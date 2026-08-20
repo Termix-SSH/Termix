@@ -1,7 +1,8 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
-import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { useSnippetRunner } from "@/hooks/use-snippet-runner.tsx";
 import {
   getSnippets,
   createSnippet as apiCreateSnippet,
@@ -18,7 +19,13 @@ import {
   getUserList,
   getRoles,
   reorderSnippets,
+  saveUserPreferences,
 } from "@/main-axios";
+import {
+  hasSnippetInputs,
+  type SnippetHostContext,
+} from "@/lib/snippet-variables";
+import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
 import {
   exportSnippets,
   importSnippets,
@@ -41,6 +48,9 @@ import {
 import {
   Box,
   ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Clipboard,
   Copy,
   Cpu,
   Database,
@@ -70,6 +80,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
+import { SettingRow, FakeSwitch } from "@/components/section-card";
 import { toast } from "sonner";
 import { FOLDER_COLORS } from "@/lib/theme";
 import { FOLDER_ICONS } from "@/types/ui-types";
@@ -147,6 +158,7 @@ function SnippetFormDialog({
   const [description, setDescription] = useState("");
   const [folder, setFolder] = useState<string | null>(null);
   const [content, setContent] = useState("");
+  const [isNote, setIsNote] = useState(false);
   const [selectedHostIds, setSelectedHostIds] = useState<Set<number>>(
     new Set(),
   );
@@ -165,6 +177,7 @@ function SnippetFormDialog({
       setDescription(snippet?.description ?? "");
       setFolder(snippet?.folder ?? null);
       setContent(snippet?.content ?? "");
+      setIsNote(snippet?.isNote ?? false);
       setSelectedHostIds(new Set(snippet?.hostIds ?? []));
     }
   }, [open, snippet]);
@@ -189,8 +202,11 @@ function SnippetFormDialog({
         description: description.trim() || undefined,
         content: content.trim(),
         folder,
+        isNote,
         hostIds:
-          selectedHostIds.size > 0 ? Array.from(selectedHostIds) : undefined,
+          !isNote && selectedHostIds.size > 0
+            ? Array.from(selectedHostIds)
+            : undefined,
       },
       snippet?.id,
     );
@@ -255,78 +271,112 @@ function SnippetFormDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground">
+              {t("newUi.sidebar.snippets.typeLabel")}
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsNote(false)}
+                className={`flex-1 py-1.5 text-xs border transition-colors ${!isNote ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("newUi.sidebar.snippets.typeCommand")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsNote(true)}
+                className={`flex-1 py-1.5 text-xs border transition-colors ${isNote ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("newUi.sidebar.snippets.typeNote")}
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold">
-              {t("newUi.sidebar.snippets.commandLabel")}{" "}
+              {isNote
+                ? t("newUi.sidebar.snippets.noteLabel")
+                : t("newUi.sidebar.snippets.commandLabel")}{" "}
               <span className="text-accent-brand">*</span>
             </label>
             <textarea
-              placeholder={t("newUi.sidebar.snippets.commandPlaceholder")}
+              placeholder={
+                isNote
+                  ? t("newUi.sidebar.snippets.notePlaceholder")
+                  : t("newUi.sidebar.snippets.commandPlaceholder")
+              }
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full h-36 px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <Server className="size-3.5" />
-              {t("newUi.sidebar.snippets.targetHostsLabel")}{" "}
-              <span className="font-normal">
-                ({t("newUi.sidebar.snippets.optional")})
-              </span>
-            </label>
-            <p className="text-xs text-muted-foreground/70">
-              {t("newUi.sidebar.snippets.targetHostsHint")}
+            <p className="text-[10px] text-muted-foreground/70 font-mono">
+              {t("newUi.sidebar.snippets.variablesHint")}
             </p>
-            {availableHosts.length === 0 ? (
-              <span className="text-xs text-muted-foreground/50">
-                {t("newUi.sidebar.snippets.noHostsAvailable")}
-              </span>
-            ) : (
-              <div className="flex flex-col gap-1 max-h-32 overflow-y-auto border border-border p-1.5">
-                {availableHosts.map((host) => {
-                  const selected = selectedHostIds.has(host.id);
-                  return (
-                    <button
-                      key={host.id}
-                      type="button"
-                      onClick={() => toggleHost(host.id)}
-                      className={`flex items-center gap-2 px-2 py-1.5 text-left transition-colors ${
-                        selected
-                          ? "bg-accent-brand/10 text-accent-brand"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <div
-                        className={`size-3 border-2 flex items-center justify-center shrink-0 transition-colors ${
+          </div>
+          {!isNote && (
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                <Server className="size-3.5" />
+                {t("newUi.sidebar.snippets.targetHostsLabel")}{" "}
+                <span className="font-normal">
+                  ({t("newUi.sidebar.snippets.optional")})
+                </span>
+              </label>
+              <p className="text-xs text-muted-foreground/70">
+                {t("newUi.sidebar.snippets.targetHostsHint")}
+              </p>
+              {availableHosts.length === 0 ? (
+                <span className="text-xs text-muted-foreground/50">
+                  {t("newUi.sidebar.snippets.noHostsAvailable")}
+                </span>
+              ) : (
+                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto border border-border p-1.5">
+                  {availableHosts.map((host) => {
+                    const selected = selectedHostIds.has(host.id);
+                    return (
+                      <button
+                        key={host.id}
+                        type="button"
+                        onClick={() => toggleHost(host.id)}
+                        className={`flex items-center gap-2 px-2 py-1.5 text-left transition-colors ${
                           selected
-                            ? "border-accent-brand bg-accent-brand"
-                            : "border-border/60"
+                            ? "bg-accent-brand/10 text-accent-brand"
+                            : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {selected && <div className="size-1.5 bg-background" />}
-                      </div>
-                      <Server className="size-3 shrink-0 opacity-60" />
-                      <span className="text-xs font-medium truncate flex-1">
-                        {host.name || host.ip}
-                      </span>
-                      <span className="text-xs text-muted-foreground/60 shrink-0">
-                        {host.ip}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {selectedHostIds.size > 0 && (
-              <button
-                type="button"
-                onClick={() => setSelectedHostIds(new Set())}
-                className="text-xs text-muted-foreground hover:text-foreground self-start"
-              >
-                {t("newUi.sidebar.snippets.clearTargetHosts")}
-              </button>
-            )}
-          </div>
+                        <div
+                          className={`size-3 border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            selected
+                              ? "border-accent-brand bg-accent-brand"
+                              : "border-border/60"
+                          }`}
+                        >
+                          {selected && (
+                            <div className="size-1.5 bg-background" />
+                          )}
+                        </div>
+                        <Server className="size-3 shrink-0 opacity-60" />
+                        <span className="text-xs font-medium truncate flex-1">
+                          {host.name || host.ip}
+                        </span>
+                        <span className="text-xs text-muted-foreground/60 shrink-0">
+                          {host.ip}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedHostIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedHostIds(new Set())}
+                  className="text-xs text-muted-foreground hover:text-foreground self-start"
+                >
+                  {t("newUi.sidebar.snippets.clearTargetHosts")}
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-end gap-2 mt-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -624,6 +674,7 @@ function mapRawSnippet(s: RawSnippet): Snippet {
     folder: s.folder ?? null,
     order: s.order ?? 0,
     hostIds: parseHostFilter(s.hostFilter),
+    isNote: s.isNote ?? false,
   };
 }
 type RawSnippetFolder = {
@@ -817,7 +868,7 @@ function SnippetCard({
   onDelete,
   onEdit,
   onShare,
-  onConfirmRun,
+  onRunSnippet,
   onDirectExecute,
   onDragStart,
   onDragEnd,
@@ -834,7 +885,7 @@ function SnippetCard({
   onDelete: (id: number) => void;
   onEdit: (snippet: Snippet) => void;
   onShare: (snippet: Snippet) => void;
-  onConfirmRun: (snippet: Snippet, execute: () => void) => void;
+  onRunSnippet: (snippet: Snippet, targets: Tab[]) => void;
   onDirectExecute: (snippet: Snippet) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -844,44 +895,26 @@ function SnippetCard({
   availableHosts: SSHHost[];
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
-  const hasTargetHosts = (snippet.hostIds?.length ?? 0) > 0;
+  const hasTargetHosts = !snippet.isNote && (snippet.hostIds?.length ?? 0) > 0;
 
-  function executeRun() {
+  function handleRun() {
     if (hasTargetHosts) {
       onDirectExecute(snippet);
       return;
     }
     const targets = terminalTabs.filter((tab) => selectedTabIds.has(tab.id));
     if (targets.length > 0) {
-      targets.forEach((tab) => {
-        tab.terminalRef?.current?.sendInput?.(snippet.content + "\r");
-      });
-      toast.success(
-        t("newUi.sidebar.snippets.runSuccess", {
-          name: snippet.name,
-          count: targets.length,
-        }),
-      );
+      onRunSnippet(snippet, targets);
     } else if (terminalTabs.length > 0) {
       const activeTab =
         terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0];
-      activeTab.terminalRef?.current?.sendInput?.(snippet.content + "\r");
-      toast.success(
-        t("newUi.sidebar.snippets.runSuccess", {
-          name: snippet.name,
-          count: 1,
-        }),
-      );
+      onRunSnippet(snippet, [activeTab]);
     } else {
       toast.error(t("newUi.sidebar.snippets.noTerminalTabsOpen"));
     }
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-  }
-
-  function handleRun() {
-    onConfirmRun(snippet, executeRun);
   }
 
   function handleCopy() {
@@ -921,10 +954,15 @@ function SnippetCard({
               </span>
             )}
           </div>
+          {snippet.isNote && (
+            <span className="shrink-0 mt-0.5 text-[10px] px-1.5 py-0.5 bg-muted/40 text-muted-foreground border border-border">
+              {t("newUi.sidebar.snippets.typeNote")}
+            </span>
+          )}
           {hasTargetHosts && (
             <Zap
               className="size-3 shrink-0 mt-0.5 text-accent-brand/70"
-              title={t("newUi.sidebar.snippets.hasTargetHosts")}
+              aria-label={t("newUi.sidebar.snippets.hasTargetHosts")}
             />
           )}
         </div>
@@ -953,12 +991,16 @@ function SnippetCard({
           >
             {hasTargetHosts ? (
               <Zap className="size-3" />
+            ) : snippet.isNote ? (
+              <Clipboard className="size-3" />
             ) : (
               <Play className="size-3" />
             )}
             {hasTargetHosts
               ? t("newUi.sidebar.snippets.runOnTargets")
-              : t("newUi.sidebar.snippets.run")}
+              : snippet.isNote
+                ? t("newUi.sidebar.snippets.pasteToTerminal")
+                : t("newUi.sidebar.snippets.run")}
           </Button>
           <Button
             variant="ghost"
@@ -1211,7 +1253,7 @@ function VirtualFolderGroup({
   onDelete,
   onEdit,
   onShare,
-  onConfirmRun,
+  onRunSnippet,
   onDirectExecute,
   draggedSnippet,
   dropTarget,
@@ -1221,7 +1263,8 @@ function VirtualFolderGroup({
   onDrop,
   availableHosts,
   t,
-  defaultOpen,
+  open,
+  onToggleOpen,
 }: {
   folderName: string;
   snippets: Snippet[];
@@ -1231,7 +1274,7 @@ function VirtualFolderGroup({
   onDelete: (id: number) => void;
   onEdit: (snippet: Snippet) => void;
   onShare: (snippet: Snippet) => void;
-  onConfirmRun: (snippet: Snippet, execute: () => void) => void;
+  onRunSnippet: (snippet: Snippet, targets: Tab[]) => void;
   onDirectExecute: (snippet: Snippet) => void;
   draggedSnippet: Snippet | null;
   dropTarget: { id: number; position: "above" | "below" } | null;
@@ -1241,14 +1284,13 @@ function VirtualFolderGroup({
   onDrop: (folder: string | null) => void;
   availableHosts: SSHHost[];
   t: (key: string, opts?: Record<string, unknown>) => string;
-  defaultOpen: boolean;
+  open: boolean;
+  onToggleOpen: () => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-
   return (
     <div className="flex flex-col gap-2">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggleOpen}
         className="flex items-center gap-1.5 w-full text-left"
       >
         <ChevronDown
@@ -1278,7 +1320,7 @@ function VirtualFolderGroup({
               onDelete={onDelete}
               onEdit={onEdit}
               onShare={onShare}
-              onConfirmRun={onConfirmRun}
+              onRunSnippet={onRunSnippet}
               onDirectExecute={onDirectExecute}
               onDragStart={() => onDragStart(snippet)}
               onDragEnd={onDragEnd}
@@ -1297,15 +1339,28 @@ function VirtualFolderGroup({
   );
 }
 
+const UNCATEGORIZED_KEY = "__uncategorized__";
+
+function readOpenFolders(): Set<string> {
+  try {
+    const saved = localStorage.getItem("snippetOpenFolders");
+    if (saved) return new Set(JSON.parse(saved));
+  } catch {
+    // ignore malformed storage
+  }
+  return new Set();
+}
+
 export function SnippetsPanel({
   terminalTabs,
   activeTabId,
+  storageMode = "local",
 }: {
   terminalTabs: Tab[];
   activeTabId: string;
+  storageMode?: "local" | "cloud";
 }) {
   const { t } = useTranslation();
-  const { confirmWithToast } = useConfirmation();
   const [snippetSearch, setSnippetSearch] = useState("");
   const [folders, setFolders] = useState<SnippetFolder[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -1323,6 +1378,12 @@ export function SnippetsPanel({
     [],
   );
   const [executionSnippetName, setExecutionSnippetName] = useState("");
+  const [foldersCollapsedDefault, setFoldersCollapsedDefault] = useState(
+    () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
+  );
+  const [confirmExecution, setConfirmExecution] = useState(
+    () => localStorage.getItem("confirmSnippetExecution") === "true",
+  );
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
     () =>
       new Set(
@@ -1331,6 +1392,22 @@ export function SnippetsPanel({
           : [],
       ),
   );
+  // Path B (direct SSH execute) needs its own variables-dialog state since it
+  // resolves against the first target host and posts inputValues to the
+  // backend, unlike Path A (terminal send) which the shared hook covers.
+  const [directRunningSnippet, setDirectRunningSnippet] = useState<{
+    snippet: Snippet;
+    host: SnippetHostContext | null;
+    onConfirm: (
+      resolvedContent: string,
+      inputValues: Record<string, string>,
+    ) => void;
+  } | null>(null);
+  const {
+    runSnippet: handleRunSnippet,
+    handleConfirmRun,
+    dialog: runSnippetDialog,
+  } = useSnippetRunner();
 
   function updateSnippets(next: Snippet[] | ((prev: Snippet[]) => Snippet[])) {
     setSnippets((prev) => {
@@ -1343,23 +1420,69 @@ export function SnippetsPanel({
   const getFoldersCollapsed = () =>
     localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false";
 
-  const [uncategorizedOpen, setUncategorizedOpen] = useState(
-    () => !getFoldersCollapsed(),
+  const [openFolders, setOpenFolders] = useState<Set<string>>(() =>
+    readOpenFolders(),
   );
+
+  function persistOpenFolders(next: Set<string>) {
+    try {
+      localStorage.setItem("snippetOpenFolders", JSON.stringify([...next]));
+    } catch {
+      // ignore quota/serialization failures
+    }
+  }
+
+  function toggleOpenFolder(key: string) {
+    setOpenFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      persistOpenFolders(next);
+      return next;
+    });
+  }
+
+  const allFolderKeys = useMemo(() => {
+    const keys = new Set<string>([UNCATEGORIZED_KEY]);
+    for (const f of folders) keys.add(f.name);
+    for (const s of snippets) {
+      if (s.folder) keys.add(s.folder);
+    }
+    return keys;
+  }, [folders, snippets]);
 
   useEffect(() => {
     const handler = () => {
       const collapsed = getFoldersCollapsed();
-      setUncategorizedOpen(!collapsed);
-      setFolders((prev) => prev.map((f) => ({ ...f, open: !collapsed })));
+      const next = collapsed ? new Set<string>() : new Set(allFolderKeys);
+      persistOpenFolders(next);
+      setOpenFolders(next);
+    };
+    const expandAll = () => {
+      const next = new Set(allFolderKeys);
+      persistOpenFolders(next);
+      setOpenFolders(next);
+    };
+    const collapseAll = () => {
+      const next = new Set<string>();
+      persistOpenFolders(next);
+      setOpenFolders(next);
     };
     window.addEventListener("defaultSnippetFoldersCollapsedChanged", handler);
-    return () =>
+    window.addEventListener("snippets:expand-all", expandAll);
+    window.addEventListener("snippets:collapse-all", collapseAll);
+    return () => {
       window.removeEventListener(
         "defaultSnippetFoldersCollapsedChanged",
         handler,
       );
-  }, []);
+      window.removeEventListener("snippets:expand-all", expandAll);
+      window.removeEventListener("snippets:collapse-all", collapseAll);
+    };
+  }, [allFolderKeys]);
 
   const [draggedSnippet, setDraggedSnippet] = useState<Snippet | null>(null);
   const [dropTarget, setDropTarget] = useState<{
@@ -1426,32 +1549,43 @@ export function SnippetsPanel({
     setDropTarget(null);
   }
 
-  const handleConfirmRun = useCallback(
-    (snippet: Snippet, execute: () => void) => {
-      const shouldConfirm =
-        localStorage.getItem("confirmSnippetExecution") === "true";
-      if (!shouldConfirm) {
-        execute();
-        return;
+  // For folder keys the user has never explicitly toggled (not present in the
+  // persisted set), fall back to the default-collapsed setting instead of
+  // always treating them as closed.
+  function seedNewFolderKeys(keys: string[]) {
+    if (keys.length === 0) return;
+    const collapsed = getFoldersCollapsed();
+    if (collapsed) return;
+    setOpenFolders((prev) => {
+      const hadAny = localStorage.getItem("snippetOpenFolders") !== null;
+      const next = new Set(prev);
+      let changed = false;
+      for (const key of keys) {
+        if (!hadAny || !next.has(key)) {
+          if (!next.has(key)) {
+            next.add(key);
+            changed = true;
+          }
+        }
       }
-      confirmWithToast(
-        t("newUi.sidebar.snippets.confirmRunMessage", { name: snippet.name }),
-        execute,
-        t("newUi.sidebar.snippets.confirmRunButton"),
-        t("newUi.sidebar.snippets.cancel"),
-        { confirmOnEnter: true, duration: 6000 },
-      );
-    },
-    [confirmWithToast, t],
-  );
+      if (!changed) return prev;
+      persistOpenFolders(next);
+      return next;
+    });
+  }
 
   useEffect(() => {
-    const collapsed = getFoldersCollapsed();
-
     getSnippets()
       .then((data) => {
-        const arr: RawSnippet[] = Array.isArray(data) ? data : [];
-        updateSnippets(arr.map(mapRawSnippet));
+        const arr = (Array.isArray(data)
+          ? data
+          : []) as unknown as RawSnippet[];
+        const mapped = arr.map(mapRawSnippet);
+        updateSnippets(mapped);
+        const folderKeys = Array.from(
+          new Set(mapped.map((s) => s.folder ?? UNCATEGORIZED_KEY)),
+        );
+        seedNewFolderKeys(folderKeys);
       })
       .catch(() => {});
 
@@ -1463,9 +1597,10 @@ export function SnippetsPanel({
           name: f.name,
           color: f.color ?? FOLDER_COLORS[0],
           icon: (f.icon as FolderIconId) ?? "folder",
-          open: !collapsed,
+          open: true,
         }));
         setFolders(mapped);
+        seedNewFolderKeys(mapped.map((f) => f.name));
       })
       .catch(() => {});
 
@@ -1535,16 +1670,16 @@ export function SnippetsPanel({
       const id =
         typeof created.id === "number" ? created.id : Number(created.id);
       setFolders((prev) => [...prev, { ...f, id, open: true }]);
+      setOpenFolders((prev) => {
+        const next = new Set(prev);
+        next.add(f.name);
+        persistOpenFolders(next);
+        return next;
+      });
       toast.success(t("newUi.sidebar.snippets.folderCreateSuccess"));
     } catch {
       toast.error(t("newUi.sidebar.snippets.folderCreateFailed"));
     }
-  }
-
-  function toggleFolder(id: number) {
-    setFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, open: !f.open } : f)),
-    );
   }
 
   async function handleDeleteFolder(folder: SnippetFolder) {
@@ -1556,6 +1691,13 @@ export function SnippetsPanel({
           s.folder === folder.name ? { ...s, folder: null } : s,
         ),
       );
+      setOpenFolders((prev) => {
+        if (!prev.has(folder.name)) return prev;
+        const next = new Set(prev);
+        next.delete(folder.name);
+        persistOpenFolders(next);
+        return next;
+      });
       toast.success(
         t("newUi.sidebar.snippets.folderDeleteSuccess", { name: folder.name }),
       );
@@ -1577,6 +1719,15 @@ export function SnippetsPanel({
             s.folder === oldName ? { ...s, folder: data.name } : s,
           ),
         );
+        setOpenFolders((prev) => {
+          const next = new Set(prev);
+          if (next.has(oldName)) {
+            next.delete(oldName);
+            next.add(data.name);
+          }
+          persistOpenFolders(next);
+          return next;
+        });
       }
       await apiUpdateSnippetFolderMetadata(nameChanged ? data.name : oldName, {
         color: data.color,
@@ -1614,11 +1765,16 @@ export function SnippetsPanel({
   }
 
   function reloadData() {
-    const collapsed = getFoldersCollapsed();
     getSnippets()
       .then((data) => {
-        const arr: RawSnippet[] = Array.isArray(data) ? data : [];
-        updateSnippets(arr.map(mapRawSnippet));
+        const arr = (Array.isArray(data)
+          ? data
+          : []) as unknown as RawSnippet[];
+        const mapped = arr.map(mapRawSnippet);
+        updateSnippets(mapped);
+        seedNewFolderKeys(
+          Array.from(new Set(mapped.map((s) => s.folder ?? UNCATEGORIZED_KEY))),
+        );
       })
       .catch(() => {});
     getSnippetFolders()
@@ -1629,9 +1785,10 @@ export function SnippetsPanel({
           name: f.name,
           color: f.color ?? FOLDER_COLORS[0],
           icon: (f.icon as FolderIconId) ?? "folder",
-          open: !collapsed,
+          open: true,
         }));
         setFolders(mapped);
+        seedNewFolderKeys(mapped.map((f) => f.name));
       })
       .catch(() => {});
   }
@@ -1650,7 +1807,10 @@ export function SnippetsPanel({
     setSnippetFormOpen(true);
   }
 
-  async function handleDirectExecute(snippet: Snippet) {
+  async function executeDirectRun(
+    snippet: Snippet,
+    inputValues: Record<string, string>,
+  ) {
     const hostIds = snippet.hostIds ?? [];
     if (hostIds.length === 0) return;
 
@@ -1663,7 +1823,11 @@ export function SnippetsPanel({
         const host = availableHosts.find((h) => h.id === hostId);
         const hostLabel = host ? host.name || host.ip : String(hostId);
         try {
-          const result = await apiExecuteSnippet(snippet.id, hostId);
+          const result = await apiExecuteSnippet(
+            snippet.id,
+            hostId,
+            Object.keys(inputValues).length > 0 ? inputValues : undefined,
+          );
           return {
             hostLabel,
             success: result.success,
@@ -1675,7 +1839,7 @@ export function SnippetsPanel({
             hostLabel,
             success: false,
             output: "",
-            error: err instanceof Error ? err.message : String(err),
+            error: getErrorMessage(err, String(err)),
           };
         }
       }),
@@ -1699,6 +1863,40 @@ export function SnippetsPanel({
       );
     }
   }
+
+  const handleDirectExecute = useCallback(
+    (snippet: Snippet) => {
+      const runWithInputs = (inputValues: Record<string, string>) => {
+        handleConfirmRun(snippet, () => {
+          void executeDirectRun(snippet, inputValues);
+        });
+      };
+
+      if (hasSnippetInputs(snippet.content)) {
+        const firstHost = snippet.hostIds?.length
+          ? availableHosts.find((h) => h.id === snippet.hostIds![0])
+          : undefined;
+        setDirectRunningSnippet({
+          snippet,
+          host: firstHost
+            ? {
+                ip: firstHost.ip,
+                username: firstHost.username,
+                port: firstHost.port,
+                name: firstHost.name,
+              }
+            : null,
+          onConfirm: (_resolvedContent, inputValues) => {
+            setDirectRunningSnippet(null);
+            runWithInputs(inputValues);
+          },
+        });
+      } else {
+        runWithInputs({});
+      }
+    },
+    [availableHosts, handleConfirmRun],
+  );
 
   const filtered = snippetSearch
     ? snippets.filter(
@@ -1726,14 +1924,91 @@ export function SnippetsPanel({
           <span className="text-xs font-semibold">
             {t("newUi.sidebar.snippets.title")}
           </span>
-          <a
-            href="https://docs.termix.site/features/terminal/snippets"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[10px] text-accent-brand hover:underline"
-          >
-            {t("hosts.docsLink")}
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://docs.termix.site/features/terminal/snippets"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-accent-brand hover:underline"
+            >
+              {t("hosts.docsLink")}
+            </a>
+            <button
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("snippets:expand-all"))
+              }
+              title={t("newUi.sidebar.snippets.expandAll")}
+              className="size-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
+            >
+              <ChevronsUpDown className="size-3.5" />
+            </button>
+            <button
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("snippets:collapse-all"))
+              }
+              title={t("newUi.sidebar.snippets.collapseAll")}
+              className="size-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
+            >
+              <ChevronsDownUp className="size-3.5" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  title={t("newUi.sidebar.snippets.settings")}
+                  className="size-6 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                >
+                  <Settings className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="text-xs w-64 p-2">
+                <SettingRow
+                  label={t("newUi.sidebar.userProfile.foldersCollapsed")}
+                  description={t(
+                    "newUi.sidebar.userProfile.foldersCollapsedDesc",
+                  )}
+                >
+                  <FakeSwitch
+                    checked={foldersCollapsedDefault}
+                    onChange={(v) => {
+                      setFoldersCollapsedDefault(v);
+                      localStorage.setItem(
+                        "defaultSnippetFoldersCollapsed",
+                        v.toString(),
+                      );
+                      window.dispatchEvent(
+                        new Event("defaultSnippetFoldersCollapsedChanged"),
+                      );
+                      if (storageMode === "cloud")
+                        saveUserPreferences({ foldersCollapsed: v }).catch(
+                          () => {},
+                        );
+                    }}
+                  />
+                </SettingRow>
+                <SettingRow
+                  label={t("newUi.sidebar.userProfile.confirmExecution")}
+                  description={t(
+                    "newUi.sidebar.userProfile.confirmExecutionDesc",
+                  )}
+                >
+                  <FakeSwitch
+                    checked={confirmExecution}
+                    onChange={(v) => {
+                      setConfirmExecution(v);
+                      localStorage.setItem(
+                        "confirmSnippetExecution",
+                        v.toString(),
+                      );
+                      if (storageMode === "cloud")
+                        saveUserPreferences({
+                          confirmSnippetExecution: v,
+                        }).catch(() => {});
+                    }}
+                  />
+                </SettingRow>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
@@ -1857,11 +2132,11 @@ export function SnippetsPanel({
           {(!snippetSearch || uncategorizedSnippets.length > 0) && (
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => setUncategorizedOpen((v) => !v)}
+                onClick={() => toggleOpenFolder(UNCATEGORIZED_KEY)}
                 className="flex items-center gap-1.5 w-full text-left"
               >
                 <ChevronDown
-                  className={`size-3 text-muted-foreground shrink-0 transition-transform ${uncategorizedOpen ? "" : "-rotate-90"}`}
+                  className={`size-3 text-muted-foreground shrink-0 transition-transform ${openFolders.has(UNCATEGORIZED_KEY) ? "" : "-rotate-90"}`}
                 />
                 <Folder className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="text-xs font-semibold flex-1 truncate text-muted-foreground">
@@ -1871,7 +2146,7 @@ export function SnippetsPanel({
                   {uncategorizedSnippets.length}
                 </span>
               </button>
-              {uncategorizedOpen && (
+              {openFolders.has(UNCATEGORIZED_KEY) && (
                 <div
                   className="flex flex-col gap-2 ml-1"
                   onDrop={() => handleDrop(null)}
@@ -1887,7 +2162,7 @@ export function SnippetsPanel({
                       onDelete={handleDeleteSnippet}
                       onEdit={handleEditSnippet}
                       onShare={setShareSnippet}
-                      onConfirmRun={handleConfirmRun}
+                      onRunSnippet={handleRunSnippet}
                       onDirectExecute={handleDirectExecute}
                       onDragStart={() => handleDragStart(snippet)}
                       onDragEnd={handleDragEnd}
@@ -1916,15 +2191,16 @@ export function SnippetsPanel({
               (s) => s.folder === folder.name,
             );
             if (folderSnippets.length === 0 && snippetSearch) return null;
+            const isOpen = openFolders.has(folder.name);
             return (
               <div key={folder.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-1.5 w-full group">
                   <button
-                    onClick={() => toggleFolder(folder.id)}
+                    onClick={() => toggleOpenFolder(folder.name)}
                     className="flex items-center gap-1.5 flex-1 min-w-0 text-left"
                   >
                     <ChevronDown
-                      className={`size-3 text-muted-foreground shrink-0 transition-transform ${folder.open ? "" : "-rotate-90"}`}
+                      className={`size-3 text-muted-foreground shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`}
                     />
                     <FolderIconEl
                       icon={folder.icon}
@@ -1967,7 +2243,7 @@ export function SnippetsPanel({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                {folder.open && (
+                {isOpen && (
                   <div
                     className="flex flex-col gap-2 ml-1"
                     onDragOver={(e) => e.preventDefault()}
@@ -1983,7 +2259,7 @@ export function SnippetsPanel({
                         onDelete={handleDeleteSnippet}
                         onEdit={handleEditSnippet}
                         onShare={setShareSnippet}
-                        onConfirmRun={handleConfirmRun}
+                        onRunSnippet={handleRunSnippet}
                         onDirectExecute={handleDirectExecute}
                         onDragStart={() => handleDragStart(snippet)}
                         onDragEnd={handleDragEnd}
@@ -2024,7 +2300,7 @@ export function SnippetsPanel({
                 onDelete={handleDeleteSnippet}
                 onEdit={handleEditSnippet}
                 onShare={setShareSnippet}
-                onConfirmRun={handleConfirmRun}
+                onRunSnippet={handleRunSnippet}
                 onDirectExecute={handleDirectExecute}
                 draggedSnippet={draggedSnippet}
                 dropTarget={dropTarget}
@@ -2034,12 +2310,24 @@ export function SnippetsPanel({
                 onDrop={handleDrop}
                 availableHosts={availableHosts}
                 t={t}
-                defaultOpen={!getFoldersCollapsed()}
+                open={openFolders.has(folderName)}
+                onToggleOpen={() => toggleOpenFolder(folderName)}
               />
             );
           })}
         </div>
       </div>
+
+      {runSnippetDialog}
+
+      {directRunningSnippet && (
+        <SnippetVariablesDialog
+          snippet={directRunningSnippet.snippet}
+          host={directRunningSnippet.host}
+          onCancel={() => setDirectRunningSnippet(null)}
+          onConfirm={directRunningSnippet.onConfirm}
+        />
+      )}
 
       <SnippetFormDialog
         open={snippetFormOpen}

@@ -1,7 +1,6 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import { homepageLogger } from "../../utils/logger.js";
-import express from "express";
 import { createCurrentHomepageLayoutRepository } from "../repositories/factory.js";
 
 export const homepageLayoutRouter = express.Router();

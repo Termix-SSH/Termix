@@ -36,7 +36,7 @@ export async function updateAcmeSslSettings(
 }
 
 export async function requestAcmeCertificate(): Promise<
-  AcmeSettings & { success: boolean }
+  AcmeSettings & { success: boolean; reloadMessage?: string }
 > {
   try {
     const response = await authApi.post("/users/acme-ssl-request", {});
@@ -49,7 +49,7 @@ export async function requestAcmeCertificate(): Promise<
 export async function uploadManualSslCertificate(payload: {
   certificate: string;
   privateKey: string;
-}): Promise<AcmeSettings & { success: boolean }> {
+}): Promise<AcmeSettings & { success: boolean; reloadMessage?: string }> {
   try {
     const response = await authApi.post("/users/manual-ssl-upload", payload);
     return response.data;

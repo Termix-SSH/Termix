@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import * as schema from "./schema.js";
@@ -13,6 +14,7 @@ import {
 } from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
+import { createPerformanceIndexes } from "./performance-indexes.js";
 import {
   assertDataDirIsNotMisconfigured,
   DataDirMisconfiguredError,
@@ -129,7 +131,7 @@ async function initializeDatabaseAsync(): Promise<void> {
 
       databaseLogger.error("Failed to initialize memory database", error, {
         operation: "db_memory_init_failed",
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorMessage: getErrorMessage(error),
         errorStack: error instanceof Error ? error.stack : undefined,
         encryptedDbExists:
           DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
@@ -153,12 +155,12 @@ async function initializeDatabaseAsync(): Promise<void> {
         databaseLogger.warn("Failed to generate diagnostic information", {
           operation: "db_diagnostic_failed",
           error:
-            diagError instanceof Error ? diagError.message : "Unknown error",
+            getErrorMessage(diagError),
         });
       }
 
       throw new Error(
-        `Database decryption failed: ${error instanceof Error ? error.message : "Unknown error"}. This prevents data loss.`,
+        `Database decryption failed: ${getErrorMessage(error)}. This prevents data loss.`,
         { cause: error },
       );
     }
@@ -292,6 +294,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         folder TEXT,
         tags TEXT,
         pin INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER,
         auth_type TEXT NOT NULL,
         password TEXT,
         key TEXT,
@@ -436,6 +439,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         color TEXT,
         icon TEXT,
         credential_id INTEGER,
+        sort_order INTEGER,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
@@ -505,7 +509,7 @@ async function initializeCompleteDatabase(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
+        user_id TEXT,
         username TEXT NOT NULL,
         action TEXT NOT NULL,
         resource_type TEXT NOT NULL,
@@ -625,6 +629,41 @@ async function initializeCompleteDatabase(): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_host_metrics_prefs_user_host
         ON host_metrics_preferences (user_id, host_id);
 
+    CREATE TABLE IF NOT EXISTS proxmox_stats_preferences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        layout TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_proxmox_stats_prefs_user_host
+        ON proxmox_stats_preferences (user_id, host_id);
+
+    CREATE TABLE IF NOT EXISTS host_sidebar_preferences (
+        user_id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS credential_sidebar_preferences (
+        user_id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS ui_preferences (
+        user_id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS host_health_checks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -717,6 +756,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   migrateSchema();
+  vacuumIfFreelistBloated();
 
   try {
     ensureRawSettingDefault("allow_registration", "true");
@@ -818,10 +858,15 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");
   addColumnIfNotExists("user_preferences", "confirm_tab_close", "INTEGER");
   addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
+  addColumnIfNotExists("user_preferences", "ai_assistant_enabled", "INTEGER");
+  addColumnIfNotExists("user_preferences", "ai_read_only_commands", "INTEGER");
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
   addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
   addColumnIfNotExists("user_preferences", "custom_themes", "TEXT");
   addColumnIfNotExists("user_preferences", "custom_keybindings", "TEXT");
+  addColumnIfNotExists("user_preferences", "terminal_defaults", "TEXT");
+  addColumnIfNotExists("user_preferences", "rdp_defaults", "TEXT");
+  addColumnIfNotExists("user_preferences", "terminal_macros", "TEXT");
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS dashboard_service_links (
@@ -875,9 +920,7 @@ const migrateSchema = () => {
       databaseLogger.warn("Failed to backfill users.registered_at", {
         operation: "schema_migration",
         error:
-          backfillError instanceof Error
-            ? backfillError.message
-            : String(backfillError),
+          getErrorMessage(backfillError, String(backfillError)),
       });
     }
   } else {
@@ -891,9 +934,7 @@ const migrateSchema = () => {
         {
           operation: "schema_migration",
           error:
-            backfillError instanceof Error
-              ? backfillError.message
-              : String(backfillError),
+            getErrorMessage(backfillError, String(backfillError)),
         },
       );
     }
@@ -930,6 +971,8 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "folder", "TEXT");
   addColumnIfNotExists("ssh_data", "tags", "TEXT");
   addColumnIfNotExists("ssh_data", "pin", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists("ssh_data", "sort_order", "INTEGER");
+  addColumnIfNotExists("ssh_folders", "sort_order", "INTEGER");
   addColumnIfNotExists(
     "ssh_data",
     "auth_type",
@@ -1022,8 +1065,19 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "proxmox_config", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
+    "enable_proxmox_stats",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_data", "proxmox_stats_config", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
     "enable_tmux_monitor",
     "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_terminal_toolbar",
+    "INTEGER NOT NULL DEFAULT 1",
   );
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
@@ -1079,6 +1133,13 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("ssh_credentials", "cert_public_key", "TEXT");
 
+  addColumnIfNotExists(
+    "ssh_credentials",
+    "pin",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_credentials", "sort_order", "INTEGER");
+
   try {
     const tableInfo = sqlite.prepare("PRAGMA table_info(ssh_credentials)").all() as Array<{
       cid: number;
@@ -1092,47 +1153,124 @@ const migrateSchema = () => {
 
     if (usernameCol && usernameCol.notnull === 1) {
       const tempTableName = "ssh_credentials_temp_migration";
-      const allColumns = tableInfo.map((col) => col.name).join(", ");
+      const allColumns = tableInfo.map((col) => `"${col.name}"`).join(", ");
+
+      // Derive the replacement table from the live definition instead of
+      // restating it here. The table keeps gaining columns (cert_public_key,
+      // pin, sort_order, sync_id, ...), and a second copy of the column list
+      // falls behind every time one is added — leaving the copy narrower than
+      // the table, so the INSERT below fails and the constraint stays put.
+      const createSql = sqlite
+        .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'ssh_credentials'")
+        .pluck()
+        .get() as string | undefined;
+
+      if (!createSql) {
+        throw new Error("ssh_credentials has no stored table definition");
+      }
+
+      // Only the table name is rewritten; replace() stops at the first match,
+      // and in a CREATE TABLE statement that is the table being defined.
+      const renamedSql = createSql.replace("ssh_credentials", tempTableName);
+      const tempCreateSql = renamedSql.replace(/(["`[]?username["`\]]?\s+TEXT)\s+NOT\s+NULL/i, "$1");
+
+      if (tempCreateSql === renamedSql) {
+        throw new Error("could not derive a nullable-username definition for ssh_credentials");
+      }
+
+      // DROP TABLE takes the table's indexes with it, so replay them afterwards.
+      const indexDefs = sqlite
+        .prepare(
+          "SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'ssh_credentials' AND sql IS NOT NULL",
+        )
+        .pluck()
+        .all() as string[];
 
       sqlite.exec(`PRAGMA foreign_keys = OFF`);
       sqlite.exec(`
-        CREATE TABLE ${tempTableName} (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          description TEXT,
-          folder TEXT,
-          tags TEXT,
-          auth_type TEXT NOT NULL,
-          username TEXT,
-          password TEXT,
-          key TEXT,
-          key_password TEXT,
-          key_type TEXT,
-          usage_count INTEGER NOT NULL DEFAULT 0,
-          last_used TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          private_key TEXT,
-          public_key TEXT,
-          detected_key_type TEXT,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
+        ${tempCreateSql};
 
-        INSERT INTO ${tempTableName} SELECT ${allColumns} FROM ssh_credentials;
+        INSERT INTO ${tempTableName} (${allColumns}) SELECT ${allColumns} FROM ssh_credentials;
 
         DROP TABLE ssh_credentials;
 
         ALTER TABLE ${tempTableName} RENAME TO ssh_credentials;
       `);
+      for (const indexSql of indexDefs) {
+        sqlite.exec(indexSql);
+      }
       sqlite.exec(`PRAGMA foreign_keys = ON`);
 
       databaseLogger.info("Successfully migrated ssh_credentials table to remove username NOT NULL constraint", {
         operation: "schema_migration_username_nullable",
+        restoredIndexes: indexDefs.length,
       });
     }
   } catch (migrationError) {
     databaseLogger.warn("Failed to migrate ssh_credentials username column", {
+      operation: "schema_migration",
+      error: migrationError,
+    });
+  }
+
+  try {
+    const auditLogColumns = sqlite.prepare("PRAGMA table_info(audit_logs)").all() as Array<{
+      name: string;
+      notnull: number;
+    }>;
+    const auditUserIdCol = auditLogColumns.find((col) => col.name === "user_id");
+
+    if (auditUserIdCol && auditUserIdCol.notnull === 1) {
+      const tempTableName = "audit_logs_temp_migration";
+      const columns = [
+        "id",
+        "user_id",
+        "username",
+        "action",
+        "resource_type",
+        "resource_id",
+        "resource_name",
+        "details",
+        "ip_address",
+        "user_agent",
+        "success",
+        "error_message",
+        "timestamp",
+      ].join(", ");
+
+      sqlite.exec(`PRAGMA foreign_keys = OFF`);
+      sqlite.exec(`
+        CREATE TABLE ${tempTableName} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT,
+          username TEXT NOT NULL,
+          action TEXT NOT NULL,
+          resource_type TEXT NOT NULL,
+          resource_id TEXT,
+          resource_name TEXT,
+          details TEXT,
+          ip_address TEXT,
+          user_agent TEXT,
+          success INTEGER NOT NULL,
+          error_message TEXT,
+          timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+        );
+
+        INSERT INTO ${tempTableName} (${columns}) SELECT ${columns} FROM audit_logs;
+
+        DROP TABLE audit_logs;
+
+        ALTER TABLE ${tempTableName} RENAME TO audit_logs;
+      `);
+      sqlite.exec(`PRAGMA foreign_keys = ON`);
+
+      databaseLogger.info("Successfully migrated audit_logs table to remove user_id NOT NULL constraint", {
+        operation: "schema_migration_audit_user_id_nullable",
+      });
+    }
+  } catch (migrationError) {
+    databaseLogger.warn("Failed to migrate audit_logs user_id column", {
       operation: "schema_migration",
       error: migrationError,
     });
@@ -1145,6 +1283,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("snippets", "folder", "TEXT");
   addColumnIfNotExists("snippets", "order", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("snippets", "host_filter", "TEXT");
+  addColumnIfNotExists("snippets", "is_note", "INTEGER NOT NULL DEFAULT 0");
 
   try {
     sqlite
@@ -1306,85 +1445,6 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite.prepare("SELECT id FROM c2s_tunnel_presets LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS c2s_tunnel_presets (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          config TEXT NOT NULL,
-          platform TEXT,
-          computer_name TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create c2s_tunnel_presets table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite
-      .prepare("SELECT id FROM sessions LIMIT 1")
-      .get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS sessions (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          jwt_token TEXT NOT NULL,
-          device_type TEXT NOT NULL,
-          device_info TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          expires_at TEXT NOT NULL,
-          last_active_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id)
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create sessions table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite
-      .prepare("SELECT id FROM trusted_devices LIMIT 1")
-      .get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS trusted_devices (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          device_fingerprint TEXT NOT NULL,
-          device_type TEXT NOT NULL,
-          device_info TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          expires_at TEXT NOT NULL,
-          last_used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create trusted_devices table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
     sqlite
       .prepare("SELECT id FROM network_topology LIMIT 1")
       .get();
@@ -1402,36 +1462,6 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create network_topology table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS host_access (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          host_id INTEGER NOT NULL,
-          user_id TEXT,
-          role_id INTEGER,
-          granted_by TEXT NOT NULL,
-          permission_level TEXT NOT NULL DEFAULT 'use',
-          expires_at TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          last_accessed_at TEXT,
-          access_count INTEGER NOT NULL DEFAULT 0,
-          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-          FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
-          FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create host_access table", {
         operation: "schema_migration",
         error: createError,
       });
@@ -1564,6 +1594,7 @@ const migrateSchema = () => {
     { column: "telnet_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_auth_type TEXT" },
     { column: "allow_session_sharing", sql: "ALTER TABLE ssh_data ADD COLUMN allow_session_sharing INTEGER NOT NULL DEFAULT 1" },
     { column: "connection_origin", sql: "ALTER TABLE ssh_data ADD COLUMN connection_origin TEXT" },
+    { column: "parent_host_id", sql: "ALTER TABLE ssh_data ADD COLUMN parent_host_id INTEGER REFERENCES ssh_data(id) ON DELETE SET NULL" },
   ];
 
   for (const migration of sshDataMigrations) {
@@ -1579,6 +1610,40 @@ const migrateSchema = () => {
         });
       }
     }
+  }
+
+  // share_ssh_auth arrived with 2.6.1 and defaults to 0, but sharing a host
+  // used to pass the owner's SSH authentication along unconditionally. Every
+  // host shared before the upgrade therefore stopped supplying credentials to
+  // its recipients the moment the column appeared, and they were left with
+  // "No valid authentication method provided".
+  //
+  // Turn it on for hosts that are already shared, which is where the previous
+  // behaviour was in effect and consented to. Hosts nobody has shared keep the
+  // new default; the owner decides when they share one.
+  try {
+    if (getRawSettingValue("share_ssh_auth_backfill_v1") === null) {
+      const backfilled = sqlite
+        .prepare(
+          `UPDATE ssh_data SET share_ssh_auth = 1
+           WHERE share_ssh_auth = 0
+             AND id IN (SELECT DISTINCT host_id FROM host_access)`,
+        )
+        .run();
+
+      if (backfilled.changes > 0) {
+        databaseLogger.info(
+          `Restored shared SSH authentication for ${backfilled.changes} already-shared host(s)`,
+          { operation: "share_ssh_auth_backfill_v1" },
+        );
+      }
+      setRawSettingValue("share_ssh_auth_backfill_v1", "true");
+    }
+  } catch (e) {
+    databaseLogger.warn("Failed to backfill share_ssh_auth", {
+      operation: "share_ssh_auth_backfill_v1",
+      error: e,
+    });
   }
 
   // Migrate legacy authType="warpgate" hosts to useWarpgate=1 with authType="none"
@@ -1648,118 +1713,6 @@ const migrateSchema = () => {
     }
   } catch {
     // user_open_tabs table not present yet; nothing to migrate.
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM roles LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS roles (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL UNIQUE,
-          display_name TEXT NOT NULL,
-          description TEXT,
-          is_system INTEGER NOT NULL DEFAULT 0,
-          permissions TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create roles table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM user_roles LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS user_roles (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          role_id INTEGER NOT NULL,
-          granted_by TEXT,
-          granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(user_id, role_id),
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-          FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
-          FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE SET NULL
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create user_roles table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM audit_logs LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS audit_logs (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT,
-          username TEXT NOT NULL,
-          action TEXT NOT NULL,
-          resource_type TEXT NOT NULL,
-          resource_id TEXT,
-          resource_name TEXT,
-          details TEXT,
-          ip_address TEXT,
-          user_agent TEXT,
-          success INTEGER NOT NULL,
-          error_message TEXT,
-          timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create audit_logs table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM session_recordings LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS session_recordings (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          host_id INTEGER NOT NULL,
-          user_id TEXT NOT NULL,
-          access_id INTEGER,
-          started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          ended_at TEXT,
-          duration INTEGER,
-          commands TEXT,
-          dangerous_actions TEXT,
-          recording_path TEXT,
-          protocol TEXT NOT NULL DEFAULT 'ssh',
-          format TEXT NOT NULL DEFAULT 'text',
-          terminated_by_owner INTEGER DEFAULT 0,
-          termination_reason TEXT,
-          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-          FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create session_recordings table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
   }
 
   try {
@@ -1897,32 +1850,6 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create vault_tokens table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM api_keys LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS api_keys (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          token_hash TEXT NOT NULL,
-          token_prefix TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          expires_at TEXT,
-          last_used_at TEXT,
-          is_active INTEGER NOT NULL DEFAULT 1,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create api_keys table", {
         operation: "schema_migration",
         error: createError,
       });
@@ -2239,6 +2166,34 @@ const migrateSchema = () => {
   }
   // --- metrics-history end ---
 
+  // --- proxmox-node-history begin ---
+  try {
+    sqlite.prepare("SELECT id FROM proxmox_node_history LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS proxmox_node_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
+          ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          cpu_percent REAL,
+          mem_percent REAL,
+          disk_percent REAL,
+          net_rx_bytes INTEGER,
+          net_tx_bytes INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_proxmox_node_history_host_ts
+          ON proxmox_node_history (host_id, ts DESC);
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create proxmox_node_history table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- proxmox-node-history end ---
+
   // --- alerts begin ---
   try {
     sqlite.prepare("SELECT id FROM alert_rules LIMIT 1").get();
@@ -2339,6 +2294,159 @@ const migrateSchema = () => {
   }
   // --- alerts end ---
 
+  // --- automations begin ---
+  try {
+    sqlite.prepare("SELECT id FROM automations LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          definition TEXT NOT NULL,
+          definition_version INTEGER NOT NULL DEFAULT 1,
+          concurrency_policy TEXT NOT NULL DEFAULT 'skip',
+          max_run_seconds INTEGER NOT NULL DEFAULT 300,
+          dry_run INTEGER NOT NULL DEFAULT 0,
+          last_run_at TEXT,
+          last_run_status TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automations table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_trigger_state LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_trigger_state (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          state_key TEXT NOT NULL,
+          breach_started_at TEXT,
+          last_fired_at TEXT,
+          last_value REAL,
+          last_observed_state TEXT,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_trigger_state table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_schedules LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_schedules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          cron TEXT,
+          interval_seconds INTEGER,
+          timezone TEXT,
+          next_due_at TEXT,
+          last_tick_at TEXT
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_schedules table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_runs LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_runs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          trigger_type TEXT NOT NULL,
+          trigger_context TEXT,
+          status TEXT NOT NULL,
+          started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          finished_at TEXT,
+          duration_ms INTEGER,
+          error TEXT,
+          dry_run INTEGER NOT NULL DEFAULT 0,
+          parent_run_id INTEGER
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_runs table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_run_steps LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_run_steps (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_id INTEGER NOT NULL REFERENCES automation_runs(id) ON DELETE CASCADE,
+          step_index INTEGER NOT NULL,
+          step_id TEXT NOT NULL,
+          step_type TEXT NOT NULL,
+          status TEXT NOT NULL,
+          started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          finished_at TEXT,
+          output TEXT,
+          error TEXT,
+          truncated INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_run_steps table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_channels LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_channels (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          channel_id INTEGER NOT NULL REFERENCES notification_channels(id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_channels table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- automations end ---
+
   // Seed default metrics history retention setting
   try {
     ensureRawSettingDefault("metrics_history_retention_days", "7");
@@ -2398,43 +2506,27 @@ const migrateSchema = () => {
   }
   // --- homepage end ---
 
+  // --- fleets begin ---
   try {
-    sqlite.prepare("SELECT id FROM session_shares LIMIT 1").get();
+    sqlite.prepare("SELECT id FROM fleets LIMIT 1").get();
   } catch {
     try {
       sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS session_shares (
-          id TEXT PRIMARY KEY,
-          host_id INTEGER NOT NULL,
-          owner_user_id TEXT NOT NULL,
-          protocol TEXT NOT NULL,
-          session_id TEXT NOT NULL,
-          tab_instance_id TEXT,
-          share_type TEXT NOT NULL,
-          target_user_id TEXT,
-          link_token TEXT UNIQUE,
-          permission_level TEXT NOT NULL DEFAULT 'read-only',
+        CREATE TABLE IF NOT EXISTS fleets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          color TEXT,
+          icon TEXT,
+          tag_rules TEXT,
+          sync_id TEXT UNIQUE,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          expires_at TEXT NOT NULL,
-          revoked_at TEXT,
-          last_joined_at TEXT,
-          join_count INTEGER NOT NULL DEFAULT 0,
-          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-          FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
-          FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      sqlite.exec(
-        "CREATE INDEX IF NOT EXISTS idx_session_shares_link_token ON session_shares(link_token)",
-      );
-      sqlite.exec(
-        "CREATE INDEX IF NOT EXISTS idx_session_shares_target_user ON session_shares(target_user_id)",
-      );
-      sqlite.exec(
-        "CREATE INDEX IF NOT EXISTS idx_session_shares_host ON session_shares(host_id)",
-      );
     } catch (createError) {
-      databaseLogger.warn("Failed to create session_shares table", {
+      databaseLogger.warn("Failed to create fleets table", {
         operation: "schema_migration",
         error: createError,
       });
@@ -2442,31 +2534,88 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite.prepare("SELECT id FROM session_share_participants LIMIT 1").get();
+    sqlite.prepare("SELECT id FROM fleet_members LIMIT 1").get();
   } catch {
     try {
       sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS session_share_participants (
+        CREATE TABLE IF NOT EXISTS fleet_members (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          share_id TEXT NOT NULL,
-          user_id TEXT,
-          guest_label TEXT,
-          joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          left_at TEXT,
-          FOREIGN KEY (share_id) REFERENCES session_shares (id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+          fleet_id INTEGER NOT NULL REFERENCES fleets(id) ON DELETE CASCADE,
+          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
+          added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
       `);
       sqlite.exec(
-        "CREATE INDEX IF NOT EXISTS idx_session_share_participants_share ON session_share_participants(share_id)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_fleet_members_fleet_host ON fleet_members(fleet_id, host_id)",
       );
     } catch (createError) {
-      databaseLogger.warn("Failed to create session_share_participants table", {
+      databaseLogger.warn("Failed to create fleet_members table", {
         operation: "schema_migration",
         error: createError,
       });
     }
   }
+
+  try {
+    sqlite.prepare("SELECT id FROM fleet_inventory LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS fleet_inventory (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          os_pretty_name TEXT,
+          kernel TEXT,
+          architecture TEXT,
+          hostname TEXT,
+          uptime_seconds INTEGER,
+          ip TEXT,
+          package_manager TEXT,
+          collected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      sqlite.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_fleet_inventory_host ON fleet_inventory(host_id, user_id)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create fleet_inventory table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- fleets end ---
+
+  // --- workspaces begin ---
+  try {
+    sqlite.prepare("SELECT id FROM user_workspaces LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS user_workspaces (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          color TEXT,
+          icon TEXT,
+          kind TEXT NOT NULL DEFAULT 'manual',
+          is_default INTEGER NOT NULL DEFAULT 0,
+          payload TEXT NOT NULL DEFAULT '{}',
+          sync_id TEXT UNIQUE,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          last_used_at TEXT
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create user_workspaces table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- workspaces end ---
 
   // --- sync begin ---
   // Stable per-row identity used to match rows across two independently-
@@ -2566,14 +2715,158 @@ const migrateSchema = () => {
   }
   // --- sync end ---
 
+  // --- ai begin ---
+  try {
+    sqlite.prepare("SELECT id FROM ai_providers LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_providers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          provider_type TEXT NOT NULL,
+          label TEXT NOT NULL,
+          base_url TEXT,
+          api_key TEXT,
+          api_key_prefix TEXT,
+          default_model TEXT,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, label)
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_providers table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM ai_conversations LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_conversations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT,
+          provider_id INTEGER,
+          model TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_conversations table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM ai_messages LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_messages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+          role TEXT NOT NULL,
+          content TEXT NOT NULL DEFAULT '',
+          tool_calls TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_messages table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM ai_proposals LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_proposals (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL,
+          summary TEXT,
+          payload TEXT NOT NULL DEFAULT '{}',
+          status TEXT NOT NULL DEFAULT 'pending',
+          applied_at TEXT,
+          result_summary TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_proposals table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  // --- ai end ---
+
   // Audit trails and session recordings used to be deleted along with the user
   // they referenced, which defeats the point of keeping them.
   migrateAuditRetention(sqlite);
+
+  // Runs last so every table and column added above already exists.
+  createPerformanceIndexes(sqlite);
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",
   });
 };
+
+// A trivial telemetry write forces `serialize()` to rewrite every free page
+// along with the live ones, so a database that has accumulated a large
+// freelist (from years of unbounded metrics/audit growth before retention
+// pruning existed) turns every future save into a multi-megabyte rewrite.
+// Reclaiming that space once at startup keeps steady-state saves cheap.
+const VACUUM_FREELIST_COUNT_THRESHOLD = 2000;
+const VACUUM_FREELIST_RATIO_THRESHOLD = 0.5;
+
+function vacuumIfFreelistBloated(): void {
+  try {
+    const pageCount = sqlite.pragma("page_count", { simple: true }) as number;
+    const freelistCount = sqlite.pragma("freelist_count", {
+      simple: true,
+    }) as number;
+    if (pageCount <= 0) return;
+
+    const freelistRatio = freelistCount / pageCount;
+    if (
+      freelistCount < VACUUM_FREELIST_COUNT_THRESHOLD ||
+      freelistRatio < VACUUM_FREELIST_RATIO_THRESHOLD
+    ) {
+      return;
+    }
+
+    databaseLogger.info("Reclaiming bloated SQLite freelist on startup", {
+      operation: "db_startup_vacuum",
+      pageCount,
+      freelistCount,
+      freelistRatio,
+    });
+    sqlite.exec("VACUUM");
+  } catch (error) {
+    databaseLogger.warn("Failed to vacuum database on startup", {
+      operation: "db_startup_vacuum_failed",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 async function saveMemoryDatabaseToFile(): Promise<void> {
   if (!memoryDatabase) return;
@@ -2636,9 +2929,7 @@ async function handlePostInitFileEncryption() {
       databaseLogger.warn("Failed to cleanup old migration files", {
         operation: "migration_cleanup_startup_failed",
         error:
-          cleanupError instanceof Error
-            ? cleanupError.message
-            : "Unknown error",
+          getErrorMessage(cleanupError),
       });
     }
   } catch (error) {
@@ -2725,7 +3016,7 @@ async function cleanupDatabase() {
   } catch (error) {
     databaseLogger.warn("Error closing database connection", {
       operation: "db_close_error",
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: getErrorMessage(error),
     });
   }
 

@@ -1,3 +1,5 @@
+import { getErrorMessage } from "../../utils/error-message.js";
+import { StringDecoder } from "string_decoder";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { WebSocketServer, WebSocket } from "ws";
@@ -12,6 +14,11 @@ import {
   type ContainerRuntime,
 } from "./container-runtime.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import {
+  hostAddressMismatch,
+  HOST_ADDRESS_MISMATCH_MESSAGE,
+  HOST_NOT_ON_THIS_SERVER_MESSAGE,
+} from "../terminal/host-identity.js";
 
 const sshLogger = systemLogger;
 
@@ -387,14 +394,49 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           try {
             // Resolve host with credentials server-side
-            const { resolveHostById } = await import("../host-resolver.js");
-            const resolvedHost = await resolveHostById(hostId, userId);
+            const { resolveHostById, resolveHostBySyncId } =
+              await import("../host-resolver.js");
+            // syncId names the host on both sides of a sync pair; the numeric
+            // id only names it in the database the client is displaying.
+            const hostSyncId = hostConfig?.syncId;
+            const resolvedHost = hostSyncId
+              ? await resolveHostBySyncId(hostSyncId, userId)
+              : await resolveHostById(hostId, userId);
 
             if (!resolvedHost) {
               ws.send(
                 JSON.stringify({
                   type: "error",
-                  message: "Host not found",
+                  message: hostSyncId
+                    ? HOST_NOT_ON_THIS_SERVER_MESSAGE
+                    : "Host not found",
+                }),
+              );
+              return;
+            }
+
+            // The connection below dials resolvedHost.ip outright, so if this
+            // server has a different machine under the id the client sent, the
+            // console opens on that machine's Docker daemon instead.
+            if (
+              !hostSyncId &&
+              hostAddressMismatch(hostConfig?.ip, resolvedHost.ip)
+            ) {
+              sshLogger.error(
+                "Refusing Docker console: host id resolves to a different address here",
+                undefined,
+                {
+                  operation: "docker_console_host_id_mismatch",
+                  hostId,
+                  userId,
+                  clientIp: hostConfig?.ip,
+                  resolvedIp: resolvedHost.ip,
+                },
+              );
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: HOST_ADDRESS_MISMATCH_MESSAGE,
                 }),
               );
               return;
@@ -601,12 +643,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   containerId,
                 });
 
+                // Buffers incomplete multi-byte UTF-8 sequences across chunk
+                // boundaries so box-drawing/special characters don't get
+                // corrupted when a character is split across TCP packets.
+                const decoder = new StringDecoder("utf-8");
+
                 stream.on("data", (data: Buffer) => {
                   if (ws.readyState === WebSocket.OPEN) {
+                    const text = decoder.write(data);
+                    if (!text) return;
                     ws.send(
                       JSON.stringify({
                         type: "output",
-                        data: data.toString("utf8"),
+                        data: text,
                       }),
                     );
                   }
@@ -669,10 +718,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
             ws.send(
               JSON.stringify({
                 type: "error",
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to connect to container",
+                message: getErrorMessage(
+                  error,
+                  "Failed to connect to container",
+                ),
               }),
             );
           }
@@ -734,7 +783,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       ws.send(
         JSON.stringify({
           type: "error",
-          message: error instanceof Error ? error.message : "An error occurred",
+          message: getErrorMessage(error, "An error occurred"),
         }),
       );
     }

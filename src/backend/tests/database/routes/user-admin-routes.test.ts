@@ -54,6 +54,28 @@ vi.mock("../../../utils/auth-manager.js", () => ({
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({
     listAll: async () => [...state.users.values()],
+    listPage: async ({
+      search,
+      limit,
+      offset,
+    }: {
+      search?: string;
+      limit: number;
+      offset: number;
+    }) => {
+      const term = search?.trim().toLowerCase();
+      const matched = [...state.users.values()]
+        .filter((u) => !term || u.username?.toLowerCase().includes(term))
+        .sort((a, b) =>
+          (a.username ?? "").localeCompare(b.username ?? "", undefined, {
+            sensitivity: "base",
+          }),
+        );
+      return {
+        users: matched.slice(offset, offset + limit),
+        total: matched.length,
+      };
+    },
     findById: async (id: string) => state.users.get(id) ?? null,
     findByUsername: async (username: string) =>
       [...state.users.values()].find((u) => u.username === username) ?? null,
@@ -102,11 +124,13 @@ function findHandler(method: string, path: string): RequestHandler {
 function makeReqRes(overrides: {
   body?: Record<string, unknown>;
   params?: Record<string, unknown>;
+  query?: Record<string, unknown>;
 }) {
   const req = {
     userId: state.currentUserId,
     body: overrides.body ?? {},
     params: overrides.params ?? {},
+    query: overrides.query ?? {},
     headers: {},
   } as unknown as Request;
 
@@ -142,6 +166,7 @@ async function invoke(
   overrides: {
     body?: Record<string, unknown>;
     params?: Record<string, unknown>;
+    query?: Record<string, unknown>;
   } = {},
 ) {
   const handler = findHandler(method, path);
@@ -213,6 +238,64 @@ describe("GET /list", () => {
     const users = (res.jsonBody as { users: Record<string, unknown>[] }).users;
     expect(users[0].data_unlocked).toBeUndefined();
     expect(users[0].totp_enabled).toBeUndefined();
+  });
+
+  it("returns every user when no limit is given", async () => {
+    // The share pickers depend on this: they fetch once and filter locally.
+    const res = await invoke("get", "/list");
+    const body = res.jsonBody as {
+      users: unknown[];
+      limit?: number;
+      total: number;
+    };
+    expect(body.users).toHaveLength(3);
+    expect(body.total).toBe(3);
+    expect(body.limit).toBeUndefined();
+  });
+
+  it("returns one page and the full total when a limit is given", async () => {
+    const res = await invoke("get", "/list", { query: { limit: "2" } });
+    const body = res.jsonBody as {
+      users: unknown[];
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    expect(body.users).toHaveLength(2);
+    expect(body.total).toBe(3);
+    expect(body.limit).toBe(2);
+    expect(body.offset).toBe(0);
+  });
+
+  it("pages with an offset", async () => {
+    const res = await invoke("get", "/list", {
+      query: { limit: "2", offset: "2" },
+    });
+    const body = res.jsonBody as { users: unknown[]; total: number };
+    expect(body.users).toHaveLength(1);
+    expect(body.total).toBe(3);
+  });
+
+  it("filters by search term without a limit", async () => {
+    const res = await invoke("get", "/list", { query: { search: "lock" } });
+    const body = res.jsonBody as {
+      users: { username: string }[];
+      total: number;
+    };
+    expect(body.users.map((u) => u.username)).toEqual(["locked"]);
+    expect(body.total).toBe(1);
+  });
+
+  it("caps an oversized page size", async () => {
+    const res = await invoke("get", "/list", { query: { limit: "100000" } });
+    expect((res.jsonBody as { limit: number }).limit).toBe(500);
+  });
+
+  it("ignores a non-numeric limit and returns the full list", async () => {
+    const res = await invoke("get", "/list", { query: { limit: "abc" } });
+    const body = res.jsonBody as { users: unknown[]; limit?: number };
+    expect(body.users).toHaveLength(3);
+    expect(body.limit).toBeUndefined();
   });
 });
 

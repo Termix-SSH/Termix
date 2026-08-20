@@ -1,20 +1,23 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import { splitDragState, notifyDragEnd } from "@/lib/splitDragging";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, SplitMode } from "@/types/ui-types";
 
-// ─── useSplitSizes ────────────────────────────────────────────────────────────
+// ─── useSplitDrag ─────────────────────────────────────────────────────────────
 
-type RowColSizes = number[][];
+export type RowColSizes = number[][];
 
-function defaultSizes(mode: SplitMode): {
+export function defaultSizes(mode: SplitMode): {
   rowSizes: number[];
   rowColSizes: RowColSizes;
 } {
   switch (mode) {
     case "2-way":
       return { rowSizes: [100], rowColSizes: [[50, 50]] };
+    case "2-way-horizontal":
+      return { rowSizes: [50, 50], rowColSizes: [[100], [100]] };
     case "3-way":
       return { rowSizes: [50, 50], rowColSizes: [[50, 50], [100]] };
     case "3-way-horizontal":
@@ -48,23 +51,18 @@ function defaultSizes(mode: SplitMode): {
   }
 }
 
-function useSplitSizes(splitMode: SplitMode) {
-  const init = defaultSizes(splitMode);
-  const [rowSizes, setRowSizes] = useState(init.rowSizes);
-  const [rowColSizes, setRowColSizes] = useState<RowColSizes>(init.rowColSizes);
+function useSplitDrag(
+  rowSizes: number[],
+  rowColSizes: RowColSizes,
+  onRowSizesChange: (sizes: number[]) => void,
+  onRowColSizesChange: (sizes: RowColSizes) => void,
+  onReset?: () => void,
+) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const d = defaultSizes(splitMode);
-    setRowSizes(d.rowSizes);
-    setRowColSizes(d.rowColSizes);
-  }, [splitMode]);
-
   function reset() {
-    const d = defaultSizes(splitMode);
-    setRowSizes(d.rowSizes);
-    setRowColSizes(d.rowColSizes);
+    onReset?.();
   }
 
   function startDrag() {
@@ -91,12 +89,10 @@ function useSplitSizes(splitMode: SplitMode) {
         10,
         Math.min(a + b - 10, a + ((ev.clientY - startY) / totalH) * 100),
       );
-      setRowSizes((prev) => {
-        const n = [...prev];
-        n[rowIdx] = na;
-        n[rowIdx + 1] = a + b - na;
-        return n;
-      });
+      const n = [...rowSizes];
+      n[rowIdx] = na;
+      n[rowIdx + 1] = a + b - na;
+      onRowSizesChange(n);
     }
     function onUp() {
       endDrag();
@@ -123,12 +119,10 @@ function useSplitSizes(splitMode: SplitMode) {
           a + ((ev.touches[0].clientY - startY) / totalH) * 100,
         ),
       );
-      setRowSizes((prev) => {
-        const n = [...prev];
-        n[rowIdx] = na;
-        n[rowIdx + 1] = a + b - na;
-        return n;
-      });
+      const n = [...rowSizes];
+      n[rowIdx] = na;
+      n[rowIdx + 1] = a + b - na;
+      onRowSizesChange(n);
     }
     function onUp() {
       endDrag();
@@ -154,12 +148,10 @@ function useSplitSizes(splitMode: SplitMode) {
         10,
         Math.min(a + b - 10, a + ((ev.clientX - startX) / totalW) * 100),
       );
-      setRowColSizes((prev) => {
-        const next = prev.map((r) => [...r]);
-        next[rowIdx][colIdx] = na;
-        next[rowIdx][colIdx + 1] = a + b - na;
-        return next;
-      });
+      const next = rowColSizes.map((r) => [...r]);
+      next[rowIdx][colIdx] = na;
+      next[rowIdx][colIdx + 1] = a + b - na;
+      onRowColSizesChange(next);
     }
     function onUp() {
       endDrag();
@@ -191,12 +183,10 @@ function useSplitSizes(splitMode: SplitMode) {
           a + ((ev.touches[0].clientX - startX) / totalW) * 100,
         ),
       );
-      setRowColSizes((prev) => {
-        const next = prev.map((r) => [...r]);
-        next[rowIdx][colIdx] = na;
-        next[rowIdx][colIdx + 1] = a + b - na;
-        return next;
-      });
+      const next = rowColSizes.map((r) => [...r]);
+      next[rowIdx][colIdx] = na;
+      next[rowIdx][colIdx + 1] = a + b - na;
+      onRowColSizesChange(next);
     }
     function onUp() {
       endDrag();
@@ -208,8 +198,6 @@ function useSplitSizes(splitMode: SplitMode) {
   }
 
   return {
-    rowSizes,
-    rowColSizes,
     isDragging,
     containerRef,
     reset,
@@ -268,10 +256,12 @@ function PaneHeader({
   tab,
   paneIndex,
   isFocused,
+  onClear,
 }: {
   tab: Tab | null;
   paneIndex: number;
   isFocused: boolean;
+  onClear?: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -291,10 +281,22 @@ function PaneHeader({
             {tabIcon(tab.type)}
           </span>
           <span
-            className={`truncate ${isFocused ? "text-accent-brand font-semibold" : "text-foreground"}`}
+            className={`truncate flex-1 ${isFocused ? "text-accent-brand font-semibold" : "text-foreground"}`}
           >
             {tab.type === "dashboard" ? "Dashboard" : tab.label}
           </span>
+          <button
+            type="button"
+            title={t("terminal.split.removeFromSplit")}
+            aria-label={t("terminal.split.removeFromSplit")}
+            className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClear?.();
+            }}
+          >
+            <X className="size-3" />
+          </button>
         </>
       ) : (
         <span className="opacity-40">
@@ -364,7 +366,12 @@ const Pane = memo(function Pane({
         if (tabId) onAssignPane?.(paneIndex, tabId);
       }}
     >
-      <PaneHeader tab={tab} paneIndex={paneIndex} isFocused={isFocused} />
+      <PaneHeader
+        tab={tab}
+        paneIndex={paneIndex}
+        isFocused={isFocused}
+        onClear={tab ? () => onAssignPane?.(paneIndex, "") : undefined}
+      />
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {tab ? (
           <div ref={contentRef} className="absolute inset-0" />
@@ -463,6 +470,11 @@ export const SplitView = memo(function SplitView({
   tabs,
   paneTabIds,
   splitMode,
+  rowSizes,
+  rowColSizes,
+  onRowSizesChange,
+  onRowColSizesChange,
+  onReset,
   focusedPaneIndex,
   onTerminalResize,
   onPaneContentRef,
@@ -472,6 +484,11 @@ export const SplitView = memo(function SplitView({
   tabs: Tab[];
   paneTabIds: (string | null)[];
   splitMode: SplitMode;
+  rowSizes: number[];
+  rowColSizes: RowColSizes;
+  onRowSizesChange: (sizes: number[]) => void;
+  onRowColSizesChange: (sizes: RowColSizes) => void;
+  onReset?: () => void;
   focusedPaneIndex?: number | null;
   onTerminalResize?: () => void;
   onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
@@ -479,8 +496,6 @@ export const SplitView = memo(function SplitView({
   onAssignPane?: (paneIndex: number, tabId: string) => void;
 }) {
   const {
-    rowSizes,
-    rowColSizes,
     isDragging,
     containerRef,
     reset,
@@ -488,7 +503,13 @@ export const SplitView = memo(function SplitView({
     onRowDividerTouch,
     onColDivider,
     onColDividerTouch,
-  } = useSplitSizes(splitMode);
+  } = useSplitDrag(
+    rowSizes,
+    rowColSizes,
+    onRowSizesChange,
+    onRowColSizesChange,
+    onReset,
+  );
 
   useEffect(() => {
     if (!isDragging) {
@@ -532,6 +553,45 @@ export const SplitView = memo(function SplitView({
           onPaneClick={onPaneClick}
           onAssignPane={onAssignPane}
         />
+      )}
+
+      {splitMode === "2-way-horizontal" && (
+        <div className="flex flex-col w-full h-full min-h-0">
+          <Row
+            rowIdx={0}
+            paneIndices={[0]}
+            rowHeight={rowSizes[0]}
+            colWidths={rowColSizes[0] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
+          />
+          <RowDivider
+            onMouseDown={(e) => onRowDivider(e, 0)}
+            onTouchStart={(e) => onRowDividerTouch(e, 0)}
+          />
+          <Row
+            rowIdx={1}
+            paneIndices={[1]}
+            rowHeight={rowSizes[1]}
+            colWidths={rowColSizes[1] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
+          />
+        </div>
       )}
 
       {splitMode === "3-way" && (

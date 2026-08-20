@@ -1,0 +1,2 @@
+ALTER TABLE "ssh_data" ADD COLUMN "parent_host_id" integer;--> statement-breakpoint
+ALTER TABLE "ssh_data" ADD CONSTRAINT "ssh_data_parent_host_id_ssh_data_id_fk" FOREIGN KEY ("parent_host_id") REFERENCES "public"."ssh_data"("id") ON DELETE set null ON UPDATE no action;

@@ -4,7 +4,7 @@
 
 <h1>Termix</h1>
 
-<p>Selbst gehostete SSH-Verwaltung und Remote-Desktop-Zugriff</p>
+<p>Selbst gehostete Serververwaltung, von SSH und Remotedesktop bis zu Automatisierungen</p>
 
 <p>
   <a href="../README.md">English</a> ·
@@ -37,7 +37,7 @@
 
 <br />
 
-Termix ist kostenlos und Open Source. Wenn Sie es nützlich finden, erwägen Sie eine [Spende](https://donate.termix.site/), um Serverkosten und Entwicklungszeit zu decken.
+Termix ist kostenlos und quelloffen. Wenn es dir hilft, denk über eine [Spende](https://donate.termix.site/) nach, um Serverkosten und Entwicklungszeit zu decken.
 
 <br />
 
@@ -56,9 +56,9 @@ Termix ist kostenlos und Open Source. Wenn Sie es nützlich finden, erwägen Sie
 
 <br />
 
-## Uberblick
+## Überblick
 
-Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-Serververwaltungsplattform. Sie bietet eine plattformubergreifende Losung zur Verwaltung Ihrer Server und Infrastruktur uber eine einzige, intuitive Oberflache. Termix bietet SSH-Terminalzugriff, Remote-Desktop-Steuerung (RDP, VNC, Telnet), SSH-Tunneling-Funktionen, Remote-Dateiverwaltung und viele weitere Werkzeuge. Termix ist die perfekte kostenlose und selbst gehostete Alternative zu Termius, verfugbar fur alle Plattformen.
+Termix ist eine kostenlose, quelloffene und selbst gehostete Plattform zur Verwaltung deiner Server. Sie bringt SSH-Terminals, Remotedesktops (RDP, VNC, Telnet), Dateiübertragungen, Tunnel, Docker, Metriken und Automatisierungen an einem Ort zusammen, im Browser, auf dem Desktop und auf dem Handy. Eine selbst gehostete Alternative zu Termius, die dauerhaft kostenlos bleibt.
 
 <br />
 
@@ -68,42 +68,42 @@ Termix ist eine quelloffene, dauerhaft kostenlose, selbst gehostete All-in-One-S
 <tr>
 <td width="50%" valign="top">
 
-**SSH-Terminalzugriff:**
-Voll ausgestattetes Terminal mit Split-Screen-Unterstutzung (bis zu 4 Panels) mit einem browserahnlichen Tab-System. Enthalt Unterstutzung fur die Anpassung des Terminals einschliesslich gangiger Terminal-Themes, Schriftarten und anderer Komponenten.
+**SSH-Terminal:**
+Ein vollwertiges Terminal mit Tabs wie im Browser und geteiltem Bildschirm, bis zu 6 Bereiche gleichzeitig. Thema, Schrift und Farben wählst du selbst. Über jeder Sitzung sitzt eine Leiste mit CPU, Speicher und Festplatte in Echtzeit sowie Verknüpfungen zu Dateien, Docker, Tunneln und Metriken dieses Hosts.
 
 </td>
 <td width="50%" valign="top">
 
-**Remote-Desktop-Zugriff:**
-RDP-, VNC- und Telnet-Unterstutzung uber den Browser mit vollstandiger Anpassung und Split-Screen.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**SSH-Tunnelverwaltung:**
-Erstellen und verwalten Sie Server-zu-Server-SSH-Tunnel mit automatischer Wiederverbindung, Gesundheitsuberwachung sowie lokaler, entfernter oder dynamischer SOCKS-Weiterleitung. Desktop-Client-zu-Server-Tunneleinstellungen werden lokal pro Desktop-Installation gespeichert, optionale C2S-Preset-Snapshots konnen auf dem Server gespeichert, umbenannt, geladen oder geloscht werden, wenn Sie eine lokale Tunnelkonfiguration zwischen Clients ubertragen mochten.
-
-</td>
-<td width="50%" valign="top">
-
-**Remote-Dateimanager:**
-Verwalten Sie Dateien direkt auf Remote-Servern mit Unterstutzung fur das Anzeigen und Bearbeiten von Code, Bildern, Audio und Video. Laden Sie Dateien hoch, herunter, benennen Sie sie um, loschen oder verschieben Sie sie nahtlos mit Sudo-Unterstutzung. Enthalt Unterstutzung fur das Verschieben von Dateien von Server zu Server.
+**Remotedesktop:**
+RDP, VNC und Telnet im Browser, in Tabs und geteiltem Bildschirm wie jede andere Sitzung. Mit Dateibrowser für RDP-Laufwerke und Hochladen per Drag-and-drop. Auf dem Windows-Desktop kannst du einen Host auch im nativen RDP-Client öffnen.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Docker- und Podman-Verwaltung:**
-Container starten, stoppen, pausieren, entfernen. Container-Statistiken anzeigen. Container uber Docker-Exec-Terminal steuern. Unterstutzt sowohl Docker als auch Podman als Container-Laufzeitumgebung. Es wurde nicht entwickelt, um Portainer oder Dockge zu ersetzen, sondern um Ihre Container einfach zu verwalten, anstatt sie zu erstellen.
+**SSH-Tunnel:**
+Lokale, entfernte und dynamische SOCKS-Weiterleitung mit automatischem Neuverbinden und Statusprüfungen. Client-zu-Server-Tunnel der Desktop-App bleiben auf diesem Rechner, und du kannst Voreinstellungen auf dem Server speichern, um eine Konfiguration auf einen anderen Rechner zu übernehmen.
 
 </td>
 <td width="50%" valign="top">
 
-**SSH-Host-Manager:**
-Speichern, organisieren und verwalten Sie Ihre SSH-Verbindungen mit Tags und Ordnern (Ordneranpassung und verschachtelte Ordner werden unterstutzt) und speichern Sie einfach wiederverwendbare Anmeldeinformationen mit der Moglichkeit, die Bereitstellung von SSH-Schlusseln zu automatisieren.
+**Dateimanager:**
+Dateien über SFTP durchsuchen, bearbeiten, hochladen, herunterladen, umbenennen, verschieben und löschen, auch mit sudo. Code, Bilder, Audio und Video ansehen und bearbeiten. Dateien direkt von einem Server zum anderen kopieren, wobei der schnellste Weg für dich gewählt und die Übertragung auf Fehler geprüft wird.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Docker und Podman:**
+Container starten, stoppen, pausieren und entfernen, ihre Auslastung ansehen und eine Shell darin öffnen. Funktioniert mit Docker und mit Podman. Es soll Portainer oder Dockge nicht ersetzen, sondern nur die Container verwalten, die du schon hast.
+
+</td>
+<td width="50%" valign="top">
+
+**Hostverwaltung:**
+Hosts mit Tags und verschachtelten Ordnern ordnen, die du benennen und einfärben kannst. Gespeicherte Zugangsdaten für mehrere Hosts wiederverwenden, SSH-Schlüssel automatisch verteilen, Hosts unter einem übergeordneten Host gruppieren, in großen Mengen bearbeiten und exportieren. Für einmalige Verbindungen, die du nicht speichern willst, gibt es Schnellverbindung.
 
 </td>
 </tr>
@@ -111,97 +111,139 @@ Speichern, organisieren und verwalten Sie Ihre SSH-Verbindungen mit Tags und Ord
 <td width="50%" valign="top">
 
 **Host-Metriken:**
-CPU-, Arbeitsspeicher- und Festplattenauslastung, Netzwerk, Betriebszeit, Systeminformationen, Firewall, Port-Monitor, Log-Viewer, Benutzer/Berechtigungen, Zertifikate und vieles mehr anzeigen, was auf den meisten Linux-basierten Servern funktioniert. Enthalt Zeitreihen-Verlaufsdiagramme und schwellenwertbasierte Warnmeldungen mit ntfy- und Webhook-Unterstutzung.
+CPU, Speicher, Festplatte, Netzwerk, Temperatur, Laufzeit, Prozesse, Ports, Anmeldungen und Systeminfos auf den meisten Linux-Servern, mit Verlaufsgrafiken. Über Verwaltungskarten kümmerst du dich um Dienste, Cronjobs, Pakete, Benutzer, Firewallregeln, WireGuard, Tailscale, SSL-Zertifikate, Logs und Statusprüfungen, ohne Termix zu verlassen.
 
 </td>
 <td width="50%" valign="top">
 
-**Benutzerauthentifizierung:**
-Sichere Benutzerverwaltung mit Admin-Kontrollen (kann Informationen anderer Benutzer bearbeiten) und OIDC-/LDAP-/SSO-Unterstutzung (mit Zugriffskontrolle), 2FA (TOTP) und Passkey (WebAuthn)-Unterstutzung. Aktive Benutzersitzungen uber alle Plattformen anzeigen und Berechtigungen widerrufen. OIDC-/Lokale Konten miteinander verknupfen. Audit-Protokoll aller Benutzeraktionen anzeigen.
+**Automatisierungen:**
+Wähle einen Auslöser und lege fest, was passieren soll. Auslöser sind unter anderem eine Metrik über einem Schwellwert, ein Host der hoch- oder runtergeht, eine geänderte Statusprüfung, ein Zeitplan, ein Container-Ereignis oder ein eingehender Webhook. Schritte können Befehle und Snippets ausführen, Container und Tunnel steuern, einen Host aufwecken, eine URL aufrufen, warten, sich nach einer Bedingung verzweigen, eine andere Automatisierung starten und dich über ntfy, Discord oder einen Webhook benachrichtigen. Mit Testläufen probierst du alles gefahrlos aus.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Tailscale-Integration:**
-Gerate aus Ihrem Tailnet auflisten, um sie schnell als Hosts hinzuzufugen, und mit Tailscale SSH als Authentifizierungsmethode verbinden, sodass Ihre Tailnet-ACLs die Autorisierung ubernehmen, ohne Anmeldedaten speichern zu mussen.
+**Flotten:**
+Fasse Hosts zu einer Flotte zusammen, entweder von Hand oder über Tag-Regeln, damit neue Hosts von selbst dazukommen. Führe einen Befehl auf allen Hosts gleichzeitig aus, schiebe und hole Dateien auf allen, installiere Pakete und sammle eine Übersicht über Betriebssystem, Kernel, Architektur und Laufzeit.
 
 </td>
 <td width="50%" valign="top">
 
-**RBAC/Freigabe:**
-Erstellen Sie Rollen und teilen Sie Hosts uber Benutzer/Rollen hinweg. Unterstutzt alle Authentifizierungstypen und alle Host-Protokolle.
+**KI-Assistent:**
+Optional und aus, bis du ihn einschaltest. Verbinde OpenAI, Anthropic, Gemini, Ollama oder einen beliebigen OpenAI-kompatiblen Endpunkt und frag ihn zu deiner Umgebung. Er liest Hosts, Flotten, Snippets und Warnungen und schlägt Änderungen vor, die du bestätigst, statt sie selbst vorzunehmen. An Zugangsdaten, Benutzer und Einstellungen kommt er nie heran. Administratoren können ihn für die ganze Instanz auslassen, und du kannst ihn schon bei der Einrichtung ausblenden.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Serielle Verbindungen:**
-Verbinden Sie sich direkt vom Browser oder der Desktop-App aus mit seriellen Geraten (Router, Switches, Mikrocontroller usw.). Konfigurieren Sie Baudrate, Datenbits, Stoppbits und Paritat. Verwendet die Web Serial API in unterstutzten Browsern oder ein natives Backend in der Electron-App.
+**Anmeldung und Benutzer:**
+Lokale Konten sowie Anmeldung über OIDC, LDAP, GitHub und Google, dazu Zwei-Faktor-Authentifizierung (TOTP), Passkeys (WebAuthn) und vertrauenswürdige Geräte. Administratoren können Benutzer verwalten, OIDC-Gruppen auf Rollen abbilden, alle aktiven Sitzungen über alle Plattformen hinweg sehen und beenden. Verknüpfe dein lokales Konto mit deinem OIDC-Konto und lies im Prüfprotokoll nach, wer was gemacht hat.
 
 </td>
 <td width="50%" valign="top">
 
-**Warnmeldungen:**
-Legen Sie schwellenwertbasierte Warnregeln fur Host-Metriken (CPU, Arbeitsspeicher, Festplatte usw.) fest und erhalten Sie Benachrichtigungen uber ntfy oder Webhooks, wenn diese ausgelost werden. Zeigen Sie ausgeloste und aufgeloste Warnmeldungen in einem Verlaufsprotokoll an.
+**Rollen und Freigaben:**
+Lege Rollen an und teile Hosts mit Benutzern oder Rollen auf vier Stufen: Verbinden, Ansehen, Bearbeiten und Verwalten. Das funktioniert mit jeder Authentifizierungsart und jedem Protokoll, und du kannst die Zugangsdaten für einen geteilten Host überschreiben.
 
 </td>
 </tr>
 <tr>
+<td width="50%" valign="top">
+
+**Warnungen:**
+Lege Regeln für Host-Metriken wie CPU, Speicher und Festplatte fest und lass dich über ntfy, Discord oder einen Webhook benachrichtigen, wenn sie greifen. Sieh dir aktive und wieder behobene Warnungen im Verlauf an und blende aus, was dich nicht interessiert.
+
+</td>
 <td width="50%" valign="top">
 
 **Startseite:**
-Eine vollstandig anpassbare Startseite mit einem Drag-and-Drop-Widget-Raster. Fugen Sie Widgets fur Hoststatus, Service-Links, Uhren, Notizen, RSS-Feeds, Wetter, Docker-Container, Host-Metrik-Diagramme, eingebettete Terminals, iFrames und mehr hinzu.
-
-</td>
-<td width="50%" valign="top">
-
-**Datenbankverschlusselung:**
-Backend gespeichert als verschlusselte SQLite-Datenbankdateien. Weitere Informationen in der [Dokumentation](https://docs.termix.site).
+Ein Raster aus Widgets, das du selbst per Drag-and-drop zusammenstellst. Widgets für Hoststatus, Pings, Dienstlinks, Lesezeichen, Suche, Uhren, Kalender, Countdowns, Notizen, RSS, Wetter, Bilder, Iframes, Docker, Tunnel, Metrikdiagramme, eigene APIs und sogar ein laufendes Terminal.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Netzwerkgraph:**
-Passen Sie Ihr Dashboard an, um Ihr Homelab basierend auf Ihren SSH-Verbindungen mit Statusunterstutzung zu visualisieren.
+**Snippets und Werkzeuge:**
+Speichere Befehle, die du oft brauchst, und starte sie mit einem Klick, mit Variablen für den Host und eigene Eingaben. Führe einen Befehl in allen offenen Terminals zugleich aus und durchsuche deinen Befehlsverlauf mit Autovervollständigung.
 
 </td>
 <td width="50%" valign="top">
 
-**SSH-Werkzeuge:**
-Erstellen Sie wiederverwendbare Befehlsvorlagen, die mit einem einzigen Klick ausgefuhrt werden. Fuhren Sie einen Befehl gleichzeitig in mehreren geoffneten Terminals aus.
+**Sitzungsfreigabe:**
+Teile eine laufende Terminal-, RDP-, VNC- oder Telnet-Sitzung in Echtzeit. Verschicke einen Link, dem jeder ohne Konto beitreten kann, oder teile mit einem bestimmten Termix-Benutzer, nur lesend oder mit Schreibrechten. Freigaben können von selbst ablaufen oder zurückgezogen werden und lassen sich global oder pro Host abschalten.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Persistente Tabs:**
-SSH-Sitzungen und Tabs bleiben uber Gerate/Aktualisierungen hinweg offen, wenn im Benutzerprofil aktiviert.
+**Sitzungsaufzeichnung und Protokolle:**
+Zeichne Terminal-, RDP- und VNC-Sitzungen auf und spiel sie später ab. Lade einfache Textprotokolle einer Sitzung herunter und sieh im Verbindungsprotokoll nach, was während einer Verbindung genau passiert ist.
+
+</td>
+<td width="50%" valign="top">
+
+**Serielle Verbindungen:**
+Sprich mit seriellen Geräten wie Routern, Switches und Mikrocontrollern, aus dem Browser oder der Desktop-App. Stelle Baudrate, Datenbits, Stoppbits und Parität ein. Nutzt die Web-Serial-API in passenden Browsern oder ein natives Backend in der Desktop-App.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Tailscale:**
+Hol Geräte aus deinem Tailnet, um sie mit ein paar Klicks als Hosts anzulegen, und verbinde dich per Tailscale SSH, damit deine Tailnet-ACLs den Zugriff regeln und keine Zugangsdaten gespeichert werden. Headscale und eigene Endpunkte gehen auch.
+
+</td>
+<td width="50%" valign="top">
+
+**Proxmox:**
+Importiere Hosts direkt aus einer Proxmox-Instanz und beobachte Knoten- und Gastwerte wie CPU, Speicher und Storage in einem eigenen Tab.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Arbeitsbereiche und Tabs:**
+Speichere eine Reihe von Tabs samt Aufteilung und öffne alles mit einem Klick wieder. Termix merkt sich auch deine letzte Sitzung, sodass deine Tabs nach einem Neuladen und auf anderen Geräten wieder da sind.
+
+</td>
+<td width="50%" valign="top">
+
+**Geführte Einrichtung:**
+Eine kurze Einrichtung führt dich durch die Wahl einer Oberflächenvorlage, deines Themas, der gewünschten Funktionen und deines ersten Hosts. Der einfache Modus blendet aus, was du nicht nutzt, und du kannst die Einrichtung jederzeit erneut starten oder die Vorlage wechseln.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Desktop eigenständig und Synchronisierung:**
+Die Desktop-App läuft eigenständig mit lokalem Backend und eigener Datenbank, ganz ohne Server. Du kannst sie auch mit einem Termix-Server verbinden, um Hosts, Zugangsdaten, Snippets und mehr in beide Richtungen abzugleichen, und wählen, ob Verbindungen lokal oder über den Server aufgebaut werden.
+
+</td>
+<td width="50%" valign="top">
+
+**Kommandozeile:**
+Ein `termix`-CLI für deine Shell und deine Skripte. Terminals öffnen, einen Befehl auf einem Host oder einer ganzen Flotte ausführen, Dateien per SFTP verschieben und Hosts, Snippets und Zugangsdaten verwalten. Installiere es mit `npm install -g @termix-cli/cli` oder nimm eine eigenständige Binärdatei. Siehe die [CLI-Dokumentation](https://docs.termix.site/cli).
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Sicherheit:**
+Passwörter, Schlüssel und andere Geheimnisse werden pro Benutzer verschlüsselt, und die Datenbankdateien selbst lassen sich auf der Festplatte verschlüsseln. Wie das funktioniert, steht in der [Dokumentation](https://docs.termix.site/security).
 
 </td>
 <td width="50%" valign="top">
 
 **Sprachen:**
-Integrierte Unterstutzung fur ca. 30 Sprachen (verwaltet uber [Crowdin](https://docs.termix.site/translations)).
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Sitzungsfreigabe:**
-Teilen Sie eine Live-Terminal-, RDP-, VNC- oder Telnet-Sitzung in Echtzeit mit anderen. Freigabe uber einen Link (anonymer Beitritt, kein Konto erforderlich) oder mit einem bestimmten Termix-Benutzer, mit Wahl zwischen Nur-Lese- oder Lese-/Schreibzugriff. Freigaben konnen automatisch ablaufen oder jederzeit widerrufen werden, und die Sitzungsfreigabe kann global oder pro Host umgeschaltet werden.
-
-</td>
-<td width="50%" valign="top">
-
-**Eigenstandiger Desktop + bidirektionale Synchronisierung:**
-Die Electron-Desktop-App lauft vollstandig eigenstandig mit eigenem lokalem Backend und eigener Datenbank, kein Server erforderlich. Optional mit einem entfernten Termix-Server verbinden fur automatische bidirektionale Synchronisierung von Hosts, Zugangsdaten, Snippets und mehr, mit der Wahl, ob SSH-Verbindungen lokal oder uber den entfernten Server gestartet werden.
+Rund 30 Sprachen sind eingebaut, verwaltet über [Crowdin](https://docs.termix.site/translations).
 
 </td>
 </tr>
@@ -213,36 +255,39 @@ Die Electron-Desktop-App lauft vollstandig eigenstandig mit eigenem lokalem Back
 <summary><b>Weitere Funktionen</b></summary>
 <br />
 
-- **Dashboard** - Serverinformationen auf einen Blick auf Ihrem Dashboard anzeigen
-- **API-Schlussel** - Erstellen Sie benutzerbezogene API-Schlussel mit Ablaufdaten zur Verwendung fur Automatisierung/CI
-- **Datenexport/-import** - SSH-Hosts, Anmeldeinformationen und Dateimanager-Daten exportieren und importieren
-- **Automatische SSL-Einrichtung** - Integrierte SSL-Zertifikatsgenerierung und -verwaltung mit HTTPS-Weiterleitungen
-- **Moderne Benutzeroberflache** - Saubere desktop-/mobilfreundliche Oberflache, erstellt mit React, Tailwind CSS und Shadcn. Wahlen Sie zwischen vielen verschiedenen UI-Themes einschliesslich Hell, Dunkel, Dracula usw. Verwenden Sie URL-Routen, um jede Verbindung im Vollbildmodus zu offnen.
-- **Befehlsverlauf** - Autovervollstandigung und Anzeige zuvor ausgefuhrter SSH-Befehle
-- **Schnellverbindung** - Verbinden Sie sich mit einem Server, ohne die Verbindungsdaten speichern zu mussen
-- **Befehlspalette** - Doppeltippen Sie die linke Umschalttaste, um schnell auf SSH-Verbindungen mit Ihrer Tastatur zuzugreifen
-- **Proxmox-Integration** - Automatisches Hinzufugen von Hosts zu Termix aus Ihrer Proxmox-Instanz
-- **SSH-Funktionsreich** - Unterstutzt Jump-Hosts, Warpgate, TOTP-basierte Verbindungen, SOCKS5, Host-Key-Verifizierung, automatisches Ausfullen von Passwortern, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, Port Knocking, Terminal-Protokollierung, SSH-Agent-Forwarding, Bitwarden SSH-Agent, HashiCorp Vault SSH-Signierung und mehr.
-- **Termix ID** - Ein sshid.io-Aquivalent, integriert in Termix. Beanspruchen Sie einen Handle, veroffentlichen Sie Ihre offentlichen SSH-Schlussel unter einer Resolver-URL und nutzen Sie eine integrierte CA zur Ausstellung von SSH-Zertifikaten.
+- **Dashboard** - Deine Server auf einen Blick, mit Karten, die du selbst anordnest
+- **Netzwerkgrafik** - Dein Homelab aus deinen Hosts gezeichnet, mit Live-Status
+- **Tmux-Monitor** - tmux-Sitzungen, Fenster und Bereiche durchsehen, mit Vorschau und Suche
+- **API-Schlüssel** - Benutzerbezogene Schlüssel mit Ablaufdatum für Skripte und CI
+- **Export und Import** - Hosts, Zugangsdaten und Dateimanager-Daten rein- und rausholen
+- **Automatisches SSL** - Zertifikate werden für dich erstellt und erneuert, samt HTTPS-Weiterleitung, oder du bringst eigene mit
+- **Datenbanken** - Standardmäßig SQLite, dazu PostgreSQL und MySQL
+- **Moderne Oberfläche** - Aufgeräumte React-Oberfläche für Desktop und Handy, mit Themen wie Hell, Dunkel und Dracula. Jede Verbindung lässt sich über eine URL im Vollbild öffnen
+- **Befehlspalette** - Zweimal linke Umschalttaste, um per Tastatur zu einem Host zu springen
+- **Tastenkürzel** - Zwischen Tabs wechseln, Tabs schließen und mehr, alles neu belegbar
+- **Wake-on-LAN** - Einen Rechner aus Termix heraus oder aus einem Automatisierungsschritt aufwecken
+- **Vertrauenswürdiger Proxy** - Einen Reverse Proxy die Anmeldung erledigen und den Benutzer durchreichen lassen
+- **Viele SSH-Funktionen** - Sprunghosts, Warpgate, TOTP-Abfragen, SOCKS5, Prüfung von Hostschlüsseln, automatisches Ausfüllen von Passwörtern, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, Port Knocking, Terminalprotokolle, Agent-Weiterleitung, Bitwarden SSH-Agent, SSH-Signierung über HashiCorp Vault und mehr
+- **Termix ID** - Eine eingebaute Variante von sshid.io. Sichere dir einen Namen, veröffentliche deine öffentlichen Schlüssel unter einer Resolver-URL und stelle SSH-Zertifikate über die eingebaute CA aus
 
 </details>
 
 <br />
 
-## Plattformunterstutzung
+## Unterstützte Plattformen
 
 <table align="center">
 <tr>
 <th align="center">Plattform</th>
-<th align="center">Distribution</th>
+<th align="center">Bezugsquelle</th>
 </tr>
 <tr>
 <td align="center"><b>Web</b></td>
-<td>Jeder moderne Browser (Chrome, Safari, Firefox) · PWA-Unterstutzung</td>
+<td>Jeder moderne Browser (Chrome, Safari, Firefox) · PWA-fähig</td>
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Portabel · MSI-Installationsprogramm · Chocolatey</td>
+<td>Portabel · MSI-Installer · Chocolatey</td>
 </tr>
 <tr>
 <td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
@@ -266,9 +311,9 @@ Die Electron-Desktop-App lauft vollstandig eigenstandig mit eigenem lokalem Back
 
 ## Installation
 
-Besuchen Sie die [Termix-Dokumentation](https://docs.termix.site/install) fur vollstandige Installationsanleitungen fur alle Plattformen.
+In der [Termix-Dokumentation](https://docs.termix.site/install) findest du die vollständigen Installationsanleitungen für alle Plattformen.
 
-Beispiel einer Docker-Compose-Datei (Sie konnen `guacd` und das Netzwerk weglassen, wenn Sie keine Remote-Desktop-Funktionen nutzen mochten):
+Beispiel für eine Docker-Compose-Datei (`guacd` und das Netzwerk kannst du weglassen, wenn du keinen Remotedesktop brauchst):
 
 ```yaml
 services:
@@ -305,11 +350,37 @@ networks:
     driver: bridge
 ```
 
+### Kommandozeile
+
+Termix hat auch ein CLI, damit du deine Server vom Terminal aus verwalten und Termix in eigenen Skripten nutzen kannst.
+
+```bash
+npm install -g @termix-cli/cli
+termix login --url https://termix.example.com
+termix ssh 1
+```
+
+Es kann Terminals öffnen, einen Befehl auf einem Host oder einer ganzen Flotte ausführen, Dateien per SFTP verschieben und Hosts, Snippets und Zugangsdaten verwalten. Die vollständige Dokumentation steht auf [docs.termix.site/cli](https://docs.termix.site/cli).
+
+### Cloud-Hosting
+
+Du kannst den Termix-Server auf einem VPS laufen lassen statt im eigenen Netz. Läuft Termix in dem Netz, das es verwaltet, reißt eine Störung es mit sich, und zwar genau dann, wenn du es zum Reparieren bräuchtest. Woanders bleibt es erreichbar, du bekommst eine feste IP und kommst von überall heran, ohne VPN und ohne Portfreigabe.
+
+[GINERNET](https://docs.termix.site/install/ginernet) sponsert Termix, und in der Dokumentation steht eine Schritt-für-Schritt-Anleitung für die Bereitstellung auf deren VPS-Plattform.
+
+<br />
+
+## Telemetrie
+
+Termix schickt einmal am Tag ein kleines anonymes Signal, damit ich sehen kann, wie viele Instanzen laufen und welche Funktionen genutzt werden. Enthalten sind eine zufällige Instanz-ID, wie viele Benutzer und Hosts du hast, die App-Version und welche Funktionen (Terminal, Dateimanager, Tunnel, Docker usw.) in den letzten 24 Stunden benutzt wurden. Niemals enthalten sind Benutzernamen, Hostnamen, IP-Adressen, Zugangsdaten oder irgendetwas anderes, das dich oder deine Server identifiziert.
+
+Es ist standardmäßig an. Schalte es in den Administrationseinstellungen unter Allgemein aus oder setze `ENABLE_TELEMETRY=false`, bevor du Termix überhaupt startest.
+
 <br />
 
 ## Spenden
 
-Termix ist kostenlos und Open Source, ohne Abonnements oder kostenpflichtige Plane. Wenn Sie es nutzlich finden, erwagen Sie eine Spende, um Serverkosten, Domains und Entwicklungszeit zu decken. Spenden helfen auch dabei, die Zeit zu finanzieren, die benotigt wird, um zu erforschen und zu lernen, was fur Funktionen wie SAML-, Kubernetes- und Agent-Unterstutzung erforderlich ist. Verfolgen Sie den Fortschritt und spenden Sie unten.
+Termix ist kostenlos und quelloffen, ohne Abo und ohne Bezahlmodell. Wenn es dir hilft, denk über eine Spende nach, um Server, Domains und Entwicklungszeit zu decken. Spenden finanzieren auch die Zeit, um Funktionen wie SAML, Kubernetes und Agent-Unterstützung zu erarbeiten. Unten kannst du den Fortschritt verfolgen und spenden.
 
 [Spenden](https://donate.termix.site/)
 
@@ -317,7 +388,7 @@ Termix ist kostenlos und Open Source, ohne Abonnements oder kostenpflichtige Pla
 
 ## Sponsoren
 
-Interessiert an einer bezahlten Platzierung zur Unterstutzung der Entwicklung? Schreiben Sie eine E-Mail an [mail@termix.site](mailto:mail@termix.site).
+Interesse an einer bezahlten Platzierung zur Unterstützung der Entwicklung? Schreib an [mail@termix.site](mailto:mail@termix.site).
 
 <div align="center">
 
@@ -339,10 +410,6 @@ Interessiert an einer bezahlten Platzierung zur Unterstutzung der Entwicklung? S
   <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
 </a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
 <a href="https://akamai.com/">
   <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
 </a>
@@ -354,14 +421,17 @@ Interessiert an einer bezahlten Platzierung zur Unterstutzung der Entwicklung? S
 <a href="https://rackgenius.com/">
   <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
 </a>
-
+&nbsp;&nbsp;&nbsp;
+<a href="https://ginernet.com/">
+  <img src="https://ginernet.com/img/logo-web.png" height="40" alt="Ginernet" />
+</a>
 </div>
 
 <br />
 
 ## Support
 
-Wenn Sie Hilfe benotigen oder eine Funktion fur Termix anfragen mochten, besuchen Sie die [Issues](https://github.com/Termix-SSH/Support/issues)-Seite, melden Sie sich an und klicken Sie auf `New Issue`. Bitte beschreiben Sie Ihr Anliegen so detailliert wie moglich, vorzugsweise auf Englisch. Sie konnen auch dem [Discord](https://discord.gg/jVQGdvHDrf)-Server beitreten und den Support-Kanal besuchen, allerdings konnen die Antwortzeiten dort langer sein.
+Brauchst du Hilfe oder möchtest du eine Funktion vorschlagen? Erstelle ein [neues Issue](https://github.com/Termix-SSH/Support/issues) und beschreibe es so genau wie möglich, nach Möglichkeit auf Englisch. Du kannst auch im Support-Kanal auf [Discord](https://discord.gg/jVQGdvHDrf) fragen, dort dauern Antworten aber manchmal länger.
 
 <br />
 
@@ -373,7 +443,7 @@ Wenn Sie Hilfe benotigen oder eine Funktion fur Termix anfragen mochten, besuche
 
 [![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
-<sub>Update-Ubersichten auf YouTube ansehen</sub>
+<sub>Übersichten zu Updates auf YouTube ansehen</sub>
 
 <br />
 <br />
@@ -413,7 +483,7 @@ Wenn Sie Hilfe benotigen oder eine Funktion fur Termix anfragen mochten, besuche
 </tr>
 </table>
 
-<sub>Einige Videos und Bilder konnen veraltet sein oder Funktionen moglicherweise nicht perfekt darstellen.</sub>
+<sub>Manche Videos und Bilder sind vielleicht veraltet oder zeigen die Funktionen nicht perfekt.</sub>
 
 </div>
 
@@ -421,10 +491,10 @@ Wenn Sie Hilfe benotigen oder eine Funktion fur Termix anfragen mochten, besuche
 
 ## Geplante Funktionen
 
-Siehe [Projekte](https://github.com/orgs/Termix-SSH/projects/5) fur alle geplanten Funktionen. Wenn Sie beitragen mochten, siehe [Mitwirken](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+Alle geplanten Funktionen stehen unter [Projects](https://github.com/orgs/Termix-SSH/projects/5). Wenn du mitarbeiten möchtest, sieh dir [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) an.
 
 <br />
 
 ## Lizenz
 
-Verteilt unter der Apache License Version 2.0. Siehe `LICENSE` fur weitere Informationen.
+Veröffentlicht unter der Apache-Lizenz Version 2.0. Mehr dazu in `LICENSE`.

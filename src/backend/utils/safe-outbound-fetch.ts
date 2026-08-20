@@ -1,24 +1,22 @@
-import {
-  lookup,
-  type LookupAddress,
-  type LookupAllOptions,
-  type LookupOptions,
-} from "dns";
+import { lookup, type LookupAddress, type LookupOptions } from "dns";
 import { BlockList, isIP } from "net";
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch } from "undici";
 
 type DnsLookupFn = (
   hostname: string,
-  options: LookupAllOptions,
-  callback: (
-    err: NodeJS.ErrnoException | null,
-    addresses: LookupAddress[],
-  ) => void,
+  options: LookupOptions,
+  callback: DnsLookupCallback,
+) => void;
+
+type DnsLookupCallback = (
+  err: NodeJS.ErrnoException | null,
+  address: string | LookupAddress[] | undefined,
+  family?: number,
 ) => void;
 
 type LookupHookCallback = (
   error: NodeJS.ErrnoException | Error | null,
-  address: string | LookupAddress[],
+  address?: string | LookupAddress[],
   family?: number,
 ) => void;
 
@@ -79,26 +77,65 @@ export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
     lookupOptions: LookupOptions,
     callback: LookupHookCallback,
   ): void {
-    const fail = (error: NodeJS.ErrnoException | Error) => {
-      if (lookupOptions.all) return callback(error, []);
-      callback(error, "", 0);
-    };
+    const cleanHost = String(host ?? "").replace(/^[|]$/g, "");
+    const lookupAll = lookupOptions.all === true;
 
     dnsLookup(
-      host,
+      cleanHost,
       { ...lookupOptions, all: true, verbatim: true },
-      (error, addresses) => {
-        if (error) return fail(error);
-        if (!addresses.length) {
-          return fail(new Error("DNS resolution returned no addresses"));
+      (error, addresses, family) => {
+        if (error) {
+          return callback(error, "", 0);
         }
-        if (addresses.some(({ address }) => isBlockedAddress(address))) {
-          return fail(new Error("Private destinations are not allowed"));
-        }
-        if (lookupOptions.all) return callback(null, addresses);
 
-        const selected = addresses[0];
-        callback(null, selected.address, selected.family);
+        const addrs = Array.isArray(addresses)
+          ? addresses
+          : addresses != null
+            ? [{ address: addresses, family: family ?? isIP(addresses) }]
+            : undefined;
+
+        if (addrs === undefined) {
+          return callback(
+            new Error("DNS lookup returned invalid address"),
+            "",
+            0,
+          );
+        }
+
+        if (!addrs.length) {
+          return callback(
+            new Error("DNS resolution returned no addresses"),
+            "",
+            0,
+          );
+        }
+
+        if (addrs.some(({ address }) => isBlockedAddress(address))) {
+          return callback(
+            new Error("Private destinations are not allowed"),
+            "",
+            0,
+          );
+        }
+
+        if (lookupAll) {
+          return callback(null, addrs, 0);
+        }
+
+        const result = addrs[0];
+        const addr = String(result.address ?? "").replace(/^\[|\]$/g, "");
+        const fam =
+          typeof result.family === "number" ? result.family : isIP(addr);
+
+        if (!addr || isIP(addr) === 0) {
+          return callback(
+            new Error("DNS lookup returned invalid address"),
+            "",
+            0,
+          );
+        }
+
+        return callback(null, addr, fam);
       },
     );
   };
@@ -124,16 +161,16 @@ export async function safeOutboundFetch(
 
   const dispatcher = new Agent({
     connect: {
-      lookup: createDnsLookupHook(),
+      lookup: createDnsLookupHook(lookup),
     },
   });
 
   try {
-    return await fetch(url, {
+    return await undiciFetch(url.toString(), {
       ...options,
-      redirect: "error",
       dispatcher,
-    } as RequestInit & { dispatcher: Agent });
+      redirect: "error",
+    });
   } finally {
     await dispatcher.close();
   }

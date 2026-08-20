@@ -1,9 +1,10 @@
+import { getErrorMessage } from "../../../lib/error-message.js";
 import React from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
-import { copyToClipboard } from "@/lib/clipboard";
+import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Button } from "@/components/button.tsx";
 import {
@@ -23,12 +24,17 @@ import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import type { SSHHost } from "@/types";
 import { isElectron } from "@/main-axios.ts";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
 import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
 import { useTheme } from "@/components/theme-provider";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/ssh/connection-log/ConnectionLogContext.tsx";
+import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 
 interface ConsoleTerminalProps {
   containerId: string;
@@ -37,7 +43,17 @@ interface ConsoleTerminalProps {
   hostConfig: SSHHost;
 }
 
-export function ConsoleTerminal({
+export function ConsoleTerminal(
+  props: ConsoleTerminalProps,
+): React.ReactElement {
+  return (
+    <ConnectionLogProvider>
+      <ConsoleTerminalInner {...props} />
+    </ConnectionLogProvider>
+  );
+}
+
+function ConsoleTerminalInner({
   containerId,
   containerName,
   containerState,
@@ -46,6 +62,7 @@ export function ConsoleTerminal({
   const { t } = useTranslation();
   const { theme: appTheme } = useTheme();
   const { instance: terminal, ref: xtermRef } = useXTerm();
+  const { addLog, clearLogs } = useConnectionLog();
 
   const terminalConfig = React.useMemo(
     () => ({ ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig }),
@@ -93,10 +110,7 @@ export function ConsoleTerminal({
     terminal.options.lineHeight = terminalConfig.lineHeight;
 
     const readTextFromClipboard = async (): Promise<string> => {
-      if (window.electronClipboard) {
-        return window.electronClipboard.readText();
-      }
-      return (await navigator.clipboard?.readText?.()) ?? "";
+      return readFromClipboard();
     };
 
     const writeTextToClipboard = async (text: string): Promise<void> => {
@@ -260,6 +274,8 @@ export function ConsoleTerminal({
       wsRef.current = null;
     }
     setIsConnected(false);
+    retryRef.current.reset();
+    clearLogs();
     if (terminal) {
       try {
         terminal.clear();
@@ -267,7 +283,7 @@ export function ConsoleTerminal({
         // Terminal clear can fail after disposal.
       }
     }
-  }, [terminal]);
+  }, [terminal, clearLogs]);
 
   const connect = React.useCallback(async () => {
     if (!terminal || containerState !== "running") {
@@ -276,6 +292,11 @@ export function ConsoleTerminal({
     }
 
     setIsConnecting(true);
+    addLog({
+      type: "info",
+      stage: "docker_connecting",
+      message: t("docker.connectingTo", { containerName }),
+    });
 
     try {
       if (fitAddonRef.current) {
@@ -304,7 +325,6 @@ export function ConsoleTerminal({
           localPort: 30009,
           localPath: "/docker/console/",
           remotePath: "/docker/console/",
-          includeLocalJwt: false,
         });
         if (!resolvedUrl) {
           setIsConnecting(false);
@@ -348,6 +368,7 @@ export function ConsoleTerminal({
             case "connected":
               setIsConnected(true);
               setIsConnecting(false);
+              retryRef.current.markConnected();
 
               if (msg.data?.shellChanged) {
                 toast.warning(
@@ -376,6 +397,7 @@ export function ConsoleTerminal({
             case "disconnected":
               setIsConnected(false);
               setIsConnecting(false);
+              retryRef.current.reset();
               terminal.write(
                 `\r\n\x1b[1;33m${msg.message || t("docker.disconnected")}\x1b[0m\r\n`,
               );
@@ -391,6 +413,12 @@ export function ConsoleTerminal({
               terminal.write(
                 `\r\n\x1b[1;31m${t("docker.errorMessage", { message: msg.message })}\x1b[0m\r\n`,
               );
+              addLog({
+                type: "error",
+                stage: "error",
+                message: msg.message || t("docker.consoleError"),
+              });
+              retryRef.current.markFailed();
               break;
           }
         } catch (error) {
@@ -403,6 +431,12 @@ export function ConsoleTerminal({
         setIsConnecting(false);
         setIsConnected(false);
         toast.error(t("docker.failedToConnect"));
+        addLog({
+          type: "error",
+          stage: "error",
+          message: t("docker.failedToConnect"),
+        });
+        retryRef.current.markFailed();
       };
 
       if (pingIntervalRef.current) {
@@ -440,9 +474,10 @@ export function ConsoleTerminal({
       });
     } catch (error) {
       setIsConnecting(false);
-      toast.error(
-        `Failed to connect: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      const message = `Failed to connect: ${getErrorMessage(error)}`;
+      toast.error(message);
+      addLog({ type: "error", stage: "error", message });
+      retryRef.current.markFailed();
     }
   }, [
     terminal,
@@ -452,7 +487,15 @@ export function ConsoleTerminal({
     selectedShell,
     containerName,
     t,
+    addLog,
   ]);
+
+  const retry = useConnectionRetry({
+    connect,
+    autoStart: false,
+  });
+  const retryRef = React.useRef(retry);
+  retryRef.current = retry;
 
   React.useEffect(() => {
     return () => {
@@ -559,30 +602,40 @@ export function ConsoleTerminal({
             style={{ display: isConnected ? "block" : "none" }}
           />
 
-          {!isConnected && !isConnecting && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center space-y-2">
-                <TerminalIcon className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-                <p className="text-muted-foreground">
-                  {t("docker.notConnected")}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {t("docker.clickToConnect")}
-                </p>
+          {!isConnected &&
+            !isConnecting &&
+            retry.status !== "error" &&
+            retry.status !== "disconnected" && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <TerminalIcon className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+                  <p className="text-muted-foreground">
+                    {t("docker.notConnected")}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("docker.clickToConnect")}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {isConnecting && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <SimpleLoader size="lg" />
-                <p className="text-muted-foreground mt-4">
-                  {t("docker.connectingTo", { containerName })}
-                </p>
-              </div>
-            </div>
-          )}
+          {!isConnected &&
+            (isConnecting ||
+              retry.status === "error" ||
+              retry.status === "disconnected") && (
+              <ConnectionScreen
+                status={isConnecting ? "connecting" : retry.status}
+                message={t("docker.connectingTo", { containerName })}
+                attempt={retry.attempt}
+                maxAttempts={retry.maxAttempts}
+                nextRetryInMs={retry.nextRetryInMs}
+                onManualRetry={() => {
+                  clearLogs();
+                  retry.retryNow();
+                }}
+                retryLabel={t("docker.connect")}
+              />
+            )}
         </CardContent>
       </Card>
     </div>

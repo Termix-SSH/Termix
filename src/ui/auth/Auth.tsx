@@ -33,6 +33,7 @@ import {
   getCurrentToken,
   getOidcSilentLoginDefault,
   requestDesktopAutoSession,
+  requestTrustedProxyLogin,
 } from "@/main-axios";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
@@ -258,6 +259,7 @@ export function Auth({ onLogin }: AuthProps) {
   const [ldapUsername, setLdapUsername] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
   const silentSigninHandledRef = useRef(false);
+  const proxySigninHandledRef = useRef(false);
   const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
   const [oidcSilentLoginDefaultLoaded, setOidcSilentLoginDefaultLoaded] =
     useState(false);
@@ -280,6 +282,25 @@ export function Auth({ onLogin }: AuthProps) {
     boolean | null
   >(!isElectron() || isInElectronWebView() ? true : null);
   const [desktopAutoSessionRetries, setDesktopAutoSessionRetries] = useState(0);
+
+  useEffect(() => {
+    if (proxySigninHandledRef.current || isElectron()) return;
+    proxySigninHandledRef.current = true;
+    requestTrustedProxyLogin()
+      .then((result) => {
+        if (!result.enabled || !result.success) return;
+        storeAuth(result.username || "");
+        onLogin(
+          result.username || "",
+          result.userId || undefined,
+          !!result.is_admin,
+        );
+      })
+      .catch(() => {
+        // Leave the login screen visible. The backend logs the reason without
+        // exposing trusted proxy configuration to an untrusted client.
+      });
+  }, [onLogin]);
 
   useEffect(() => {
     try {
@@ -336,17 +357,48 @@ export function Auth({ onLogin }: AuthProps) {
     // Electron). Waiting avoids flashing a login screen the user is about
     // to skip past via auto-login.
     if (desktopAutoSessionDone !== true) return;
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Right after a server update/restart (or behind a reverse proxy that's
+    // still warming up), the very first request can transiently fail even
+    // though the backend/database is fine seconds later. A single failure
+    // here used to permanently show the "could not connect to the database"
+    // screen, forcing users to manually reload -- sometimes repeatedly.
+    // Retry a few times with backoff before treating it as a real failure.
+    const maxAttempts = 5;
+    const attempt = (attemptNumber: number) => {
+      getSetupRequired()
+        .then((res) => {
+          if (cancelled) return;
+          if (res.setup_required) {
+            setFirstUser(true);
+            setView("register");
+          }
+          setDbConnectionFailed(false);
+          setDbHealthChecking(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attemptNumber >= maxAttempts) {
+            setDbConnectionFailed(true);
+            setDbHealthChecking(false);
+            return;
+          }
+          const delay = Math.min(500 * 2 ** attemptNumber, 5000);
+          retryTimer = setTimeout(() => {
+            if (!cancelled) attempt(attemptNumber + 1);
+          }, delay);
+        });
+    };
+
     setDbHealthChecking(true);
-    getSetupRequired()
-      .then((res) => {
-        if (res.setup_required) {
-          setFirstUser(true);
-          setView("register");
-        }
-        setDbConnectionFailed(false);
-      })
-      .catch(() => setDbConnectionFailed(true))
-      .finally(() => setDbHealthChecking(false));
+    attempt(0);
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [desktopAutoSessionDone]);
 
   // A cold first launch spawns the embedded backend as a separate process

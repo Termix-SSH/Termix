@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { notifyAiStatusChanged } from "@/hooks/use-ai-availability";
+import {
+  getAiGloballyEnabled,
+  getAiPrivateEndpoints,
+  setAiGloballyEnabled as setAiGloballyEnabledApi,
+  setAiPrivateEndpoints as setAiPrivateEndpointsApi,
+} from "@/api/ai-api";
 import {
   getUserList,
   getSessions,
@@ -42,7 +49,12 @@ import {
   updateHostDefaults,
   getAnalyticsEnabled,
   updateAnalyticsEnabled,
+  getTerminalImageStorageSettings,
+  updateTerminalImageStorageSettings,
+  testTerminalImageStorage,
   type HostDefaults,
+  type TerminalImageStorageSettings,
+  type TerminalImageStorageTestResult,
 } from "@/api/settings-api";
 import {
   getSessionSharingGloballyEnabled,
@@ -65,9 +77,13 @@ import {
   saveMetricsHistoryRetention,
 } from "@/api/host-metrics-api";
 import type { SSOProvider } from "@/types/index";
-import type { ApiKey, CreatedApiKey, UserRole } from "@/main-axios";
-import type { AdminSection } from "@/types/ui-types";
-import type { Role } from "@/main-axios";
+import {
+  type ApiKey,
+  type CreatedApiKey,
+  type Role,
+  type UserRole,
+} from "@/main-axios";
+import { type AdminSection, type Host } from "@/types/ui-types";
 import {
   AdminRolesSection,
   AdminSessionsSection,
@@ -94,7 +110,17 @@ import {
   AdminUnlinkAccountDialog,
 } from "./AdminUserDialogs";
 import { AdminUserManagePanel } from "./AdminUserManagePanel";
-import type { Host } from "@/types/ui-types";
+import {
+  TOUCH_INPUT_DEFAULTS,
+  type TouchInputSettings,
+} from "@/types/touch-input-settings";
+import {
+  getTouchInputSettings,
+  updateTouchInputSettings,
+} from "@/api/touch-input-settings-api";
+import { cacheTouchInputSettings } from "@/features/terminal/touch-input-settings-store";
+import { AdminTouchInputSection } from "./AdminTouchInputSection";
+import { AdminImageStorageSection } from "./AdminImageStorageSection";
 
 type ApiErrorLike = {
   response?: {
@@ -107,6 +133,8 @@ type ApiErrorLike = {
 function apiErrorMessage(error: unknown, fallback: string) {
   return (error as ApiErrorLike).response?.data?.error || fallback;
 }
+
+const USERS_PAGE_SIZE = 25;
 
 export function AdminSettingsPanel({
   onEditingChange,
@@ -131,12 +159,28 @@ export function AdminSettingsPanel({
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
   const [tailscaleApiKey, setTailscaleApiKey] = useState("");
+  const [tailscaleApiBaseUrl, setTailscaleApiBaseUrl] = useState("");
   const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
     useState(true);
+  const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
+  const [aiPrivateEndpoints, setAiPrivateEndpoints] = useState<string[]>([]);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
+  const [touchInputSettings, setTouchInputSettings] =
+    useState<TouchInputSettings>({ ...TOUCH_INPUT_DEFAULTS });
+
+  // Terminal image storage state. localDir stays a draft: the API never
+  // returns the configured backend path, so it is only sent when changed.
+  const [imageStorageSettings, setImageStorageSettings] =
+    useState<TerminalImageStorageSettings | null>(null);
+  const [imageStorageLocalDir, setImageStorageLocalDir] = useState("");
+  const [imageStorageInstanceId, setImageStorageInstanceId] = useState("");
+  const [imageStorageSaving, setImageStorageSaving] = useState(false);
+  const [imageStorageTesting, setImageStorageTesting] = useState(false);
+  const [imageStorageTestResult, setImageStorageTestResult] =
+    useState<TerminalImageStorageTestResult | null>(null);
 
   // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
@@ -215,18 +259,31 @@ export function AdminSettingsPanel({
   const [manualUploading, setManualUploading] = useState(false);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [userPage, setUserPage] = useState(0);
+  const [userTotal, setUserTotal] = useState(0);
   const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
 
   useEffect(() => {
-    loadUsers();
     loadSessions();
     loadRoles();
     loadApiKeys();
     loadGeneralSettings();
     loadSSOProviders();
   }, []);
+
+  // Debounced so typing in the search box does not fire a request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(loadUsers, userSearch ? 250 : 0);
+    return () => clearTimeout(timer);
+  }, [userSearch, userPage]);
+
+  // A new search term starts again from the first page.
+  useEffect(() => {
+    setUserPage(0);
+  }, [userSearch]);
 
   useEffect(() => {
     onEditingChange?.(manageUser !== null);
@@ -245,8 +302,14 @@ export function AdminSettingsPanel({
   }, [editUserOpen, editUserTarget]);
 
   function loadUsers() {
-    getUserList()
-      .then(({ users: u }) =>
+    // Paged server-side so an install with thousands of accounts does not
+    // ship the whole directory to render one screen of it.
+    getUserList({
+      search: userSearch.trim() || undefined,
+      limit: USERS_PAGE_SIZE,
+      offset: userPage * USERS_PAGE_SIZE,
+    })
+      .then(({ users: u, total }) => {
         setUsers(
           u.map((user) => ({
             id: user.userId,
@@ -257,8 +320,9 @@ export function AdminSettingsPanel({
             dataUnlocked: user.data_unlocked,
             totpEnabled: user.totp_enabled,
           })),
-        ),
-      )
+        );
+        setUserTotal(total ?? u.length);
+      })
       .catch(() => {});
   }
 
@@ -296,6 +360,10 @@ export function AdminSettingsPanel({
         cmdHistory,
         analytics,
         sessionSharingEnabled,
+        touchInput,
+        aiEnabled,
+        aiEndpoints,
+        imageStorage,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -310,6 +378,10 @@ export function AdminSettingsPanel({
         getCommandHistoryEnabled(),
         getAnalyticsEnabled(),
         getSessionSharingGloballyEnabled(),
+        getTouchInputSettings(),
+        getAiGloballyEnabled(),
+        getAiPrivateEndpoints(),
+        getTerminalImageStorageSettings(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -337,6 +409,7 @@ export function AdminSettingsPanel({
       }
       if (tailscale.status === "fulfilled") {
         setTailscaleApiKey(tailscale.value.apiKey ?? "");
+        setTailscaleApiBaseUrl(tailscale.value.apiBaseUrl ?? "");
       }
       if (cmdHistory.status === "fulfilled") {
         setCommandHistoryEnabled(cmdHistory.value.enabled);
@@ -347,6 +420,19 @@ export function AdminSettingsPanel({
       }
       if (sessionSharingEnabled.status === "fulfilled") {
         setSessionSharingGloballyEnabled(sessionSharingEnabled.value.enabled);
+      }
+      if (touchInput.status === "fulfilled") {
+        setTouchInputSettings(touchInput.value);
+        cacheTouchInputSettings(touchInput.value);
+      }
+      if (aiEnabled.status === "fulfilled") {
+        setAiGloballyEnabled(aiEnabled.value);
+      }
+      if (aiEndpoints.status === "fulfilled") {
+        setAiPrivateEndpoints(aiEndpoints.value);
+      }
+      if (imageStorage.status === "fulfilled") {
+        setImageStorageSettings(imageStorage.value);
       }
     } catch {
       // non-fatal
@@ -478,6 +564,90 @@ export function AdminSettingsPanel({
     }
   }
 
+  async function handleToggleAiGloballyEnabled() {
+    const newVal = !aiGloballyEnabled;
+    setAiGloballyEnabled(newVal);
+    try {
+      await setAiGloballyEnabledApi(newVal);
+      // Every AI surface listens for this, so the admin sees the entry appear
+      // or disappear right away instead of after a reload.
+      notifyAiStatusChanged();
+    } catch {
+      setAiGloballyEnabled(!newVal);
+      toast.error(t("admin.updateAiEnabledFailed"));
+    }
+  }
+
+  async function handleSaveAiPrivateEndpoints(hosts: string[]) {
+    const previous = aiPrivateEndpoints;
+    setAiPrivateEndpoints(hosts);
+    try {
+      setAiPrivateEndpoints(await setAiPrivateEndpointsApi(hosts));
+    } catch {
+      setAiPrivateEndpoints(previous);
+      toast.error(t("admin.updateAiEndpointsFailed"));
+    }
+  }
+
+  async function saveTouchInputSettings(settings = touchInputSettings) {
+    try {
+      const saved = await updateTouchInputSettings(settings);
+      setTouchInputSettings(saved);
+      cacheTouchInputSettings(saved);
+      toast.success(t("admin.touchSaved"));
+    } catch {
+      toast.error(t("admin.touchSaveFailed"));
+    }
+  }
+
+  function resetTouchInputSettings() {
+    const defaults = { ...TOUCH_INPUT_DEFAULTS };
+    setTouchInputSettings(defaults);
+    void saveTouchInputSettings(defaults);
+  }
+
+  async function handleSaveImageStorage() {
+    if (!imageStorageSettings) return;
+    setImageStorageSaving(true);
+    try {
+      const saved = await updateTerminalImageStorageSettings({
+        mode: imageStorageSettings.mode,
+        hostPath: imageStorageSettings.hostPath,
+        ttlMs: imageStorageSettings.ttlMs,
+        maxCount: imageStorageSettings.maxCount,
+        maxBytes: imageStorageSettings.maxBytes,
+        ...(imageStorageLocalDir.trim()
+          ? { localDir: imageStorageLocalDir.trim() }
+          : {}),
+      });
+      setImageStorageSettings(saved);
+      setImageStorageLocalDir("");
+      toast.success(t("admin.imageStorageSaved"));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("admin.imageStorageSaveFailed")));
+    } finally {
+      setImageStorageSaving(false);
+    }
+  }
+
+  async function handleTestImageStorage() {
+    if (!imageStorageInstanceId.trim()) {
+      toast.error(t("admin.imageStorageInstanceIdRequired"));
+      return;
+    }
+    setImageStorageTesting(true);
+    setImageStorageTestResult(null);
+    try {
+      setImageStorageTestResult(
+        await testTerminalImageStorage(imageStorageInstanceId.trim()),
+      );
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("admin.imageStorageTestFailed")));
+    } finally {
+      setImageStorageTesting(false);
+    }
+  }
+
   async function handleSaveSessionTimeout() {
     const hours = parseInt(sessionTimeout, 10);
     if (isNaN(hours) || hours < 1 || hours > 720) {
@@ -542,7 +712,7 @@ export function AdminSettingsPanel({
 
   async function handleSaveTailscaleApiKey() {
     try {
-      await updateTailscaleSettings(tailscaleApiKey);
+      await updateTailscaleSettings(tailscaleApiKey, tailscaleApiBaseUrl);
       toast.success(t("admin.tailscaleSettingsSaved"));
     } catch {
       toast.error(t("admin.tailscaleSettingsSaveFailed"));
@@ -632,6 +802,9 @@ export function AdminSettingsPanel({
       const result = await requestAcmeCertificate();
       setAcmeSettings(result);
       toast.success(t("admin.sslRequestCertSuccess"));
+      if (result.reloadMessage) {
+        toast.info(result.reloadMessage);
+      }
     } catch (e) {
       toast.error(apiErrorMessage(e, t("admin.sslRequestCertFailed")));
     } finally {
@@ -654,6 +827,9 @@ export function AdminSettingsPanel({
       setManualCertDraft("");
       setManualKeyDraft("");
       toast.success(t("admin.sslManualUploadSuccess"));
+      if (result.reloadMessage) {
+        toast.info(result.reloadMessage);
+      }
     } catch (e) {
       toast.error(apiErrorMessage(e, t("admin.sslManualUploadFailed")));
     } finally {
@@ -934,6 +1110,10 @@ export function AdminSettingsPanel({
         analyticsLocked={analyticsLocked}
         handleToggleAnalytics={handleToggleAnalytics}
         sessionSharingGloballyEnabled={sessionSharingGloballyEnabled}
+        aiGloballyEnabled={aiGloballyEnabled}
+        onToggleAiGloballyEnabled={handleToggleAiGloballyEnabled}
+        aiPrivateEndpoints={aiPrivateEndpoints}
+        onSaveAiPrivateEndpoints={handleSaveAiPrivateEndpoints}
         handleToggleSessionSharingGloballyEnabled={
           handleToggleSessionSharingGloballyEnabled
         }
@@ -968,6 +1148,8 @@ export function AdminSettingsPanel({
         handleSaveLogLevel={handleSaveLogLevel}
         tailscaleApiKey={tailscaleApiKey}
         setTailscaleApiKey={setTailscaleApiKey}
+        tailscaleApiBaseUrl={tailscaleApiBaseUrl}
+        setTailscaleApiBaseUrl={setTailscaleApiBaseUrl}
         handleSaveTailscaleApiKey={handleSaveTailscaleApiKey}
       />
 
@@ -1002,6 +1184,12 @@ export function AdminSettingsPanel({
         setUnlinkAccountTarget={setUnlinkAccountTarget}
         setUnlinkAccountOpen={setUnlinkAccountOpen}
         onManageUser={setManageUser}
+        search={userSearch}
+        onSearchChange={setUserSearch}
+        page={userPage}
+        pageSize={USERS_PAGE_SIZE}
+        total={userTotal}
+        onPageChange={setUserPage}
       />
 
       <AdminSessionsSection
@@ -1035,6 +1223,22 @@ export function AdminSettingsPanel({
         defaults={hostDefaults}
         setDefaults={setHostDefaults}
         handleSaveDefaults={handleSaveHostDefaults}
+      />
+
+      <AdminImageStorageSection
+        open={openSections.has("image-storage")}
+        onToggle={() => toggle("image-storage")}
+        settings={imageStorageSettings}
+        setSettings={setImageStorageSettings}
+        localDir={imageStorageLocalDir}
+        setLocalDir={setImageStorageLocalDir}
+        instanceId={imageStorageInstanceId}
+        setInstanceId={setImageStorageInstanceId}
+        saving={imageStorageSaving}
+        testing={imageStorageTesting}
+        testResult={imageStorageTestResult}
+        onSave={() => void handleSaveImageStorage()}
+        onTest={() => void handleTestImageStorage()}
       />
 
       <AdminDatabaseSection
@@ -1091,6 +1295,15 @@ export function AdminSettingsPanel({
         open={openSections.has("audit-log")}
         onToggle={() => toggle("audit-log")}
         users={users}
+      />
+
+      <AdminTouchInputSection
+        open={openSections.has("touch-input")}
+        onToggle={() => toggle("touch-input")}
+        settings={touchInputSettings}
+        setSettings={setTouchInputSettings}
+        onSave={() => void saveTouchInputSettings()}
+        onReset={resetTouchInputSettings}
       />
 
       <AdminCreateUserDialog

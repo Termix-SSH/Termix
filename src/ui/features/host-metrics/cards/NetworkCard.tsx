@@ -161,9 +161,16 @@ export function NetworkCard({
                 </div>
                 <div className="flex justify-between font-mono text-[10px] text-muted-foreground">
                   <span className="truncate">{iface.ip}</span>
-                  {(iface.rx || iface.tx) && (
+                  {(iface.rxRateBps != null || iface.txRateBps != null) && (
                     <span className="shrink-0">
-                      &#8595; {iface.rx ?? "—"} / &#8593; {iface.tx ?? "—"}
+                      &#8595;{" "}
+                      {iface.rxRateBps == null
+                        ? "—"
+                        : formatBytes(iface.rxRateBps)}{" "}
+                      / &#8593;{" "}
+                      {iface.txRateBps == null
+                        ? "—"
+                        : formatBytes(iface.txRateBps)}
                     </span>
                   )}
                 </div>

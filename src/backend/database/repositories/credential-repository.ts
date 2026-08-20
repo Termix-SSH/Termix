@@ -212,6 +212,56 @@ export class CredentialRepository {
     return this.decryptOne(rows[0] ?? null, userId);
   }
 
+  /**
+   * Manual drag-to-reorder write path. Updates sortOrder for each id one row
+   * at a time inside a transaction rather than a single set-for-all-matching
+   * -ids statement, matching HostRepository.reorderForUser.
+   */
+  async reorderForUser(
+    userId: string,
+    positions: { id: number; sortOrder: number }[],
+  ): Promise<number> {
+    if (positions.length === 0) return 0;
+
+    let affected: number;
+    if (this.context.dialect === "sqlite") {
+      affected = this.context.drizzle.transaction((tx) => {
+        let count = 0;
+        for (const { id, sortOrder } of positions) {
+          const result = tx
+            .update(sshCredentials)
+            .set({ sortOrder, updatedAt: sql`CURRENT_TIMESTAMP` })
+            .where(
+              and(eq(sshCredentials.id, id), eq(sshCredentials.userId, userId)),
+            )
+            .run();
+          count += rowsAffected(result);
+        }
+        return count;
+      });
+    } else {
+      affected = await this.context.drizzle.transaction(async (tx) => {
+        let count = 0;
+        for (const { id, sortOrder } of positions) {
+          const result = await tx
+            .update(sshCredentials)
+            .set({ sortOrder, updatedAt: sql`CURRENT_TIMESTAMP` })
+            .where(
+              and(eq(sshCredentials.id, id), eq(sshCredentials.userId, userId)),
+            );
+          count += rowsAffected(result);
+        }
+        return count;
+      });
+    }
+
+    if (affected > 0) {
+      await this.afterWrite();
+    }
+
+    return affected;
+  }
+
   async deleteForUser(
     userId: string,
     credentialId: number,

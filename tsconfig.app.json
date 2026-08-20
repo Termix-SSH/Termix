@@ -28,12 +28,14 @@
     "noImplicitOverride": false,
     "noEmitOnError": false,
     "paths": {
+      "@/types": ["./src/types/index.ts"],
       "@/types/*": ["./src/types/*"],
       "@/*": ["./src/ui/*"]
     }
   },
   "include": [
     "src/main.tsx",
+    "src/vite-env.d.ts",
     "src/ui/**/*.ts",
     "src/ui/**/*.tsx",
     "src/types/**/*.ts"

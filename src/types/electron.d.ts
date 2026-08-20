@@ -29,12 +29,21 @@ interface DialogResult {
 export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
+  openNativeRdp: (options: {
+    host: string;
+    port?: number;
+    username?: string;
+    domain?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   getSetting?: (key: string) => Promise<string | null | undefined>;
   setSetting?: (key: string, value: string) => Promise<void>;
 
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
-  testServerConnection: (serverUrl: string) => Promise<ConnectionTestResult>;
+  testServerConnection: (
+    serverUrl: string,
+    allowInvalidCertificate?: boolean,
+  ) => Promise<ConnectionTestResult>;
   getC2STunnelConfig: () => Promise<unknown[]>;
   saveC2STunnelConfig: (
     config: unknown[],
@@ -73,6 +82,7 @@ export interface ElectronAPI {
       needsReauth: boolean;
     }) => void,
   ) => () => void;
+  onCloseActiveTab?: (callback: () => void) => () => void;
   clearSessionCookies: () => Promise<void>;
   getSessionCookie: (
     name: string,
@@ -160,6 +170,27 @@ export interface ElectronAPI {
     success: boolean;
     error?: string;
   }>;
+
+  startLocalTerminal(dimensions: {
+    cols: number;
+    rows: number;
+  }): Promise<{ sessionId: string; shell: string }>;
+  readyLocalTerminal(sessionId: string): Promise<boolean>;
+  writeLocalTerminal(sessionId: string, data: string): Promise<boolean>;
+  resizeLocalTerminal(
+    sessionId: string,
+    cols: number,
+    rows: number,
+  ): Promise<boolean>;
+  closeLocalTerminal(sessionId: string): Promise<boolean>;
+  onLocalTerminalData(
+    sessionId: string,
+    callback: (data: string) => void,
+  ): () => void;
+  onLocalTerminalExit(
+    sessionId: string,
+    callback: (exitCode: number) => void,
+  ): () => void;
 }
 
 declare global {

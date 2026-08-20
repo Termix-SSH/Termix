@@ -28,6 +28,16 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
     ],
   },
   {
+    group: "automations",
+    permissions: [
+      "automations.view",
+      "automations.create",
+      "automations.edit",
+      "automations.delete",
+      "automations.run",
+    ],
+  },
+  {
     group: "credentials",
     permissions: [
       "credentials.view",
@@ -35,6 +45,10 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
       "credentials.edit",
       "credentials.delete",
     ],
+  },
+  {
+    group: "ai",
+    permissions: ["ai.use", "ai.manage_providers", "ai.apply_proposals"],
   },
   {
     group: "admin",

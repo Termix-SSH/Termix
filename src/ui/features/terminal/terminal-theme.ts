@@ -1,4 +1,4 @@
-import { TERMINAL_THEMES } from "@/lib/terminal-themes.ts";
+import { TERMINAL_THEMES, type TerminalTheme } from "@/lib/terminal-themes.ts";
 import type { TerminalConfig } from "@/types/index.ts";
 
 // Background/foreground per UI theme for "Termix Default" - must match index.css
@@ -21,7 +21,7 @@ export function resolveTermixThemeColors(
   activeTheme: string,
   appTheme: string,
   customThemeColors?: TerminalConfig["customThemeColors"],
-) {
+): TerminalTheme["colors"] {
   if (activeTheme === "custom") {
     if (customThemeColors) {
       return customThemeColors;

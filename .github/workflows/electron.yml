@@ -77,6 +77,43 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "npm"
 
+      - name: Install Spectre-mitigated MSVC libraries
+        shell: pwsh
+        run: |
+          # node-pty's binding.gyp sets SpectreMitigation, so MSBuild refuses to
+          # build without these. They are not on the runner image by default.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installPath = & $vswhere -latest -products * -property installationPath
+          if (-not $installPath) { throw "Visual Studio installation not found" }
+
+          # Derive the toolset version from the installed MSVC so the component
+          # id keeps matching when the runner image bumps the compiler.
+          $toolsetDir = Get-ChildItem -Path "$installPath\VC\Tools\MSVC" -Directory |
+            Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $toolsetDir) { throw "No MSVC toolset found under $installPath" }
+          $parts = $toolsetDir.Name.Split(".")
+          $shortVer = "$($parts[0]).$($parts[1].Substring(0,2))"
+          Write-Host "MSVC toolset $($toolsetDir.Name) -> component version $shortVer"
+
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $components = @(
+            "Microsoft.VisualStudio.Component.VC.$shortVer.17.14.x86.x64.Spectre",
+            "Microsoft.VisualStudio.Component.VC.Runtimes.x86.x64.Spectre"
+          )
+          $args = @("modify", "--installPath", "`"$installPath`"", "--quiet", "--norestart", "--nocache")
+          foreach ($c in $components) { $args += @("--add", $c) }
+
+          Write-Host "Installing: $($components -join ', ')"
+          $proc = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -NoNewWindow
+          if ($proc.ExitCode -ne 0 -and $proc.ExitCode -ne 3010) {
+            Write-Host "vs_installer exited with $($proc.ExitCode); verifying libraries anyway"
+          }
+
+          $found = Get-ChildItem -Path "$installPath\VC\Tools\MSVC" -Recurse -Filter "*.lib" -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\spectre\\" } | Select-Object -First 1
+          if (-not $found) { throw "Spectre-mitigated libraries still missing after install" }
+          Write-Host "Spectre libs present: $($found.FullName)"
+
       - name: Install dependencies
         run: npm ci
 
@@ -1117,6 +1154,18 @@ jobs:
           BUILD_VERSION="${{ steps.build_number.outputs.build_version || github.run_number }}"
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
 
+      - name: Generate App Store release notes
+        id: asc_notes
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          META_DIR="$RUNNER_TEMP/asc_metadata"
+          rm -rf "$META_DIR"
+          node scripts/generate-appstore-notes.cjs \
+            --notes RELEASE_NOTES.md \
+            --out-dir "$META_DIR" \
+            --locales "en-US"
+          echo "metadata_path=$META_DIR" >> "$GITHUB_OUTPUT"
+
       - name: Upload and submit to Mac App Store
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         run: |
@@ -1133,8 +1182,12 @@ jobs:
             --pkg "$PKG_FILE" \
             --api_key_path "$API_KEY_JSON" \
             --app_version "$VERSION" \
-            --skip_metadata true \
+            --platform osx \
+            --app_identifier "com.karmaa.termix" \
+            --skip_metadata false \
+            --metadata_path "${{ steps.asc_notes.outputs.metadata_path }}" \
             --skip_screenshots true \
+            --skip_app_version_update false \
             --submit_for_review true \
             --automatic_release true \
             --precheck_include_in_app_purchases false \

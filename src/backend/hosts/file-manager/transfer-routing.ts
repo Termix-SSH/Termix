@@ -1,4 +1,5 @@
 import type { TransferPlatform } from "../transfer-paths.js";
+import { deflateRawSync } from "node:zlib";
 
 export type TransferMethodPreference = "auto" | "tar" | "item_sftp";
 
@@ -8,6 +9,8 @@ export interface TransferScanSummary {
   largestFileBytes: number;
   /** Share of total bytes in likely incompressible file types (0–1). */
   incompressibleRatio: number;
+  /** Share inferred from bounded content samples, when available. */
+  sampledIncompressibleRatio?: number;
 }
 
 const INCOMPRESSIBLE_EXT =
@@ -43,6 +46,15 @@ export function buildTransferScanSummary(
   };
 }
 
+export function estimateIncompressibleSample(data: Buffer): boolean {
+  if (data.length === 0) return false;
+  return deflateRawSync(data, { level: 1 }).length / data.length >= 0.9;
+}
+
+function effectiveIncompressibleRatio(summary: TransferScanSummary): number {
+  return summary.sampledIncompressibleRatio ?? summary.incompressibleRatio;
+}
+
 /**
  * Choose tar vs per-item SFTP for directory / multi-file transfers.
  * Single-file stream transfers bypass this entirely.
@@ -72,8 +84,8 @@ export function resolveArchiveTransferMethod(
     return "item_sftp";
   }
 
-  const { fileCount, totalBytes, largestFileBytes, incompressibleRatio } =
-    summary;
+  const { fileCount, totalBytes, largestFileBytes } = summary;
+  const incompressibleRatio = effectiveIncompressibleRatio(summary);
 
   if (fileCount === 0) {
     return "item_sftp";
@@ -154,8 +166,8 @@ export function getArchiveTransferReasonKey(
     return "tar_unavailable";
   }
 
-  const { fileCount, totalBytes, largestFileBytes, incompressibleRatio } =
-    summary;
+  const { fileCount, totalBytes, largestFileBytes } = summary;
+  const incompressibleRatio = effectiveIncompressibleRatio(summary);
 
   if (
     fileCount > 1 &&

@@ -14,6 +14,8 @@ import { installElectronWheelZoomGuard } from "@/lib/electron-wheel-zoom";
 import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
+import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
+import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
@@ -35,6 +37,11 @@ const TunnelApp = lazy(() =>
 );
 const HostMetricsApp = lazy(() =>
   import("@/features/host-metrics/HostMetricsApp").then((m) => ({
+    default: m.default,
+  })),
+);
+const ProxmoxStatsApp = lazy(() =>
+  import("@/features/proxmox-stats/ProxmoxStatsApp").then((m) => ({
     default: m.default,
   })),
 );
@@ -101,6 +108,8 @@ function FullscreenApp() {
     case "host-metrics":
     case "server-stats":
       return <HostMetricsApp hostId={hostId || undefined} />;
+    case "proxmox-stats":
+      return <ProxmoxStatsApp hostId={hostId || undefined} />;
     case "docker":
       return <DockerApp hostId={hostId || undefined} />;
     case "rdp":
@@ -352,7 +361,11 @@ function App() {
           }}
         >
           <Suspense fallback={null}>
-            <AppShell username={authUsername} onLogout={handleLogout} />
+            <UiPreferencesProvider>
+              <ConnectionDefaultsProvider>
+                <AppShell username={authUsername} onLogout={handleLogout} />
+              </ConnectionDefaultsProvider>
+            </UiPreferencesProvider>
           </Suspense>
         </div>
       )}
@@ -395,7 +408,11 @@ function RootApp() {
   if (isFullscreen) {
     return (
       <Suspense fallback={null}>
-        <FullscreenAppGate />
+        <UiPreferencesProvider>
+          <ConnectionDefaultsProvider>
+            <FullscreenAppGate />
+          </ConnectionDefaultsProvider>
+        </UiPreferencesProvider>
       </Suspense>
     );
   }

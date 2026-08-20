@@ -1,4 +1,4 @@
-export type StatusValue = "online" | "offline" | "degraded";
+export type StatusValue = "online" | "reachable" | "offline" | "degraded";
 
 export interface ServerStatusEntry {
   status: StatusValue;

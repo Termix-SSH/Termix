@@ -5,13 +5,14 @@ import {
   sortHostTree,
 } from "../../sidebar/host-sort";
 
-function host(name: string, pin = false): Host {
+function host(name: string, pin = false, sortOrder?: number | null): Host {
   return {
     id: name,
     name,
     ip: `10.0.0.${name.length}`,
     online: true,
     pin,
+    sortOrder,
   } as Host;
 }
 
@@ -71,6 +72,56 @@ describe("sortHostTree", () => {
 
     const sorted = sortHostTree(tree, "name-asc", true);
     expect(names(sorted.children[0] as HostFolder)).toEqual(["alpha", "beta"]);
+  });
+});
+
+describe("sortHostTree manual mode", () => {
+  it("sorts hosts by sortOrder, nulls last, name tie-break", () => {
+    const tree: HostFolder = {
+      name: "root",
+      children: [
+        host("gamma", false, null),
+        host("alpha", false, 2000),
+        host("beta", false, 1000),
+        host("delta", false, null),
+      ],
+    };
+
+    expect(names(sortHostTree(tree, "manual"))).toEqual([
+      "beta",
+      "alpha",
+      "delta",
+      "gamma",
+    ]);
+  });
+
+  it("sorts sibling folders by their own sortOrder in manual mode", () => {
+    const tree: HostFolder = {
+      name: "root",
+      children: [
+        { name: "zeta", sortOrder: 1000, children: [] },
+        { name: "alpha", sortOrder: null, children: [] },
+        { name: "beta", sortOrder: 500, children: [] },
+      ],
+    };
+
+    expect(names(sortHostTree(tree, "manual"))).toEqual([
+      "beta",
+      "zeta",
+      "alpha",
+    ]);
+  });
+
+  it("still lists folders before hosts in manual mode", () => {
+    const tree: HostFolder = {
+      name: "root",
+      children: [
+        host("alpha", false, 100),
+        { name: "sub", sortOrder: 9000, children: [] },
+      ],
+    };
+
+    expect(names(sortHostTree(tree, "manual"))).toEqual(["sub", "alpha"]);
   });
 });
 

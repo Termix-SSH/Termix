@@ -35,6 +35,7 @@ export function createCorsMiddleware(
     "Authorization",
     "User-Agent",
     "X-Electron-App",
+    "X-Termix-Device-ID",
     "Cache-Control",
     "x-admin-target-user",
     ...extraHeaders,

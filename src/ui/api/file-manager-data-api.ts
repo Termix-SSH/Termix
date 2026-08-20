@@ -1,11 +1,20 @@
 import { authApi, handleApiError } from "@/main-axios";
 
+/** Row shape shared by the recent / pinned / shortcut list endpoints. */
+export interface FileManagerEntry {
+  id: number;
+  name: string;
+  path: string;
+  lastOpened?: string;
+  [key: string]: unknown;
+}
+
 // FILE MANAGER DATA
 // ============================================================================
 
 export async function getRecentFiles(
   hostId: number,
-): Promise<Record<string, unknown>> {
+): Promise<FileManagerEntry[]> {
   try {
     const response = await authApi.get("/host/file_manager/recent", {
       params: { hostId },
@@ -52,7 +61,7 @@ export async function removeRecentFile(
 
 export async function getPinnedFiles(
   hostId: number,
-): Promise<Record<string, unknown>> {
+): Promise<FileManagerEntry[]> {
   try {
     const response = await authApi.get("/host/file_manager/pinned", {
       params: { hostId },
@@ -99,7 +108,7 @@ export async function removePinnedFile(
 
 export async function getFolderShortcuts(
   hostId: number,
-): Promise<Record<string, unknown>> {
+): Promise<FileManagerEntry[]> {
   try {
     const response = await authApi.get("/host/file_manager/shortcuts", {
       params: { hostId },

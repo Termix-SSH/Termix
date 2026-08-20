@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
@@ -45,7 +46,7 @@ export class DatabaseMigration {
       } catch (error) {
         databaseLogger.warn("Could not get unencrypted database file size", {
           operation: "migration_status_check",
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -65,7 +66,7 @@ export class DatabaseMigration {
         } catch (error) {
           databaseLogger.warn("Failed to remove empty unencrypted database", {
             operation: "migration_cleanup_empty_failed",
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           });
         }
       } else {
@@ -117,10 +118,9 @@ export class DatabaseMigration {
         source: this.unencryptedDbPath,
         backup: backupPath,
       });
-      throw new Error(
-        `Backup creation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-        { cause: error },
-      );
+      throw new Error(`Backup creation failed: ${getErrorMessage(error)}`, {
+        cause: error,
+      });
     }
   }
 
@@ -174,8 +174,7 @@ export class DatabaseMigration {
         duration: Date.now() - startTime,
       };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+      const errorMessage = getErrorMessage(error);
 
       databaseLogger.error("Database migration failed", error, {
         operation: "migration_failed",
@@ -233,14 +232,14 @@ export class DatabaseMigration {
           databaseLogger.warn("Failed to cleanup old migration file", {
             operation: "migration_cleanup_failed",
             file: file.name,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           });
         }
       }
     } catch (error) {
       databaseLogger.warn("Migration cleanup failed", {
         operation: "migration_cleanup_error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }

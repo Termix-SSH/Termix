@@ -32,10 +32,7 @@ type FileManagerDialogsProps = {
   handleAuthDialogCancel: () => void;
   permissionsDialogFile: FileItem | null;
   setPermissionsDialogFile: (file: FileItem | null) => void;
-  handleSavePermissions: (
-    file: FileItem,
-    permissions: string,
-  ) => void | Promise<void>;
+  handleSavePermissions: (file: FileItem, permissions: string) => Promise<void>;
   sudoDialogOpen: boolean;
   setSudoDialogOpen: (open: boolean) => void;
   setPendingSudoOperation: (operation: PendingSudoOperation | null) => void;

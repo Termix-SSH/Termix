@@ -9,8 +9,10 @@ import { FieldCrypto } from "../../utils/field-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
+import { isTrustedProxyAuthEnabled } from "../../utils/trusted-proxy-auth.js";
 import {
   generateDeviceFingerprint,
+  getDeviceId,
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
 import {
@@ -182,6 +184,11 @@ export function registerUserTotpRoutes(
    *         description: Failed to enable TOTP.
    */
   router.post("/totp/enable", authenticateJWT, async (req, res) => {
+    if (isTrustedProxyAuthEnabled()) {
+      return res.status(409).json({
+        error: "TOTP is disabled while trusted proxy authentication is enabled",
+      });
+    }
     const userId = (req as AuthenticatedRequest).userId;
     const sessionId = (req as AuthenticatedRequest).sessionId;
     const { totp_code } = req.body;
@@ -325,20 +332,16 @@ export function registerUserTotpRoutes(
         return res.status(404).json({ error: "User not found" });
       }
 
-      if (!totp_code || (!userRecord.isOidc && !password)) {
+      // One re-authentication value, whichever kind it is. The dialog offers a
+      // single field -- "Enter TOTP code or password" -- so it arrives in
+      // whichever of the two body fields the caller happened to use.
+      const credential = totp_code || password;
+      if (!credential) {
         return res.status(400).json({
           error: userRecord.isOidc
             ? "A TOTP code is required"
-            : "Both password and TOTP code are required",
+            : "A TOTP code or password is required",
         });
-      }
-
-      if (
-        !userRecord.isOidc &&
-        (!userRecord.passwordHash ||
-          !(await bcrypt.compare(password, userRecord.passwordHash)))
-      ) {
-        return res.status(401).json({ error: "Incorrect password" });
       }
 
       if (!userRecord.totpEnabled) {
@@ -346,11 +349,18 @@ export function registerUserTotpRoutes(
       }
 
       const userDataKey = authManager.getUserDataKey(userId);
-      const verified = await verifyTotpReauth(
+      // TOTP code or backup code first; verifyTotpReauth deliberately refuses
+      // the account password, so that stays a separate comparison here.
+      let verified = await verifyTotpReauth(
         userRecord,
-        totp_code,
+        credential,
         userDataKey,
       );
+
+      if (!verified && !userRecord.isOidc && userRecord.passwordHash) {
+        verified = await bcrypt.compare(credential, userRecord.passwordHash);
+      }
+
       if (!verified) {
         return res
           .status(401)
@@ -624,18 +634,23 @@ export function registerUserTotpRoutes(
       const deviceInfo = parseUserAgent(req);
 
       if (rememberMe) {
-        const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
-        await authManager.addTrustedDevice(
-          userRecord.id,
-          deviceFingerprint,
-          deviceInfo.type,
-          deviceInfo.deviceInfo,
+        const deviceFingerprint = generateDeviceFingerprint(
+          deviceInfo,
+          getDeviceId(req),
         );
-        authLogger.info("Device automatically trusted via Remember Me", {
-          operation: "totp_auto_trust",
-          userId: userRecord.id,
-          deviceType: deviceInfo.type,
-        });
+        if (deviceFingerprint) {
+          await authManager.addTrustedDevice(
+            userRecord.id,
+            deviceFingerprint,
+            deviceInfo.type,
+            deviceInfo.deviceInfo,
+          );
+          authLogger.info("Device automatically trusted via Remember Me", {
+            operation: "totp_auto_trust",
+            userId: userRecord.id,
+            deviceType: deviceInfo.type,
+          });
+        }
       }
 
       const token = await authManager.generateJWTToken(userRecord.id, {

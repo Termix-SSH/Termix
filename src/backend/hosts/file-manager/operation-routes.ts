@@ -1,8 +1,25 @@
 import type { Express } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { fileLogger } from "../../utils/logger.js";
-import { execChannel, execWithSudo, type SSHSession } from "./session.js";
+import {
+  execChannel,
+  execWithSudo,
+  getSessionSftp,
+  type SSHSession,
+} from "./session.js";
 import { buildDeleteCommand } from "./operation-commands.js";
+import {
+  emptyTrash,
+  listTrash,
+  moveToTrash,
+  permanentlyDeleteTrashItem,
+  restoreTrashItem,
+} from "./trash-service.js";
+import {
+  createCurrentSettingsRepository,
+  getCurrentSettingValue,
+} from "../../database/repositories/factory.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 
 type FileOperationRoutesDeps = {
   sshSessions: Record<string, SSHSession>;
@@ -13,6 +30,128 @@ export function registerFileOperationRoutes(
   app: Express,
   { sshSessions, verifySessionOwnership }: FileOperationRoutesDeps,
 ): void {
+  const permissionManager = PermissionManager.getInstance();
+  const getTrashRetentionDays = () => {
+    try {
+      const value = Number(
+        getCurrentSettingValue("file_manager_trash_retention_days"),
+      );
+      return Number.isInteger(value) && value >= 1 && value <= 3650 ? value : 7;
+    } catch {
+      return 7;
+    }
+  };
+
+  async function ownedSession(
+    req: AuthenticatedRequest,
+    res: import("express").Response,
+  ) {
+    const sessionId = String(req.body?.sessionId ?? req.query?.sessionId ?? "");
+    const session = sshSessions[sessionId];
+    if (!sessionId || !session?.isConnected) {
+      res.status(400).json({ error: "SSH connection not established" });
+      return null;
+    }
+    if (!verifySessionOwnership(session, req.userId)) {
+      res.status(403).json({ error: "Session access denied" });
+      return null;
+    }
+    session.lastActive = Date.now();
+    return session;
+  }
+
+  app.get("/ssh/file_manager/ssh/trash", async (req, res) => {
+    const session = await ownedSession(
+      req as unknown as AuthenticatedRequest,
+      res,
+    );
+    if (!session) return;
+    try {
+      res.json({
+        items: await listTrash(
+          await getSessionSftp(session),
+          getTrashRetentionDays(),
+        ),
+        retentionDays: getTrashRetentionDays(),
+        canManageRetention: await permissionManager.isAdmin(
+          (req as AuthenticatedRequest).userId,
+        ),
+      });
+    } catch (error) {
+      fileLogger.error("Failed to list trash", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.post("/ssh/file_manager/ssh/trash/:id/restore", async (req, res) => {
+    const session = await ownedSession(
+      req as unknown as AuthenticatedRequest,
+      res,
+    );
+    if (!session) return;
+    try {
+      res.json({
+        item: await restoreTrashItem(
+          await getSessionSftp(session),
+          req.params.id,
+        ),
+      });
+    } catch (error) {
+      const message = (error as Error).message;
+      res
+        .status(message.includes("already exists") ? 409 : 500)
+        .json({ error: message });
+    }
+  });
+
+  app.delete("/ssh/file_manager/ssh/trash/:id", async (req, res) => {
+    const session = await ownedSession(
+      req as unknown as AuthenticatedRequest,
+      res,
+    );
+    if (!session) return;
+    try {
+      await permanentlyDeleteTrashItem(
+        await getSessionSftp(session),
+        req.params.id,
+      );
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.delete("/ssh/file_manager/ssh/trash", async (req, res) => {
+    const session = await ownedSession(req as AuthenticatedRequest, res);
+    if (!session) return;
+    try {
+      res.json({ deleted: await emptyTrash(await getSessionSftp(session)) });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.put("/ssh/file_manager/ssh/trash-retention", async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    if (!(await permissionManager.isAdmin(userId))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    const retentionDays = Number(req.body?.retentionDays);
+    if (
+      !Number.isInteger(retentionDays) ||
+      retentionDays < 1 ||
+      retentionDays > 3650
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Retention must be between 1 and 3650 days" });
+    }
+    await createCurrentSettingsRepository().upsert(
+      "file_manager_trash_retention_days",
+      String(retentionDays),
+    );
+    return res.json({ retentionDays });
+  });
   /**
    * @openapi
    * /ssh/file_manager/ssh/createFile:
@@ -342,7 +481,7 @@ export function registerFileOperationRoutes(
    *         description: Failed to delete item.
    */
   app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
-    const { sessionId, path: itemPath, isDirectory } = req.body;
+    const { sessionId, path: itemPath, isDirectory, permanent } = req.body;
     const sshConn = sshSessions[sessionId];
     const userId = (req as AuthenticatedRequest).userId;
 
@@ -370,6 +509,37 @@ export function registerFileOperationRoutes(
       type: isDirectory ? "directory" : "file",
     });
     sshConn.lastActive = Date.now();
+
+    if (!permanent) {
+      try {
+        const sftp = await getSessionSftp(sshConn);
+        await listTrash(sftp, getTrashRetentionDays());
+        const item = await moveToTrash(sftp, itemPath);
+        fileLogger.success("Item moved to trash", {
+          operation: "file_trash_success",
+          sessionId,
+          userId,
+          path: itemPath,
+          trashId: item.id,
+        });
+        return res.json({
+          message: "Item moved to trash",
+          path: itemPath,
+          trashItem: item,
+        });
+      } catch (error) {
+        fileLogger.error("Failed to move item to trash", error, {
+          operation: "file_trash_failed",
+          sessionId,
+          userId,
+          path: itemPath,
+        });
+        return res.status(409).json({
+          error: (error as Error).message,
+          trashUnavailable: true,
+        });
+      }
+    }
 
     const { command: deleteCommand, commandWithSuccess } = buildDeleteCommand(
       itemPath,

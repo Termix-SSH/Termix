@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { execFileSync } from "node:child_process";
 import type { Client } from "ssh2";
 import { describe, expect, it } from "vitest";
 import {
@@ -8,24 +9,42 @@ import {
 } from "../../../hosts/tmux/helper.js";
 
 describe("tmux command path handling", () => {
-  it("adds common non-login shell tmux paths", () => {
-    const command = withTmuxPath("command -v tmux");
-
-    expect(command).toMatch(/^\/bin\/sh -c '/);
-    expect(command).toContain("/opt/homebrew/bin");
-    expect(command).toContain("/usr/local/bin");
-    expect(command).toContain("/opt/bin");
-    expect(command).toContain("/usr/pkg/bin");
-    expect(command).toContain(":$PATH; export PATH; command -v tmux");
-  });
-
-  it("wraps tmux invocations with the same path", () => {
-    expect(tmuxCommand("list-sessions")).toMatch(
-      /^\/bin\/sh -c 'PATH=.*:\$PATH; export PATH; tmux list-sessions'$/,
+  it("prepends all non-login tmux paths while preserving inherited PATH", () => {
+    expect(withTmuxPath("command -v tmux")).toBe(
+      `/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:"$PATH"; export PATH; command -v tmux'`,
     );
   });
 
-  it("detects suffixed tmux versions without parsing the version number", async () => {
+  it("shell-escapes embedded single quotes in wrapped commands", () => {
+    // Asserted as a string so the escaping rule is covered everywhere. The
+    // round-trip below proves it against a real parser, but only where one
+    // exists -- see the note there.
+    expect(withTmuxPath(`printf '%s' "can't"`)).toBe(
+      "/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:\"$PATH\"; export PATH; printf '\\''%s'\\'' \"can'\\''t\"'",
+    );
+  });
+
+  // /bin/sh is not on Windows, and Windows is a supported platform for the
+  // desktop app -- contributors run `npm test` there. CI is ubuntu-only, so it
+  // would never notice this failing.
+  it.skipIf(process.platform === "win32")(
+    "produces a command a real shell parses back to the original",
+    () => {
+      const command = withTmuxPath(`printf '%s' "can't"`);
+
+      expect(
+        execFileSync("/bin/sh", ["-c", command], { encoding: "utf8" }),
+      ).toBe("can't");
+    },
+  );
+
+  it("runs every tmux invocation in UTF-8 mode through the path wrapper", () => {
+    expect(tmuxCommand("list-sessions")).toBe(
+      `/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:"$PATH"; export PATH; tmux -u list-sessions'`,
+    );
+  });
+
+  it("detects tmux with the UTF-8 wrapper", async () => {
     const commands: string[] = [];
     const conn = {
       exec(command: string, callback: (error: null, stream: never) => void) {
@@ -51,6 +70,9 @@ describe("tmux command path handling", () => {
       available: true,
       sessions: [],
     });
-    expect(commands[0]).toContain("tmux -V");
+    expect(commands).toEqual([
+      `/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:"$PATH"; export PATH; tmux -u -V'`,
+      `/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:"$PATH"; export PATH; tmux -u list-sessions -F "#{session_name}|#{session_created}|#{session_activity}|#{session_windows}|#{session_attached}" 2>/dev/null'`,
+    ]);
   });
 });

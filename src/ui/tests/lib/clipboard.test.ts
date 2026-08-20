@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { copyToClipboard } from "../../lib/clipboard";
+import { copyToClipboard, readFromClipboard } from "../../lib/clipboard";
 
 describe("copyToClipboard", () => {
   const originalClipboard = navigator.clipboard;
@@ -82,5 +82,101 @@ describe("copyToClipboard", () => {
     const ok = await copyToClipboard("nope");
 
     expect(ok).toBe(false);
+  });
+});
+
+describe("readFromClipboard", () => {
+  const originalClipboard = navigator.clipboard;
+
+  beforeEach(() => {
+    delete (window as { electronClipboard?: unknown }).electronClipboard;
+  });
+
+  afterEach(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: originalClipboard,
+      configurable: true,
+    });
+    vi.restoreAllMocks();
+  });
+
+  function setClipboard(value: unknown) {
+    Object.defineProperty(navigator, "clipboard", {
+      value,
+      configurable: true,
+    });
+  }
+
+  it("uses the electron bridge when present", async () => {
+    const readText = vi.fn().mockResolvedValue("hello");
+    (window as { electronClipboard?: unknown }).electronClipboard = {
+      writeText: vi.fn(),
+      readText,
+    };
+
+    const text = await readFromClipboard();
+
+    expect(text).toBe("hello");
+    expect(readText).toHaveBeenCalled();
+  });
+
+  it("uses navigator.clipboard when available", async () => {
+    const readText = vi.fn().mockResolvedValue("world");
+    setClipboard({ readText });
+
+    const text = await readFromClipboard();
+
+    expect(text).toBe("world");
+    expect(readText).toHaveBeenCalled();
+  });
+
+  it("falls back to execCommand when navigator.clipboard.readText is undefined (non-HTTPS)", async () => {
+    setClipboard({});
+    const execCommand = vi.fn().mockImplementation((command: string) => {
+      if (command === "paste") {
+        const active = document.activeElement as HTMLTextAreaElement;
+        active.value = "fallback";
+        return true;
+      }
+      return false;
+    });
+    (document as unknown as { execCommand: typeof execCommand }).execCommand =
+      execCommand;
+
+    const text = await readFromClipboard();
+
+    expect(text).toBe("fallback");
+    expect(execCommand).toHaveBeenCalledWith("paste");
+  });
+
+  it("falls back to execCommand when the async read throws", async () => {
+    setClipboard({
+      readText: vi.fn().mockRejectedValue(new Error("denied")),
+    });
+    const execCommand = vi.fn().mockImplementation((command: string) => {
+      if (command === "paste") {
+        const active = document.activeElement as HTMLTextAreaElement;
+        active.value = "retry";
+        return true;
+      }
+      return false;
+    });
+    (document as unknown as { execCommand: typeof execCommand }).execCommand =
+      execCommand;
+
+    const text = await readFromClipboard();
+
+    expect(text).toBe("retry");
+    expect(execCommand).toHaveBeenCalledWith("paste");
+  });
+
+  it("returns an empty string when every approach fails", async () => {
+    setClipboard({});
+    (document as unknown as { execCommand: () => boolean }).execCommand = () =>
+      false;
+
+    const text = await readFromClipboard();
+
+    expect(text).toBe("");
   });
 });

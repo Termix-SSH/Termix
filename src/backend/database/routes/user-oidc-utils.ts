@@ -23,7 +23,10 @@ export class OIDCTokenFormatError extends Error {
 }
 
 function normalizeIssuer(url: string): string {
-  return url.trim().replace(/\/+$/, "");
+  return url
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/\.well-known\/openid-configuration$/, "");
 }
 
 export type OIDCConfig = {
@@ -205,6 +208,22 @@ export function extractOidcGroups(
   return [];
 }
 
+/**
+ * OIDC providers may return group claims in the ID token, userinfo response,
+ * or both. Keep every verified source authoritative instead of letting a
+ * sparse userinfo payload overwrite claims from the ID token.
+ */
+export function extractOidcGroupsFromSources(
+  sources: Record<string, unknown>[],
+  groupClaim?: string,
+): string[] {
+  return [
+    ...new Set(
+      sources.flatMap((source) => extractOidcGroups(source, groupClaim)),
+    ),
+  ];
+}
+
 export function isOIDCUserAllowed(
   allowedUsers: string,
   identifier: string,
@@ -260,14 +279,12 @@ export async function verifyOIDCToken(
   }
 
   const fetchOptions = buildFetchOptions(caCert);
-  const normalizedIssuerUrl = issuerUrl.endsWith("/")
-    ? issuerUrl.slice(0, -1)
-    : issuerUrl;
+  const configuredIssuerUrl = issuerUrl.trim().replace(/\/+$/, "");
+  const normalizedIssuerUrl = normalizeIssuer(issuerUrl);
   const possibleIssuers = [
-    issuerUrl,
     normalizedIssuerUrl,
-    issuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
     normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
+    ...(configuredIssuerUrl === normalizedIssuerUrl ? [issuerUrl] : []),
   ];
 
   const jwksUrls = [

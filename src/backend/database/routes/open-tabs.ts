@@ -1,6 +1,5 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { sessionManager } from "../../hosts/terminal/session-manager.js";
@@ -213,6 +212,7 @@ router.patch("/:id", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = String(req.params.id);
   const updates = req.body as Partial<{
+    hostId: number | null;
     label: string;
     tabOrder: number;
     backendSessionId: string | null;

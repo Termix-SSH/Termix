@@ -1,6 +1,5 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import {
   createCurrentCredentialRepository,
   createCurrentTermixIdentityRepository,

@@ -4,6 +4,10 @@ import {
   createCurrentSettingsRepository,
   getCurrentRepositorySqlite,
 } from "../../database/repositories/factory.js";
+import {
+  needsExplicitPersist,
+  resolveDatabaseDialect,
+} from "../../database/db/dialect.js";
 
 const MIGRATION_FLAG = "private_shared_ssh_auth_v1";
 
@@ -18,6 +22,14 @@ export async function runPrivateSharedSshAuthMigration(): Promise<
 
   try {
     if ((await settingsRepository.get(MIGRATION_FLAG)) === "done") {
+      return null;
+    }
+
+    // Only a SQLite deployment can hold these snapshots: they were written by
+    // releases that predate Postgres and MySQL support. The cleanup also needs a
+    // synchronous query no other driver has, so this would throw rather than
+    // find nothing to do.
+    if (!needsExplicitPersist(resolveDatabaseDialect())) {
       return null;
     }
 

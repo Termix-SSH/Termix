@@ -242,6 +242,87 @@ export function registerHostFolderRoutes(
 
   /**
    * @openapi
+   * /host/folders/reorder:
+   *   put:
+   *     summary: Reorder folders
+   *     description: Sets a manual sortOrder for multiple sibling folders, used by drag-to-reorder in the sidebar's manual sort mode. Folders with no existing metadata row are created.
+   *     tags:
+   *       - SSH
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               positions:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     name:
+   *                       type: string
+   *                     sortOrder:
+   *                       type: integer
+   *     responses:
+   *       200:
+   *         description: Folders reordered successfully.
+   *       400:
+   *         description: Invalid positions array.
+   *       500:
+   *         description: Failed to reorder folders.
+   */
+  router.put(
+    "/folders/reorder",
+    authenticateJWT,
+    async (req: Request, res: Response) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      const { positions } = req.body as {
+        positions?: { name?: unknown; sortOrder?: unknown }[];
+      };
+
+      if (!isNonEmptyString(userId) || !Array.isArray(positions)) {
+        return res.status(400).json({ error: "positions array is required" });
+      }
+
+      const normalized: { name: string; sortOrder: number }[] = [];
+      for (const entry of positions) {
+        if (
+          typeof entry?.name !== "string" ||
+          !entry.name ||
+          typeof entry.sortOrder !== "number" ||
+          !Number.isFinite(entry.sortOrder)
+        ) {
+          return res.status(400).json({
+            error: "Each position requires a name and a numeric sortOrder",
+          });
+        }
+        normalized.push({ name: entry.name, sortOrder: entry.sortOrder });
+      }
+
+      if (normalized.length === 0) {
+        return res.status(400).json({ error: "positions array is required" });
+      }
+
+      try {
+        const updated =
+          await createCurrentHostFolderRepository().reorderFolders(
+            userId,
+            normalized,
+          );
+        res.json({ updated });
+      } catch (err) {
+        sshLogger.error("Failed to reorder folders", err, {
+          operation: "folders_reorder",
+          userId,
+        });
+        res.status(500).json({ error: "Failed to reorder folders" });
+      }
+    },
+  );
+
+  /**
+   * @openapi
    * /host/folders/{name}/hosts:
    *   delete:
    *     summary: Delete all hosts in folder

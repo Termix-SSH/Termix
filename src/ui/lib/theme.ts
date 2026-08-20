@@ -103,6 +103,7 @@ export const FOLDER_COLORS = [
 export const SPLIT_MODES: { id: SplitMode; label: string }[] = [
   { id: "none", label: "None" },
   { id: "2-way", label: "2-Way" },
+  { id: "2-way-horizontal", label: "2-Way (H)" },
   { id: "3-way", label: "3-Way (V)" },
   { id: "3-way-horizontal", label: "3-Way (H)" },
   { id: "4-way", label: "4-Way" },
@@ -113,6 +114,7 @@ export const SPLIT_MODES: { id: SplitMode; label: string }[] = [
 export const PANE_COUNTS: Record<SplitMode, number> = {
   none: 0,
   "2-way": 2,
+  "2-way-horizontal": 2,
   "3-way": 3,
   "3-way-horizontal": 3,
   "4-way": 4,

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Command as CommandPrimitive } from "cmdk";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/kbd";
@@ -17,6 +18,7 @@ import {
   FolderSearch,
   Box,
   Globe,
+  HardDrive,
   Plus,
   MessagesSquare,
   LifeBuoy,
@@ -31,16 +33,29 @@ import {
   Clock,
   Folder,
   Pencil,
+  Play,
+  Clipboard,
 } from "lucide-react";
-import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
-import type { Host, TabType } from "@/types/ui-types";
+import {
+  getRecentActivity,
+  getSnippets,
+  type RecentActivityItem,
+} from "@/main-axios";
+import type { Host, TabType, Tab, Snippet } from "@/types/ui-types";
 import { canEditHost } from "@/sidebar/host-permissions";
+import { RAIL_ITEMS, RAIL_UTILITY_ITEMS } from "@/sidebar/rail-items";
+import { useAiAvailability } from "@/hooks/use-ai-availability";
+import { useSnippetRunner } from "@/hooks/use-snippet-runner.tsx";
 
 interface CommandPaletteProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   hosts: Host[];
+  terminalTabs?: Tab[];
+  activeTabId?: string;
   onOpenTab: (type: TabType, label?: string, pendingEvent?: string) => void;
+  /** Opens a sidebar panel. Kept separate from onOpenTab, which is TabType-shaped. */
+  onOpenPanel?: (view: string) => void;
 }
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -96,6 +111,11 @@ function getSshActions(host: Host): {
       icon: Activity,
       label: "Host Metrics",
     },
+    host.enableProxmoxStats === true && {
+      type: "proxmox-stats",
+      icon: HardDrive,
+      label: "Proxmox Stats",
+    },
   ].filter(Boolean) as {
     type: TabType;
     icon: React.ElementType;
@@ -107,14 +127,20 @@ export function CommandPalette({
   isOpen,
   setIsOpen,
   hosts,
+  terminalTabs = [],
+  activeTabId = "",
   onOpenTab,
+  onOpenPanel,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
+  const { globallyEnabled: aiGloballyEnabled } = useAiAvailability();
   const inputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
     [],
   );
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const { runSnippet, dialog: runSnippetDialog } = useSnippetRunner();
 
   useEffect(() => {
     if (isOpen) {
@@ -122,6 +148,9 @@ export function CommandPalette({
       setSearch("");
       getRecentActivity(5)
         .then(setRecentActivity)
+        .catch(() => {});
+      getSnippets()
+        .then((data) => setSnippets((data ?? []) as unknown as Snippet[]))
         .catch(() => {});
     }
   }, [isOpen]);
@@ -168,13 +197,29 @@ export function CommandPalette({
     groupedHosts.push({ folder, hosts: fhosts });
   }
 
+  const filteredSnippets = search.trim()
+    ? snippets.filter((s) => {
+        const query = search.toLowerCase();
+        return (
+          s.name.toLowerCase().includes(query) ||
+          s.content.toLowerCase().includes(query)
+        );
+      })
+    : [];
+
+  const activeTargetTab =
+    terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0];
+
   const handleAction = (action: () => void) => {
     action();
     setIsOpen(false);
   };
   const showHostResultsFirst = search.trim().length > 0;
 
-  if (!isOpen) return null;
+  // Closing the palette unmounts this component (AppShell only renders it
+  // while commandPaletteOpen is true), so keep rendering just the variables
+  // dialog after close if a snippet run is still pending its inputs.
+  if (!isOpen) return runSnippetDialog;
 
   return (
     <div
@@ -189,13 +234,13 @@ export function CommandPalette({
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <Command className="rounded-none">
+        <Command className="rounded-none" shouldFilter={false} loop>
           <div className="flex items-center border-b border-border px-4 py-1">
             <Search className="size-4 text-muted-foreground mr-3" />
-            <input
+            <CommandPrimitive.Input
               ref={inputRef}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onValueChange={setSearch}
               placeholder={t("commandPalette.searchPlaceholder")}
               className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
@@ -211,7 +256,29 @@ export function CommandPalette({
               heading={t("commandPalette.quickActions")}
               className="px-2"
             >
+              {window.electronAPI?.isElectron && (
+                <CommandItem
+                  value="quick-action-local-terminal"
+                  onSelect={() =>
+                    handleAction(() => onOpenTab("local-terminal"))
+                  }
+                  className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                >
+                  <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
+                    <Terminal className="size-4 text-accent-brand" />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="text-sm font-semibold">
+                      {t("commandPalette.localTerminal")}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("commandPalette.localTerminalDesc")}
+                    </span>
+                  </div>
+                </CommandItem>
+              )}
               <CommandItem
+                value="quick-action-add-host"
                 onSelect={() =>
                   handleAction(() =>
                     onOpenTab(
@@ -237,6 +304,7 @@ export function CommandPalette({
               </CommandItem>
 
               <CommandItem
+                value="quick-action-admin-settings"
                 onSelect={() => handleAction(() => onOpenTab("admin-settings"))}
                 className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
               >
@@ -254,6 +322,7 @@ export function CommandPalette({
               </CommandItem>
 
               <CommandItem
+                value="quick-action-user-profile"
                 onSelect={() => handleAction(() => onOpenTab("user-profile"))}
                 className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
               >
@@ -270,25 +339,8 @@ export function CommandPalette({
                 </div>
               </CommandItem>
 
-              {/* --- tmux-monitor --- */}
               <CommandItem
-                onSelect={() => handleAction(() => onOpenTab("tmux_monitor"))}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <Layers className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.tmuxMonitor")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.tmuxMonitorDesc")}
-                  </span>
-                </div>
-              </CommandItem>
-
-              <CommandItem
+                value="quick-action-add-credential"
                 onSelect={() =>
                   handleAction(() =>
                     onOpenTab(
@@ -314,6 +366,88 @@ export function CommandPalette({
               </CommandItem>
             </CommandGroup>
 
+            {onOpenPanel && (
+              <>
+                <CommandSeparator className="my-2" />
+                <CommandGroup
+                  heading={t("commandPalette.navigation")}
+                  className="px-2"
+                >
+                  {[...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
+                    .filter((item) => item.kind !== "tab")
+                    .filter((item) => item.id !== "ai" || aiGloballyEnabled)
+                    .map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <CommandItem
+                          key={`nav-${item.id}`}
+                          value={`nav-${item.id} ${t(item.labelKey)}`}
+                          onSelect={() =>
+                            handleAction(() => onOpenPanel(item.id))
+                          }
+                          className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                        >
+                          <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
+                            <Icon className="size-4 text-accent-brand" />
+                          </div>
+                          <span className="text-sm font-semibold flex-1">
+                            {t(item.labelKey)}
+                          </span>
+                        </CommandItem>
+                      );
+                    })}
+                </CommandGroup>
+              </>
+            )}
+
+            {filteredSnippets.length > 0 && (
+              <>
+                <CommandSeparator className="my-2" />
+                <CommandGroup
+                  heading={t("commandPalette.snippets")}
+                  className="px-2"
+                >
+                  {filteredSnippets.map((snippet) => (
+                    <CommandItem
+                      key={snippet.id}
+                      value={`snippet-${snippet.id}`}
+                      onSelect={() => {
+                        if (!activeTargetTab) return;
+                        handleAction(() =>
+                          runSnippet(snippet, [activeTargetTab]),
+                        );
+                      }}
+                      className={cn(
+                        "group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer",
+                        !activeTargetTab && "pointer-events-none opacity-50",
+                      )}
+                    >
+                      <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
+                        {snippet.isNote ? (
+                          <Clipboard className="size-4 text-accent-brand" />
+                        ) : (
+                          <Play className="size-4 text-accent-brand" />
+                        )}
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-sm font-semibold truncate">
+                          {snippet.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate font-mono">
+                          {snippet.content}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                        {activeTargetTab
+                          ? t("commandPalette.runSnippetDesc")
+                          : t("newUi.sidebar.snippets.noTerminalTabsOpen")}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+
             {recentActivity.length > 0 && (
               <>
                 <CommandSeparator className="my-2" />
@@ -324,6 +458,7 @@ export function CommandPalette({
                   {recentActivity.map((item) => (
                     <CommandItem
                       key={item.id}
+                      value={`recent-activity-${item.id}`}
                       onSelect={() =>
                         handleAction(() =>
                           onOpenTab(
@@ -376,6 +511,7 @@ export function CommandPalette({
                       {groupHosts.map((host, i) => (
                         <CommandItem
                           key={i}
+                          value={`host-${host.id}`}
                           onSelect={() =>
                             handleAction(() => {
                               const type = host.enableSsh
@@ -534,6 +670,7 @@ export function CommandPalette({
             <CommandGroup heading={t("commandPalette.links")} className="px-2">
               <div className="grid grid-cols-3 gap-1">
                 <CommandItem
+                  value="link-github"
                   onSelect={() =>
                     window.open(
                       "https://github.com/Termix-SSH/Termix",
@@ -546,6 +683,7 @@ export function CommandPalette({
                   <span className="text-sm font-medium">GitHub</span>
                 </CommandItem>
                 <CommandItem
+                  value="link-discord"
                   onSelect={() =>
                     window.open(
                       "https://discord.com/invite/jVQGdvHDrf",
@@ -558,6 +696,7 @@ export function CommandPalette({
                   <span className="text-sm font-medium">Discord</span>
                 </CommandItem>
                 <CommandItem
+                  value="link-support"
                   onSelect={() =>
                     window.open(
                       "https://github.com/Termix-SSH/Support/issues/new",
@@ -586,6 +725,10 @@ export function CommandPalette({
             </div>
             <div className="flex items-center gap-1">
               <span>{t("commandPalette.toggleWith")}</span>
+              <Kbd className="h-5 px-1.5 bg-background rounded-none">Ctrl</Kbd>
+              <span>+</span>
+              <Kbd className="h-5 px-1.5 bg-background rounded-none">K</Kbd>
+              <span>{t("commandPalette.orShortcut")}</span>
               <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>
               <span>+</span>
               <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>
@@ -593,6 +736,8 @@ export function CommandPalette({
           </div>
         </Command>
       </div>
+
+      {runSnippetDialog}
     </div>
   );
 }

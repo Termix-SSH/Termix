@@ -82,7 +82,7 @@
         "arch": ["x64", "arm64", "armv7l"]
       }
     ],
-    "icon": "public/icon.png",
+    "icon": "public/icons",
     "category": "Development",
     "executableName": "termix",
     "maintainer": "Termix <mail@termix.site>",
@@ -122,8 +122,8 @@
     "type": "distribution",
     "minimumSystemVersion": "10.15",
     "mergeASARs": false,
-    "singleArchFiles": "**/*.{node,bare}",
-    "x64ArchFiles": "**/*.{node,bare}"
+    "singleArchFiles": "**/*.{node,bare,dylib}",
+    "x64ArchFiles": "**/{*.{node,bare,dylib},node-pty/prebuilds/*/spawn-helper}"
   },
   "dmg": {
     "artifactName": "termix_macos_${arch}_dmg.${ext}",

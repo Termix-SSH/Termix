@@ -120,7 +120,8 @@ export function TOTPDialog({
                 name="totpCode"
                 type="text"
                 autoFocus
-                maxLength={6}
+                // Some Secure Auth codes can be longer than 6 digits, so allow up to 8 digits here.
+                maxLength={8}
                 pattern="[0-9]*"
                 inputMode="numeric"
                 placeholder="000000"

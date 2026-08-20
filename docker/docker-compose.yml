@@ -12,6 +12,13 @@ services:
       GUACD_HOST: "guacd"
       GUACD_TUNNEL_HOST: "termix"
       GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      # Trusted reverse-proxy authentication is disabled by default. When
+      # enabled, do not expose this container directly to untrusted clients.
+      # TRUSTED_PROXY_AUTH_ENABLED: "true"
+      # TRUSTED_PROXY_AUTH_TRUSTED_PROXIES: "172.16.0.0/12"
+      # TRUSTED_PROXY_AUTH_ROLE_MAP: '{"operators":["user"]}'
+      # TRUSTED_PROXY_AUTH_USERNAME_HEADER: "x-forwarded-username"
+      # TRUSTED_PROXY_AUTH_ROLE_HEADER: "x-forwarded-role"
     depends_on:
       - guacd
     networks:

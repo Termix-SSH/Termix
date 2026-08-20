@@ -1,5 +1,10 @@
 import type { Terminal } from "@xterm/xterm";
 import type { KeybindingAction } from "@/types/keybindings";
+import {
+  hasSnippetInputs,
+  resolveSnippetContent,
+  type SnippetHostContext,
+} from "@/lib/snippet-variables";
 
 export interface KeybindingDispatchContext {
   terminal: Terminal;
@@ -7,17 +12,30 @@ export interface KeybindingDispatchContext {
   writeTextToClipboard: (text: string) => Promise<boolean>;
   readTextFromClipboard: () => Promise<string>;
   getSnippetById: (id: string) => Promise<{ content: string } | undefined>;
+  /** Host context used to silently resolve $HOST/$USER/$PORT/$NAME in runSnippet actions. */
+  hostContext?: SnippetHostContext | null;
+  /**
+   * Called instead of sending the snippet directly when its content still has
+   * unresolved $INPUT_n placeholders after host-variable substitution -- the
+   * caller is expected to collect values (e.g. via a dialog) and send itself.
+   */
+  onSnippetNeedsInputs?: (snippet: { id: string; content: string }) => void;
+}
+
+export function sendRawToSocket(
+  webSocketRef: React.MutableRefObject<WebSocket | null>,
+  data: string,
+): void {
+  if (webSocketRef.current?.readyState === 1) {
+    webSocketRef.current.send(JSON.stringify({ type: "input", data }));
+  }
 }
 
 export function dispatchKeybindingAction(
   action: KeybindingAction,
   ctx: KeybindingDispatchContext,
 ): void {
-  const sendRaw = (data: string) => {
-    if (ctx.webSocketRef.current?.readyState === 1) {
-      ctx.webSocketRef.current.send(JSON.stringify({ type: "input", data }));
-    }
-  };
+  const sendRaw = (data: string) => sendRawToSocket(ctx.webSocketRef, data);
 
   switch (action.type) {
     case "copy": {
@@ -47,8 +65,20 @@ export function dispatchKeybindingAction(
     case "runSnippet": {
       if (!action.snippetId) return;
       ctx.getSnippetById(action.snippetId).then((snippet) => {
-        if (snippet)
-          sendRaw(snippet.content + (action.appendEnter !== false ? "\r" : ""));
+        if (!snippet) return;
+        if (hasSnippetInputs(snippet.content)) {
+          ctx.onSnippetNeedsInputs?.({
+            id: action.snippetId!,
+            content: snippet.content,
+          });
+          return;
+        }
+        const resolved = resolveSnippetContent(
+          snippet.content,
+          ctx.hostContext ?? null,
+          {},
+        );
+        sendRaw(resolved + (action.appendEnter !== false ? "\r" : ""));
       });
       return;
     }

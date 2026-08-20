@@ -110,224 +110,224 @@ export function WidgetEditDialog({
       case "service_link":
         return (
           <ServiceLinkEditForm
-            config={config as ServiceLinkConfig}
+            config={config as unknown as ServiceLinkConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "folder":
         return (
           <FolderEditForm
-            config={config as FolderConfig}
+            config={config as unknown as FolderConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "notes":
         return (
           <NotesEditForm
-            config={config as NotesConfig}
+            config={config as unknown as NotesConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "bookmark_list":
         return (
           <BookmarkListEditForm
-            config={config as BookmarkListConfig}
+            config={config as unknown as BookmarkListConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "clock":
         return (
           <ClockEditForm
-            config={config as ClockConfig}
+            config={config as unknown as ClockConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "host_status":
         return (
           <HostStatusEditForm
-            config={config as HostStatusConfig}
+            config={config as unknown as HostStatusConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "weather":
         return (
           <WeatherEditForm
-            config={config as WeatherConfig}
+            config={config as unknown as WeatherConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "iframe_embed":
         return (
           <IframeEditForm
-            config={config as IframeConfig}
+            config={config as unknown as IframeConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "rss_feed":
         return (
           <RssFeedEditForm
-            config={config as RssFeedConfig}
+            config={config as unknown as RssFeedConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "metrics_chart":
         return (
           <MetricsChartEditForm
-            config={config as MetricsChartConfig}
+            config={config as unknown as MetricsChartConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "host_grid":
         return (
           <HostGridEditForm
-            config={config as HostGridConfig}
+            config={config as unknown as HostGridConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "alert_feed":
         return (
           <AlertFeedEditForm
-            config={config as AlertFeedConfig}
+            config={config as unknown as AlertFeedConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "ping_status":
         return (
           <PingStatusEditForm
-            config={config as PingStatusConfig}
+            config={config as unknown as PingStatusConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "recent_activity":
         return (
           <RecentActivityEditForm
-            config={config as RecentActivityConfig}
+            config={config as unknown as RecentActivityConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "termix_uptime":
         return (
           <TermixUptimeEditForm
-            config={config as TermixUptimeConfig}
+            config={config as unknown as TermixUptimeConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "system_overview":
         return (
           <SystemOverviewEditForm
-            config={config as SystemOverviewConfig}
+            config={config as unknown as SystemOverviewConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "ssh_terminal":
         return (
           <SshTerminalEditForm
-            config={config as SshTerminalConfig}
+            config={config as unknown as SshTerminalConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "quick_connect":
         return (
           <QuickConnectEditForm
-            config={config as QuickConnectConfig}
+            config={config as unknown as QuickConnectConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "file_manager_widget":
         return (
           <FileManagerWidgetEditForm
-            config={config as FileManagerWidgetConfig}
+            config={config as unknown as FileManagerWidgetConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "docker_widget":
         return (
           <DockerWidgetEditForm
-            config={config as DockerWidgetConfig}
+            config={config as unknown as DockerWidgetConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "tunnel_widget":
         return (
           <TunnelWidgetEditForm
-            config={config as TunnelWidgetConfig}
+            config={config as unknown as TunnelWidgetConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "calendar":
         return (
           <CalendarEditForm
-            config={config as CalendarConfig}
+            config={config as unknown as CalendarConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "countdown":
         return (
           <CountdownEditForm
-            config={config as CountdownConfig}
+            config={config as unknown as CountdownConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "search_bar":
         return (
           <SearchBarEditForm
-            config={config as SearchBarConfig}
+            config={config as unknown as SearchBarConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "text_banner":
         return (
           <TextBannerEditForm
-            config={config as TextBannerConfig}
+            config={config as unknown as TextBannerConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "image_widget":
         return (
           <ImageWidgetEditForm
-            config={config as ImageWidgetConfig}
+            config={config as unknown as ImageWidgetConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "markdown_notes":
         return (
           <MarkdownNotesEditForm
-            config={config as MarkdownNotesConfig}
+            config={config as unknown as MarkdownNotesConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "custom_api":
         return (
           <CustomApiEditForm
-            config={config as CustomApiConfig}
+            config={config as unknown as CustomApiConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "service_grid":
         return (
           <ServiceGridEditForm
-            config={config as ServiceGridConfig}
+            config={config as unknown as ServiceGridConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "dashboard_links":
         return (
           <DashboardLinksEditForm
-            config={config as DashboardLinksConfig}
+            config={config as unknown as DashboardLinksConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "search_links":
         return (
           <SearchLinksEditForm
-            config={config as SearchLinksConfig}
+            config={config as unknown as SearchLinksConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
       case "link_tree":
         return (
           <LinkTreeEditForm
-            config={config as LinkTreeConfig}
+            config={config as unknown as LinkTreeConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );

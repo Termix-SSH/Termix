@@ -443,13 +443,21 @@ jobs:
 
       - name: Create docs release branch
         working-directory: docs-repo
-        run: git checkout -B "dev-${{ needs.prep.outputs.version }}"
+        run: |
+          BRANCH="dev-${{ needs.prep.outputs.version }}"
+          if git ls-remote --exit-code origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
+            echo "Reusing existing docs branch $BRANCH."
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+          else
+            git checkout -B "$BRANCH"
+          fi
 
       - name: Overwrite OpenAPI spec and regenerate API docs
         working-directory: docs-repo
         run: |
           cp ../termix/openapi.json static/openapi.json
           npm ci
+          npm run docusaurus clean-api-docs termix
           npm run docusaurus gen-api-docs termix
 
       - name: Commit and push docs branch
@@ -471,7 +479,7 @@ jobs:
 
           git add -A
           git commit -m "feat: update API docs for ${{ needs.prep.outputs.version }}"
-          git push --force origin "dev-${{ needs.prep.outputs.version }}"
+          git push origin "dev-${{ needs.prep.outputs.version }}"
 
       - name: Open and squash-merge docs PR
         if: ${{ inputs.mode != 'Dry run' }}
@@ -534,7 +542,7 @@ jobs:
         docs,
         publish-youtube,
       ]
-    if: ${{ always() && (inputs.mode == 'Everything' || inputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' && needs.electron-release.result == 'success' }}
+    if: ${{ always() && (inputs.mode == 'Everything' || inputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' && needs.docs.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout repository

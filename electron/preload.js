@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+  getPlatform: () => ipcRenderer.invoke("get-platform"),
+  openNativeRdp: (options) => ipcRenderer.invoke("open-native-rdp", options),
 
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   isElectron: true,
@@ -36,6 +38,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("remote-sync-status-changed", listener);
     return () =>
       ipcRenderer.removeListener("remote-sync-status-changed", listener);
+  },
+  onCloseActiveTab: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("close-active-tab", listener);
+    return () => ipcRenderer.removeListener("close-active-tab", listener);
   },
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
@@ -72,6 +79,29 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startDragToDesktop: (dragData) =>
     ipcRenderer.invoke("start-drag-to-desktop", dragData),
   cleanupTempFile: (tempId) => ipcRenderer.invoke("cleanup-temp-file", tempId),
+
+  startLocalTerminal: (dimensions) =>
+    ipcRenderer.invoke("local-terminal-start", dimensions),
+  writeLocalTerminal: (sessionId, data) =>
+    ipcRenderer.invoke("local-terminal-write", sessionId, data),
+  readyLocalTerminal: (sessionId) =>
+    ipcRenderer.invoke("local-terminal-ready", sessionId),
+  resizeLocalTerminal: (sessionId, cols, rows) =>
+    ipcRenderer.invoke("local-terminal-resize", sessionId, cols, rows),
+  closeLocalTerminal: (sessionId) =>
+    ipcRenderer.invoke("local-terminal-close", sessionId),
+  onLocalTerminalData: (sessionId, callback) => {
+    const channel = `local-terminal:data:${sessionId}`;
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
+  },
+  onLocalTerminalExit: (sessionId, callback) => {
+    const channel = `local-terminal:exit:${sessionId}`;
+    const listener = (_event, exitCode) => callback(exitCode);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
+  },
 
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 });

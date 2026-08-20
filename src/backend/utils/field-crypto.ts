@@ -42,9 +42,14 @@ class FieldCrypto {
       "key",
       "publicKey",
     ]),
+    // Channel configs hold ntfy tokens, webhook auth headers and Discord
+    // webhook URLs, which are credentials like any other.
+    notification_channels: new Set(["config"]),
     opkssh_tokens: new Set(["sshCert", "privateKey"]),
     termix_identity_ca: new Set(["privateKey"]),
     vault_tokens: new Set(["sshCert", "privateKey"]),
+    // Third-party AI provider keys are user credentials like any other.
+    ai_providers: new Set(["apiKey"]),
   };
 
   static encryptField(
@@ -81,6 +86,26 @@ class FieldCrypto {
     };
 
     return JSON.stringify(encryptedData);
+  }
+
+  /**
+   * Whether a stored value is one of our envelopes rather than plaintext.
+   * Some encrypted fields hold JSON themselves, so parsing is not enough; the
+   * envelope's own keys have to be present.
+   */
+  static isEncrypted(value: string): boolean {
+    if (!value || !value.startsWith("{")) return false;
+    try {
+      const parsed = JSON.parse(value) as Partial<EncryptedData>;
+      return (
+        typeof parsed?.data === "string" &&
+        typeof parsed?.iv === "string" &&
+        typeof parsed?.tag === "string" &&
+        typeof parsed?.salt === "string"
+      );
+    } catch {
+      return false;
+    }
   }
 
   static decryptField(

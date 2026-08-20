@@ -1,10 +1,30 @@
-import { handleApiError, rbacApi } from "@/main-axios";
-import type { AccessRecord, Role, UserRole } from "@/main-axios";
+import {
+  handleApiError,
+  rbacApi,
+  type AccessRecord,
+  type Role,
+  type UserRole,
+} from "@/main-axios";
 import type { AuthOverrideProtocol } from "@/types/auth-protocols";
+import {
+  getConnectedRemoteApi,
+  resolveRemoteHostId,
+} from "@/lib/remote-server-api";
+
+async function getSharingTarget(hostId: number, syncId?: string | null) {
+  const api = await getConnectedRemoteApi();
+  if (!api || !syncId) return { api: rbacApi, hostId };
+  const remoteHostId = await resolveRemoteHostId(syncId);
+  if (remoteHostId === null) {
+    throw new Error("The synced host does not exist on the remote server");
+  }
+  return { api, hostId: remoteHostId };
+}
 
 export async function getRoles(): Promise<{ roles: Role[] }> {
   try {
-    const response = await rbacApi.get("/rbac/roles");
+    const api = (await getConnectedRemoteApi()) ?? rbacApi;
+    const response = await api.get("/rbac/roles");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch roles");
@@ -104,6 +124,7 @@ export async function shareHost(
     permissionLevel: SharePermissionLevel;
     durationHours?: number;
   },
+  syncId?: string | null,
 ): Promise<{
   success: boolean;
   expiresAt: string | null;
@@ -115,8 +136,9 @@ export async function shareHost(
   }>;
 }> {
   try {
-    const response = await rbacApi.post(
-      `/rbac/host/${hostId}/share`,
+    const target = await getSharingTarget(hostId, syncId);
+    const response = await target.api.post(
+      `/rbac/host/${target.hostId}/share`,
       shareData,
     );
     return response.data;
@@ -140,7 +162,8 @@ export async function shareFolder(
   hostResults: Array<{ hostId: number; shared: boolean; reason?: string }>;
 }> {
   try {
-    const response = await rbacApi.post("/rbac/folder/share", {
+    const api = (await getConnectedRemoteApi()) ?? rbacApi;
+    const response = await api.post("/rbac/folder/share", {
       folder,
       ...shareData,
     });
@@ -157,10 +180,12 @@ export async function updateHostAccess(
     permissionLevel?: SharePermissionLevel;
     durationHours?: number | null;
   },
+  syncId?: string | null,
 ): Promise<{ success: boolean; expiresAt: string | null }> {
   try {
-    const response = await rbacApi.patch(
-      `/rbac/host/${hostId}/access/${accessId}`,
+    const target = await getSharingTarget(hostId, syncId);
+    const response = await target.api.patch(
+      `/rbac/host/${target.hostId}/access/${accessId}`,
       update,
     );
     return response.data;
@@ -171,9 +196,11 @@ export async function updateHostAccess(
 
 export async function getHostAccess(
   hostId: number,
+  syncId?: string | null,
 ): Promise<{ accessList: AccessRecord[]; isOwner?: boolean }> {
   try {
-    const response = await rbacApi.get(`/rbac/host/${hostId}/access`);
+    const target = await getSharingTarget(hostId, syncId);
+    const response = await target.api.get(`/rbac/host/${target.hostId}/access`);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch host access");
@@ -212,7 +239,8 @@ export async function getSharedHosts(): Promise<{
   }>;
 }> {
   try {
-    const response = await rbacApi.get("/rbac/shared-hosts");
+    const api = (await getConnectedRemoteApi()) ?? rbacApi;
+    const response = await api.get("/rbac/shared-hosts");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch shared hosts");
@@ -222,10 +250,12 @@ export async function getSharedHosts(): Promise<{
 export async function revokeHostAccess(
   hostId: number,
   accessId: number,
+  syncId?: string | null,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await rbacApi.delete(
-      `/rbac/host/${hostId}/access/${accessId}`,
+    const target = await getSharingTarget(hostId, syncId);
+    const response = await target.api.delete(
+      `/rbac/host/${target.hostId}/access/${accessId}`,
     );
     return response.data;
   } catch (error) {

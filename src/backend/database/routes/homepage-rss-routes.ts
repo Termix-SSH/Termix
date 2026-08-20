@@ -1,8 +1,6 @@
-import type { Request, Response } from "express";
-import express from "express";
-import https from "https";
-import http from "http";
+import express, { type Request, type Response } from "express";
 import { homepageLogger } from "../../utils/logger.js";
+import { safeOutboundFetch } from "../../utils/safe-outbound-fetch.js";
 
 export const homepageRssRouter = express.Router();
 
@@ -19,19 +17,11 @@ interface RssItem {
 }
 
 function fetchXml(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const mod = url.startsWith("https") ? https : http;
-    const req = mod.get(url, { timeout: FETCH_TIMEOUT_MS }, (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (chunk: Buffer) => chunks.push(chunk));
-      res.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
-      res.on("error", reject);
-    });
-    req.on("error", reject);
-    req.on("timeout", () => {
-      req.destroy();
-      reject(new Error("RSS fetch timeout"));
-    });
+  return safeOutboundFetch(url, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`);
+    return res.text();
   });
 }
 

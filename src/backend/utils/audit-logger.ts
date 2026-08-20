@@ -4,6 +4,7 @@ import {
   createCurrentAuditLogRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
+import { getClientIp } from "./request-origin.js";
 
 /**
  * Resolves the display name to store alongside the entry. It is denormalised on
@@ -60,11 +61,6 @@ export function getRequestMeta(req: Request): {
   ipAddress: string;
   userAgent: string;
 } {
-  const forwarded = req.headers["x-forwarded-for"];
-  const ipAddress =
-    (Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0]) ||
-    req.ip ||
-    "";
   const userAgent = (req.headers["user-agent"] as string) || "";
-  return { ipAddress, userAgent };
+  return { ipAddress: getClientIp(req), userAgent };
 }
