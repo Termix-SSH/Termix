@@ -65,7 +65,8 @@ import {
   collectFileWorkItems,
   readSftpSample,
   type FileWorkItem,
-} from "./transfer-scan.js";import {
+} from "./transfer-scan.js";
+import {
   deletePathSftp,
   ensureDirectoryTreeSftp,
 } from "./transfer-sftp-dir.js";
@@ -963,7 +964,6 @@ async function verifyTransferredFile(
     },
   });
 }
-
 
 async function deleteSourcePathsAfterSuccess(
   deps: HostTransferDeps,

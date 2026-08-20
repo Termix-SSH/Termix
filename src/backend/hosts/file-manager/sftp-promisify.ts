@@ -16,7 +16,10 @@ export function promisifySftpStat(
   });
 }
 
-export function promisifySftpUnlink(sftp: SFTPWrapper, path: string): Promise<void> {
+export function promisifySftpUnlink(
+  sftp: SFTPWrapper,
+  path: string,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     sftp.unlink(path, (err) => {
       if (err) reject(err);
@@ -25,7 +28,10 @@ export function promisifySftpUnlink(sftp: SFTPWrapper, path: string): Promise<vo
   });
 }
 
-export function promisifySftpRmdir(sftp: SFTPWrapper, path: string): Promise<void> {
+export function promisifySftpRmdir(
+  sftp: SFTPWrapper,
+  path: string,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     sftp.rmdir(path, (err) => {
       if (err) reject(err);
@@ -89,7 +95,10 @@ export function promisifySftpOpen(
   });
 }
 
-export function promisifySftpClose(sftp: SFTPWrapper, handle: Buffer): Promise<void> {
+export function promisifySftpClose(
+  sftp: SFTPWrapper,
+  handle: Buffer,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     sftp.close(handle, (err) => {
       if (err) reject(err);

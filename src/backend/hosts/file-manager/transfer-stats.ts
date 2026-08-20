@@ -56,7 +56,10 @@ export function noteHopStart(
   if (clock.firstAt === null) clock.firstAt = t;
 }
 
-export function noteHopEnd(clock: HopWallClock, t: number = performance.now()): void {
+export function noteHopEnd(
+  clock: HopWallClock,
+  t: number = performance.now(),
+): void {
   clock.lastAt = t;
 }
 
@@ -65,9 +68,7 @@ export function hopSpanMs(clock: HopWallClock): number {
   return Math.max(0, clock.lastAt - clock.firstAt);
 }
 
-export function createThrottledProgress(
-  onProgress?: (bytes: number) => void,
-) {
+export function createThrottledProgress(onProgress?: (bytes: number) => void) {
   let pending = 0;
   let lastFlush = 0;
 

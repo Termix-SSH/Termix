@@ -47,7 +47,10 @@ export async function ensureDirectoryTreeSftp(
   }
 }
 
-export async function deletePathSftp(sftp: SFTPWrapper, path: string): Promise<void> {
+export async function deletePathSftp(
+  sftp: SFTPWrapper,
+  path: string,
+): Promise<void> {
   let stats: import("ssh2").Stats;
   try {
     stats = await promisifySftpStat(sftp, path);
