@@ -22,7 +22,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   lint:
@@ -52,6 +51,9 @@ jobs:
     needs: lint
     if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7

@@ -1,0 +1,12 @@
+{{- if and .Values.ingress.enabled .Values.traefik.ingressRoute.enabled -}}
+{{- fail "ingress and traefik.ingressRoute cannot both be enabled" -}}
+{{- end -}}
+{{- if and (eq .Values.database.dialect "sqlite") (or (gt (int .Values.replicaCount) 1) .Values.autoscaling.enabled) -}}
+{{- fail "SQLite supports only one replica; use Postgres or MySQL before enabling replicas or autoscaling" -}}
+{{- end -}}
+{{- if and (not .Values.guacd.enabled) (not .Values.guacd.host) -}}
+{{- fail "guacd.host is required when the bundled guacd sidecar is disabled" -}}
+{{- end -}}
+{{- if and .Values.database.existingSecret.name .Values.secrets.create .Values.secrets.data.DATABASE_URL -}}
+{{- fail "DATABASE_URL must come from either database.existingSecret or secrets.data, not both" -}}
+{{- end -}}

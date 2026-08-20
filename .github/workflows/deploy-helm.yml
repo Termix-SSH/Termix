@@ -51,16 +51,26 @@ jobs:
         env:
           KUBECONFIG: ${{ runner.temp }}/kubeconfig
           IMAGE_TAG: ${{ inputs.image_tag }}
+          RELEASE_NAME: ${{ inputs.release }}
+          TARGET_NAMESPACE: ${{ inputs.namespace }}
+          VALUES_FILE: ${{ inputs.values_file }}
         run: |
           set -euo pipefail
+          [[ "$RELEASE_NAME" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+          [[ "$TARGET_NAMESPACE" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+          case "$VALUES_FILE" in
+            charts/termix/*.yaml) ;;
+            *) echo "values_file must be a YAML file under charts/termix" >&2; exit 1 ;;
+          esac
+          test -f "$VALUES_FILE"
           ARGS=()
           if [ -n "$IMAGE_TAG" ]; then
             ARGS+=(--set "image.tag=$IMAGE_TAG")
           fi
-          helm upgrade --install "${{ inputs.release }}" charts/termix \
-            --namespace "${{ inputs.namespace }}" \
+          helm upgrade --install "$RELEASE_NAME" charts/termix \
+            --namespace "$TARGET_NAMESPACE" \
             --create-namespace \
-            --values "${{ inputs.values_file }}" \
+            --values "$VALUES_FILE" \
             --atomic \
             --timeout 10m \
             "${ARGS[@]}"

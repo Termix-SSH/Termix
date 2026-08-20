@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/lukegus/Termix.git
+    repoURL: https://github.com/Termix-SSH/Termix.git
     targetRevision: main
     path: charts/termix
     helm:

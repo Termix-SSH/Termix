@@ -1,6 +1,6 @@
 image:
-  repository: ghcr.io/lukegus/termix
-  tag: latest
+  repository: ghcr.io/termix-ssh/termix
+  tag: "2.7.0"
 
 ingress:
   enabled: true

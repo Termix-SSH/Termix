@@ -3,6 +3,8 @@
 This repository includes a Helm chart for deploying Termix to Kubernetes. Termix
 and guacd run in the same pod by default so Guacamole recordings can share the
 same persistent volume without cross-node `ReadWriteOnce` mount issues.
+The guacd port is not exposed through a Service; only Termix can reach the
+sidecar over the pod-local interface.
 
 ## Local Helm install
 
@@ -97,3 +99,6 @@ kubectl -n termix create secret generic termix-database \
 For stable sessions across pod replacement, provide a `JWT_SECRET` and
 optionally `GUACAMOLE_ENCRYPTION_KEY` through an existing secret or
 `secrets.create`.
+
+SQLite is intentionally limited to one replica. Configure Postgres or MySQL
+before increasing `replicaCount` or enabling autoscaling.

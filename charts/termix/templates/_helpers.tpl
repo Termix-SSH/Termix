@@ -43,7 +43,3 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "termix.secretName" -}}
 {{- default (printf "%s-secret" (include "termix.fullname" .)) .Values.secrets.name -}}
 {{- end -}}
-
-{{- define "termix.guacdName" -}}
-{{- printf "%s-guacd" (include "termix.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
