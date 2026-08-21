@@ -80,7 +80,7 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
-import { isTabKeyEvent } from "./terminal-key-event.ts";
+import { isPhysicalShortcutKey, isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
 import { quoteTerminalImagePath } from "./terminal-image-path.ts";
@@ -2869,7 +2869,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           !e.shiftKey &&
           !e.altKey &&
           !e.metaKey &&
-          e.key.toLowerCase() === "c" &&
+          isPhysicalShortcutKey(e, "KeyC", "c") &&
           terminal.hasSelection()
         ) {
           const selection = terminal.getSelection();
@@ -2883,13 +2883,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          ((e.metaKey && !e.shiftKey && !e.ctrlKey && !e.altKey) ||
-            (e.ctrlKey &&
-              !e.shiftKey &&
-              !e.altKey &&
-              !e.metaKey &&
-              e.key === "Insert")) &&
-          (e.key.toLowerCase() === "c" || e.key === "Insert")
+          (e.metaKey &&
+            !e.shiftKey &&
+            !e.ctrlKey &&
+            !e.altKey &&
+            isPhysicalShortcutKey(e, "KeyC", "c")) ||
+          (e.ctrlKey &&
+            !e.shiftKey &&
+            !e.altKey &&
+            !e.metaKey &&
+            e.key === "Insert")
         ) {
           const selection = terminal.getSelection();
           if (selection) {
@@ -2905,7 +2908,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.shiftKey &&
           !e.altKey &&
           !e.metaKey &&
-          e.key.toLowerCase() === "c"
+          isPhysicalShortcutKey(e, "KeyC", "c")
         ) {
           const selection = terminal.getSelection();
           if (selection) {
@@ -2922,7 +2925,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.shiftKey &&
           !e.altKey &&
           !e.metaKey &&
-          e.key.toLowerCase() === "v"
+          isPhysicalShortcutKey(e, "KeyV", "v")
         ) {
           e.preventDefault();
           e.stopPropagation();
@@ -2937,7 +2940,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           !e.shiftKey &&
           !e.altKey &&
           !e.metaKey &&
-          e.key.toLowerCase() === "v"
+          isPhysicalShortcutKey(e, "KeyV", "v")
         ) {
           // Let the browser handle Ctrl+V natively, the paste event
           // listener will intercept the result without triggering the
