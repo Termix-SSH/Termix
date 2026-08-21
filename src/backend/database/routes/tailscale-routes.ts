@@ -4,7 +4,7 @@ import {
   type Router as ExpressRouter,
 } from "express";
 import { apiLogger } from "../../utils/logger.js";
-import { getFetchDispatcher } from "../../utils/proxy-agent.js";
+import { fetchWithProxy } from "../../utils/proxy-agent.js";
 import { createCurrentSettingsRepository } from "../repositories/factory.js";
 
 interface TailscaleDevice {
@@ -74,12 +74,11 @@ export function registerTailscaleRoutes(
       );
 
       const url = `${apiBase}/tailnet/-/devices?fields=all`;
-      const response = await fetch(url, {
+      const response = await fetchWithProxy(url, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "User-Agent": "Termix/1.0",
         },
-        dispatcher: getFetchDispatcher(url),
       });
 
       if (!response.ok) {
