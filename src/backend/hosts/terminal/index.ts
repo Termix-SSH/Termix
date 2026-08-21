@@ -54,6 +54,7 @@ import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
+  resolveServerJumpHosts,
 } from "./host-identity.js";
 
 interface ConnectToHostData {
@@ -1542,16 +1543,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
 
         if (resolvedHostData) {
-          if (
-            (!hostConfig.jumpHosts || hostConfig.jumpHosts.length === 0) &&
-            resolvedHostData.jumpHosts &&
-            resolvedHostData.jumpHosts.length > 0
-          ) {
-            hostConfig.jumpHosts = resolvedHostData.jumpHosts;
+          const resolvedJumpHosts = resolveServerJumpHosts(
+            hostConfig.jumpHosts,
+            resolvedHostData.jumpHosts,
+            hostSyncId,
+          );
+          if (resolvedJumpHosts !== hostConfig.jumpHosts) {
+            hostConfig.jumpHosts = resolvedJumpHosts;
             sendLog(
               "jump",
               "info",
-              `Loaded ${resolvedHostData.jumpHosts.length} jump host(s) from server-side host data`,
+              `Loaded ${resolvedJumpHosts?.length ?? 0} jump host(s) from server-side host data`,
             );
           }
 

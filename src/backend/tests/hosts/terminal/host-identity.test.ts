@@ -6,6 +6,7 @@ import {
   HostAddressMismatchError,
   HostNotOnThisServerError,
   normalizeHostAddress,
+  resolveServerJumpHosts,
 } from "../../../hosts/terminal/host-identity.js";
 
 /**
@@ -56,6 +57,20 @@ describe("hostAddressMismatch", () => {
     // An id alone must not be enough to pick a machine.
     expect(hostAddressMismatch(undefined, "10.0.0.9")).toBe(true);
     expect(hostAddressMismatch("", "10.0.0.9")).toBe(true);
+  });
+});
+
+describe("resolveServerJumpHosts", () => {
+  it("uses server-side ids for a sync-delegated connection", () => {
+    expect(
+      resolveServerJumpHosts([{ hostId: 7 }], [{ hostId: 42 }], "host-sync-id"),
+    ).toEqual([{ hostId: 42 }]);
+  });
+
+  it("keeps client ids for a local id-based connection", () => {
+    expect(resolveServerJumpHosts([{ hostId: 7 }], [{ hostId: 42 }])).toEqual([
+      { hostId: 7 },
+    ]);
   });
 });
 
