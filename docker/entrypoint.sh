@@ -23,6 +23,18 @@ if [ "$(id -u)" = "0" ]; then
 fi
 
 DATA_DIR=${DATA_DIR:-/app/data}
+
+RUNTIME_ENABLE_SSL_SET=${ENABLE_SSL+x}
+RUNTIME_ENABLE_SSL=${ENABLE_SSL-}
+RUNTIME_SSL_PORT_SET=${SSL_PORT+x}
+RUNTIME_SSL_PORT=${SSL_PORT-}
+RUNTIME_SSL_CERT_PATH_SET=${SSL_CERT_PATH+x}
+RUNTIME_SSL_CERT_PATH=${SSL_CERT_PATH-}
+RUNTIME_SSL_KEY_PATH_SET=${SSL_KEY_PATH+x}
+RUNTIME_SSL_KEY_PATH=${SSL_KEY_PATH-}
+RUNTIME_SSL_DOMAIN_SET=${SSL_DOMAIN+x}
+RUNTIME_SSL_DOMAIN=${SSL_DOMAIN-}
+
 if [ -f "$DATA_DIR/.env" ]; then
     echo "Loading persisted SSL settings from $DATA_DIR/.env"
     set -a
@@ -30,11 +42,18 @@ if [ -f "$DATA_DIR/.env" ]; then
     set +a
 fi
 
+[ "$RUNTIME_ENABLE_SSL_SET" = "x" ] && ENABLE_SSL=$RUNTIME_ENABLE_SSL
+[ "$RUNTIME_SSL_PORT_SET" = "x" ] && SSL_PORT=$RUNTIME_SSL_PORT
+[ "$RUNTIME_SSL_CERT_PATH_SET" = "x" ] && SSL_CERT_PATH=$RUNTIME_SSL_CERT_PATH
+[ "$RUNTIME_SSL_KEY_PATH_SET" = "x" ] && SSL_KEY_PATH=$RUNTIME_SSL_KEY_PATH
+[ "$RUNTIME_SSL_DOMAIN_SET" = "x" ] && SSL_DOMAIN=$RUNTIME_SSL_DOMAIN
+
 export PORT=${PORT:-8080}
 export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
 export SSL_CERT_PATH=${SSL_CERT_PATH:-/app/data/ssl/termix.crt}
 export SSL_KEY_PATH=${SSL_KEY_PATH:-/app/data/ssl/termix.key}
+export TERMIX_SSL_TERMINATED_BY_NGINX=true
 
 echo "Configuring web UI to run on port: $PORT"
 
@@ -48,6 +67,11 @@ fi
 
 mkdir -p /tmp/nginx
 envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /tmp/nginx/nginx.conf
+
+if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
+    echo "HTTP and HTTPS use port $SSL_PORT; disabling the HTTP redirect listener"
+    sed -i '/# BEGIN HTTP_REDIRECT_SERVER/,/# END HTTP_REDIRECT_SERVER/d' /tmp/nginx/nginx.conf
+fi
 
 mkdir -p /app/data /app/uploads /app/data/.opk /app/data/acme-webroot/.well-known/acme-challenge
 chmod 755 /app/data /app/uploads /app/data/.opk 2>/dev/null || true

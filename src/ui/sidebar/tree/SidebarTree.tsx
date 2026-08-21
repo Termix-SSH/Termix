@@ -714,6 +714,9 @@ export function SidebarTree({
   // Opening the management row from actionsOnly's closed state (which
   // already includes the connection row).
   const ACTIONS_ONLY_OPEN_ROW_HEIGHT = isCompactDensity ? 79.25 : 104.75;
+  // Tag pills are a separate flex row. Comfortable density adds the row plus
+  // its gap; compact density pulls it upward by 2px but still needs a slot.
+  const TAG_ROW_EXTRA = isCompactDensity ? 12.5 : 18.5;
   // Hiding the resource bars only ever makes a row shorter than the height
   // reserved for it, which the existing shapes already tolerate: the bars are
   // conditional on the host being online with CPU/RAM data, so an offline host
@@ -726,7 +729,8 @@ export function SidebarTree({
       const row = visibleRows[index];
       if (!row) return FOLDER_ROW_HEIGHT;
       if (isFolder(row.item)) return FOLDER_ROW_HEIGHT;
-      if (alwaysShowActions) return ALWAYS_ROW_HEIGHT;
+      const tagExtra = showTags && row.item.tags?.length ? TAG_ROW_EXTRA : 0;
+      if (alwaysShowActions) return ALWAYS_ROW_HEIGHT + tagExtra;
       const toggledOpen =
         (openTrayHostId === row.item.id || openMenuHostId === row.item.id) &&
         (clickTrayActive || actionsOnly);
@@ -739,9 +743,15 @@ export function SidebarTree({
         (hoveredHostId === row.item.id || openMenuHostId === row.item.id);
       const isOpen = toggledOpen || hoverOpen;
       if (actionsOnly) {
-        return isOpen ? ACTIONS_ONLY_OPEN_ROW_HEIGHT : ACTIONS_ONLY_ROW_HEIGHT;
+        return (
+          (isOpen ? ACTIONS_ONLY_OPEN_ROW_HEIGHT : ACTIONS_ONLY_ROW_HEIGHT) +
+          tagExtra
+        );
       }
-      return isOpen ? HOST_ROW_HEIGHT + OPEN_TRAY_EXTRA : HOST_ROW_HEIGHT;
+      return (
+        (isOpen ? HOST_ROW_HEIGHT + OPEN_TRAY_EXTRA : HOST_ROW_HEIGHT) +
+        tagExtra
+      );
     },
     [
       visibleRows,
@@ -752,12 +762,14 @@ export function SidebarTree({
       clickTrayActive,
       alwaysShowActions,
       actionsOnly,
+      showTags,
       HOST_ROW_HEIGHT,
       CLICK_CHEVRON_EXTRA,
       OPEN_TRAY_EXTRA,
       ALWAYS_ROW_HEIGHT,
       ACTIONS_ONLY_ROW_HEIGHT,
       ACTIONS_ONLY_OPEN_ROW_HEIGHT,
+      TAG_ROW_EXTRA,
     ],
   );
 

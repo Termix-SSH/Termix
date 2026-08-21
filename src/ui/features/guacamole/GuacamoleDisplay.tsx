@@ -25,6 +25,10 @@ import {
 } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
 import { bindPointerInput } from "./guacamole-pointer.ts";
+import {
+  getFileDropDisposition,
+  hasDraggedFiles,
+} from "./guacamole-file-drop.ts";
 import { guacStateToStage } from "@/components/connection/connection-status.ts";
 import type { ConnectionStage } from "@/types/connection-log.ts";
 
@@ -66,6 +70,7 @@ interface GuacamoleDisplayProps {
   onError?: (error: string) => void;
   onFilesystem?: (filesystem: Guacamole.Object | null) => void;
   onDropFiles?: (files: File[]) => void;
+  onDropUnavailable?: () => void;
   onStageChange?: (stage: ConnectionStage) => void;
 }
 
@@ -85,6 +90,7 @@ export const GuacamoleDisplay = forwardRef<
     onError,
     onFilesystem,
     onDropFiles,
+    onDropUnavailable,
     onStageChange,
   },
   ref,
@@ -776,8 +782,9 @@ export const GuacamoleDisplay = forwardRef<
 
   const handleDragEnter = useCallback(
     (event: React.DragEvent) => {
-      if (!canDropFiles || !event.dataTransfer.types.includes("Files")) return;
+      if (!hasDraggedFiles(event.dataTransfer.types)) return;
       event.preventDefault();
+      if (!canDropFiles) return;
       dragDepthRef.current += 1;
       setIsDraggingFiles(true);
     },
@@ -791,15 +798,21 @@ export const GuacamoleDisplay = forwardRef<
 
   const handleDrop = useCallback(
     (event: React.DragEvent) => {
-      if (!canDropFiles) return;
+      if (!hasDraggedFiles(event.dataTransfer.types)) return;
       event.preventDefault();
       dragDepthRef.current = 0;
       setIsDraggingFiles(false);
 
       const files = Array.from(event.dataTransfer.files);
-      if (files.length > 0) onDropFiles?.(files);
+      const disposition = getFileDropDisposition(
+        event.dataTransfer.types,
+        files.length,
+        canDropFiles,
+      );
+      if (disposition === "upload") onDropFiles?.(files);
+      if (disposition === "reject") onDropUnavailable?.();
     },
-    [canDropFiles, onDropFiles],
+    [canDropFiles, onDropFiles, onDropUnavailable],
   );
 
   return (
@@ -808,7 +821,9 @@ export const GuacamoleDisplay = forwardRef<
       className="absolute inset-0 overflow-hidden"
       style={{ backgroundColor: "var(--bg-base)" }}
       onDragEnter={handleDragEnter}
-      onDragOver={canDropFiles ? (e) => e.preventDefault() : undefined}
+      onDragOver={(event) => {
+        if (hasDraggedFiles(event.dataTransfer.types)) event.preventDefault();
+      }}
       onDragLeave={canDropFiles ? handleDragLeave : undefined}
       onDrop={handleDrop}
     >

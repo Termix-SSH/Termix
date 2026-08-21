@@ -1,13 +1,14 @@
 import dgram from "dgram";
 import net from "net";
 import ssh2Pkg, {
+  type GetStreamCallback,
   type IdentityCallback,
   type ParsedKey,
   type SignCallback,
   type SigningRequestOptions,
 } from "ssh2";
 
-const { BaseAgent } = ssh2Pkg;
+const { AgentProtocol, BaseAgent } = ssh2Pkg;
 const DEFAULT_PORT_KNOCK_TIMEOUT_MS = 1000;
 
 type Sleep = (ms: number) => Promise<void>;
@@ -32,6 +33,23 @@ export class MemoryAgent extends BaseAgent {
 
   getIdentities(cb: IdentityCallback<ParsedKey>): void {
     cb(null, [this.key]);
+  }
+
+  getStream(cb: GetStreamCallback): void {
+    const protocol = new AgentProtocol(false);
+
+    protocol.on("identities", (request) => {
+      protocol.getIdentitiesReply(request, [this.key]);
+    });
+
+    protocol.on("sign", (request, publicKey, data, options) => {
+      this.sign(publicKey, data, options, (error, signature) => {
+        if (error || !signature) return protocol.failureReply(request);
+        protocol.signReply(request, signature);
+      });
+    });
+
+    cb(null, protocol);
   }
 
   sign(

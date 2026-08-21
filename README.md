@@ -313,6 +313,9 @@ Around 30 languages built in, managed through [Crowdin](https://docs.termix.site
 
 Visit the [Termix Docs](https://docs.termix.site/install) for full installation instructions across all platforms.
 
+Kubernetes, Helm, Traefik, GitLab CI, GitHub Actions, and Argo CD examples are
+available in [docs/deployment/helm.md](docs/deployment/helm.md).
+
 Sample Docker Compose file (you can omit `guacd` and the network if you don't plan on using remote desktop features):
 
 ```yaml

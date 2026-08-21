@@ -30,24 +30,9 @@ const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
+const { resolveLocalShell } = require("./local-shell.cjs");
 
 const localTerminalSessions = new Map();
-
-function localShell() {
-  if (process.platform === "win32") {
-    return {
-      file: process.env.TERMIX_LOCAL_SHELL || "powershell.exe",
-      args: ["-NoLogo"],
-    };
-  }
-  return {
-    file:
-      process.env.TERMIX_LOCAL_SHELL ||
-      process.env.SHELL ||
-      (process.platform === "darwin" ? "/bin/zsh" : "/bin/bash"),
-    args: ["-l"],
-  };
-}
 
 function ownedLocalTerminal(event, sessionId) {
   if (typeof sessionId !== "string" || !/^[a-f0-9-]{36}$/.test(sessionId)) {
@@ -537,7 +522,11 @@ function httpFetch(url, options = {}) {
       method: options.method || "GET",
       headers: options.headers || {},
       timeout: options.timeout || 10000,
-      ...(isHttps ? getTlsVerificationOptions(url) : {}),
+      ...(isHttps
+        ? options.allowInvalidCertificate
+          ? { rejectUnauthorized: false }
+          : getTlsVerificationOptions(url)
+        : {}),
     };
 
     const req = client.request(url, requestOptions, (res) => {
@@ -2928,7 +2917,7 @@ ipcMain.handle("local-terminal-start", (event, dimensions = {}) => {
   const cols = Math.min(500, Math.max(2, Number(dimensions.cols) || 80));
   const rows = Math.min(300, Math.max(1, Number(dimensions.rows) || 24));
   const sessionId = crypto.randomUUID();
-  const shellConfig = localShell();
+  const shellConfig = resolveLocalShell(process.platform, dimensions.shell);
   const child = pty.spawn(shellConfig.file, shellConfig.args, {
     name: "xterm-256color",
     cols,
@@ -3134,7 +3123,11 @@ ipcMain.handle("close-external-editor", (_event, editId) => {
   }
 });
 
-ipcMain.handle("test-server-connection", async (event, serverUrl) => {
+async function testServerConnection(
+  _event,
+  serverUrl,
+  allowInvalidCertificate = false,
+) {
   try {
     const normalizedServerUrl = serverUrl.replace(/\/$/, "");
     const healthUrl = `${normalizedServerUrl}/health`;
@@ -3154,6 +3147,7 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
       const response = await httpFetch(healthUrl, {
         method: "GET",
         timeout: 10000,
+        allowInvalidCertificate,
       });
 
       const data = await response.text();
@@ -3207,7 +3201,9 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
-});
+}
+
+ipcMain.handle("test-server-connection", testServerConnection);
 
 function createMenu() {
   if (process.platform === "darwin") {

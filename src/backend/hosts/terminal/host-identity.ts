@@ -55,6 +55,15 @@ export const HOST_NOT_ON_THIS_SERVER_MESSAGE =
   "This host does not exist on the sync server, so the connection was refused. " +
   'Run a sync so the server knows about it, or set the connection origin to "This device" for this host.';
 
+export function resolveServerJumpHosts(
+  clientJumpHosts: Array<{ hostId: number }> | undefined,
+  serverJumpHosts: Array<{ hostId: number }> | undefined,
+  hostSyncId?: string | null,
+): Array<{ hostId: number }> | undefined {
+  if (hostSyncId) return serverJumpHosts ?? [];
+  return clientJumpHosts?.length ? clientJumpHosts : serverJumpHosts;
+}
+
 /**
  * Thrown where a mismatch is reported by rejecting rather than by messaging
  * the socket. Callers whose host-resolution is wrapped in a "failed to resolve

@@ -7,7 +7,10 @@ import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { SSOProviderType } from "../../../types/index.js";
 import { createCurrentSsoProviderRepository } from "../repositories/factory.js";
-import { getOIDCConfigFromEnv } from "./user-oidc-utils.js";
+import {
+  getOIDCConfigFromEnv,
+  isOIDCEnvOverrideEnabled,
+} from "./user-oidc-utils.js";
 import {
   decryptSsoConfigSecrets,
   encryptSsoConfigSecrets,
@@ -16,6 +19,19 @@ import { isTrustedProxyAuthEnabled } from "../../utils/trusted-proxy-auth.js";
 
 function isOidcLike(type: SSOProviderType): boolean {
   return type === "oidc" || type === "github" || type === "google";
+}
+
+export function isValidOidcIssuer(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return (
+      ["http:", "https:"].includes(url.protocol) &&
+      !/\/userinfo\/?$/i.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 const authManager = AuthManager.getInstance();
@@ -95,13 +111,19 @@ export function registerSSOProviderRoutes(router: Router): void {
    */
   router.get("/sso-providers", async (_req, res) => {
     try {
+      const envConfig = getOIDCConfigFromEnv();
+      if (envConfig && isOIDCEnvOverrideEnabled()) {
+        return res.json([
+          { id: 0, name: "SSO", type: "oidc", displayOrder: 0 },
+        ]);
+      }
+
       const providers =
         await createCurrentSsoProviderRepository().listEnabledPublic();
 
       // If no DB providers exist, synthesize one from env vars so SSO login
       // remains available when configured purely via environment variables.
       if (providers.length === 0) {
-        const envConfig = getOIDCConfigFromEnv();
         if (envConfig) {
           providers.push({ id: 0, name: "SSO", type: "oidc", displayOrder: 0 });
         }
@@ -220,6 +242,12 @@ export function registerSSOProviderRoutes(router: Router): void {
         if (missing.length > 0 && type === "oidc") {
           return res.status(400).json({
             error: `Missing required OIDC fields: ${missing.join(", ")}`,
+          });
+        }
+        if (c.issuer_url && !isValidOidcIssuer(c.issuer_url)) {
+          return res.status(400).json({
+            error:
+              "Issuer URL must be an HTTP(S) issuer and not a userinfo endpoint",
           });
         }
         if (
@@ -353,6 +381,16 @@ export function registerSSOProviderRoutes(router: Router): void {
           ),
           ...rawConfig,
         };
+        if (
+          isOidcLike(effectiveType) &&
+          mergedConfig.issuer_url &&
+          !isValidOidcIssuer(mergedConfig.issuer_url)
+        ) {
+          return res.status(400).json({
+            error:
+              "Issuer URL must be an HTTP(S) issuer and not a userinfo endpoint",
+          });
+        }
         encryptedConfig = await encryptProviderConfig(
           mergedConfig,
           userId,

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { generateKeyPairSync } from "crypto";
+import ssh2Pkg, { type ParsedKey } from "ssh2";
 
 const mockAccess = vi.fn();
 
@@ -6,7 +8,56 @@ vi.mock("fs/promises", () => ({
   access: mockAccess,
 }));
 
-import { resolveAgentSocket } from "../../hosts/terminal-auth-helpers.js";
+import {
+  MemoryAgent,
+  resolveAgentSocket,
+} from "../../hosts/terminal-auth-helpers.js";
+
+describe("MemoryAgent", () => {
+  it("serves identities and signatures over the agent protocol", async () => {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const parsed = ssh2Pkg.utils.parseKey(
+      privateKey.export({ type: "pkcs1", format: "pem" }),
+    );
+    expect(parsed).not.toBeInstanceOf(Error);
+
+    const agent = new MemoryAgent(parsed as ParsedKey);
+    const stream = await new Promise<NodeJS.ReadWriteStream>(
+      (resolve, reject) => {
+        agent.getStream((error, result) => {
+          if (error || !result)
+            reject(error ?? new Error("Missing agent stream"));
+          else resolve(result);
+        });
+      },
+    );
+    const client = new ssh2Pkg.AgentProtocol(true);
+    client.pipe(stream).pipe(client);
+
+    const identities = await new Promise<ParsedKey[]>((resolve, reject) => {
+      client.getIdentities((error, keys) => {
+        if (error || !keys) reject(error ?? new Error("Missing identities"));
+        else resolve(keys);
+      });
+    });
+    expect(identities).toHaveLength(1);
+    expect(identities[0].getPublicSSH()).toEqual(
+      (parsed as ParsedKey).getPublicSSH(),
+    );
+
+    const data = Buffer.from("forwarded-agent-test");
+    const signature = await new Promise<Buffer>((resolve, reject) => {
+      client.sign(identities[0], data, (error, result) => {
+        if (error || !result) reject(error ?? new Error("Missing signature"));
+        else resolve(result);
+      });
+    });
+    expect((parsed as ParsedKey).verify(data, signature)).toBe(true);
+
+    client.destroy();
+    stream.destroy();
+  });
+});
 
 describe("resolveAgentSocket", () => {
   const originalEnv = process.env.SSH_AUTH_SOCK;
