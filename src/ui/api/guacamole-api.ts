@@ -6,6 +6,7 @@ import {
 } from "@/main-axios";
 import type { AxiosInstance } from "axios";
 import type { GuacamoleConfig } from "@/types/guacamole-config";
+import { resolveRemoteHostId } from "@/lib/remote-server-api";
 
 /**
  * The embedded desktop backend does not bundle guacd, which is why
@@ -185,10 +186,18 @@ export async function getGuacamoleTokenFromHost(
     password?: string;
     domain?: string;
   },
+  syncId?: string | null,
 ): Promise<GuacamoleTokenResponse> {
   try {
+    const remoteHostId = isElectron()
+      ? await resolveRemoteHostId(syncId)
+      : null;
+    if (isElectron() && syncId && remoteHostId === null) {
+      throw new Error("The synced host does not exist on the remote server");
+    }
+    const targetHostId = remoteHostId ?? hostId;
     const response = await guacamoleApi().post(
-      `/guacamole/connect-host/${hostId}`,
+      `/guacamole/connect-host/${targetHostId}`,
       {
         ...(protocol ? { protocol } : {}),
         ...(promptedCredentials?.username

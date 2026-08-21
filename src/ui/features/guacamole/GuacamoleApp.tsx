@@ -134,7 +134,7 @@ interface GuacamoleAppInnerProps {
   hostId: number;
   hostConfig: Pick<
     SSHHost,
-    "connectionType" | "domain" | "guacamoleConfig" | "rdpAuthType"
+    "connectionType" | "domain" | "guacamoleConfig" | "rdpAuthType" | "syncId"
   >;
   hostName: string;
   tabId?: string;
@@ -256,6 +256,7 @@ const GuacamoleAppInner = React.forwardRef<
       hostId,
       protocol,
       promptedCredentials ?? undefined,
+      hostConfig.syncId,
     );
     if (result) {
       setToken(result.token);
@@ -268,6 +269,7 @@ const GuacamoleAppInner = React.forwardRef<
     protocol,
     promptedCredentials,
     resolvedProtocolForConnect,
+    hostConfig.syncId,
     addLog,
     t,
   ]);
