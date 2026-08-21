@@ -105,6 +105,10 @@ export function getOIDCConfigFromEnv(): OIDCConfig | null {
   };
 }
 
+export function isOIDCEnvOverrideEnabled(): boolean {
+  return process.env.OIDC_ENV_OVERRIDE?.toLowerCase() === "true";
+}
+
 /**
  * Normalizes a group name for comparison. Providers are inconsistent about
  * whether they emit bare names (`devops-interns`) or full paths
@@ -438,6 +442,11 @@ export async function loadProviderConfig(
   providerType: SSOProviderType;
   providerDbId: number | null;
 } | null> {
+  const envConfig = getOIDCConfigFromEnv();
+  if (envConfig && isOIDCEnvOverrideEnabled()) {
+    return { config: envConfig, providerType: "oidc", providerDbId: null };
+  }
+
   if (providerId != null) {
     try {
       const row =
@@ -485,7 +494,6 @@ export async function loadProviderConfig(
   }
 
   // Fallback: env vars
-  const envConfig = getOIDCConfigFromEnv();
   if (envConfig) {
     return { config: envConfig, providerType: "oidc", providerDbId: null };
   }
@@ -542,6 +550,14 @@ export async function resolveProviderByIssuer(issuer: string): Promise<{
   providerDbId: number | null;
 } | null> {
   const target = normalizeIssuer(issuer);
+  const envConfig = getOIDCConfigFromEnv();
+  if (
+    envConfig?.issuer_url &&
+    isOIDCEnvOverrideEnabled() &&
+    normalizeIssuer(envConfig.issuer_url) === target
+  ) {
+    return { config: envConfig, providerType: "oidc", providerDbId: null };
+  }
 
   try {
     const rows = await createCurrentSsoProviderRepository().listEnabled();
@@ -569,7 +585,6 @@ export async function resolveProviderByIssuer(issuer: string): Promise<{
     });
   }
 
-  const envConfig = getOIDCConfigFromEnv();
   if (
     envConfig?.issuer_url &&
     normalizeIssuer(envConfig.issuer_url) === target

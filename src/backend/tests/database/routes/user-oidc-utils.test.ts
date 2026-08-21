@@ -21,6 +21,7 @@ const {
   resolveOidcMappedRoles,
   verifyOIDCToken,
   describeFetchFailure,
+  isOIDCEnvOverrideEnabled,
 } = await import("../../../database/routes/user-oidc-utils.js");
 
 const BACKCHANNEL_LOGOUT_EVENT =
@@ -281,6 +282,7 @@ describe("getOIDCConfigFromEnv", () => {
     "OIDC_SCOPES",
     "OIDC_ALLOWED_USERS",
     "OIDC_ADMIN_GROUP",
+    "OIDC_ENV_OVERRIDE",
   ];
   const saved: Record<string, string | undefined> = {};
 
@@ -333,6 +335,12 @@ describe("getOIDCConfigFromEnv", () => {
     const config = getOIDCConfigFromEnv();
     expect(config?.identifier_path).toBe("email");
     expect(config?.scopes).toBe("openid");
+  });
+
+  it("only enables database recovery override when explicitly requested", () => {
+    expect(isOIDCEnvOverrideEnabled()).toBe(false);
+    process.env.OIDC_ENV_OVERRIDE = "true";
+    expect(isOIDCEnvOverrideEnabled()).toBe(true);
   });
 });
 
