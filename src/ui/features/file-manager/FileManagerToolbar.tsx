@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
   ChevronLeft,
@@ -76,14 +76,20 @@ function Breadcrumb({
           <React.Fragment key={i}>
             {part === "" && i === 0 ? (
               <button
-                onClick={() => navigateTo("/")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateTo("/");
+                }}
                 className="hover:text-accent-brand transition-colors"
               >
                 {t("fileManager.root")}
               </button>
             ) : part !== "" ? (
               <button
-                onClick={() => navigateTo(arr.slice(0, i + 1).join("/") || "/")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateTo(arr.slice(0, i + 1).join("/") || "/");
+                }}
                 className="hover:text-accent-brand transition-colors"
               >
                 {part}
@@ -99,6 +105,83 @@ function Breadcrumb({
         ))}
       </div>
     </>
+  );
+}
+
+function PathBar({
+  currentPath,
+  navigateTo,
+  t,
+  className,
+}: Pick<FileManagerToolbarProps, "currentPath" | "navigateTo" | "t"> & {
+  className: string;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(currentPath);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    doneRef.current = false;
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isEditing]);
+
+  const commit = (path: string) => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    setIsEditing(false);
+    const trimmed = path.trim();
+    if (trimmed && trimmed !== currentPath) {
+      navigateTo(trimmed);
+    }
+  };
+
+  const cancel = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className={className}>
+        <Folder className="size-3.5 text-accent-brand shrink-0" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit(value);
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              cancel();
+            }
+          }}
+          onBlur={() => commit(value)}
+          className="flex-1 min-w-0 bg-transparent text-xs font-semibold tracking-wide outline-none text-foreground"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${className} cursor-text`}
+      onClick={() => {
+        setValue(currentPath);
+        setIsEditing(true);
+      }}
+    >
+      <Breadcrumb currentPath={currentPath} navigateTo={navigateTo} t={t} />
+    </div>
   );
 }
 
@@ -182,9 +265,12 @@ export function FileManagerToolbar({
           </Button>
         </div>
 
-        <div className="hidden md:flex flex-1 items-center px-3 h-8 bg-muted/50 border border-border rounded-none gap-2 overflow-hidden">
-          <Breadcrumb currentPath={currentPath} navigateTo={navigateTo} t={t} />
-        </div>
+        <PathBar
+          currentPath={currentPath}
+          navigateTo={navigateTo}
+          t={t}
+          className="hidden md:flex flex-1 items-center px-3 h-8 bg-muted/50 border border-border rounded-none gap-2 overflow-hidden"
+        />
 
         <div className="flex items-center gap-2">
           {selectedFiles.length > 0 && (
@@ -340,9 +426,12 @@ export function FileManagerToolbar({
       </div>
 
       <div className="md:hidden flex items-center px-3 pb-2 gap-2">
-        <div className="flex-1 flex items-center px-3 h-8 bg-muted/50 border border-border gap-2 overflow-hidden">
-          <Breadcrumb currentPath={currentPath} navigateTo={navigateTo} t={t} />
-        </div>
+        <PathBar
+          currentPath={currentPath}
+          navigateTo={navigateTo}
+          t={t}
+          className="flex-1 flex items-center px-3 h-8 bg-muted/50 border border-border gap-2 overflow-hidden"
+        />
       </div>
     </div>
   );
