@@ -45,4 +45,32 @@ describe("Android IME composition", () => {
 
     expect(input.join("")).toBe("\x7f\x7f\x7fỏa");
   });
+
+  it("coalesces rapid textarea changes without dropping or duplicating input", async () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    terminal = new Terminal();
+    terminal.open(container);
+
+    const input: string[] = [];
+    terminal.onData((data) => input.push(data));
+
+    const textarea = terminal.textarea!;
+    const type = (value: string) => {
+      textarea.dispatchEvent(
+        new KeyboardEvent("keydown", { keyCode: 229 } as KeyboardEventInit),
+      );
+      textarea.value = value;
+      textarea.selectionStart = value.length;
+      textarea.selectionEnd = value.length;
+    };
+
+    type("t");
+    type("te");
+    type("ter");
+    type("termix");
+    await tick();
+
+    expect(input.join("")).toBe("termix");
+  });
 });
