@@ -30,8 +30,12 @@ const patches = [
     file: "xterm.mjs",
     replacements: [
       [
-        'this._compositionPosition={start:0,end:0},this._dataAlreadySent=""',
         'this._compositionPosition={start:0,end:0},this._preCompositionValue="",this._dataAlreadySent=""',
+        'this._compositionPosition={start:0,end:0},this._preCompositionValue="",this._pendingTextareaValue=null,this._dataAlreadySent=""',
+      ],
+      [
+        'this._compositionPosition={start:0,end:0},this._dataAlreadySent=""',
+        'this._compositionPosition={start:0,end:0},this._preCompositionValue="",this._pendingTextareaValue=null,this._dataAlreadySent=""',
       ],
       [
         'this._compositionPosition.start=this._textarea.value.length,this._compositionView.textContent=""',
@@ -46,8 +50,12 @@ const patches = [
         "e.start+=this._dataAlreadySent.length;if(this._isComposing)i=this._textarea.value.substring(e.start,this._compositionPosition.start);else{const t=this._textarea.value;if(t.length<s.length){let e=0;const r=Math.min(t.length,s.length);for(;e<r&&t.charCodeAt(e)===s.charCodeAt(e);)e++;i=b.DEL.repeat(s.length-e)+t.substring(e)}else i=t.substring(e.start)}i.length>0&&",
       ],
       [
-        '_handleAnyTextareaChanges(){let t=this._textarea.value;setTimeout(()=>{if(!this._isComposing){let e=this._textarea.value,i=e.replace(t,"");this._dataAlreadySent=i,e.length>t.length?this._coreService.triggerDataEvent(i,!0):e.length<t.length?this._coreService.triggerDataEvent(`${b.DEL}`,!0):e.length===t.length&&e!==t&&this._coreService.triggerDataEvent(e,!0)}},0)}',
         "_handleAnyTextareaChanges(){let t=this._textarea.value;setTimeout(()=>{if(!this._isComposing){let e=this._textarea.value,r=0;const n=Math.min(e.length,t.length);for(;r<n&&e.charCodeAt(r)===t.charCodeAt(r);)r++;let i=e.length<t.length?b.DEL.repeat(t.length-r)+e.substring(r):e.substring(r);this._dataAlreadySent=i,i.length>0&&this._coreService.triggerDataEvent(i,!0)}},0)}",
+        "_handleAnyTextareaChanges(){if(this._pendingTextareaValue!==null)return;this._pendingTextareaValue=this._textarea.value,setTimeout(()=>{const t=this._pendingTextareaValue;this._pendingTextareaValue=null;if(!this._isComposing){let e=this._textarea.value,r=0;const n=Math.min(e.length,t.length);for(;r<n&&e.charCodeAt(r)===t.charCodeAt(r);)r++;let i=e.length<t.length?b.DEL.repeat(t.length-r)+e.substring(r):e.substring(r);this._dataAlreadySent=i,i.length>0&&this._coreService.triggerDataEvent(i,!0)}},0)}",
+      ],
+      [
+        '_handleAnyTextareaChanges(){let t=this._textarea.value;setTimeout(()=>{if(!this._isComposing){let e=this._textarea.value,i=e.replace(t,"");this._dataAlreadySent=i,e.length>t.length?this._coreService.triggerDataEvent(i,!0):e.length<t.length?this._coreService.triggerDataEvent(`${b.DEL}`,!0):e.length===t.length&&e!==t&&this._coreService.triggerDataEvent(e,!0)}},0)}',
+        "_handleAnyTextareaChanges(){if(this._pendingTextareaValue!==null)return;this._pendingTextareaValue=this._textarea.value,setTimeout(()=>{const t=this._pendingTextareaValue;this._pendingTextareaValue=null;if(!this._isComposing){let e=this._textarea.value,r=0;const n=Math.min(e.length,t.length);for(;r<n&&e.charCodeAt(r)===t.charCodeAt(r);)r++;let i=e.length<t.length?b.DEL.repeat(t.length-r)+e.substring(r):e.substring(r);this._dataAlreadySent=i,i.length>0&&this._coreService.triggerDataEvent(i,!0)}},0)}",
       ],
     ],
   },
@@ -55,8 +63,12 @@ const patches = [
     file: "xterm.js",
     replacements: [
       [
-        'this._compositionPosition={start:0,end:0},this._dataAlreadySent=""',
         'this._compositionPosition={start:0,end:0},this._preCompositionValue="",this._dataAlreadySent=""',
+        'this._compositionPosition={start:0,end:0},this._preCompositionValue="",this._pendingTextareaValue=null,this._dataAlreadySent=""',
+      ],
+      [
+        'this._compositionPosition={start:0,end:0},this._dataAlreadySent=""',
+        'this._compositionPosition={start:0,end:0},this._preCompositionValue="",this._pendingTextareaValue=null,this._dataAlreadySent=""',
       ],
       [
         'this._compositionPosition.start=this._textarea.value.length,this._compositionView.textContent=""',
@@ -71,8 +83,12 @@ const patches = [
         "e.start+=this._dataAlreadySent.length;this._isComposing?t=this._textarea.value.substring(e.start,this._compositionPosition.start):(()=>{const s=this._textarea.value;if(s.length<i.length){let e=0;const r=Math.min(s.length,i.length);for(;e<r&&s.charCodeAt(e)===i.charCodeAt(e);)e++;t=a.C0.DEL.repeat(i.length-e)+s.substring(e)}else t=s.substring(e.start)})(),t.length>0&&",
       ],
       [
-        '_handleAnyTextareaChanges(){const e=this._textarea.value;setTimeout((()=>{if(!this._isComposing){const t=this._textarea.value,i=t.replace(e,"");this._dataAlreadySent=i,t.length>e.length?this._coreService.triggerDataEvent(i,!0):t.length<e.length?this._coreService.triggerDataEvent(`${a.C0.DEL}`,!0):t.length===e.length&&t!==e&&this._coreService.triggerDataEvent(t,!0)}}),0)}',
         "_handleAnyTextareaChanges(){const e=this._textarea.value;setTimeout((()=>{if(!this._isComposing){const t=this._textarea.value;let r=0;const n=Math.min(t.length,e.length);for(;r<n&&t.charCodeAt(r)===e.charCodeAt(r);)r++;const i=t.length<e.length?a.C0.DEL.repeat(e.length-r)+t.substring(r):t.substring(r);this._dataAlreadySent=i,i.length>0&&this._coreService.triggerDataEvent(i,!0)}}),0)}",
+        "_handleAnyTextareaChanges(){if(this._pendingTextareaValue!==null)return;this._pendingTextareaValue=this._textarea.value,setTimeout((()=>{const e=this._pendingTextareaValue;this._pendingTextareaValue=null;if(!this._isComposing){const t=this._textarea.value;let r=0;const n=Math.min(t.length,e.length);for(;r<n&&t.charCodeAt(r)===e.charCodeAt(r);)r++;const i=t.length<e.length?a.C0.DEL.repeat(e.length-r)+t.substring(r):t.substring(r);this._dataAlreadySent=i,i.length>0&&this._coreService.triggerDataEvent(i,!0)}}),0)}",
+      ],
+      [
+        '_handleAnyTextareaChanges(){const e=this._textarea.value;setTimeout((()=>{if(!this._isComposing){const t=this._textarea.value,i=t.replace(e,"");this._dataAlreadySent=i,t.length>e.length?this._coreService.triggerDataEvent(i,!0):t.length<e.length?this._coreService.triggerDataEvent(`${a.C0.DEL}`,!0):t.length===e.length&&t!==e&&this._coreService.triggerDataEvent(t,!0)}}),0)}',
+        "_handleAnyTextareaChanges(){if(this._pendingTextareaValue!==null)return;this._pendingTextareaValue=this._textarea.value,setTimeout((()=>{const e=this._pendingTextareaValue;this._pendingTextareaValue=null;if(!this._isComposing){const t=this._textarea.value;let r=0;const n=Math.min(t.length,e.length);for(;r<n&&t.charCodeAt(r)===e.charCodeAt(r);)r++;const i=t.length<e.length?a.C0.DEL.repeat(e.length-r)+t.substring(r):t.substring(r);this._dataAlreadySent=i,i.length>0&&this._coreService.triggerDataEvent(i,!0)}}),0)}",
       ],
     ],
   },
