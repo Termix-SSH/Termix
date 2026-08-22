@@ -66,6 +66,7 @@ import {
   rowKind,
   ROOT_PARENT,
 } from "./visible-rows";
+import { RESOURCE_ROW_EXTRA, rendersResourceRow } from "./row-metrics";
 import { ReorderIndicator } from "@/sidebar/ReorderIndicator";
 import { useSidebarSelection } from "./hooks/useSidebarSelection";
 import { useSidebarDragState } from "./hooks/useSidebarDragState";
@@ -699,30 +700,27 @@ export function SidebarTree({
   const CLICK_CHEVRON_EXTRA = clickTrayActive ? 4.5 : 0;
   const HOST_ROW_HEIGHT = (isCompactDensity ? 27.5 : 45) + CLICK_CHEVRON_EXTRA;
   const FOLDER_ROW_HEIGHT = 31.5;
-  // "always" mode permanently renders the connection-buttons row (plus the
-  // management row/resource bars for online hosts) -- measured directly
-  // rather than derived, since it has its own fixed shape.
+  // "always" mode permanently renders the connection-buttons row plus the
+  // management row -- measured directly rather than derived, since it has its
+  // own fixed shape. The resource bars are NOT included: they only render for
+  // an online host with CPU/RAM, so rowHeight adds RESOURCE_ROW_EXTRA per row.
   // Carries the click-mode chevron so the open row lands at its measured
   // 104.75 rather than always mode's 100.25. The term cancels out of
   // OPEN_TRAY_EXTRA below, leaving HOST_ROW_HEIGHT to supply it once.
   const ALWAYS_ROW_HEIGHT =
-    (isCompactDensity ? 73.75 : 100.25) + CLICK_CHEVRON_EXTRA;
+    (isCompactDensity ? 73.75 : 83) + CLICK_CHEVRON_EXTRA;
   const OPEN_TRAY_EXTRA = ALWAYS_ROW_HEIGHT - HOST_ROW_HEIGHT;
   // "actionsOnly" permanently renders just the connection-buttons row above
   // the tray; the management row/resource bars stay collapsed until toggled.
   const ACTIONS_ONLY_ROW_HEIGHT = isCompactDensity ? 50.25 : 75.75;
   // Opening the management row from actionsOnly's closed state (which
-  // already includes the connection row).
-  const ACTIONS_ONLY_OPEN_ROW_HEIGHT = isCompactDensity ? 79.25 : 104.75;
+  // already includes the connection row). Excludes the resource bars for the
+  // same reason as ALWAYS_ROW_HEIGHT -- rowHeight adds them per row.
+  const ACTIONS_ONLY_OPEN_ROW_HEIGHT = isCompactDensity ? 79.25 : 87.5;
   // Tag pills are a separate flex row. Comfortable density adds the row plus
   // its gap; compact density pulls it upward by 2px but still needs a slot.
   const TAG_ROW_EXTRA = isCompactDensity ? 12.5 : 18.5;
-  // Hiding the resource bars only ever makes a row shorter than the height
-  // reserved for it, which the existing shapes already tolerate: the bars are
-  // conditional on the host being online with CPU/RAM data, so an offline host
-  // has always rendered short of ALWAYS_ROW_HEIGHT. Simple therefore pairs
-  // showResourceBars:false with trayTrigger:"actionsOnly", whose measured
-  // height excludes the resource/management row to begin with.
+  // showResourceBars:false simply drops RESOURCE_ROW_EXTRA from every row.
 
   const rowHeight = useCallback(
     (index: number) => {
@@ -730,7 +728,19 @@ export function SidebarTree({
       if (!row) return FOLDER_ROW_HEIGHT;
       if (isFolder(row.item)) return FOLDER_ROW_HEIGHT;
       const tagExtra = showTags && row.item.tags?.length ? TAG_ROW_EXTRA : 0;
-      if (alwaysShowActions) return ALWAYS_ROW_HEIGHT + tagExtra;
+      // The resource bars only render for an online host that reported CPU/RAM.
+      // Reserving their height unconditionally left a gap under every offline
+      // row. measureElement corrects any drift from live status this estimate
+      // can't see.
+      const resourceExtra = rendersResourceRow(
+        row.item,
+        showResourceBars,
+        isCompactDensity,
+      )
+        ? RESOURCE_ROW_EXTRA
+        : 0;
+      if (alwaysShowActions)
+        return ALWAYS_ROW_HEIGHT + tagExtra + resourceExtra;
       const toggledOpen =
         (openTrayHostId === row.item.id || openMenuHostId === row.item.id) &&
         (clickTrayActive || actionsOnly);
@@ -742,15 +752,19 @@ export function SidebarTree({
         !selectionMode &&
         (hoveredHostId === row.item.id || openMenuHostId === row.item.id);
       const isOpen = toggledOpen || hoverOpen;
+      // The bars live inside the tray, so they only take space once it opens.
+      const openResourceExtra = isOpen ? resourceExtra : 0;
       if (actionsOnly) {
         return (
           (isOpen ? ACTIONS_ONLY_OPEN_ROW_HEIGHT : ACTIONS_ONLY_ROW_HEIGHT) +
-          tagExtra
+          tagExtra +
+          openResourceExtra
         );
       }
       return (
         (isOpen ? HOST_ROW_HEIGHT + OPEN_TRAY_EXTRA : HOST_ROW_HEIGHT) +
-        tagExtra
+        tagExtra +
+        openResourceExtra
       );
     },
     [
@@ -770,6 +784,8 @@ export function SidebarTree({
       ACTIONS_ONLY_ROW_HEIGHT,
       ACTIONS_ONLY_OPEN_ROW_HEIGHT,
       TAG_ROW_EXTRA,
+      showResourceBars,
+      isCompactDensity,
     ],
   );
 
@@ -778,6 +794,15 @@ export function SidebarTree({
     getScrollElement: () => parentRef.current,
     estimateSize: rowHeight,
     overscan: 12,
+    // The library's default rounds every measurement to a whole pixel. Rows
+    // here land on fractions (a 63.84px row rounds to 64), and the rounded-up
+    // size becomes the slot pitch -- leaving a visible sliver under every
+    // single row, which stacks into the gaps the list is judged by. Keep the
+    // sub-pixel size so slots sit flush against the row above.
+    measureElement: (element, entry) => {
+      const box = entry?.borderBoxSize?.[0];
+      return box ? box.blockSize : element.getBoundingClientRect().height;
+    },
     getItemKey: (index) => {
       const row = visibleRows[index];
       if (!row) return index;
@@ -804,28 +829,21 @@ export function SidebarTree({
     return reorderHoverEdge === "before" ? slot.start : slot.start + slot.size;
   })();
 
-  // Fixed heights mean estimateSize already IS the real size. Do not attach
-  // measureElement here: its index-based ResizeObserver measurements can be
-  // reused for a different row after a deletion and override the fixed size.
-  // The virtualizer still needs telling when a row's height classification
-  // changes (tray opened/closed, tree reshaped, density/trigger changed).
+  // rowHeight is only an estimate: a row's real height also depends on live
+  // state the tree can't cheaply know per row (an offline host drops the
+  // resource bars "always" mode reserves space for). measureElement corrects
+  // it from the DOM, keyed by getItemKey rather than index so a deleted row's
+  // size is never reused for whatever shifts into its slot.
+  //
+  // measure() wipes the ENTIRE measurement cache, so it may only run when
+  // every row's shape changes at once -- a density/trigger/tag switch. Hover
+  // and tray state are deliberately absent: they change one row, which
+  // re-renders and re-measures itself through the observer anyway, whereas
+  // calling measure() for them threw all 5000 rows back to their estimates
+  // and made the list visibly jump apart on every pointer move.
   useLayoutEffect(() => {
     virtualizer.measure();
-  }, [
-    virtualizer,
-    openFolders,
-    closedHostParents,
-    openTrayHostId,
-    openMenuHostId,
-    hoveredHostId,
-    selectionMode,
-    query,
-    visibleRows.length,
-    density,
-    trayTrigger,
-    showTags,
-    showResourceBars,
-  ]);
+  }, [virtualizer, density, trayTrigger, showTags, showResourceBars]);
 
   if (loading) {
     return (
@@ -921,6 +939,8 @@ export function SidebarTree({
               return (
                 <div
                   key={vItem.key}
+                  data-index={vItem.index}
+                  ref={virtualizer.measureElement}
                   className="absolute top-0 left-0 w-full"
                   style={{
                     transform: `translateY(${vItem.start}px)`,

@@ -822,16 +822,22 @@ export function HostItem({
     !shouldUseClickTray &&
     !selectionMode &&
     (isHovered || isMenuOpen);
+  // A collapsed tray must not earn the text column's gap-[3.5px]. Clipping to
+  // max-h-0 leaves it a flex item, so every closed row measured ~3.5px taller
+  // than its slot and the virtualizer spread the rows apart to match. The
+  // negative margin cancels the gap while keeping the element in flow, so the
+  // modes that animate open still have something to transition.
+  const trayCollapsedClass = `max-h-0 opacity-0 ${isCompact ? "" : "-mt-[3.5px]"}`;
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
-      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`
+      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
       : shouldUseClickTray
-        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`
+        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
         : // No transition in hover mode: the row's height is set by the
           // virtualizer and snaps in a single frame, so animating the tray
           // against it leaves the open tray overflowing its shortened row for
           // the length of the animation. Both change together instead.
-          `overflow-hidden ${hoverTrayOpen ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`;
+          `overflow-hidden ${hoverTrayOpen ? "max-h-[130px] opacity-100" : trayCollapsedClass}`;
 
   return (
     <div
