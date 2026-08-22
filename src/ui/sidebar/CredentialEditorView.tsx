@@ -13,10 +13,11 @@ import {
   generateKeyPair,
   generatePublicKeyFromPrivate,
   updateCredential,
+  duplicateCredential,
   adminCreateUserCredential,
   adminUpdateUserCredential,
 } from "@/main-axios";
-import type { Credential } from "@/types/ui-types";
+import type { Credential, Host } from "@/types/ui-types";
 import { FolderPathPicker } from "./FolderPathPicker";
 
 export function CredentialEditorView({
@@ -26,13 +27,20 @@ export function CredentialEditorView({
   onSave,
   adminTargetUserId,
   existingFolders = [],
+  saveAsNewHost,
 }: {
   credential: Credential | null;
   activeTab: string;
   onBack: () => void;
-  onSave: (saved: Record<string, unknown>) => void;
+  onSave: (
+    saved: Record<string, unknown>,
+    options?: { assignToHost?: boolean },
+  ) => void;
   adminTargetUserId?: string;
   existingFolders?: string[];
+  // When set, this credential is being edited from within a host's editor;
+  // shows a "Save as New" action that clones it and reassigns the host.
+  saveAsNewHost?: Host | "new";
 }) {
   const [credForm, setCredForm] = useState(() => ({
     name: credential?.name ?? "",
@@ -61,21 +69,14 @@ export function CredentialEditorView({
     v: (typeof credForm)[K],
   ) => setCredForm((p) => ({ ...p, [k]: v }));
   const [saving, setSaving] = useState(false);
+  const [savingAsNew, setSavingAsNew] = useState(false);
 
-  const handleSave = async () => {
-    if (!credForm.name.trim()) {
-      toast.error(t("hosts.credentialNameRequired"));
-      return;
-    }
+  const buildCredentialData = () => {
     const hasKey =
       credForm.value === "existing_key" || credForm.value.trim() !== "";
-    if (!hasKey && !credForm.password) {
-      toast.error(t("hosts.credentialAuthRequired"));
-      return;
-    }
-    setSaving(true);
-    try {
-      const data = {
+    return {
+      hasKey,
+      data: {
         name: credForm.name,
         username: credForm.username,
         folder: credForm.folder || null,
@@ -95,7 +96,29 @@ export function CredentialEditorView({
             ? undefined
             : credForm.passphrase || null
           : null,
-      };
+      },
+    };
+  };
+
+  const validateForm = () => {
+    if (!credForm.name.trim()) {
+      toast.error(t("hosts.credentialNameRequired"));
+      return false;
+    }
+    const hasKey =
+      credForm.value === "existing_key" || credForm.value.trim() !== "";
+    if (!hasKey && !credForm.password) {
+      toast.error(t("hosts.credentialAuthRequired"));
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+    setSaving(true);
+    try {
+      const { data } = buildCredentialData();
       let saved: Record<string, unknown>;
       if (adminTargetUserId) {
         saved = credential
@@ -124,6 +147,24 @@ export function CredentialEditorView({
       toast.error(msg || t("hosts.failedToSaveCredential"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveAsNew = async () => {
+    if (!credential || adminTargetUserId) return;
+    if (!validateForm()) return;
+    setSavingAsNew(true);
+    try {
+      const { data } = buildCredentialData();
+      const saved = await duplicateCredential(Number(credential.id), data);
+      toast.success(t("hosts.credentialSavedAsNew"));
+      window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
+      onSave(saved, { assignToHost: true });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : null;
+      toast.error(msg || t("hosts.failedToSaveCredentialAsNew"));
+    } finally {
+      setSavingAsNew(false);
     }
   };
 
@@ -494,14 +535,31 @@ export function CredentialEditorView({
       )}
 
       <div className="flex justify-end gap-3 mt-3">
-        <Button variant="ghost" onClick={onBack} disabled={saving}>
+        <Button
+          variant="ghost"
+          onClick={onBack}
+          disabled={saving || savingAsNew}
+        >
           {t("hosts.cancelBtn")}
         </Button>
+        {saveAsNewHost && credential && !adminTargetUserId && (
+          <Button
+            variant="outline"
+            className="px-6"
+            onClick={handleSaveAsNew}
+            disabled={saving || savingAsNew}
+            title={t("hosts.saveCredentialAsNewDesc")}
+          >
+            {savingAsNew
+              ? t("hosts.savingBtn")
+              : t("hosts.saveCredentialAsNewBtn")}
+          </Button>
+        )}
         <Button
           variant="outline"
           className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand px-8"
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || savingAsNew}
         >
           {saving
             ? t("hosts.savingBtn")

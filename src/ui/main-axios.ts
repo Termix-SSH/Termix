@@ -2093,6 +2093,7 @@ export {
   getCredentialDetails,
   createCredential,
   updateCredential,
+  duplicateCredential,
   deleteCredential,
   getCredentialHosts,
   getCredentialFolders,

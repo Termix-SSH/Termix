@@ -111,6 +111,11 @@ export function HostManager({
     string | null
   >(null);
   const [editingCredFolderValue, setEditingCredFolderValue] = useState("");
+  // Remembers the host being edited when its credential is opened for
+  // editing, so "back" can return to that host instead of the list.
+  const [credentialReturnHost, setCredentialReturnHost] = useState<
+    Host | "new" | null
+  >(null);
   const [termixIdLinkedIds, setTermixIdLinkedIds] = useState<Set<number>>(
     new Set(),
   );
@@ -355,6 +360,15 @@ export function HostManager({
     }
   }
 
+  // Opens a host's credential for editing from within the host editor,
+  // remembering the host so "back" returns to it instead of the list.
+  async function handleEditCredentialFromHost(credentialId: string) {
+    const cred = credentials.find((c) => c.id === credentialId);
+    if (!cred) return;
+    setCredentialReturnHost(editingHost);
+    await handleEditCredential(cred);
+  }
+
   // Editor view: full-width with top tab bar instead of side nav
   const closeHostEditor = () => {
     setHostEditorDirty(false);
@@ -423,6 +437,11 @@ export function HostManager({
             onClick={() => {
               if (isHost) {
                 requestCloseHostEditor();
+              } else if (credentialReturnHost) {
+                setEditingHost(credentialReturnHost);
+                setCredentialReturnHost(null);
+                setEditingCredential(null);
+                setActiveCredentialTab("general");
               } else {
                 setEditingCredential(null);
                 setActiveCredentialTab("general");
@@ -434,7 +453,9 @@ export function HostManager({
             <span>
               {isHost
                 ? t("hosts.backToHosts")
-                : t("credentials.backToCredentials")}
+                : credentialReturnHost
+                  ? t("hosts.backToHost")
+                  : t("credentials.backToCredentials")}
             </span>
             {isHost && editingHost !== "new" && (
               <span
@@ -525,6 +546,7 @@ export function HostManager({
               onTabChange={setActiveHostTab}
               hosts={hosts}
               credentials={credentials}
+              onEditCredential={handleEditCredentialFromHost}
             />
           ) : (
             <CredentialEditorView
@@ -546,11 +568,21 @@ export function HostManager({
                     .filter((f): f is string => !!f),
                 ),
               ).sort()}
+              saveAsNewHost={
+                credentialReturnHost ? credentialReturnHost : undefined
+              }
               onBack={() => {
+                if (credentialReturnHost) {
+                  setEditingHost(credentialReturnHost);
+                  setCredentialReturnHost(null);
+                  setEditingCredential(null);
+                  setActiveCredentialTab("general");
+                  return;
+                }
                 setEditingCredential(null);
                 setActiveCredentialTab("general");
               }}
-              onSave={(saved) => {
+              onSave={(saved, options) => {
                 // The save endpoints are typed as an untyped record; these are
                 // the fields this view reads back off the response.
                 const result = saved as Partial<Credential> & {
@@ -579,6 +611,27 @@ export function HostManager({
                   }
                   return [...prev, updated];
                 });
+                if (options?.assignToHost && credentialReturnHost) {
+                  const returnHost = credentialReturnHost;
+                  setCredentialReturnHost(null);
+                  if (returnHost !== "new") {
+                    setHosts((prev) =>
+                      prev.map((h) =>
+                        h.id === returnHost.id
+                          ? { ...h, credentialId: String(result.id) }
+                          : h,
+                      ),
+                    );
+                  }
+                  setEditingHost(
+                    returnHost === "new"
+                      ? "new"
+                      : { ...returnHost, credentialId: String(result.id) },
+                  );
+                  setActiveHostTab("ssh");
+                  setEditingCredential(null);
+                  return;
+                }
                 setEditingCredential(null);
                 setActiveCredentialTab("general");
               }}
