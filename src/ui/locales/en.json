@@ -2209,6 +2209,8 @@
     "operationCompleted": "{{operation}} {{count}} items",
     "downloadFileSuccess": "File {{name}} downloaded successfully",
     "downloadFileFailed": "Download failed",
+    "downloadingFile": "Downloading {{name}}…",
+    "downloadProgressBytes": "{{transferred}} / {{total}}",
     "moveTo": "Move to {{name}}",
     "diffCompareWith": "Diff compare with {{name}}",
     "dragOutsideToDownload": "Drag outside window to download ({{count}} files)",

@@ -19,6 +19,7 @@ import {
   useWindowManager,
 } from "./components/WindowManager.tsx";
 import { FileWindow } from "./components/FileWindow.tsx";
+import { DownloadProgressToast } from "./components/DownloadProgressToast.tsx";
 import { DiffWindow } from "./components/DiffWindow.tsx";
 import { useDragToDesktop } from "@/features/file-manager/hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "@/features/file-manager/hooks/useDragToSystemDesktop";
@@ -1166,14 +1167,47 @@ function FileManagerContent({
   async function handleDownloadFile(file: FileItem) {
     if (!sshSessionId) return;
 
+    const toastId = `download-${file.path}-${Date.now()}`;
+    let lastLoaded = 0;
+    let lastTime = Date.now();
+    let mbPerSec: number | undefined;
+
     try {
       await ensureSSHConnection();
 
       const { downloadSSHFileStream } = await import("@/main-axios.ts");
-      await downloadSSHFileStream(sshSessionId, file.path);
+
+      toast.loading(
+        <DownloadProgressToast fileName={file.name} loaded={0} />,
+        { id: toastId, duration: Infinity },
+      );
+
+      await downloadSSHFileStream(sshSessionId, file.path, ({ loaded, total }) => {
+        const now = Date.now();
+        const deltaMs = now - lastTime;
+        if (deltaMs > 200) {
+          const deltaBytes = loaded - lastLoaded;
+          if (deltaBytes >= 0) {
+            mbPerSec = (deltaBytes / deltaMs / 1024 / 1024) * 1000;
+          }
+          lastLoaded = loaded;
+          lastTime = now;
+        }
+
+        toast.loading(
+          <DownloadProgressToast
+            fileName={file.name}
+            loaded={loaded}
+            total={total}
+            mbPerSec={mbPerSec}
+          />,
+          { id: toastId, duration: Infinity },
+        );
+      });
 
       toast.success(
         t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
+        { id: toastId },
       );
     } catch (error: unknown) {
       const err = error instanceof Error ? error : null;
@@ -1187,9 +1221,10 @@ function FileManagerContent({
             ip: currentHost?.ip,
             port: currentHost?.port,
           }),
+          { id: toastId },
         );
       } else {
-        toast.error(t("fileManager.failedToDownloadFile"));
+        toast.error(t("fileManager.failedToDownloadFile"), { id: toastId });
       }
       console.error("Download failed:", error);
     }

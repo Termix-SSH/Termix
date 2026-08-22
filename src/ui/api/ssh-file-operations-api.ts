@@ -549,14 +549,27 @@ export async function downloadSSHFile(
   }
 }
 
+export interface DownloadProgressEvent {
+  loaded: number;
+  total?: number;
+}
+
 export async function downloadSSHFileStream(
   sessionId: string,
   filePath: string,
+  onProgress?: (event: DownloadProgressEvent) => void,
 ): Promise<void> {
   const response = await getFileManagerApiForSession(sessionId).post(
     "/ssh/downloadFileStream",
     { sessionId, path: filePath },
-    { responseType: "blob", timeout: 0 },
+    {
+      responseType: "blob",
+      timeout: 0,
+      onDownloadProgress: onProgress
+        ? (event) =>
+            onProgress({ loaded: event.loaded, total: event.total })
+        : undefined,
+    },
   );
   const blob = response.data as Blob;
   const fileName = filePath.split("/").pop() || "download";
