@@ -715,6 +715,7 @@ export interface TerminalConfig {
   linkClickBehavior?: "confirm" | "direct";
   useSSHTitle?: boolean;
   agentSocketPath?: string;
+  agentIdentity?: string;
   customThemeColors?: {
     background: string;
     foreground: string;

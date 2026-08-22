@@ -1104,6 +1104,21 @@ export function HostEditor({
                           {t("hosts.agentSocketPathHint")}
                         </p>
                       </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.agentIdentityLabel")}
+                        </label>
+                        <Input
+                          placeholder={t("hosts.agentIdentityPlaceholder")}
+                          value={form.agentIdentity}
+                          onChange={(e) =>
+                            setField("agentIdentity", e.target.value)
+                          }
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.agentIdentityHint")}
+                        </p>
+                      </div>
                     </div>
                   )}
                   <SettingRow

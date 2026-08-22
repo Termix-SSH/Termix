@@ -48,7 +48,7 @@ import {
 import {
   MemoryAgent,
   performPortKnocking,
-  resolveAgentSocket,
+  applyAgentAuth,
 } from "../terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
@@ -3063,15 +3063,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     } else if (resolvedCredentials.authType === "agent") {
       sendLog("auth", "info", "Using SSH agent authentication");
-      const result = await resolveAgentSocket(
+      const result = await applyAgentAuth(
+        connectConfig,
         hostConfig.terminalConfig as Record<string, unknown> | undefined,
       );
       if ("error" in result) {
         ws.send(JSON.stringify({ type: "error", message: result.error }));
         return;
       }
-      const { createAgent } = ssh2Pkg;
-      connectConfig.agent = createAgent(result.socketPath);
       sendLog(
         "auth",
         "info",

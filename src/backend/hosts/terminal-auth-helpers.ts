@@ -1,6 +1,7 @@
 import dgram from "dgram";
 import net from "net";
 import ssh2Pkg, {
+  type BaseAgent as BaseAgentType,
   type GetStreamCallback,
   type IdentityCallback,
   type ParsedKey,
@@ -103,6 +104,69 @@ export async function resolveAgentSocket(
   return { socketPath: resolved };
 }
 
+/**
+ * Wraps an agent so only identities matching a specific public key are
+ * offered to the server, mirroring ssh_config's IdentityFile + IdentitiesOnly
+ * for agent auth. Prevents exhausting the server's MaxAuthTries when the
+ * agent holds many keys.
+ */
+export class FilteredAgent extends BaseAgent {
+  private inner: BaseAgentType;
+  private publicKeyBlob: Buffer;
+
+  constructor(inner: BaseAgentType, publicKeyBlob: Buffer) {
+    super();
+    this.inner = inner;
+    this.publicKeyBlob = publicKeyBlob;
+  }
+
+  private matches(key: ParsedKey): boolean {
+    try {
+      const blob = key.getPublicSSH();
+      return Buffer.isBuffer(blob) && Buffer.compare(blob, this.publicKeyBlob) === 0;
+    } catch {
+      return false;
+    }
+  }
+
+  getIdentities(cb: IdentityCallback<ParsedKey>): void {
+    this.inner.getIdentities((err, keys) => {
+      if (err || !keys) return cb(err, keys);
+      cb(null, keys.filter((key) => this.matches(key)));
+    });
+  }
+
+  getStream(cb: GetStreamCallback): void {
+    this.inner.getStream(cb);
+  }
+
+  sign(
+    pubKey: ParsedKey | Buffer | string,
+    data: Buffer,
+    optionsOrCb: SigningRequestOptions | SignCallback,
+    cb?: SignCallback,
+  ): void {
+    this.inner.sign(
+      pubKey,
+      data,
+      optionsOrCb as SigningRequestOptions,
+      cb as SignCallback,
+    );
+  }
+}
+
+function parseAgentIdentityBlob(agentIdentity: string): Buffer | null {
+  const { utils } = ssh2Pkg;
+  const parsed = utils.parseKey(agentIdentity.trim());
+  if (parsed instanceof Error || !parsed) return null;
+  const key = Array.isArray(parsed) ? parsed[0] : parsed;
+  try {
+    return key.getPublicSSH();
+  } catch {
+    return null;
+  }
+}
+
 export async function applyAgentAuth(
   connectConfig: Record<string, unknown>,
   terminalConfig: Record<string, unknown> | undefined,
@@ -111,7 +175,21 @@ export async function applyAgentAuth(
   if ("error" in result) return result;
 
   const { createAgent } = ssh2Pkg;
-  connectConfig.agent = createAgent(result.socketPath);
+  const agent = createAgent(result.socketPath);
+
+  const agentIdentity = (
+    terminalConfig?.agentIdentity as string | undefined
+  )?.trim();
+  if (agentIdentity) {
+    const publicKeyBlob = parseAgentIdentityBlob(agentIdentity);
+    if (!publicKeyBlob) {
+      return { error: "Invalid public key provided for agent identity." };
+    }
+    connectConfig.agent = new FilteredAgent(agent, publicKeyBlob);
+  } else {
+    connectConfig.agent = agent;
+  }
+
   return result;
 }
 

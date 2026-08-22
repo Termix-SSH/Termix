@@ -243,6 +243,7 @@ export function createHostEditorForm(
     linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
       "default") as "default" | "confirm" | "direct",
     agentSocketPath: host?.terminalConfig?.agentSocketPath ?? "",
+    agentIdentity: host?.terminalConfig?.agentIdentity ?? "",
     useSSHTitle: host?.terminalConfig?.useSSHTitle ?? false,
     syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     syntaxHighlightingOptions: {
@@ -409,6 +410,7 @@ export function buildHostEditorPayload(
       form.linkClickBehavior !== "default" ? form.linkClickBehavior : undefined,
     localEcho: form.localEcho !== "default" ? form.localEcho : undefined,
     agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
+    agentIdentity: usesAgent ? form.agentIdentity || null : null,
   };
   const terminalOverrides = form.inheritTerminalAppearance
     ? stripKeys(terminalConfig, terminalAppearanceKeys)

@@ -237,6 +237,56 @@ describe("buildHostEditorPayload auth field isolation", () => {
     expect(tc?.agentSocketPath).toBeNull();
   });
 
+  it("preserves agentIdentity in terminalConfig when authType is agent", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      authType: "agent" as const,
+      agentIdentity: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA test-key",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
+
+    expect(tc?.agentIdentity).toBe(
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA test-key",
+    );
+  });
+
+  it("nulls out agentIdentity when switching away from agent auth", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      authType: "password" as const,
+      password: "mypass",
+      agentIdentity: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA test-key",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
+
+    expect(tc?.agentIdentity).toBeNull();
+  });
+
+  it("keeps agentIdentity in terminalConfig for shared edits (not owner-private)", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      authType: "agent" as const,
+      agentIdentity: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA test-key",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const sharedEdit = omitOwnerSshAuthFromSharedEdit(payload);
+
+    expect(sharedEdit.terminalConfig?.agentIdentity).toBe(
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA test-key",
+    );
+  });
+
   it("preserves sudo password autofill settings", () => {
     const form = {
       ...createHostEditorForm(null),
