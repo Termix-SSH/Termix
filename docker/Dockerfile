@@ -31,7 +31,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm rebuild better-sqlite3 --build-from-source
+RUN npm rebuild better-sqlite3 --build-from-source && \
+    rm -rf node_modules/better-sqlite3/prebuilds
 
 RUN npm run build:backend
 
@@ -68,6 +69,7 @@ COPY scripts/patch-guacamole-lite.cjs ./scripts/
 RUN npm ci --omit=dev --ignore-scripts && \
     node scripts/patch-guacamole-lite.cjs && \
     npm rebuild better-sqlite3 --build-from-source && \
+    rm -rf node_modules/better-sqlite3/prebuilds && \
     npm rebuild bcryptjs ssh2 && \
     npm cache clean --force
 
