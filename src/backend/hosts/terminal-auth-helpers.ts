@@ -4,10 +4,13 @@ import ssh2Pkg, {
   type BaseAgent as BaseAgentType,
   type GetStreamCallback,
   type IdentityCallback,
+  type KnownPublicKeys,
   type ParsedKey,
   type SignCallback,
   type SigningRequestOptions,
 } from "ssh2";
+
+type KnownPublicKey = KnownPublicKeys[number];
 
 const { AgentProtocol, BaseAgent } = ssh2Pkg;
 const DEFAULT_PORT_KNOCK_TIMEOUT_MS = 1000;
@@ -120,23 +123,38 @@ export class FilteredAgent extends BaseAgent {
     this.publicKeyBlob = publicKeyBlob;
   }
 
-  private matches(key: ParsedKey): boolean {
+  private matches(key: KnownPublicKey): boolean {
     try {
-      const blob = key.getPublicSSH();
-      return Buffer.isBuffer(blob) && Buffer.compare(blob, this.publicKeyBlob) === 0;
+      const blob =
+        typeof key === "string"
+          ? Buffer.from(key)
+          : Buffer.isBuffer(key)
+            ? key
+            : "getPublicSSH" in key
+              ? key.getPublicSSH()
+              : null;
+      return (
+        Buffer.isBuffer(blob) && Buffer.compare(blob, this.publicKeyBlob) === 0
+      );
     } catch {
       return false;
     }
   }
 
-  getIdentities(cb: IdentityCallback<ParsedKey>): void {
+  getIdentities(cb: IdentityCallback): void {
     this.inner.getIdentities((err, keys) => {
       if (err || !keys) return cb(err, keys);
-      cb(null, keys.filter((key) => this.matches(key)));
+      cb(
+        null,
+        keys.filter((key) => this.matches(key)),
+      );
     });
   }
 
   getStream(cb: GetStreamCallback): void {
+    if (typeof this.inner.getStream !== "function") {
+      return cb(new Error("Agent does not support forwarding."));
+    }
     this.inner.getStream(cb);
   }
 
