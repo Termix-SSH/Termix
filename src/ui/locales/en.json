@@ -3257,6 +3257,7 @@
     "oidcAutoProvisionDesc": "Auto-create accounts for OIDC/SSO users on first login (independent of the registration toggle)",
     "oidcSilentLoginDefault": "Silent OIDC Login by Default",
     "oidcSilentLoginDefaultDesc": "Automatically redirect to OIDC login on every visit, skipping the login form entirely",
+    "oidcSilentLoginDefaultLockedDesc": "This setting is locked by the OIDC_SILENT_LOGIN_DEFAULT environment variable and cannot be changed here.",
     "allowPasswordReset": "Allow Password Reset",
     "allowPasswordResetDesc": "Reset code via Docker logs",
     "commandHistoryEnabled": "Command History",
