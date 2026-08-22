@@ -609,3 +609,21 @@ describe("user connection defaults", () => {
     });
   });
 });
+
+describe("createHostEditorForm credentialId", () => {
+  it("coerces a numeric credentialId to a string so credential lookups match", () => {
+    const form = createHostEditorForm({
+      credentialId: 12,
+    } as unknown as Host);
+    expect(form.credentialId).toBe("12");
+  });
+
+  it("keeps a string credentialId as is", () => {
+    const form = createHostEditorForm({ credentialId: "12" } as Host);
+    expect(form.credentialId).toBe("12");
+  });
+
+  it("falls back to an empty string when there is no credential", () => {
+    expect(createHostEditorForm(null).credentialId).toBe("");
+  });
+});

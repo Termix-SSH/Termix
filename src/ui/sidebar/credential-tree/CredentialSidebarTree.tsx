@@ -31,6 +31,7 @@ export function CredentialSidebarTree({
   folders,
   onDeployCredential,
   onEditCredential,
+  onCloneCredential,
   onDeleteCredential,
   usedByCounts,
   termixIdLinkedIds,
@@ -51,6 +52,7 @@ export function CredentialSidebarTree({
   folders: CredentialFolder[];
   onDeployCredential: (cred: Credential) => void;
   onEditCredential: (cred: Credential) => void;
+  onCloneCredential: (cred: Credential) => void;
   onDeleteCredential: (cred: Credential) => void;
   usedByCounts?: Map<string, number>;
   termixIdLinkedIds?: Set<number>;
@@ -434,6 +436,7 @@ export function CredentialSidebarTree({
                       }}
                       onDeploy={() => onDeployCredential(item)}
                       onEdit={() => onEditCredential(item)}
+                      onClone={() => onCloneCredential(item)}
                       onDelete={() => onDeleteCredential(item)}
                     />
                   )}

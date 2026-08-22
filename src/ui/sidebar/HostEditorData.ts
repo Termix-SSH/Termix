@@ -140,8 +140,11 @@ export function createHostEditorForm(
     keyType: host?.keyType ?? "auto",
     keySubTab: "paste" as "paste" | "upload",
     credentialId:
-      host?.credentialId ??
-      (d?.credentialId != null ? String(d.credentialId) : ""),
+      host?.credentialId != null
+        ? String(host.credentialId)
+        : d?.credentialId != null
+          ? String(d.credentialId)
+          : "",
     vaultProfileId: host?.vaultProfileId ?? "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",

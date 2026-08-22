@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
   Copy,
+  CopyPlus,
   GripVertical,
   Pencil,
   Pin,
@@ -68,6 +69,7 @@ export function CredentialItem({
   onReorderHoverChange,
   onDeploy,
   onEdit,
+  onClone,
   onDelete,
 }: {
   cred: Credential;
@@ -100,6 +102,7 @@ export function CredentialItem({
   onReorderHoverChange?: (edge: "before" | "after" | null) => void;
   onDeploy: () => void;
   onEdit: () => void;
+  onClone: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
@@ -166,6 +169,16 @@ export function CredentialItem({
         className={trayButtonClass}
       >
         <Pencil className="size-3.5" />
+      </button>
+      <button
+        title={t("credentials.cloneCredentialAction")}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClone();
+        }}
+        className={trayButtonClass}
+      >
+        <CopyPlus className="size-3.5" />
       </button>
       <button
         title={t("credentials.deleteCredentialAction")}

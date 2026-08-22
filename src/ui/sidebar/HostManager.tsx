@@ -16,6 +16,7 @@ import {
   getCredentials,
   getCredentialDetails,
   deleteCredential,
+  duplicateCredential,
   updateCredential,
   deployCredentialToHost,
   renameCredentialFolder,
@@ -317,6 +318,21 @@ export function HostManager({
     }
   };
 
+  const handleCloneCredential = async (cred: Credential) => {
+    try {
+      await duplicateCredential(Number(cred.id), {
+        name: t("credentials.clonedCredentialName", { name: cred.name }),
+      });
+      const res = await getCredentials();
+      setCredentials(mapCredentials(res));
+      window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
+      toast.success(t("credentials.clonedCredential", { name: cred.name }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : null;
+      toast.error(msg || t("credentials.failedToCloneCredential"));
+    }
+  };
+
   const handleDeleteCredential = async (cred: Credential) => {
     await deleteCredential(Number(cred.id));
     setCredentials((prev) => prev.filter((c) => c.id !== cred.id));
@@ -363,7 +379,7 @@ export function HostManager({
   // Opens a host's credential for editing from within the host editor,
   // remembering the host so "back" returns to it instead of the list.
   async function handleEditCredentialFromHost(credentialId: string) {
-    const cred = credentials.find((c) => c.id === credentialId);
+    const cred = credentials.find((c) => String(c.id) === String(credentialId));
     if (!cred) return;
     setCredentialReturnHost(editingHost);
     await handleEditCredential(cred);
@@ -715,6 +731,7 @@ export function HostManager({
                 setDeployDialog({ cred, hostId: "" })
               }
               onEditCredential={handleEditCredential}
+              onCloneCredential={handleCloneCredential}
               onDeleteCredential={handleConfirmDeleteCredential}
             />
           )}

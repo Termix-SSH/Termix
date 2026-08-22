@@ -360,7 +360,7 @@ export function HostEditor({
       ? [...credentials, quickCreatedCredential]
       : credentials;
   const selectedCredential = availableCredentials.find(
-    (c) => c.id === form.credentialId,
+    (c) => String(c.id) === String(form.credentialId),
   );
 
   const canQuickCreateCredential =
