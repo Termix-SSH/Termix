@@ -42,7 +42,7 @@ import {
 } from "./transfer-engine.js";
 import { registerFileContentRoutes } from "./content-routes.js";
 import { createConnectionLog } from "../connection-log.js";
-import { createJumpHostChain } from "../jump-host-chain.js";
+import { createJumpHostChain, JumpHostChainError } from "../jump-host-chain.js";
 import {
   isPrivateKeyPassphraseError,
   preparePrivateKeyForSSH2,
@@ -1845,7 +1845,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         ),
       );
       return res.status(500).json({
-        error: "Failed to connect through jump hosts",
+        error:
+          error instanceof JumpHostChainError
+            ? `Failed to connect through jump hosts: ${error.message}`
+            : "Failed to connect through jump hosts",
         connectionLogs,
       });
     }

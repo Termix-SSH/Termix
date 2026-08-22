@@ -27,7 +27,7 @@ import {
 import { SSHAuthManager } from "../auth-manager.js";
 import type { ProxyNode } from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
-import { createJumpHostChain } from "../jump-host-chain.js";
+import { createJumpHostChain, JumpHostChainError } from "../jump-host-chain.js";
 import {
   parseTailscaleCheckBanner,
   isTailscaleCheckCompleteBanner,
@@ -3289,7 +3289,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message: "Failed to connect through jump hosts",
+            message:
+              error instanceof JumpHostChainError
+                ? `Failed to connect through jump hosts: ${error.message}`
+                : "Failed to connect through jump hosts",
           }),
         );
         if (currentSessionId) {
