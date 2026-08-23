@@ -40,6 +40,7 @@ import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { defaultSizes, SplitView, type RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
+import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
 
 // Shell surfaces that are not needed for first paint.
 const CommandPalette = lazy(() =>
@@ -466,9 +467,10 @@ export function AppShell({
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
   useEffect(() => {
-    return window.electronAPI?.onCloseActiveTab?.(() =>
-      closeActiveTabRef.current(),
-    );
+    return window.electronAPI?.onCloseActiveTab?.(() => {
+      if (dispatchCtrlW(document.activeElement)) return;
+      closeActiveTabRef.current();
+    });
   }, []);
   const skipSplitSyncRef = useRef(false);
   useEffect(() => {
@@ -575,7 +577,7 @@ export function AppShell({
   // hard to discover.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "ShiftLeft" && !e.repeat) {
+      if (isShiftKey(e) && !e.repeat) {
         const now = Date.now();
         if (now - lastShiftTime.current < 300 && commandPaletteShortcutEnabled)
           setCommandPaletteOpen((prev) => !prev);
