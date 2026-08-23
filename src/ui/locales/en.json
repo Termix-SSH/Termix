@@ -2283,6 +2283,8 @@
     "used": "Used",
     "of": "of",
     "toggleSidebar": "Toggle Sidebar",
+    "compactLayout": "Use compact layout",
+    "comfortableLayout": "Use comfortable layout",
     "cannotLoadPdf": "Cannot load PDF",
     "pdfLoadError": "There was an error loading this PDF file.",
     "loadingPdf": "Loading PDF...",
