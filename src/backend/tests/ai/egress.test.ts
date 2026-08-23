@@ -61,6 +61,16 @@ describe("evaluateEgress", () => {
     expect(decision.isPrivate).toBe(true);
   });
 
+  it.each(["llm.internal", "host.docker.internal"])(
+    "routes allowlisted private DNS name %s through the private path",
+    (host) => {
+      expect(evaluateEgress(`http://${host}:8000/v1`, [host])).toEqual({
+        allowed: true,
+        isPrivate: true,
+      });
+    },
+  );
+
   it("matches the allowlist case-insensitively", () => {
     expect(
       evaluateEgress("http://LOCALHOST:11434", ["localhost"]).allowed,

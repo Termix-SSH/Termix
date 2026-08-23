@@ -82,4 +82,17 @@ describe("AiProviderSettings", () => {
       screen.getByRole("combobox", { name: "ai.defaultModel" }),
     ).toBeTruthy();
   });
+
+  it("shows the provider error when refreshing models fails", async () => {
+    api.getAiProviderModels.mockRejectedValue(
+      new Error("Add llm.internal to the AI endpoint allowlist"),
+    );
+    render(<AiProviderSettings providers={[provider]} onChanged={() => {}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "ai.editProvider" }));
+
+    expect(
+      await screen.findByText("Add llm.internal to the AI endpoint allowlist"),
+    ).toBeTruthy();
+  });
 });

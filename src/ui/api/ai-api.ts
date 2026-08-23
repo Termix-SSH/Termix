@@ -114,7 +114,11 @@ export async function probeAiModels(input: {
   baseUrl?: string | null;
   apiKey?: string | null;
   providerId?: number | null;
-}): Promise<{ models: string[]; source: "live" | "fallback" | "none" }> {
+}): Promise<{
+  models: string[];
+  source: "live" | "fallback" | "none";
+  warning?: string;
+}> {
   try {
     return (await authApi.post("/ai/probe-models", input)).data;
   } catch (error) {
