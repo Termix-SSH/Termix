@@ -9,9 +9,9 @@ import { isElectron } from "@/lib/electron";
 import { Toaster } from "@/components/sonner";
 import { Auth, getStoredAuth, clearStoredAuth } from "@/auth/Auth";
 import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
-import { applyAccentColor, applyFontSize } from "@/lib/theme";
+import { applyAccentColor, applyFontSize, applyUiFont } from "@/lib/theme";
 import { installElectronWheelZoomGuard } from "@/lib/electron-wheel-zoom";
-import type { FontSizeId } from "@/types/ui-types";
+import type { FontSizeId, UiFontId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
@@ -202,6 +202,10 @@ function App() {
       "termix-font-size",
     ) as FontSizeId | null;
     applyFontSize(savedSize ?? "md");
+    applyUiFont(
+      (localStorage.getItem("termix-ui-font") as UiFontId | null) ??
+        "jetbrains-mono",
+    );
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };

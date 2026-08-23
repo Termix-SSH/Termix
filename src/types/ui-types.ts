@@ -357,6 +357,12 @@ export type ThemeId =
   | "one-dark"
   | "gruvbox";
 export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
+export type UiFontId =
+  | "jetbrains-mono"
+  | "system-sans"
+  | "fira-code"
+  | "source-code-pro"
+  | "caskaydia-cove";
 
 export type ToolsTab =
   "ssh-tools" | "snippets" | "macros" | "history" | "split-screen";

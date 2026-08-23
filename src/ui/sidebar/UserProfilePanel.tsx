@@ -77,11 +77,13 @@ import {
   ACCENT_PRESET_COLORS,
   applyAccentColor,
   applyFontSize,
+  applyUiFont,
   FONT_SIZES,
+  UI_FONTS,
 } from "@/lib/theme";
 import type { ApiKey } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
-import type { FontSizeId, ThemeId } from "@/types/ui-types";
+import type { FontSizeId, ThemeId, UiFontId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
@@ -597,6 +599,10 @@ export function UserProfilePanel({
   const [fontSize, setFontSize] = useState<FontSizeId>(
     () => (localStorage.getItem("termix-font-size") as FontSizeId) ?? "md",
   );
+  const [uiFont, setUiFont] = useState<UiFontId>(
+    () =>
+      (localStorage.getItem("termix-ui-font") as UiFontId) ?? "jetbrains-mono",
+  );
   const [language, setLanguage] = useState(() =>
     normalizeLanguageCode(localStorage.getItem("i18nextLng")),
   );
@@ -831,6 +837,7 @@ export function UserProfilePanel({
       const SNAPSHOT_KEYS = [
         "termix-accent",
         "termix-font-size",
+        "termix-ui-font",
         "i18nextLng",
         "commandAutocomplete",
         "commandPaletteShortcutEnabled",
@@ -961,6 +968,8 @@ export function UserProfilePanel({
     setTheme("system");
     setFontSize("md");
     applyFontSize("md");
+    setUiFont("jetbrains-mono");
+    applyUiFont("jetbrains-mono");
     setAccentColor(DEFAULT_ACCENT);
     setCustomColorInput(DEFAULT_ACCENT);
     localStorage.setItem("termix-accent", DEFAULT_ACCENT);
@@ -1046,6 +1055,12 @@ export function UserProfilePanel({
       (restore("termix-font-size", "md") as FontSizeId) ?? "md";
     setFontSize(restoredFontSize);
     applyFontSize(restoredFontSize);
+
+    const restoredUiFont =
+      (restore("termix-ui-font", "jetbrains-mono") as UiFontId) ??
+      "jetbrains-mono";
+    setUiFont(restoredUiFont);
+    applyUiFont(restoredUiFont);
 
     const restoredAccent = restore("termix-accent", "#f59145") ?? "#f59145";
     setAccentColor(restoredAccent);
@@ -1154,6 +1169,11 @@ export function UserProfilePanel({
     setFontSize(id);
     applyFontSize(id);
     if (storageMode === "cloud") saveToCloud({ fontSize: id });
+  }
+
+  function handleUiFontChange(id: UiFontId) {
+    setUiFont(id);
+    applyUiFont(id);
   }
 
   function handleLanguageChange(code: string) {
@@ -1721,6 +1741,29 @@ export function UserProfilePanel({
                 />
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Type className="size-3" />
+              {t("newUi.sidebar.userProfile.interfaceFontLabel")}
+            </span>
+            <select
+              value={uiFont}
+              onChange={(event) =>
+                handleUiFontChange(event.target.value as UiFontId)
+              }
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full"
+            >
+              {UI_FONTS.map((font) => (
+                <option key={font.id} value={font.id}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-[10px] text-muted-foreground">
+              {t("newUi.sidebar.userProfile.interfaceFontDescription")}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">

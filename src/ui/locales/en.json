@@ -4150,6 +4150,8 @@
         "languageLabel": "Language",
         "themeLabel": "Theme",
         "fontSizeLabel": "Font Size",
+        "interfaceFontLabel": "Interface Font",
+        "interfaceFontDescription": "Changes the application interface font. Terminal profiles keep their own font settings.",
         "accentColorLabel": "Accent Color",
         "settingsTerminal": "Terminal",
         "commandAutocomplete": "Command Autocomplete",
