@@ -55,5 +55,6 @@ https://youtu.be/lngaePO96tM
 - Rounded corners on the host list search bar
 - Image storage settings text wrapping to one word per line
 - Unclear wording on the click-to-expand host setting
+- Dragging a folder into the file manager failing to upload
 
 <!-- /BUG_FIXES -->
