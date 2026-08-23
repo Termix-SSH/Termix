@@ -383,6 +383,9 @@ export function HostManager({
     if (!cred) return;
     setCredentialReturnHost(editingHost);
     await handleEditCredential(cred);
+    // The editor view keys off editingHost, so it has to be cleared or the
+    // host editor keeps rendering over the credential we just opened.
+    setEditingHost(null);
   }
 
   // Editor view: full-width with top tab bar instead of side nav
