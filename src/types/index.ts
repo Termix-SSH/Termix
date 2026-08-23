@@ -482,6 +482,7 @@ export interface TunnelConnection {
   tunnelType?: "local" | "remote";
   bindHost?: string;
   sourceHostId?: number;
+  sourceHostSyncId?: string;
   sourceHostName?: string;
   sourcePort: number;
   endpointPort: number;
@@ -508,6 +509,7 @@ export interface TunnelConfig {
   targetHost?: string;
 
   sourceHostId: number;
+  sourceHostSyncId?: string;
   tunnelIndex: number;
 
   requestingUserId?: string;
