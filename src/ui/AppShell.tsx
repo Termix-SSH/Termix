@@ -859,6 +859,7 @@ export function AppShell({
             const SNAPSHOT_KEYS = [
               "termix-accent",
               "termix-font-size",
+              "termix-ui-font",
               "i18nextLng",
               "commandAutocomplete",
               "commandPaletteShortcutEnabled",

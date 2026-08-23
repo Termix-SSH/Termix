@@ -55,7 +55,7 @@
 
 @theme inline {
   --font-heading: var(--font-mono);
-  --font-mono: "JetBrains Mono Variable", monospace;
+  --font-mono: var(--font-ui, "JetBrains Mono Variable", monospace);
   --color-accent-brand: var(--accent-brand);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
