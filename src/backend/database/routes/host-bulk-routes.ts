@@ -105,6 +105,16 @@ export function parseSSHConfig(content: string): SSHConfigHost[] {
   return results;
 }
 
+export function importedHostUsername(
+  connectionType: string,
+  authType: unknown,
+  username: unknown,
+): string | null {
+  if (isNonEmptyString(username)) return username;
+  if (connectionType !== "ssh" || authType === "credential") return "";
+  return null;
+}
+
 export function registerHostBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
@@ -558,10 +568,12 @@ export function registerHostBulkRoutes(
             continue;
           }
 
-          if (
-            effectiveConnectionType === "ssh" &&
-            !isNonEmptyString(hostData.username)
-          ) {
+          const username = importedHostUsername(
+            effectiveConnectionType,
+            hostData.authType,
+            hostData.username,
+          );
+          if (username === null) {
             results.failed++;
             results.errors.push(
               `Host ${i + 1}: Username required for SSH connections`,
@@ -660,12 +672,12 @@ export function registerHostBulkRoutes(
           const sshDataObj: Record<string, unknown> = {
             userId: userId,
             connectionType: effectiveConnectionType,
-            name: hostData.name || `${hostData.username || ""}@${hostData.ip}`,
+            name: hostData.name || `${username}@${hostData.ip}`,
             folder: hostData.folder || "Default",
             tags: Array.isArray(hostData.tags) ? hostData.tags.join(",") : "",
             ip: hostData.ip,
             port: hostData.port,
-            username: hostData.username || null,
+            username,
             pin: hostData.pin || false,
             enableTerminal: hostData.enableTerminal !== false,
             enableTunnel: hostData.enableTunnel !== false,

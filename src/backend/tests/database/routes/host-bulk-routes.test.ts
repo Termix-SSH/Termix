@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { parseSSHConfig } from "../../../database/routes/host-bulk-routes.js";
+import {
+  importedHostUsername,
+  parseSSHConfig,
+} from "../../../database/routes/host-bulk-routes.js";
 
 describe("parseSSHConfig", () => {
   it("parses a basic Host block", () => {
@@ -100,5 +103,26 @@ Host server
   it("returns empty array for empty input", () => {
     expect(parseSSHConfig("")).toHaveLength(0);
     expect(parseSSHConfig("   \n\n  ")).toHaveLength(0);
+  });
+});
+
+describe("importedHostUsername", () => {
+  it("lets credential-backed SSH hosts inherit the credential username", () => {
+    expect(importedHostUsername("ssh", "credential", "")).toBe("");
+  });
+
+  it("keeps requiring usernames for other SSH authentication modes", () => {
+    expect(importedHostUsername("ssh", "password", "")).toBeNull();
+    expect(importedHostUsername("ssh", "key", undefined)).toBeNull();
+  });
+
+  it("always returns a non-null database value for non-SSH hosts", () => {
+    expect(importedHostUsername("rdp", "password", undefined)).toBe("");
+  });
+
+  it("preserves an explicitly configured host username", () => {
+    expect(importedHostUsername("ssh", "credential", "guest-admin")).toBe(
+      "guest-admin",
+    );
   });
 });
