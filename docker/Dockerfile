@@ -41,17 +41,20 @@ RUN npm run build:backend
 FROM node:24-slim AS opkssh-downloader
 ARG TARGETARCH
 ARG OPKSSH_VERSION=v0.16.0
+ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
+ARG OPKSSH_SHA256_ARM64=9dd10c2b6ce99cde18e52c054877ca014134b291fd82afe71741c68db4f83d44
 WORKDIR /opkssh
 
 RUN apt-get update && apt-get install -y curl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 RUN case "$TARGETARCH" in \
-      amd64) OPKSSH_ARCH=amd64 ;; \
-      arm64) OPKSSH_ARCH=arm64 ;; \
+      amd64) OPKSSH_ARCH=amd64; OPKSSH_SHA256="$OPKSSH_SHA256_AMD64" ;; \
+      arm64) OPKSSH_ARCH=arm64; OPKSSH_SHA256="$OPKSSH_SHA256_ARM64" ;; \
       *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
     esac && \
     curl -fSL -o "opkssh-linux-${OPKSSH_ARCH}" \
       "https://github.com/openpubkey/opkssh/releases/download/${OPKSSH_VERSION}/opkssh-linux-${OPKSSH_ARCH}" && \
+    echo "$OPKSSH_SHA256  opkssh-linux-${OPKSSH_ARCH}" | sha256sum -c - && \
     chmod 755 "opkssh-linux-${OPKSSH_ARCH}" && \
     echo -n "$OPKSSH_VERSION" > version.txt
 
