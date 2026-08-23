@@ -80,17 +80,17 @@ export async function buildOriginWsUrl({
   localPort,
   localPath,
   remotePath,
-  includeLocalJwt = true,
+  includeJwt = true,
 }: {
   origin: ConnectionOrigin;
   localPort: number;
   localPath: string;
   remotePath: string;
-  includeLocalJwt?: boolean;
+  includeJwt?: boolean;
 }): Promise<string | null> {
   if (origin === "local") {
     let url = `ws://127.0.0.1:${localPort}${localPath}`;
-    if (includeLocalJwt) {
+    if (includeJwt) {
       const token = localStorage.getItem("jwt");
       if (token) url += `?token=${encodeURIComponent(token)}`;
     }
@@ -107,6 +107,8 @@ export async function buildOriginWsUrl({
     .replace(/^https?:\/\//, "")
     .replace(/\/$/, "");
   let url = `${wsProtocol}${wsHost}${remotePath}`;
-  if (remote.jwt) url += `?token=${encodeURIComponent(remote.jwt)}`;
+  if (includeJwt && remote.jwt) {
+    url += `?token=${encodeURIComponent(remote.jwt)}`;
+  }
   return url;
 }

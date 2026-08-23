@@ -132,10 +132,32 @@ describe("buildOriginWsUrl", () => {
       localPort: 30009,
       localPath: "/docker/console/",
       remotePath: "/docker/console/",
-      includeLocalJwt: false,
+      includeJwt: false,
     });
 
     expect(url).toBe("ws://127.0.0.1:30009/docker/console/");
+  });
+
+  it("does not duplicate the Guacamole token on remote connections", async () => {
+    win.electronAPI = {
+      invoke: async (channel: string) => {
+        if (channel === "get-remote-sync-config") {
+          return { serverUrl: "https://termix.example" };
+        }
+        if (channel === "get-remote-sync-jwt") return "remote-jwt";
+        return null;
+      },
+    };
+
+    const url = await buildOriginWsUrl({
+      origin: "remote",
+      localPort: 30008,
+      localPath: "/guacamole/websocket/",
+      remotePath: "/guacamole/websocket/",
+      includeJwt: false,
+    });
+
+    expect(url).toBe("wss://termix.example/guacamole/websocket/");
   });
 
   it("leaves the URL alone when there is no token stored", async () => {
