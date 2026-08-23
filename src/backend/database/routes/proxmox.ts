@@ -13,6 +13,10 @@ import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
 import { resolveHostById } from "../../hosts/host-resolver.js";
 import { createJumpHostChain } from "../../hosts/jump-host-chain.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
+import {
+  parseProxmoxJumpHosts,
+  serializeProxmoxJumpHosts,
+} from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "../../hosts/proxmox-shared.js";
 
 const router = express.Router();
@@ -182,20 +186,6 @@ type ProxmoxSyncResult = {
   skipped: number;
   errors: string[];
 };
-
-function parseJumpHostsField(raw: unknown): unknown[] | null {
-  if (!raw) return null;
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
 
 function parseJsonObject(value: unknown): Record<string, unknown> {
   if (!value) return {};
@@ -599,7 +589,7 @@ async function discoverProxmoxGuestsForHost(
       guests,
       credentialId: hostCredentialId,
       defaultCredentialId: config.defaultCredentialId,
-      jumpHosts: parseJumpHostsField(
+      jumpHosts: parseProxmoxJumpHosts(
         (host as unknown as { jumpHosts?: unknown }).jumpHosts,
       ),
       config,
@@ -770,9 +760,7 @@ async function syncProxmoxHost(
         telnetPort: null,
         defaultPath: "/",
         tunnelConnections: "[]",
-        jumpHosts:
-          (discovery.host as unknown as { jumpHosts?: string | null })
-            .jumpHosts ?? null,
+        jumpHosts: serializeProxmoxJumpHosts(discovery.jumpHosts),
         quickActions: null,
         statsConfig: null,
         dockerConfig: null,
