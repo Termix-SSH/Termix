@@ -1003,6 +1003,7 @@ function validateHostId(
 }
 
 const app = express();
+app.set("trust proxy", "loopback");
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 app.use(cookieParser());

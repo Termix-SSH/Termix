@@ -15,6 +15,7 @@ import {
 import { DataCrypto } from "../utils/data-crypto.js";
 
 const app = express();
+app.set("trust proxy", "loopback");
 const authManager = AuthManager.getInstance();
 
 const serverStartTime = Date.now();

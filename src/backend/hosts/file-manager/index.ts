@@ -117,10 +117,13 @@ function assertResolvedHost(
 }
 
 const app = express();
+app.set("trust proxy", "loopback");
 
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
@@ -128,9 +131,6 @@ app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
-
-const authManager = AuthManager.getInstance();
-app.use(authManager.createAuthMiddleware());
 
 const sshSessions: Record<string, SSHSession> = {};
 const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};

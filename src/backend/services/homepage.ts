@@ -11,6 +11,7 @@ import { homepagePingRouter } from "../database/routes/homepage-ping-routes.js";
 import { homepageProxyRouter } from "../database/routes/homepage-proxy-routes.js";
 
 const app = express();
+app.set("trust proxy", "loopback");
 const authManager = AuthManager.getInstance();
 const PORT = 30012;
 

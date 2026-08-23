@@ -4,6 +4,7 @@ import type { UserRecord } from "../../../database/repositories/user-repository.
 import {
   isLoopbackRequest,
   extractBearerOrCookieToken,
+  isNativeTokenExportRequest,
   resolveDesktopAutoSessionUser,
 } from "../../../database/routes/desktop-auto-session.js";
 
@@ -104,6 +105,34 @@ describe("extractBearerOrCookieToken", () => {
     } as unknown as Request;
     expect(extractBearerOrCookieToken(req)).toBeUndefined();
   });
+});
+
+describe("isNativeTokenExportRequest", () => {
+  function requestWithUserAgent(userAgent: string): Request {
+    return {
+      get: (name: string) =>
+        name.toLowerCase() === "user-agent" ? userAgent : undefined,
+    } as unknown as Request;
+  }
+
+  it.each([
+    "Termix-Mobile/iOS",
+    "Termix-Mobile/Android",
+    "Termix-Desktop/2.8.0 (win32; Electron/43)",
+  ])("allows native user agent %s", (userAgent) => {
+    expect(isNativeTokenExportRequest(requestWithUserAgent(userAgent))).toBe(
+      true,
+    );
+  });
+
+  it.each(["Mozilla/5.0", "Electron/43.0.0", "", "Termix-MobileFake/iOS"])(
+    "rejects non-native user agent %s",
+    (userAgent) => {
+      expect(isNativeTokenExportRequest(requestWithUserAgent(userAgent))).toBe(
+        false,
+      );
+    },
+  );
 });
 
 describe("resolveDesktopAutoSessionUser", () => {

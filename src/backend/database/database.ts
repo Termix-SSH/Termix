@@ -73,7 +73,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.set("trust proxy", true);
+app.set("trust proxy", "loopback");
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -259,9 +259,8 @@ async function fetchGitHubAPI<T>(
   }
 }
 
-app.use(bodyParser.json({ limit: "1gb" }));
-app.use(bodyParser.urlencoded({ limit: "1gb", extended: true }));
-app.use(bodyParser.raw({ limit: "5gb", type: "application/octet-stream" }));
+app.use(bodyParser.json({ limit: "2mb" }));
+app.use(bodyParser.urlencoded({ limit: "2mb", extended: true }));
 app.use(cookieParser());
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");

@@ -122,26 +122,27 @@ describe("getRequestBasePath", () => {
 });
 
 describe("getClientIp", () => {
-  it("prefers the leftmost X-Forwarded-For entry over the socket peer", () => {
+  it("uses Express's proxy-validated req.ip", () => {
     expect(
       getClientIp(
         requestWithSocket(
           { "x-forwarded-for": "203.0.113.7, 10.0.0.1, 10.0.0.2" },
           { remoteAddress: "::ffff:127.0.0.1" },
+          "198.51.100.5",
         ),
       ),
-    ).toBe("203.0.113.7");
+    ).toBe("198.51.100.5");
   });
 
-  it("handles X-Forwarded-For sent as a header array", () => {
+  it("does not trust a raw forwarded header without Express validation", () => {
     expect(
       getClientIp(
         requestWithSocket(
-          { "x-forwarded-for": ["203.0.113.7", "10.0.0.1"] },
-          { remoteAddress: "::ffff:127.0.0.1" },
+          { "x-forwarded-for": "127.0.0.1" },
+          { remoteAddress: "198.51.100.9" },
         ),
       ),
-    ).toBe("203.0.113.7");
+    ).toBe("198.51.100.9");
   });
 
   it("falls back to req.ip when there is no forwarded header", () => {

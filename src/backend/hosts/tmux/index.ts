@@ -326,6 +326,7 @@ async function collectPaneMetrics(
 // Express app
 
 const app = express();
+app.set("trust proxy", "loopback");
 const authManager = AuthManager.getInstance();
 
 app.use(createCompressionMiddleware());
