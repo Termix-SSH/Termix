@@ -44,6 +44,9 @@ const ACTION_LABEL_KEYS: Record<KeybindingActionType, string> = {
   sendControlCode: "newUi.sidebar.keybindings.actionSendControlCode",
   sendText: "newUi.sidebar.keybindings.actionSendText",
   runSnippet: "newUi.sidebar.keybindings.actionRunSnippet",
+  nextTab: "newUi.sidebar.keybindings.actionNextTab",
+  previousTab: "newUi.sidebar.keybindings.actionPreviousTab",
+  openCommandPalette: "newUi.sidebar.keybindings.actionOpenCommandPalette",
 };
 
 function generateId(): string {
@@ -450,6 +453,7 @@ export function KeybindingsDialog({
                 <span className="text-accent-brand">*</span>
               </label>
               <Input
+                data-keybinding-recorder
                 readOnly
                 value={
                   recording
@@ -496,6 +500,15 @@ export function KeybindingsDialog({
                 </option>
                 <option value="runSnippet">
                   {t("newUi.sidebar.keybindings.actionRunSnippet")}
+                </option>
+                <option value="nextTab">
+                  {t("newUi.sidebar.keybindings.actionNextTab")}
+                </option>
+                <option value="previousTab">
+                  {t("newUi.sidebar.keybindings.actionPreviousTab")}
+                </option>
+                <option value="openCommandPalette">
+                  {t("newUi.sidebar.keybindings.actionOpenCommandPalette")}
                 </option>
               </select>
               {actionType === "paste" && (

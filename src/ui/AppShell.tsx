@@ -41,6 +41,12 @@ import { defaultSizes, SplitView, type RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
 import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
+import { parseCustomKeybindings } from "@/api/open-tabs-api";
+import { findMatchingKeybinding } from "@/lib/keybinding-match";
+import type {
+  CustomKeybinding,
+  KeybindingActionType,
+} from "@/types/keybindings";
 
 // Shell surfaces that are not needed for first paint.
 const CommandPalette = lazy(() =>
@@ -454,6 +460,7 @@ export function AppShell({
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const closeActiveTabRef = useRef<() => void>(() => {});
+  const globalKeybindingsRef = useRef<CustomKeybinding[]>([]);
   const splitModeRef = useRef(splitMode);
   const focusedPaneIndexRef = useRef<number | null>(null);
   const paneContentElsRef = useRef<(HTMLDivElement | null)[]>(
@@ -463,6 +470,76 @@ export function AppShell({
   useEffect(() => {
     tabsRef.current = tabs;
   }, [tabs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      getUserPreferences()
+        .then((prefs) => {
+          if (cancelled) return;
+          globalKeybindingsRef.current = parseCustomKeybindings(
+            prefs.customKeybindings,
+          ).filter(
+            (binding) =>
+              binding.enabled &&
+              ["nextTab", "previousTab", "openCommandPalette"].includes(
+                binding.action.type,
+              ),
+          );
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("customKeybindingsChanged", load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("customKeybindingsChanged", load);
+    };
+  }, []);
+
+  useEffect(() => {
+    const runAction = (type: KeybindingActionType) => {
+      if (type === "openCommandPalette") {
+        setCommandPaletteOpen(true);
+        return;
+      }
+      const currentTabs = tabsRef.current;
+      if (currentTabs.length < 2) return;
+      const index = currentTabs.findIndex(
+        (tab) => tab.id === activeTabIdRef.current,
+      );
+      const offset = type === "nextTab" ? 1 : -1;
+      const next = (index + offset + currentTabs.length) % currentTabs.length;
+      setActiveTabId(currentTabs[next].id);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-keybinding-recorder]")
+      )
+        return;
+      const binding = findMatchingKeybinding(
+        event,
+        globalKeybindingsRef.current,
+      );
+      if (!binding) return;
+      event.preventDefault();
+      event.stopPropagation();
+      runAction(binding.action.type);
+    };
+    const handleAction = (event: Event) =>
+      runAction(
+        (event as CustomEvent<{ type: KeybindingActionType }>).detail.type,
+      );
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("termix:global-keybinding", handleAction);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("termix:global-keybinding", handleAction);
+    };
+  }, []);
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);

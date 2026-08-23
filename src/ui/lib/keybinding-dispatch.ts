@@ -82,5 +82,15 @@ export function dispatchKeybindingAction(
       });
       return;
     }
+    case "nextTab":
+    case "previousTab":
+    case "openCommandPalette": {
+      window.dispatchEvent(
+        new CustomEvent("termix:global-keybinding", {
+          detail: { type: action.type },
+        }),
+      );
+      return;
+    }
   }
 }

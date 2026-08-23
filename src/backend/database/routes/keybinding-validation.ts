@@ -4,6 +4,9 @@ const VALID_ACTION_TYPES = [
   "sendControlCode",
   "sendText",
   "runSnippet",
+  "nextTab",
+  "previousTab",
+  "openCommandPalette",
 ];
 
 export function isValidKeyCombo(combo: unknown): boolean {
