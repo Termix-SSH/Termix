@@ -566,8 +566,7 @@ export async function downloadSSHFileStream(
       responseType: "blob",
       timeout: 0,
       onDownloadProgress: onProgress
-        ? (event) =>
-            onProgress({ loaded: event.loaded, total: event.total })
+        ? (event) => onProgress({ loaded: event.loaded, total: event.total })
         : undefined,
     },
   );

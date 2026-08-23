@@ -170,9 +170,8 @@ describe("FilteredAgent", () => {
     ) as ParsedKey;
 
     const inner = {
-      getIdentities: (
-        cb: (err: Error | null, keys: ParsedKey[]) => void,
-      ) => cb(null, [parsedA, parsedB]),
+      getIdentities: (cb: (err: Error | null, keys: ParsedKey[]) => void) =>
+        cb(null, [parsedA, parsedB]),
       getStream: vi.fn(),
       sign: vi.fn(),
     };
@@ -208,9 +207,8 @@ describe("FilteredAgent", () => {
     ) as ParsedKey;
 
     const inner = {
-      getIdentities: (
-        cb: (err: Error | null, keys: ParsedKey[]) => void,
-      ) => cb(null, [parsedA]),
+      getIdentities: (cb: (err: Error | null, keys: ParsedKey[]) => void) =>
+        cb(null, [parsedA]),
       getStream: vi.fn(),
       sign: vi.fn(),
     };

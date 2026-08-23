@@ -1177,33 +1177,37 @@ function FileManagerContent({
 
       const { downloadSSHFileStream } = await import("@/main-axios.ts");
 
-      toast.loading(
-        <DownloadProgressToast fileName={file.name} loaded={0} />,
-        { id: toastId, duration: Infinity },
-      );
-
-      await downloadSSHFileStream(sshSessionId, file.path, ({ loaded, total }) => {
-        const now = Date.now();
-        const deltaMs = now - lastTime;
-        if (deltaMs > 200) {
-          const deltaBytes = loaded - lastLoaded;
-          if (deltaBytes >= 0) {
-            mbPerSec = (deltaBytes / deltaMs / 1024 / 1024) * 1000;
-          }
-          lastLoaded = loaded;
-          lastTime = now;
-        }
-
-        toast.loading(
-          <DownloadProgressToast
-            fileName={file.name}
-            loaded={loaded}
-            total={total}
-            mbPerSec={mbPerSec}
-          />,
-          { id: toastId, duration: Infinity },
-        );
+      toast.loading(<DownloadProgressToast fileName={file.name} loaded={0} />, {
+        id: toastId,
+        duration: Infinity,
       });
+
+      await downloadSSHFileStream(
+        sshSessionId,
+        file.path,
+        ({ loaded, total }) => {
+          const now = Date.now();
+          const deltaMs = now - lastTime;
+          if (deltaMs > 200) {
+            const deltaBytes = loaded - lastLoaded;
+            if (deltaBytes >= 0) {
+              mbPerSec = (deltaBytes / deltaMs / 1024 / 1024) * 1000;
+            }
+            lastLoaded = loaded;
+            lastTime = now;
+          }
+
+          toast.loading(
+            <DownloadProgressToast
+              fileName={file.name}
+              loaded={loaded}
+              total={total}
+              mbPerSec={mbPerSec}
+            />,
+            { id: toastId, duration: Infinity },
+          );
+        },
+      );
 
       toast.success(
         t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
