@@ -22,6 +22,7 @@ import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
   isLoopbackRequest,
   extractBearerOrCookieToken,
+  isNativeTokenExportRequest,
   resolveDesktopAutoSessionUser,
 } from "./desktop-auto-session.js";
 import { shouldShowDonationModal } from "./donation-modal-utils.js";
@@ -2168,7 +2169,7 @@ router.post(
  * /users/me/token:
  *   get:
  *     summary: Get current session token
- *     description: Returns the JWT for the currently authenticated session. Intended for mobile WebView clients that cannot read HTTP-only cookies.
+ *     description: Returns the JWT for the currently authenticated native Mobile or Desktop client. Browser sessions cannot export their HTTP-only cookie.
  *     tags:
  *       - Users
  *     responses:
@@ -2183,8 +2184,16 @@ router.post(
  *                   type: string
  *       401:
  *         description: Not authenticated.
+ *       403:
+ *         description: Token export is not available to browser clients.
  */
 router.get("/me/token", authenticateJWT, (req: Request, res: Response) => {
+  if (!isNativeTokenExportRequest(req)) {
+    return res
+      .status(403)
+      .json({ error: "Token export is limited to native clients" });
+  }
+
   // authenticateJWT accepts either the jwt cookie or an Authorization:
   // Bearer header (see auth-manager.ts's createAuthMiddleware) -- this must
   // check both too, or a request that only carried the header (e.g. the

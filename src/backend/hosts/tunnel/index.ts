@@ -26,6 +26,7 @@ import { initializeAutoStartTunnels } from "./manager.js";
 const authManager = AuthManager.getInstance();
 
 const app = express();
+app.set("trust proxy", "loopback");
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());

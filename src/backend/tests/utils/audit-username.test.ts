@@ -33,7 +33,7 @@ describe("getAuditUsername", () => {
 });
 
 describe("getRequestMeta", () => {
-  it("prefers the first x-forwarded-for hop", () => {
+  it("prefers the proxy-validated Express IP", () => {
     const meta = getRequestMeta({
       headers: {
         "x-forwarded-for": "203.0.113.9, 10.0.0.1",
@@ -43,7 +43,7 @@ describe("getRequestMeta", () => {
     } as never);
 
     expect(meta).toEqual({
-      ipAddress: "203.0.113.9",
+      ipAddress: "10.0.0.1",
       userAgent: "Mozilla/5.0",
     });
   });

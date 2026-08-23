@@ -5,6 +5,7 @@ const win = window as unknown as Record<string, unknown>;
 
 afterEach(() => {
   delete win.__TERMIX_BASE_PATH__;
+  document.querySelector('meta[name="termix-base-path"]')?.remove();
 });
 
 describe("getBasePath", () => {
@@ -16,6 +17,15 @@ describe("getBasePath", () => {
   it("uses the runtime override when present", () => {
     win.__TERMIX_BASE_PATH__ = "/termix";
     expect(getBasePath()).toBe("/termix");
+  });
+
+  it("uses the CSP-safe runtime meta value when present", () => {
+    const meta = document.createElement("meta");
+    meta.name = "termix-base-path";
+    meta.content = "/gateway/termix";
+    document.head.append(meta);
+
+    expect(getBasePath()).toBe("/gateway/termix");
   });
 
   it("strips a trailing slash from the runtime override", () => {

@@ -172,7 +172,14 @@ if [ -n "$BASE_PATH" ]; then
     echo "Injecting BASE_PATH: $BASE_PATH"
     # Strip trailing slash for use as a path prefix
     CLEAN_BASE_PATH="${BASE_PATH%/}"
-    find /app/html -name "index.html" -exec sed -i "s|window.__TERMIX_BASE_PATH__ = \"\"|window.__TERMIX_BASE_PATH__ = \"$CLEAN_BASE_PATH\"|g" {} \;
+    case "$CLEAN_BASE_PATH" in
+        /*) ;;
+        *) echo "BASE_PATH must start with /" >&2; exit 1 ;;
+    esac
+    case "$CLEAN_BASE_PATH" in
+        *[!A-Za-z0-9_./~-]*) echo "BASE_PATH contains unsupported characters" >&2; exit 1 ;;
+    esac
+    find /app/html -name "index.html" -exec sed -i "s|name=\"termix-base-path\" content=\"\"|name=\"termix-base-path\" content=\"$CLEAN_BASE_PATH\"|g" {} \;
     # Patch sw.js static asset paths with the base path prefix
     find /app/html -name "sw.js" -exec sed -i "s|__TERMIX_SW_BASE_PATH__|$CLEAN_BASE_PATH|g" {} \;
 else
