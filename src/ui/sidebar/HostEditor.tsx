@@ -28,6 +28,7 @@ import {
   LayoutGrid,
   Network,
   Palette,
+  Pencil,
   Plus,
   Settings,
   Shield,
@@ -114,6 +115,7 @@ export function HostEditor({
   credentials,
   adminTargetUserId,
   simpleMode = false,
+  onEditCredential,
 }: {
   host: Host | null;
   activeTab: string;
@@ -130,6 +132,9 @@ export function HostEditor({
   // When set, the editor works on another user's host through the admin
   // impersonation endpoints instead of the signed-in user's own data.
   adminTargetUserId?: string;
+  // Opens the currently-selected credential for editing (from within the
+  // host editor), so the user can tweak/rotate it without leaving the flow.
+  onEditCredential?: (credentialId: string) => void;
 }) {
   const { t } = useTranslation();
   const { setPreviewTerminalTheme } = useTabsSafe();
@@ -355,7 +360,7 @@ export function HostEditor({
       ? [...credentials, quickCreatedCredential]
       : credentials;
   const selectedCredential = availableCredentials.find(
-    (c) => c.id === form.credentialId,
+    (c) => String(c.id) === String(form.credentialId),
   );
 
   const canQuickCreateCredential =
@@ -899,38 +904,54 @@ export function HostEditor({
                           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {t("hosts.storedCredential")}
                           </label>
-                          <select
-                            value={form.credentialId}
-                            disabled={lockAuthReferences}
-                            title={
-                              lockAuthReferences
-                                ? t("hosts.sharing.ownerOnlyControl")
-                                : undefined
-                            }
-                            onChange={(e) => {
-                              const newId = e.target.value;
-                              setField("credentialId", newId);
-                              if (!form.overrideCredentialUsername) {
-                                const cred = availableCredentials.find(
-                                  (c) => c.id === newId,
-                                );
-                                if (cred?.username)
-                                  setField("username", cred.username);
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={form.credentialId}
+                              disabled={lockAuthReferences}
+                              title={
+                                lockAuthReferences
+                                  ? t("hosts.sharing.ownerOnlyControl")
+                                  : undefined
                               }
-                            }}
-                            className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <option value="">
-                              {t("hosts.selectACredential")}
-                            </option>
-                            {availableCredentials.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.username
-                                  ? `${c.name} (${c.username})`
-                                  : c.name}
+                              onChange={(e) => {
+                                const newId = e.target.value;
+                                setField("credentialId", newId);
+                                if (!form.overrideCredentialUsername) {
+                                  const cred = availableCredentials.find(
+                                    (c) => c.id === newId,
+                                  );
+                                  if (cred?.username)
+                                    setField("username", cred.username);
+                                }
+                              }}
+                              className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value="">
+                                {t("hosts.selectACredential")}
                               </option>
-                            ))}
-                          </select>
+                              {availableCredentials.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.username
+                                    ? `${c.name} (${c.username})`
+                                    : c.name}
+                                </option>
+                              ))}
+                            </select>
+                            {onEditCredential && form.credentialId && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 px-2.5 shrink-0"
+                                title={t("hosts.editCredentialAction")}
+                                onClick={() =>
+                                  onEditCredential(form.credentialId)
+                                }
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         {selectedCredential?.username && (
                           <div className="flex items-center justify-between col-span-2 pt-1">
@@ -1102,6 +1123,21 @@ export function HostEditor({
                         />
                         <p className="text-[10px] text-muted-foreground">
                           {t("hosts.agentSocketPathHint")}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.agentIdentityLabel")}
+                        </label>
+                        <Input
+                          placeholder={t("hosts.agentIdentityPlaceholder")}
+                          value={form.agentIdentity}
+                          onChange={(e) =>
+                            setField("agentIdentity", e.target.value)
+                          }
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.agentIdentityHint")}
                         </p>
                       </div>
                     </div>

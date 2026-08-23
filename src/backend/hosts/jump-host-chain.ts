@@ -2,6 +2,8 @@ import { Client as SSHClient } from "ssh2";
 import { fileLogger } from "../utils/logger.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
+import { getErrorMessage } from "../utils/error-message.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
 import { applyAgentAuth } from "./terminal-auth-helpers.js";
@@ -46,6 +48,17 @@ async function resolveJumpHost(
   }
 }
 
+export class JumpHostChainError extends Error {
+  constructor(
+    message: string,
+    readonly hopIndex: number,
+    readonly totalHops: number,
+  ) {
+    super(message);
+    this.name = "JumpHostChainError";
+  }
+}
+
 export async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
@@ -76,7 +89,11 @@ export async function createJumpHostChain(
           totalHops,
         });
         clients.forEach((c) => c.end());
-        return null;
+        throw new JumpHostChainError(
+          `Jump host ${i + 1} of ${totalHops} was not found`,
+          i,
+          totalHops,
+        );
       }
     }
 
@@ -106,11 +123,20 @@ export async function createJumpHostChain(
         true,
       );
 
+      let lastError: Error | null = null;
+
       // eslint-disable-next-line no-async-promise-executor
       const connected = await new Promise<boolean>(async (resolve) => {
+        const readyTimeoutMs = 60000;
         const timeout = setTimeout(() => {
+          lastError = new Error(
+            `Timed out waiting for jump host ${i + 1}/${totalHops} to authenticate`,
+          );
           resolve(false);
-        }, 30000);
+          // ssh2 has no explicit cancel; ending the client stops it from
+          // firing "ready"/"error" after we've already resolved.
+          jumpClient.end();
+        }, readyTimeoutMs + 5000);
 
         jumpClient.on("ready", () => {
           clearTimeout(timeout);
@@ -119,6 +145,7 @@ export async function createJumpHostChain(
 
         jumpClient.on("error", (err) => {
           clearTimeout(timeout);
+          lastError = err;
           fileLogger.error(
             `Jump host ${i + 1}/${totalHops} connection failed`,
             err,
@@ -145,7 +172,7 @@ export async function createJumpHostChain(
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
           tryKeyboard: jumpHostConfig.authType !== "none",
-          readyTimeout: 60000,
+          readyTimeout: readyTimeoutMs,
           hostVerifier: jumpHostVerifier,
           algorithms: {
             kex: [
@@ -190,11 +217,19 @@ export async function createJumpHostChain(
         if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
           connectConfig.password = jumpHostConfig.password;
         } else if (jumpHostConfig.authType === "key" && jumpHostConfig.key) {
-          const cleanKey = jumpHostConfig.key
-            .trim()
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n");
-          connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
+          try {
+            connectConfig.privateKey = preparePrivateKeyForSSH2(
+              jumpHostConfig.key,
+              jumpHostConfig.keyPassword,
+            );
+          } catch (keyError) {
+            clearTimeout(timeout);
+            lastError = new Error(
+              `Jump host ${i + 1}/${totalHops} key error: ${getErrorMessage(keyError, "Invalid private key format")}`,
+            );
+            resolve(false);
+            return;
+          }
           if (jumpHostConfig.keyPassword) {
             connectConfig.passphrase = jumpHostConfig.keyPassword;
           }
@@ -237,6 +272,7 @@ export async function createJumpHostChain(
             (err, stream) => {
               if (err) {
                 clearTimeout(timeout);
+                lastError = err;
                 resolve(false);
                 return;
               }
@@ -254,7 +290,14 @@ export async function createJumpHostChain(
 
       if (!connected) {
         clients.forEach((c) => c.end());
-        return null;
+        throw new JumpHostChainError(
+          getErrorMessage(
+            lastError,
+            `Jump host ${i + 1} of ${totalHops} failed to connect`,
+          ),
+          i,
+          totalHops,
+        );
       }
 
       currentClient = jumpClient;
@@ -262,6 +305,7 @@ export async function createJumpHostChain(
 
     return currentClient;
   } catch (error) {
+    if (error instanceof JumpHostChainError) throw error;
     fileLogger.error("Failed to create jump host chain", error, {
       operation: "jump_host_chain",
     });

@@ -183,14 +183,14 @@ export function canCopyHostSudoPassword(host: Host): boolean {
  */
 const HOST_ITEM_DENSITY_TOKENS = {
   comfortable: {
-    rowPadding: "pl-2.5 pr-2 py-2",
+    rowPadding: "pl-[8.75px] pr-[7px] py-[7px]",
     nameTextSize: "text-[13px]",
     showAddressRow: true,
     showTagsRow: true,
     showResourceRow: true,
   },
   compact: {
-    rowPadding: "pl-2 pr-1.5 py-[5px]",
+    rowPadding: "pl-[7px] pr-[5.25px] py-[5px]",
     nameTextSize: "text-[12px]",
     showAddressRow: false,
     showTagsRow: false,
@@ -404,7 +404,7 @@ export function HostItem({
     depth > 0 ? ({ paddingLeft: depth * 12 } as const) : undefined;
 
   const trayButtonClass =
-    "flex items-center justify-center size-6.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
+    "flex items-center justify-center size-[22.75px] text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
 
   const sshActions = getSshActions(host);
   const availableActions: TabType[] = [
@@ -822,16 +822,22 @@ export function HostItem({
     !shouldUseClickTray &&
     !selectionMode &&
     (isHovered || isMenuOpen);
+  // A collapsed tray must not earn the text column's gap-[3.5px]. Clipping to
+  // max-h-0 leaves it a flex item, so every closed row measured ~3.5px taller
+  // than its slot and the virtualizer spread the rows apart to match. The
+  // negative margin cancels the gap while keeping the element in flow, so the
+  // modes that animate open still have something to transition.
+  const trayCollapsedClass = `max-h-0 opacity-0 ${isCompact ? "" : "-mt-[3.5px]"}`;
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
-      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`
+      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
       : shouldUseClickTray
-        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`
+        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
         : // No transition in hover mode: the row's height is set by the
           // virtualizer and snaps in a single frame, so animating the tray
           // against it leaves the open tray overflowing its shortened row for
           // the length of the animation. Both change together instead.
-          `overflow-hidden ${hoverTrayOpen ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`;
+          `overflow-hidden ${hoverTrayOpen ? "max-h-[130px] opacity-100" : trayCollapsedClass}`;
 
   return (
     <div
@@ -980,7 +986,7 @@ export function HostItem({
       )}
 
       <div
-        className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-1"}`}
+        className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-[3.5px]"}`}
       >
         {/* Name row */}
         <div data-drag-label className="flex items-center gap-1.5 min-w-0">
@@ -1073,10 +1079,10 @@ export function HostItem({
                 e.stopPropagation();
                 onTrayOpenChange?.(!isTrayOpen);
               }}
-              className="ml-auto flex items-center justify-center size-5 rounded text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted-foreground/10 transition-colors shrink-0"
+              className="ml-auto flex items-center justify-center size-[17.5px] rounded text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted-foreground/10 transition-colors shrink-0"
             >
               <ChevronRight
-                className={`size-3 transition-transform duration-150 ${isTrayOpen ? "rotate-90" : ""}`}
+                className={`size-[10.5px] transition-transform duration-150 ${isTrayOpen ? "rotate-90" : ""}`}
               />
             </button>
           )}
@@ -1115,7 +1121,7 @@ export function HostItem({
           (alwaysShowTray ||
             actionsOnly ||
             (shouldUseClickTray && isTrayOpen)) && (
-            <div className="flex items-center flex-wrap gap-1">
+            <div className="flex items-center flex-wrap gap-[3.5px]">
               {connectionButtons}
             </div>
           )}
@@ -1126,7 +1132,7 @@ export function HostItem({
             isOnline &&
             ((host.cpu != null && host.cpu > 0) ||
               (host.ram != null && host.ram > 0)) && (
-              <div className="flex items-center gap-3 pt-1.5">
+              <div className="flex items-center gap-[10.5px] pt-[5.25px]">
                 {host.cpu != null && host.cpu > 0 && (
                   <div className="flex items-center gap-1.5">
                     <Cpu className="size-2.5 shrink-0 text-muted-foreground/40" />
@@ -1163,14 +1169,14 @@ export function HostItem({
           >
             {/* Connection buttons — only shown here when not already shown above */}
             {!alwaysShowTray && !actionsOnly && !shouldUseClickTray && (
-              <div className="flex items-center flex-wrap gap-0.5">
+              <div className="flex items-center flex-wrap gap-[1.75px]">
                 {connectionButtons}
               </div>
             )}
 
             {/* Management buttons row */}
             <div
-              className={`flex items-center gap-0.5 border-t border-border/30 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "pt-1.5" : "pt-1 mt-0.5"}`}
+              className={`flex items-center gap-[1.75px] border-t border-border/30 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "pt-[5.25px]" : "pt-[3.5px] mt-[1.75px]"}`}
             >
               {managementButtons}
             </div>

@@ -8,7 +8,7 @@ interface DragAndDropState {
 
 interface UseDragAndDropProps {
   onFilesDropped: (files: FileList) => void;
-  onItemsDropped?: (items: DataTransferItemList) => void;
+  onItemsDropped?: (entries: FileSystemEntry[]) => void;
   onError?: (error: string) => void;
   maxFileSize?: number;
   allowedTypes?: string[];
@@ -119,23 +119,28 @@ export function useDragAndDrop({
       e.preventDefault();
       e.stopPropagation();
 
+      // Read the entries before touching state. Updating state flushes a render
+      // and the browser clears dataTransfer once the drop handler unwinds, so
+      // anything read later comes back empty (Firefox is strictest here).
+      const entries: FileSystemEntry[] = [];
+      if (onItemsDropped && e.dataTransfer.items?.length > 0) {
+        for (const item of Array.from(e.dataTransfer.items)) {
+          const entry = item.webkitGetAsEntry?.();
+          if (entry) entries.push(entry);
+        }
+      }
+      const files = e.dataTransfer.files;
+
       setState({
         isDragging: false,
         dragCounter: 0,
         draggedFiles: [],
       });
 
-      if (onItemsDropped && e.dataTransfer.items?.length > 0) {
-        const hasDirectory = Array.from(e.dataTransfer.items).some(
-          (item) => item.webkitGetAsEntry?.()?.isDirectory,
-        );
-        if (hasDirectory) {
-          onItemsDropped(e.dataTransfer.items);
-          return;
-        }
+      if (onItemsDropped && entries.some((entry) => entry.isDirectory)) {
+        onItemsDropped(entries);
+        return;
       }
-
-      const files = e.dataTransfer.files;
 
       if (files.length === 0) {
         return;

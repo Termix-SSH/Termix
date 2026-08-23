@@ -19,6 +19,7 @@ import {
   useWindowManager,
 } from "./components/WindowManager.tsx";
 import { FileWindow } from "./components/FileWindow.tsx";
+import { DownloadProgressToast } from "./components/DownloadProgressToast.tsx";
 import { DiffWindow } from "./components/DiffWindow.tsx";
 import { useDragToDesktop } from "@/features/file-manager/hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "@/features/file-manager/hooks/useDragToSystemDesktop";
@@ -976,19 +977,14 @@ function FileManagerContent({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [currentPath]);
 
-  async function handleItemsDropped(items: DataTransferItemList) {
+  async function handleItemsDropped(entries: FileSystemEntry[]) {
     if (!sshSessionId) {
       toast.error(t("fileManager.noSSHConnection"));
       return;
     }
 
-    const entries: FileSystemEntry[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const entry = items[i].webkitGetAsEntry?.();
-      if (entry) entries.push(entry);
-    }
-
     const files: { file: File; relativePath: string }[] = [];
+    const emptyDirs: string[] = [];
 
     async function readEntry(
       entry: FileSystemEntry,
@@ -999,51 +995,77 @@ function FileManagerContent({
           (entry as FileSystemFileEntry).file(resolve, reject),
         );
         files.push({ file, relativePath: path });
-      } else if (entry.isDirectory) {
-        const reader = (entry as FileSystemDirectoryEntry).createReader();
-        let batch: FileSystemEntry[];
-        do {
-          batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
-            reader.readEntries(resolve, reject),
-          );
-          for (const child of batch) {
-            await readEntry(child, `${path}/${child.name}`);
-          }
-        } while (batch.length > 0);
+        return;
+      }
+
+      if (!entry.isDirectory) return;
+
+      // readEntries only hands back a page at a time and signals the end with an
+      // empty batch, so drain it fully before walking into the children.
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      const children: FileSystemEntry[] = [];
+      for (;;) {
+        const batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+          reader.readEntries(resolve, reject),
+        );
+        if (batch.length === 0) break;
+        children.push(...batch);
+      }
+
+      if (children.length === 0) {
+        emptyDirs.push(path);
+        return;
+      }
+
+      for (const child of children) {
+        await readEntry(child, `${path}/${child.name}`);
       }
     }
 
-    for (const entry of entries) {
-      await readEntry(entry, entry.name);
+    try {
+      for (const entry of entries) {
+        await readEntry(entry, entry.name);
+      }
+    } catch (error) {
+      toast.error(t("fileManager.failedToUploadFile"));
+      console.error("Failed to read dropped folder:", error);
+      return;
     }
 
-    if (files.length === 0) return;
+    if (files.length === 0 && emptyDirs.length === 0) return;
 
     const progressToast = toast.loading(
-      `Uploading ${files.length} file(s)...`,
+      t("fileManager.uploadingFolderFiles", { count: files.length }),
       { duration: Infinity },
     );
+
+    const failed: string[] = [];
 
     try {
       await ensureSSHConnection();
 
+      const base = currentPath.endsWith("/") ? currentPath : currentPath + "/";
+
       const dirs = new Set<string>();
-      for (const { relativePath } of files) {
+      for (const relativePath of [
+        ...files.map((f) => f.relativePath),
+        ...emptyDirs.map((d) => `${d}/`),
+      ]) {
         const parts = relativePath.split("/");
         for (let i = 1; i < parts.length; i++) {
           dirs.add(parts.slice(0, i).join("/"));
         }
       }
 
-      const sortedDirs = Array.from(dirs).sort();
+      // Shallowest first so each parent exists before its children.
+      const sortedDirs = Array.from(dirs).sort(
+        (a, b) =>
+          a.split("/").length - b.split("/").length || a.localeCompare(b),
+      );
       for (const dir of sortedDirs) {
-        const parentPath = currentPath.endsWith("/")
-          ? currentPath + dir.split("/").slice(0, -1).join("/")
-          : currentPath + "/" + dir.split("/").slice(0, -1).join("/");
+        const parentDir = dir.split("/").slice(0, -1).join("/");
+        const targetPath = parentDir ? `${base}${parentDir}/` : base;
         const folderName = dir.split("/").pop()!;
-        const targetPath = parentPath.endsWith("/")
-          ? parentPath
-          : parentPath + "/";
         try {
           await createSSHFolder(
             sshSessionId,
@@ -1060,23 +1082,37 @@ function FileManagerContent({
         const dirPart = relativePath.includes("/")
           ? relativePath.substring(0, relativePath.lastIndexOf("/"))
           : "";
-        const uploadPath = dirPart
-          ? (currentPath.endsWith("/") ? currentPath : currentPath + "/") +
-            dirPart +
-            "/"
-          : currentPath;
+        const uploadPath = dirPart ? `${base}${dirPart}/` : currentPath;
 
-        await uploadSSHFile(
-          sshSessionId,
-          uploadPath,
-          file.name,
-          file,
-          currentHost?.id,
-        );
+        try {
+          await uploadSSHFile(
+            sshSessionId,
+            uploadPath,
+            file.name,
+            file,
+            currentHost?.id,
+          );
+        } catch (error) {
+          failed.push(relativePath);
+          console.error(`Failed to upload ${relativePath}:`, error);
+        }
       }
 
       toast.dismiss(progressToast);
-      toast.success(`Uploaded ${files.length} file(s) successfully`);
+      if (failed.length === 0) {
+        toast.success(
+          t("fileManager.uploadedFolderFiles", { count: files.length }),
+        );
+      } else if (failed.length === files.length) {
+        toast.error(t("fileManager.failedToUploadFile"));
+      } else {
+        toast.warning(
+          t("fileManager.uploadedFolderPartial", {
+            uploaded: files.length - failed.length,
+            failed: failed.length,
+          }),
+        );
+      }
       handleRefreshDirectory();
     } catch (error) {
       toast.dismiss(progressToast);
@@ -1166,14 +1202,51 @@ function FileManagerContent({
   async function handleDownloadFile(file: FileItem) {
     if (!sshSessionId) return;
 
+    const toastId = `download-${file.path}-${Date.now()}`;
+    let lastLoaded = 0;
+    let lastTime = Date.now();
+    let mbPerSec: number | undefined;
+
     try {
       await ensureSSHConnection();
 
       const { downloadSSHFileStream } = await import("@/main-axios.ts");
-      await downloadSSHFileStream(sshSessionId, file.path);
+
+      toast.loading(<DownloadProgressToast fileName={file.name} loaded={0} />, {
+        id: toastId,
+        duration: Infinity,
+      });
+
+      await downloadSSHFileStream(
+        sshSessionId,
+        file.path,
+        ({ loaded, total }) => {
+          const now = Date.now();
+          const deltaMs = now - lastTime;
+          if (deltaMs > 200) {
+            const deltaBytes = loaded - lastLoaded;
+            if (deltaBytes >= 0) {
+              mbPerSec = (deltaBytes / deltaMs / 1024 / 1024) * 1000;
+            }
+            lastLoaded = loaded;
+            lastTime = now;
+          }
+
+          toast.loading(
+            <DownloadProgressToast
+              fileName={file.name}
+              loaded={loaded}
+              total={total}
+              mbPerSec={mbPerSec}
+            />,
+            { id: toastId, duration: Infinity },
+          );
+        },
+      );
 
       toast.success(
         t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
+        { id: toastId },
       );
     } catch (error: unknown) {
       const err = error instanceof Error ? error : null;
@@ -1187,9 +1260,10 @@ function FileManagerContent({
             ip: currentHost?.ip,
             port: currentHost?.port,
           }),
+          { id: toastId },
         );
       } else {
-        toast.error(t("fileManager.failedToDownloadFile"));
+        toast.error(t("fileManager.failedToDownloadFile"), { id: toastId });
       }
       console.error("Download failed:", error);
     }

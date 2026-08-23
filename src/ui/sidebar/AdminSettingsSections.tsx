@@ -39,6 +39,7 @@ type GeneralSettingsSectionProps = {
   oidcAutoProvision: boolean;
   handleToggleOidcAutoProvision: () => void;
   oidcSilentLoginDefault: boolean;
+  oidcSilentLoginDefaultLocked: boolean;
   handleToggleOidcSilentLoginDefault: () => void;
   allowPasswordReset: boolean;
   handleTogglePasswordReset: () => void;
@@ -87,6 +88,7 @@ export function AdminGeneralSettingsSection({
   oidcAutoProvision,
   handleToggleOidcAutoProvision,
   oidcSilentLoginDefault,
+  oidcSilentLoginDefaultLocked,
   handleToggleOidcSilentLoginDefault,
   allowPasswordReset,
   handleTogglePasswordReset,
@@ -211,11 +213,16 @@ export function AdminGeneralSettingsSection({
         </SettingRow>
         <SettingRow
           label={t("admin.oidcSilentLoginDefault")}
-          description={t("admin.oidcSilentLoginDefaultDesc")}
+          description={
+            oidcSilentLoginDefaultLocked
+              ? t("admin.oidcSilentLoginDefaultLockedDesc")
+              : t("admin.oidcSilentLoginDefaultDesc")
+          }
         >
           <AdminToggle
             on={oidcSilentLoginDefault}
             onToggle={handleToggleOidcSilentLoginDefault}
+            disabled={oidcSilentLoginDefaultLocked}
           />
         </SettingRow>
         <SettingRow

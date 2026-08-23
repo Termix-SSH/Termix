@@ -163,6 +163,8 @@ export function AdminSettingsPanel({
   const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
+  const [oidcSilentLoginDefaultLocked, setOidcSilentLoginDefaultLocked] =
+    useState(false);
   const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
     useState(true);
   const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
@@ -389,8 +391,10 @@ export function AdminSettingsPanel({
         setAllowPasswordLogin(pwLogin.value.allowed);
       if (oidcProv.status === "fulfilled")
         setOidcAutoProvision(oidcProv.value.enabled);
-      if (oidcSilent.status === "fulfilled")
+      if (oidcSilent.status === "fulfilled") {
         setOidcSilentLoginDefault(oidcSilent.value.enabled);
+        setOidcSilentLoginDefaultLocked(oidcSilent.value.locked ?? false);
+      }
       if (pwReset.status === "fulfilled") setAllowPasswordReset(pwReset.value);
       if (timeout.status === "fulfilled")
         setSessionTimeout(String(timeout.value.timeoutHours));
@@ -509,6 +513,7 @@ export function AdminSettingsPanel({
   }
 
   async function handleToggleOidcSilentLoginDefault() {
+    if (oidcSilentLoginDefaultLocked) return;
     const newVal = !oidcSilentLoginDefault;
     setOidcSilentLoginDefault(newVal);
     try {
@@ -1124,6 +1129,7 @@ export function AdminSettingsPanel({
         oidcAutoProvision={oidcAutoProvision}
         handleToggleOidcAutoProvision={handleToggleOidcAutoProvision}
         oidcSilentLoginDefault={oidcSilentLoginDefault}
+        oidcSilentLoginDefaultLocked={oidcSilentLoginDefaultLocked}
         handleToggleOidcSilentLoginDefault={handleToggleOidcSilentLoginDefault}
         allowPasswordReset={allowPasswordReset}
         handleTogglePasswordReset={handleTogglePasswordReset}

@@ -257,6 +257,7 @@ export async function updateOidcAutoProvision(
 
 export async function getOidcSilentLoginDefault(): Promise<{
   enabled: boolean;
+  locked?: boolean;
 }> {
   try {
     const response = await authApi.get("/users/oidc-silent-login-default");

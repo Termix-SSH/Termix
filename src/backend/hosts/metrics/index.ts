@@ -576,16 +576,32 @@ class PollingManager {
       } else {
         isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
       }
+      const config = this.pollingConfigs.get(refreshedHost.id);
+      let authenticated: boolean | undefined;
+      if (
+        isOnline &&
+        supportsMetrics(refreshedHost) &&
+        !config?.statsConfig.metricsEnabled
+      ) {
+        try {
+          await withSshConnection(refreshedHost, async () => undefined);
+          authenticated = true;
+        } catch {
+          authenticated = false;
+        }
+      }
       const statusEntry: StatusEntry = {
-        status: statusAfterReachabilityCheck(
-          isOnline,
-          this.statusStore.get(refreshedHost.id)?.status,
-        ),
+        status:
+          authenticated === undefined
+            ? statusAfterReachabilityCheck(
+                isOnline,
+                this.statusStore.get(refreshedHost.id)?.status,
+              )
+            : statusAfterAuthentication(authenticated),
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
       if (isOnline && this.activeViewers.has(refreshedHost.id)) {
-        const config = this.pollingConfigs.get(refreshedHost.id);
         if (config?.statsConfig.metricsEnabled) {
           this.scheduleInitialMetricsPoll(config.host, config.viewerUserId);
         }

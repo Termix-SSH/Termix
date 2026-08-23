@@ -384,18 +384,36 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       }
     });
 
+    // A single bad request must not take the server down. Exit only on errors
+    // that leave the process genuinely unusable; log and keep serving
+    // otherwise, since these are almost always scoped to one connection.
+    const isFatalError = (error: unknown): boolean => {
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code === "ERR_WORKER_OUT_OF_MEMORY") return true;
+      if (error instanceof RangeError) {
+        return /call stack|heap out of memory/i.test(error.message);
+      }
+      return false;
+    };
+
     process.on("uncaughtException", (error) => {
       systemLogger.error("Uncaught exception occurred", error, {
         operation: "error_handling",
+        fatal: isFatalError(error),
       });
-      process.exit(1);
+      if (isFatalError(error)) {
+        process.exit(1);
+      }
     });
 
     process.on("unhandledRejection", (reason) => {
       systemLogger.error("Unhandled promise rejection", reason, {
         operation: "error_handling",
+        fatal: isFatalError(reason),
       });
-      process.exit(1);
+      if (isFatalError(reason)) {
+        process.exit(1);
+      }
     });
   } catch (error) {
     systemLogger.error("Failed to initialize backend services", error, {

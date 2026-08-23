@@ -137,6 +137,12 @@ function isPasswordResetAllowed(): boolean {
   }
 }
 
+function getOidcSilentLoginDefaultFromEnv(): boolean | undefined {
+  const envVal = process.env.OIDC_SILENT_LOGIN_DEFAULT;
+  if (envVal === undefined) return undefined;
+  return envVal.trim().toLowerCase() === "true";
+}
+
 function isNativeAppRequest(req: Request): boolean {
   return (
     (req.get("User-Agent") || "").startsWith("Termix-Mobile/") ||
@@ -2460,7 +2466,7 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
  * /users/oidc-silent-login-default:
  *   get:
  *     summary: Get OIDC silent login default setting
- *     description: Returns whether silent OIDC login is enabled as the default behavior.
+ *     description: Returns whether silent OIDC login is enabled as the default behavior. Can be pinned via the OIDC_SILENT_LOGIN_DEFAULT env var.
  *     tags:
  *       - Users
  *     responses:
@@ -2471,11 +2477,17 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
  */
 router.get("/oidc-silent-login-default", async (_req, res) => {
   try {
+    const envVal = getOidcSilentLoginDefaultFromEnv();
+    if (envVal !== undefined) {
+      res.json({ enabled: envVal, locked: true });
+      return;
+    }
     res.json({
       enabled: await createCurrentSettingsRepository().getBoolean(
         "oidc_silent_login_default",
         false,
       ),
+      locked: false,
     });
   } catch (err) {
     authLogger.error("Failed to get OIDC silent login default", err);
@@ -2507,6 +2519,8 @@ router.get("/oidc-silent-login-default", async (_req, res) => {
  *         description: Invalid value.
  *       403:
  *         description: Not authorized.
+ *       409:
+ *         description: Setting is pinned by the OIDC_SILENT_LOGIN_DEFAULT env var.
  *       500:
  *         description: Failed to update setting.
  */
@@ -2519,6 +2533,12 @@ router.patch(
       const user = await requireCurrentAdmin(userId);
       if (!user) {
         return res.status(403).json({ error: "Not authorized" });
+      }
+      if (getOidcSilentLoginDefaultFromEnv() !== undefined) {
+        return res.status(409).json({
+          error:
+            "OIDC silent login default is set via the OIDC_SILENT_LOGIN_DEFAULT env var and cannot be changed here",
+        });
       }
       const { enabled } = req.body;
       if (typeof enabled !== "boolean") {

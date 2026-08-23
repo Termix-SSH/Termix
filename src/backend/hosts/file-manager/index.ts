@@ -9,7 +9,7 @@ import { createCorsMiddleware } from "../../utils/cors-config.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
-import { Client as SSHClient } from "ssh2";
+import ssh2Pkg, { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { fileLogger } from "../../utils/logger.js";
@@ -42,8 +42,11 @@ import {
 } from "./transfer-engine.js";
 import { registerFileContentRoutes } from "./content-routes.js";
 import { createConnectionLog } from "../connection-log.js";
-import { createJumpHostChain } from "../jump-host-chain.js";
-import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
+import { createJumpHostChain, JumpHostChainError } from "../jump-host-chain.js";
+import {
+  isPrivateKeyPassphraseError,
+  preparePrivateKeyForSSH2,
+} from "../../utils/ssh-key-utils.js";
 import {
   ChannelOpenSerializer,
   execChannel,
@@ -840,7 +843,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         resolvedCredentials = {
           password: resolvedHost.password,
           sshKey: resolvedHost.key,
-          keyPassword: resolvedHost.keyPassword,
+          keyPassword: keyPassword || resolvedHost.keyPassword,
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
           certPublicKey: (resolvedHost as { certPublicKey?: string })
@@ -909,7 +912,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         resolvedCredentials = {
           password: resolvedHost.password,
           sshKey: resolvedHost.key,
-          keyPassword: resolvedHost.keyPassword,
+          keyPassword: keyPassword || resolvedHost.keyPassword,
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
           certPublicKey: (resolvedHost as { certPublicKey?: string })
@@ -1049,6 +1052,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         resolvedCredentials.keyPassword,
       );
 
+      const parsedKey = ssh2Pkg.utils.parseKey(
+        config.privateKey as Buffer,
+        resolvedCredentials.keyPassword,
+      );
+      if (parsedKey instanceof Error) throw parsedKey;
+
       if (resolvedCredentials.keyPassword)
         config.passphrase = resolvedCredentials.keyPassword;
 
@@ -1071,6 +1080,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         ),
       );
     } catch (keyError) {
+      if (isPrivateKeyPassphraseError(keyError)) {
+        return res.json({ status: "passphrase_required", connectionLogs });
+      }
+
       fileLogger.error("SSH key format error for file manager", {
         operation: "file_connect",
         sessionId,
@@ -1832,7 +1845,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         ),
       );
       return res.status(500).json({
-        error: "Failed to connect through jump hosts",
+        error:
+          error instanceof JumpHostChainError
+            ? `Failed to connect through jump hosts: ${error.message}`
+            : "Failed to connect through jump hosts",
         connectionLogs,
       });
     }

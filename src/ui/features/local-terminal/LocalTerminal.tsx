@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FitAddon } from "@xterm/addon-fit";
 import { useXTerm } from "react-xtermjs";
 import { useTheme } from "@/components/theme-provider";
@@ -17,6 +17,14 @@ export function LocalTerminal({
   const { instance: terminal, ref: xtermRef } = useXTerm();
   const fitAddonRef = useRef<FitAddon | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const [isWindows, setIsWindows] = useState(false);
+  const [shell, setShell] = useState<"default" | "wsl">("default");
+
+  useEffect(() => {
+    window.electronAPI?.getPlatform().then((platform) => {
+      setIsWindows(platform === "win32");
+    });
+  }, []);
 
   const fit = useCallback(() => {
     const fitAddon = fitAddonRef.current;
@@ -60,7 +68,7 @@ export function LocalTerminal({
     });
 
     window.electronAPI
-      .startLocalTerminal({ cols: terminal.cols, rows: terminal.rows })
+      .startLocalTerminal({ cols: terminal.cols, rows: terminal.rows, shell })
       .then(({ sessionId }) => {
         if (disposed) {
           window.electronAPI.closeLocalTerminal(sessionId);
@@ -100,11 +108,30 @@ export function LocalTerminal({
       fitAddonRef.current = null;
       fitAddon.dispose();
     };
-  }, [fit, instanceId, terminal, xtermRef]);
+  }, [fit, instanceId, shell, terminal, xtermRef]);
 
   useEffect(() => {
     if (isVisible) requestAnimationFrame(fit);
   }, [fit, isVisible]);
 
-  return <div ref={xtermRef} className="h-full w-full bg-background p-2" />;
+  return (
+    <div className="flex h-full w-full flex-col bg-background">
+      {isWindows && (
+        <div className="flex justify-end border-b border-border px-2 py-1">
+          <select
+            aria-label="Local terminal shell"
+            className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
+            value={shell}
+            onChange={(event) =>
+              setShell(event.target.value === "wsl" ? "wsl" : "default")
+            }
+          >
+            <option value="default">PowerShell</option>
+            <option value="wsl">WSL</option>
+          </select>
+        </div>
+      )}
+      <div ref={xtermRef} className="min-h-0 flex-1 p-2" />
+    </div>
+  );
 }

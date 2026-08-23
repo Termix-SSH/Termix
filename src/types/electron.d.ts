@@ -40,7 +40,10 @@ export interface ElectronAPI {
 
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
-  testServerConnection: (serverUrl: string) => Promise<ConnectionTestResult>;
+  testServerConnection: (
+    serverUrl: string,
+    allowInvalidCertificate?: boolean,
+  ) => Promise<ConnectionTestResult>;
   getC2STunnelConfig: () => Promise<unknown[]>;
   saveC2STunnelConfig: (
     config: unknown[],
@@ -171,6 +174,7 @@ export interface ElectronAPI {
   startLocalTerminal(dimensions: {
     cols: number;
     rows: number;
+    shell?: "default" | "wsl";
   }): Promise<{ sessionId: string; shell: string }>;
   readyLocalTerminal(sessionId: string): Promise<boolean>;
   writeLocalTerminal(sessionId: string, data: string): Promise<boolean>;

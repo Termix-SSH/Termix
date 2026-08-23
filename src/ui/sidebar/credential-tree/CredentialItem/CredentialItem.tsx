@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
   Copy,
+  CopyPlus,
   GripVertical,
   Pencil,
   Pin,
@@ -68,6 +69,7 @@ export function CredentialItem({
   onReorderHoverChange,
   onDeploy,
   onEdit,
+  onClone,
   onDelete,
 }: {
   cred: Credential;
@@ -100,6 +102,7 @@ export function CredentialItem({
   onReorderHoverChange?: (edge: "before" | "after" | null) => void;
   onDeploy: () => void;
   onEdit: () => void;
+  onClone: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
@@ -168,6 +171,16 @@ export function CredentialItem({
         <Pencil className="size-3.5" />
       </button>
       <button
+        title={t("credentials.cloneCredentialAction")}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClone();
+        }}
+        className={trayButtonClass}
+      >
+        <CopyPlus className="size-3.5" />
+      </button>
+      <button
         title={t("credentials.deleteCredentialAction")}
         onClick={(e) => {
           e.stopPropagation();
@@ -181,12 +194,16 @@ export function CredentialItem({
   );
 
   const trayOpenState = isTrayOpen || isMenuOpen;
+  // A collapsed tray clipped to max-h-0 is still a flex item, so it earns the
+  // text column's gap-1 and leaves a gap under every closed row. The negative
+  // margin cancels it while keeping the element in flow to animate open.
+  const trayCollapsed = `max-h-0 opacity-0 ${isCompact ? "" : "-mt-1"}`;
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
-      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[60px] opacity-100" : "max-h-0 opacity-0"}`
+      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[60px] opacity-100" : trayCollapsed}`
       : shouldUseClickTray
-        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[60px] opacity-100" : "max-h-0 opacity-0"}`
-        : `overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 group-hover:max-h-[60px] group-hover:opacity-100 ${isMenuOpen ? "!max-h-[60px] !opacity-100" : ""}`;
+        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[60px] opacity-100" : trayCollapsed}`
+        : `overflow-hidden transition-all duration-150 ease-out ${trayCollapsed} group-hover:max-h-[60px] group-hover:opacity-100 ${isCompact ? "" : "group-hover:mt-0"} ${isMenuOpen ? `!max-h-[60px] !opacity-100 ${isCompact ? "" : "!mt-0"}` : ""}`;
 
   return (
     <div
@@ -345,7 +362,7 @@ export function CredentialItem({
                 </div>
               )}
             <div
-              className={`flex items-center gap-0.5 border-t border-border/30 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "pt-1.5" : "pt-1 mt-0.5"}`}
+              className={`flex items-center gap-0.5 ${connectionButtons ? "border-t border-border/30" : ""} ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "pt-1.5" : "pt-1 mt-0.5"}`}
             >
               {managementButtons}
             </div>

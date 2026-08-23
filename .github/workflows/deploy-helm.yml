@@ -1,0 +1,76 @@
+name: Deploy Helm
+
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: "Kubernetes namespace"
+        required: true
+        default: termix
+      release:
+        description: "Helm release name"
+        required: true
+        default: termix
+      values_file:
+        description: "Values file to use"
+        required: true
+        default: charts/termix/values-gitops-example.yaml
+      image_tag:
+        description: "Image tag to deploy"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.15.4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          test -n "$KUBE_CONFIG"
+          echo "$KUBE_CONFIG" | base64 -d > "$RUNNER_TEMP/kubeconfig"
+          chmod 600 "$RUNNER_TEMP/kubeconfig"
+
+      - name: Lint chart
+        run: helm lint charts/termix
+
+      - name: Deploy
+        env:
+          KUBECONFIG: ${{ runner.temp }}/kubeconfig
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          RELEASE_NAME: ${{ inputs.release }}
+          TARGET_NAMESPACE: ${{ inputs.namespace }}
+          VALUES_FILE: ${{ inputs.values_file }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_NAME" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+          [[ "$TARGET_NAMESPACE" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+          case "$VALUES_FILE" in
+            charts/termix/*.yaml) ;;
+            *) echo "values_file must be a YAML file under charts/termix" >&2; exit 1 ;;
+          esac
+          test -f "$VALUES_FILE"
+          ARGS=()
+          if [ -n "$IMAGE_TAG" ]; then
+            ARGS+=(--set "image.tag=$IMAGE_TAG")
+          fi
+          helm upgrade --install "$RELEASE_NAME" charts/termix \
+            --namespace "$TARGET_NAMESPACE" \
+            --create-namespace \
+            --values "$VALUES_FILE" \
+            --atomic \
+            --timeout 10m \
+            "${ARGS[@]}"

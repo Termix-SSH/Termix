@@ -47,6 +47,12 @@ const repository = {
   }),
 };
 
+const resolveHostById = vi.fn();
+
+vi.mock("../../hosts/host-resolver.js", () => ({
+  resolveHostById: (...args: unknown[]) => resolveHostById(...args),
+}));
+
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentAutomationRepository: () => repository,
 }));
@@ -93,12 +99,41 @@ beforeEach(() => {
   nextRunId = 1;
   nextStepRowId = 1;
   vi.clearAllMocks();
+  resolveHostById.mockResolvedValue(null);
   executeStep.mockResolvedValue({ success: true, output: "ok" });
   // The singleton carries in-flight state between tests.
   (AutomationEngine as unknown as { instance?: unknown }).instance = undefined;
 });
 
 describe("AutomationEngine.run", () => {
+  it("adds the trigger host name to the template context", async () => {
+    defineAutomation([step({ id: "notify", type: "notify" })]);
+    resolveHostById.mockResolvedValue({
+      name: "Proxmox Node",
+      ip: "10.0.0.11",
+      username: "root",
+      port: 22,
+    });
+
+    await AutomationEngine.getInstance().run({
+      automationId: 1,
+      triggerType: "metric_threshold",
+      triggerHostId: 11,
+      triggerContext: { hostId: 11, value: 97 },
+    });
+
+    const context = executeStep.mock.calls[0][1] as {
+      template: {
+        host: { id: number; name: string };
+        trigger: { hostName: string };
+      };
+    };
+    expect(context.template.host).toMatchObject({
+      id: 11,
+      name: "Proxmox Node",
+    });
+    expect(context.template.trigger.hostName).toBe("Proxmox Node");
+  });
   it("runs steps in order and records each one", async () => {
     defineAutomation([
       step({ id: "a", type: "run_command" }),

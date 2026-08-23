@@ -10,6 +10,7 @@ import {
 } from "../../types/automations.js";
 import { createCurrentAutomationRepository } from "../database/repositories/factory.js";
 import { statsLogger } from "../utils/logger.js";
+import { resolveHostById } from "../hosts/host-resolver.js";
 import { executeStep } from "./actions/index.js";
 import type { StepExecutionContext, StepResult } from "./actions/types.js";
 import { compare } from "./conditions.js";
@@ -175,8 +176,33 @@ export class AutomationEngine {
 
     if (!claimed) this.running.add(automation.id);
 
+    const trigger = { ...(request.triggerContext ?? {}) };
+    trigger.type ??= request.triggerType;
+    let host: TemplateContext["host"];
+    if (request.triggerHostId) {
+      try {
+        const resolved = await resolveHostById(
+          request.triggerHostId,
+          automation.userId,
+        );
+        if (resolved) {
+          host = {
+            id: request.triggerHostId,
+            name: resolved.name || resolved.ip,
+            ip: resolved.ip,
+            username: resolved.username,
+            port: resolved.port,
+          };
+          trigger.hostName ??= host.name;
+        }
+      } catch {
+        // A notification should still run with its numeric host id.
+      }
+    }
+
     const template: TemplateContext = {
-      trigger: request.triggerContext ?? {},
+      host,
+      trigger,
       steps: {},
       vars: {},
       run: {

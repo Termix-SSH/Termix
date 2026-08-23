@@ -98,6 +98,7 @@ export function RemoteSyncServerPicker({
       const testResult = (await window.electronAPI?.invoke?.(
         "test-server-connection",
         normalizedUrl,
+        normalizedUrl.startsWith("https://") && allowInvalidCertificate,
       )) as { success?: boolean; error?: string; warning?: string } | undefined;
 
       if (!testResult?.success) {

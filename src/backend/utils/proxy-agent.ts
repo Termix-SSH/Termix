@@ -1,4 +1,4 @@
-import { Agent, ProxyAgent } from "undici";
+import { Agent, ProxyAgent, fetch as undiciFetch } from "undici";
 import type { Dispatcher } from "undici-types";
 
 const directAgent = new Agent({
@@ -38,4 +38,14 @@ export function getProxyAgent(targetUrl?: string): Dispatcher | undefined {
 
 export function getFetchDispatcher(targetUrl: string): Dispatcher {
   return getProxyAgent(targetUrl) ?? (directAgent as unknown as Dispatcher);
+}
+
+export function fetchWithProxy(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  return undiciFetch(url, {
+    ...init,
+    dispatcher: getFetchDispatcher(url),
+  });
 }

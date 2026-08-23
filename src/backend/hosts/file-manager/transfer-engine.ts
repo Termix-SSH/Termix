@@ -1,12 +1,10 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import { randomUUID } from "crypto";
-import { networkInterfaces } from "os";
 import { performance } from "node:perf_hooks";
 import type { ClientChannel } from "ssh2";
 import { fileLogger } from "../../utils/logger.js";
 import {
   basename,
-  buildPathFromSegments,
   dirname,
   getWorkingDir,
   inferPlatformFromPath,
@@ -14,7 +12,6 @@ import {
   normalizeSftpPath,
   pathsOverlap,
   sftpPathToLocalPath,
-  splitPathSegments,
   type TransferPlatform,
 } from "../transfer-paths.js";
 import {
@@ -26,6 +23,60 @@ import {
   type TransferScanSummary,
 } from "./transfer-routing.js";
 import { verifySftpFileIntegrity } from "./transfer-integrity.js";
+import {
+  promisifySftpChmod,
+  promisifySftpClose,
+  promisifySftpFstat,
+  promisifySftpOpen,
+  promisifySftpStat,
+  promisifySftpUnlink,
+} from "./sftp-promisify.js";
+import {
+  buildTransferHopTimings,
+  computeTransferMbPerSec,
+  createEmptyXferStats,
+  createHopWallClock,
+  createThrottledProgress,
+  elapsedMs,
+  hopSpanMs,
+  mergeXferStats,
+  noteHopEnd,
+  noteHopStart,
+  type PipelinedXferStats,
+  type TransferTimings,
+} from "./transfer-stats.js";
+import {
+  TransferCancelledError,
+  TransferStalledError,
+  isRecoverableTransferError,
+} from "./transfer-errors.js";
+import {
+  escapeShell,
+  isLocalSshEndpoint,
+  isPermissionError,
+  isRootOnlyPath,
+} from "./transfer-host-utils.js";
+import {
+  SFTP_OPEN_READ,
+  SFTP_OPEN_WRITE,
+  SFTP_OPEN_WRITE_RESUME,
+} from "./sftp-promisify.js";
+import {
+  collectFileWorkItems,
+  readSftpSample,
+  type FileWorkItem,
+} from "./transfer-scan.js";
+import {
+  deletePathSftp,
+  ensureDirectoryTreeSftp,
+} from "./transfer-sftp-dir.js";
+import {
+  DEFAULT_PARALLEL_SEGMENT_COUNT,
+  SFTP_XFER_SEGMENT_SIZE,
+  buildSegmentCopyJobs,
+  clampParallelSegmentCount,
+  type SegmentCopyJob,
+} from "./transfer-segment-copy.js";
 import {
   buildDirectProbeCommand,
   buildDirectRsyncCommand,
@@ -107,31 +158,11 @@ export type TransferStatus =
   "running" | "success" | "partial" | "error" | "cancelled";
 export type TransferMethod = "stream" | "tar" | "item_sftp" | "direct_rsync";
 
-export type TransferHopId =
-  "source_read" | "dest_sftp_write" | "dest_local_write";
-
-export interface TransferHopMetrics {
-  id: TransferHopId;
-  bytes: number;
-  /** Wall-clock span from first I/O on this hop to last I/O complete. */
-  spanMs: number;
-  mbPerSec: number;
-}
-
-export interface TransferTimings {
-  prepareDestMs?: number;
-  compressMs?: number;
-  transferMs?: number;
-  extractMs?: number;
-  verifyMs?: number;
-  directBenchmarkMs?: number;
-  relayBenchmarkMs?: number;
-  sourceDeleteMs?: number;
-  totalMs?: number;
-  transferBytes?: number;
-  endToEndMbPerSec?: number;
-  hops?: TransferHopMetrics[];
-}
+export type {
+  TransferHopId,
+  TransferHopMetrics,
+  TransferTimings,
+} from "./transfer-stats.js";
 
 export interface TransferProgress {
   transferId: string;
@@ -203,34 +234,6 @@ interface ActiveXferControl {
 }
 const activeXferControls = new Map<string, ActiveXferControl>();
 const cancelWatchdogs = new Map<string, ReturnType<typeof setTimeout>>();
-
-class TransferCancelledError extends Error {
-  constructor() {
-    super("Transfer cancelled");
-    this.name = "TransferCancelledError";
-  }
-}
-
-class TransferStalledError extends Error {
-  readonly byteOffset?: number;
-  readonly segmentIndex?: number;
-
-  constructor(byteOffset?: number, segmentIndex?: number) {
-    const pos = byteOffset !== undefined ? ` at byte offset ${byteOffset}` : "";
-    const seg = segmentIndex !== undefined ? ` (segment ${segmentIndex})` : "";
-    super(`Transfer stalled — no data moved for 45 seconds${pos}${seg}`);
-    this.name = "TransferStalledError";
-    this.byteOffset = byteOffset;
-    this.segmentIndex = segmentIndex;
-  }
-}
-
-class TransferConnectionLostError extends Error {
-  constructor(message = "Transfer SSH connection lost") {
-    super(message);
-    this.name = "TransferConnectionLostError";
-  }
-}
 
 function throwIfCancelled(transferId: string): void {
   if (cancelRequestedTransfers.has(transferId)) {
@@ -315,8 +318,6 @@ const SMALL_FILE_SYNC_THRESHOLD = 10 * 1024 * 1024;
 const SFTP_XFER_CHUNK_SIZE = 256 * 1024;
 /** Pipelined in-flight READ requests per leg (ssh2 fastGet/fastPut default is 64). */
 const SFTP_XFER_CONCURRENCY = 32;
-/** Reset pipelined scheduler every segment to avoid long-run deadlocks at GiB boundaries. */
-const SFTP_XFER_SEGMENT_SIZE = 256 * 1024 * 1024;
 /** Files above this size use segmented copy; smaller files use a single scheduler run. */
 const SFTP_XFER_SEGMENT_THRESHOLD = 32 * 1024 * 1024;
 /** Per-segment attempts before giving up (sequential and parallel). */
@@ -328,17 +329,9 @@ const SFTP_SEQUENTIAL_COPY_MAX_ATTEMPTS = 2;
 const SFTP_PARALLEL_COPY_MAX_ATTEMPTS = 2;
 /** Short backoff before opening fresh dedicated SSH sessions. */
 const TRANSFER_SESSION_RESET_DELAYS_MS = [1000, 2000, 3000];
-const DEFAULT_PARALLEL_SEGMENT_COUNT = 2;
-const MAX_PARALLEL_SEGMENT_COUNT = 8;
 const TRANSFER_HANDLE_CLOSE_TIMEOUT_MS = 2500;
 const HUNG_TRANSFER_MS = 90_000;
 const HUNG_RECONNECTING_MS = 180_000;
-const TRANSFER_PROGRESS_INTERVAL_MS = 200;
-const SFTP_OPEN_READ = 0x00000001;
-/** WRITE | CREATE | TRUNCATE — new file or overwrite from start. */
-const SFTP_OPEN_WRITE = 0x00000002 | 0x00000008 | 0x00000010;
-/** READ | WRITE | CREATE — resume into an existing partial file without truncating. */
-const SFTP_OPEN_WRITE_RESUME = 0x00000001 | 0x00000002 | 0x00000008;
 
 interface TransferReconnectContext {
   deps: HostTransferDeps;
@@ -362,31 +355,6 @@ function buildTransferReconnectContext(
   meta: TransferReconnectMeta,
 ): TransferReconnectContext {
   return { deps, transferId, ...meta };
-}
-
-function isRecoverableTransferConnectionError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const msg = err.message.toLowerCase();
-  return (
-    msg.includes("no response from server") ||
-    msg.includes("connection lost") ||
-    msg.includes("not connected") ||
-    msg.includes("econnreset") ||
-    msg.includes("econnrefused") ||
-    msg.includes("etimedout") ||
-    msg.includes("socket hang up") ||
-    msg.includes("protocol error") ||
-    msg.includes("connection closed") ||
-    msg.includes("channel open failure")
-  );
-}
-
-function isRecoverableTransferError(err: unknown): boolean {
-  return (
-    err instanceof TransferStalledError ||
-    err instanceof TransferConnectionLostError ||
-    isRecoverableTransferConnectionError(err)
-  );
 }
 
 async function probeDestResumeOffset(
@@ -560,69 +528,6 @@ async function resetDedicatedTransferSessions(
   return { sourceSession, destSession, sourceSftp, destSftp };
 }
 
-let cachedLocalAddresses: Set<string> | null = null;
-
-function normalizeHostAddress(host: string): string {
-  const trimmed = host.trim().toLowerCase();
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed.split(":")[0] ?? trimmed;
-}
-
-function getLocalAddresses(): Set<string> {
-  if (cachedLocalAddresses) return cachedLocalAddresses;
-
-  const addresses = new Set(["127.0.0.1", "::1", "localhost"]);
-  for (const ifaces of Object.values(networkInterfaces())) {
-    if (!ifaces) continue;
-    for (const iface of ifaces) {
-      if (!iface.internal && iface.family === "IPv4") {
-        addresses.add(iface.address.toLowerCase());
-      }
-    }
-  }
-  cachedLocalAddresses = addresses;
-  return addresses;
-}
-
-export function isLocalSshEndpoint(ip?: string): boolean {
-  if (!ip) return false;
-  const bare = normalizeHostAddress(ip);
-  if (bare === "localhost" || bare === "127.0.0.1" || bare === "::1") {
-    return true;
-  }
-  return getLocalAddresses().has(bare);
-}
-
-function createThrottledProgress(onProgress?: (bytes: number) => void) {
-  let pending = 0;
-  let lastFlush = 0;
-
-  const flush = () => {
-    if (pending > 0) {
-      onProgress?.(pending);
-      pending = 0;
-      lastFlush = Date.now();
-    }
-  };
-
-  return {
-    add(bytes: number) {
-      pending += bytes;
-      const now = Date.now();
-      if (now - lastFlush >= TRANSFER_PROGRESS_INTERVAL_MS) {
-        flush();
-      }
-    },
-    flush,
-  };
-}
-
-function escapeShell(s: string): string {
-  return s.replace(/'/g, "'\"'\"'");
-}
-
 async function detectTransferPlatform(
   deps: HostTransferDeps,
   session: SSHSessionLike,
@@ -678,150 +583,6 @@ async function detectTransferPlatform(
 
   session.transferPlatform = "unix";
   return "unix";
-}
-
-function isRootOnlyPath(path: string): boolean {
-  const normalized = normalizeSftpPath(path);
-  return (
-    normalized === "/" ||
-    /^\/[A-Za-z]:$/.test(normalized) ||
-    /^[A-Za-z]:$/.test(normalized)
-  );
-}
-
-function isPermissionError(err: Error): boolean {
-  const msg = err.message.toLowerCase();
-  return (
-    msg.includes("permission denied") ||
-    msg.includes("eacces") ||
-    msg.includes("access denied")
-  );
-}
-
-function promisifySftpStat(
-  sftp: SFTPWrapper,
-  path: string,
-): Promise<import("ssh2").Stats> {
-  return new Promise((resolve, reject) => {
-    sftp.stat(path, (err, stats) => {
-      if (err) reject(err);
-      else resolve(stats);
-    });
-  });
-}
-
-function promisifySftpUnlink(sftp: SFTPWrapper, path: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.unlink(path, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-function promisifySftpRmdir(sftp: SFTPWrapper, path: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.rmdir(path, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-async function ensureDirectoryTreeSftp(
-  sftp: SFTPWrapper,
-  dirPath: string,
-  created: Set<string> = new Set(),
-): Promise<void> {
-  const normalized = normalizeSftpPath(dirPath);
-  if (!normalized || isRootOnlyPath(normalized)) return;
-
-  const { root, segments } = splitPathSegments(normalized);
-  if (segments.length === 0) return;
-
-  for (let i = 0; i < segments.length; i++) {
-    const current = buildPathFromSegments(root, segments, i + 1);
-    if (created.has(current)) continue;
-
-    try {
-      await promisifySftpMkdir(sftp, current, 0o755);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "EEXIST") {
-        try {
-          const stats = await promisifySftpStat(sftp, current);
-          if (!stats.isDirectory()) throw err;
-        } catch {
-          throw err;
-        }
-      }
-    }
-    created.add(current);
-  }
-}
-
-async function deletePathSftp(sftp: SFTPWrapper, path: string): Promise<void> {
-  let stats: import("ssh2").Stats;
-  try {
-    stats = await promisifySftpStat(sftp, path);
-  } catch {
-    return;
-  }
-
-  if (stats.isDirectory()) {
-    const entries = await promisifySftpReaddir(sftp, path);
-    for (const entry of entries) {
-      if (entry.filename === "." || entry.filename === "..") continue;
-      await deletePathSftp(sftp, joinPath(path, entry.filename));
-    }
-    await promisifySftpRmdir(sftp, path);
-    return;
-  }
-
-  if (stats.isFile()) {
-    await promisifySftpUnlink(sftp, path);
-  }
-}
-
-function promisifySftpMkdir(
-  sftp: SFTPWrapper,
-  path: string,
-  mode: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.mkdir(path, { mode }, (err) => {
-      if (err && (err as NodeJS.ErrnoException).code !== "EEXIST") {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
-function promisifySftpChmod(
-  sftp: SFTPWrapper,
-  path: string,
-  mode: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.chmod(path, mode, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-function promisifySftpReaddir(
-  sftp: SFTPWrapper,
-  path: string,
-): Promise<Array<{ filename: string; attrs: import("ssh2").Stats }>> {
-  return new Promise((resolve, reject) => {
-    sftp.readdir(path, (err, list) => {
-      if (err) reject(err);
-      else resolve(list);
-    });
-  });
 }
 
 function execCommand(
@@ -1157,10 +918,6 @@ function finalizeTransfer(
   return result;
 }
 
-function elapsedMs(start: number): number {
-  return Date.now() - start;
-}
-
 async function verifyTransferredFile(
   deps: HostTransferDeps,
   transferId: string,
@@ -1208,103 +965,6 @@ async function verifyTransferredFile(
   });
 }
 
-export function computeTransferMbPerSec(
-  bytes: number,
-  ms: number,
-): number | undefined {
-  if (ms <= 0 || bytes <= 0) return undefined;
-  return ((bytes / ms) * 1000) / (1024 * 1024);
-}
-
-interface HopWallClock {
-  firstAt: number | null;
-  lastAt: number | null;
-}
-
-function createHopWallClock(): HopWallClock {
-  return { firstAt: null, lastAt: null };
-}
-
-function noteHopStart(
-  clock: HopWallClock,
-  t: number = performance.now(),
-): void {
-  if (clock.firstAt === null) clock.firstAt = t;
-}
-
-function noteHopEnd(clock: HopWallClock, t: number = performance.now()): void {
-  clock.lastAt = t;
-}
-
-function hopSpanMs(clock: HopWallClock): number {
-  if (clock.firstAt === null || clock.lastAt === null) return 0;
-  return Math.max(0, clock.lastAt - clock.firstAt);
-}
-
-interface PipelinedXferStats {
-  bytes: number;
-  sourceReadSpanMs: number;
-  destWriteSpanMs: number;
-  destWriteKind: "sftp" | "local";
-}
-
-function createEmptyXferStats(): PipelinedXferStats {
-  return {
-    bytes: 0,
-    sourceReadSpanMs: 0,
-    destWriteSpanMs: 0,
-    destWriteKind: "sftp",
-  };
-}
-
-function mergeXferStats(
-  target: PipelinedXferStats,
-  source: PipelinedXferStats,
-): void {
-  target.bytes += source.bytes;
-  target.sourceReadSpanMs += source.sourceReadSpanMs;
-  target.destWriteSpanMs += source.destWriteSpanMs;
-  target.destWriteKind = source.destWriteKind;
-}
-
-function buildTransferHopTimings(
-  stats: PipelinedXferStats,
-  transferMs: number,
-): Pick<TransferTimings, "transferBytes" | "endToEndMbPerSec" | "hops"> {
-  const hops: TransferHopMetrics[] = [];
-
-  const sourceRate = computeTransferMbPerSec(
-    stats.bytes,
-    stats.sourceReadSpanMs,
-  );
-  if (sourceRate !== undefined) {
-    hops.push({
-      id: "source_read",
-      bytes: stats.bytes,
-      spanMs: stats.sourceReadSpanMs,
-      mbPerSec: sourceRate,
-    });
-  }
-
-  const destHopId: TransferHopId =
-    stats.destWriteKind === "local" ? "dest_local_write" : "dest_sftp_write";
-  const destRate = computeTransferMbPerSec(stats.bytes, stats.destWriteSpanMs);
-  if (destRate !== undefined) {
-    hops.push({
-      id: destHopId,
-      bytes: stats.bytes,
-      spanMs: stats.destWriteSpanMs,
-      mbPerSec: destRate,
-    });
-  }
-
-  return {
-    transferBytes: stats.bytes,
-    endToEndMbPerSec: computeTransferMbPerSec(stats.bytes, transferMs),
-    hops,
-  };
-}
-
 async function deleteSourcePathsAfterSuccess(
   deps: HostTransferDeps,
   transferId: string,
@@ -1332,63 +992,6 @@ async function ensureDestParentForFile(
   const parent = dirname(filePath);
   if (!parent || isRootOnlyPath(parent)) return;
   await ensureDestDirectory(deps, destSession, parent);
-}
-
-interface FileWorkItem {
-  sourcePath: string;
-  destPath: string;
-  mode: number;
-  size: number;
-}
-
-async function collectFileWorkItems(
-  sftp: SFTPWrapper,
-  sourcePath: string,
-  destRoot: string,
-  destBaseName?: string,
-): Promise<FileWorkItem[]> {
-  const stats = await promisifySftpStat(sftp, sourcePath);
-  const name = destBaseName ?? basename(sourcePath);
-  const destPath = joinPath(destRoot, name);
-
-  if (stats.isFile()) {
-    return [
-      {
-        sourcePath,
-        destPath,
-        mode: stats.mode & 0o7777,
-        size: stats.size,
-      },
-    ];
-  }
-
-  if (!stats.isDirectory()) {
-    return [];
-  }
-
-  const items: FileWorkItem[] = [];
-  const walk = async (srcDir: string, dstDir: string) => {
-    const entries = await promisifySftpReaddir(sftp, srcDir);
-    for (const entry of entries) {
-      if (entry.filename === "." || entry.filename === "..") continue;
-      const srcChild = joinPath(srcDir, entry.filename);
-      const dstChild = joinPath(dstDir, entry.filename);
-
-      if (entry.attrs.isDirectory()) {
-        await walk(srcChild, dstChild);
-      } else if (entry.attrs.isFile()) {
-        items.push({
-          sourcePath: srcChild,
-          destPath: dstChild,
-          mode: entry.attrs.mode & 0o7777,
-          size: entry.attrs.size,
-        });
-      }
-    }
-  };
-
-  await walk(sourcePath, destPath);
-  return items;
 }
 
 async function scanSourcePathsForRouting(
@@ -1430,63 +1033,6 @@ async function scanSourcePathsForRouting(
   return summary;
 }
 
-async function readSftpSample(
-  sftp: SFTPWrapper,
-  path: string,
-  fileSize: number,
-): Promise<Buffer> {
-  const sampleSize = Math.min(64 * 1024, fileSize);
-  const position = Math.max(0, Math.floor((fileSize - sampleSize) / 2));
-  const handle = await promisifySftpOpen(sftp, path, SFTP_OPEN_READ, 0o666);
-  try {
-    const buffer = Buffer.alloc(sampleSize);
-    const bytesRead = await new Promise<number>((resolve, reject) => {
-      sftp.read(handle, buffer, 0, sampleSize, position, (err, count) => {
-        if (err) reject(err);
-        else resolve(count);
-      });
-    });
-    return buffer.subarray(0, bytesRead);
-  } finally {
-    await promisifySftpClose(sftp, handle).catch(() => {});
-  }
-}
-
-function promisifySftpOpen(
-  sftp: SFTPWrapper,
-  path: string,
-  flags: number,
-  mode: number,
-): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    sftp.open(path, flags, mode, (err, handle) => {
-      if (err) reject(err);
-      else resolve(handle);
-    });
-  });
-}
-
-function promisifySftpClose(sftp: SFTPWrapper, handle: Buffer): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.close(handle, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-function promisifySftpFstat(
-  sftp: SFTPWrapper,
-  handle: Buffer,
-): Promise<import("ssh2").Stats> {
-  return new Promise((resolve, reject) => {
-    sftp.fstat(handle, (err, stats) => {
-      if (err) reject(err);
-      else resolve(stats);
-    });
-  });
-}
-
 interface PipelinedXferOptions {
   fileSize?: number;
   initialOffset?: number;
@@ -1498,43 +1044,6 @@ interface PipelinedXferOptions {
   segmentIndex?: number;
   reconnect?: TransferReconnectContext;
   onResumeOffset?: (offset: number) => void;
-}
-
-interface SegmentCopyJob {
-  offset: number;
-  length: number;
-  segmentIndex: number;
-}
-
-function clampParallelSegmentCount(value?: number): number {
-  const n = value ?? DEFAULT_PARALLEL_SEGMENT_COUNT;
-  return Math.max(1, Math.min(MAX_PARALLEL_SEGMENT_COUNT, Math.floor(n)));
-}
-
-function buildSegmentCopyJobs(
-  fileSize: number,
-  initialOffset: number,
-  destResumeSize: number,
-): SegmentCopyJob[] {
-  const jobs: SegmentCopyJob[] = [];
-  for (
-    let offset = initialOffset;
-    offset < fileSize;
-    offset += SFTP_XFER_SEGMENT_SIZE
-  ) {
-    const length = Math.min(SFTP_XFER_SEGMENT_SIZE, fileSize - offset);
-    const segmentIndex = Math.floor(offset / SFTP_XFER_SEGMENT_SIZE);
-    if (destResumeSize >= offset + length) {
-      continue;
-    }
-    const start = destResumeSize > offset ? destResumeSize : offset;
-    jobs.push({
-      offset: start,
-      length: offset + length - start,
-      segmentIndex,
-    });
-  }
-  return jobs;
 }
 
 function closeAllTransferSessions(

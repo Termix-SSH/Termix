@@ -1,0 +1,32 @@
+ingress:
+  enabled: false
+
+traefik:
+  ingressRoute:
+    enabled: true
+    entryPoints:
+      - websecure
+    host: termix.example.com
+    pathPrefix: /
+    tls:
+      enabled: true
+      certResolver: letsencrypt
+
+persistence:
+  enabled: true
+  size: 20Gi
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 2Gi
+
+guacd:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

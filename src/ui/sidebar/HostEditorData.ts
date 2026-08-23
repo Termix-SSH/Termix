@@ -140,8 +140,11 @@ export function createHostEditorForm(
     keyType: host?.keyType ?? "auto",
     keySubTab: "paste" as "paste" | "upload",
     credentialId:
-      host?.credentialId ??
-      (d?.credentialId != null ? String(d.credentialId) : ""),
+      host?.credentialId != null
+        ? String(host.credentialId)
+        : d?.credentialId != null
+          ? String(d.credentialId)
+          : "",
     vaultProfileId: host?.vaultProfileId ?? "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
@@ -243,6 +246,7 @@ export function createHostEditorForm(
     linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
       "default") as "default" | "confirm" | "direct",
     agentSocketPath: host?.terminalConfig?.agentSocketPath ?? "",
+    agentIdentity: host?.terminalConfig?.agentIdentity ?? "",
     useSSHTitle: host?.terminalConfig?.useSSHTitle ?? false,
     syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     syntaxHighlightingOptions: {
@@ -409,6 +413,7 @@ export function buildHostEditorPayload(
       form.linkClickBehavior !== "default" ? form.linkClickBehavior : undefined,
     localEcho: form.localEcho !== "default" ? form.localEcho : undefined,
     agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
+    agentIdentity: usesAgent ? form.agentIdentity || null : null,
   };
   const terminalOverrides = form.inheritTerminalAppearance
     ? stripKeys(terminalConfig, terminalAppearanceKeys)
