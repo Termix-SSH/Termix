@@ -331,6 +331,10 @@ export function HostItem({
   const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
   const [parentDragOver, setParentDragOver] = useState(false);
   const [nativeRdpAvailable, setNativeRdpAvailable] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!window.electronAPI?.isElectron) return;
@@ -395,6 +399,16 @@ export function HostItem({
       }
     } catch {
       toast.error(t("hosts.nativeRdpFailed"));
+    }
+  }
+
+  async function handleWakeOnLan(e: MouseEvent) {
+    e.stopPropagation();
+    try {
+      await wakeOnLan(Number(host.id));
+      toast.success(t("hosts.wakeOnLanSuccess", { name: host.name }));
+    } catch {
+      toast.error(t("hosts.wakeOnLanError"));
     }
   }
 
@@ -504,15 +518,7 @@ export function HostItem({
       {host.macAddress && (
         <button
           title={t("hosts.wakeOnLanAction")}
-          onClick={async (e) => {
-            e.stopPropagation();
-            try {
-              await wakeOnLan(Number(host.id));
-              toast.success(t("hosts.wakeOnLanSuccess", { name: host.name }));
-            } catch {
-              toast.error(t("hosts.wakeOnLanError"));
-            }
-          }}
+          onClick={handleWakeOnLan}
           className={trayButtonClass}
         >
           <Zap className="size-3.5" />
@@ -582,12 +588,29 @@ export function HostItem({
           <Boxes className="size-3.5" />
         </button>
       )}
-      <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
+      <DropdownMenu
+        open={isMenuOpen}
+        onOpenChange={(open) => {
+          if (!open) setContextMenuPosition(null);
+          onMenuOpenChange?.(open);
+        }}
+      >
         <DropdownMenuTrigger asChild>
           <button
             title={t("hosts.moreOptions")}
-            onClick={(e) => e.stopPropagation()}
-            className={trayButtonClass}
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenuPosition(null);
+            }}
+            className={`${trayButtonClass} ${contextMenuPosition ? "fixed z-50 size-px opacity-0 pointer-events-none" : ""}`}
+            style={
+              contextMenuPosition
+                ? {
+                    left: contextMenuPosition.x,
+                    top: contextMenuPosition.y,
+                  }
+                : undefined
+            }
           >
             <MoreHorizontal className="size-3.5" />
           </button>
@@ -596,6 +619,100 @@ export function HostItem({
           align="start"
           className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
         >
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Terminal className="size-3.5 mr-2" />
+              {t("common.connect")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {sshActions.map(({ type, icon: Icon, label }) => (
+                <DropdownMenuItem
+                  key={type}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab(type);
+                  }}
+                >
+                  <Icon className="size-3.5 mr-2" />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+              {host.enableRdp && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab("rdp");
+                  }}
+                >
+                  <Monitor className="size-3.5 mr-2" />
+                  {t("hosts.connectRdp")}
+                </DropdownMenuItem>
+              )}
+              {host.enableVnc && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab("vnc");
+                  }}
+                >
+                  <MousePointerClick className="size-3.5 mr-2" />
+                  {t("hosts.connectVnc")}
+                </DropdownMenuItem>
+              )}
+              {host.enableTelnet && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab("telnet");
+                  }}
+                >
+                  <MessagesSquare className="size-3.5 mr-2" />
+                  {t("hosts.connectTelnet")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          {onEditHost && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditHost();
+              }}
+            >
+              <Pencil className="size-3.5 mr-2" />
+              {t("hosts.editHostAction")}
+            </DropdownMenuItem>
+          )}
+          {onShareHost && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onShareHost();
+              }}
+            >
+              <Share2 className="size-3.5 mr-2" />
+              {t("hosts.shareHost")}
+            </DropdownMenuItem>
+          )}
+          {host.enableProxmox && onProxmoxDiscover && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onProxmoxDiscover();
+              }}
+            >
+              <Boxes className="size-3.5 mr-2" />
+              {t("hosts.proxmoxDiscoverAction")}
+            </DropdownMenuItem>
+          )}
+          {host.macAddress && (
+            <DropdownMenuItem onClick={handleWakeOnLan}>
+              <Zap className="size-3.5 mr-2" />
+              {t("hosts.wakeOnLanAction")}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
@@ -929,6 +1046,13 @@ export function HostItem({
       }}
       onMouseEnter={() => onHoverChange?.(true)}
       onMouseLeave={() => onHoverChange?.(false)}
+      onContextMenu={(event) => {
+        if (selectionMode || arrangeMode) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setContextMenuPosition({ x: event.clientX, y: event.clientY });
+        onMenuOpenChange?.(true);
+      }}
       className={`group relative flex items-stretch select-none transition-colors hover:bg-muted/50 ${
         canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
       } ${
