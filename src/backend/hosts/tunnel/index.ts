@@ -100,7 +100,7 @@ c2sRelayWss.on("connection", (ws, req) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "127.0.0.1", () => {
   setTimeout(() => {
     initializeAutoStartTunnels();
   }, 2000);

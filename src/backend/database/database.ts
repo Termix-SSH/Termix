@@ -2034,7 +2034,7 @@ httpServer.on("error", (err: NodeJS.ErrnoException) => {
 });
 
 export const serverReady = new Promise<void>((resolve) => {
-  httpServer.listen(HTTP_PORT, async () => {
+  httpServer.listen(HTTP_PORT, "127.0.0.1", async () => {
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
@@ -2083,7 +2083,7 @@ if (
       });
     });
 
-    httpsServer.listen(sslConfig.port, () => {
+    httpsServer.listen(sslConfig.port, "127.0.0.1", () => {
       databaseLogger.success(
         `Backend is now also listening for HTTPS directly`,
         {

@@ -62,6 +62,7 @@ import {
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
   resolveServerJumpHosts,
 } from "./host-identity.js";
+import { extractWebSocketToken } from "../../utils/ws-auth.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -128,6 +129,7 @@ const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
 const userConnections = new Map<string, Set<WebSocket>>();
 
 const wss = new WebSocketServer({
+  host: "127.0.0.1",
   port: 30002,
 });
 
@@ -299,25 +301,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   try {
-    let token: string | undefined;
-
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-      const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
-    }
-
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        token = authHeader.slice("Bearer ".length);
-      }
-    }
-
-    if (!token) {
-      const qp = urlObj.searchParams.get("token");
-      if (qp) token = qp;
-    }
+    const token = extractWebSocketToken(req);
 
     if (!token) {
       ws.close(1008, "Authentication required");

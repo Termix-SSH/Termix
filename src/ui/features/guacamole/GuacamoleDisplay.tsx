@@ -250,17 +250,18 @@ export const GuacamoleDisplay = forwardRef<
           const origin = await resolveConnectionOrigin({
             connectionType: connectionProtocol,
           });
-          wsBase = await buildOriginWsUrl({
+          const target = await buildOriginWsUrl({
             origin,
             localPort: 30008,
             localPath: "/guacamole/websocket/",
             remotePath: "/guacamole/websocket/",
             includeJwt: false,
           });
-          if (!wsBase) {
+          if (!target) {
             onError?.(t("errors.remoteServerRequired"));
             return null;
           }
+          wsBase = target.url;
         } else {
           wsBase = buildGuacamoleWebSocketBaseUrl({
             isDev,

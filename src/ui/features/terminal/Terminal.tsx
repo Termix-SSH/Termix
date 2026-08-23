@@ -1201,6 +1201,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           window.location.port === "");
 
       let baseWsUrl: string;
+      let wsProtocols: string[] = [];
 
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
@@ -1223,7 +1224,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           isConnectingRef.current = false;
           return;
         }
-        baseWsUrl = resolvedUrl;
+        baseWsUrl = resolvedUrl.url;
+        wsProtocols = resolvedUrl.protocols;
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
       }
@@ -1246,7 +1248,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         connectionTimeoutRef.current = null;
       }
 
-      const ws = new WebSocket(baseWsUrl);
+      const ws = new WebSocket(baseWsUrl, wsProtocols);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
       updateConnectionError(null);

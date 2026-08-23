@@ -19,6 +19,7 @@ import {
   HOST_ADDRESS_MISMATCH_MESSAGE,
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
 } from "../terminal/host-identity.js";
+import { extractWebSocketToken } from "../../utils/ws-auth.js";
 
 const sshLogger = systemLogger;
 
@@ -35,7 +36,7 @@ interface SSHSession {
 const activeSessions = new Map<string, SSHSession>();
 
 const wss = new WebSocketServer({
-  host: "0.0.0.0",
+  host: "127.0.0.1",
   port: 30009,
 });
 
@@ -285,26 +286,7 @@ async function createJumpHostChain(
 }
 
 wss.on("connection", async (ws: WebSocket, req) => {
-  let token: string | undefined;
-
-  const cookieHeader = req.headers.cookie;
-  if (cookieHeader) {
-    const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-    if (match) token = decodeURIComponent(match[1]);
-  }
-
-  if (!token) {
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.slice("Bearer ".length);
-    }
-  }
-
-  if (!token) {
-    const urlObj = new URL(req.url || "", "http://localhost");
-    const qp = urlObj.searchParams.get("token");
-    if (qp) token = qp;
-  }
+  const token = extractWebSocketToken(req);
 
   if (!token) {
     ws.close(1008, "Authentication required");
