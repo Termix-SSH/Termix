@@ -32,14 +32,20 @@ async function read(socket: net.Socket, length: number): Promise<Buffer> {
 }
 
 describe("createMacosVncCompatibilityProxy", () => {
-  it("normalizes Apple's private RFB banner and preserves later traffic", async () => {
+  it("normalizes Apple's private RFB banner and forces classic VNC auth", async () => {
     let clientBanner = "";
+    let selectedSecurityType = 0;
     const target = net.createServer((socket) => {
       socket.write("RFB 003.");
       socket.write("889\n");
       socket.once("data", (data) => {
         clientBanner = data.toString("ascii");
-        socket.write("security-types");
+        socket.write(Buffer.from([5, 30, 33]));
+        socket.write(Buffer.from([36, 2, 35]));
+        socket.once("data", (selection) => {
+          selectedSecurityType = selection[0];
+          socket.write("desktop-data");
+        });
       });
     });
     const targetPort = await listen(target);
@@ -58,12 +64,18 @@ describe("createMacosVncCompatibilityProxy", () => {
       "RFB 003.008\n",
     );
     client.write("RFB 003.008\n");
-    expect((await read(client, 14)).toString("ascii")).toBe("security-types");
+    expect([...(await read(client, 2))]).toEqual([1, 2]);
+    client.write(Buffer.from([2]));
+    expect((await read(client, 12)).toString("ascii")).toBe("desktop-data");
     expect(clientBanner).toBe("RFB 003.008\n");
+    expect(selectedSecurityType).toBe(2);
   });
 
-  it("passes standard RFB banners through unchanged", async () => {
-    const target = net.createServer((socket) => socket.write("RFB 003.008\n"));
+  it("passes standard RFB negotiation through unchanged", async () => {
+    const target = net.createServer((socket) => {
+      socket.write("RFB 003.008\n");
+      socket.once("data", () => socket.write(Buffer.from([2, 30, 2])));
+    });
     const targetPort = await listen(target);
     closers.push(() => target.close());
     const proxy = await createMacosVncCompatibilityProxy({
@@ -76,5 +88,28 @@ describe("createMacosVncCompatibilityProxy", () => {
     const client = net.createConnection(proxy.port, "127.0.0.1");
     closers.push(() => client.destroy());
     expect((await read(client, 12)).toString("ascii")).toBe("RFB 003.008\n");
+    client.write("RFB 003.008\n");
+    expect([...(await read(client, 3))]).toEqual([2, 30, 2]);
+  });
+
+  it("passes Apple's security types through when VNC auth is unavailable", async () => {
+    const target = net.createServer((socket) => {
+      socket.write("RFB 003.889\n");
+      socket.once("data", () => socket.write(Buffer.from([2, 30, 33])));
+    });
+    const targetPort = await listen(target);
+    closers.push(() => target.close());
+    const proxy = await createMacosVncCompatibilityProxy({
+      targetHost: "127.0.0.1",
+      targetPort,
+      bindHost: "127.0.0.1",
+    });
+    closers.push(proxy.close);
+
+    const client = net.createConnection(proxy.port, "127.0.0.1");
+    closers.push(() => client.destroy());
+    expect((await read(client, 12)).toString("ascii")).toBe("RFB 003.008\n");
+    client.write("RFB 003.008\n");
+    expect([...(await read(client, 3))]).toEqual([2, 30, 33]);
   });
 });
