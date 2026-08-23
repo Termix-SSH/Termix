@@ -166,6 +166,7 @@ const GuacamoleAppInner = React.forwardRef<
       : null,
   );
   const displayRef = useRef<GuacamoleDisplayHandle>(null);
+  const [displayZoom, setDisplayZoom] = useState(1);
   const [filesystem, setFilesystem] = useState<Guacamole.Object | null>(null);
   const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
@@ -472,6 +473,7 @@ const GuacamoleAppInner = React.forwardRef<
             }),
           })
         }
+        onZoomChange={setDisplayZoom}
         onFilesystem={setFilesystem}
         onDropFiles={handleDropFiles}
         onDropUnavailable={handleDropUnavailable}
@@ -494,6 +496,7 @@ const GuacamoleAppInner = React.forwardRef<
         fileBrowserOpen={fileBrowserOpen}
         onToggleFileBrowser={() => setFileBrowserOpen((open) => !open)}
         onTouchModeChange={setTouchMode}
+        zoom={displayZoom}
       />
       {shareModalOpen && guacamoleConnectionId && (
         <ShareSessionModal

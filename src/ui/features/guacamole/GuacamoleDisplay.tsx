@@ -31,6 +31,7 @@ import {
 } from "./guacamole-file-drop.ts";
 import { guacStateToStage } from "@/components/connection/connection-status.ts";
 import type { ConnectionStage } from "@/types/connection-log.ts";
+import { clampGuacamoleZoom, stepGuacamoleZoom } from "./guacamole-zoom.ts";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -56,6 +57,9 @@ export interface GuacamoleDisplayHandle {
   sendMouse: (x: number, y: number, buttonMask: number) => void;
   setClipboard: (data: string) => void;
   getFilesystem: () => Guacamole.Object | null;
+  zoomIn: () => number;
+  zoomOut: () => number;
+  resetZoom: () => number;
 }
 
 export type GuacamoleTouchMode = "touchscreen" | "touchpad";
@@ -72,6 +76,7 @@ interface GuacamoleDisplayProps {
   onDropFiles?: (files: File[]) => void;
   onDropUnavailable?: () => void;
   onStageChange?: (stage: ConnectionStage) => void;
+  onZoomChange?: (zoom: number) => void;
 }
 
 const isDev = import.meta.env.DEV;
@@ -92,6 +97,7 @@ export const GuacamoleDisplay = forwardRef<
     onDropFiles,
     onDropUnavailable,
     onStageChange,
+    onZoomChange,
   },
   ref,
 ) {
@@ -113,6 +119,8 @@ export const GuacamoleDisplay = forwardRef<
   onStageChangeRef.current = onStageChange;
   const keyboardRef = useRef<Guacamole.Keyboard | null>(null);
   const scaleRef = useRef<number>(1);
+  const fitScaleRef = useRef<number>(1);
+  const zoomRef = useRef<number>(1);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasKeyboardFocusRef = useRef(false);
   const windowFocusedRef = useRef(
@@ -140,6 +148,24 @@ export const GuacamoleDisplay = forwardRef<
       console.warn("Failed to disconnect Guacamole client", error);
     }
   }, []);
+
+  const applyZoom = useCallback(
+    (nextZoom: number): number => {
+      const zoom = clampGuacamoleZoom(nextZoom);
+      zoomRef.current = zoom;
+      const display = clientRef.current?.getDisplay();
+      if (display && displayRef.current) {
+        const scale = fitScaleRef.current * zoom;
+        scaleRef.current = scale;
+        display.scale(scale);
+        displayRef.current.style.width = `${display.getWidth() * scale}px`;
+        displayRef.current.style.height = `${display.getHeight() * scale}px`;
+      }
+      onZoomChange?.(zoom);
+      return zoom;
+    },
+    [onZoomChange],
+  );
 
   useImperativeHandle(ref, () => ({
     disconnect: disconnectClient,
@@ -171,6 +197,9 @@ export const GuacamoleDisplay = forwardRef<
       }
     },
     getFilesystem: () => filesystemRef.current,
+    zoomIn: () => applyZoom(stepGuacamoleZoom(zoomRef.current, 1)),
+    zoomOut: () => applyZoom(stepGuacamoleZoom(zoomRef.current, -1)),
+    resetZoom: () => applyZoom(1),
   }));
 
   const getWebSocketConnection = useCallback(
@@ -315,34 +344,44 @@ export const GuacamoleDisplay = forwardRef<
     };
   }, [isVisible]);
 
-  const rescaleDisplay = useCallback((immediate: boolean = false) => {
-    if (!clientRef.current || !containerRef.current) return;
-
-    const performRescale = () => {
+  const rescaleDisplay = useCallback(
+    (immediate: boolean = false) => {
       if (!clientRef.current || !containerRef.current) return;
 
-      const display = clientRef.current.getDisplay();
-      const cWidth = containerRef.current.clientWidth;
-      const cHeight = containerRef.current.clientHeight;
-      const displayWidth = display.getWidth();
-      const displayHeight = display.getHeight();
+      const performRescale = () => {
+        if (!clientRef.current || !containerRef.current) return;
 
-      if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
-        const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
-        scaleRef.current = scale;
-        display.scale(scale);
-      }
-    };
+        const display = clientRef.current.getDisplay();
+        const cWidth = containerRef.current.clientWidth;
+        const cHeight = containerRef.current.clientHeight;
+        const displayWidth = display.getWidth();
+        const displayHeight = display.getHeight();
 
-    if (immediate) {
-      performRescale();
-    } else {
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
+        if (
+          displayWidth > 0 &&
+          displayHeight > 0 &&
+          cWidth > 0 &&
+          cHeight > 0
+        ) {
+          fitScaleRef.current = Math.min(
+            cWidth / displayWidth,
+            cHeight / displayHeight,
+          );
+          applyZoom(zoomRef.current);
+        }
+      };
+
+      if (immediate) {
+        performRescale();
+      } else {
+        if (resizeTimeoutRef.current) {
+          clearTimeout(resizeTimeoutRef.current);
+        }
+        resizeTimeoutRef.current = setTimeout(performRescale, 200);
       }
-      resizeTimeoutRef.current = setTimeout(performRescale, 200);
-    }
-  }, []);
+    },
+    [applyZoom],
+  );
 
   const connect = useCallback(async () => {
     if (isConnectingRef.current) return;
@@ -764,6 +803,51 @@ export const GuacamoleDisplay = forwardRef<
 
   useEffect(() => {
     const container = containerRef.current;
+    const protocol = connectionConfig.protocol ?? connectionConfig.type;
+    if (!container || !isReady || protocol !== "vnc") return;
+
+    let pinchDistance = 0;
+    let pinchZoom = zoomRef.current;
+    const distance = (touches: TouchList) =>
+      Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY,
+      );
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 2) return;
+      event.preventDefault();
+      event.stopPropagation();
+      pinchDistance = distance(event.touches);
+      pinchZoom = zoomRef.current;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 2 || pinchDistance === 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      applyZoom(pinchZoom * (distance(event.touches) / pinchDistance));
+    };
+    const onTouchEnd = () => {
+      pinchDistance = 0;
+    };
+
+    container.addEventListener("touchstart", onTouchStart, {
+      passive: false,
+      capture: true,
+    });
+    container.addEventListener("touchmove", onTouchMove, {
+      passive: false,
+      capture: true,
+    });
+    container.addEventListener("touchend", onTouchEnd, { capture: true });
+    return () => {
+      container.removeEventListener("touchstart", onTouchStart, true);
+      container.removeEventListener("touchmove", onTouchMove, true);
+      container.removeEventListener("touchend", onTouchEnd, true);
+    };
+  }, [applyZoom, connectionConfig.protocol, connectionConfig.type, isReady]);
+
+  useEffect(() => {
+    const container = containerRef.current;
     if (!container || !isReady) return;
 
     const handleFocus = () => syncClipboard();
@@ -818,7 +902,7 @@ export const GuacamoleDisplay = forwardRef<
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 overflow-hidden"
+      className="absolute inset-0 overflow-auto"
       style={{ backgroundColor: "var(--bg-base)" }}
       onDragEnter={handleDragEnter}
       onDragOver={(event) => {
@@ -829,7 +913,7 @@ export const GuacamoleDisplay = forwardRef<
     >
       <div
         ref={displayRef}
-        className="relative w-full h-full flex items-center justify-center"
+        className="relative flex min-h-full min-w-full items-center justify-center"
         style={{
           cursor: isReady ? "none" : "default",
           visibility: isReady ? "visible" : "hidden",
