@@ -74,7 +74,7 @@ function ResultsList({ results }: { results: FleetHostResult[] }) {
   const { t } = useTranslation();
   if (results.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+    <div className="flex flex-col gap-2">
       {results.map((r) => (
         <div
           key={r.hostId}
