@@ -1908,6 +1908,10 @@
       "collapse": "Collapse toolbar",
       "expand": "Expand toolbar",
       "dragHandle": "Drag to reposition",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetZoom": "Reset zoom",
+      "fitToScreen": "Fit to screen",
       "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
       "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
     }
