@@ -53,6 +53,7 @@ interface FileManagerGridProps {
   onDownload?: (files: FileItem[]) => void;
   onContextMenu?: (event: React.MouseEvent, file?: FileItem) => void;
   viewMode?: "grid" | "list";
+  density?: "comfortable" | "compact";
   onRename?: (file: FileItem, newName: string) => void;
   editingFile?: FileItem | null;
   onStartEdit?: (file: FileItem) => void;
@@ -89,8 +90,18 @@ const getFileTypeColor = (file: FileItem): string => {
   return "text-blue-400";
 };
 
-const getFileIcon = (file: FileItem, viewMode: "grid" | "list" = "grid") => {
-  const iconClass = viewMode === "grid" ? "w-8 h-8" : "w-6 h-6";
+const getFileIcon = (
+  file: FileItem,
+  viewMode: "grid" | "list" = "grid",
+  compact = false,
+) => {
+  const iconClass = compact
+    ? viewMode === "grid"
+      ? "size-6"
+      : "size-4"
+    : viewMode === "grid"
+      ? "size-8"
+      : "size-6";
   const colorClass = getFileTypeColor(file);
 
   if (file.type === "directory") {
@@ -170,6 +181,7 @@ export function FileManagerGrid({
   onDownload,
   onContextMenu,
   viewMode = "grid",
+  density = "comfortable",
   onRename,
   editingFile,
   onStartEdit,
@@ -197,10 +209,13 @@ export function FileManagerGrid({
   const [editingName, setEditingName] = useState("");
   const [gridCols, setGridCols] = useState(4);
 
-  const LIST_ROW_H = 41;
-  const GRID_ROW_H = 112;
-  const LIST_HEADER_H = 33;
-  const CONTENT_PAD = 16;
+  const compact = density === "compact";
+  const LIST_ROW_H = compact ? 29 : 41;
+  const GRID_ROW_H = compact ? 76 : 112;
+  const LIST_HEADER_H = compact ? 25 : 33;
+  const CONTENT_PAD = compact ? 8 : 16;
+  const GRID_GAP = compact ? 8 : 16;
+  const GRID_CELL = compact ? 76 : 112;
 
   const [dragState, setDragState] = useState<DragState>({
     type: "none",
@@ -216,15 +231,17 @@ export function FileManagerGrid({
 
     const updateCols = () => {
       const w = el.clientWidth - CONTENT_PAD * 2;
-      // gap-4 (16px) + ~min cell 96px
-      const n = Math.max(2, Math.min(8, Math.floor((w + 16) / 112)));
+      const n = Math.max(
+        2,
+        Math.min(10, Math.floor((w + GRID_GAP) / GRID_CELL)),
+      );
       setGridCols(n);
     };
     updateCols();
     const ro = new ResizeObserver(updateCols);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [viewMode]);
+  }, [viewMode, CONTENT_PAD, GRID_GAP, GRID_CELL]);
 
   const gridRowCount = useMemo(
     () => (viewMode === "grid" ? Math.ceil(files.length / gridCols) : 0),
@@ -252,7 +269,14 @@ export function FileManagerGrid({
   useLayoutEffect(() => {
     if (viewMode === "list") listVirtualizer.measure();
     else gridVirtualizer.measure();
-  }, [viewMode, files.length, editingFile?.path, createIntent, gridCols]);
+  }, [
+    viewMode,
+    density,
+    files.length,
+    editingFile?.path,
+    createIntent,
+    gridCols,
+  ]);
 
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -558,7 +582,8 @@ export function FileManagerGrid({
             const contentLeft = selectionBox.left - CONTENT_PAD;
             const contentRight = selectionBox.right - CONTENT_PAD;
             const cellW =
-              (gridRef.current.clientWidth - CONTENT_PAD * 2 + 16) / gridCols;
+              (gridRef.current.clientWidth - CONTENT_PAD * 2 + GRID_GAP) /
+              gridCols;
             const startCol = Math.max(0, Math.floor(contentLeft / cellW));
             const endCol = Math.min(
               gridCols - 1,
@@ -618,6 +643,7 @@ export function FileManagerGrid({
       files,
       onSelectionChange,
       viewMode,
+      GRID_GAP,
       createIntent,
       gridCols,
       gridRowCount,
@@ -921,7 +947,8 @@ export function FileManagerGrid({
         <div
           ref={gridRef}
           className={cn(
-            "absolute inset-0 p-4 overflow-y-auto thin-scrollbar",
+            "absolute inset-0 overflow-y-auto thin-scrollbar",
+            compact ? "p-2" : "p-4",
             dragState.type === "external" &&
               "bg-muted/20 border-2 border-dashed border-primary",
           )}
@@ -956,10 +983,10 @@ export function FileManagerGrid({
               </span>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="flex flex-col gap-4">
+            <div className={cn("flex flex-col", compact ? "gap-2" : "gap-4")}>
               {createIntent && (
                 <div
-                  className="grid gap-4"
+                  className={cn("grid", compact ? "gap-2" : "gap-4")}
                   style={{
                     gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
                   }}
@@ -989,7 +1016,10 @@ export function FileManagerGrid({
                       }}
                     >
                       <div
-                        className="grid gap-4 pb-4"
+                        className={cn(
+                          "grid",
+                          compact ? "gap-2 pb-2" : "gap-4 pb-4",
+                        )}
                         style={{
                           gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
                         }}
@@ -1004,7 +1034,8 @@ export function FileManagerGrid({
                               data-file-path={file.path}
                               draggable={true}
                               className={cn(
-                                "group flex flex-col items-center p-3 rounded-none border-2 border-transparent transition-all cursor-pointer hover:bg-muted/50 select-none",
+                                "group flex flex-col items-center rounded-none border-2 border-transparent transition-all cursor-pointer hover:bg-muted/50 select-none",
+                                compact ? "p-1.5" : "p-3",
                                 isSelected &&
                                   "bg-accent-brand/10 border-accent-brand/40",
                                 dragState.target?.path === file.path &&
@@ -1026,8 +1057,13 @@ export function FileManagerGrid({
                               onDrop={(e) => handleFileDrop(e, file)}
                               onDragEnd={handleFileDragEnd}
                             >
-                              <div className="relative mb-2 pointer-events-none">
-                                {getFileIcon(file, viewMode)}
+                              <div
+                                className={cn(
+                                  "relative pointer-events-none",
+                                  compact ? "mb-1" : "mb-2",
+                                )}
+                              >
+                                {getFileIcon(file, viewMode, compact)}
                               </div>
                               <div className="w-full flex flex-col items-center pointer-events-none">
                                 {editingFile?.path === file.path ? (
@@ -1046,7 +1082,10 @@ export function FileManagerGrid({
                                   />
                                 ) : (
                                   <p
-                                    className="text-[11px] font-bold tracking-tight text-center truncate w-full px-1"
+                                    className={cn(
+                                      "font-bold tracking-tight text-center truncate w-full px-1",
+                                      compact ? "text-[10px]" : "text-[11px]",
+                                    )}
                                     title={file.name}
                                   >
                                     {file.name}
@@ -1079,7 +1118,12 @@ export function FileManagerGrid({
             </div>
           ) : (
             <div className="flex flex-col">
-              <div className="grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border sticky top-0 bg-card z-10">
+              <div
+                className={cn(
+                  "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card",
+                  compact ? "px-2 py-1" : "px-4 py-2",
+                )}
+              >
                 <div
                   className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors"
                   onClick={() => onSortChange?.("name")}
@@ -1150,7 +1194,10 @@ export function FileManagerGrid({
                         data-file-path={file.path}
                         draggable={true}
                         className={cn(
-                          "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center text-xs cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
+                          "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
+                          compact
+                            ? "px-2 py-1 text-[11px]"
+                            : "px-4 py-2 text-xs",
                           isSelected && "bg-accent-brand/10",
                           dragState.target?.path === file.path &&
                             "bg-accent-brand/20 border-accent-brand border-dashed",
@@ -1169,9 +1216,14 @@ export function FileManagerGrid({
                         onDrop={(e) => handleFileDrop(e, file)}
                         onDragEnd={handleFileDragEnd}
                       >
-                        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
+                        <div
+                          className={cn(
+                            "flex items-center overflow-hidden pointer-events-none",
+                            compact ? "gap-2" : "gap-3",
+                          )}
+                        >
                           <div className="shrink-0">
-                            {getFileIcon(file, viewMode)}
+                            {getFileIcon(file, viewMode, compact)}
                           </div>
                           {editingFile?.path === file.path ? (
                             <input

@@ -154,6 +154,11 @@ function FileManagerContent({
     const saved = localStorage.getItem("fileManagerViewMode");
     return saved === "grid" || saved === "list" ? saved : "grid";
   });
+  const [density, setDensity] = useState<"comfortable" | "compact">(() =>
+    localStorage.getItem("fileManagerDensity") === "compact"
+      ? "compact"
+      : "comfortable",
+  );
   // Picking an interface preset seeds this key from another part of the app.
   useEffect(() => {
     const handler = () => {
@@ -883,6 +888,25 @@ function FileManagerContent({
       setCurrentPath(path);
     }
   }, [navIndex, navHistory, sshSessionId]);
+
+  useEffect(() => {
+    const handleMouseNavigation = (event: MouseEvent) => {
+      if (event.button !== 3 && event.button !== 4) return;
+      event.preventDefault();
+      if (event.button === 3) goBack();
+      else goForward();
+    };
+    const preventBrowserMouseNavigation = (event: MouseEvent) => {
+      if (event.button === 3 || event.button === 4) event.preventDefault();
+    };
+
+    window.addEventListener("mouseup", handleMouseNavigation);
+    window.addEventListener("auxclick", preventBrowserMouseNavigation);
+    return () => {
+      window.removeEventListener("mouseup", handleMouseNavigation);
+      window.removeEventListener("auxclick", preventBrowserMouseNavigation);
+    };
+  }, [goBack, goForward]);
 
   const goUp = useCallback(() => {
     if (currentPath === "/") return;
@@ -3146,6 +3170,10 @@ function FileManagerContent({
   }, [viewMode]);
 
   useEffect(() => {
+    localStorage.setItem("fileManagerDensity", density);
+  }, [density]);
+
+  useEffect(() => {
     localStorage.setItem("fileManagerSortBy", sortBy);
     localStorage.setItem("fileManagerSortOrder", sortOrder);
   }, [sortBy, sortOrder]);
@@ -3223,6 +3251,8 @@ function FileManagerContent({
           setSearchQuery={setSearchQuery}
           viewMode={viewMode}
           setViewMode={setViewMode}
+          density={density}
+          setDensity={setDensity}
           sortBy={sortBy}
           setSortBy={setSortBy}
           sortOrder={sortOrder}
@@ -3304,6 +3334,7 @@ function FileManagerContent({
                 }
                 onContextMenu={handleContextMenu}
                 viewMode={viewMode}
+                density={density}
                 onRename={handleRenameConfirm}
                 editingFile={editingFile}
                 onStartEdit={handleStartEdit}
