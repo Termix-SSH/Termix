@@ -550,8 +550,9 @@ export function AppShell({
     });
   }, []);
   const skipSplitSyncRef = useRef(false);
+  const activeTabAvailable = tabs.some((tab) => tab.id === activeTabId);
   useEffect(() => {
-    const active = tabsRef.current.find((tab) => tab.id === activeTabId);
+    const active = tabs.find((tab) => tab.id === activeTabId);
     const config = active?.type === "split-screen" ? active.splitConfig : null;
     skipSplitSyncRef.current = true;
     if (!config) {
@@ -565,7 +566,7 @@ export function AppShell({
     setRowSizes(config.rowSizes);
     setRowColSizes(config.rowColSizes);
     setFocusedPaneIndex(0);
-  }, [activeTabId]);
+  }, [activeTabId, activeTabAvailable]);
 
   useEffect(() => {
     if (skipSplitSyncRef.current) {
