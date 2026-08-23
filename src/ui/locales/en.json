@@ -2511,6 +2511,7 @@
     "selectFilesystem": "Select filesystem",
     "temperature": "Temperature",
     "highestTemperature": "Highest temperature",
+    "primaryTemperatureSensor": "Primary sensor",
     "failedToFetchHostConfig": "Failed to fetch host configuration",
     "serverOffline": "Server Offline",
     "cannotFetchMetrics": "Cannot fetch metrics from offline server",

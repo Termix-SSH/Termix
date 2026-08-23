@@ -26,8 +26,22 @@ fan1:          1200 RPM
 `);
 
     expect(result).toEqual([
-      { label: "Package id 0", celsius: 52 },
-      { label: "Core 0", celsius: 48.5 },
+      { label: "coretemp-isa-0000: Package id 0", celsius: 52 },
+      { label: "coretemp-isa-0000: Core 0", celsius: 48.5 },
+    ]);
+  });
+
+  it("keeps duplicate sensor names distinct across devices", () => {
+    const result = parseSensorsOutput(`
+nvme-pci-0100
+Composite: +41.0°C
+nvme-pci-0200
+Composite: +52.0°C
+`);
+
+    expect(result).toEqual([
+      { label: "nvme-pci-0100: Composite", celsius: 41 },
+      { label: "nvme-pci-0200: Composite", celsius: 52 },
     ]);
   });
 });
