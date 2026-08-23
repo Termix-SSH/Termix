@@ -226,7 +226,7 @@ export const GuacamoleDisplay = forwardRef<
             localPort: 30008,
             localPath: "/guacamole/websocket/",
             remotePath: "/guacamole/websocket/",
-            includeLocalJwt: false,
+            includeJwt: false,
           });
           if (!wsBase) {
             onError?.(t("errors.remoteServerRequired"));

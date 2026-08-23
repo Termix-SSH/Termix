@@ -23,6 +23,7 @@ import {
 } from "../../utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
 import { buildRdpSettings, resolveRdpDomain } from "./rdp-settings.js";
+import { createMacosVncCompatibilityProxy } from "./macos-vnc-proxy.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -495,20 +496,24 @@ router.post(
         }
       }
 
+      let tunnelEndpoint: ReturnType<typeof resolveJumpTunnelEndpoint> | null =
+        null;
+      if (jumpHosts.length > 0 || (connectionType === "vnc" && !username)) {
+        let guacdUrl: string | undefined;
+        try {
+          guacdUrl =
+            (await createCurrentSettingsRepository().get("guac_url")) ??
+            undefined;
+        } catch {
+          // Environment/default guacd configuration remains available.
+        }
+        const guacdHost =
+          perConnectionGuacdHost || resolveGuacdOptions(guacdUrl).host;
+        tunnelEndpoint = resolveJumpTunnelEndpoint(guacdHost);
+      }
+
       if (jumpHosts.length > 0) {
         try {
-          let guacdUrl: string | undefined;
-          try {
-            guacdUrl =
-              (await createCurrentSettingsRepository().get("guac_url")) ??
-              undefined;
-          } catch {
-            // Environment/default guacd configuration remains available.
-          }
-          const guacdHost =
-            perConnectionGuacdHost || resolveGuacdOptions(guacdUrl).host;
-          const tunnelEndpoint = resolveJumpTunnelEndpoint(guacdHost);
-
           // The chain dials the first hop through that hop's own SOCKS5
           // settings; the target host's proxy config does not apply to it.
           const jumpClient = await createJumpHostChain(jumpHosts, userId);
@@ -543,7 +548,7 @@ router.post(
               );
             });
             server.on("error", reject);
-            server.listen(0, tunnelEndpoint.bindHost, () => {
+            server.listen(0, tunnelEndpoint!.bindHost, () => {
               const addr = server.address() as net.AddressInfo;
               // Auto-cleanup after 1 hour
               setTimeout(
@@ -556,7 +561,7 @@ router.post(
               resolve(addr.port);
             });
           });
-          hostname = tunnelEndpoint.advertisedHost;
+          hostname = tunnelEndpoint!.advertisedHost;
           port = tunnelPort;
           guacLogger.info("SSH tunnel established for guacamole", {
             operation: "guac_ssh_tunnel",
@@ -570,6 +575,36 @@ router.post(
           });
           return res.status(500).json({
             error: "Failed to establish SSH tunnel to remote host",
+          });
+        }
+      }
+
+      if (connectionType === "vnc" && !username) {
+        try {
+          const proxy = await createMacosVncCompatibilityProxy({
+            targetHost: hostname,
+            targetPort: port,
+            bindHost: tunnelEndpoint!.bindHost,
+          });
+          hostname = tunnelEndpoint!.advertisedHost;
+          port = proxy.port;
+          setTimeout(proxy.close, 60 * 60 * 1000).unref();
+          guacLogger.info("VNC compatibility proxy established", {
+            operation: "guac_vnc_compatibility_proxy",
+            hostId,
+            proxyPort: port,
+          });
+        } catch (proxyError) {
+          guacLogger.error(
+            "Failed to establish VNC compatibility proxy",
+            proxyError,
+            {
+              operation: "guac_vnc_compatibility_proxy_error",
+              hostId,
+            },
+          );
+          return res.status(500).json({
+            error: "Failed to establish VNC compatibility proxy",
           });
         }
       }
