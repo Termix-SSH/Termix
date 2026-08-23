@@ -566,6 +566,9 @@ export function UserProfilePanel({
   const [totpLoading, setTotpLoading] = useState(false);
   const [showDisableTotp, setShowDisableTotp] = useState(false);
   const [disableTotpInput, setDisableTotpInput] = useState("");
+  const [showAddTotp, setShowAddTotp] = useState(false);
+  const [addTotpInput, setAddTotpInput] = useState("");
+  const [addingTotpAuthenticator, setAddingTotpAuthenticator] = useState(false);
   const [passkeys, setPasskeys] = useState<WebAuthnCredentialSummary[]>([]);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyName, setPasskeyName] = useState("");
@@ -1204,6 +1207,29 @@ export function UserProfilePanel({
       setTotpStep("setup");
     } catch {
       toast.error(t("newUi.sidebar.userProfile.totpSetupFailed"));
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleAddTotpAuthenticator() {
+    if (!addTotpInput) {
+      toast.error(t("newUi.sidebar.userProfile.totpAddInputRequired"));
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const result = await setupTOTP(addTotpInput);
+      setTotpQrCode(result.qr_code);
+      setTotpSecret(result.secret);
+      setAddingTotpAuthenticator(true);
+      setShowAddTotp(false);
+      setAddTotpInput("");
+      setTotpStep("setup");
+    } catch (e: unknown) {
+      toast.error(
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpAddFailed")),
+      );
     } finally {
       setTotpLoading(false);
     }
@@ -2153,14 +2179,25 @@ export function UserProfilePanel({
                 </span>
               </div>
               {totpEnabled ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 ml-3 text-[10px] h-7 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setShowDisableTotp((o) => !o)}
-                >
-                  {t("newUi.sidebar.userProfile.disable")}
-                </Button>
+                <div className="ml-3 flex shrink-0 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                    onClick={() => setShowAddTotp((open) => !open)}
+                    disabled={totpLoading || totpStep !== "idle"}
+                  >
+                    {t("newUi.sidebar.userProfile.totpAddAuthenticator")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setShowDisableTotp((o) => !o)}
+                  >
+                    {t("newUi.sidebar.userProfile.disable")}
+                  </Button>
+                </div>
               ) : (
                 <Button
                   variant="outline"
@@ -2173,6 +2210,50 @@ export function UserProfilePanel({
                 </Button>
               )}
             </div>
+
+            {totpEnabled && showAddTotp && (
+              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpAddTitle")}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpAddDescription")}
+                </span>
+                <Input
+                  placeholder={t(
+                    "newUi.sidebar.userProfile.totpDisablePlaceholder",
+                  )}
+                  value={addTotpInput}
+                  onChange={(e) => setAddTotpInput(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleAddTotpAuthenticator()
+                  }
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setShowAddTotp(false);
+                      setAddTotpInput("");
+                    }}
+                  >
+                    {t("newUi.sidebar.userProfile.cancel")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                    onClick={handleAddTotpAuthenticator}
+                    disabled={totpLoading}
+                  >
+                    {t("common.continue")}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Disable TOTP form */}
             {totpEnabled && showDisableTotp && (
@@ -2214,14 +2295,17 @@ export function UserProfilePanel({
             )}
 
             {/* TOTP setup: scan QR */}
-            {!totpEnabled && totpStep === "setup" && (
+            {totpStep === "setup" && (
               <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     {t("newUi.sidebar.userProfile.setupTotp")}
                   </span>
                   <button
-                    onClick={() => setTotpStep("idle")}
+                    onClick={() => {
+                      setTotpStep("idle");
+                      setAddingTotpAuthenticator(false);
+                    }}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-3.5" />
@@ -2257,15 +2341,33 @@ export function UserProfilePanel({
                   </button>
                 </div>
                 <span className="text-[10px] text-muted-foreground text-center">
-                  {t("newUi.sidebar.userProfile.totpInstructions")}
+                  {t(
+                    addingTotpAuthenticator
+                      ? "newUi.sidebar.userProfile.totpAddScanInstructions"
+                      : "newUi.sidebar.userProfile.totpInstructions",
+                  )}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  onClick={() => setTotpStep("verify")}
+                  onClick={() => {
+                    if (addingTotpAuthenticator) {
+                      setAddingTotpAuthenticator(false);
+                      setTotpStep("idle");
+                      toast.success(
+                        t("newUi.sidebar.userProfile.totpAddSuccess"),
+                      );
+                    } else {
+                      setTotpStep("verify");
+                    }
+                  }}
                 >
-                  {t("newUi.sidebar.userProfile.totpContinueVerify")}
+                  {t(
+                    addingTotpAuthenticator
+                      ? "newUi.sidebar.userProfile.done"
+                      : "newUi.sidebar.userProfile.totpContinueVerify",
+                  )}
                 </Button>
               </div>
             )}
