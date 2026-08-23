@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw, Usb, TriangleAlert } from "lucide-react";
 import { Input } from "@/components/input";
 import { isElectron } from "@/lib/electron";
+import { websocketAuthProtocols } from "@/lib/ws-auth";
 import type { SerialConfig } from "@/types/ui-types";
 
 const BAUD_RATES = [
@@ -34,9 +35,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
   const buildWsUrl = () => {
     // Serial is always local -- the device is physically attached to this
     // desktop machine, so it never routes through a remote server.
-    const token = localStorage.getItem("jwt");
-    const base = "ws://127.0.0.1:30011";
-    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+    return "ws://127.0.0.1:30011";
   };
 
   const refreshPorts = useCallback(() => {
@@ -48,7 +47,10 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
       return;
     }
 
-    const ws = new WebSocket(url);
+    const ws = new WebSocket(
+      url,
+      websocketAuthProtocols(localStorage.getItem("jwt")),
+    );
     ws.onopen = () => ws.send(JSON.stringify({ type: "list_ports" }));
     ws.onmessage = (ev) => {
       try {

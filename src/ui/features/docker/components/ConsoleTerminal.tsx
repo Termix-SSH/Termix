@@ -313,6 +313,7 @@ function ConsoleTerminalInner({
           window.location.port === "");
 
       let baseWsUrl: string;
+      let wsProtocols: string[] = [];
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30009`;
       } else if (isElectronApp) {
@@ -331,12 +332,13 @@ function ConsoleTerminalInner({
           toast.error(t("errors.remoteServerRequired"));
           return;
         }
-        baseWsUrl = resolvedUrl;
+        baseWsUrl = resolvedUrl.url;
+        wsProtocols = resolvedUrl.protocols;
       } else {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/docker/console/`;
       }
 
-      const ws = new WebSocket(baseWsUrl);
+      const ws = new WebSocket(baseWsUrl, wsProtocols);
 
       ws.onopen = () => {
         const cols = terminal.cols || 80;

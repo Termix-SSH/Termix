@@ -12,6 +12,10 @@ services:
       GUACD_HOST: "guacd"
       GUACD_TUNNEL_HOST: "termix"
       GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      # Hardened deployments can require keys from environment variables or
+      # Docker secrets mounted through JWT_SECRET_FILE, DATABASE_KEY_FILE,
+      # ENCRYPTION_KEY_FILE and INTERNAL_AUTH_TOKEN_FILE.
+      # TERMIX_REQUIRE_EXTERNAL_SECRETS: "true"
       # Trusted reverse-proxy authentication is disabled by default. When
       # enabled, do not expose this container directly to untrusted clients.
       # TRUSTED_PROXY_AUTH_ENABLED: "true"

@@ -3128,7 +3128,7 @@ process.on("SIGTERM", () => {
 const PORT = 30004;
 
 try {
-  const server = app.listen(PORT, async () => {
+  const server = app.listen(PORT, "127.0.0.1", async () => {
     try {
       await authManager.initialize();
     } catch (err) {

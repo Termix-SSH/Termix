@@ -12,6 +12,35 @@ class SystemCrypto {
 
   private constructor() {}
 
+  private async readExternalSecret(
+    name: string,
+    minimumLength: number,
+  ): Promise<string | null> {
+    const direct = process.env[name]?.trim();
+    if (direct && direct.length >= minimumLength) return direct;
+
+    const secretFile = process.env[`${name}_FILE`]?.trim();
+    if (!secretFile) return null;
+    const value = (await fs.readFile(secretFile, "utf8")).trim();
+    if (value.length < minimumLength) {
+      throw new Error(`${name}_FILE contains a secret that is too short`);
+    }
+    return value;
+  }
+
+  private requireExternalSecret(name: string): never {
+    throw new Error(
+      `${name} must be supplied through ${name} or ${name}_FILE when TERMIX_REQUIRE_EXTERNAL_SECRETS=true`,
+    );
+  }
+
+  private parseExternalHexKey(name: string, value: string): Buffer {
+    if (!/^[0-9a-f]{64}$/i.test(value)) {
+      throw new Error(`${name} must contain exactly 64 hexadecimal characters`);
+    }
+    return Buffer.from(value, "hex");
+  }
+
   static getInstance(): SystemCrypto {
     if (!this.instance) {
       this.instance = new SystemCrypto();
@@ -21,8 +50,8 @@ class SystemCrypto {
 
   async initializeJWTSecret(): Promise<void> {
     try {
-      const envSecret = process.env.JWT_SECRET;
-      if (envSecret && envSecret.length >= 64) {
+      const envSecret = await this.readExternalSecret("JWT_SECRET", 64);
+      if (envSecret) {
         this.jwtSecret = envSecret;
         return;
       }
@@ -39,7 +68,6 @@ class SystemCrypto {
           databaseLogger.success("JWT secret loaded from .env file", {
             operation: "jwt_init_from_file_success",
             secretLength: jwtMatch[1].length,
-            secretPrefix: jwtMatch[1].substring(0, 8) + "...",
           });
           return;
         } else {
@@ -56,6 +84,9 @@ class SystemCrypto {
         // expected - env file may not exist
       }
 
+      if (process.env.TERMIX_REQUIRE_EXTERNAL_SECRETS === "true") {
+        this.requireExternalSecret("JWT_SECRET");
+      }
       await this.generateAndGuideUser();
     } catch (error) {
       databaseLogger.error("Failed to initialize JWT secret", error, {
@@ -77,9 +108,9 @@ class SystemCrypto {
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
 
-      const envKey = process.env.DATABASE_KEY;
-      if (envKey && envKey.length >= 64) {
-        this.databaseKey = Buffer.from(envKey, "hex");
+      const envKey = await this.readExternalSecret("DATABASE_KEY", 64);
+      if (envKey) {
+        this.databaseKey = this.parseExternalHexKey("DATABASE_KEY", envKey);
         return;
       }
 
@@ -97,6 +128,9 @@ class SystemCrypto {
         // expected - env file may not exist
       }
 
+      if (process.env.TERMIX_REQUIRE_EXTERNAL_SECRETS === "true") {
+        this.requireExternalSecret("DATABASE_KEY");
+      }
       await this.generateAndGuideDatabaseKey();
     } catch (error) {
       databaseLogger.error("Failed to initialize database key", error, {
@@ -119,9 +153,9 @@ class SystemCrypto {
       const dataDir = process.env.DATA_DIR || "./db/data";
       const envPath = path.join(dataDir, ".env");
 
-      const envKey = process.env.ENCRYPTION_KEY;
-      if (envKey && envKey.length >= 64) {
-        this.encryptionKey = Buffer.from(envKey, "hex");
+      const envKey = await this.readExternalSecret("ENCRYPTION_KEY", 64);
+      if (envKey) {
+        this.encryptionKey = this.parseExternalHexKey("ENCRYPTION_KEY", envKey);
         return;
       }
 
@@ -137,6 +171,9 @@ class SystemCrypto {
         // expected - env file may not exist
       }
 
+      if (process.env.TERMIX_REQUIRE_EXTERNAL_SECRETS === "true") {
+        this.requireExternalSecret("ENCRYPTION_KEY");
+      }
       await this.generateAndGuideEncryptionKey();
     } catch (error) {
       databaseLogger.error("Failed to initialize encryption key", error, {
@@ -156,8 +193,8 @@ class SystemCrypto {
 
   async initializeInternalAuthToken(): Promise<void> {
     try {
-      const envToken = process.env.INTERNAL_AUTH_TOKEN;
-      if (envToken && envToken.length >= 32) {
+      const envToken = await this.readExternalSecret("INTERNAL_AUTH_TOKEN", 32);
+      if (envToken) {
         this.internalAuthToken = envToken;
         return;
       }
@@ -177,6 +214,9 @@ class SystemCrypto {
         // expected - env file may not exist
       }
 
+      if (process.env.TERMIX_REQUIRE_EXTERNAL_SECRETS === "true") {
+        this.requireExternalSecret("INTERNAL_AUTH_TOKEN");
+      }
       await this.generateAndGuideInternalAuthToken();
     } catch (error) {
       databaseLogger.error("Failed to initialize internal auth token", error, {

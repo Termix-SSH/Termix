@@ -318,7 +318,7 @@ app.delete("/activity/reset", async (req, res) => {
 app.use("/service-links", dashboardServiceLinksRouter);
 
 const PORT = 30006;
-app.listen(PORT, async () => {
+app.listen(PORT, "127.0.0.1", async () => {
   try {
     await authManager.initialize();
   } catch (err) {

@@ -116,18 +116,21 @@ describe("buildOriginWsUrl", () => {
 
   it("carries the local JWT by default", async () => {
     // Every interactive channel on the embedded backend relies on this.
-    const url = await buildOriginWsUrl({
+    const target = await buildOriginWsUrl({
       origin: "local",
       localPort: 30009,
       localPath: "/docker/console/",
       remotePath: "/docker/console/",
     });
 
-    expect(url).toBe("ws://127.0.0.1:30009/docker/console/?token=local-jwt");
+    expect(target).toEqual({
+      url: "ws://127.0.0.1:30009/docker/console/",
+      protocols: ["termix.jwt.local-jwt"],
+    });
   });
 
   it("omits it only when a caller asks", async () => {
-    const url = await buildOriginWsUrl({
+    const target = await buildOriginWsUrl({
       origin: "local",
       localPort: 30009,
       localPath: "/docker/console/",
@@ -135,7 +138,10 @@ describe("buildOriginWsUrl", () => {
       includeJwt: false,
     });
 
-    expect(url).toBe("ws://127.0.0.1:30009/docker/console/");
+    expect(target).toEqual({
+      url: "ws://127.0.0.1:30009/docker/console/",
+      protocols: [],
+    });
   });
 
   it("does not duplicate the Guacamole token on remote connections", async () => {
@@ -149,7 +155,7 @@ describe("buildOriginWsUrl", () => {
       },
     };
 
-    const url = await buildOriginWsUrl({
+    const target = await buildOriginWsUrl({
       origin: "remote",
       localPort: 30008,
       localPath: "/guacamole/websocket/",
@@ -157,19 +163,25 @@ describe("buildOriginWsUrl", () => {
       includeJwt: false,
     });
 
-    expect(url).toBe("wss://termix.example/guacamole/websocket/");
+    expect(target).toEqual({
+      url: "wss://termix.example/guacamole/websocket/",
+      protocols: [],
+    });
   });
 
   it("leaves the URL alone when there is no token stored", async () => {
     delete store.jwt;
 
-    const url = await buildOriginWsUrl({
+    const target = await buildOriginWsUrl({
       origin: "local",
       localPort: 30002,
       localPath: "",
       remotePath: "/ssh/websocket/",
     });
 
-    expect(url).toBe("ws://127.0.0.1:30002");
+    expect(target).toEqual({
+      url: "ws://127.0.0.1:30002",
+      protocols: [],
+    });
   });
 });

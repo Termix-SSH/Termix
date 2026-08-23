@@ -21,7 +21,7 @@ const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
 const crypto = require("crypto");
-const { URL } = require("url");
+const { URL, pathToFileURL } = require("url");
 const { fork, spawn } = require("child_process");
 const pty = require("node-pty");
 const WebSocket = require("ws");
@@ -1193,11 +1193,12 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
+      sandbox: true,
+      webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
       partition: termixSessionPartition,
-      allowRunningInsecureContent: true,
-      webviewTag: true,
+      allowRunningInsecureContent: false,
+      webviewTag: false,
       offscreen: false,
     },
     show: true,
@@ -1376,6 +1377,13 @@ function createWindow() {
       // invalid URL, ignore
     }
     return { action: "deny" };
+  });
+
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const allowedUrl = isDev
+      ? url.startsWith("http://localhost:5173/")
+      : url === pathToFileURL(path.join(appRoot, "dist", "index.html")).href;
+    if (!allowedUrl) event.preventDefault();
   });
 }
 

@@ -1,5 +1,28 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+const ALLOWED_INVOKE_CHANNELS = new Set([
+  "check-electron-update",
+  "clear-remote-sync-config",
+  "get-desktop-settings",
+  "get-legacy-server-config",
+  "get-remote-sync-config",
+  "get-remote-sync-jwt",
+  "get-remote-sync-status",
+  "get-remote-sync-user-info",
+  "remote-sync-now",
+  "save-desktop-settings",
+  "save-remote-sync-config",
+  "save-remote-sync-jwt",
+  "test-server-connection",
+]);
+
+function invokeAllowed(channel, ...args) {
+  if (!ALLOWED_INVOKE_CHANNELS.has(channel)) {
+    return Promise.reject(new Error(`IPC channel is not allowed: ${channel}`));
+  }
+  return ipcRenderer.invoke(channel, ...args);
+}
+
 contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   getPlatform: () => ipcRenderer.invoke("get-platform"),
@@ -103,7 +126,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener(channel, listener);
   },
 
-  invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+  invoke: invokeAllowed,
 });
 
 contextBridge.exposeInMainWorld("electronClipboard", {
