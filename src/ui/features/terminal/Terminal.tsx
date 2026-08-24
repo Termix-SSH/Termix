@@ -1182,6 +1182,57 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }, delay);
     }
 
+    // A persisted session that timed out reconnects to a fresh shell below.
+    // Say so, and offer the setting that would have kept it alive.
+    async function explainSessionExpiry() {
+      const hostLabel = hostConfig.name || hostConfig.ip;
+      let minutes: number | null = null;
+      try {
+        const { getTerminalSessionSettings } = await import(
+          "@/api/settings-api"
+        );
+        minutes = (await getTerminalSessionSettings()).timeoutMinutes;
+      } catch {
+        /* the notice still makes sense without the number */
+      }
+      const notice = minutes
+        ? t("terminal.sessionExpiredNotice", { host: hostLabel, minutes })
+        : t("terminal.sessionExpiredNoticeNoMinutes", { host: hostLabel });
+      addLog({ type: "warning", stage: "connection", message: notice });
+
+      const canEnable =
+        typeof hostConfig.id === "number" &&
+        !hostConfig.terminalConfig?.autoTmux &&
+        !hostConfig.joinShareId;
+      toast.warning(notice, {
+        duration: 15000,
+        ...(canEnable
+          ? {
+              action: {
+                label: t("terminal.enableAutoTmuxAction"),
+                onClick: () => {
+                  void import("@/api/host-terminal-config-api")
+                    .then(({ setHostAutoTmux }) =>
+                      setHostAutoTmux(hostConfig.id as number, true),
+                    )
+                    .then(() => {
+                      window.dispatchEvent(
+                        new CustomEvent("termix:hosts-changed"),
+                      );
+                      toast.success(
+                        t("terminal.autoTmuxEnabled", { host: hostLabel }),
+                      );
+                    })
+                    .catch(() =>
+                      toast.error(t("terminal.autoTmuxEnableFailed")),
+                    );
+                },
+              },
+            }
+          : {}),
+      });
+    }
+
     async function connectToHost(cols: number, rows: number) {
       if (isConnectingRef.current) {
         return;
@@ -1979,6 +2030,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             isAttachingSessionRef.current = false;
             sessionIdRef.current = null;
             wasSessionExpiredRef.current = true;
+            void explainSessionExpiry();
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
                 patchOpenTab(hostConfig.instanceId!, {

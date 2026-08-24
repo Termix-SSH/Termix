@@ -94,6 +94,10 @@ import {
   type AdminUser,
 } from "./AdminManagementSections";
 import { toast } from "sonner";
+import {
+  getTerminalSessionSettings,
+  updateTerminalSessionSettings,
+} from "@/api/settings-api";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
   AdminDatabaseSection,
@@ -154,6 +158,12 @@ export function AdminSettingsPanel({
   const [allowPasswordLogin, setAllowPasswordLogin] = useState(true);
   const [allowPasswordReset, setAllowPasswordReset] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("24");
+  const [terminalTimeout, setTerminalTimeout] = useState("30");
+  useEffect(() => {
+    getTerminalSessionSettings()
+      .then((settings) => setTerminalTimeout(String(settings.timeoutMinutes)))
+      .catch(() => {});
+  }, []);
   const [statusInterval, setStatusInterval] = useState("60");
   const [metricsInterval, setMetricsInterval] = useState("30");
   const [metricsHistoryRetention, setMetricsHistoryRetention] = useState("7");
@@ -689,6 +699,20 @@ export function AdminSettingsPanel({
     }
   }
 
+  async function handleSaveTerminalTimeout() {
+    const minutes = parseInt(terminalTimeout, 10);
+    if (isNaN(minutes) || minutes < 1 || minutes > 1440) {
+      toast.error(t("admin.terminalSessionTimeoutRange"));
+      return;
+    }
+    try {
+      await updateTerminalSessionSettings({ timeoutMinutes: minutes });
+      toast.success(t("admin.terminalSessionTimeoutSaved"));
+    } catch {
+      toast.error(t("admin.terminalSessionTimeoutSaveFailed"));
+    }
+  }
+
   async function handleSaveMonitoring() {
     const status = parseInt(statusInterval, 10);
     const metrics = parseInt(metricsInterval, 10);
@@ -1164,6 +1188,9 @@ export function AdminSettingsPanel({
         sessionTimeout={sessionTimeout}
         setSessionTimeout={setSessionTimeout}
         handleSaveSessionTimeout={handleSaveSessionTimeout}
+        terminalTimeout={terminalTimeout}
+        setTerminalTimeout={setTerminalTimeout}
+        handleSaveTerminalTimeout={handleSaveTerminalTimeout}
         statusInterval={statusInterval}
         setStatusInterval={setStatusInterval}
         metricsInterval={metricsInterval}

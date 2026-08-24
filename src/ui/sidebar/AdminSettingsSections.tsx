@@ -50,6 +50,9 @@ type GeneralSettingsSectionProps = {
   sessionTimeout: string;
   setSessionTimeout: Dispatch<SetStateAction<string>>;
   handleSaveSessionTimeout: () => void;
+  terminalTimeout: string;
+  setTerminalTimeout: Dispatch<SetStateAction<string>>;
+  handleSaveTerminalTimeout: () => void;
   statusInterval: string;
   setStatusInterval: Dispatch<SetStateAction<string>>;
   metricsInterval: string;
@@ -101,6 +104,9 @@ export function AdminGeneralSettingsSection({
   sessionTimeout,
   setSessionTimeout,
   handleSaveSessionTimeout,
+  terminalTimeout,
+  setTerminalTimeout,
+  handleSaveTerminalTimeout,
   statusInterval,
   setStatusInterval,
   metricsInterval,
@@ -296,6 +302,36 @@ export function AdminGeneralSettingsSection({
           </div>
           <span className="text-[10px] text-muted-foreground">
             {t("admin.sessionTimeoutRange")}
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-2 pt-3 mt-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("admin.terminalSessionTimeout")}
+          </span>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={1440}
+              value={terminalTimeout}
+              onChange={(e) => setTerminalTimeout(e.target.value)}
+              className="w-20 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">
+              {t("admin.minutes")}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+              onClick={handleSaveTerminalTimeout}
+            >
+              {t("common.save")}
+            </Button>
+          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {t("admin.terminalSessionTimeoutDesc")}
           </span>
         </div>
 
@@ -1096,6 +1132,17 @@ export function AdminHostDefaultsSection({
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("admin.hostDefaultsTerminal")}
           </span>
+          <SettingRow
+            label={t("admin.hostDefaultsAutoTmux")}
+            description={t("admin.hostDefaultsAutoTmuxDesc")}
+          >
+            <AdminToggle
+              on={defaults.autoTmux ?? false}
+              onToggle={() =>
+                setDefaults((p) => ({ ...p, autoTmux: !(p.autoTmux ?? false) }))
+              }
+            />
+          </SettingRow>
           <SettingRow
             label={t("admin.hostDefaultsSessionLogging")}
             description={t("admin.hostDefaultsSessionLoggingDesc")}
