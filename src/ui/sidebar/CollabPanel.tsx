@@ -45,6 +45,8 @@ export function CollabPanel({
 
   useEffect(() => {
     void refresh();
+    const timer = window.setInterval(() => void refresh(), 30000);
+    return () => window.clearInterval(timer);
   }, [refresh]);
 
   async function handleCreate() {
@@ -70,7 +72,7 @@ export function CollabPanel({
       <div className="flex items-center gap-1.5">
         <Button
           size="sm"
-          className="h-7 text-xs flex-1"
+          className="h-8 text-xs flex-1"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="size-3.5 mr-1" />
@@ -79,8 +81,10 @@ export function CollabPanel({
         <Button
           size="sm"
           variant="outline"
-          className="h-7 px-2"
+          className="h-8 px-2"
           onClick={() => void refresh()}
+          aria-label={t("common.refresh")}
+          title={t("common.refresh")}
         >
           <RefreshCw className="size-3.5" />
         </Button>
@@ -106,7 +110,12 @@ export function CollabPanel({
               <Presentation className="size-3.5 shrink-0 text-muted-foreground" />
               <span className="flex-1 text-xs truncate">{room.name}</span>
               {room.presenterUserId && (
-                <span className="size-1.5 rounded-full bg-red-500 shrink-0" />
+                <span
+                  className="size-1.5 rounded-full bg-red-500 shrink-0"
+                  role="img"
+                  aria-label={t("collab.presenterBadge")}
+                  title={t("collab.presenterBadge")}
+                />
               )}
               {room.persistent && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0">
@@ -124,7 +133,11 @@ export function CollabPanel({
             <DialogTitle>{t("collab.createRoom")}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-3">
+            <label htmlFor="collab-room-name" className="text-xs font-medium">
+              {t("collab.roomName")}
+            </label>
             <Input
+              id="collab-room-name"
               placeholder={t("collab.roomName")}
               value={name}
               onChange={(e) => setName(e.target.value)}

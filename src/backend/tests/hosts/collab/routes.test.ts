@@ -72,6 +72,7 @@ vi.mock("../../../hosts/terminal/session-manager.js", () => ({
     setRoomShareControl: (...args: unknown[]) => {
       state.control.push(args);
     },
+    disconnectShareParticipants: vi.fn(() => 0),
   },
 }));
 vi.mock("../../../hosts/session-sharing/live-sessions.js", () => ({
@@ -146,6 +147,16 @@ vi.mock("../../../database/repositories/factory.js", () => ({
         .map((m) => ({ ...m, username: m.userId, createdAt: "" })),
     updateStage: async (roomId: string, stage: Partial<Room>) => {
       Object.assign(state.rooms.get(roomId)!, stage);
+    },
+    replaceStage: async (
+      roomId: string,
+      expectedShareId: string | null,
+      stage: Partial<Room>,
+    ) => {
+      const room = state.rooms.get(roomId)!;
+      if (room.stageShareId !== expectedShareId) return false;
+      Object.assign(room, stage);
+      return true;
     },
     clearStage: async (roomId: string) => {
       Object.assign(state.rooms.get(roomId)!, {
@@ -305,6 +316,26 @@ describe("collab room routes", () => {
       invoke("get", "/rooms/:id", { params: { id: roomId } }),
     );
     expect((other as { statusCode: number }).statusCode).toBe(404);
+  });
+
+  it("never exposes the guest bearer token in room responses", async () => {
+    const roomId = await createRoom();
+    await invite(roomId, ["alice"]);
+    state.rooms.get(roomId)!.guestLinkToken = "secret-token";
+
+    const list = await as("alice", () => invoke("get", "/rooms"));
+    const listedRoom = (list as Awaited<ReturnType<typeof invoke>>).jsonBody!
+      .rooms as Array<Record<string, unknown>>;
+    expect(listedRoom[0]).not.toHaveProperty("guestLinkToken");
+    expect(listedRoom[0]).toHaveProperty("guestLinkEnabled", true);
+
+    const detail = await as("alice", () =>
+      invoke("get", "/rooms/:id", { params: { id: roomId } }),
+    );
+    const room = (detail as Awaited<ReturnType<typeof invoke>>).jsonBody!
+      .room as Record<string, unknown>;
+    expect(room).not.toHaveProperty("guestLinkToken");
+    expect(room).toHaveProperty("guestLinkEnabled", true);
   });
 
   it("rejects an empty or oversized room name", async () => {

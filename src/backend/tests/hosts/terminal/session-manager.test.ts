@@ -57,6 +57,8 @@ function makeFakeWs(readyState = 1 /* OPEN */) {
   return {
     readyState,
     send: vi.fn(),
+    close: vi.fn(),
+    terminate: vi.fn(),
   } as unknown as import("ws").WebSocket;
 }
 const WS_OPEN = 1;
@@ -250,6 +252,39 @@ describe("TerminalSessionManager - multiplayer participants", () => {
     expect(
       sessionManager.getParticipantForWs(session, aliceWs)?.permissionLevel,
     ).toBe("read-only");
+
+    sessionManager.destroySession(id);
+  });
+
+  it("disconnectShareParticipants revokes only the selected share participants", () => {
+    const id = createConnectedSession();
+    const ownerWs = makeFakeWs();
+    const aliceWs = makeFakeWs();
+    const guestWs = makeFakeWs();
+    sessionManager.attachWs(id, "owner-1", ownerWs);
+    const session = sessionManager.joinAsParticipant(id, aliceWs, {
+      userId: "alice",
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    })!;
+    sessionManager.joinAsParticipant(id, guestWs, {
+      userId: null,
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    });
+
+    expect(
+      sessionManager.disconnectShareParticipants(id, "stage-share", {
+        userId: "alice",
+        reason: "Removed",
+      }),
+    ).toBe(1);
+    expect(sessionManager.getParticipantForWs(session, aliceWs)).toBeNull();
+    expect(sessionManager.getParticipantForWs(session, guestWs)).not.toBeNull();
+    expect(sessionManager.getParticipantForWs(session, ownerWs)?.isOwner).toBe(
+      true,
+    );
+    expect(aliceWs.close).toHaveBeenCalledWith(1008, "Removed");
 
     sessionManager.destroySession(id);
   });
