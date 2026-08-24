@@ -1,14 +1,47 @@
 import type { SSHHostData } from "@/types";
 import type { Host } from "@/types/ui-types";
+import type { GuacamoleQuickHost } from "@/features/guacamole/GuacamoleApp";
+
+export type QuickConnectProtocol = "ssh" | "rdp" | "vnc";
 
 type QuickConnectInput = Pick<
   Host,
   "ip" | "port" | "username" | "authType" | "password" | "key" | "credentialId"
->;
+> & { protocol?: QuickConnectProtocol; domain?: string };
+
+export const QUICK_CONNECT_ID_PREFIX = "quick-connect-";
+
+export function isQuickConnectHost(host: Pick<Host, "id">): boolean {
+  return host.id.startsWith(QUICK_CONNECT_ID_PREFIX);
+}
 
 export function createQuickConnectHost(input: QuickConnectInput): Host {
+  const protocol = input.protocol ?? "ssh";
+  if (protocol !== "ssh") {
+    return {
+      ...createQuickConnectHost({ ...input, protocol: "ssh", port: 22 }),
+      port: input.port,
+      enableTerminal: false,
+      enableCommandHistory: false,
+      enableFileManager: false,
+      enableTunnel: false,
+      enableDocker: false,
+      enableTerminalToolbar: false,
+      enableSsh: false,
+      enableRdp: protocol === "rdp",
+      enableVnc: protocol === "vnc",
+      rdpPort: protocol === "rdp" ? input.port : 3389,
+      vncPort: protocol === "vnc" ? input.port : 5900,
+      rdpAuthType: "direct",
+      rdpUser: protocol === "rdp" ? input.username : undefined,
+      rdpPassword: protocol === "rdp" ? input.password : undefined,
+      domain: protocol === "rdp" ? input.domain : undefined,
+      vncUser: protocol === "vnc" ? input.username : undefined,
+      vncPassword: protocol === "vnc" ? input.password : undefined,
+    };
+  }
   return {
-    id: `quick-connect-${Date.now()}`,
+    id: `${QUICK_CONNECT_ID_PREFIX}${Date.now()}`,
     name: `${input.username}@${input.ip}`,
     ip: input.ip,
     port: input.port,
@@ -85,5 +118,22 @@ export function quickConnectHostToPayload(host: Host): SSHHostData {
     rdpPort: host.rdpPort,
     vncPort: host.vncPort,
     telnetPort: host.telnetPort,
+  };
+}
+
+/** The slice of a quick-connect host that GuacamoleApp mints a token from. */
+export function quickConnectGuacHost(host: Host): GuacamoleQuickHost {
+  return {
+    name: host.name,
+    ip: host.ip,
+    connectionType: host.enableVnc ? "vnc" : "rdp",
+    domain: host.domain,
+    rdpPort: host.rdpPort,
+    vncPort: host.vncPort,
+    rdpAuthType: host.rdpAuthType,
+    rdpUser: host.rdpUser,
+    rdpPassword: host.rdpPassword,
+    vncUser: host.vncUser,
+    vncPassword: host.vncPassword,
   };
 }

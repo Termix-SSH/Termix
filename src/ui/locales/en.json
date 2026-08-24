@@ -3686,6 +3686,11 @@
         "privateKeyPlaceholder": "Paste private key...",
         "credentialLabel": "Credential",
         "credentialPlaceholder": "Select a saved credential",
+        "protocolLabel": "Protocol",
+        "domainLabel": "Domain",
+        "domainPlaceholder": "optional",
+        "connectToRdp": "Connect via RDP",
+        "connectToVnc": "Connect via VNC",
         "connectToTerminal": "Connect to Terminal",
         "connectToFiles": "Connect to Files"
       },
