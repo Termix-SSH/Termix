@@ -85,6 +85,39 @@ export async function updateTerminalSessionSettings(input: {
   }
 }
 
+export interface StepCaSettings {
+  configured: boolean;
+  caUrl: string;
+  fingerprint: string;
+  provisioner: string;
+}
+
+export async function getStepCaSettings(): Promise<StepCaSettings> {
+  try {
+    const response = await authApi.get("/users/step-ca-settings");
+    return {
+      configured: !!response.data.configured,
+      caUrl: response.data.caUrl ?? "",
+      fingerprint: response.data.fingerprint ?? "",
+      provisioner: response.data.provisioner ?? "",
+    };
+  } catch (error) {
+    handleApiError(error, "fetch Step CA settings");
+  }
+}
+
+export async function updateStepCaSettings(input: {
+  caUrl: string;
+  fingerprint: string;
+  provisioner: string;
+}): Promise<void> {
+  try {
+    await authApi.patch("/users/step-ca-settings", input);
+  } catch (error) {
+    handleApiError(error, "update Step CA settings");
+  }
+}
+
 export async function updateSessionTimeout(
   timeoutHours: number,
 ): Promise<void> {

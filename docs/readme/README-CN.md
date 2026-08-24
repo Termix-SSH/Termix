@@ -351,9 +351,11 @@ networks:
 ```
 
 部署多个 Termix 后端实例时，请为所有实例配置相同的 `REDIS_URL`，并可选配置
-`TERMIX_REDIS_PREFIX`。Redis 会同步协作房间的在线成员、控制请求、控制权和事件；
-实时 SSH 与远程桌面传输仍依附于创建连接的后端实例，因此负载均衡器需要保持
-WebSocket 会话亲和性。单实例部署无需 Redis。
+`TERMIX_REDIS_PREFIX`。Redis 会同步协作房间的在线成员、控制请求、控制权和事件，
+也会把 Step CA OAuth 回调路由回持有用户终端的实例；可通过
+`TERMIX_STEP_CA_REDIS_PREFIX` 隔离这些短期加密消息。实时 SSH 与远程桌面传输仍
+依附于创建连接的后端实例，因此负载均衡器需要保持 WebSocket 会话亲和性。
+单实例部署无需 Redis。
 
 ### 命令行工具
 

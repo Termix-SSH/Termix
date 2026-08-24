@@ -49,6 +49,8 @@ export const FORBIDDEN_DOMAINS = [
   "identity",
   "certificate",
   "opkssh",
+  "stepca",
+  "step_ca",
   "acme",
   "ssl",
   "audit",

@@ -147,10 +147,21 @@ export function createDnsLookupHook(
   };
 }
 
+export interface OutboundTlsOptions {
+  /** PEM bundle to trust instead of the system store (private CAs). */
+  ca?: string;
+  /**
+   * Skip certificate verification. Only for the one request that fetches a
+   * private CA's root by fingerprint, where the caller verifies the result.
+   */
+  rejectUnauthorized?: boolean;
+}
+
 export async function safeOutboundFetch(
   rawUrl: string,
   options: RequestInit,
   allowedPrivateHosts: readonly string[] = [],
+  tls: OutboundTlsOptions = {},
 ): Promise<Response> {
   const url = new URL(rawUrl);
   if (
@@ -172,6 +183,10 @@ export async function safeOutboundFetch(
   const dispatcher = new Agent({
     connect: {
       lookup: createDnsLookupHook(lookup, allowPrivate),
+      ...(tls.ca ? { ca: tls.ca } : {}),
+      ...(tls.rejectUnauthorized === false
+        ? { rejectUnauthorized: false }
+        : {}),
     },
   });
 

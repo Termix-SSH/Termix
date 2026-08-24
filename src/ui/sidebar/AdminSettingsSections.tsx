@@ -33,6 +33,13 @@ type GeneralSettingsSectionProps = {
   onSaveAiPrivateEndpoints: (hosts: string[]) => void;
   notificationPrivateEndpoints: string[];
   onSaveNotificationPrivateEndpoints: (hosts: string[]) => void;
+  stepCaPrivateEndpoints: string[];
+  onSaveStepCaPrivateEndpoints: (hosts: string[]) => void;
+  stepCaSettings: { caUrl: string; fingerprint: string; provisioner: string };
+  setStepCaSettings: Dispatch<
+    SetStateAction<{ caUrl: string; fingerprint: string; provisioner: string }>
+  >;
+  handleSaveStepCaSettings: () => void;
   handleToggleSessionSharingGloballyEnabled: () => void;
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
@@ -87,6 +94,11 @@ export function AdminGeneralSettingsSection({
   onSaveAiPrivateEndpoints,
   notificationPrivateEndpoints,
   onSaveNotificationPrivateEndpoints,
+  stepCaPrivateEndpoints,
+  onSaveStepCaPrivateEndpoints,
+  stepCaSettings,
+  setStepCaSettings,
+  handleSaveStepCaSettings,
   handleToggleSessionSharingGloballyEnabled,
   allowRegistration,
   handleToggleRegistration,
@@ -214,6 +226,73 @@ export function AdminGeneralSettingsSection({
               )
             }
           />
+        </div>
+        <div className="flex flex-col gap-1.5 py-2">
+          <span className="text-xs font-medium">
+            {t("admin.stepCaPrivateEndpoints")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.stepCaPrivateEndpointsDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            defaultValue={stepCaPrivateEndpoints.join(", ")}
+            placeholder="ca.internal, sso.internal"
+            onBlur={(event) =>
+              onSaveStepCaPrivateEndpoints(
+                event.target.value
+                  .split(",")
+                  .map((entry) => entry.trim())
+                  .filter(Boolean),
+              )
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("admin.stepCa")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.stepCaDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            placeholder="https://ca.internal:9000"
+            value={stepCaSettings.caUrl}
+            onChange={(e) =>
+              setStepCaSettings((p) => ({ ...p, caUrl: e.target.value }))
+            }
+          />
+          <Input
+            className="rounded-none font-mono text-xs"
+            placeholder={t("admin.stepCaFingerprint")}
+            value={stepCaSettings.fingerprint}
+            onChange={(e) =>
+              setStepCaSettings((p) => ({ ...p, fingerprint: e.target.value }))
+            }
+          />
+          <div className="flex items-center gap-2">
+            <Input
+              className="rounded-none"
+              placeholder={t("admin.stepCaProvisioner")}
+              value={stepCaSettings.provisioner}
+              onChange={(e) =>
+                setStepCaSettings((p) => ({
+                  ...p,
+                  provisioner: e.target.value,
+                }))
+              }
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+              onClick={handleSaveStepCaSettings}
+            >
+              {t("common.save")}
+            </Button>
+          </div>
         </div>
         <SettingRow
           label={t("admin.allowRegistration")}

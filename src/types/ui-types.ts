@@ -31,6 +31,7 @@ export type Host = {
     | "credential"
     | "none"
     | "opkssh"
+    | "stepca"
     | "tailscale"
     | "vault"
     | "agent";

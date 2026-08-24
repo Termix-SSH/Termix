@@ -270,6 +270,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
       error?: string;
       providers?: Array<{ alias: string; issuer: string }>;
+      /** Which issuer is asking (OPKSSH by default, "Step CA", ...). */
+      label?: string;
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1823,6 +1825,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 requestId: msg.requestId || "",
                 stage: "chooser",
                 providers: msg.providers,
+                label: typeof msg.label === "string" ? msg.label : undefined,
               });
               if (opksshTimeoutRef.current) {
                 clearTimeout(opksshTimeoutRef.current);
@@ -3598,6 +3601,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             stage={opksshDialog.stage}
             error={opksshDialog.error}
             providers={opksshDialog.providers}
+            label={opksshDialog.label}
             onCancel={() => {
               if (webSocketRef.current) {
                 webSocketRef.current.send(

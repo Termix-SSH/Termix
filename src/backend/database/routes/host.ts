@@ -43,6 +43,7 @@ import {
 } from "./host-normalizers.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
+import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostFileManagerBookmarkRoutes } from "./host-file-manager-bookmark-routes.js";
 import { registerHostCommandHistoryRoutes } from "./host-command-history-routes.js";
@@ -2899,6 +2900,7 @@ router.delete(
 );
 
 registerHostOpksshRoutes(router);
+registerHostStepCaRoutes(router);
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,

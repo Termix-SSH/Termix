@@ -20,6 +20,7 @@ services:
       # in-memory fallback.
       # REDIS_URL: "redis://redis:6379"
       # TERMIX_REDIS_PREFIX: "termix:collab"
+      # TERMIX_STEP_CA_REDIS_PREFIX: "termix:step-ca"
       # Hardened deployments can require keys from environment variables or
       # Docker secrets mounted through JWT_SECRET_FILE, DATABASE_KEY_FILE,
       # ENCRYPTION_KEY_FILE and INTERNAL_AUTH_TOKEN_FILE.
