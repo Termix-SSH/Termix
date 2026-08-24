@@ -2,6 +2,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
@@ -68,6 +69,7 @@ async function getAccessibleSnippet(snippetId: number, userId: string) {
 }
 
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
@@ -90,6 +92,7 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 router.get(
   "/folders",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -144,6 +147,7 @@ router.get(
 router.post(
   "/folders",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -226,6 +230,7 @@ router.post(
 router.put(
   "/folders/:name/metadata",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -306,6 +311,7 @@ router.put(
 router.put(
   "/folders/rename",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -382,6 +388,7 @@ router.put(
 router.delete(
   "/folders/:name",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -466,6 +473,7 @@ router.delete(
 router.put(
   "/reorder",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -796,6 +804,7 @@ router.post(
 router.get(
   "/export",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -872,6 +881,7 @@ router.get(
 router.post(
   "/bulk-import",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -932,6 +942,7 @@ router.post(
 router.get(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1003,6 +1014,7 @@ router.get(
 router.get(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1073,6 +1085,7 @@ router.get(
 router.post(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1183,6 +1196,7 @@ router.post(
 router.put(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1261,6 +1275,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;

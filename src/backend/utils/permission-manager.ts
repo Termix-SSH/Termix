@@ -183,7 +183,8 @@ class PermissionManager {
       }
     }
 
-    return false;
+    // Checked last: it costs two queries and only matters on the deny path.
+    return this.isAdmin(userId);
   }
 
   async canAccessHost(

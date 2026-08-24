@@ -181,7 +181,7 @@ describe("HostAuthOverrideModal", () => {
 });
 
 describe("canOverrideHostAuth", () => {
-  it("allows every shared SSH permission level and excludes owners and non-SSH hosts", () => {
+  it("allows every shared permission level and excludes owners and disabled protocols", () => {
     for (const permissionLevel of [
       "connect",
       "view",
@@ -200,6 +200,7 @@ describe("canOverrideHostAuth", () => {
     ).toBe(false);
     expect(
       canOverrideHostAuth({ ...host, enableRdp: true } as Host, "rdp"),
-    ).toBe(false);
+    ).toBe(true);
+    expect(canOverrideHostAuth(host, "rdp")).toBe(false);
   });
 });

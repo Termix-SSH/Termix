@@ -5,6 +5,8 @@ import { withRecordingSettings } from "./recording-settings.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
+import { resolveRecipientSharedHostAuthentication } from "../../utils/shared-host-auth-resolver.js";
+import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
@@ -332,30 +334,34 @@ router.post(
         host.telnetPassword = null;
 
         try {
-          const { SharedHostSecretsManager } =
-            await import("../../utils/shared-host-secrets-manager.js");
-          const secret =
-            await SharedHostSecretsManager.getInstance().getSecretForUser(
-              hostId,
-              userId,
-              connectionType as "rdp" | "vnc" | "telnet",
-            );
-          if (secret) {
+          const resolution = await resolveRecipientSharedHostAuthentication(
+            host,
+            hostId,
+            userId,
+            connectionType as AuthOverrideProtocol,
+          );
+          const auth =
+            resolution.source === "personal-override"
+              ? { ...resolution.credential, domain: null }
+              : resolution.source === "owner-shared"
+                ? resolution.secret
+                : null;
+          if (auth) {
             if (connectionType === "rdp") {
-              host.rdpUser = secret.username ?? null;
-              host.rdpPassword = secret.password ?? null;
-              if (secret.domain) host.rdpDomain = secret.domain;
+              host.rdpUser = auth.username ?? null;
+              host.rdpPassword = auth.password ?? null;
+              if (auth.domain) host.rdpDomain = auth.domain;
             } else if (connectionType === "vnc") {
-              host.vncUser = secret.username ?? null;
-              host.vncPassword = secret.password ?? null;
+              host.vncUser = auth.username ?? null;
+              host.vncPassword = auth.password ?? null;
             } else if (connectionType === "telnet") {
-              host.telnetUser = secret.username ?? null;
-              host.telnetPassword = secret.password ?? null;
+              host.telnetUser = auth.username ?? null;
+              host.telnetPassword = auth.password ?? null;
             }
           }
         } catch (e) {
-          guacLogger.warn("Failed to resolve shared host secret", {
-            operation: "guac_shared_secret_resolve",
+          guacLogger.warn("Failed to resolve shared host auth", {
+            operation: "guac_shared_auth_resolve",
             hostId,
             protocol: connectionType,
             error: getErrorMessage(e, "Unknown"),

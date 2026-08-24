@@ -72,3 +72,22 @@ const VALID_PERMISSIONS = new Set<string>(
 export function isValidPermission(permission: string): boolean {
   return VALID_PERMISSIONS.has(permission);
 }
+
+// What the seeded system roles grant. Applied only to a role row that has no
+// permissions yet, so an admin's edits to these roles survive restarts.
+export const SYSTEM_ROLE_DEFAULTS = {
+  admin: {
+    description: "Administrator with full access",
+    permissions: ["*"],
+  },
+  user: {
+    description: "Regular user",
+    permissions: [
+      "hosts.*",
+      "snippets.*",
+      "automations.*",
+      "credentials.*",
+      "ai.*",
+    ],
+  },
+} as const;

@@ -206,7 +206,14 @@ describe("TerminalSessionManager - multiplayer participants", () => {
       ownerWs,
     );
     expect(ownerParticipant?.isOwner).toBe(true);
-    expect(ownerWs.send).not.toHaveBeenCalled();
+    // The join is announced to everyone already in the session - and that is
+    // the only unsolicited message the owner receives.
+    expect(ownerWs.send).toHaveBeenCalledTimes(1);
+    const announced = JSON.parse(
+      (ownerWs.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as string,
+    );
+    expect(announced.type).toBe("participants");
+    expect(announced.participants).toHaveLength(2);
 
     sessionManager.destroySession(id);
   });

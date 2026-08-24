@@ -110,6 +110,24 @@ export async function removeRoleFromUser(
   }
 }
 
+export interface RoleMember {
+  userId: string;
+  username: string;
+  grantedAt: string;
+  grantedBy: string | null;
+}
+
+export async function getRoleMembers(
+  roleId: number,
+): Promise<{ members: RoleMember[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/roles/${roleId}/members`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get role members");
+  }
+}
+
 export type SharePermissionLevel = "connect" | "view" | "edit" | "manage";
 
 export interface ShareTarget {
@@ -318,6 +336,23 @@ export async function shareSnippet(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "share snippet");
+  }
+}
+
+export async function shareSnippetFolder(
+  folder: string,
+  targets: ShareTarget[],
+  durationHours?: number,
+): Promise<{ success: boolean; snippetsShared: number }> {
+  try {
+    const response = await rbacApi.post("/rbac/snippet-folder/share", {
+      folder,
+      targets,
+      durationHours,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share snippet folder");
   }
 }
 

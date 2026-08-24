@@ -28,6 +28,7 @@ import {
   createCurrentHostRepository,
   createCurrentUserRepository,
   createCurrentSyncTombstoneRepository,
+  createCurrentSharedHostAuthOverrideRepository,
 } from "../repositories/factory.js";
 import {
   containsOwnerPrivateAuthUpdate,
@@ -62,6 +63,7 @@ import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../repositories/host-resolution-repository.js";
+import { AUTH_PROTOCOL_METADATA } from "../../../types/auth-protocols.js";
 import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
@@ -125,6 +127,7 @@ registerHostInternalRoutes(router);
 router.post(
   ["/db/host", "/enroll"],
   authenticateJWT,
+  permissionManager.requirePermission("hosts.create"),
   requireDataAccess,
   requireHostEnrollmentAccessForPath,
   upload.single("key"),
@@ -817,6 +820,7 @@ router.post(
 router.put(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
@@ -1458,6 +1462,7 @@ router.put(
 router.get(
   "/db/host",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1601,6 +1606,7 @@ router.get(
 router.get(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Array.isArray(req.params.id)
@@ -2223,6 +2229,7 @@ router.get(
 router.delete(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -2455,6 +2462,24 @@ async function resolveHostCredentials(
         required: needsPersonalCredential,
         ownerAuthShared: !!host.shareSshAuth,
       };
+      // Owner auth for the remote desktop protocols is always snapshotted
+      // for recipients; only their own override credential varies per user.
+      const authOverrides: Record<string, unknown> = {
+        ssh: baseSshOverrideState,
+      };
+      const overrideCredentialIds =
+        await createCurrentSharedHostAuthOverrideRepository().listCredentialIds(
+          host.id,
+          requestingUserId,
+        );
+      for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+        if (!host[AUTH_PROTOCOL_METADATA[protocol].enableField]) continue;
+        authOverrides[protocol] = {
+          credentialId: overrideCredentialIds[protocol],
+          required: false,
+          ownerAuthShared: true,
+        };
+      }
       const recipientHost: Record<string, unknown> = {
         ...host,
         credentialId: null,
@@ -2462,9 +2487,7 @@ async function resolveHostCredentials(
         key: null,
         keyPassword: null,
         keyType: null,
-        authOverrides: {
-          ssh: baseSshOverrideState,
-        },
+        authOverrides,
       };
 
       try {
@@ -2480,6 +2503,7 @@ async function resolveHostCredentials(
           return {
             ...recipientHost,
             authOverrides: {
+              ...authOverrides,
               ssh: {
                 credentialId: resolution.credentialId,
                 required: false,
@@ -2505,6 +2529,7 @@ async function resolveHostCredentials(
             return {
               ...recipientHost,
               authOverrides: {
+                ...authOverrides,
                 ssh: {
                   required: false,
                   ownerAuthShared: true,
@@ -2524,6 +2549,7 @@ async function resolveHostCredentials(
             return {
               ...recipientHost,
               authOverrides: {
+                ...authOverrides,
                 ssh: {
                   required: false,
                   ownerAuthShared: true,
@@ -2547,6 +2573,7 @@ async function resolveHostCredentials(
           return {
             ...recipientHost,
             authOverrides: {
+              ...authOverrides,
               ssh: {
                 required: false,
                 ownerAuthShared: !!host.shareSshAuth,

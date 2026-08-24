@@ -26,6 +26,7 @@ export interface SessionParticipant {
   userId: string | null; // null for anonymous link guests
   permissionLevel: "read-write" | "read-only";
   isOwner: boolean;
+  displayName?: string;
   guestLabel?: string;
   tabInstanceId?: string;
   joinedViaShareId?: string;
@@ -382,6 +383,7 @@ class TerminalSessionManager {
     });
     session.attachedTabInstanceId = tabInstanceId;
     session.lastDetachedAt = null;
+    this.broadcastParticipants(sessionId);
 
     sshLogger.info("WebSocket attached to session", {
       operation: "session_attach",
@@ -403,6 +405,7 @@ class TerminalSessionManager {
     opts: {
       userId: string | null;
       permissionLevel: "read-write" | "read-only";
+      displayName?: string;
       guestLabel?: string;
       tabInstanceId?: string;
       shareId?: string;
@@ -417,10 +420,12 @@ class TerminalSessionManager {
       userId: opts.userId,
       permissionLevel: opts.permissionLevel,
       isOwner: false,
+      displayName: opts.displayName,
       guestLabel: opts.guestLabel,
       tabInstanceId: opts.tabInstanceId,
       joinedViaShareId: opts.shareId,
     });
+    this.broadcastParticipants(sessionId);
 
     sshLogger.info("Participant joined shared session", {
       operation: "session_join_participant",
@@ -431,6 +436,25 @@ class TerminalSessionManager {
     });
 
     return session;
+  }
+
+  /**
+   * Tells everyone in a shared session who is present. Sent on join and
+   * leave, and only while someone besides the owner is (or just was) in the
+   * room - a solo owner never receives presence traffic.
+   */
+  private broadcastParticipants(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    const participants = Array.from(session.participants.values()).map(
+      (participant) => ({
+        isOwner: participant.isOwner,
+        permissionLevel: participant.permissionLevel,
+        label: participant.displayName ?? participant.guestLabel ?? null,
+      }),
+    );
+    if (participants.every((participant) => participant.isOwner)) return;
+    this.broadcast(sessionId, { type: "participants", participants });
   }
 
   /** Fans out a message to every OPEN participant socket; skips closed ones and send failures. */
@@ -469,6 +493,7 @@ class TerminalSessionManager {
     for (const [id, participant] of session.participants.entries()) {
       if (participant.ws === ws && !participant.isOwner) {
         session.participants.delete(id);
+        this.broadcastParticipants(sessionId);
         sshLogger.info("Participant left shared session", {
           operation: "session_leave_participant",
           sessionId,
