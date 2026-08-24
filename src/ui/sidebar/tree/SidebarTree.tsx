@@ -1101,7 +1101,7 @@ export function SidebarTree({
 
       {/* Floating selection bar */}
       {selectionMode && (
-        <div className="absolute bottom-4 inset-x-3 z-50">
+        <div className="motion-panel-enter absolute bottom-4 inset-x-3 z-50">
           <div className="bg-popover border border-border shadow-xl px-2.5 py-2 flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-semibold tabular-nums shrink-0">
               {t("hosts.nSelected", { count: selectedHostIds.size })}

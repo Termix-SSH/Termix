@@ -2295,6 +2295,7 @@ export function AppShell({
           node.style.pointerEvents = activeInline ? "auto" : "none";
           node.style.zIndex = activeInline ? "1" : "0";
         } else {
+          node.classList.toggle("motion-workspace-enter", activeInline);
           node.style.visibility = "";
           node.style.pointerEvents = "";
           node.style.zIndex = activeInline ? "2" : "";
@@ -2824,7 +2825,7 @@ export function AppShell({
           <div
             inert={settingsFullscreen ? true : undefined}
             aria-hidden={settingsFullscreen || undefined}
-            className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
+            className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-[padding] duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
           >
             {!isMobile && !sidebarOpen && (
               <button
@@ -2864,7 +2865,7 @@ export function AppShell({
                 {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
                 {!isMobile && (
                   <div
-                    className="absolute inset-0"
+                    className="motion-workspace-layout absolute inset-0"
                     style={{
                       display: isSplit ? "flex" : "none",
                       flexDirection: "column",

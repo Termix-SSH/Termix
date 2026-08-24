@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -319,6 +319,19 @@ export function HostItem({
           ? "online"
           : "offline";
   const isOnline = availability === "online";
+  const previousAvailability = useRef(availability);
+  const [statusLocking, setStatusLocking] = useState(false);
+
+  useEffect(() => {
+    const justCameOnline =
+      previousAvailability.current !== "online" && availability === "online";
+    previousAvailability.current = availability;
+    if (!justCameOnline) return;
+
+    setStatusLocking(true);
+    const timeout = window.setTimeout(() => setStatusLocking(false), 400);
+    return () => window.clearTimeout(timeout);
+  }, [availability]);
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const alwaysShowTray = trayTrigger === "always";
@@ -947,9 +960,9 @@ export function HostItem({
   const trayCollapsedClass = `max-h-0 opacity-0 ${isCompact ? "" : "-mt-[3.5px]"}`;
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
-      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
+      ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
       : shouldUseClickTray
-        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
+        ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
         : // No transition in hover mode: the row's height is set by the
           // virtualizer and snaps in a single frame, so animating the tray
           // against it leaves the open tray overflowing its shortened row for
@@ -1053,7 +1066,7 @@ export function HostItem({
         setContextMenuPosition({ x: event.clientX, y: event.clientY });
         onMenuOpenChange?.(true);
       }}
-      className={`group relative flex items-stretch select-none transition-colors hover:bg-muted/50 ${
+      className={`group relative flex items-stretch select-none transition-colors motion-interactive hover:bg-muted/50 ${
         canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
       } ${
         selected
@@ -1096,7 +1109,8 @@ export function HostItem({
       {/* Status stripe */}
       {showStatusStripes && (
         <div
-          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(availability, statusScheme, "stripe", statusLoading)}`}
+          data-locking={statusLocking}
+          className={`host-status-stripe w-[3px] shrink-0 transition-colors motion-interactive ${getStatusClasses(availability, statusScheme, "stripe", statusLoading)}`}
         />
       )}
 
@@ -1262,7 +1276,7 @@ export function HostItem({
                     <Cpu className="size-2.5 shrink-0 text-muted-foreground/40" />
                     <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                        className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
                         style={{ width: `${host.cpu}%` }}
                       />
                     </div>
@@ -1276,7 +1290,7 @@ export function HostItem({
                     <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/40" />
                     <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                        className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
                         style={{ width: `${host.ram}%` }}
                       />
                     </div>

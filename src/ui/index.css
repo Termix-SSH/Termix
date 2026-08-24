@@ -101,6 +101,11 @@
 
 :root {
   --accent-brand: #f59145;
+  --motion-duration-micro: 110ms;
+  --motion-duration-panel: 220ms;
+  --motion-duration-context: 340ms;
+  --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --background: oklch(1 0 0);
   --foreground: oklch(0.1802 0.0043 128.73);
   --card: oklch(1 0 0);
@@ -536,4 +541,264 @@ html.fs-xl {
 
 .terminal-toolbar-collapsed-shell {
   position: relative;
+}
+
+/* Motion communicates state and hierarchy. Keep it off the terminal glyph layer. */
+.motion-interactive {
+  transition-duration: var(--motion-duration-micro);
+  transition-timing-function: var(--motion-ease-enter);
+}
+
+.motion-meter {
+  transition: width var(--motion-duration-panel) var(--motion-ease-enter);
+}
+
+.motion-panel-enter {
+  animation: motion-panel-enter var(--motion-duration-panel)
+    var(--motion-ease-enter) both;
+}
+
+.motion-context-enter {
+  animation: motion-context-enter var(--motion-duration-context)
+    var(--motion-ease-enter) both;
+}
+
+.motion-workspace-enter {
+  animation: motion-workspace-enter var(--motion-duration-panel)
+    var(--motion-ease-enter) both;
+}
+
+.motion-workspace-layout {
+  animation: motion-workspace-layout var(--motion-duration-context)
+    var(--motion-ease-enter) both;
+}
+
+.motion-transfer-phase {
+  animation: motion-transfer-phase var(--motion-duration-micro)
+    var(--motion-ease-enter) both;
+}
+
+.transfer-progress-track {
+  position: relative;
+  height: 5px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--primary) 16%, transparent);
+}
+
+.transfer-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent-brand);
+  transform: scaleX(var(--transfer-progress, 0));
+  transform-origin: left center;
+  transition: transform var(--motion-duration-panel) var(--motion-ease-enter);
+}
+
+.transfer-progress-indeterminate {
+  width: 32%;
+  transform: translateX(-110%);
+  animation: transfer-progress-flow 1.1s var(--motion-ease-enter) infinite;
+}
+
+.transfer-progress-stalled {
+  background: var(--destructive);
+  animation: none;
+}
+
+.transfer-progress-indeterminate.transfer-progress-stalled {
+  transform: translateX(105%);
+}
+
+.connection-signal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 24px;
+  color: var(--accent-brand);
+}
+
+.connection-signal::before,
+.connection-signal::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.22;
+}
+
+.connection-signal::before {
+  right: 50%;
+  margin-right: 5px;
+  transform-origin: right;
+}
+
+.connection-signal::after {
+  left: 50%;
+  margin-left: 5px;
+  transform-origin: left;
+}
+
+.connection-signal-core {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  background: color-mix(in oklab, currentColor 18%, transparent);
+  transform: rotate(45deg);
+}
+
+.connection-signal[data-active="true"]::before,
+.connection-signal[data-active="true"]::after {
+  animation: connection-signal-flow 900ms var(--motion-ease-enter) infinite;
+}
+
+.connection-signal[data-active="true"]::after {
+  animation-delay: 120ms;
+}
+
+.host-status-stripe {
+  position: relative;
+  isolation: isolate;
+}
+
+.host-status-stripe[data-locking="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0 -3px;
+  z-index: -1;
+  background: inherit;
+  opacity: 0;
+  transform: scaleX(1);
+  animation: host-signal-lock var(--motion-duration-context)
+    var(--motion-ease-enter) both;
+}
+
+@keyframes motion-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes motion-context-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.995);
+    filter: saturate(0.65);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes motion-workspace-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.998);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes motion-workspace-layout {
+  from {
+    opacity: 0.72;
+    transform: scale(0.996);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes motion-transfer-phase {
+  from {
+    opacity: 0.45;
+    transform: translateX(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes transfer-progress-flow {
+  to {
+    transform: translateX(420%);
+  }
+}
+
+@keyframes connection-signal-flow {
+  0% {
+    opacity: 0.12;
+    transform: scaleX(0.2);
+  }
+  45% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0.22;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes host-signal-lock {
+  0% {
+    opacity: 0;
+    transform: scaleX(3.2);
+  }
+  38% {
+    opacity: 0.48;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-micro: 1ms;
+    --motion-duration-panel: 1ms;
+    --motion-duration-context: 1ms;
+  }
+
+  .motion-panel-enter,
+  .motion-context-enter,
+  .motion-workspace-enter,
+  .motion-workspace-layout,
+  .motion-transfer-phase,
+  .transfer-progress-indeterminate,
+  .connection-signal[data-active="true"]::before,
+  .connection-signal[data-active="true"]::after,
+  .host-status-stripe[data-locking="true"]::after {
+    animation: none;
+  }
+
+  .motion-meter {
+    transition: none;
+  }
+
+  .transfer-progress-indeterminate {
+    transform: translateX(105%);
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

@@ -19,6 +19,9 @@ describe("ConnectionScreen", () => {
     ).not.toThrow();
 
     expect(screen.getByText("common.loading")).toBeTruthy();
+    const status = screen.getByRole("status");
+    expect(status.getAttribute("data-status")).toBe("connecting");
+    expect(status.querySelector('[data-active="true"]')).toBeTruthy();
   });
 
   it("renders the disconnected state without a provider", () => {
@@ -32,6 +35,9 @@ describe("ConnectionScreen", () => {
     ).not.toThrow();
 
     expect(screen.getByText("guacamole.hostNotFound")).toBeTruthy();
+    expect(screen.getByRole("status").getAttribute("data-status")).toBe(
+      "disconnected",
+    );
   });
 
   it("still shows the connection log when a provider is present", () => {
