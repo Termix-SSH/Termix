@@ -15,6 +15,10 @@ import {
 import { getTelemetryEnvOverride } from "../../utils/analytics.js";
 import { AI_PRIVATE_ALLOWLIST_KEY, parseAllowlist } from "../../ai/egress.js";
 import {
+  NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
+  parseNotificationAllowlist,
+} from "../../utils/notification-egress.js";
+import {
   createCurrentSettingsRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
@@ -1077,6 +1081,90 @@ export function registerUserSettingsRoutes(
       res.status(500).json({ error: "Failed to update the allowlist" });
     }
   });
+
+  router.get(
+    "/notification-private-endpoints",
+    authenticateJWT,
+    async (req, res) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      try {
+        if (!(await getAdminActor(userId))) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+        const raw = await createCurrentSettingsRepository().get(
+          NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
+        );
+        res.json({ hosts: parseNotificationAllowlist(raw) });
+      } catch (err) {
+        authLogger.error("Failed to get notification endpoint allowlist", err);
+        res.status(500).json({ error: "Failed to get the allowlist" });
+      }
+    },
+  );
+
+  router.patch(
+    "/notification-private-endpoints",
+    authenticateJWT,
+    async (req, res) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      try {
+        const actor = await getAdminActor(userId);
+        if (!actor) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+
+        const { hosts } = req.body;
+        if (!Array.isArray(hosts)) {
+          return res.status(400).json({ error: "hosts must be an array" });
+        }
+        if (hosts.length > 50) {
+          return res
+            .status(400)
+            .json({ error: "At most 50 hosts are allowed" });
+        }
+
+        const cleaned: string[] = [];
+        for (const entry of hosts) {
+          if (typeof entry !== "string") {
+            return res
+              .status(400)
+              .json({ error: "Each host must be a string" });
+          }
+          const host = entry.trim().toLowerCase();
+          if (!host) continue;
+          if (!/^[a-z0-9._:-]+$/.test(host)) {
+            return res
+              .status(400)
+              .json({ error: `${entry} is not a valid hostname` });
+          }
+          if (!cleaned.includes(host)) cleaned.push(host);
+        }
+
+        await createCurrentSettingsRepository().set(
+          NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
+          JSON.stringify(cleaned),
+        );
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId,
+          username: actor.username ?? userId,
+          action: "update_notification_private_endpoints",
+          resourceType: "setting",
+          details: JSON.stringify({ hosts: cleaned }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+        res.json({ hosts: cleaned });
+      } catch (err) {
+        authLogger.error(
+          "Failed to update notification endpoint allowlist",
+          err,
+        );
+        res.status(500).json({ error: "Failed to update the allowlist" });
+      }
+    },
+  );
 
   /**
    * @openapi

@@ -216,3 +216,24 @@ export async function setAiPrivateEndpoints(
     throw handleApiError(error, "update AI endpoint allowlist");
   }
 }
+
+export async function getNotificationPrivateEndpoints(): Promise<string[]> {
+  try {
+    return (await authApi.get("/users/notification-private-endpoints")).data
+      .hosts;
+  } catch (error) {
+    throw handleApiError(error, "get notification endpoint allowlist");
+  }
+}
+
+export async function setNotificationPrivateEndpoints(
+  hosts: string[],
+): Promise<string[]> {
+  try {
+    return (
+      await authApi.patch("/users/notification-private-endpoints", { hosts })
+    ).data.hosts;
+  } catch (error) {
+    throw handleApiError(error, "update notification endpoint allowlist");
+  }
+}

@@ -1,5 +1,6 @@
 import { safeOutboundFetch } from "./safe-outbound-fetch.js";
 import { statsLogger } from "./logger.js";
+import { readNotificationPrivateAllowlist } from "./notification-egress.js";
 
 export interface DiscordConfig {
   url: string;
@@ -14,7 +15,8 @@ async function fetchWithRetry(
   options: RequestInit,
 ): Promise<void> {
   const attempt = async () => {
-    const res = await safeOutboundFetch(url, options);
+    const allowlist = await readNotificationPrivateAllowlist();
+    const res = await safeOutboundFetch(url, options, allowlist);
     if (!res.ok) {
       let body = "";
       try {

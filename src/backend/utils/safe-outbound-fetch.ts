@@ -71,7 +71,10 @@ export function isBlockedAddress(address: string): boolean {
 // fake DNS resolver, instead of only through a real fetch()/Agent call —
 // the actual bug here lived entirely in this callback, several layers
 // below where undici's own "fetch failed" wrapping would otherwise hide it.
-export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
+export function createDnsLookupHook(
+  dnsLookup: DnsLookupFn = lookup,
+  allowPrivate = false,
+) {
   return function lookupHook(
     host: string,
     lookupOptions: LookupOptions,
@@ -110,7 +113,10 @@ export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
           );
         }
 
-        if (addrs.some(({ address }) => isBlockedAddress(address))) {
+        if (
+          !allowPrivate &&
+          addrs.some(({ address }) => isBlockedAddress(address))
+        ) {
           return callback(
             new Error("Private destinations are not allowed"),
             "",
@@ -144,6 +150,7 @@ export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
 export async function safeOutboundFetch(
   rawUrl: string,
   options: RequestInit,
+  allowedPrivateHosts: readonly string[] = [],
 ): Promise<Response> {
   const url = new URL(rawUrl);
   if (
@@ -155,13 +162,16 @@ export async function safeOutboundFetch(
   }
 
   const hostname = url.hostname.replace(/^\[|\]$/g, "");
-  if (isIP(hostname) && isBlockedAddress(hostname)) {
+  const allowPrivate = allowedPrivateHosts.some(
+    (host) => host.trim().toLowerCase() === hostname.toLowerCase(),
+  );
+  if (!allowPrivate && isIP(hostname) && isBlockedAddress(hostname)) {
     throw new Error("Private destinations are not allowed");
   }
 
   const dispatcher = new Agent({
     connect: {
-      lookup: createDnsLookupHook(lookup),
+      lookup: createDnsLookupHook(lookup, allowPrivate),
     },
   });
 

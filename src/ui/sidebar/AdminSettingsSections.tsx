@@ -31,6 +31,8 @@ type GeneralSettingsSectionProps = {
   onToggleAiGloballyEnabled: () => void;
   aiPrivateEndpoints: string[];
   onSaveAiPrivateEndpoints: (hosts: string[]) => void;
+  notificationPrivateEndpoints: string[];
+  onSaveNotificationPrivateEndpoints: (hosts: string[]) => void;
   handleToggleSessionSharingGloballyEnabled: () => void;
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
@@ -80,6 +82,8 @@ export function AdminGeneralSettingsSection({
   onToggleAiGloballyEnabled,
   aiPrivateEndpoints,
   onSaveAiPrivateEndpoints,
+  notificationPrivateEndpoints,
+  onSaveNotificationPrivateEndpoints,
   handleToggleSessionSharingGloballyEnabled,
   allowRegistration,
   handleToggleRegistration,
@@ -184,6 +188,27 @@ export function AdminGeneralSettingsSection({
             />
           </div>
         )}
+        <div className="flex flex-col gap-1.5 py-2">
+          <span className="text-xs font-medium">
+            {t("admin.notificationPrivateEndpoints")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.notificationPrivateEndpointsDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            defaultValue={notificationPrivateEndpoints.join(", ")}
+            placeholder="ntfy.internal, 192.168.1.20"
+            onBlur={(event) =>
+              onSaveNotificationPrivateEndpoints(
+                event.target.value
+                  .split(",")
+                  .map((entry) => entry.trim())
+                  .filter(Boolean),
+              )
+            }
+          />
+        </div>
         <SettingRow
           label={t("admin.allowRegistration")}
           description={t("admin.allowRegistrationDesc")}

@@ -1,13 +1,14 @@
 import { safeOutboundFetch } from "../utils/safe-outbound-fetch.js";
+import { readNotificationPrivateAllowlist } from "../utils/notification-egress.js";
 
 /**
  * Outbound HTTP for automation steps and notification channels.
  *
  * safeOutboundFetch refuses private and loopback addresses, which is the right
  * default against SSRF but also blocks the self-hosted ntfy or Gotify sitting
- * on a LAN that many installs actually use. Rather than weaken the guard
- * globally, a destination can opt in explicitly; everything else about the
- * guard (scheme, embedded credentials, no redirects) still applies.
+ * on a LAN that many installs actually use. Private delivery therefore needs
+ * both a channel opt-in and an exact host in the administrator allowlist;
+ * scheme validation, DNS pinning and redirect refusal remain in force.
  */
 export interface AutomationFetchOptions {
   method?: string;
@@ -52,8 +53,8 @@ export async function automationFetch(
 }
 
 /**
- * The opt-in path. Keeps the parts of the guard that are always right and
- * drops only the address blocklist.
+ * The opt-in path still goes through the guarded resolver. Only an exact host
+ * authorized by an administrator may resolve to a private address.
  */
 async function privateNetworkFetch(
   rawUrl: string,
@@ -73,5 +74,6 @@ async function privateNetworkFetch(
     throw new Error("URLs with embedded credentials are not allowed");
   }
 
-  return fetch(rawUrl, { ...init, redirect: "error" });
+  const allowlist = await readNotificationPrivateAllowlist();
+  return safeOutboundFetch(rawUrl, init, allowlist);
 }
