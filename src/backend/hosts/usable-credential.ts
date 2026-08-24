@@ -44,5 +44,7 @@ export async function findUsableCredential(
     await manager.snapshotForUser(grant.id, credentialId, userId, row.userId);
     data = await manager.getSecretForUser(credentialId, userId);
   }
-  return data ? snapshotAsCredentialRecord(credentialId, row.userId, data) : null;
+  return data
+    ? snapshotAsCredentialRecord(credentialId, row.userId, data)
+    : null;
 }

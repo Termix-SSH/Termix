@@ -181,8 +181,17 @@ export class HostRepository {
       .where(eq(hosts.userId, fromUserId));
     const moved: number[] = [];
     for (const row of rows) {
-      const plain = DataCrypto.decryptRecord("ssh_data", row, fromUserId, fromKey);
-      const { id: _id, userId: _userId, ...fields } = plain as Record<string, unknown>;
+      const plain = DataCrypto.decryptRecord(
+        "ssh_data",
+        row,
+        fromUserId,
+        fromKey,
+      );
+      const {
+        id: _id,
+        userId: _userId,
+        ...fields
+      } = plain as Record<string, unknown>;
       const encrypted = DataCrypto.encryptRecord(
         "ssh_data",
         { ...fields, id: row.id },

@@ -19,7 +19,10 @@ export class SharedCredentialSecretsRepository {
       .from(sharedCredentialSecrets)
       .where(
         and(
-          eq(sharedCredentialSecrets.credentialAccessId, record.credentialAccessId),
+          eq(
+            sharedCredentialSecrets.credentialAccessId,
+            record.credentialAccessId,
+          ),
           eq(sharedCredentialSecrets.targetUserId, record.targetUserId),
         ),
       )
@@ -53,23 +56,24 @@ export class SharedCredentialSecretsRepository {
     return rows[0] ?? null;
   }
 
-  async deleteForRoleMember(roleId: number, targetUserId: string): Promise<void> {
+  async deleteForRoleMember(
+    roleId: number,
+    targetUserId: string,
+  ): Promise<void> {
     const grants = await this.context.drizzle
       .select({ id: credentialAccess.id })
       .from(credentialAccess)
       .where(eq(credentialAccess.roleId, roleId));
     if (grants.length === 0) return;
-    await this.context.drizzle
-      .delete(sharedCredentialSecrets)
-      .where(
-        and(
-          inArray(
-            sharedCredentialSecrets.credentialAccessId,
-            grants.map((g) => g.id),
-          ),
-          eq(sharedCredentialSecrets.targetUserId, targetUserId),
+    await this.context.drizzle.delete(sharedCredentialSecrets).where(
+      and(
+        inArray(
+          sharedCredentialSecrets.credentialAccessId,
+          grants.map((g) => g.id),
         ),
-      );
+        eq(sharedCredentialSecrets.targetUserId, targetUserId),
+      ),
+    );
     await this.afterWrite();
   }
 

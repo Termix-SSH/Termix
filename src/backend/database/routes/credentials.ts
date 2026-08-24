@@ -369,13 +369,13 @@ router.get(
 
     try {
       const credentialRepository = createCurrentCredentialRepository();
-      const ownCredential =
-        await credentialRepository.findDecryptedByIdForUser(
-          userId,
-          parseInt(id),
-        );
+      const ownCredential = await credentialRepository.findDecryptedByIdForUser(
+        userId,
+        parseInt(id),
+      );
       const credential =
-        ownCredential ?? (await findSharedCredentialForUser(parseInt(id), userId));
+        ownCredential ??
+        (await findSharedCredentialForUser(parseInt(id), userId));
 
       if (!credential) {
         return res.status(404).json({ error: "Credential not found" });
@@ -1057,22 +1057,26 @@ async function listSharedCredentialsForUser(
   userId: string,
 ): Promise<Record<string, unknown>[]> {
   const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
-  const grants = await createCurrentCredentialAccessRepository().listSharedWithUser(
-    userId,
-    roleIds,
-  );
+  const grants =
+    await createCurrentCredentialAccessRepository().listSharedWithUser(
+      userId,
+      roleIds,
+    );
   if (grants.length === 0) return [];
   const credentialRepository = createCurrentCredentialRepository();
   const userRepository = createCurrentUserRepository();
-  const { findUsableCredential } = await import("../../hosts/usable-credential.js");
+  const { findUsableCredential } =
+    await import("../../hosts/usable-credential.js");
   const results: Record<string, unknown>[] = [];
   for (const grant of grants) {
     const row = await credentialRepository.findById(grant.credentialId);
     if (!row) continue;
     let secrets: Record<string, unknown> | null = null;
     try {
-      secrets = (await findUsableCredential(grant.credentialId, userId)) as
-        Record<string, unknown> | null;
+      secrets = (await findUsableCredential(
+        grant.credentialId,
+        userId,
+      )) as Record<string, unknown> | null;
     } catch {
       secrets = null;
     }

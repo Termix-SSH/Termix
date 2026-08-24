@@ -379,7 +379,9 @@ export async function getCredentialAccess(
   credentialId: number,
 ): Promise<{ access: AccessRecord[] }> {
   try {
-    const response = await rbacApi.get(`/rbac/credential/${credentialId}/access`);
+    const response = await rbacApi.get(
+      `/rbac/credential/${credentialId}/access`,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "get credential access");

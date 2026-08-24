@@ -85,19 +85,26 @@ class SharedCredentialSecretsManager {
       try {
         await this.snapshotForUser(accessId, credentialId, memberId, ownerId);
       } catch (error) {
-        databaseLogger.warn("Failed to snapshot shared credential for role member", {
-          operation: "shared_credential_snapshot_role_member",
-          accessId,
-          memberId,
-          error,
-        });
+        databaseLogger.warn(
+          "Failed to snapshot shared credential for role member",
+          {
+            operation: "shared_credential_snapshot_role_member",
+            accessId,
+            memberId,
+            error,
+          },
+        );
       }
     }
   }
 
   /** A user just joined a role: give them every credential the role holds. */
-  async snapshotForRoleMember(roleId: number, targetUserId: string): Promise<void> {
-    const grants = await createCurrentCredentialAccessRepository().listRoleGrants(roleId);
+  async snapshotForRoleMember(
+    roleId: number,
+    targetUserId: string,
+  ): Promise<void> {
+    const grants =
+      await createCurrentCredentialAccessRepository().listRoleGrants(roleId);
     for (const grant of grants) {
       try {
         await this.snapshotForUser(
@@ -107,12 +114,15 @@ class SharedCredentialSecretsManager {
           grant.ownerId,
         );
       } catch (error) {
-        databaseLogger.warn("Failed to snapshot shared credential for new role member", {
-          operation: "shared_credential_snapshot_new_member",
-          accessId: grant.accessId,
-          targetUserId,
-          error,
-        });
+        databaseLogger.warn(
+          "Failed to snapshot shared credential for new role member",
+          {
+            operation: "shared_credential_snapshot_new_member",
+            accessId: grant.accessId,
+            targetUserId,
+            error,
+          },
+        );
       }
     }
   }
@@ -137,7 +147,12 @@ class SharedCredentialSecretsManager {
           : [];
       for (const targetUserId of targets) {
         try {
-          await this.snapshotForUser(grant.id, credentialId, targetUserId, ownerId);
+          await this.snapshotForUser(
+            grant.id,
+            credentialId,
+            targetUserId,
+            ownerId,
+          );
         } catch (error) {
           databaseLogger.warn("Failed to resync shared credential", {
             operation: "shared_credential_resync",

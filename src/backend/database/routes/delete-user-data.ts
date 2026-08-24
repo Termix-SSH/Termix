@@ -53,7 +53,8 @@ export async function deleteUserAndRelatedData(
     // With a successor, hosts and credentials (and the shares on them)
     // change owner instead of disappearing with the account.
     if (options.successorUserId) {
-      const { transferOwnership } = await import("../../utils/transfer-ownership.js");
+      const { transferOwnership } =
+        await import("../../utils/transfer-ownership.js");
       await transferOwnership(userId, options.successorUserId);
     }
 

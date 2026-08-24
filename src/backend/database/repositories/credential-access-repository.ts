@@ -101,7 +101,10 @@ export class CredentialAccessRepository {
       .select({ id: credentialAccess.id })
       .from(credentialAccess)
       .where(
-        and(eq(credentialAccess.credentialId, input.credentialId), targetFilter),
+        and(
+          eq(credentialAccess.credentialId, input.credentialId),
+          targetFilter,
+        ),
       )
       .limit(1);
 
@@ -198,14 +201,18 @@ export class CredentialAccessRepository {
         expiresAt: credentialAccess.expiresAt,
       })
       .from(credentialAccess)
-      .innerJoin(sshCredentials, eq(credentialAccess.credentialId, sshCredentials.id))
+      .innerJoin(
+        sshCredentials,
+        eq(credentialAccess.credentialId, sshCredentials.id),
+      )
       .where(and(granteeFilter(userId, roleIds), activeFilter(now)));
     // Direct and role grants can overlap; keep the strongest per credential.
     const best = new Map<number, SharedCredentialGrant>();
     for (const row of rows) {
       if (row.ownerId === userId) continue;
       const current = best.get(row.credentialId);
-      if (!current || row.permissionLevel === "manage") best.set(row.credentialId, row);
+      if (!current || row.permissionLevel === "manage")
+        best.set(row.credentialId, row);
     }
     return Array.from(best.values());
   }
@@ -226,7 +233,9 @@ export class CredentialAccessRepository {
   /** Grants a role holds, with the credential owner - for new-member snapshots. */
   async listRoleGrants(
     roleId: number,
-  ): Promise<Array<{ accessId: number; credentialId: number; ownerId: string }>> {
+  ): Promise<
+    Array<{ accessId: number; credentialId: number; ownerId: string }>
+  > {
     return this.context.drizzle
       .select({
         accessId: credentialAccess.id,
@@ -234,7 +243,10 @@ export class CredentialAccessRepository {
         ownerId: sshCredentials.userId,
       })
       .from(credentialAccess)
-      .innerJoin(sshCredentials, eq(credentialAccess.credentialId, sshCredentials.id))
+      .innerJoin(
+        sshCredentials,
+        eq(credentialAccess.credentialId, sshCredentials.id),
+      )
       .where(eq(credentialAccess.roleId, roleId));
   }
 

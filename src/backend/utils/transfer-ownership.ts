@@ -1,9 +1,16 @@
+import { eq } from "drizzle-orm";
 import {
-  createCurrentCredentialAccessRepository,
-  createCurrentCredentialRepository,
-  createCurrentHostRepository,
-  createCurrentRbacAccessRepository,
-} from "../database/repositories/factory.js";
+  credentialAccess,
+  hostAccess,
+  hosts,
+  sshCredentials,
+} from "../database/db/schema.js";
+import { needsExplicitPersist } from "../database/db/dialect.js";
+import { createCurrentRepositoryContext } from "../database/repositories/factory.js";
+import type { HostUpdate } from "../database/repositories/host-repository.js";
+import type { NewCredentialRecord } from "../database/repositories/credential-repository.js";
+import { DataCrypto } from "./data-crypto.js";
+import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger } from "./logger.js";
 import { SharedHostSecretsManager } from "./shared-host-secrets-manager.js";
 import { SharedCredentialSecretsManager } from "./shared-credential-secrets-manager.js";
@@ -22,23 +29,104 @@ export async function transferOwnership(
   if (fromUserId === toUserId) {
     throw new Error("Cannot transfer ownership to the same user");
   }
-  const credentialIds =
-    await createCurrentCredentialRepository().transferAllToUser(
+  const context = createCurrentRepositoryContext();
+  const fromKey = DataCrypto.validateUserAccess(fromUserId);
+  const toKey = DataCrypto.validateUserAccess(toUserId);
+  const credentialRows = await context.drizzle
+    .select()
+    .from(sshCredentials)
+    .where(eq(sshCredentials.userId, fromUserId));
+  const hostRows = await context.drizzle
+    .select()
+    .from(hosts)
+    .where(eq(hosts.userId, fromUserId));
+
+  // Decrypt and re-encrypt everything before opening the write transaction.
+  // A corrupt row therefore fails without changing ownership of earlier rows.
+  const credentials = credentialRows.map((row) => {
+    const plain = DataCrypto.decryptRecord(
+      "ssh_credentials",
+      row,
       fromUserId,
-      toUserId,
+      fromKey,
     );
-  const hostIds = await createCurrentHostRepository().transferAllToUser(
-    fromUserId,
-    toUserId,
-  );
-  await createCurrentRbacAccessRepository().reassignHostAccessGrantedBy(
-    fromUserId,
-    toUserId,
-  );
-  await createCurrentCredentialAccessRepository().reassignGrantedBy(
-    fromUserId,
-    toUserId,
-  );
+    const {
+      id: _id,
+      userId: _userId,
+      ...fields
+    } = plain as Record<string, unknown>;
+    const encrypted = DataCrypto.encryptRecord(
+      "ssh_credentials",
+      { ...fields, id: row.id },
+      toUserId,
+      toKey,
+    ) as Record<string, unknown>;
+    delete encrypted.id;
+    return { id: row.id, update: encrypted as Partial<NewCredentialRecord> };
+  });
+  const transferredHosts = hostRows.map((row) => {
+    const plain = DataCrypto.decryptRecord(
+      "ssh_data",
+      row,
+      fromUserId,
+      fromKey,
+    );
+    const {
+      id: _id,
+      userId: _userId,
+      ...fields
+    } = plain as Record<string, unknown>;
+    const encrypted = DataCrypto.encryptRecord(
+      "ssh_data",
+      { ...fields, id: row.id },
+      toUserId,
+      toKey,
+    ) as Record<string, unknown>;
+    delete encrypted.id;
+    return { id: row.id, update: encrypted as HostUpdate };
+  });
+
+  const apply = (tx: typeof context.drizzle, sync: boolean) => {
+    const writes = [
+      ...credentials.map(({ id, update }) =>
+        tx
+          .update(sshCredentials)
+          .set({ ...update, userId: toUserId })
+          .where(eq(sshCredentials.id, id)),
+      ),
+      ...transferredHosts.map(({ id, update }) =>
+        tx
+          .update(hosts)
+          .set({ ...update, userId: toUserId })
+          .where(eq(hosts.id, id)),
+      ),
+      tx
+        .update(hostAccess)
+        .set({ grantedBy: toUserId })
+        .where(eq(hostAccess.grantedBy, fromUserId)),
+      tx
+        .update(credentialAccess)
+        .set({ grantedBy: toUserId })
+        .where(eq(credentialAccess.grantedBy, fromUserId)),
+    ];
+    if (sync) {
+      for (const write of writes) write.run();
+      return undefined;
+    }
+    return Promise.all(writes);
+  };
+
+  if (context.dialect === "sqlite") {
+    context.drizzle.transaction((tx) => apply(tx, true));
+  } else {
+    await context.drizzle.transaction((tx) => apply(tx, false));
+  }
+  if (needsExplicitPersist(context.dialect)) {
+    await DatabaseSaveTrigger.forceSave("transfer_ownership");
+  }
+
+  const credentialIds = credentials.map(({ id }) => id);
+  const hostIds = transferredHosts.map(({ id }) => id);
 
   const hostSecrets = SharedHostSecretsManager.getInstance();
   for (const hostId of hostIds) {

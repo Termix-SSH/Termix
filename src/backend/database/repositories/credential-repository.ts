@@ -371,7 +371,11 @@ export class CredentialRepository {
         fromUserId,
         fromKey,
       );
-      const { id: _id, userId: _userId, ...fields } = plain as Record<string, unknown>;
+      const {
+        id: _id,
+        userId: _userId,
+        ...fields
+      } = plain as Record<string, unknown>;
       const encrypted = DataCrypto.encryptRecord(
         "ssh_credentials",
         { ...fields, id: row.id },
@@ -381,7 +385,10 @@ export class CredentialRepository {
       delete encrypted.id;
       await this.context.drizzle
         .update(sshCredentials)
-        .set({ ...(encrypted as Partial<NewCredentialRecord>), userId: toUserId })
+        .set({
+          ...(encrypted as Partial<NewCredentialRecord>),
+          userId: toUserId,
+        })
         .where(eq(sshCredentials.id, row.id));
       moved.push(row.id);
     }

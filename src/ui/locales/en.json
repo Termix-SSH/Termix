@@ -129,7 +129,12 @@
       "levelUseDesc": "Use: attach the credential to hosts and connect. The secret itself stays hidden.",
       "levelManageDesc": "Manage: also edit the credential and share it with others.",
       "expires": "Expires",
-      "expiry": { "never": "Never", "oneDay": "1 day", "sevenDays": "7 days", "thirtyDays": "30 days" },
+      "expiry": {
+        "never": "Never",
+        "oneDay": "1 day",
+        "sevenDays": "7 days",
+        "thirtyDays": "30 days"
+      },
       "currentAccess": "Shared with",
       "revoke": "Revoke",
       "shared": "Credential shared",

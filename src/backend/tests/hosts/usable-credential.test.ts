@@ -47,7 +47,8 @@ vi.mock("../../utils/shared-credential-secrets-manager.js", async () => {
   };
 });
 
-const { findUsableCredential } = await import("../../hosts/usable-credential.js");
+const { findUsableCredential } =
+  await import("../../hosts/usable-credential.js");
 
 describe("findUsableCredential", () => {
   beforeEach(() => {
@@ -60,7 +61,9 @@ describe("findUsableCredential", () => {
 
   it("returns the user's own credential first", async () => {
     state.own.set("alice:1", { id: 1, userId: "alice", password: "mine" });
-    expect(await findUsableCredential(1, "alice")).toMatchObject({ password: "mine" });
+    expect(await findUsableCredential(1, "alice")).toMatchObject({
+      password: "mine",
+    });
   });
 
   it("returns a shared credential from the recipient's snapshot, shaped like a row", async () => {

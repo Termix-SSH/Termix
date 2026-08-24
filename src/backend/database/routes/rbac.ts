@@ -1637,7 +1637,9 @@ router.post(
     try {
       const sharing = await canManageCredentialSharing(userId, credentialId);
       if (!sharing.allowed || !sharing.ownerId) {
-        return res.status(403).json({ error: "Not allowed to share this credential" });
+        return res
+          .status(403)
+          .json({ error: "Not allowed to share this credential" });
       }
       const ownerId = sharing.ownerId;
 
@@ -1649,7 +1651,10 @@ router.post(
             ? await userRepository.findById(target.id as string)
             : await roleRepository.findRoleById(target.id as number);
         if (!found) {
-          return res.status(404).json({ error: `Target ${target.type} not found`, targetId: target.id });
+          return res.status(404).json({
+            error: `Target ${target.type} not found`,
+            targetId: target.id,
+          });
         }
       }
 
@@ -1673,9 +1678,19 @@ router.post(
         });
         try {
           if (target.type === "user") {
-            await manager.snapshotForUser(grant.id, credentialId, target.id as string, ownerId);
+            await manager.snapshotForUser(
+              grant.id,
+              credentialId,
+              target.id as string,
+              ownerId,
+            );
           } else {
-            await manager.snapshotForRole(grant.id, credentialId, target.id as number, ownerId);
+            await manager.snapshotForRole(
+              grant.id,
+              credentialId,
+              target.id as number,
+              ownerId,
+            );
           }
         } catch (snapshotError) {
           databaseLogger.warn("Credential shared but secret snapshot failed", {
@@ -1730,14 +1745,18 @@ router.get(
       return res.status(400).json({ error: "Invalid credential ID" });
     }
     try {
-      const sharing = await canManageCredentialSharing(req.userId!, credentialId);
+      const sharing = await canManageCredentialSharing(
+        req.userId!,
+        credentialId,
+      );
       if (!sharing.allowed) {
         return res.status(403).json({ error: "Not allowed" });
       }
       res.json({
-        access: await createCurrentCredentialAccessRepository().listForCredential(
-          credentialId,
-        ),
+        access:
+          await createCurrentCredentialAccessRepository().listForCredential(
+            credentialId,
+          ),
       });
     } catch (error) {
       databaseLogger.error("Failed to list credential access", error, {
@@ -1767,7 +1786,10 @@ router.delete(
       return res.status(400).json({ error: "Invalid ID" });
     }
     try {
-      const sharing = await canManageCredentialSharing(req.userId!, credentialId);
+      const sharing = await canManageCredentialSharing(
+        req.userId!,
+        credentialId,
+      );
       if (!sharing.allowed) {
         return res.status(403).json({ error: "Not allowed" });
       }

@@ -164,7 +164,8 @@ export function CredentialItem({
   // A recipient sees only what their grant allows: "manage" may edit and
   // re-share, "use" may only use. Cloning and deleting stay with the owner.
   const canEdit = !cred.isShared || cred.permissionLevel === "manage";
-  const canShare = !!onShare && (!cred.isShared || cred.permissionLevel === "manage");
+  const canShare =
+    !!onShare && (!cred.isShared || cred.permissionLevel === "manage");
   const managementButtons = (
     <>
       {canEdit && (
@@ -293,7 +294,9 @@ export function CredentialItem({
             {cred.isShared && (
               <span
                 className="ml-1 inline-flex items-center gap-0.5 text-[9px] uppercase text-accent-brand/80"
-                title={t("credentials.sharedBy", { owner: cred.ownerUsername ?? "" })}
+                title={t("credentials.sharedBy", {
+                  owner: cred.ownerUsername ?? "",
+                })}
               >
                 <Share2 className="size-2.5" />
                 {t("credentials.sharedBadge")}

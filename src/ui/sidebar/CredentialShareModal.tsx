@@ -41,12 +41,15 @@ export function CredentialShareModal({
   const { t } = useTranslation();
   const [tab, setTab] = useState<"user" | "role">("user");
   const [search, setSearch] = useState("");
-  const [users, setUsers] = useState<Array<{ id: string; username: string }>>([]);
+  const [users, setUsers] = useState<Array<{ id: string; username: string }>>(
+    [],
+  );
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [selectedRoles, setSelectedRoles] = useState<Set<number>>(new Set());
   const [level, setLevel] = useState<CredentialPermissionLevel>("use");
-  const [expiry, setExpiry] = useState<(typeof EXPIRY_PRESETS)[number]["key"]>("never");
+  const [expiry, setExpiry] =
+    useState<(typeof EXPIRY_PRESETS)[number]["key"]>("never");
   const [access, setAccess] = useState<AccessRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -143,7 +146,9 @@ export function CredentialShareModal({
           <DialogTitle>
             {t("credentials.share.title", { name: credential?.name ?? "" })}
           </DialogTitle>
-          <DialogDescription>{t("credentials.share.description")}</DialogDescription>
+          <DialogDescription>
+            {t("credentials.share.description")}
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -164,8 +169,16 @@ export function CredentialShareModal({
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {kind === "user" ? <UserRound className="size-3" /> : <Users className="size-3" />}
-                  {t(kind === "user" ? "credentials.share.users" : "credentials.share.roles")}
+                  {kind === "user" ? (
+                    <UserRound className="size-3" />
+                  ) : (
+                    <Users className="size-3" />
+                  )}
+                  {t(
+                    kind === "user"
+                      ? "credentials.share.users"
+                      : "credentials.share.roles",
+                  )}
                 </button>
               ))}
             </div>
@@ -178,21 +191,31 @@ export function CredentialShareModal({
             <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
               {tab === "user"
                 ? filteredUsers.map((u) => (
-                    <label key={u.id} className="flex items-center gap-2 text-xs px-1 py-0.5 cursor-pointer">
+                    <label
+                      key={u.id}
+                      className="flex items-center gap-2 text-xs px-1 py-0.5 cursor-pointer"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedUsers.has(u.id)}
-                        onChange={() => setSelectedUsers((s) => toggle(s, u.id))}
+                        onChange={() =>
+                          setSelectedUsers((s) => toggle(s, u.id))
+                        }
                       />
                       {u.username}
                     </label>
                   ))
                 : filteredRoles.map((r) => (
-                    <label key={r.id} className="flex items-center gap-2 text-xs px-1 py-0.5 cursor-pointer">
+                    <label
+                      key={r.id}
+                      className="flex items-center gap-2 text-xs px-1 py-0.5 cursor-pointer"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedRoles.has(r.id)}
-                        onChange={() => setSelectedRoles((s) => toggle(s, r.id))}
+                        onChange={() =>
+                          setSelectedRoles((s) => toggle(s, r.id))
+                        }
                       />
                       {r.displayName || r.name}
                     </label>
@@ -206,11 +229,15 @@ export function CredentialShareModal({
                 </span>
                 <select
                   value={level}
-                  onChange={(e) => setLevel(e.target.value as CredentialPermissionLevel)}
+                  onChange={(e) =>
+                    setLevel(e.target.value as CredentialPermissionLevel)
+                  }
                   className="h-8 border border-border bg-background px-2 text-xs outline-none"
                 >
                   <option value="use">{t("credentials.share.levelUse")}</option>
-                  <option value="manage">{t("credentials.share.levelManage")}</option>
+                  <option value="manage">
+                    {t("credentials.share.levelManage")}
+                  </option>
                 </select>
               </div>
               <div className="flex flex-col gap-1">
@@ -231,7 +258,11 @@ export function CredentialShareModal({
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground">
-              {t(level === "manage" ? "credentials.share.levelManageDesc" : "credentials.share.levelUseDesc")}
+              {t(
+                level === "manage"
+                  ? "credentials.share.levelManageDesc"
+                  : "credentials.share.levelUseDesc",
+              )}
             </p>
 
             {access.length > 0 && (
@@ -240,8 +271,15 @@ export function CredentialShareModal({
                   {t("credentials.share.currentAccess")}
                 </span>
                 {access.map((entry) => (
-                  <div key={entry.id} className="flex items-center gap-2 text-xs px-1 py-0.5">
-                    {entry.targetType === "role" ? <Users className="size-3 text-muted-foreground" /> : <UserRound className="size-3 text-muted-foreground" />}
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-2 text-xs px-1 py-0.5"
+                  >
+                    {entry.targetType === "role" ? (
+                      <Users className="size-3 text-muted-foreground" />
+                    ) : (
+                      <UserRound className="size-3 text-muted-foreground" />
+                    )}
                     <span className="flex-1 truncate">
                       {entry.targetType === "role"
                         ? entry.roleDisplayName || entry.roleName
@@ -271,7 +309,9 @@ export function CredentialShareModal({
           </Button>
           <Button
             onClick={() => void handleShare()}
-            disabled={saving || (selectedUsers.size === 0 && selectedRoles.size === 0)}
+            disabled={
+              saving || (selectedUsers.size === 0 && selectedRoles.size === 0)
+            }
           >
             {saving && <Loader2 className="size-3.5 mr-1 animate-spin" />}
             {t("credentials.share.shareButton")}
