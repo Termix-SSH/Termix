@@ -16,7 +16,10 @@ import {
   setHostAuthOverride,
 } from "@/main-axios";
 import type { Credential, Host } from "@/types/ui-types";
-import type { AuthOverrideProtocol } from "@/types/auth-protocols";
+import {
+  AUTH_PROTOCOL_METADATA,
+  type AuthOverrideProtocol,
+} from "@/types/auth-protocols";
 import { mapCredentials } from "./HostManagerData";
 
 export function HostAuthOverrideModal({
@@ -106,7 +109,11 @@ export function HostAuthOverrideModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("hosts.sharing.authOverrideTitle")}</DialogTitle>
+            <DialogTitle>
+              {t("hosts.sharing.authOverrideTitleProtocol", {
+                protocol: AUTH_PROTOCOL_METADATA[protocol].label,
+              })}
+            </DialogTitle>
             <DialogDescription>
               {t(
                 ownerAuthShared

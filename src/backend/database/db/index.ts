@@ -21,6 +21,7 @@ import {
 } from "../../utils/data-dir-guard.js";
 import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
 import { resolveDatabaseDialect, type DatabaseDialect } from "./dialect.js";
+import { SYSTEM_ROLE_DEFAULTS } from "../../utils/permission-catalog.js";
 import { connectRemoteDatabase } from "./connect.js";
 import { runRemoteMigrations } from "./migrate.js";
 import type { PortableDatabase } from "../repositories/database-context.js";
@@ -1953,20 +1954,24 @@ const migrateSchema = () => {
       });
     }
 
-    const systemRoles = [
-      {
-        name: "admin",
-        displayName: "rbac.roles.admin",
-        description: "Administrator with full access",
-        permissions: null,
-      },
-      {
-        name: "user",
-        displayName: "rbac.roles.user",
-        description: "Regular user",
-        permissions: null,
-      },
-    ];
+    const systemRoles = Object.entries(SYSTEM_ROLE_DEFAULTS).map(
+      ([name, defaults]) => ({
+        name,
+        displayName: `rbac.roles.${name}`,
+        description: defaults.description,
+        permissions: JSON.stringify(defaults.permissions),
+      }),
+    );
+
+    // Route-level RBAC needs the permission lists to exist; roles seeded by
+    // earlier versions carried NULL there. Backfill only NULL so an admin's
+    // edits to these roles are never overwritten.
+    const backfillPermissions = sqlite.prepare(
+      "UPDATE roles SET permissions = ? WHERE name = ? AND is_system = 1 AND permissions IS NULL",
+    );
+    for (const role of systemRoles) {
+      backfillPermissions.run(role.permissions, role.name);
+    }
 
     for (const role of systemRoles) {
       const existingRole = sqlite.prepare("SELECT id FROM roles WHERE name = ?").get(role.name);
@@ -2985,6 +2990,12 @@ async function initializeRemoteDatabase(
   );
   await primeCurrentSettingsCache();
   startSettingsCacheRefresh();
+
+  // The SQLite bootstrap seeds system roles inline below; migrations for the
+  // remote dialects never did, and route-level RBAC denies a user with no
+  // usable role, so they are seeded (and backfilled) here.
+  const { ensureSystemRoles } = await import("../../utils/system-roles.js");
+  await ensureSystemRoles();
 
   databaseLogger.info(`${dialect} database ready`, {
     operation: "db_init_complete",

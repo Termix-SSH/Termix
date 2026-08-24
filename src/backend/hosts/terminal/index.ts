@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { getAuditUsername } from "../../utils/audit-logger.js";
 import {
   parseWsMessage,
   asObject,
@@ -1274,6 +1275,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 userId,
                 permissionLevel: share.permissionLevel as
                   "read-write" | "read-only",
+                displayName: await getAuditUsername(userId),
                 tabInstanceId: joinData.tabInstanceId,
                 shareId: share.id,
               },

@@ -1,9 +1,24 @@
 import { safeOutboundFetch } from "./safe-outbound-fetch.js";
+import { getCurrentSettingValue } from "../database/repositories/factory.js";
 import { databaseLogger } from "./logger.js";
 import type { AuditLogParams } from "./audit-logger.js";
 
 export const AUDIT_FORWARD_URL_ENV = "AUDIT_LOG_FORWARD_URL";
 export const AUDIT_FORWARD_TOKEN_ENV = "AUDIT_LOG_FORWARD_TOKEN";
+export const AUDIT_FORWARD_URL_SETTING = "audit_log_forward_url";
+export const AUDIT_FORWARD_TOKEN_SETTING = "audit_log_forward_token";
+
+/**
+ * Settings-table read that tolerates running before the database is up (unit
+ * tests, early startup): no readable setting behaves like an unset one.
+ */
+function readForwardSetting(key: string): string | null {
+  try {
+    return getCurrentSettingValue(key)?.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * How many consecutive failures before the forwarder stops complaining on every
@@ -23,9 +38,14 @@ export interface AuditForwardTarget {
 export function auditForwardTarget(
   env: NodeJS.ProcessEnv = process.env,
 ): AuditForwardTarget | null {
-  const url = env[AUDIT_FORWARD_URL_ENV]?.trim();
+  // An admin-entered collector wins over the deployment env var, so the UI
+  // can configure forwarding - and its token - without a restart.
+  const settingUrl = readForwardSetting(AUDIT_FORWARD_URL_SETTING);
+  const url = settingUrl ?? env[AUDIT_FORWARD_URL_ENV]?.trim();
   if (!url) return null;
-  const token = env[AUDIT_FORWARD_TOKEN_ENV]?.trim();
+  const token = settingUrl
+    ? readForwardSetting(AUDIT_FORWARD_TOKEN_SETTING)
+    : env[AUDIT_FORWARD_TOKEN_ENV]?.trim();
   return token ? { url, token } : { url };
 }
 

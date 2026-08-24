@@ -28,6 +28,7 @@ import {
   createCurrentHostRepository,
   createCurrentUserRepository,
   createCurrentSyncTombstoneRepository,
+  createCurrentSharedHostAuthOverrideRepository,
 } from "../repositories/factory.js";
 import {
   containsOwnerPrivateAuthUpdate,
@@ -62,6 +63,7 @@ import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../repositories/host-resolution-repository.js";
+import { AUTH_PROTOCOL_METADATA } from "../../../types/auth-protocols.js";
 import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
@@ -125,6 +127,7 @@ registerHostInternalRoutes(router);
 router.post(
   ["/db/host", "/enroll"],
   authenticateJWT,
+  permissionManager.requirePermission("hosts.create"),
   requireDataAccess,
   requireHostEnrollmentAccessForPath,
   upload.single("key"),
@@ -817,6 +820,7 @@ router.post(
 router.put(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
@@ -1458,6 +1462,7 @@ router.put(
 router.get(
   "/db/host",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1601,6 +1606,7 @@ router.get(
 router.get(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Array.isArray(req.params.id)
@@ -2223,6 +2229,7 @@ router.get(
 router.delete(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -2354,11 +2361,18 @@ router.delete(
   },
 );
 
-registerHostFileManagerBookmarkRoutes(router, authenticateJWT);
+registerHostFileManagerBookmarkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+);
 
 router.get(
   "/transfer/recent",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const sourceHostIdQuery = Array.isArray(req.query.sourceHostId)
@@ -2395,6 +2409,8 @@ router.get(
 router.post(
   "/transfer/recent",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { sourceHostId, destHostId, destPath, destPathLabel } = req.body;
@@ -2426,7 +2442,12 @@ router.post(
     }
   },
 );
-registerHostCommandHistoryRoutes(router, authenticateJWT);
+registerHostCommandHistoryRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+);
 
 async function resolveHostCredentials(
   host: Record<string, unknown>,
@@ -2455,6 +2476,24 @@ async function resolveHostCredentials(
         required: needsPersonalCredential,
         ownerAuthShared: !!host.shareSshAuth,
       };
+      // Owner auth for the remote desktop protocols is always snapshotted
+      // for recipients; only their own override credential varies per user.
+      const authOverrides: Record<string, unknown> = {
+        ssh: baseSshOverrideState,
+      };
+      const overrideCredentialIds =
+        await createCurrentSharedHostAuthOverrideRepository().listCredentialIds(
+          host.id,
+          requestingUserId,
+        );
+      for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+        if (!host[AUTH_PROTOCOL_METADATA[protocol].enableField]) continue;
+        authOverrides[protocol] = {
+          credentialId: overrideCredentialIds[protocol],
+          required: false,
+          ownerAuthShared: true,
+        };
+      }
       const recipientHost: Record<string, unknown> = {
         ...host,
         credentialId: null,
@@ -2462,9 +2501,7 @@ async function resolveHostCredentials(
         key: null,
         keyPassword: null,
         keyType: null,
-        authOverrides: {
-          ssh: baseSshOverrideState,
-        },
+        authOverrides,
       };
 
       try {
@@ -2480,6 +2517,7 @@ async function resolveHostCredentials(
           return {
             ...recipientHost,
             authOverrides: {
+              ...authOverrides,
               ssh: {
                 credentialId: resolution.credentialId,
                 required: false,
@@ -2505,6 +2543,7 @@ async function resolveHostCredentials(
             return {
               ...recipientHost,
               authOverrides: {
+                ...authOverrides,
                 ssh: {
                   required: false,
                   ownerAuthShared: true,
@@ -2524,6 +2563,7 @@ async function resolveHostCredentials(
             return {
               ...recipientHost,
               authOverrides: {
+                ...authOverrides,
                 ssh: {
                   required: false,
                   ownerAuthShared: true,
@@ -2547,6 +2587,7 @@ async function resolveHostCredentials(
           return {
             ...recipientHost,
             authOverrides: {
+              ...authOverrides,
               ssh: {
                 required: false,
                 ownerAuthShared: !!host.shareSshAuth,
@@ -2605,13 +2646,27 @@ async function resolveHostCredentials(
 
 registerHostFolderRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
+  requireDeletePermission: permissionManager.requirePermission("hosts.delete"),
+  requireCredentialEditPermission:
+    permissionManager.requirePermission("credentials.edit"),
+  requireDataAccess,
   statsServerUrl: STATS_SERVER_URL,
 });
 
-registerHostBulkRoutes(router, authenticateJWT);
+registerHostBulkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.create"),
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+);
 
 registerHostAutostartRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
 });
 
@@ -2656,6 +2711,8 @@ registerHostAutostartRoutes(router, {
 router.get(
   "/ssh/opkssh/token/:hostId",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
@@ -2727,6 +2784,8 @@ router.get(
 router.delete(
   "/ssh/opkssh/token/:hostId",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
@@ -2759,6 +2818,7 @@ registerHostOpksshRoutes(router);
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
 });
 

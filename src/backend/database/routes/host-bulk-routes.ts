@@ -118,6 +118,9 @@ export function importedHostUsername(
 export function registerHostBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireCreatePermission: RequestHandler,
+  requireEditPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -182,6 +185,8 @@ export function registerHostBulkRoutes(
   router.patch(
     "/bulk-update",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostIds, updates } = req.body;
@@ -386,6 +391,8 @@ export function registerHostBulkRoutes(
   router.put(
     "/reorder",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { positions } = req.body as {
@@ -432,6 +439,9 @@ export function registerHostBulkRoutes(
   router.post(
     "/bulk-import",
     authenticateJWT,
+    requireCreatePermission,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const {
@@ -844,6 +854,9 @@ export function registerHostBulkRoutes(
   router.post(
     "/ssh-config-import",
     authenticateJWT,
+    requireCreatePermission,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { content, overwrite } = req.body;

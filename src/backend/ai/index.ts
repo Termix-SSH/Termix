@@ -1,6 +1,7 @@
 import { getErrorMessage } from "../utils/error-message.js";
 import express from "express";
 import type { AuthenticatedRequest } from "../../types/index.js";
+import { PermissionManager } from "../utils/permission-manager.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { databaseLogger } from "../utils/logger.js";
 import {
@@ -36,6 +37,7 @@ import { applyProposal } from "./tools/executor.js";
 const router = express.Router();
 
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 const aiGate = createAiGate();
@@ -97,6 +99,7 @@ router.get("/status", authenticateJWT, async (req, res) => {
 router.get(
   "/providers",
   authenticateJWT,
+  permissionManager.requirePermission("ai.use"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -147,6 +150,7 @@ router.get(
 router.post(
   "/providers",
   authenticateJWT,
+  permissionManager.requirePermission("ai.manage_providers"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -224,6 +228,7 @@ router.post(
 router.patch(
   "/providers/:id",
   authenticateJWT,
+  permissionManager.requirePermission("ai.manage_providers"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -286,6 +291,7 @@ router.patch(
 router.delete(
   "/providers/:id",
   authenticateJWT,
+  permissionManager.requirePermission("ai.manage_providers"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -358,6 +364,7 @@ router.delete(
 router.post(
   "/probe-models",
   authenticateJWT,
+  permissionManager.requirePermission("ai.manage_providers"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -423,6 +430,7 @@ router.post(
 router.get(
   "/providers/:id/models",
   authenticateJWT,
+  permissionManager.requirePermission("ai.use"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -470,6 +478,7 @@ router.get(
 router.get(
   "/conversations",
   authenticateJWT,
+  permissionManager.requirePermission("ai.use"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -510,6 +519,7 @@ router.get(
 router.get(
   "/conversations/:id",
   authenticateJWT,
+  permissionManager.requirePermission("ai.use"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -560,6 +570,7 @@ router.get(
 router.delete(
   "/conversations/:id",
   authenticateJWT,
+  permissionManager.requirePermission("ai.use"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -622,6 +633,7 @@ router.delete(
 router.post(
   "/chat/stream",
   authenticateJWT,
+  permissionManager.requirePermission("ai.use"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -840,6 +852,7 @@ router.post(
 router.post(
   "/proposals/:id/apply",
   authenticateJWT,
+  permissionManager.requirePermission("ai.apply_proposals"),
   requireDataAccess,
   aiGate,
   async (req, res) => {
@@ -931,6 +944,7 @@ router.post(
 router.post(
   "/proposals/:id/reject",
   authenticateJWT,
+  permissionManager.requirePermission("ai.use"),
   requireDataAccess,
   aiGate,
   async (req, res) => {

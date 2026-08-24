@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { hostAccess, roles, userRoles } from "../db/schema.js";
+import { hostAccess, roles, userRoles, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
 import { deleteReturning, insertReturning } from "./returning.js";
@@ -8,7 +8,7 @@ export type RoleRecord = typeof roles.$inferSelect;
 export type NewRoleRecord = typeof roles.$inferInsert;
 export type RoleUpdate = Pick<
   Partial<NewRoleRecord>,
-  "displayName" | "description" | "updatedAt"
+  "displayName" | "description" | "permissions" | "updatedAt"
 >;
 
 export type UserRoleWithRole = {
@@ -19,6 +19,13 @@ export type UserRoleWithRole = {
   description: string | null;
   isSystem: boolean;
   grantedAt: string;
+};
+
+export type RoleMemberRecord = {
+  userId: string;
+  username: string;
+  grantedAt: string;
+  grantedBy: string | null;
 };
 
 export type UserRolePermissionRecord = {
@@ -224,6 +231,20 @@ export class RoleRepository {
       .where(eq(userRoles.roleId, roleId));
 
     return rows.map((row) => row.userId);
+  }
+
+  async listRoleMembers(roleId: number): Promise<RoleMemberRecord[]> {
+    return this.context.drizzle
+      .select({
+        userId: userRoles.userId,
+        username: users.username,
+        grantedAt: userRoles.grantedAt,
+        grantedBy: userRoles.grantedBy,
+      })
+      .from(userRoles)
+      .innerJoin(users, eq(userRoles.userId, users.id))
+      .where(eq(userRoles.roleId, roleId))
+      .orderBy(users.username);
   }
 
   async listUserRolePermissions(

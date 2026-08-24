@@ -58,6 +58,11 @@ import {
 } from "@/sidebar/host-permissions";
 import { HostAuthOverrideModal } from "@/sidebar/HostAuthOverrideModal";
 import {
+  AUTH_OVERRIDE_PROTOCOLS,
+  AUTH_PROTOCOL_METADATA,
+  type AuthOverrideProtocol,
+} from "@/types/auth-protocols";
+import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
@@ -340,8 +345,11 @@ export function HostItem({
     !alwaysShowTray && !actionsOnly && (trayTrigger === "click" || isTouchOnly);
   const showPasswordCopy = !host.isShared && canCopyHostPassword(host);
   const showSudoPasswordCopy = !host.isShared && canCopyHostSudoPassword(host);
-  const canOverrideAuth = canOverrideHostAuth(host, "ssh");
-  const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
+  const authOverrideProtocols = AUTH_OVERRIDE_PROTOCOLS.filter((protocol) =>
+    canOverrideHostAuth(host, protocol),
+  );
+  const [authOverrideProtocol, setAuthOverrideProtocol] =
+    useState<AuthOverrideProtocol | null>(null);
   const [parentDragOver, setParentDragOver] = useState(false);
   const [nativeRdpAvailable, setNativeRdpAvailable] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState<{
@@ -736,17 +744,20 @@ export function HostItem({
             <Copy className="size-3.5 mr-2" />
             {t("hosts.copyAddress")}
           </DropdownMenuItem>
-          {canOverrideAuth && (
+          {authOverrideProtocols.map((protocol) => (
             <DropdownMenuItem
+              key={protocol}
               onClick={(e) => {
                 e.stopPropagation();
-                setAuthOverrideOpen(true);
+                setAuthOverrideProtocol(protocol);
               }}
             >
               <KeyRound className="size-3.5 mr-2" />
-              {t("hosts.sharing.authOverrideAction")}
+              {t("hosts.sharing.authOverrideActionProtocol", {
+                protocol: AUTH_PROTOCOL_METADATA[protocol].label,
+              })}
             </DropdownMenuItem>
-          )}
+          ))}
           {showPasswordCopy && (
             <DropdownMenuItem
               onClick={(e) => handleCopyPassword(e, "password")}
@@ -1320,12 +1331,14 @@ export function HostItem({
             </div>
           </div>
         </div>
-        {canOverrideAuth && (
+        {authOverrideProtocol && (
           <HostAuthOverrideModal
-            open={authOverrideOpen}
-            onOpenChange={setAuthOverrideOpen}
+            open
+            onOpenChange={(open) => {
+              if (!open) setAuthOverrideProtocol(null);
+            }}
             host={host}
-            protocol="ssh"
+            protocol={authOverrideProtocol}
           />
         )}
       </div>

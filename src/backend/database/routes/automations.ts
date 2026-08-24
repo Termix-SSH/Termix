@@ -7,6 +7,7 @@ import type {
   Trigger,
 } from "../../../types/automations.js";
 import { AUTOMATION_DEFINITION_VERSION } from "../../../types/automations.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { databaseLogger } from "../../utils/logger.js";
 import {
@@ -26,6 +27,7 @@ import {
 const router = express.Router();
 
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
@@ -244,6 +246,7 @@ async function syncSchedule(
 router.get(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("automations.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -282,6 +285,7 @@ router.get(
 router.get(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("automations.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -333,6 +337,7 @@ router.get(
 router.post(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("automations.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -423,6 +428,7 @@ router.post(
 router.put(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("automations.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -531,6 +537,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("automations.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -600,6 +607,7 @@ router.delete(
 router.post(
   "/:id/run",
   authenticateJWT,
+  permissionManager.requirePermission("automations.run"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -673,6 +681,7 @@ router.post(
 router.get(
   "/runs/history",
   authenticateJWT,
+  permissionManager.requirePermission("automations.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -715,6 +724,7 @@ router.get(
 router.get(
   "/runs/:runId/steps",
   authenticateJWT,
+  permissionManager.requirePermission("automations.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;

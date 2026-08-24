@@ -2,6 +2,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import { authLogger } from "../../utils/logger.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
@@ -26,6 +27,7 @@ function isNonEmptyString(val: unknown): val is string {
 }
 
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
@@ -78,6 +80,7 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 router.post(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -250,6 +253,7 @@ router.post(
 router.get(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -290,6 +294,7 @@ router.get(
 router.get(
   "/folders",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -311,7 +316,12 @@ router.get(
 // Registered here (before the PUT /:id route below) so the literal
 // "/reorder" path segment is matched before Express falls through to the
 // PUT /:id param route and treats "reorder" as an id.
-registerCredentialBulkRoutes(router, authenticateJWT);
+registerCredentialBulkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.edit"),
+  requireDataAccess,
+);
 
 /**
  * @openapi
@@ -340,6 +350,7 @@ registerCredentialBulkRoutes(router, authenticateJWT);
 router.get(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -432,6 +443,7 @@ router.get(
 router.post(
   "/:id/duplicate",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -585,6 +597,7 @@ router.post(
 router.put(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -747,6 +760,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -878,6 +892,7 @@ router.delete(
 router.post(
   "/:id/apply-to-host/:hostId",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.edit"),
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const credentialId = Array.isArray(req.params.id)
@@ -958,6 +973,7 @@ router.post(
 router.get(
   "/:id/hosts",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const credentialId = Array.isArray(req.params.id)
@@ -1076,6 +1092,7 @@ function formatSSHHostOutput(
 router.put(
   "/folders/rename",
   authenticateJWT,
+  permissionManager.requirePermission("credentials.edit"),
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { oldName, newName } = req.body;
@@ -1107,8 +1124,19 @@ router.put(
   },
 );
 
-registerCredentialKeyRoutes(router, authenticateJWT);
+registerCredentialKeyRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
+  requireDataAccess,
+);
 
-registerCredentialDeployRoutes(router, authenticateJWT);
+registerCredentialDeployRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+);
 
 export default router;

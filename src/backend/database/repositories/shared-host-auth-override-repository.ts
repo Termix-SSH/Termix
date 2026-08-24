@@ -33,6 +33,33 @@ export class SharedHostAuthOverrideRepository {
     return rows[0] ?? null;
   }
 
+  /** Recipient overrides for a host keyed by protocol, in one query. */
+  async listCredentialIds(
+    hostId: number,
+    userId: string,
+  ): Promise<Partial<Record<AuthOverrideProtocol, number>>> {
+    const rows = await this.context.drizzle
+      .select({
+        protocol: sharedHostAuthOverrides.protocol,
+        credentialId: sharedHostAuthOverrides.credentialId,
+      })
+      .from(sharedHostAuthOverrides)
+      .where(
+        and(
+          eq(sharedHostAuthOverrides.hostId, hostId),
+          eq(sharedHostAuthOverrides.userId, userId),
+        ),
+      );
+
+    const result: Partial<Record<AuthOverrideProtocol, number>> = {};
+    for (const row of rows) {
+      if (row.credentialId) {
+        result[row.protocol as AuthOverrideProtocol] = row.credentialId;
+      }
+    }
+    return result;
+  }
+
   async findCredentialId(
     hostId: number,
     userId: string,

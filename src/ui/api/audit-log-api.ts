@@ -105,3 +105,33 @@ export async function getAuditLogActions(): Promise<{ actions: string[] }> {
     handleApiError(error, "fetch audit log actions");
   }
 }
+
+export interface AuditForwardingSettings {
+  url: string;
+  hasToken: boolean;
+  envConfigured: boolean;
+}
+
+export async function getAuditForwarding(): Promise<AuditForwardingSettings> {
+  try {
+    const response = await authApi.get("/users/audit-forwarding");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get audit forwarding settings");
+  }
+}
+
+export async function updateAuditForwarding(
+  url: string,
+  token?: string,
+): Promise<{ url: string; hasToken: boolean }> {
+  try {
+    const response = await authApi.patch("/users/audit-forwarding", {
+      url,
+      token,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update audit forwarding settings");
+  }
+}

@@ -154,6 +154,7 @@ export function parseShareTargets(
 router.post(
   "/host/:id/share",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const hostId = parseInt(id, 10);
@@ -365,6 +366,7 @@ router.post(
 router.post(
   "/folder/share",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId!;
     const { folder } = req.body ?? {};
@@ -939,7 +941,7 @@ router.get(
 router.post(
   "/roles",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const { name, displayName, description } = req.body;
 
@@ -1031,7 +1033,7 @@ router.post(
 router.put(
   "/roles/:id",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
@@ -1174,7 +1176,7 @@ router.get(
 router.delete(
   "/roles/:id",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
@@ -1219,6 +1221,53 @@ router.delete(
 
 /**
  * @openapi
+ * /rbac/roles/{id}/members:
+ *   get:
+ *     summary: List the users holding a role
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Role members.
+ *       404:
+ *         description: Role not found.
+ */
+router.get(
+  "/roles/:id/members",
+  authenticateJWT,
+  permissionManager.requirePermission("admin.roles.manage"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const roleId = parseInt(id, 10);
+
+    if (isNaN(roleId)) {
+      return res.status(400).json({ error: "Invalid role ID" });
+    }
+
+    try {
+      const roleRepository = createCurrentRoleRepository();
+      if (!(await roleRepository.findRoleById(roleId))) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.json({ members: await roleRepository.listRoleMembers(roleId) });
+    } catch (error) {
+      databaseLogger.error("Failed to list role members", error, {
+        operation: "list_role_members",
+        roleId,
+      });
+      res.status(500).json({ error: "Failed to list role members" });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /rbac/users/{userId}/roles:
  *   post:
  *     summary: Assign a role to a user
@@ -1257,7 +1306,7 @@ router.delete(
 router.post(
   "/users/:userId/roles",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const targetUserId = Array.isArray(req.params.userId)
       ? req.params.userId[0]
@@ -1382,7 +1431,7 @@ router.post(
 router.delete(
   "/users/:userId/roles/:roleId",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const targetUserId = Array.isArray(req.params.userId)
       ? req.params.userId[0]
@@ -1524,6 +1573,7 @@ router.get(
 router.post(
   "/snippet/:id/share",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const snippetId = parseInt(id, 10);
@@ -1639,6 +1689,131 @@ router.post(
  *     tags:
  *       - RBAC
  */
+/**
+ * @openapi
+ * /rbac/snippet-folder/share:
+ *   post:
+ *     summary: Share every snippet in a folder
+ *     description: Grants view access to each owned snippet in the folder (and its subfolders) to the given users or roles.
+ *     tags:
+ *       - RBAC
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               folder:
+ *                 type: string
+ *               targets:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [user, role]
+ *                     id:
+ *                       oneOf:
+ *                         - type: string
+ *                         - type: integer
+ *               durationHours:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Folder shared.
+ *       404:
+ *         description: A target was not found.
+ */
+router.post(
+  "/snippet-folder/share",
+  authenticateJWT,
+  permissionManager.requirePermission("snippets.share"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId!;
+    const { folder, durationHours } = req.body ?? {};
+
+    if (!isNonEmptyString(folder)) {
+      return res.status(400).json({ error: "Folder name is required" });
+    }
+
+    const targets = parseShareTargets(req.body ?? {});
+    if (!targets) {
+      return res.status(400).json({
+        error:
+          "targets must be a non-empty array of { type: 'user'|'role', id } entries",
+      });
+    }
+
+    try {
+      const userRepository = createCurrentUserRepository();
+      const roleRepository = createCurrentRoleRepository();
+      for (const target of targets) {
+        const found =
+          target.type === "user"
+            ? await userRepository.findById(target.id as string)
+            : await roleRepository.findRoleById(target.id as number);
+        if (!found) {
+          return res.status(404).json({
+            error: `Target ${target.type} not found`,
+            targetId: target.id,
+          });
+        }
+      }
+
+      const snippetsInFolder =
+        await createCurrentSnippetRepository().listOwnedSnippetsInFolder(
+          userId,
+          folder,
+        );
+      const expiresAt = expiryFromDuration(durationHours);
+      const rbacAccessRepository = createCurrentRbacAccessRepository();
+
+      for (const snippet of snippetsInFolder) {
+        for (const target of targets) {
+          if (target.type === "user" && target.id === userId) continue;
+          await rbacAccessRepository.upsertSnippetAccess({
+            snippetId: snippet.id,
+            grantedBy: userId,
+            expiresAt,
+            ...(target.type === "user"
+              ? {
+                  targetType: "user" as const,
+                  targetUserId: target.id as string,
+                }
+              : {
+                  targetType: "role" as const,
+                  targetRoleId: target.id as number,
+                }),
+          });
+        }
+      }
+
+      databaseLogger.success("Snippet folder shared successfully", {
+        operation: "rbac_snippet_folder_share",
+        userId,
+        folder,
+        snippetsShared: snippetsInFolder.length,
+        targets: targets.length,
+      });
+
+      res.json({
+        success: true,
+        expiresAt,
+        snippetsShared: snippetsInFolder.length,
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to share snippet folder", error, {
+        operation: "share_snippet_folder",
+        folder,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to share snippet folder" });
+    }
+  },
+);
+
 router.delete(
   "/snippet/:id/access/:accessId",
   authenticateJWT,

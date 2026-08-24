@@ -7,6 +7,11 @@ import {
   setGlobalLogLevel,
 } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  AUDIT_FORWARD_TOKEN_SETTING,
+  AUDIT_FORWARD_URL_ENV,
+  AUDIT_FORWARD_URL_SETTING,
+} from "../../utils/audit-forwarder.js";
 import { getTelemetryEnvOverride } from "../../utils/analytics.js";
 import { AI_PRIVATE_ALLOWLIST_KEY, parseAllowlist } from "../../ai/egress.js";
 import {
@@ -669,6 +674,125 @@ export function registerUserSettingsRoutes(
    *                 enabled:
    *                   type: boolean
    */
+  /**
+   * @openapi
+   * /users/audit-forwarding:
+   *   get:
+   *     summary: Get audit log forwarding settings (admin only)
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: Forwarding target. The token itself is never returned.
+   */
+  router.get("/audit-forwarding", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      if (!(await getAdminActor(userId))) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const settingsRepository = createCurrentSettingsRepository();
+      const url =
+        (await settingsRepository.get(AUDIT_FORWARD_URL_SETTING)) ?? "";
+      const hasToken = !!(await settingsRepository.get(
+        AUDIT_FORWARD_TOKEN_SETTING,
+      ));
+      res.json({
+        url,
+        hasToken,
+        envConfigured: !!process.env[AUDIT_FORWARD_URL_ENV]?.trim(),
+      });
+    } catch (err) {
+      authLogger.error("Failed to get audit forwarding settings", err);
+      res
+        .status(500)
+        .json({ error: "Failed to get audit forwarding settings" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/audit-forwarding:
+   *   patch:
+   *     summary: Update audit log forwarding settings (admin only)
+   *     description: Sets the collector URL audit entries are shipped to. An empty URL disables forwarding and clears the stored token. Omitting token keeps the stored one.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               url:
+   *                 type: string
+   *               token:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Setting updated.
+   *       403:
+   *         description: Not authorized.
+   */
+  router.patch("/audit-forwarding", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { url, token } = req.body ?? {};
+      if (
+        typeof url !== "string" ||
+        (token !== undefined && typeof token !== "string")
+      ) {
+        return res.status(400).json({ error: "url must be a string" });
+      }
+      const trimmedUrl = url.trim();
+      if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+        return res.status(400).json({ error: "url must be http(s)" });
+      }
+
+      const settingsRepository = createCurrentSettingsRepository();
+      if (!trimmedUrl) {
+        await settingsRepository.delete(AUDIT_FORWARD_URL_SETTING);
+        await settingsRepository.delete(AUDIT_FORWARD_TOKEN_SETTING);
+      } else {
+        await settingsRepository.set(AUDIT_FORWARD_URL_SETTING, trimmedUrl);
+        if (token !== undefined) {
+          if (token.trim()) {
+            await settingsRepository.set(
+              AUDIT_FORWARD_TOKEN_SETTING,
+              token.trim(),
+            );
+          } else {
+            await settingsRepository.delete(AUDIT_FORWARD_TOKEN_SETTING);
+          }
+        }
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: actor.username ?? userId,
+        action: "update_audit_forwarding",
+        resourceType: "setting",
+        details: JSON.stringify({ enabled: !!trimmedUrl }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ url: trimmedUrl, hasToken: !!token?.trim() });
+    } catch (err) {
+      authLogger.error("Failed to update audit forwarding settings", err);
+      res
+        .status(500)
+        .json({ error: "Failed to update audit forwarding settings" });
+    }
+  });
+
   router.get("/session-sharing-enabled", authenticateJWT, async (_req, res) => {
     try {
       res.json({

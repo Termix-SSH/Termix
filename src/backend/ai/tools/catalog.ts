@@ -5,12 +5,10 @@ import type { AiTool, ToolDefinitionShape } from "./types.js";
 /**
  * The allowlist, and the security boundary for the whole feature.
  *
- * A model can only ever invoke what appears here. This matters more than usual
- * in this codebase: PermissionManager.requirePermission exists but is currently
- * mounted on zero routes, so RBAC strings are a vocabulary for the admin role
- * editor rather than route enforcement. "The assistant cannot reach credentials
- * or user administration" is therefore a property of this list, not of the
- * permission system.
+ * A model can only ever invoke what appears here. Route-level RBAC gates the
+ * HTTP API, but tools run in-process with the calling user's identity and never
+ * pass through a router, so "the assistant cannot reach credentials or user
+ * administration" is a property of this list, not of the permission system.
  *
  * Anything touching credentials, vaults, RBAC, users, identity, certificates,
  * SSO or instance settings is deliberately absent and must stay absent.

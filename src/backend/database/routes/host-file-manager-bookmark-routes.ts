@@ -7,6 +7,8 @@ import { isNonEmptyString } from "./host-normalizers.js";
 export function registerHostFileManagerBookmarkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireViewPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -33,6 +35,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.get(
     "/file_manager/recent",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const hostIdQuery = Array.isArray(req.query.hostId)
@@ -98,6 +102,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.post(
     "/file_manager/recent",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostId, path, name } = req.body;
@@ -155,6 +161,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.delete(
     "/file_manager/recent",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostId, path } = req.body;
@@ -203,6 +211,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.get(
     "/file_manager/pinned",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const hostIdQuery = Array.isArray(req.query.hostId)
@@ -269,6 +279,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.post(
     "/file_manager/pinned",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostId, path, name } = req.body;
@@ -327,6 +339,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.delete(
     "/file_manager/pinned",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostId, path } = req.body;
@@ -375,6 +389,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.get(
     "/file_manager/shortcuts",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const hostIdQuery = Array.isArray(req.query.hostId)
@@ -441,6 +457,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.post(
     "/file_manager/shortcuts",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostId, path, name } = req.body;
@@ -499,6 +517,8 @@ export function registerHostFileManagerBookmarkRoutes(
   router.delete(
     "/file_manager/shortcuts",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostId, path } = req.body;
