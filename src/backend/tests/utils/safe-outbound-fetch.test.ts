@@ -51,6 +51,7 @@ function runHook(
   addresses: LookupAddress[] | string | undefined,
   error: NodeJS.ErrnoException | null = null,
   lookupOptions: LookupOptions = { all: true },
+  allowPrivate = false,
 ) {
   const fakeLookup = vi.fn(
     (
@@ -66,7 +67,7 @@ function runHook(
     },
   );
 
-  const hook = createDnsLookupHook(fakeLookup);
+  const hook = createDnsLookupHook(fakeLookup, allowPrivate);
   const callback = vi.fn();
 
   hook("example.invalid", lookupOptions, callback);
@@ -92,6 +93,21 @@ const publicAddresses: LookupAddress[] = [
 ];
 
 describe("createDnsLookupHook", () => {
+  it("permits private results only for an explicitly authorized host", () => {
+    const { callback } = runHook(
+      [{ address: "192.168.1.20", family: 4 }],
+      null,
+      { all: true },
+      true,
+    );
+
+    expect(callback).toHaveBeenCalledWith(
+      null,
+      [{ address: "192.168.1.20", family: 4 }],
+      0,
+    );
+  });
+
   it("allows a public IPv4 address through", () => {
     const { callback } = runHook([
       {

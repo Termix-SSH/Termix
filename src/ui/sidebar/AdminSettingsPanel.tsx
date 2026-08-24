@@ -4,8 +4,10 @@ import { notifyAiStatusChanged } from "@/hooks/use-ai-availability";
 import {
   getAiGloballyEnabled,
   getAiPrivateEndpoints,
+  getNotificationPrivateEndpoints,
   setAiGloballyEnabled as setAiGloballyEnabledApi,
   setAiPrivateEndpoints as setAiPrivateEndpointsApi,
+  setNotificationPrivateEndpoints as setNotificationPrivateEndpointsApi,
 } from "@/api/ai-api";
 import {
   getUserList,
@@ -169,6 +171,8 @@ export function AdminSettingsPanel({
     useState(true);
   const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
   const [aiPrivateEndpoints, setAiPrivateEndpoints] = useState<string[]>([]);
+  const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
+    useState<string[]>([]);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
   const [touchInputSettings, setTouchInputSettings] =
     useState<TouchInputSettings>({ ...TOUCH_INPUT_DEFAULTS });
@@ -365,6 +369,7 @@ export function AdminSettingsPanel({
         touchInput,
         aiEnabled,
         aiEndpoints,
+        notificationEndpoints,
         imageStorage,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
@@ -383,6 +388,7 @@ export function AdminSettingsPanel({
         getTouchInputSettings(),
         getAiGloballyEnabled(),
         getAiPrivateEndpoints(),
+        getNotificationPrivateEndpoints(),
         getTerminalImageStorageSettings(),
       ]);
 
@@ -434,6 +440,9 @@ export function AdminSettingsPanel({
       }
       if (aiEndpoints.status === "fulfilled") {
         setAiPrivateEndpoints(aiEndpoints.value);
+      }
+      if (notificationEndpoints.status === "fulfilled") {
+        setNotificationPrivateEndpoints(notificationEndpoints.value);
       }
       if (imageStorage.status === "fulfilled") {
         setImageStorageSettings(imageStorage.value);
@@ -591,6 +600,19 @@ export function AdminSettingsPanel({
     } catch {
       setAiPrivateEndpoints(previous);
       toast.error(t("admin.updateAiEndpointsFailed"));
+    }
+  }
+
+  async function handleSaveNotificationPrivateEndpoints(hosts: string[]) {
+    const previous = notificationPrivateEndpoints;
+    setNotificationPrivateEndpoints(hosts);
+    try {
+      setNotificationPrivateEndpoints(
+        await setNotificationPrivateEndpointsApi(hosts),
+      );
+    } catch {
+      setNotificationPrivateEndpoints(previous);
+      toast.error(t("admin.updateNotificationEndpointsFailed"));
     }
   }
 
@@ -1119,6 +1141,10 @@ export function AdminSettingsPanel({
         onToggleAiGloballyEnabled={handleToggleAiGloballyEnabled}
         aiPrivateEndpoints={aiPrivateEndpoints}
         onSaveAiPrivateEndpoints={handleSaveAiPrivateEndpoints}
+        notificationPrivateEndpoints={notificationPrivateEndpoints}
+        onSaveNotificationPrivateEndpoints={
+          handleSaveNotificationPrivateEndpoints
+        }
         handleToggleSessionSharingGloballyEnabled={
           handleToggleSessionSharingGloballyEnabled
         }

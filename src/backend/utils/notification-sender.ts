@@ -1,5 +1,6 @@
 import { statsLogger } from "./logger.js";
 import { safeOutboundFetch } from "./safe-outbound-fetch.js";
+import { readNotificationPrivateAllowlist } from "./notification-egress.js";
 
 export interface AlertPayload {
   hostName: string;
@@ -37,7 +38,8 @@ async function fetchWithRetry(
   options: RequestInit,
 ): Promise<void> {
   const attempt = async () => {
-    const res = await safeOutboundFetch(url, options);
+    const allowlist = await readNotificationPrivateAllowlist();
+    const res = await safeOutboundFetch(url, options, allowlist);
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }

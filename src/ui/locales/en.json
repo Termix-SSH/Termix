@@ -3595,6 +3595,9 @@
     "aiGloballyEnabledDesc": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone.",
     "aiPrivateEndpoints": "Allowed private AI hosts",
     "aiPrivateEndpointsDesc": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Separate them with commas.",
+    "notificationPrivateEndpoints": "Allowed private notification hosts",
+    "notificationPrivateEndpointsDesc": "Exact private hosts that notification channels may contact. Separate them with commas.",
+    "updateNotificationEndpointsFailed": "Failed to update notification endpoint allowlist",
     "updateAiEnabledFailed": "Could not update the AI setting",
     "updateAiEndpointsFailed": "Could not update the allowed hosts"
   },
