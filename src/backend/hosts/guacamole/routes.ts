@@ -2,6 +2,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
 import { withRecordingSettings } from "./recording-settings.js";
+import { withDriveSettings } from "./drive-settings.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -658,10 +659,7 @@ router.post(
 
       switch (connectionType) {
         case "rdp":
-          if (guacConfig["enable-drive"] && !guacConfig["drive-path"]) {
-            guacConfig["drive-path"] = "/drive";
-            guacConfig["create-drive-path"] = true;
-          }
+          guacConfig = withDriveSettings(guacConfig, userId);
           token = tokenService.createRdpToken(
             hostname,
             username,
