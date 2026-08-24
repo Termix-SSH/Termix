@@ -113,6 +113,9 @@ export function CollabRoomTab({
     null,
   );
   const [guestLinkToken, setGuestLinkToken] = useState<string | null>(null);
+  const [guestLinkAction, setGuestLinkAction] = useState<
+    "disable" | "rotate" | null
+  >(null);
   const [hostSearch, setHostSearch] = useState("");
   const [inviteSearch, setInviteSearch] = useState("");
   const [hosts, setHosts] = useState<SSHHostWithStatus[]>([]);
@@ -647,11 +650,25 @@ export function CollabRoomTab({
               {t("collab.copyLink")}
             </Button>
           )}
+          {detail?.room.guestLinkEnabled && !guestLinkToken && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => setGuestLinkAction("rotate")}
+            >
+              {t("collab.rotateLink")}
+            </Button>
+          )}
           <Button
             size="sm"
             variant={detail?.room.guestLinkEnabled ? "destructive" : "outline"}
             className="h-8 text-xs"
-            onClick={() => void handleGuestLink(!detail?.room.guestLinkEnabled)}
+            onClick={() =>
+              detail?.room.guestLinkEnabled
+                ? setGuestLinkAction("disable")
+                : void handleGuestLink(true)
+            }
           >
             {t("collab.guestLink")}:{" "}
             {detail?.room.guestLinkEnabled ? "ON" : "OFF"}
@@ -923,6 +940,46 @@ export function CollabRoomTab({
               }}
             >
               {t("collab.takeOver")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(guestLinkAction)}
+        onOpenChange={(open) => !open && setGuestLinkAction(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t(
+                guestLinkAction === "rotate"
+                  ? "collab.rotateLinkConfirmTitle"
+                  : "collab.disableLinkConfirmTitle",
+              )}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(
+                guestLinkAction === "rotate"
+                  ? "collab.rotateLinkDescription"
+                  : "collab.disableLinkDescription",
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const enabled = guestLinkAction === "rotate";
+                setGuestLinkAction(null);
+                void handleGuestLink(enabled);
+              }}
+            >
+              {t(
+                guestLinkAction === "rotate"
+                  ? "collab.rotateLink"
+                  : "collab.disableLink",
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

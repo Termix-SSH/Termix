@@ -830,7 +830,7 @@ router.post(
         : null;
       await createCurrentCollabRoomRepository().setGuestToken(roomId, token);
       if (
-        !enabled &&
+        (!enabled || access.room.guestLinkToken) &&
         access.room.stageShareId &&
         access.room.stageProtocol === "ssh"
       ) {
@@ -844,7 +844,9 @@ router.post(
             share.id,
             {
               userId: null,
-              reason: "The guest link was disabled",
+              reason: enabled
+                ? "The guest link was rotated"
+                : "The guest link was disabled",
             },
           );
         }
