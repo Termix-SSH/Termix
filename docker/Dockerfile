@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:24-slim AS deps
+FROM node:26-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -38,7 +38,7 @@ RUN rm -rf node_modules/better-sqlite3/prebuilds && \
 RUN npm run build:backend
 
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
-FROM node:24-slim AS opkssh-downloader
+FROM node:26-slim AS opkssh-downloader
 ARG TARGETARCH
 ARG OPKSSH_VERSION=v0.16.0
 ARG OPKSSH_SHA256_AMD64=c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf
@@ -59,7 +59,7 @@ RUN case "$TARGETARCH" in \
     echo -n "$OPKSSH_VERSION" > version.txt
 
 # Stage 5: Production dependencies only
-FROM node:24-slim AS production-deps
+FROM node:26-slim AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -79,7 +79,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 6: Final optimized image
-FROM node:24-slim
+FROM node:26-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
