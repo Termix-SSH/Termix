@@ -134,6 +134,13 @@
       "when": 1787600442827,
       "tag": "0018_puzzling_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787602478567,
+      "tag": "0019_oval_puff_adder",
+      "breakpoints": true
     }
   ]
 }

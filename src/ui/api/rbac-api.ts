@@ -191,6 +191,42 @@ export async function shareFolder(
   }
 }
 
+export interface FolderAccessRule {
+  id: number;
+  folder: string;
+  targetType: "user" | "role";
+  userId: string | null;
+  roleId: number | null;
+  username: string | null;
+  roleName: string | null;
+  roleDisplayName: string | null;
+  permissionLevel: SharePermissionLevel;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+/** Standing shares on a folder - what hosts added to it later inherit. */
+export async function getFolderAccess(
+  folder: string,
+): Promise<{ rules: FolderAccessRule[] }> {
+  try {
+    const response = await rbacApi.get("/rbac/folder/access", {
+      params: { folder },
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get folder access");
+  }
+}
+
+export async function revokeFolderAccess(ruleId: number): Promise<void> {
+  try {
+    await rbacApi.delete(`/rbac/folder/access/${ruleId}`);
+  } catch (error) {
+    throw handleApiError(error, "revoke folder access");
+  }
+}
+
 export async function updateHostAccess(
   hostId: number,
   accessId: number,

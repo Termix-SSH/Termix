@@ -6,6 +6,7 @@ import {
   createCurrentCredentialRepository,
   createCurrentFileManagerBookmarkRepository,
   createCurrentHostFolderRepository,
+  createCurrentFolderAccessRepository,
   createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentSshCredentialUsageRepository,
@@ -88,6 +89,11 @@ export function registerHostFolderRoutes(
       try {
         const { updatedHosts, updatedCredentials } =
           await createCurrentHostFolderRepository().renameFolder(
+            userId,
+            oldName,
+            newName,
+          );
+          await createCurrentFolderAccessRepository().renameFolder(
             userId,
             oldName,
             newName,
