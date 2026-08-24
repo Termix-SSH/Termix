@@ -71,6 +71,7 @@ import {
 } from "./helpers.js";
 import {
   type HostStatus,
+  needsStatusPollAuthentication,
   statusAfterAuthentication,
   statusAfterReachabilityCheck,
 } from "./host-status.js";
@@ -581,7 +582,10 @@ class PollingManager {
       if (
         isOnline &&
         supportsMetrics(refreshedHost) &&
-        !config?.statsConfig.metricsEnabled
+        needsStatusPollAuthentication(
+          !!config?.statsConfig.metricsEnabled,
+          this.activeViewers.has(refreshedHost.id),
+        )
       ) {
         try {
           await withSshConnection(refreshedHost, async () => undefined);
