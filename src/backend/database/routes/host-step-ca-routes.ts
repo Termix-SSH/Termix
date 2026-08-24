@@ -16,12 +16,15 @@ main{max-width:28rem;padding:2rem;border:1px solid #333;background:#181818}h1{fo
 export function registerHostStepCaRoutes(router: Router): void {
   router.get("/step-ca-callback", async (req: Request, res: Response) => {
     const { completeStepCaAuth } = await import("../../hosts/step-ca-auth.js");
-    const query = req.query as Record<string, string | undefined>;
+    const stringQuery = (name: string): string | undefined => {
+      const value = req.query[name];
+      return typeof value === "string" ? value : undefined;
+    };
     const result = await completeStepCaAuth({
-      state: query.state,
-      code: query.code,
-      error: query.error,
-      error_description: query.error_description,
+      state: stringQuery("state"),
+      code: stringQuery("code"),
+      error: stringQuery("error"),
+      error_description: stringQuery("error_description"),
     });
     res
       .status(result.ok ? 200 : 400)

@@ -356,9 +356,12 @@ networks:
 
 For multiple Termix backend instances, set the same `REDIS_URL` and optional
 `TERMIX_REDIS_PREFIX` on every instance. Redis synchronizes collaboration room
-presence, control requests, controller state, and events; keep WebSocket session
-affinity enabled because live SSH and remote desktop transports remain attached
-to the backend instance that opened them. A single instance needs no Redis.
+presence, control requests, controller state, and events. It also routes Step CA
+OAuth callbacks back to the instance holding the user's terminal; the optional
+`TERMIX_STEP_CA_REDIS_PREFIX` isolates those short-lived encrypted messages.
+Keep WebSocket session affinity enabled because live SSH and remote desktop
+transports remain attached to the backend instance that opened them. A single
+instance needs no Redis.
 
 ### Command Line Interface
 

@@ -18,6 +18,7 @@ services:
       GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
       # REDIS_URL: "redis://redis:6379"
       # TERMIX_REDIS_PREFIX: "termix:collab"
+      # TERMIX_STEP_CA_REDIS_PREFIX: "termix:step-ca"
     depends_on:
       - guacd-dev
     networks:

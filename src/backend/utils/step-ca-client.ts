@@ -32,6 +32,17 @@ export interface OidcEndpoints {
 
 const FETCH_TIMEOUT_MS = 15_000;
 
+/** Display-only claims; the CA is the component that verifies the token. */
+export function decodeJwtClaims(token: string): Record<string, unknown> {
+  const payload = token.split(".")[1];
+  if (!payload) return {};
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  } catch {
+    return {};
+  }
+}
+
 export function normalizeCaUrl(raw: string): string {
   const url = new URL(raw.trim());
   if (url.protocol !== "https:") {
@@ -297,6 +308,7 @@ export async function signSshCertificate(
 
 export interface SshCertificateInfo {
   keyType: string;
+  publicKeyLine: string;
   keyId: string;
   principals: string[];
   validAfter: Date;
@@ -306,39 +318,61 @@ export interface SshCertificateInfo {
 /** Reads the identity and validity window out of an OpenSSH certificate line. */
 export function parseSshCertificate(line: string): SshCertificateInfo {
   const blob = Buffer.from(line.trim().split(/\s+/)[1] ?? "", "base64");
+  if (blob.length === 0) throw new Error("Invalid SSH certificate");
   let offset = 0;
   const readString = (): Buffer => {
+    if (offset + 4 > blob.length) throw new Error("Truncated SSH certificate");
     const len = blob.readUInt32BE(offset);
     offset += 4;
+    if (offset + len > blob.length) {
+      throw new Error("Truncated SSH certificate");
+    }
     const value = blob.subarray(offset, offset + len);
     offset += len;
     return value;
   };
   const readUint64 = (): bigint => {
+    if (offset + 8 > blob.length) throw new Error("Truncated SSH certificate");
     const value = blob.readBigUInt64BE(offset);
     offset += 8;
     return value;
   };
 
   const keyType = readString().toString();
+  if (!keyType.endsWith("-cert-v01@openssh.com")) {
+    throw new Error("The CA returned a public key instead of a certificate");
+  }
   readString(); // nonce
   // Public key fields differ by algorithm; consume them by shape.
+  const publicKeyParts: Buffer[] = [];
+  let plainKeyType: string;
   if (keyType.startsWith("ssh-rsa")) {
-    readString(); // e
-    readString(); // n
+    plainKeyType = "ssh-rsa";
+    publicKeyParts.push(readString(), readString()); // e, n
   } else if (keyType.startsWith("ecdsa-")) {
-    readString(); // curve
-    readString(); // Q
+    plainKeyType = keyType.replace(/-cert-v01@openssh\.com$/, "");
+    publicKeyParts.push(readString(), readString()); // curve, Q
   } else {
-    readString(); // ed25519 pk (and any other single-blob key)
+    plainKeyType = keyType.replace(/-cert-v01@openssh\.com$/, "");
+    publicKeyParts.push(readString()); // ed25519 pk
   }
+  const publicKeyBlob = Buffer.concat([
+    sshString(plainKeyType),
+    ...publicKeyParts.map(sshString),
+  ]);
   readUint64(); // serial
   offset += 4; // type
   const keyId = readString().toString();
   const principalsBlob = readString();
   const principals: string[] = [];
   for (let p = 0; p < principalsBlob.length;) {
+    if (p + 4 > principalsBlob.length) {
+      throw new Error("Invalid SSH certificate principals");
+    }
     const len = principalsBlob.readUInt32BE(p);
+    if (p + 4 + len > principalsBlob.length) {
+      throw new Error("Invalid SSH certificate principals");
+    }
     principals.push(principalsBlob.subarray(p + 4, p + 4 + len).toString());
     p += 4 + len;
   }
@@ -351,6 +385,7 @@ export function parseSshCertificate(line: string): SshCertificateInfo {
     );
   return {
     keyType,
+    publicKeyLine: `${plainKeyType} ${publicKeyBlob.toString("base64")}`,
     keyId,
     principals,
     validAfter: toDate(validAfter),

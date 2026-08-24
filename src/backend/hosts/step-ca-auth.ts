@@ -10,8 +10,14 @@ import {
 } from "../database/repositories/factory.js";
 import { readStepCaPrivateAllowlist } from "../utils/step-ca-egress.js";
 import {
+  stepCaRuntime,
+  type StepCaCallbackQuery,
+  type StepCaCallbackResult,
+} from "./step-ca-runtime.js";
+import {
   buildAuthorizationUrl,
   createPkce,
+  decodeJwtClaims,
   discoverOidcEndpoints,
   exchangeCodeForIdToken,
   fetchRootCertificate,
@@ -38,7 +44,8 @@ export const STEP_CA_SETTING_KEYS = {
 } as const;
 
 const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
-const FALLBACK_CERT_LIFETIME_MS = 16 * 60 * 60 * 1000;
+const REMOTE_CALLBACK_WAIT_MS = 30_000;
+const REMOTE_POLL_MS = 250;
 
 export interface StepCaSettings {
   caUrl: string;
@@ -73,6 +80,8 @@ interface StepCaAuthSession {
   nonce: string;
   keyPair: { publicKeyLine: string; privateKeyPem: string };
   timeout: NodeJS.Timeout;
+  commandPoll: NodeJS.Timeout | null;
+  processing: boolean;
   completed: boolean;
 }
 
@@ -86,20 +95,11 @@ function send(ws: WebSocket, message: object): void {
   }
 }
 
-function endSession(session: StepCaAuthSession): void {
+function endSession(session: StepCaAuthSession, removeRuntime = true): void {
   clearTimeout(session.timeout);
+  if (session.commandPoll) clearInterval(session.commandPoll);
   sessions.delete(session.state);
-}
-
-/** Display-only claims; the CA is the one that verifies the token. */
-export function decodeJwtClaims(token: string): Record<string, unknown> {
-  const payload = token.split(".")[1];
-  if (!payload) return {};
-  try {
-    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-  } catch {
-    return {};
-  }
+  if (removeRuntime) void stepCaRuntime.remove(session.state);
 }
 
 export async function startStepCaAuth(
@@ -156,15 +156,28 @@ export async function startStepCaAuth(
       codeVerifier: pkce.verifier,
       nonce,
       keyPair: generateSshKeyPair(),
+      processing: false,
       completed: false,
+      commandPoll: null,
       timeout: setTimeout(() => {
         const current = sessions.get(state);
-        if (!current || current.completed) return;
+        if (!current || current.completed || current.processing) return;
         send(ws, { type: "opkssh_timeout", requestId: state });
         endSession(current);
       }, AUTH_TIMEOUT_MS),
     };
     sessions.set(state, session);
+    await stepCaRuntime.register(state);
+    session.commandPoll = setInterval(() => {
+      if (session.processing || session.completed) return;
+      void stepCaRuntime.takeCommand(state).then(async (query) => {
+        if (!query || session.processing || session.completed) return;
+        session.processing = true;
+        const result = await finishStepCaAuth(session, query, false);
+        await stepCaRuntime.complete(state, result);
+      });
+    }, REMOTE_POLL_MS);
+    session.commandPoll.unref();
     ws.once("close", () => {
       const current = sessions.get(state);
       if (current && !current.completed) endSession(current);
@@ -212,16 +225,40 @@ export function cancelStepCaAuth(requestId: string): boolean {
  * does (same table, same encryption, same token id) and tells the terminal
  * to reconnect.
  */
-export async function completeStepCaAuth(query: {
-  state?: string;
-  code?: string;
-  error?: string;
-  error_description?: string;
-}): Promise<{ ok: boolean; message: string }> {
+export async function completeStepCaAuth(
+  query: StepCaCallbackQuery,
+): Promise<StepCaCallbackResult> {
   const session = query.state ? sessions.get(query.state) : undefined;
   if (!session) {
-    return { ok: false, message: "This sign-in request is no longer active." };
+    if (!query.state || !(await stepCaRuntime.submit(query.state, query))) {
+      return {
+        ok: false,
+        message: "This sign-in request is no longer active.",
+      };
+    }
+    const deadline = Date.now() + REMOTE_CALLBACK_WAIT_MS;
+    while (Date.now() < deadline) {
+      const result = await stepCaRuntime.takeResult(query.state);
+      if (result) return result;
+      await new Promise((resolve) => setTimeout(resolve, REMOTE_POLL_MS));
+    }
+    return {
+      ok: false,
+      message: "The Termix instance handling this sign-in did not respond.",
+    };
   }
+  if (session.processing || session.completed) {
+    return { ok: false, message: "This sign-in request was already used." };
+  }
+  session.processing = true;
+  return finishStepCaAuth(session, query);
+}
+
+async function finishStepCaAuth(
+  session: StepCaAuthSession,
+  query: StepCaCallbackQuery,
+  removeRuntime = true,
+): Promise<StepCaCallbackResult> {
   if (query.error || !query.code) {
     const message = query.error_description || query.error || "Sign-in failed";
     send(session.ws, {
@@ -229,7 +266,7 @@ export async function completeStepCaAuth(query: {
       requestId: session.state,
       error: `Step CA: ${message}`,
     });
-    endSession(session);
+    endSession(session, removeRuntime);
     return { ok: false, message };
   }
 
@@ -249,7 +286,7 @@ export async function completeStepCaAuth(query: {
       allowedPrivateHosts: session.target.allowedPrivateHosts,
     });
     const claims = decodeJwtClaims(idToken);
-    if (claims.nonce !== undefined && claims.nonce !== session.nonce) {
+    if (claims.nonce !== session.nonce) {
       throw new Error("The identity token does not match this sign-in");
     }
     const email = typeof claims.email === "string" ? claims.email : undefined;
@@ -265,12 +302,23 @@ export async function completeStepCaAuth(query: {
       },
     );
 
-    let expiresAt = new Date(Date.now() + FALLBACK_CERT_LIFETIME_MS);
-    try {
-      expiresAt = parseSshCertificate(certificate).validBefore;
-    } catch {
-      /* an unparseable validity window falls back to the CA default */
+    const certificateInfo = parseSshCertificate(certificate);
+    if (certificateInfo.publicKeyLine !== session.keyPair.publicKeyLine) {
+      throw new Error("The CA returned a certificate for a different key");
     }
+    if (!certificateInfo.principals.includes(session.username)) {
+      throw new Error("The CA certificate does not include the host username");
+    }
+    const now = Date.now();
+    if (
+      certificateInfo.validBefore.getTime() <= now ||
+      certificateInfo.validAfter.getTime() > now + 60_000
+    ) {
+      throw new Error(
+        "The CA returned a certificate outside its validity window",
+      );
+    }
+    const expiresAt = certificateInfo.validBefore;
 
     const userDataKey = DataCrypto.getUserDataKey(session.userId);
     if (!userDataKey) throw new Error("User data key not found");
@@ -304,7 +352,7 @@ export async function completeStepCaAuth(query: {
       requestId: session.state,
       expiresAt: expiresAt.toISOString(),
     });
-    endSession(session);
+    endSession(session, removeRuntime);
     return { ok: true, message: "Signed in. You can close this window." };
   } catch (error) {
     sshLogger.error("Step CA certificate issuance failed", error, {
@@ -318,7 +366,7 @@ export async function completeStepCaAuth(query: {
       requestId: session.state,
       error: `Step CA: ${message}`,
     });
-    endSession(session);
+    endSession(session, removeRuntime);
     return { ok: false, message };
   }
 }

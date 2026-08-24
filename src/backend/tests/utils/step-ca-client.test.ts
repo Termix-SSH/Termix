@@ -4,6 +4,7 @@ import {
   buildAuthorizationUrl,
   certificateFingerprint,
   createPkce,
+  decodeJwtClaims,
   generateSshKeyPair,
   normalizeCaUrl,
   normalizeFingerprint,
@@ -73,6 +74,7 @@ describe("step-ca client helpers", () => {
     const info = parseSshCertificate(cert!);
     expect(info).toMatchObject({
       keyType: "ssh-ed25519-cert-v01@openssh.com",
+      publicKeyLine,
       keyId: "alice@example",
       principals: ["alice", "ops"],
     });
@@ -80,12 +82,15 @@ describe("step-ca client helpers", () => {
     expect(info.validBefore.getTime() - info.validAfter.getTime()).toBe(
       16 * 3600 * 1000,
     );
+    expect(() => parseSshCertificate(publicKeyLine)).toThrow(/certificate/);
+    expect(() =>
+      parseSshCertificate("ssh-ed25519-cert-v01@openssh.com AAAA"),
+    ).toThrow(/certificate/);
   });
 });
 
 describe("decodeJwtClaims", () => {
-  it("reads the payload without verifying and tolerates junk", async () => {
-    const { decodeJwtClaims } = await import("../../hosts/step-ca-auth.js");
+  it("reads the payload without verifying and tolerates junk", () => {
     const payload = Buffer.from(
       JSON.stringify({ email: "a@b.c", nonce: "n1" }),
     ).toString("base64url");
