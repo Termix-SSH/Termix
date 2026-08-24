@@ -563,6 +563,16 @@ html.fs-xl {
     var(--motion-ease-enter) both;
 }
 
+.motion-workspace-enter {
+  animation: motion-workspace-enter var(--motion-duration-panel)
+    var(--motion-ease-enter) both;
+}
+
+.motion-workspace-layout {
+  animation: motion-workspace-layout var(--motion-duration-context)
+    var(--motion-ease-enter) both;
+}
+
 .connection-signal {
   position: relative;
   display: grid;
@@ -653,6 +663,28 @@ html.fs-xl {
   }
 }
 
+@keyframes motion-workspace-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.998);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes motion-workspace-layout {
+  from {
+    opacity: 0.72;
+    transform: scale(0.996);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes connection-signal-flow {
   0% {
     opacity: 0.12;
@@ -690,6 +722,8 @@ html.fs-xl {
 
   .motion-panel-enter,
   .motion-context-enter,
+  .motion-workspace-enter,
+  .motion-workspace-layout,
   .connection-signal[data-active="true"]::before,
   .connection-signal[data-active="true"]::after,
   .host-status-stripe[data-locking="true"]::after {

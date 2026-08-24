@@ -2295,6 +2295,7 @@ export function AppShell({
           node.style.pointerEvents = activeInline ? "auto" : "none";
           node.style.zIndex = activeInline ? "1" : "0";
         } else {
+          node.classList.toggle("motion-workspace-enter", activeInline);
           node.style.visibility = "";
           node.style.pointerEvents = "";
           node.style.zIndex = activeInline ? "2" : "";
@@ -2864,7 +2865,7 @@ export function AppShell({
                 {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
                 {!isMobile && (
                   <div
-                    className="absolute inset-0"
+                    className="motion-workspace-layout absolute inset-0"
                     style={{
                       display: isSplit ? "flex" : "none",
                       flexDirection: "column",

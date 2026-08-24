@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/button";
 import { Separator } from "@/components/separator";
 import {
@@ -77,6 +78,7 @@ export function TabBar({
   onToggleRightDock?: () => void;
 }) {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(true);
   const [dragTabId, setDragTabId] = useState<string | null>(null);
   const [dragTargetIndex, setDragTargetIndex] = useState<number | null>(null);
@@ -318,10 +320,27 @@ export function TabBar({
                 ${index === 0 && tab.type !== "dashboard" ? "border-l border-border" : ""}
                 ${
                   tab.type === "dashboard"
-                    ? `px-2.5 md:px-3.5 ${active ? "border-b-2 border-b-accent-brand bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
-                    : `px-2.5 md:px-4 font-medium ${active ? "border-b-2 border-b-accent-brand bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
+                    ? `px-2.5 md:px-3.5 ${active ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
+                    : `px-2.5 md:px-4 font-medium ${active ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
                 }`}
               >
+                {active && (
+                  <motion.span
+                    layoutId="active-workspace-tab"
+                    data-workspace-indicator={tab.id}
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-accent-brand z-10"
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : {
+                            type: "spring",
+                            stiffness: 520,
+                            damping: 42,
+                            mass: 0.55,
+                          }
+                    }
+                  />
+                )}
                 {/* Focused-pane indicator: brand accent bottom border overlay */}
                 {showFocusIndicator && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-brand/70 z-10" />
