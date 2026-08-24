@@ -171,6 +171,13 @@ async function handleRoomGuestConnection(
   req: import("http").IncomingMessage,
   roomGuestToken: string,
 ): Promise<void> {
+  const { isCollabGuestRateLimited } =
+    await import("../collab/guest-rate-limit.js");
+  const ip = req.socket.remoteAddress ?? "unknown";
+  if (isCollabGuestRateLimited(ip)) {
+    ws.close(1008, "Too many requests");
+    return;
+  }
   const room =
     await createCurrentCollabRoomRepository().findByGuestToken(roomGuestToken);
   const share = room?.stageShareId

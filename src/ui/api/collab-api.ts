@@ -11,7 +11,7 @@ export interface CollabRoom {
   stageProtocol: string | null;
   stageHostId: number | null;
   stageShareId: string | null;
-  guestLinkToken: string | null;
+  guestLinkEnabled: boolean;
   createdAt: string;
   endedAt: string | null;
 }

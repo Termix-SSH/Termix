@@ -2,6 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { collabRoomMembers, collabRooms, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { insertReturning } from "./returning.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type CollabRoomRecord = typeof collabRooms.$inferSelect;
 export type CollabRoomMemberRecord = typeof collabRoomMembers.$inferSelect;
@@ -162,6 +163,27 @@ export class CollabRoomRepository {
       .set(stage)
       .where(eq(collabRooms.id, roomId));
     await this.afterWrite();
+  }
+
+  async replaceStage(
+    roomId: string,
+    expectedShareId: string | null,
+    stage: CollabRoomStage,
+  ): Promise<boolean> {
+    const result = await this.context.drizzle
+      .update(collabRooms)
+      .set(stage)
+      .where(
+        and(
+          eq(collabRooms.id, roomId),
+          expectedShareId
+            ? eq(collabRooms.stageShareId, expectedShareId)
+            : isNull(collabRooms.stageShareId),
+        ),
+      );
+    const changed = rowsAffected(result) > 0;
+    if (changed) await this.afterWrite();
+    return changed;
   }
 
   async clearStage(roomId: string): Promise<void> {

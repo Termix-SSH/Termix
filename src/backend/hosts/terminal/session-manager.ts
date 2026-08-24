@@ -478,6 +478,49 @@ class TerminalSessionManager {
     }
   }
 
+  /**
+   * Disconnects non-owner participants that joined through one share.
+   * Supplying userId narrows the kick to that authenticated user; null targets
+   * anonymous guests. Omitting it revokes the share for every participant.
+   */
+  disconnectShareParticipants(
+    sessionId: string,
+    shareId: string,
+    options: { userId?: string | null; reason: string },
+  ): number {
+    const session = this.sessions.get(sessionId);
+    if (!session) return 0;
+    const filterByUser = Object.hasOwn(options, "userId");
+    let disconnected = 0;
+    for (const [id, participant] of session.participants.entries()) {
+      if (
+        participant.isOwner ||
+        participant.joinedViaShareId !== shareId ||
+        (filterByUser && participant.userId !== options.userId)
+      ) {
+        continue;
+      }
+      session.participants.delete(id);
+      disconnected += 1;
+      if (participant.ws.readyState === WebSocket.OPEN) {
+        try {
+          participant.ws.send(
+            JSON.stringify({
+              type: "sessionExpired",
+              sessionId,
+              message: options.reason,
+            }),
+          );
+          participant.ws.close(1008, options.reason);
+        } catch {
+          participant.ws.terminate();
+        }
+      }
+    }
+    if (disconnected > 0) this.broadcastParticipants(sessionId);
+    return disconnected;
+  }
+
   /** Fans out a message to every OPEN participant socket; skips closed ones and send failures. */
   broadcast(sessionId: string, message: object): void {
     const session = this.sessions.get(sessionId);

@@ -11,6 +11,7 @@ import {
 import { GuacamoleTokenService } from "../guacamole/token-service.js";
 import { collabRoomHub } from "./room-hub.js";
 import { getStageController, setStageController } from "./stage-control.js";
+import { isCollabGuestRateLimited } from "./guest-rate-limit.js";
 import { sessionManager } from "../terminal/session-manager.js";
 import {
   isLiveSession,
@@ -40,7 +41,10 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const tokenService = GuacamoleTokenService.getInstance();
 
 const STAGE_SHARE_EXPIRY_HOURS = 12;
+const MAX_INVITE_TARGETS = 200;
+const CONTROL_REQUEST_COOLDOWN_MS = 5000;
 const PROTOCOLS: LiveProtocol[] = ["ssh", "rdp", "vnc", "telnet"];
+const controlRequestTimes = new Map<string, number>();
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -60,13 +64,22 @@ async function requireRoomMember(
 
 async function revokeStageShare(room: CollabRoomRecord): Promise<void> {
   if (!room.stageShareId) return;
-  try {
-    await createCurrentSessionShareRepository().revokeAsAdmin(
-      room.stageShareId,
-    );
-  } catch {
-    // A stale share must never block switching presenters.
+  const repository = createCurrentSessionShareRepository();
+  const share = await repository.findActiveById(room.stageShareId);
+  if (!share) return;
+  if (!(await repository.revokeAsAdmin(room.stageShareId))) {
+    throw new Error("Failed to revoke the active stage share");
   }
+  if (share.protocol === "ssh") {
+    sessionManager.disconnectShareParticipants(share.sessionId, share.id, {
+      reason: "The collaboration stage ended",
+    });
+  }
+}
+
+function publicRoom(room: CollabRoomRecord) {
+  const { guestLinkToken: _secret, ...safeRoom } = room;
+  return { ...safeRoom, guestLinkEnabled: Boolean(_secret) };
 }
 
 function stagePayload(room: CollabRoomRecord) {
@@ -122,7 +135,7 @@ router.post("/rooms", authenticateJWT, async (req: Request, res: Response) => {
       success: true,
     });
 
-    res.json({ room });
+    res.json({ room: publicRoom(room) });
   } catch (error) {
     sshLogger.error("Failed to create collab room", error, {
       operation: "collab_room_create_error",
@@ -143,7 +156,7 @@ router.get("/rooms", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId!;
   try {
     const rooms = await createCurrentCollabRoomRepository().listForUser(userId);
-    res.json({ rooms });
+    res.json({ rooms: rooms.map(publicRoom) });
   } catch (error) {
     sshLogger.error("Failed to list collab rooms", error, {
       operation: "collab_room_list_error",
@@ -174,7 +187,7 @@ router.get(
       const members =
         await createCurrentCollabRoomRepository().listMembers(roomId);
       res.json({
-        room: access.room,
+        room: publicRoom(access.room),
         me: userId,
         isHost: access.isHost,
         members,
@@ -218,6 +231,9 @@ router.post(
         error: "userIds (user ids) or roleIds (integers) are required",
       });
     }
+    if (userIds.length + roleIds.length > MAX_INVITE_TARGETS) {
+      return res.status(400).json({ error: "Too many invite targets" });
+    }
 
     try {
       const access = await requireRoomMember(roomId, userId);
@@ -255,6 +271,20 @@ router.post(
           addedBy: userId,
         });
       }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "collab_room_invite",
+        resourceType: "collab_room",
+        resourceId: roomId,
+        resourceName: access.room.name,
+        details: JSON.stringify({ memberCount: expanded.size }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       collabRoomHub.broadcast(roomId, {
         type: "collab_members_changed",
@@ -303,6 +333,23 @@ router.delete(
       const repository = createCurrentCollabRoomRepository();
       await repository.removeMember(roomId, targetId);
 
+      if (access.room.stageShareId && access.room.stageProtocol === "ssh") {
+        const share =
+          await createCurrentSessionShareRepository().findActiveById(
+            access.room.stageShareId,
+          );
+        if (share) {
+          sessionManager.disconnectShareParticipants(
+            share.sessionId,
+            share.id,
+            {
+              userId: targetId,
+              reason: "You were removed from the collaboration room",
+            },
+          );
+        }
+      }
+
       if (getStageController(roomId) === targetId) {
         await applyStageControl(access.room, roomId, null);
       }
@@ -316,6 +363,23 @@ router.delete(
           stage: null,
         });
       }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action:
+          targetId === userId
+            ? "collab_room_leave"
+            : "collab_room_remove_member",
+        resourceType: "collab_room",
+        resourceId: roomId,
+        resourceName: access.room.name,
+        details: JSON.stringify({ targetUserId: targetId }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       collabRoomHub.broadcast(roomId, {
         type: "collab_members_changed",
@@ -393,12 +457,20 @@ router.post(
       await revokeStageShare(access.room);
       setStageController(roomId, null);
       const repository = createCurrentCollabRoomRepository();
-      await repository.updateStage(roomId, {
-        presenterUserId: userId,
-        stageProtocol: protocol,
-        stageHostId: numericHostId,
-        stageShareId: share.id,
-      });
+      const replaced = await repository.replaceStage(
+        roomId,
+        access.room.stageShareId,
+        {
+          presenterUserId: userId,
+          stageProtocol: protocol,
+          stageHostId: numericHostId,
+          stageShareId: share.id,
+        },
+      );
+      if (!replaced) {
+        await shareRepository.revokeAsAdmin(share.id);
+        return res.status(409).json({ error: "The stage changed; try again" });
+      }
 
       const stage = {
         presenterUserId: userId,
@@ -468,6 +540,18 @@ router.post(
         type: "collab_stage_changed",
         roomId,
         stage: null,
+      });
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "collab_room_stop_presenting",
+        resourceType: "collab_room",
+        resourceId: roomId,
+        resourceName: access.room.name,
+        ipAddress,
+        userAgent,
+        success: true,
       });
       res.json({ success: true });
     } catch (error) {
@@ -626,6 +710,19 @@ router.post(
       }
 
       await applyStageControl(access.room, roomId, targetId);
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: targetId ? "collab_control_grant" : "collab_control_revoke",
+        resourceType: "collab_room",
+        resourceId: roomId,
+        resourceName: access.room.name,
+        details: JSON.stringify({ targetUserId: targetId }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
       res.json({ controllerUserId: targetId });
     } catch (error) {
       sshLogger.error("Failed to change collab stage control", error, {
@@ -663,11 +760,32 @@ router.post(
           error: "Remote desktop stages are read-only",
         });
       }
+      const requestKey = `${roomId}:${userId}`;
+      const now = Date.now();
+      if (
+        now - (controlRequestTimes.get(requestKey) ?? 0) <
+        CONTROL_REQUEST_COOLDOWN_MS
+      ) {
+        return res.status(429).json({ error: "Control was already requested" });
+      }
+      controlRequestTimes.set(requestKey, now);
       collabRoomHub.broadcast(roomId, {
         type: "collab_control_requested",
         roomId,
         userId,
         username: await getAuditUsername(userId),
+      });
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "collab_control_request",
+        resourceType: "collab_room",
+        resourceId: roomId,
+        resourceName: access.room.name,
+        ipAddress,
+        userAgent,
+        success: true,
       });
       res.json({ success: true });
     } catch (error) {
@@ -711,6 +829,28 @@ router.post(
         ? crypto.randomBytes(24).toString("base64url")
         : null;
       await createCurrentCollabRoomRepository().setGuestToken(roomId, token);
+      if (
+        (!enabled || access.room.guestLinkToken) &&
+        access.room.stageShareId &&
+        access.room.stageProtocol === "ssh"
+      ) {
+        const share =
+          await createCurrentSessionShareRepository().findActiveById(
+            access.room.stageShareId,
+          );
+        if (share) {
+          sessionManager.disconnectShareParticipants(
+            share.sessionId,
+            share.id,
+            {
+              userId: null,
+              reason: enabled
+                ? "The guest link was rotated"
+                : "The guest link was disabled",
+            },
+          );
+        }
+      }
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
@@ -736,28 +876,6 @@ router.post(
   },
 );
 
-const GUEST_WINDOW_MS = 60 * 1000;
-const GUEST_MAX_ATTEMPTS = 60;
-const guestAttempts = new Map<string, { count: number; windowStart: number }>();
-
-function isGuestRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = guestAttempts.get(ip);
-  if (!entry || now - entry.windowStart > GUEST_WINDOW_MS) {
-    guestAttempts.set(ip, { count: 1, windowStart: now });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > GUEST_MAX_ATTEMPTS;
-}
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of guestAttempts) {
-    if (now - entry.windowStart > GUEST_WINDOW_MS) guestAttempts.delete(ip);
-  }
-}, 5 * GUEST_WINDOW_MS).unref();
-
 /**
  * @openapi
  * /collab/guest/{token}:
@@ -769,7 +887,7 @@ setInterval(() => {
  */
 router.get("/guest/:token", async (req: Request, res: Response) => {
   const ip = req.ip || req.socket.remoteAddress || "unknown";
-  if (isGuestRateLimited(ip)) {
+  if (isCollabGuestRateLimited(ip)) {
     return res.status(429).json({ error: "Too many requests" });
   }
   const token = String(req.params.token);
@@ -846,6 +964,7 @@ router.post(
       setStageController(roomId, null);
       const repository = createCurrentCollabRoomRepository();
       if (access.room.persistent) {
+        await repository.setGuestToken(roomId, null);
         await repository.clearStage(roomId);
         collabRoomHub.broadcast(roomId, {
           type: "collab_stage_changed",
