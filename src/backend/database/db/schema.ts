@@ -2045,3 +2045,90 @@ export const secretSources = sqliteTable(
   },
   (table) => [index("idx_secret_sources_user").on(table.userId)],
 );
+
+// --- credential sharing ---
+
+/**
+ * Who may use or manage someone else's credential. Same shape as
+ * snippet_access; "use" attaches it to hosts and connects, "manage" also
+ * edits and re-shares it.
+ */
+export const credentialAccess = sqliteTable(
+  "credential_access",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
+
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    permissionLevel: text("permission_level").notNull().default("use"),
+
+    expiresAt: text("expires_at"),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_credential_access_user_id").on(table.userId),
+    index("idx_credential_access_role_id").on(table.roleId),
+    index("idx_credential_access_credential_id").on(table.credentialId),
+  ],
+);
+
+/**
+ * A recipient's copy of a shared credential's secrets, re-encrypted under
+ * the recipient's data key (the owner's key cannot be used by anyone else).
+ * Rebuilt whenever the owner edits the credential; one row per grant and
+ * recipient, like shared_host_secrets.
+ */
+export const sharedCredentialSecrets = sqliteTable(
+  "shared_credential_secrets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    credentialAccessId: integer("credential_access_id")
+      .notNull()
+      .references(() => credentialAccess.id, { onDelete: "cascade" }),
+    targetUserId: text("target_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    encryptedUsername: text("encrypted_username"),
+    authType: text("auth_type").notNull().default("password"),
+    encryptedPassword: text("encrypted_password"),
+    encryptedKey: text("encrypted_key", { length: 16384 }),
+    encryptedKeyPassword: text("encrypted_key_password"),
+    keyType: text("key_type"),
+    publicKey: text("public_key", { length: 4096 }),
+    certPublicKey: text("cert_public_key", { length: 8192 }),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_shared_credential_secrets_scope").on(
+      table.credentialAccessId,
+      table.targetUserId,
+    ),
+    index("idx_shared_credential_secrets_target").on(
+      table.targetUserId,
+      table.credentialId,
+    ),
+  ],
+);

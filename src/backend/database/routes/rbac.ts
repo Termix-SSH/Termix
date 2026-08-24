@@ -3,7 +3,11 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  getRequestMeta,
+  getAuditUsername,
+  logAudit,
+} from "../../utils/audit-logger.js";
 import { isAuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import {
   SharedHostAuthOverrideService,
@@ -20,6 +24,8 @@ import {
 } from "../../utils/permission-catalog.js";
 import {
   createCurrentHostFolderRepository,
+  createCurrentCredentialRepository,
+  createCurrentCredentialAccessRepository,
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
@@ -1362,6 +1368,12 @@ router.post(
           roleId,
           targetUserId,
         );
+        const { SharedCredentialSecretsManager } =
+          await import("../../utils/shared-credential-secrets-manager.js");
+        await SharedCredentialSecretsManager.getInstance().snapshotForRoleMember(
+          roleId,
+          targetUserId,
+        );
       } catch (error) {
         databaseLogger.error(
           "Failed to snapshot shared host secrets for new role member",
@@ -1471,6 +1483,12 @@ router.delete(
           roleId,
           targetUserId,
         );
+        const { createCurrentSharedCredentialSecretsRepository } =
+          await import("../repositories/factory.js");
+        await createCurrentSharedCredentialSecretsRepository().deleteForRoleMember(
+          roleId,
+          targetUserId,
+        );
       } catch (cleanupError) {
         databaseLogger.warn(
           "Failed to clean shared host secrets after role removal",
@@ -1555,6 +1573,239 @@ router.get(
         targetUserId,
       });
       res.status(500).json({ error: "Failed to get user roles" });
+    }
+  },
+);
+
+// CREDENTIAL SHARING
+
+const CREDENTIAL_LEVELS = ["use", "manage"] as const;
+type CredentialLevel = (typeof CREDENTIAL_LEVELS)[number];
+
+/** Owner, or a recipient holding "manage". */
+async function canManageCredentialSharing(
+  userId: string,
+  credentialId: number,
+): Promise<{ allowed: boolean; ownerId: string | null }> {
+  const row = await createCurrentCredentialRepository().findById(credentialId);
+  if (!row) return { allowed: false, ownerId: null };
+  if (row.userId === userId) return { allowed: true, ownerId: row.userId };
+  const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
+  const grant = await createCurrentCredentialAccessRepository().findActiveGrant(
+    credentialId,
+    userId,
+    roleIds,
+  );
+  return { allowed: grant?.permissionLevel === "manage", ownerId: row.userId };
+}
+
+/**
+ * @openapi
+ * /rbac/credential/{id}/share:
+ *   post:
+ *     summary: Share a credential with users or roles
+ *     description: Recipients get a copy of the secrets re-encrypted under their own key. "use" lets them attach it to hosts and connect; "manage" also lets them edit and re-share. Owner or a "manage" recipient only.
+ *     tags:
+ *       - RBAC
+ */
+router.post(
+  "/credential/:id/share",
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.share"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const credentialId = parseInt(id, 10);
+    const userId = req.userId!;
+    if (isNaN(credentialId)) {
+      return res.status(400).json({ error: "Invalid credential ID" });
+    }
+    const targets = parseShareTargets(req.body ?? {});
+    if (!targets) {
+      return res.status(400).json({
+        error:
+          "targets must be a non-empty array of { type: 'user'|'role', id } entries",
+      });
+    }
+    const { durationHours, permissionLevel = "use" } = req.body ?? {};
+    if (!CREDENTIAL_LEVELS.includes(permissionLevel)) {
+      return res.status(400).json({
+        error: "Invalid permission level",
+        validLevels: CREDENTIAL_LEVELS,
+      });
+    }
+
+    try {
+      const sharing = await canManageCredentialSharing(userId, credentialId);
+      if (!sharing.allowed || !sharing.ownerId) {
+        return res
+          .status(403)
+          .json({ error: "Not allowed to share this credential" });
+      }
+      const ownerId = sharing.ownerId;
+
+      const userRepository = createCurrentUserRepository();
+      const roleRepository = createCurrentRoleRepository();
+      for (const target of targets) {
+        const found =
+          target.type === "user"
+            ? await userRepository.findById(target.id as string)
+            : await roleRepository.findRoleById(target.id as number);
+        if (!found) {
+          return res.status(404).json({
+            error: `Target ${target.type} not found`,
+            targetId: target.id,
+          });
+        }
+      }
+
+      const expiresAt = expiryFromDuration(durationHours);
+      const accessRepository = createCurrentCredentialAccessRepository();
+      const { SharedCredentialSecretsManager } =
+        await import("../../utils/shared-credential-secrets-manager.js");
+      const manager = SharedCredentialSecretsManager.getInstance();
+
+      for (const target of targets) {
+        if (target.type === "user" && target.id === ownerId) continue;
+        const grant = await accessRepository.upsert({
+          credentialId,
+          grantedBy: userId,
+          permissionLevel: permissionLevel as CredentialLevel,
+          expiresAt,
+          target:
+            target.type === "user"
+              ? { targetType: "user", targetUserId: target.id as string }
+              : { targetType: "role", targetRoleId: target.id as number },
+        });
+        try {
+          if (target.type === "user") {
+            await manager.snapshotForUser(
+              grant.id,
+              credentialId,
+              target.id as string,
+              ownerId,
+            );
+          } else {
+            await manager.snapshotForRole(
+              grant.id,
+              credentialId,
+              target.id as number,
+              ownerId,
+            );
+          }
+        } catch (snapshotError) {
+          databaseLogger.warn("Credential shared but secret snapshot failed", {
+            operation: "rbac_credential_share_snapshot_failed",
+            credentialId,
+            accessId: grant.id,
+            error: getErrorMessage(snapshotError),
+          });
+        }
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "credential_share",
+        resourceType: "credential",
+        resourceId: String(credentialId),
+        details: JSON.stringify({ targets, permissionLevel, expiresAt }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ success: true, permissionLevel, expiresAt });
+    } catch (error) {
+      databaseLogger.error("Failed to share credential", error, {
+        operation: "share_credential",
+        credentialId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to share credential" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/credential/{id}/access:
+ *   get:
+ *     summary: List who a credential is shared with
+ *     tags:
+ *       - RBAC
+ */
+router.get(
+  "/credential/:id/access",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const credentialId = parseInt(id, 10);
+    if (isNaN(credentialId)) {
+      return res.status(400).json({ error: "Invalid credential ID" });
+    }
+    try {
+      const sharing = await canManageCredentialSharing(
+        req.userId!,
+        credentialId,
+      );
+      if (!sharing.allowed) {
+        return res.status(403).json({ error: "Not allowed" });
+      }
+      res.json({
+        access:
+          await createCurrentCredentialAccessRepository().listForCredential(
+            credentialId,
+          ),
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to list credential access", error, {
+        operation: "list_credential_access",
+        credentialId,
+      });
+      res.status(500).json({ error: "Failed to list credential access" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/credential/{id}/access/{accessId}:
+ *   delete:
+ *     summary: Revoke a credential share (recipients' copies are removed with it)
+ *     tags:
+ *       - RBAC
+ */
+router.delete(
+  "/credential/:id/access/:accessId",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const credentialId = parseInt(String(req.params.id), 10);
+    const accessId = parseInt(String(req.params.accessId), 10);
+    if (isNaN(credentialId) || isNaN(accessId)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+    try {
+      const sharing = await canManageCredentialSharing(
+        req.userId!,
+        credentialId,
+      );
+      if (!sharing.allowed) {
+        return res.status(403).json({ error: "Not allowed" });
+      }
+      const repository = createCurrentCredentialAccessRepository();
+      if (!(await repository.findById(accessId, credentialId))) {
+        return res.status(404).json({ error: "Access grant not found" });
+      }
+      await repository.revoke(accessId, credentialId);
+      res.json({ success: true });
+    } catch (error) {
+      databaseLogger.error("Failed to revoke credential access", error, {
+        operation: "revoke_credential_access",
+        credentialId,
+        accessId,
+      });
+      res.status(500).json({ error: "Failed to revoke credential access" });
     }
   },
 );

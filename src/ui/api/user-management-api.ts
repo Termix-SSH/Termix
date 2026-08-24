@@ -154,10 +154,11 @@ export async function removeAdminStatus(
 
 export async function deleteUser(
   username: string,
+  successorUserId?: string | "none",
 ): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.delete("/users/delete-user", {
-      data: { username },
+      data: { username, successorUserId },
     });
     return response.data;
   } catch (error) {

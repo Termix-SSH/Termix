@@ -33,6 +33,7 @@ export function CredentialSidebarTree({
   onEditCredential,
   onCloneCredential,
   onDeleteCredential,
+  onShareCredential,
   usedByCounts,
   termixIdLinkedIds,
   query = "",
@@ -54,6 +55,7 @@ export function CredentialSidebarTree({
   onEditCredential: (cred: Credential) => void;
   onCloneCredential: (cred: Credential) => void;
   onDeleteCredential: (cred: Credential) => void;
+  onShareCredential?: (cred: Credential) => void;
   usedByCounts?: Map<string, number>;
   termixIdLinkedIds?: Set<number>;
   query?: string;
@@ -438,6 +440,7 @@ export function CredentialSidebarTree({
                       onEdit={() => onEditCredential(item)}
                       onClone={() => onCloneCredential(item)}
                       onDelete={() => onDeleteCredential(item)}
+                      onShare={() => onShareCredential?.(item)}
                     />
                   )}
                 </div>

@@ -2048,3 +2048,90 @@ export const secretSources = mysqlTable(
   },
   (table) => [index("idx_secret_sources_user").on(table.userId)],
 );
+
+// --- credential sharing ---
+
+/**
+ * Who may use or manage someone else's credential. Same shape as
+ * snippet_access; "use" attaches it to hosts and connects, "manage" also
+ * edits and re-shares it.
+ */
+export const credentialAccess = mysqlTable(
+  "credential_access",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    credentialId: int("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    roleId: int("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
+
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    permissionLevel: text("permission_level").notNull().default("use"),
+
+    expiresAt: varchar("expires_at", { length: 255 }),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_credential_access_user_id").on(table.userId),
+    index("idx_credential_access_role_id").on(table.roleId),
+    index("idx_credential_access_credential_id").on(table.credentialId),
+  ],
+);
+
+/**
+ * A recipient's copy of a shared credential's secrets, re-encrypted under
+ * the recipient's data key (the owner's key cannot be used by anyone else).
+ * Rebuilt whenever the owner edits the credential; one row per grant and
+ * recipient, like shared_host_secrets.
+ */
+export const sharedCredentialSecrets = mysqlTable(
+  "shared_credential_secrets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    credentialAccessId: int("credential_access_id")
+      .notNull()
+      .references(() => credentialAccess.id, { onDelete: "cascade" }),
+    targetUserId: varchar("target_user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialId: int("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    encryptedUsername: text("encrypted_username"),
+    authType: text("auth_type").notNull().default("password"),
+    encryptedPassword: text("encrypted_password"),
+    encryptedKey: text("encrypted_key"),
+    encryptedKeyPassword: text("encrypted_key_password"),
+    keyType: text("key_type"),
+    publicKey: text("public_key"),
+    certPublicKey: text("cert_public_key"),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_shared_credential_secrets_scope").on(
+      table.credentialAccessId,
+      table.targetUserId,
+    ),
+    index("idx_shared_credential_secrets_target").on(
+      table.targetUserId,
+      table.credentialId,
+    ),
+  ],
+);

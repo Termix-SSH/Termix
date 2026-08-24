@@ -206,6 +206,10 @@ export type Credential = {
   pin?: boolean;
   sortOrder?: number | null;
   certPublicKey?: string;
+  /** Set when someone else owns this credential and shared it with you. */
+  isShared?: boolean;
+  ownerUsername?: string | null;
+  permissionLevel?: "use" | "manage";
 };
 
 // HashiCorp Vault SSH signer profile — shareable connection settings only
