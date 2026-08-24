@@ -20,11 +20,20 @@ import {
 } from "../session-sharing/live-sessions.js";
 import {
   createCurrentCollabRoomRepository,
+  createCurrentRoleRepository,
   createCurrentSessionShareRepository,
   createCurrentUserRepository,
 } from "../../database/repositories/factory.js";
 import type { CollabRoomRecord } from "../../database/repositories/collab-room-repository.js";
 
+/*
+ * Known limits, shared with session sharing v1:
+ * - Room events and stage control live in this process (room-hub,
+ *   stage-control). With more than one backend instance, members connected
+ *   to different instances do not see each other's events.
+ * - A guac viewer whose control was revoked keeps its current connection
+ *   until it reconnects; guacamole-lite exposes no server-side kick.
+ */
 const router = express.Router();
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -196,16 +205,18 @@ router.post(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId!;
     const roomId = String(req.params.id);
-    const { userIds } = req.body ?? {};
+    const { userIds = [], roleIds = [] } = req.body ?? {};
 
     if (
       !Array.isArray(userIds) ||
-      userIds.length === 0 ||
-      userIds.some((id) => !isNonEmptyString(id))
+      userIds.some((id) => !isNonEmptyString(id)) ||
+      !Array.isArray(roleIds) ||
+      roleIds.some((id) => !Number.isInteger(id)) ||
+      (userIds.length === 0 && roleIds.length === 0)
     ) {
-      return res
-        .status(400)
-        .json({ error: "userIds must be a non-empty array of user ids" });
+      return res.status(400).json({
+        error: "userIds (user ids) or roleIds (integers) are required",
+      });
     }
 
     try {
@@ -224,7 +235,19 @@ router.post(
           return res.status(404).json({ error: "User not found", targetId });
         }
       }
-      for (const targetId of userIds as string[]) {
+      // Roles expand to their current members - a snapshot, like folder
+      // sharing; people joining the role later are not pulled in.
+      const roleRepository = createCurrentRoleRepository();
+      const expanded = new Set<string>(userIds as string[]);
+      for (const roleId of roleIds as number[]) {
+        if (!(await roleRepository.findRoleById(roleId))) {
+          return res.status(404).json({ error: "Role not found", roleId });
+        }
+        for (const memberId of await roleRepository.listRoleUserIds(roleId)) {
+          expanded.add(memberId);
+        }
+      }
+      for (const targetId of expanded) {
         await repository.addMember({
           roomId,
           userId: targetId,
@@ -486,6 +509,15 @@ router.get(
       );
       const protocol = room.stageProtocol as LiveProtocol;
       if (!share || !isLiveSession(protocol, share.sessionId)) {
+        // The presenter is gone (expired share or dead session): clear the
+        // stale stage so the room stops pointing at it.
+        setStageController(roomId, null);
+        await createCurrentCollabRoomRepository().clearStage(roomId);
+        collabRoomHub.broadcast(roomId, {
+          type: "collab_stage_changed",
+          roomId,
+          stage: null,
+        });
         return res.json({ stage: null });
       }
 
@@ -639,6 +671,143 @@ router.post(
     }
   },
 );
+
+/**
+ * @openapi
+ * /collab/rooms/{id}/guest-link:
+ *   post:
+ *     summary: Enable, rotate or disable the room's anonymous guest link (host only)
+ *     tags:
+ *       - Collab
+ */
+router.post(
+  "/rooms/:id/guest-link",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId!;
+    const roomId = String(req.params.id);
+    const { enabled } = req.body ?? {};
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "enabled must be a boolean" });
+    }
+    try {
+      const access = await requireRoomMember(roomId, userId);
+      if (!access) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      if (!access.isHost) {
+        return res
+          .status(403)
+          .json({ error: "Only the host can manage the guest link" });
+      }
+      const token = enabled
+        ? crypto.randomBytes(24).toString("base64url")
+        : null;
+      await createCurrentCollabRoomRepository().setGuestToken(roomId, token);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: enabled
+          ? "collab_guest_link_enable"
+          : "collab_guest_link_disable",
+        resourceType: "collab_room",
+        resourceId: roomId,
+        resourceName: access.room.name,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+      res.json({ guestLinkToken: token });
+    } catch (error) {
+      sshLogger.error("Failed to update collab guest link", error, {
+        operation: "collab_guest_link_error",
+      });
+      res.status(500).json({ error: "Failed to update guest link" });
+    }
+  },
+);
+
+const GUEST_WINDOW_MS = 60 * 1000;
+const GUEST_MAX_ATTEMPTS = 60;
+const guestAttempts = new Map<string, { count: number; windowStart: number }>();
+
+function isGuestRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = guestAttempts.get(ip);
+  if (!entry || now - entry.windowStart > GUEST_WINDOW_MS) {
+    guestAttempts.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > GUEST_MAX_ATTEMPTS;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of guestAttempts) {
+    if (now - entry.windowStart > GUEST_WINDOW_MS) guestAttempts.delete(ip);
+  }
+}, 5 * GUEST_WINDOW_MS).unref();
+
+/**
+ * @openapi
+ * /collab/guest/{token}:
+ *   get:
+ *     summary: Resolve a room's current stage for an anonymous guest
+ *     description: Public, rate-limited per IP. Guests poll this to follow presenter switches. Never returns host details; SSH stages are joined over the terminal WS with roomGuestToken, guac stages get a read-only join token.
+ *     tags:
+ *       - Collab
+ */
+router.get("/guest/:token", async (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  if (isGuestRateLimited(ip)) {
+    return res.status(429).json({ error: "Too many requests" });
+  }
+  const token = String(req.params.token);
+  try {
+    const room =
+      await createCurrentCollabRoomRepository().findByGuestToken(token);
+    if (!room) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+    const response: Record<string, unknown> = {
+      roomName: room.name,
+      stage: null,
+    };
+    if (room.stageShareId && room.stageProtocol) {
+      const share = await createCurrentSessionShareRepository().findActiveById(
+        room.stageShareId,
+      );
+      const protocol = room.stageProtocol as LiveProtocol;
+      if (share && isLiveSession(protocol, share.sessionId)) {
+        const { enabled } = await isSharingEnabledForHost(share.hostId);
+        if (enabled) {
+          response.stage = {
+            protocol,
+            shareId: share.id,
+            ...(protocol === "ssh"
+              ? {
+                  wsPath: `/terminal/ws?roomGuestToken=${encodeURIComponent(token)}`,
+                }
+              : {
+                  connectParams: {
+                    token: tokenService.createJoinToken(share.sessionId, true),
+                  },
+                }),
+          };
+        }
+      }
+    }
+    res.json(response);
+  } catch (error) {
+    sshLogger.error("Failed to resolve collab guest link", error, {
+      operation: "collab_guest_resolve_error",
+    });
+    res.status(500).json({ error: "Failed to resolve guest link" });
+  }
+});
 
 /**
  * @openapi

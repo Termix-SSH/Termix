@@ -1971,12 +1971,18 @@ export const collabRooms = sqliteTable(
       onDelete: "set null",
     }),
 
+    // Set = anonymous guests may watch the stage through this token.
+    guestLinkToken: text("guest_link_token"),
+
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     endedAt: text("ended_at"),
   },
-  (table) => [index("idx_collab_rooms_owner").on(table.ownerUserId)],
+  (table) => [
+    index("idx_collab_rooms_owner").on(table.ownerUserId),
+    uniqueIndex("idx_collab_rooms_guest_token").on(table.guestLinkToken),
+  ],
 );
 
 export const collabRoomMembers = sqliteTable(

@@ -65,6 +65,25 @@ export class CollabRoomRepository {
     return rows[0] ?? null;
   }
 
+  async findByGuestToken(token: string): Promise<CollabRoomRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(collabRooms)
+      .where(
+        and(eq(collabRooms.guestLinkToken, token), isNull(collabRooms.endedAt)),
+      )
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async setGuestToken(roomId: string, token: string | null): Promise<void> {
+    await this.context.drizzle
+      .update(collabRooms)
+      .set({ guestLinkToken: token })
+      .where(eq(collabRooms.id, roomId));
+    await this.afterWrite();
+  }
+
   async listForUser(userId: string): Promise<CollabRoomRecord[]> {
     const rows = await this.context.drizzle
       .select({ room: collabRooms })

@@ -1975,12 +1975,18 @@ export const collabRooms = pgTable(
       onDelete: "set null",
     }),
 
+    // Set = anonymous guests may watch the stage through this token.
+    guestLinkToken: varchar("guest_link_token", { length: 255 }),
+
     createdAt: varchar("created_at", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     endedAt: text("ended_at"),
   },
-  (table) => [index("idx_collab_rooms_owner").on(table.ownerUserId)],
+  (table) => [
+    index("idx_collab_rooms_owner").on(table.ownerUserId),
+    uniqueIndex("idx_collab_rooms_guest_token").on(table.guestLinkToken),
+  ],
 );
 
 export const collabRoomMembers = pgTable(

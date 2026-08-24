@@ -1775,6 +1775,52 @@ export function AppShell({
     return id;
   }
 
+  // Invite awareness: rooms are discovered by polling, so a room that has
+  // never been shown to this browser gets one toast with an Open action.
+  useEffect(() => {
+    const SEEN_KEY = "termix:collab-rooms-seen";
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const { listCollabRooms } = await import("@/api/collab-api");
+        const { rooms } = await listCollabRooms();
+        if (cancelled) return;
+        let seen: string[] = [];
+        try {
+          seen = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]");
+        } catch {
+          seen = [];
+        }
+        const seenSet = new Set(seen);
+        const fresh = rooms.filter((room) => !seenSet.has(room.id));
+        if (fresh.length === 0) return;
+        localStorage.setItem(
+          SEEN_KEY,
+          JSON.stringify([...seenSet, ...fresh.map((room) => room.id)]),
+        );
+        // The first poll after login only records what already exists.
+        if (seen.length === 0) return;
+        for (const room of fresh) {
+          if (room.ownerUserId === userId) continue;
+          toast(t("collab.invitedTo", { name: room.name }), {
+            action: {
+              label: t("collab.openRoom"),
+              onClick: () => setRailView("collab"),
+            },
+          });
+        }
+      } catch {
+        /* next poll */
+      }
+    };
+    void check();
+    const timer = setInterval(() => void check(), 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
   const openSingletonTab = useCallback(
     // --- tmux-monitor --- (added optional `host` so tmux_monitor can open
     // with a preselected host; existing callers are unaffected)

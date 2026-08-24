@@ -587,6 +587,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         stage_protocol TEXT,
         stage_host_id INTEGER,
         stage_share_id TEXT,
+        guest_link_token TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         ended_at TEXT,
         FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
@@ -2070,6 +2071,10 @@ const migrateSchema = () => {
   }
 
   addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
+  addColumnIfNotExists("collab_rooms", "guest_link_token", "TEXT");
+  sqlite.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_collab_rooms_guest_token ON collab_rooms (guest_link_token)",
+  );
 
   try {
     const usersTableInfo = sqlite.prepare("PRAGMA table_info(users)").all() as Array<{

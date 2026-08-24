@@ -77,6 +77,8 @@ const ElectronVersionCheck = lazy(() =>
 const SharedSessionView = lazy(
   () => import("@/features/session-sharing/SharedSessionView"),
 );
+// Anonymous guest view for collab rooms (?view=collab-guest&token=<guestLinkToken>).
+const CollabGuestView = lazy(() => import("@/features/collab/CollabGuestView"));
 
 type Phase =
   "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
@@ -405,6 +407,13 @@ function RootApp() {
     return (
       <Suspense fallback={null}>
         <SharedSessionView />
+      </Suspense>
+    );
+  }
+  if (searchParams.get("view") === "collab-guest") {
+    return (
+      <Suspense fallback={null}>
+        <CollabGuestView />
       </Suspense>
     );
   }

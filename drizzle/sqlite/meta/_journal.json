@@ -85,6 +85,13 @@
       "when": 1787576992255,
       "tag": "0011_wakeful_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1787581978969,
+      "tag": "0012_yellow_firedrake",
+      "breakpoints": true
     }
   ]
 }

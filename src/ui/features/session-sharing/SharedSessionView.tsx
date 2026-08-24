@@ -118,12 +118,12 @@ function CenteredMessage({
   );
 }
 
-function GuestTerminalView({
+export function GuestTerminalView({
   share,
-  linkToken,
+  wsQuery,
 }: {
-  share: ResolvedShareLink;
-  linkToken: string;
+  share: Pick<ResolvedShareLink, "permissionLevel">;
+  wsQuery: string;
 }) {
   const { t } = useTranslation();
   const { instance: terminal, ref: xtermRef } = useXTerm();
@@ -153,9 +153,7 @@ function GuestTerminalView({
     resolveTerminalWsBaseUrl().then((baseWsUrl) => {
       if (cancelled) return;
       const separator = baseWsUrl.includes("?") ? "&" : "?";
-      ws = new WebSocket(
-        `${baseWsUrl}${separator}shareToken=${encodeURIComponent(linkToken)}`,
-      );
+      ws = new WebSocket(`${baseWsUrl}${separator}${wsQuery}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -215,7 +213,7 @@ function GuestTerminalView({
     };
     // Deliberately runs once terminal mounts - share/token/permission are stable for the view's lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [terminal, linkToken]);
+  }, [terminal, wsQuery]);
 
   return (
     <div className="relative w-full h-full">
@@ -357,7 +355,10 @@ export default function SharedSessionView() {
           share &&
           linkToken &&
           (share.protocol === "ssh" ? (
-            <GuestTerminalView share={share} linkToken={linkToken} />
+            <GuestTerminalView
+              share={share}
+              wsQuery={`shareToken=${encodeURIComponent(linkToken)}`}
+            />
           ) : (
             <GuestGuacamoleView share={share} />
           ))}

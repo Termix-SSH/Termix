@@ -35,7 +35,7 @@ const isDev = (): boolean =>
 // truth, so a share link opened there always resolves against it --
 // joining a session hosted on someone else's remote server isn't
 // supported from the desktop app today.
-async function resolveApiBaseUrl(): Promise<string> {
+export async function resolveApiBaseUrl(): Promise<string> {
   if (isDev()) {
     const protocol = window.location.protocol === "https:" ? "https" : "http";
     return `${protocol}://localhost:30001`;

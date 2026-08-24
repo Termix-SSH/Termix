@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Crown,
   Hand,
+  Link2,
   Loader2,
   MonitorUp,
   MousePointerClick,
@@ -26,6 +27,8 @@ import { CommandHistoryProvider } from "@/features/terminal/command-history/Comm
 import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
 import { getGuacamoleTokenFromHost } from "@/api/guacamole-api";
 import { getSSHHosts, getUserList, type SSHHostWithStatus } from "@/main-axios";
+import { getRoles } from "@/api/rbac-api";
+import type { Role } from "@/main-axios";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { getErrorMessage } from "@/lib/error-message";
@@ -36,6 +39,7 @@ import {
   inviteCollabMembers,
   presentCollabStage,
   requestCollabStageControl,
+  setCollabGuestLink,
   setCollabStageControl,
   stopCollabStage,
   type CollabRoomDetail,
@@ -67,7 +71,7 @@ function roomEventsWsUrl(): string {
 type PresentDraft =
   | { protocol: "ssh"; host: SSHHostWithStatus }
   | {
-      protocol: "rdp" | "vnc";
+      protocol: "rdp" | "vnc" | "telnet";
       host: SSHHostWithStatus;
       token: string;
       guacamoleConnectionId: string;
@@ -94,6 +98,8 @@ export function CollabRoomTab({
   const [inviteSelection, setInviteSelection] = useState<Set<string>>(
     new Set(),
   );
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [roleSelection, setRoleSelection] = useState<Set<number>>(new Set());
   const draftRef = useRef<PresentDraft | null>(null);
   draftRef.current = draft;
   const stageKeyRef = useRef<string | null>(null);
@@ -246,7 +252,7 @@ export function CollabRoomTab({
 
   async function choosePresent(
     host: SSHHostWithStatus,
-    protocol: "ssh" | "rdp" | "vnc",
+    protocol: "ssh" | "rdp" | "vnc" | "telnet",
   ) {
     if (!roomId) return;
     setPresentOpen(false);
@@ -315,23 +321,46 @@ export function CollabRoomTab({
   async function openInviteDialog() {
     setInviteOpen(true);
     setInviteSelection(new Set());
+    setRoleSelection(new Set());
     try {
-      const result = await getUserList();
+      const [userResult, roleResult] = await Promise.all([
+        getUserList(),
+        getRoles().catch(() => ({ roles: [] as Role[] })),
+      ]);
       setUsers(
-        result.users.map((user) => ({
+        userResult.users.map((user) => ({
           id: user.userId,
           username: user.username,
         })),
       );
+      setRoles(roleResult.roles);
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
   }
 
-  async function handleInvite() {
-    if (!roomId || inviteSelection.size === 0) return;
+  async function handleGuestLink(enabled: boolean) {
+    if (!roomId) return;
     try {
-      await inviteCollabMembers(roomId, Array.from(inviteSelection));
+      await setCollabGuestLink(roomId, enabled);
+      void refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }
+
+  function guestLinkUrl(token: string) {
+    return `${window.location.origin}${window.location.pathname}?view=collab-guest&token=${token}`;
+  }
+
+  async function handleInvite() {
+    if (!roomId || (inviteSelection.size === 0 && roleSelection.size === 0))
+      return;
+    try {
+      await inviteCollabMembers(roomId, {
+        userIds: Array.from(inviteSelection),
+        roleIds: Array.from(roleSelection),
+      });
       toast.success(t("collab.invited"));
       setInviteOpen(false);
       void refresh();
@@ -340,7 +369,16 @@ export function CollabRoomTab({
     }
   }
 
-  if (!roomId) return null;
+  if (!roomId) {
+    return (
+      <div className="flex flex-1 h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <Presentation className="size-8" />
+          <p className="text-sm">{t("collab.reopenFromPanel")}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (ended) {
     return (
@@ -471,6 +509,40 @@ export function CollabRoomTab({
         </div>
       </div>
 
+      {isHost && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border text-[11px] text-muted-foreground">
+          <Link2 className="size-3.5" />
+          <span className="flex-1 truncate">
+            {detail?.room.guestLinkToken
+              ? t("collab.guestLinkOn")
+              : t("collab.guestLinkOff")}
+          </span>
+          {detail?.room.guestLinkToken && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-[10px]"
+              onClick={() => {
+                void navigator.clipboard
+                  .writeText(guestLinkUrl(detail.room.guestLinkToken!))
+                  .then(() => toast.success(t("collab.linkCopied")));
+              }}
+            >
+              {t("collab.copyLink")}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant={detail?.room.guestLinkToken ? "destructive" : "outline"}
+            className="h-6 text-[10px]"
+            onClick={() => void handleGuestLink(!detail?.room.guestLinkToken)}
+          >
+            {t("collab.guestLink")}:{" "}
+            {detail?.room.guestLinkToken ? "ON" : "OFF"}
+          </Button>
+        </div>
+      )}
+
       {/* Stage */}
       <div className="relative flex-1 min-h-0">
         {draft ? (
@@ -572,10 +644,11 @@ export function CollabRoomTab({
               </div>
             )}
             {hosts.map((host) => {
-              const protocols: Array<"ssh" | "rdp" | "vnc"> = [];
+              const protocols: Array<"ssh" | "rdp" | "vnc" | "telnet"> = [];
               if (host.enableTerminal || host.enableSsh) protocols.push("ssh");
               if (host.enableRdp) protocols.push("rdp");
               if (host.enableVnc) protocols.push("vnc");
+              if (host.enableTelnet) protocols.push("telnet");
               if (protocols.length === 0) return null;
               return (
                 <div
@@ -608,6 +681,34 @@ export function CollabRoomTab({
             <DialogTitle>{t("collab.inviteTitle")}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-1">
+            {roles.length > 0 && (
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {t("collab.roles")}
+              </span>
+            )}
+            {roles.map((role) => (
+              <label
+                key={role.id}
+                className="flex items-center gap-2 px-2 py-1.5 text-xs border border-border cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={roleSelection.has(role.id)}
+                  onChange={(e) => {
+                    setRoleSelection((prev) => {
+                      const next = new Set(prev);
+                      if (e.target.checked) next.add(role.id);
+                      else next.delete(role.id);
+                      return next;
+                    });
+                  }}
+                />
+                {role.displayName || role.name}
+              </label>
+            ))}
+            <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {t("collab.users")}
+            </span>
             {invitableUsers.map((user) => (
               <label
                 key={user.id}
@@ -635,7 +736,7 @@ export function CollabRoomTab({
             </Button>
             <Button
               onClick={() => void handleInvite()}
-              disabled={inviteSelection.size === 0}
+              disabled={inviteSelection.size === 0 && roleSelection.size === 0}
             >
               {t("collab.invite")}
             </Button>

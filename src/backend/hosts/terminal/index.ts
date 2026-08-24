@@ -1,6 +1,7 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import { getAuditUsername } from "../../utils/audit-logger.js";
 import { collabRoomHub } from "../collab/room-hub.js";
+import type { SessionShareRecord } from "../../database/repositories/session-share-repository.js";
 import { createCurrentCollabRoomRepository } from "../../database/repositories/factory.js";
 import {
   parseWsMessage,
@@ -152,12 +153,45 @@ async function handleShareTokenConnection(
   req: import("http").IncomingMessage,
   shareToken: string,
 ): Promise<void> {
-  const shareRepo = createCurrentSessionShareRepository();
-  const share = await shareRepo.findByLinkToken(shareToken);
+  const share =
+    await createCurrentSessionShareRepository().findByLinkToken(shareToken);
   if (!share) {
     ws.close(1008, "Invalid or expired share link");
     return;
   }
+  return attachShareGuest(ws, req, share);
+}
+
+/**
+ * Auth path for anonymous collab-room guests (?roomGuestToken=<token>): the
+ * room's guest link resolves to whatever share is on stage right now.
+ */
+async function handleRoomGuestConnection(
+  ws: WebSocket,
+  req: import("http").IncomingMessage,
+  roomGuestToken: string,
+): Promise<void> {
+  const room =
+    await createCurrentCollabRoomRepository().findByGuestToken(roomGuestToken);
+  const share = room?.stageShareId
+    ? await createCurrentSessionShareRepository().findActiveById(
+        room.stageShareId,
+      )
+    : null;
+  if (!share) {
+    ws.close(1008, "Nothing is being presented");
+    return;
+  }
+  return attachShareGuest(ws, req, share);
+}
+
+/** Joins an anonymous guest socket to a live shared SSH session, read-only or not per the share. */
+async function attachShareGuest(
+  ws: WebSocket,
+  req: import("http").IncomingMessage,
+  share: SessionShareRecord,
+): Promise<void> {
+  const shareRepo = createCurrentSessionShareRepository();
   if (share.protocol !== "ssh") {
     ws.close(1008, "Unsupported share protocol");
     return;
@@ -300,6 +334,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   if (shareToken) {
     await handleShareTokenConnection(ws, req, shareToken);
+    return;
+  }
+  const roomGuestToken = urlObj.searchParams.get("roomGuestToken");
+  if (roomGuestToken) {
+    await handleRoomGuestConnection(ws, req, roomGuestToken);
     return;
   }
 
@@ -1295,10 +1334,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
               share.protocol === "ssh" &&
               share.shareType === "room"
             ) {
-              const roomRepository = createCurrentCollabRoomRepository();
-              const room = await roomRepository.findByStageShareId(share.id);
-              eligible =
-                !!room && !!(await roomRepository.findMember(room.id, userId));
+              const { canJoinRoomStageShare } =
+                await import("../collab/room-share-access.js");
+              eligible = await canJoinRoomStageShare(share.id, userId);
             }
             if (!eligible || !share) {
               ws.send(

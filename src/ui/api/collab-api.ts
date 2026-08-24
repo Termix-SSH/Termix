@@ -1,4 +1,6 @@
+import axios from "axios";
 import { authApi, handleApiError } from "@/main-axios";
+import { resolveApiBaseUrl } from "@/api/session-sharing-api";
 
 export interface CollabRoom {
   id: string;
@@ -9,6 +11,7 @@ export interface CollabRoom {
   stageProtocol: string | null;
   stageHostId: number | null;
   stageShareId: string | null;
+  guestLinkToken: string | null;
   createdAt: string;
   endedAt: string | null;
 }
@@ -77,10 +80,10 @@ export async function getCollabRoom(roomId: string): Promise<CollabRoomDetail> {
 
 export async function inviteCollabMembers(
   roomId: string,
-  userIds: string[],
+  targets: { userIds?: string[]; roleIds?: number[] },
 ): Promise<void> {
   try {
-    await authApi.post(`/collab/rooms/${roomId}/members`, { userIds });
+    await authApi.post(`/collab/rooms/${roomId}/members`, targets);
   } catch (error) {
     throw handleApiError(error, "invite collab members");
   }
@@ -156,4 +159,36 @@ export async function endCollabRoom(roomId: string): Promise<void> {
   } catch (error) {
     throw handleApiError(error, "end collab room");
   }
+}
+
+export async function setCollabGuestLink(
+  roomId: string,
+  enabled: boolean,
+): Promise<{ guestLinkToken: string | null }> {
+  try {
+    const response = await authApi.post(`/collab/rooms/${roomId}/guest-link`, {
+      enabled,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update guest link");
+  }
+}
+
+export interface CollabGuestStage {
+  protocol: "ssh" | "rdp" | "vnc" | "telnet";
+  shareId: string;
+  wsPath?: string;
+  connectParams?: { token: string };
+}
+
+/** Anonymous: guests poll this to follow the presenter. Throws on 404/429. */
+export async function resolveCollabGuestStage(
+  token: string,
+): Promise<{ roomName: string; stage: CollabGuestStage | null }> {
+  const baseUrl = await resolveApiBaseUrl();
+  const response = await axios.get(
+    `${baseUrl}/collab/guest/${encodeURIComponent(token)}`,
+  );
+  return response.data;
 }
