@@ -1952,6 +1952,7 @@
       "uploadFailed": "Failed to upload {{name}}",
       "uploadDisabled": "Uploads are disabled for this connection",
       "driveUnavailable": "Enable RDP drive redirection before uploading files",
+      "driveNotWritable": "guacd cannot write to the drive folder. Check GUACD_DRIVE_PATH (or the host's Drive Path) and its permissions.",
       "dropToUpload": "Drop files to upload"
     },
     "toolbar": {

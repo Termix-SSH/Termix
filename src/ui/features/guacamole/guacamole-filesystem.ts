@@ -163,3 +163,22 @@ export function saveBlobAs(blob: Blob, filename: string): void {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Turns an upload failure into something a user can act on. guacd answers a
+ * refused stream with an ack like "FAIL (CANNOT OPEN)" - accurate, but it
+ * means "the drive folder isn't writable", which is what people need to hear.
+ */
+export function describeUploadError(
+  error: unknown,
+  t: (key: "driveNotWritable" | "driveUnavailable" | "uploadFailed") => string,
+): string {
+  const message = error instanceof Error ? error.message : "";
+  if (/cannot open|can't open|permission denied/i.test(message)) {
+    return t("driveNotWritable");
+  }
+  if (/no fs/i.test(message)) {
+    return t("driveUnavailable");
+  }
+  return message || t("uploadFailed");
+}

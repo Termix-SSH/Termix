@@ -12,6 +12,9 @@ services:
       GUACD_HOST: "guacd"
       GUACD_TUNNEL_HOST: "termix"
       GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      # Where guacd stores files for RDP drive redirection (one folder per
+      # user is created underneath). Must be writable by guacd's user.
+      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
       # Hardened deployments can require keys from environment variables or
       # Docker secrets mounted through JWT_SECRET_FILE, DATABASE_KEY_FILE,
       # ENCRYPTION_KEY_FILE and INTERNAL_AUTH_TOKEN_FILE.

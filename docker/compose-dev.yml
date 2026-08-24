@@ -15,6 +15,7 @@ services:
       GUACD_HOST: "guacd-dev"
       GUACD_TUNNEL_HOST: "termix-dev"
       GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
     depends_on:
       - guacd-dev
     networks:
