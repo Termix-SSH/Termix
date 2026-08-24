@@ -350,6 +350,11 @@ networks:
     driver: bridge
 ```
 
+部署多个 Termix 后端实例时，请为所有实例配置相同的 `REDIS_URL`，并可选配置
+`TERMIX_REDIS_PREFIX`。Redis 会同步协作房间的在线成员、控制请求、控制权和事件；
+实时 SSH 与远程桌面传输仍依附于创建连接的后端实例，因此负载均衡器需要保持
+WebSocket 会话亲和性。单实例部署无需 Redis。
+
 ### 命令行工具
 
 Termix 还提供命令行工具，你可以在终端里管理服务器，也可以把 Termix 用在自己的脚本中。

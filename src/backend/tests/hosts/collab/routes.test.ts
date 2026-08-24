@@ -29,6 +29,11 @@ const state = vi.hoisted(() => ({
   liveOwned: new Map<string, string>(), // sessionId -> owner
   broadcasts: [] as Array<Record<string, unknown>>,
   control: [] as Array<unknown[]>,
+  controllers: new Map<string, string>(),
+  requests: new Map<
+    string,
+    Map<string, { userId: string; username: string; requestedAt: string }>
+  >(),
 }));
 
 vi.mock("../../../utils/logger.js", () => ({
@@ -65,6 +70,39 @@ vi.mock("../../../hosts/collab/room-hub.js", () => ({
       state.broadcasts.push({ roomId, ...message });
     },
     onlineUsers: () => [],
+  },
+}));
+vi.mock("../../../hosts/collab/runtime-store.js", () => ({
+  collabRuntimeStore: {
+    onEvent: vi.fn(),
+    publish: vi.fn(async () => undefined),
+    getController: async (roomId: string) =>
+      state.controllers.get(roomId) ?? null,
+    setController: async (roomId: string, userId: string | null) => {
+      if (userId) state.controllers.set(roomId, userId);
+      else state.controllers.delete(roomId);
+    },
+    listRequests: async (roomId: string) =>
+      Array.from(state.requests.get(roomId)?.values() ?? []).sort((a, b) =>
+        a.requestedAt.localeCompare(b.requestedAt),
+      ),
+    upsertRequest: async (
+      roomId: string,
+      request: { userId: string; username: string; requestedAt: string },
+    ) => {
+      let requests = state.requests.get(roomId);
+      if (!requests) {
+        requests = new Map();
+        state.requests.set(roomId, requests);
+      }
+      requests.set(request.userId, request);
+    },
+    removeRequest: async (roomId: string, userId: string) => {
+      state.requests.get(roomId)?.delete(userId);
+    },
+    clearRequests: async (roomId: string) => {
+      state.requests.delete(roomId);
+    },
   },
 }));
 vi.mock("../../../hosts/terminal/session-manager.js", () => ({
@@ -302,6 +340,8 @@ describe("collab room routes", () => {
     state.liveOwned.clear();
     state.broadcasts.length = 0;
     state.control.length = 0;
+    state.controllers.clear();
+    state.requests.clear();
     state.sharingEnabled = true;
   });
 
@@ -434,13 +474,13 @@ describe("collab room routes", () => {
       params: { id: roomId },
       body: { userId: "alice" },
     });
-    expect(getStageController(roomId)).toBe("alice");
+    expect(await getStageController(roomId)).toBe("alice");
 
     await as("alice", () => present(roomId, "s2"));
     const room = state.rooms.get(roomId)!;
     expect(room.presenterUserId).toBe("alice");
     expect(state.shares.get(firstShare)!.revokedAt).toBeTruthy();
-    expect(getStageController(roomId)).toBeNull();
+    expect(await getStageController(roomId)).toBeNull();
   });
 
   it("stop is for the presenter or host", async () => {
@@ -533,14 +573,16 @@ describe("collab room routes", () => {
       state.rooms.get(roomId)!.stageShareId,
       "alice",
     ]);
-    expect(state.broadcasts.at(-1)).toMatchObject({
-      type: "collab_control_changed",
-      controllerUserId: "alice",
-    });
+    expect(state.broadcasts).toContainEqual(
+      expect.objectContaining({
+        type: "collab_control_changed",
+        controllerUserId: "alice",
+      }),
+    );
 
     expect((await control("bob", null)).statusCode).toBe(403);
     expect((await control("alice", null)).statusCode).toBe(200);
-    expect(getStageController(roomId)).toBeNull();
+    expect(await getStageController(roomId)).toBeNull();
 
     const asked = await as("bob", () =>
       invoke("post", "/rooms/:id/control/request", { params: { id: roomId } }),
@@ -551,6 +593,31 @@ describe("collab room routes", () => {
       userId: "bob",
       username: "BOB",
     });
+    expect(
+      (
+        await as("bob", () =>
+          invoke("get", "/rooms/:id", { params: { id: roomId } }),
+        )
+      ).jsonBody!.controlRequests,
+    ).toEqual([expect.objectContaining({ userId: "bob" })]);
+
+    const repeated = await as("bob", () =>
+      invoke("post", "/rooms/:id/control/request", {
+        params: { id: roomId },
+      }),
+    );
+    expect((repeated as { statusCode: number }).statusCode).toBe(429);
+
+    const listed = await invoke("get", "/rooms/:id/control/requests", {
+      params: { id: roomId },
+    });
+    expect(listed.jsonBody!.requests).toEqual([
+      expect.objectContaining({ userId: "bob" }),
+    ]);
+    await invoke("delete", "/rooms/:id/control/requests/:userId", {
+      params: { id: roomId, userId: "bob" },
+    });
+    expect(state.requests.get(roomId)?.size ?? 0).toBe(0);
   });
 
   it("guest link: host-only toggle, anonymous resolve follows the stage, rate limited", async () => {
