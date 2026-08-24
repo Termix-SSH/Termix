@@ -31,8 +31,8 @@ import type { CollabRoomRecord } from "../../database/repositories/collab-room-r
  * - Room events and stage control live in this process (room-hub,
  *   stage-control). With more than one backend instance, members connected
  *   to different instances do not see each other's events.
- * - A guac viewer whose control was revoked keeps its current connection
- *   until it reconnects; guacamole-lite exposes no server-side kick.
+ * - Guacamole stages stay read-only because guacamole-lite cannot revoke a
+ *   writable viewer without disconnecting the whole shared session.
  */
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -529,10 +529,7 @@ router.get(
       };
       if (protocol !== "ssh") {
         stage.connectParams = {
-          token: tokenService.createJoinToken(
-            share.sessionId,
-            controllerUserId !== userId,
-          ),
+          token: tokenService.createJoinToken(share.sessionId, true),
         };
       }
       res.json({ stage });
@@ -606,6 +603,11 @@ router.post(
       if (!access.room.stageShareId) {
         return res.status(400).json({ error: "Nothing is being presented" });
       }
+      if (access.room.stageProtocol !== "ssh") {
+        return res.status(400).json({
+          error: "Remote desktop stages are read-only",
+        });
+      }
 
       const releasingOwnControl =
         targetId === null && getStageController(roomId) === userId;
@@ -655,6 +657,11 @@ router.post(
       }
       if (!access.room.stageShareId) {
         return res.status(400).json({ error: "Nothing is being presented" });
+      }
+      if (access.room.stageProtocol !== "ssh") {
+        return res.status(400).json({
+          error: "Remote desktop stages are read-only",
+        });
       }
       collabRoomHub.broadcast(roomId, {
         type: "collab_control_requested",

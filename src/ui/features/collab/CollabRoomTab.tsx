@@ -406,6 +406,7 @@ export function CollabRoomTab({
           {detail?.members.map((member) => {
             const canToggleControl =
               (isHost || iAmPresenter) &&
+              detail?.stage.protocol === "ssh" &&
               !!detail?.stage.shareId &&
               member.userId !== presenterUserId;
             const hasControl = member.userId === controllerUserId;
@@ -456,25 +457,28 @@ export function CollabRoomTab({
               {t("collab.invite")}
             </Button>
           )}
-          {!!detail?.stage.shareId && !iAmPresenter && !draft && (
-            <Button
-              size="sm"
-              variant={controllerUserId === me ? "default" : "outline"}
-              className="h-7 text-xs"
-              onClick={() =>
-                controllerUserId === me
-                  ? void changeControl(null)
-                  : void requestCollabStageControl(roomId).catch((error) =>
-                      toast.error(getErrorMessage(error)),
-                    )
-              }
-            >
-              <Hand className="size-3.5 mr-1" />
-              {controllerUserId === me
-                ? t("collab.releaseControl")
-                : t("collab.requestControl")}
-            </Button>
-          )}
+          {!!detail?.stage.shareId &&
+            detail.stage.protocol === "ssh" &&
+            !iAmPresenter &&
+            !draft && (
+              <Button
+                size="sm"
+                variant={controllerUserId === me ? "default" : "outline"}
+                className="h-7 text-xs"
+                onClick={() =>
+                  controllerUserId === me
+                    ? void changeControl(null)
+                    : void requestCollabStageControl(roomId).catch((error) =>
+                        toast.error(getErrorMessage(error)),
+                      )
+                }
+              >
+                <Hand className="size-3.5 mr-1" />
+                {controllerUserId === me
+                  ? t("collab.releaseControl")
+                  : t("collab.requestControl")}
+              </Button>
+            )}
           {(iAmPresenter || draft || (isHost && presenterUserId)) && (
             <Button
               size="sm"

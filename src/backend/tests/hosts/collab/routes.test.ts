@@ -426,7 +426,7 @@ describe("collab room routes", () => {
     expect(state.rooms.get(roomId)!.stageShareId).toBeNull();
   });
 
-  it("resolves the stage per protocol and mints a writable guac token only for the controller", async () => {
+  it("keeps remote desktop stages read-only", async () => {
     const roomId = await createRoom();
     await invite(roomId, ["alice"]);
     const stageOf = (user: string) =>
@@ -449,12 +449,13 @@ describe("collab room routes", () => {
     expect((await stageOf("alice")).jsonBody.stage!.connectParams).toEqual({
       token: "join:g1:true",
     });
-    await invoke("post", "/rooms/:id/control", {
+    const control = await invoke("post", "/rooms/:id/control", {
       params: { id: roomId },
       body: { userId: "alice" },
     });
+    expect(control.statusCode).toBe(400);
     expect((await stageOf("alice")).jsonBody.stage!.connectParams).toEqual({
-      token: "join:g1:false",
+      token: "join:g1:true",
     });
   });
 
