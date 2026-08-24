@@ -6457,8 +6457,8 @@
         }
       },
       "foreignKeys": {
-        "shared_credential_secrets_credential_access_id_credential_access_id_fk": {
-          "name": "shared_credential_secrets_credential_access_id_credential_access_id_fk",
+        "shared_cred_secrets_access_id_fk": {
+          "name": "shared_cred_secrets_access_id_fk",
           "tableFrom": "shared_credential_secrets",
           "tableTo": "credential_access",
           "columnsFrom": [

@@ -5,6 +5,7 @@ import {
   real,
   index,
   uniqueIndex,
+  foreignKey,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
@@ -2095,9 +2096,7 @@ export const sharedCredentialSecrets = sqliteTable(
   "shared_credential_secrets",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    credentialAccessId: integer("credential_access_id")
-      .notNull()
-      .references(() => credentialAccess.id, { onDelete: "cascade" }),
+    credentialAccessId: integer("credential_access_id").notNull(),
     targetUserId: text("target_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -2122,6 +2121,11 @@ export const sharedCredentialSecrets = sqliteTable(
       .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [
+    foreignKey({
+      columns: [table.credentialAccessId],
+      foreignColumns: [credentialAccess.id],
+      name: "shared_cred_secrets_access_id_fk",
+    }).onDelete("cascade"),
     uniqueIndex("idx_shared_credential_secrets_scope").on(
       table.credentialAccessId,
       table.targetUserId,

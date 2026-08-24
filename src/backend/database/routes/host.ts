@@ -506,7 +506,11 @@ router.post(
       const createdHost = result;
       // Standing folder shares apply to the newcomer.
       try {
-        await applyFolderAccessRules(createdHost.id, userId!, createdHost.folder);
+        await applyFolderAccessRules(
+          createdHost.id,
+          userId!,
+          createdHost.folder,
+        );
       } catch (folderAccessError) {
         sshLogger.warn("Failed to inherit folder access on host create", {
           operation: "host_create_folder_access",

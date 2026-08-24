@@ -93,11 +93,11 @@ export function registerHostFolderRoutes(
             oldName,
             newName,
           );
-          await createCurrentFolderAccessRepository().renameFolder(
-            userId,
-            oldName,
-            newName,
-          );
+        await createCurrentFolderAccessRepository().renameFolder(
+          userId,
+          oldName,
+          newName,
+        );
 
         res.json({
           message: "Folder renamed successfully",

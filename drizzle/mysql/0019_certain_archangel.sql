@@ -11,8 +11,6 @@ CREATE TABLE `folder_access` (
 	CONSTRAINT `folder_access_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
-ALTER TABLE `shared_credential_secrets` DROP FOREIGN KEY `shared_cred_secrets_access_id_fk`;
---> statement-breakpoint
 ALTER TABLE `ssh_data` MODIFY COLUMN `folder` varchar(255);--> statement-breakpoint
 ALTER TABLE `snippets` MODIFY COLUMN `folder` varchar(255);--> statement-breakpoint
 ALTER TABLE `ssh_credentials` MODIFY COLUMN `folder` varchar(255);--> statement-breakpoint
@@ -21,5 +19,4 @@ ALTER TABLE `folder_access` ADD CONSTRAINT `folder_access_owner_user_id_users_id
 ALTER TABLE `folder_access` ADD CONSTRAINT `folder_access_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `folder_access` ADD CONSTRAINT `folder_access_role_id_roles_id_fk` FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `folder_access` ADD CONSTRAINT `folder_access_granted_by_users_id_fk` FOREIGN KEY (`granted_by`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX `idx_folder_access_owner_folder` ON `folder_access` (`owner_user_id`,`folder`);--> statement-breakpoint
-ALTER TABLE `shared_credential_secrets` ADD CONSTRAINT `shared_credential_secrets_credential_access_id_credential_access_id_fk` FOREIGN KEY (`credential_access_id`) REFERENCES `credential_access`(`id`) ON DELETE cascade ON UPDATE no action;
+CREATE INDEX `idx_folder_access_owner_folder` ON `folder_access` (`owner_user_id`,`folder`);

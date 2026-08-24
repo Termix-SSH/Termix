@@ -171,8 +171,8 @@ function transform(source, dialect) {
   );
 
   const imports = isPg
-    ? `import {\n  pgTable,\n  text,\n  varchar,\n  integer,\n  serial,\n  boolean,\n  doublePrecision,\n  index,\n  uniqueIndex,\n  type AnyPgColumn,\n} from "drizzle-orm/pg-core";`
-    : `import {\n  mysqlTable,\n  text,\n  varchar,\n  int,\n  boolean,\n  double,\n  index,\n  uniqueIndex,\n  type AnyMySqlColumn,\n} from "drizzle-orm/mysql-core";`;
+    ? `import {\n  pgTable,\n  text,\n  varchar,\n  integer,\n  serial,\n  boolean,\n  doublePrecision,\n  index,\n  uniqueIndex,\n  foreignKey,\n  type AnyPgColumn,\n} from "drizzle-orm/pg-core";`
+    : `import {\n  mysqlTable,\n  text,\n  varchar,\n  int,\n  boolean,\n  double,\n  index,\n  uniqueIndex,\n  foreignKey,\n  type AnyMySqlColumn,\n} from "drizzle-orm/mysql-core";`;
 
   out = out.replace(
     /import\s*\{[^}]*\}\s*from\s*"drizzle-orm\/sqlite-core";/,

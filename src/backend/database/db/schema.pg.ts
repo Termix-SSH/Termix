@@ -17,6 +17,7 @@ import {
   doublePrecision,
   index,
   uniqueIndex,
+  foreignKey,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -2099,9 +2100,7 @@ export const sharedCredentialSecrets = pgTable(
   "shared_credential_secrets",
   {
     id: serial("id").primaryKey(),
-    credentialAccessId: integer("credential_access_id")
-      .notNull()
-      .references(() => credentialAccess.id, { onDelete: "cascade" }),
+    credentialAccessId: integer("credential_access_id").notNull(),
     targetUserId: varchar("target_user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -2126,6 +2125,11 @@ export const sharedCredentialSecrets = pgTable(
       .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [
+    foreignKey({
+      columns: [table.credentialAccessId],
+      foreignColumns: [credentialAccess.id],
+      name: "shared_cred_secrets_access_id_fk",
+    }).onDelete("cascade"),
     uniqueIndex("idx_shared_credential_secrets_scope").on(
       table.credentialAccessId,
       table.targetUserId,

@@ -55,14 +55,39 @@ describe("folder access inheritance", () => {
 
   it("fans standing rules out to a host and snapshots secrets for each target", async () => {
     state.rules = [
-      { id: 1, userId: "alice", roleId: null, grantedBy: "owner", permissionLevel: "connect", expiresAt: null },
-      { id: 2, userId: null, roleId: 7, grantedBy: "owner", permissionLevel: "view", expiresAt: "2030-01-01" },
+      {
+        id: 1,
+        userId: "alice",
+        roleId: null,
+        grantedBy: "owner",
+        permissionLevel: "connect",
+        expiresAt: null,
+      },
+      {
+        id: 2,
+        userId: null,
+        roleId: 7,
+        grantedBy: "owner",
+        permissionLevel: "view",
+        expiresAt: "2030-01-01",
+      },
     ];
     const applied = await applyFolderAccessRules(42, "owner", "Prod");
     expect(applied).toBe(2);
     expect(state.grants).toEqual([
-      expect.objectContaining({ hostId: 42, targetType: "user", targetUserId: "alice", permissionLevel: "connect" }),
-      expect.objectContaining({ hostId: 42, targetType: "role", targetRoleId: 7, permissionLevel: "view", expiresAt: "2030-01-01" }),
+      expect.objectContaining({
+        hostId: 42,
+        targetType: "user",
+        targetUserId: "alice",
+        permissionLevel: "connect",
+      }),
+      expect.objectContaining({
+        hostId: 42,
+        targetType: "role",
+        targetRoleId: 7,
+        permissionLevel: "view",
+        expiresAt: "2030-01-01",
+      }),
     ]);
     expect(state.snapshots).toEqual([
       ["user", 1, 42, "alice", "owner"],
@@ -71,7 +96,16 @@ describe("folder access inheritance", () => {
   });
 
   it("does nothing for hosts outside any folder", async () => {
-    state.rules = [{ id: 1, userId: "alice", roleId: null, grantedBy: "o", permissionLevel: "connect", expiresAt: null }];
+    state.rules = [
+      {
+        id: 1,
+        userId: "alice",
+        roleId: null,
+        grantedBy: "o",
+        permissionLevel: "connect",
+        expiresAt: null,
+      },
+    ];
     expect(await applyFolderAccessRules(1, "owner", null)).toBe(0);
     expect(state.grants).toEqual([]);
   });
