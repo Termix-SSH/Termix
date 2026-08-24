@@ -94,6 +94,10 @@ import {
 } from "./HostEditorGuacamoleTabs";
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { VaultProfileManager } from "./VaultProfileManager";
+import {
+  SecretReferenceHint,
+  SecretSourceManager,
+} from "./SecretSourceManager";
 import { findHostByTunnelEndpoint } from "@/features/tunnel/tunnel-endpoints";
 import {
   toCredentialOption,
@@ -190,6 +194,7 @@ export function HostEditor({
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
   const [showVaultManager, setShowVaultManager] = useState(false);
+  const [showSecretSources, setShowSecretSources] = useState(false);
   const [quickCredentialName, setQuickCredentialName] = useState("");
   const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
   const [showQuickCredentialDialog, setShowQuickCredentialDialog] =
@@ -697,8 +702,17 @@ export function HostEditor({
                           }}
                           onChange={(e) => setField("password", e.target.value)}
                         />
+                        <SecretReferenceHint
+                          onManage={() => setShowSecretSources((v) => !v)}
+                        />
                       </div>
                     )}
+                    {(authMethod === "password" || authMethod === "key") &&
+                      showSecretSources && (
+                        <SecretSourceManager
+                          onClose={() => setShowSecretSources(false)}
+                        />
+                      )}
                     {authMethod === "key" && (
                       <>
                         <div className="flex flex-col gap-1.5 col-span-2">

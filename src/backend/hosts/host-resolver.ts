@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { resolveExternalSecretRefs } from "./external-secrets.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentVaultProfileRepository,
@@ -227,6 +228,14 @@ export async function resolveHostById(
   host.username = await expandOidcUsername(
     host.username as string | undefined,
     ownerEquivalent ? ownerId : userId,
+  );
+
+  // "op://..." references become real secrets here, once, for everyone
+  // downstream. They resolve in the context of whoever owns the secret
+  // fields: the owner for their own host, the recipient for an override.
+  await resolveExternalSecretRefs(
+    host as Record<string, unknown>,
+    sharedAuthResolution === "recipient-override" ? userId : ownerId,
   );
 
   // Resolve a Vault SSH signer profile (shared settings, no secrets). The

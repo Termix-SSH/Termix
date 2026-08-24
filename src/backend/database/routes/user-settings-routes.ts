@@ -16,6 +16,7 @@ import {
 import { getTelemetryEnvOverride } from "../../utils/analytics.js";
 import { AI_PRIVATE_ALLOWLIST_KEY, parseAllowlist } from "../../ai/egress.js";
 import { STEP_CA_PRIVATE_ALLOWLIST_KEY } from "../../utils/step-ca-egress.js";
+import { SECRET_SOURCE_PRIVATE_ALLOWLIST_KEY } from "../../utils/secret-source-egress.js";
 import {
   NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
   parseNotificationAllowlist,
@@ -1202,6 +1203,25 @@ export function registerUserSettingsRoutes(
     STEP_CA_PRIVATE_ALLOWLIST_KEY,
     "update_step_ca_private_endpoints",
     "Step CA endpoint",
+  );
+
+  /**
+   * @openapi
+   * /users/secret-source-private-endpoints:
+   *   get:
+   *     summary: Get the private hosts secret sources (1Password Connect) may contact (admin only)
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Replace that allowlist (admin only)
+   *     tags:
+   *       - Users
+   */
+  registerPrivateEndpointAllowlist(
+    "/secret-source-private-endpoints",
+    SECRET_SOURCE_PRIVATE_ALLOWLIST_KEY,
+    "update_secret_source_private_endpoints",
+    "secret source endpoint",
   );
 
   /**

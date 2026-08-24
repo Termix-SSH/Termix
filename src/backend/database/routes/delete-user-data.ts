@@ -39,6 +39,7 @@ import {
   createCurrentUserRepository,
   createCurrentTransferRecentRepository,
   createCurrentVaultProfileRepository,
+  createCurrentSecretSourceRepository,
   createCurrentVaultTokenRepository,
 } from "../repositories/factory.js";
 
@@ -98,6 +99,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentOpksshTokenRepository().deleteByUserId(userId);
     await createCurrentVaultTokenRepository().deleteByUserId(userId);
     await createCurrentVaultProfileRepository().deleteByUserId(userId);
+    await createCurrentSecretSourceRepository().deleteByUserId(userId);
     await createCurrentTermixIdentityCaRepository().deleteByUserId(userId);
     await createCurrentTermixIdentityRepository().deleteByUserId(userId);
     await createCurrentTmuxSessionTagRepository().deleteByUserId(userId);
