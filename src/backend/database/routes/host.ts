@@ -2361,11 +2361,18 @@ router.delete(
   },
 );
 
-registerHostFileManagerBookmarkRoutes(router, authenticateJWT);
+registerHostFileManagerBookmarkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+);
 
 router.get(
   "/transfer/recent",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const sourceHostIdQuery = Array.isArray(req.query.sourceHostId)
@@ -2402,6 +2409,8 @@ router.get(
 router.post(
   "/transfer/recent",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { sourceHostId, destHostId, destPath, destPathLabel } = req.body;
@@ -2433,7 +2442,12 @@ router.post(
     }
   },
 );
-registerHostCommandHistoryRoutes(router, authenticateJWT);
+registerHostCommandHistoryRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+);
 
 async function resolveHostCredentials(
   host: Record<string, unknown>,
@@ -2632,13 +2646,27 @@ async function resolveHostCredentials(
 
 registerHostFolderRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
+  requireDeletePermission: permissionManager.requirePermission("hosts.delete"),
+  requireCredentialEditPermission:
+    permissionManager.requirePermission("credentials.edit"),
+  requireDataAccess,
   statsServerUrl: STATS_SERVER_URL,
 });
 
-registerHostBulkRoutes(router, authenticateJWT);
+registerHostBulkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.create"),
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+);
 
 registerHostAutostartRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
 });
 
@@ -2683,6 +2711,8 @@ registerHostAutostartRoutes(router, {
 router.get(
   "/ssh/opkssh/token/:hostId",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
@@ -2754,6 +2784,8 @@ router.get(
 router.delete(
   "/ssh/opkssh/token/:hostId",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
@@ -2786,6 +2818,7 @@ registerHostOpksshRoutes(router);
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
 });
 

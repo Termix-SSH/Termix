@@ -7,6 +7,8 @@ import { isNonEmptyString } from "./host-normalizers.js";
 export function registerHostCommandHistoryRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireViewPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -33,6 +35,8 @@ export function registerHostCommandHistoryRoutes(
   router.get(
     "/command-history/:hostId",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const hostIdParam = Array.isArray(req.params.hostId)
@@ -98,6 +102,8 @@ export function registerHostCommandHistoryRoutes(
   router.delete(
     "/command-history",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostId, command } = req.body;

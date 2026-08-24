@@ -316,7 +316,12 @@ router.get(
 // Registered here (before the PUT /:id route below) so the literal
 // "/reorder" path segment is matched before Express falls through to the
 // PUT /:id param route and treats "reorder" as an id.
-registerCredentialBulkRoutes(router, authenticateJWT);
+registerCredentialBulkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.edit"),
+  requireDataAccess,
+);
 
 /**
  * @openapi
@@ -1119,8 +1124,19 @@ router.put(
   },
 );
 
-registerCredentialKeyRoutes(router, authenticateJWT);
+registerCredentialKeyRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
+  requireDataAccess,
+);
 
-registerCredentialDeployRoutes(router, authenticateJWT);
+registerCredentialDeployRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.view"),
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+);
 
 export default router;
