@@ -3,6 +3,7 @@ const SECRETLESS_AUTH_TYPES = new Set([
   "none",
   "agent",
   "opkssh",
+  "stepca",
   "tailscale",
   "vault",
 ]);

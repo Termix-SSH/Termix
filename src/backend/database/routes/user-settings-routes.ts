@@ -1,4 +1,5 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { RequestHandler, Router } from "express";
 import { restartGuacServer } from "../../hosts/guacamole/guacamole-server.js";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../../utils/audit-forwarder.js";
 import { getTelemetryEnvOverride } from "../../utils/analytics.js";
 import { AI_PRIVATE_ALLOWLIST_KEY, parseAllowlist } from "../../ai/egress.js";
+import { STEP_CA_PRIVATE_ALLOWLIST_KEY } from "../../utils/step-ca-egress.js";
 import {
   NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
   parseNotificationAllowlist,
@@ -1083,30 +1085,31 @@ export function registerUserSettingsRoutes(
     }
   });
 
-  router.get(
-    "/notification-private-endpoints",
-    authenticateJWT,
-    async (req, res) => {
+  /**
+   * GET/PATCH a comma-list of private hosts an outbound feature may reach.
+   * Shared by notifications and Step CA; each keeps its own setting key.
+   */
+  const registerPrivateEndpointAllowlist = (
+    path: string,
+    settingKey: string,
+    auditAction: string,
+    label: string,
+  ) => {
+    router.get(path, authenticateJWT, async (req, res) => {
       const userId = (req as AuthenticatedRequest).userId;
       try {
         if (!(await getAdminActor(userId))) {
           return res.status(403).json({ error: "Not authorized" });
         }
-        const raw = await createCurrentSettingsRepository().get(
-          NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
-        );
+        const raw = await createCurrentSettingsRepository().get(settingKey);
         res.json({ hosts: parseNotificationAllowlist(raw) });
       } catch (err) {
-        authLogger.error("Failed to get notification endpoint allowlist", err);
+        authLogger.error(`Failed to get ${label} allowlist`, err);
         res.status(500).json({ error: "Failed to get the allowlist" });
       }
-    },
-  );
+    });
 
-  router.patch(
-    "/notification-private-endpoints",
-    authenticateJWT,
-    async (req, res) => {
+    router.patch(path, authenticateJWT, async (req, res) => {
       const userId = (req as AuthenticatedRequest).userId;
       try {
         const actor = await getAdminActor(userId);
@@ -1123,7 +1126,6 @@ export function registerUserSettingsRoutes(
             .status(400)
             .json({ error: "At most 50 hosts are allowed" });
         }
-
         const cleaned: string[] = [];
         for (const entry of hosts) {
           if (typeof entry !== "string") {
@@ -1142,14 +1144,14 @@ export function registerUserSettingsRoutes(
         }
 
         await createCurrentSettingsRepository().set(
-          NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
+          settingKey,
           JSON.stringify(cleaned),
         );
         const { ipAddress, userAgent } = getRequestMeta(req);
         await logAudit({
           userId,
           username: actor.username ?? userId,
-          action: "update_notification_private_endpoints",
+          action: auditAction,
           resourceType: "setting",
           details: JSON.stringify({ hosts: cleaned }),
           ipAddress,
@@ -1158,14 +1160,148 @@ export function registerUserSettingsRoutes(
         });
         res.json({ hosts: cleaned });
       } catch (err) {
-        authLogger.error(
-          "Failed to update notification endpoint allowlist",
-          err,
-        );
+        authLogger.error(`Failed to update ${label} allowlist`, err);
         res.status(500).json({ error: "Failed to update the allowlist" });
       }
-    },
+    });
+  };
+
+  /**
+   * @openapi
+   * /users/notification-private-endpoints:
+   *   get:
+   *     summary: Get the private hosts notification channels may contact (admin only)
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Replace that allowlist (admin only)
+   *     tags:
+   *       - Users
+   */
+  registerPrivateEndpointAllowlist(
+    "/notification-private-endpoints",
+    NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
+    "update_notification_private_endpoints",
+    "notification endpoint",
   );
+
+  /**
+   * @openapi
+   * /users/step-ca-private-endpoints:
+   *   get:
+   *     summary: Get the private hosts the Step CA certificate flow may contact (admin only)
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Replace that allowlist (admin only)
+   *     tags:
+   *       - Users
+   */
+  registerPrivateEndpointAllowlist(
+    "/step-ca-private-endpoints",
+    STEP_CA_PRIVATE_ALLOWLIST_KEY,
+    "update_step_ca_private_endpoints",
+    "Step CA endpoint",
+  );
+
+  /**
+   * @openapi
+   * /users/step-ca-settings:
+   *   get:
+   *     summary: Step CA settings. Admins get the values; everyone else only whether it is configured.
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Set the Step CA URL, root fingerprint and OIDC provisioner (admin only). Empty values clear the configuration.
+   *     tags:
+   *       - Users
+   */
+  router.get("/step-ca-settings", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const { readStepCaSettings } =
+        await import("../../hosts/step-ca-auth.js");
+      const settings = await readStepCaSettings();
+      if (!(await getAdminActor(userId))) {
+        return res.json({ configured: settings !== null });
+      }
+      res.json({
+        configured: settings !== null,
+        caUrl: settings?.caUrl ?? "",
+        fingerprint: settings?.fingerprint ?? "",
+        provisioner: settings?.provisioner ?? "",
+      });
+    } catch (err) {
+      authLogger.error("Failed to get Step CA settings", err);
+      res.status(500).json({ error: "Failed to get Step CA settings" });
+    }
+  });
+
+  router.patch("/step-ca-settings", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { caUrl, fingerprint, provisioner } = req.body ?? {};
+      if (
+        [caUrl, fingerprint, provisioner].some((v) => typeof v !== "string")
+      ) {
+        return res.status(400).json({
+          error: "caUrl, fingerprint and provisioner must be strings",
+        });
+      }
+      const values = {
+        caUrl: caUrl.trim(),
+        fingerprint: fingerprint.trim(),
+        provisioner: provisioner.trim(),
+      };
+      const clearing = !values.caUrl && !values.fingerprint && !values.provisioner;
+      if (!clearing) {
+        const { normalizeCaUrl, normalizeFingerprint } =
+          await import("../../utils/step-ca-client.js");
+        try {
+          values.caUrl = normalizeCaUrl(values.caUrl);
+          values.fingerprint = normalizeFingerprint(values.fingerprint);
+        } catch (err) {
+          return res.status(400).json({ error: getErrorMessage(err) });
+        }
+        if (!values.provisioner) {
+          return res.status(400).json({ error: "provisioner is required" });
+        }
+      }
+
+      const { STEP_CA_SETTING_KEYS } =
+        await import("../../hosts/step-ca-auth.js");
+      const settings = createCurrentSettingsRepository();
+      if (clearing) {
+        await settings.delete(STEP_CA_SETTING_KEYS.url);
+        await settings.delete(STEP_CA_SETTING_KEYS.fingerprint);
+        await settings.delete(STEP_CA_SETTING_KEYS.provisioner);
+      } else {
+        await settings.set(STEP_CA_SETTING_KEYS.url, values.caUrl);
+        await settings.set(STEP_CA_SETTING_KEYS.fingerprint, values.fingerprint);
+        await settings.set(STEP_CA_SETTING_KEYS.provisioner, values.provisioner);
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: actor.username ?? userId,
+        action: "update_step_ca_settings",
+        resourceType: "setting",
+        details: JSON.stringify({ configured: !clearing, caUrl: values.caUrl }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+      res.json({ configured: !clearing, ...values });
+    } catch (err) {
+      authLogger.error("Failed to update Step CA settings", err);
+      res.status(500).json({ error: "Failed to update Step CA settings" });
+    }
+  });
 
   /**
    * @openapi

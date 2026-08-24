@@ -34,7 +34,14 @@ export type HostTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
 
 export interface HostSidebarFilterState {
   status: ("online" | "offline" | "pinned")[];
-  authType: ("password" | "key" | "credential" | "none" | "opkssh")[];
+  authType: (
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "stepca"
+  )[];
   protocol: ("ssh" | "rdp" | "vnc" | "telnet")[];
   features: ("terminal" | "fileManager" | "tunnel" | "docker")[];
   tags: string[];
@@ -94,6 +101,7 @@ const FILTER_AUTH_TYPE: HostSidebarFilterState["authType"] = [
   "credential",
   "none",
   "opkssh",
+  "stepca",
 ];
 const FILTER_PROTOCOL: HostSidebarFilterState["protocol"] = [
   "ssh",

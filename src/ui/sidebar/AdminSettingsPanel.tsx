@@ -5,6 +5,8 @@ import {
   getAiGloballyEnabled,
   getAiPrivateEndpoints,
   getNotificationPrivateEndpoints,
+  getStepCaPrivateEndpoints,
+  setStepCaPrivateEndpoints as setStepCaPrivateEndpointsApi,
   setAiGloballyEnabled as setAiGloballyEnabledApi,
   setAiPrivateEndpoints as setAiPrivateEndpointsApi,
   setNotificationPrivateEndpoints as setNotificationPrivateEndpointsApi,
@@ -97,6 +99,8 @@ import { toast } from "sonner";
 import {
   getTerminalSessionSettings,
   updateTerminalSessionSettings,
+  getStepCaSettings,
+  updateStepCaSettings,
 } from "@/api/settings-api";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
@@ -181,6 +185,25 @@ export function AdminSettingsPanel({
     useState(true);
   const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
   const [aiPrivateEndpoints, setAiPrivateEndpoints] = useState<string[]>([]);
+  const [stepCaPrivateEndpoints, setStepCaPrivateEndpoints] = useState<
+    string[]
+  >([]);
+  const [stepCaSettings, setStepCaSettings] = useState({
+    caUrl: "",
+    fingerprint: "",
+    provisioner: "",
+  });
+  useEffect(() => {
+    getStepCaSettings()
+      .then((s) =>
+        setStepCaSettings({
+          caUrl: s.caUrl,
+          fingerprint: s.fingerprint,
+          provisioner: s.provisioner,
+        }),
+      )
+      .catch(() => {});
+  }, []);
   const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
     useState<string[]>([]);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
@@ -380,6 +403,7 @@ export function AdminSettingsPanel({
         aiEnabled,
         aiEndpoints,
         notificationEndpoints,
+        stepCaEndpoints,
         imageStorage,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
@@ -399,6 +423,7 @@ export function AdminSettingsPanel({
         getAiGloballyEnabled(),
         getAiPrivateEndpoints(),
         getNotificationPrivateEndpoints(),
+        getStepCaPrivateEndpoints(),
         getTerminalImageStorageSettings(),
       ]);
 
@@ -450,6 +475,9 @@ export function AdminSettingsPanel({
       }
       if (aiEndpoints.status === "fulfilled") {
         setAiPrivateEndpoints(aiEndpoints.value);
+      }
+      if (stepCaEndpoints.status === "fulfilled") {
+        setStepCaPrivateEndpoints(stepCaEndpoints.value);
       }
       if (notificationEndpoints.status === "fulfilled") {
         setNotificationPrivateEndpoints(notificationEndpoints.value);
@@ -610,6 +638,28 @@ export function AdminSettingsPanel({
     } catch {
       setAiPrivateEndpoints(previous);
       toast.error(t("admin.updateAiEndpointsFailed"));
+    }
+  }
+
+  async function handleSaveStepCaSettings() {
+    try {
+      await updateStepCaSettings(stepCaSettings);
+      toast.success(t("admin.stepCaSaved"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("admin.stepCaSaveFailed"),
+      );
+    }
+  }
+
+  async function handleSaveStepCaPrivateEndpoints(hosts: string[]) {
+    const previous = stepCaPrivateEndpoints;
+    setStepCaPrivateEndpoints(hosts);
+    try {
+      setStepCaPrivateEndpoints(await setStepCaPrivateEndpointsApi(hosts));
+    } catch {
+      setStepCaPrivateEndpoints(previous);
+      toast.error(t("admin.updateStepCaEndpointsFailed"));
     }
   }
 
@@ -1166,6 +1216,11 @@ export function AdminSettingsPanel({
         aiPrivateEndpoints={aiPrivateEndpoints}
         onSaveAiPrivateEndpoints={handleSaveAiPrivateEndpoints}
         notificationPrivateEndpoints={notificationPrivateEndpoints}
+        stepCaPrivateEndpoints={stepCaPrivateEndpoints}
+        onSaveStepCaPrivateEndpoints={handleSaveStepCaPrivateEndpoints}
+        stepCaSettings={stepCaSettings}
+        setStepCaSettings={setStepCaSettings}
+        handleSaveStepCaSettings={handleSaveStepCaSettings}
         onSaveNotificationPrivateEndpoints={
           handleSaveNotificationPrivateEndpoints
         }

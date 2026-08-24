@@ -590,6 +590,7 @@ export function HostEditor({
                         "vault",
                         "none",
                         "opkssh",
+                        "stepca",
                         "tailscale",
                         "agent",
                       ].map((m) => (
@@ -647,7 +648,27 @@ export function HostEditor({
                           {t("hosts.oidcUsernameHint")}
                         </p>
                       )}
-                      {authMethod === "tailscale" && (
+                      {authMethod === "stepca" && (
+                    <div className="flex flex-col gap-2 border-t border-border pt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.stepcaLabel")}
+                        </span>
+                        <a
+                          href="https://smallstep.com/docs/step-ca/provisioners/#oauthoidc-single-sign-on"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] text-accent-brand hover:underline"
+                        >
+                          {t("hosts.docsLink")}
+                        </a>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.stepcaDesc")}
+                      </p>
+                    </div>
+                  )}
+                  {authMethod === "tailscale" && (
                         <p className="text-[10px] text-muted-foreground/60">
                           {t("hosts.tailscaleUsernameHint")}
                         </p>

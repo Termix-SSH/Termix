@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import express from "express";
 import {
   logAudit,
@@ -289,7 +290,7 @@ async function buildDedicatedTransferConnectConfig(
       throw new Error("Password required for transfer connection");
     }
     config.password = host.password;
-  } else if (authType === "opkssh") {
+  } else if (usesIssuedCertificate(authType)) {
     const { getOPKSSHToken } = await import("../opkssh-auth.js");
     const token = await getOPKSSHToken(userId, host.id);
     if (!token) {
@@ -1120,7 +1121,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     connectionLogs.push(
       createConnectionLog("info", "sftp_auth", "Using password authentication"),
     );
-  } else if (resolvedCredentials.authType === "opkssh") {
+  } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
     try {
       const { getOPKSSHToken } = await import("../opkssh-auth.js");
       const token = await getOPKSSHToken(userId, hostId);

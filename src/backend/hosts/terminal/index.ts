@@ -1,5 +1,6 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import { getAuditUsername } from "../../utils/audit-logger.js";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import { collabRoomHub } from "../collab/room-hub.js";
 import type { SessionShareRecord } from "../../database/repositories/session-share-repository.js";
 import { createCurrentCollabRoomRepository } from "../../database/repositories/factory.js";
@@ -1088,6 +1089,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }
             const hostname = host.name || host.ip;
             const requestOrigin = getRequestOrigin(req);
+            if (host.authType === "stepca") {
+              const { startStepCaAuth } = await import("../step-ca-auth.js");
+              await startStepCaAuth(
+                userId,
+                opksshData.hostId,
+                host.username,
+                ws,
+                requestOrigin,
+              );
+              break;
+            }
             await startOPKSSHAuth(
               userId,
               opksshData.hostId,
@@ -1113,6 +1125,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
 
         case "opkssh_cancel": {
+          {
+            const { cancelStepCaAuth } = await import("../step-ca-auth.js");
+            cancelStepCaAuth(
+              String((data as { requestId?: string })?.requestId ?? ""),
+            );
+          }
           const cancelData = data as { requestId: string };
           try {
             const { cancelAuthSession } = await import("../opkssh-auth.js");
@@ -2457,7 +2475,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       });
 
       if (
-        resolvedCredentials.authType === "opkssh" &&
+        usesIssuedCertificate(resolvedCredentials.authType) &&
         err.message.includes("All configured authentication methods failed")
       ) {
         sshLogger.warn("OPKSSH authentication failed - invalidating token", {
@@ -3064,8 +3082,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
-    } else if (resolvedCredentials.authType === "opkssh") {
-      sendLog("auth", "info", "Using OPKSSH certificate authentication");
+    } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
+      sendLog("auth", "info", "Using issued SSH certificate authentication");
       try {
         const { getOPKSSHToken } = await import("../opkssh-auth.js");
         const token = await getOPKSSHToken(userId, id);
@@ -3074,7 +3092,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sendLog(
             "auth",
             "info",
-            "No valid OPKSSH token found, requesting authentication",
+            "No valid certificate found, requesting sign-in",
           );
           ws.send(
             JSON.stringify({
@@ -3085,7 +3103,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           return;
         }
 
-        sendLog("auth", "info", "Using cached OPKSSH certificate");
+        sendLog("auth", "info", "Using cached SSH certificate");
 
         const { setupOPKSSHCertAuth } = await import("../opkssh-cert-auth.js");
         await setupOPKSSHCertAuth(connectConfig, sshConn, token, username);

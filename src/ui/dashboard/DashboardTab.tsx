@@ -1357,7 +1357,12 @@ export function DashboardTab({
         const hostId = Number(host.id);
         const knownStatus = statuses?.[hostId]?.status;
         if (knownStatus === "offline") return null;
-        if (host.authType === "none" || host.authType === "opkssh") return null;
+        if (
+          host.authType === "none" ||
+          host.authType === "opkssh" ||
+          host.authType === "stepca"
+        )
+          return null;
 
         try {
           const existing = newSessions.get(hostId);

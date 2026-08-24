@@ -766,7 +766,14 @@ export function HostsPanel({
                     {t("hosts.filterAuthGroup")}
                   </DropdownMenuLabel>
                   {(
-                    ["password", "key", "credential", "none", "opkssh"] as const
+                    [
+                      "password",
+                      "key",
+                      "credential",
+                      "none",
+                      "opkssh",
+                      "stepca",
+                    ] as const
                   ).map((val) => (
                     <DropdownMenuCheckboxItem
                       key={val}

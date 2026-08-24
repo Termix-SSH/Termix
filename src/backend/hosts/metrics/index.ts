@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import express from "express";
 import net from "net";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
@@ -1396,7 +1397,7 @@ async function buildSshConfig(
     host.authType === "warpgate"
   ) {
     // no credentials needed
-  } else if (host.authType === "opkssh") {
+  } else if (usesIssuedCertificate(host.authType)) {
     // cert auth setup happens in createSshFactory (needs client instance)
   } else if (host.authType === "vault") {
     // cert auth setup happens in createSshFactory (needs client instance)
@@ -1440,7 +1441,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
     const client = new Client();
 
     // Set up OPKSSH cert auth if needed (requires client instance)
-    if (host.authType === "opkssh" && host.userId) {
+    if (usesIssuedCertificate(host.authType) && host.userId) {
       const { getOPKSSHToken } = await import("../opkssh-auth.js");
       const token = await getOPKSSHToken(host.userId, host.id);
       if (!token) {
@@ -2359,7 +2360,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
     const config = await buildSshConfig(host);
     const client = new Client();
 
-    if (host.authType === "opkssh" && host.userId) {
+    if (usesIssuedCertificate(host.authType) && host.userId) {
       const { getOPKSSHToken } = await import("../opkssh-auth.js");
       const token = await getOPKSSHToken(host.userId, host.id);
       if (!token) {
