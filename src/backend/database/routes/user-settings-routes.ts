@@ -1257,7 +1257,8 @@ export function registerUserSettingsRoutes(
         fingerprint: fingerprint.trim(),
         provisioner: provisioner.trim(),
       };
-      const clearing = !values.caUrl && !values.fingerprint && !values.provisioner;
+      const clearing =
+        !values.caUrl && !values.fingerprint && !values.provisioner;
       if (!clearing) {
         const { normalizeCaUrl, normalizeFingerprint } =
           await import("../../utils/step-ca-client.js");
@@ -1281,8 +1282,14 @@ export function registerUserSettingsRoutes(
         await settings.delete(STEP_CA_SETTING_KEYS.provisioner);
       } else {
         await settings.set(STEP_CA_SETTING_KEYS.url, values.caUrl);
-        await settings.set(STEP_CA_SETTING_KEYS.fingerprint, values.fingerprint);
-        await settings.set(STEP_CA_SETTING_KEYS.provisioner, values.provisioner);
+        await settings.set(
+          STEP_CA_SETTING_KEYS.fingerprint,
+          values.fingerprint,
+        );
+        await settings.set(
+          STEP_CA_SETTING_KEYS.provisioner,
+          values.provisioner,
+        );
       }
 
       const { ipAddress, userAgent } = getRequestMeta(req);
