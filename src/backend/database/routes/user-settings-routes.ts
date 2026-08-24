@@ -44,6 +44,7 @@ export type HostDefaults = {
   cursorBlink?: boolean;
   enableSessionLogging?: boolean;
   enableCommandHistory?: boolean;
+  autoTmux?: boolean;
 };
 
 async function getAdminActor(

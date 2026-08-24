@@ -627,3 +627,17 @@ describe("createHostEditorForm credentialId", () => {
     expect(createHostEditorForm(null).credentialId).toBe("");
   });
 });
+
+describe("createHostEditorForm auto-tmux", () => {
+  it("inherits the admin default for a new host but keeps an existing host's own choice", () => {
+    expect(createHostEditorForm(null, { autoTmux: true }).autoTmux).toBe(true);
+    expect(createHostEditorForm(null, {}).autoTmux).toBe(false);
+
+    const host = {
+      id: "1",
+      name: "box",
+      terminalConfig: { autoTmux: false },
+    } as unknown as Host;
+    expect(createHostEditorForm(host, { autoTmux: true }).autoTmux).toBe(false);
+  });
+});

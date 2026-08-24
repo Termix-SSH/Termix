@@ -61,6 +61,30 @@ export async function getSessionTimeout(): Promise<{ timeoutHours: number }> {
   }
 }
 
+// How long a detached terminal session is kept alive server-side.
+export async function getTerminalSessionSettings(): Promise<{
+  timeoutMinutes: number;
+  enabled: boolean;
+}> {
+  try {
+    const response = await authApi.get("/terminal/session_settings");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch terminal session settings");
+  }
+}
+
+export async function updateTerminalSessionSettings(input: {
+  timeoutMinutes?: number;
+  enabled?: boolean;
+}): Promise<void> {
+  try {
+    await authApi.patch("/terminal/session_settings", input);
+  } catch (error) {
+    handleApiError(error, "update terminal session settings");
+  }
+}
+
 export async function updateSessionTimeout(
   timeoutHours: number,
 ): Promise<void> {
@@ -288,6 +312,7 @@ export type HostDefaults = {
   cursorBlink?: boolean;
   enableSessionLogging?: boolean;
   enableCommandHistory?: boolean;
+  autoTmux?: boolean;
 };
 
 export async function getHostDefaults(): Promise<HostDefaults> {

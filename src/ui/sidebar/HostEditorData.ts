@@ -232,7 +232,7 @@ export function createHostEditorForm(
     moshCommand: host?.terminalConfig?.moshCommand ?? "",
     agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
     autoMosh: host?.terminalConfig?.autoMosh ?? false,
-    autoTmux: host?.terminalConfig?.autoTmux ?? false,
+    autoTmux: host?.terminalConfig?.autoTmux ?? d?.autoTmux ?? false,
     sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
     sudoPassword: host?.hasSudoPassword
       ? "existing_sudo_password"

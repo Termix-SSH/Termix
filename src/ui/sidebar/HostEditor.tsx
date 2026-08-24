@@ -1789,6 +1789,27 @@ export function HostEditor({
                     />
                   </div>
                   <SettingRow
+                    label={t("hosts.enableAutoTmux")}
+                    description={
+                      <>
+                        {t("hosts.enableAutoTmuxDesc")}{" "}
+                        <a
+                          href="https://docs.termix.site/features/terminal/tmux"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent-brand hover:underline"
+                        >
+                          {t("hosts.docsLink")}
+                        </a>
+                      </>
+                    }
+                  >
+                    <FakeSwitch
+                      checked={form.autoTmux}
+                      onChange={(v) => setField("autoTmux", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
                     label={t("hosts.sshAgentForwardingLabel")}
                     description={t("hosts.sshAgentForwardingShortDesc")}
                   >
@@ -1813,27 +1834,6 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.autoMosh}
                       onChange={(v) => setField("autoMosh", v)}
-                    />
-                  </SettingRow>
-                  <SettingRow
-                    label={t("hosts.enableAutoTmux")}
-                    description={
-                      <>
-                        {t("hosts.enableAutoTmuxDesc")}{" "}
-                        <a
-                          href="https://docs.termix.site/features/terminal/tmux"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </>
-                    }
-                  >
-                    <FakeSwitch
-                      checked={form.autoTmux}
-                      onChange={(v) => setField("autoTmux", v)}
                     />
                   </SettingRow>
                   <SettingRow

@@ -1459,6 +1459,90 @@ router.put(
  *       500:
  *         description: Failed to fetch SSH data.
  */
+/**
+ * @openapi
+ * /host/db/host/{id}/terminal-config:
+ *   patch:
+ *     summary: Update a host's terminal behaviour flags
+ *     description: Merges the given flags into the host's terminalConfig. Owner or a recipient with edit access. Currently supports autoTmux; used by the "enable Auto-Tmux" action shown when a persisted session expires.
+ *     tags:
+ *       - Hosts
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               autoTmux:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Updated.
+ *       403:
+ *         description: No edit access.
+ *       404:
+ *         description: Host not found.
+ */
+router.patch(
+  "/db/host/:id/terminal-config",
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId!;
+    const hostId = parseInt(String(req.params.id), 10);
+    const { autoTmux } = req.body ?? {};
+
+    if (isNaN(hostId)) {
+      return res.status(400).json({ error: "Invalid host ID" });
+    }
+    if (typeof autoTmux !== "boolean") {
+      return res.status(400).json({ error: "autoTmux must be a boolean" });
+    }
+
+    try {
+      const access = await permissionManager.canAccessHost(
+        userId,
+        hostId,
+        "edit",
+      );
+      if (!access.hasAccess) {
+        return res.status(403).json({ error: "Access denied to host" });
+      }
+      const ownerId =
+        await createCurrentHostResolutionRepository().findHostOwnerId(hostId);
+      const host = ownerId
+        ? await createCurrentHostRepository().findByIdForUser(ownerId, hostId)
+        : null;
+      if (!host || !ownerId) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      let terminalConfig: Record<string, unknown> = {};
+      if (host.terminalConfig) {
+        try {
+          terminalConfig = JSON.parse(host.terminalConfig);
+        } catch {
+          terminalConfig = {};
+        }
+      }
+      await createCurrentHostRepository().updateForUser(ownerId, hostId, {
+        terminalConfig: JSON.stringify({ ...terminalConfig, autoTmux }),
+      });
+
+      res.json({ success: true, autoTmux });
+    } catch (error) {
+      sshLogger.error("Failed to update host terminal config", error, {
+        operation: "host_terminal_config_update",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to update terminal config" });
+    }
+  },
+);
+
 router.get(
   "/db/host",
   authenticateJWT,
