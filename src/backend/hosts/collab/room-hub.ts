@@ -1,4 +1,7 @@
 import type { WebSocket } from "ws";
+import { collabRuntimeStore } from "./runtime-store.js";
+
+const PRESENCE_HEARTBEAT_MS = 15_000;
 
 export interface CollabRoomClient {
   ws: WebSocket;
@@ -7,12 +10,27 @@ export interface CollabRoomClient {
 }
 
 /**
- * In-memory fan-out for collab room events, mirroring the single-instance
- * assumption TerminalSessionManager already makes. REST mutations broadcast
- * through it; the terminal WS server feeds subscribe/unsubscribe.
+ * Local WebSocket fan-out plus optional Redis pub/sub for multi-instance room
+ * events and presence. The terminal WS server feeds subscribe/unsubscribe.
  */
 class CollabRoomHub {
   private rooms = new Map<string, Set<CollabRoomClient>>();
+
+  constructor() {
+    collabRuntimeStore.onEvent((roomId, message) => {
+      if (
+        "type" in message &&
+        typeof message.type === "string" &&
+        message.type.startsWith("collab_internal_")
+      ) {
+        return;
+      }
+      this.broadcastLocal(roomId, message);
+    });
+    setInterval(() => {
+      for (const roomId of this.rooms.keys()) void this.refreshPresence(roomId);
+    }, PRESENCE_HEARTBEAT_MS).unref();
+  }
 
   subscribe(roomId: string, client: CollabRoomClient): void {
     let clients = this.rooms.get(roomId);
@@ -24,7 +42,7 @@ class CollabRoomHub {
       if (existing.ws === client.ws) return;
     }
     clients.add(client);
-    this.broadcastOnline(roomId);
+    void this.refreshPresence(roomId);
   }
 
   /** Drops the socket from one room, or from every room when roomId is omitted. */
@@ -39,11 +57,25 @@ class CollabRoomHub {
         }
       }
       if (clients.size === 0) this.rooms.delete(id);
-      if (removed) this.broadcastOnline(id);
+      if (removed) void this.refreshPresence(id);
     }
   }
 
   broadcast(roomId: string, message: object): void {
+    this.broadcastLocal(roomId, message);
+    void collabRuntimeStore.publish(roomId, message);
+  }
+
+  async onlineUsers(
+    roomId: string,
+  ): Promise<Array<{ userId: string; username: string }>> {
+    return collabRuntimeStore.onlineUsers(
+      roomId,
+      this.localOnlineUsers(roomId),
+    );
+  }
+
+  private broadcastLocal(roomId: string, message: object): void {
     const clients = this.rooms.get(roomId);
     if (!clients) return;
     const payload = JSON.stringify(message);
@@ -57,7 +89,9 @@ class CollabRoomHub {
     }
   }
 
-  onlineUsers(roomId: string): Array<{ userId: string; username: string }> {
+  private localOnlineUsers(
+    roomId: string,
+  ): Array<{ userId: string; username: string }> {
     const clients = this.rooms.get(roomId);
     if (!clients) return [];
     const seen = new Map<string, string>();
@@ -67,11 +101,13 @@ class CollabRoomHub {
     return Array.from(seen, ([userId, username]) => ({ userId, username }));
   }
 
-  private broadcastOnline(roomId: string): void {
+  private async refreshPresence(roomId: string): Promise<void> {
+    const localUsers = this.localOnlineUsers(roomId);
+    await collabRuntimeStore.updatePresence(roomId, localUsers);
     this.broadcast(roomId, {
       type: "collab_online",
       roomId,
-      users: this.onlineUsers(roomId),
+      users: await this.onlineUsers(roomId),
     });
   }
 }

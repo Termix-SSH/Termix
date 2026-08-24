@@ -3,18 +3,15 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   AlertCircle,
-  Crown,
   Hand,
   Link2,
   Loader2,
   MonitorUp,
-  MousePointerClick,
   Presentation,
   Square,
-  UserPlus,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/button";
-import { Badge } from "@/components/badge";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/alert-dialog";
 import { Input } from "@/components/input";
+import { CollabMembersSidebar } from "./CollabMembersSidebar";
 import { Terminal } from "@/features/terminal/Terminal";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
 import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
@@ -45,11 +43,13 @@ import { isElectron } from "@/lib/electron";
 import { getErrorMessage } from "@/lib/error-message";
 import {
   endCollabRoom,
+  dismissCollabControlRequest,
   getCollabRoom,
   getCollabStage,
   inviteCollabMembers,
   presentCollabStage,
   requestCollabStageControl,
+  removeCollabMember,
   setCollabGuestLink,
   setCollabStageControl,
   stopCollabStage,
@@ -108,6 +108,7 @@ export function CollabRoomTab({
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentLoading, setPresentLoading] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(true);
   const [endOpen, setEndOpen] = useState(false);
   const [takeoverChoice, setTakeoverChoice] = useState<PresentChoice | null>(
     null,
@@ -224,19 +225,10 @@ export function CollabRoomTab({
           case "collab_members_changed":
           case "collab_stage_changed":
           case "collab_control_changed":
+          case "collab_control_requested":
+          case "collab_control_requests_changed":
             void refresh();
             break;
-          case "collab_control_requested": {
-            const request = msg as unknown as {
-              userId: string;
-              username?: string;
-            };
-            handleControlRequestRef.current?.(
-              request.userId,
-              request.username ?? "?",
-            );
-            break;
-          }
           case "collab_room_ended":
             setEnded(true);
             break;
@@ -270,30 +262,49 @@ export function CollabRoomTab({
   const controllerUserId = detail?.controllerUserId ?? null;
   const presenterUserId = detail?.stage.presenterUserId ?? null;
   const iAmPresenter = !!me && presenterUserId === me;
-  const onlineIds = new Set(detail?.online.map((user) => user.userId));
   const presenterName = detail?.members.find(
     (member) => member.userId === presenterUserId,
   )?.username;
-
-  const handleControlRequestRef = useRef<
-    ((userId: string, username: string) => void) | null
-  >(null);
-  handleControlRequestRef.current = (userId, username) => {
-    if (!roomId) return;
-    const mayGrant = isHost || iAmPresenter;
-    if (!mayGrant || userId === me) return;
-    toast(t("collab.controlRequestedBy", { name: username }), {
-      action: {
-        label: t("collab.grant"),
-        onClick: () => void setCollabStageControl(roomId, userId),
-      },
-    });
-  };
 
   async function changeControl(targetId: string | null) {
     if (!roomId) return;
     try {
       await setCollabStageControl(roomId, targetId);
+      await refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }
+
+  async function dismissControlRequest(targetId: string) {
+    if (!roomId) return;
+    try {
+      await dismissCollabControlRequest(roomId, targetId);
+      await refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }
+
+  async function removeMember(targetId: string) {
+    if (!roomId) return;
+    try {
+      await removeCollabMember(roomId, targetId);
+      await refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }
+
+  async function toggleOwnControlRequest() {
+    if (!roomId || !me) return;
+    try {
+      const existing = detail?.controlRequests.some(
+        (request) => request.userId === me,
+      );
+      if (existing) await dismissCollabControlRequest(roomId, me);
+      else await requestCollabStageControl(roomId);
+      await refresh();
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -507,70 +518,14 @@ export function CollabRoomTab({
           </Button>
         </div>
       )}
-      {/* Header: roster + controls */}
+      {/* Header: room identity + primary controls */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border flex-wrap">
         <Presentation className="size-4 text-muted-foreground shrink-0" />
         <span className="text-sm font-semibold truncate">
           {detail?.room.name}
         </span>
-        <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-          {detail?.members.map((member) => {
-            const canToggleControl =
-              (isHost || iAmPresenter) &&
-              detail?.stage.protocol === "ssh" &&
-              !!detail?.stage.shareId &&
-              member.userId !== presenterUserId;
-            const hasControl = member.userId === controllerUserId;
-            const badge = (
-              <Badge
-                key={canToggleControl ? undefined : member.userId}
-                variant={hasControl ? "default" : "outline"}
-                className="text-xs gap-1"
-              >
-                <span
-                  className={`size-1.5 rounded-full ${onlineIds.has(member.userId) ? "bg-green-500" : "bg-muted-foreground/30"}`}
-                />
-                {member.username}
-                {member.roomRole === "host" && <Crown className="size-2.5" />}
-                {member.userId === presenterUserId && (
-                  <MonitorUp className="size-2.5 text-red-500" />
-                )}
-                {hasControl && <MousePointerClick className="size-2.5" />}
-              </Badge>
-            );
-            return canToggleControl ? (
-              <button
-                key={member.userId}
-                type="button"
-                title={t(
-                  hasControl ? "collab.revokeControl" : "collab.grantControl",
-                )}
-                aria-label={`${member.username}: ${t(
-                  hasControl ? "collab.revokeControl" : "collab.grantControl",
-                )}`}
-                onClick={() =>
-                  void changeControl(hasControl ? null : member.userId)
-                }
-              >
-                {badge}
-              </button>
-            ) : (
-              badge
-            );
-          })}
-        </div>
+        <div className="flex-1" />
         <div className="flex items-center gap-1.5 shrink-0">
-          {isHost && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => void openInviteDialog()}
-            >
-              <UserPlus className="size-3.5 mr-1" />
-              {t("collab.invite")}
-            </Button>
-          )}
           {!!detail?.stage.shareId &&
             detail.stage.protocol === "ssh" &&
             !iAmPresenter &&
@@ -582,15 +537,17 @@ export function CollabRoomTab({
                 onClick={() =>
                   controllerUserId === me
                     ? void changeControl(null)
-                    : void requestCollabStageControl(roomId).catch((error) =>
-                        toast.error(getErrorMessage(error)),
-                      )
+                    : void toggleOwnControlRequest()
                 }
               >
                 <Hand className="size-3.5 mr-1" />
                 {controllerUserId === me
                   ? t("collab.releaseControl")
-                  : t("collab.requestControl")}
+                  : detail.controlRequests.some(
+                        (request) => request.userId === me,
+                      )
+                    ? t("collab.cancelControlRequest")
+                    : t("collab.requestControl")}
               </Button>
             )}
           {(iAmPresenter || draft || (isHost && presenterUserId)) && (
@@ -604,6 +561,17 @@ export function CollabRoomTab({
               {t("collab.stopPresenting")}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant={membersOpen ? "default" : "outline"}
+            className="h-8 text-xs"
+            aria-controls="collab-members-sidebar"
+            aria-expanded={membersOpen}
+            onClick={() => setMembersOpen((open) => !open)}
+          >
+            <Users className="mr-1 size-3.5" />
+            {detail?.members.length ?? 0}
+          </Button>
           <Button
             size="sm"
             className="h-8 text-xs"
@@ -676,91 +644,103 @@ export function CollabRoomTab({
         </div>
       )}
 
-      {/* Stage */}
-      <div className="relative flex-1 min-h-0">
-        {draft ? (
-          draft.protocol === "ssh" ? (
-            <CommandHistoryProvider>
-              <Terminal
-                hostConfig={{
-                  ...draft.host,
-                  id: Number(draft.host.id),
-                  ip: draft.host.ip,
-                  port: draft.host.port,
-                  username: draft.host.username,
-                  instanceId: `collab-present-${roomId}`,
-                }}
-                isVisible={isVisible}
-                disableAutoFocus={false}
-                onSessionReady={(sessionId) =>
-                  void registerStage("ssh", sessionId, Number(draft.host.id))
-                }
-              />
-            </CommandHistoryProvider>
-          ) : (
-            <GuacamoleDisplay
-              connectionConfig={{
-                token: draft.token,
-                protocol: draft.protocol,
-                type: draft.protocol,
-              }}
-              isVisible={isVisible}
-              onConnect={() =>
-                void registerStage(
-                  draft.protocol,
-                  draft.guacamoleConnectionId,
-                  Number(draft.host.id),
-                )
-              }
-              onError={(err) => {
-                toast.error(err);
-                setDraft(null);
-              }}
-            />
-          )
-        ) : stage && stage.protocol && !iAmPresenter ? (
-          <>
-            {presenterName && (
-              <div className="absolute top-2 left-2 z-20 rounded px-2 py-0.5 text-[10px] bg-background/80 border border-border">
-                {t("collab.presenterLabel", { name: presenterName })}
-              </div>
-            )}
-            {stage.protocol === "ssh" ? (
+      <div className="relative flex flex-1 min-h-0">
+        {/* Stage */}
+        <div className="relative flex-1 min-w-0 min-h-0">
+          {draft ? (
+            draft.protocol === "ssh" ? (
               <CommandHistoryProvider>
                 <Terminal
                   hostConfig={{
-                    id: stage.hostId ?? undefined,
-                    name: detail?.room.name ?? "stage",
-                    ip: "",
-                    port: 0,
-                    username: "",
-                    authType: "none",
-                    instanceId: `collab-view-${roomId}-${stage.shareId}`,
-                    joinShareId: stage.shareId,
-                    joinSharedSessionId: stage.sessionId ?? null,
+                    ...draft.host,
+                    id: Number(draft.host.id),
+                    ip: draft.host.ip,
+                    port: draft.host.port,
+                    username: draft.host.username,
+                    instanceId: `collab-present-${roomId}`,
                   }}
                   isVisible={isVisible}
-                  disableAutoFocus
+                  disableAutoFocus={false}
+                  onSessionReady={(sessionId) =>
+                    void registerStage("ssh", sessionId, Number(draft.host.id))
+                  }
                 />
               </CommandHistoryProvider>
-            ) : stage.connectParams?.token ? (
+            ) : (
               <GuacamoleDisplay
-                key={stage.connectParams.token}
                 connectionConfig={{
-                  token: stage.connectParams.token,
-                  protocol: stage.protocol,
-                  type: stage.protocol,
+                  token: draft.token,
+                  protocol: draft.protocol,
+                  type: draft.protocol,
                 }}
                 isVisible={isVisible}
+                onConnect={() =>
+                  void registerStage(
+                    draft.protocol,
+                    draft.guacamoleConnectionId,
+                    Number(draft.host.id),
+                  )
+                }
+                onError={(err) => {
+                  toast.error(err);
+                  setDraft(null);
+                }}
               />
-            ) : (
-              <CenteredNote text={t("collab.stageLoading")} />
-            )}
-          </>
-        ) : iAmPresenter && !draft ? (
-          <CenteredNote text={t("collab.youArePresenting")} />
-        ) : (
-          <CenteredNote text={t("collab.emptyStage")} />
+            )
+          ) : stage && stage.protocol && !iAmPresenter ? (
+            <>
+              {presenterName && (
+                <div className="absolute top-2 left-2 z-20 rounded px-2 py-0.5 text-[10px] bg-background/80 border border-border">
+                  {t("collab.presenterLabel", { name: presenterName })}
+                </div>
+              )}
+              {stage.protocol === "ssh" ? (
+                <CommandHistoryProvider>
+                  <Terminal
+                    hostConfig={{
+                      id: stage.hostId ?? undefined,
+                      name: detail?.room.name ?? "stage",
+                      ip: "",
+                      port: 0,
+                      username: "",
+                      authType: "none",
+                      instanceId: `collab-view-${roomId}-${stage.shareId}`,
+                      joinShareId: stage.shareId,
+                      joinSharedSessionId: stage.sessionId ?? null,
+                    }}
+                    isVisible={isVisible}
+                    disableAutoFocus
+                  />
+                </CommandHistoryProvider>
+              ) : stage.connectParams?.token ? (
+                <GuacamoleDisplay
+                  key={stage.connectParams.token}
+                  connectionConfig={{
+                    token: stage.connectParams.token,
+                    protocol: stage.protocol,
+                    type: stage.protocol,
+                  }}
+                  isVisible={isVisible}
+                />
+              ) : (
+                <CenteredNote text={t("collab.stageLoading")} />
+              )}
+            </>
+          ) : iAmPresenter && !draft ? (
+            <CenteredNote text={t("collab.youArePresenting")} />
+          ) : (
+            <CenteredNote text={t("collab.emptyStage")} />
+          )}
+        </div>
+        {membersOpen && detail && (
+          <CollabMembersSidebar
+            detail={detail}
+            onClose={() => setMembersOpen(false)}
+            onInvite={() => void openInviteDialog()}
+            onControl={changeControl}
+            onDismissRequest={dismissControlRequest}
+            onRemoveMember={removeMember}
+          />
         )}
       </div>
 

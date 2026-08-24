@@ -46,6 +46,13 @@ export interface CollabRoomDetail {
   online: CollabOnlineUser[];
   stage: CollabStage;
   controllerUserId: string | null;
+  controlRequests: CollabControlRequest[];
+}
+
+export interface CollabControlRequest {
+  userId: string;
+  username: string;
+  requestedAt: string;
 }
 
 export async function listCollabRooms(): Promise<{ rooms: CollabRoom[] }> {
@@ -145,11 +152,40 @@ export async function setCollabStageControl(
   }
 }
 
-export async function requestCollabStageControl(roomId: string): Promise<void> {
+export async function requestCollabStageControl(
+  roomId: string,
+): Promise<{ request: CollabControlRequest }> {
   try {
-    await authApi.post(`/collab/rooms/${roomId}/control/request`);
+    const response = await authApi.post(
+      `/collab/rooms/${roomId}/control/request`,
+    );
+    return response.data;
   } catch (error) {
     throw handleApiError(error, "request stage control");
+  }
+}
+
+export async function listCollabControlRequests(
+  roomId: string,
+): Promise<{ requests: CollabControlRequest[] }> {
+  try {
+    const response = await authApi.get(
+      `/collab/rooms/${roomId}/control/requests`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "list control requests");
+  }
+}
+
+export async function dismissCollabControlRequest(
+  roomId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    await authApi.delete(`/collab/rooms/${roomId}/control/requests/${userId}`);
+  } catch (error) {
+    throw handleApiError(error, "dismiss control request");
   }
 }
 
