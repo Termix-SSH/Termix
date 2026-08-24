@@ -245,6 +245,27 @@ export async function setStepCaPrivateEndpoints(
   }
 }
 
+export async function getSecretSourcePrivateEndpoints(): Promise<string[]> {
+  try {
+    return (await authApi.get("/users/secret-source-private-endpoints")).data
+      .hosts;
+  } catch (error) {
+    throw handleApiError(error, "get secret source endpoint allowlist");
+  }
+}
+
+export async function setSecretSourcePrivateEndpoints(
+  hosts: string[],
+): Promise<string[]> {
+  try {
+    return (
+      await authApi.patch("/users/secret-source-private-endpoints", { hosts })
+    ).data.hosts;
+  } catch (error) {
+    throw handleApiError(error, "update secret source endpoint allowlist");
+  }
+}
+
 export async function setNotificationPrivateEndpoints(
   hosts: string[],
 ): Promise<string[]> {

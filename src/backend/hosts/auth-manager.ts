@@ -1,4 +1,5 @@
 import type { WebSocket } from "ws";
+import { resolveExternalSecretRefs } from "./external-secrets.js";
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 interface ResolvedCredentials {
@@ -63,6 +64,11 @@ export class SSHAuthManager {
         );
 
       if (cred) {
+        // Credentials may hold secret references instead of secrets.
+        await resolveExternalSecretRefs(
+          cred as unknown as Record<string, unknown>,
+          this.context.userId,
+        );
         resolvedCredentials = {
           username: (cred.username as string) || hostConfig.username,
           password: (cred.password as string) || undefined,

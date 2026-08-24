@@ -2017,3 +2017,35 @@ export const collabRoomMembers = pgTable(
     index("idx_collab_room_members_user").on(table.userId),
   ],
 );
+
+// --- secret sources ---
+
+/**
+ * An external password manager Termix pulls secrets from at connect time,
+ * instead of storing them. Only the access token is secret; it is encrypted
+ * with the owner's data key under the row id. Hosts and credentials refer to
+ * entries by reference ("op://vault/item/field") in their secret fields.
+ */
+export const secretSources = pgTable(
+  "secret_sources",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    // "onepassword-connect" for now; the reference syntax is per kind.
+    kind: text("kind").notNull().default("onepassword-connect"),
+    baseUrl: text("base_url").notNull(),
+    token: text("token").notNull(),
+    // Visible to every user; secrets still decrypt with the owner's key.
+    shared: boolean("shared").notNull().default(false),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_secret_sources_user").on(table.userId)],
+);

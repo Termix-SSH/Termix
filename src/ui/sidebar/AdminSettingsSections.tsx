@@ -35,6 +35,8 @@ type GeneralSettingsSectionProps = {
   onSaveNotificationPrivateEndpoints: (hosts: string[]) => void;
   stepCaPrivateEndpoints: string[];
   onSaveStepCaPrivateEndpoints: (hosts: string[]) => void;
+  secretSourcePrivateEndpoints: string[];
+  onSaveSecretSourcePrivateEndpoints: (hosts: string[]) => void;
   stepCaSettings: { caUrl: string; fingerprint: string; provisioner: string };
   setStepCaSettings: Dispatch<
     SetStateAction<{ caUrl: string; fingerprint: string; provisioner: string }>
@@ -96,6 +98,8 @@ export function AdminGeneralSettingsSection({
   onSaveNotificationPrivateEndpoints,
   stepCaPrivateEndpoints,
   onSaveStepCaPrivateEndpoints,
+  secretSourcePrivateEndpoints,
+  onSaveSecretSourcePrivateEndpoints,
   stepCaSettings,
   setStepCaSettings,
   handleSaveStepCaSettings,
@@ -240,6 +244,28 @@ export function AdminGeneralSettingsSection({
             placeholder="ca.internal, sso.internal"
             onBlur={(event) =>
               onSaveStepCaPrivateEndpoints(
+                event.target.value
+                  .split(",")
+                  .map((entry) => entry.trim())
+                  .filter(Boolean),
+              )
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5 py-2">
+          <span className="text-xs font-medium">
+            {t("admin.secretSourcePrivateEndpoints")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.secretSourcePrivateEndpointsDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            defaultValue={secretSourcePrivateEndpoints.join(", ")}
+            placeholder="connect.internal, 10.0.0.5"
+            onBlur={(event) =>
+              onSaveSecretSourcePrivateEndpoints(
                 event.target.value
                   .split(",")
                   .map((entry) => entry.trim())
