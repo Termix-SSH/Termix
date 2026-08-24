@@ -348,6 +348,47 @@ export class CredentialRepository {
     );
   }
 
+  /**
+   * Re-keys every credential of one user to another: decrypt under the old
+   * owner's key, encrypt under the new one, change the owner. Used when an
+   * account is deleted and its data is inherited rather than dropped.
+   */
+  async transferAllToUser(
+    fromUserId: string,
+    toUserId: string,
+  ): Promise<number[]> {
+    const fromKey = DataCrypto.validateUserAccess(fromUserId);
+    const toKey = DataCrypto.validateUserAccess(toUserId);
+    const rows = await this.context.drizzle
+      .select()
+      .from(sshCredentials)
+      .where(eq(sshCredentials.userId, fromUserId));
+    const moved: number[] = [];
+    for (const row of rows) {
+      const plain = DataCrypto.decryptRecord(
+        "ssh_credentials",
+        row,
+        fromUserId,
+        fromKey,
+      );
+      const { id: _id, userId: _userId, ...fields } = plain as Record<string, unknown>;
+      const encrypted = DataCrypto.encryptRecord(
+        "ssh_credentials",
+        { ...fields, id: row.id },
+        toUserId,
+        toKey,
+      ) as Record<string, unknown>;
+      delete encrypted.id;
+      await this.context.drizzle
+        .update(sshCredentials)
+        .set({ ...(encrypted as Partial<NewCredentialRecord>), userId: toUserId })
+        .where(eq(sshCredentials.id, row.id));
+      moved.push(row.id);
+    }
+    if (moved.length) await this.afterWrite();
+    return moved;
+  }
+
   private encryptCredentialRecordForWrite<T extends Record<string, unknown>>(
     record: T,
     userId: string,

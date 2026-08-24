@@ -44,6 +44,7 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
       "credentials.create",
       "credentials.edit",
       "credentials.delete",
+      "credentials.share",
     ],
   },
   {

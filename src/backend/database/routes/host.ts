@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { findUsableCredential } from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import axios from "axios";
@@ -716,11 +717,7 @@ router.post(
       let resolvedUsername = username;
 
       if (authType === "credential" && credentialId) {
-        const cred =
-          await createCurrentHostResolutionRepository().findCredentialByIdForUser(
-            Number(credentialId),
-            userId,
-          );
+        const cred = await findUsableCredential(Number(credentialId), userId);
 
         if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
@@ -2693,10 +2690,7 @@ async function resolveHostCredentials(
 
       const credential =
         preloadedCredentials?.get(credentialId) ??
-        (await createCurrentHostResolutionRepository().findCredentialByIdForUser(
-          credentialId,
-          credentialOwnerId,
-        ));
+        (await findUsableCredential(credentialId, credentialOwnerId));
 
       if (credential) {
         const resolvedHost: Record<string, unknown> = {

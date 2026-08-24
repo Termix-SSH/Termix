@@ -92,6 +92,11 @@ async function syncSharedCredentialsForUserRoles(
     const { SharedHostSecretsManager } =
       await import("../../utils/shared-host-secrets-manager.js");
     await SharedHostSecretsManager.getInstance().snapshotForUserRoles(userId);
+    const { SharedCredentialSecretsManager } =
+      await import("../../utils/shared-credential-secrets-manager.js");
+    await SharedCredentialSecretsManager.getInstance().snapshotForUserRoles(
+      userId,
+    );
   } catch (error) {
     authLogger.warn("Failed to sync role shared host secrets", {
       operation,
@@ -2980,7 +2985,21 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
 
     const targetUserId = targetUser.id;
 
-    await deleteUserAndRelatedData(targetUserId);
+    // Inherit rather than drop: the deleting admin takes over the hosts and
+    // credentials unless another successor is named; "none" discards them.
+    const { successorUserId: requestedSuccessor } = req.body ?? {};
+    let successorUserId: string | undefined = userId;
+    if (requestedSuccessor === "none") {
+      successorUserId = undefined;
+    } else if (isNonEmptyString(requestedSuccessor)) {
+      const successor = await userRepository.findById(requestedSuccessor);
+      if (!successor || successor.id === targetUserId) {
+        return res.status(400).json({ error: "Invalid successor user" });
+      }
+      successorUserId = successor.id;
+    }
+
+    await deleteUserAndRelatedData(targetUserId, { successorUserId });
 
     authLogger.warn("User account deleted by admin", {
       operation: "admin_delete_user",

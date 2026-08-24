@@ -622,6 +622,46 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS credential_access (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        credential_id INTEGER NOT NULL,
+        user_id TEXT,
+        role_id INTEGER,
+        granted_by TEXT NOT NULL,
+        permission_level TEXT NOT NULL DEFAULT 'use',
+        expires_at TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+        FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_credential_access_user_id ON credential_access (user_id);
+    CREATE INDEX IF NOT EXISTS idx_credential_access_role_id ON credential_access (role_id);
+    CREATE INDEX IF NOT EXISTS idx_credential_access_credential_id ON credential_access (credential_id);
+
+    CREATE TABLE IF NOT EXISTS shared_credential_secrets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        credential_access_id INTEGER NOT NULL,
+        target_user_id TEXT NOT NULL,
+        credential_id INTEGER NOT NULL,
+        encrypted_username TEXT,
+        auth_type TEXT NOT NULL DEFAULT 'password',
+        encrypted_password TEXT,
+        encrypted_key TEXT,
+        encrypted_key_password TEXT,
+        key_type TEXT,
+        public_key TEXT,
+        cert_public_key TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (credential_access_id, target_user_id),
+        FOREIGN KEY (credential_access_id) REFERENCES credential_access (id) ON DELETE CASCADE,
+        FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_shared_credential_secrets_target ON shared_credential_secrets (target_user_id, credential_id);
+
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,

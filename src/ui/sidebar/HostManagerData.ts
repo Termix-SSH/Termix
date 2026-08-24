@@ -13,6 +13,9 @@ type RawSSHHost = SSHHostWithStatus & {
 type HostQuickAction = Host["quickActions"][number];
 type HostJumpHost = NonNullable<Host["jumpHosts"]>[number];
 type RawCredential = {
+  isShared?: boolean;
+  ownerUsername?: string | null;
+  permissionLevel?: "use" | "manage";
   id: number | string;
   name: string;
   username: string;
@@ -192,5 +195,8 @@ export function mapCredentials(res: unknown): Credential[] {
     pin: c.pin ?? false,
     sortOrder: c.sortOrder ?? null,
     certPublicKey: c.certPublicKey ?? undefined,
+    isShared: c.isShared ?? false,
+    ownerUsername: c.ownerUsername ?? null,
+    permissionLevel: c.permissionLevel,
   }));
 }

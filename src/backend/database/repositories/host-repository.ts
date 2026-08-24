@@ -168,6 +168,38 @@ export class HostRepository {
     return rows[0] ?? null;
   }
 
+  /** Re-keys every host of one user to another; see CredentialRepository.transferAllToUser. */
+  async transferAllToUser(
+    fromUserId: string,
+    toUserId: string,
+  ): Promise<number[]> {
+    const fromKey = DataCrypto.validateUserAccess(fromUserId);
+    const toKey = DataCrypto.validateUserAccess(toUserId);
+    const rows = await this.context.drizzle
+      .select()
+      .from(hosts)
+      .where(eq(hosts.userId, fromUserId));
+    const moved: number[] = [];
+    for (const row of rows) {
+      const plain = DataCrypto.decryptRecord("ssh_data", row, fromUserId, fromKey);
+      const { id: _id, userId: _userId, ...fields } = plain as Record<string, unknown>;
+      const encrypted = DataCrypto.encryptRecord(
+        "ssh_data",
+        { ...fields, id: row.id },
+        toUserId,
+        toKey,
+      ) as Record<string, unknown>;
+      delete encrypted.id;
+      await this.context.drizzle
+        .update(hosts)
+        .set({ ...(encrypted as Partial<HostUpdate>), userId: toUserId })
+        .where(eq(hosts.id, row.id));
+      moved.push(row.id);
+    }
+    if (moved.length) await this.afterWrite();
+    return moved;
+  }
+
   async updateEncryptedForUser(
     userId: string,
     hostId: number,

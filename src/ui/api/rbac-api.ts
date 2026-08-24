@@ -356,6 +356,47 @@ export async function shareSnippetFolder(
   }
 }
 
+export type CredentialPermissionLevel = "use" | "manage";
+
+export async function shareCredential(
+  credentialId: number,
+  targets: ShareTarget[],
+  permissionLevel: CredentialPermissionLevel,
+  durationHours?: number,
+): Promise<{ success: boolean; expiresAt: string | null }> {
+  try {
+    const response = await rbacApi.post(
+      `/rbac/credential/${credentialId}/share`,
+      { targets, permissionLevel, durationHours },
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share credential");
+  }
+}
+
+export async function getCredentialAccess(
+  credentialId: number,
+): Promise<{ access: AccessRecord[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/credential/${credentialId}/access`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get credential access");
+  }
+}
+
+export async function revokeCredentialAccess(
+  credentialId: number,
+  accessId: number,
+): Promise<void> {
+  try {
+    await rbacApi.delete(`/rbac/credential/${credentialId}/access/${accessId}`);
+  } catch (error) {
+    throw handleApiError(error, "revoke credential access");
+  }
+}
+
 export async function getSnippetAccess(
   snippetId: number,
 ): Promise<{ accessList: AccessRecord[] }> {

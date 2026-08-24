@@ -40,12 +40,30 @@ import {
   createCurrentTransferRecentRepository,
   createCurrentVaultProfileRepository,
   createCurrentSecretSourceRepository,
+  createCurrentSharedCredentialSecretsRepository,
+  createCurrentCredentialAccessRepository,
   createCurrentVaultTokenRepository,
 } from "../repositories/factory.js";
 
-export async function deleteUserAndRelatedData(userId: string): Promise<void> {
+export async function deleteUserAndRelatedData(
+  userId: string,
+  options: { successorUserId?: string } = {},
+): Promise<void> {
   try {
+    // With a successor, hosts and credentials (and the shares on them)
+    // change owner instead of disappearing with the account.
+    if (options.successorUserId) {
+      const { transferOwnership } = await import("../../utils/transfer-ownership.js");
+      await transferOwnership(userId, options.successorUserId);
+    }
+
     await createCurrentSharedHostSecretsRepository().deleteByTargetUserId(
+      userId,
+    );
+    await createCurrentSharedCredentialSecretsRepository().deleteByTargetUserId(
+      userId,
+    );
+    await createCurrentCredentialAccessRepository().deleteForUserReferences(
       userId,
     );
 

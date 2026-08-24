@@ -24,6 +24,7 @@ const api = vi.hoisted(() => ({
   createApiKey: vi.fn(async () => ({})),
   deleteApiKey: vi.fn(async () => ({})),
   deleteUser: vi.fn(async () => ({})),
+  getUserList: vi.fn(async () => ({ users: [] })),
   getUserRoles: vi.fn(async () => ({ roles: [] as unknown[] })),
   assignRoleToUser: vi.fn(async () => ({})),
   removeRoleFromUser: vi.fn(async () => ({})),

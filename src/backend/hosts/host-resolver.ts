@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { findUsableCredential } from "./usable-credential.js";
 import { resolveExternalSecretRefs } from "./external-secrets.js";
 import {
   createCurrentHostResolutionRepository,
@@ -190,7 +191,7 @@ export async function resolveHostById(
 
     if (effectiveCredentialId) {
       try {
-        const cred = (await repository.findCredentialByIdForUser(
+        const cred = (await findUsableCredential(
           effectiveCredentialId,
           ownerId,
         )) as Record<string, unknown> | null;
