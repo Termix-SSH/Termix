@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { applyFolderAccessRules } from "../../utils/folder-access-inheritance.js";
 import { findUsableCredential } from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
@@ -503,6 +504,20 @@ router.post(
       }
 
       const createdHost = result;
+      // Standing folder shares apply to the newcomer.
+      try {
+        await applyFolderAccessRules(
+          createdHost.id,
+          userId!,
+          createdHost.folder,
+        );
+      } catch (folderAccessError) {
+        sshLogger.warn("Failed to inherit folder access on host create", {
+          operation: "host_create_folder_access",
+          hostId: createdHost.id,
+          error: getErrorMessage(folderAccessError),
+        });
+      }
       const baseHost = transformHostResponse(createdHost);
 
       const resolvedHost =
@@ -1371,6 +1386,21 @@ router.put(
         Number(hostId),
         sshDataObj,
       );
+
+      // A host that moved into a folder inherits that folder's standing shares.
+      try {
+        await applyFolderAccessRules(
+          Number(hostId),
+          ownerId,
+          sshDataObj.folder as string | null | undefined,
+        );
+      } catch (folderAccessError) {
+        sshLogger.warn("Failed to inherit folder access on host update", {
+          operation: "host_update_folder_access",
+          hostId: parseInt(hostId),
+          error: getErrorMessage(folderAccessError),
+        });
+      }
 
       // Keep every recipient's re-encrypted secret snapshots in sync with
       // the updated host record.

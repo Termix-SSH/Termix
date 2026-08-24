@@ -42,6 +42,7 @@ import { CollabRoomRepository } from "./collab-room-repository.js";
 import { SecretSourceRepository } from "./secret-source-repository.js";
 import { CredentialAccessRepository } from "./credential-access-repository.js";
 import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
+import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
@@ -507,6 +508,13 @@ export function createCurrentUserRepository(): UserRepository {
   return new UserRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("user_repository_write"),
+  );
+}
+
+export function createCurrentFolderAccessRepository(): FolderAccessRepository {
+  return new FolderAccessRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("folder_access_repository_write"),
   );
 }
 

@@ -16,6 +16,7 @@ import {
   double,
   index,
   uniqueIndex,
+  foreignKey,
   type AnyMySqlColumn,
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
@@ -150,7 +151,7 @@ export const hosts = mysqlTable(
     ip: text("ip").notNull(),
     port: int("port").notNull(),
     username: text("username").notNull(),
-    folder: text("folder"),
+    folder: varchar("folder", { length: 255 }),
     // Sub-host nesting: a host acting as an organizational parent for other
     // hosts, mutually exclusive with folder (see host route validation).
     parentHostId: int("parent_host_id").references(
@@ -439,7 +440,7 @@ export const sshCredentials = mysqlTable(
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  folder: text("folder"),
+  folder: varchar("folder", { length: 255 }),
   tags: text("tags"),
   pin: boolean("pin").notNull().default(false),
   // Manual drag-to-reorder position within a folder. Null means the
@@ -505,7 +506,7 @@ export const snippets = mysqlTable(
     name: varchar("name", { length: 255 }).notNull(),
     content: text("content").notNull(),
     description: text("description"),
-    folder: text("folder"),
+    folder: varchar("folder", { length: 255 }),
     order: int("order").notNull().default(0),
     syncId: varchar("sync_id", { length: 255 }).unique(),
     createdAt: varchar("created_at", { length: 255 })
@@ -1022,7 +1023,7 @@ export const vaultProfiles = mysqlTable("vault_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  folder: text("folder"),
+  folder: varchar("folder", { length: 255 }),
   tags: text("tags"),
   // Vault server connection (non-secret)
   vaultAddr: text("vault_addr").notNull(),
@@ -2098,9 +2099,7 @@ export const sharedCredentialSecrets = mysqlTable(
   "shared_credential_secrets",
   {
     id: int("id").autoincrement().primaryKey(),
-    credentialAccessId: int("credential_access_id")
-      .notNull()
-      .references(() => credentialAccess.id, { onDelete: "cascade" }),
+    credentialAccessId: int("credential_access_id").notNull(),
     targetUserId: varchar("target_user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -2125,6 +2124,11 @@ export const sharedCredentialSecrets = mysqlTable(
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
   (table) => [
+    foreignKey({
+      columns: [table.credentialAccessId],
+      foreignColumns: [credentialAccess.id],
+      name: "shared_cred_secrets_access_id_fk",
+    }).onDelete("cascade"),
     uniqueIndex("idx_shared_credential_secrets_scope").on(
       table.credentialAccessId,
       table.targetUserId,
@@ -2133,5 +2137,42 @@ export const sharedCredentialSecrets = mysqlTable(
       table.targetUserId,
       table.credentialId,
     ),
+  ],
+);
+
+// --- folder access rules ---
+
+/**
+ * A standing share on a host folder. Sharing a folder fans out host_access
+ * grants to the hosts in it today; this row is what makes hosts created in
+ * or moved into the folder later inherit the same access.
+ */
+export const folderAccess = mysqlTable(
+  "folder_access",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerUserId: varchar("owner_user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The folder path as stored on hosts ("Parent / Child"); subfolders inherit.
+    folder: varchar("folder", { length: 255 }).notNull(),
+
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    roleId: int("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
+
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permissionLevel: text("permission_level").notNull().default("connect"),
+    expiresAt: varchar("expires_at", { length: 255 }),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_folder_access_owner_folder").on(table.ownerUserId, table.folder),
   ],
 );

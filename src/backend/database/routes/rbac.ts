@@ -24,6 +24,7 @@ import {
 } from "../../utils/permission-catalog.js";
 import {
   createCurrentHostFolderRepository,
+  createCurrentFolderAccessRepository,
   createCurrentCredentialRepository,
   createCurrentCredentialAccessRepository,
   createCurrentHostResolutionRepository,
@@ -430,6 +431,22 @@ router.post(
         );
 
       const expiresAt = expiryFromDuration(durationHours);
+
+      // Remember the share on the folder itself so hosts added later inherit it.
+      const folderAccessRepository = createCurrentFolderAccessRepository();
+      for (const target of targets) {
+        await folderAccessRepository.upsert({
+          ownerUserId: userId,
+          folder,
+          grantedBy: userId,
+          permissionLevel,
+          expiresAt,
+          target:
+            target.type === "user"
+              ? { targetType: "user", targetUserId: target.id as string }
+              : { targetType: "role", targetRoleId: target.id as number },
+        });
+      }
       const rbacAccessRepository = createCurrentRbacAccessRepository();
       const { SharedHostSecretsManager } =
         await import("../../utils/shared-host-secrets-manager.js");
@@ -583,6 +600,78 @@ router.post(
  *       500:
  *         description: Failed to update grant.
  */
+/**
+ * @openapi
+ * /rbac/folder/access:
+ *   get:
+ *     summary: Standing shares on one of your folders (inherited by hosts added later)
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: query
+ *         name: folder
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.get(
+  "/folder/access",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const folder = String(req.query.folder ?? "");
+    if (!isNonEmptyString(folder)) {
+      return res.status(400).json({ error: "folder is required" });
+    }
+    try {
+      res.json({
+        rules: await createCurrentFolderAccessRepository().listForFolder(
+          req.userId!,
+          folder,
+        ),
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to list folder access rules", error, {
+        operation: "list_folder_access",
+      });
+      res.status(500).json({ error: "Failed to list folder access" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/folder/access/{id}:
+ *   delete:
+ *     summary: Stop a folder share from applying to hosts added later
+ *     description: Grants already fanned out to hosts stay; revoke those per host.
+ *     tags:
+ *       - RBAC
+ */
+router.delete(
+  "/folder/access/:id",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const ruleId = parseInt(String(req.params.id), 10);
+    if (isNaN(ruleId)) {
+      return res.status(400).json({ error: "Invalid rule ID" });
+    }
+    try {
+      const repository = createCurrentFolderAccessRepository();
+      if (!(await repository.findById(ruleId, req.userId!))) {
+        return res.status(404).json({ error: "Rule not found" });
+      }
+      await repository.deleteById(ruleId, req.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      databaseLogger.error("Failed to delete folder access rule", error, {
+        operation: "delete_folder_access",
+        ruleId,
+      });
+      res.status(500).json({ error: "Failed to delete folder access" });
+    }
+  },
+);
+
 router.patch(
   "/host/:id/access/:accessId",
   authenticateJWT,

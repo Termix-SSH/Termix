@@ -6,6 +6,7 @@ import {
   createCurrentCredentialRepository,
   createCurrentFileManagerBookmarkRepository,
   createCurrentHostFolderRepository,
+  createCurrentFolderAccessRepository,
   createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentSshCredentialUsageRepository,
@@ -92,6 +93,11 @@ export function registerHostFolderRoutes(
             oldName,
             newName,
           );
+        await createCurrentFolderAccessRepository().renameFolder(
+          userId,
+          oldName,
+          newName,
+        );
 
         res.json({
           message: "Folder renamed successfully",
