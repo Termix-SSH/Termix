@@ -5,13 +5,13 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { sshLogger } from "../../utils/logger.js";
 import { sessionManager } from "../terminal/session-manager.js";
-import { getGuacSessionInfo } from "../guacamole/guacamole-server.js";
-import { GuacamoleTokenService } from "../guacamole/token-service.js";
 import {
-  createCurrentSessionShareRepository,
-  createCurrentSettingsRepository,
-  createCurrentHostResolutionRepository,
-} from "../../database/repositories/factory.js";
+  isLiveSession,
+  isLiveSessionOwnedBy,
+  isSharingEnabledForHost,
+} from "./live-sessions.js";
+import { GuacamoleTokenService } from "../guacamole/token-service.js";
+import { createCurrentSessionShareRepository } from "../../database/repositories/factory.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -30,6 +30,14 @@ interface ResolveRateEntry {
   windowStart: number;
 }
 const resolveAttempts = new Map<string, ResolveRateEntry>();
+function computeExpiresAt(expiryHours: number | undefined): string {
+  const hours = Math.min(
+    Math.max(expiryHours ?? DEFAULT_EXPIRY_HOURS, 1),
+    MAX_EXPIRY_HOURS,
+  );
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
 const RESOLVE_WINDOW_MS = 60 * 1000;
 const RESOLVE_MAX_ATTEMPTS = 30;
 
@@ -54,58 +62,6 @@ setInterval(
   },
   5 * 60 * 1000,
 );
-
-async function isSharingEnabledForHost(hostId: number): Promise<{
-  enabled: boolean;
-  hostOwnerId: string | null;
-}> {
-  const globalEnabled = await createCurrentSettingsRepository().getBoolean(
-    "session_sharing_globally_enabled",
-    true,
-  );
-  if (!globalEnabled) return { enabled: false, hostOwnerId: null };
-
-  const hostResolutionRepository = createCurrentHostResolutionRepository();
-  const hostOwnerId = await hostResolutionRepository.findHostOwnerId(hostId);
-  if (!hostOwnerId) return { enabled: false, hostOwnerId: null };
-
-  const host = await hostResolutionRepository.findHostById(hostId, hostOwnerId);
-  if (!host) return { enabled: false, hostOwnerId: null };
-
-  return {
-    enabled: host.allowSessionSharing !== false,
-    hostOwnerId,
-  };
-}
-
-function computeExpiresAt(expiryHours: number | undefined): string {
-  const hours = Math.min(
-    Math.max(expiryHours ?? DEFAULT_EXPIRY_HOURS, 1),
-    MAX_EXPIRY_HOURS,
-  );
-  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-}
-
-function isLiveSessionOwnedBy(
-  protocol: Protocol,
-  sessionId: string,
-  userId: string,
-): boolean {
-  if (protocol === "ssh") {
-    const session = sessionManager.getSession(sessionId);
-    return !!session && session.isConnected && session.userId === userId;
-  }
-  const info = getGuacSessionInfo(sessionId);
-  return !!info && info.ownerUserId === userId;
-}
-
-function isLiveSession(protocol: Protocol, sessionId: string): boolean {
-  if (protocol === "ssh") {
-    const session = sessionManager.getSession(sessionId);
-    return !!session && session.isConnected;
-  }
-  return !!getGuacSessionInfo(sessionId);
-}
 
 /**
  * @openapi

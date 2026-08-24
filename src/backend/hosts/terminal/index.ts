@@ -1,5 +1,7 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import { getAuditUsername } from "../../utils/audit-logger.js";
+import { collabRoomHub } from "../collab/room-hub.js";
+import { createCurrentCollabRoomRepository } from "../../database/repositories/factory.js";
 import {
   parseWsMessage,
   asObject,
@@ -399,6 +401,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   ws.on("close", () => {
     clearInterval(wsPingInterval);
+    collabRoomHub.unsubscribe(ws);
     sshLogger.info("Terminal WebSocket disconnected", {
       operation: "terminal_ws_disconnect",
       sessionId,
@@ -1231,17 +1234,73 @@ wss.on("connection", async (ws: WebSocket, req) => {
           break;
         }
 
+        case "collab_subscribe": {
+          const { roomId } = (data ?? {}) as { roomId?: string };
+          if (typeof roomId !== "string" || !roomId) break;
+          try {
+            const repository = createCurrentCollabRoomRepository();
+            const room = await repository.findById(roomId);
+            const member =
+              room && !room.endedAt
+                ? await repository.findMember(roomId, userId)
+                : null;
+            if (!member) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "Room not found",
+                }),
+              );
+              break;
+            }
+            collabRoomHub.subscribe(roomId, {
+              ws,
+              userId,
+              username: await getAuditUsername(userId),
+            });
+          } catch (error) {
+            sshLogger.error("Failed to subscribe to collab room", error, {
+              operation: "collab_subscribe_error",
+              userId,
+            });
+          }
+          break;
+        }
+
+        case "collab_unsubscribe": {
+          const { roomId } = (data ?? {}) as { roomId?: string };
+          collabRoomHub.unsubscribe(
+            ws,
+            typeof roomId === "string" ? roomId : undefined,
+          );
+          break;
+        }
+
         case "joinSharedSession": {
           const joinData = data as { shareId: string; tabInstanceId?: string };
           try {
             const shareRepo = createCurrentSessionShareRepository();
             const share = await shareRepo.findActiveById(joinData.shareId);
+            // Room-stage shares are joinable by any member of the live
+            // room whose stage points at them; user shares only by their
+            // target.
+            let eligible =
+              !!share &&
+              share.protocol === "ssh" &&
+              share.shareType === "user" &&
+              share.targetUserId === userId;
             if (
-              !share ||
-              share.shareType !== "user" ||
-              share.targetUserId !== userId ||
-              share.protocol !== "ssh"
+              !eligible &&
+              share &&
+              share.protocol === "ssh" &&
+              share.shareType === "room"
             ) {
+              const roomRepository = createCurrentCollabRoomRepository();
+              const room = await roomRepository.findByStageShareId(share.id);
+              eligible =
+                !!room && !!(await roomRepository.findMember(room.id, userId));
+            }
+            if (!eligible || !share) {
               ws.send(
                 JSON.stringify({
                   type: "error",
@@ -1251,13 +1310,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
               break;
             }
 
+            // Room membership is the authorization for a room stage; the
+            // read-only share never exposes host credentials or config.
             const { PermissionManager } =
               await import("../../utils/permission-manager.js");
-            const access = await PermissionManager.getInstance().canAccessHost(
-              userId,
-              share.hostId,
-              "connect",
-            );
+            const access =
+              share.shareType === "room"
+                ? { hasAccess: true }
+                : await PermissionManager.getInstance().canAccessHost(
+                    userId,
+                    share.hostId,
+                    "connect",
+                  );
             if (!access.hasAccess) {
               ws.send(
                 JSON.stringify({

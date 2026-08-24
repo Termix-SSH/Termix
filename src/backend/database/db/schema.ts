@@ -1936,3 +1936,74 @@ export const aiProposals = sqliteTable(
   ],
 );
 // --- ai end ---
+
+// --- collab rooms ---
+
+/**
+ * A collaboration room: a group of users watching one "stage" - the live
+ * session the current presenter is showing. The stage points at a
+ * shareType="room" row in session_shares, so transport, gating, recording and
+ * expiry all reuse the session-sharing machinery.
+ */
+export const collabRooms = sqliteTable(
+  "collab_rooms",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // Persistent rooms survive being emptied and can be re-used; one-off
+    // rooms are ended explicitly and never listed again.
+    persistent: integer("persistent", { mode: "boolean" })
+      .notNull()
+      .default(false),
+
+    presenterUserId: text("presenter_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    stageProtocol: text("stage_protocol"),
+    stageHostId: integer("stage_host_id").references(() => hosts.id, {
+      onDelete: "set null",
+    }),
+    stageShareId: text("stage_share_id").references(() => sessionShares.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    endedAt: text("ended_at"),
+  },
+  (table) => [index("idx_collab_rooms_owner").on(table.ownerUserId)],
+);
+
+export const collabRoomMembers = sqliteTable(
+  "collab_room_members",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    roomId: text("room_id")
+      .notNull()
+      .references(() => collabRooms.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // "host" runs the room: invites, force-switches the presenter, ends it.
+    roomRole: text("room_role").notNull().default("member"),
+    addedBy: text("added_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_collab_room_members_room_user").on(
+      table.roomId,
+      table.userId,
+    ),
+    index("idx_collab_room_members_user").on(table.userId),
+  ],
+);

@@ -27,6 +27,7 @@ import {
   Plug,
   ScrollText,
   Sparkles,
+  Presentation,
   Workflow,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
@@ -57,6 +58,11 @@ const loadTerminalFeature = () =>
     default: m.Terminal,
   }));
 const TerminalFeature = lazy(loadTerminalFeature);
+const CollabRoomTab = lazy(() =>
+  import("@/features/collab/CollabRoomTab").then((m) => ({
+    default: m.CollabRoomTab,
+  })),
+);
 const LocalTerminal = lazy(() =>
   import("@/features/local-terminal/LocalTerminal").then((m) => ({
     default: m.LocalTerminal,
@@ -318,6 +324,8 @@ export function tabIcon(type: TabType) {
       return <LayoutGrid className="size-3.5" />;
     case "fleet-inventory":
       return <Boxes className="size-3.5" />;
+    case "collab":
+      return <Presentation className="size-3.5" />;
     case "termix-id":
       return <Fingerprint className="size-3.5" />;
     case "alerts":
@@ -613,6 +621,11 @@ export function renderTabContent(
     case "fleet-inventory":
       return withTabSuspense(
         <FleetInventoryTab fleetId={tab.fleetId} isVisible={isVisible} />,
+      );
+
+    case "collab":
+      return withTabSuspense(
+        <CollabRoomTab roomId={tab.collabRoomId} isVisible={isVisible} />,
       );
 
     case "termix-id":

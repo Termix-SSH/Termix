@@ -80,6 +80,9 @@ const AlertManager = lazy(() =>
 const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
 );
+const CollabPanel = lazy(() =>
+  import("@/sidebar/CollabPanel").then((m) => ({ default: m.CollabPanel })),
+);
 const SnippetsPanel = lazy(() =>
   import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
 );
@@ -1572,6 +1575,7 @@ export function AppShell({
       serialConfig?: SerialConfig;
       joinSharedSessionId?: string | null;
       joinShareId?: string | null;
+      collabRoomId?: string;
     },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
@@ -1617,6 +1621,7 @@ export function AppShell({
             initialFilePath,
             initialPath,
             serialConfig,
+            collabRoomId: restore?.collabRoomId,
           },
         ];
       }
@@ -1652,6 +1657,7 @@ export function AppShell({
           initialFilePath,
           initialPath,
           serialConfig,
+          collabRoomId: restore?.collabRoomId,
         },
       ];
     });
@@ -2588,6 +2594,57 @@ export function AppShell({
                   savedLabel: t("connections.sharedSessionLabel", {
                     hostName: session.hostName,
                   }),
+                });
+                if (isMobile) setSidebarOpen(false);
+              }}
+            />
+          </div>
+        )}
+
+        {railView === "collab" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <CollabPanel
+              onOpenRoom={(room) => {
+                const roomHost: Host = {
+                  id: `collab-${room.id}`,
+                  name: room.name,
+                  username: "",
+                  ip: "",
+                  port: 0,
+                  folder: "",
+                  online: false,
+                  cpu: null,
+                  ram: null,
+                  lastAccess: new Date().toISOString(),
+                  authType: "none",
+                  enableTerminal: false,
+                  enableCommandHistory: false,
+                  enableTunnel: false,
+                  enableFileManager: false,
+                  enableDocker: false,
+                  enableProxmox: false,
+                  enableProxmoxStats: false,
+                  enableTmuxMonitor: false,
+                  enableTerminalToolbar: false,
+                  enableSsh: false,
+                  enableRdp: false,
+                  enableVnc: false,
+                  enableTelnet: false,
+                  sshPort: 22,
+                  rdpPort: 3389,
+                  vncPort: 5900,
+                  telnetPort: 23,
+                  serverTunnels: [],
+                  quickActions: [],
+                };
+                openTab(roomHost, "collab", {
+                  instanceId:
+                    typeof crypto.randomUUID === "function"
+                      ? crypto.randomUUID()
+                      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                  restoredSessionId: null,
+                  savedLabel: room.name,
+                  collabRoomId: room.id,
                 });
                 if (isMobile) setSidebarOpen(false);
               }}

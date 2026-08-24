@@ -131,6 +131,8 @@ interface SSHTerminalProps {
   onOpenTab?: (type: TabType) => void;
   /** False when this terminal sits in an unfocused split pane. */
   isFocusedPane?: boolean;
+  /** Fires when the backend reports the created session id (collab presenting). */
+  onSessionReady?: (sessionId: string) => void;
 }
 
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
@@ -154,6 +156,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     {
       hostConfig,
       isVisible,
+      onSessionReady,
       splitScreen = false,
       onClose,
       onTitleChange,
@@ -1936,6 +1939,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "sessionCreated") {
             sessionIdRef.current = msg.sessionId;
+            onSessionReady?.(msg.sessionId);
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
                 patchOpenTab(hostConfig.instanceId!, {

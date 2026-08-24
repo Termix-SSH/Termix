@@ -1939,3 +1939,74 @@ export const aiProposals = mysqlTable(
   ],
 );
 // --- ai end ---
+
+// --- collab rooms ---
+
+/**
+ * A collaboration room: a group of users watching one "stage" - the live
+ * session the current presenter is showing. The stage points at a
+ * shareType="room" row in session_shares, so transport, gating, recording and
+ * expiry all reuse the session-sharing machinery.
+ */
+export const collabRooms = mysqlTable(
+  "collab_rooms",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    ownerUserId: varchar("owner_user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // Persistent rooms survive being emptied and can be re-used; one-off
+    // rooms are ended explicitly and never listed again.
+    persistent: boolean("persistent")
+      .notNull()
+      .default(false),
+
+    presenterUserId: varchar("presenter_user_id", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    stageProtocol: text("stage_protocol"),
+    stageHostId: int("stage_host_id").references(() => hosts.id, {
+      onDelete: "set null",
+    }),
+    stageShareId: varchar("stage_share_id", { length: 255 }).references(() => sessionShares.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    endedAt: text("ended_at"),
+  },
+  (table) => [index("idx_collab_rooms_owner").on(table.ownerUserId)],
+);
+
+export const collabRoomMembers = mysqlTable(
+  "collab_room_members",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    roomId: varchar("room_id", { length: 255 })
+      .notNull()
+      .references(() => collabRooms.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // "host" runs the room: invites, force-switches the presenter, ends it.
+    roomRole: text("room_role").notNull().default("member"),
+    addedBy: varchar("added_by", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_collab_room_members_room_user").on(
+      table.roomId,
+      table.userId,
+    ),
+    index("idx_collab_room_members_user").on(table.userId),
+  ],
+);

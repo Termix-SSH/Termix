@@ -662,6 +662,7 @@
     "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
   },
   "nav": {
+    "collab": "Meetings",
     "home": "Home",
     "terminal": "Terminal",
     "localTerminal": "Local Terminal",
@@ -1805,6 +1806,38 @@
     "sharedBy": "Shared by {{username}}",
     "join": "Join",
     "sharedSessionLabel": "{{hostName}} (shared)"
+  },
+  "collab": {
+    "createRoom": "New room",
+    "roomName": "Room name",
+    "persistentRoom": "Persistent room",
+    "persistentRoomHint": "Persistent rooms stay listed after the meeting ends and can be reused.",
+    "noRooms": "No rooms yet. Create one to start a meeting.",
+    "openRoom": "Open",
+    "endRoom": "End meeting",
+    "leaveRoom": "Leave",
+    "deleteMember": "Remove",
+    "invite": "Invite",
+    "inviteTitle": "Invite members",
+    "members": "Members",
+    "online": "online",
+    "hostBadge": "Host",
+    "presenterBadge": "Presenting",
+    "present": "Present",
+    "presentTitle": "Take the stage",
+    "presentHost": "Host",
+    "presentProtocol": "Protocol",
+    "stopPresenting": "Stop presenting",
+    "takeOver": "Take over",
+    "emptyStage": "Nobody is presenting. Take the stage to share a session.",
+    "stageLoading": "Connecting to the stage...",
+    "stageEnded": "The presentation ended",
+    "roomEnded": "This meeting has ended",
+    "presenterLabel": "{{name}} is presenting",
+    "youArePresenting": "You are presenting in another tab. Stop presenting to hand the stage over.",
+    "created": "Room created",
+    "invited": "Members invited",
+    "roomTab": "Meeting"
   },
   "sessionSharing": {
     "guestView": {
