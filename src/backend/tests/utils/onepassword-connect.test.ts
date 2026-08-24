@@ -12,7 +12,9 @@ describe("1Password secret references", () => {
       field: "password",
     });
     expect(
-      parseSecretReference("op://Infra/deploy key/private key?ssh-format=openssh"),
+      parseSecretReference(
+        "op://Infra/deploy key/private key?ssh-format=openssh",
+      ),
     ).toEqual({ vault: "Infra", item: "deploy key", field: "private key" });
     expect(parseSecretReference("op://Infra/only-two")).toBeNull();
     expect(parseSecretReference("https://x")).toBeNull();

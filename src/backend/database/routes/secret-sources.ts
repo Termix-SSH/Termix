@@ -5,7 +5,11 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { getErrorMessage } from "../../utils/error-message.js";
-import { logAudit, getAuditUsername, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import { testConnectSource } from "../../utils/onepassword-connect.js";
 import { readSecretSourcePrivateAllowlist } from "../../utils/secret-source-egress.js";
 import { clearExternalSecretCache } from "../../hosts/external-secrets.js";
@@ -101,13 +105,18 @@ router.post(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId!;
-    const { name, kind = "onepassword-connect", baseUrl, token, shared } =
-      req.body ?? {};
+    const {
+      name,
+      kind = "onepassword-connect",
+      baseUrl,
+      token,
+      shared,
+    } = req.body ?? {};
     const url = validBaseUrl(baseUrl);
     if (!isNonEmptyString(name) || !url || !isNonEmptyString(token)) {
-      return res
-        .status(400)
-        .json({ error: "name, a valid http(s) baseUrl and token are required" });
+      return res.status(400).json({
+        error: "name, a valid http(s) baseUrl and token are required",
+      });
     }
     if (!KINDS.includes(kind)) {
       return res.status(400).json({ error: "Unsupported secret source kind" });
@@ -170,7 +179,11 @@ router.put(
       if (baseUrl !== undefined && !url) {
         return res.status(400).json({ error: "baseUrl must be http(s)" });
       }
-      if (shared === true && !source.shared && !(await permissionManager.isAdmin(userId))) {
+      if (
+        shared === true &&
+        !source.shared &&
+        !(await permissionManager.isAdmin(userId))
+      ) {
         return res
           .status(403)
           .json({ error: "Only admins can share a secret source" });

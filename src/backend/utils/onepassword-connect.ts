@@ -44,7 +44,9 @@ async function connectGet<T>(source: ConnectSource, path: string): Promise<T> {
     source.allowedPrivateHosts,
   );
   if (!response.ok) {
-    throw new Error(`1Password Connect ${path} failed: HTTP ${response.status}`);
+    throw new Error(
+      `1Password Connect ${path} failed: HTTP ${response.status}`,
+    );
   }
   return (await response.json()) as T;
 }
@@ -70,14 +72,19 @@ interface ConnectField {
 }
 
 /** Reachability + token validity: the vault list needs a valid token. */
-export async function testConnectSource(source: ConnectSource): Promise<number> {
+export async function testConnectSource(
+  source: ConnectSource,
+): Promise<number> {
   const vaults = await connectGet<ConnectVault[]>(source, "/v1/vaults");
   return vaults.length;
 }
 
-const byIdOrName = (name: string) => (candidate: { id: string; name?: string; title?: string }) =>
-  candidate.id === name ||
-  (candidate.name ?? candidate.title ?? "").toLowerCase() === name.toLowerCase();
+const byIdOrName =
+  (name: string) =>
+  (candidate: { id: string; name?: string; title?: string }) =>
+    candidate.id === name ||
+    (candidate.name ?? candidate.title ?? "").toLowerCase() ===
+      name.toLowerCase();
 
 export async function resolveConnectReference(
   source: ConnectSource,

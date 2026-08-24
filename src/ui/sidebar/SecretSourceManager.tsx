@@ -40,7 +40,12 @@ type FormState = {
   shared: boolean;
 };
 
-const emptyForm: FormState = { name: "", baseUrl: "", token: "", shared: false };
+const emptyForm: FormState = {
+  name: "",
+  baseUrl: "",
+  token: "",
+  shared: false,
+};
 
 export function SecretSourceManager({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -66,7 +71,11 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
 
   const handleSave = async () => {
     if (!form) return;
-    if (!form.name.trim() || !form.baseUrl.trim() || (!form.id && !form.token)) {
+    if (
+      !form.name.trim() ||
+      !form.baseUrl.trim() ||
+      (!form.id && !form.token)
+    ) {
       toast.error(t("hosts.secretSourceRequired"));
       return;
     }
