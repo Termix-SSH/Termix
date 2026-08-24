@@ -850,6 +850,7 @@ export function UserProfilePanel({
         "pinAppRail",
         "expandAppRailOnHover",
         "defaultSnippetFoldersCollapsed",
+        "snippetShowCommands",
         "confirmSnippetExecution",
         "disableUpdateCheck",
         "confirmTabClose",
