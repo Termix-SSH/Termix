@@ -4,8 +4,10 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   Crown,
+  Hand,
   Loader2,
   MonitorUp,
+  MousePointerClick,
   Presentation,
   Square,
   UserPlus,
@@ -33,6 +35,8 @@ import {
   getCollabStage,
   inviteCollabMembers,
   presentCollabStage,
+  requestCollabStageControl,
+  setCollabStageControl,
   stopCollabStage,
   type CollabRoomDetail,
   type CollabStage,
@@ -92,6 +96,7 @@ export function CollabRoomTab({
   );
   const draftRef = useRef<PresentDraft | null>(null);
   draftRef.current = draft;
+  const stageKeyRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!roomId) return;
@@ -103,9 +108,18 @@ export function CollabRoomTab({
         nextDetail.stage.shareId &&
         nextDetail.stage.presenterUserId !== nextDetail.me
       ) {
-        const { stage: resolved } = await getCollabStage(roomId);
-        setStage(resolved);
+        // A guac viewer reconnects whenever its token changes, so the stage
+        // is only re-resolved when the share or my control actually changed.
+        const stageKey = `${nextDetail.stage.shareId}:${
+          nextDetail.controllerUserId === nextDetail.me
+        }`;
+        if (stageKeyRef.current !== stageKey) {
+          stageKeyRef.current = stageKey;
+          const { stage: resolved } = await getCollabStage(roomId);
+          setStage(resolved);
+        }
       } else if (!nextDetail.stage.shareId) {
+        stageKeyRef.current = null;
         setStage(null);
         // The stage was cleared elsewhere; stop presenting locally too.
         if (draftRef.current) setDraft(null);
@@ -151,8 +165,20 @@ export function CollabRoomTab({
           case "collab_online":
           case "collab_members_changed":
           case "collab_stage_changed":
+          case "collab_control_changed":
             void refresh();
             break;
+          case "collab_control_requested": {
+            const request = msg as unknown as {
+              userId: string;
+              username?: string;
+            };
+            handleControlRequestRef.current?.(
+              request.userId,
+              request.username ?? "?",
+            );
+            break;
+          }
           case "collab_room_ended":
             setEnded(true);
             break;
@@ -175,12 +201,37 @@ export function CollabRoomTab({
 
   const me = detail?.me;
   const isHost = detail?.isHost ?? false;
+  const controllerUserId = detail?.controllerUserId ?? null;
   const presenterUserId = detail?.stage.presenterUserId ?? null;
   const iAmPresenter = !!me && presenterUserId === me;
   const onlineIds = new Set(detail?.online.map((user) => user.userId));
   const presenterName = detail?.members.find(
     (member) => member.userId === presenterUserId,
   )?.username;
+
+  const handleControlRequestRef = useRef<
+    ((userId: string, username: string) => void) | null
+  >(null);
+  handleControlRequestRef.current = (userId, username) => {
+    if (!roomId) return;
+    const mayGrant = isHost || iAmPresenter;
+    if (!mayGrant || userId === me) return;
+    toast(t("collab.controlRequestedBy", { name: username }), {
+      action: {
+        label: t("collab.grant"),
+        onClick: () => void setCollabStageControl(roomId, userId),
+      },
+    });
+  };
+
+  async function changeControl(targetId: string | null) {
+    if (!roomId) return;
+    try {
+      await setCollabStageControl(roomId, targetId);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }
 
   async function openPresentDialog() {
     setPresentOpen(true);
@@ -314,22 +365,46 @@ export function CollabRoomTab({
           {detail?.room.name}
         </span>
         <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-          {detail?.members.map((member) => (
-            <Badge
-              key={member.userId}
-              variant="outline"
-              className="text-[10px] gap-1"
-            >
-              <span
-                className={`size-1.5 rounded-full ${onlineIds.has(member.userId) ? "bg-green-500" : "bg-muted-foreground/30"}`}
-              />
-              {member.username}
-              {member.roomRole === "host" && <Crown className="size-2.5" />}
-              {member.userId === presenterUserId && (
-                <MonitorUp className="size-2.5 text-red-500" />
-              )}
-            </Badge>
-          ))}
+          {detail?.members.map((member) => {
+            const canToggleControl =
+              (isHost || iAmPresenter) &&
+              !!detail?.stage.shareId &&
+              member.userId !== presenterUserId;
+            const hasControl = member.userId === controllerUserId;
+            const badge = (
+              <Badge
+                key={canToggleControl ? undefined : member.userId}
+                variant={hasControl ? "default" : "outline"}
+                className="text-[10px] gap-1"
+              >
+                <span
+                  className={`size-1.5 rounded-full ${onlineIds.has(member.userId) ? "bg-green-500" : "bg-muted-foreground/30"}`}
+                />
+                {member.username}
+                {member.roomRole === "host" && <Crown className="size-2.5" />}
+                {member.userId === presenterUserId && (
+                  <MonitorUp className="size-2.5 text-red-500" />
+                )}
+                {hasControl && <MousePointerClick className="size-2.5" />}
+              </Badge>
+            );
+            return canToggleControl ? (
+              <button
+                key={member.userId}
+                type="button"
+                title={t(
+                  hasControl ? "collab.revokeControl" : "collab.grantControl",
+                )}
+                onClick={() =>
+                  void changeControl(hasControl ? null : member.userId)
+                }
+              >
+                {badge}
+              </button>
+            ) : (
+              badge
+            );
+          })}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {isHost && (
@@ -341,6 +416,25 @@ export function CollabRoomTab({
             >
               <UserPlus className="size-3.5 mr-1" />
               {t("collab.invite")}
+            </Button>
+          )}
+          {!!detail?.stage.shareId && !iAmPresenter && !draft && (
+            <Button
+              size="sm"
+              variant={controllerUserId === me ? "default" : "outline"}
+              className="h-7 text-xs"
+              onClick={() =>
+                controllerUserId === me
+                  ? void changeControl(null)
+                  : void requestCollabStageControl(roomId).catch((error) =>
+                      toast.error(getErrorMessage(error)),
+                    )
+              }
+            >
+              <Hand className="size-3.5 mr-1" />
+              {controllerUserId === me
+                ? t("collab.releaseControl")
+                : t("collab.requestControl")}
             </Button>
           )}
           {(iAmPresenter || draft || (isHost && presenterUserId)) && (
@@ -446,6 +540,7 @@ export function CollabRoomTab({
               </CommandHistoryProvider>
             ) : stage.connectParams?.token ? (
               <GuacamoleDisplay
+                key={stage.connectParams.token}
                 connectionConfig={{
                   token: stage.connectParams.token,
                   protocol: stage.protocol,

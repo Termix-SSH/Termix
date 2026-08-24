@@ -31,6 +31,7 @@ export interface CollabStage {
   hostId: number | null;
   shareId: string | null;
   sessionId?: string;
+  controllerUserId?: string | null;
   connectParams?: { token: string };
 }
 
@@ -41,6 +42,7 @@ export interface CollabRoomDetail {
   members: CollabRoomMember[];
   online: CollabOnlineUser[];
   stage: CollabStage;
+  controllerUserId: string | null;
 }
 
 export async function listCollabRooms(): Promise<{ rooms: CollabRoom[] }> {
@@ -126,6 +128,25 @@ export async function getCollabStage(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "resolve collab stage");
+  }
+}
+
+export async function setCollabStageControl(
+  roomId: string,
+  userId: string | null,
+): Promise<void> {
+  try {
+    await authApi.post(`/collab/rooms/${roomId}/control`, { userId });
+  } catch (error) {
+    throw handleApiError(error, "change stage control");
+  }
+}
+
+export async function requestCollabStageControl(roomId: string): Promise<void> {
+  try {
+    await authApi.post(`/collab/rooms/${roomId}/control/request`);
+  } catch (error) {
+    throw handleApiError(error, "request stage control");
   }
 }
 

@@ -457,6 +457,27 @@ class TerminalSessionManager {
     this.broadcast(sessionId, { type: "participants", participants });
   }
 
+  /**
+   * Grants stage control: participants joined via this share become
+   * read-write only while they are the controller. The owner is untouched.
+   */
+  setRoomShareControl(
+    sessionId: string,
+    shareId: string,
+    controllerUserId: string | null,
+  ): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    for (const participant of session.participants.values()) {
+      if (participant.isOwner || participant.joinedViaShareId !== shareId)
+        continue;
+      participant.permissionLevel =
+        controllerUserId && participant.userId === controllerUserId
+          ? "read-write"
+          : "read-only";
+    }
+  }
+
   /** Fans out a message to every OPEN participant socket; skips closed ones and send failures. */
   broadcast(sessionId: string, message: object): void {
     const session = this.sessions.get(sessionId);

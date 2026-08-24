@@ -10,6 +10,8 @@ import {
 } from "../../utils/audit-logger.js";
 import { GuacamoleTokenService } from "../guacamole/token-service.js";
 import { collabRoomHub } from "./room-hub.js";
+import { getStageController, setStageController } from "./stage-control.js";
+import { sessionManager } from "../terminal/session-manager.js";
 import {
   isLiveSession,
   isLiveSessionOwnedBy,
@@ -169,6 +171,7 @@ router.get(
         members,
         online: collabRoomHub.onlineUsers(roomId),
         stage: stagePayload(access.room),
+        controllerUserId: getStageController(roomId),
       });
     } catch (error) {
       sshLogger.error("Failed to get collab room", error, {
@@ -277,6 +280,10 @@ router.delete(
       const repository = createCurrentCollabRoomRepository();
       await repository.removeMember(roomId, targetId);
 
+      if (getStageController(roomId) === targetId) {
+        await applyStageControl(access.room, roomId, null);
+      }
+
       if (access.room.presenterUserId === targetId) {
         await revokeStageShare(access.room);
         await repository.clearStage(roomId);
@@ -361,6 +368,7 @@ router.post(
       });
 
       await revokeStageShare(access.room);
+      setStageController(roomId, null);
       const repository = createCurrentCollabRoomRepository();
       await repository.updateStage(roomId, {
         presenterUserId: userId,
@@ -431,6 +439,7 @@ router.post(
       }
 
       await revokeStageShare(access.room);
+      setStageController(roomId, null);
       await createCurrentCollabRoomRepository().clearStage(roomId);
       collabRoomHub.broadcast(roomId, {
         type: "collab_stage_changed",
@@ -480,13 +489,18 @@ router.get(
         return res.json({ stage: null });
       }
 
+      const controllerUserId = getStageController(roomId);
       const stage: Record<string, unknown> = {
         ...stagePayload(room),
         sessionId: share.sessionId,
+        controllerUserId,
       };
       if (protocol !== "ssh") {
         stage.connectParams = {
-          token: tokenService.createJoinToken(share.sessionId, true),
+          token: tokenService.createJoinToken(
+            share.sessionId,
+            controllerUserId !== userId,
+          ),
         };
       }
       res.json({ stage });
@@ -495,6 +509,133 @@ router.get(
         operation: "collab_room_stage_error",
       });
       res.status(500).json({ error: "Failed to resolve stage" });
+    }
+  },
+);
+
+/** Sets the controller everywhere it lives: memory, live SSH gate, hub. */
+async function applyStageControl(
+  room: CollabRoomRecord,
+  roomId: string,
+  controllerUserId: string | null,
+): Promise<void> {
+  setStageController(roomId, controllerUserId);
+  if (room.stageShareId && room.stageProtocol === "ssh") {
+    try {
+      const share = await createCurrentSessionShareRepository().findActiveById(
+        room.stageShareId,
+      );
+      if (share) {
+        sessionManager.setRoomShareControl(
+          share.sessionId,
+          share.id,
+          controllerUserId,
+        );
+      }
+    } catch {
+      // The gate keeps its previous state; the broadcast still lands.
+    }
+  }
+  collabRoomHub.broadcast(roomId, {
+    type: "collab_control_changed",
+    roomId,
+    controllerUserId,
+  });
+}
+
+/**
+ * @openapi
+ * /collab/rooms/{id}/control:
+ *   post:
+ *     summary: Grant or revoke stage control (presenter or host)
+ *     description: Grants a member write access to the current stage, or revokes it with a null userId. The controller may also release control themselves.
+ *     tags:
+ *       - Collab
+ */
+router.post(
+  "/rooms/:id/control",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId!;
+    const roomId = String(req.params.id);
+    const { userId: targetId } = req.body ?? {};
+
+    if (targetId !== null && !isNonEmptyString(targetId)) {
+      return res
+        .status(400)
+        .json({ error: "userId must be a user id or null" });
+    }
+
+    try {
+      const access = await requireRoomMember(roomId, userId);
+      if (!access) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      if (!access.room.stageShareId) {
+        return res.status(400).json({ error: "Nothing is being presented" });
+      }
+
+      const releasingOwnControl =
+        targetId === null && getStageController(roomId) === userId;
+      const mayGrant = access.isHost || access.room.presenterUserId === userId;
+      if (!mayGrant && !releasingOwnControl) {
+        return res.status(403).json({
+          error: "Only the presenter or host can change stage control",
+        });
+      }
+
+      if (targetId) {
+        const repository = createCurrentCollabRoomRepository();
+        if (!(await repository.findMember(roomId, targetId))) {
+          return res.status(404).json({ error: "Member not found" });
+        }
+      }
+
+      await applyStageControl(access.room, roomId, targetId);
+      res.json({ controllerUserId: targetId });
+    } catch (error) {
+      sshLogger.error("Failed to change collab stage control", error, {
+        operation: "collab_control_error",
+      });
+      res.status(500).json({ error: "Failed to change stage control" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /collab/rooms/{id}/control/request:
+ *   post:
+ *     summary: Ask the presenter for stage control (hand raise)
+ *     tags:
+ *       - Collab
+ */
+router.post(
+  "/rooms/:id/control/request",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId!;
+    const roomId = String(req.params.id);
+    try {
+      const access = await requireRoomMember(roomId, userId);
+      if (!access) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      if (!access.room.stageShareId) {
+        return res.status(400).json({ error: "Nothing is being presented" });
+      }
+      collabRoomHub.broadcast(roomId, {
+        type: "collab_control_requested",
+        roomId,
+        userId,
+        username: await getAuditUsername(userId),
+      });
+      res.json({ success: true });
+    } catch (error) {
+      sshLogger.error("Failed to request collab stage control", error, {
+        operation: "collab_control_request_error",
+      });
+      res.status(500).json({ error: "Failed to request control" });
     }
   },
 );
@@ -526,6 +667,7 @@ router.post(
       }
 
       await revokeStageShare(access.room);
+      setStageController(roomId, null);
       const repository = createCurrentCollabRoomRepository();
       if (access.room.persistent) {
         await repository.clearStage(roomId);
