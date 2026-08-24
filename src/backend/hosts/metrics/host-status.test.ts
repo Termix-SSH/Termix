@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  needsStatusPollAuthentication,
   statusAfterAuthentication,
   statusAfterReachabilityCheck,
 } from "./host-status.js";
@@ -20,5 +21,12 @@ describe("host availability status", () => {
   it("downgrades failed authentication without hiding reachability", () => {
     expect(statusAfterAuthentication(false, "online")).toBe("reachable");
     expect(statusAfterAuthentication(false, "offline")).toBe("offline");
+  });
+
+  it("authenticates in the status probe unless a metrics poll will do it", () => {
+    expect(needsStatusPollAuthentication(false, false)).toBe(true);
+    expect(needsStatusPollAuthentication(false, true)).toBe(true);
+    expect(needsStatusPollAuthentication(true, false)).toBe(true);
+    expect(needsStatusPollAuthentication(true, true)).toBe(false);
   });
 });
