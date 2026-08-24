@@ -200,10 +200,10 @@ export function CredentialItem({
   const trayCollapsed = `max-h-0 opacity-0 ${isCompact ? "" : "-mt-1"}`;
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
-      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[60px] opacity-100" : trayCollapsed}`
+      ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[60px] opacity-100" : trayCollapsed}`
       : shouldUseClickTray
-        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[60px] opacity-100" : trayCollapsed}`
-        : `overflow-hidden transition-all duration-150 ease-out ${trayCollapsed} group-hover:max-h-[60px] group-hover:opacity-100 ${isCompact ? "" : "group-hover:mt-0"} ${isMenuOpen ? `!max-h-[60px] !opacity-100 ${isCompact ? "" : "!mt-0"}` : ""}`;
+        ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState ? "max-h-[60px] opacity-100" : trayCollapsed}`
+        : `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayCollapsed} group-hover:max-h-[60px] group-hover:opacity-100 ${isCompact ? "" : "group-hover:mt-0"} ${isMenuOpen ? `!max-h-[60px] !opacity-100 ${isCompact ? "" : "!mt-0"}` : ""}`;
 
   return (
     <div

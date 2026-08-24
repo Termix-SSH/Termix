@@ -1,5 +1,7 @@
 import { formatTransferMbPerSec } from "@/main-axios.ts";
 import { useTranslation } from "react-i18next";
+import { ArrowDownToLine } from "lucide-react";
+import { TransferProgressBar } from "./TransferProgressBar";
 
 interface DownloadProgressToastProps {
   fileName: string;
@@ -22,26 +24,6 @@ function formatBytes(bytes: number): string {
   return `${formattedSize} ${units[unitIndex]}`;
 }
 
-function IndeterminateProgressBar() {
-  return (
-    <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
-      <div className="bg-primary/60 absolute inset-y-0 left-0 w-1/3 animate-pulse rounded-full" />
-    </div>
-  );
-}
-
-function DeterminateProgressBar({ value }: { value: number }) {
-  const clamped = Math.min(100, Math.max(0, value));
-  return (
-    <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
-      <div
-        className="bg-primary h-full rounded-full transition-[width]"
-        style={{ width: `${clamped}%` }}
-      />
-    </div>
-  );
-}
-
 export function DownloadProgressToast({
   fileName,
   loaded,
@@ -58,14 +40,16 @@ export function DownloadProgressToast({
 
   return (
     <div className="flex w-[min(calc(100vw-5rem),288px)] max-w-full flex-col gap-2 pr-2">
-      <p className="text-sm font-medium leading-tight truncate">
-        {t("fileManager.downloadingFile", { name: fileName })}
+      <p className="flex items-center gap-2 text-sm font-medium leading-tight">
+        <ArrowDownToLine className="size-3.5 shrink-0 text-accent-brand" />
+        <span className="truncate">
+          {t("fileManager.downloadingFile", { name: fileName })}
+        </span>
       </p>
-      {percent === undefined ? (
-        <IndeterminateProgressBar />
-      ) : (
-        <DeterminateProgressBar value={percent} />
-      )}
+      <TransferProgressBar
+        value={percent}
+        label={t("fileManager.downloadingFile", { name: fileName })}
+      />
       <div className="flex items-center justify-between gap-3 pr-1 text-xs text-muted-foreground">
         <span className="min-w-0 truncate">
           {total !== undefined

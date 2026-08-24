@@ -216,7 +216,7 @@ export function TabBar({
   return (
     <div className="flex flex-col shrink-0 min-w-0">
       <div
-        className={`flex items-end bg-sidebar min-w-0 transition-all duration-200 ${open ? "h-12.5 border-b border-border" : "h-0 overflow-hidden"}`}
+        className={`flex items-end bg-sidebar min-w-0 transition-[height,border-color] duration-200 ${open ? "h-12.5 border-b border-border" : "h-0 overflow-hidden"}`}
       >
         <div
           ref={tabBarRef}
