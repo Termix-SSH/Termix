@@ -4286,6 +4286,8 @@
         "expandAppRailOnHoverDesc": "Allow the left sidebar app rail to expand when the pointer moves over it",
         "settingsNavigation": "Navigation",
         "navigationTabsDesc": "Choose which tabs appear in the app rail",
+        "showSnippetCommands": "Show Commands",
+        "showSnippetCommandsDesc": "Show each snippet's command under its name. Turn off for a compact list.",
         "foldersCollapsed": "Folders Collapsed",
         "foldersCollapsedDesc": "Collapse folders by default",
         "confirmExecution": "Confirm Execution",
