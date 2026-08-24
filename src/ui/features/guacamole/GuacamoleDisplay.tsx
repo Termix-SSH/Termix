@@ -18,11 +18,7 @@ import {
   resolveConnectionOrigin,
   buildOriginWsUrl,
 } from "@/lib/connection-origin.ts";
-import {
-  isFirefoxBrowser,
-  isPasteShortcut,
-  pasteTextToRemote,
-} from "./guacamole-clipboard.ts";
+import { isPasteShortcut, pasteTextToRemote } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
 import { bindPointerInput } from "./guacamole-pointer.ts";
 import {
@@ -456,31 +452,32 @@ export const GuacamoleDisplay = forwardRef<
     displayElement.setAttribute("tabindex", "0");
     displayElement.style.outline = "none";
 
-    const useNativePasteFallback = isFirefoxBrowser();
-    if (useNativePasteFallback) {
-      displayElement.addEventListener(
-        "keydown",
-        (event) => {
-          if (isPasteShortcut(event)) {
-            event.stopImmediatePropagation();
-          }
-        },
-        true,
-      );
-      displayElement.addEventListener(
-        "paste",
-        (event) => {
-          if (clientRef.current !== client) return;
-          const text = event.clipboardData?.getData("text/plain");
-          if (!text) return;
-
-          event.preventDefault();
+    // Reading navigator.clipboard outside a user gesture is denied by Safari
+    // and commonly denied by Chromium. The paste event carries the text under
+    // the browser's normal permission model, so use it on every browser and
+    // replace the original shortcut with an ordered clipboard update + Ctrl+V.
+    displayElement.addEventListener(
+      "keydown",
+      (event) => {
+        if (isPasteShortcut(event)) {
           event.stopImmediatePropagation();
-          pasteTextToRemote(client, text);
-        },
-        true,
-      );
-    }
+        }
+      },
+      true,
+    );
+    displayElement.addEventListener(
+      "paste",
+      (event) => {
+        if (clientRef.current !== client) return;
+        const text = event.clipboardData?.getData("text/plain");
+        if (!text) return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        pasteTextToRemote(client, text);
+      },
+      true,
+    );
 
     display.onresize = () => {
       if (!isMountedRef.current || clientRef.current !== client) return;
@@ -759,7 +756,7 @@ export const GuacamoleDisplay = forwardRef<
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;
-    if (!client || isFirefoxBrowser() || !navigator.clipboard?.readText) return;
+    if (!client || !navigator.clipboard?.readText) return;
     navigator.clipboard
       .readText()
       .then((text) => {

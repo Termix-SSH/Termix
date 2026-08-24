@@ -13,10 +13,6 @@ export interface GuacamoleClipboardClient {
   sendKeyEvent(pressed: number, keysym: number): void;
 }
 
-export function isFirefoxBrowser(userAgent = navigator.userAgent): boolean {
-  return /(?:Firefox|FxiOS)\//.test(userAgent);
-}
-
 export function isPasteShortcut(
   event: Pick<KeyboardEvent, "altKey" | "ctrlKey" | "key" | "metaKey">,
 ): boolean {
