@@ -18,10 +18,9 @@ export function withDriveSettings(
   if (!guacConfig["enable-drive"] || guacConfig["drive-path"]) {
     return guacConfig;
   }
-  const root = (env[GUACD_DRIVE_PATH_ENV]?.trim() || DEFAULT_DRIVE_ROOT).replace(
-    /\/+$/,
-    "",
-  );
+  const root = (
+    env[GUACD_DRIVE_PATH_ENV]?.trim() || DEFAULT_DRIVE_ROOT
+  ).replace(/\/+$/, "");
   return {
     ...guacConfig,
     "drive-path": `${root}/${userId}`,
