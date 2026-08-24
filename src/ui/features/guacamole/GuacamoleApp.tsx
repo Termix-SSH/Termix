@@ -21,7 +21,7 @@ import {
   isElectron,
 } from "@/main-axios.ts";
 import { readConfiguredDimension } from "@/features/guacamole/guacamole-display-size.ts";
-import { parseGuacamoleConfig } from "@/api/guacamole-api";
+import { getGuacamoleToken, parseGuacamoleConfig } from "@/api/guacamole-api";
 import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
@@ -52,7 +52,14 @@ interface GuacamoleAppProps {
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
   isVisible?: boolean;
+  /** A quick-connect host: never saved, so the token is minted from its fields. */
+  quickConnectHost?: GuacamoleQuickHost;
 }
+
+/** What GuacamoleApp needs from a host that has no database row. */
+export type GuacamoleQuickHost = GuacamoleAppInnerProps["hostConfig"] & {
+  name?: string;
+};
 
 export interface GuacamoleAppHandle {
   disconnect: () => void;
@@ -62,14 +69,31 @@ export interface GuacamoleAppHandle {
 }
 
 const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
-  function GuacamoleApp({ hostId, tabId, protocol, isVisible = true }, ref) {
+  function GuacamoleApp(
+    { hostId, tabId, protocol, isVisible = true, quickConnectHost },
+    ref,
+  ) {
     const { t } = useTranslation();
     const defaults = useConnectionDefaults();
-    const [hostConfig, setHostConfig] = useState<SSHHost | null>(null);
+    const [hostConfig, setHostConfig] = useState<GuacamoleQuickHost | null>(
+      null,
+    );
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
       if (!defaults.ready) return;
+      if (quickConnectHost) {
+        const connectionType = protocol ?? quickConnectHost.connectionType;
+        setHostConfig({
+          ...quickConnectHost,
+          guacamoleConfig: resolveConnectionDefaults(
+            connectionType === "rdp" ? defaults.rdp : {},
+            {},
+          ),
+        });
+        setLoading(false);
+        return;
+      }
       if (!hostId) {
         setLoading(false);
         return;
@@ -93,7 +117,7 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
         })
         .catch(() => setHostConfig(null))
         .finally(() => setLoading(false));
-    }, [hostId, protocol, defaults.ready, defaults.rdp]);
+    }, [hostId, protocol, defaults.ready, defaults.rdp, quickConnectHost]);
 
     if (loading) {
       return (
@@ -117,9 +141,9 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
     return (
       <ConnectionLogProvider>
         <GuacamoleAppInner
-          hostId={parseInt(hostId, 10)}
+          hostId={quickConnectHost ? 0 : parseInt(hostId, 10)}
           hostConfig={hostConfig}
-          hostName={hostConfig.name || hostConfig.ip || String(hostId)}
+          hostName={hostConfig.name || hostConfig.ip || String(hostId ?? "")}
           tabId={tabId}
           protocol={protocol}
           isVisible={isVisible}
@@ -134,7 +158,18 @@ interface GuacamoleAppInnerProps {
   hostId: number;
   hostConfig: Pick<
     SSHHost,
-    "connectionType" | "domain" | "guacamoleConfig" | "rdpAuthType" | "syncId"
+    | "connectionType"
+    | "domain"
+    | "guacamoleConfig"
+    | "rdpAuthType"
+    | "syncId"
+    | "ip"
+    | "rdpPort"
+    | "vncPort"
+    | "rdpUser"
+    | "rdpPassword"
+    | "vncUser"
+    | "vncPassword"
   >;
   hostName: string;
   tabId?: string;
@@ -253,16 +288,44 @@ const GuacamoleAppInner = React.forwardRef<
         type: resolvedProtocolForConnect.toUpperCase(),
       }),
     });
-    const result = await getGuacamoleTokenFromHost(
-      hostId,
-      protocol,
-      promptedCredentials ?? undefined,
-      hostConfig.syncId,
-    );
+    // hostId 0 is a quick-connect host: nothing to look up, mint the token
+    // straight from what the user typed. It cannot be shared or logged as
+    // host activity because there is no host row.
+    const result =
+      hostId === 0
+        ? await getGuacamoleToken({
+            protocol: resolvedProtocolForConnect,
+            hostname: hostConfig.ip,
+            port:
+              resolvedProtocolForConnect === "vnc"
+                ? hostConfig.vncPort
+                : hostConfig.rdpPort,
+            username:
+              resolvedProtocolForConnect === "vnc"
+                ? hostConfig.vncUser
+                : hostConfig.rdpUser,
+            password:
+              resolvedProtocolForConnect === "vnc"
+                ? hostConfig.vncPassword
+                : hostConfig.rdpPassword,
+            domain: hostConfig.domain,
+            ignoreCert: true,
+            guacamoleConfig: parseGuacamoleConfig(hostConfig.guacamoleConfig),
+          })
+        : await getGuacamoleTokenFromHost(
+            hostId,
+            protocol,
+            promptedCredentials ?? undefined,
+            hostConfig.syncId,
+          );
     if (result) {
       setToken(result.token);
       setGuacamoleConnectionId(result.guacamoleConnectionId ?? null);
-      logActivity(resolvedProtocolForConnect, hostId, hostName).catch(() => {});
+      if (hostId !== 0) {
+        logActivity(resolvedProtocolForConnect, hostId, hostName).catch(
+          () => {},
+        );
+      }
     }
   }, [
     hostId,
@@ -270,7 +333,7 @@ const GuacamoleAppInner = React.forwardRef<
     protocol,
     promptedCredentials,
     resolvedProtocolForConnect,
-    hostConfig.syncId,
+    hostConfig,
     addLog,
     t,
   ]);

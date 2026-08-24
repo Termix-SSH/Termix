@@ -40,6 +40,10 @@ import type {
 import type { GuacamoleAppHandle } from "@/features/guacamole/GuacamoleApp";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Tab, TabType, Host } from "@/types/ui-types";
+import {
+  isQuickConnectHost,
+  quickConnectGuacHost,
+} from "@/sidebar/quick-connect-host";
 import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 import {
@@ -586,6 +590,9 @@ export function renderTabContent(
           tabId={tab.id}
           protocol={tab.type as "rdp" | "vnc" | "telnet"}
           isVisible={isVisible}
+          quickConnectHost={
+            isQuickConnectHost(host) ? quickConnectGuacHost(host) : undefined
+          }
         />,
       );
 
