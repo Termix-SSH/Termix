@@ -1188,9 +1188,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const hostLabel = hostConfig.name || hostConfig.ip;
       let minutes: number | null = null;
       try {
-        const { getTerminalSessionSettings } = await import(
-          "@/api/settings-api"
-        );
+        const { getTerminalSessionSettings } =
+          await import("@/api/settings-api");
         minutes = (await getTerminalSessionSettings()).timeoutMinutes;
       } catch {
         /* the notice still makes sense without the number */
