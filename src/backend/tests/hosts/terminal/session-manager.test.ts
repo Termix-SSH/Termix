@@ -218,6 +218,42 @@ describe("TerminalSessionManager - multiplayer participants", () => {
     sessionManager.destroySession(id);
   });
 
+  it("setRoomShareControl makes only the controller read-write and never touches the owner", () => {
+    const id = createConnectedSession();
+    const ownerWs = makeFakeWs();
+    sessionManager.attachWs(id, "owner-1", ownerWs);
+    const aliceWs = makeFakeWs();
+    const bobWs = makeFakeWs();
+    const session = sessionManager.joinAsParticipant(id, aliceWs, {
+      userId: "alice",
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    })!;
+    sessionManager.joinAsParticipant(id, bobWs, {
+      userId: "bob",
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    });
+
+    sessionManager.setRoomShareControl(id, "stage-share", "alice");
+    expect(
+      sessionManager.getParticipantForWs(session, aliceWs)?.permissionLevel,
+    ).toBe("read-write");
+    expect(
+      sessionManager.getParticipantForWs(session, bobWs)?.permissionLevel,
+    ).toBe("read-only");
+    expect(
+      sessionManager.getParticipantForWs(session, ownerWs)?.permissionLevel,
+    ).toBe("read-write");
+
+    sessionManager.setRoomShareControl(id, "stage-share", null);
+    expect(
+      sessionManager.getParticipantForWs(session, aliceWs)?.permissionLevel,
+    ).toBe("read-only");
+
+    sessionManager.destroySession(id);
+  });
+
   it("joinAsParticipant returns null for a nonexistent or unconnected session", () => {
     expect(
       sessionManager.joinAsParticipant("does-not-exist", makeFakeWs(), {

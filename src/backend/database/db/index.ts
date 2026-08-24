@@ -578,6 +578,37 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS collab_rooms (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        owner_user_id TEXT NOT NULL,
+        persistent INTEGER NOT NULL DEFAULT 0,
+        presenter_user_id TEXT,
+        stage_protocol TEXT,
+        stage_host_id INTEGER,
+        stage_share_id TEXT,
+        guest_link_token TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ended_at TEXT,
+        FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (presenter_user_id) REFERENCES users (id) ON DELETE SET NULL,
+        FOREIGN KEY (stage_host_id) REFERENCES ssh_data (id) ON DELETE SET NULL,
+        FOREIGN KEY (stage_share_id) REFERENCES session_shares (id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS collab_room_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        room_role TEXT NOT NULL DEFAULT 'member',
+        added_by TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (room_id, user_id),
+        FOREIGN KEY (room_id) REFERENCES collab_rooms (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (added_by) REFERENCES users (id) ON DELETE SET NULL
+    );
+
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -2040,6 +2071,10 @@ const migrateSchema = () => {
   }
 
   addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
+  addColumnIfNotExists("collab_rooms", "guest_link_token", "TEXT");
+  sqlite.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_collab_rooms_guest_token ON collab_rooms (guest_link_token)",
+  );
 
   try {
     const usersTableInfo = sqlite.prepare("PRAGMA table_info(users)").all() as Array<{

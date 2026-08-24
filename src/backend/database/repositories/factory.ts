@@ -38,6 +38,7 @@ import { RoleRepository } from "./role-repository.js";
 import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { SessionShareRepository } from "./session-share-repository.js";
+import { CollabRoomRepository } from "./collab-room-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
@@ -392,6 +393,13 @@ export function createCurrentSessionRepository(): SessionRepository {
   return new SessionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("session_repository_write"),
+  );
+}
+
+export function createCurrentCollabRoomRepository(): CollabRoomRepository {
+  return new CollabRoomRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("collab_room_repository_write"),
   );
 }
 

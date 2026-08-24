@@ -48,6 +48,7 @@ describe("RAIL_ITEMS", () => {
       "credentials",
       "termix-id",
       "connections",
+      "collab",
       "quick-connect",
       "serial",
       "ssh-tools",

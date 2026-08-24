@@ -267,6 +267,7 @@ export type TabType =
   | "ssh-tools"
   | "automations"
   | "ai"
+  | "collab"
   | "split-screen";
 
 export type SerialConfig = {
@@ -294,6 +295,8 @@ export type Tab = {
   initialPath?: string;
   /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
   fleetId?: number;
+  /** Which collab room a collab tab is showing. */
+  collabRoomId?: string;
   serialConfig?: SerialConfig;
   /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
   splitConfig?: SplitTabConfig;
