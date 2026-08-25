@@ -54,6 +54,10 @@ export SSL_PORT=${SSL_PORT:-8443}
 export SSL_CERT_PATH=${SSL_CERT_PATH:-/app/data/ssl/termix.crt}
 export SSL_KEY_PATH=${SSL_KEY_PATH:-/app/data/ssl/termix.key}
 export TERMIX_SSL_TERMINATED_BY_NGINX=true
+# CSP frame-ancestors for the app document. 'self' blocks clickjacking of a
+# live terminal; widen it (e.g. "'self' https://dash.example.com") to embed
+# Termix in another dashboard.
+export FRAME_ANCESTORS=${FRAME_ANCESTORS:-\'self\'}
 
 echo "Configuring web UI to run on port: $PORT"
 
@@ -66,7 +70,7 @@ else
 fi
 
 mkdir -p /tmp/nginx
-envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /tmp/nginx/nginx.conf
+envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH} ${FRAME_ANCESTORS}' < $NGINX_CONF_SOURCE > /tmp/nginx/nginx.conf
 
 if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
     echo "HTTP and HTTPS use port $SSL_PORT; disabling the HTTP redirect listener"

@@ -6,6 +6,7 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createSecurityHeadersMiddleware } from "../../utils/security-headers.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
@@ -118,6 +119,7 @@ function assertResolvedHost(
 
 const app = express();
 
+app.use(createSecurityHeadersMiddleware());
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());

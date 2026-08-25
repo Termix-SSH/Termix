@@ -1,6 +1,25 @@
 import type { Request } from "express";
 import type { UserRecord } from "../repositories/user-repository.js";
 
+/**
+ * The auto-session endpoint hands out a full session for the local account
+ * without any credential, so it must only exist where that trade is actually
+ * intended: the Electron build, whose trust boundary is machine access.
+ * `ELECTRON_EMBEDDED` is set by electron/main.cjs when it spawns the embedded
+ * backend and by nothing else, so a server deployment never enables it.
+ *
+ * Without this gate the endpoint stays mounted on every server install and its
+ * only defense is the loopback heuristic below - which holds for the bundled
+ * nginx, but silently turns into an unauthenticated admin login as soon as the
+ * backend is fronted by some other loopback proxy that does not set
+ * `X-Real-IP`.
+ */
+export function isDesktopAutoSessionEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env.ELECTRON_EMBEDDED === "true";
+}
+
 export function isLoopbackRequest(req: Request): boolean {
   // Requests relayed by the bundled nginx always carry X-Real-IP, which
   // nginx overwrites with the actual client address -- so its presence

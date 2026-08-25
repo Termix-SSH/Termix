@@ -77,3 +77,38 @@ describe("isReadOnlyCommand", () => {
     expect(isReadOnlyCommand("   ").allowed).toBe(false);
   });
 });
+
+describe("cat path escapes", () => {
+  it("rejects traversal out of the allowed prefixes", () => {
+    expect(isReadOnlyCommand("cat /proc/../etc/shadow").allowed).toBe(false);
+    expect(isReadOnlyCommand("cat /sys/../root/.ssh/id_rsa").allowed).toBe(
+      false,
+    );
+  });
+
+  it("rejects the per-process entries that lead back out of /proc", () => {
+    // /proc/self/root is a symlink to /, so the prefix check alone is not a
+    // containment boundary.
+    expect(isReadOnlyCommand("cat /proc/self/root/etc/shadow").allowed).toBe(
+      false,
+    );
+    expect(isReadOnlyCommand("cat /proc/1/root/etc/shadow").allowed).toBe(
+      false,
+    );
+    expect(isReadOnlyCommand("cat /proc/self/environ").allowed).toBe(false);
+    expect(isReadOnlyCommand("cat /proc/self/cmdline").allowed).toBe(false);
+    expect(
+      isReadOnlyCommand("cat /proc/self/task/1/root/etc/shadow").allowed,
+    ).toBe(false);
+  });
+
+  it("still allows the diagnostics the allowlist exists for", () => {
+    expect(isReadOnlyCommand("cat /proc/meminfo").allowed).toBe(true);
+    expect(isReadOnlyCommand("cat /proc/self/status").allowed).toBe(true);
+    expect(isReadOnlyCommand("cat /proc/1/status").allowed).toBe(true);
+    expect(isReadOnlyCommand("cat /etc/os-release").allowed).toBe(true);
+    expect(
+      isReadOnlyCommand("cat /sys/class/thermal/thermal_zone0/temp").allowed,
+    ).toBe(true);
+  });
+});

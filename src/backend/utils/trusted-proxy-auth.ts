@@ -126,6 +126,44 @@ export function resolveTrustedProxyRoles(
   return [...resolved];
 }
 
+/**
+ * Header the bundled nginx uses to hand the backend the address that actually
+ * opened the connection *to nginx*. nginx overwrites it on every proxied
+ * request, so a client cannot forge it.
+ */
+export const PROXY_PEER_HEADER = "x-termix-proxy-peer";
+
+/**
+ * The address to match against TRUSTED_PROXY_AUTH_TRUSTED_PROXIES.
+ *
+ * `req.socket.remoteAddress` is the wrong answer in every containerized
+ * deployment: the bundled nginx proxies to 127.0.0.1, so the backend sees
+ * loopback for *every* request no matter where it came from. An operator
+ * making the feature work at all therefore had to allowlist 127.0.0.1 - which
+ * turned the allowlist into "everyone", and let anyone reaching nginx log in
+ * as any user by sending the username header themselves.
+ *
+ * nginx fills PROXY_PEER_HEADER with `$realip_remote_addr` (the peer *before*
+ * real_ip rewriting, i.e. the reverse proxy in front of it), and it is only
+ * believed when the request really did arrive over loopback - a remote caller
+ * cannot both set the header and be loopback.
+ */
+export function resolveProxyAuthSourceAddress(req: {
+  socket?: { remoteAddress?: string };
+  headers: Record<string, string | string[] | undefined>;
+}): string | undefined {
+  const peer = req.socket?.remoteAddress;
+  const normalizedPeer = peer ? normalizeAddress(peer) : "";
+  const isLoopbackPeer =
+    normalizedPeer === "127.0.0.1" || normalizedPeer === "::1";
+  if (!isLoopbackPeer) return peer;
+
+  const forwardedPeer = req.headers[PROXY_PEER_HEADER];
+  const value = Array.isArray(forwardedPeer) ? forwardedPeer[0] : forwardedPeer;
+  const candidate = value?.split(",")[0].trim();
+  return candidate || peer;
+}
+
 export function isTrustedProxyAuthEnabled(): boolean {
   return enabled(process.env.TRUSTED_PROXY_AUTH_ENABLED);
 }

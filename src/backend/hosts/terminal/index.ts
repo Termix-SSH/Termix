@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { createWebSocketOriginVerifier } from "../../utils/ws-origin.js";
 import {
   parseWsMessage,
   asObject,
@@ -129,6 +130,7 @@ const userConnections = new Map<string, Set<WebSocket>>();
 
 const wss = new WebSocketServer({
   port: 30002,
+  verifyClient: createWebSocketOriginVerifier(),
 });
 
 wss.on("error", (error) => {

@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../utils/error-message.js";
+import { createWebSocketOriginVerifier } from "../utils/ws-origin.js";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { SerialPort } from "serialport";
 import { AuthManager } from "../utils/auth-manager.js";
@@ -16,7 +17,10 @@ interface SerialConnectData {
 
 const authManager = AuthManager.getInstance();
 
-const wss = new WebSocketServer({ port: 30011 });
+const wss = new WebSocketServer({
+  port: 30011,
+  verifyClient: createWebSocketOriginVerifier(),
+});
 
 wss.on("error", (error) => {
   sshLogger.error("Serial WebSocket server error", error, {

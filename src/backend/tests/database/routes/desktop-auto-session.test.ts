@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Request } from "express";
 import type { UserRecord } from "../../../database/repositories/user-repository.js";
 import {
+  isDesktopAutoSessionEnabled,
   isLoopbackRequest,
   extractBearerOrCookieToken,
   resolveDesktopAutoSessionUser,
@@ -159,5 +160,23 @@ describe("resolveDesktopAutoSessionUser", () => {
       makeUser({ id: "user-3", registeredAt: "2026-02-01T00:00:00.000Z" }),
     ]);
     expect(result).toBe(earliest);
+  });
+});
+
+describe("isDesktopAutoSessionEnabled", () => {
+  it("is off unless the Electron main process spawned this backend", () => {
+    // A server deployment must never expose a credential-free login, whatever
+    // the loopback heuristic says about the request.
+    expect(isDesktopAutoSessionEnabled({})).toBe(false);
+    expect(isDesktopAutoSessionEnabled({ ELECTRON_EMBEDDED: "false" })).toBe(
+      false,
+    );
+    expect(isDesktopAutoSessionEnabled({ ELECTRON_EMBEDDED: "1" })).toBe(false);
+  });
+
+  it("is on for the embedded desktop backend", () => {
+    expect(isDesktopAutoSessionEnabled({ ELECTRON_EMBEDDED: "true" })).toBe(
+      true,
+    );
   });
 });

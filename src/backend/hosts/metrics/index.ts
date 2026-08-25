@@ -2,6 +2,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import net from "net";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createSecurityHeadersMiddleware } from "../../utils/security-headers.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
@@ -1003,6 +1004,7 @@ function validateHostId(
 }
 
 const app = express();
+app.use(createSecurityHeadersMiddleware());
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 app.use(cookieParser());

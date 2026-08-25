@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createSecurityHeadersMiddleware } from "../../utils/security-headers.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import { logger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -21,6 +22,7 @@ const sshLogger = logger;
 
 const app = express();
 
+app.use(createSecurityHeadersMiddleware());
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 
