@@ -354,59 +354,6 @@ networks:
     driver: bridge
 ```
 
-### Behind a Reverse Proxy
-
-Termix serves its UI through a bundled nginx that proxies to the Node backend on
-loopback. Putting your own proxy (Traefik, Caddy, nginx, HAProxy) in front of it
-works out of the box; these variables exist for the cases where it doesn't.
-
-| Variable               | Default    | What it does                                                                                                                                                                                                                                                                        |
-| ---------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRUSTED_PROXIES`      | `loopback` | Which hops may set `X-Forwarded-For`, and therefore what Termix records as the client address in audit logs and login lockouts. Accepts IPs, CIDRs, the `loopback` / `linklocal` / `uniquelocal` presets (comma-separated), or `true` to trust every hop and `false` to trust none. |
-| `FRAME_ANCESTORS`      | `'self'`   | Who may embed the Termix UI in an iframe, as a CSP `frame-ancestors` value.                                                                                                                                                                                                         |
-| `CORS_ALLOWED_ORIGINS` | _(unset)_  | Extra browser origins allowed to call the API cross-origin, comma-separated. The origin Termix is served on is always allowed.                                                                                                                                                      |
-
-**You normally do not need to set `TRUSTED_PROXIES`.** The default trusts only
-loopback, which is what the bundled nginx connects from, and nginx appends the
-address it saw — so the real client address still reaches Termix through one
-extra proxy such as Traefik, and a client that sends its own `X-Forwarded-For`
-cannot displace it. Set it only if you run the Node backend directly, without
-the bundled nginx, in which case name the subnet your proxy connects from:
-
-```yaml
-TRUSTED_PROXIES: "loopback,172.16.0.0/12"
-```
-
-Every hop you list here is a hop that is allowed to claim to be someone else, so
-keep the list as narrow as your topology allows.
-
-One thing the default cannot cover: nginx believes forwarded headers from any
-private address, so a client on your LAN that reaches the container port
-directly — bypassing your proxy — can still choose the address it appears as. If
-that matters, don't publish the port to your LAN at all and let only your proxy
-reach it, with `expose: ["8080"]` instead of `ports:`.
-
-### Configuration Files
-
-Environment variables can also come from a `.env` file, which the backend reads
-from two places, both before anything uses them:
-
-- `.env` in the working directory — `/opt/termix/.env` on the Proxmox LXC install
-- `$DATA_DIR/.env` — `/app/data/.env` in Docker, which lives on the data volume
-  and therefore survives recreating the container
-
-Precedence runs highest to lowest:
-
-1. `$DATA_DIR/.env`
-2. the real environment — a Compose `environment:` block, a systemd
-   `EnvironmentFile=`, `docker run -e`
-3. `.env` in the working directory
-
-Note the order of the first two: `$DATA_DIR/.env` is applied on top of the
-process environment rather than under it, so a value left over on the data
-volume overrides the one in your Compose file. If a setting refuses to take
-effect, check that file first.
-
 ### Command Line Interface
 
 Termix also has a CLI, so you can manage your servers from a terminal and use Termix in your own scripts.
