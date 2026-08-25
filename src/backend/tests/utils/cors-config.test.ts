@@ -63,8 +63,16 @@ describe("isAllowedOrigin", () => {
     );
   });
 
-  it("still supports an explicit wildcard opt-in", () => {
+  it("refuses a wildcard, which cannot be combined with credentials", () => {
+    // This middleware sets credentials: true, and reflecting an arbitrary
+    // origin alongside credentials hands every website the visitor's session.
     process.env.CORS_ALLOWED_ORIGINS = "*";
-    expect(isAllowedOrigin("https://evil.example", behindProxy)).toBe(true);
+    expect(isAllowedOrigin("https://evil.example", behindProxy)).toBe(false);
+  });
+
+  it("honours the named origins in a list that also contains a wildcard", () => {
+    process.env.CORS_ALLOWED_ORIGINS = "*,https://dash.example.com";
+    expect(isAllowedOrigin("https://dash.example.com", behindProxy)).toBe(true);
+    expect(isAllowedOrigin("https://evil.example", behindProxy)).toBe(false);
   });
 });

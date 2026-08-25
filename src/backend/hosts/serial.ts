@@ -15,6 +15,34 @@ interface SerialConnectData {
   parity?: "none" | "even" | "odd";
 }
 
+/**
+ * Device paths a serial session may open.
+ *
+ * `path` arrives over the WebSocket from any authenticated user and went
+ * straight into SerialPort, which will happily open any file the backend can
+ * reach - so the serial feature doubled as read/write access to arbitrary
+ * device nodes on the Termix host itself, not on a managed host.
+ *
+ * The allowlist covers the places real serial devices live on Linux and
+ * Windows. `/dev/tty` on its own is excluded: it is the controlling terminal
+ * of the backend process, not a serial line.
+ */
+const SERIAL_PATH_PATTERNS = [
+  /^\/dev\/tty(?:S|USB|ACM|AMA|XRUSB)\d+$/,
+  /^\/dev\/serial\/[\w./-]+$/,
+  /^\/dev\/rfcomm\d+$/,
+  /^COM\d+$/i,
+];
+
+export function isAllowedSerialPath(candidate: unknown): candidate is string {
+  if (typeof candidate !== "string") return false;
+  const path = candidate.trim();
+  if (!path || path.length > 255) return false;
+  // Traversal and separator tricks never appear in a real device path.
+  if (/[\0\r\n]/.test(path) || path.includes("..")) return false;
+  return SERIAL_PATH_PATTERNS.some((pattern) => pattern.test(path));
+}
+
 const authManager = AuthManager.getInstance();
 
 const wss = new WebSocketServer({
@@ -125,6 +153,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const cfg = data as SerialConnectData;
           if (!cfg?.path || !cfg?.baudRate) {
             send({ type: "error", data: "Missing port path or baud rate" });
+            break;
+          }
+
+          if (!isAllowedSerialPath(cfg.path)) {
+            sshLogger.warn("Rejected serial connect to a non-device path", {
+              operation: "serial_path_rejected",
+              path: String(cfg.path).slice(0, 128),
+              userId,
+            });
+            send({ type: "error", data: "Not a serial device path" });
             break;
           }
 

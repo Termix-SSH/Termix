@@ -88,7 +88,7 @@ export function registerUserApiKeyRoutes(
 
       const rawToken = "tmx_" + crypto.randomBytes(32).toString("hex");
       const tokenPrefix = rawToken.substring(0, 12);
-      const tokenHash = await bcrypt.hash(rawToken, 10);
+      const tokenHash = await bcrypt.hash(rawToken, 12);
       const keyId = nanoid();
       const now = new Date().toISOString();
 

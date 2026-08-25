@@ -52,7 +52,7 @@ export async function verifyTotpReauth(
         secret: totpSecret,
         encoding: "base32",
         token: credential,
-        window: 2,
+        window: 1,
       });
       if (totpMatch) {
         return true;
@@ -238,7 +238,7 @@ export function registerUserTotpRoutes(
         secret: totpSecret,
         encoding: "base32",
         token: totp_code,
-        window: 2,
+        window: 1,
       });
 
       if (!verified) {
@@ -585,7 +585,7 @@ export function registerUserTotpRoutes(
         secret: totpSecret,
         encoding: "base32",
         token: totp_code,
-        window: 2,
+        window: 1,
       });
 
       if (!verified) {

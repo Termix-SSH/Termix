@@ -2,10 +2,13 @@ import type { Router } from "express";
 import type { LDAPProviderConfig } from "../../../types/index.js";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
+import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
+import { getClientIp } from "../../utils/request-origin.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
 import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
+import { readFileSync } from "node:fs";
 import {
   createCurrentRoleRepository,
   createCurrentSettingsRepository,
@@ -22,6 +25,40 @@ function ldapEscapeFilter(value: string): string {
   );
 }
 
+/**
+ * TLS options for the LDAPS link.
+ *
+ * This connection carries the bind DN and its password. With
+ * `rejectUnauthorized: false` any certificate was accepted, so anyone able to
+ * intercept the link could present their own and read those credentials -
+ * which is the entire threat LDAPS exists to prevent.
+ *
+ * Verification is on by default. LDAP_TLS_REJECT_UNAUTHORIZED=false restores
+ * the old behavior for a directory with a self-signed certificate that cannot
+ * be fixed; LDAP_TLS_CA_FILE is the better answer for that case.
+ */
+export function buildLdapTlsOptions(
+  env: NodeJS.ProcessEnv = process.env,
+  readCa: (path: string) => Buffer = (path) => readFileSync(path),
+): { rejectUnauthorized: boolean; ca?: Buffer } {
+  const rejectUnauthorized =
+    env.LDAP_TLS_REJECT_UNAUTHORIZED?.trim().toLowerCase() !== "false";
+
+  const caFile = env.LDAP_TLS_CA_FILE?.trim();
+  if (!caFile) return { rejectUnauthorized };
+
+  try {
+    return { rejectUnauthorized, ca: readCa(caFile) };
+  } catch (error) {
+    authLogger.error(
+      `Could not read LDAP_TLS_CA_FILE at ${caFile}; falling back to the system trust store`,
+      error,
+      { operation: "ldap_ca_file_unreadable" },
+    );
+    return { rejectUnauthorized };
+  }
+}
+
 function createLDAPClient(
   host: string,
   port: number,
@@ -30,7 +67,7 @@ function createLDAPClient(
   const url = `${useTLS ? "ldaps" : "ldap"}://${host}:${port}`;
   return ldap.createClient({
     url,
-    tlsOptions: useTLS ? { rejectUnauthorized: false } : undefined,
+    tlsOptions: useTLS ? buildLdapTlsOptions() : undefined,
   });
 }
 
@@ -122,6 +159,25 @@ export function registerLDAPAuthRoutes(router: Router): void {
         .json({ error: "providerId, username, and password are required" });
     }
 
+    // The password login path has been rate-limited all along; this one was
+    // not, so a directory account could be brute-forced through LDAP while the
+    // same account was locked out at the local form.
+    const clientIp = getClientIp(req);
+    const rateLimitKey = `ldap:${providerId}:${username}`;
+    const lockStatus = loginRateLimiter.isLocked(clientIp, rateLimitKey);
+    if (lockStatus.locked) {
+      authLogger.warn("LDAP login attempt blocked due to rate limiting", {
+        operation: "ldap_login_blocked",
+        username,
+        ip: clientIp,
+        remainingTime: lockStatus.remainingTime,
+      });
+      return res.status(429).json({
+        error: "Too many login attempts. Please try again later.",
+        remainingTime: lockStatus.remainingTime,
+      });
+    }
+
     try {
       const provider =
         await createCurrentSsoProviderRepository().findById(providerId);
@@ -178,6 +234,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
           operation: "ldap_login",
           username,
         });
+        loginRateLimiter.recordFailedAttempt(clientIp, rateLimitKey);
         return res.status(401).json({ error: "Invalid username or password" });
       }
 
@@ -228,6 +285,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
           operation: "ldap_login",
           ldapIdentifier,
         });
+        loginRateLimiter.recordFailedAttempt(clientIp, rateLimitKey);
         return res.status(401).json({ error: "Invalid username or password" });
       } finally {
         ldapUnbind(userClient);
@@ -376,6 +434,8 @@ export function registerLDAPAuthRoutes(router: Router): void {
       } catch {
         /* */
       }
+
+      loginRateLimiter.resetAttempts(clientIp, rateLimitKey);
 
       const token = await authManager.generateJWTToken(userRecord.id, {
         deviceType: deviceInfo.type,

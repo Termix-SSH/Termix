@@ -1,6 +1,7 @@
 import cors from "cors";
 import type { Request, Response, NextFunction } from "express";
 import { getRequestOrigin } from "./request-origin.js";
+import { apiLogger as logger } from "./logger.js";
 
 const DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
 const ELECTRON_FILE_ORIGIN = "file://";
@@ -33,7 +34,19 @@ export function isAllowedOrigin(origin: string, req: Request): boolean {
   if (LOOPBACK_ORIGIN.test(origin)) return true;
 
   const configured = getAllowedOrigins();
-  if (configured.includes("*") || configured.includes(origin)) return true;
+
+  // "*" is refused rather than honoured. This middleware sets
+  // `credentials: true`, and reflecting an arbitrary origin alongside
+  // credentials hands every website the visitor's session - the exact thing
+  // the same-origin policy exists to prevent, which is why the fetch spec
+  // forbids the combination outright. Naming the origins is the fix.
+  if (configured.includes("*")) {
+    logger.error(
+      'CORS_ALLOWED_ORIGINS contains "*", which cannot be combined with credentials. List the origins explicitly instead, e.g. CORS_ALLOWED_ORIGINS="https://app.example.com". The wildcard is ignored.',
+      { operation: "cors_wildcard_refused" },
+    );
+  }
+  if (configured.includes(origin)) return true;
 
   return origin === getRequestOrigin(req);
 }
