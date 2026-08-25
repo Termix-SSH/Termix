@@ -84,7 +84,15 @@ ENV DATA_DIR=/app/data \
     NODE_ENV=production \
     POSTHOG_API_KEY=phc_xM8UznirsFxUkGE68gH4jzeqevf4kh76wGw7Ci7hH2dd
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
+# apt-get upgrade, not just install: glibc, perl-base and friends ship in the
+# base image and are never named below, so without it they keep whatever
+# version that image layer froze - months of Debian security fixes behind,
+# and flagged by every container scanner. Essential packages cannot be
+# removed, so upgrading is the only lever. The cost is a less reproducible
+# build; shipping known-vulnerable packages costs more.
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx && \
