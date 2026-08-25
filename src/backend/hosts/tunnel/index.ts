@@ -1,4 +1,5 @@
 import express from "express";
+import { getTrustProxySetting } from "../../utils/trusted-proxies.js";
 import { createWebSocketOriginVerifier } from "../../utils/ws-origin.js";
 import { createServer } from "http";
 
@@ -28,6 +29,10 @@ import { initializeAutoStartTunnels } from "./manager.js";
 const authManager = AuthManager.getInstance();
 
 const app = express();
+// Same trust boundary as the main app: these services sit behind the same
+// nginx, and req.ip feeds audit records. Without it Express reports the
+// loopback proxy for every request instead of the client.
+app.set("trust proxy", getTrustProxySetting());
 app.use(createSecurityHeadersMiddleware());
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));

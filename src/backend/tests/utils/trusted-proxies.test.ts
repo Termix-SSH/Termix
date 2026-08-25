@@ -106,3 +106,32 @@ describe("resolveClientIp", () => {
     expect(resolveClientIp(undefined, undefined, "loopback")).toBe("unknown");
   });
 });
+
+describe("getTrustProxySetting with unusable input", () => {
+  it("falls back to the restrictive default instead of letting Express throw", () => {
+    // Express compiles `trust proxy` at set time and throws on anything
+    // proxy-addr cannot parse, which would crash-loop the backend at boot.
+    expect(getTrustProxySetting({ TRUSTED_PROXIES: "garbage" })).toBe(
+      "loopback",
+    );
+    expect(
+      getTrustProxySetting({ TRUSTED_PROXIES: "loopback,not-an-ip" }),
+    ).toBe("loopback");
+    expect(getTrustProxySetting({ TRUSTED_PROXIES: "172.16.0.0/99" })).toBe(
+      "loopback",
+    );
+  });
+
+  it("still accepts everything proxy-addr accepts", () => {
+    for (const value of [
+      "loopback",
+      "uniquelocal",
+      "loopback, 172.16.0.0/12",
+      "10.0.0.1",
+      "::1",
+      "fc00::/7",
+    ]) {
+      expect(getTrustProxySetting({ TRUSTED_PROXIES: value })).toBe(value);
+    }
+  });
+});

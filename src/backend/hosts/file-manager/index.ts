@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { getTrustProxySetting } from "../../utils/trusted-proxies.js";
 import express from "express";
 import {
   logAudit,
@@ -118,6 +119,10 @@ function assertResolvedHost(
 }
 
 const app = express();
+// Same trust boundary as the main app: these services sit behind the same
+// nginx, and req.ip feeds audit records. Without it Express reports the
+// loopback proxy for every request instead of the client.
+app.set("trust proxy", getTrustProxySetting());
 
 app.use(createSecurityHeadersMiddleware());
 app.use(createCompressionMiddleware());

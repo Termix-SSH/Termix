@@ -1,5 +1,6 @@
 import { BlockList, isIP } from "node:net";
 import type { IncomingMessage } from "node:http";
+import { systemLogger } from "./logger.js";
 
 /**
  * Reverse-proxy hops whose `X-Forwarded-For` entries may be believed.
@@ -41,6 +42,30 @@ export const DEFAULT_TRUSTED_PROXIES = "loopback";
 
 export type TrustProxySetting = string | boolean;
 
+/** Entries Express's proxy-addr accepts. Anything else makes `app.set` throw. */
+function invalidEntries(setting: string): string[] {
+  const invalid: string[] = [];
+  for (const rawEntry of setting.split(",")) {
+    const entry = rawEntry.trim();
+    if (!entry) continue;
+    if (PRESETS[entry.toLowerCase()]) continue;
+
+    const [rawAddress, rawPrefix] = entry.split("/");
+    const family = isIP(normalizeAddress(rawAddress));
+    if (!family) {
+      invalid.push(entry);
+      continue;
+    }
+    if (rawPrefix === undefined) continue;
+    const prefix = Number(rawPrefix);
+    const max = family === 4 ? 32 : 128;
+    if (!Number.isInteger(prefix) || prefix < 0 || prefix > max) {
+      invalid.push(entry);
+    }
+  }
+  return invalid;
+}
+
 export function getTrustProxySetting(
   env: NodeJS.ProcessEnv = process.env,
 ): TrustProxySetting {
@@ -50,6 +75,20 @@ export function getTrustProxySetting(
   const normalized = raw.toLowerCase();
   if (normalized === "true" || normalized === "all") return true;
   if (normalized === "false" || normalized === "none") return false;
+
+  // Express compiles this value the moment it is set, and throws on anything
+  // proxy-addr cannot parse - at module load, so a single typo would put the
+  // backend into a crash loop behind an opaque "invalid IP address". Fall back
+  // to the default instead, which is the restrictive value, and say why.
+  const invalid = invalidEntries(raw);
+  if (invalid.length > 0) {
+    systemLogger.error(
+      `Ignoring TRUSTED_PROXIES: ${invalid.join(", ")} is not an IP, CIDR or one of ${Object.keys(PRESETS).join("/")}. Falling back to "${DEFAULT_TRUSTED_PROXIES}".`,
+      { operation: "trusted_proxies_invalid", invalid },
+    );
+    return DEFAULT_TRUSTED_PROXIES;
+  }
+
   return raw;
 }
 

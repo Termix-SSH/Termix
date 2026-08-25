@@ -27,7 +27,18 @@ export function createWebSocketOriginVerifier() {
     info: { req: IncomingMessage },
     done: (result: boolean, code?: number, message?: string) => void,
   ): void => {
-    if (isAllowedWebSocketOrigin(info.req)) return done(true);
+    // ws calls this synchronously from the upgrade handler, where a thrown
+    // error is an uncaught exception rather than a failed handshake - so a
+    // malformed header on one connection would take the whole process down.
+    // Refuse on error: a rejected handshake is recoverable, a crash is not.
+    let allowed: boolean;
+    try {
+      allowed = isAllowedWebSocketOrigin(info.req);
+    } catch {
+      allowed = false;
+    }
+
+    if (allowed) return done(true);
     done(false, 403, "Forbidden origin");
   };
 }
