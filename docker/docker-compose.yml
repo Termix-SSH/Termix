@@ -12,8 +12,21 @@ services:
       GUACD_HOST: "guacd"
       GUACD_TUNNEL_HOST: "termix"
       GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      # Which hops may set X-Forwarded-For, and therefore what Termix believes
+      # the client address is in audit records and login lockouts. The default
+      # ("loopback") already yields the real client address behind one extra
+      # reverse proxy such as Traefik or Caddy. Only widen it if you run a
+      # proxy chain whose own address must be skipped as well; every hop you
+      # trust here is a hop that can claim to be someone else.
+      # TRUSTED_PROXIES: "loopback,172.16.0.0/12"
+      # Who may put the Termix UI in an iframe. Defaults to 'self'; widen it to
+      # embed Termix in a dashboard.
+      # FRAME_ANCESTORS: "'self' https://dash.example.com"
       # Trusted reverse-proxy authentication is disabled by default. When
       # enabled, do not expose this container directly to untrusted clients.
+      # TRUSTED_PROXY_AUTH_TRUSTED_PROXIES lists the proxies that are allowed
+      # to assert a username - that is the proxy in front of Termix (e.g.
+      # Traefik on the Docker network), not the container's own loopback.
       # TRUSTED_PROXY_AUTH_ENABLED: "true"
       # TRUSTED_PROXY_AUTH_TRUSTED_PROXIES: "172.16.0.0/12"
       # TRUSTED_PROXY_AUTH_ROLE_MAP: '{"operators":["user"]}'
