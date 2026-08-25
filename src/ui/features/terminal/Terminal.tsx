@@ -14,6 +14,10 @@ import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
+import {
+  resolveTerminalContextMenuAction,
+  selectedTextToCopy,
+} from "@/features/terminal/terminal-clipboard-actions";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
@@ -1106,6 +1110,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     function getUseRightClickCopyPaste() {
       return getCookie("rightClickCopyPaste") !== "false";
+    }
+
+    function getCopyOnSelect() {
+      return getCookie("copyOnSelect") === "true";
     }
 
     function attemptReconnection() {
@@ -2597,10 +2605,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        if (getUseRightClickCopyPaste()) {
+        const action = resolveTerminalContextMenuAction({
+          rightClickCopyPaste: getUseRightClickCopyPaste(),
+          copyOnSelect: getCopyOnSelect(),
+          hasSelection: terminal.hasSelection(),
+        });
+        if (action !== "native") {
           e.preventDefault();
           e.stopPropagation();
-          if (terminal.hasSelection()) {
+          if (action === "copy") {
             const text = terminal.getSelection();
             writeTextToClipboard(text).then(() => terminal.clearSelection());
           } else {
@@ -2612,6 +2625,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
       };
       element?.addEventListener("contextmenu", handleContextMenu);
+
+      const handleSelectionMouseUp = (e: MouseEvent) => {
+        const text = selectedTextToCopy({
+          copyOnSelect: getCopyOnSelect(),
+          button: e.button,
+          selection: terminal.getSelection(),
+        });
+        if (text) void writeTextToClipboard(text);
+      };
+      element?.addEventListener("mouseup", handleSelectionMouseUp);
+
+      const handleMiddleClick = (e: MouseEvent) => {
+        if (
+          e.button !== 1 ||
+          !getCopyOnSelect() ||
+          !getUseRightClickCopyPaste()
+        ) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        readTextFromClipboard().then((text) => {
+          if (text) terminal.paste(text);
+        });
+      };
+      element?.addEventListener("auxclick", handleMiddleClick);
 
       const handlePaste = (e: ClipboardEvent) => {
         const text = e.clipboardData?.getData("text");
@@ -2698,6 +2737,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         resizeObserver.disconnect();
         clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
+        element?.removeEventListener("mouseup", handleSelectionMouseUp);
+        element?.removeEventListener("auxclick", handleMiddleClick);
         element?.removeEventListener("paste", handlePaste);
         element?.removeEventListener("mousedown", handleTmuxDragStart);
         element?.removeEventListener("mousemove", handleTmuxDragMove);

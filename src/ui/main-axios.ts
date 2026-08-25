@@ -291,7 +291,7 @@ if (isElectron()) {
       const electronAPI = (window as ElectronWindow).electronAPI;
 
       if (electronAPI?.getSetting) {
-        const settingsToLoad = ["rightClickCopyPaste"];
+        const settingsToLoad = ["rightClickCopyPaste", "copyOnSelect"];
         for (const key of settingsToLoad) {
           const value = await electronAPI.getSetting(key);
           if (value !== null && value !== undefined) {
