@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRdpSettings,
+  resolveRdpAuthTypeForConnect,
   resolveRdpDomain,
 } from "../../../hosts/guacamole/rdp-settings.js";
 
@@ -50,5 +51,34 @@ describe("buildRdpSettings", () => {
   it("keeps the stored domain for saved authentication", () => {
     expect(resolveRdpDomain("direct", "EXAMPLE", "SAVED")).toBe("SAVED");
     expect(resolveRdpDomain("none", undefined, "SAVED")).toBe("SAVED");
+  });
+});
+
+describe("resolveRdpAuthTypeForConnect", () => {
+  it("keeps prompt-on-connect authentication for a secretless recipient", () => {
+    expect(
+      resolveRdpAuthTypeForConnect({
+        storedAuthType: "none",
+        sharedResolution: { source: "secretless" },
+      }),
+    ).toBe("none");
+  });
+
+  it("uses a recipient override instead of prompting", () => {
+    expect(
+      resolveRdpAuthTypeForConnect({
+        storedAuthType: "none",
+        sharedResolution: { source: "personal-override" },
+      }),
+    ).toBe("credential");
+  });
+
+  it("uses authentication shared by the owner", () => {
+    expect(
+      resolveRdpAuthTypeForConnect({
+        storedAuthType: "credential",
+        sharedResolution: { source: "owner-shared", authType: "credential" },
+      }),
+    ).toBe("credential");
   });
 });
