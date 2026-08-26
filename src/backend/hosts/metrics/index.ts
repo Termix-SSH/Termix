@@ -72,7 +72,6 @@ import {
 } from "./helpers.js";
 import {
   type HostStatus,
-  needsStatusPollAuthentication,
   statusAfterAuthentication,
   statusAfterReachabilityCheck,
 } from "./host-status.js";
@@ -579,30 +578,18 @@ class PollingManager {
         isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
       }
       const config = this.pollingConfigs.get(refreshedHost.id);
-      let authenticated: boolean | undefined;
-      if (
-        isOnline &&
-        supportsMetrics(refreshedHost) &&
-        needsStatusPollAuthentication(
-          !!config?.statsConfig.metricsEnabled,
-          this.activeViewers.has(refreshedHost.id),
-        )
-      ) {
-        try {
-          await withSshConnection(refreshedHost, async () => undefined);
-          authenticated = true;
-        } catch {
-          authenticated = false;
-        }
-      }
+      // Routine status polling is TCP-only. Hosts with metrics disabled
+      // never get a full SSH auth attempt here, since on RADIUS/Duo-backed
+      // devices that fires a live 2FA push every interval with no session
+      // to show for it; those hosts settle at "reachable" rather than
+      // "online", since metrics collection (the only path that
+      // authenticates and can promote a host to "online") never runs for
+      // them.
       const statusEntry: StatusEntry = {
-        status:
-          authenticated === undefined
-            ? statusAfterReachabilityCheck(
-                isOnline,
-                this.statusStore.get(refreshedHost.id)?.status,
-              )
-            : statusAfterAuthentication(authenticated),
+        status: statusAfterReachabilityCheck(
+          isOnline,
+          this.statusStore.get(refreshedHost.id)?.status,
+        ),
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
