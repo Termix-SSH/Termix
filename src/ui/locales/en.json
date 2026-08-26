@@ -3808,7 +3808,8 @@
         "stopRecording": "Stop Recording",
         "startRecording": "Start Recording",
         "settingsTitle": "Settings",
-        "enableRightClickCopyPaste": "Enable right-click copy/paste"
+        "enableRightClickCopyPaste": "Enable right-click copy/paste",
+        "copyOnSelect": "Copy selected text automatically"
       },
       "splitScreen": {
         "layoutTitle": "Layout",
