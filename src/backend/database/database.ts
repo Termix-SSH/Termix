@@ -45,6 +45,7 @@ import { databaseLogger, apiLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
+import { resolveWithinDir } from "../utils/safe-data-path.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
@@ -1725,14 +1726,36 @@ app.post("/database/restore", requireAdmin, async (req, res) => {
       return res.status(400).json({ error: "Backup path is required" });
     }
 
-    if (!DatabaseFileEncryption.isEncryptedDatabaseFile(backupPath)) {
+    // backupPath and targetPath come straight from the request body and become
+    // fs read/write targets. Backups only ever live under DATA_DIR, so confine
+    // both there: an admin session must not be turned into arbitrary file
+    // read/write on the host.
+    const dataDir = process.env.DATA_DIR || "./db/data";
+    const safeBackupPath = resolveWithinDir(dataDir, backupPath);
+    if (!safeBackupPath) {
+      return res
+        .status(400)
+        .json({ error: "Backup path must be inside the data directory" });
+    }
+    let safeTargetPath: string | undefined;
+    if (targetPath !== undefined) {
+      const resolvedTarget = resolveWithinDir(dataDir, targetPath);
+      if (!resolvedTarget) {
+        return res
+          .status(400)
+          .json({ error: "Target path must be inside the data directory" });
+      }
+      safeTargetPath = resolvedTarget;
+    }
+
+    if (!DatabaseFileEncryption.isEncryptedDatabaseFile(safeBackupPath)) {
       return res.status(400).json({ error: "Invalid encrypted backup file" });
     }
 
     const restoredPath =
       await DatabaseFileEncryption.restoreFromEncryptedBackup(
-        backupPath,
-        targetPath,
+        safeBackupPath,
+        safeTargetPath,
       );
 
     res.json({
