@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { createWebSocketOriginVerifier } from "../../utils/ws-origin.js";
 import { StringDecoder } from "string_decoder";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
@@ -37,6 +38,7 @@ const activeSessions = new Map<string, SSHSession>();
 const wss = new WebSocketServer({
   host: "0.0.0.0",
   port: 30009,
+  verifyClient: createWebSocketOriginVerifier(),
 });
 
 wss.on("error", (error) => {

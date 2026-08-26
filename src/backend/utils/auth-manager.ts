@@ -68,6 +68,14 @@ interface RequestWithHeaders extends Request {
   };
 }
 
+/**
+ * Pinned on both sides. jsonwebtoken v9 already refuses asymmetric algorithms
+ * for a string secret, so this is not closing an open hole - it states the
+ * contract so a later change of key material cannot silently reopen algorithm
+ * confusion.
+ */
+const JWT_ALGORITHM = "HS256" as const;
+
 const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
 
 // Data-plane routes an admin may hit on behalf of another user. Everything
@@ -295,6 +303,7 @@ class AuthManager {
       payload.sessionId = sessionId;
 
       const token = jwt.sign(payload, jwtSecret, {
+        algorithm: JWT_ALGORITHM,
         expiresIn,
       } as jwt.SignOptions);
 
@@ -328,7 +337,10 @@ class AuthManager {
       return token;
     }
 
-    return jwt.sign(payload, jwtSecret, { expiresIn } as jwt.SignOptions);
+    return jwt.sign(payload, jwtSecret, {
+      algorithm: JWT_ALGORITHM,
+      expiresIn,
+    } as jwt.SignOptions);
   }
 
   private parseExpiresIn(expiresIn: string): number {
@@ -356,7 +368,9 @@ class AuthManager {
     try {
       const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-      const payload = jwt.verify(token, jwtSecret) as JWTPayload;
+      const payload = jwt.verify(token, jwtSecret, {
+        algorithms: [JWT_ALGORITHM],
+      }) as JWTPayload;
 
       if (payload.sessionId) {
         try {
@@ -419,6 +433,7 @@ class AuthManager {
     const payload: JWTPayload = { userId, sessionId };
 
     const token = jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
+      algorithm: JWT_ALGORITHM,
       expiresIn: Math.ceil(maxAge / 1000),
     } as jwt.SignOptions);
 

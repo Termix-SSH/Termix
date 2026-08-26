@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import type { IncomingMessage } from "http";
+import { resolveRequestClientIp } from "./trusted-proxies.js";
 
 function firstHeaderValue(value: string | string[] | undefined): string {
   if (!value) return "";
@@ -65,17 +66,23 @@ export function normalizeBasePath(value: unknown): string {
 }
 
 /**
- * Real client IP behind a reverse proxy. `X-Forwarded-For`'s leftmost entry is
- * the original client; socket.remoteAddress is only the immediate peer, which
- * behind Traefik/Cloudflare is the proxy itself (often a loopback address).
+ * Real client IP behind a reverse proxy.
+ *
+ * `X-Forwarded-For`'s *leftmost* entry is whatever the first hop was told, and
+ * every hop only appends - so a client that sends `X-Forwarded-For: 1.2.3.4`
+ * puts that value in front of its own address and the leftmost entry becomes
+ * attacker-controlled. Rate-limit buckets and audit records keyed on it are
+ * therefore forgeable. `resolveClientIp` instead walks the chain from the
+ * socket peer leftwards and stops at the first hop that is not a configured
+ * trusted proxy (see `TRUSTED_PROXIES`).
  */
 export function getClientIp(req: Request | IncomingMessage): string {
-  const forwarded = firstHeaderValue(req.headers["x-forwarded-for"]);
-  if (forwarded) return forwarded;
-
+  // Express has already applied the same `trust proxy` setting to produce
+  // req.ip, so prefer it where it exists; the manual walk is for the
+  // WebSocket upgrade path, which never passes through Express.
   if ("ip" in req && req.ip) return req.ip;
 
-  return req.socket?.remoteAddress ?? "unknown";
+  return resolveRequestClientIp(req as IncomingMessage);
 }
 
 export function getRequestOrigin(req: Request | IncomingMessage): string {

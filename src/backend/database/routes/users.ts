@@ -20,6 +20,7 @@ import {
 } from "../../utils/oidc-desktop-callback.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
+  isDesktopAutoSessionEnabled,
   isLoopbackRequest,
   extractBearerOrCookieToken,
   resolveDesktopAutoSessionUser,
@@ -66,6 +67,7 @@ import type { UserRecord } from "../repositories/user-repository.js";
 import {
   getTrustedProxyAuthConfig,
   isTrustedProxyAddress,
+  resolveProxyAuthSourceAddress,
   isTrustedProxyAuthEnabled,
   resolveTrustedProxyRoles,
 } from "../../utils/trusted-proxy-auth.js";
@@ -1596,7 +1598,7 @@ router.post("/proxy-login", async (req, res) => {
   }
   if (!config.enabled) return res.json({ enabled: false });
 
-  const sourceAddress = req.socket.remoteAddress;
+  const sourceAddress = resolveProxyAuthSourceAddress(req);
   try {
     if (!isTrustedProxyAddress(sourceAddress, config.trustedProxies)) {
       authLogger.warn(
@@ -2239,6 +2241,10 @@ router.get("/setup-required", async (req, res) => {
  */
 router.post("/internal/auto-session", async (req, res) => {
   try {
+    if (!isDesktopAutoSessionEnabled()) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     if (!isLoopbackRequest(req)) {
       authLogger.warn(
         "Rejected non-loopback attempt to access auto-session endpoint",

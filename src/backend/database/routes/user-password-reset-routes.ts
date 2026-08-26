@@ -5,6 +5,28 @@ import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
+
+/**
+ * Reset codes and temporary tokens are single-use credentials that live in the
+ * settings table. Storing them verbatim meant anyone who could read that table
+ * - a backup, a support export, a SQL injection elsewhere - could complete a
+ * password reset for any account. Only the hash is kept now; the code itself
+ * still reaches the operator through the log line below, which is the only
+ * delivery channel this install has.
+ */
+function hashResetSecret(value: string): string {
+  return crypto.createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+/** Constant-time compare of two hex digests of equal length. */
+function secretMatches(candidate: string, storedHash: unknown): boolean {
+  if (typeof storedHash !== "string" || storedHash.length === 0) return false;
+  const expected = Buffer.from(storedHash, "utf8");
+  const actual = Buffer.from(hashResetSecret(candidate), "utf8");
+  if (expected.length !== actual.length) return false;
+  return crypto.timingSafeEqual(expected, actual);
+}
+
 import {
   createCurrentCredentialRepository,
   createCurrentDismissedAlertRepository,
@@ -188,7 +210,7 @@ export function registerUserPasswordResetRoutes(
       await createCurrentSettingsRepository().set(
         `reset_code_${username}`,
         JSON.stringify({
-          code: resetCode,
+          codeHash: hashResetSecret(resetCode),
           expiresAt: expiresAt.toISOString(),
         }),
       );
@@ -301,7 +323,7 @@ export function registerUserPasswordResetRoutes(
         });
       }
 
-      if (resetData.code !== resetCode) {
+      if (!secretMatches(resetCode, resetData.codeHash)) {
         authLogger.warn("Reset code verification failed - invalid code", {
           operation: "reset_code_verify_failed",
           username,
@@ -323,7 +345,7 @@ export function registerUserPasswordResetRoutes(
       await createCurrentSettingsRepository().set(
         `temp_reset_token_${username}`,
         JSON.stringify({
-          token: tempToken,
+          tokenHash: hashResetSecret(tempToken),
           expiresAt: tempTokenExpiry.toISOString(),
         }),
       );
@@ -398,7 +420,7 @@ export function registerUserPasswordResetRoutes(
         return res.status(400).json({ error: "Temporary token has expired" });
       }
 
-      if (tempTokenData.token !== tempToken) {
+      if (!secretMatches(tempToken, tempTokenData.tokenHash)) {
         return res.status(400).json({ error: "Invalid temporary token" });
       }
 

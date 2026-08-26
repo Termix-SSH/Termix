@@ -330,7 +330,11 @@ class SystemCrypto {
         envContent += `${key}=${value}\n`;
       }
 
-      await fs.writeFile(envPath, envContent);
+      // This file holds JWT_SECRET, DATABASE_KEY, ENCRYPTION_KEY and the
+      // internal auth token. Written with the default umask it lands at 0644,
+      // readable by every other account on the host.
+      await fs.writeFile(envPath, envContent, { mode: 0o600 });
+      await fs.chmod(envPath, 0o600).catch(() => {});
 
       process.env[key] = value;
     } catch (error) {

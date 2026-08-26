@@ -122,7 +122,27 @@ describe("getRequestBasePath", () => {
 });
 
 describe("getClientIp", () => {
-  it("prefers the leftmost X-Forwarded-For entry over the socket peer", () => {
+  const originalTrustedProxies = process.env.TRUSTED_PROXIES;
+
+  afterEach(() => {
+    restoreEnv("TRUSTED_PROXIES", originalTrustedProxies);
+  });
+
+  it("stops at the rightmost hop that is not a trusted proxy", () => {
+    // Only loopback is trusted by default, so the two private hops the client
+    // claims are as untrustworthy as the public entry it put in front of them.
+    expect(
+      getClientIp(
+        requestWithSocket(
+          { "x-forwarded-for": "203.0.113.7, 10.0.0.1, 10.0.0.2" },
+          { remoteAddress: "::ffff:127.0.0.1" },
+        ),
+      ),
+    ).toBe("10.0.0.2");
+  });
+
+  it("walks past hops the deployment declares trusted", () => {
+    process.env.TRUSTED_PROXIES = "loopback,uniquelocal";
     expect(
       getClientIp(
         requestWithSocket(
@@ -133,7 +153,21 @@ describe("getClientIp", () => {
     ).toBe("203.0.113.7");
   });
 
+  it("ignores a forwarded header from an untrusted peer", () => {
+    // A client reaching the backend directly cannot promote itself by
+    // claiming to be a proxy for someone else.
+    expect(
+      getClientIp(
+        requestWithSocket(
+          { "x-forwarded-for": "203.0.113.7" },
+          { remoteAddress: "198.51.100.9" },
+        ),
+      ),
+    ).toBe("198.51.100.9");
+  });
+
   it("handles X-Forwarded-For sent as a header array", () => {
+    process.env.TRUSTED_PROXIES = "loopback,uniquelocal";
     expect(
       getClientIp(
         requestWithSocket(
@@ -144,7 +178,7 @@ describe("getClientIp", () => {
     ).toBe("203.0.113.7");
   });
 
-  it("falls back to req.ip when there is no forwarded header", () => {
+  it("prefers req.ip, which Express derived from the same trust setting", () => {
     expect(
       getClientIp(
         requestWithSocket(
@@ -154,6 +188,12 @@ describe("getClientIp", () => {
         ),
       ),
     ).toBe("198.51.100.5");
+  });
+
+  it("falls back to the peer when a trusted proxy forwards no chain", () => {
+    expect(
+      getClientIp(requestWithSocket({}, { remoteAddress: "::ffff:127.0.0.1" })),
+    ).toBe("127.0.0.1");
   });
 
   it("falls back to the raw socket peer when nothing else is available", () => {

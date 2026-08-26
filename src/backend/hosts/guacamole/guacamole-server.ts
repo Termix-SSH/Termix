@@ -1,4 +1,5 @@
 import GuacamoleLite from "guacamole-lite";
+import { createWebSocketOriginVerifier } from "../../utils/ws-origin.js";
 import { guacLogger } from "../../utils/logger.js";
 import {
   GuacamoleTokenService,
@@ -141,6 +142,7 @@ async function persistGuacamoleRecording(
 
 const websocketOptions = {
   port: GUAC_WS_PORT,
+  verifyClient: createWebSocketOriginVerifier(),
 };
 
 const clientOptions = {

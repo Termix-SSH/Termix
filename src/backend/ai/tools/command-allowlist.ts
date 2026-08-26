@@ -64,6 +64,39 @@ const SUBCOMMAND_ALLOWLIST: Record<string, Set<string>> = {
 /** Paths `cat` may read. Anything else could disclose credentials. */
 const CAT_ALLOWED_PREFIXES = ["/proc/", "/sys/", "/etc/os-release"];
 
+/**
+ * Per-process entries under /proc that are doors out of /proc rather than
+ * files: `/proc/self/root` is a symlink to `/`, so `/proc/self/root/etc/shadow`
+ * satisfies the "/proc/" prefix while reading anything on the host. `environ`
+ * and `cmdline` leak the secrets a process was started with, `mem` is its
+ * address space, and `task` nests another copy of all of them.
+ */
+const PROC_PROCESS_ENTRY_DENYLIST = new Set([
+  "root",
+  "cwd",
+  "exe",
+  "fd",
+  "fdinfo",
+  "map_files",
+  "mem",
+  "environ",
+  "cmdline",
+  "task",
+]);
+
+function isSafeReadPath(target: string): boolean {
+  if (!target.startsWith("/")) return false;
+
+  const segments = target.split("/").filter(Boolean);
+  // "/proc/../etc/shadow" passes a naive prefix check.
+  if (segments.includes("..")) return false;
+
+  if (segments[0] !== "proc" || segments.length < 3) return true;
+
+  const isProcessDir = /^(\d+|self|thread-self)$/.test(segments[1]);
+  return !isProcessDir || !PROC_PROCESS_ENTRY_DENYLIST.has(segments[2]);
+}
+
 export interface CommandCheck {
   allowed: boolean;
   reason?: string;
@@ -120,9 +153,11 @@ export function isReadOnlyCommand(raw: string): CommandCheck {
       return { allowed: false, reason: "cat needs a file path" };
     }
     for (const target of targets) {
-      const permitted = CAT_ALLOWED_PREFIXES.some((prefix) =>
-        prefix.endsWith("/") ? target.startsWith(prefix) : target === prefix,
-      );
+      const permitted =
+        isSafeReadPath(target) &&
+        CAT_ALLOWED_PREFIXES.some((prefix) =>
+          prefix.endsWith("/") ? target.startsWith(prefix) : target === prefix,
+        );
       if (!permitted) {
         return {
           allowed: false,

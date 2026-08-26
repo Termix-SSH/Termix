@@ -34,6 +34,8 @@ import aiRoutes from "../ai/index.js";
 import automationsRoutes from "./routes/automations.js";
 import syncRoutes from "./routes/sync.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
+import { getTrustProxySetting } from "../utils/trusted-proxies.js";
+import { createSecurityHeadersMiddleware } from "../utils/security-headers.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
 import path from "path";
@@ -73,11 +75,14 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.set("trust proxy", true);
+// Which hops may write X-Forwarded-For, and therefore what req.ip is allowed
+// to become. Trusting every proxy let any client set its own apparent address.
+app.set("trust proxy", getTrustProxySetting());
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
+app.use(createSecurityHeadersMiddleware());
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 
@@ -128,7 +133,12 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();
-    cb(null, `${timestamp}-${file.originalname}`);
+    // multer hands the client-supplied name through untouched and joins it
+    // onto the destination, so a name like "../../data/termix.sqlite" would
+    // write outside the uploads directory - and the extension filter below
+    // does nothing to stop it.
+    const safeName = path.basename(file.originalname).replace(/[/\\]/g, "");
+    cb(null, `${timestamp}-${safeName}`);
   },
 });
 

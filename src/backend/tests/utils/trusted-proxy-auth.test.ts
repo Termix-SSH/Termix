@@ -3,6 +3,7 @@ import {
   getTrustedProxyAuthConfig,
   isTrustedProxyAddress,
   parseTrustedProxyRoleMap,
+  resolveProxyAuthSourceAddress,
   resolveTrustedProxyRoles,
 } from "../../utils/trusted-proxy-auth.js";
 
@@ -37,5 +38,53 @@ describe("trusted proxy authentication config", () => {
       "readonly",
     ]);
     expect(resolveTrustedProxyRoles("operators, admins", roleMap)).toBeNull();
+  });
+});
+
+describe("resolveProxyAuthSourceAddress", () => {
+  function request(
+    remoteAddress: string | undefined,
+    headers: Record<string, string | string[] | undefined> = {},
+  ) {
+    return { socket: { remoteAddress }, headers };
+  }
+
+  it("uses the peer nginx reports when the request came over loopback", () => {
+    // The backend only ever sees nginx itself on 127.0.0.1, so without this
+    // the allowlist would have to contain 127.0.0.1 - and then match everyone.
+    expect(
+      resolveProxyAuthSourceAddress(
+        request("::ffff:127.0.0.1", { "x-termix-proxy-peer": "172.18.0.5" }),
+      ),
+    ).toBe("172.18.0.5");
+  });
+
+  it("ignores the header when the request did not arrive over loopback", () => {
+    expect(
+      resolveProxyAuthSourceAddress(
+        request("203.0.113.7", { "x-termix-proxy-peer": "172.18.0.5" }),
+      ),
+    ).toBe("203.0.113.7");
+  });
+
+  it("falls back to the peer when nginx did not set the header", () => {
+    expect(resolveProxyAuthSourceAddress(request("127.0.0.1"))).toBe(
+      "127.0.0.1",
+    );
+  });
+
+  it("takes only the first entry of a header array or list", () => {
+    expect(
+      resolveProxyAuthSourceAddress(
+        request("127.0.0.1", {
+          "x-termix-proxy-peer": ["172.18.0.5", "10.0.0.1"],
+        }),
+      ),
+    ).toBe("172.18.0.5");
+    expect(
+      resolveProxyAuthSourceAddress(
+        request("127.0.0.1", { "x-termix-proxy-peer": "172.18.0.5, 10.0.0.1" }),
+      ),
+    ).toBe("172.18.0.5");
   });
 });

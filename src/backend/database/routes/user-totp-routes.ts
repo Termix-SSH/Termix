@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Router } from "express";
 import bcrypt from "bcryptjs";
+import { generateBackupCodes } from "../../utils/backup-codes.js";
 import QRCode from "qrcode";
 import speakeasy from "speakeasy";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -244,9 +245,7 @@ export function registerUserTotpRoutes(
         return res.status(401).json({ error: "Invalid TOTP code" });
       }
 
-      const backupCodes = Array.from({ length: 8 }, () =>
-        Math.random().toString(36).substring(2, 10).toUpperCase(),
-      );
+      const backupCodes = generateBackupCodes();
 
       const backupCodesJson = JSON.stringify(backupCodes);
       const storedBackupCodes = userDataKey
@@ -456,9 +455,7 @@ export function registerUserTotpRoutes(
           .json({ error: "Incorrect password or invalid TOTP code" });
       }
 
-      const backupCodes = Array.from({ length: 8 }, () =>
-        Math.random().toString(36).substring(2, 10).toUpperCase(),
-      );
+      const backupCodes = generateBackupCodes();
 
       const backupCodesJson = JSON.stringify(backupCodes);
       const storedBackupCodes = userDataKey

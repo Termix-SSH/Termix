@@ -68,6 +68,20 @@ fi
 mkdir -p /tmp/nginx
 envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /tmp/nginx/nginx.conf
 
+# CSP frame-ancestors for the app document. Off unless asked for: the desktop
+# app signs in against a remote server by framing it from a file:// document,
+# so any default would break that login. Set FRAME_ANCESTORS to switch the
+# clickjacking protection on -- "'self'" for the common case, or
+# "'self' https://dash.example.com" to embed Termix in a dashboard.
+#
+# Inserted here rather than templated, so the checked-in config stays valid
+# nginx for consumers that do not run envsubst over it.
+if [ -n "${FRAME_ANCESTORS:-}" ]; then
+    echo "Restricting who may frame Termix to: $FRAME_ANCESTORS"
+    FRAME_ANCESTORS_ESCAPED=$(printf '%s' "$FRAME_ANCESTORS" | sed -e 's/[\\&|]/\\&/g')
+    sed -i "s|# TERMIX_FRAME_ANCESTORS_ANCHOR|add_header Content-Security-Policy \"frame-ancestors ${FRAME_ANCESTORS_ESCAPED}\" always;|g" /tmp/nginx/nginx.conf
+fi
+
 if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
     echo "HTTP and HTTPS use port $SSL_PORT; disabling the HTTP redirect listener"
     sed -i '/# BEGIN HTTP_REDIRECT_SERVER/,/# END HTTP_REDIRECT_SERVER/d' /tmp/nginx/nginx.conf

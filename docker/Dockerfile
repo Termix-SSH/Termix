@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:24-slim AS deps
+FROM node:24-trixie-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -38,7 +38,7 @@ RUN rm -rf node_modules/better-sqlite3/prebuilds && \
 RUN npm run build:backend
 
 # Stage 4: Download OPKSSH binary for the target platform so the image works offline
-FROM node:24-slim AS opkssh-downloader
+FROM node:24-trixie-slim AS opkssh-downloader
 ARG TARGETARCH
 ARG OPKSSH_VERSION=v0.16.0
 WORKDIR /opkssh
@@ -56,7 +56,7 @@ RUN case "$TARGETARCH" in \
     echo -n "$OPKSSH_VERSION" > version.txt
 
 # Stage 5: Production dependencies only
-FROM node:24-slim AS production-deps
+FROM node:24-trixie-slim AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -76,7 +76,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 6: Final optimized image
-FROM node:24-slim
+FROM node:24-trixie-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
@@ -84,12 +84,30 @@ ENV DATA_DIR=/app/data \
     NODE_ENV=production \
     POSTHOG_API_KEY=phc_xM8UznirsFxUkGE68gH4jzeqevf4kh76wGw7Ci7hH2dd
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
+# apt-get upgrade, not just install: glibc, perl-base and friends ship in the
+# base image and are never named below, so without it they keep whatever
+# version that image layer froze - months of Debian security fixes behind,
+# and flagged by every container scanner. Essential packages cannot be
+# removed, so upgrading is the only lever. The cost is a less reproducible
+# build; shipping known-vulnerable packages costs more.
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx && \
     chown -R node:node /app /tmp/nginx && \
     chmod 755 /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx
+
+# The runtime is `node dist/backend/backend/starter.js` - npm, npx, corepack and
+# yarn are never invoked past the builder stages. They stay in the image only to
+# carry their own bundled dependencies into every container scan: npm alone
+# vendors tar, minimatch and ssri at whatever version that npm release pinned,
+# independent of this project's lockfile and unreachable by `npm audit`.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
 
 COPY docker/nginx.conf /app/nginx/nginx.conf.template
 COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template

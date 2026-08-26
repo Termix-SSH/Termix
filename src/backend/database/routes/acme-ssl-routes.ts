@@ -13,6 +13,28 @@ import {
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
+/** Hostname labels only; certbot also accepts a leading "*." wildcard. */
+const ACME_DOMAIN =
+  /^(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+const ACME_EMAIL =
+  /^[^\s@,;"'\\<>]+@([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+
+export function isValidAcmeDomain(value: unknown): boolean {
+  return (
+    typeof value === "string" &&
+    value.length <= 253 &&
+    ACME_DOMAIN.test(value.trim())
+  );
+}
+
+export function isValidAcmeEmail(value: unknown): boolean {
+  return (
+    typeof value === "string" &&
+    value.length <= 254 &&
+    ACME_EMAIL.test(value.trim())
+  );
+}
+
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 const SSL_DIR = path.join(DATA_DIR, "ssl");
 const ACME_WEBROOT = path.join(DATA_DIR, "acme-webroot");
@@ -194,11 +216,18 @@ export function registerAcmeSSLRoutes(
       const { enabled, domain, email, challengeType, cloudflareToken } =
         req.body;
 
+      if (domain !== undefined && !isValidAcmeDomain(domain)) {
+        return res.status(400).json({ error: "Domain has an invalid format" });
+      }
+      if (email !== undefined && !isValidAcmeEmail(email)) {
+        return res.status(400).json({ error: "Email has an invalid format" });
+      }
+
       const updated = {
         ...current,
         ...(typeof enabled === "boolean" && { enabled }),
-        ...(typeof domain === "string" && { domain }),
-        ...(typeof email === "string" && { email }),
+        ...(isValidAcmeDomain(domain) && { domain: domain.trim() }),
+        ...(isValidAcmeEmail(email) && { email: email.trim() }),
         ...(typeof challengeType === "string" && { challengeType }),
         ...(typeof cloudflareToken === "string" &&
           cloudflareToken &&
@@ -273,6 +302,15 @@ export function registerAcmeSSLRoutes(
 
       if (!domain || !email) {
         return res.status(400).json({ error: "Domain and email are required" });
+      }
+
+      // certbot is exec'd without a shell, so this is not command injection -
+      // but an unvalidated value still lands in argv, where a leading "-" turns
+      // it into a certbot flag ("--config-dir=..." and friends).
+      if (!isValidAcmeDomain(domain) || !isValidAcmeEmail(email)) {
+        return res
+          .status(400)
+          .json({ error: "Domain or email has an invalid format" });
       }
 
       try {

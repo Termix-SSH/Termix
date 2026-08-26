@@ -1,7 +1,10 @@
 import express from "express";
+import { getTrustProxySetting } from "../../utils/trusted-proxies.js";
+import { createWebSocketOriginVerifier } from "../../utils/ws-origin.js";
 import { createServer } from "http";
 
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createSecurityHeadersMiddleware } from "../../utils/security-headers.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import { WebSocketServer } from "ws";
@@ -26,6 +29,11 @@ import { initializeAutoStartTunnels } from "./manager.js";
 const authManager = AuthManager.getInstance();
 
 const app = express();
+// Same trust boundary as the main app: these services sit behind the same
+// nginx, and req.ip feeds audit records. Without it Express reports the
+// loopback proxy for every request instead of the client.
+app.set("trust proxy", getTrustProxySetting());
+app.use(createSecurityHeadersMiddleware());
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
@@ -42,6 +50,7 @@ const server = createServer(app);
 const c2sRelayWss = new WebSocketServer({
   server,
   path: "/ssh/tunnel/c2s/stream",
+  verifyClient: createWebSocketOriginVerifier(),
 });
 
 c2sRelayWss.on("error", (error) => {
