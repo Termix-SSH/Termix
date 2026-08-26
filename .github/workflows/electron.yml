@@ -427,6 +427,7 @@ jobs:
           npm ci
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
+          node scripts/install-macos-sharp.cjs
 
       - name: Check for Code Signing Certificates
         id: check_certs
@@ -537,6 +538,14 @@ jobs:
             npm run build
           fi
           npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
+
+      - name: Verify macOS sharp packaging
+        run: |
+          artifacts=(release/termix_macos_*_dmg.dmg)
+          if [ -f release/termix_macos_universal_mas.pkg ]; then
+            artifacts+=(release/termix_macos_universal_mas.pkg)
+          fi
+          node scripts/verify-macos-sharp.cjs "${artifacts[@]}"
 
       - name: Upload macOS MAS PKG
         if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/termix_macos_universal_mas.pkg') != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release' || inputs.artifact_destination == 'submit')
@@ -923,6 +932,9 @@ jobs:
           echo "dmg_name=$DMG_NAME" >> $GITHUB_OUTPUT
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
 
+      - name: Verify macOS sharp packaging
+        run: node scripts/verify-macos-sharp.cjs release_asset/termix_macos_universal_dmg.dmg
+
       - name: Prepare Homebrew submission files
         run: |
           VERSION="${{ steps.package-version.outputs.version }}"
@@ -1013,6 +1025,7 @@ jobs:
           npm ci
           npm install --force @rollup/rollup-darwin-arm64
           npm install dmg-license
+          node scripts/install-macos-sharp.cjs
 
       - name: Check for Code Signing Certificates
         id: check_certs
@@ -1153,6 +1166,10 @@ jobs:
         run: |
           BUILD_VERSION="${{ steps.build_number.outputs.build_version || github.run_number }}"
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
+
+      - name: Verify macOS sharp packaging
+        if: steps.check_certs.outputs.has_certs == 'true'
+        run: node scripts/verify-macos-sharp.cjs release/termix_macos_universal_mas.pkg
 
       - name: Generate App Store release notes
         id: asc_notes
