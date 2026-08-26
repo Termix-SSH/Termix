@@ -120,6 +120,40 @@ export function execWithSudoBuffer(
   });
 }
 
+export function execBuffer(
+  session: SSHSession,
+  command: string,
+): Promise<{ stdout: Buffer; stderr: string; code: number }> {
+  return new Promise((resolve) => {
+    execChannel(session, command, (err, stream) => {
+      if (err) {
+        resolve({ stdout: Buffer.alloc(0), stderr: err.message, code: 1 });
+        return;
+      }
+
+      const stdoutChunks: Buffer[] = [];
+      let stderr = "";
+      let settled = false;
+
+      const finish = (code: number) => {
+        if (settled) return;
+        settled = true;
+        resolve({ stdout: Buffer.concat(stdoutChunks), stderr, code });
+      };
+
+      stream.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
+      stream.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+      stream.on("close", (code: number) => finish(code || 0));
+      stream.on("error", (streamErr: Error) => {
+        stderr = stderr || streamErr.message;
+        finish(1);
+      });
+    });
+  });
+}
+
 export function getSessionSftp(
   session: SSHSession,
 ): Promise<import("ssh2").SFTPWrapper> {
