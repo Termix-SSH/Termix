@@ -46,6 +46,7 @@ import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.
 import type { SSHHost } from "@/types";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import { resolveConnectionDefaults } from "@/lib/connection-defaults";
+import { needsRdpCredentialPrompt } from "@/features/guacamole/rdp-credential-prompt";
 
 interface GuacamoleAppProps {
   hostId?: string;
@@ -162,6 +163,7 @@ interface GuacamoleAppInnerProps {
     | "domain"
     | "guacamoleConfig"
     | "rdpAuthType"
+    | "authOverrides"
     | "syncId"
     | "ip"
     | "rdpPort"
@@ -230,8 +232,11 @@ const GuacamoleAppInner = React.forwardRef<
   const resolvedProtocolForConnect = (protocol ??
     hostConfig.connectionType ??
     "rdp") as "rdp" | "vnc" | "telnet";
-  const needsCredentialPrompt =
-    resolvedProtocolForConnect === "rdp" && hostConfig.rdpAuthType === "none";
+  const needsCredentialPrompt = needsRdpCredentialPrompt({
+    protocol: resolvedProtocolForConnect,
+    rdpAuthType: hostConfig.rdpAuthType,
+    authOverrides: hostConfig.authOverrides,
+  });
 
   const [promptedCredentials, setPromptedCredentials] = useState<{
     username: string;

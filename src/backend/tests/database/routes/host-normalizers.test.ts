@@ -394,6 +394,7 @@ describe("sanitizeHostForRecipient", () => {
       {
         ...sharedHost,
         permissionLevel: "connect",
+        rdpAuthType: "none",
         authOverrides: {
           ssh: {
             credentialId: 9,
@@ -408,6 +409,7 @@ describe("sanitizeHostForRecipient", () => {
     expect(result.ip).toBe("10.0.0.42");
     expect(result.enableRdp).toBe(true);
     expect(result.rdpPort).toBe(3389);
+    expect(result.rdpAuthType).toBe("none");
     expect(result.permissionLevel).toBe("connect");
     expect(result.shareSshAuth).toBe(true);
     expect(result.authOverrides).toEqual({

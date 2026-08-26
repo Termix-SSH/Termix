@@ -6,7 +6,10 @@ import { withDriveSettings } from "./drive-settings.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
-import { resolveRecipientSharedHostAuthentication } from "../../utils/shared-host-auth-resolver.js";
+import {
+  resolveRecipientSharedHostAuthentication,
+  type RecipientSharedHostAuthResolution,
+} from "../../utils/shared-host-auth-resolver.js";
 import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import net from "net";
 import crypto from "crypto";
@@ -25,7 +28,11 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
-import { buildRdpSettings, resolveRdpDomain } from "./rdp-settings.js";
+import {
+  buildRdpSettings,
+  resolveRdpAuthTypeForConnect,
+  resolveRdpDomain,
+} from "./rdp-settings.js";
 import { createMacosVncCompatibilityProxy } from "./macos-vnc-proxy.js";
 
 const router = express.Router();
@@ -322,6 +329,7 @@ router.post(
       const hostRecord = host as Record<string, unknown>;
       const hostRepository = hostResolutionRepository;
       const isSharedConnection = host.userId !== userId;
+      let sharedAuthResolution: RecipientSharedHostAuthResolution | null = null;
 
       if (isSharedConnection) {
         // Recipients never read the owner's raw secrets; wipe them and use
@@ -341,6 +349,7 @@ router.post(
             userId,
             connectionType as AuthOverrideProtocol,
           );
+          sharedAuthResolution = resolution;
           const auth =
             resolution.source === "personal-override"
               ? { ...resolution.credential, domain: null }
@@ -448,10 +457,11 @@ router.post(
       let username: string;
       let password: string;
 
-      const rdpAuthTypeForConnect = isSharedConnection
-        ? null
-        : (host.rdpAuthType as string) ||
-          (host.rdpCredentialId ? "credential" : "direct");
+      const rdpAuthTypeForConnect = resolveRdpAuthTypeForConnect({
+        storedAuthType: host.rdpAuthType as string | null,
+        credentialId: host.rdpCredentialId as number | null,
+        sharedResolution: isSharedConnection ? sharedAuthResolution : undefined,
+      });
 
       switch (connectionType) {
         case "rdp":

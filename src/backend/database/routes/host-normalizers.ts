@@ -346,6 +346,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableTelnet",
   "sshPort",
   "rdpPort",
+  "rdpAuthType",
   "vncPort",
   "telnetPort",
   "defaultPath",
