@@ -19,9 +19,11 @@ services:
       # proxy chain whose own address must be skipped as well; every hop you
       # trust here is a hop that can claim to be someone else.
       # TRUSTED_PROXIES: "loopback,172.16.0.0/12"
-      # Who may put the Termix UI in an iframe. Defaults to 'self'; widen it to
-      # embed Termix in a dashboard.
-      # FRAME_ANCESTORS: "'self' https://dash.example.com"
+      # Who may put the Termix UI in an iframe. Unset means no restriction,
+      # because the desktop app signs in against a remote server by framing it.
+      # Set it to switch clickjacking protection on; use "'self'" unless you
+      # embed Termix in a dashboard, and note it will block that desktop login.
+      # FRAME_ANCESTORS: "'self'"
       # Trusted reverse-proxy authentication is disabled by default. When
       # enabled, do not expose this container directly to untrusted clients.
       # TRUSTED_PROXY_AUTH_TRUSTED_PROXIES lists the proxies that are allowed

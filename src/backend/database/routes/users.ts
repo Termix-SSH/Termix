@@ -253,7 +253,7 @@ router.post("/create", async (req, res) => {
       return res.status(409).json({ error: "Username already exists" });
     }
 
-    const password_hash = await bcrypt.hash(password, 12);
+    const password_hash = await bcrypt.hash(password, 10);
     const id = nanoid();
 
     const { isFirstUser } = await userRepository.createFirstLocalUser({
@@ -2874,7 +2874,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
       .json({ error: "Failed to update password and re-encrypt data." });
   }
 
-  const password_hash = await bcrypt.hash(newPassword, 12);
+  const password_hash = await bcrypt.hash(newPassword, 10);
   await createCurrentUserRepository().update(userId, {
     passwordHash: password_hash,
   });

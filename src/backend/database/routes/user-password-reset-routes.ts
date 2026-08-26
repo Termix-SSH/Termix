@@ -67,7 +67,7 @@ export async function resetUserPassword(
   },
 ): Promise<PasswordResetOutcome> {
   const { userId, username, newPassword, confirmDataWipe } = options;
-  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const passwordHash = await bcrypt.hash(newPassword, 10);
   const userRepository = createCurrentUserRepository();
 
   if (authManager.isUserUnlocked(userId)) {

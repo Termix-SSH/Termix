@@ -56,11 +56,16 @@ describe("nginx config templates", () => {
     expect([...new Set(found)].filter((n) => !LXC_HANDLED.has(n))).toEqual([]);
   });
 
-  it("ships a restrictive frame-ancestors the entrypoint can widen", () => {
+  it("ships no frame-ancestors, only the anchor the entrypoint fills in", () => {
+    // Opt-in, because the desktop app frames a remote server from a file://
+    // document and any default would refuse that ancestor. The anchor is a
+    // comment, so a consumer that never runs the entrypoint - the Proxmox LXC
+    // installer - simply gets no header rather than a broken one.
     for (const config of CONFIGS) {
-      expect(read(config)).toContain(
-        `add_header Content-Security-Policy "frame-ancestors 'self'" always;`,
-      );
+      // Comments stripped: the explanation above the anchor names the
+      // directive, and that mention is not a header.
+      expect(withoutComments(read(config))).not.toContain("frame-ancestors");
+      expect(read(config)).toContain("# TERMIX_FRAME_ANCESTORS_ANCHOR");
     }
   });
 
