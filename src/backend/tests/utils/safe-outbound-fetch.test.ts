@@ -3,6 +3,7 @@ import type { LookupAddress, LookupOptions } from "dns";
 import {
   createDnsLookupHook,
   isBlockedAddress,
+  readResponseTextLimited,
 } from "../../utils/safe-outbound-fetch.js";
 
 describe("isBlockedAddress", () => {
@@ -44,6 +45,37 @@ describe("isBlockedAddress", () => {
 
   it("blocks unparseable input", () => {
     expect(isBlockedAddress("not-an-ip")).toBe(true);
+  });
+});
+
+describe("readResponseTextLimited", () => {
+  it("reads a response within the configured limit", async () => {
+    const response = new Response("hello");
+    await expect(readResponseTextLimited(response, 5)).resolves.toBe("hello");
+  });
+
+  it("rejects a declared oversized response before buffering it", async () => {
+    const response = new Response("small", {
+      headers: { "content-length": "100" },
+    });
+    await expect(readResponseTextLimited(response, 10)).rejects.toThrow(
+      "Response exceeds 10 bytes",
+    );
+  });
+
+  it("stops a chunked response once its actual body exceeds the limit", async () => {
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("12345"));
+          controller.enqueue(new TextEncoder().encode("6"));
+          controller.close();
+        },
+      }),
+    );
+    await expect(readResponseTextLimited(response, 5)).rejects.toThrow(
+      "Response exceeds 5 bytes",
+    );
   });
 });
 

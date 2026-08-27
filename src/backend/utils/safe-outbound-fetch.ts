@@ -157,6 +157,35 @@ export interface OutboundTlsOptions {
   rejectUnauthorized?: boolean;
 }
 
+export async function readResponseTextLimited(
+  response: Response,
+  maxBytes: number,
+): Promise<string> {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    await response.body?.cancel().catch(() => {});
+    throw new Error(`Response exceeds ${maxBytes} bytes`);
+  }
+
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw new Error(`Response exceeds ${maxBytes} bytes`);
+    }
+    chunks.push(value);
+  }
+
+  return Buffer.concat(chunks, total).toString("utf8");
+}
+
 export async function safeOutboundFetch(
   rawUrl: string,
   options: RequestInit,
