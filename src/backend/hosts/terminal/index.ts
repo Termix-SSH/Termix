@@ -68,6 +68,7 @@ import {
   resolveServerJumpHosts,
 } from "./host-identity.js";
 import { extractWebSocketToken } from "../../utils/ws-auth.js";
+import { waitForWebSocketOpen } from "../cloudflare-websocket.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -3285,14 +3286,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           },
         });
 
-        await new Promise<void>((resolve, reject) => {
-          cfWs.on("open", () => resolve());
-          cfWs.on("error", (err) => reject(err));
-          setTimeout(
-            () => reject(new Error("Cloudflare tunnel timeout")),
-            30000,
-          );
-        });
+        await waitForWebSocketOpen(cfWs, 30000);
 
         const { Duplex } = await import("stream");
         const duplexStream = new Duplex({
