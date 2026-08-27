@@ -37,6 +37,7 @@ import {
   isNonEmptyString,
   isOptionalBoolean,
   isValidPort,
+  normalizeProtocolEnableFields,
   OWNER_PRIVATE_AUTH_FIELDS,
   OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS,
   sanitizeHostForRecipient,
@@ -267,7 +268,8 @@ router.post(
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
-      !isOptionalBoolean(shareSshAuth)
+      !isOptionalBoolean(shareSshAuth) ||
+      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(isOptionalBoolean)
     ) {
       sshLogger.warn("Invalid SSH data input validation failed", {
         operation: "host_create",
@@ -398,10 +400,7 @@ router.post(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
-      enableSsh: enableSsh ? 1 : 0,
-      enableRdp: enableRdp ? 1 : 0,
-      enableVnc: enableVnc ? 1 : 0,
-      enableTelnet: enableTelnet ? 1 : 0,
+      ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
@@ -971,6 +970,9 @@ router.put(
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
+      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(
+        isOptionalBoolean,
+      ) ||
       !hostId
     ) {
       sshLogger.warn("Invalid SSH data input validation failed for update", {
@@ -1102,10 +1104,7 @@ router.put(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
-      enableSsh: enableSsh ? 1 : 0,
-      enableRdp: enableRdp ? 1 : 0,
-      enableVnc: enableVnc ? 1 : 0,
-      enableTelnet: enableTelnet ? 1 : 0,
+      ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,

@@ -5,6 +5,7 @@ import {
   isOptionalBoolean,
   isValidPort,
   normalizeImportedHost,
+  normalizeProtocolEnableFields,
   renameFolderPath,
   sanitizeHostForRecipient,
   stripSensitiveFields,
@@ -77,6 +78,23 @@ describe("isOptionalBoolean", () => {
     expect(isOptionalBoolean("0")).toBe(false);
     expect(isOptionalBoolean(1)).toBe(false);
     expect(isOptionalBoolean(null)).toBe(false);
+  });
+});
+
+describe("normalizeProtocolEnableFields", () => {
+  it("omits unspecified protocol fields so database defaults are preserved", () => {
+    expect(normalizeProtocolEnableFields({ name: "server" })).toEqual({});
+  });
+
+  it("converts explicitly provided protocol booleans to database integers", () => {
+    expect(
+      normalizeProtocolEnableFields({
+        enableSsh: true,
+        enableRdp: false,
+        enableVnc: undefined,
+        enableTelnet: true,
+      }),
+    ).toEqual({ enableSsh: 1, enableRdp: 0, enableTelnet: 1 });
   });
 });
 
