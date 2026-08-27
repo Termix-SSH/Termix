@@ -97,12 +97,45 @@ describe("file manager readFile", () => {
       session,
       "cat '/root/secret.txt'",
       "sudo-secret",
+      500 * 1024 * 1024,
     );
     expect(response.json).toHaveBeenCalledWith({
       content: "secret",
       path: "/root/secret.txt",
       encoding: "utf8",
     });
+    expect(commandMocks.execBuffer).toHaveBeenNthCalledWith(
+      2,
+      session,
+      "cat '/root/secret.txt'",
+      500 * 1024 * 1024,
+    );
+  });
+
+  it("rejects a file that grows beyond the limit while being read", async () => {
+    const { handler, request, response } = setupReadRoute();
+    commandMocks.execBuffer
+      .mockResolvedValueOnce({
+        stdout: Buffer.from("5\n"),
+        stderr: "",
+        code: 0,
+      })
+      .mockResolvedValueOnce({
+        stdout: Buffer.alloc(0),
+        stderr: "Command output exceeds 524288000 bytes",
+        code: 1,
+        exceededLimit: true,
+      });
+
+    await handler(request, response);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxSize: 500 * 1024 * 1024,
+        tooLarge: true,
+      }),
+    );
   });
 
   it("keeps readable files on the unprivileged path", async () => {

@@ -85,7 +85,7 @@ async function pruneOldLogs(): Promise<void> {
 
 // Run prune once at startup, then every 24 hours
 pruneOldLogs();
-setInterval(pruneOldLogs, 24 * 60 * 60 * 1000);
+setInterval(pruneOldLogs, 24 * 60 * 60 * 1000).unref();
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();

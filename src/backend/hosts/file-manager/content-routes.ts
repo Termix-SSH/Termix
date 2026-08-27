@@ -361,7 +361,11 @@ export function registerFileContentRoutes(
         });
       }
 
-      let contentResult = await execBuffer(sshConn, `cat '${escapedPath}'`);
+      let contentResult = await execBuffer(
+        sshConn,
+        `cat '${escapedPath}'`,
+        MAX_READ_SIZE,
+      );
       let contentError =
         contentResult.stderr || contentResult.stdout.toString("utf8");
 
@@ -374,9 +378,18 @@ export function registerFileContentRoutes(
           sshConn,
           `cat '${escapedPath}'`,
           sshConn.sudoPassword,
+          MAX_READ_SIZE,
         );
         contentError =
           contentResult.stderr || contentResult.stdout.toString("utf8");
+      }
+
+      if (contentResult.exceededLimit) {
+        return res.status(400).json({
+          error: `File grew beyond the ${MAX_READ_SIZE / 1024 / 1024}MB read limit`,
+          maxSize: MAX_READ_SIZE,
+          tooLarge: true,
+        });
       }
 
       if (contentResult.code !== 0) {

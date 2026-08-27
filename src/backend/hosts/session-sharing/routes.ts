@@ -61,7 +61,7 @@ setInterval(
     }
   },
   5 * 60 * 1000,
-);
+).unref();
 
 /**
  * @openapi
