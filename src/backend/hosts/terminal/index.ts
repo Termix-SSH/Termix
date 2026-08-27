@@ -68,7 +68,10 @@ import {
   resolveServerJumpHosts,
 } from "./host-identity.js";
 import { extractWebSocketToken } from "../../utils/ws-auth.js";
-import { waitForWebSocketOpen } from "../cloudflare-websocket.js";
+import {
+  createWebSocketDuplex,
+  waitForWebSocketOpen,
+} from "../cloudflare-websocket.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -3288,15 +3291,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         await waitForWebSocketOpen(cfWs, 30000);
 
-        const { Duplex } = await import("stream");
-        const duplexStream = new Duplex({
-          read() {},
-          write(chunk, _encoding, callback) {
-            cfWs.send(chunk, callback);
-          },
-        });
-        cfWs.on("message", (data) => duplexStream.push(data));
-        cfWs.on("close", () => duplexStream.push(null));
+        const duplexStream = createWebSocketDuplex(cfWs);
 
         connectConfig.sock =
           duplexStream as unknown as typeof connectConfig.sock;

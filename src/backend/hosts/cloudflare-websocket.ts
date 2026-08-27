@@ -1,13 +1,8 @@
-interface OpeningWebSocket {
-  once(event: "open", listener: () => void): unknown;
-  once(event: "error", listener: (error: Error) => void): unknown;
-  off(event: "open", listener: () => void): unknown;
-  off(event: "error", listener: (error: Error) => void): unknown;
-  terminate(): void;
-}
+import { Duplex } from "node:stream";
+import type { RawData, WebSocket } from "ws";
 
 export function waitForWebSocketOpen(
-  socket: OpeningWebSocket,
+  socket: WebSocket,
   timeoutMs: number,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -34,4 +29,36 @@ export function waitForWebSocketOpen(
     socket.once("open", onOpen);
     socket.once("error", onError);
   });
+}
+
+export function createWebSocketDuplex(socket: WebSocket): Duplex {
+  const duplex = new Duplex({
+    read() {},
+    write(chunk, _encoding, callback) {
+      try {
+        socket.send(chunk, (error) => callback(error || undefined));
+      } catch (error) {
+        callback(error instanceof Error ? error : new Error(String(error)));
+      }
+    },
+    destroy(error, callback) {
+      cleanup();
+      socket.terminate();
+      callback(error);
+    },
+  });
+
+  const onMessage = (data: RawData) => duplex.push(data);
+  const onClose = () => duplex.destroy();
+  const onError = () => duplex.destroy();
+  const cleanup = () => {
+    socket.off("message", onMessage);
+    socket.off("close", onClose);
+    socket.off("error", onError);
+  };
+
+  socket.on("message", onMessage);
+  socket.on("close", onClose);
+  socket.on("error", onError);
+  return duplex;
 }
