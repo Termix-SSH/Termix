@@ -3,7 +3,7 @@ import type { RawData } from "ws";
 // Cap on a single decoded text frame. Anything larger is almost certainly
 // abuse - the legitimate control messages here are tiny, and terminal input is
 // bounded by what a user can type or paste.
-const MAX_MESSAGE_BYTES = 1024 * 1024;
+export const MAX_WS_MESSAGE_BYTES = 1024 * 1024;
 
 export class WsMessageError extends Error {}
 
@@ -27,7 +27,7 @@ export function parseWsMessage(raw: RawData): {
   type: string;
   data: unknown;
 } {
-  if (rawByteLength(raw) > MAX_MESSAGE_BYTES) {
+  if (rawByteLength(raw) > MAX_WS_MESSAGE_BYTES) {
     throw new WsMessageError("Message too large");
   }
 
