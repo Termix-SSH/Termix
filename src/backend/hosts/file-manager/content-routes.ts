@@ -65,7 +65,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const linkPath = decodeURIComponent(req.query.path as string);
+    const linkPath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -166,7 +166,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const rawPath = decodeURIComponent(req.query.path as string);
+    const rawPath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -266,7 +266,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/readFile", async (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const filePath = decodeURIComponent(req.query.path as string);
+    const filePath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {

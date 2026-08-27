@@ -162,6 +162,34 @@ describe("file manager readFile", () => {
     });
   });
 
+  it("preserves percent escapes that are literal path characters", async () => {
+    const { handler, request, response, session } = setupReadRoute();
+    request.query.path = "/tmp/100%/literal%2Fname";
+    commandMocks.execBuffer
+      .mockResolvedValueOnce({
+        stdout: Buffer.from("5\n"),
+        stderr: "",
+        code: 0,
+      })
+      .mockResolvedValueOnce({
+        stdout: Buffer.from("hello"),
+        stderr: "",
+        code: 0,
+      });
+
+    await handler(request, response);
+
+    expect(commandMocks.execBuffer).toHaveBeenNthCalledWith(
+      2,
+      session,
+      "cat '/tmp/100%/literal%2Fname'",
+      500 * 1024 * 1024,
+    );
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "/tmp/100%/literal%2Fname" }),
+    );
+  });
+
   it("rejects oversized sudo-only files before reading their content", async () => {
     const { handler, request, response } = setupReadRoute();
     commandMocks.execBuffer.mockResolvedValueOnce({
