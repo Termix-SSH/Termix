@@ -302,7 +302,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   const authManagerInstance = AuthManager.getInstance();
-  const payload = await authManagerInstance.verifyJWTToken(token);
+  let payload;
+  try {
+    payload = await authManagerInstance.verifyJWTToken(token);
+  } catch (error) {
+    sshLogger.warn("Docker console JWT verification failed", {
+      operation: "docker_console_auth_error",
+      error: getErrorMessage(error),
+    });
+    ws.close(1008, "Authentication required");
+    return;
+  }
   if (!payload?.userId || payload.pendingTOTP) {
     ws.close(1008, "Authentication required");
     return;
@@ -323,6 +333,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
       ws.ping();
     }
   }, 30000);
+
+  const cleanup = () => {
+    clearInterval(wsPingInterval);
+    if (!sshSession) return;
+    sshSession.stream?.end();
+    sshSession.client.end();
+    activeSessions.delete(sessionId);
+    sshSession = null;
+  };
 
   ws.on("message", async (data) => {
     try {
@@ -784,7 +803,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   ws.on("close", () => {
-    clearInterval(wsPingInterval);
     sshLogger.info("Docker console disconnected", {
       operation: "docker_console_disconnect",
       sessionId,
@@ -792,13 +810,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       hostId: sshSession?.hostId,
       containerId: sshSession?.containerId,
     });
-    if (sshSession) {
-      if (sshSession.stream) {
-        sshSession.stream.end();
-      }
-      sshSession.client.end();
-      activeSessions.delete(sessionId);
-    }
+    cleanup();
   });
 
   ws.on("error", (error) => {
@@ -807,13 +819,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sessionId,
     });
 
-    if (sshSession) {
-      if (sshSession.stream) {
-        sshSession.stream.end();
-      }
-      sshSession.client.end();
-      activeSessions.delete(sessionId);
-    }
+    cleanup();
   });
 });
 

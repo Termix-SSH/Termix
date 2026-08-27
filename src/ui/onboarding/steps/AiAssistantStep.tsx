@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import { saveUserPreferences } from "@/main-axios";
+import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 
 /**
  * Asks once, plainly.
@@ -18,9 +19,7 @@ export function AiAssistantStep() {
   function apply(next: boolean) {
     setEnabled(next);
 
-    const hidden = new Set<string>(
-      JSON.parse(localStorage.getItem("hiddenRailTabs") ?? "[]"),
-    );
+    const hidden = readHiddenRailTabs();
     if (next) hidden.delete("ai");
     else hidden.add("ai");
 

@@ -68,6 +68,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
 import { visibleRailItems } from "./rail-items";
 import { InterfacePresetSettings } from "./InterfacePresetSettings";
@@ -719,9 +720,7 @@ export function UserProfilePanel({
   const applyAiEnabled = (enabled: boolean) => {
     setAiAssistantEnabled(enabled);
 
-    const hidden = new Set<string>(
-      JSON.parse(localStorage.getItem("hiddenRailTabs") ?? "[]"),
-    );
+    const hidden = readHiddenRailTabs();
     if (enabled) hidden.delete("ai");
     else hidden.add("ai");
 
