@@ -1654,7 +1654,7 @@ ipcMain.handle("clear-remote-sync-config", async () => {
   return result;
 });
 
-ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
+ipcMain.handle("save-remote-sync-jwt", async (_event, token) => {
   const result = remoteSync.saveRemoteSyncJwt(token);
   if (result.success) {
     remoteSync.getRemoteSyncEngine()?.updateStatus({
@@ -1662,7 +1662,8 @@ ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
       needsReauth: false,
       lastError: null,
     });
-    remoteSync.getRemoteSyncEngine()?.syncNow();
+    const status = await remoteSync.getRemoteSyncEngine()?.syncNow();
+    return { ...result, status: status || null };
   }
   return result;
 });

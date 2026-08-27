@@ -474,6 +474,8 @@
     "disconnectButton": "断开",
     "syncNowButton": "立即同步",
     "syncing": "正在同步...",
+    "syncSuccess": "远程同步已完成",
+    "syncUnavailable": "无法启动远程同步",
     "serverUrl": "服务器 URL",
     "enterServerUrl": "请输入服务器网址",
     "mustIncludeProtocol": "服务器 URL 必须以 http:// 或 https:// 开头。",
@@ -2820,6 +2822,8 @@
     "resetCodeRateLimited": "频率受限：验证尝试次数过多，请稍后再试。",
     "resetCodeRateLimitedWithTime": "频率受限：验证尝试次数过多，请等待 {{time}} 秒后再试。",
     "authTokenSaveFailed": "保存认证令牌失败",
+    "authTokenMissing": "服务器没有返回新的认证令牌，请重新登录。",
+    "authTokenRejected": "远程服务器拒绝了新的认证令牌",
     "keyringUnavailable": "已登录，但会话无法保存：此系统没有可用于加密的密钥环。请启动密钥服务（例如 gnome-keyring 或 KWallet）并重新登录。",
     "failedToLoadServer": "加载服务器失败",
     "remoteServerRequired": "需要远程服务器。请在“设置”中连接远程服务器以使用此连接类型。"

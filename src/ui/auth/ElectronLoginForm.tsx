@@ -20,6 +20,10 @@ interface SaveRemoteSyncJwtResult {
   success: boolean;
   reason?: string;
   error?: string;
+  status?: {
+    needsReauth?: boolean;
+    lastError?: string | null;
+  } | null;
 }
 
 const AUTH_MESSAGE_SOURCES = new Set([
@@ -56,27 +60,33 @@ export function ElectronLoginForm({
       setIsAuthenticating(true);
 
       try {
-        if (token) {
-          if (targetPurpose === "remoteSync") {
-            // The main process refuses to persist the JWT when it has no OS
-            // keyring to encrypt it with, and reports that by resolving with
-            // success: false. Dropping the result signs the user in against a
-            // store that kept nothing, so the next sync tick calls a session
-            // that was never saved expired.
-            const result = (await window.electronAPI?.invoke?.(
-              "save-remote-sync-jwt",
-              token,
-            )) as SaveRemoteSyncJwtResult | undefined;
-            if (!result?.success) {
-              throw new Error(
-                result?.reason === "encryption_unavailable"
-                  ? t("errors.keyringUnavailable")
-                  : result?.error || t("errors.authTokenSaveFailed"),
-              );
-            }
-          } else {
-            localStorage.setItem("jwt", token);
+        if (targetPurpose === "remoteSync") {
+          if (!token) {
+            throw new Error(t("errors.authTokenMissing"));
           }
+          // The main process refuses to persist the JWT when it has no OS
+          // keyring to encrypt it with, and reports that by resolving with
+          // success: false. Dropping the result signs the user in against a
+          // store that kept nothing, so the next sync tick calls a session
+          // that was never saved expired.
+          const result = (await window.electronAPI?.invoke?.(
+            "save-remote-sync-jwt",
+            token,
+          )) as SaveRemoteSyncJwtResult | undefined;
+          if (!result?.success) {
+            throw new Error(
+              result?.reason === "encryption_unavailable"
+                ? t("errors.keyringUnavailable")
+                : result?.error || t("errors.authTokenSaveFailed"),
+            );
+          }
+          if (result.status?.needsReauth || result.status?.lastError) {
+            throw new Error(
+              result.status.lastError || t("errors.authTokenRejected"),
+            );
+          }
+        } else if (token) {
+          localStorage.setItem("jwt", token);
         }
         await onAuthSuccessRef.current(token);
       } catch (err) {

@@ -500,6 +500,8 @@
     "disconnectButton": "Disconnect",
     "syncNowButton": "Sync Now",
     "syncing": "Syncing...",
+    "syncSuccess": "Remote sync completed",
+    "syncUnavailable": "Remote sync could not be started",
     "serverUrl": "Server URL",
     "enterServerUrl": "Please enter a server URL",
     "mustIncludeProtocol": "Server URL must start with http:// or https://",
@@ -2966,6 +2968,8 @@
     "resetCodeRateLimited": "Rate limited: Too many verification attempts. Please try again later.",
     "resetCodeRateLimitedWithTime": "Rate limited: Too many verification attempts. Please wait {{time}} seconds before trying again.",
     "authTokenSaveFailed": "Failed to save authentication token",
+    "authTokenMissing": "The server did not return a new authentication token. Please sign in again.",
+    "authTokenRejected": "The remote server rejected the new authentication token",
     "keyringUnavailable": "Signed in, but the session could not be stored: this system has no keyring available to encrypt it with. Start a Secret Service (such as gnome-keyring or KWallet) and sign in again.",
     "failedToLoadServer": "Failed to load server",
     "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."

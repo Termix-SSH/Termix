@@ -333,6 +333,8 @@ export function AppShell({
   const [remoteSyncInitialServerUrl, setRemoteSyncInitialServerUrl] = useState<
     string | undefined
   >(undefined);
+  const [remoteSyncReconnectRequested, setRemoteSyncReconnectRequested] =
+    useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
@@ -2714,6 +2716,10 @@ export function AppShell({
                 setUserPrefs((current) => ({ ...current, ...updates }))
               }
               remoteSyncInitialServerUrl={remoteSyncInitialServerUrl}
+              remoteSyncReconnectRequested={remoteSyncReconnectRequested}
+              onRemoteSyncReconnectHandled={() =>
+                setRemoteSyncReconnectRequested(false)
+              }
             />
           </div>
         )}
@@ -2854,6 +2860,7 @@ export function AppShell({
               onReconnect={() => {
                 setRailView("user-profile");
                 if (!sidebarOpen) setSidebarOpen(true);
+                setRemoteSyncReconnectRequested(true);
               }}
             />
             <MigrationNoticeDialog
