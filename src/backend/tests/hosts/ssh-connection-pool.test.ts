@@ -41,4 +41,28 @@ describe("SSHConnectionPool", () => {
     await Promise.all([requests[1], requests[2]]);
     pool.destroy();
   });
+
+  it("discards a pending connection when its host pool is cleared", async () => {
+    const pool = new SSHConnectionPool();
+    const pending = deferredClient();
+    const request = pool.getConnection("cleared-host", () => pending.promise);
+
+    pool.clearKeyConnections("cleared-host");
+    pending.resolve(pending.client);
+
+    await expect(request).rejects.toThrow(
+      "SSH connection pool cleared for cleared-host",
+    );
+    expect(pending.client.end).toHaveBeenCalledOnce();
+    pool.destroy();
+  });
+
+  it("rejects new connections after the pool is destroyed", async () => {
+    const pool = new SSHConnectionPool();
+    pool.destroy();
+
+    await expect(
+      pool.getConnection("host", () => deferredClient().promise),
+    ).rejects.toThrow("SSH connection pool destroyed");
+  });
 });

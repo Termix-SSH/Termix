@@ -24,6 +24,8 @@ export class SSHConnectionPool {
   private connections = new Map<string, PooledConnection[]>();
   private waiters = new Map<string, ConnectionWaiter[]>();
   private pendingConnections = new Map<string, number>();
+  private generations = new Map<string, number>();
+  private destroyed = false;
   private maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
   private maxWaitMs = DEFAULT_MAX_WAIT_MS;
   private cleanupInterval: NodeJS.Timeout;
@@ -40,6 +42,10 @@ export class SSHConnectionPool {
       connections.length + (this.pendingConnections.get(key) || 0) <
       this.maxConnectionsPerHost
     );
+  }
+
+  private invalidatePendingConnections(key: string): void {
+    this.generations.set(key, (this.generations.get(key) || 0) + 1);
   }
 
   private isConnectionHealthy(client: Client): boolean {
@@ -82,12 +88,21 @@ export class SSHConnectionPool {
     factory: () => Promise<Client>,
     existing: PooledConnection[],
   ): Promise<Client> {
+    const generation = this.generations.get(key) || 0;
     this.pendingConnections.set(
       key,
       (this.pendingConnections.get(key) || 0) + 1,
     );
     try {
       const client = await factory();
+      if (this.destroyed || (this.generations.get(key) || 0) !== generation) {
+        try {
+          client.end();
+        } catch {
+          // expected
+        }
+        throw new Error(`SSH connection pool cleared for ${key}`);
+      }
       const pooled: PooledConnection = {
         client,
         lastUsed: Date.now(),
@@ -193,6 +208,9 @@ export class SSHConnectionPool {
     key: string,
     factory: () => Promise<Client>,
   ): Promise<Client> {
+    if (this.destroyed) {
+      throw new Error("SSH connection pool destroyed");
+    }
     let connections = this.connections.get(key) || [];
 
     const available = connections.find((conn) => !conn.inUse);
@@ -237,6 +255,7 @@ export class SSHConnectionPool {
   }
 
   clearKeyConnections(key: string): void {
+    this.invalidatePendingConnections(key);
     const connections = this.connections.get(key) || [];
     for (const conn of connections) {
       try {
@@ -283,6 +302,12 @@ export class SSHConnectionPool {
   }
 
   clearAllConnections(): void {
+    const keys = new Set([
+      ...this.connections.keys(),
+      ...this.pendingConnections.keys(),
+      ...this.waiters.keys(),
+    ]);
+    for (const key of keys) this.invalidatePendingConnections(key);
     for (const key of [...this.waiters.keys()]) {
       this.rejectWaiters(key, "SSH connection pool destroyed");
     }
@@ -299,6 +324,7 @@ export class SSHConnectionPool {
   }
 
   destroy(): void {
+    this.destroyed = true;
     clearInterval(this.cleanupInterval);
     this.clearAllConnections();
   }
