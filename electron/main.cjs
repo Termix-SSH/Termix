@@ -536,6 +536,16 @@ function httpFetch(url, options = {}) {
       // Node's http/https modules never auto-decompress, so an unhandled
       // content-encoding here silently turns the body into garbage bytes.
       let stream = res;
+      const maxResponseBytes = options.maxResponseBytes || 10 * 1024 * 1024;
+      let responseBytes = 0;
+      let settled = false;
+      const fail = (error) => {
+        if (settled) return;
+        settled = true;
+        stream.destroy();
+        req.destroy();
+        reject(error);
+      };
       const encoding = (res.headers["content-encoding"] || "")
         .toLowerCase()
         .trim();
@@ -552,8 +562,17 @@ function httpFetch(url, options = {}) {
         return;
       }
 
-      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("data", (chunk) => {
+        responseBytes += chunk.length;
+        if (responseBytes > maxResponseBytes) {
+          fail(new Error(`Response exceeds ${maxResponseBytes} bytes`));
+          return;
+        }
+        chunks.push(chunk);
+      });
       stream.on("end", () => {
+        if (settled) return;
+        settled = true;
         const data = Buffer.concat(chunks).toString("utf8");
         resolve({
           ok: res.statusCode >= 200 && res.statusCode < 300,
@@ -562,7 +581,7 @@ function httpFetch(url, options = {}) {
           json: () => Promise.resolve(JSON.parse(data)),
         });
       });
-      stream.on("error", reject);
+      stream.on("error", fail);
     });
 
     req.on("error", reject);
