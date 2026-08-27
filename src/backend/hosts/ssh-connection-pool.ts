@@ -20,9 +20,10 @@ const DEFAULT_MAX_WAIT_MS = 30_000;
 const IDLE_MAX_AGE_MS = 10 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 2 * 60 * 1000;
 
-class SSHConnectionPool {
+export class SSHConnectionPool {
   private connections = new Map<string, PooledConnection[]>();
   private waiters = new Map<string, ConnectionWaiter[]>();
+  private pendingConnections = new Map<string, number>();
   private maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
   private maxWaitMs = DEFAULT_MAX_WAIT_MS;
   private cleanupInterval: NodeJS.Timeout;
@@ -31,6 +32,14 @@ class SSHConnectionPool {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, CLEANUP_INTERVAL_MS);
+    this.cleanupInterval.unref();
+  }
+
+  private hasCapacity(key: string, connections: PooledConnection[]): boolean {
+    return (
+      connections.length + (this.pendingConnections.get(key) || 0) <
+      this.maxConnectionsPerHost
+    );
   }
 
   private isConnectionHealthy(client: Client): boolean {
@@ -73,24 +82,35 @@ class SSHConnectionPool {
     factory: () => Promise<Client>,
     existing: PooledConnection[],
   ): Promise<Client> {
-    const client = await factory();
-    const pooled: PooledConnection = {
-      client,
-      lastUsed: Date.now(),
-      inUse: true,
-      hostKey: key,
-    };
-    existing.push(pooled);
-    this.connections.set(key, existing);
+    this.pendingConnections.set(
+      key,
+      (this.pendingConnections.get(key) || 0) + 1,
+    );
+    try {
+      const client = await factory();
+      const pooled: PooledConnection = {
+        client,
+        lastUsed: Date.now(),
+        inUse: true,
+        hostKey: key,
+      };
+      existing.push(pooled);
+      this.connections.set(key, existing);
 
-    client.on("end", () => {
-      this.removeConnection(key, client);
-    });
-    client.on("close", () => {
-      this.removeConnection(key, client);
-    });
+      client.on("end", () => {
+        this.removeConnection(key, client);
+      });
+      client.on("close", () => {
+        this.removeConnection(key, client);
+      });
 
-    return client;
+      return client;
+    } finally {
+      const pending = (this.pendingConnections.get(key) || 1) - 1;
+      if (pending === 0) this.pendingConnections.delete(key);
+      else this.pendingConnections.set(key, pending);
+      this.wakeWaiter(key);
+    }
   }
 
   private enqueueWaiter(
@@ -147,7 +167,7 @@ class SSHConnectionPool {
       }
     }
 
-    if (connections.length < this.maxConnectionsPerHost) {
+    if (this.hasCapacity(key, connections)) {
       const waiter = queue.shift()!;
       if (queue.length === 0) this.waiters.delete(key);
       else this.waiters.set(key, queue);
@@ -186,7 +206,7 @@ class SSHConnectionPool {
       }
     }
 
-    if (connections.length < this.maxConnectionsPerHost) {
+    if (this.hasCapacity(key, connections)) {
       return this.createPooledClient(key, factory, connections);
     }
 
