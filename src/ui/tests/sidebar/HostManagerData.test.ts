@@ -15,4 +15,18 @@ describe("sshHostToHost", () => {
 
     expect(host.wolBroadcastAddress).toBe("192.168.0.255");
   });
+
+  it("preserves remote shared-host identity for local connection auth", () => {
+    const host = sshHostToHost({
+      id: -12,
+      name: "shared",
+      ip: "10.0.0.2",
+      port: 22,
+      username: "root",
+      isShared: true,
+    } as SSHHostWithStatus);
+
+    expect(host.id).toBe("-12");
+    expect(host.isShared).toBe(true);
+  });
 });

@@ -320,10 +320,14 @@ export async function revokeHostAccess(
 export async function getHostAuthOverride(
   hostId: number,
   protocol: AuthOverrideProtocol,
+  remoteShared = false,
 ): Promise<{ protocol: AuthOverrideProtocol; credentialId: number | null }> {
   try {
-    const response = await rbacApi.get(
-      `/rbac/host-access/${hostId}/auth/${protocol}`,
+    const api = remoteShared ? await getConnectedRemoteApi() : rbacApi;
+    if (!api) throw new Error("Remote server is not connected");
+    const targetHostId = remoteShared ? Math.abs(hostId) : hostId;
+    const response = await api.get(
+      `/rbac/host-access/${targetHostId}/auth/${protocol}`,
     );
     return response.data;
   } catch (error) {
@@ -335,14 +339,18 @@ export async function setHostAuthOverride(
   hostId: number,
   protocol: AuthOverrideProtocol,
   credentialId: number | null,
+  remoteShared = false,
 ): Promise<{
   success: boolean;
   protocol: AuthOverrideProtocol;
   credentialId: number | null;
 }> {
   try {
-    const response = await rbacApi.put(
-      `/rbac/host-access/${hostId}/auth/${protocol}`,
+    const api = remoteShared ? await getConnectedRemoteApi() : rbacApi;
+    if (!api) throw new Error("Remote server is not connected");
+    const targetHostId = remoteShared ? Math.abs(hostId) : hostId;
+    const response = await api.put(
+      `/rbac/host-access/${targetHostId}/auth/${protocol}`,
       { credentialId },
     );
     return response.data;

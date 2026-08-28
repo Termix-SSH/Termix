@@ -19,7 +19,14 @@ const toast = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
+const remote = vi.hoisted(() => ({
+  get: vi.fn(),
+}));
+
 vi.mock("@/main-axios", () => api);
+vi.mock("@/lib/remote-server-api", () => ({
+  getConnectedRemoteApi: vi.fn(async () => remote),
+}));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -49,6 +56,7 @@ beforeEach(() => {
   api.setHostAuthOverride.mockReset();
   toast.success.mockReset();
   toast.error.mockReset();
+  remote.get.mockReset();
   api.getCredentials.mockResolvedValue([
     {
       id: 7,
@@ -68,6 +76,7 @@ beforeEach(() => {
     success: true,
     credentialId: 8,
   });
+  remote.get.mockResolvedValue({ data: [] });
 });
 
 afterEach(cleanup);
@@ -148,6 +157,37 @@ describe("HostAuthOverrideModal", () => {
     expect(
       screen.getByText("hosts.sharing.authOverrideDescriptionShared"),
     ).toBeTruthy();
+  });
+
+  it("loads credentials and overrides from the remote server for remote-only shared hosts", async () => {
+    remote.get.mockResolvedValue({
+      data: [
+        {
+          id: 19,
+          name: "Remote personal key",
+          username: "alice",
+          authType: "key",
+        },
+      ],
+    });
+    api.getHostAuthOverride.mockResolvedValue({ credentialId: 19 });
+
+    render(
+      <HostAuthOverrideModal
+        open
+        onOpenChange={() => {}}
+        host={{ ...host, id: "-42" }}
+        protocol="ssh"
+      />,
+    );
+
+    const select = await screen.findByLabelText(
+      "hosts.sharing.authOverrideCredentialLabel",
+    );
+    expect((select as HTMLSelectElement).value).toBe("19");
+    expect(remote.get).toHaveBeenCalledWith("/credentials");
+    expect(api.getCredentials).not.toHaveBeenCalled();
+    expect(api.getHostAuthOverride).toHaveBeenCalledWith(-42, "ssh", true);
   });
 
   it("renders empty and load-error states", async () => {

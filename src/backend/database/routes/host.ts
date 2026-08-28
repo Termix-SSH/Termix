@@ -1813,6 +1813,78 @@ router.get(
 );
 
 /**
+ * Returns the minimum authentication material needed by the desktop app to
+ * connect to a shared host from the recipient's own network. The response is
+ * deliberately transient: callers must not persist it or include it in logs.
+ */
+router.get(
+  "/db/host/:id/local-connection-auth",
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = Number(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId) || !Number.isInteger(hostId) || hostId <= 0) {
+      return res.status(400).json({ error: "Invalid userId or hostId" });
+    }
+
+    try {
+      const access = await permissionManager.canAccessHost(
+        userId,
+        hostId,
+        "connect",
+      );
+      if (!access.hasAccess || !access.isShared) {
+        return res.status(404).json({ error: "Shared host not found" });
+      }
+
+      const repository = createCurrentHostResolutionRepository();
+      const ownerId = await repository.findHostOwnerId(hostId);
+      const host = ownerId
+        ? await repository.findHostById(hostId, ownerId)
+        : null;
+      if (!host) {
+        return res.status(404).json({ error: "Shared host not found" });
+      }
+
+      const resolved = await resolveHostCredentials(
+        {
+          ...transformHostResponse(host),
+          isShared: true,
+          permissionLevel: access.permissionLevel,
+        },
+        userId,
+      );
+
+      res.setHeader("Cache-Control", "no-store");
+      return res.json({
+        username: resolved.username,
+        authType: resolved.authType,
+        password: resolved.password || null,
+        key: resolved.key || null,
+        keyPassword: resolved.keyPassword || null,
+        keyType: resolved.keyType || null,
+      });
+    } catch (error) {
+      sshLogger.error(
+        "Failed to resolve shared host local authentication",
+        error,
+        {
+          operation: "shared_host_local_auth_resolve",
+          hostId,
+          userId,
+        },
+      );
+      return res
+        .status(500)
+        .json({ error: "Failed to resolve shared host authentication" });
+    }
+  },
+);
+
+/**
  * @openapi
  * /host/db/host/{id}/password:
  *   get:
