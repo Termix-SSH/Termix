@@ -72,6 +72,7 @@ import {
   createWebSocketDuplex,
   waitForWebSocketOpen,
 } from "../cloudflare-websocket.js";
+import { hostSessionStatus } from "./host-session-status.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -1615,9 +1616,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
     let tailscaleCheckPending = false;
     let tailscaleForcePasswordAttempted = false;
     let isTailscaleRetrying = false;
+    let clearOnlineStatus: (() => void) | null = null;
 
     let resolvedHostData:
       | (Record<string, unknown> & {
+          id?: number;
           ip?: string;
           port?: number;
           username?: string;
@@ -1751,6 +1754,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         });
       }
     }
+
+    const statusHostId = resolvedHostData?.id ?? id;
 
     // Resolve credentials server-side when frontend doesn't provide them
     let resolvedCredentials = {
@@ -1921,6 +1926,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     });
 
     sshConn.on("ready", () => {
+      clearOnlineStatus ??= hostSessionStatus.register(statusHostId);
       clearTimeout(connectionTimeout);
       isTailscaleRetrying = false;
       if (tailscaleCheckPending) {
@@ -2816,6 +2822,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       if (isTailscaleRetrying) {
         return;
       }
+
+      clearOnlineStatus?.();
+      clearOnlineStatus = null;
 
       clearTimeout(connectionTimeout);
       sshLogger.info("SSH connection closed", {
