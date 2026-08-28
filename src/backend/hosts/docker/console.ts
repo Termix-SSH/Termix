@@ -20,6 +20,13 @@ import {
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
 } from "../terminal/host-identity.js";
 import { extractWebSocketToken } from "../../utils/ws-auth.js";
+import {
+  asObject,
+  asString,
+  MAX_WS_MESSAGE_BYTES,
+  parseWsMessage,
+  toTerminalDimension,
+} from "../../utils/ws-message.js";
 
 const sshLogger = systemLogger;
 
@@ -38,6 +45,7 @@ const activeSessions = new Map<string, SSHSession>();
 const wss = new WebSocketServer({
   host: "127.0.0.1",
   port: 30009,
+  maxPayload: MAX_WS_MESSAGE_BYTES,
 });
 
 wss.on("error", (error) => {
@@ -294,7 +302,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   const authManagerInstance = AuthManager.getInstance();
-  const payload = await authManagerInstance.verifyJWTToken(token);
+  let payload;
+  try {
+    payload = await authManagerInstance.verifyJWTToken(token);
+  } catch (error) {
+    sshLogger.warn("Docker console JWT verification failed", {
+      operation: "docker_console_auth_error",
+      error: getErrorMessage(error),
+    });
+    ws.close(1008, "Authentication required");
+    return;
+  }
   if (!payload?.userId || payload.pendingTOTP) {
     ws.close(1008, "Authentication required");
     return;
@@ -316,20 +334,29 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
   }, 30000);
 
+  const cleanup = () => {
+    clearInterval(wsPingInterval);
+    if (!sshSession) return;
+    sshSession.stream?.end();
+    sshSession.client.end();
+    activeSessions.delete(sessionId);
+    sshSession = null;
+  };
+
   ws.on("message", async (data) => {
     try {
-      const message = JSON.parse(data.toString());
+      const message = parseWsMessage(data);
 
       switch (message.type) {
         case "connect": {
-          const { hostConfig, containerId, shell, cols, rows } =
-            message.data as {
-              hostConfig: SSHHost;
-              containerId: string;
-              shell?: string;
-              cols?: number;
-              rows?: number;
-            };
+          const connectData = asObject(message.data);
+          const hostConfig = asObject(
+            connectData.hostConfig,
+          ) as unknown as SSHHost;
+          const containerId = asString(connectData.containerId);
+          const shell = asString(connectData.shell) || undefined;
+          const cols = toTerminalDimension(connectData.cols) || 80;
+          const rows = toTerminalDimension(connectData.rows) || 24;
 
           const hostId = hostConfig?.id;
 
@@ -595,8 +622,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
               {
                 pty: {
                   term: "xterm-256color",
-                  cols: cols || 80,
-                  rows: rows || 24,
+                  cols,
+                  rows,
                 },
               },
               (err, stream) => {
@@ -694,7 +721,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             sshLogger.error("Failed to connect to container", error, {
               operation: "console_connect",
               sessionId,
-              containerId: message.data.containerId,
+              containerId,
             });
 
             ws.send(
@@ -712,15 +739,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         case "input": {
           if (sshSession && sshSession.stream) {
-            sshSession.stream.write(message.data);
+            const input = asString(message.data);
+            if (input) sshSession.stream.write(input);
           }
           break;
         }
 
         case "resize": {
           if (sshSession && sshSession.stream) {
-            const { cols, rows } = message.data;
-            sshSession.stream.setWindow(rows, cols, rows, cols);
+            const dimensions = asObject(message.data);
+            const cols = toTerminalDimension(dimensions.cols);
+            const rows = toTerminalDimension(dimensions.rows);
+            if (cols && rows)
+              sshSession.stream.setWindow(rows, cols, rows, cols);
           }
           break;
         }
@@ -772,7 +803,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   ws.on("close", () => {
-    clearInterval(wsPingInterval);
     sshLogger.info("Docker console disconnected", {
       operation: "docker_console_disconnect",
       sessionId,
@@ -780,13 +810,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       hostId: sshSession?.hostId,
       containerId: sshSession?.containerId,
     });
-    if (sshSession) {
-      if (sshSession.stream) {
-        sshSession.stream.end();
-      }
-      sshSession.client.end();
-      activeSessions.delete(sessionId);
-    }
+    cleanup();
   });
 
   ws.on("error", (error) => {
@@ -795,13 +819,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sessionId,
     });
 
-    if (sshSession) {
-      if (sshSession.stream) {
-        sshSession.stream.end();
-      }
-      sshSession.client.end();
-      activeSessions.delete(sessionId);
-    }
+    cleanup();
   });
 });
 

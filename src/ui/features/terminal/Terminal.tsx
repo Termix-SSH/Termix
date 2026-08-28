@@ -88,6 +88,7 @@ import { isPhysicalShortcutKey, isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
 import { quoteTerminalImagePath } from "./terminal-image-path.ts";
+import { hydrateLocalSharedHostAuth } from "@/lib/remote-server-api.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -1265,6 +1266,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       let baseWsUrl: string;
       let wsProtocols: string[] = [];
+      let outboundHostConfig = hostConfig;
 
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
@@ -1286,6 +1288,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           updateConnectionError(t("errors.remoteServerRequired"));
           isConnectingRef.current = false;
           return;
+        }
+        if (origin === "local") {
+          try {
+            outboundHostConfig = await hydrateLocalSharedHostAuth(hostConfig);
+          } catch (error) {
+            const message = getErrorMessage(
+              error,
+              "Failed to load shared SSH authentication",
+            );
+            setIsConnected(false);
+            setIsConnecting(false);
+            updateConnectionError(message);
+            addLog({ type: "error", stage: "auth", message });
+            isConnectingRef.current = false;
+            return;
+          }
         }
         baseWsUrl = resolvedUrl.url;
         wsProtocols = resolvedUrl.protocols;
@@ -1319,13 +1337,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isReconnectingRef.current = false;
       setIsConnecting(true);
 
-      setupWebSocketListeners(ws, cols, rows);
+      setupWebSocketListeners(ws, cols, rows, outboundHostConfig);
     }
 
     function setupWebSocketListeners(
       ws: WebSocket,
       cols: number,
       rows: number,
+      outboundHostConfig: TerminalHostConfig,
     ) {
       ws.addEventListener("open", () => {
         alternateScreenModeRef.current = false;
@@ -1402,7 +1421,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               data: {
                 cols,
                 rows,
-                hostConfig,
+                hostConfig: outboundHostConfig,
                 initialPath,
                 executeCommand,
                 tmuxAttachSession,

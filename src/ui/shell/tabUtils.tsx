@@ -232,6 +232,7 @@ function hostToSSHHost(h: Host): SSHHost {
     tunnelConnections: [],
     connectionType: "ssh",
     connectionOrigin: h.connectionOrigin ?? null,
+    isShared: h.isShared ?? false,
     // Carries the host's identity to a delegated backend. Without it the
     // remote side resolves our local row id against its own table.
     syncId: h.syncId ?? null,

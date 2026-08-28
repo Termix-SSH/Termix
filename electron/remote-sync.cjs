@@ -37,7 +37,20 @@ function writeJson(filePath, value) {
   if (!fs.existsSync(userDataPath)) {
     fs.mkdirSync(userDataPath, { recursive: true });
   }
-  fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
+  const temporaryPath = `${filePath}.${process.pid}-${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, JSON.stringify(value, null, 2), {
+      mode: 0o600,
+    });
+    fs.renameSync(temporaryPath, filePath);
+  } catch (error) {
+    try {
+      fs.unlinkSync(temporaryPath);
+    } catch {
+      // already absent
+    }
+    throw error;
+  }
 }
 
 function getDesktopSettingsPath() {
