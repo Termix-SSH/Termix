@@ -12,8 +12,8 @@ import {
   resolveSnippetCommand,
 } from "./snippets-execution.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { resolveHostById } from "../../hosts/host-resolver.js";
 import {
-  createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentSnippetRepository,
@@ -587,32 +587,16 @@ router.post(
       }
 
       const { Client } = await import("ssh2");
-      const repository = createCurrentHostResolutionRepository();
-      const host = await repository.findHostById(parseInt(hostId), userId);
+      const host = await resolveHostById(parseInt(hostId), userId);
 
-      if (!host || host.userId !== userId) {
+      if (!host) {
         return res.status(404).json({ error: "Host not found" });
       }
 
-      let password = host.password;
-      let privateKey = host.key;
-      let passphrase = host.keyPassword;
-      let authType = host.authType;
-
-      if (host.credentialId) {
-        const cred = await repository.findCredentialByIdForUser(
-          host.credentialId as number,
-          userId,
-        );
-
-        if (cred) {
-          authType = (cred.authType || authType) as string;
-          password = (cred.password || undefined) as string | undefined;
-          privateKey = (cred.privateKey || cred.key || undefined) as
-            string | undefined;
-          passphrase = (cred.keyPassword || undefined) as string | undefined;
-        }
-      }
+      const password = host.password;
+      const privateKey = host.key;
+      const passphrase = host.keyPassword;
+      const authType = host.authType;
 
       const conn = new Client();
       let output = "";
