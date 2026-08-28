@@ -10,7 +10,7 @@ import { createCorsMiddleware } from "../../utils/cors-config.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
-import ssh2Pkg, { Client as SSHClient } from "ssh2";
+import ssh2Pkg, { Client as SSHClient, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { fileLogger } from "../../utils/logger.js";
@@ -829,6 +829,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedSocks5Username = socks5Username;
   let resolvedSocks5Password = socks5Password;
   let resolvedSocks5ProxyChain = socks5ProxyChain;
+  let resolvedVaultProfileId: number | null = null;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById, resolveHostBySyncId } =
@@ -855,6 +856,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
+        resolvedVaultProfileId =
+          (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
+          null;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -924,6 +928,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
+        resolvedVaultProfileId =
+          (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
+          null;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -1172,6 +1179,38 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       );
       return res.status(500).json({
         error: "OPKSSH authentication failed",
+        connectionLogs,
+      });
+    }
+  } else if (resolvedCredentials.authType === "vault") {
+    try {
+      const { setupVaultSshSignerAuth } =
+        await import("../vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config as ConnectConfig, client, {
+        id: hostId,
+        username: resolvedUsername,
+        userId,
+        vaultProfile: { id: resolvedVaultProfileId },
+      });
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "sftp_auth",
+          "Using cached Vault-signed certificate",
+        ),
+      );
+    } catch (vaultError) {
+      const message = getErrorMessage(vaultError);
+      fileLogger.warn("Vault authentication unavailable for file manager", {
+        operation: "file_connect_vault_auth",
+        sessionId,
+        hostId,
+        error: message,
+      });
+      connectionLogs.push(createConnectionLog("error", "sftp_auth", message));
+      return res.status(401).json({
+        error: message,
+        requiresVaultAuth: true,
         connectionLogs,
       });
     }
