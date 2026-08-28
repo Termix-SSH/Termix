@@ -89,6 +89,7 @@ describe("GuacamoleToolbar Windows key", () => {
         sendMouse: vi.fn(),
         setClipboard: vi.fn(),
         getFilesystem: () => null,
+        uploadFile: vi.fn(),
         zoomIn: vi.fn(() => 1.25),
         zoomOut: vi.fn(() => 0.75),
         resetZoom: vi.fn(() => 1),
