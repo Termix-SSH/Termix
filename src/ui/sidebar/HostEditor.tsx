@@ -25,7 +25,6 @@ import {
   Globe,
   Info,
   Layers, // --- tmux-monitor ---
-  LayoutGrid,
   Network,
   Palette,
   Pencil,
@@ -2189,22 +2188,6 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.enableTmuxMonitor}
                       onChange={(v) => setField("enableTmuxMonitor", v)}
-                    />
-                  </SettingRow>
-                </div>
-              </SectionCard>
-              <SectionCard
-                title={t("terminalToolbar.title")}
-                icon={<LayoutGrid className="size-3.5" />}
-              >
-                <div className="flex flex-col gap-4 py-3">
-                  <SettingRow
-                    label={t("hosts.enableTerminalToolbar")}
-                    description={t("hosts.enableTerminalToolbarDesc")}
-                  >
-                    <FakeSwitch
-                      checked={form.enableTerminalToolbar}
-                      onChange={(v) => setField("enableTerminalToolbar", v)}
                     />
                   </SettingRow>
                 </div>

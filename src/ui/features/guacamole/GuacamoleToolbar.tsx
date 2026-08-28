@@ -19,6 +19,7 @@ import {
   ZoomIn,
   ZoomOut,
   Scan,
+  X,
 } from "lucide-react";
 import {
   Tooltip,
@@ -42,6 +43,7 @@ interface GuacamoleToolbarProps {
   onToggleFileBrowser?: () => void;
   onTouchModeChange?: (mode: GuacamoleTouchMode) => void;
   zoom?: number;
+  onHide?: () => void;
 }
 
 const MODIFIER_KEYSYMS = {
@@ -130,6 +132,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
   onToggleFileBrowser,
   onTouchModeChange,
   zoom = 1,
+  onHide,
 }) => {
   const { t } = useTranslation();
   const [position, setPosition] = useState({ x: 0, y: 12 });
@@ -569,6 +572,14 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                 {t("guacamole.toolbar.collapse")}
               </TooltipContent>
             </Tooltip>
+            {onHide && (
+              <TipIconBtn
+                tooltip={t("guacamole.toolbar.hide")}
+                onClick={onHide}
+              >
+                <X className="size-3.5" />
+              </TipIconBtn>
+            )}
           </div>
         )}
       </div>

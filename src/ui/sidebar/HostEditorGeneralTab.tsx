@@ -8,6 +8,7 @@ import { FakeSwitch, SectionCard, SettingRow } from "@/components/section-card";
 import type { Host } from "@/types/ui-types";
 import {
   Globe,
+  LayoutGrid,
   Monitor,
   MousePointerClick,
   Plus,
@@ -169,6 +170,23 @@ export function HostEditorGeneralTab({
               </div>
             );
           })}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title={t("hosts.connectionToolbar")}
+        icon={<LayoutGrid className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-4 py-3">
+          <SettingRow
+            label={t("hosts.showConnectionToolbar")}
+            description={t("hosts.showConnectionToolbarDesc")}
+          >
+            <FakeSwitch
+              checked={form.enableTerminalToolbar}
+              onChange={(value) => setField("enableTerminalToolbar", value)}
+            />
+          </SettingRow>
         </div>
       </SectionCard>
 
