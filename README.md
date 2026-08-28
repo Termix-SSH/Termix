@@ -331,6 +331,11 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+      GUACD_HOST: "guacd"
+      GUACD_TUNNEL_HOST: "termix"
+      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      # guacd, not the Termix container, reads and writes redirected-drive files.
+      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
     depends_on:
       - guacd
     networks:
@@ -340,8 +345,10 @@ services:
     image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
-    ports:
-      - "4822:4822"
+    volumes:
+      # The official guacd image runs as a non-root user. Keep the drive path
+      # in this writable shared volume instead of bind-mounting /drive.
+      - termix-data:/termix-data
     networks:
       - termix-net
 
