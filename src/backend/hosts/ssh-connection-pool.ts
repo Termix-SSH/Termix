@@ -20,9 +20,12 @@ const DEFAULT_MAX_WAIT_MS = 30_000;
 const IDLE_MAX_AGE_MS = 10 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 2 * 60 * 1000;
 
-class SSHConnectionPool {
+export class SSHConnectionPool {
   private connections = new Map<string, PooledConnection[]>();
   private waiters = new Map<string, ConnectionWaiter[]>();
+  private pendingConnections = new Map<string, number>();
+  private generations = new Map<string, number>();
+  private destroyed = false;
   private maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
   private maxWaitMs = DEFAULT_MAX_WAIT_MS;
   private cleanupInterval: NodeJS.Timeout;
@@ -31,6 +34,18 @@ class SSHConnectionPool {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, CLEANUP_INTERVAL_MS);
+    this.cleanupInterval.unref();
+  }
+
+  private hasCapacity(key: string, connections: PooledConnection[]): boolean {
+    return (
+      connections.length + (this.pendingConnections.get(key) || 0) <
+      this.maxConnectionsPerHost
+    );
+  }
+
+  private invalidatePendingConnections(key: string): void {
+    this.generations.set(key, (this.generations.get(key) || 0) + 1);
   }
 
   private isConnectionHealthy(client: Client): boolean {
@@ -73,24 +88,44 @@ class SSHConnectionPool {
     factory: () => Promise<Client>,
     existing: PooledConnection[],
   ): Promise<Client> {
-    const client = await factory();
-    const pooled: PooledConnection = {
-      client,
-      lastUsed: Date.now(),
-      inUse: true,
-      hostKey: key,
-    };
-    existing.push(pooled);
-    this.connections.set(key, existing);
+    const generation = this.generations.get(key) || 0;
+    this.pendingConnections.set(
+      key,
+      (this.pendingConnections.get(key) || 0) + 1,
+    );
+    try {
+      const client = await factory();
+      if (this.destroyed || (this.generations.get(key) || 0) !== generation) {
+        try {
+          client.end();
+        } catch {
+          // expected
+        }
+        throw new Error(`SSH connection pool cleared for ${key}`);
+      }
+      const pooled: PooledConnection = {
+        client,
+        lastUsed: Date.now(),
+        inUse: true,
+        hostKey: key,
+      };
+      existing.push(pooled);
+      this.connections.set(key, existing);
 
-    client.on("end", () => {
-      this.removeConnection(key, client);
-    });
-    client.on("close", () => {
-      this.removeConnection(key, client);
-    });
+      client.on("end", () => {
+        this.removeConnection(key, client);
+      });
+      client.on("close", () => {
+        this.removeConnection(key, client);
+      });
 
-    return client;
+      return client;
+    } finally {
+      const pending = (this.pendingConnections.get(key) || 1) - 1;
+      if (pending === 0) this.pendingConnections.delete(key);
+      else this.pendingConnections.set(key, pending);
+      this.wakeWaiter(key);
+    }
   }
 
   private enqueueWaiter(
@@ -147,7 +182,7 @@ class SSHConnectionPool {
       }
     }
 
-    if (connections.length < this.maxConnectionsPerHost) {
+    if (this.hasCapacity(key, connections)) {
       const waiter = queue.shift()!;
       if (queue.length === 0) this.waiters.delete(key);
       else this.waiters.set(key, queue);
@@ -173,6 +208,9 @@ class SSHConnectionPool {
     key: string,
     factory: () => Promise<Client>,
   ): Promise<Client> {
+    if (this.destroyed) {
+      throw new Error("SSH connection pool destroyed");
+    }
     let connections = this.connections.get(key) || [];
 
     const available = connections.find((conn) => !conn.inUse);
@@ -186,7 +224,7 @@ class SSHConnectionPool {
       }
     }
 
-    if (connections.length < this.maxConnectionsPerHost) {
+    if (this.hasCapacity(key, connections)) {
       return this.createPooledClient(key, factory, connections);
     }
 
@@ -217,6 +255,7 @@ class SSHConnectionPool {
   }
 
   clearKeyConnections(key: string): void {
+    this.invalidatePendingConnections(key);
     const connections = this.connections.get(key) || [];
     for (const conn of connections) {
       try {
@@ -263,6 +302,12 @@ class SSHConnectionPool {
   }
 
   clearAllConnections(): void {
+    const keys = new Set([
+      ...this.connections.keys(),
+      ...this.pendingConnections.keys(),
+      ...this.waiters.keys(),
+    ]);
+    for (const key of keys) this.invalidatePendingConnections(key);
     for (const key of [...this.waiters.keys()]) {
       this.rejectWaiters(key, "SSH connection pool destroyed");
     }
@@ -279,6 +324,7 @@ class SSHConnectionPool {
   }
 
   destroy(): void {
+    this.destroyed = true;
     clearInterval(this.cleanupInterval);
     this.clearAllConnections();
   }
