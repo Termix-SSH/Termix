@@ -65,7 +65,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const linkPath = decodeURIComponent(req.query.path as string);
+    const linkPath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -166,7 +166,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const rawPath = decodeURIComponent(req.query.path as string);
+    const rawPath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -266,7 +266,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/readFile", async (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const filePath = decodeURIComponent(req.query.path as string);
+    const filePath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -361,7 +361,11 @@ export function registerFileContentRoutes(
         });
       }
 
-      let contentResult = await execBuffer(sshConn, `cat '${escapedPath}'`);
+      let contentResult = await execBuffer(
+        sshConn,
+        `cat '${escapedPath}'`,
+        MAX_READ_SIZE,
+      );
       let contentError =
         contentResult.stderr || contentResult.stdout.toString("utf8");
 
@@ -374,9 +378,18 @@ export function registerFileContentRoutes(
           sshConn,
           `cat '${escapedPath}'`,
           sshConn.sudoPassword,
+          MAX_READ_SIZE,
         );
         contentError =
           contentResult.stderr || contentResult.stdout.toString("utf8");
+      }
+
+      if (contentResult.exceededLimit) {
+        return res.status(400).json({
+          error: `File grew beyond the ${MAX_READ_SIZE / 1024 / 1024}MB read limit`,
+          maxSize: MAX_READ_SIZE,
+          tooLarge: true,
+        });
       }
 
       if (contentResult.code !== 0) {
