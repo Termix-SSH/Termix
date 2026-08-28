@@ -25,6 +25,10 @@ import {
   getFileDropDisposition,
   hasDraggedFiles,
 } from "./guacamole-file-drop.ts";
+import {
+  uploadFileToClient,
+  type GuacamoleFileStreamClient,
+} from "./guacamole-filesystem.ts";
 import { guacStateToStage } from "@/components/connection/connection-status.ts";
 import type { ConnectionStage } from "@/types/connection-log.ts";
 import { clampGuacamoleZoom, stepGuacamoleZoom } from "./guacamole-zoom.ts";
@@ -53,6 +57,7 @@ export interface GuacamoleDisplayHandle {
   sendMouse: (x: number, y: number, buttonMask: number) => void;
   setClipboard: (data: string) => void;
   getFilesystem: () => Guacamole.Object | null;
+  uploadFile: (file: File) => Promise<void>;
   zoomIn: () => number;
   zoomOut: () => number;
   resetZoom: () => number;
@@ -193,6 +198,14 @@ export const GuacamoleDisplay = forwardRef<
       }
     },
     getFilesystem: () => filesystemRef.current,
+    uploadFile: (file: File) => {
+      const client = clientRef.current;
+      if (!client) return Promise.reject(new Error("RDP session is not ready"));
+      return uploadFileToClient(
+        client as unknown as GuacamoleFileStreamClient,
+        file,
+      );
+    },
     zoomIn: () => applyZoom(stepGuacamoleZoom(zoomRef.current, 1)),
     zoomOut: () => applyZoom(stepGuacamoleZoom(zoomRef.current, -1)),
     resetZoom: () => applyZoom(1),

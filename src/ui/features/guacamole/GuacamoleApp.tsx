@@ -26,6 +26,8 @@ import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
 import { GuacamoleFileBrowser } from "@/features/guacamole/GuacamoleFileBrowser.tsx";
+import { describeUploadError } from "@/features/guacamole/guacamole-filesystem.ts";
+import { canUploadToRdpDrive } from "@/features/guacamole/guacamole-file-drop.ts";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { PasswordInput } from "@/components/password-input.tsx";
@@ -212,12 +214,36 @@ const GuacamoleAppInner = React.forwardRef<
   const allowUpload = guacConfig.disableUpload !== true;
   const allowDownload = guacConfig.disableDownload !== true;
 
-  // A dropped file has nowhere to go until the browser is showing the target
-  // directory, so opening it is part of accepting the drop.
-  const handleDropFiles = useCallback((files: File[]) => {
-    setPendingUploads(files);
-    setFileBrowserOpen(true);
-  }, []);
+  // Prefer the browsable filesystem's current directory. guacd may expose the
+  // RDP drive only through the connection-level file stream, in which case the
+  // standard direct upload still lands in the redirected drive.
+  const handleDropFiles = useCallback(
+    (files: File[]) => {
+      if (filesystem) {
+        setPendingUploads(files);
+        setFileBrowserOpen(true);
+        return;
+      }
+
+      void (async () => {
+        for (const file of files) {
+          try {
+            const display = displayRef.current;
+            if (!display) throw new Error("RDP session is not ready");
+            await display.uploadFile(file);
+            toast.success(t("guacamole.files.uploaded", { name: file.name }));
+          } catch (error) {
+            toast.error(
+              describeUploadError(error, (key) =>
+                t(`guacamole.files.${key}`, { name: file.name }),
+              ),
+            );
+          }
+        }
+      })();
+    },
+    [filesystem, t],
+  );
 
   const handleDropUnavailable = useCallback(() => {
     toast.error(
@@ -526,7 +552,11 @@ const GuacamoleAppInner = React.forwardRef<
         }}
         isVisible={isVisible}
         touchMode={touchMode}
-        allowUpload={allowUpload && filesystem !== null}
+        allowUpload={canUploadToRdpDrive(
+          allowUpload,
+          guacConfig.enableDrive === true,
+          filesystem !== null,
+        )}
         onConnect={() => setIsDisplayReady(true)}
         onError={(err) => {
           setConnectionError(err);

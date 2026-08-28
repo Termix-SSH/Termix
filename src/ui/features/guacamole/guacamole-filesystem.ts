@@ -1,5 +1,11 @@
 import Guacamole from "guacamole-common-js";
 
+// The bundled Guacamole runtime exposes Client.createFileStream(), but the
+// package's older TypeScript declaration omits it.
+export interface GuacamoleFileStreamClient {
+  createFileStream(mimetype: string, filename: string): Guacamole.OutputStream;
+}
+
 // The root stream of a Guacamole.Object maps stream name to mimetype; a stream
 // carrying that same mimetype is itself a directory.
 export const STREAM_INDEX_MIMETYPE =
@@ -123,12 +129,45 @@ export function uploadFile(
   file: File,
   onProgress?: (sent: number, total: number) => void,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const path = joinPath(directory, file.name);
-    const stream = filesystem.createOutputStream(
+  return writeUpload(
+    filesystem.createOutputStream(
       file.type || "application/octet-stream",
-      path,
-    );
+      joinPath(directory, file.name),
+    ),
+    file,
+    onProgress,
+  );
+}
+
+/**
+ * Uploads through Guacamole's connection-level file stream. RDP exposes this
+ * path even when guacd does not advertise a browsable filesystem object, so
+ * display drops must not depend on `Client.onfilesystem` having fired.
+ */
+export function uploadFileToClient(
+  client: GuacamoleFileStreamClient,
+  file: File,
+  onProgress?: (sent: number, total: number) => void,
+): Promise<void> {
+  return writeUpload(createClientFileStream(client, file), file, onProgress);
+}
+
+export function createClientFileStream(
+  client: GuacamoleFileStreamClient,
+  file: File,
+): Guacamole.OutputStream {
+  return client.createFileStream(
+    file.type || "application/octet-stream",
+    file.name,
+  );
+}
+
+function writeUpload(
+  stream: Guacamole.OutputStream,
+  file: File,
+  onProgress?: (sent: number, total: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
     const writer = new Guacamole.BlobWriter(stream);
 
     // A rejected blob stops the writer without firing onerror or oncomplete —
