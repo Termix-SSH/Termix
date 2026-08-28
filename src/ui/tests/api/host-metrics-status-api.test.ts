@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const statsApiMock = vi.hoisted(() => ({ get: vi.fn() }));
+const statsApiMock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 const remoteStatsApiMock = vi.hoisted(() => ({ get: vi.fn() }));
 const sshHostApiMock = vi.hoisted(() => ({ get: vi.fn() }));
 const resolveConnectionOriginMock = vi.hoisted(() => vi.fn());
@@ -24,6 +24,7 @@ vi.mock("@/lib/connection-origin", () => ({
 import {
   getAllServerStatuses,
   getServerMetricsById,
+  sendMetricsHeartbeat,
 } from "../../api/host-metrics-status-api";
 
 beforeEach(() => {
@@ -96,5 +97,23 @@ describe("metrics request coalescing", () => {
     expect(first).toEqual({ cpu: { percent: 12 } });
     expect(second).toBe(first);
     expect(statsApiMock.get).toHaveBeenCalledOnce();
+  });
+});
+
+describe("metrics viewer heartbeat", () => {
+  it("reports a swept viewer session without throwing or logging", async () => {
+    statsApiMock.post.mockResolvedValueOnce({ status: 404 });
+
+    await expect(sendMetricsHeartbeat("expired-viewer")).resolves.toBe(false);
+    expect(statsApiMock.post).toHaveBeenCalledWith(
+      "/metrics/heartbeat",
+      { viewerSessionId: "expired-viewer" },
+      { validateStatus: expect.any(Function) },
+    );
+  });
+
+  it("keeps a live viewer session", async () => {
+    statsApiMock.post.mockResolvedValueOnce({ status: 200 });
+    await expect(sendMetricsHeartbeat("live-viewer")).resolves.toBe(true);
   });
 });
