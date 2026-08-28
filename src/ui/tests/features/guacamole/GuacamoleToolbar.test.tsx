@@ -78,4 +78,32 @@ describe("GuacamoleToolbar Windows key", () => {
     expect(zoomIn).toHaveBeenCalledOnce();
     expect(resetZoom).toHaveBeenCalledOnce();
   });
+
+  it("offers an explicit session-only hide action", () => {
+    const onHide = vi.fn();
+    const displayRef = {
+      current: {
+        disconnect: vi.fn(),
+        isConnected: () => true,
+        sendKey: vi.fn(),
+        sendMouse: vi.fn(),
+        setClipboard: vi.fn(),
+        getFilesystem: () => null,
+        zoomIn: vi.fn(() => 1.25),
+        zoomOut: vi.fn(() => 0.75),
+        resetZoom: vi.fn(() => 1),
+      } satisfies GuacamoleDisplayHandle,
+    } as React.RefObject<GuacamoleDisplayHandle>;
+
+    const { getByLabelText } = render(
+      <GuacamoleToolbar
+        displayRef={displayRef}
+        protocol="rdp"
+        onHide={onHide}
+      />,
+    );
+
+    fireEvent.click(getByLabelText("guacamole.toolbar.hide"));
+    expect(onHide).toHaveBeenCalledOnce();
+  });
 });

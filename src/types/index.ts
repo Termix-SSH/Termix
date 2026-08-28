@@ -111,7 +111,7 @@ export interface HostFeatureFlags {
   enableFileManager: boolean; // SSH only
   enableDocker: boolean; // SSH only
   enableTmuxMonitor: boolean; // SSH only
-  enableTerminalToolbar: boolean; // SSH only
+  enableTerminalToolbar: boolean; // SSH, RDP, VNC, and Telnet
   enableRemoteDesktop: boolean; // RDP, VNC only
 }
 

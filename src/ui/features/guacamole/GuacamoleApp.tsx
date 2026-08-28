@@ -174,7 +174,7 @@ interface GuacamoleAppInnerProps {
     | "rdpPassword"
     | "vncUser"
     | "vncPassword"
-  >;
+  > & { enableTerminalToolbar?: boolean };
   hostName: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
@@ -208,6 +208,7 @@ const GuacamoleAppInner = React.forwardRef<
   const [displayZoom, setDisplayZoom] = useState(1);
   const [filesystem, setFilesystem] = useState<Guacamole.Object | null>(null);
   const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
+  const [toolbarHidden, setToolbarHidden] = useState(false);
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
 
   const guacConfig = parseGuacamoleConfig(hostConfig.guacamoleConfig);
@@ -586,16 +587,19 @@ const GuacamoleAppInner = React.forwardRef<
           onClose={() => setFileBrowserOpen(false)}
         />
       )}
-      <GuacamoleToolbar
-        displayRef={displayRef}
-        protocol={resolvedProtocol}
-        touchMode={touchMode}
-        hasFilesystem={filesystem !== null}
-        fileBrowserOpen={fileBrowserOpen}
-        onToggleFileBrowser={() => setFileBrowserOpen((open) => !open)}
-        onTouchModeChange={setTouchMode}
-        zoom={displayZoom}
-      />
+      {hostConfig.enableTerminalToolbar !== false && !toolbarHidden && (
+        <GuacamoleToolbar
+          displayRef={displayRef}
+          protocol={resolvedProtocol}
+          touchMode={touchMode}
+          hasFilesystem={filesystem !== null}
+          fileBrowserOpen={fileBrowserOpen}
+          onToggleFileBrowser={() => setFileBrowserOpen((open) => !open)}
+          onTouchModeChange={setTouchMode}
+          zoom={displayZoom}
+          onHide={() => setToolbarHidden(true)}
+        />
+      )}
       {shareModalOpen && guacamoleConnectionId && (
         <ShareSessionModal
           open={shareModalOpen}
