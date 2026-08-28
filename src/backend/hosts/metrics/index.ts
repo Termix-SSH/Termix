@@ -53,6 +53,7 @@ import { registerHostMetricsHistoryRoutes } from "./history-routes.js";
 import { registerProxmoxStatsRoutes } from "./proxmox-stats-routes.js";
 import { registerProxmoxStatsHistoryRoutes } from "./proxmox-stats-history-routes.js";
 import { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
+import { hostSessionStatus } from "../terminal/host-session-status.js";
 import { AlertEngine } from "./alert-engine.js";
 import {
   notifyAutomationMetrics,
@@ -206,11 +207,42 @@ class PollingManager {
   private statusInFlight = new Set<number>();
   private metricsInFlight = new Set<number>();
   private initialMetricsRequested = new Set<number>();
+  private terminalOnlineHosts = new Set<number>();
+  private metricsAuthenticatedHosts = new Set<number>();
+  private unsubscribeHostSessionStatus: () => void;
 
   constructor() {
+    this.unsubscribeHostSessionStatus = hostSessionStatus.subscribe(
+      (hostId, online) => this.setTerminalSessionOnline(hostId, online),
+    );
     this.viewerCleanupInterval = setInterval(() => {
       this.cleanupInactiveViewers();
     }, 60000);
+  }
+
+  private setTerminalSessionOnline(hostId: number, online: boolean): void {
+    if (online) {
+      this.terminalOnlineHosts.add(hostId);
+      const config = this.pollingConfigs.get(hostId);
+      if (config && isTcpPingEnabled(config.statsConfig)) {
+        this.statusStore.set(hostId, {
+          status: "online",
+          lastChecked: new Date().toISOString(),
+        });
+      }
+      return;
+    }
+
+    this.terminalOnlineHosts.delete(hostId);
+    if (
+      !this.metricsAuthenticatedHosts.has(hostId) &&
+      this.statusStore.get(hostId)?.status === "online"
+    ) {
+      this.statusStore.set(hostId, {
+        status: "reachable",
+        lastChecked: new Date().toISOString(),
+      });
+    }
   }
 
   /**
@@ -586,10 +618,13 @@ class PollingManager {
       // authenticates and can promote a host to "online") never runs for
       // them.
       const statusEntry: StatusEntry = {
-        status: statusAfterReachabilityCheck(
-          isOnline,
-          this.statusStore.get(refreshedHost.id)?.status,
-        ),
+        status:
+          isOnline && this.terminalOnlineHosts.has(refreshedHost.id)
+            ? "online"
+            : statusAfterReachabilityCheck(
+                isOnline,
+                this.statusStore.get(refreshedHost.id)?.status,
+              ),
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
@@ -651,6 +686,7 @@ class PollingManager {
     try {
       const metrics = await collectMetrics(refreshedHost, () => {
         authenticated = true;
+        this.metricsAuthenticatedHosts.add(refreshedHost.id);
         this.statusStore.set(refreshedHost.id, {
           status: statusAfterAuthentication(true),
           lastChecked: new Date().toISOString(),
@@ -673,11 +709,14 @@ class PollingManager {
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
       if (!authenticated) {
+        this.metricsAuthenticatedHosts.delete(refreshedHost.id);
         this.statusStore.set(refreshedHost.id, {
-          status: statusAfterAuthentication(
-            false,
-            this.statusStore.get(refreshedHost.id)?.status,
-          ),
+          status: this.terminalOnlineHosts.has(refreshedHost.id)
+            ? "online"
+            : statusAfterAuthentication(
+                false,
+                this.statusStore.get(refreshedHost.id)?.status,
+              ),
           lastChecked: new Date().toISOString(),
         });
       }
@@ -973,6 +1012,7 @@ class PollingManager {
   }
 
   destroy(): void {
+    this.unsubscribeHostSessionStatus();
     clearInterval(this.viewerCleanupInterval);
     for (const hostId of this.pollingConfigs.keys()) {
       this.stopPollingForHost(hostId);
