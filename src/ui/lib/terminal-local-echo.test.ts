@@ -11,7 +11,14 @@ describe("TerminalLocalEcho", () => {
   it("rolls back a prediction when remote output differs", () => {
     const echo = new TerminalLocalEcho("on");
     echo.handleInput("a");
-    expect(echo.handleOutput("z")).toBe("\x1b[1D\x1b[Kz");
+    expect(echo.handleOutput("z")).toBe("\x1b[1D\x1b[1Xz");
+  });
+
+  it("only erases the predicted cells during rollback", () => {
+    const echo = new TerminalLocalEcho("on");
+    echo.handleInput("a");
+    echo.handleInput("b");
+    expect(echo.handleOutput("\x1b[C")).toBe("\x1b[2D\x1b[2X\x1b[C");
   });
 
   it("does not expose password input", () => {

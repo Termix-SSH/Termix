@@ -81,7 +81,7 @@ export class TerminalLocalEcho {
   private rollback() {
     const count = this.pending.filter((item) => item.predicted).length;
     this.pending = [];
-    return count > 0 ? `\x1b[${count}D\x1b[K` : "";
+    return count > 0 ? `\x1b[${count}D\x1b[${count}X` : "";
   }
 
   private stripAnsi(value: string) {
