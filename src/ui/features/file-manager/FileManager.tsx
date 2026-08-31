@@ -93,7 +93,7 @@ import type {
   PendingSudoOperation,
   SSHConnectionError,
 } from "./file-manager-types.ts";
-import { formatFileSize } from "./file-manager-utils.ts";
+import { formatFileSize, runWithConcurrency } from "./file-manager-utils.ts";
 import {
   invalidateCachedFileList,
   peekCachedFileList,
@@ -1145,15 +1145,13 @@ function FileManagerContent({
     }
   }
 
-  function handleFilesDropped(fileList: FileList) {
+  async function handleFilesDropped(fileList: FileList) {
     if (!sshSessionId) {
       toast.error(t("fileManager.noSSHConnection"));
       return;
     }
 
-    Array.from(fileList).forEach((file) => {
-      handleUploadFile(file);
-    });
+    await runWithConcurrency(Array.from(fileList), 3, handleUploadFile);
   }
 
   async function handleUploadFile(file: File) {
