@@ -9,6 +9,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "get-remote-sync-jwt",
   "get-remote-sync-status",
   "get-remote-sync-user-info",
+  "notify-local-login",
   "remote-sync-now",
   "save-desktop-settings",
   "save-remote-sync-config",
