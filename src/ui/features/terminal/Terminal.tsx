@@ -906,6 +906,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
     }
 
+    function applyLocalEchoToOutput(output: string): string {
+      const alternateScreen = updateAlternateScreenMode(
+        output,
+        alternateScreenModeRef.current,
+      );
+      if (
+        alternateScreenModeRef.current ||
+        alternateScreen.isActive ||
+        alternateScreen.sawSequence
+      ) {
+        if (!alternateScreenModeRef.current && alternateScreen.isActive) {
+          localEchoRef.current?.reset();
+        }
+        return output;
+      }
+      return localEchoRef.current?.handleOutput(output) ?? output;
+    }
+
     async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
       let passwordToFill = isSudoPrompt
         ? hostConfig.terminalConfig?.sudoPassword || hostConfig.password
@@ -1457,7 +1475,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           }
           trackInput(data);
-          const predicted = localEchoRef.current?.handleInput(data);
+          const predicted = alternateScreenModeRef.current
+            ? ""
+            : localEchoRef.current?.handleInput(data);
           if (predicted) terminal.write(predicted);
           ws.send(JSON.stringify({ type: "input", data }));
         });
@@ -1497,8 +1517,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 currentAutocompleteCommand.current = "";
               }
 
-              const output =
-                localEchoRef.current?.handleOutput(msg.data) ?? msg.data;
+              const output = applyLocalEchoToOutput(msg.data);
               terminal.write(formatTerminalOutput(output));
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
@@ -1509,8 +1528,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               maybeOfferPasswordFill(strippedData);
             } else {
               const stringData = String(msg.data);
-              const output =
-                localEchoRef.current?.handleOutput(stringData) ?? stringData;
+              const output = applyLocalEchoToOutput(stringData);
               terminal.write(formatTerminalOutput(output));
             }
           } else if (msg.type === "error") {
