@@ -461,19 +461,20 @@ export async function uploadSSHFile(
         const end = Math.min(start + CHUNK_SIZE_BYTES, file.size);
         const chunkBlob = file.slice(start, end);
 
-        const form = new FormData();
-        form.append("sessionId", sessionId);
-        form.append("path", path);
-        form.append("fileName", fileName);
-        form.append("chunkIndex", String(i));
-        form.append("totalChunks", String(totalChunks));
-        form.append("totalSize", String(file.size));
-        form.append("chunk", chunkBlob, fileName);
-
-        const response = await getFileManagerApiForSession(sessionId).postForm(
+        const response = await getFileManagerApiForSession(sessionId).post(
           "/ssh/uploadFileChunk",
-          form,
-          { timeout: 0 },
+          chunkBlob,
+          {
+            params: {
+              sessionId,
+              path,
+              fileName,
+              offset: start,
+              totalSize: file.size,
+            },
+            headers: { "Content-Type": "application/octet-stream" },
+            timeout: 0,
+          },
         );
 
         bytesSent = end;
