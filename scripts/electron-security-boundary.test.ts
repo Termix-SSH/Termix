@@ -18,4 +18,9 @@ describe("Electron security boundary", () => {
       "invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)",
     );
   });
+
+  it("allows the renderer to hand the local session to Remote Sync", () => {
+    expect(main).toContain('ipcMain.handle("notify-local-login"');
+    expect(preload).toContain('"notify-local-login"');
+  });
 });
