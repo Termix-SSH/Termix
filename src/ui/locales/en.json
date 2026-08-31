@@ -227,6 +227,7 @@
     "icon": "Icon",
     "expanded": "Expanded by default",
     "timezone": "Timezone",
+    "invalidTimezone": "Invalid timezone. Use an IANA name such as America/New_York",
     "showSeconds": "Show seconds",
     "format12h": "12-hour",
     "format24h": "24-hour",
