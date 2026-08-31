@@ -1337,6 +1337,20 @@ export function registerFileContentRoutes(
       let fileName: string | undefined;
       let uploadStartTime: number;
       let resolved = false;
+      let requestAborted = false;
+      let cleanupStarted = false;
+      let destroyUpload: (() => void) | undefined;
+
+      const abortUpload = () => {
+        if (req.complete || cleanupStarted) return;
+        requestAborted = true;
+        cleanupStarted = true;
+        destroyUpload?.();
+      };
+
+      req.once("aborted", abortUpload);
+      req.once("error", abortUpload);
+      req.once("close", abortUpload);
 
       const bb = Busboy({ headers: req.headers });
 
@@ -1401,10 +1415,27 @@ export function registerFileContentRoutes(
           getSessionSftp(sshConn)
             .then((sftp) => {
               const writeStream = sftp.createWriteStream(fullPath);
+              const removePartialFile = () => {
+                writeStream.destroy();
+                sftp.unlink(fullPath, (err) => {
+                  if (err) {
+                    fileLogger.error(
+                      "Failed to remove partial file after aborted upload:",
+                      err,
+                    );
+                  }
+                });
+              };
+              destroyUpload = removePartialFile;
+
+              if (requestAborted) {
+                removePartialFile();
+                return;
+              }
 
               writeStream.on("error", (err) => {
                 fileLogger.error("SFTP write stream error during upload:", err);
-                if (!resolved) {
+                if (!resolved && !requestAborted) {
                   resolved = true;
                   res
                     .status(500)
@@ -1432,30 +1463,10 @@ export function registerFileContentRoutes(
                 });
               });
 
-              writeStream.on("close", () => {
-                if (resolved) return;
-                resolved = true;
-                fileLogger.success("Streaming file upload completed", {
-                  operation: "file_upload_stream_complete",
-                  sessionId,
-                  userId,
-                  path: fullPath,
-                  duration: Date.now() - uploadStartTime,
-                });
-                res.json({
-                  message: "File uploaded successfully",
-                  path: fullPath,
-                  toast: {
-                    type: "success",
-                    message: `File uploaded: ${fullPath}`,
-                  },
-                });
-              });
-
               fileStream.on("error", (err) => {
                 fileLogger.error("File read stream error during upload:", err);
                 writeStream.destroy();
-                if (!resolved) {
+                if (!resolved && !requestAborted) {
                   resolved = true;
                   res
                     .status(500)
@@ -1470,7 +1481,7 @@ export function registerFileContentRoutes(
             .catch((err: Error) => {
               fileStream.resume();
               fileLogger.error("SFTP session error during stream upload:", err);
-              if (!resolved) {
+              if (!resolved && !requestAborted) {
                 resolved = true;
                 res.status(500).json({ error: `SFTP error: ${err.message}` });
               }
@@ -1480,7 +1491,7 @@ export function registerFileContentRoutes(
 
       bb.on("error", (err: Error) => {
         fileLogger.error("Busboy parse error during stream upload:", err);
-        if (!resolved) {
+        if (!resolved && !requestAborted) {
           resolved = true;
           res.status(500).json({ error: `Upload parse error: ${err.message}` });
         }

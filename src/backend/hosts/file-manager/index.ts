@@ -3178,6 +3178,11 @@ try {
     }
   });
 
+  // Uploads are streamed and may legitimately take longer than Node's default
+  // five-minute request deadline. Connection liveness is handled by the proxy
+  // and socket-level timeouts instead of a total request duration cap.
+  server.requestTimeout = 0;
+
   server.on("error", (err) => {
     fileLogger.error("File Manager server error", err, {
       operation: "file_manager_server_error",
