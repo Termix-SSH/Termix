@@ -1,0 +1,28 @@
+image:
+  repository: ghcr.io/termix-ssh/termix
+  tag: "2.7.0"
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: termix.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: termix-tls
+      hosts:
+        - termix.example.com
+
+persistence:
+  enabled: true
+  size: 20Gi
+
+secrets:
+  create: false
+
+database:
+  dialect: sqlite
+
+extraEnvFrom: []

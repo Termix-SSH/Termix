@@ -4,6 +4,7 @@ import {
   detectPlatform,
   parseUserAgent,
   generateDeviceFingerprint,
+  getDeviceId,
 } from "../../utils/user-agent-parser.js";
 
 function reqWith(headers: Record<string, string>): Request {
@@ -98,50 +99,81 @@ describe("parseUserAgent", () => {
 });
 
 describe("generateDeviceFingerprint", () => {
-  it("is stable across minor browser version bumps on web", () => {
-    const a = generateDeviceFingerprint({
-      type: "web",
-      browser: "Chrome",
-      version: "120.5",
-      os: "Windows 10/11",
-      deviceInfo: "Chrome 120.5 on Windows 10/11",
-    });
-    const b = generateDeviceFingerprint({
-      type: "web",
-      browser: "Chrome",
-      version: "120.9",
-      os: "Windows 10/11",
-      deviceInfo: "Chrome 120.9 on Windows 10/11",
-    });
+  it("is stable for the same client device id", () => {
+    const a = generateDeviceFingerprint(
+      {
+        type: "web",
+        browser: "Chrome",
+        version: "120.5",
+        os: "Windows 10/11",
+        deviceInfo: "Chrome 120.5 on Windows 10/11",
+      },
+      "a".repeat(64),
+    );
+    const b = generateDeviceFingerprint(
+      {
+        type: "web",
+        browser: "Chrome",
+        version: "121.9",
+        os: "Windows 10/11",
+        deviceInfo: "Chrome 121.9 on Windows 10/11",
+      },
+      "a".repeat(64),
+    );
     expect(a).toBe(b);
   });
 
-  it("differs across major browser versions on web", () => {
-    const a = generateDeviceFingerprint({
-      type: "web",
-      browser: "Chrome",
-      version: "120.0",
-      os: "Windows 10/11",
-      deviceInfo: "",
-    });
-    const b = generateDeviceFingerprint({
-      type: "web",
-      browser: "Chrome",
-      version: "121.0",
-      os: "Windows 10/11",
-      deviceInfo: "",
-    });
+  it("differs for two clients on the same platform", () => {
+    const a = generateDeviceFingerprint(
+      {
+        type: "desktop",
+        browser: "Termix Desktop",
+        version: "2.7.0",
+        os: "Linux",
+        deviceInfo: "",
+      },
+      "a".repeat(64),
+    );
+    const b = generateDeviceFingerprint(
+      {
+        type: "desktop",
+        browser: "Termix Desktop",
+        version: "2.7.0",
+        os: "Linux",
+        deviceInfo: "",
+      },
+      "b".repeat(64),
+    );
     expect(a).not.toBe(b);
   });
 
-  it("produces a 64-char hex sha256 digest", () => {
-    const fp = generateDeviceFingerprint({
-      type: "desktop",
-      browser: "Termix Desktop",
-      version: "2.3.1",
-      os: "macOS",
-      deviceInfo: "",
-    });
-    expect(fp).toMatch(/^[0-9a-f]{64}$/);
+  it("does not trust clients without a device id", () => {
+    const fp = generateDeviceFingerprint(
+      {
+        type: "desktop",
+        browser: "Termix Desktop",
+        version: "2.3.1",
+        os: "macOS",
+        deviceInfo: "",
+      },
+      null,
+    );
+    expect(fp).toBeNull();
+  });
+});
+
+describe("getDeviceId", () => {
+  it("accepts a 256-bit hex device id", () => {
+    const deviceId = "a".repeat(64);
+    expect(getDeviceId(reqWith({ "x-termix-device-id": deviceId }))).toBe(
+      deviceId,
+    );
+  });
+
+  it("rejects missing or malformed device ids", () => {
+    expect(getDeviceId(reqWith({}))).toBeNull();
+    expect(
+      getDeviceId(reqWith({ "x-termix-device-id": "shared-linux" })),
+    ).toBeNull();
   });
 });

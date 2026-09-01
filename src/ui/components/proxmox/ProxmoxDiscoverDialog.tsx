@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { HostData } from "@/types/index";
 import { useTranslation } from "react-i18next";
 import { Server, RefreshCw, CheckSquare, Square, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -147,7 +148,10 @@ export function ProxmoxDiscoverDialog({
         // the real IP. Re-sync keeps the manual value (guest.ip || existing.ip).
         ip: g.ip || "0.0.0.0",
         port: g.connectionType === "rdp" ? 3389 : 22,
-        username: defaultUsername ?? "root",
+        username:
+          importAuth.authType === "credential"
+            ? ""
+            : (defaultUsername ?? "root"),
         folder: importFolder,
         // Inherit the jump-host chain from the scanned Proxmox host so the
         // imported guests are reachable the same way; user can override.
@@ -160,7 +164,13 @@ export function ProxmoxDiscoverDialog({
         enableRdp: g.connectionType === "rdp",
         enableDocker: g.enableDocker,
         connectionType: g.connectionType,
-        tags: ["proxmox", g.type, g.node],
+        tags: [
+          "proxmox",
+          g.type,
+          g.node,
+          g.type === "lxc" ? `ct-${g.vmid}` : `vm-${g.vmid}`,
+          ...(g.enableDocker ? ["docker"] : []),
+        ],
         proxmoxConfig: {
           source: {
             source: "proxmox",
@@ -176,7 +186,7 @@ export function ProxmoxDiscoverDialog({
       }));
 
       const result = toImport.length
-        ? await bulkImportSSHHosts(toImport, false)
+        ? await bulkImportSSHHosts(toImport as unknown as HostData[], false)
         : { success: 0, updated: 0, skipped: 0, failed: 0 };
 
       if (toImport.length) {

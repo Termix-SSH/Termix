@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import { createCorsMiddleware } from "../utils/cors-config.js";
+import { createCompressionMiddleware } from "../utils/compression-config.js";
 import { dashboardLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
@@ -25,6 +26,7 @@ function isUserDataUnlocked(userId: string): boolean {
   return DataCrypto.getUserDataKey(userId) !== null;
 }
 
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));

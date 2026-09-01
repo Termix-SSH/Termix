@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
@@ -6,6 +7,7 @@ import {
   createCurrentHostRepository,
   createCurrentHostResolutionRepository,
 } from "../repositories/factory.js";
+import { validateParentHostId } from "./host-parent-validation.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -154,6 +156,13 @@ export function registerHostBulkRoutes(
    *                   type: number
    *               updates:
    *                 type: object
+   *                 description: Partial fields to apply. Setting folder clears parentHostId and vice versa, since a host is either in a folder or nested under a parent host.
+   *                 properties:
+   *                   folder:
+   *                     type: string
+   *                   parentHostId:
+   *                     type: integer
+   *                     nullable: true
    *     responses:
    *       200:
    *         description: Bulk update completed.
@@ -215,8 +224,39 @@ export function registerHostBulkRoutes(
 
         const simpleUpdates: Record<string, unknown> = {};
         if (typeof updates.pin === "boolean") simpleUpdates.pin = updates.pin;
-        if (typeof updates.folder === "string")
+        if (typeof updates.folder === "string") {
           simpleUpdates.folder = updates.folder || null;
+          // Folder placement and parent-host placement are mutually
+          // exclusive -- assigning a folder (including moving to root, an
+          // empty folder) clears any parent host, matching the single-host
+          // update route's behavior.
+          simpleUpdates.parentHostId = null;
+        }
+        if (updates.parentHostId !== undefined) {
+          if (updates.parentHostId === null) {
+            simpleUpdates.parentHostId = null;
+          } else {
+            const numericParentHostId = Number(updates.parentHostId);
+            if (!Number.isInteger(numericParentHostId)) {
+              return res.status(400).json({ error: "Invalid parent host" });
+            }
+            // A bulk move can only ever target one parent host at a time
+            // (the caller drags a selection onto one drop target), so every
+            // id in the batch is checked against the same candidate parent.
+            for (const id of ownedIds) {
+              const parentError = await validateParentHostId(
+                userId,
+                id,
+                numericParentHostId,
+              );
+              if (parentError) {
+                return res.status(400).json({ error: parentError });
+              }
+            }
+            simpleUpdates.parentHostId = numericParentHostId;
+            simpleUpdates.folder = null;
+          }
+        }
         if (typeof updates.enableTerminal === "boolean")
           simpleUpdates.enableTerminal = updates.enableTerminal;
         if (typeof updates.enableTunnel === "boolean")
@@ -227,6 +267,8 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableDocker = updates.enableDocker;
         if (typeof updates.enableTmuxMonitor === "boolean")
           simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
+        if (typeof updates.enableTerminalToolbar === "boolean")
+          simpleUpdates.enableTerminalToolbar = updates.enableTerminalToolbar;
         // Disabling Proxmox is a plain flag flip; enabling is handled per-host
         // below so each host can default to its own stored credential.
         if (updates.enableProxmox === false)
@@ -295,6 +337,84 @@ export function registerHostBulkRoutes(
       } catch (error) {
         sshLogger.error("Failed to bulk update hosts:", error);
         return res.status(500).json({ error: "Failed to bulk update hosts" });
+      }
+    },
+  );
+
+  /**
+   * @openapi
+   * /host/reorder:
+   *   put:
+   *     summary: Reorder hosts
+   *     description: Sets a manual sortOrder for multiple hosts within the same folder, used by drag-to-reorder in the sidebar's manual sort mode.
+   *     tags:
+   *       - SSH
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               positions:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: integer
+   *                     sortOrder:
+   *                       type: integer
+   *     responses:
+   *       200:
+   *         description: Hosts reordered successfully.
+   *       400:
+   *         description: Invalid positions array.
+   *       500:
+   *         description: Failed to reorder hosts.
+   */
+  router.put(
+    "/reorder",
+    authenticateJWT,
+    async (req: Request, res: Response) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      const { positions } = req.body as {
+        positions?: { id?: unknown; sortOrder?: unknown }[];
+      };
+
+      if (!Array.isArray(positions)) {
+        return res.status(400).json({ error: "positions array is required" });
+      }
+
+      const normalized: { id: number; sortOrder: number }[] = [];
+      for (const entry of positions) {
+        if (
+          typeof entry?.id !== "number" ||
+          !Number.isInteger(entry.id) ||
+          typeof entry.sortOrder !== "number" ||
+          !Number.isFinite(entry.sortOrder)
+        ) {
+          return res.status(400).json({
+            error:
+              "Each position requires an integer id and a numeric sortOrder",
+          });
+        }
+        normalized.push({ id: entry.id, sortOrder: entry.sortOrder });
+      }
+
+      if (normalized.length === 0) {
+        return res.status(400).json({ error: "positions array is required" });
+      }
+
+      try {
+        const updated = await createCurrentHostRepository().reorderForUser(
+          userId,
+          normalized,
+        );
+        return res.json({ updated });
+      } catch (error) {
+        sshLogger.error("Failed to reorder hosts:", error);
+        return res.status(500).json({ error: "Failed to reorder hosts" });
       }
     },
   );
@@ -391,7 +511,7 @@ export function registerHostBulkRoutes(
         }
       } catch (error) {
         results.errors.push(
-          `Credential placeholders: ${error instanceof Error ? error.message : "failed to prepare credential aliases"}`,
+          `Credential placeholders: ${getErrorMessage(error, "failed to prepare credential aliases")}`,
         );
       }
 
@@ -553,6 +673,7 @@ export function registerHostBulkRoutes(
             enableDocker: hostData.enableDocker || false,
             enableProxmox: hostData.enableProxmox || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
+            enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
             showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
             showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
             showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,
@@ -665,9 +786,7 @@ export function registerHostBulkRoutes(
           }
         } catch (error) {
           results.failed++;
-          results.errors.push(
-            `Host ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          results.errors.push(`Host ${i + 1}: ${getErrorMessage(error)}`);
         }
       }
 
@@ -821,6 +940,7 @@ export function registerHostBulkRoutes(
             enableDocker: false,
             enableProxmox: false,
             enableTmuxMonitor: false,
+            enableTerminalToolbar: true,
             showTerminalInSidebar: 0,
             showFileManagerInSidebar: 0,
             showTunnelInSidebar: 0,
@@ -872,7 +992,7 @@ export function registerHostBulkRoutes(
         } catch (error) {
           results.failed++;
           results.errors.push(
-            `Host "${parsed[i].name}": ${error instanceof Error ? error.message : "Unknown error"}`,
+            `Host "${parsed[i].name}": ${getErrorMessage(error)}`,
           );
         }
       }

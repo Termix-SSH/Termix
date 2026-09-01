@@ -561,6 +561,67 @@ describe("HostRepository and CredentialRepository", () => {
     expect(updated?.lastUsed).toBe("2026-06-26T00:00:00.000Z");
   });
 
+  it("sets a distinct sortOrder per credential via reorderForUser", async () => {
+    const onWrite = vi.fn();
+    const repo = await createRepositories(onWrite);
+
+    const first = await repo.credentials.create({
+      userId: "user-1",
+      name: "one",
+      authType: "password",
+    });
+    const second = await repo.credentials.create({
+      userId: "user-1",
+      name: "two",
+      authType: "password",
+    });
+    onWrite.mockClear();
+
+    const updated = await repo.credentials.reorderForUser("user-1", [
+      { id: first.id, sortOrder: 2000 },
+      { id: second.id, sortOrder: 1000 },
+    ]);
+    expect(updated).toBe(2);
+    expect(onWrite).toHaveBeenCalledTimes(1);
+
+    expect(
+      await adapter!.query(
+        sql`SELECT id, sort_order FROM ssh_credentials WHERE user_id = 'user-1' ORDER BY id`,
+      ),
+    ).toEqual([
+      { id: first.id, sort_order: 2000 },
+      { id: second.id, sort_order: 1000 },
+    ]);
+  });
+
+  it("ignores credential ids the user does not own when reordering", async () => {
+    const repo = await createRepositories();
+
+    const other = await repo.credentials.create({
+      userId: "user-2",
+      name: "other",
+      authType: "password",
+    });
+
+    const updated = await repo.credentials.reorderForUser("user-1", [
+      { id: other.id, sortOrder: 5000 },
+    ]);
+    expect(updated).toBe(0);
+
+    expect(
+      await adapter!.query(
+        sql`SELECT sort_order FROM ssh_credentials WHERE id = ${other.id}`,
+      ),
+    ).toEqual([{ sort_order: null }]);
+  });
+
+  it("no-ops reorderForUser on an empty positions array", async () => {
+    const repo = await createRepositories();
+    await expect(repo.credentials.reorderForUser("user-1", [])).resolves.toBe(
+      0,
+    );
+  });
+
   it("cleans host access before deleting a host", async () => {
     const repo = await createRepositories();
     const host = await repo.hosts.create({

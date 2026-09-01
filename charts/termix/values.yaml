@@ -1,0 +1,147 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/termix-ssh/termix
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: termix.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+traefik:
+  ingressRoute:
+    enabled: false
+    entryPoints:
+      - websecure
+    host: termix.example.com
+    pathPrefix: /
+    tls:
+      enabled: true
+      secretName: ""
+      certResolver: ""
+    middlewares: []
+    annotations: {}
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  storageClass: ""
+  annotations: {}
+  existingClaim: ""
+
+env:
+  PORT: "8080"
+  DATA_DIR: /app/data
+  NODE_ENV: production
+  GUACD_RECORDING_PATH: /termix-data/session_recordings/guacamole
+  GUACD_RECORDING_BACKEND_PATH: /app/data/session_recordings/guacamole
+
+extraEnv: []
+extraEnvFrom: []
+
+secrets:
+  create: false
+  name: ""
+  data:
+    JWT_SECRET: ""
+    DATABASE_URL: ""
+    GUACAMOLE_ENCRYPTION_KEY: ""
+
+database:
+  dialect: sqlite
+  existingSecret:
+    name: ""
+    urlKey: DATABASE_URL
+
+guacd:
+  enabled: true
+  host: ""
+  image:
+    repository: guacamole/guacd
+    tag: 1.6.0
+    pullPolicy: IfNotPresent
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  service:
+    port: 4822
+    annotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+strategy:
+  type: Recreate
+
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []

@@ -5,6 +5,7 @@ import {
   type AlertPayload,
   type NotificationChannel,
 } from "../../utils/notification-sender.js";
+import { sendDiscord } from "../../utils/discord-sender.js";
 
 type AlertTriggerType =
   | "host_offline"
@@ -26,6 +27,24 @@ interface AlertRule {
   thresholdValue: number | null;
   thresholdDurationSeconds: number | null;
   cooldownMinutes: number;
+}
+
+/**
+ * Set once the alert rules have been copied into automations. From then on the
+ * automations engine owns evaluation, and this one stands down rather than
+ * sending a second notification for every rule.
+ *
+ * The class is left in place so an install that has not migrated yet, or one
+ * rolled back, still alerts exactly as before.
+ */
+let supersededByAutomations = false;
+
+export function markAlertEngineSuperseded(): void {
+  supersededByAutomations = true;
+}
+
+export function isAlertEngineSuperseded(): boolean {
+  return supersededByAutomations;
 }
 
 export class AlertEngine {
@@ -55,6 +74,7 @@ export class AlertEngine {
       disk?: { percent: number | null } | null;
     },
   ): Promise<void> {
+    if (supersededByAutomations) return;
     const rules = (await this.loadRulesForHost(hostId)).filter((r) =>
       ["cpu_threshold", "memory_threshold", "disk_threshold"].includes(
         r.triggerType,
@@ -103,6 +123,7 @@ export class AlertEngine {
   }
 
   async evaluateStatus(hostId: number, isOnline: boolean): Promise<void> {
+    if (supersededByAutomations) return;
     const currentStatus = isOnline ? "online" : "offline";
     const lastStatus = this.lastStatusMap.get(hostId);
 
@@ -138,6 +159,7 @@ export class AlertEngine {
     ok: boolean,
     detail?: string,
   ): Promise<void> {
+    if (supersededByAutomations) return;
     const stateKey = `${hostId}:${checkId}`;
     const lastOk = this.healthCheckStateMap.get(stateKey);
     this.healthCheckStateMap.set(stateKey, ok);
@@ -173,6 +195,7 @@ export class AlertEngine {
     sshUser: string,
     fromIp: string,
   ): Promise<void> {
+    if (supersededByAutomations) return;
     const rules = (await this.loadRulesForHostUser(hostId, userId)).filter(
       (r) => r.triggerType === "user_login",
     );
@@ -236,13 +259,42 @@ export class AlertEngine {
 
     const channels = await this.loadChannelsForRule(rule.id);
     for (const channel of channels) {
-      sendNotification(channel, payload).catch((err) => {
-        statsLogger.warn("Failed to send notification", {
-          operation: "notification_delivery_error",
-          channelId: channel.id,
-          error: err instanceof Error ? err.message : String(err),
+      if (channel.type === "discord") {
+        // parse config and send via Discord sender directly
+        try {
+          let parsed: Record<string, unknown>;
+          try {
+            parsed = JSON.parse(channel.config) as Record<string, unknown>;
+          } catch {
+            statsLogger.warn("Failed to parse discord channel config", {
+              operation: "discord_config_parse_error",
+              channelId: channel.id,
+            });
+            continue;
+          }
+          sendDiscord(parsed as any, payload).catch((err) => {
+            statsLogger.warn("Failed to send discord notification", {
+              operation: "discord_notification_error",
+              channelId: channel.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
+        } catch (err) {
+          statsLogger.warn("Failed to send discord notification", {
+            operation: "discord_notification_error",
+            channelId: channel.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      } else {
+        sendNotification(channel, payload).catch((err) => {
+          statsLogger.warn("Failed to send notification", {
+            operation: "notification_delivery_error",
+            channelId: channel.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-      });
+      }
     }
   }
 

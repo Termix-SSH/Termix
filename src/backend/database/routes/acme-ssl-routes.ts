@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { execFileSync } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
@@ -5,6 +6,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { reloadNginxWithSSL } from "../../utils/nginx-ssl-reload.js";
 import {
   createCurrentSettingsRepository,
   createCurrentUserRepository,
@@ -382,6 +384,8 @@ export function registerAcmeSSLRoutes(
         operation: "acme_cert_installed",
       });
 
+      const reload = reloadNginxWithSSL();
+
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
         userId,
@@ -394,9 +398,13 @@ export function registerAcmeSSLRoutes(
         success: true,
       });
 
-      res.json({ success: true, ...(await getAcmeSettings()) });
+      res.json({
+        success: true,
+        reloadMessage: reload.message,
+        ...(await getAcmeSettings()),
+      });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       authLogger.error("ACME certificate request failed", err);
 
       const { ipAddress, userAgent } = getRequestMeta(req);
@@ -535,6 +543,8 @@ export function registerAcmeSSLRoutes(
         operation: "manual_ssl_installed",
       });
 
+      const reload = reloadNginxWithSSL();
+
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
         userId,
@@ -547,9 +557,13 @@ export function registerAcmeSSLRoutes(
         success: true,
       });
 
-      res.json({ success: true, ...(await getAcmeSettings()) });
+      res.json({
+        success: true,
+        reloadMessage: reload.message,
+        ...(await getAcmeSettings()),
+      });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       authLogger.error("Manual SSL certificate upload failed", err);
 
       const { ipAddress, userAgent } = getRequestMeta(req);

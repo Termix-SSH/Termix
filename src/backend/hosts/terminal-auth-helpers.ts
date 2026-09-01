@@ -1,13 +1,18 @@
 import dgram from "dgram";
 import net from "net";
 import ssh2Pkg, {
+  type BaseAgent as BaseAgentType,
+  type GetStreamCallback,
   type IdentityCallback,
+  type KnownPublicKeys,
   type ParsedKey,
   type SignCallback,
   type SigningRequestOptions,
 } from "ssh2";
 
-const { BaseAgent } = ssh2Pkg;
+type KnownPublicKey = KnownPublicKeys[number];
+
+const { AgentProtocol, BaseAgent } = ssh2Pkg;
 const DEFAULT_PORT_KNOCK_TIMEOUT_MS = 1000;
 
 type Sleep = (ms: number) => Promise<void>;
@@ -32,6 +37,23 @@ export class MemoryAgent extends BaseAgent {
 
   getIdentities(cb: IdentityCallback<ParsedKey>): void {
     cb(null, [this.key]);
+  }
+
+  getStream(cb: GetStreamCallback): void {
+    const protocol = new AgentProtocol(false);
+
+    protocol.on("identities", (request) => {
+      protocol.getIdentitiesReply(request, [this.key]);
+    });
+
+    protocol.on("sign", (request, publicKey, data, options) => {
+      this.sign(publicKey, data, options, (error, signature) => {
+        if (error || !signature) return protocol.failureReply(request);
+        protocol.signReply(request, signature);
+      });
+    });
+
+    cb(null, protocol);
   }
 
   sign(
@@ -85,6 +107,84 @@ export async function resolveAgentSocket(
   return { socketPath: resolved };
 }
 
+/**
+ * Wraps an agent so only identities matching a specific public key are
+ * offered to the server, mirroring ssh_config's IdentityFile + IdentitiesOnly
+ * for agent auth. Prevents exhausting the server's MaxAuthTries when the
+ * agent holds many keys.
+ */
+export class FilteredAgent extends BaseAgent {
+  private inner: BaseAgentType;
+  private publicKeyBlob: Buffer;
+
+  constructor(inner: BaseAgentType, publicKeyBlob: Buffer) {
+    super();
+    this.inner = inner;
+    this.publicKeyBlob = publicKeyBlob;
+  }
+
+  private matches(key: KnownPublicKey): boolean {
+    try {
+      const blob =
+        typeof key === "string"
+          ? Buffer.from(key)
+          : Buffer.isBuffer(key)
+            ? key
+            : "getPublicSSH" in key
+              ? key.getPublicSSH()
+              : null;
+      return (
+        Buffer.isBuffer(blob) && Buffer.compare(blob, this.publicKeyBlob) === 0
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  getIdentities(cb: IdentityCallback): void {
+    this.inner.getIdentities((err, keys) => {
+      if (err || !keys) return cb(err, keys);
+      cb(
+        null,
+        keys.filter((key) => this.matches(key)),
+      );
+    });
+  }
+
+  getStream(cb: GetStreamCallback): void {
+    if (typeof this.inner.getStream !== "function") {
+      return cb(new Error("Agent does not support forwarding."));
+    }
+    this.inner.getStream(cb);
+  }
+
+  sign(
+    pubKey: ParsedKey | Buffer | string,
+    data: Buffer,
+    optionsOrCb: SigningRequestOptions | SignCallback,
+    cb?: SignCallback,
+  ): void {
+    this.inner.sign(
+      pubKey,
+      data,
+      optionsOrCb as SigningRequestOptions,
+      cb as SignCallback,
+    );
+  }
+}
+
+function parseAgentIdentityBlob(agentIdentity: string): Buffer | null {
+  const { utils } = ssh2Pkg;
+  const parsed = utils.parseKey(agentIdentity.trim());
+  if (parsed instanceof Error || !parsed) return null;
+  const key = Array.isArray(parsed) ? parsed[0] : parsed;
+  try {
+    return key.getPublicSSH();
+  } catch {
+    return null;
+  }
+}
+
 export async function applyAgentAuth(
   connectConfig: Record<string, unknown>,
   terminalConfig: Record<string, unknown> | undefined,
@@ -93,7 +193,21 @@ export async function applyAgentAuth(
   if ("error" in result) return result;
 
   const { createAgent } = ssh2Pkg;
-  connectConfig.agent = createAgent(result.socketPath);
+  const agent = createAgent(result.socketPath);
+
+  const agentIdentity = (
+    terminalConfig?.agentIdentity as string | undefined
+  )?.trim();
+  if (agentIdentity) {
+    const publicKeyBlob = parseAgentIdentityBlob(agentIdentity);
+    if (!publicKeyBlob) {
+      return { error: "Invalid public key provided for agent identity." };
+    }
+    connectConfig.agent = new FilteredAgent(agent, publicKeyBlob);
+  } else {
+    connectConfig.agent = agent;
+  }
+
   return result;
 }
 

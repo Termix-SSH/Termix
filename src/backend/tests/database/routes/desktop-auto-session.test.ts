@@ -24,9 +24,13 @@ describe("isLoopbackRequest", () => {
   it.each(["127.0.0.1", "::1", "::ffff:127.0.0.1"])(
     "accepts %s as loopback",
     (ip) => {
-      expect(isLoopbackRequest({ ip, socket: {} } as unknown as Request)).toBe(
-        true,
-      );
+      expect(
+        isLoopbackRequest({
+          ip,
+          headers: {},
+          socket: { remoteAddress: ip },
+        } as unknown as Request),
+      ).toBe(true);
     },
   );
 
@@ -34,27 +38,40 @@ describe("isLoopbackRequest", () => {
     expect(
       isLoopbackRequest({
         ip: "::ffff:127.0.0.1",
-        socket: {},
+        headers: {},
+        socket: { remoteAddress: "::ffff:127.0.0.1" },
       } as unknown as Request),
     ).toBe(true);
   });
 
-  it("rejects a non-loopback IP", () => {
+  it("rejects a non-loopback TCP peer address", () => {
     expect(
       isLoopbackRequest({
         ip: "192.168.1.50",
-        socket: {},
+        headers: {},
+        socket: { remoteAddress: "192.168.1.50" },
       } as unknown as Request),
     ).toBe(false);
   });
 
-  it("falls back to socket.remoteAddress when req.ip is empty", () => {
+  it("ignores a spoofed X-Forwarded-For value", () => {
     expect(
       isLoopbackRequest({
-        ip: "",
+        ip: "127.0.0.1",
+        headers: { "x-forwarded-for": "127.0.0.1" },
+        socket: { remoteAddress: "203.0.113.10" },
+      } as unknown as Request),
+    ).toBe(false);
+  });
+
+  it("rejects requests that traversed the reverse proxy (X-Real-IP set)", () => {
+    expect(
+      isLoopbackRequest({
+        ip: "127.0.0.1",
+        headers: { "x-real-ip": "203.0.113.10" },
         socket: { remoteAddress: "127.0.0.1" },
       } as unknown as Request),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 

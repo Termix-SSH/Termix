@@ -1,0 +1,16 @@
+apiVersion: v2
+name: termix
+description: Self-hosted SSH and remote desktop management for Kubernetes.
+type: application
+version: 0.1.0
+appVersion: 2.7.0
+home: https://github.com/Termix-SSH/Termix
+sources:
+  - https://github.com/Termix-SSH/Termix
+maintainers:
+  - name: Termix maintainers
+keywords:
+  - ssh
+  - remote-desktop
+  - guacamole
+  - terminal

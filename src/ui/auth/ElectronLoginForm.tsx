@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/alert.tsx";
 import { useTranslation } from "react-i18next";
@@ -13,6 +14,12 @@ interface ElectronLoginFormProps {
   // engine -- the JWT is handed to the Electron main process's encrypted
   // store instead, never exposed to the renderer's localStorage.
   targetPurpose?: "local" | "remoteSync";
+}
+
+interface SaveRemoteSyncJwtResult {
+  success: boolean;
+  reason?: string;
+  error?: string;
 }
 
 const AUTH_MESSAGE_SOURCES = new Set([
@@ -54,14 +61,33 @@ export function ElectronLoginForm({
         }
         if (token) {
           if (targetPurpose === "remoteSync") {
-            await window.electronAPI?.invoke?.("save-remote-sync-jwt", token);
+            // The main process refuses to persist the JWT when it has no OS
+            // keyring to encrypt it with, and reports that by resolving with
+            // success: false. Dropping the result signs the user in against a
+            // store that kept nothing, so the next sync tick calls a session
+            // that was never saved expired.
+            const result = (await window.electronAPI?.invoke?.(
+              "save-remote-sync-jwt",
+              token,
+            )) as SaveRemoteSyncJwtResult | undefined;
+            if (!result?.success) {
+              throw new Error(
+                result?.reason === "encryption_unavailable"
+                  ? t("errors.keyringUnavailable")
+                  : result?.error || t("errors.authTokenSaveFailed"),
+              );
+            }
           } else {
             localStorage.setItem("jwt", token);
           }
         }
         await onAuthSuccessRef.current(token);
-      } catch {
-        setError(t("errors.authTokenSaveFailed"));
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : t("errors.authTokenSaveFailed"),
+        );
         isAuthenticatingRef.current = false;
         setIsAuthenticating(false);
         hasAuthenticatedRef.current = false;
@@ -154,8 +180,7 @@ export function ElectronLoginForm({
           typeof event.data.providerId === "number"
             ? event.data.providerId
             : undefined;
-        const error =
-          err instanceof Error ? err.message : t("errors.failedOidcLogin");
+        const error = getErrorMessage(err, t("errors.failedOidcLogin"));
         iframeRef.current?.contentWindow?.postMessage(
           {
             type: "OIDC_SYSTEM_BROWSER_AUTH_RESULT",

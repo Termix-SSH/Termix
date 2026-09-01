@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import { createCorsMiddleware } from "../utils/cors-config.js";
+import { createCompressionMiddleware } from "../utils/compression-config.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { homepageItemsRouter } from "../database/routes/homepage-items-routes.js";
 import { homepageLayoutRouter } from "../database/routes/homepage-layout-routes.js";
@@ -13,6 +14,7 @@ const app = express();
 const authManager = AuthManager.getInstance();
 const PORT = 30012;
 
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));

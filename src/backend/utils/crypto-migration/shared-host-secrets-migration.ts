@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../error-message.js";
 import { databaseLogger } from "../logger.js";
 import { DataCrypto } from "../data-crypto.js";
 import { DatabaseSaveTrigger } from "../database-save-trigger.js";
@@ -106,7 +107,7 @@ export async function runSharedHostSecretsMigration(): Promise<{
             operation: "shared_host_secrets_migration_failed",
             hostAccessId: grant.hostAccessId,
             targetUserId,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           });
         }
       }

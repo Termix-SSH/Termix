@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Express } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { statsLogger } from "../../utils/logger.js";
@@ -21,6 +22,8 @@ type HostMetricsViewerRoutesDeps<
     userId: string,
   ) => void;
   unregisterViewer: (hostId: number, viewerSessionId: string) => void;
+  /** Route path segment, e.g. "metrics" -> /metrics/heartbeat. Defaults to "metrics". */
+  pathPrefix?: string;
 };
 
 export function registerHostMetricsViewerRoutes<
@@ -35,6 +38,7 @@ export function registerHostMetricsViewerRoutes<
     updateHeartbeat,
     registerViewer,
     unregisterViewer,
+    pathPrefix = "metrics",
   }: HostMetricsViewerRoutesDeps<THost, TStatsConfig>,
 ): void {
   /**
@@ -66,7 +70,7 @@ export function registerHostMetricsViewerRoutes<
    *       500:
    *         description: Failed to update heartbeat.
    */
-  app.post("/metrics/heartbeat", async (req, res) => {
+  app.post(`/${pathPrefix}/heartbeat`, async (req, res) => {
     const { viewerSessionId } = req.body;
     const userId = (req as AuthenticatedRequest).userId;
 
@@ -125,7 +129,7 @@ export function registerHostMetricsViewerRoutes<
    *       500:
    *         description: Failed to register viewer.
    */
-  app.post("/metrics/register-viewer", async (req, res) => {
+  app.post(`/${pathPrefix}/register-viewer`, async (req, res) => {
     const { hostId } = req.body;
     const userId = (req as AuthenticatedRequest).userId;
 
@@ -154,10 +158,7 @@ export function registerHostMetricsViewerRoutes<
             operation: "register_viewer_lookup",
             hostId,
             userId,
-            error:
-              lookupErr instanceof Error
-                ? lookupErr.message
-                : String(lookupErr),
+            error: getErrorMessage(lookupErr, String(lookupErr)),
           },
         );
       }
@@ -255,7 +256,7 @@ export function registerHostMetricsViewerRoutes<
    *       500:
    *         description: Failed to unregister viewer.
    */
-  app.post("/metrics/unregister-viewer", async (req, res) => {
+  app.post(`/${pathPrefix}/unregister-viewer`, async (req, res) => {
     const { hostId, viewerSessionId } = req.body;
     const userId = (req as AuthenticatedRequest).userId;
 

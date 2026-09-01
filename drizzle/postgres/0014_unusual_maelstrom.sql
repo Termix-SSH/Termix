@@ -1,0 +1,1 @@
+ALTER TABLE "user_preferences" ADD COLUMN "terminal_macros" text;

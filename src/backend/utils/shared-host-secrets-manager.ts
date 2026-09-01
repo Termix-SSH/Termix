@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
@@ -242,7 +243,7 @@ class SharedHostSecretsManager {
               hostId,
               hostAccessId: grant.id,
               targetUserId,
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             },
           );
         }

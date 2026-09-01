@@ -1,8 +1,6 @@
-import type { Request, Response } from "express";
-import express from "express";
-import https from "https";
-import http from "http";
+import express, { type Request, type Response } from "express";
 import { homepageLogger } from "../../utils/logger.js";
+import { safeOutboundFetch } from "../../utils/safe-outbound-fetch.js";
 
 export const homepagePingRouter = express.Router();
 
@@ -17,54 +15,37 @@ const pingCache = new Map<string, PingCacheEntry>();
 const CACHE_SIZE = 200;
 const FETCH_TIMEOUT_MS = 5000;
 
-function pingUrl(
+async function requestStatus(
+  url: string,
+  method: "HEAD" | "GET",
+): Promise<number | null> {
+  const res = await safeOutboundFetch(url, {
+    method,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  // Discard the body without buffering it.
+  await res.body?.cancel().catch(() => {});
+  return res.status ?? null;
+}
+
+async function pingUrl(
   url: string,
 ): Promise<{ ok: boolean; statusCode: number | null; latencyMs: number }> {
-  return new Promise((resolve) => {
-    const start = performance.now();
-    const mod = url.startsWith("https") ? https : http;
-
-    const done = (ok: boolean, statusCode: number | null) => {
-      resolve({
-        ok,
-        statusCode,
-        latencyMs: Math.round(performance.now() - start),
-      });
+  const start = performance.now();
+  const elapsed = () => Math.round(performance.now() - start);
+  try {
+    let code = await requestStatus(url, "HEAD");
+    if (code === 405) {
+      code = await requestStatus(url, "GET");
+    }
+    return {
+      ok: code !== null && code < 400,
+      statusCode: code,
+      latencyMs: elapsed(),
     };
-
-    const tryGet = () => {
-      const req = mod.get(url, { timeout: FETCH_TIMEOUT_MS }, (res) => {
-        res.resume();
-        const code = res.statusCode ?? null;
-        done(code !== null && code < 400, code);
-      });
-      req.on("error", () => done(false, null));
-      req.on("timeout", () => {
-        req.destroy();
-        done(false, null);
-      });
-    };
-
-    const req = mod.request(
-      url,
-      { method: "HEAD", timeout: FETCH_TIMEOUT_MS },
-      (res) => {
-        res.resume();
-        const code = res.statusCode ?? null;
-        if (code === 405) {
-          tryGet();
-        } else {
-          done(code !== null && code < 400, code);
-        }
-      },
-    );
-    req.on("error", () => done(false, null));
-    req.on("timeout", () => {
-      req.destroy();
-      done(false, null);
-    });
-    req.end();
-  });
+  } catch {
+    return { ok: false, statusCode: null, latencyMs: elapsed() };
+  }
 }
 
 /**

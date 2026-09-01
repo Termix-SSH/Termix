@@ -179,6 +179,8 @@ export function HostAuthOverrideModal({
               {t("common.cancel")}
             </Button>
             <Button
+              variant="outline"
+              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
               onClick={handleSave}
               disabled={
                 loading || loadError || saving || selectedId === initialId

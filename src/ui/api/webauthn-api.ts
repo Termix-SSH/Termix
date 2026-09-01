@@ -5,10 +5,11 @@ import type {
   RegistrationResponseJSON,
 } from "@simplewebauthn/browser";
 import {
+  browserSupportsWebAuthn,
   startAuthentication,
   startRegistration,
 } from "@simplewebauthn/browser";
-import { authApi, handleApiError, type AuthResponse } from "@/main-axios";
+import { authApi, handleApiError } from "@/main-axios";
 
 export type WebAuthnUserVerification = "discouraged" | "preferred" | "required";
 
@@ -32,6 +33,48 @@ type AuthenticationOptionsResponse = {
   options: PublicKeyCredentialRequestOptionsJSON;
   challengeId: string;
 };
+
+export type PasskeyLoginResult = {
+  success: boolean;
+  requires_totp?: boolean;
+  temp_token?: string;
+  is_admin?: boolean;
+  username?: string;
+  userId?: string;
+  is_oidc?: boolean;
+  totp_enabled?: boolean;
+  token?: string;
+};
+
+export function isPasskeySupported(): boolean {
+  return browserSupportsWebAuthn();
+}
+
+export async function loginWithPasskey(
+  username?: string,
+  rememberMe = false,
+): Promise<PasskeyLoginResult> {
+  try {
+    const optionsResponse = await authApi.post<AuthenticationOptionsResponse>(
+      "/users/webauthn/authenticate/options",
+      username ? { username } : {},
+    );
+    const credential = await startAuthentication({
+      optionsJSON: optionsResponse.data.options,
+    });
+    const verifyResponse = await authApi.post<PasskeyLoginResult>(
+      "/users/webauthn/authenticate/verify",
+      {
+        challengeId: optionsResponse.data.challengeId,
+        response: credential as AuthenticationResponseJSON,
+        rememberMe,
+      },
+    );
+    return verifyResponse.data;
+  } catch (error) {
+    throw handleApiError(error, "sign in with passkey");
+  }
+}
 
 export async function listWebAuthnCredentials(): Promise<{
   credentials: WebAuthnCredentialSummary[];
@@ -67,41 +110,6 @@ export async function registerWebAuthnCredential(
     return verifyResponse.data;
   } catch (error) {
     throw handleApiError(error, "register passkey");
-  }
-}
-
-export async function authenticateWithWebAuthn(
-  username: string,
-  rememberMe: boolean,
-  userVerification: WebAuthnUserVerification = "preferred",
-): Promise<AuthResponse> {
-  try {
-    const optionsResponse = await authApi.post<AuthenticationOptionsResponse>(
-      "/users/webauthn/authenticate/options",
-      {
-        username: username.trim() || undefined,
-        userVerification,
-      },
-    );
-    const credential = await startAuthentication({
-      optionsJSON: optionsResponse.data.options,
-    });
-    const verifyResponse = await authApi.post<AuthResponse>(
-      "/users/webauthn/authenticate/verify",
-      {
-        challengeId: optionsResponse.data.challengeId,
-        rememberMe,
-        response: credential as AuthenticationResponseJSON,
-      },
-    );
-
-    if (verifyResponse.data.token) {
-      localStorage.setItem("jwt", verifyResponse.data.token);
-    }
-
-    return verifyResponse.data;
-  } catch (error) {
-    throw handleApiError(error, "authenticate with passkey");
   }
 }
 

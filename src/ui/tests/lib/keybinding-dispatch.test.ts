@@ -103,4 +103,33 @@ describe("dispatchKeybindingAction", () => {
     await Promise.resolve();
     expect(ctx.sentData).toEqual([]);
   });
+
+  it("runSnippet silently resolves host variables from hostContext", async () => {
+    const ctx = makeContext({
+      getSnippetById: vi
+        .fn()
+        .mockResolvedValue({ content: "ping $HOST -p $PORT" }),
+      hostContext: { ip: "10.0.0.5", username: "root", port: 22 },
+    });
+    dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(ctx.sentData).toEqual(["ping 10.0.0.5 -p 22\r"]);
+  });
+
+  it("runSnippet defers to onSnippetNeedsInputs instead of sending when $INPUT_n is present", async () => {
+    const onSnippetNeedsInputs = vi.fn();
+    const ctx = makeContext({
+      getSnippetById: vi.fn().mockResolvedValue({ content: "echo $INPUT_1" }),
+      onSnippetNeedsInputs,
+    });
+    dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(ctx.sentData).toEqual([]);
+    expect(onSnippetNeedsInputs).toHaveBeenCalledWith({
+      id: "1",
+      content: "echo $INPUT_1",
+    });
+  });
 });

@@ -80,6 +80,12 @@ type UsersSectionProps = {
   >;
   setUnlinkAccountOpen: Dispatch<SetStateAction<boolean>>;
   onManageUser: (user: AdminUser) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: Dispatch<SetStateAction<number>>;
 };
 
 export function AdminUsersSection({
@@ -96,8 +102,17 @@ export function AdminUsersSection({
   setUnlinkAccountTarget,
   setUnlinkAccountOpen,
   onManageUser,
+  search,
+  onSearchChange,
+  page,
+  pageSize,
+  total,
+  onPageChange,
 }: UsersSectionProps) {
   const { t } = useTranslation();
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const hasPrev = page > 0;
+  const hasNext = page + 1 < pageCount;
 
   return (
     <AccordionSection
@@ -109,7 +124,7 @@ export function AdminUsersSection({
       <div className="flex flex-col pt-2">
         <div className="flex items-center justify-between py-2 border-b border-border">
           <span className="text-[10px] text-muted-foreground">
-            {t("admin.usersCount", { count: users.length })}
+            {t("admin.usersCount", { count: total })}
           </span>
           <div className="flex items-center gap-1">
             <Button
@@ -130,6 +145,14 @@ export function AdminUsersSection({
               {t("admin.createUser")}
             </Button>
           </div>
+        </div>
+        <div className="py-2 border-b border-border">
+          <Input
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={t("admin.searchUsers")}
+            className="h-7 text-xs rounded-none"
+          />
         </div>
         {users.map((user) => {
           const authLabel =
@@ -245,6 +268,36 @@ export function AdminUsersSection({
             </div>
           );
         })}
+        {users.length === 0 && (
+          <div className="py-4 text-center text-[10px] text-muted-foreground">
+            {search ? t("admin.noUsersMatch") : t("admin.noUsers")}
+          </div>
+        )}
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between py-2 border-t border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[10px] rounded-none"
+              disabled={!hasPrev}
+              onClick={() => onPageChange((p) => Math.max(0, p - 1))}
+            >
+              {t("common.previous")}
+            </Button>
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.pageOf", { page: page + 1, total: pageCount })}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[10px] rounded-none"
+              disabled={!hasNext}
+              onClick={() => onPageChange((p) => p + 1)}
+            >
+              {t("common.next")}
+            </Button>
+          </div>
+        )}
       </div>
     </AccordionSection>
   );

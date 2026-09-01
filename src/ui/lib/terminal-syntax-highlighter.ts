@@ -72,7 +72,13 @@ const MID_LINE_CR = /\r(?!\n)/;
 // Detects shell prompt lines (user@host:/path$ or similar) after stripping ANSI.
 // These should not be highlighted — the server already colored them, and injecting
 // additional ANSI codes into the prompt fragments causes display corruption.
-const STRIP_ANSI_RE = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
+//
+// The parameter-byte class (0-9;?>=!) intentionally also includes `<` and `:` —
+// SGR mouse-tracking reports (`ESC[<Cb;Cx;CyM`) use `<` as their private-mode
+// marker. Without it, mouse reports from TUI apps (especially through a
+// multiplexer like screen) aren't recognized as escape sequences and leak
+// through as literal "35;191;1M" text on screen.
+const STRIP_ANSI_RE = /\x1b(?:[@-Z\\-_]|\[[0-9:;<=>?!]*[@-~])/g;
 const SSH_BRACKET_HEADING_RE =
   /(?:(?<=^)|(?<=\s))\[[\w.-]+@[\w.-]+(?:[^\]\r\n]*)?\]/g;
 
@@ -89,7 +95,7 @@ function isShellPromptLine(bare: string): boolean {
 }
 
 // Matches any complete ANSI escape sequence
-const ANSI_REGEX = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
+const ANSI_REGEX = /\x1b(?:[@-Z\\-_]|\[[0-9:;<=>?!]*[@-~])/g;
 
 // Matches SGR sequences (color/style setters) specifically — used to track active color state
 const SGR_REGEX = /\x1b\[[0-9;]*m/;
@@ -218,7 +224,7 @@ const ALL_PATTERNS: HighlightPattern[] = [
 ];
 
 function hasIncompleteAnsiSequence(text: string): boolean {
-  return /\x1b\[[0-9;?>=!]*$/.test(text);
+  return /\x1b\[[0-9:;<=>?!]*$/.test(text);
 }
 
 /**

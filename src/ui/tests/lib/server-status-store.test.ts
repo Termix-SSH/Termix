@@ -65,6 +65,15 @@ describe("ServerStatusStore", () => {
     expect(store.getStatus(5)).toBe("online");
   });
 
+  it("preserves reachable as distinct from authenticated online", () => {
+    const store = new ServerStatusStore();
+    store.setEnabledHostIds(new Set([7]));
+    store.applyStatuses(
+      new Map([[7, { status: "reachable", lastChecked: "t" }]]),
+    );
+    expect(store.getStatus(7)).toBe("reachable");
+  });
+
   it("emits meta listeners when initial load completes", () => {
     const store = new ServerStatusStore();
     const onMeta = vi.fn();

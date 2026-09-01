@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import crypto from "crypto";
 import axios from "axios";
 import { sql } from "drizzle-orm";
@@ -127,7 +128,7 @@ export async function collectAndSendHeartbeat(): Promise<void> {
   } catch (err) {
     analyticsLogger.warn("Failed to send usage heartbeat", {
       operation: "analytics_heartbeat_failed",
-      error: err instanceof Error ? err.message : "Unknown error",
+      error: getErrorMessage(err),
     });
   }
 }

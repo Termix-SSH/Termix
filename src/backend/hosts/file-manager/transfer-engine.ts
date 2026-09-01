@@ -1,11 +1,10 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { randomUUID } from "crypto";
-import { networkInterfaces } from "os";
 import { performance } from "node:perf_hooks";
 import type { ClientChannel } from "ssh2";
 import { fileLogger } from "../../utils/logger.js";
 import {
   basename,
-  buildPathFromSegments,
   dirname,
   getWorkingDir,
   inferPlatformFromPath,
@@ -13,16 +12,88 @@ import {
   normalizeSftpPath,
   pathsOverlap,
   sftpPathToLocalPath,
-  splitPathSegments,
   type TransferPlatform,
 } from "../transfer-paths.js";
 import {
   buildTransferScanSummary,
+  estimateIncompressibleSample,
   getArchiveTransferReasonKey,
   resolveArchiveTransferMethod,
   type TransferMethodPreference,
   type TransferScanSummary,
 } from "./transfer-routing.js";
+import { verifySftpFileIntegrity } from "./transfer-integrity.js";
+import {
+  promisifySftpChmod,
+  promisifySftpClose,
+  promisifySftpFstat,
+  promisifySftpOpen,
+  promisifySftpStat,
+  promisifySftpUnlink,
+} from "./sftp-promisify.js";
+import {
+  buildTransferHopTimings,
+  computeTransferMbPerSec,
+  createEmptyXferStats,
+  createHopWallClock,
+  createThrottledProgress,
+  elapsedMs,
+  hopSpanMs,
+  mergeXferStats,
+  noteHopEnd,
+  noteHopStart,
+  type PipelinedXferStats,
+  type TransferTimings,
+} from "./transfer-stats.js";
+import {
+  TransferCancelledError,
+  TransferStalledError,
+  isRecoverableTransferError,
+} from "./transfer-errors.js";
+import {
+  escapeShell,
+  isLocalSshEndpoint,
+  isPermissionError,
+  isRootOnlyPath,
+} from "./transfer-host-utils.js";
+import {
+  SFTP_OPEN_READ,
+  SFTP_OPEN_WRITE,
+  SFTP_OPEN_WRITE_RESUME,
+} from "./sftp-promisify.js";
+import {
+  collectFileWorkItems,
+  readSftpSample,
+  type FileWorkItem,
+} from "./transfer-scan.js";
+import {
+  deletePathSftp,
+  ensureDirectoryTreeSftp,
+} from "./transfer-sftp-dir.js";
+import {
+  DEFAULT_PARALLEL_SEGMENT_COUNT,
+  SFTP_XFER_SEGMENT_SIZE,
+  buildSegmentCopyJobs,
+  clampParallelSegmentCount,
+  type SegmentCopyJob,
+} from "./transfer-segment-copy.js";
+import {
+  buildDirectProbeCommand,
+  buildDirectRsyncCommand,
+  quoteShell,
+  shouldBenchmarkDirectTransfer,
+  shouldUseDirectTransfer,
+  type DirectTransferEndpoint,
+} from "./direct-transfer-routing.js";
+import {
+  getRecentDirectRouteDecision,
+  getTransferProfile,
+  initializeTransferProfiles,
+  recordDirectRouteBenchmark,
+  recordDirectRouteOutcome,
+  recordTransferProfile,
+  selectTransferTuning,
+} from "./transfer-tuning.js";
 
 export type {
   TransferMethodPreference,
@@ -53,6 +124,7 @@ export interface SSHSessionLike {
   userId?: string;
   ip?: string;
   port?: number;
+  username?: string;
   transferPlatform?: TransferPlatform;
 }
 
@@ -76,33 +148,21 @@ export interface HostTransferDeps {
 }
 
 export type TransferPhase =
-  "compressing" | "transferring" | "extracting" | "reconnecting";
+  | "compressing"
+  | "transferring"
+  | "benchmarking"
+  | "verifying"
+  | "extracting"
+  | "reconnecting";
 export type TransferStatus =
   "running" | "success" | "partial" | "error" | "cancelled";
-export type TransferMethod = "stream" | "tar" | "item_sftp";
+export type TransferMethod = "stream" | "tar" | "item_sftp" | "direct_rsync";
 
-export type TransferHopId =
-  "source_read" | "dest_sftp_write" | "dest_local_write";
-
-export interface TransferHopMetrics {
-  id: TransferHopId;
-  bytes: number;
-  /** Wall-clock span from first I/O on this hop to last I/O complete. */
-  spanMs: number;
-  mbPerSec: number;
-}
-
-export interface TransferTimings {
-  prepareDestMs?: number;
-  compressMs?: number;
-  transferMs?: number;
-  extractMs?: number;
-  sourceDeleteMs?: number;
-  totalMs?: number;
-  transferBytes?: number;
-  endToEndMbPerSec?: number;
-  hops?: TransferHopMetrics[];
-}
+export type {
+  TransferHopId,
+  TransferHopMetrics,
+  TransferTimings,
+} from "./transfer-stats.js";
 
 export interface TransferProgress {
   transferId: string;
@@ -136,6 +196,7 @@ export interface TransferProgress {
   partialDestRemaining?: boolean;
   cleanupCompleted?: boolean;
   retryable?: boolean;
+  integrityVerified?: boolean;
   requestSnapshot?: {
     sourceSessionId: string;
     sourcePaths: string[];
@@ -155,12 +216,16 @@ export interface TransferRequest {
   move?: boolean;
   userId: string;
   methodPreference?: TransferMethodPreference;
-  /** Parallel 256 MiB segment lanes for single-file SFTP copy (default 2). */
+  /** Explicit parallel lane override; omitted values are tuned automatically. */
   parallelSegmentCount?: number;
 }
 
 const activeTransfers = new Map<string, TransferProgress>();
 const cancelRequestedTransfers = new Set<string>();
+const directRouteCache = new Map<
+  string,
+  { useDirect: boolean; expiresAt: number; directMs?: number; relayMs?: number }
+>();
 
 /** In-flight pipelined SFTP reads; force-closed when the user cancels. */
 interface ActiveXferControl {
@@ -169,34 +234,6 @@ interface ActiveXferControl {
 }
 const activeXferControls = new Map<string, ActiveXferControl>();
 const cancelWatchdogs = new Map<string, ReturnType<typeof setTimeout>>();
-
-class TransferCancelledError extends Error {
-  constructor() {
-    super("Transfer cancelled");
-    this.name = "TransferCancelledError";
-  }
-}
-
-class TransferStalledError extends Error {
-  readonly byteOffset?: number;
-  readonly segmentIndex?: number;
-
-  constructor(byteOffset?: number, segmentIndex?: number) {
-    const pos = byteOffset !== undefined ? ` at byte offset ${byteOffset}` : "";
-    const seg = segmentIndex !== undefined ? ` (segment ${segmentIndex})` : "";
-    super(`Transfer stalled — no data moved for 45 seconds${pos}${seg}`);
-    this.name = "TransferStalledError";
-    this.byteOffset = byteOffset;
-    this.segmentIndex = segmentIndex;
-  }
-}
-
-class TransferConnectionLostError extends Error {
-  constructor(message = "Transfer SSH connection lost") {
-    super(message);
-    this.name = "TransferConnectionLostError";
-  }
-}
 
 function throwIfCancelled(transferId: string): void {
   if (cancelRequestedTransfers.has(transferId)) {
@@ -281,8 +318,6 @@ const SMALL_FILE_SYNC_THRESHOLD = 10 * 1024 * 1024;
 const SFTP_XFER_CHUNK_SIZE = 256 * 1024;
 /** Pipelined in-flight READ requests per leg (ssh2 fastGet/fastPut default is 64). */
 const SFTP_XFER_CONCURRENCY = 32;
-/** Reset pipelined scheduler every segment to avoid long-run deadlocks at GiB boundaries. */
-const SFTP_XFER_SEGMENT_SIZE = 256 * 1024 * 1024;
 /** Files above this size use segmented copy; smaller files use a single scheduler run. */
 const SFTP_XFER_SEGMENT_THRESHOLD = 32 * 1024 * 1024;
 /** Per-segment attempts before giving up (sequential and parallel). */
@@ -294,17 +329,9 @@ const SFTP_SEQUENTIAL_COPY_MAX_ATTEMPTS = 2;
 const SFTP_PARALLEL_COPY_MAX_ATTEMPTS = 2;
 /** Short backoff before opening fresh dedicated SSH sessions. */
 const TRANSFER_SESSION_RESET_DELAYS_MS = [1000, 2000, 3000];
-const DEFAULT_PARALLEL_SEGMENT_COUNT = 2;
-const MAX_PARALLEL_SEGMENT_COUNT = 8;
 const TRANSFER_HANDLE_CLOSE_TIMEOUT_MS = 2500;
 const HUNG_TRANSFER_MS = 90_000;
 const HUNG_RECONNECTING_MS = 180_000;
-const TRANSFER_PROGRESS_INTERVAL_MS = 200;
-const SFTP_OPEN_READ = 0x00000001;
-/** WRITE | CREATE | TRUNCATE — new file or overwrite from start. */
-const SFTP_OPEN_WRITE = 0x00000002 | 0x00000008 | 0x00000010;
-/** READ | WRITE | CREATE — resume into an existing partial file without truncating. */
-const SFTP_OPEN_WRITE_RESUME = 0x00000001 | 0x00000002 | 0x00000008;
 
 interface TransferReconnectContext {
   deps: HostTransferDeps;
@@ -314,6 +341,7 @@ interface TransferReconnectContext {
   dedicatedSourceSessionId: string;
   dedicatedDestSessionId: string;
   transferId: string;
+  profileKey?: string;
 }
 
 type TransferReconnectMeta = Omit<
@@ -327,31 +355,6 @@ function buildTransferReconnectContext(
   meta: TransferReconnectMeta,
 ): TransferReconnectContext {
   return { deps, transferId, ...meta };
-}
-
-function isRecoverableTransferConnectionError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const msg = err.message.toLowerCase();
-  return (
-    msg.includes("no response from server") ||
-    msg.includes("connection lost") ||
-    msg.includes("not connected") ||
-    msg.includes("econnreset") ||
-    msg.includes("econnrefused") ||
-    msg.includes("etimedout") ||
-    msg.includes("socket hang up") ||
-    msg.includes("protocol error") ||
-    msg.includes("connection closed") ||
-    msg.includes("channel open failure")
-  );
-}
-
-function isRecoverableTransferError(err: unknown): boolean {
-  return (
-    err instanceof TransferStalledError ||
-    err instanceof TransferConnectionLostError ||
-    isRecoverableTransferConnectionError(err)
-  );
 }
 
 async function probeDestResumeOffset(
@@ -376,7 +379,8 @@ function buildStreamTransferTimings(
   const wallStart = progress?.startedAt ?? Date.now();
   const totalMs = elapsedMs(wallStart);
   const prepare = prepareDestMs ?? progress?.timings?.prepareDestMs ?? 0;
-  const dataMs = Math.max(1, totalMs - prepare);
+  const verify = progress?.timings?.verifyMs ?? 0;
+  const dataMs = Math.max(1, totalMs - prepare - verify);
 
   return {
     ...progress?.timings,
@@ -394,6 +398,7 @@ async function finalizeStreamTransferIfDestAtSize(
   destPath: string,
   expectedSize: number,
   extra: Partial<TransferProgress> = {},
+  verify?: () => Promise<void>,
 ): Promise<boolean> {
   try {
     const destSize = await probeDestResumeOffset(
@@ -404,6 +409,8 @@ async function finalizeStreamTransferIfDestAtSize(
     if (destSize < expectedSize) {
       return false;
     }
+
+    await verify?.();
 
     fileLogger.info("Destination file complete — finalizing transfer", {
       operation: "host_transfer_dest_complete",
@@ -435,6 +442,7 @@ async function tryFinalizeStreamTransferIfDestComplete(
   destPath: string,
   expectedSize: number,
   extra: Partial<TransferProgress> = {},
+  verify?: () => Promise<void>,
 ): Promise<boolean> {
   try {
     const destSftp = await deps.getSessionSftp(destSession);
@@ -444,6 +452,7 @@ async function tryFinalizeStreamTransferIfDestComplete(
       destPath,
       expectedSize,
       extra,
+      verify,
     );
   } catch {
     return false;
@@ -519,69 +528,6 @@ async function resetDedicatedTransferSessions(
   return { sourceSession, destSession, sourceSftp, destSftp };
 }
 
-let cachedLocalAddresses: Set<string> | null = null;
-
-function normalizeHostAddress(host: string): string {
-  const trimmed = host.trim().toLowerCase();
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed.split(":")[0] ?? trimmed;
-}
-
-function getLocalAddresses(): Set<string> {
-  if (cachedLocalAddresses) return cachedLocalAddresses;
-
-  const addresses = new Set(["127.0.0.1", "::1", "localhost"]);
-  for (const ifaces of Object.values(networkInterfaces())) {
-    if (!ifaces) continue;
-    for (const iface of ifaces) {
-      if (!iface.internal && iface.family === "IPv4") {
-        addresses.add(iface.address.toLowerCase());
-      }
-    }
-  }
-  cachedLocalAddresses = addresses;
-  return addresses;
-}
-
-export function isLocalSshEndpoint(ip?: string): boolean {
-  if (!ip) return false;
-  const bare = normalizeHostAddress(ip);
-  if (bare === "localhost" || bare === "127.0.0.1" || bare === "::1") {
-    return true;
-  }
-  return getLocalAddresses().has(bare);
-}
-
-function createThrottledProgress(onProgress?: (bytes: number) => void) {
-  let pending = 0;
-  let lastFlush = 0;
-
-  const flush = () => {
-    if (pending > 0) {
-      onProgress?.(pending);
-      pending = 0;
-      lastFlush = Date.now();
-    }
-  };
-
-  return {
-    add(bytes: number) {
-      pending += bytes;
-      const now = Date.now();
-      if (now - lastFlush >= TRANSFER_PROGRESS_INTERVAL_MS) {
-        flush();
-      }
-    },
-    flush,
-  };
-}
-
-function escapeShell(s: string): string {
-  return s.replace(/'/g, "'\"'\"'");
-}
-
 async function detectTransferPlatform(
   deps: HostTransferDeps,
   session: SSHSessionLike,
@@ -639,154 +585,15 @@ async function detectTransferPlatform(
   return "unix";
 }
 
-function isRootOnlyPath(path: string): boolean {
-  const normalized = normalizeSftpPath(path);
-  return (
-    normalized === "/" ||
-    /^\/[A-Za-z]:$/.test(normalized) ||
-    /^[A-Za-z]:$/.test(normalized)
-  );
-}
-
-function isPermissionError(err: Error): boolean {
-  const msg = err.message.toLowerCase();
-  return (
-    msg.includes("permission denied") ||
-    msg.includes("eacces") ||
-    msg.includes("access denied")
-  );
-}
-
-function promisifySftpStat(
-  sftp: SFTPWrapper,
-  path: string,
-): Promise<import("ssh2").Stats> {
-  return new Promise((resolve, reject) => {
-    sftp.stat(path, (err, stats) => {
-      if (err) reject(err);
-      else resolve(stats);
-    });
-  });
-}
-
-function promisifySftpUnlink(sftp: SFTPWrapper, path: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.unlink(path, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-function promisifySftpRmdir(sftp: SFTPWrapper, path: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.rmdir(path, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-async function ensureDirectoryTreeSftp(
-  sftp: SFTPWrapper,
-  dirPath: string,
-  created: Set<string> = new Set(),
-): Promise<void> {
-  const normalized = normalizeSftpPath(dirPath);
-  if (!normalized || isRootOnlyPath(normalized)) return;
-
-  const { root, segments } = splitPathSegments(normalized);
-  if (segments.length === 0) return;
-
-  for (let i = 0; i < segments.length; i++) {
-    const current = buildPathFromSegments(root, segments, i + 1);
-    if (created.has(current)) continue;
-
-    try {
-      await promisifySftpMkdir(sftp, current, 0o755);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "EEXIST") {
-        try {
-          const stats = await promisifySftpStat(sftp, current);
-          if (!stats.isDirectory()) throw err;
-        } catch {
-          throw err;
-        }
-      }
-    }
-    created.add(current);
-  }
-}
-
-async function deletePathSftp(sftp: SFTPWrapper, path: string): Promise<void> {
-  let stats: import("ssh2").Stats;
-  try {
-    stats = await promisifySftpStat(sftp, path);
-  } catch {
-    return;
-  }
-
-  if (stats.isDirectory()) {
-    const entries = await promisifySftpReaddir(sftp, path);
-    for (const entry of entries) {
-      if (entry.filename === "." || entry.filename === "..") continue;
-      await deletePathSftp(sftp, joinPath(path, entry.filename));
-    }
-    await promisifySftpRmdir(sftp, path);
-    return;
-  }
-
-  if (stats.isFile()) {
-    await promisifySftpUnlink(sftp, path);
-  }
-}
-
-function promisifySftpMkdir(
-  sftp: SFTPWrapper,
-  path: string,
-  mode: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.mkdir(path, { mode }, (err) => {
-      if (err && (err as NodeJS.ErrnoException).code !== "EEXIST") {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
-function promisifySftpChmod(
-  sftp: SFTPWrapper,
-  path: string,
-  mode: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.chmod(path, mode, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-function promisifySftpReaddir(
-  sftp: SFTPWrapper,
-  path: string,
-): Promise<Array<{ filename: string; attrs: import("ssh2").Stats }>> {
-  return new Promise((resolve, reject) => {
-    sftp.readdir(path, (err, list) => {
-      if (err) reject(err);
-      else resolve(list);
-    });
-  });
-}
-
 function execCommand(
   deps: HostTransferDeps,
   session: SSHSessionLike,
   command: string,
+  options: {
+    shouldAbort?: () => boolean;
+    onOutput?: (chunk: Buffer) => void;
+    timeoutMs?: number;
+  } = {},
 ): Promise<{ code: number; stderr: string }> {
   return new Promise((resolve, reject) => {
     deps.execChannel(session, command, (err, stream) => {
@@ -794,17 +601,44 @@ function execCommand(
         reject(err);
         return;
       }
+      let settled = false;
+      const startedAt = Date.now();
       let stderr = "";
-      stream.on("data", () => {
-        /* consume stdout */
+      const abortTimer =
+        options.shouldAbort || options.timeoutMs
+          ? setInterval(() => {
+              const timedOut =
+                options.timeoutMs !== undefined &&
+                Date.now() - startedAt >= options.timeoutMs;
+              if ((!options.shouldAbort?.() && !timedOut) || settled) return;
+              settled = true;
+              clearInterval(abortTimer);
+              stream.signal("KILL");
+              stream.close();
+              reject(
+                timedOut
+                  ? new Error(`Command timed out after ${options.timeoutMs}ms`)
+                  : new TransferCancelledError(),
+              );
+            }, 250)
+          : undefined;
+      stream.on("data", (data: Buffer) => {
+        options.onOutput?.(data);
       });
       stream.stderr.on("data", (data: Buffer) => {
         stderr += data.toString();
+        options.onOutput?.(data);
       });
       stream.on("close", (code: number) => {
+        if (settled) return;
+        settled = true;
+        if (abortTimer) clearInterval(abortTimer);
         resolve({ code: code ?? 0, stderr });
       });
       stream.on("error", (streamErr: Error) => {
+        if (settled) return;
+        settled = true;
+        if (abortTimer) clearInterval(abortTimer);
         reject(streamErr);
       });
     });
@@ -1084,105 +918,51 @@ function finalizeTransfer(
   return result;
 }
 
-function elapsedMs(start: number): number {
-  return Date.now() - start;
-}
-
-export function computeTransferMbPerSec(
-  bytes: number,
-  ms: number,
-): number | undefined {
-  if (ms <= 0 || bytes <= 0) return undefined;
-  return ((bytes / ms) * 1000) / (1024 * 1024);
-}
-
-interface HopWallClock {
-  firstAt: number | null;
-  lastAt: number | null;
-}
-
-function createHopWallClock(): HopWallClock {
-  return { firstAt: null, lastAt: null };
-}
-
-function noteHopStart(
-  clock: HopWallClock,
-  t: number = performance.now(),
-): void {
-  if (clock.firstAt === null) clock.firstAt = t;
-}
-
-function noteHopEnd(clock: HopWallClock, t: number = performance.now()): void {
-  clock.lastAt = t;
-}
-
-function hopSpanMs(clock: HopWallClock): number {
-  if (clock.firstAt === null || clock.lastAt === null) return 0;
-  return Math.max(0, clock.lastAt - clock.firstAt);
-}
-
-interface PipelinedXferStats {
-  bytes: number;
-  sourceReadSpanMs: number;
-  destWriteSpanMs: number;
-  destWriteKind: "sftp" | "local";
-}
-
-function createEmptyXferStats(): PipelinedXferStats {
-  return {
-    bytes: 0,
-    sourceReadSpanMs: 0,
-    destWriteSpanMs: 0,
-    destWriteKind: "sftp",
-  };
-}
-
-function mergeXferStats(
-  target: PipelinedXferStats,
-  source: PipelinedXferStats,
-): void {
-  target.bytes += source.bytes;
-  target.sourceReadSpanMs += source.sourceReadSpanMs;
-  target.destWriteSpanMs += source.destWriteSpanMs;
-  target.destWriteKind = source.destWriteKind;
-}
-
-function buildTransferHopTimings(
-  stats: PipelinedXferStats,
-  transferMs: number,
-): Pick<TransferTimings, "transferBytes" | "endToEndMbPerSec" | "hops"> {
-  const hops: TransferHopMetrics[] = [];
-
-  const sourceRate = computeTransferMbPerSec(
-    stats.bytes,
-    stats.sourceReadSpanMs,
+async function verifyTransferredFile(
+  deps: HostTransferDeps,
+  transferId: string,
+  reconnectMeta: TransferReconnectMeta,
+  sourcePath: string,
+  destPath: string,
+): Promise<void> {
+  updateTransfer(transferId, { phase: "verifying" });
+  const verifyStart = Date.now();
+  const [sourceSession, destSession] = await Promise.all([
+    deps.openDedicatedTransferSession(
+      reconnectMeta.browseSourceSessionId,
+      reconnectMeta.dedicatedSourceSessionId,
+      reconnectMeta.userId,
+      transferId,
+      { allowBrowseDisconnected: true },
+    ),
+    deps.openDedicatedTransferSession(
+      reconnectMeta.browseDestSessionId,
+      reconnectMeta.dedicatedDestSessionId,
+      reconnectMeta.userId,
+      transferId,
+      { allowBrowseDisconnected: true },
+    ),
+  ]);
+  const [sourceSftp, destSftp] = await Promise.all([
+    deps.getSessionSftp(sourceSession),
+    deps.getSessionSftp(destSession),
+  ]);
+  await verifySftpFileIntegrity(
+    sourceSftp,
+    destSftp,
+    sourcePath,
+    destPath,
+    createTransferShouldAbort(transferId),
+    () => new TransferCancelledError(),
   );
-  if (sourceRate !== undefined) {
-    hops.push({
-      id: "source_read",
-      bytes: stats.bytes,
-      spanMs: stats.sourceReadSpanMs,
-      mbPerSec: sourceRate,
-    });
-  }
-
-  const destHopId: TransferHopId =
-    stats.destWriteKind === "local" ? "dest_local_write" : "dest_sftp_write";
-  const destRate = computeTransferMbPerSec(stats.bytes, stats.destWriteSpanMs);
-  if (destRate !== undefined) {
-    hops.push({
-      id: destHopId,
-      bytes: stats.bytes,
-      spanMs: stats.destWriteSpanMs,
-      mbPerSec: destRate,
-    });
-  }
-
-  return {
-    transferBytes: stats.bytes,
-    endToEndMbPerSec: computeTransferMbPerSec(stats.bytes, transferMs),
-    hops,
-  };
+  const current = activeTransfers.get(transferId);
+  updateTransfer(transferId, {
+    integrityVerified: true,
+    timings: {
+      ...current?.timings,
+      verifyMs: (current?.timings?.verifyMs ?? 0) + elapsedMs(verifyStart),
+    },
+  });
 }
 
 async function deleteSourcePathsAfterSuccess(
@@ -1214,63 +994,6 @@ async function ensureDestParentForFile(
   await ensureDestDirectory(deps, destSession, parent);
 }
 
-interface FileWorkItem {
-  sourcePath: string;
-  destPath: string;
-  mode: number;
-  size: number;
-}
-
-async function collectFileWorkItems(
-  sftp: SFTPWrapper,
-  sourcePath: string,
-  destRoot: string,
-  destBaseName?: string,
-): Promise<FileWorkItem[]> {
-  const stats = await promisifySftpStat(sftp, sourcePath);
-  const name = destBaseName ?? basename(sourcePath);
-  const destPath = joinPath(destRoot, name);
-
-  if (stats.isFile()) {
-    return [
-      {
-        sourcePath,
-        destPath,
-        mode: stats.mode & 0o7777,
-        size: stats.size,
-      },
-    ];
-  }
-
-  if (!stats.isDirectory()) {
-    return [];
-  }
-
-  const items: FileWorkItem[] = [];
-  const walk = async (srcDir: string, dstDir: string) => {
-    const entries = await promisifySftpReaddir(sftp, srcDir);
-    for (const entry of entries) {
-      if (entry.filename === "." || entry.filename === "..") continue;
-      const srcChild = joinPath(srcDir, entry.filename);
-      const dstChild = joinPath(dstDir, entry.filename);
-
-      if (entry.attrs.isDirectory()) {
-        await walk(srcChild, dstChild);
-      } else if (entry.attrs.isFile()) {
-        items.push({
-          sourcePath: srcChild,
-          destPath: dstChild,
-          mode: entry.attrs.mode & 0o7777,
-          size: entry.attrs.size,
-        });
-      }
-    }
-  };
-
-  await walk(sourcePath, destPath);
-  return items;
-}
-
 async function scanSourcePathsForRouting(
   sftp: SFTPWrapper,
   sourcePaths: string[],
@@ -1284,91 +1007,43 @@ async function scanSourcePathsForRouting(
       ...work.map((w) => ({ sourcePath: w.sourcePath, size: w.size })),
     );
   }
-  return buildTransferScanSummary(scanItems);
-}
-
-function promisifySftpOpen(
-  sftp: SFTPWrapper,
-  path: string,
-  flags: number,
-  mode: number,
-): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    sftp.open(path, flags, mode, (err, handle) => {
-      if (err) reject(err);
-      else resolve(handle);
-    });
-  });
-}
-
-function promisifySftpClose(sftp: SFTPWrapper, handle: Buffer): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.close(handle, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
-function promisifySftpFstat(
-  sftp: SFTPWrapper,
-  handle: Buffer,
-): Promise<import("ssh2").Stats> {
-  return new Promise((resolve, reject) => {
-    sftp.fstat(handle, (err, stats) => {
-      if (err) reject(err);
-      else resolve(stats);
-    });
-  });
+  const summary = buildTransferScanSummary(scanItems);
+  const candidates = [...scanItems]
+    .filter((item) => item.size > 0)
+    .sort((a, b) => b.size - a.size)
+    .slice(0, 3);
+  let sampledBytes = 0;
+  let sampledIncompressibleBytes = 0;
+  for (const item of candidates) {
+    throwIfCancelled(transferId);
+    try {
+      const sample = await readSftpSample(sftp, item.sourcePath, item.size);
+      sampledBytes += sample.length;
+      if (estimateIncompressibleSample(sample)) {
+        sampledIncompressibleBytes += sample.length;
+      }
+    } catch {
+      /* Extension-based routing remains the safe fallback. */
+    }
+  }
+  if (sampledBytes > 0) {
+    summary.sampledIncompressibleRatio =
+      sampledIncompressibleBytes / sampledBytes;
+  }
+  return summary;
 }
 
 interface PipelinedXferOptions {
   fileSize?: number;
   initialOffset?: number;
   parallelSegmentCount?: number;
+  pipelineConcurrency?: number;
   onProgress?: (bytes: number) => void;
   shouldAbort?: () => boolean;
   transferId?: string;
   segmentIndex?: number;
   reconnect?: TransferReconnectContext;
   onResumeOffset?: (offset: number) => void;
-}
-
-interface SegmentCopyJob {
-  offset: number;
-  length: number;
-  segmentIndex: number;
-}
-
-function clampParallelSegmentCount(value?: number): number {
-  const n = value ?? DEFAULT_PARALLEL_SEGMENT_COUNT;
-  return Math.max(1, Math.min(MAX_PARALLEL_SEGMENT_COUNT, Math.floor(n)));
-}
-
-function buildSegmentCopyJobs(
-  fileSize: number,
-  initialOffset: number,
-  destResumeSize: number,
-): SegmentCopyJob[] {
-  const jobs: SegmentCopyJob[] = [];
-  for (
-    let offset = initialOffset;
-    offset < fileSize;
-    offset += SFTP_XFER_SEGMENT_SIZE
-  ) {
-    const length = Math.min(SFTP_XFER_SEGMENT_SIZE, fileSize - offset);
-    const segmentIndex = Math.floor(offset / SFTP_XFER_SEGMENT_SIZE);
-    if (destResumeSize >= offset + length) {
-      continue;
-    }
-    const start = destResumeSize > offset ? destResumeSize : offset;
-    jobs.push({
-      offset: start,
-      length: offset + length - start,
-      segmentIndex,
-    });
-  }
-  return jobs;
 }
 
 function closeAllTransferSessions(
@@ -1440,7 +1115,7 @@ async function runFastSftpCopy(
   sourceReadClock: ReturnType<typeof createHopWallClock>,
   destWriteClock: ReturnType<typeof createHopWallClock>,
 ): Promise<void> {
-  let concurrency = SFTP_XFER_CONCURRENCY;
+  let concurrency = options.pipelineConcurrency ?? SFTP_XFER_CONCURRENCY;
   let chunkSize = SFTP_XFER_CHUNK_SIZE;
   let bufsize = chunkSize * concurrency;
   while (bufsize > byteLength && concurrency > 1) {
@@ -1694,8 +1369,7 @@ async function runFastSftpCopySegmentedSequential(
           throw err;
         }
 
-        const message =
-          err instanceof Error ? err.message : "Segment transfer failed";
+        const message = getErrorMessage(err, "Segment transfer failed");
         const recoverable =
           options.reconnect &&
           isRecoverableTransferError(err) &&
@@ -1987,8 +1661,7 @@ async function runFastSftpCopySegmentedParallel(
           throw err;
         }
 
-        const message =
-          err instanceof Error ? err.message : "Segment transfer failed";
+        const message = getErrorMessage(err, "Segment transfer failed");
         const recoverable =
           isRecoverableTransferError(err) &&
           attempts < SFTP_PARALLEL_SEGMENT_MAX_ATTEMPTS;
@@ -2255,7 +1928,7 @@ async function pipelinedSftpFile(
             const reset = await resetDedicatedTransferSessions(
               options.reconnect,
               attempts,
-              err instanceof Error ? err.message : "copy failed",
+              getErrorMessage(err, "copy failed"),
             );
             sftpSource = reset.sourceSftp;
             sftpDest = reset.destSftp;
@@ -2330,7 +2003,7 @@ async function pipelinedSftpToLocalFile(
   const transferStart = Date.now();
 
   await promisifyFastGet(sourceSftp, sourcePath, localPath, {
-    concurrency: SFTP_XFER_CONCURRENCY,
+    concurrency: options.pipelineConcurrency ?? SFTP_XFER_CONCURRENCY,
     chunkSize: SFTP_XFER_CHUNK_SIZE,
     fileSize,
     step: (_total, chunk) => {
@@ -2361,6 +2034,13 @@ async function transferFileData(
   onResumeOffset?: (offset: number) => void,
   parallelSegmentCount?: number,
 ): Promise<PipelinedXferStats> {
+  const tuning = selectTransferTuning(
+    fileSize,
+    reconnect?.profileKey
+      ? getTransferProfile(reconnect.profileKey)
+      : undefined,
+    parallelSegmentCount,
+  );
   const pipeOptions: PipelinedXferOptions = {
     fileSize,
     onProgress,
@@ -2368,25 +2048,392 @@ async function transferFileData(
     transferId,
     reconnect,
     onResumeOffset,
-    parallelSegmentCount,
+    parallelSegmentCount: tuning.parallelSegmentCount,
+    pipelineConcurrency: tuning.pipelineConcurrency,
   };
 
-  if (isLocalSshEndpoint(destSession.ip)) {
-    return pipelinedSftpToLocalFile(
-      sourceSftp,
-      sourcePath,
-      destPath,
-      pipeOptions,
-    );
+  if (transferId) {
+    updateTransfer(transferId, {
+      parallelSegmentCount: tuning.parallelSegmentCount,
+    });
   }
 
-  return pipelinedSftpFile(
+  const startedAt = Date.now();
+  const shouldProfile = fileSize >= SFTP_XFER_SEGMENT_THRESHOLD;
+  fileLogger.info("Selected adaptive transfer tuning", {
+    operation: "host_transfer_tuning",
+    transferId,
+    fileSize,
+    parallelSegmentCount: tuning.parallelSegmentCount,
+    pipelineConcurrency: tuning.pipelineConcurrency,
+    profileSamples: reconnect?.profileKey
+      ? getTransferProfile(reconnect.profileKey)?.samples
+      : undefined,
+    explicitParallelOverride: parallelSegmentCount !== undefined,
+  });
+  try {
+    const stats = isLocalSshEndpoint(destSession.ip)
+      ? await pipelinedSftpToLocalFile(
+          sourceSftp,
+          sourcePath,
+          destPath,
+          pipeOptions,
+        )
+      : await pipelinedSftpFile(
+          sourceSftp,
+          destSftp,
+          sourcePath,
+          destPath,
+          pipeOptions,
+        );
+    if (shouldProfile && reconnect?.profileKey) {
+      recordTransferProfile(reconnect.profileKey, {
+        bytes: stats.bytes,
+        durationMs: Math.max(1, Date.now() - startedAt),
+        lanes: tuning.parallelSegmentCount,
+        pipelineConcurrency: tuning.pipelineConcurrency,
+        failed: false,
+      });
+    }
+    return stats;
+  } catch (err) {
+    if (shouldProfile && reconnect?.profileKey) {
+      recordTransferProfile(reconnect.profileKey, {
+        bytes: 0,
+        durationMs: Math.max(1, Date.now() - startedAt),
+        lanes: tuning.parallelSegmentCount,
+        pipelineConcurrency: tuning.pipelineConcurrency,
+        failed: true,
+      });
+    }
+    throw err;
+  }
+}
+
+const DIRECT_BENCHMARK_BYTES = 8 * 1024 * 1024;
+const DIRECT_ROUTE_CACHE_MS = 10 * 60 * 1000;
+
+function getDirectEndpoint(
+  sourceSession: SSHSessionLike,
+  destSession: SSHSessionLike,
+): DirectTransferEndpoint | null {
+  if (
+    !sourceSession.ip ||
+    !destSession.ip ||
+    !destSession.username ||
+    !destSession.port ||
+    sourceSession.transferPlatform !== "unix" ||
+    destSession.transferPlatform !== "unix"
+  ) {
+    return null;
+  }
+  return {
+    host: destSession.ip,
+    port: destSession.port,
+    username: destSession.username,
+  };
+}
+
+function directRouteKey(
+  sourceSession: SSHSessionLike,
+  endpoint: DirectTransferEndpoint,
+): string {
+  return `${sourceSession.username ?? ""}@${sourceSession.ip}->${endpoint.username}@${endpoint.host}:${endpoint.port}`;
+}
+
+function transferProfileKey(
+  sourceSession: SSHSessionLike,
+  destSession: SSHSessionLike,
+  userId: string,
+): string {
+  return `${userId}:${sourceSession.username ?? ""}@${sourceSession.ip ?? "local"}:${sourceSession.port ?? 22}->${destSession.username ?? ""}@${destSession.ip ?? "local"}:${destSession.port ?? 22}`;
+}
+
+async function benchmarkTransferRoutes(
+  deps: HostTransferDeps,
+  transferId: string,
+  sourceSession: SSHSessionLike,
+  destSession: SSHSessionLike,
+  endpoint: DirectTransferEndpoint,
+  profileKey?: string,
+): Promise<{ useDirect: boolean; directMs?: number; relayMs?: number }> {
+  const key = directRouteKey(sourceSession, endpoint);
+  const cached = directRouteCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached;
+  const learned = profileKey
+    ? getRecentDirectRouteDecision(profileKey, DIRECT_ROUTE_CACHE_MS)
+    : undefined;
+  if (learned) {
+    const result = {
+      ...learned,
+      expiresAt: Date.now() + DIRECT_ROUTE_CACHE_MS,
+    };
+    directRouteCache.set(key, result);
+    return result;
+  }
+
+  updateTransfer(transferId, { phase: "benchmarking" });
+  const probe = await execCommand(
+    deps,
+    sourceSession,
+    `command -v rsync >/dev/null && ${buildDirectProbeCommand(endpoint)}`,
+    { timeoutMs: 8000 },
+  ).catch(() => ({ code: 1, stderr: "" }));
+  if (probe.code !== 0) {
+    const result = {
+      useDirect: false,
+      expiresAt: Date.now() + DIRECT_ROUTE_CACHE_MS,
+    };
+    directRouteCache.set(key, result);
+    return result;
+  }
+
+  const probeId = randomUUID();
+  const sourceProbe = `/tmp/termix-route-${probeId}.bin`;
+  const directProbe = `/tmp/termix-route-${probeId}.direct`;
+  const relayProbe = `/tmp/termix-route-${probeId}.relay`;
+  const cleanup = async () => {
+    await Promise.allSettled([
+      execCommand(deps, sourceSession, `rm -f ${quoteShell(sourceProbe)}`),
+      execCommand(
+        deps,
+        destSession,
+        `rm -f ${quoteShell(directProbe)} ${quoteShell(relayProbe)}`,
+      ),
+    ]);
+  };
+
+  try {
+    const created = await execCommand(
+      deps,
+      sourceSession,
+      `dd if=/dev/zero of=${quoteShell(sourceProbe)} bs=1048576 count=8 status=none`,
+      { timeoutMs: 8000 },
+    );
+    if (created.code !== 0) throw new Error("Failed to create route probe");
+
+    const directStart = performance.now();
+    const direct = await execCommand(
+      deps,
+      sourceSession,
+      buildDirectRsyncCommand(endpoint, [sourceProbe], directProbe, false),
+      { timeoutMs: 15000 },
+    );
+    const directMs = performance.now() - directStart;
+    if (direct.code !== 0) throw new Error("Direct route probe failed");
+
+    const [sourceSftp, destSftp] = await Promise.all([
+      deps.getSessionSftp(sourceSession),
+      deps.getSessionSftp(destSession),
+    ]);
+    const relayStart = performance.now();
+    const relayDeadline = Date.now() + 15000;
+    await transferFileData(
+      sourceSftp,
+      destSftp,
+      destSession,
+      sourceProbe,
+      relayProbe,
+      DIRECT_BENCHMARK_BYTES,
+      undefined,
+      () => Date.now() >= relayDeadline,
+    );
+    const relayMs = performance.now() - relayStart;
+    const profile = profileKey
+      ? recordDirectRouteBenchmark(profileKey, directMs, relayMs)
+      : undefined;
+    const useDirect =
+      shouldUseDirectTransfer(directMs, relayMs) &&
+      (!profile || profile.outcomeSamples < 2 || profile.failureRate < 0.25);
+    const result = {
+      useDirect,
+      directMs,
+      relayMs,
+      expiresAt: Date.now() + DIRECT_ROUTE_CACHE_MS,
+    };
+    directRouteCache.set(key, result);
+    updateTransfer(transferId, {
+      timings: {
+        ...activeTransfers.get(transferId)?.timings,
+        directBenchmarkMs: directMs,
+        relayBenchmarkMs: relayMs,
+      },
+    });
+    return result;
+  } catch {
+    const result = {
+      useDirect: false,
+      expiresAt: Date.now() + DIRECT_ROUTE_CACHE_MS,
+    };
+    directRouteCache.set(key, result);
+    return result;
+  } finally {
+    await cleanup();
+  }
+}
+
+async function tryAdaptiveDirectTransfer(
+  deps: HostTransferDeps,
+  transferId: string,
+  sourceSession: SSHSessionLike,
+  destSession: SSHSessionLike,
+  sourcePaths: string[],
+  destPath: string,
+  move: boolean,
+  reconnectMeta: TransferReconnectMeta,
+): Promise<TransferProgress | null> {
+  const endpoint = getDirectEndpoint(sourceSession, destSession);
+  if (!endpoint) return null;
+
+  const sourceSftp = await deps.getSessionSftp(sourceSession);
+  const firstStats = await promisifySftpStat(sourceSftp, sourcePaths[0]);
+  const destIsDirectory = sourcePaths.length > 1 || firstStats.isDirectory();
+  const summary = await scanSourcePathsForRouting(
     sourceSftp,
-    destSftp,
-    sourcePath,
-    destPath,
-    pipeOptions,
+    sourcePaths,
+    transferId,
   );
+  if (!shouldBenchmarkDirectTransfer(summary.totalBytes)) return null;
+
+  const route = await benchmarkTransferRoutes(
+    deps,
+    transferId,
+    sourceSession,
+    destSession,
+    endpoint,
+    reconnectMeta.profileKey,
+  );
+  if (!route.useDirect) return null;
+  if (destIsDirectory) {
+    await ensureDestDirectory(deps, destSession, destPath);
+  } else {
+    await ensureDestParentForFile(deps, destSession, destPath);
+  }
+
+  updateTransfer(transferId, {
+    method: "direct_rsync",
+    phase: "transferring",
+    bytesTransferred: 0,
+    totalBytes: summary.totalBytes,
+  });
+  const transferStart = performance.now();
+  let outputBuffer = "";
+
+  try {
+    const result = await execCommand(
+      deps,
+      sourceSession,
+      buildDirectRsyncCommand(endpoint, sourcePaths, destPath, destIsDirectory),
+      {
+        shouldAbort: createTransferShouldAbort(transferId),
+        onOutput: (chunk) => {
+          outputBuffer = `${outputBuffer}${chunk.toString()}`.slice(-2048);
+          const matches = [...outputBuffer.matchAll(/([\d,]+)\s+(\d+)%/g)];
+          const last = matches.at(-1);
+          if (!last) return;
+          const bytes = Number(last[1].replace(/,/g, ""));
+          if (Number.isFinite(bytes)) {
+            updateTransfer(transferId, {
+              bytesTransferred: Math.min(bytes, summary.totalBytes),
+            });
+          }
+        },
+      },
+    );
+    if (result.code !== 0) {
+      throw new Error(result.stderr || "Direct rsync transfer failed");
+    }
+
+    const workItems: FileWorkItem[] = [];
+    if (destIsDirectory) {
+      for (const sourcePath of sourcePaths) {
+        workItems.push(
+          ...(await collectFileWorkItems(sourceSftp, sourcePath, destPath)),
+        );
+      }
+    } else {
+      workItems.push({
+        sourcePath: sourcePaths[0],
+        destPath,
+        mode: firstStats.mode,
+        size: firstStats.size,
+      });
+    }
+    for (const item of workItems) {
+      await verifyTransferredFile(
+        deps,
+        transferId,
+        reconnectMeta,
+        item.sourcePath,
+        item.destPath,
+      );
+    }
+    if (move) {
+      await deleteSourcePathsAfterSuccess(
+        deps,
+        transferId,
+        sourceSession,
+        sourcePaths,
+      );
+    }
+
+    const transferMs = performance.now() - transferStart;
+    if (reconnectMeta.profileKey) {
+      recordDirectRouteOutcome(
+        reconnectMeta.profileKey,
+        false,
+        Date.now(),
+        DIRECT_ROUTE_CACHE_MS,
+      );
+    }
+    return finalizeTransfer(transferId, {
+      status: "success",
+      phase: "verifying",
+      method: "direct_rsync",
+      bytesTransferred: summary.totalBytes,
+      totalBytes: summary.totalBytes,
+      sourcePaths,
+      destPath,
+      sourceDeleted: move,
+      moveRequested: move,
+      integrityVerified: true,
+      timings: {
+        ...activeTransfers.get(transferId)?.timings,
+        transferMs,
+        transferBytes: summary.totalBytes,
+        endToEndMbPerSec: computeTransferMbPerSec(
+          summary.totalBytes,
+          transferMs,
+        ),
+      },
+    });
+  } catch (error) {
+    if (error instanceof TransferCancelledError) throw error;
+    fileLogger.warn("Direct transfer failed; falling back to relay", {
+      operation: "host_transfer_direct_fallback",
+      transferId,
+      error: getErrorMessage(error, "Direct transfer failed"),
+    });
+    if (reconnectMeta.profileKey) {
+      recordDirectRouteOutcome(
+        reconnectMeta.profileKey,
+        true,
+        Date.now(),
+        DIRECT_ROUTE_CACHE_MS,
+      );
+    }
+    directRouteCache.set(directRouteKey(sourceSession, endpoint), {
+      useDirect: false,
+      expiresAt: Date.now() + DIRECT_ROUTE_CACHE_MS,
+    });
+    updateTransfer(transferId, {
+      method: undefined,
+      phase: "transferring",
+      bytesTransferred: 0,
+      integrityVerified: false,
+    });
+    return null;
+  }
 }
 
 async function transferSingleFile(
@@ -2398,6 +2445,7 @@ async function transferSingleFile(
   destPath: string,
   move: boolean,
   reconnectMeta: TransferReconnectMeta,
+  requestedParallelSegments?: number,
 ): Promise<TransferProgress> {
   const sourceSftp = await deps.getSessionSftp(sourceSession);
   const destSftp = await deps.getSessionSftp(destSession);
@@ -2439,9 +2487,12 @@ async function transferSingleFile(
     updateTransfer(transferId, { bytesTransferred: absoluteOffset });
   };
 
-  const parallelLanes = clampParallelSegmentCount(
-    activeTransfers.get(transferId)?.parallelSegmentCount,
+  const tuning = selectTransferTuning(
+    stats.size,
+    reconnect.profileKey ? getTransferProfile(reconnect.profileKey) : undefined,
+    requestedParallelSegments,
   );
+  const parallelLanes = tuning.parallelSegmentCount;
   const useAbsoluteProgressOnly = parallelLanes > 1;
 
   throwIfCancelled(transferId);
@@ -2463,7 +2514,15 @@ async function transferSingleFile(
     transferId,
     reconnect,
     syncProgress,
-    parallelLanes,
+    requestedParallelSegments,
+  );
+
+  await verifyTransferredFile(
+    deps,
+    transferId,
+    reconnectMeta,
+    sourcePath,
+    destPath,
   );
 
   if (move) {
@@ -2605,8 +2664,16 @@ async function transferViaTar(
       syncProgress,
     );
     mergeXferStats(xferStats, fileStats);
+    await verifyTransferredFile(
+      deps,
+      transferId,
+      reconnectMeta,
+      tempArchive,
+      tempArchive,
+    );
   } catch (err) {
     if (!(err instanceof TransferCancelledError)) {
+      await promisifySftpUnlink(destSftp, tempArchive).catch(() => {});
       await cleanupDestItems(deps, destSession, destPath, basenames);
     }
     throw err;
@@ -2746,6 +2813,14 @@ async function transferViaItemSftp(
         },
       );
       mergeXferStats(xferStats, itemXferStats);
+      await verifyTransferredFile(
+        deps,
+        transferId,
+        reconnectMeta,
+        item.sourcePath,
+        item.destPath,
+      );
+      updateTransfer(transferId, { phase: "transferring" });
       if (destPlatform !== "windows") {
         await promisifySftpChmod(destSftp, item.destPath, item.mode);
       }
@@ -2760,6 +2835,7 @@ async function transferViaItemSftp(
         continue;
       }
       if (!(err instanceof TransferCancelledError)) {
+        await deletePathSftp(destSftp, item.destPath).catch(() => {});
         for (const created of [...createdFiles].reverse()) {
           await deletePathSftp(destSftp, created).catch(() => {});
         }
@@ -2794,6 +2870,7 @@ async function transferViaItemSftp(
     destPath,
     sourceDeleted: status === "success" && move,
     moveRequested: move,
+    integrityVerified: status === "success",
     timings: {
       ...activeTransfers.get(transferId)?.timings,
       transferMs,
@@ -2807,6 +2884,7 @@ async function runTransfer(
   transferId: string,
   request: TransferRequest,
 ): Promise<void> {
+  await initializeTransferProfiles();
   const {
     sourceSessionId: browseSourceSessionId,
     sourcePaths,
@@ -2815,13 +2893,10 @@ async function runTransfer(
     move = false,
     userId,
     methodPreference = "auto",
-    parallelSegmentCount:
-      requestParallelSegments = DEFAULT_PARALLEL_SEGMENT_COUNT,
+    parallelSegmentCount: requestParallelSegments,
   } = request;
 
-  const parallelSegmentCount = clampParallelSegmentCount(
-    requestParallelSegments,
-  );
+  const parallelSegmentCount = requestParallelSegments;
 
   const dedicatedSourceSessionId = `xfer:${transferId}:src`;
   const dedicatedDestSessionId = `xfer:${transferId}:dst`;
@@ -2848,11 +2923,18 @@ async function runTransfer(
       transferId,
     );
 
+    reconnectMeta.profileKey = transferProfileKey(
+      sourceSession,
+      destSession,
+      userId,
+    );
+
     sourceSession.lastActive = Date.now();
     destSession.lastActive = Date.now();
 
     updateTransfer(transferId, {
-      parallelSegmentCount,
+      parallelSegmentCount:
+        parallelSegmentCount ?? DEFAULT_PARALLEL_SEGMENT_COUNT,
       dedicatedSourceSessionId,
       dedicatedDestSessionId,
     });
@@ -2887,6 +2969,29 @@ async function runTransfer(
       }
     }
 
+    const directResult =
+      methodPreference === "auto"
+        ? await tryAdaptiveDirectTransfer(
+            deps,
+            transferId,
+            sourceSession,
+            destSession,
+            sourcePaths,
+            destPath,
+            move,
+            reconnectMeta,
+          )
+        : null;
+    if (directResult) {
+      updateTransfer(transferId, {
+        timings: {
+          ...directResult.timings,
+          totalMs: elapsedMs(runStart),
+        },
+      });
+      return;
+    }
+
     let useArchive = sourcePaths.length > 1;
 
     if (sourcePaths.length === 1) {
@@ -2904,6 +3009,7 @@ async function runTransfer(
         destPath,
         move,
         reconnectMeta,
+        parallelSegmentCount,
       );
     } else {
       const prepareStart = Date.now();
@@ -3007,6 +3113,7 @@ async function runTransfer(
           totalItems: current?.totalItems,
           moveRequested: move,
           sourceDeleted: false,
+          integrityVerified: false,
           timings: {
             ...current?.timings,
             totalMs: elapsedMs(runStart),
@@ -3023,7 +3130,7 @@ async function runTransfer(
     }
 
     const current = activeTransfers.get(transferId);
-    const message = err instanceof Error ? err.message : "Transfer failed";
+    const message = getErrorMessage(err, "Transfer failed");
 
     if (
       sourcePaths.length === 1 &&
@@ -3050,6 +3157,14 @@ async function runTransfer(
             moveRequested: move,
             sourceDeleted: current.sourceDeleted,
           },
+          () =>
+            verifyTransferredFile(
+              deps,
+              transferId,
+              reconnectMeta,
+              sourcePaths[0],
+              current.destPath!,
+            ),
         );
         if (finalized) {
           fileLogger.info("Host transfer succeeded after destination verify", {
@@ -3079,6 +3194,7 @@ async function runTransfer(
         itemsCompleted: current?.itemsCompleted,
         totalItems: current?.totalItems,
         moveRequested: move,
+        integrityVerified: false,
         timings: {
           ...current?.timings,
           totalMs: elapsedMs(runStart),
@@ -3244,10 +3360,7 @@ export function retryHostTransfer(
     await runTransfer(deps, transferId, {
       ...latest.requestSnapshot,
       userId,
-      parallelSegmentCount:
-        latest.requestSnapshot?.parallelSegmentCount ??
-        latest.parallelSegmentCount ??
-        DEFAULT_PARALLEL_SEGMENT_COUNT,
+      parallelSegmentCount: latest.requestSnapshot.parallelSegmentCount,
     });
   })();
 
@@ -3301,14 +3414,11 @@ export async function previewArchiveTransferMethod(
   );
 
   const sourceSftp = await deps.getSessionSftp(sourceSession);
-  const scanItems: Array<{ sourcePath: string; size: number }> = [];
-  for (const sourcePath of sourcePaths) {
-    const work = await collectFileWorkItems(sourceSftp, sourcePath, "/");
-    scanItems.push(
-      ...work.map((w) => ({ sourcePath: w.sourcePath, size: w.size })),
-    );
-  }
-  const scanSummary = buildTransferScanSummary(scanItems);
+  const scanSummary = await scanSourcePathsForRouting(
+    sourceSftp,
+    sourcePaths,
+    "preview",
+  );
 
   const sourceHasTar =
     sourcePlatform === "unix" && (await checkTarAvailable(deps, sourceSession));
@@ -3374,9 +3484,7 @@ export function startHostTransfer(
       destPath: request.destPath,
       move: request.move,
       methodPreference: request.methodPreference,
-      parallelSegmentCount: clampParallelSegmentCount(
-        request.parallelSegmentCount,
-      ),
+      parallelSegmentCount: request.parallelSegmentCount,
     },
   });
 

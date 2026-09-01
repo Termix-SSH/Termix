@@ -7,6 +7,8 @@ import { insertReturning } from "./returning.js";
 export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;
 
+const SESSION_ACTIVITY_PERSIST_INTERVAL_MS = 60_000;
+
 export class SessionRepository {
   constructor(
     private readonly context: DatabaseContext,
@@ -50,12 +52,19 @@ export class SessionRepository {
   async touch(
     id: string,
     lastActiveAt = new Date().toISOString(),
-  ): Promise<void> {
-    await this.context.drizzle
+    minIntervalMs = SESSION_ACTIVITY_PERSIST_INTERVAL_MS,
+  ): Promise<boolean> {
+    const cutoff = new Date(
+      new Date(lastActiveAt).getTime() - minIntervalMs,
+    ).toISOString();
+    const result = await this.context.drizzle
       .update(sessions)
       .set({ lastActiveAt })
-      .where(eq(sessions.id, id));
+      .where(and(eq(sessions.id, id), lte(sessions.lastActiveAt, cutoff)));
+
+    if (rowsAffected(result) === 0) return false;
     await this.afterWrite();
+    return true;
   }
 
   async updateToken(

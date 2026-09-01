@@ -28,6 +28,10 @@ type GeneralSettingsSectionProps = {
   analyticsLocked: boolean;
   handleToggleAnalytics: () => void;
   sessionSharingGloballyEnabled: boolean;
+  aiGloballyEnabled: boolean;
+  onToggleAiGloballyEnabled: () => void;
+  aiPrivateEndpoints: string[];
+  onSaveAiPrivateEndpoints: (hosts: string[]) => void;
   handleToggleSessionSharingGloballyEnabled: () => void;
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
@@ -36,6 +40,7 @@ type GeneralSettingsSectionProps = {
   oidcAutoProvision: boolean;
   handleToggleOidcAutoProvision: () => void;
   oidcSilentLoginDefault: boolean;
+  oidcSilentLoginDefaultLocked: boolean;
   handleToggleOidcSilentLoginDefault: () => void;
   allowPasswordReset: boolean;
   handleTogglePasswordReset: () => void;
@@ -60,6 +65,8 @@ type GeneralSettingsSectionProps = {
   handleSaveLogLevel: (level: string) => void;
   tailscaleApiKey: string;
   setTailscaleApiKey: Dispatch<SetStateAction<string>>;
+  tailscaleApiBaseUrl: string;
+  setTailscaleApiBaseUrl: Dispatch<SetStateAction<string>>;
   handleSaveTailscaleApiKey: () => void;
 };
 
@@ -70,6 +77,10 @@ export function AdminGeneralSettingsSection({
   analyticsLocked,
   handleToggleAnalytics,
   sessionSharingGloballyEnabled,
+  aiGloballyEnabled,
+  onToggleAiGloballyEnabled,
+  aiPrivateEndpoints,
+  onSaveAiPrivateEndpoints,
   handleToggleSessionSharingGloballyEnabled,
   allowRegistration,
   handleToggleRegistration,
@@ -78,6 +89,7 @@ export function AdminGeneralSettingsSection({
   oidcAutoProvision,
   handleToggleOidcAutoProvision,
   oidcSilentLoginDefault,
+  oidcSilentLoginDefaultLocked,
   handleToggleOidcSilentLoginDefault,
   allowPasswordReset,
   handleTogglePasswordReset,
@@ -102,6 +114,8 @@ export function AdminGeneralSettingsSection({
   handleSaveLogLevel,
   tailscaleApiKey,
   setTailscaleApiKey,
+  tailscaleApiBaseUrl,
+  setTailscaleApiBaseUrl,
   handleSaveTailscaleApiKey,
 }: GeneralSettingsSectionProps) {
   const { t } = useTranslation();
@@ -138,6 +152,40 @@ export function AdminGeneralSettingsSection({
           />
         </SettingRow>
         <SettingRow
+          label={t("admin.aiGloballyEnabled")}
+          description={t("admin.aiGloballyEnabledDesc")}
+        >
+          <AdminToggle
+            on={aiGloballyEnabled}
+            onToggle={onToggleAiGloballyEnabled}
+          />
+        </SettingRow>
+        {aiGloballyEnabled && (
+          // Full-width rather than a SettingRow: the panel is narrow, and an
+          // inline field here squeezes the label down to a word per line.
+          <div className="flex flex-col gap-1.5 py-2">
+            <span className="text-xs font-medium">
+              {t("admin.aiPrivateEndpoints")}
+            </span>
+            <span className="text-[11px] leading-snug text-muted-foreground">
+              {t("admin.aiPrivateEndpointsDesc")}
+            </span>
+            <Input
+              className="rounded-none"
+              defaultValue={aiPrivateEndpoints.join(", ")}
+              placeholder="localhost, 127.0.0.1"
+              onBlur={(event) =>
+                onSaveAiPrivateEndpoints(
+                  event.target.value
+                    .split(",")
+                    .map((entry) => entry.trim())
+                    .filter(Boolean),
+                )
+              }
+            />
+          </div>
+        )}
+        <SettingRow
           label={t("admin.allowRegistration")}
           description={t("admin.allowRegistrationDesc")}
         >
@@ -166,11 +214,16 @@ export function AdminGeneralSettingsSection({
         </SettingRow>
         <SettingRow
           label={t("admin.oidcSilentLoginDefault")}
-          description={t("admin.oidcSilentLoginDefaultDesc")}
+          description={
+            oidcSilentLoginDefaultLocked
+              ? t("admin.oidcSilentLoginDefaultLockedDesc")
+              : t("admin.oidcSilentLoginDefaultDesc")
+          }
         >
           <AdminToggle
             on={oidcSilentLoginDefault}
             onToggle={handleToggleOidcSilentLoginDefault}
+            disabled={oidcSilentLoginDefaultLocked}
           />
         </SettingRow>
         <SettingRow
@@ -363,7 +416,7 @@ export function AdminGeneralSettingsSection({
               type="password"
               value={tailscaleApiKey}
               onChange={(e) => setTailscaleApiKey(e.target.value)}
-              placeholder="tskey-api-..."
+              placeholder="tskey-api-... / hskey-api-..."
               className="text-sm"
             />
             <Button
@@ -374,6 +427,20 @@ export function AdminGeneralSettingsSection({
             >
               {t("common.save")}
             </Button>
+          </div>
+          <div className="flex flex-col gap-1.5 mt-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              {t("admin.tailscaleApiBaseUrl")}
+            </label>
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.tailscaleApiBaseUrlDescription")}
+            </span>
+            <Input
+              value={tailscaleApiBaseUrl}
+              onChange={(e) => setTailscaleApiBaseUrl(e.target.value)}
+              placeholder="https://api.tailscale.com/api/v2"
+              className="text-sm"
+            />
           </div>
         </div>
 

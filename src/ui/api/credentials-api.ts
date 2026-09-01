@@ -1,6 +1,11 @@
 import { authApi, handleApiError, sshHostApi } from "@/main-axios";
 import type { SSHFolder } from "@/types/index";
 import { sshLogger } from "@/lib/frontend-logger";
+import {
+  getCachedSSHFolders,
+  invalidateSSHFoldersCache,
+  invalidateHostsAndStatusCaches,
+} from "@/lib/hosts-request-cache";
 
 export async function getCredentials(): Promise<
   Record<string, unknown>[] | Record<string, unknown>
@@ -47,6 +52,21 @@ export async function updateCredential(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update credential");
+  }
+}
+
+export async function duplicateCredential(
+  credentialId: number,
+  data: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.post(
+      `/credentials/${credentialId}/duplicate`,
+      data,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "duplicate credential");
   }
 }
 
@@ -174,6 +194,7 @@ export async function renameFolder(
       oldName,
       newName,
     });
+    invalidateSSHFoldersCache();
     return response.data;
   } catch (error) {
     handleApiError(error, "rename folder");
@@ -186,14 +207,17 @@ export async function getSSHFolders(): Promise<SSHFolder[]> {
       operation: "fetch_ssh_folders",
     });
 
-    const response = await authApi.get("/host/folders");
+    const folders = await getCachedSSHFolders(async () => {
+      const response = await authApi.get("/host/folders");
+      return response.data;
+    });
 
     sshLogger.success("SSH folders fetched successfully", {
       operation: "fetch_ssh_folders",
-      count: response.data.length,
+      count: folders.length,
     });
 
-    return response.data;
+    return folders;
   } catch (error) {
     sshLogger.error("Failed to fetch SSH folders", error, {
       operation: "fetch_ssh_folders",
@@ -225,6 +249,8 @@ export async function updateFolderMetadata(
       credentialId,
     });
 
+    invalidateSSHFoldersCache();
+
     sshLogger.success("Folder metadata updated successfully", {
       operation: "update_folder_metadata",
       name,
@@ -235,6 +261,21 @@ export async function updateFolderMetadata(
       name,
     });
     handleApiError(error, "update folder metadata");
+    throw error;
+  }
+}
+
+export async function reorderFolders(
+  positions: { name: string; sortOrder: number }[],
+): Promise<{ updated: number }> {
+  try {
+    const response = await authApi.put("/host/folders/reorder", {
+      positions,
+    });
+    invalidateSSHFoldersCache();
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "reorder folders");
     throw error;
   }
 }
@@ -251,6 +292,8 @@ export async function deleteAllHostsInFolder(
     const response = await authApi.delete(
       `/host/folders/${encodeURIComponent(folderName)}/hosts`,
     );
+
+    invalidateHostsAndStatusCaches();
 
     sshLogger.success("All hosts in folder deleted successfully", {
       operation: "delete_folder_hosts",
@@ -278,9 +321,24 @@ export async function renameCredentialFolder(
       oldName,
       newName,
     });
+    invalidateSSHFoldersCache();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "rename credential folder");
+  }
+}
+
+export async function reorderCredentials(
+  positions: { id: number; sortOrder: number }[],
+): Promise<{ updated: number }> {
+  try {
+    const response = await authApi.put("/credentials/reorder", {
+      positions,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "reorder credentials");
+    throw error;
   }
 }
 
@@ -329,10 +387,16 @@ export async function validateKeyPair(
   }
 }
 
+export interface GeneratedPublicKey {
+  success?: boolean;
+  publicKey?: string;
+  error?: string;
+}
+
 export async function generatePublicKeyFromPrivate(
   privateKey: string,
   keyPassword?: string,
-): Promise<Record<string, unknown>> {
+): Promise<GeneratedPublicKey> {
   try {
     const response = await authApi.post("/credentials/generate-public-key", {
       privateKey,
@@ -344,11 +408,23 @@ export async function generatePublicKeyFromPrivate(
   }
 }
 
+export interface GeneratedKeyPair {
+  success: boolean;
+  privateKey?: string;
+  publicKey?: string;
+  keyType?: string;
+  format?: string;
+  algorithm?: string;
+  keySize?: number;
+  curve?: string;
+  error?: string;
+}
+
 export async function generateKeyPair(
   keyType: "ssh-ed25519" | "ssh-rsa" | "ecdsa-sha2-nistp256",
   keySize?: number,
   passphrase?: string,
-): Promise<Record<string, unknown>> {
+): Promise<GeneratedKeyPair> {
   try {
     const response = await authApi.post("/credentials/generate-key-pair", {
       keyType,

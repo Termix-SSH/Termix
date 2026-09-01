@@ -7,8 +7,7 @@ import type {
   WidgetComponentProps,
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
-import { getServiceLinks } from "@/api/dashboard-api";
-import type { ServiceLink } from "@/api/dashboard-api";
+import { getServiceLinks, type ServiceLink } from "@/api/dashboard-api";
 import { WidgetTitle } from "./WidgetTitle";
 
 function getFaviconUrl(url: string): string {

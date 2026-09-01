@@ -6,6 +6,7 @@ import {
   hosts,
   notificationChannels,
 } from "../db/schema.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
 import type { DatabaseContext } from "./database-context.js";
 import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
 import { rowsAffected } from "./mutation-result.js";
@@ -83,6 +84,56 @@ export class AlertRepository {
     private readonly onWrite?: () => void | Promise<void>,
   ) {}
 
+  /**
+   * Channel configs carry ntfy tokens and webhook auth headers, so they are
+   * field-encrypted like any other secret. The key is derived from the row id,
+   * which does not exist until after the insert, so a new channel is written
+   * once and then re-encrypted in place with its real id.
+   */
+  private userDataKey(userId: string): Buffer | null {
+    try {
+      return DataCrypto.getUserDataKey(userId);
+    } catch {
+      // Crypto is not initialized (tests, early boot); leave the value as is.
+      return null;
+    }
+  }
+
+  private encryptConfig(
+    config: string,
+    userId: string,
+    recordId: number | string,
+  ): string {
+    const userDataKey = this.userDataKey(userId);
+    if (!userDataKey) return config;
+    return DataCrypto.encryptRecord(
+      "notification_channels",
+      { id: recordId, config },
+      userId,
+      userDataKey,
+    ).config;
+  }
+
+  private decryptConfig(
+    config: string,
+    userId: string,
+    recordId: number | string,
+  ): string {
+    const userDataKey = this.userDataKey(userId);
+    if (!userDataKey) return config;
+    try {
+      return DataCrypto.decryptRecord(
+        "notification_channels",
+        { id: recordId, config },
+        userId,
+        userDataKey,
+      ).config;
+    } catch {
+      // Rows written before channel configs were encrypted are still plaintext.
+      return config;
+    }
+  }
+
   async listNotificationChannels(
     userId: string,
   ): Promise<NotificationChannelRow[]> {
@@ -92,7 +143,11 @@ export class AlertRepository {
       .where(eq(notificationChannels.userId, userId))
       .orderBy(notificationChannels.id);
 
-    return rows.map(mapChannelRow);
+    return rows.map((row) => {
+      const mapped = mapChannelRow(row);
+      mapped.config = this.decryptConfig(mapped.config, userId, mapped.id);
+      return mapped;
+    });
   }
 
   async findNotificationChannelForUser(
@@ -110,7 +165,10 @@ export class AlertRepository {
       )
       .limit(1);
 
-    return rows[0] ? mapChannelRow(rows[0]) : null;
+    if (!rows[0]) return null;
+    const mapped = mapChannelRow(rows[0]);
+    mapped.config = this.decryptConfig(mapped.config, userId, mapped.id);
+    return mapped;
   }
 
   async createNotificationChannel(input: {
@@ -132,8 +190,22 @@ export class AlertRepository {
       },
     );
 
+    const encrypted = this.encryptConfig(
+      input.config,
+      input.userId,
+      created.id,
+    );
+    if (encrypted !== input.config) {
+      await this.context.drizzle
+        .update(notificationChannels)
+        .set({ config: encrypted })
+        .where(eq(notificationChannels.id, created.id));
+    }
+
     await this.afterWrite();
-    return mapChannelRow(created);
+    const mapped = mapChannelRow(created);
+    mapped.config = input.config;
+    return mapped;
   }
 
   async updateNotificationChannel(
@@ -150,10 +222,15 @@ export class AlertRepository {
       return this.findNotificationChannelForUser(id, userId);
     }
 
+    const values =
+      input.config !== undefined
+        ? { ...input, config: this.encryptConfig(input.config, userId, id) }
+        : input;
+
     const [updated] = await updateReturning(
       this.context,
       notificationChannels,
-      input,
+      values,
       and(
         eq(notificationChannels.id, id),
         eq(notificationChannels.userId, userId),
@@ -162,7 +239,9 @@ export class AlertRepository {
 
     if (!updated) return null;
     await this.afterWrite();
-    return mapChannelRow(updated);
+    const mapped = mapChannelRow(updated);
+    mapped.config = this.decryptConfig(mapped.config, userId, mapped.id);
+    return mapped;
   }
 
   async deleteNotificationChannel(
@@ -358,17 +437,25 @@ export class AlertRepository {
     await this.afterWrite();
   }
 
+  // A rule with host_id IS NULL means "all my hosts", not "all hosts on the
+  // server". Without joining the host back to its owner, every user's wildcard
+  // rule fired for every polled host and leaked other users' host names into
+  // their alerts.
   async listEnabledRulesForHost(hostId: number): Promise<AlertEngineRule[]> {
     const rows = await this.context.drizzle
-      .select()
+      .select({ rule: alertRules })
       .from(alertRules)
+      .innerJoin(hosts, eq(hosts.id, hostId))
       .where(
         and(
           eq(alertRules.enabled, true),
-          or(eq(alertRules.hostId, hostId), isNull(alertRules.hostId)),
+          or(
+            eq(alertRules.hostId, hostId),
+            and(isNull(alertRules.hostId), eq(alertRules.userId, hosts.userId)),
+          ),
         ),
       );
-    return rows.map(mapEngineRule);
+    return rows.map((row) => mapEngineRule(row.rule));
   }
 
   async listEnabledRulesForHostUser(
@@ -489,6 +576,7 @@ export class AlertRepository {
     const rows = await this.context.drizzle
       .select({
         id: notificationChannels.id,
+        userId: notificationChannels.userId,
         type: notificationChannels.type,
         config: notificationChannels.config,
         enabled: notificationChannels.enabled,
@@ -505,7 +593,11 @@ export class AlertRepository {
         ),
       );
 
-    return rows;
+    // The engine sends without a user in scope, so decrypt against the owner.
+    return rows.map(({ userId, ...channel }) => ({
+      ...channel,
+      config: this.decryptConfig(channel.config, userId, channel.id),
+    }));
   }
 
   async getHostDisplayName(hostId: number): Promise<string | null> {

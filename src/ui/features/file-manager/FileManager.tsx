@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, {
   useState,
@@ -6,9 +7,10 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { asHttpError } from "@/lib/http-error";
 import { cn } from "@/lib/utils.ts";
 import { FileManagerGrid } from "./FileManagerGrid.tsx";
-import { FileManagerSidebar } from "./FileManagerSidebar.tsx";
+import { FileManagerSidebar, type SidebarItem } from "./FileManagerSidebar.tsx";
 import { FileManagerContextMenu } from "./FileManagerContextMenu.tsx";
 import { useFileSelection } from "./hooks/useFileSelection.ts";
 import { useDragAndDrop } from "./hooks/useDragAndDrop.ts";
@@ -17,6 +19,7 @@ import {
   useWindowManager,
 } from "./components/WindowManager.tsx";
 import { FileWindow } from "./components/FileWindow.tsx";
+import { DownloadProgressToast } from "./components/DownloadProgressToast.tsx";
 import { DiffWindow } from "./components/DiffWindow.tsx";
 import { useDragToDesktop } from "@/features/file-manager/hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "@/features/file-manager/hooks/useDragToSystemDesktop";
@@ -27,17 +30,20 @@ import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
 import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
+import { FileManagerTrashDialog } from "./FileManagerTrashDialog.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
 import type { SSHHost, FileItem } from "@/types/index";
 import {
   ConnectionLogProvider,
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+import { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel.tsx";
+import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import {
   listSSHFiles,
+  readSSHFile,
   resolveSSHPath,
   uploadSSHFile,
   createSSHFile,
@@ -69,9 +75,18 @@ import {
   type TransferMethodPreference,
   type DiskFilesystem,
 } from "@/main-axios.ts";
+import {
+  getAdaptiveResourceBudget,
+  markAdaptiveResourceUsed,
+  runAdaptiveBackgroundTask,
+} from "@/lib/adaptive-resource-budget";
+import { shouldPrefetchFileContent } from "@/lib/file-content-request-cache";
+import {
+  markFilePreviewUsed,
+  preloadFilePreview,
+} from "./file-preview-preload";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
-import type { SidebarItem } from "./FileManagerSidebar.tsx";
 import type {
   CreateIntent,
   FileManagerProps,
@@ -79,6 +94,18 @@ import type {
   SSHConnectionError,
 } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
+import {
+  invalidateCachedFileList,
+  peekCachedFileList,
+  updateCachedFileList,
+} from "@/lib/file-list-request-cache";
+import {
+  addOptimisticItem,
+  childPath,
+  removePaths,
+  renameOptimisticItem,
+  restoreItems,
+} from "./optimistic-file-list";
 
 const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
 
@@ -97,16 +124,14 @@ function FileManagerContent({
     [t],
   );
   const { confirmWithToast } = useConfirmation();
-  const {
-    addLog,
-    clearLogs,
-    isExpanded: isConnectionLogExpanded,
-  } = useConnectionLog();
+  const { addLog, clearLogs } = useConnectionLog();
 
   const [currentHost] = useState<SSHHost | null>(initialHost || null);
   const [currentPath, setCurrentPath] = useState(
     initialPath || initialHost?.defaultPath || "/",
   );
+  const currentPathRef = useRef(currentPath);
+  currentPathRef.current = currentPath;
   const lastSuccessfulPathRef = useRef(
     initialPath || initialHost?.defaultPath || "/",
   );
@@ -115,8 +140,13 @@ function FileManagerContent({
   ]);
   const [navIndex, setNavIndex] = useState(0);
   const [files, setFiles] = useState<FileItem[]>([]);
+  const filesRef = useRef(files);
+  filesRef.current = files;
+  const directoryRequestRef = useRef(0);
   const [isLoading, setIsLoading] = useState(false);
   const [sshSessionId, setSshSessionId] = useState<string | null>(null);
+  const sshSessionIdRef = useRef(sshSessionId);
+  sshSessionIdRef.current = sshSessionId;
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
@@ -124,6 +154,16 @@ function FileManagerContent({
     const saved = localStorage.getItem("fileManagerViewMode");
     return saved === "grid" || saved === "list" ? saved : "grid";
   });
+  // Picking an interface preset seeds this key from another part of the app.
+  useEffect(() => {
+    const handler = () => {
+      const saved = localStorage.getItem("fileManagerViewMode");
+      if (saved === "grid" || saved === "list") setViewMode(saved);
+    };
+    window.addEventListener("fileManagerViewModeChanged", handler);
+    return () =>
+      window.removeEventListener("fileManagerViewModeChanged", handler);
+  }, []);
   const [sortBy, setSortBy] = useState<"name" | "modified" | "size">(() => {
     const saved = localStorage.getItem("fileManagerSortBy");
     return saved === "name" || saved === "modified" || saved === "size"
@@ -150,6 +190,7 @@ function FileManagerContent({
   const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [diskInfo, setDiskInfo] = useState<{
@@ -214,6 +255,32 @@ function FileManagerContent({
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
+  const commitFilesForPath = useCallback(
+    (sessionId: string, path: string, next: FileItem[]) => {
+      updateCachedFileList(sessionId, path, next);
+      if (
+        sshSessionIdRef.current !== sessionId ||
+        currentPathRef.current !== path
+      ) {
+        return;
+      }
+      directoryRequestRef.current += 1;
+      filesRef.current = next;
+      setFiles(next);
+    },
+    [],
+  );
+
+  const filesForPath = useCallback((sessionId: string, path: string) => {
+    if (
+      sshSessionIdRef.current === sessionId &&
+      currentPathRef.current === path
+    ) {
+      return filesRef.current;
+    }
+    return peekCachedFileList(sessionId, path)?.files ?? [];
+  }, []);
+
   const { dragHandlers } = useDragAndDrop({
     onFilesDropped: handleFilesDropped,
     onItemsDropped: handleItemsDropped,
@@ -264,13 +331,31 @@ function FileManagerContent({
         stage: "connection",
         message: errorMessage,
       });
+      connectRetryRef.current?.markFailed();
     },
     [addLog],
   );
 
+  const connectRetry = useConnectionRetry({
+    connect: () => {
+      void initializeSSHConnection();
+    },
+    enabled:
+      !!currentHost &&
+      !sshSessionId &&
+      !totpRequired &&
+      !warpgateRequired &&
+      !showAuthDialog &&
+      !showPassphraseDialog,
+    autoStart: false,
+  });
+  const connectRetryRef = useRef(connectRetry);
+  connectRetryRef.current = connectRetry;
+
   useEffect(() => {
     if (currentHost) {
-      initializeSSHConnection();
+      connectRetryRef.current.reset();
+      connectRetryRef.current.retryNow();
     }
   }, [currentHost]);
 
@@ -427,8 +512,8 @@ function FileManagerContent({
       setHasConnectionError(true);
       addLog({
         type: "error",
+        stage: "error",
         message: t("fileManager.sshRequiredForFileManager"),
-        timestamp: new Date().toISOString(),
       });
       setIsLoading(false);
       return;
@@ -496,6 +581,7 @@ function FileManagerContent({
       }
 
       setSshSessionId(sessionId);
+      connectRetryRef.current.markConnected();
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
@@ -563,7 +649,7 @@ function FileManagerContent({
       handleCloseWithError(
         t("fileManager.failedToConnect") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          getErrorMessage(error, String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -577,6 +663,7 @@ function FileManagerContent({
         console.error("Cannot load directory: no SSH session ID");
         return false;
       }
+      const requestId = ++directoryRequestRef.current;
 
       let resolvedPath = path;
       if (path.includes("$") || path.startsWith("~")) {
@@ -588,12 +675,19 @@ function FileManagerContent({
       }
 
       currentLoadingPathRef.current = resolvedPath;
-      setIsLoading(true);
+      const cached = peekCachedFileList(sshSessionId, resolvedPath);
+      if (cached) {
+        setFiles(cached.files);
+        clearSelection();
+      }
+      setIsLoading(!cached);
 
       try {
-        const response = await listSSHFiles(sshSessionId, resolvedPath);
+        const response = await listSSHFiles(sshSessionId, resolvedPath, {
+          force: cached !== null,
+        });
 
-        if (currentLoadingPathRef.current !== resolvedPath) {
+        if (directoryRequestRef.current !== requestId) {
           return false;
         }
 
@@ -606,7 +700,7 @@ function FileManagerContent({
         clearSelection();
         return true;
       } catch (error: unknown) {
-        if (currentLoadingPathRef.current === resolvedPath) {
+        if (directoryRequestRef.current === requestId) {
           // ApiError has .status directly; raw axios errors have .response.status
           const apiError = error as {
             status?: number;
@@ -717,7 +811,7 @@ function FileManagerContent({
         }
         return false;
       } finally {
-        if (currentLoadingPathRef.current === resolvedPath) {
+        if (directoryRequestRef.current === requestId) {
           setIsLoading(false);
           currentLoadingPathRef.current = "";
         }
@@ -744,7 +838,12 @@ function FileManagerContent({
 
   const navigateTo = useCallback(
     (path: string) => {
-      if (sshSessionId) setIsLoading(true);
+      directoryRequestRef.current += 1;
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setCurrentPath(path);
       setNavHistory((prev) => {
         const next = [...prev.slice(0, navIndex + 1), path];
@@ -757,19 +856,31 @@ function FileManagerContent({
 
   const goBack = useCallback(() => {
     if (navIndex > 0) {
-      if (sshSessionId) setIsLoading(true);
+      directoryRequestRef.current += 1;
       const newIndex = navIndex - 1;
+      const path = navHistory[newIndex];
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setNavIndex(newIndex);
-      setCurrentPath(navHistory[newIndex]);
+      setCurrentPath(path);
     }
   }, [navIndex, navHistory, sshSessionId]);
 
   const goForward = useCallback(() => {
     if (navIndex < navHistory.length - 1) {
-      if (sshSessionId) setIsLoading(true);
+      directoryRequestRef.current += 1;
       const newIndex = navIndex + 1;
+      const path = navHistory[newIndex];
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setNavIndex(newIndex);
-      setCurrentPath(navHistory[newIndex]);
+      setCurrentPath(path);
     }
   }, [navIndex, navHistory, sshSessionId]);
 
@@ -807,11 +918,12 @@ function FileManagerContent({
     }
 
     setLastRefreshTime(now);
+    if (sshSessionId) invalidateCachedFileList(sshSessionId, currentPath);
     // Force reset loading state to ensure refresh is not blocked
     setIsLoading(false);
     currentLoadingPathRef.current = "";
     loadDirectory(currentPath);
-  }, [currentPath, lastRefreshTime, loadDirectory]);
+  }, [currentPath, lastRefreshTime, loadDirectory, sshSessionId]);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -850,7 +962,7 @@ function FileManagerContent({
         activeElement &&
         (activeElement.tagName === "INPUT" ||
           activeElement.tagName === "TEXTAREA" ||
-          activeElement.contentEditable === "true")
+          (activeElement as HTMLElement).contentEditable === "true")
       ) {
         return;
       }
@@ -865,19 +977,14 @@ function FileManagerContent({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [currentPath]);
 
-  async function handleItemsDropped(items: DataTransferItemList) {
+  async function handleItemsDropped(entries: FileSystemEntry[]) {
     if (!sshSessionId) {
       toast.error(t("fileManager.noSSHConnection"));
       return;
     }
 
-    const entries: FileSystemEntry[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const entry = items[i].webkitGetAsEntry?.();
-      if (entry) entries.push(entry);
-    }
-
     const files: { file: File; relativePath: string }[] = [];
+    const emptyDirs: string[] = [];
 
     async function readEntry(
       entry: FileSystemEntry,
@@ -888,51 +995,77 @@ function FileManagerContent({
           (entry as FileSystemFileEntry).file(resolve, reject),
         );
         files.push({ file, relativePath: path });
-      } else if (entry.isDirectory) {
-        const reader = (entry as FileSystemDirectoryEntry).createReader();
-        let batch: FileSystemEntry[];
-        do {
-          batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
-            reader.readEntries(resolve, reject),
-          );
-          for (const child of batch) {
-            await readEntry(child, `${path}/${child.name}`);
-          }
-        } while (batch.length > 0);
+        return;
+      }
+
+      if (!entry.isDirectory) return;
+
+      // readEntries only hands back a page at a time and signals the end with an
+      // empty batch, so drain it fully before walking into the children.
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      const children: FileSystemEntry[] = [];
+      for (;;) {
+        const batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+          reader.readEntries(resolve, reject),
+        );
+        if (batch.length === 0) break;
+        children.push(...batch);
+      }
+
+      if (children.length === 0) {
+        emptyDirs.push(path);
+        return;
+      }
+
+      for (const child of children) {
+        await readEntry(child, `${path}/${child.name}`);
       }
     }
 
-    for (const entry of entries) {
-      await readEntry(entry, entry.name);
+    try {
+      for (const entry of entries) {
+        await readEntry(entry, entry.name);
+      }
+    } catch (error) {
+      toast.error(t("fileManager.failedToUploadFile"));
+      console.error("Failed to read dropped folder:", error);
+      return;
     }
 
-    if (files.length === 0) return;
+    if (files.length === 0 && emptyDirs.length === 0) return;
 
     const progressToast = toast.loading(
-      `Uploading ${files.length} file(s)...`,
+      t("fileManager.uploadingFolderFiles", { count: files.length }),
       { duration: Infinity },
     );
+
+    const failed: string[] = [];
 
     try {
       await ensureSSHConnection();
 
+      const base = currentPath.endsWith("/") ? currentPath : currentPath + "/";
+
       const dirs = new Set<string>();
-      for (const { relativePath } of files) {
+      for (const relativePath of [
+        ...files.map((f) => f.relativePath),
+        ...emptyDirs.map((d) => `${d}/`),
+      ]) {
         const parts = relativePath.split("/");
         for (let i = 1; i < parts.length; i++) {
           dirs.add(parts.slice(0, i).join("/"));
         }
       }
 
-      const sortedDirs = Array.from(dirs).sort();
+      // Shallowest first so each parent exists before its children.
+      const sortedDirs = Array.from(dirs).sort(
+        (a, b) =>
+          a.split("/").length - b.split("/").length || a.localeCompare(b),
+      );
       for (const dir of sortedDirs) {
-        const parentPath = currentPath.endsWith("/")
-          ? currentPath + dir.split("/").slice(0, -1).join("/")
-          : currentPath + "/" + dir.split("/").slice(0, -1).join("/");
+        const parentDir = dir.split("/").slice(0, -1).join("/");
+        const targetPath = parentDir ? `${base}${parentDir}/` : base;
         const folderName = dir.split("/").pop()!;
-        const targetPath = parentPath.endsWith("/")
-          ? parentPath
-          : parentPath + "/";
         try {
           await createSSHFolder(
             sshSessionId,
@@ -949,23 +1082,37 @@ function FileManagerContent({
         const dirPart = relativePath.includes("/")
           ? relativePath.substring(0, relativePath.lastIndexOf("/"))
           : "";
-        const uploadPath = dirPart
-          ? (currentPath.endsWith("/") ? currentPath : currentPath + "/") +
-            dirPart +
-            "/"
-          : currentPath;
+        const uploadPath = dirPart ? `${base}${dirPart}/` : currentPath;
 
-        await uploadSSHFile(
-          sshSessionId,
-          uploadPath,
-          file.name,
-          file,
-          currentHost?.id,
-        );
+        try {
+          await uploadSSHFile(
+            sshSessionId,
+            uploadPath,
+            file.name,
+            file,
+            currentHost?.id,
+          );
+        } catch (error) {
+          failed.push(relativePath);
+          console.error(`Failed to upload ${relativePath}:`, error);
+        }
       }
 
       toast.dismiss(progressToast);
-      toast.success(`Uploaded ${files.length} file(s) successfully`);
+      if (failed.length === 0) {
+        toast.success(
+          t("fileManager.uploadedFolderFiles", { count: files.length }),
+        );
+      } else if (failed.length === files.length) {
+        toast.error(t("fileManager.failedToUploadFile"));
+      } else {
+        toast.warning(
+          t("fileManager.uploadedFolderPartial", {
+            uploaded: files.length - failed.length,
+            failed: failed.length,
+          }),
+        );
+      }
       handleRefreshDirectory();
     } catch (error) {
       toast.dismiss(progressToast);
@@ -1055,14 +1202,51 @@ function FileManagerContent({
   async function handleDownloadFile(file: FileItem) {
     if (!sshSessionId) return;
 
+    const toastId = `download-${file.path}-${Date.now()}`;
+    let lastLoaded = 0;
+    let lastTime = Date.now();
+    let mbPerSec: number | undefined;
+
     try {
       await ensureSSHConnection();
 
       const { downloadSSHFileStream } = await import("@/main-axios.ts");
-      await downloadSSHFileStream(sshSessionId, file.path);
+
+      toast.loading(<DownloadProgressToast fileName={file.name} loaded={0} />, {
+        id: toastId,
+        duration: Infinity,
+      });
+
+      await downloadSSHFileStream(
+        sshSessionId,
+        file.path,
+        ({ loaded, total }) => {
+          const now = Date.now();
+          const deltaMs = now - lastTime;
+          if (deltaMs > 200) {
+            const deltaBytes = loaded - lastLoaded;
+            if (deltaBytes >= 0) {
+              mbPerSec = (deltaBytes / deltaMs / 1024 / 1024) * 1000;
+            }
+            lastLoaded = loaded;
+            lastTime = now;
+          }
+
+          toast.loading(
+            <DownloadProgressToast
+              fileName={file.name}
+              loaded={loaded}
+              total={total}
+              mbPerSec={mbPerSec}
+            />,
+            { id: toastId, duration: Infinity },
+          );
+        },
+      );
 
       toast.success(
         t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
+        { id: toastId },
       );
     } catch (error: unknown) {
       const err = error instanceof Error ? error : null;
@@ -1076,9 +1260,10 @@ function FileManagerContent({
             ip: currentHost?.ip,
             port: currentHost?.port,
           }),
+          { id: toastId },
         );
       } else {
-        toast.error(t("fileManager.failedToDownloadFile"));
+        toast.error(t("fileManager.failedToDownloadFile"), { id: toastId });
       }
       console.error("Download failed:", error);
     }
@@ -1110,11 +1295,24 @@ function FileManagerContent({
       });
     }
 
-    const fullMessage = `${confirmMessage}\n\n${t("fileManager.permanentDeleteWarning")}`;
+    const fullMessage = `${confirmMessage}\n\n${t("fileManager.moveToTrashWarning")}`;
 
     confirmWithToast(
       fullMessage,
       async () => {
+        const operationPath = currentPath;
+        const operationSession = sshSessionId;
+        const deletedPaths = new Set(files.map((file) => file.path));
+        commitFilesForPath(
+          operationSession,
+          operationPath,
+          removePaths(
+            filesForPath(operationSession, operationPath),
+            deletedPaths,
+          ),
+        );
+        clearSelection();
+        let completed = 0;
         try {
           await ensureSSHConnection();
 
@@ -1126,31 +1324,29 @@ function FileManagerContent({
               currentHost?.id,
               currentHost?.userId?.toString(),
             );
+            completed += 1;
           }
 
-          const deletedFiles = files.map((file) => ({
-            path: file.path,
-            name: file.name,
-          }));
-
-          const undoAction: UndoAction = {
-            type: "delete",
-            description: t("fileManager.deletedItems", { count: files.length }),
-            data: {
-              operation: "cut",
-              deletedFiles,
-              targetDirectory: currentPath,
-            },
-            timestamp: Date.now(),
-          };
-          setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
-
           toast.success(
-            t("fileManager.itemsDeletedSuccessfully", { count: files.length }),
+            t("fileManager.itemsMovedToTrash", { count: files.length }),
           );
-          handleRefreshDirectory();
-          clearSelection();
+          if (
+            sshSessionIdRef.current === operationSession &&
+            currentPathRef.current === operationPath
+          ) {
+            handleRefreshDirectory();
+          } else {
+            invalidateCachedFileList(operationSession, operationPath);
+          }
         } catch (error: unknown) {
+          commitFilesForPath(
+            operationSession,
+            operationPath,
+            restoreItems(
+              filesForPath(operationSession, operationPath),
+              files.slice(completed),
+            ),
+          );
           const axiosError = error as {
             response?: {
               data?: { needsSudo?: boolean; error?: string };
@@ -1159,8 +1355,34 @@ function FileManagerContent({
             message?: string;
           };
           if (axiosError.response?.data?.needsSudo) {
-            setPendingSudoOperation({ type: "delete", files });
+            setPendingSudoOperation({
+              type: "delete",
+              files: files.slice(completed),
+            });
             setSudoDialogOpen(true);
+            return;
+          }
+          if (
+            (axiosError.response?.data as { trashUnavailable?: boolean })
+              ?.trashUnavailable &&
+            window.confirm(t("fileManager.trashUnavailableConfirm"))
+          ) {
+            for (const file of files.slice(completed)) {
+              await deleteSSHItem(
+                sshSessionId,
+                file.path,
+                file.type === "directory",
+                currentHost?.id,
+                currentHost?.userId?.toString(),
+                true,
+              );
+            }
+            toast.success(
+              t("fileManager.itemsDeletedSuccessfully", {
+                count: files.length - completed,
+              }),
+            );
+            handleRefreshDirectory();
             return;
           }
           if (
@@ -1339,9 +1561,10 @@ function FileManagerContent({
         });
       }
     } catch (error: unknown) {
+      const httpError = asHttpError(error);
       toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
+        httpError.response?.data?.error ||
+          httpError.message ||
           t("fileManager.failedToResolveSymlink"),
       );
     }
@@ -1403,7 +1626,13 @@ function FileManagerContent({
 
   async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
-      if (sshSessionId) setIsLoading(true);
+      markAdaptiveResourceUsed("network", "directory-list");
+      directoryRequestRef.current += 1;
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, file.path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setCurrentPath(file.path);
       return;
     }
@@ -1420,9 +1649,41 @@ function FileManagerContent({
 
     if (!(await confirmLargeFileOpen(file))) return;
 
+    markFilePreviewUsed(file.name);
+    markAdaptiveResourceUsed(
+      "network",
+      file.size && file.size > 128 * 1024
+        ? "file-content:medium"
+        : "file-content:small",
+    );
     await recordRecentFile(file);
     openFileWindow(file, sshSessionId);
   }
+
+  const prefetchFileIntent = useCallback(
+    (file: FileItem) => {
+      if (!sshSessionId) return;
+      if (file.type === "directory") {
+        runAdaptiveBackgroundTask("network", "directory-list", () =>
+          listSSHFiles(sshSessionId, file.path),
+        );
+        return;
+      }
+      const budget = getAdaptiveResourceBudget("network");
+      if (shouldPrefetchFileContent(file, budget.maxPrefetchBytes)) {
+        preloadFilePreview(file.name);
+        runAdaptiveBackgroundTask(
+          "network",
+          file.size && file.size > 128 * 1024
+            ? "file-content:medium"
+            : "file-content:small",
+          () => readSSHFile(sshSessionId, file.path),
+          { estimatedBytes: file.size },
+        );
+      }
+    },
+    [sshSessionId],
+  );
 
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
     event.preventDefault();
@@ -1637,7 +1898,7 @@ function FileManagerContent({
                     ? t("fileManager.copy")
                     : t("fileManager.move"),
                 name: file.name,
-                error: error instanceof Error ? error.message : String(error),
+                error: getErrorMessage(error, String(error)),
               }),
             );
           }
@@ -1731,8 +1992,7 @@ function FileManagerContent({
         setClipboard(null);
       }
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.pasteFailed")}: ${errorMessage}`);
     }
   }
@@ -1756,11 +2016,9 @@ function FileManagerContent({
       toast.success(
         t("fileManager.archiveExtractedSuccessfully", { name: file.name }),
       );
-
       handleRefreshDirectory();
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.extractFailed")}: ${errorMessage}`);
     }
   }
@@ -1799,12 +2057,10 @@ function FileManagerContent({
           name: archiveName,
         }),
       );
-
       handleRefreshDirectory();
       clearSelection();
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
     }
   }
@@ -1821,7 +2077,7 @@ function FileManagerContent({
     destPath: string,
     destPathLabel: string,
     methodPreference: TransferMethodPreference,
-    parallelSegmentCount: number,
+    parallelSegmentCount?: number,
   ) {
     if (!sshSessionId || !currentHost?.id || transferFiles.length === 0) return;
 
@@ -1915,8 +2171,7 @@ function FileManagerContent({
                 toast.error(
                   t("fileManager.deleteCopiedFileFailed", {
                     name: copiedFile.targetName,
-                    error:
-                      error instanceof Error ? error.message : String(error),
+                    error: getErrorMessage(error, String(error)),
                   }),
                 );
               }
@@ -1958,8 +2213,7 @@ function FileManagerContent({
                 toast.error(
                   t("fileManager.moveBackFileFailed", {
                     name: movedFile.targetName,
-                    error:
-                      error instanceof Error ? error.message : String(error),
+                    error: getErrorMessage(error, String(error)),
                   }),
                 );
               }
@@ -1992,8 +2246,7 @@ function FileManagerContent({
 
       handleRefreshDirectory();
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.undoOperationFailed")}: ${errorMessage}`);
       console.error("Undo failed:", error);
     }
@@ -2062,10 +2315,25 @@ function FileManagerContent({
   async function handleConfirmCreate(name: string) {
     if (!createIntent || !sshSessionId) return;
 
+    const operationPath = currentPath;
+    const operationSession = sshSessionId;
+    const optimisticPath = childPath(operationPath, name);
+    const previousFiles = filesForPath(operationSession, operationPath);
+    const optimisticFiles = addOptimisticItem(
+      previousFiles,
+      operationPath,
+      name,
+      createIntent.type,
+    );
+    const didAddOptimistically = optimisticFiles !== previousFiles;
+    commitFilesForPath(operationSession, operationPath, optimisticFiles);
+    const createdType = createIntent.type;
+    setCreateIntent(null);
+
     try {
       await ensureSSHConnection();
 
-      if (createIntent.type === "file") {
+      if (createdType === "file") {
         await createSSHFile(
           sshSessionId,
           currentPath,
@@ -2086,9 +2354,25 @@ function FileManagerContent({
         toast.success(t("fileManager.folderCreatedSuccessfully", { name }));
       }
 
-      setCreateIntent(null);
-      handleRefreshDirectory();
+      if (
+        sshSessionIdRef.current === operationSession &&
+        currentPathRef.current === operationPath
+      ) {
+        handleRefreshDirectory();
+      } else {
+        invalidateCachedFileList(operationSession, operationPath);
+      }
     } catch (error: unknown) {
+      if (didAddOptimistically) {
+        commitFilesForPath(
+          operationSession,
+          operationPath,
+          removePaths(
+            filesForPath(operationSession, operationPath),
+            new Set([optimisticPath]),
+          ),
+        );
+      }
       const axiosError = error as {
         response?: { status?: number; data?: { error?: string } };
       };
@@ -2113,6 +2397,25 @@ function FileManagerContent({
   async function handleRenameConfirm(file: FileItem, newName: string) {
     if (!sshSessionId) return;
 
+    const operationPath = currentPath;
+    const operationSession = sshSessionId;
+    const renamedPath = childPath(
+      file.path.slice(0, Math.max(1, file.path.lastIndexOf("/"))),
+      newName,
+    );
+    const operationFiles = filesForPath(operationSession, operationPath);
+    const didRenameOptimistically = !operationFiles.some(
+      (entry) => entry.path === renamedPath && entry.path !== file.path,
+    );
+    if (didRenameOptimistically) {
+      commitFilesForPath(
+        operationSession,
+        operationPath,
+        renameOptimisticItem(operationFiles, file.path, newName),
+      );
+    }
+    setEditingFile(null);
+
     try {
       await ensureSSHConnection();
 
@@ -2127,9 +2430,26 @@ function FileManagerContent({
       toast.success(
         t("fileManager.itemRenamedSuccessfully", { name: newName }),
       );
-      setEditingFile(null);
-      handleRefreshDirectory();
+      if (
+        sshSessionIdRef.current === operationSession &&
+        currentPathRef.current === operationPath
+      ) {
+        handleRefreshDirectory();
+      } else {
+        invalidateCachedFileList(operationSession, operationPath);
+      }
     } catch (error: unknown) {
+      if (didRenameOptimistically) {
+        commitFilesForPath(
+          operationSession,
+          operationPath,
+          renameOptimisticItem(
+            filesForPath(operationSession, operationPath),
+            renamedPath,
+            file.name,
+          ),
+        );
+      }
       const axiosError = error as {
         response?: { status?: number; data?: { error?: string } };
       };
@@ -2167,6 +2487,7 @@ function FileManagerContent({
         setTotpPrompt("");
         setSshSessionId(totpSessionId);
         setTotpSessionId(null);
+        connectRetryRef.current.markConnected();
 
         try {
           const response = await listSSHFiles(totpSessionId, currentPath);
@@ -2211,6 +2532,7 @@ function FileManagerContent({
         setWarpgateSecurityKey("");
         setSshSessionId(warpgateSessionId);
         setWarpgateSessionId(null);
+        connectRetryRef.current.markConnected();
 
         try {
           const response = await listSSHFiles(warpgateSessionId, currentPath);
@@ -2308,6 +2630,7 @@ function FileManagerContent({
       }
 
       setSshSessionId(sessionId);
+      connectRetryRef.current.markConnected();
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
@@ -2329,7 +2652,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.failedToConnect") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          getErrorMessage(error, String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -2392,6 +2715,7 @@ function FileManagerContent({
       }
 
       setSshSessionId(sessionId);
+      connectRetryRef.current.markConnected();
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
@@ -2477,7 +2801,7 @@ function FileManagerContent({
           toast.error(
             t("fileManager.moveFileFailed", { name: file.name }) +
               ": " +
-              (error instanceof Error ? error.message : String(error)),
+              getErrorMessage(error, String(error)),
           );
         }
       }
@@ -2523,7 +2847,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.moveOperationFailed") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          getErrorMessage(error, String(error)),
       );
     }
   }
@@ -2556,15 +2880,17 @@ function FileManagerContent({
     );
 
     openWindow({
-      id: windowId,
-      type: "diff",
       title: t("fileManager.fileComparison", {
         file1: file1.name,
         file2: file2.name,
       }),
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 600,
       isMaximized: false,
+      isMinimized: false,
       component: createWindowComponent,
-      zIndex: Date.now(),
     });
 
     toast.success(
@@ -2598,7 +2924,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.dragFailed") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          getErrorMessage(error, String(error)),
       );
     }
   }
@@ -2690,9 +3016,7 @@ function FileManagerContent({
 
     try {
       const pinnedData = await getPinnedFiles(currentHost.id);
-      const pinnedPaths = new Set(
-        pinnedData.map((item: Record<string, unknown>) => item.path),
-      );
+      const pinnedPaths = new Set(pinnedData.map((item) => item.path));
       setPinnedFiles(pinnedPaths);
     } catch (error) {
       console.error("Failed to load pinned files:", error);
@@ -2871,17 +3195,14 @@ function FileManagerContent({
   if ((isLoading || isReconnecting) && !sshSessionId) {
     return (
       <div className="h-full w-full flex flex-col bg-background relative">
-        <div className="flex-1 overflow-hidden min-h-0 relative">
-          <SimpleLoader
-            visible={!isConnectionLogExpanded}
-            message={t("fileManager.connecting")}
-          />
-        </div>
-        <ConnectionLog
-          isConnecting={isLoading || isReconnecting}
-          isConnected={false}
-          hasConnectionError={hasConnectionError}
-          position={hasConnectionError ? "top" : "bottom"}
+        <ConnectionScreen
+          status={isReconnecting ? "connecting" : connectRetry.status}
+          message={t("fileManager.connecting")}
+          attempt={connectRetry.attempt}
+          maxAttempts={connectRetry.maxAttempts}
+          nextRetryInMs={connectRetry.nextRetryInMs}
+          onManualRetry={connectRetry.retryNow}
+          logPosition={hasConnectionError ? "top" : "bottom"}
         />
       </div>
     );
@@ -2889,12 +3210,7 @@ function FileManagerContent({
 
   return (
     <div className="h-full flex flex-col bg-background relative overflow-hidden isolate">
-      <div
-        className="h-full w-full flex flex-col min-h-0"
-        style={{
-          visibility: isConnectionLogExpanded ? "hidden" : "visible",
-        }}
-      >
+      <div className="h-full w-full flex flex-col min-h-0">
         <FileManagerToolbar
           t={t}
           currentPath={currentPath}
@@ -2951,11 +3267,11 @@ function FileManagerContent({
                 currentHost={currentHost}
                 currentPath={currentPath}
                 onPathChange={navigateTo}
-                onLoadDirectory={loadDirectory}
                 onFileOpen={handleSidebarFileOpen}
                 onItemContextMenu={handleSidebarItemContextMenu}
                 sshSessionId={sshSessionId}
                 refreshTrigger={sidebarRefreshTrigger}
+                onOpenTrash={() => setTrashOpen(true)}
                 diskInfo={diskInfo ?? undefined}
               />
             </div>
@@ -2967,6 +3283,7 @@ function FileManagerContent({
                 files={filteredFiles}
                 selectedFiles={selectedFiles}
                 onFileOpen={handleFileOpen}
+                onFileIntent={prefetchFileIntent}
                 onSelectionChange={setSelection}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}
@@ -3059,6 +3376,17 @@ function FileManagerContent({
             </div>
           </div>
         </div>
+
+        <FileManagerTrashDialog
+          open={trashOpen}
+          onOpenChange={setTrashOpen}
+          sessionId={sshSessionId}
+          onChanged={() => {
+            if (sshSessionId)
+              invalidateCachedFileList(sshSessionId, currentPath);
+            void handleRefreshDirectory();
+          }}
+        />
       </div>
 
       {currentHost && (
@@ -3115,9 +3443,9 @@ function FileManagerContent({
         setPendingSudoOperation={setPendingSudoOperation}
         handleSudoPasswordSubmit={handleSudoPasswordSubmit}
       />
-      <ConnectionLog
+      <ConnectionLogPanel
         isConnecting={isReconnecting || isLoading}
-        isConnected={!!sshSessionId}
+        isConnected={!!sshSessionId && !isReconnecting}
         hasConnectionError={hasConnectionError}
         position={hasConnectionError ? "top" : "bottom"}
       />

@@ -1,5 +1,5 @@
-import type { Request, Response } from "express";
-import express from "express";
+import { getErrorMessage } from "../../utils/error-message.js";
+import express, { type Request, type Response } from "express";
 import https from "https";
 import http from "http";
 import { lookup } from "dns/promises";
@@ -132,7 +132,7 @@ homepageProxyRouter.get("/", async (req: Request, res: Response) => {
     proxyCache.set(targetUrl, { data, expires: Date.now() + ttl });
     res.json(data);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
+    const msg = getErrorMessage(err);
     homepageLogger.warn("Proxy fetch failed", { targetUrl, msg });
     if (msg.includes("not valid JSON")) {
       return res.status(400).json({ error: "Response is not valid JSON" });

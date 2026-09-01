@@ -10,6 +10,7 @@ import {
 } from "@/components/dialog.tsx";
 import { RemoteSyncServerPicker } from "./RemoteSyncServerPicker.tsx";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm.tsx";
+import { invalidateServerStatusCache } from "@/lib/hosts-request-cache.ts";
 
 interface RemoteSyncConfig {
   serverUrl: string;
@@ -109,6 +110,8 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
     const next = { ...desktopSettings, defaultConnectionOrigin: origin };
     setDesktopSettings(next);
     await window.electronAPI?.invoke?.("save-desktop-settings", next);
+    invalidateServerStatusCache();
+    window.dispatchEvent(new CustomEvent("hosts:refresh"));
   };
 
   const isConnected = !!config?.serverUrl;

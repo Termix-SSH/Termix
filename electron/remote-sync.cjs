@@ -109,7 +109,15 @@ function getSafeStorageAvailable() {
 
 function saveRemoteSyncJwt(token) {
   if (!getSafeStorageAvailable()) {
-    return { success: false, error: "Encryption unavailable on this system" };
+    // Carries a stable reason alongside the message: the renderer has a
+    // translated explanation for this one, because "no OS keyring" is a
+    // machine-level problem the user has to go and fix, not something signing
+    // in again can resolve.
+    return {
+      success: false,
+      reason: "encryption_unavailable",
+      error: "Encryption unavailable on this system",
+    };
   }
   writeJson(getRemoteSyncCredentialPath(), {
     encrypted: true,
@@ -462,7 +470,7 @@ class RemoteSyncEngine {
       text.includes("<body>");
     if (looksLikeHtml) {
       const err = new Error(
-        "The reverse proxy in front of this server is blocking sync traffic with its own login page. Reconnecting won't fix this -- the proxy needs to let Termix's API requests through (e.g. an SSO bypass rule for the sync API, or a non-proxied hostname/port for it).",
+        "The reverse proxy in front of this server is blocking sync traffic with its own login page. Reconnecting won't fix this. The proxy needs to let Termix's API requests through (e.g. an SSO bypass rule for the sync API, or a non-proxied hostname/port for it).",
       );
       err.proxyBlocked = true;
       throw err;

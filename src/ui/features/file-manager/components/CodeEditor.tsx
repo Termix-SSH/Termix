@@ -1,7 +1,10 @@
 import React, { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { loadLanguage } from "@uiw/codemirror-extensions-langs";
+import {
+  loadLanguage,
+  type LanguageName,
+} from "@uiw/codemirror-extensions-langs";
 import { EditorView, keymap } from "@codemirror/view";
 import { searchKeymap, search, openSearchPanel } from "@codemirror/search";
 import {
@@ -31,7 +34,7 @@ function getLanguageExtension(filename: string) {
   const baseName = filename.toLowerCase();
 
   if (["dockerfile", "makefile", "rakefile", "gemfile"].includes(baseName)) {
-    return loadLanguage(baseName);
+    return loadLanguage(baseName as LanguageName);
   }
 
   const langMap: Record<string, string> = {
@@ -69,7 +72,7 @@ function getLanguageExtension(filename: string) {
   };
 
   const language = langMap[ext];
-  return language ? loadLanguage(language) : null;
+  return language ? loadLanguage(language as LanguageName) : null;
 }
 
 export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
@@ -154,7 +157,6 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           closeBrackets: true,
           autocompletion: true,
           highlightSelectionMatches: false,
-          scrollPastEnd: false,
         }}
       />
     );

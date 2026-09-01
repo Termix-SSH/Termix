@@ -2,7 +2,17 @@ import type { Request } from "express";
 import type { UserRecord } from "../repositories/user-repository.js";
 
 export function isLoopbackRequest(req: Request): boolean {
-  const ip = req.ip || req.socket?.remoteAddress || "";
+  // Requests relayed by the bundled nginx always carry X-Real-IP, which
+  // nginx overwrites with the actual client address -- so its presence
+  // means the caller reached the backend through the reverse proxy and is
+  // not a local process, whatever the TCP peer address says (it is nginx
+  // itself on loopback). Everything else is judged by the TCP peer
+  // address, which no client-supplied header can influence: with
+  // `trust proxy = true`, req.ip comes from X-Forwarded-For and would let
+  // any remote caller claim to be loopback.
+  if (req.headers["x-real-ip"]) return false;
+
+  const ip = req.socket?.remoteAddress || "";
   return (
     ip === "127.0.0.1" ||
     ip === "::1" ||

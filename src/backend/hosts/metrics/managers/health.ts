@@ -8,6 +8,7 @@ import { shellSingleQuote } from "./exec-elevated.js";
 import { isValidPort } from "./validation.js";
 import type { ManagerRoutesDeps } from "./types.js";
 import { AlertEngine } from "../alert-engine.js";
+import { notifyAutomationHealthCheck } from "../automation-bridge.js";
 
 export interface HealthCheck {
   id: string;
@@ -165,6 +166,13 @@ export function registerHealthRoutes(
                 r.detail ?? undefined,
               )
               .catch(() => {});
+            notifyAutomationHealthCheck(
+              host.id,
+              userId,
+              r.checkId,
+              r.ok,
+              r.detail ?? undefined,
+            );
           }
         }
 
@@ -244,6 +252,13 @@ export function registerHealthRoutes(
                 r.detail ?? undefined,
               )
               .catch(() => {});
+            notifyAutomationHealthCheck(
+              host.id,
+              userId,
+              r.checkId,
+              r.ok,
+              r.detail ?? undefined,
+            );
           }
         }
         return { results };

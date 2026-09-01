@@ -6,11 +6,14 @@ import { DATABASE_DIALECT_ENV } from "../../../database/db/dialect.js";
 vi.mock("../../../database/db/index.js", () => ({
   getDb: () => ({}),
   getSqlite: () => ({}),
-  DatabaseSaveTrigger: { forceSave: vi.fn() },
+  DatabaseSaveTrigger: { forceSave: vi.fn(), triggerSave: vi.fn() },
 }));
 
-const { createCurrentRepositoryContext, createCurrentRepositoryWriteHook } =
-  await import("../../../database/repositories/factory.js");
+const {
+  createCurrentRepositoryContext,
+  createCurrentRepositoryWriteHook,
+  createCurrentRepositoryLazyWriteHook,
+} = await import("../../../database/repositories/factory.js");
 
 // Neither cross-dialect harness reaches this function: both
 // tests/database/repositories/test-support.ts and scripts/verify-dialects.mjs
@@ -61,6 +64,25 @@ describe("createCurrentRepositoryWriteHook", () => {
     for (const dialect of ["postgres", "mysql"]) {
       process.env[DATABASE_DIALECT_ENV] = dialect;
       expect(createCurrentRepositoryWriteHook("test")).toBeUndefined();
+    }
+  });
+});
+
+describe("createCurrentRepositoryLazyWriteHook", () => {
+  const saved = process.env[DATABASE_DIALECT_ENV];
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env[DATABASE_DIALECT_ENV];
+    else process.env[DATABASE_DIALECT_ENV] = saved;
+  });
+
+  it("installs a debounced persist hook only for sqlite", () => {
+    process.env[DATABASE_DIALECT_ENV] = "sqlite";
+    expect(createCurrentRepositoryLazyWriteHook("test")).toBeTypeOf("function");
+
+    for (const dialect of ["postgres", "mysql"]) {
+      process.env[DATABASE_DIALECT_ENV] = dialect;
+      expect(createCurrentRepositoryLazyWriteHook("test")).toBeUndefined();
     }
   });
 });

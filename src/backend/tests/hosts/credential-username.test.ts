@@ -101,4 +101,62 @@ describe("expandOidcUsername", () => {
       "$oidc.preferred_username",
     );
   });
+
+  it("strips the ldap:{providerId}: prefix for genuine LDAP users", async () => {
+    vi.doMock("../../database/repositories/factory.js", () => ({
+      createCurrentUserRepository: () => ({
+        findById: async () => ({
+          oidcIdentifier: "ldap:1:jdoe",
+          ssoProviderId: 1,
+        }),
+      }),
+      createCurrentSsoProviderRepository: () => ({
+        findById: async () => ({ type: "ldap" }),
+      }),
+    }));
+
+    const { expandOidcUsername: expand } =
+      await import("../../hosts/credential-username.js");
+    expect(await expand("$oidc.preferred_username", "user-1")).toBe("jdoe");
+  });
+
+  it("does not strip a spoofed ldap: identifier from a non-LDAP provider", async () => {
+    vi.doMock("../../database/repositories/factory.js", () => ({
+      createCurrentUserRepository: () => ({
+        findById: async () => ({
+          oidcIdentifier: "ldap:1:admin",
+          ssoProviderId: 1,
+        }),
+      }),
+      createCurrentSsoProviderRepository: () => ({
+        findById: async () => ({ type: "oidc" }),
+      }),
+    }));
+
+    const { expandOidcUsername: expand } =
+      await import("../../hosts/credential-username.js");
+    expect(await expand("$oidc.preferred_username", "user-1")).toBe(
+      "ldap:1:admin",
+    );
+  });
+
+  it("does not strip when the embedded provider id is not the user's provider", async () => {
+    vi.doMock("../../database/repositories/factory.js", () => ({
+      createCurrentUserRepository: () => ({
+        findById: async () => ({
+          oidcIdentifier: "ldap:1:admin",
+          ssoProviderId: 5,
+        }),
+      }),
+      createCurrentSsoProviderRepository: () => ({
+        findById: async () => ({ type: "ldap" }),
+      }),
+    }));
+
+    const { expandOidcUsername: expand } =
+      await import("../../hosts/credential-username.js");
+    expect(await expand("$oidc.preferred_username", "user-1")).toBe(
+      "ldap:1:admin",
+    );
+  });
 });

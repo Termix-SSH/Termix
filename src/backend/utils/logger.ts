@@ -1,5 +1,4 @@
-import chalk from "chalk";
-import type { ChalkInstance } from "chalk";
+import chalk, { type ChalkInstance } from "chalk";
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "success";
 
@@ -149,6 +148,20 @@ export class Logger {
         contextParts.push(`session:${sanitizedContext.sessionId}`);
       if (sanitizedContext.requestId)
         contextParts.push(`req:${sanitizedContext.requestId}`);
+      if (sanitizedContext.source)
+        contextParts.push(`source:${sanitizedContext.source}`);
+      if (sanitizedContext.sequence !== undefined)
+        contextParts.push(`seq:${sanitizedContext.sequence}`);
+      if (sanitizedContext.clientUploadTimestamp)
+        contextParts.push(
+          `clientUpload:${sanitizedContext.clientUploadTimestamp}`,
+        );
+      if (sanitizedContext.serverReceivedAt)
+        contextParts.push(
+          `serverReceived:${sanitizedContext.serverReceivedAt}`,
+        );
+      if (sanitizedContext.bytes !== undefined)
+        contextParts.push(`bytes:${sanitizedContext.bytes}`);
       if (sanitizedContext.duration)
         contextParts.push(`duration:${sanitizedContext.duration}ms`);
       if (sanitizedContext.error)

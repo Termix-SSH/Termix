@@ -1,6 +1,8 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import net from "net";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
@@ -47,7 +49,14 @@ import { registerHostMetricsSettingsRoutes } from "./settings-routes.js";
 import { registerHostMetricsViewerRoutes } from "./viewer-routes.js";
 import { registerHostMetricsPreferencesRoutes } from "./preferences-routes.js";
 import { registerHostMetricsHistoryRoutes } from "./history-routes.js";
+import { registerProxmoxStatsRoutes } from "./proxmox-stats-routes.js";
+import { registerProxmoxStatsHistoryRoutes } from "./proxmox-stats-history-routes.js";
+import { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
 import { AlertEngine } from "./alert-engine.js";
+import {
+  notifyAutomationMetrics,
+  notifyAutomationStatus,
+} from "./automation-bridge.js";
 import { registerManagerRoutes } from "./managers/index.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
@@ -56,9 +65,15 @@ import { createJumpHostChain } from "../jump-host-chain.js";
 import { resolveHostById } from "../host-resolver.js";
 import {
   isTcpPingEnabled,
+  parseStatusHostIds,
   supportsMetrics,
   tcpPingThroughJumpHost,
 } from "./helpers.js";
+import {
+  type HostStatus,
+  statusAfterAuthentication,
+  statusAfterReachabilityCheck,
+} from "./host-status.js";
 import { createConnectionLog } from "../connection-log.js";
 import {
   cleanupMetricsSession,
@@ -70,9 +85,12 @@ import {
 } from "./sessions.js";
 import {
   authFailureTracker,
+  canStartInitialMetrics,
   hostPollCache,
+  initialMetricsPollLimiter,
   metricsCache,
   metricsPollLimiter,
+  metricsConcurrencyFor,
   pollingBackoff,
   requestQueue,
   statusPollLimiter,
@@ -80,8 +98,6 @@ import {
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
-
-type HostStatus = "online" | "offline";
 
 interface SSHHostWithCredentials {
   id: number;
@@ -106,6 +122,8 @@ interface SSHHostWithCredentials {
   tunnelConnections: unknown[];
   jumpHosts?: Array<{ hostId: number }>;
   statsConfig?: string | StatsConfig;
+  enableProxmoxStats?: boolean;
+  proxmoxStatsConfig?: unknown;
   createdAt: string;
   updatedAt: string;
   userId: string;
@@ -137,6 +155,8 @@ interface StatsConfig {
   metricsInterval: number;
   useGlobalMetricsInterval?: boolean;
   disableTcpPing?: boolean;
+  excludedMounts?: string[];
+  monitoredMounts?: Array<{ path: string; label?: string }>;
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -157,6 +177,7 @@ const DEFAULT_STATS_CONFIG: StatsConfig = {
   statusCheckInterval: 60,
   metricsEnabled: true,
   metricsInterval: 30,
+  excludedMounts: [],
 };
 
 interface HostPollingConfig {
@@ -183,11 +204,36 @@ class PollingManager {
   /** Skip stacking another status/metrics poll while one is already running. */
   private statusInFlight = new Set<number>();
   private metricsInFlight = new Set<number>();
+  private initialMetricsRequested = new Set<number>();
 
   constructor() {
     this.viewerCleanupInterval = setInterval(() => {
       this.cleanupInactiveViewers();
     }, 60000);
+  }
+
+  /**
+   * Keeps poll concurrency matched to how many hosts are actually being
+   * polled, so a sweep still finishes inside its interval as a fleet grows.
+   */
+  private syncPollConcurrency(): void {
+    const metricsHosts = Array.from(this.pollingConfigs.values()).filter(
+      (config) => config.statsConfig.metricsEnabled,
+    ).length;
+
+    const target = metricsConcurrencyFor(metricsHosts);
+    if (target === metricsPollLimiter.limit) return;
+
+    const previous = metricsPollLimiter.limit;
+    metricsPollLimiter.setLimit(target);
+    statsLogger.info(
+      `Metrics poll concurrency ${previous} -> ${target} for ${metricsHosts} host(s)`,
+      {
+        operation: "metrics_concurrency_resize",
+        hosts: metricsHosts,
+        concurrency: target,
+      },
+    );
   }
 
   /** Spread timers so N hosts do not fire on the same wall-clock second. */
@@ -265,6 +311,54 @@ class PollingManager {
       });
   }
 
+  private scheduleInitialMetricsPoll(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): void {
+    if (
+      this.metricsStore.has(host.id) ||
+      this.initialMetricsRequested.has(host.id)
+    ) {
+      return;
+    }
+
+    this.initialMetricsRequested.add(host.id);
+    void initialMetricsPollLimiter
+      .run(async () => {
+        if (
+          !canStartInitialMetrics(
+            this.statusStore.get(host.id)?.status,
+            this.activeViewers.has(host.id),
+            isTcpPingEnabled(
+              this.pollingConfigs.get(host.id)?.statsConfig ??
+                this.parseStatsConfig(host.statsConfig),
+            ),
+          )
+        ) {
+          return;
+        }
+        if (this.metricsInFlight.has(host.id)) return;
+
+        this.metricsInFlight.add(host.id);
+        try {
+          await metricsPollLimiter.run(() =>
+            this.pollHostMetrics(host, viewerUserId),
+          );
+        } finally {
+          this.metricsInFlight.delete(host.id);
+        }
+      })
+      .catch((err) => {
+        statsLogger.error("Initial metrics polling failed", err, {
+          operation: "initial_metrics_poll_unhandled",
+          hostId: host.id,
+        });
+      })
+      .finally(() => {
+        this.initialMetricsRequested.delete(host.id);
+      });
+  }
+
   private getGlobalDefaults(): {
     statusCheckInterval: number;
     metricsInterval: number;
@@ -312,7 +406,7 @@ class PollingManager {
         parsed = temp as StatsConfig;
       } catch (error) {
         statsLogger.warn(
-          `Failed to parse statsConfig: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Failed to parse statsConfig: ${getErrorMessage(error)}`,
           {
             operation: "parse_stats_config_error",
             statsConfigStr,
@@ -376,6 +470,7 @@ class PollingManager {
 
     if (!isTcpPingEnabled(statsConfig) && !statsConfig.metricsEnabled) {
       this.pollingConfigs.delete(host.id);
+      this.syncPollConcurrency();
       this.statusStore.delete(host.id);
       this.metricsStore.delete(host.id);
       return;
@@ -386,6 +481,7 @@ class PollingManager {
       statsConfig,
       viewerUserId,
     };
+    this.pollingConfigs.set(host.id, config);
 
     if (isTcpPingEnabled(statsConfig)) {
       const intervalMs = this.intervalWithJitter(
@@ -411,21 +507,18 @@ class PollingManager {
         host.id,
       );
 
-      // First sample still awaited (gated) so callers can rely on a warm cache.
-      if (!this.metricsInFlight.has(host.id)) {
-        this.metricsInFlight.add(host.id);
-        try {
-          await metricsPollLimiter.run(() =>
-            this.pollHostMetrics(host, viewerUserId),
-          );
-        } catch (err) {
-          statsLogger.error("Metrics polling failed", err, {
-            operation: "metrics_poll_unhandled",
-            hostId: host.id,
-          });
-        } finally {
-          this.metricsInFlight.delete(host.id);
-        }
+      // Viewer registration can arrive for an entire fleet at once. Only
+      // collect the first heavy SSH sample after the cheap status probe has
+      // confirmed the host is reachable; the status completion path below
+      // starts it when the result was not already cached.
+      if (
+        canStartInitialMetrics(
+          this.statusStore.get(host.id)?.status,
+          this.activeViewers.has(host.id),
+          isTcpPingEnabled(statsConfig),
+        )
+      ) {
+        this.scheduleInitialMetricsPoll(host, viewerUserId);
       }
 
       config.metricsTimer = setInterval(() => {
@@ -445,7 +538,7 @@ class PollingManager {
       this.metricsStore.delete(host.id);
     }
 
-    this.pollingConfigs.set(host.id, config);
+    this.syncPollConcurrency();
   }
 
   private async pollHostStatus(
@@ -483,14 +576,40 @@ class PollingManager {
       } else {
         isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
       }
+      const config = this.pollingConfigs.get(refreshedHost.id);
+      let authenticated: boolean | undefined;
+      if (
+        isOnline &&
+        supportsMetrics(refreshedHost) &&
+        !config?.statsConfig.metricsEnabled
+      ) {
+        try {
+          await withSshConnection(refreshedHost, async () => undefined);
+          authenticated = true;
+        } catch {
+          authenticated = false;
+        }
+      }
       const statusEntry: StatusEntry = {
-        status: isOnline ? "online" : "offline",
+        status:
+          authenticated === undefined
+            ? statusAfterReachabilityCheck(
+                isOnline,
+                this.statusStore.get(refreshedHost.id)?.status,
+              )
+            : statusAfterAuthentication(authenticated),
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
+      if (isOnline && this.activeViewers.has(refreshedHost.id)) {
+        if (config?.statsConfig.metricsEnabled) {
+          this.scheduleInitialMetricsPoll(config.host, config.viewerUserId);
+        }
+      }
       AlertEngine.getInstance()
         .evaluateStatus(refreshedHost.id, isOnline)
         .catch(() => {});
+      notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, isOnline);
     } catch {
       const statusEntry: StatusEntry = {
         status: "offline",
@@ -500,6 +619,7 @@ class PollingManager {
       AlertEngine.getInstance()
         .evaluateStatus(refreshedHost.id, false)
         .catch(() => {});
+      notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, false);
     }
   }
 
@@ -535,8 +655,19 @@ class PollingManager {
       return;
     }
 
+    let authenticated = false;
     try {
-      const metrics = await collectMetrics(refreshedHost);
+      const metrics = await collectMetrics(refreshedHost, () => {
+        authenticated = true;
+        this.statusStore.set(refreshedHost.id, {
+          status: statusAfterAuthentication(true),
+          lastChecked: new Date().toISOString(),
+        });
+      });
+      this.statusStore.set(refreshedHost.id, {
+        status: statusAfterAuthentication(true),
+        lastChecked: new Date().toISOString(),
+      });
       this.metricsStore.set(refreshedHost.id, {
         data: metrics,
         timestamp: Date.now(),
@@ -545,9 +676,19 @@ class PollingManager {
       AlertEngine.getInstance()
         .evaluateMetrics(refreshedHost.id, metrics)
         .catch(() => {});
+      notifyAutomationMetrics(refreshedHost.id, refreshedHost.userId, metrics);
       pollingBackoff.reset(refreshedHost.id);
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
+      if (!authenticated) {
+        this.statusStore.set(refreshedHost.id, {
+          status: statusAfterAuthentication(
+            false,
+            this.statusStore.get(refreshedHost.id)?.status,
+          ),
+          lastChecked: new Date().toISOString(),
+        });
+      }
       const isAuthError =
         error instanceof Error &&
         (error.message.includes("authentication") ||
@@ -643,6 +784,8 @@ class PollingManager {
       }
 
       this.pollingConfigs.delete(hostId);
+
+      this.syncPollConcurrency();
       if (clearData) {
         this.statusStore.delete(hostId);
         this.metricsStore.delete(hostId);
@@ -685,6 +828,24 @@ class PollingManager {
     }
   }
 
+  async reconcileStatusPolling(
+    userId: string,
+    allowedHostIds: Set<number>,
+  ): Promise<void> {
+    const hosts = await fetchAllHosts(userId);
+
+    for (const host of hosts) {
+      if (allowedHostIds.has(host.id)) {
+        if (!this.pollingConfigs.has(host.id)) {
+          await this.startPollingForHost(host, { statusOnly: true });
+        }
+        continue;
+      }
+
+      this.stopPollingForHost(host.id, true);
+    }
+  }
+
   async refreshHostPolling(userId: string): Promise<void> {
     const hosts = await fetchAllHosts(userId);
     const currentHostIds = new Set(hosts.map((h) => h.id));
@@ -714,7 +875,11 @@ class PollingManager {
     for (const [hostId, config] of this.pollingConfigs.entries()) {
       const status = this.statusStore.get(hostId);
 
-      if (!status || status.status === "online") {
+      if (
+        !status ||
+        status.status === "online" ||
+        status.status === "reachable"
+      ) {
         hostsToRefresh.push({
           host: config.host,
           viewerUserId: config.viewerUserId,
@@ -838,6 +1003,7 @@ function validateHostId(
 }
 
 const app = express();
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
@@ -897,7 +1063,7 @@ async function fetchAllHosts(
         }
       } catch (err) {
         statsLogger.warn(
-          `Failed to resolve credentials for host ${host.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
+          `Failed to resolve credentials for host ${host.id}: ${getErrorMessage(err)}`,
         );
       }
     }
@@ -1089,7 +1255,7 @@ async function resolveHostCredentials(
         }
       } catch (error) {
         statsLogger.warn(
-          `Failed to resolve credential ${host.credentialId} for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Failed to resolve credential ${host.credentialId} for host ${host.id}: ${getErrorMessage(error)}`,
         );
         addLegacyCredentials(baseHost, host);
         if (baseHost.authType === "credential") {
@@ -1107,7 +1273,7 @@ async function resolveHostCredentials(
     return baseHost as unknown as SSHHostWithCredentials;
   } catch (error) {
     statsLogger.error(
-      `Failed to resolve host credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to resolve host credentials for host ${host.id}: ${getErrorMessage(error)}`,
     );
     return undefined;
   }
@@ -1213,7 +1379,7 @@ async function buildSshConfig(
       }
     } catch (keyError) {
       statsLogger.error(
-        `SSH key format error for host ${host.ip}: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
+        `SSH key format error for host ${host.ip}: ${getErrorMessage(keyError)}`,
       );
       throw new Error(`Invalid SSH key format for host ${host.ip}`, {
         cause: keyError,
@@ -1321,10 +1487,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
         }
       } catch (proxyError) {
         throw new Error(
-          "Proxy connection failed: " +
-            (proxyError instanceof Error
-              ? proxyError.message
-              : "Unknown error"),
+          "Proxy connection failed: " + getErrorMessage(proxyError),
           { cause: proxyError },
         );
       }
@@ -1450,7 +1613,17 @@ async function withSshConnection<T>(
   return withConnection(key, factory, fn);
 }
 
-async function collectMetrics(host: SSHHostWithCredentials): Promise<{
+const proxmoxPollingManager = new ProxmoxPollingManager<SSHHostWithCredentials>(
+  {
+    fetchHostById,
+    withSshConnection,
+  },
+);
+
+async function collectMetrics(
+  host: SSHHostWithCredentials,
+  onAuthenticated?: () => void,
+): Promise<{
   cpu: {
     percent: number | null;
     cores: number | null;
@@ -1476,6 +1649,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
       state: string;
       rxBytes: string | null;
       txBytes: string | null;
+      rxRateBps: number | null;
+      txRateBps: number | null;
     }>;
   };
   uptime: {
@@ -1510,6 +1685,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
 
   const cached = metricsCache.get(host.id);
   if (cached) {
+    onAuthenticated?.();
     return cached as ReturnType<typeof collectMetrics> extends Promise<infer T>
       ? T
       : never;
@@ -1520,10 +1696,22 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     const existingSession = metricsSessions[sessionKey];
 
     try {
+      const excludedMounts = pollingManager.parseStatsConfig(
+        host.statsConfig,
+      ).excludedMounts;
+      const monitoredMounts = pollingManager.parseStatsConfig(
+        host.statsConfig,
+      ).monitoredMounts;
+
       const collectFn = async (client: Client) => {
+        onAuthenticated?.();
         const cpu = await collectCpuMetrics(client);
         const memory = await collectMemoryMetrics(client);
-        const disk = await collectDiskMetrics(client);
+        const disk = await collectDiskMetrics(
+          client,
+          excludedMounts,
+          monitoredMounts,
+        );
         const network = await collectNetworkMetrics(client);
         const uptime = await collectUptimeMetrics(client);
         const processes = await collectProcessesMetrics(client);
@@ -1749,15 +1937,28 @@ app.get("/status", async (req, res) => {
     });
   }
 
-  const statuses = pollingManager.getAllStatuses();
-  if (statuses.size === 0) {
+  const requestedHostIds = parseStatusHostIds(req.query.hostIds);
+  if (requestedHostIds !== null) {
+    await pollingManager.reconcileStatusPolling(userId, requestedHostIds);
+  } else if (pollingManager.getAllStatuses().size === 0) {
     await pollingManager.initializePolling(userId);
   }
 
+  // One batched permission resolution for the whole fleet; this endpoint is
+  // polled every few seconds, and a per-host check made it linear in host
+  // count against the database.
+  const entries = Array.from(pollingManager.getAllStatuses().entries());
+  const allowed = await permissionManager.filterAccessibleHostIds(
+    userId,
+    entries.map(([id]) => id),
+  );
+
   const result: Record<number, StatusEntry> = {};
-  for (const [id, entry] of pollingManager.getAllStatuses().entries()) {
-    const access = await permissionManager.canAccessHost(userId, id, "connect");
-    if (access.hasAccess) {
+  for (const [id, entry] of entries) {
+    if (
+      allowed.has(id) &&
+      (requestedHostIds === null || requestedHostIds.has(id))
+    ) {
       result[id] = entry;
     }
   }
@@ -2420,7 +2621,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
                 createConnectionLog(
                   "error",
                   "proxy",
-                  `Jump host connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  `Jump host connection failed: ${getErrorMessage(error)}`,
                 ),
               );
               reject(error);
@@ -2456,7 +2657,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
                 createConnectionLog(
                   "error",
                   "proxy",
-                  `SOCKS5 proxy connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  `SOCKS5 proxy connection failed: ${getErrorMessage(error)}`,
                 ),
               );
               reject(error);
@@ -2489,14 +2690,11 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       createConnectionLog(
         "error",
         "stats_connecting",
-        `Failed to start metrics: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to start metrics: ${getErrorMessage(error)}`,
       ),
     );
     res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to start metrics collection",
+      error: getErrorMessage(error, "Failed to start metrics collection"),
       connectionLogs,
     });
   }
@@ -2567,10 +2765,7 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
       error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to stop metrics collection",
+      error: getErrorMessage(error, "Failed to stop metrics collection"),
     });
   }
 });
@@ -2747,6 +2942,20 @@ app.post("/metrics/connect-totp", async (req, res) => {
   }
 });
 
+// Lets automations keep metrics flowing for hosts they watch, through the same
+// viewer refcount the UI uses rather than around it.
+import("../../automations/headless-viewer.js")
+  .then(({ setViewerRegistry }) => {
+    setViewerRegistry({
+      registerViewer: (hostId, sessionId, userId) =>
+        pollingManager.registerViewer(hostId, sessionId, userId),
+      unregisterViewer: (hostId, sessionId) =>
+        pollingManager.unregisterViewer(hostId, sessionId),
+      updateHeartbeat: (sessionId) => pollingManager.updateHeartbeat(sessionId),
+    });
+  })
+  .catch(() => {});
+
 registerHostMetricsViewerRoutes(app, {
   fetchHostById,
   supportsMetrics: (host: SSHHostWithCredentials) => supportsMetrics(host),
@@ -2784,6 +2993,40 @@ registerHostMetricsHistoryRoutes(app, {
     (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
 });
 
+registerHostMetricsViewerRoutes<
+  SSHHostWithCredentials,
+  { metricsEnabled: boolean }
+>(app, {
+  fetchHostById,
+  // Proxmox Stats viewers are gated by enableProxmoxStats + host-type support,
+  // not the Host Metrics statsConfig - fold both checks in here since
+  // supportsMetrics receives the full host, unlike parseStatsConfig below.
+  supportsMetrics: (host: SSHHostWithCredentials) =>
+    supportsMetrics(host) && host.enableProxmoxStats === true,
+  parseStatsConfig: () => ({ metricsEnabled: true }),
+  updateHeartbeat: (viewerSessionId) =>
+    proxmoxPollingManager.updateHeartbeat(viewerSessionId),
+  registerViewer: (hostId, viewerSessionId, userId) =>
+    proxmoxPollingManager.registerViewer(hostId, viewerSessionId, userId),
+  unregisterViewer: (hostId, viewerSessionId) =>
+    proxmoxPollingManager.unregisterViewer(hostId, viewerSessionId),
+  pathPrefix: "proxmox-stats",
+});
+
+registerProxmoxStatsRoutes(app, {
+  validateHostId,
+  fetchHostById,
+  canAccessHost: async (userId, hostId, level) =>
+    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
+  pollingManager: proxmoxPollingManager,
+});
+
+registerProxmoxStatsHistoryRoutes(app, {
+  validateHostId,
+  canAccessHost: async (userId, hostId, level) =>
+    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
+});
+
 registerManagerRoutes(app, {
   validateHostId,
   runOnHost: async (hostId, userId, level, fn) => {
@@ -2814,12 +3057,14 @@ registerManagerRoutes(app, {
 
 process.on("SIGINT", () => {
   pollingManager.destroy();
+  proxmoxPollingManager.destroy();
   connectionPool.destroy();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
   pollingManager.destroy();
+  proxmoxPollingManager.destroy();
   connectionPool.destroy();
   process.exit(0);
 });

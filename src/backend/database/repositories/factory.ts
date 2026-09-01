@@ -4,7 +4,9 @@ import { needsExplicitPersist, resolveDatabaseDialect } from "../db/dialect.js";
 import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
 import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
+import { AiRepository } from "./ai-repository.js";
 import { AlertRepository } from "./alert-repository.js";
+import { AutomationRepository } from "./automation-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { C2sTunnelPresetRepository } from "./c2s-tunnel-preset-repository.js";
@@ -13,14 +15,20 @@ import { CredentialRepository } from "./credential-repository.js";
 import { DashboardServiceLinkRepository } from "./dashboard-service-link-repository.js";
 import { DismissedAlertRepository } from "./dismissed-alert-repository.js";
 import { FileManagerBookmarkRepository } from "./file-manager-bookmark-repository.js";
+import { FleetRepository } from "./fleet-repository.js";
+import { FleetInventoryRepository } from "./fleet-inventory-repository.js";
 import { HomepageItemRepository } from "./homepage-item-repository.js";
 import { HomepageLayoutRepository } from "./homepage-layout-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
 import { HostHealthRepository } from "./host-health-repository.js";
 import { HostMetricsHistoryRepository } from "./host-metrics-history-repository.js";
 import { HostMetricsPreferenceRepository } from "./host-metrics-preference-repository.js";
+import { ProxmoxNodeHistoryRepository } from "./proxmox-node-history-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
+import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repository.js";
+import { CredentialSidebarPreferenceRepository } from "./credential-sidebar-preference-repository.js";
+import { UiPreferenceRepository } from "./ui-preference-repository.js";
 import { NetworkTopologyRepository } from "./network-topology-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
 import { OpksshTokenRepository } from "./opkssh-token-repository.js";
@@ -47,6 +55,7 @@ import { UserPreferenceRepository } from "./user-preference-repository.js";
 import { UserRepository } from "./user-repository.js";
 import { VaultProfileRepository } from "./vault-profile-repository.js";
 import { VaultTokenRepository } from "./vault-token-repository.js";
+import { WorkspaceRepository } from "./workspace-repository.js";
 
 /**
  * The context every repository runs against.
@@ -80,6 +89,23 @@ export function createCurrentRepositoryWriteHook(
 ): (() => Promise<void>) | undefined {
   if (!needsExplicitPersist(resolveDatabaseDialect())) return undefined;
   return () => DatabaseSaveTrigger.forceSave(reason);
+}
+
+/**
+ * Post-write hook for high-frequency, non-critical writes (telemetry
+ * inserts/cleanup, informational timestamp touches).
+ *
+ * Marks the in-memory database dirty and lets DatabaseSaveTrigger's existing
+ * debounce coalesce the actual serialize+encrypt, instead of forcing one on
+ * every single sample. A lost 2-second window of telemetry on crash is
+ * acceptable; blocking the event loop that serves SSH traffic on every metric
+ * sample is not.
+ */
+export function createCurrentRepositoryLazyWriteHook(
+  reason: string,
+): (() => Promise<void>) | undefined {
+  if (!needsExplicitPersist(resolveDatabaseDialect())) return undefined;
+  return () => DatabaseSaveTrigger.triggerSave(reason);
 }
 
 /**
@@ -118,10 +144,24 @@ export function createCurrentWebauthnCredentialRepository(): WebauthnCredentialR
   );
 }
 
+export function createCurrentAiRepository(): AiRepository {
+  return new AiRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("ai_repository_write"),
+  );
+}
+
 export function createCurrentAlertRepository(): AlertRepository {
   return new AlertRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("alert_repository_write"),
+  );
+}
+
+export function createCurrentAutomationRepository(): AutomationRepository {
+  return new AutomationRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("automation_repository_write"),
   );
 }
 
@@ -188,6 +228,20 @@ export function createCurrentFileManagerBookmarkRepository(): FileManagerBookmar
   );
 }
 
+export function createCurrentFleetRepository(): FleetRepository {
+  return new FleetRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("fleet_repository_write"),
+  );
+}
+
+export function createCurrentFleetInventoryRepository(): FleetInventoryRepository {
+  return new FleetInventoryRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("fleet_inventory_repository_write"),
+  );
+}
+
 export function createCurrentHomepageItemRepository(): HomepageItemRepository {
   return new HomepageItemRepository(
     createCurrentRepositoryContext(),
@@ -219,7 +273,9 @@ export function createCurrentHostHealthRepository(): HostHealthRepository {
 export function createCurrentHostMetricsHistoryRepository(): HostMetricsHistoryRepository {
   return new HostMetricsHistoryRepository(
     createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("host_metrics_history_repository_write"),
+    createCurrentRepositoryLazyWriteHook(
+      "host_metrics_history_repository_write",
+    ),
   );
 }
 
@@ -228,6 +284,15 @@ export function createCurrentHostMetricsPreferenceRepository(): HostMetricsPrefe
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook(
       "host_metrics_preference_repository_write",
+    ),
+  );
+}
+
+export function createCurrentProxmoxNodeHistoryRepository(): ProxmoxNodeHistoryRepository {
+  return new ProxmoxNodeHistoryRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryLazyWriteHook(
+      "proxmox_node_history_repository_write",
     ),
   );
 }
@@ -243,6 +308,34 @@ export function createCurrentHostResolutionRepository(): HostResolutionRepositor
   return new HostResolutionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("host_resolution_repository_write"),
+    createCurrentRepositoryLazyWriteHook(
+      "host_resolution_repository_lazy_write",
+    ),
+  );
+}
+
+export function createCurrentHostSidebarPreferenceRepository(): HostSidebarPreferenceRepository {
+  return new HostSidebarPreferenceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "host_sidebar_preference_repository_write",
+    ),
+  );
+}
+
+export function createCurrentCredentialSidebarPreferenceRepository(): CredentialSidebarPreferenceRepository {
+  return new CredentialSidebarPreferenceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "credential_sidebar_preference_repository_write",
+    ),
+  );
+}
+
+export function createCurrentUiPreferenceRepository(): UiPreferenceRepository {
+  return new UiPreferenceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("ui_preference_repository_write"),
   );
 }
 
@@ -417,6 +510,13 @@ export function createCurrentVaultTokenRepository(): VaultTokenRepository {
   return new VaultTokenRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("vault_token_repository_write"),
+  );
+}
+
+export function createCurrentWorkspaceRepository(): WorkspaceRepository {
+  return new WorkspaceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("workspace_repository_write"),
   );
 }
 

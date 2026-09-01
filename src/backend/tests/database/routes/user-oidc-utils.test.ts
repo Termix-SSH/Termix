@@ -15,11 +15,13 @@ const {
   isOIDCUserAllowed,
   getOIDCConfigFromEnv,
   extractOidcGroups,
+  extractOidcGroupsFromSources,
   validateLogoutTokenClaims,
   parseOidcRoleMap,
   resolveOidcMappedRoles,
   verifyOIDCToken,
   describeFetchFailure,
+  isOIDCEnvOverrideEnabled,
 } = await import("../../../database/routes/user-oidc-utils.js");
 
 const BACKCHANNEL_LOGOUT_EVENT =
@@ -126,6 +128,46 @@ describe("verifyOIDCToken JWKS diagnostics", () => {
 });
 
 describe("verifyOIDCToken", () => {
+  it("accepts a discovery document URL as the configured issuer", async () => {
+    const { exportJWK, generateKeyPair, SignJWT } = await import("jose");
+    const { publicKey, privateKey } = await generateKeyPair("RS256");
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = "google-key";
+
+    const issuer = "https://accounts.google.com";
+    const clientId = "termix-client";
+    const token = await new SignJWT({ sub: "user-1" })
+      .setProtectedHeader({ alg: "RS256", kid: jwk.kid })
+      .setIssuer(issuer)
+      .setAudience(clientId)
+      .setExpirationTime("5m")
+      .sign(privateKey);
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ jwks_uri: `${issuer}/keys` }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }),
+      );
+
+    const payload = await verifyOIDCToken(
+      token,
+      `${issuer}/.well-known/openid-configuration`,
+      clientId,
+    );
+
+    expect(payload.sub).toBe("user-1");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `${issuer}/.well-known/openid-configuration`,
+      {},
+    );
+  });
+
   it("uses the protected-header algorithm when the provider JWK omits alg", async () => {
     const { exportJWK, generateKeyPair, SignJWT } = await import("jose");
     const { publicKey, privateKey } = await generateKeyPair("RS256");
@@ -240,6 +282,7 @@ describe("getOIDCConfigFromEnv", () => {
     "OIDC_SCOPES",
     "OIDC_ALLOWED_USERS",
     "OIDC_ADMIN_GROUP",
+    "OIDC_ENV_OVERRIDE",
   ];
   const saved: Record<string, string | undefined> = {};
 
@@ -293,6 +336,12 @@ describe("getOIDCConfigFromEnv", () => {
     expect(config?.identifier_path).toBe("email");
     expect(config?.scopes).toBe("openid");
   });
+
+  it("only enables database recovery override when explicitly requested", () => {
+    expect(isOIDCEnvOverrideEnabled()).toBe(false);
+    process.env.OIDC_ENV_OVERRIDE = "true";
+    expect(isOIDCEnvOverrideEnabled()).toBe(true);
+  });
 });
 
 describe("extractOidcGroups", () => {
@@ -342,6 +391,35 @@ describe("extractOidcGroups", () => {
 
   it("returns an empty array when no groups are present", () => {
     expect(extractOidcGroups({})).toEqual([]);
+  });
+});
+
+describe("extractOidcGroupsFromSources", () => {
+  it("preserves ID token groups when userinfo omits them", () => {
+    expect(
+      extractOidcGroupsFromSources([
+        { groups: ["admins", "users"] },
+        { sub: "user-1", name: "Example User" },
+      ]),
+    ).toEqual(["admins", "users"]);
+  });
+
+  it("combines and deduplicates groups from both verified sources", () => {
+    expect(
+      extractOidcGroupsFromSources([
+        { roles: ["users", "operators"] },
+        { roles: ["operators", "admins"] },
+      ]),
+    ).toEqual(["users", "operators", "admins"]);
+  });
+
+  it("supports a configured group claim across sources", () => {
+    expect(
+      extractOidcGroupsFromSources(
+        [{ custom_groups: ["admins"] }, { custom_groups: ["users"] }],
+        "custom_groups",
+      ),
+    ).toEqual(["admins", "users"]);
   });
 });
 

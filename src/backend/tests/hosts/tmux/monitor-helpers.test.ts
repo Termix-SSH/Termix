@@ -9,6 +9,8 @@ import {
   buildPaneMetrics,
   attachPanesToWindows,
   shellEscape,
+  type ProcessInfo,
+  type TmuxWindow,
 } from "../../../hosts/tmux/monitor-helpers.js";
 
 function join(...fields: (string | number)[]): string {
@@ -194,6 +196,28 @@ describe("buildPaneMetrics", () => {
     const metrics = buildPaneMetrics(pane, cyclic, new Map());
     expect(metrics[0].processCount).toBe(2);
   });
+
+  it("aggregates a wide process tree without dropping children", () => {
+    const childCount = 2_000;
+    const wideTree: ProcessInfo[] = [
+      { pid: 1, ppid: 0, cpu: 0, mem: 0, rss: 1, comm: "bash" },
+      ...Array.from({ length: childCount }, (_, index) => ({
+        pid: index + 2,
+        ppid: 1,
+        cpu: 0.1,
+        mem: 0,
+        rss: 1,
+        comm: `worker-${index}`,
+      })),
+    ];
+    const pane = parsePanes(
+      join("wide", 0, "%1", 0, 1, 1, 80, 24, "bash", "/", "t"),
+    );
+
+    const [metrics] = buildPaneMetrics(pane, wideTree, new Map());
+    expect(metrics.processCount).toBe(childCount + 1);
+    expect(metrics.memRssKb).toBe(childCount + 1);
+  });
 });
 
 describe("attachPanesToWindows", () => {
@@ -213,6 +237,29 @@ describe("attachPanesToWindows", () => {
     expect(windows.get("s1")![0].panes).toHaveLength(1);
     expect(windows.get("s1")![0].panes[0].id).toBe("%1");
     expect(windows.get("s1")![1].panes[0].id).toBe("%2");
+  });
+
+  it("preserves first-match behavior for duplicate window indexes", () => {
+    const first: TmuxWindow = {
+      index: 0,
+      name: "first",
+      active: true,
+      panes: [],
+    };
+    const duplicate: TmuxWindow = {
+      index: 0,
+      name: "duplicate",
+      active: false,
+      panes: [],
+    };
+    const windows = new Map([["s1", [first, duplicate]]]);
+    const panes = parsePanes(
+      join("s1", 0, "%1", 0, 100, 1, 80, 24, "bash", "/", "t"),
+    );
+
+    attachPanesToWindows(windows, panes);
+    expect(first.panes).toHaveLength(1);
+    expect(duplicate.panes).toHaveLength(0);
   });
 });
 

@@ -14,8 +14,11 @@ import type {
   WidgetComponentProps,
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
-import { getAlertFirings, acknowledgeAlertFiring } from "@/api/alerts-api";
-import type { AlertFiring } from "@/api/alerts-api";
+import {
+  acknowledgeAlertFiring,
+  getAlertFirings,
+  type AlertFiring,
+} from "@/api/alerts-api";
 import { WidgetTitle } from "./WidgetTitle";
 
 function relativeTime(ts: string): string {

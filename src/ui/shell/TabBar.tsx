@@ -19,6 +19,7 @@ import {
   Maximize2,
   Minimize2,
   FolderOpen,
+  PanelRight,
   Share2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
@@ -26,7 +27,13 @@ import { isElectron } from "@/lib/electron";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
 
-const CONNECTION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
+const CONNECTION_TAB_TYPES: TabType[] = [
+  "terminal",
+  "local-terminal",
+  "rdp",
+  "vnc",
+  "telnet",
+];
 
 export function TabBar({
   tabs,
@@ -46,6 +53,8 @@ export function TabBar({
   onOpenShare,
   isAppFullscreen,
   onToggleAppFullscreen,
+  rightDockOpen,
+  onToggleRightDock,
 }: {
   tabs: Tab[];
   activeTabId: string;
@@ -64,6 +73,8 @@ export function TabBar({
   onOpenShare?: (tabId: string) => void;
   isAppFullscreen: boolean;
   onToggleAppFullscreen: () => void;
+  rightDockOpen?: boolean;
+  onToggleRightDock?: () => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
@@ -463,6 +474,22 @@ export function TabBar({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          {onToggleRightDock && (
+            <>
+              <Separator orientation="vertical" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-full w-12.5 rounded-none border-y-0 border-border ${rightDockOpen ? "text-accent-brand bg-accent-brand/10" : "text-muted-foreground hover:text-foreground"}`}
+                title={t("nav.toggleRightDock")}
+                aria-label={t("nav.toggleRightDock")}
+                aria-pressed={!!rightDockOpen}
+                onClick={onToggleRightDock}
+              >
+                <PanelRight className="size-4" />
+              </Button>
+            </>
+          )}
           {!isElectron() && (
             <>
               <Separator orientation="vertical" />
@@ -516,7 +543,7 @@ export function TabBar({
         (() => {
           const ctxTab = tabs.find((t) => t.id === contextTabId);
           if (!ctxTab) return null;
-          const isInPane = paneTabIds.indexOf(contextTabId) !== -1;
+          const isInPane = paneTabIds.includes(contextTabId);
           const hasEmptySlot =
             isSplit && paneTabIds.slice(0, paneCount).some((p) => p === null);
           return (
@@ -572,24 +599,27 @@ export function TabBar({
                 <Pencil className="size-3" />
                 {t("nav.renameTab")}
               </button>
-              <div className="h-px bg-border my-1" />
-              {/* Split submenu */}
-              <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("terminal.split.splitTab")}
-              </div>
-              {SPLIT_MODES.filter((m) => m.id !== "none").map((mode) => (
-                <button
-                  key={mode.id}
-                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => {
-                    onSplitTab(contextTabId, mode.id);
-                    setContextTabId(null);
-                  }}
-                >
-                  <LayoutPanelLeft className="size-3 text-muted-foreground" />
-                  {mode.label}
-                </button>
-              ))}
+              {ctxTab.type !== "split-screen" && (
+                <>
+                  <div className="h-px bg-border my-1" />
+                  <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("terminal.split.splitTab")}
+                  </div>
+                  {SPLIT_MODES.filter((m) => m.id !== "none").map((mode) => (
+                    <button
+                      key={mode.id}
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => {
+                        onSplitTab(contextTabId, mode.id);
+                        setContextTabId(null);
+                      }}
+                    >
+                      <LayoutPanelLeft className="size-3 text-muted-foreground" />
+                      {mode.label}
+                    </button>
+                  ))}
+                </>
+              )}
               {isSplit && (
                 <>
                   <div className="h-px bg-border my-1" />

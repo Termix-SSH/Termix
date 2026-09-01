@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { generateKeyPairSync } from "crypto";
+import ssh2Pkg, { type ParsedKey } from "ssh2";
 
 const mockAccess = vi.fn();
 
@@ -6,7 +8,57 @@ vi.mock("fs/promises", () => ({
   access: mockAccess,
 }));
 
-import { resolveAgentSocket } from "../../hosts/terminal-auth-helpers.js";
+import {
+  MemoryAgent,
+  FilteredAgent,
+  resolveAgentSocket,
+} from "../../hosts/terminal-auth-helpers.js";
+
+describe("MemoryAgent", () => {
+  it("serves identities and signatures over the agent protocol", async () => {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const parsed = ssh2Pkg.utils.parseKey(
+      privateKey.export({ type: "pkcs1", format: "pem" }),
+    );
+    expect(parsed).not.toBeInstanceOf(Error);
+
+    const agent = new MemoryAgent(parsed as ParsedKey);
+    const stream = await new Promise<NodeJS.ReadWriteStream>(
+      (resolve, reject) => {
+        agent.getStream((error, result) => {
+          if (error || !result)
+            reject(error ?? new Error("Missing agent stream"));
+          else resolve(result);
+        });
+      },
+    );
+    const client = new ssh2Pkg.AgentProtocol(true);
+    client.pipe(stream).pipe(client);
+
+    const identities = await new Promise<ParsedKey[]>((resolve, reject) => {
+      client.getIdentities((error, keys) => {
+        if (error || !keys) reject(error ?? new Error("Missing identities"));
+        else resolve(keys);
+      });
+    });
+    expect(identities).toHaveLength(1);
+    expect(identities[0].getPublicSSH()).toEqual(
+      (parsed as ParsedKey).getPublicSSH(),
+    );
+
+    const data = Buffer.from("forwarded-agent-test");
+    const signature = await new Promise<Buffer>((resolve, reject) => {
+      client.sign(identities[0], data, (error, result) => {
+        if (error || !result) reject(error ?? new Error("Missing signature"));
+        else resolve(result);
+      });
+    });
+    expect((parsed as ParsedKey).verify(data, signature)).toBe(true);
+
+    client.destroy();
+    stream.destroy();
+  });
+});
 
 describe("resolveAgentSocket", () => {
   const originalEnv = process.env.SSH_AUTH_SOCK;
@@ -99,5 +151,80 @@ describe("resolveAgentSocket", () => {
       socketPath: "\\\\.\\pipe\\openssh-ssh-agent",
     });
     expect(mockAccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("FilteredAgent", () => {
+  it("only returns identities matching the configured public key", async () => {
+    const { privateKey: keyA } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+    });
+    const { privateKey: keyB } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+    });
+    const parsedA = ssh2Pkg.utils.parseKey(
+      keyA.export({ type: "pkcs1", format: "pem" }),
+    ) as ParsedKey;
+    const parsedB = ssh2Pkg.utils.parseKey(
+      keyB.export({ type: "pkcs1", format: "pem" }),
+    ) as ParsedKey;
+
+    const inner = {
+      getIdentities: (cb: (err: Error | null, keys: ParsedKey[]) => void) =>
+        cb(null, [parsedA, parsedB]),
+      getStream: vi.fn(),
+      sign: vi.fn(),
+    };
+
+    const filtered = new FilteredAgent(
+      inner as unknown as ConstructorParameters<typeof FilteredAgent>[0],
+      parsedB.getPublicSSH(),
+    );
+
+    const identities = await new Promise<ParsedKey[]>((resolve, reject) => {
+      filtered.getIdentities((err, keys) => {
+        if (err || !keys) reject(err ?? new Error("Missing identities"));
+        else resolve(keys);
+      });
+    });
+
+    expect(identities).toHaveLength(1);
+    expect(identities[0].getPublicSSH()).toEqual(parsedB.getPublicSSH());
+  });
+
+  it("returns no identities when nothing matches", async () => {
+    const { privateKey: keyA } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+    });
+    const { privateKey: keyB } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+    });
+    const parsedA = ssh2Pkg.utils.parseKey(
+      keyA.export({ type: "pkcs1", format: "pem" }),
+    ) as ParsedKey;
+    const parsedB = ssh2Pkg.utils.parseKey(
+      keyB.export({ type: "pkcs1", format: "pem" }),
+    ) as ParsedKey;
+
+    const inner = {
+      getIdentities: (cb: (err: Error | null, keys: ParsedKey[]) => void) =>
+        cb(null, [parsedA]),
+      getStream: vi.fn(),
+      sign: vi.fn(),
+    };
+
+    const filtered = new FilteredAgent(
+      inner as unknown as ConstructorParameters<typeof FilteredAgent>[0],
+      parsedB.getPublicSSH(),
+    );
+
+    const identities = await new Promise<ParsedKey[]>((resolve, reject) => {
+      filtered.getIdentities((err, keys) => {
+        if (err || !keys) reject(err ?? new Error("Missing identities"));
+        else resolve(keys);
+      });
+    });
+
+    expect(identities).toHaveLength(0);
   });
 });

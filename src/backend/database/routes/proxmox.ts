@@ -1,15 +1,19 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../utils/logger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { createCurrentHostRepository } from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import type { AuthenticatedRequest } from "../../../types/index.js";
-import type { SSHHost } from "../../../types/index.js";
+import {
+  type AuthenticatedRequest,
+  type SSHHost,
+} from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
 import { resolveHostById } from "../../hosts/host-resolver.js";
 import { createJumpHostChain } from "../../hosts/jump-host-chain.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
+import { isSafeNodeName } from "../../hosts/proxmox-shared.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -23,14 +27,6 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Helpers
-
-// Proxmox node names are restricted to [a-zA-Z0-9-] by PVE itself,
-// but we validate defensively before using in a shell command.
-const SAFE_NODE_RE = /^[a-zA-Z0-9._-]{1,64}$/;
-
-function isSafeNodeName(name: string): boolean {
-  return SAFE_NODE_RE.test(name);
-}
 
 function execCommand(
   client: SSHClient,
@@ -238,6 +234,17 @@ function proxmoxSourceKey(source: ProxmoxSource): string {
 
 function guestSourceKey(sourceHostId: number, guest: ProxmoxGuest): string {
   return `${sourceHostId}:${guest.node}:${guest.type}:${guest.vmid}`;
+}
+
+function guestTags(guest: ProxmoxGuest): string[] {
+  const idTag = guest.type === "lxc" ? `ct-${guest.vmid}` : `vm-${guest.vmid}`;
+  return [
+    "proxmox",
+    guest.type,
+    guest.node,
+    idTag,
+    ...(guest.enableDocker ? ["docker"] : []),
+  ];
 }
 
 function mergeTags(
@@ -682,6 +689,12 @@ async function syncProxmoxHost(
           ? existing.connectionType
           : null;
       const connectionType = existingConnectionType ?? guest.connectionType;
+      const usesImportCredential =
+        connectionType === "ssh" && importAuth.authType === "credential";
+      const existingUsesImportCredential =
+        usesImportCredential &&
+        existing?.authType === "credential" &&
+        existing?.credentialId === importAuth.credentialId;
       const port =
         typeof existing?.port === "number"
           ? existing.port
@@ -689,11 +702,13 @@ async function syncProxmoxHost(
             ? 3389
             : 22;
       const username =
-        typeof existing?.username === "string" && existing.username
-          ? existing.username
-          : connectionType === "rdp"
-            ? ""
-            : "root";
+        usesImportCredential && (!existing || existingUsesImportCredential)
+          ? ""
+          : typeof existing?.username === "string" && existing.username
+            ? existing.username
+            : connectionType === "rdp"
+              ? ""
+              : "root";
       const update: Record<string, unknown> = {
         name: guest.name,
         ip: guest.ip || existing?.ip || "0.0.0.0",
@@ -701,16 +716,16 @@ async function syncProxmoxHost(
         username,
         connectionType,
         folder: existing?.folder || sourceHostName,
-        tags: mergeTags(
-          existing?.tags,
-          ["proxmox", guest.type, guest.node],
-          ["proxmox-missing"],
-        ),
+        tags: mergeTags(existing?.tags, guestTags(guest), ["proxmox-missing"]),
         proxmoxConfig: JSON.stringify(proxmoxConfig),
         updatedAt: now,
       };
 
       if (existing) {
+        if (existingUsesImportCredential) {
+          update.credentialId = importAuth.credentialId;
+          update.overrideCredentialUsername = false;
+        }
         await createCurrentHostRepository().updateEncryptedForUser(
           userId,
           existing.id as number,
@@ -814,7 +829,7 @@ async function syncProxmoxHost(
 
     return result;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = getErrorMessage(error);
     result.errors.push(message);
     await writeSyncStatus(userId, sourceHostId, {
       lastSyncAt: startedAt,
@@ -855,7 +870,7 @@ router.post("/sync", authenticateJWT, requireDataAccess, async (req, res) => {
     const result = await syncProxmoxHost(userId, parsedHostId);
     return res.json(result);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = getErrorMessage(err);
     const status =
       (err as Error & { code?: string; status?: number }).code ===
       "SESSION_EXPIRED"
@@ -1041,7 +1056,7 @@ router.get(
         jumpHosts: discovery.jumpHosts,
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       proxmoxLogger.error("Proxmox discovery (stream) failed", err, {
         operation: "proxmox_discover",
         hostId: parsedHostId,
@@ -1086,7 +1101,7 @@ router.post(
         jumpHosts: discovery.jumpHosts,
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       proxmoxLogger.error("Proxmox discovery failed", err, {
         operation: "proxmox_discover",
         hostId: parsedHostId,

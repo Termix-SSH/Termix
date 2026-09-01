@@ -15,7 +15,9 @@ import {
   serial,
   boolean,
   doublePrecision,
+  index,
   uniqueIndex,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -61,50 +63,62 @@ export const ssoProviders = pgTable("sso_providers", {
   enabled: boolean("enabled").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
   config: text("config").notNull(),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const sessions = pgTable("sessions", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  jwtToken: text("jwt_token").notNull(),
-  deviceType: text("device_type").notNull(),
-  deviceInfo: text("device_info").notNull(),
-  oidcSub: text("oidc_sub"),
-  oidcSid: text("oidc_sid"),
-  ssoProviderId: integer("sso_provider_id"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
-  lastActiveAt: text("last_active_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const trustedDevices = pgTable("trusted_devices", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  deviceFingerprint: text("device_fingerprint").notNull(),
-  deviceType: text("device_type").notNull(),
-  deviceInfo: text("device_info").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
-  lastUsedAt: text("last_used_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    jwtToken: text("jwt_token").notNull(),
+    deviceType: text("device_type").notNull(),
+    deviceInfo: text("device_info").notNull(),
+    oidcSub: text("oidc_sub"),
+    oidcSid: text("oidc_sid"),
+    ssoProviderId: integer("sso_provider_id"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
+    lastActiveAt: text("last_active_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Listing a user's devices, and the startup sweep of expired rows.
+  (table) => [
+    index("idx_sessions_user_id").on(table.userId),
+    index("idx_sessions_expires_at").on(table.expiresAt),
+  ],
+);
+
+export const trustedDevices = pgTable(
+  "trusted_devices",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    deviceFingerprint: text("device_fingerprint").notNull(),
+    deviceType: text("device_type").notNull(),
+    deviceInfo: text("device_info").notNull(),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
+    lastUsedAt: text("last_used_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_trusted_devices_user_id").on(table.userId)],
+);
 
 export const webauthnCredentials = pgTable("webauthn_credentials", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -112,256 +126,314 @@ export const webauthnCredentials = pgTable("webauthn_credentials", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
-  credentialId: text("credential_id").notNull(),
+  credentialId: varchar("credential_id", { length: 255 }).notNull(),
   publicKey: text("public_key").notNull(),
   counter: integer("counter").notNull().default(0),
   deviceType: text("device_type"),
   backedUp: boolean("backed_up").notNull().default(false),
   transports: text("transports"),
   userVerification: text("user_verification").notNull().default("preferred"),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   lastUsedAt: text("last_used_at"),
 });
 
-export const hosts = pgTable("ssh_data", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  connectionType: text("connection_type").notNull().default("ssh"),
-  name: varchar("name", { length: 255 }),
-  ip: text("ip").notNull(),
-  port: integer("port").notNull(),
-  username: text("username").notNull(),
-  folder: text("folder"),
-  tags: text("tags"),
-  pin: boolean("pin").notNull().default(false),
-  authType: text("auth_type").notNull(),
-  useWarpgate: boolean("use_warpgate").notNull().default(false),
-  shareSshAuth: boolean("share_ssh_auth")
-    .notNull()
-    .default(false),
-  forceKeyboardInteractive: text("force_keyboard_interactive"),
+export const hosts = pgTable(
+  "ssh_data",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    connectionType: text("connection_type").notNull().default("ssh"),
+    name: varchar("name", { length: 255 }),
+    ip: text("ip").notNull(),
+    port: integer("port").notNull(),
+    username: text("username").notNull(),
+    folder: text("folder"),
+    // Sub-host nesting: a host acting as an organizational parent for other
+    // hosts, mutually exclusive with folder (see host route validation).
+    parentHostId: integer("parent_host_id").references(
+      (): AnyPgColumn => hosts.id,
+      { onDelete: "set null" },
+    ),
+    tags: text("tags"),
+    pin: boolean("pin").notNull().default(false),
+    // Manual drag-to-reorder position within a folder. Null means the host has
+    // never been manually reordered; falls back to name sort in that case.
+    sortOrder: integer("sort_order"),
+    authType: text("auth_type").notNull(),
+    useWarpgate: boolean("use_warpgate").notNull().default(false),
+    shareSshAuth: boolean("share_ssh_auth")
+      .notNull()
+      .default(false),
+    forceKeyboardInteractive: text("force_keyboard_interactive"),
 
-  password: text("password"),
-  key: text("key"),
-  keyPassword: text("key_password"),
-  keyType: text("key_type"),
-  sudoPassword: text("sudo_password"),
+    password: text("password"),
+    key: text("key"),
+    keyPassword: text("key_password"),
+    keyType: text("key_type"),
+    sudoPassword: text("sudo_password"),
 
-  autostartPassword: text("autostart_password"),
-  autostartKey: text("autostart_key"),
-  autostartKeyPassword: text("autostart_key_password"),
+    autostartPassword: text("autostart_password"),
+    autostartKey: text("autostart_key"),
+    autostartKeyPassword: text("autostart_key_password"),
 
-  credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-  overrideCredentialUsername: boolean("override_credential_username"),
-  // When authType is "vault", the host authenticates via a Vault SSH signer
-  // profile (shared settings, no secrets). The signing certificate is obtained
-  // per-user at connect time via an interactive Vault OIDC flow.
-  vaultProfileId: integer("vault_profile_id").references(
-    () => vaultProfiles.id,
-    { onDelete: "set null" },
-  ),
-  enableTerminal: boolean("enable_terminal")
-    .notNull()
-    .default(true),
-  enableSessionLogging: boolean("enable_session_logging")
-    .notNull()
-    .default(true),
-  allowSessionSharing: boolean("allow_session_sharing")
-    .notNull()
-    .default(true),
-  enableCommandHistory: boolean("enable_command_history")
-    .notNull()
-    .default(true),
-  enableTunnel: boolean("enable_tunnel")
-    .notNull()
-    .default(true),
-  tunnelConnections: text("tunnel_connections"),
-  jumpHosts: text("jump_hosts"),
-  enableFileManager: boolean("enable_file_manager")
-    .notNull()
-    .default(true),
-  scpLegacy: boolean("scp_legacy").notNull().default(false),
-  enableDocker: boolean("enable_docker")
-    .notNull()
-    .default(false),
-  enableTmuxMonitor: boolean("enable_tmux_monitor")
-    .notNull()
-    .default(false),
-  showTerminalInSidebar: boolean("show_terminal_in_sidebar")
-    .notNull()
-    .default(true),
-  showFileManagerInSidebar: boolean("show_file_manager_in_sidebar")
-    .notNull()
-    .default(false),
-  showTunnelInSidebar: boolean("show_tunnel_in_sidebar")
-    .notNull()
-    .default(false),
-  showDockerInSidebar: boolean("show_docker_in_sidebar")
-    .notNull()
-    .default(false),
-  showServerStatsInSidebar: boolean("show_server_stats_in_sidebar")
-    .notNull()
-    .default(false),
-  defaultPath: text("default_path"),
-  statsConfig: text("stats_config"),
-  dockerConfig: text("docker_config"),
-  enableProxmox: boolean("enable_proxmox")
-    .notNull()
-    .default(false),
-  proxmoxConfig: text("proxmox_config"),
-  terminalConfig: text("terminal_config"),
-  quickActions: text("quick_actions"),
-  notes: text("notes"),
-  enableSsh: boolean("enable_ssh").notNull().default(true),
-  enableRdp: boolean("enable_rdp").notNull().default(false),
-  enableVnc: boolean("enable_vnc").notNull().default(false),
-  enableTelnet: boolean("enable_telnet").notNull().default(false),
+    credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    overrideCredentialUsername: boolean("override_credential_username"),
+    // When authType is "vault", the host authenticates via a Vault SSH signer
+    // profile (shared settings, no secrets). The signing certificate is obtained
+    // per-user at connect time via an interactive Vault OIDC flow.
+    vaultProfileId: integer("vault_profile_id").references(
+      () => vaultProfiles.id,
+      { onDelete: "set null" },
+    ),
+    enableTerminal: boolean("enable_terminal")
+      .notNull()
+      .default(true),
+    enableSessionLogging: boolean("enable_session_logging")
+      .notNull()
+      .default(true),
+    allowSessionSharing: boolean("allow_session_sharing")
+      .notNull()
+      .default(true),
+    enableCommandHistory: boolean("enable_command_history")
+      .notNull()
+      .default(true),
+    enableTunnel: boolean("enable_tunnel")
+      .notNull()
+      .default(true),
+    tunnelConnections: text("tunnel_connections"),
+    jumpHosts: text("jump_hosts"),
+    enableFileManager: boolean("enable_file_manager")
+      .notNull()
+      .default(true),
+    scpLegacy: boolean("scp_legacy").notNull().default(false),
+    enableDocker: boolean("enable_docker")
+      .notNull()
+      .default(false),
+    enableTmuxMonitor: boolean("enable_tmux_monitor")
+      .notNull()
+      .default(false),
+    enableTerminalToolbar: boolean("enable_terminal_toolbar")
+      .notNull()
+      .default(true),
+    showTerminalInSidebar: boolean("show_terminal_in_sidebar")
+      .notNull()
+      .default(true),
+    showFileManagerInSidebar: boolean("show_file_manager_in_sidebar")
+      .notNull()
+      .default(false),
+    showTunnelInSidebar: boolean("show_tunnel_in_sidebar")
+      .notNull()
+      .default(false),
+    showDockerInSidebar: boolean("show_docker_in_sidebar")
+      .notNull()
+      .default(false),
+    showServerStatsInSidebar: boolean("show_server_stats_in_sidebar")
+      .notNull()
+      .default(false),
+    defaultPath: text("default_path"),
+    statsConfig: text("stats_config"),
+    dockerConfig: text("docker_config"),
+    enableProxmox: boolean("enable_proxmox")
+      .notNull()
+      .default(false),
+    proxmoxConfig: text("proxmox_config"),
+    enableProxmoxStats: boolean("enable_proxmox_stats")
+      .notNull()
+      .default(false),
+    proxmoxStatsConfig: text("proxmox_stats_config"),
+    terminalConfig: text("terminal_config"),
+    quickActions: text("quick_actions"),
+    notes: text("notes"),
+    enableSsh: boolean("enable_ssh").notNull().default(true),
+    enableRdp: boolean("enable_rdp").notNull().default(false),
+    enableVnc: boolean("enable_vnc").notNull().default(false),
+    enableTelnet: boolean("enable_telnet").notNull().default(false),
 
-  sshPort: integer("ssh_port").default(22),
-  rdpPort: integer("rdp_port").default(3389),
-  vncPort: integer("vnc_port").default(5900),
-  telnetPort: integer("telnet_port").default(23),
+    sshPort: integer("ssh_port").default(22),
+    rdpPort: integer("rdp_port").default(3389),
+    vncPort: integer("vnc_port").default(5900),
+    telnetPort: integer("telnet_port").default(23),
 
-  rdpCredentialId: integer("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-  rdpUser: text("rdp_user"),
-  rdpPassword: text("rdp_password"),
-  rdpDomain: text("rdp_domain"),
-  rdpSecurity: text("rdp_security"),
-  rdpIgnoreCert: boolean("rdp_ignore_cert").default(false),
+    rdpCredentialId: integer("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    rdpUser: text("rdp_user"),
+    rdpPassword: text("rdp_password"),
+    rdpDomain: text("rdp_domain"),
+    rdpSecurity: text("rdp_security"),
+    rdpIgnoreCert: boolean("rdp_ignore_cert").default(false),
 
-  vncCredentialId: integer("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-  vncPassword: text("vnc_password"),
-  vncUser: text("vnc_user"),
+    vncCredentialId: integer("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    vncPassword: text("vnc_password"),
+    vncUser: text("vnc_user"),
 
-  telnetUser: text("telnet_user"),
-  telnetPassword: text("telnet_password"),
-  telnetCredentialId: integer("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    telnetUser: text("telnet_user"),
+    telnetPassword: text("telnet_password"),
+    telnetCredentialId: integer("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
 
-  rdpAuthType: text("rdp_auth_type"),
-  vncAuthType: text("vnc_auth_type"),
-  telnetAuthType: text("telnet_auth_type"),
+    rdpAuthType: text("rdp_auth_type"),
+    vncAuthType: text("vnc_auth_type"),
+    telnetAuthType: text("telnet_auth_type"),
 
-  domain: text("domain"),
-  security: text("security"),
-  ignoreCert: boolean("ignore_cert").default(false),
-  guacamoleConfig: text("guacamole_config"),
+    domain: text("domain"),
+    security: text("security"),
+    ignoreCert: boolean("ignore_cert").default(false),
+    guacamoleConfig: text("guacamole_config"),
 
-  useSocks5: boolean("use_socks5"),
-  socks5Host: text("socks5_host"),
-  socks5Port: integer("socks5_port"),
-  socks5Username: text("socks5_username"),
-  socks5Password: text("socks5_password"),
-  socks5ProxyChain: text("socks5_proxy_chain"),
+    useSocks5: boolean("use_socks5"),
+    socks5Host: text("socks5_host"),
+    socks5Port: integer("socks5_port"),
+    socks5Username: text("socks5_username"),
+    socks5Password: text("socks5_password"),
+    socks5ProxyChain: text("socks5_proxy_chain"),
 
-  // null = use the desktop app's global default; "local" | "remote" pins
-  // this specific host's SSH/Docker-console/Serial connections to originate
-  // from the embedded local backend or a connected remote sync server.
-  // Ignored for rdp/vnc/telnet, which always require the remote server.
-  connectionOrigin: text("connection_origin"),
+    // null = use the desktop app's global default; "local" | "remote" pins
+    // this specific host's SSH/Docker-console/Serial connections to originate
+    // from the embedded local backend or a connected remote sync server.
+    // Ignored for rdp/vnc/telnet, which always require the remote server.
+    connectionOrigin: text("connection_origin"),
 
-  macAddress: text("mac_address"),
-  wolBroadcastAddress: text("wol_broadcast_address"),
-  portKnockSequence: text("port_knock_sequence"),
+    macAddress: text("mac_address"),
+    wolBroadcastAddress: text("wol_broadcast_address"),
+    portKnockSequence: text("port_knock_sequence"),
 
-  hostKeyFingerprint: text("host_key_fingerprint"),
-  hostKeyType: text("host_key_type"),
-  hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
-  hostKeyFirstSeen: text("host_key_first_seen"),
-  hostKeyLastVerified: text("host_key_last_verified"),
-  hostKeyChangedCount: integer("host_key_changed_count").default(0),
+    hostKeyFingerprint: text("host_key_fingerprint"),
+    hostKeyType: text("host_key_type"),
+    hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
+    hostKeyFirstSeen: text("host_key_first_seen"),
+    hostKeyLastVerified: text("host_key_last_verified"),
+    hostKeyChangedCount: integer("host_key_changed_count").default(0),
 
-  // Stable identity used to match this row across two independently-seeded
-  // databases (the embedded backend and a connected remote server) during
-  // sync -- local autoincrement ids collide across instances.
-  syncId: varchar("sync_id", { length: 255 }).unique(),
+    // Stable identity used to match this row across two independently-seeded
+    // databases (the embedded backend and a connected remote server) during
+    // sync -- local autoincrement ids collide across instances.
+    syncId: varchar("sync_id", { length: 255 }).unique(),
 
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Every host read is scoped by owner, so user_id carries the host list.
+  //
+  // `folder` is deliberately not indexed: on Postgres/MySQL an indexed text
+  // column is generated as varchar(255), and folder holds a joined nested path
+  // with no length cap, so indexing it would truncate deep hierarchies.
+  (table) => [
+    index("idx_ssh_data_user_id").on(table.userId),
+    index("idx_ssh_data_parent_host").on(table.parentHostId),
+    index("idx_ssh_data_credential").on(table.credentialId),
+  ],
+);
 
-export const fileManagerRecent = pgTable("file_manager_recent", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  path: text("path").notNull(),
-  lastOpened: text("last_opened")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const fileManagerRecent = pgTable(
+  "file_manager_recent",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    path: text("path").notNull(),
+    lastOpened: text("last_opened")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Every file manager surface is read for one user on one host at a time.
+  (table) => [
+    index("idx_file_manager_recent_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const fileManagerPinned = pgTable("file_manager_pinned", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  path: text("path").notNull(),
-  pinnedAt: text("pinned_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const fileManagerPinned = pgTable(
+  "file_manager_pinned",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    path: text("path").notNull(),
+    pinnedAt: text("pinned_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_file_manager_pinned_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const fileManagerShortcuts = pgTable("file_manager_shortcuts", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  path: text("path").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const fileManagerShortcuts = pgTable(
+  "file_manager_shortcuts",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    path: text("path").notNull(),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_file_manager_shortcuts_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const transferRecent = pgTable("transfer_recent", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  sourceHostId: integer("source_host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  destHostId: integer("dest_host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  destPath: text("dest_path").notNull(),
-  destPathLabel: text("dest_path_label").notNull(),
-  lastUsed: text("last_used")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const transferRecent = pgTable(
+  "transfer_recent",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceHostId: integer("source_host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    destHostId: integer("dest_host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    destPath: text("dest_path").notNull(),
+    destPathLabel: text("dest_path_label").notNull(),
+    lastUsed: text("last_used")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_transfer_recent_user").on(table.userId)],
+);
 
-export const dismissedAlerts = pgTable("dismissed_alerts", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  alertId: text("alert_id").notNull(),
-  dismissedAt: text("dismissed_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const dismissedAlerts = pgTable(
+  "dismissed_alerts",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    alertId: text("alert_id").notNull(),
+    dismissedAt: text("dismissed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_dismissed_alerts_user_id").on(table.userId)],
+);
 
-export const sshCredentials = pgTable("ssh_credentials", {
+export const sshCredentials = pgTable(
+  "ssh_credentials",
+  {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
@@ -370,6 +442,11 @@ export const sshCredentials = pgTable("ssh_credentials", {
   description: text("description"),
   folder: text("folder"),
   tags: text("tags"),
+  pin: boolean("pin").notNull().default(false),
+  // Manual drag-to-reorder position within a folder. Null means the
+  // credential has never been manually reordered; falls back to name sort
+  // in that case, same convention as hosts.sortOrder.
+  sortOrder: integer("sort_order"),
   authType: text("auth_type").notNull(),
   username: text("username"),
   password: text("password"),
@@ -386,49 +463,63 @@ export const sshCredentials = pgTable("ssh_credentials", {
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-});
+  },
+  (table) => [index("idx_ssh_credentials_user_id").on(table.userId)],
+);
 
-export const sshCredentialUsage = pgTable("ssh_credential_usage", {
-  id: serial("id").primaryKey(),
-  credentialId: integer("credential_id")
-    .notNull()
-    .references(() => sshCredentials.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  usedAt: text("used_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const sshCredentialUsage = pgTable(
+  "ssh_credential_usage",
+  {
+    id: serial("id").primaryKey(),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    usedAt: text("used_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ssh_credential_usage_credential").on(table.credentialId),
+    index("idx_ssh_credential_usage_user").on(table.userId),
+  ],
+);
 
-export const snippets = pgTable("snippets", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  content: text("content").notNull(),
-  description: text("description"),
-  folder: text("folder"),
-  order: integer("order").notNull().default(0),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  hostFilter: text("host_filter"),
-});
+export const snippets = pgTable(
+  "snippets",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    content: text("content").notNull(),
+    description: text("description"),
+    folder: text("folder"),
+    order: integer("order").notNull().default(0),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    hostFilter: text("host_filter"),
+    isNote: boolean("is_note").notNull().default(false),
+  },
+  (table) => [index("idx_snippets_user_id").on(table.userId)],
+);
 
 export const snippetFolders = pgTable("snippet_folders", {
   id: serial("id").primaryKey(),
@@ -439,10 +530,10 @@ export const snippetFolders = pgTable("snippet_folders", {
   color: text("color"),
   icon: text("icon"),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -456,86 +547,115 @@ export const c2sTunnelPresets = pgTable("c2s_tunnel_presets", {
   config: text("config").notNull(),
   platform: text("platform"),
   computerName: text("computer_name"),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const snippetAccess = pgTable("snippet_access", {
-  id: serial("id").primaryKey(),
-  snippetId: integer("snippet_id")
-    .notNull()
-    .references(() => snippets.id, { onDelete: "cascade" }),
-
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
-  roleId: integer("role_id").references(() => roles.id, {
-    onDelete: "cascade",
-  }),
-
-  grantedBy: varchar("granted_by", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-
-  permissionLevel: text("permission_level").notNull().default("view"),
-
-  expiresAt: text("expires_at"),
-
-  createdAt: text("created_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const sshFolders = pgTable("ssh_folders", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  credentialId: integer("credential_id").references(() => sshCredentials.id, {
-    onDelete: "set null",
-  }),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const snippetAccess = pgTable(
+  "snippet_access",
+  {
+    id: serial("id").primaryKey(),
+    snippetId: integer("snippet_id")
+      .notNull()
+      .references(() => snippets.id, { onDelete: "cascade" }),
 
-export const recentActivity = pgTable("recent_activity", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  hostName: text("host_name"),
-  timestamp: text("timestamp")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
 
-export const commandHistory = pgTable("command_history", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  command: text("command").notNull(),
-  executedAt: text("executed_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    permissionLevel: text("permission_level").notNull().default("view"),
+
+    expiresAt: varchar("expires_at", { length: 255 }),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Same three lookup shapes as host_access: by grantee, by role, by snippet.
+  (table) => [
+    index("idx_snippet_access_user_id").on(table.userId),
+    index("idx_snippet_access_snippet_id").on(table.snippetId),
+    index("idx_snippet_access_role_id").on(table.roleId),
+  ],
+);
+
+export const sshFolders = pgTable(
+  "ssh_folders",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    color: text("color"),
+    icon: text("icon"),
+    credentialId: integer("credential_id").references(() => sshCredentials.id, {
+      onDelete: "set null",
+    }),
+    // Manual drag-to-reorder position among sibling folders. Null falls back
+    // to name sort, same convention as hosts.sortOrder.
+    sortOrder: integer("sort_order"),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_ssh_folders_user_id").on(table.userId)],
+);
+
+export const recentActivity = pgTable(
+  "recent_activity",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    hostName: text("host_name"),
+    timestamp: varchar("timestamp", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Always read newest-first for one user, so timestamp follows user_id.
+  (table) => [
+    index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
+  ],
+);
+
+export const commandHistory = pgTable(
+  "command_history",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    command: text("command").notNull(),
+    executedAt: text("executed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_command_history_user_host").on(table.userId, table.hostId),
+  ],
+);
 
 export const networkTopology = pgTable("network_topology", {
   id: serial("id").primaryKey(),
@@ -543,41 +663,52 @@ export const networkTopology = pgTable("network_topology", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   topology: text("topology"),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const hostAccess = pgTable("host_access", {
-  id: serial("id").primaryKey(),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
+export const hostAccess = pgTable(
+  "host_access",
+  {
+    id: serial("id").primaryKey(),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
 
-  userId: varchar("user_id", { length: 255 })
-    .references(() => users.id, { onDelete: "cascade" }),
-  roleId: integer("role_id")
-    .references(() => roles.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id")
+      .references(() => roles.id, { onDelete: "cascade" }),
 
-  grantedBy: varchar("granted_by", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
-  permissionLevel: text("permission_level")
-    .notNull()
-    .default("connect"),
+    permissionLevel: text("permission_level")
+      .notNull()
+      .default("connect"),
 
-  expiresAt: text("expires_at"),
+    expiresAt: varchar("expires_at", { length: 255 }),
 
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  lastAccessedAt: text("last_accessed_at"),
-  accessCount: integer("access_count").notNull().default(0),
-});
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    lastAccessedAt: text("last_accessed_at"),
+    accessCount: integer("access_count").notNull().default(0),
+  },
+  // Resolved on every host list request and every permission check, so all
+  // three lookup shapes (by grantee, by role, by host) need to be indexed.
+  (table) => [
+    index("idx_host_access_user_id").on(table.userId),
+    index("idx_host_access_role_id").on(table.roleId),
+    index("idx_host_access_host_id").on(table.hostId),
+    index("idx_host_access_expires_at").on(table.expiresAt),
+  ],
+);
 
 export const sharedHostAuthOverrides = pgTable(
   "shared_host_auth_overrides",
@@ -593,10 +724,10 @@ export const sharedHostAuthOverrides = pgTable(
     credentialId: integer("credential_id")
       .notNull()
       .references(() => sshCredentials.id, { onDelete: "cascade" }),
-    createdAt: text("created_at")
+    createdAt: varchar("created_at", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
+    updatedAt: varchar("updated_at", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -638,10 +769,10 @@ export const sharedHostSecrets = pgTable(
     encryptedKeyType: text("encrypted_key_type"),
     encryptedDomain: text("encrypted_domain"),
 
-    createdAt: text("created_at")
+    createdAt: varchar("created_at", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
+    updatedAt: varchar("updated_at", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -669,10 +800,10 @@ export const roles = pgTable("roles", {
 
   permissions: text("permissions"),
 
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -698,67 +829,97 @@ export const userRoles = pgTable(
   // Declared inline in the production DDL as UNIQUE(...), but never here,
   // so the generated Postgres and MySQL schemas allowed duplicates the
   // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId)],
+  //
+  // The unique pair already serves lookups by user, since user_id leads it.
+  // Listing a role's members starts from role_id, which it cannot serve.
+  (table) => [
+    uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId),
+    index("idx_user_roles_role_id").on(table.roleId),
+  ],
 );
 
-export const auditLogs = pgTable("audit_logs", {
-  id: serial("id").primaryKey(),
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: serial("id").primaryKey(),
 
-  // Nullable on purpose: the trail outlives the account, and username keeps the
-  // entry attributable once the reference is gone.
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
-  username: text("username").notNull(),
+    // Nullable on purpose: the trail outlives the account, and username keeps the
+    // entry attributable once the reference is gone.
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
+    username: text("username").notNull(),
 
-  action: text("action").notNull(),
-  resourceType: text("resource_type").notNull(),
-  resourceId: text("resource_id"),
-  resourceName: text("resource_name"),
+    action: varchar("action", { length: 255 }).notNull(),
+    resourceType: varchar("resource_type", { length: 255 }).notNull(),
+    resourceId: text("resource_id"),
+    resourceName: text("resource_name"),
 
-  details: text("details"),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
+    details: text("details"),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
 
-  success: boolean("success").notNull(),
-  errorMessage: text("error_message"),
+    success: boolean("success").notNull(),
+    errorMessage: text("error_message"),
 
-  timestamp: text("timestamp")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    timestamp: varchar("timestamp", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // This table only grows, and is always read newest-first with an optional
+  // filter. Each composite leads with the filtered column so the same index
+  // also satisfies the ORDER BY.
+  (table) => [
+    index("idx_audit_logs_timestamp").on(table.timestamp),
+    index("idx_audit_logs_user_ts").on(table.userId, table.timestamp),
+    index("idx_audit_logs_action_ts").on(table.action, table.timestamp),
+    index("idx_audit_logs_resource_ts").on(table.resourceType, table.timestamp),
+  ],
+);
 
-export const sessionRecordings = pgTable("session_recordings", {
-  id: serial("id").primaryKey(),
+export const sessionRecordings = pgTable(
+  "session_recordings",
+  {
+    id: serial("id").primaryKey(),
 
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  // Nullable on purpose: a recording is evidence about the host as much as the
-  // person, so it outlives the account. username keeps it attributable.
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
-  username: text("username"),
-  accessId: integer("access_id").references(() => hostAccess.id, {
-    onDelete: "set null",
-  }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    // Nullable on purpose: a recording is evidence about the host as much as the
+    // person, so it outlives the account. username keeps it attributable.
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
+    username: text("username"),
+    accessId: integer("access_id").references(() => hostAccess.id, {
+      onDelete: "set null",
+    }),
 
-  startedAt: text("started_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  endedAt: text("ended_at"),
-  duration: integer("duration"),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    endedAt: text("ended_at"),
+    duration: integer("duration"),
 
-  commands: text("commands"),
-  dangerousActions: text("dangerous_actions"),
+    commands: text("commands"),
+    dangerousActions: text("dangerous_actions"),
 
-  recordingPath: text("recording_path"),
-  protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
-  format: text("format").notNull().default("text"),
+    recordingPath: text("recording_path"),
+    protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
+    format: text("format").notNull().default("text"),
 
-  terminatedByOwner: boolean("terminated_by_owner")
-    .default(false),
-  terminationReason: text("termination_reason"),
-});
+    terminatedByOwner: boolean("terminated_by_owner").default(false),
+    terminationReason: text("termination_reason"),
+  },
+  // Listed newest-first per user, and audited per host.
+  (table) => [
+    index("idx_session_recordings_user_started").on(
+      table.userId,
+      table.startedAt,
+    ),
+    index("idx_session_recordings_host").on(table.hostId),
+  ],
+);
 
-export const sessionShares = pgTable("session_shares", {
+export const sessionShares = pgTable(
+  "session_shares",
+  {
   id: varchar("id", { length: 255 }).primaryKey(),
 
   hostId: integer("host_id")
@@ -773,7 +934,7 @@ export const sessionShares = pgTable("session_shares", {
   // Live-session binding: TerminalSessionManager's session.id for SSH, or
   // guacd's own guacamoleConnectionId for rdp/vnc/telnet. Neither is a DB
   // row (process-local, in-memory) so this intentionally has no FK.
-  sessionId: text("session_id").notNull(),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
   tabInstanceId: text("tab_instance_id"),
 
   shareType: text("share_type").notNull(), // "link" | "user"
@@ -784,15 +945,21 @@ export const sessionShares = pgTable("session_shares", {
 
   permissionLevel: text("permission_level").notNull().default("read-only"),
 
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
+  expiresAt: varchar("expires_at", { length: 255 }).notNull(),
   revokedAt: text("revoked_at"),
 
   lastJoinedAt: text("last_joined_at"),
   joinCount: integer("join_count").notNull().default(0),
-});
+  },
+  // Resolved from the live session on join, and listed per host.
+  (table) => [
+    index("idx_session_shares_session_id").on(table.sessionId),
+    index("idx_session_shares_host_id").on(table.hostId),
+  ],
+);
 
 export const sessionShareParticipants = pgTable(
   "session_share_participants",
@@ -833,10 +1000,10 @@ export const opksshTokens = pgTable(
     issuer: text("issuer"),
     audience: text("audience"),
   
-    createdAt: text("created_at")
+    createdAt: varchar("created_at", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    expiresAt: text("expires_at").notNull(),
+    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
     lastUsed: text("last_used"),
   },
   // Declared inline in the production DDL as UNIQUE(...), but never here,
@@ -873,10 +1040,10 @@ export const vaultProfiles = pgTable("vault_profiles", {
   // When true the profile is visible/usable by all users on the server
   shared: boolean("shared").notNull().default(false),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -898,10 +1065,10 @@ export const vaultTokens = pgTable(
     sshCert: text("ssh_cert").notNull(),
     privateKey: text("private_key").notNull(),
   
-    createdAt: text("created_at")
+    createdAt: varchar("created_at", { length: 255 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    expiresAt: text("expires_at").notNull(),
+    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
     lastUsed: text("last_used"),
   },
   // Declared inline in the production DDL as UNIQUE(...), but never here,
@@ -910,37 +1077,47 @@ export const vaultTokens = pgTable(
   (table) => [uniqueIndex("idx_vault_tokens_user_profile").on(table.userId, table.profileId)],
 );
 
-export const apiKeys = pgTable("api_keys", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  tokenHash: text("token_hash").notNull(),
-  tokenPrefix: text("token_prefix").notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at"),
-  lastUsedAt: text("last_used_at"),
-  isActive: boolean("is_active").notNull().default(true),
-});
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    tokenHash: text("token_hash").notNull(),
+    tokenPrefix: text("token_prefix").notNull(),
+    createdAt: varchar("created_at", { length: 255 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: varchar("expires_at", { length: 255 }),
+    lastUsedAt: text("last_used_at"),
+    isActive: boolean("is_active").notNull().default(true),
+  },
+  (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
 
-export const userOpenTabs = pgTable("user_open_tabs", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  tabType: text("tab_type").notNull(),
-  hostId: integer("host_id").references(() => hosts.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
-  tabOrder: integer("tab_order").notNull().default(0),
-  backendSessionId: text("backend_session_id"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const userOpenTabs = pgTable(
+  "user_open_tabs",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tabType: text("tab_type").notNull(),
+    hostId: integer("host_id").references(() => hosts.id, {
+      onDelete: "cascade",
+    }),
+    label: varchar("label", { length: 255 }).notNull(),
+    tabOrder: integer("tab_order").notNull().default(0),
+    backendSessionId: text("backend_session_id"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_user_open_tabs_user_id").on(table.userId)],
+);
 
 export const userPreferences = pgTable("user_preferences", {
   userId: varchar("user_id", { length: 255 })
@@ -965,11 +1142,20 @@ export const userPreferences = pgTable("user_preferences", {
   disableUpdateCheck: boolean("disable_update_check"),
   confirmTabClose: boolean("confirm_tab_close"),
   hiddenRailTabs: text("hidden_rail_tabs"),
+  // null means the user has not been asked yet; the assistant stays hidden
+  // until this is explicitly true and the admin global is on.
+  aiAssistantEnabled: boolean("ai_assistant_enabled"),
+  // Opt-in to letting the assistant run allowlisted read-only diagnostics
+  // without a per-command approval click.
+  aiReadOnlyCommands: boolean("ai_read_only_commands"),
   compactHostView: boolean("compact_host_view"),
   statusColorScheme: text("status_color_scheme"),
   customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
-  updatedAt: text("updated_at")
+  terminalDefaults: text("terminal_defaults"),
+  rdpDefaults: text("rdp_defaults"),
+  terminalMacros: text("terminal_macros"),
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -987,10 +1173,10 @@ export const hostMetricsPreferences = pgTable(
   // JSON-encoded HostMetricsLayout. Layout has no secrets, so it is stored as
   // plain JSON (no field-level encryption).
   layout: text("layout").notNull(),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1001,6 +1187,67 @@ export const hostMetricsPreferences = pgTable(
     uniqueIndex("idx_host_metrics_prefs_user_host").on(table.userId, table.hostId),
   ],
 );
+
+export const proxmoxStatsPreferences = pgTable(
+  "proxmox_stats_preferences",
+  {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id").notNull().references(() => hosts.id, { onDelete: "cascade" }),
+  // JSON-encoded ProxmoxStatsLayout. Layout has no secrets, so it is stored as
+  // plain JSON (no field-level encryption), same convention as hostMetricsPreferences.layout.
+  layout: text("layout").notNull(),
+  createdAt: varchar("created_at", { length: 255 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: varchar("updated_at", { length: 255 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_proxmox_stats_prefs_user_host").on(table.userId, table.hostId),
+  ],
+);
+
+export const hostSidebarPreferences = pgTable("host_sidebar_preferences", {
+  userId: varchar("user_id", { length: 255 })
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // JSON-encoded HostSidebarPreferences. No secrets in this blob, stored as
+  // plain JSON like hostMetricsPreferences.layout.
+  data: text("data").notNull(),
+  updatedAt: varchar("updated_at", { length: 255 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const credentialSidebarPreferences = pgTable(
+  "credential_sidebar_preferences",
+  {
+    userId: varchar("user_id", { length: 255 })
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // JSON-encoded CredentialSidebarPreferences. No secrets in this blob,
+    // same convention as hostSidebarPreferences.data.
+    data: text("data").notNull(),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+);
+
+export const uiPreferences = pgTable("ui_preferences", {
+  userId: varchar("user_id", { length: 255 })
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // JSON-encoded UiPreferences (preset + per-area overrides + onboarding
+  // state). No secrets in this blob, same convention as
+  // hostSidebarPreferences.data.
+  data: text("data").notNull(),
+  updatedAt: varchar("updated_at", { length: 255 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
 
 export const hostHealthChecks = pgTable(
   "host_health_checks",
@@ -1015,10 +1262,10 @@ export const hostHealthChecks = pgTable(
   // JSON array of { id, name, type: "tcp"|"http", target, port, path }
   checks: text("checks").notNull(),
   intervalSeconds: integer("interval_seconds").notNull().default(300),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1048,14 +1295,14 @@ export const dashboardServiceLinks = pgTable("dashboard_service_links", {
   userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
+  label: varchar("label", { length: 255 }).notNull(),
   url: text("url").notNull(),
   order: integer("order").notNull().default(0),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1073,10 +1320,10 @@ export const termixIdentities = pgTable("termix_identities", {
     .references(() => users.id, { onDelete: "cascade" }),
   handle: varchar("handle", { length: 255 }).notNull().unique(),
   description: text("description"),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1096,7 +1343,7 @@ export const termixIdentityKeys = pgTable("termix_identity_keys", {
   // the /<ALGO> resolver filter (RSA / ED25519 / ECDSA / ...).
   keyType: text("key_type").notNull(),
   algorithm: text("algorithm").notNull(),
-  label: text("label"),
+  label: varchar("label", { length: 255 }),
   comment: text("comment"),
   // "manual" (pasted) or "credential" (imported from an ssh_credentials entry).
   source: text("source").notNull().default("manual"),
@@ -1104,7 +1351,7 @@ export const termixIdentityKeys = pgTable("termix_identity_keys", {
     onDelete: "set null",
   }),
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1124,10 +1371,10 @@ export const termixIdentityCa = pgTable("termix_identity_ca", {
   publicKey: text("public_key").notNull(),
   privateKey: text("private_key").notNull(),
   validityDays: integer("validity_days").notNull().default(90),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1144,7 +1391,7 @@ export const tmuxSessionTags = pgTable("tmux_session_tags", {
     .references(() => hosts.id, { onDelete: "cascade" }),
   sessionName: text("session_name").notNull(),
   tag: text("tag").notNull(),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1167,6 +1414,23 @@ export const hostMetricsHistory = pgTable("host_metrics_history", {
 });
 // --- metrics-history end ---
 
+// --- proxmox-node-history begin ---
+export const proxmoxNodeHistory = pgTable("proxmox_node_history", {
+  id: serial("id").primaryKey(),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  ts: text("ts")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  cpuPercent: doublePrecision("cpu_percent"),
+  memPercent: doublePrecision("mem_percent"),
+  diskPercent: doublePrecision("disk_percent"),
+  netRxBytes: integer("net_rx_bytes"),
+  netTxBytes: integer("net_tx_bytes"),
+});
+// --- proxmox-node-history end ---
+
 // --- alerts begin ---
 export const alertRules = pgTable("alert_rules", {
   id: serial("id").primaryKey(),
@@ -1180,10 +1444,10 @@ export const alertRules = pgTable("alert_rules", {
   thresholdValue: doublePrecision("threshold_value"),
   thresholdDurationSeconds: integer("threshold_duration_seconds"),
   cooldownMinutes: integer("cooldown_minutes").notNull().default(15),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1197,7 +1461,7 @@ export const notificationChannels = pgTable("notification_channels", {
   type: text("type").notNull(),
   config: text("config").notNull(),
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: text("created_at")
+  createdAt: varchar("created_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1212,45 +1476,218 @@ export const alertRuleChannels = pgTable("alert_rule_channels", {
     .references(() => notificationChannels.id, { onDelete: "cascade" }),
 });
 
-export const alertFirings = pgTable("alert_firings", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  ruleId: integer("rule_id")
-    .notNull()
-    .references(() => alertRules.id, { onDelete: "cascade" }),
-  hostId: integer("host_id").notNull(),
-  hostName: text("host_name").notNull(),
-  firedAt: text("fired_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  resolvedAt: text("resolved_at"),
-  value: doublePrecision("value"),
-  message: text("message").notNull(),
-  severity: text("severity").notNull().default("warning"),
-  acknowledged: boolean("acknowledged").notNull().default(false),
-});
+export const alertFirings = pgTable(
+  "alert_firings",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ruleId: integer("rule_id")
+      .notNull()
+      .references(() => alertRules.id, { onDelete: "cascade" }),
+    hostId: integer("host_id").notNull(),
+    hostName: text("host_name").notNull(),
+    firedAt: varchar("fired_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    resolvedAt: text("resolved_at"),
+    value: doublePrecision("value"),
+    message: text("message").notNull(),
+    severity: text("severity").notNull().default("warning"),
+    acknowledged: boolean("acknowledged")
+      .notNull()
+      .default(false),
+  },
+  // A rule's history is read newest-first; host_id is filtered on its own.
+  (table) => [
+    index("idx_alert_firings_rule").on(table.ruleId, table.firedAt),
+    index("idx_alert_firings_host").on(table.hostId),
+  ],
+);
 // --- alerts end ---
 
+// --- automations begin ---
+export const automations = pgTable(
+  "automations",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    enabled: boolean("enabled").notNull().default(true),
+    // The whole trigger + steps graph, shaped by AutomationDefinition. Read and
+    // written as a unit, never queried by its inner structure.
+    definition: text("definition").notNull(),
+    definitionVersion: integer("definition_version").notNull().default(1),
+    concurrencyPolicy: text("concurrency_policy").notNull().default("skip"),
+    maxRunSeconds: integer("max_run_seconds").notNull().default(300),
+    dryRun: boolean("dry_run").notNull().default(false),
+    lastRunAt: text("last_run_at"),
+    lastRunStatus: text("last_run_status"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // The scheduler sweeps enabled automations for one user at a time.
+  (table) => [index("idx_automations_user").on(table.userId, table.enabled)],
+);
+
+/**
+ * Durable per-target trigger state. state_key scopes a trigger to what it is
+ * actually watching ("<hostId>", "<hostId>:/data", "<hostId>:<container>"), so
+ * a sustained-breach window can track one filesystem rather than a whole host.
+ * Living in the database rather than memory means cooldowns and dwell windows
+ * survive a restart.
+ */
+export const automationTriggerState = pgTable(
+  "automation_trigger_state",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    stateKey: varchar("state_key", { length: 255 }).notNull(),
+    breachStartedAt: text("breach_started_at"),
+    lastFiredAt: text("last_fired_at"),
+    lastValue: doublePrecision("last_value"),
+    lastObservedState: text("last_observed_state"),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_trigger_state_key").on(
+      table.automationId,
+      table.stateKey,
+    ),
+  ],
+);
+
+export const automationSchedules = pgTable(
+  "automation_schedules",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    cron: text("cron"),
+    intervalSeconds: integer("interval_seconds"),
+    timezone: text("timezone"),
+    nextDueAt: varchar("next_due_at", { length: 255 }),
+    lastTickAt: text("last_tick_at"),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_schedules_automation").on(table.automationId),
+    index("idx_automation_schedules_due").on(table.nextDueAt),
+  ],
+);
+
+export const automationRuns = pgTable(
+  "automation_runs",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    triggerType: text("trigger_type").notNull(),
+    triggerContext: text("trigger_context"),
+    status: varchar("status", { length: 255 }).notNull(),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    finishedAt: text("finished_at"),
+    durationMs: integer("duration_ms"),
+    error: text("error"),
+    dryRun: boolean("dry_run").notNull().default(false),
+    // Set when one automation invoked another, so a chain can be traced.
+    parentRunId: integer("parent_run_id"),
+  },
+  (table) => [
+    index("idx_automation_runs_automation").on(
+      table.automationId,
+      table.startedAt,
+    ),
+    index("idx_automation_runs_user").on(table.userId, table.startedAt),
+  ],
+);
+
+export const automationRunSteps = pgTable(
+  "automation_run_steps",
+  {
+    id: serial("id").primaryKey(),
+    runId: integer("run_id")
+      .notNull()
+      .references(() => automationRuns.id, { onDelete: "cascade" }),
+    stepIndex: integer("step_index").notNull(),
+    stepId: text("step_id").notNull(),
+    stepType: text("step_type").notNull(),
+    status: varchar("status", { length: 255 }).notNull(),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    finishedAt: text("finished_at"),
+    output: text("output"),
+    error: text("error"),
+    truncated: boolean("truncated")
+      .notNull()
+      .default(false),
+  },
+  (table) => [
+    index("idx_automation_run_steps_run").on(table.runId, table.stepIndex),
+  ],
+);
+
+export const automationChannels = pgTable(
+  "automation_channels",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    channelId: integer("channel_id")
+      .notNull()
+      .references(() => notificationChannels.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_channels_pair").on(
+      table.automationId,
+      table.channelId,
+    ),
+  ],
+);
+// --- automations end ---
+
 // --- homepage begin ---
-export const homepageItems = pgTable("homepage_items", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  typeId: text("type_id").notNull(),
-  title: text("title"),
-  config: text("config").notNull().default("{}"),
-  folderId: integer("folder_id"),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const homepageItems = pgTable(
+  "homepage_items",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    typeId: text("type_id").notNull(),
+    title: text("title"),
+    config: text("config").notNull().default("{}"),
+    folderId: integer("folder_id"),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_homepage_items_user_id").on(table.userId)],
+);
 
 export const homepageLayouts = pgTable("homepage_layouts", {
   id: serial("id").primaryKey(),
@@ -1260,11 +1697,117 @@ export const homepageLayouts = pgTable("homepage_layouts", {
     .references(() => users.id, { onDelete: "cascade" }),
   // JSON: { entries: HomepageLayoutEntry[], pan: {x,y}, zoom: number }
   layout: text("layout").notNull().default("{}"),
-  updatedAt: text("updated_at")
+  updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- homepage end ---
+
+// --- fleets begin ---
+export const fleets = pgTable("fleets", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  color: text("color"),
+  icon: text("icon"),
+  // JSON array of { tag: string } rules, unioned with static fleetMembers at
+  // resolution time. Kept to tag-equality matching for v1.
+  tagRules: text("tag_rules"),
+  syncId: varchar("sync_id", { length: 255 }).unique(),
+  createdAt: varchar("created_at", { length: 255 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: varchar("updated_at", { length: 255 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const fleetMembers = pgTable(
+  "fleet_members",
+  {
+    id: serial("id").primaryKey(),
+    fleetId: integer("fleet_id")
+      .notNull()
+      .references(() => fleets.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    addedAt: text("added_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // fleet_id leads the unique pair, so listing a fleet's hosts is already
+  // served. Finding the fleets a host belongs to starts from host_id.
+  (table) => [
+    uniqueIndex("idx_fleet_members_fleet_host").on(table.fleetId, table.hostId),
+    index("idx_fleet_members_host").on(table.hostId),
+  ],
+);
+
+// Latest-only inventory snapshot per host, overwritten on each refresh - no
+// historical log, matching the "latest snapshot only" scope decision.
+export const fleetInventory = pgTable(
+  "fleet_inventory",
+  {
+    id: serial("id").primaryKey(),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    osPrettyName: text("os_pretty_name"),
+    kernel: text("kernel"),
+    architecture: text("architecture"),
+    hostname: text("hostname"),
+    uptimeSeconds: integer("uptime_seconds"),
+    ip: text("ip"),
+    packageManager: text("package_manager"),
+    collectedAt: text("collected_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // host_id leads the unique pair; a user's whole inventory is read by user_id.
+  (table) => [
+    uniqueIndex("idx_fleet_inventory_host").on(table.hostId, table.userId),
+    index("idx_fleet_inventory_user").on(table.userId),
+  ],
+);
+// --- fleets end ---
+
+// --- workspaces begin ---
+export const userWorkspaces = pgTable(
+  "user_workspaces",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    color: text("color"),
+    icon: text("icon"),
+    // "manual" | "last_session" - exactly one last_session row per user.
+    kind: text("kind").notNull().default("manual"),
+    isDefault: boolean("is_default")
+      .notNull()
+      .default(false),
+    // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
+    payload: text("payload").notNull().default("{}"),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    lastUsedAt: text("last_used_at"),
+  },
+  (table) => [index("idx_user_workspaces_user_id").on(table.userId)],
+);
+// --- workspaces end ---
 
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync
@@ -1282,3 +1825,118 @@ export const syncTombstones = pgTable("sync_tombstones", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- sync end ---
+
+// --- ai begin ---
+/**
+ * A user's connection to one AI provider. api_key is encrypted at rest via
+ * FieldCrypto; it is never returned to the frontend, which only ever sees
+ * api_key_prefix for display.
+ */
+export const aiProviders = pgTable(
+  "ai_providers",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // ollama | anthropic | openai | gemini | openai_compatible
+    providerType: text("provider_type").notNull(),
+    label: varchar("label", { length: 255 }).notNull(),
+    // Required for ollama and openai_compatible, optional elsewhere.
+    baseUrl: text("base_url"),
+    apiKey: text("api_key"),
+    // First few characters, kept in the clear so the UI can identify a key.
+    apiKeyPrefix: text("api_key_prefix"),
+    defaultModel: text("default_model"),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_ai_providers_user_label").on(table.userId, table.label),
+  ],
+);
+
+export const aiConversations = pgTable(
+  "ai_conversations",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title"),
+    providerId: integer("provider_id"),
+    model: text("model"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ai_conversations_user").on(table.userId, table.updatedAt),
+  ],
+);
+
+export const aiMessages = pgTable(
+  "ai_messages",
+  {
+    id: serial("id").primaryKey(),
+    conversationId: integer("conversation_id")
+      .notNull()
+      .references(() => aiConversations.id, { onDelete: "cascade" }),
+    // user | assistant | tool
+    role: text("role").notNull(),
+    content: text("content").notNull().default(""),
+    // Serialized tool calls and their results for this turn.
+    toolCalls: text("tool_calls"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ai_messages_conversation").on(
+      table.conversationId,
+      table.createdAt,
+    ),
+  ],
+);
+
+/**
+ * A change the assistant wants to make. Nothing here has been applied: the
+ * payload is re-validated against the tool schema at apply time and only then
+ * dispatched through the same repository logic a human action uses.
+ */
+export const aiProposals = pgTable(
+  "ai_proposals",
+  {
+    id: serial("id").primaryKey(),
+    conversationId: integer("conversation_id")
+      .notNull()
+      .references(() => aiConversations.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The propose_* tool name that produced this.
+    kind: text("kind").notNull(),
+    summary: text("summary"),
+    payload: text("payload").notNull().default("{}"),
+    // pending | applied | rejected | expired
+    status: varchar("status", { length: 255 }).notNull().default("pending"),
+    appliedAt: text("applied_at"),
+    resultSummary: text("result_summary"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ai_proposals_user").on(table.userId, table.status),
+    index("idx_ai_proposals_conversation").on(table.conversationId),
+  ],
+);
+// --- ai end ---
