@@ -1,3 +1,11 @@
+import { getErrorMessage } from "../../utils/error-message.js";
+import {
+  parseWsMessage,
+  asObject,
+  asString,
+  toTerminalDimension,
+} from "../../utils/ws-message.js";
+import { StringDecoder } from "string_decoder";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import ssh2Pkg, {
   type Client as SSHClientType,
@@ -19,7 +27,7 @@ import {
 import { SSHAuthManager } from "../auth-manager.js";
 import type { ProxyNode } from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
-import { createJumpHostChain } from "../jump-host-chain.js";
+import { createJumpHostChain, JumpHostChainError } from "../jump-host-chain.js";
 import {
   parseTailscaleCheckBanner,
   isTailscaleCheckCompleteBanner,
@@ -40,18 +48,28 @@ import {
 import {
   MemoryAgent,
   performPortKnocking,
-  resolveAgentSocket,
+  applyAgentAuth,
 } from "../terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../../utils/alert-trigger.js";
+import { getClientIp } from "../../utils/request-origin.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
+import { resolveSshKeepalive } from "../ssh-keepalive.js";
+import {
+  hostAddressMismatch,
+  HOST_ADDRESS_MISMATCH_MESSAGE,
+  HOST_NOT_ON_THIS_SERVER_MESSAGE,
+  resolveServerJumpHosts,
+} from "./host-identity.js";
 
 interface ConnectToHostData {
   cols: number;
   rows: number;
   hostConfig: {
     id: number;
+    /** Names the host across a sync pair; `id` only names it locally. */
+    syncId?: string | null;
     instanceId?: string;
     ip: string;
     port: number;
@@ -99,13 +117,6 @@ interface ResizeData {
 
 interface TOTPResponseData {
   code?: string;
-}
-
-interface WebSocketMessage {
-  type: string;
-  data?: ConnectToHostData | ResizeData | TOTPResponseData | string | unknown;
-  code?: string;
-  [key: string]: unknown;
 }
 
 const authManager = AuthManager.getInstance();
@@ -225,13 +236,13 @@ async function handleShareTokenConnection(
   });
 
   ws.on("message", (msg: RawData) => {
-    let parsed: WebSocketMessage;
+    let type: string;
+    let data: unknown;
     try {
-      parsed = JSON.parse(msg.toString()) as WebSocketMessage;
+      ({ type, data } = parseWsMessage(msg));
     } catch {
       return;
     }
-    const { type, data } = parsed;
 
     const liveSession = sessionManager.getSession(currentSessionId);
     const participant = liveSession
@@ -243,7 +254,8 @@ async function handleShareTokenConnection(
 
     switch (type) {
       case "input": {
-        const inputData = data as string;
+        if (typeof data !== "string") break;
+        const inputData = data;
         sessionManager.bufferInput(currentSessionId, inputData);
         const inputStream = liveSession?.sshStream;
         if (inputStream) {
@@ -326,7 +338,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       error,
       {
         operation: "websocket_connection_auth_error",
-        ip: req.socket.remoteAddress,
+        ip: getClientIp(req),
       },
     );
     ws.close(1008, "Authentication required");
@@ -465,20 +477,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    let parsed: WebSocketMessage;
+    let type: string;
+    let data: unknown;
     try {
-      parsed = JSON.parse(msg.toString()) as WebSocketMessage;
+      ({ type, data } = parseWsMessage(msg));
     } catch (e) {
-      sshLogger.error("Invalid JSON received", e, {
-        operation: "websocket_message_invalid_json",
+      sshLogger.warn("Rejected malformed WebSocket message", {
+        operation: "websocket_message_invalid",
         userId,
-        messageLength: msg.toString().length,
+        error: getErrorMessage(e),
       });
-      ws.send(JSON.stringify({ type: "error", message: "Invalid JSON" }));
+      ws.send(JSON.stringify({ type: "error", message: "Invalid message" }));
       return;
     }
-
-    const { type, data } = parsed;
 
     // Server-side gate: non-owner participants (read-only or read-write
     // guests/joiners) may only send input/ping/disconnect - everything else
@@ -495,231 +506,200 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }
 
-    switch (type) {
-      case "connectToHost": {
-        const connectData = data as ConnectToHostData;
-        if (connectData.hostConfig) {
-          connectData.hostConfig.userId = userId;
-        }
-        handleConnectToHost(connectData).catch((error) => {
-          const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
-          if (
-            errMsg.includes("Cannot parse privateKey") &&
-            errMsg.includes("no passphrase")
-          ) {
-            isAwaitingAuthCredentials = true;
+    try {
+      switch (type) {
+        case "connectToHost": {
+          const connectData = data as ConnectToHostData;
+          if (!connectData?.hostConfig) {
             ws.send(
               JSON.stringify({
-                type: "passphrase_required",
-                message:
-                  "The SSH key is encrypted. Please enter the passphrase to unlock it.",
+                type: "error",
+                message: "Missing host configuration",
               }),
             );
-            return;
+            break;
           }
-          sshLogger.error("Failed to connect to host", error, {
-            operation: "ssh_connect",
-            userId,
-            hostId: connectData.hostConfig?.id,
-            ip: connectData.hostConfig?.ip,
-          });
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message: "Failed to connect to host: " + errMsg,
-            }),
-          );
-        });
-        break;
-      }
-
-      case "attachSession": {
-        const attachData = data as {
-          sessionId: string;
-          cols: number;
-          rows: number;
-          tabInstanceId?: string;
-        };
-        sshLogger.info("Attempting to attach session", {
-          operation: "terminal_attach_session",
-          sessionId: attachData.sessionId,
-          tabInstanceId: attachData.tabInstanceId,
-          userId,
-          requestedCols: attachData.cols,
-          requestedRows: attachData.rows,
-        });
-        const session = sessionManager.attachWs(
-          attachData.sessionId,
-          userId,
-          ws,
-          attachData.tabInstanceId,
-        );
-        if (session) {
-          sshLogger.success("Session attached successfully", {
-            operation: "terminal_attach_success",
-            sessionId: attachData.sessionId,
-            sessionCreatedAt: session.createdAt,
-            wasDetached: !!session.lastDetachedAt,
-            detachedDuration: session.lastDetachedAt
-              ? Date.now() - session.lastDetachedAt
-              : 0,
-          });
-          currentSessionId = attachData.sessionId;
-          sshStream = session.sshStream;
-          sshConn = session.sshConn;
-          isConnecting = false;
-          isConnected = true;
-          const buffered = sessionManager.getBuffer(session);
-          if (buffered) {
-            ws.send(JSON.stringify({ type: "data", data: buffered }));
-          }
-          if (
-            attachData.cols !== session.cols ||
-            attachData.rows !== session.rows
-          ) {
-            session.sshStream?.setWindow(
-              attachData.rows,
-              attachData.cols,
-              attachData.rows,
-              attachData.cols,
-            );
-            session.cols = attachData.cols;
-            session.rows = attachData.rows;
-          }
-
-          ws.send(
-            JSON.stringify({
-              type: "sessionAttached",
-              sessionId: attachData.sessionId,
-            }),
-          );
-          ws.send(
-            JSON.stringify({
-              type: "connected",
-              message: "Session reattached",
-            }),
-          );
-        } else {
-          sshLogger.warn(
-            "Session attachment failed - will create new connection",
-            {
-              operation: "terminal_attach_failed",
-              sessionId: attachData.sessionId,
-              tabInstanceId: attachData.tabInstanceId,
-              userId,
-              reason: "session_not_found_or_invalid",
-            },
-          );
-          ws.send(
-            JSON.stringify({
-              type: "sessionExpired",
-              sessionId: attachData.sessionId,
-            }),
-          );
-        }
-        break;
-      }
-
-      case "listSessions": {
-        const sessions = sessionManager.getUserSessions(userId);
-        ws.send(
-          JSON.stringify({
-            type: "sessionList",
-            sessions: sessions.map((s) => ({
-              id: s.id,
-              hostId: s.hostId,
-              hostName: s.hostName,
-              createdAt: s.createdAt,
-              lastDetachedAt: s.lastDetachedAt,
-              tmuxSessionName: s.tmuxSessionName,
-            })),
-          }),
-        );
-        break;
-      }
-
-      case "resize": {
-        const resizeData = data as ResizeData;
-        handleResize(resizeData);
-        break;
-      }
-
-      case "disconnect": {
-        const disconnectSession = currentSessionId
-          ? sessionManager.getSession(currentSessionId)
-          : null;
-        const disconnectParticipant = disconnectSession
-          ? sessionManager.getParticipantForWs(disconnectSession, ws)
-          : null;
-        if (disconnectParticipant && !disconnectParticipant.isOwner) {
-          if (currentSessionId) {
-            sessionManager.removeParticipant(currentSessionId, ws);
-            currentSessionId = null;
-          }
-          break;
-        }
-        if (currentSessionId) {
-          sessionManager.destroySession(currentSessionId);
-          currentSessionId = null;
-        }
-        cleanupAuthState();
-        sshConn = null;
-        sshStream = null;
-        break;
-      }
-
-      case "get_cwd": {
-        const activeConn =
-          sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
-        if (!activeConn) {
-          ws.send(JSON.stringify({ type: "cwd", path: "/" }));
-          break;
-        }
-        activeConn.exec("pwd", (err, execStream) => {
-          if (err) {
-            ws.send(JSON.stringify({ type: "cwd", path: "/" }));
-            return;
-          }
-          let stdout = "";
-          execStream.on("data", (chunk: Buffer) => {
-            stdout += chunk.toString("utf-8");
-          });
-          execStream.stderr.on("data", () => {});
-          execStream.on("close", () => {
-            const cwd = stdout.trim() || "/";
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: "cwd", path: cwd }));
-            }
-          });
-        });
-        break;
-      }
-
-      case "open_file_in_editor": {
-        const { path: requestedPath } = data as { path: string };
-        const activeConn =
-          sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
-        if (!activeConn || !requestedPath) {
-          ws.send(
-            JSON.stringify({
-              type: "open_file_in_editor",
-              path: requestedPath || "/",
-            }),
-          );
-          break;
-        }
-        const escapedPath = requestedPath.replace(/'/g, "'\\''");
-        activeConn.exec(
-          `realpath '${escapedPath}' 2>/dev/null || echo '${escapedPath}'`,
-          (err, execStream) => {
-            if (err) {
+          connectData.hostConfig.userId = userId;
+          handleConnectToHost(connectData).catch((error) => {
+            const errMsg = getErrorMessage(error);
+            if (
+              errMsg.includes("Cannot parse privateKey") &&
+              errMsg.includes("no passphrase")
+            ) {
+              isAwaitingAuthCredentials = true;
               ws.send(
                 JSON.stringify({
-                  type: "open_file_in_editor",
-                  path: requestedPath,
+                  type: "passphrase_required",
+                  message:
+                    "The SSH key is encrypted. Please enter the passphrase to unlock it.",
                 }),
               );
+              return;
+            }
+            sshLogger.error("Failed to connect to host", error, {
+              operation: "ssh_connect",
+              userId,
+              hostId: connectData.hostConfig?.id,
+              ip: connectData.hostConfig?.ip,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Failed to connect to host: " + errMsg,
+              }),
+            );
+          });
+          break;
+        }
+
+        case "attachSession": {
+          const attachData = data as {
+            sessionId: string;
+            cols: number;
+            rows: number;
+            tabInstanceId?: string;
+          };
+          sshLogger.info("Attempting to attach session", {
+            operation: "terminal_attach_session",
+            sessionId: attachData.sessionId,
+            tabInstanceId: attachData.tabInstanceId,
+            userId,
+            requestedCols: attachData.cols,
+            requestedRows: attachData.rows,
+          });
+          const session = sessionManager.attachWs(
+            attachData.sessionId,
+            userId,
+            ws,
+            attachData.tabInstanceId,
+          );
+          if (session) {
+            sshLogger.success("Session attached successfully", {
+              operation: "terminal_attach_success",
+              sessionId: attachData.sessionId,
+              sessionCreatedAt: session.createdAt,
+              wasDetached: !!session.lastDetachedAt,
+              detachedDuration: session.lastDetachedAt
+                ? Date.now() - session.lastDetachedAt
+                : 0,
+            });
+            currentSessionId = attachData.sessionId;
+            sshStream = session.sshStream;
+            sshConn = session.sshConn;
+            isConnecting = false;
+            isConnected = true;
+            const buffered = sessionManager.getBuffer(session);
+            if (buffered) {
+              ws.send(JSON.stringify({ type: "data", data: buffered }));
+            }
+            const attachCols = toTerminalDimension(attachData.cols);
+            const attachRows = toTerminalDimension(attachData.rows);
+            if (
+              attachCols &&
+              attachRows &&
+              (attachCols !== session.cols || attachRows !== session.rows)
+            ) {
+              session.sshStream?.setWindow(
+                attachRows,
+                attachCols,
+                attachRows,
+                attachCols,
+              );
+              session.cols = attachCols;
+              session.rows = attachRows;
+            }
+
+            ws.send(
+              JSON.stringify({
+                type: "sessionAttached",
+                sessionId: attachData.sessionId,
+              }),
+            );
+            ws.send(
+              JSON.stringify({
+                type: "connected",
+                message: "Session reattached",
+              }),
+            );
+          } else {
+            sshLogger.warn(
+              "Session attachment failed - will create new connection",
+              {
+                operation: "terminal_attach_failed",
+                sessionId: attachData.sessionId,
+                tabInstanceId: attachData.tabInstanceId,
+                userId,
+                reason: "session_not_found_or_invalid",
+              },
+            );
+            ws.send(
+              JSON.stringify({
+                type: "sessionExpired",
+                sessionId: attachData.sessionId,
+              }),
+            );
+          }
+          break;
+        }
+
+        case "listSessions": {
+          const sessions = sessionManager.getUserSessions(userId);
+          ws.send(
+            JSON.stringify({
+              type: "sessionList",
+              sessions: sessions.map((s) => ({
+                id: s.id,
+                hostId: s.hostId,
+                hostName: s.hostName,
+                createdAt: s.createdAt,
+                lastDetachedAt: s.lastDetachedAt,
+                tmuxSessionName: s.tmuxSessionName,
+              })),
+            }),
+          );
+          break;
+        }
+
+        case "resize": {
+          const resizeData = data as ResizeData;
+          handleResize(resizeData);
+          break;
+        }
+
+        case "disconnect": {
+          const disconnectSession = currentSessionId
+            ? sessionManager.getSession(currentSessionId)
+            : null;
+          const disconnectParticipant = disconnectSession
+            ? sessionManager.getParticipantForWs(disconnectSession, ws)
+            : null;
+          if (disconnectParticipant && !disconnectParticipant.isOwner) {
+            if (currentSessionId) {
+              sessionManager.removeParticipant(currentSessionId, ws);
+              currentSessionId = null;
+            }
+            break;
+          }
+          if (currentSessionId) {
+            sessionManager.destroySession(currentSessionId);
+            currentSessionId = null;
+          }
+          cleanupAuthState();
+          sshConn = null;
+          sshStream = null;
+          break;
+        }
+
+        case "get_cwd": {
+          const activeConn =
+            sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
+          if (!activeConn) {
+            ws.send(JSON.stringify({ type: "cwd", path: "/" }));
+            break;
+          }
+          activeConn.exec("pwd", (err, execStream) => {
+            if (err) {
+              ws.send(JSON.stringify({ type: "cwd", path: "/" }));
               return;
             }
             let stdout = "";
@@ -728,593 +708,665 @@ wss.on("connection", async (ws: WebSocket, req) => {
             });
             execStream.stderr.on("data", () => {});
             execStream.on("close", () => {
-              const resolvedPath = stdout.trim() || requestedPath;
+              const cwd = stdout.trim() || "/";
               if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "cwd", path: cwd }));
+              }
+            });
+          });
+          break;
+        }
+
+        case "open_file_in_editor": {
+          const requestedPath = asString(asObject(data).path);
+          const activeConn =
+            sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
+          if (!activeConn || !requestedPath) {
+            ws.send(
+              JSON.stringify({
+                type: "open_file_in_editor",
+                path: requestedPath || "/",
+              }),
+            );
+            break;
+          }
+          const escapedPath = requestedPath.replace(/'/g, "'\\''");
+          activeConn.exec(
+            `realpath '${escapedPath}' 2>/dev/null || echo '${escapedPath}'`,
+            (err, execStream) => {
+              if (err) {
                 ws.send(
                   JSON.stringify({
                     type: "open_file_in_editor",
-                    path: resolvedPath,
+                    path: requestedPath,
                   }),
                 );
+                return;
               }
-            });
-          },
-        );
-        break;
-      }
-
-      case "input": {
-        const inputData = data as string;
-        if (currentSessionId) {
-          sessionManager.bufferInput(currentSessionId, inputData);
-        }
-        const inputStream =
-          sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
-        if (inputStream) {
-          if (inputData === "\t") {
-            inputStream.write(inputData);
-          } else if (
-            typeof inputData === "string" &&
-            inputData.startsWith("\x1b")
-          ) {
-            inputStream.write(inputData);
-          } else {
-            try {
-              inputStream.write(Buffer.from(inputData, "utf8"));
-            } catch (error) {
-              sshLogger.error("Error writing input to SSH stream", error, {
-                operation: "ssh_input_encoding",
-                userId,
-                dataLength: inputData.length,
+              let stdout = "";
+              execStream.on("data", (chunk: Buffer) => {
+                stdout += chunk.toString("utf-8");
               });
-              inputStream.write(Buffer.from(inputData, "latin1"));
+              execStream.stderr.on("data", () => {});
+              execStream.on("close", () => {
+                const resolvedPath = stdout.trim() || requestedPath;
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(
+                    JSON.stringify({
+                      type: "open_file_in_editor",
+                      path: resolvedPath,
+                    }),
+                  );
+                }
+              });
+            },
+          );
+          break;
+        }
+
+        case "input": {
+          if (typeof data !== "string") break;
+          const inputData = data;
+          if (currentSessionId) {
+            sessionManager.bufferInput(currentSessionId, inputData);
+          }
+          const inputStream =
+            sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
+          if (inputStream) {
+            if (inputData === "\t") {
+              inputStream.write(inputData);
+            } else if (
+              typeof inputData === "string" &&
+              inputData.startsWith("\x1b")
+            ) {
+              inputStream.write(inputData);
+            } else {
+              try {
+                inputStream.write(Buffer.from(inputData, "utf8"));
+              } catch (error) {
+                sshLogger.error("Error writing input to SSH stream", error, {
+                  operation: "ssh_input_encoding",
+                  userId,
+                  dataLength: inputData.length,
+                });
+                inputStream.write(Buffer.from(inputData, "latin1"));
+              }
             }
           }
+          break;
         }
-        break;
-      }
 
-      case "ping":
-        ws.send(JSON.stringify({ type: "pong" }));
-        break;
+        case "ping":
+          ws.send(JSON.stringify({ type: "pong" }));
+          break;
 
-      case "tmux_attach": {
-        const tmuxData = data as { sessionName: string };
-        const session = currentSessionId
-          ? sessionManager.getSession(currentSessionId)
-          : null;
-        if (session?.sshStream) {
-          const existingName = tmuxData.sessionName || undefined;
-          if (existingName) {
-            attachOrCreateTmuxSession(session.sshStream, existingName);
-            session.tmuxSessionName = existingName;
-            sshLogger.info("User selected tmux session to attach", {
-              operation: "tmux_user_attach",
-              sessionName: existingName,
+        case "tmux_attach": {
+          const tmuxData = data as { sessionName: string };
+          const session = currentSessionId
+            ? sessionManager.getSession(currentSessionId)
+            : null;
+          if (session?.sshStream) {
+            const existingName = tmuxData.sessionName || undefined;
+            if (existingName) {
+              attachOrCreateTmuxSession(session.sshStream, existingName);
+              session.tmuxSessionName = existingName;
+              sshLogger.info("User selected tmux session to attach", {
+                operation: "tmux_user_attach",
+                sessionName: existingName,
+                hostId: session.hostId,
+              });
+              ws.send(
+                JSON.stringify({
+                  type: "tmux_session_attached",
+                  sessionName: existingName,
+                }),
+              );
+            } else {
+              const newName = `termix-${session.hostId}-${Date.now().toString(36).slice(-4)}`;
+              attachOrCreateTmuxSession(session.sshStream, undefined, newName);
+              const sshConn = session.sshConn;
+              if (sshConn) {
+                (async () => {
+                  const confirmed = await waitForTmuxSession(sshConn, newName);
+                  session.tmuxSessionName = confirmed;
+                  sshLogger.info("User requested new tmux session", {
+                    operation: "tmux_user_create",
+                    sessionName: confirmed,
+                    hostId: session.hostId,
+                  });
+                  ws.send(
+                    JSON.stringify({
+                      type: "tmux_session_created",
+                      sessionName: confirmed,
+                    }),
+                  );
+                })();
+              }
+            }
+          }
+          break;
+        }
+
+        case "tmux_detach": {
+          const session = currentSessionId
+            ? sessionManager.getSession(currentSessionId)
+            : null;
+          if (session?.sshConn && session.tmuxSessionName) {
+            const tmuxName = session.tmuxSessionName;
+            session.sshStream?.write("\x02d");
+            session.tmuxSessionName = null;
+            sshLogger.info("User detached from tmux session", {
+              operation: "tmux_user_detach",
+              sessionName: tmuxName,
               hostId: session.hostId,
             });
             ws.send(
-              JSON.stringify({
-                type: "tmux_session_attached",
-                sessionName: existingName,
-              }),
+              JSON.stringify({ type: "tmux_detached", sessionName: tmuxName }),
             );
-          } else {
-            const newName = `termix-${session.hostId}-${Date.now().toString(36).slice(-4)}`;
-            attachOrCreateTmuxSession(session.sshStream, undefined, newName);
-            const sshConn = session.sshConn;
-            if (sshConn) {
-              (async () => {
-                const confirmed = await waitForTmuxSession(sshConn, newName);
-                session.tmuxSessionName = confirmed;
-                sshLogger.info("User requested new tmux session", {
-                  operation: "tmux_user_create",
-                  sessionName: confirmed,
-                  hostId: session.hostId,
-                });
-                ws.send(
-                  JSON.stringify({
-                    type: "tmux_session_created",
-                    sessionName: confirmed,
-                  }),
-                );
-              })();
+          }
+          break;
+        }
+
+        case "totp_response": {
+          const totpData = data as TOTPResponseData;
+          if (keyboardInteractiveFinish && totpData?.code) {
+            if (totpTimeout) {
+              clearTimeout(totpTimeout);
+              totpTimeout = null;
             }
-          }
-        }
-        break;
-      }
-
-      case "tmux_detach": {
-        const session = currentSessionId
-          ? sessionManager.getSession(currentSessionId)
-          : null;
-        if (session?.sshConn && session.tmuxSessionName) {
-          const tmuxName = session.tmuxSessionName;
-          session.sshStream?.write("\x02d");
-          session.tmuxSessionName = null;
-          sshLogger.info("User detached from tmux session", {
-            operation: "tmux_user_detach",
-            sessionName: tmuxName,
-            hostId: session.hostId,
-          });
-          ws.send(
-            JSON.stringify({ type: "tmux_detached", sessionName: tmuxName }),
-          );
-        }
-        break;
-      }
-
-      case "totp_response": {
-        const totpData = data as TOTPResponseData;
-        if (keyboardInteractiveFinish && totpData?.code) {
-          if (totpTimeout) {
-            clearTimeout(totpTimeout);
-            totpTimeout = null;
-          }
-          const totpCode = totpData.code;
-          keyboardInteractiveFinish([totpCode]);
-          keyboardInteractiveFinish = null;
-          totpPromptSent = false;
-        } else {
-          sshLogger.warn("TOTP response received but no callback available", {
-            operation: "totp_response_error",
-            userId,
-            hasCallback: !!keyboardInteractiveFinish,
-            hasCode: !!totpData?.code,
-          });
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message: "TOTP authentication state lost. Please reconnect.",
-            }),
-          );
-        }
-        break;
-      }
-
-      case "password_response": {
-        const passwordData = data as TOTPResponseData;
-        if (keyboardInteractiveFinish && passwordData?.code) {
-          if (totpTimeout) {
-            clearTimeout(totpTimeout);
-            totpTimeout = null;
-          }
-          const password = passwordData.code;
-          keyboardInteractiveFinish([password]);
-          keyboardInteractiveFinish = null;
-        } else {
-          sshLogger.warn(
-            "Password response received but no callback available",
-            {
-              operation: "password_response_error",
+            const totpCode = totpData.code;
+            keyboardInteractiveFinish([totpCode]);
+            keyboardInteractiveFinish = null;
+            totpPromptSent = false;
+          } else {
+            sshLogger.warn("TOTP response received but no callback available", {
+              operation: "totp_response_error",
               userId,
               hasCallback: !!keyboardInteractiveFinish,
-              hasCode: !!passwordData?.code,
-            },
-          );
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message: "Password authentication state lost. Please reconnect.",
-            }),
-          );
-        }
-        break;
-      }
-
-      case "warpgate_auth_continue": {
-        if (keyboardInteractiveFinish) {
-          if (warpgateAuthTimeout) {
-            clearTimeout(warpgateAuthTimeout);
-            warpgateAuthTimeout = null;
-          }
-          keyboardInteractiveFinish([""]);
-          keyboardInteractiveFinish = null;
-          warpgateAuthPromptSent = false;
-        }
-        break;
-      }
-
-      case "reconnect_with_credentials": {
-        const credentialsData = data as {
-          cols: number;
-          rows: number;
-          hostConfig: ConnectToHostData["hostConfig"];
-          password?: string;
-          sshKey?: string;
-          keyPassword?: string;
-        };
-
-        if (credentialsData.password) {
-          credentialsData.hostConfig.password = credentialsData.password;
-          credentialsData.hostConfig.authType = "password";
-          (
-            credentialsData.hostConfig as Record<string, unknown>
-          ).userProvidedPassword = true;
-        } else if (credentialsData.sshKey) {
-          credentialsData.hostConfig.key = credentialsData.sshKey;
-          credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
-          credentialsData.hostConfig.authType = "key";
-        } else if (credentialsData.keyPassword) {
-          credentialsData.hostConfig.keyPassword = credentialsData.keyPassword;
-        }
-
-        isAwaitingAuthCredentials = false;
-        if (currentSessionId) {
-          sessionManager.destroySession(currentSessionId);
-          currentSessionId = null;
-        }
-        cleanupAuthState();
-        sshConn = null;
-        sshStream = null;
-
-        const reconnectData: ConnectToHostData = {
-          cols: credentialsData.cols,
-          rows: credentialsData.rows,
-          hostConfig: credentialsData.hostConfig,
-        };
-
-        handleConnectToHost(reconnectData).catch((error) => {
-          const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
-          if (
-            errMsg.includes("Cannot parse privateKey") &&
-            errMsg.includes("no passphrase")
-          ) {
-            isAwaitingAuthCredentials = true;
+              hasCode: !!totpData?.code,
+            });
             ws.send(
               JSON.stringify({
-                type: "passphrase_required",
-                message:
-                  "The SSH key is encrypted. Please enter the passphrase to unlock it.",
+                type: "error",
+                message: "TOTP authentication state lost. Please reconnect.",
               }),
             );
-            return;
           }
-          sshLogger.error("Failed to reconnect with credentials", error, {
-            operation: "ssh_reconnect_with_credentials",
-            userId,
-            hostId: credentialsData.hostConfig?.id,
-            ip: credentialsData.hostConfig?.ip,
-          });
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message: "Failed to connect with provided credentials: " + errMsg,
-            }),
-          );
-        });
-        break;
-      }
+          break;
+        }
 
-      case "opkssh_start_auth": {
-        const opksshData = data as { hostId: number };
-        try {
-          const { startOPKSSHAuth } = await import("../opkssh-auth.js");
-          const { getRequestOrigin } =
-            await import("../../utils/request-origin.js");
-          const host =
-            await createCurrentHostResolutionRepository().findHostById(
-              opksshData.hostId,
-              userId,
-            );
-          if (!host) {
-            sshLogger.error(
-              `Host ${opksshData.hostId} not found for OPKSSH auth`,
+        case "password_response": {
+          const passwordData = data as TOTPResponseData;
+          if (keyboardInteractiveFinish && passwordData?.code) {
+            if (totpTimeout) {
+              clearTimeout(totpTimeout);
+              totpTimeout = null;
+            }
+            const password = passwordData.code;
+            keyboardInteractiveFinish([password]);
+            keyboardInteractiveFinish = null;
+          } else {
+            sshLogger.warn(
+              "Password response received but no callback available",
               {
-                operation: "opkssh_start_auth_host_not_found",
+                operation: "password_response_error",
                 userId,
-                hostId: opksshData.hostId,
+                hasCallback: !!keyboardInteractiveFinish,
+                hasCode: !!passwordData?.code,
               },
             );
             ws.send(
               JSON.stringify({
-                type: "opkssh_error",
-                requestId: "",
-                error: "Host not found",
+                type: "error",
+                message:
+                  "Password authentication state lost. Please reconnect.",
+              }),
+            );
+          }
+          break;
+        }
+
+        case "warpgate_auth_continue": {
+          if (keyboardInteractiveFinish) {
+            if (warpgateAuthTimeout) {
+              clearTimeout(warpgateAuthTimeout);
+              warpgateAuthTimeout = null;
+            }
+            keyboardInteractiveFinish([""]);
+            keyboardInteractiveFinish = null;
+            warpgateAuthPromptSent = false;
+          }
+          break;
+        }
+
+        case "reconnect_with_credentials": {
+          const credentialsData = data as {
+            cols: number;
+            rows: number;
+            hostConfig: ConnectToHostData["hostConfig"];
+            password?: string;
+            sshKey?: string;
+            keyPassword?: string;
+          };
+
+          if (!credentialsData?.hostConfig) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Missing host configuration",
               }),
             );
             break;
           }
-          const hostname = host.name || host.ip;
-          const requestOrigin = getRequestOrigin(req);
-          await startOPKSSHAuth(
-            userId,
-            opksshData.hostId,
-            hostname,
-            ws,
-            requestOrigin,
-          );
-        } catch (error) {
-          sshLogger.error("Failed to start OPKSSH auth", error, {
-            operation: "opkssh_start_auth_error",
-            userId,
-            hostId: opksshData.hostId,
-          });
-          ws.send(
-            JSON.stringify({
-              type: "opkssh_error",
-              requestId: "",
-              error: "Failed to start OPKSSH authentication",
-            }),
-          );
-        }
-        break;
-      }
 
-      case "opkssh_cancel": {
-        const cancelData = data as { requestId: string };
-        try {
-          const { cancelAuthSession } = await import("../opkssh-auth.js");
-          cancelAuthSession(cancelData.requestId);
-          resetConnectionState();
-        } catch (error) {
-          sshLogger.error("Failed to cancel OPKSSH auth", error, {
-            operation: "opkssh_cancel_error",
-            userId,
-          });
-        }
-        break;
-      }
+          if (credentialsData.password) {
+            credentialsData.hostConfig.password = credentialsData.password;
+            credentialsData.hostConfig.authType = "password";
+            (
+              credentialsData.hostConfig as Record<string, unknown>
+            ).userProvidedPassword = true;
+          } else if (credentialsData.sshKey) {
+            credentialsData.hostConfig.key = credentialsData.sshKey;
+            credentialsData.hostConfig.keyPassword =
+              credentialsData.keyPassword;
+            credentialsData.hostConfig.authType = "key";
+          } else if (credentialsData.keyPassword) {
+            credentialsData.hostConfig.keyPassword =
+              credentialsData.keyPassword;
+          }
 
-      case "opkssh_browser_opened": {
-        break;
-      }
+          isAwaitingAuthCredentials = false;
+          if (currentSessionId) {
+            sessionManager.destroySession(currentSessionId);
+            currentSessionId = null;
+          }
+          cleanupAuthState();
+          sshConn = null;
+          sshStream = null;
 
-      case "opkssh_auth_completed": {
-        const completedData = data as {
-          hostId: number;
-          cols?: number;
-          rows?: number;
-          hostConfig?: ConnectToHostData["hostConfig"];
-        };
+          const reconnectData: ConnectToHostData = {
+            cols: credentialsData.cols,
+            rows: credentialsData.rows,
+            hostConfig: credentialsData.hostConfig,
+          };
 
-        resetConnectionState();
-
-        const reconnectConfig: ConnectToHostData = {
-          cols: completedData.cols || 80,
-          rows: completedData.rows || 24,
-          hostConfig:
-            completedData.hostConfig ||
-            ({
-              id: completedData.hostId,
-              ip: "",
-              port: 22,
-              username: "",
+          handleConnectToHost(reconnectData).catch((error) => {
+            const errMsg = getErrorMessage(error);
+            if (
+              errMsg.includes("Cannot parse privateKey") &&
+              errMsg.includes("no passphrase")
+            ) {
+              isAwaitingAuthCredentials = true;
+              ws.send(
+                JSON.stringify({
+                  type: "passphrase_required",
+                  message:
+                    "The SSH key is encrypted. Please enter the passphrase to unlock it.",
+                }),
+              );
+              return;
+            }
+            sshLogger.error("Failed to reconnect with credentials", error, {
+              operation: "ssh_reconnect_with_credentials",
               userId,
-            } as ConnectToHostData["hostConfig"]),
-        };
-
-        handleConnectToHost(reconnectConfig).catch((error) => {
-          sshLogger.error("Failed to reconnect after OPKSSH auth", error, {
-            operation: "opkssh_reconnect_error",
-            userId,
-            hostId: completedData.hostId,
+              hostId: credentialsData.hostConfig?.id,
+              ip: credentialsData.hostConfig?.ip,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message:
+                  "Failed to connect with provided credentials: " + errMsg,
+              }),
+            );
           });
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message:
-                "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
-            }),
-          );
-        });
-        break;
-      }
+          break;
+        }
 
-      case "vault_start_auth": {
-        const vaultData = data as { hostId: number };
-        try {
-          const { loadVaultProfileForHost, startVaultAuth } =
-            await import("../vault-oidc-auth.js");
-          const { getRequestOrigin } =
-            await import("../../utils/request-origin.js");
-          const profile = await loadVaultProfileForHost(
-            vaultData.hostId,
-            userId,
-          );
-          if (!profile) {
+        case "opkssh_start_auth": {
+          const opksshData = data as { hostId: number };
+          try {
+            const { startOPKSSHAuth } = await import("../opkssh-auth.js");
+            const { getRequestOrigin } =
+              await import("../../utils/request-origin.js");
+            const host =
+              await createCurrentHostResolutionRepository().findHostById(
+                opksshData.hostId,
+                userId,
+              );
+            if (!host) {
+              sshLogger.error(
+                `Host ${opksshData.hostId} not found for OPKSSH auth`,
+                {
+                  operation: "opkssh_start_auth_host_not_found",
+                  userId,
+                  hostId: opksshData.hostId,
+                },
+              );
+              ws.send(
+                JSON.stringify({
+                  type: "opkssh_error",
+                  requestId: "",
+                  error: "Host not found",
+                }),
+              );
+              break;
+            }
+            const hostname = host.name || host.ip;
+            const requestOrigin = getRequestOrigin(req);
+            await startOPKSSHAuth(
+              userId,
+              opksshData.hostId,
+              hostname,
+              ws,
+              requestOrigin,
+            );
+          } catch (error) {
+            sshLogger.error("Failed to start OPKSSH auth", error, {
+              operation: "opkssh_start_auth_error",
+              userId,
+              hostId: opksshData.hostId,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "opkssh_error",
+                requestId: "",
+                error: "Failed to start OPKSSH authentication",
+              }),
+            );
+          }
+          break;
+        }
+
+        case "opkssh_cancel": {
+          const cancelData = data as { requestId: string };
+          try {
+            const { cancelAuthSession } = await import("../opkssh-auth.js");
+            cancelAuthSession(cancelData.requestId);
+            resetConnectionState();
+          } catch (error) {
+            sshLogger.error("Failed to cancel OPKSSH auth", error, {
+              operation: "opkssh_cancel_error",
+              userId,
+            });
+          }
+          break;
+        }
+
+        case "opkssh_browser_opened": {
+          break;
+        }
+
+        case "opkssh_auth_completed": {
+          const completedData = data as {
+            hostId: number;
+            cols?: number;
+            rows?: number;
+            hostConfig?: ConnectToHostData["hostConfig"];
+          };
+
+          resetConnectionState();
+
+          const reconnectConfig: ConnectToHostData = {
+            cols: completedData.cols || 80,
+            rows: completedData.rows || 24,
+            hostConfig:
+              completedData.hostConfig ||
+              ({
+                id: completedData.hostId,
+                ip: "",
+                port: 22,
+                username: "",
+                userId,
+              } as ConnectToHostData["hostConfig"]),
+          };
+
+          handleConnectToHost(reconnectConfig).catch((error) => {
+            sshLogger.error("Failed to reconnect after OPKSSH auth", error, {
+              operation: "opkssh_reconnect_error",
+              userId,
+              hostId: completedData.hostId,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message:
+                  "Failed to connect after authentication: " +
+                  getErrorMessage(error),
+              }),
+            );
+          });
+          break;
+        }
+
+        case "vault_start_auth": {
+          const vaultData = data as { hostId: number };
+          try {
+            const { loadVaultProfileForHost, startVaultAuth } =
+              await import("../vault-oidc-auth.js");
+            const { getRequestOrigin } =
+              await import("../../utils/request-origin.js");
+            const profile = await loadVaultProfileForHost(
+              vaultData.hostId,
+              userId,
+            );
+            if (!profile) {
+              ws.send(
+                JSON.stringify({
+                  type: "vault_error",
+                  hostId: vaultData.hostId,
+                  error: "No Vault signer profile configured for this host",
+                }),
+              );
+              break;
+            }
+            const requestOrigin = getRequestOrigin(req);
+            await startVaultAuth(
+              userId,
+              vaultData.hostId,
+              profile,
+              ws,
+              requestOrigin,
+            );
+          } catch (error) {
+            sshLogger.error("Failed to start Vault auth", error, {
+              operation: "vault_start_auth_error",
+              userId,
+              hostId: vaultData.hostId,
+            });
             ws.send(
               JSON.stringify({
                 type: "vault_error",
                 hostId: vaultData.hostId,
-                error: "No Vault signer profile configured for this host",
+                error: getErrorMessage(
+                  error,
+                  "Failed to start Vault authentication",
+                ),
               }),
             );
-            break;
           }
-          const requestOrigin = getRequestOrigin(req);
-          await startVaultAuth(
-            userId,
-            vaultData.hostId,
-            profile,
-            ws,
-            requestOrigin,
-          );
-        } catch (error) {
-          sshLogger.error("Failed to start Vault auth", error, {
-            operation: "vault_start_auth_error",
-            userId,
-            hostId: vaultData.hostId,
-          });
-          ws.send(
-            JSON.stringify({
-              type: "vault_error",
-              hostId: vaultData.hostId,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to start Vault authentication",
-            }),
-          );
+          break;
         }
-        break;
-      }
 
-      case "vault_cancel": {
-        const cancelData = data as { hostId: number };
-        try {
-          const { cancelVaultAuthByHost } =
-            await import("../vault-oidc-auth.js");
-          cancelVaultAuthByHost(userId, cancelData.hostId);
+        case "vault_cancel": {
+          const cancelData = data as { hostId: number };
+          try {
+            const { cancelVaultAuthByHost } =
+              await import("../vault-oidc-auth.js");
+            cancelVaultAuthByHost(userId, cancelData.hostId);
+            resetConnectionState();
+          } catch (error) {
+            sshLogger.error("Failed to cancel Vault auth", error, {
+              operation: "vault_cancel_error",
+              userId,
+            });
+          }
+          break;
+        }
+
+        case "vault_auth_completed": {
+          const completedData = data as {
+            hostId: number;
+            cols?: number;
+            rows?: number;
+            hostConfig?: ConnectToHostData["hostConfig"];
+          };
+
           resetConnectionState();
-        } catch (error) {
-          sshLogger.error("Failed to cancel Vault auth", error, {
-            operation: "vault_cancel_error",
-            userId,
-          });
-        }
-        break;
-      }
 
-      case "vault_auth_completed": {
-        const completedData = data as {
-          hostId: number;
-          cols?: number;
-          rows?: number;
-          hostConfig?: ConnectToHostData["hostConfig"];
-        };
+          const reconnectConfig: ConnectToHostData = {
+            cols: completedData.cols || 80,
+            rows: completedData.rows || 24,
+            hostConfig:
+              completedData.hostConfig ||
+              ({
+                id: completedData.hostId,
+                ip: "",
+                port: 22,
+                username: "",
+                userId,
+              } as ConnectToHostData["hostConfig"]),
+          };
 
-        resetConnectionState();
-
-        const reconnectConfig: ConnectToHostData = {
-          cols: completedData.cols || 80,
-          rows: completedData.rows || 24,
-          hostConfig:
-            completedData.hostConfig ||
-            ({
-              id: completedData.hostId,
-              ip: "",
-              port: 22,
-              username: "",
+          handleConnectToHost(reconnectConfig).catch((error) => {
+            sshLogger.error("Failed to reconnect after Vault auth", error, {
+              operation: "vault_reconnect_error",
               userId,
-            } as ConnectToHostData["hostConfig"]),
-        };
-
-        handleConnectToHost(reconnectConfig).catch((error) => {
-          sshLogger.error("Failed to reconnect after Vault auth", error, {
-            operation: "vault_reconnect_error",
-            userId,
-            hostId: completedData.hostId,
+              hostId: completedData.hostId,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message:
+                  "Failed to connect after authentication: " +
+                  getErrorMessage(error),
+              }),
+            );
           });
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message:
-                "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
-            }),
-          );
-        });
-        break;
-      }
-
-      case "joinSharedSession": {
-        const joinData = data as { shareId: string; tabInstanceId?: string };
-        try {
-          const shareRepo = createCurrentSessionShareRepository();
-          const share = await shareRepo.findActiveById(joinData.shareId);
-          if (
-            !share ||
-            share.shareType !== "user" ||
-            share.targetUserId !== userId ||
-            share.protocol !== "ssh"
-          ) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Share not found or not accessible",
-              }),
-            );
-            break;
-          }
-
-          const { PermissionManager } =
-            await import("../../utils/permission-manager.js");
-          const access = await PermissionManager.getInstance().canAccessHost(
-            userId,
-            share.hostId,
-            "connect",
-          );
-          if (!access.hasAccess) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Share not found or not accessible",
-              }),
-            );
-            break;
-          }
-
-          const joinedSession = sessionManager.joinAsParticipant(
-            share.sessionId,
-            ws,
-            {
-              userId,
-              permissionLevel: share.permissionLevel as
-                "read-write" | "read-only",
-              tabInstanceId: joinData.tabInstanceId,
-              shareId: share.id,
-            },
-          );
-          if (!joinedSession) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Shared session is no longer active",
-              }),
-            );
-            break;
-          }
-
-          currentSessionId = share.sessionId;
-          sshStream = joinedSession.sshStream;
-          sshConn = joinedSession.sshConn;
-          isConnecting = false;
-          isConnected = true;
-
-          shareRepo.touchShareUsage(share.id).catch(() => {});
-          shareRepo
-            .recordParticipantJoin(share.id, userId, null)
-            .catch(() => {});
-
-          const buffered = sessionManager.getBuffer(joinedSession);
-          if (buffered) {
-            ws.send(JSON.stringify({ type: "data", data: buffered }));
-          }
-          ws.send(
-            JSON.stringify({
-              type: "sessionAttached",
-              sessionId: share.sessionId,
-            }),
-          );
-          ws.send(
-            JSON.stringify({ type: "connected", message: "Joined session" }),
-          );
-        } catch (error) {
-          sshLogger.error("Failed to join shared session", error, {
-            operation: "terminal_join_shared_session_error",
-            userId,
-            shareId: joinData.shareId,
-          });
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message: "Failed to join shared session",
-            }),
-          );
+          break;
         }
-        break;
-      }
 
-      default:
-        sshLogger.warn("Unknown message type received", {
-          operation: "websocket_message_unknown_type",
-          userId,
-          messageType: type,
-        });
+        case "joinSharedSession": {
+          const joinData = data as { shareId: string; tabInstanceId?: string };
+          try {
+            const shareRepo = createCurrentSessionShareRepository();
+            const share = await shareRepo.findActiveById(joinData.shareId);
+            if (
+              !share ||
+              share.shareType !== "user" ||
+              share.targetUserId !== userId ||
+              share.protocol !== "ssh"
+            ) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "Share not found or not accessible",
+                }),
+              );
+              break;
+            }
+
+            const { PermissionManager } =
+              await import("../../utils/permission-manager.js");
+            const access = await PermissionManager.getInstance().canAccessHost(
+              userId,
+              share.hostId,
+              "connect",
+            );
+            if (!access.hasAccess) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "Share not found or not accessible",
+                }),
+              );
+              break;
+            }
+
+            const joinedSession = sessionManager.joinAsParticipant(
+              share.sessionId,
+              ws,
+              {
+                userId,
+                permissionLevel: share.permissionLevel as
+                  "read-write" | "read-only",
+                tabInstanceId: joinData.tabInstanceId,
+                shareId: share.id,
+              },
+            );
+            if (!joinedSession) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "Shared session is no longer active",
+                }),
+              );
+              break;
+            }
+
+            currentSessionId = share.sessionId;
+            sshStream = joinedSession.sshStream;
+            sshConn = joinedSession.sshConn;
+            isConnecting = false;
+            isConnected = true;
+
+            shareRepo.touchShareUsage(share.id).catch(() => {});
+            shareRepo
+              .recordParticipantJoin(share.id, userId, null)
+              .catch(() => {});
+
+            const buffered = sessionManager.getBuffer(joinedSession);
+            if (buffered) {
+              ws.send(JSON.stringify({ type: "data", data: buffered }));
+            }
+            ws.send(
+              JSON.stringify({
+                type: "sessionAttached",
+                sessionId: share.sessionId,
+              }),
+            );
+            ws.send(
+              JSON.stringify({ type: "connected", message: "Joined session" }),
+            );
+          } catch (error) {
+            sshLogger.error("Failed to join shared session", error, {
+              operation: "terminal_join_shared_session_error",
+              userId,
+              shareId: joinData.shareId,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Failed to join shared session",
+              }),
+            );
+          }
+          break;
+        }
+
+        default:
+          sshLogger.warn("Unknown message type received", {
+            operation: "websocket_message_unknown_type",
+            userId,
+            messageType: type,
+          });
+      }
+    } catch (error) {
+      // A malformed payload must never escape into the process-level
+      // unhandledRejection handler, which exits the server.
+      sshLogger.error("Error handling WebSocket message", error, {
+        operation: "websocket_message_handler_error",
+        userId,
+        messageType: type,
+      });
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: "Failed to process message",
+          }),
+        );
+      }
     }
   });
 
@@ -1322,6 +1374,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const { hostConfig, initialPath, executeCommand, tmuxAttachSession } = data;
     const {
       id,
+      syncId: hostSyncId,
       ip: rawIp,
       port: clientPort,
       username: clientUsername,
@@ -1471,23 +1524,78 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     if (id && userId) {
       try {
-        const { resolveHostById } = await import("../host-resolver.js");
-        resolvedHostData = (await resolveHostById(
-          id,
-          userId,
-        )) as unknown as typeof resolvedHostData;
+        const { resolveHostById, resolveHostBySyncId } =
+          await import("../host-resolver.js");
+
+        // Prefer the sync identity. A numeric id belongs to whichever database
+        // produced it, so on a sync server it names a different host than the
+        // desktop app meant; syncId is the same string on both sides.
+        resolvedHostData = (hostSyncId
+          ? await resolveHostBySyncId(hostSyncId, userId)
+          : await resolveHostById(id, userId)) as unknown as
+          typeof resolvedHostData | null;
+
+        if (hostSyncId && !resolvedHostData) {
+          sshLogger.error(
+            "Refusing to connect: host is not known to this server",
+            undefined,
+            {
+              operation: "ssh_connect_host_sync_id_unknown",
+              hostId: id,
+              userId,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: HOST_NOT_ON_THIS_SERVER_MESSAGE,
+            }),
+          );
+          cleanupAuthState(connectionTimeout);
+          return;
+        }
+
+        // Older clients send only the numeric id, which cannot be trusted to
+        // mean the same host here. Everything below is taken from the row it
+        // lands on -- the address, the credentials, the jump hosts, the stored
+        // host key -- so compare the address before using any of it.
+        if (
+          !hostSyncId &&
+          hostAddressMismatch(clientIp, resolvedHostData?.ip)
+        ) {
+          sshLogger.error(
+            "Refusing to connect: host id resolves to a different address here",
+            undefined,
+            {
+              operation: "ssh_connect_host_id_mismatch",
+              hostId: id,
+              userId,
+              clientIp,
+              resolvedIp: resolvedHostData?.ip,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: HOST_ADDRESS_MISMATCH_MESSAGE,
+            }),
+          );
+          cleanupAuthState(connectionTimeout);
+          return;
+        }
 
         if (resolvedHostData) {
-          if (
-            (!hostConfig.jumpHosts || hostConfig.jumpHosts.length === 0) &&
-            resolvedHostData.jumpHosts &&
-            resolvedHostData.jumpHosts.length > 0
-          ) {
-            hostConfig.jumpHosts = resolvedHostData.jumpHosts;
+          const resolvedJumpHosts = resolveServerJumpHosts(
+            hostConfig.jumpHosts,
+            resolvedHostData.jumpHosts,
+            hostSyncId,
+          );
+          if (resolvedJumpHosts !== hostConfig.jumpHosts) {
+            hostConfig.jumpHosts = resolvedJumpHosts;
             sendLog(
               "jump",
               "info",
-              `Loaded ${resolvedHostData.jumpHosts.length} jump host(s) from server-side host data`,
+              `Loaded ${resolvedJumpHosts?.length ?? 0} jump host(s) from server-side host data`,
             );
           }
 
@@ -1522,7 +1630,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve server-side host data for ${id}`, {
           operation: "ssh_host_data",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1563,7 +1671,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve host credentials for ${id}`, {
           operation: "ssh_credentials",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     } else if (credentialId && id && userId) {
@@ -1588,7 +1696,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           operation: "ssh_credentials",
           hostId: id,
           credentialId,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1633,8 +1741,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
         }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
+        const message = getErrorMessage(error);
         sshLogger.error("SSH hostname resolution failed", error, {
           operation: "terminal_dns_resolve",
           hostId: id,
@@ -1988,10 +2095,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           const boundSessionId = currentSessionId;
+          // A single TCP/SSH packet boundary can split a multi-byte UTF-8
+          // character (e.g. the box-drawing glyphs mc/htop use for borders).
+          // Buffer.toString("utf-8") on each chunk independently replaces the
+          // split bytes with U+FFFD, which shows up as corrupted/inserted
+          // characters. StringDecoder carries incomplete trailing bytes over
+          // to the next chunk so multi-byte characters decode correctly.
+          const decoder = new StringDecoder("utf-8");
 
           stream.on("data", (data: Buffer) => {
             try {
-              const utf8String = data.toString("utf-8");
+              const utf8String = decoder.write(data);
 
               if (!utf8String) return;
 
@@ -2184,7 +2298,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               id,
               hostConfig.userId,
               username,
-              req.socket.remoteAddress ?? "unknown",
+              getClientIp(req),
             ).catch(() => {});
           }
 
@@ -2220,8 +2334,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   operation: "activity_log_error",
                   userId: hostConfig.userId,
                   hostId: id,
-                  error:
-                    error instanceof Error ? error.message : "Unknown error",
+                  error: getErrorMessage(error),
                 });
               }
             })();
@@ -2698,6 +2811,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
     const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
+    const keepalive = resolveSshKeepalive(
+      hostKeepaliveInterval,
+      hostKeepaliveCountMax,
+      30000,
+      5,
+    );
 
     // Pre-fetch the stored host key before connect so the verifier callback
     // runs synchronously during SSH key exchange, avoiding LoginGraceTime
@@ -2709,14 +2828,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       port,
       username,
       tryKeyboard: resolvedCredentials.authType !== "tailscale",
-      keepaliveInterval:
-        typeof hostKeepaliveInterval === "number"
-          ? Math.max(5000, hostKeepaliveInterval * 1000)
-          : 30000,
-      keepaliveCountMax:
-        typeof hostKeepaliveCountMax === "number"
-          ? Math.max(1, hostKeepaliveCountMax)
-          : 5,
+      ...keepalive,
       readyTimeout:
         resolvedCredentials.authType === "tailscale"
           ? TAILSCALE_CHECK_TIMEOUT_MS
@@ -2828,18 +2940,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
               operation: "ca_cert_auth_setup_failed",
               userId,
               hostId: id,
-              error:
-                certError instanceof Error
-                  ? certError.message
-                  : String(certError),
+              error: getErrorMessage(certError, String(certError)),
             });
           }
         }
       } catch (keyError) {
-        const message =
-          keyError instanceof Error
-            ? keyError.message
-            : "Invalid private key format";
+        const message = getErrorMessage(keyError, "Invalid private key format");
         sshLogger.error("SSH key format error: " + message);
         ws.send(
           JSON.stringify({
@@ -2898,10 +3004,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           JSON.stringify({
             type: "error",
             message:
-              "OPKSSH authentication failed: " +
-              (opksshError instanceof Error
-                ? opksshError.message
-                : "Unknown error"),
+              "OPKSSH authentication failed: " + getErrorMessage(opksshError),
           }),
         );
         return;
@@ -2953,24 +3056,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
             type: "error",
             message:
               "Vault SSH signer authentication failed: " +
-              (vaultError instanceof Error
-                ? vaultError.message
-                : "Unknown error"),
+              getErrorMessage(vaultError),
           }),
         );
         return;
       }
     } else if (resolvedCredentials.authType === "agent") {
       sendLog("auth", "info", "Using SSH agent authentication");
-      const result = await resolveAgentSocket(
+      const result = await applyAgentAuth(
+        connectConfig,
         hostConfig.terminalConfig as Record<string, unknown> | undefined,
       );
       if ("error" in result) {
         ws.send(JSON.stringify({ type: "error", message: result.error }));
         return;
       }
-      const { createAgent } = ssh2Pkg;
-      connectConfig.agent = createAgent(result.socketPath);
       sendLog(
         "auth",
         "info",
@@ -3104,7 +3204,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             type: "error",
             message:
               "Cloudflare tunnel connection failed: " +
-              (cfError instanceof Error ? cfError.message : "Unknown error"),
+              getErrorMessage(cfError),
           }),
         );
         cleanupAuthState(connectionTimeout);
@@ -3188,7 +3288,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message: "Failed to connect through jump hosts",
+            message:
+              error instanceof JumpHostChainError
+                ? `Failed to connect through jump hosts: ${error.message}`
+                : "Failed to connect through jump hosts",
           }),
         );
         if (currentSessionId) {
@@ -3214,11 +3317,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message:
-              "Proxy connection failed: " +
-              (proxyError instanceof Error
-                ? proxyError.message
-                : "Unknown error"),
+            message: "Proxy connection failed: " + getErrorMessage(proxyError),
           }),
         );
         if (currentSessionId) {
@@ -3261,19 +3360,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   function handleResize(data: ResizeData) {
+    const cols = toTerminalDimension(data?.cols);
+    const rows = toTerminalDimension(data?.rows);
+    if (!cols || !rows) return;
+
     const resizeStream =
       sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
     if (resizeStream && resizeStream.setWindow) {
-      resizeStream.setWindow(data.rows, data.cols, data.rows, data.cols);
+      resizeStream.setWindow(rows, cols, rows, cols);
       const session = sessionManager.getSession(currentSessionId);
       if (session) {
-        session.cols = data.cols;
-        session.rows = data.rows;
-        sessionManager.bufferResize(session.id, data.cols, data.rows);
+        session.cols = cols;
+        session.rows = rows;
+        sessionManager.bufferResize(session.id, cols, rows);
       }
-      ws.send(
-        JSON.stringify({ type: "resized", cols: data.cols, rows: data.rows }),
-      );
+      ws.send(JSON.stringify({ type: "resized", cols, rows }));
     }
   }
 

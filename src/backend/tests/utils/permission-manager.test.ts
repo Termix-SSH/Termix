@@ -24,6 +24,11 @@ const accessState = vi.hoisted(() => ({
   } | null,
   touched: [] as number[],
   adminIds: new Set<string>(),
+  rolePermissionCalls: 0,
+  rolePermissions: [] as { permissions: string }[],
+  ownedHostIds: new Set<number>(),
+  visibleGrants: [] as { hostId: number }[],
+  ownedQueryCalls: 0,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -31,8 +36,13 @@ vi.mock("../../database/repositories/factory.js", () => ({
     isHostOwnedByUser: async (_hostId: number, userId: string) =>
       userId === accessState.ownerId,
     findHostOwnerId: async () => accessState.ownerId,
+    listOwnedHostIds: async () => {
+      accessState.ownedQueryCalls += 1;
+      return accessState.ownedHostIds;
+    },
   }),
   createCurrentRbacAccessRepository: () => ({
+    listVisibleHostAccessEntries: async () => accessState.visibleGrants,
     findActiveHostAccess: async () => accessState.grant,
     touchHostAccess: async (id: number) => {
       accessState.touched.push(id);
@@ -41,7 +51,10 @@ vi.mock("../../database/repositories/factory.js", () => ({
   }),
   createCurrentRoleRepository: () => ({
     listUserRoleIds: async () => [],
-    listUserRolePermissions: async () => [],
+    listUserRolePermissions: async () => {
+      accessState.rolePermissionCalls += 1;
+      return accessState.rolePermissions;
+    },
     userHasAnyRoleName: async () => false,
   }),
   createCurrentUserRepository: () => ({
@@ -193,5 +206,162 @@ describe("PermissionManager.canAccessHost level hierarchy", () => {
     const info = await manager.canAccessHost("stranger", 42, "manage");
     expect(info.hasAccess).toBe(false);
     expect(info.isAdminBypass).toBeUndefined();
+  });
+});
+
+describe("PermissionManager.getUserPermissions caching", () => {
+  let manager: PermissionManagerInstance;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    manager = PermissionManager.getInstance();
+    accessState.rolePermissionCalls = 0;
+    accessState.rolePermissions = [{ permissions: '["hosts.read"]' }];
+    manager.invalidateUserPermissionCache("cache-user");
+  });
+
+  it("serves repeat lookups from cache instead of re-querying roles", async () => {
+    expect(await manager.getUserPermissions("cache-user")).toEqual([
+      "hosts.read",
+    ]);
+    expect(await manager.getUserPermissions("cache-user")).toEqual([
+      "hosts.read",
+    ]);
+
+    expect(accessState.rolePermissionCalls).toBe(1);
+  });
+
+  it("re-reads roles after an explicit invalidation", async () => {
+    await manager.getUserPermissions("cache-user");
+    manager.invalidateUserPermissionCache("cache-user");
+    accessState.rolePermissions = [{ permissions: '["hosts.write"]' }];
+
+    expect(await manager.getUserPermissions("cache-user")).toEqual([
+      "hosts.write",
+    ]);
+    expect(accessState.rolePermissionCalls).toBe(2);
+  });
+
+  it("expires an entry once its own TTL has passed", async () => {
+    vi.useFakeTimers();
+    try {
+      await manager.getUserPermissions("cache-user");
+      // Just past the 5 minute TTL.
+      vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+      await manager.getUserPermissions("cache-user");
+
+      expect(accessState.rolePermissionCalls).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a still-fresh entry when the sweep runs", async () => {
+    vi.useFakeTimers();
+    try {
+      await manager.getUserPermissions("cache-user");
+      // Fire the periodic sweep without crossing this entry's own TTL. The
+      // old implementation cleared the whole map here, expiring every active
+      // user at once.
+      vi.advanceTimersByTime(5 * 60 * 1000 - 1000);
+      await manager.getUserPermissions("cache-user");
+
+      expect(accessState.rolePermissionCalls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns an empty set rather than throwing when role lookup fails", async () => {
+    manager.invalidateUserPermissionCache("boom-user");
+    accessState.rolePermissions = [{ permissions: "not-json" }];
+
+    expect(await manager.getUserPermissions("boom-user")).toEqual([]);
+  });
+});
+
+describe("PermissionManager.filterAccessibleHostIds", () => {
+  let manager: PermissionManagerInstance;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    manager = PermissionManager.getInstance();
+    accessState.adminIds = new Set();
+    accessState.ownedHostIds = new Set();
+    accessState.visibleGrants = [];
+    accessState.ownedQueryCalls = 0;
+  });
+
+  it("keeps hosts the user owns", async () => {
+    accessState.ownedHostIds = new Set([1, 2]);
+
+    const allowed = await manager.filterAccessibleHostIds("u1", [1, 2, 3]);
+
+    expect([...allowed].sort()).toEqual([1, 2]);
+  });
+
+  it("keeps hosts shared with the user", async () => {
+    accessState.visibleGrants = [{ hostId: 7 }];
+
+    const allowed = await manager.filterAccessibleHostIds("u1", [7, 8]);
+
+    expect([...allowed]).toEqual([7]);
+  });
+
+  it("combines owned and shared without duplicating", async () => {
+    accessState.ownedHostIds = new Set([1]);
+    accessState.visibleGrants = [{ hostId: 1 }, { hostId: 2 }];
+
+    const allowed = await manager.filterAccessibleHostIds("u1", [1, 2, 3]);
+
+    expect([...allowed].sort()).toEqual([1, 2]);
+  });
+
+  it("excludes another tenant's hosts", async () => {
+    accessState.ownedHostIds = new Set([1]);
+
+    const allowed = await manager.filterAccessibleHostIds("u1", [1, 99, 100]);
+
+    expect(allowed.has(99)).toBe(false);
+    expect(allowed.has(100)).toBe(false);
+  });
+
+  it("gives an admin every host without per-host lookups", async () => {
+    accessState.adminIds = new Set(["admin1"]);
+
+    const allowed = await manager.filterAccessibleHostIds(
+      "admin1",
+      [1, 2, 3, 4],
+    );
+
+    expect([...allowed].sort()).toEqual([1, 2, 3, 4]);
+  });
+
+  it("resolves the whole fleet with a single owned-hosts query", async () => {
+    accessState.ownedHostIds = new Set(
+      Array.from({ length: 500 }, (_, i) => i + 1),
+    );
+    const ids = Array.from({ length: 500 }, (_, i) => i + 1);
+
+    const allowed = await manager.filterAccessibleHostIds("u1", ids);
+
+    expect(allowed.size).toBe(500);
+    // The point of the batch path: cost does not scale with host count.
+    expect(accessState.ownedQueryCalls).toBe(1);
+  });
+
+  it("short-circuits an empty list without querying", async () => {
+    const allowed = await manager.filterAccessibleHostIds("u1", []);
+
+    expect(allowed.size).toBe(0);
+    expect(accessState.ownedQueryCalls).toBe(0);
+  });
+
+  it("fails closed when the lookup throws", async () => {
+    accessState.ownedHostIds = null as unknown as Set<number>;
+
+    const allowed = await manager.filterAccessibleHostIds("u1", [1, 2]);
+
+    expect(allowed.size).toBe(0);
   });
 });

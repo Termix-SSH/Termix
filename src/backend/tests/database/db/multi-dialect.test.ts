@@ -10,6 +10,7 @@ import Database from "better-sqlite3";
 import * as sqliteSchema from "../../../database/db/schema.js";
 import * as pgSchema from "../../../database/db/schema.pg.js";
 import * as mysqlSchema from "../../../database/db/schema.mysql.js";
+import { PERFORMANCE_INDEXES } from "../../../database/db/performance-indexes.js";
 import {
   DATABASE_DIALECT_ENV,
   isDatabaseDialect,
@@ -125,6 +126,40 @@ describe("generated schemas", () => {
       expect(schema.sshFolders.userId.notNull).toBe(true);
       expect(schema.sshFolders.syncId.isUnique).toBe(true);
     }
+  });
+
+  /**
+   * SQLite builds its indexes at runtime from PERFORMANCE_INDEXES; Postgres and
+   * MySQL only ever get what the migrations declare, which comes from schema.ts.
+   * Anything listed in one and missing from the other is an index the engines
+   * chosen for scale silently do without — which is how 31 of them went missing.
+   */
+  it("declares every performance index in schema.ts", () => {
+    // Both are the leading column of an existing composite unique index, which
+    // already serves the same lookup. A second index would be redundant.
+    const coveredByCompositePrefix = new Set([
+      "idx_user_roles_user_id", // idx_user_roles_user_role (user_id, role_id)
+      "idx_fleet_members_fleet", // idx_fleet_members_fleet_host (fleet_id, host_id)
+    ]);
+
+    const declared = new Set(
+      Object.values(sqliteSchema)
+        .filter((table): table is object => typeof table === "object")
+        .flatMap((table) => {
+          try {
+            return sqliteTableConfig(table as never).indexes;
+          } catch {
+            return [];
+          }
+        })
+        .map((index) => index.config.name),
+    );
+
+    const missing = PERFORMANCE_INDEXES.map((index) => index.name)
+      .filter((name) => !coveredByCompositePrefix.has(name))
+      .filter((name) => !declared.has(name));
+
+    expect(missing).toEqual([]);
   });
 });
 

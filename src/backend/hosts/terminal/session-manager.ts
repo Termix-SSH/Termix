@@ -14,6 +14,12 @@ const SESSION_LOGS_DIR = path.join(DATA_DIR, "session_logs");
 const DEFAULT_TIMEOUT_MINUTES = 30;
 const HEALTH_CHECK_INTERVAL_MS = 60_000;
 const MAX_SESSIONS_PER_USER = 10;
+// Coalesces recording writes: a chatty SSH stream can emit dozens of "data"
+// events per second, and appending to disk on every single one saturates the
+// libuv threadpool (default size 4), starving unrelated fs/DNS/crypto work
+// and stalling the WS ping/pong health check enough to look like connection
+// drops. Batch pending lines and flush on a short trailing edge instead.
+const RECORDING_FLUSH_INTERVAL_MS = 300;
 
 export interface SessionParticipant {
   ws: WebSocket;
@@ -54,6 +60,8 @@ export interface TerminalSession {
   recordingId: number | null;
   recordingWriteChain: Promise<void>;
   recordingPersistChain: Promise<void>;
+  pendingRecordingData: string;
+  recordingFlushTimer: NodeJS.Timeout | null;
   tmuxSessionName: string | null;
   sessionLoggingEnabled: boolean;
   sessionStartedAt: number;
@@ -199,6 +207,8 @@ class TerminalSessionManager {
       recordingId: null,
       recordingWriteChain: Promise.resolve(),
       recordingPersistChain: Promise.resolve(),
+      pendingRecordingData: "",
+      recordingFlushTimer: null,
       tmuxSessionName: null,
       sessionLoggingEnabled,
       sessionStartedAt: now,
@@ -599,6 +609,11 @@ class TerminalSessionManager {
 
   private maybePersistLog(session: TerminalSession, force = false): void {
     if (!session.sessionLoggingEnabled) return;
+    if (session.recordingFlushTimer) {
+      clearTimeout(session.recordingFlushTimer);
+      session.recordingFlushTimer = null;
+      this.flushRecording(session);
+    }
     if (session.recordingBytes === 0) return;
     if (!force && session.recordingBytes === session.lastPersistedBytes) return;
     session.lastPersistedBytes = session.recordingBytes;
@@ -710,21 +725,37 @@ class TerminalSessionManager {
       return;
     const elapsed = (Date.now() - session.sessionStartedAt) / 1000;
     const line = `${JSON.stringify([elapsed, type, data])}\n`;
-    const firstEvent = session.recordingBytes === 0;
     session.recordingBytes += Buffer.byteLength(line);
+    session.pendingRecordingData += line;
+
+    if (!session.recordingFlushTimer) {
+      session.recordingFlushTimer = setTimeout(() => {
+        session.recordingFlushTimer = null;
+        this.flushRecording(session);
+      }, RECORDING_FLUSH_INTERVAL_MS);
+    }
+  }
+
+  /** Coalesces buffered recording lines into a single disk write. */
+  private flushRecording(session: TerminalSession): void {
+    if (!session.recordingPath || !session.pendingRecordingData) return;
+    const chunk = session.pendingRecordingData;
+    session.pendingRecordingData = "";
+    const firstWrite = session.recordingBytes === Buffer.byteLength(chunk);
+
     session.recordingWriteChain = session.recordingWriteChain.then(async () => {
-      if (firstEvent) {
+      if (firstWrite) {
         await fs.promises.mkdir(path.dirname(session.recordingPath!), {
           recursive: true,
         });
         await fs.promises.writeFile(
           session.recordingPath!,
-          `${session.recordingHeader}${line}`,
+          `${session.recordingHeader}${chunk}`,
           "utf8",
         );
         return;
       }
-      await fs.promises.appendFile(session.recordingPath!, line, "utf8");
+      await fs.promises.appendFile(session.recordingPath!, chunk, "utf8");
     });
   }
 

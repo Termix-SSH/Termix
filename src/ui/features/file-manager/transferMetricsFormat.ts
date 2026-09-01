@@ -9,6 +9,17 @@ export function createFormatTransferMetrics(t: TFunction) {
   return (timings?: TransferTimings): string => {
     if (!timings) return "";
     const parts: string[] = [];
+    if (
+      timings.directBenchmarkMs !== undefined &&
+      timings.relayBenchmarkMs !== undefined
+    ) {
+      parts.push(
+        t("transfer.metricsRouteBenchmark", {
+          direct: formatDurationMs(timings.directBenchmarkMs),
+          relay: formatDurationMs(timings.relayBenchmarkMs),
+        }),
+      );
+    }
     if (timings.prepareDestMs !== undefined) {
       parts.push(
         t("transfer.metricsPrepare", {
@@ -52,6 +63,13 @@ export function createFormatTransferMetrics(t: TFunction) {
       parts.push(
         t("transfer.metricsExtract", {
           duration: formatDurationMs(timings.extractMs),
+        }),
+      );
+    }
+    if (timings.verifyMs !== undefined) {
+      parts.push(
+        t("transfer.metricsVerify", {
+          duration: formatDurationMs(timings.verifyMs),
         }),
       );
     }

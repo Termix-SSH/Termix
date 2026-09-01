@@ -11,6 +11,7 @@ import {
   connectSSH,
 } from "@/main-axios.ts";
 import { toast } from "sonner";
+import type { SSHHost } from "@/types/index";
 import { useTranslation } from "react-i18next";
 
 interface FileItem {
@@ -22,20 +23,6 @@ interface FileItem {
   permissions?: string;
   owner?: string;
   group?: string;
-}
-
-interface SSHHost {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  authType: "password" | "key";
-  credentialId?: number;
-  userId?: number;
 }
 
 interface FileWindowProps {
@@ -284,7 +271,9 @@ export function FileWindow({
 
         await ensureSSHConnection();
 
-        const response = await readSSHFile(sshSessionId, file.path);
+        const response = await readSSHFile(sshSessionId, file.path, {
+          force: true,
+        });
         const fileContent = response.content || "";
         setContent(fileContent);
         setPendingContent("");

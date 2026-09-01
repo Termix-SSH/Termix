@@ -1,11 +1,12 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
+import { registerCredentialBulkRoutes } from "./credential-bulk-routes.js";
 import {
   logAudit,
   getAuditUsername,
@@ -224,8 +225,7 @@ router.post(
         username,
       });
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to create credential",
+        error: getErrorMessage(err, "Failed to create credential"),
       });
     }
   },
@@ -308,6 +308,11 @@ router.get(
   },
 );
 
+// Registered here (before the PUT /:id route below) so the literal
+// "/reorder" path segment is matched before Express falls through to the
+// PUT /:id param route and treats "reorder" as an id.
+registerCredentialBulkRoutes(router, authenticateJWT);
+
 /**
  * @openapi
  * /credentials/{id}:
@@ -377,8 +382,166 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to fetch credential",
+        error: getErrorMessage(err, "Failed to fetch credential"),
+      });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /credentials/{id}/duplicate:
+ *   post:
+ *     summary: Duplicate a credential
+ *     description: Creates a new credential from an existing one, optionally overriding fields (e.g. password), leaving the original credential untouched.
+ *     tags:
+ *       - Credentials
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               key:
+ *                 type: string
+ *               keyPassword:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: New credential created from the duplicate.
+ *       400:
+ *         description: Invalid request.
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         description: Failed to duplicate credential.
+ */
+router.post(
+  "/:id/duplicate",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { name, username, password, key, keyPassword, certPublicKey } =
+      req.body ?? {};
+
+    if (!isNonEmptyString(userId) || !id) {
+      authLogger.warn("Invalid request for credential duplicate");
+      return res.status(400).json({ error: "Invalid request" });
+    }
+    if (!isNonEmptyString(name)) {
+      return res.status(400).json({ error: "Name is required" });
+    }
+
+    const credentialId = parseInt(id);
+
+    try {
+      const credentialRepository = createCurrentCredentialRepository();
+      const source = await credentialRepository.findDecryptedByIdForUser(
+        userId,
+        credentialId,
+      );
+
+      if (!source) {
+        return res.status(404).json({ error: "Credential not found" });
+      }
+
+      const authType = source.authType;
+      const plainPassword =
+        password !== undefined ? password || null : source.password;
+      const plainKey = key !== undefined ? key || null : source.key;
+      const plainKeyPassword =
+        keyPassword !== undefined ? keyPassword || null : source.keyPassword;
+
+      let keyInfo = null;
+      if (authType === "key" && plainKey) {
+        keyInfo = parseSSHKey(plainKey, plainKeyPassword);
+        if (!keyInfo.success) {
+          return res.status(400).json({
+            error: keyInfo.error
+              ? `Invalid SSH key: ${keyInfo.error}`
+              : "Unrecognized SSH key format. Use an OpenSSH, PEM, or PuTTY PPK v2 RSA/DSA private key.",
+          });
+        }
+      }
+
+      const credentialData = {
+        userId,
+        name: name.trim(),
+        description: source.description,
+        folder: source.folder,
+        tags: source.tags,
+        authType,
+        username:
+          username !== undefined ? username?.trim() || null : source.username,
+        password: authType === "password" ? plainPassword : null,
+        key: authType === "key" ? plainKey : null,
+        privateKey: authType === "key" ? keyInfo?.privateKey || plainKey : null,
+        publicKey: authType === "key" ? keyInfo?.publicKey || null : null,
+        keyPassword: authType === "key" ? plainKeyPassword : null,
+        keyType: source.keyType,
+        detectedKeyType: authType === "key" ? keyInfo?.keyType || null : null,
+        certPublicKey:
+          authType === "key"
+            ? certPublicKey !== undefined
+              ? certPublicKey?.trim() || null
+              : source.certPublicKey
+            : null,
+        usageCount: 0,
+        lastUsed: null,
+      };
+
+      const created = await credentialRepository.createEncryptedForUser(
+        userId,
+        credentialData,
+      );
+
+      const { ipAddress: dupIp, userAgent: dupUa } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "duplicate_credential",
+        resourceType: "credential",
+        resourceId: String(created.id),
+        resourceName: name,
+        ipAddress: dupIp,
+        userAgent: dupUa,
+        success: true,
+      });
+
+      authLogger.success(
+        `SSH credential duplicated: ${name} (from ${credentialId}) by user ${userId}`,
+        {
+          operation: "credential_duplicate_success",
+          userId,
+          sourceCredentialId: credentialId,
+          credentialId: created.id,
+        },
+      );
+
+      res.status(201).json(formatCredentialOutput(created));
+    } catch (err) {
+      authLogger.error("Failed to duplicate credential", err, {
+        operation: "credential_duplicate",
+        userId,
+        credentialId,
+      });
+      res.status(500).json({
+        error: getErrorMessage(err, "Failed to duplicate credential"),
       });
     }
   },
@@ -551,8 +714,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to update credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to update credential",
+        error: getErrorMessage(err, "Failed to update credential"),
       });
     }
   },
@@ -678,8 +840,7 @@ router.delete(
     } catch (err) {
       authLogger.error("Failed to delete credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to delete credential",
+        error: getErrorMessage(err, "Failed to delete credential"),
       });
     }
   },
@@ -766,10 +927,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to apply credential to host", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to apply credential to host",
+        error: getErrorMessage(err, "Failed to apply credential to host"),
       });
     }
   },
@@ -822,10 +980,7 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch hosts using credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to fetch hosts using credential",
+        error: getErrorMessage(err, "Failed to fetch hosts using credential"),
       });
     }
   },
@@ -845,6 +1000,8 @@ function formatCredentialOutput(
           ? credential.tags.split(",").filter(Boolean)
           : []
         : [],
+    pin: !!credential.pin,
+    sortOrder: credential.sortOrder ?? null,
     authType: credential.authType,
     username: credential.username || null,
     publicKey: credential.publicKey,

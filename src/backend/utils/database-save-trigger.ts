@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import { databaseLogger } from "./logger.js";
 
 export class DatabaseSaveTrigger {
@@ -48,7 +49,7 @@ export class DatabaseSaveTrigger {
         databaseLogger.error("Database save failed", error, {
           operation: "db_save_trigger_failed",
           reason,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }, 2000);
@@ -78,7 +79,7 @@ export class DatabaseSaveTrigger {
       databaseLogger.error("Database force save failed", error, {
         operation: "db_save_trigger_force_failed",
         reason,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
       throw error;
     }

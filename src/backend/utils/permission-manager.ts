@@ -16,7 +16,7 @@ const SHARE_PERMISSION_LEVELS = ["connect", "view", "edit", "manage"] as const;
 
 type SharePermissionLevel = (typeof SHARE_PERMISSION_LEVELS)[number];
 
-type HostAction = SharePermissionLevel | "delete";
+export type HostAction = SharePermissionLevel | "delete";
 
 const LEVEL_RANK: Record<SharePermissionLevel, number> = {
   connect: 1,
@@ -70,8 +70,12 @@ class PermissionManager {
       });
     }, 60 * 1000);
 
+    // Entries expire on read against their own timestamp, so this sweep only
+    // has to drop ones nobody has come back for. Flushing the whole map on a
+    // timer instead expired every active user at the same instant, so each
+    // sweep was followed by a burst of simultaneous role lookups.
     setInterval(() => {
-      this.clearPermissionCache();
+      this.evictExpiredPermissions();
     }, this.CACHE_TTL);
   }
 
@@ -92,8 +96,13 @@ class PermissionManager {
     }
   }
 
-  private clearPermissionCache(): void {
-    this.permissionCache.clear();
+  private evictExpiredPermissions(): void {
+    const now = Date.now();
+    for (const [userId, entry] of this.permissionCache) {
+      if (now - entry.timestamp >= this.CACHE_TTL) {
+        this.permissionCache.delete(userId);
+      }
+    }
   }
 
   invalidateUserPermissionCache(userId: string): void {
@@ -112,10 +121,22 @@ class PermissionManager {
 
       const allPermissions = new Set<string>();
       for (const record of userRoleRecords) {
+        // A role can legitimately have no permissions column yet, and
+        // JSON.parse(null) returns null rather than throwing, which used to
+        // blow up the loop and leave the user with no permissions at all.
+        if (!record.permissions) continue;
+
         try {
-          const permissions = JSON.parse(record.permissions) as string[];
-          for (const perm of permissions) {
-            allPermissions.add(perm);
+          const parsed = JSON.parse(record.permissions) as unknown;
+          if (!Array.isArray(parsed)) {
+            databaseLogger.warn("Role permissions are not a list", {
+              operation: "get_user_permissions",
+              userId,
+            });
+            continue;
+          }
+          for (const perm of parsed) {
+            if (typeof perm === "string") allPermissions.add(perm);
           }
         } catch (parseError) {
           databaseLogger.warn("Failed to parse role permissions", {
@@ -268,6 +289,55 @@ class PermissionManager {
     }
   }
 
+  /**
+   * The subset of `hostIds` this user may reach, resolved in a fixed number of
+   * queries instead of one call per host.
+   *
+   * canAccessHost costs between one and four queries, so filtering a list with
+   * it is linear in host count — and the status poll does exactly that every
+   * few seconds for the whole fleet. This answers the same question for many
+   * hosts at once using the same three rules, in the same order: owner, then
+   * an unexpired grant, then admin bypass.
+   *
+   * Deliberately limited to read-style checks. It does not touch grant
+   * timestamps the way `canAccessHost(..., "connect")` does, because this is
+   * used for visibility filtering rather than for opening a connection.
+   */
+  async filterAccessibleHostIds(
+    userId: string,
+    hostIds: number[],
+  ): Promise<Set<number>> {
+    if (hostIds.length === 0) return new Set();
+
+    try {
+      if (await this.isAdmin(userId)) {
+        return new Set(hostIds);
+      }
+
+      const owned =
+        await createCurrentHostResolutionRepository().listOwnedHostIds(userId);
+
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
+      const grants =
+        await createCurrentRbacAccessRepository().listVisibleHostAccessEntries(
+          userId,
+          roleIds,
+        );
+      const granted = new Set(grants.map((grant) => grant.hostId));
+
+      return new Set(hostIds.filter((id) => owned.has(id) || granted.has(id)));
+    } catch (error) {
+      databaseLogger.error("Failed to filter accessible hosts", error, {
+        operation: "filter_accessible_hosts",
+        userId,
+      });
+      // Fail closed: showing nothing is safer than showing another
+      // tenant's hosts.
+      return new Set();
+    }
+  }
+
   // Admins get owner-equivalent access to every host; each connect is
   // audit-logged in the host resolver.
   private adminBypassAccess(): HostAccessInfo {
@@ -416,5 +486,4 @@ export type {
   HostAccessInfo,
   PermissionCheckResult,
   SharePermissionLevel,
-  HostAction,
 };

@@ -1,0 +1,17 @@
+Termix has been installed.
+
+Service:
+  {{ include "termix.fullname" . }}:{{ .Values.service.port }}
+
+{{- if .Values.ingress.enabled }}
+Ingress hosts:
+{{- range .Values.ingress.hosts }}
+  - {{ .host }}
+{{- end }}
+{{- else if .Values.traefik.ingressRoute.enabled }}
+Traefik IngressRoute:
+  https://{{ .Values.traefik.ingressRoute.host }}{{ .Values.traefik.ingressRoute.pathPrefix }}
+{{- else }}
+Port-forward for local testing:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "termix.fullname" . }} 8080:{{ .Values.service.port }}
+{{- end }}

@@ -9,8 +9,12 @@ import {
   DialogTitle,
 } from "@/components/dialog";
 import { toast } from "sonner";
-import type { SSOProvider, SSOProviderType } from "@/types/index";
-import type { OIDCProviderConfig, LDAPProviderConfig } from "@/types/index";
+import {
+  type LDAPProviderConfig,
+  type OIDCProviderConfig,
+  type SSOProvider,
+  type SSOProviderType,
+} from "@/types/index";
 import { createSSOProvider, updateSSOProvider } from "@/api/sso-provider-api";
 import { Select2 } from "@/components/select2";
 
@@ -76,7 +80,7 @@ function emptyOidc(): OIDCProviderConfig {
   };
 }
 
-function emptyLdap(): LDAPProviderConfig {
+function emptyLdap(): Required<LDAPProviderConfig> {
   return {
     host: "",
     port: 389,
@@ -383,7 +387,8 @@ export function SSOProviderDialog({
             </Button>
             <Button
               size="sm"
-              className="text-xs bg-accent-brand text-white hover:bg-accent-brand/90"
+              variant="outline"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
               onClick={handleSave}
               disabled={saving}
             >

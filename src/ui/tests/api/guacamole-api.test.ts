@@ -9,12 +9,16 @@ const remoteApiMock = vi.hoisted(() => ({
   post: vi.fn(async () => ({ data: { token: "remote-token" } })),
 }));
 const isElectronMock = vi.hoisted(() => vi.fn(() => false));
+const resolveRemoteHostIdMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/main-axios", () => ({
   authApi: authApiMock,
   getRemoteGuacamoleApi: () => remoteApiMock,
   isElectron: isElectronMock,
   handleApiError: (error: unknown) => error,
+}));
+vi.mock("@/lib/remote-server-api", () => ({
+  resolveRemoteHostId: resolveRemoteHostIdMock,
 }));
 
 import {
@@ -27,6 +31,7 @@ beforeEach(() => {
   authApiMock.post.mockClear();
   remoteApiMock.get.mockClear();
   remoteApiMock.post.mockClear();
+  resolveRemoteHostIdMock.mockReset();
 });
 
 describe("guacamole API origin", () => {
@@ -60,19 +65,55 @@ describe("guacamole API origin", () => {
 
   it("sends the connect-host payload unchanged to the remote server", async () => {
     isElectronMock.mockReturnValue(true);
+    resolveRemoteHostIdMock.mockResolvedValue(41);
 
-    await getGuacamoleTokenFromHost(9, "rdp", {
-      username: "admin",
-      password: "secret",
-    });
+    await getGuacamoleTokenFromHost(
+      9,
+      "rdp",
+      {
+        username: "admin",
+        password: "secret",
+        domain: "EXAMPLE",
+      },
+      "host-sync-id",
+    );
 
     expect(remoteApiMock.post).toHaveBeenCalledWith(
-      "/guacamole/connect-host/9",
+      "/guacamole/connect-host/41",
       {
         protocol: "rdp",
         promptedUsername: "admin",
         promptedPassword: "secret",
+        promptedDomain: "EXAMPLE",
       },
     );
+    expect(resolveRemoteHostIdMock).toHaveBeenCalledWith("host-sync-id");
+  });
+
+  it("sends an empty prompted domain for local RDP accounts", async () => {
+    isElectronMock.mockReturnValue(false);
+
+    await getGuacamoleTokenFromHost(9, "rdp", {
+      username: "local-admin",
+      password: "secret",
+      domain: "",
+    });
+
+    expect(authApiMock.post).toHaveBeenCalledWith("/guacamole/connect-host/9", {
+      protocol: "rdp",
+      promptedUsername: "local-admin",
+      promptedPassword: "secret",
+      promptedDomain: "",
+    });
+  });
+
+  it("does not fall back to a colliding local id when sync resolution fails", async () => {
+    isElectronMock.mockReturnValue(true);
+    resolveRemoteHostIdMock.mockResolvedValue(null);
+
+    await expect(
+      getGuacamoleTokenFromHost(9, "rdp", undefined, "missing-sync-id"),
+    ).rejects.toThrow("The synced host does not exist on the remote server");
+    expect(remoteApiMock.post).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,10 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { SerialPort } from "serialport";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { sshLogger } from "../utils/logger.js";
+import { parseWsMessage } from "../utils/ws-message.js";
 
 interface SerialConnectData {
   path: string;
@@ -10,11 +12,6 @@ interface SerialConnectData {
   dataBits?: 5 | 6 | 7 | 8;
   stopBits?: 1 | 2;
   parity?: "none" | "even" | "odd";
-}
-
-interface WebSocketMessage {
-  type: string;
-  data?: SerialConnectData | string | unknown;
 }
 
 const authManager = AuthManager.getInstance();
@@ -92,110 +89,117 @@ wss.on("connection", async (ws: WebSocket, req) => {
   };
 
   ws.on("message", async (raw: RawData) => {
-    let parsed: WebSocketMessage;
+    let type: string;
+    let data: unknown;
     try {
-      parsed = JSON.parse(raw.toString()) as WebSocketMessage;
+      ({ type, data } = parseWsMessage(raw));
     } catch {
       return;
     }
 
-    const { type, data } = parsed;
-
-    switch (type) {
-      case "list_ports": {
-        try {
-          const ports = await SerialPort.list();
-          send({ type: "ports_list", data: ports });
-        } catch (err) {
-          send({
-            type: "error",
-            data: err instanceof Error ? err.message : "Failed to list ports",
-          });
-        }
-        break;
-      }
-
-      case "connect": {
-        if (port?.isOpen) {
-          port.close();
-          port = null;
-        }
-
-        const cfg = data as SerialConnectData;
-        if (!cfg?.path || !cfg?.baudRate) {
-          send({ type: "error", data: "Missing port path or baud rate" });
+    try {
+      switch (type) {
+        case "list_ports": {
+          try {
+            const ports = await SerialPort.list();
+            send({ type: "ports_list", data: ports });
+          } catch (err) {
+            send({
+              type: "error",
+              data: getErrorMessage(err, "Failed to list ports"),
+            });
+          }
           break;
         }
 
-        try {
-          port = new SerialPort({
-            path: cfg.path,
-            baudRate: cfg.baudRate,
-            dataBits: cfg.dataBits ?? 8,
-            stopBits: cfg.stopBits ?? 1,
-            parity: cfg.parity ?? "none",
-            autoOpen: false,
-          });
+        case "connect": {
+          if (port?.isOpen) {
+            port.close();
+            port = null;
+          }
 
-          port.open((err) => {
-            if (err) {
-              sshLogger.error("Serial port open failed", err, {
-                operation: "serial_open",
-                path: cfg.path,
-                userId,
-              });
-              send({ type: "error", data: err.message });
-              port = null;
-              return;
-            }
-            sshLogger.info("Serial port opened", {
-              operation: "serial_open",
+          const cfg = data as SerialConnectData;
+          if (!cfg?.path || !cfg?.baudRate) {
+            send({ type: "error", data: "Missing port path or baud rate" });
+            break;
+          }
+
+          try {
+            port = new SerialPort({
               path: cfg.path,
               baudRate: cfg.baudRate,
-              userId,
+              dataBits: cfg.dataBits ?? 8,
+              stopBits: cfg.stopBits ?? 1,
+              parity: cfg.parity ?? "none",
+              autoOpen: false,
             });
-            send({ type: "connected" });
-          });
 
-          port.on("data", (chunk: Buffer) => {
-            send({ type: "data", data: chunk.toString("binary") });
-          });
+            port.open((err) => {
+              if (err) {
+                sshLogger.error("Serial port open failed", err, {
+                  operation: "serial_open",
+                  path: cfg.path,
+                  userId,
+                });
+                send({ type: "error", data: err.message });
+                port = null;
+                return;
+              }
+              sshLogger.info("Serial port opened", {
+                operation: "serial_open",
+                path: cfg.path,
+                baudRate: cfg.baudRate,
+                userId,
+              });
+              send({ type: "connected" });
+            });
 
-          port.on("error", (err) => {
-            send({ type: "error", data: err.message });
-          });
+            port.on("data", (chunk: Buffer) => {
+              send({ type: "data", data: chunk.toString("binary") });
+            });
 
-          port.on("close", () => {
-            send({ type: "disconnected" });
-            port = null;
-          });
-        } catch (err) {
-          send({
-            type: "error",
-            data:
-              err instanceof Error ? err.message : "Failed to open serial port",
-          });
-        }
-        break;
-      }
+            port.on("error", (err) => {
+              send({ type: "error", data: err.message });
+            });
 
-      case "input": {
-        if (!port?.isOpen) break;
-        const input = typeof data === "string" ? data : "";
-        if (!input) break;
-        port.write(Buffer.from(input, "binary"), (err) => {
-          if (err) {
-            send({ type: "error", data: err.message });
+            port.on("close", () => {
+              send({ type: "disconnected" });
+              port = null;
+            });
+          } catch (err) {
+            send({
+              type: "error",
+              data: getErrorMessage(err, "Failed to open serial port"),
+            });
           }
-        });
-        break;
-      }
+          break;
+        }
 
-      case "disconnect": {
-        cleanup();
-        send({ type: "disconnected" });
-        break;
+        case "input": {
+          if (!port?.isOpen) break;
+          const input = typeof data === "string" ? data : "";
+          if (!input) break;
+          port.write(Buffer.from(input, "binary"), (err) => {
+            if (err) {
+              send({ type: "error", data: err.message });
+            }
+          });
+          break;
+        }
+
+        case "disconnect": {
+          cleanup();
+          send({ type: "disconnected" });
+          break;
+        }
       }
+    } catch (err) {
+      sshLogger.error("Error handling serial WebSocket message", err, {
+        operation: "serial_message_handler_error",
+        userId,
+        messageType: type,
+      });
+      send({ type: "error", data: "Failed to process message" });
     }
   });
 

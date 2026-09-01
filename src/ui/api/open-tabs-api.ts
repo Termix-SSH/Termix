@@ -67,7 +67,7 @@ export async function deleteOpenTab(instanceId: string): Promise<void> {
 export async function patchOpenTab(
   instanceId: string,
   updates: Partial<
-    Pick<OpenTabRecord, "label" | "tabOrder" | "backendSessionId">
+    Pick<OpenTabRecord, "hostId" | "label" | "tabOrder" | "backendSessionId">
   >,
 ): Promise<void> {
   await authApi.patch(`/open-tabs/${instanceId}`, updates);
@@ -112,10 +112,15 @@ export interface UserPreferences {
   disableUpdateCheck?: boolean | null;
   confirmTabClose?: boolean | null;
   hiddenRailTabs?: string | null;
+  aiAssistantEnabled?: boolean | null;
+  aiReadOnlyCommands?: boolean | null;
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
   customThemes?: string | null;
   customKeybindings?: string | null;
+  terminalDefaults?: string | null;
+  rdpDefaults?: string | null;
+  terminalMacros?: string | null;
 }
 
 export function parseCustomThemes(raw?: string | null): SavedCustomTheme[] {

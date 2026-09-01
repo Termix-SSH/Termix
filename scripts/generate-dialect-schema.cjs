@@ -88,11 +88,12 @@ function collectKeyColumns(source) {
     keyed.add(camelToSnake(match[1]));
   }
 
-  // Table-level indexes: `(table) => [uniqueIndex("x").on(table.a, table.b)]`.
+  // Table-level indexes: `(table) => [uniqueIndex("x").on(table.a, table.b)]`,
+  // and the same for the plain `index("x")` used by the performance indexes.
   // These were invisible here at first, and MySQL rejected the migration with
   // "BLOB/TEXT column used in key specification without a key length" — but
   // only on MySQL 8; MariaDB took it.
-  const tableIndex = /uniqueIndex\("[a-z0-9_]+"\)\.on\(([^)]*)\)/g;
+  const tableIndex = /\b(?:unique)?[iI]ndex\("[a-z0-9_]+"\)\.on\(([^)]*)\)/g;
   while ((match = tableIndex.exec(source)) !== null) {
     for (const column of match[1].split(",")) {
       const name = column.trim().replace(/^\w+\./, "");
@@ -162,9 +163,16 @@ function transform(source, dialect) {
 
   out = out.replace(/\bsqliteTable\(/g, isPg ? "pgTable(" : "mysqlTable(");
 
+  // Self-referencing FK callbacks are typed against the source dialect's
+  // "any column" helper so TS can resolve the circular table reference.
+  out = out.replace(
+    /\bAnySQLiteColumn\b/g,
+    isPg ? "AnyPgColumn" : "AnyMySqlColumn",
+  );
+
   const imports = isPg
-    ? `import {\n  pgTable,\n  text,\n  varchar,\n  integer,\n  serial,\n  boolean,\n  doublePrecision,\n  uniqueIndex,\n} from "drizzle-orm/pg-core";`
-    : `import {\n  mysqlTable,\n  text,\n  varchar,\n  int,\n  boolean,\n  double,\n  uniqueIndex,\n} from "drizzle-orm/mysql-core";`;
+    ? `import {\n  pgTable,\n  text,\n  varchar,\n  integer,\n  serial,\n  boolean,\n  doublePrecision,\n  index,\n  uniqueIndex,\n  type AnyPgColumn,\n} from "drizzle-orm/pg-core";`
+    : `import {\n  mysqlTable,\n  text,\n  varchar,\n  int,\n  boolean,\n  double,\n  index,\n  uniqueIndex,\n  type AnyMySqlColumn,\n} from "drizzle-orm/mysql-core";`;
 
   out = out.replace(
     /import\s*\{[^}]*\}\s*from\s*"drizzle-orm\/sqlite-core";/,

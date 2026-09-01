@@ -11,6 +11,12 @@
  * rarely and are read constantly, so they are cached in full. Writes go through
  * SettingsRepository, which updates the cache in the same call, and the cache is
  * primed once at startup.
+ *
+ * Known limitation with more than one instance: a write only updates the cache
+ * of the process that made it. Other instances keep serving the old value until
+ * their own refresh comes round (SETTINGS_CACHE_REFRESH_SECONDS, 30s default),
+ * so a settings change takes up to that long to apply fleet-wide. Fixing it
+ * properly needs cross-instance invalidation, which is not in place yet.
  */
 
 let cache: Map<string, string> | null = null;

@@ -21,6 +21,18 @@ export function isTcpPingEnabled(statsConfig: TcpPingStatsConfig): boolean {
   return statsConfig.statusCheckEnabled && !statsConfig.disableTcpPing;
 }
 
+export function parseStatusHostIds(value: unknown): Set<number> | null {
+  if (value === undefined) return null;
+  if (typeof value !== "string") return new Set();
+
+  return new Set(
+    value
+      .split(",")
+      .map(Number)
+      .filter((id) => Number.isSafeInteger(id) && id > 0),
+  );
+}
+
 export function tcpPingThroughJumpHost(
   jumpClient: Pick<Client, "forwardOut" | "end">,
   host: string,

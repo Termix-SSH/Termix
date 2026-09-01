@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type {
   AuthenticatedRequest,
   CredentialBackend,
@@ -234,7 +235,7 @@ async function deploySSHKeyToHost(
         conn.end();
         resolve({
           success: false,
-          error: error instanceof Error ? error.message : "Deployment failed",
+          error: getErrorMessage(error, "Deployment failed"),
         });
       }
     });
@@ -331,7 +332,7 @@ async function deploySSHKeyToHost(
           clearTimeout(connectionTimeout);
           resolve({
             success: false,
-            error: `Invalid SSH key format: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
+            error: `Invalid SSH key format: ${getErrorMessage(keyError)}`,
           });
           return;
         }
@@ -349,7 +350,7 @@ async function deploySSHKeyToHost(
       clearTimeout(connectionTimeout);
       resolve({
         success: false,
-        error: error instanceof Error ? error.message : "Connection failed",
+        error: getErrorMessage(error, "Connection failed"),
       });
     }
   });
@@ -527,8 +528,7 @@ export function registerCredentialDeployRoutes(
       } catch (error) {
         res.status(500).json({
           success: false,
-          error:
-            error instanceof Error ? error.message : "Failed to deploy SSH key",
+          error: getErrorMessage(error, "Failed to deploy SSH key"),
         });
       }
     },

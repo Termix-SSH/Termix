@@ -99,7 +99,9 @@ export function HostShareModal({
     setSharingLoaded(true);
     Promise.all([
       host
-        ? getHostAccess(Number(host.id)).catch(() => ({ accessList: [] }))
+        ? getHostAccess(Number(host.id), host.syncId).catch(() => ({
+            accessList: [],
+          }))
         : Promise.resolve({ accessList: [] }),
       getUserList().catch(() => ({ users: [] })),
       getRoles().catch(() => ({ roles: [] })),
@@ -172,7 +174,7 @@ export function HostShareModal({
 
   async function refreshAccessList() {
     if (!host) return;
-    const res = await getHostAccess(Number(host.id));
+    const res = await getHostAccess(Number(host.id), host.syncId);
     setAccessList(res.accessList ?? []);
   }
 
@@ -207,11 +209,15 @@ export function HostShareModal({
           }),
         );
       } else if (host) {
-        await shareHost(Number(host.id), {
-          targets,
-          permissionLevel,
-          ...(durationHours ? { durationHours } : {}),
-        });
+        await shareHost(
+          Number(host.id),
+          {
+            targets,
+            permissionLevel,
+            ...(durationHours ? { durationHours } : {}),
+          },
+          host.syncId,
+        );
         await refreshAccessList();
         setSelectedUserIds(new Set());
         setSelectedRoleIds(new Set());
@@ -234,9 +240,14 @@ export function HostShareModal({
   ) {
     if (!host || record.permissionLevel === level) return;
     try {
-      await updateHostAccess(Number(host.id), record.id, {
-        permissionLevel: level,
-      });
+      await updateHostAccess(
+        Number(host.id),
+        record.id,
+        {
+          permissionLevel: level,
+        },
+        host.syncId,
+      );
       setAccessList((prev) =>
         prev.map((entry) =>
           entry.id === record.id ? { ...entry, permissionLevel: level } : entry,
@@ -561,7 +572,11 @@ export function HostShareModal({
                         className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
                         onClick={async () => {
                           try {
-                            await revokeHostAccess(Number(host!.id), record.id);
+                            await revokeHostAccess(
+                              Number(host!.id),
+                              record.id,
+                              host!.syncId,
+                            );
                             setAccessList((prev) =>
                               prev.filter((entry) => entry.id !== record.id),
                             );

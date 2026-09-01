@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -148,7 +149,7 @@ export function registerHostAutostartRoutes(
           } catch (error) {
             sshLogger.warn("Failed to update tunnel connections", {
               operation: "tunnel_connections_update_failed",
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             });
           }
         }

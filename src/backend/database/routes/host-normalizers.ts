@@ -154,6 +154,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableDocker?: unknown;
   enableProxmox?: unknown;
   enableTmuxMonitor?: unknown;
+  enableTerminalToolbar?: unknown;
   showTerminalInSidebar?: unknown;
   showFileManagerInSidebar?: unknown;
   showTunnelInSidebar?: unknown;
@@ -167,6 +168,8 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   statsConfig?: unknown;
   dockerConfig?: unknown;
   proxmoxConfig?: unknown;
+  enableProxmoxStats?: unknown;
+  proxmoxStatsConfig?: unknown;
   terminalConfig?: unknown;
   forceKeyboardInteractive?: unknown;
   notes?: unknown;
@@ -273,10 +276,17 @@ export function stripSensitiveFields(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
   const result = { ...host };
+  const terminalConfigForSudo =
+    host.terminalConfig &&
+    typeof host.terminalConfig === "object" &&
+    !Array.isArray(host.terminalConfig)
+      ? (host.terminalConfig as Record<string, unknown>)
+      : undefined;
   result.hasKey = !!host.key;
   result.hasKeyPassword = !!host.keyPassword;
   result.hasPassword = !!host.password;
-  result.hasSudoPassword = !!host.sudoPassword;
+  result.hasSudoPassword =
+    !!host.sudoPassword || !!terminalConfigForSudo?.sudoPassword;
   result.hasRdpPassword = !!host.rdpPassword;
   result.hasVncPassword = !!host.vncPassword;
   result.hasTelnetPassword = !!host.telnetPassword;
@@ -322,7 +332,9 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableFileManager",
   "enableDocker",
   "enableProxmox",
+  "enableProxmoxStats",
   "enableTmuxMonitor",
+  "enableTerminalToolbar",
   "showTerminalInSidebar",
   "showFileManagerInSidebar",
   "showTunnelInSidebar",
@@ -356,6 +368,10 @@ export function sanitizeHostForRecipient(
   const stripped = stripSensitiveFields(host);
   delete stripped.credentialId;
   delete stripped.overrideCredentialUsername;
+  // Sub-host nesting is per-owner tree structure; a recipient generally
+  // can't see (or share permission on) the parent host row, so a shared
+  // host always renders at root rather than leaking another host's id.
+  delete stripped.parentHostId;
   if (
     stripped.terminalConfig &&
     typeof stripped.terminalConfig === "object" &&
@@ -417,7 +433,9 @@ export function transformHostResponse(
     enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
     enableProxmox: !!host.enableProxmox,
+    enableProxmoxStats: !!host.enableProxmoxStats,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
+    enableTerminalToolbar: host.enableTerminalToolbar !== false,
     showTerminalInSidebar: !!host.showTerminalInSidebar,
     showFileManagerInSidebar: !!host.showFileManagerInSidebar,
     showTunnelInSidebar: !!host.showTunnelInSidebar,
@@ -468,6 +486,9 @@ export function transformHostResponse(
       : undefined,
     proxmoxConfig: host.proxmoxConfig
       ? JSON.parse(host.proxmoxConfig as string)
+      : undefined,
+    proxmoxStatsConfig: host.proxmoxStatsConfig
+      ? JSON.parse(host.proxmoxStatsConfig as string)
       : undefined,
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     useWarpgate: !!host.useWarpgate,

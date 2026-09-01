@@ -1,7 +1,10 @@
-import { Router } from "express";
-import type { RequestHandler, Router as ExpressRouter } from "express";
+import {
+  Router,
+  type RequestHandler,
+  type Router as ExpressRouter,
+} from "express";
 import { apiLogger } from "../../utils/logger.js";
-import { getProxyAgent } from "../../utils/proxy-agent.js";
+import { fetchWithProxy } from "../../utils/proxy-agent.js";
 import { createCurrentSettingsRepository } from "../repositories/factory.js";
 
 interface TailscaleDevice {
@@ -23,9 +26,14 @@ interface TailscaleAPIDevice {
   nodeId?: string;
 }
 
-const TAILSCALE_API_BASE = "https://api.tailscale.com/api/v2";
+const DEFAULT_TAILSCALE_API_BASE = "https://api.tailscale.com/api/v2";
 
 const router = Router();
+
+function normalizeApiBase(raw: string | null): string {
+  const trimmed = (raw ?? "").trim().replace(/\/+$/, "");
+  return trimmed || DEFAULT_TAILSCALE_API_BASE;
+}
 
 export function registerTailscaleRoutes(
   app: ExpressRouter,
@@ -56,20 +64,21 @@ export function registerTailscaleRoutes(
    */
   router.get("/devices", authenticateJWT, async (_req, res) => {
     try {
-      const apiKey =
-        (await createCurrentSettingsRepository().get("tailscale_api_key")) ??
-        "";
+      const settingsRepo = createCurrentSettingsRepository();
+      const apiKey = (await settingsRepo.get("tailscale_api_key")) ?? "";
       if (!apiKey) {
         return res.json({ devices: [], hasApiKey: false });
       }
+      const apiBase = normalizeApiBase(
+        await settingsRepo.get("tailscale_api_base_url"),
+      );
 
-      const url = `${TAILSCALE_API_BASE}/tailnet/-/devices?fields=all`;
-      const response = await fetch(url, {
+      const url = `${apiBase}/tailnet/-/devices?fields=all`;
+      const response = await fetchWithProxy(url, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "User-Agent": "Termix/1.0",
         },
-        dispatcher: getProxyAgent(url),
       });
 
       if (!response.ok) {
@@ -78,13 +87,17 @@ export function registerTailscaleRoutes(
           status: response.status,
         });
         if (response.status === 401 || response.status === 403) {
-          return res
-            .status(401)
-            .json({ error: "Invalid Tailscale API key", devices: [] });
+          return res.status(401).json({
+            error: "Invalid Tailscale API key",
+            devices: [],
+            hasApiKey: true,
+          });
         }
-        return res
-          .status(502)
-          .json({ error: "Tailscale API error", devices: [] });
+        return res.status(502).json({
+          error: "Tailscale API error",
+          devices: [],
+          hasApiKey: true,
+        });
       }
 
       const data = (await response.json()) as { devices: TailscaleAPIDevice[] };
@@ -103,9 +116,11 @@ export function registerTailscaleRoutes(
       apiLogger.error("Failed to fetch Tailscale devices", err, {
         operation: "tailscale_devices",
       });
-      res
-        .status(500)
-        .json({ error: "Failed to fetch Tailscale devices", devices: [] });
+      res.status(500).json({
+        error: "Failed to fetch Tailscale devices",
+        devices: [],
+        hasApiKey: true,
+      });
     }
   });
 

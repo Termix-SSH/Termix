@@ -1,13 +1,14 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { nanoid } from "nanoid";
-import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
+  getDeviceId,
   parseUserAgent,
   generateDeviceFingerprint,
 } from "../../utils/user-agent-parser.js";
@@ -30,7 +31,7 @@ import {
   isOIDCUserAllowed,
   OIDCTokenFormatError,
   verifyOIDCToken,
-  extractOidcGroups,
+  extractOidcGroupsFromSources,
   parseOidcRoleMap,
   resolveOidcMappedRoles,
   loadProviderConfig,
@@ -39,7 +40,9 @@ import {
   validateLogoutToken,
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
+import { registerUserImageStorageRoutes } from "./user-image-storage-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
+import { registerTouchInputSettingsRoutes } from "./touch-input-settings-routes.js";
 import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
 import { registerUserTotpRoutes } from "./user-totp-routes.js";
 import { registerUserWebAuthnRoutes } from "./user-webauthn-routes.js";
@@ -51,17 +54,34 @@ import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { notifyAutomationInternalEvent } from "../../hosts/metrics/automation-bridge.js";
 import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
   createCurrentRoleRepository,
+  createCurrentSsoProviderRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
+import {
+  getTrustedProxyAuthConfig,
+  isTrustedProxyAddress,
+  isTrustedProxyAuthEnabled,
+  resolveTrustedProxyRoles,
+} from "../../utils/trusted-proxy-auth.js";
 
 const authManager = AuthManager.getInstance();
 
 const router = express.Router();
+
+router.use((req, res, next) => {
+  if (isTrustedProxyAuthEnabled() && req.path.startsWith("/oidc")) {
+    return res.status(409).json({
+      error: "OIDC is disabled while trusted proxy authentication is enabled",
+    });
+  }
+  next();
+});
 
 async function syncSharedCredentialsForUserRoles(
   userId: string,
@@ -117,6 +137,12 @@ function isPasswordResetAllowed(): boolean {
   }
 }
 
+function getOidcSilentLoginDefaultFromEnv(): boolean | undefined {
+  const envVal = process.env.OIDC_SILENT_LOGIN_DEFAULT;
+  if (envVal === undefined) return undefined;
+  return envVal.trim().toLowerCase() === "true";
+}
+
 function isNativeAppRequest(req: Request): boolean {
   return (
     (req.get("User-Agent") || "").startsWith("Termix-Mobile/") ||
@@ -133,6 +159,15 @@ async function requireCurrentAdmin(userId: string): Promise<UserRecord | null> {
   return user?.isAdmin ? user : null;
 }
 
+// RFC 7636 PKCE: 43-128 char unreserved-character string.
+function generatePkceCodeVerifier(): string {
+  return crypto.randomBytes(64).toString("base64url");
+}
+
+function generatePkceCodeChallenge(verifier: string): string {
+  return crypto.createHash("sha256").update(verifier).digest("base64url");
+}
+
 async function deleteOIDCStateSettings(state: string): Promise<void> {
   const settingsRepository = createCurrentSettingsRepository();
   await settingsRepository.delete(`oidc_state_${state}`);
@@ -140,6 +175,7 @@ async function deleteOIDCStateSettings(state: string): Promise<void> {
   await settingsRepository.delete(`oidc_frontend_origin_${state}`);
   await settingsRepository.delete(`oidc_remember_me_${state}`);
   await settingsRepository.delete(`oidc_provider_${state}`);
+  await settingsRepository.delete(`oidc_pkce_verifier_${state}`);
 }
 
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -681,6 +717,9 @@ router.get("/oidc/authorize", async (req, res) => {
       frontendOrigin = origin;
     }
 
+    const codeVerifier = generatePkceCodeVerifier();
+    const codeChallenge = generatePkceCodeChallenge(codeVerifier);
+
     const settingsRepository = createCurrentSettingsRepository();
     await settingsRepository.set(`oidc_state_${state}`, nonce);
     await settingsRepository.set(
@@ -695,6 +734,7 @@ router.get("/oidc/authorize", async (req, res) => {
       `oidc_remember_me_${state}`,
       rememberMe === "true" ? "true" : "false",
     );
+    await settingsRepository.set(`oidc_pkce_verifier_${state}`, codeVerifier);
 
     if (providerDbId != null) {
       await settingsRepository.set(
@@ -710,6 +750,8 @@ router.get("/oidc/authorize", async (req, res) => {
     authUrl.searchParams.set("scope", config.scopes);
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("nonce", nonce);
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
 
     res.json({ auth_url: authUrl.toString(), state, nonce });
   } catch (err) {
@@ -748,6 +790,9 @@ router.get("/oidc/callback", async (req, res) => {
   );
   const storedRememberMeValue = await settingsRepository.get(
     `oidc_remember_me_${state}`,
+  );
+  const storedCodeVerifier = await settingsRepository.get(
+    `oidc_pkce_verifier_${state}`,
   );
 
   if (!storedBackendCallback || !storedFrontendOrigin) {
@@ -990,6 +1035,7 @@ router.get("/oidc/callback", async (req, res) => {
         client_secret: config.client_secret,
         code: code,
         redirect_uri: backendCallbackUri,
+        ...(storedCodeVerifier ? { code_verifier: storedCodeVerifier } : {}),
       }),
       ...fetchOptions,
     });
@@ -1014,6 +1060,7 @@ router.get("/oidc/callback", async (req, res) => {
     await deleteOIDCStateSettings(state);
 
     let userInfo: Record<string, unknown> = null;
+    const oidcClaimSources: Record<string, unknown>[] = [];
     const userInfoUrls: string[] = [];
 
     const normalizedIssuerUrl = config.issuer_url.endsWith("/")
@@ -1069,6 +1116,7 @@ router.get("/oidc/callback", async (req, res) => {
           });
           return res.status(401).json({ error: "Invalid OIDC token nonce" });
         }
+        oidcClaimSources.push(userInfo);
       } catch (error) {
         // A token we cannot parse as a JWS carries no claims we could trust, so
         // fall through to the userinfo endpoint instead of failing the login.
@@ -1102,6 +1150,7 @@ router.get("/oidc/callback", async (req, res) => {
               string,
               unknown
             >;
+            oidcClaimSources.push(fetchedUserInfo);
             userInfo = { ...userInfo, ...fetchedUserInfo };
             break;
           } else {
@@ -1306,8 +1355,8 @@ router.get("/oidc/callback", async (req, res) => {
 
     // Sync admin status based on OIDC group membership
     if (config.admin_group) {
-      const groups = extractOidcGroups(
-        userInfo as Record<string, unknown>,
+      const groups = extractOidcGroupsFromSources(
+        oidcClaimSources,
         config.group_claim,
       );
 
@@ -1369,8 +1418,8 @@ router.get("/oidc/callback", async (req, res) => {
       );
 
       if (roleMap.size > 0) {
-        const groups = extractOidcGroups(
-          userInfo as Record<string, unknown>,
+        const groups = extractOidcGroupsFromSources(
+          oidcClaimSources,
           config.group_claim,
         );
         const { desired, managed } = resolveOidcMappedRoles(groups, roleMap);
@@ -1532,7 +1581,179 @@ router.get("/oidc/callback", async (req, res) => {
  *       500:
  *         description: Login failed.
  */
+router.post("/proxy-login", async (req, res) => {
+  let config;
+  try {
+    config = getTrustedProxyAuthConfig();
+  } catch (error) {
+    authLogger.error(
+      "Invalid trusted proxy authentication configuration",
+      error,
+    );
+    return res
+      .status(503)
+      .json({ error: "Proxy authentication is misconfigured" });
+  }
+  if (!config.enabled) return res.json({ enabled: false });
+
+  const sourceAddress = req.socket.remoteAddress;
+  try {
+    if (!isTrustedProxyAddress(sourceAddress, config.trustedProxies)) {
+      authLogger.warn(
+        "Rejected proxy authentication from an untrusted source",
+        {
+          operation: "trusted_proxy_auth_rejected",
+          sourceAddress,
+        },
+      );
+      return res.status(403).json({ error: "Untrusted authentication proxy" });
+    }
+  } catch (error) {
+    authLogger.error("Invalid trusted proxy allowlist", error);
+    return res
+      .status(503)
+      .json({ error: "Proxy authentication is misconfigured" });
+  }
+
+  const usernameValue = req.headers[config.usernameHeader];
+  const roleValue = req.headers[config.roleHeader];
+  const username = Array.isArray(usernameValue)
+    ? usernameValue[0]
+    : usernameValue;
+  const roleHeader = Array.isArray(roleValue) ? roleValue[0] : roleValue;
+  if (!isNonEmptyString(username) || !isNonEmptyString(roleHeader)) {
+    return res
+      .status(401)
+      .json({ error: "Proxy authentication headers are missing" });
+  }
+
+  const mappedRoles = resolveTrustedProxyRoles(roleHeader, config.roleMap);
+  if (!mappedRoles) {
+    return res.status(403).json({ error: "Proxy role is not mapped" });
+  }
+
+  try {
+    const [legacyOidc, enabledProviders, userRecord] = await Promise.all([
+      createCurrentSettingsRepository().get("oidc_config"),
+      createCurrentSsoProviderRepository().listEnabled(),
+      createCurrentUserRepository().findByUsername(username),
+    ]);
+    const hasOidc =
+      Boolean(getOIDCConfigFromEnv() || legacyOidc) ||
+      enabledProviders.some((provider) =>
+        ["oidc", "github", "google"].includes(provider.type),
+      );
+    if (hasOidc) {
+      return res
+        .status(409)
+        .json({ error: "Proxy authentication cannot be used with OIDC" });
+    }
+    if (!userRecord) {
+      return res.status(403).json({ error: "Proxy user must already exist" });
+    }
+    if (userRecord.isOidc || userRecord.totpEnabled) {
+      return res.status(409).json({
+        error: "Proxy authentication cannot be used with OIDC or TOTP users",
+      });
+    }
+
+    const roleRepository = createCurrentRoleRepository();
+    const managedRoles = new Set([...config.roleMap.values()].flat());
+    for (const roleName of managedRoles) {
+      if (!(await roleRepository.findRoleByName(roleName))) {
+        authLogger.error("Trusted proxy role map references a missing role", {
+          operation: "trusted_proxy_auth_missing_role",
+          roleName,
+        });
+        return res
+          .status(503)
+          .json({ error: "Proxy role mapping is misconfigured" });
+      }
+    }
+
+    const currentRoles = await roleRepository.listUserRoles(userRecord.id);
+    const currentNames = new Set(currentRoles.map((role) => role.roleName));
+    for (const roleName of mappedRoles) {
+      if (!currentNames.has(roleName)) {
+        await roleRepository.assignRoleNameToUser({
+          userId: userRecord.id,
+          roleName,
+          grantedBy: userRecord.id,
+        });
+      }
+    }
+    for (const role of currentRoles) {
+      if (
+        managedRoles.has(role.roleName) &&
+        !mappedRoles.includes(role.roleName)
+      ) {
+        await roleRepository.removeRoleFromUser(userRecord.id, role.roleId);
+      }
+    }
+    PermissionManager.getInstance().invalidateUserPermissionCache(
+      userRecord.id,
+    );
+
+    const deviceInfo = parseUserAgent(req);
+    if (
+      !(await authManager.authenticateWebAuthnUser(
+        userRecord.id,
+        deviceInfo.type,
+      ))
+    ) {
+      return res
+        .status(409)
+        .json({ error: "User encryption data is unavailable" });
+    }
+    await syncSharedCredentialsForUserRoles(
+      userRecord.id,
+      "trusted_proxy_login_role_shared_credentials",
+    );
+    const token = await authManager.generateJWTToken(userRecord.id, {
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
+    });
+    const payload = await authManager.verifyJWTToken(token);
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    await logAudit({
+      userId: userRecord.id,
+      username: userRecord.username,
+      action: "trusted_proxy_login",
+      resourceType: "session",
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+    authLogger.success("Trusted proxy login successful", {
+      operation: "trusted_proxy_login",
+      userId: userRecord.id,
+      sessionId: payload?.sessionId,
+      mappedRoles,
+    });
+
+    return res
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req))
+      .json({
+        enabled: true,
+        success: true,
+        username: userRecord.username,
+        userId: userRecord.id,
+        is_admin: !!userRecord.isAdmin,
+        ...(isNativeAppRequest(req) ? { token } : {}),
+      });
+  } catch (error) {
+    authLogger.error("Trusted proxy login failed", error);
+    return res.status(500).json({ error: "Proxy authentication failed" });
+  }
+});
+
 router.post("/login", async (req, res) => {
+  if (isTrustedProxyAuthEnabled()) {
+    return res.status(403).json({
+      error:
+        "Password login is disabled while trusted proxy authentication is enabled",
+    });
+  }
   const { username, password, rememberMe } = req.body;
   const clientIp = req.ip || req.socket.remoteAddress || "unknown";
   authLogger.info("User login request received", {
@@ -1643,12 +1864,14 @@ router.post("/login", async (req, res) => {
     );
 
     if (userRecord.totpEnabled) {
-      const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
-
-      const isTrusted = await authManager.isTrustedDevice(
-        userRecord.id,
-        deviceFingerprint,
+      const deviceFingerprint = generateDeviceFingerprint(
+        deviceInfo,
+        getDeviceId(req),
       );
+
+      const isTrusted = deviceFingerprint
+        ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
+        : false;
 
       if (isTrusted) {
         authLogger.info("TOTP bypassed for trusted device", {
@@ -1695,6 +1918,11 @@ router.post("/login", async (req, res) => {
       ipAddress: loginIp,
       userAgent: loginUa,
       success: true,
+    });
+
+    notifyAutomationInternalEvent("user_login", userRecord.id, undefined, {
+      username,
+      ipAddress: loginIp,
     });
 
     const response: Record<string, unknown> = {
@@ -2238,7 +2466,7 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
  * /users/oidc-silent-login-default:
  *   get:
  *     summary: Get OIDC silent login default setting
- *     description: Returns whether silent OIDC login is enabled as the default behavior.
+ *     description: Returns whether silent OIDC login is enabled as the default behavior. Can be pinned via the OIDC_SILENT_LOGIN_DEFAULT env var.
  *     tags:
  *       - Users
  *     responses:
@@ -2249,11 +2477,17 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
  */
 router.get("/oidc-silent-login-default", async (_req, res) => {
   try {
+    const envVal = getOidcSilentLoginDefaultFromEnv();
+    if (envVal !== undefined) {
+      res.json({ enabled: envVal, locked: true });
+      return;
+    }
     res.json({
       enabled: await createCurrentSettingsRepository().getBoolean(
         "oidc_silent_login_default",
         false,
       ),
+      locked: false,
     });
   } catch (err) {
     authLogger.error("Failed to get OIDC silent login default", err);
@@ -2285,6 +2519,8 @@ router.get("/oidc-silent-login-default", async (_req, res) => {
  *         description: Invalid value.
  *       403:
  *         description: Not authorized.
+ *       409:
+ *         description: Setting is pinned by the OIDC_SILENT_LOGIN_DEFAULT env var.
  *       500:
  *         description: Failed to update setting.
  */
@@ -2297,6 +2533,12 @@ router.patch(
       const user = await requireCurrentAdmin(userId);
       if (!user) {
         return res.status(403).json({ error: "Not authorized" });
+      }
+      if (getOidcSilentLoginDefaultFromEnv() !== undefined) {
+        return res.status(409).json({
+          error:
+            "OIDC silent login default is set via the OIDC_SILENT_LOGIN_DEFAULT env var and cannot be changed here",
+        });
       }
       const { enabled } = req.body;
       if (typeof enabled !== "boolean") {
@@ -2786,9 +3028,11 @@ registerUserOidcAccountRoutes(router, {
 });
 
 registerUserSettingsRoutes(router, authenticateJWT);
+registerTouchInputSettingsRoutes(router, authenticateJWT);
 registerAcmeSSLRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);
+registerUserImageStorageRoutes(router, requireAdmin);
 
 registerSSOProviderRoutes(router);
 registerLDAPAuthRoutes(router);

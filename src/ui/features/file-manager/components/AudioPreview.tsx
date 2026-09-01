@@ -85,7 +85,7 @@ export function AudioPreview({
           <div className="rounded-lg overflow-hidden">
             <AudioPlayer
               src={audioUrl}
-              onLoadedMetadata={() => {
+              onLoadedMetaData={() => {
                 onMediaDimensionsChange?.({
                   width: 600,
                   height: 400,

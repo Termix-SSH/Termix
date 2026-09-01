@@ -12,6 +12,7 @@ import {
   getPendingTransferIds,
   isTransferNotified,
 } from "./transferNotificationStore.ts";
+import { runAdaptivePolling } from "@/lib/adaptive-polling.ts";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -24,8 +25,10 @@ export function TransferMonitor() {
 
   useEffect(() => {
     const reconcileTransfers = async () => {
+      let hasWork = false;
       try {
         const { transfers } = await listActiveTransfers();
+        hasWork = transfers.length > 0;
         for (const transfer of transfers) {
           if (isTransferBeingMonitored(transfer.transferId)) continue;
           beginTransferProgressMonitoring(transfer.transferId, t, {
@@ -38,13 +41,15 @@ export function TransferMonitor() {
         // Non-fatal: file-manager service may be unavailable briefly
       }
 
-      for (const transferId of getPendingTransferIds()) {
+      const pendingTransferIds = getPendingTransferIds();
+      for (const transferId of pendingTransferIds) {
         if (
           isTransferBeingMonitored(transferId) ||
           isTransferNotified(transferId)
         ) {
           continue;
         }
+        hasWork = true;
 
         try {
           const status = await getTransferStatus(transferId);
@@ -69,36 +74,14 @@ export function TransferMonitor() {
           clearStalePendingTransfer(transferId);
         }
       }
+      return hasWork;
     };
 
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    const start = () => {
-      if (intervalId !== null) return;
-      intervalId = setInterval(reconcileTransfers, POLL_INTERVAL_MS);
-    };
-    const stop = () => {
-      if (intervalId === null) return;
-      clearInterval(intervalId);
-      intervalId = null;
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        stop();
-        return;
-      }
-      void reconcileTransfers();
-      start();
-    };
-
-    void reconcileTransfers();
-    if (document.visibilityState !== "hidden") start();
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
+    return runAdaptivePolling(reconcileTransfers, {
+      minIntervalMs: POLL_INTERVAL_MS,
+      maxIntervalMs: 30_000,
+      stablePollsPerStep: 1,
+    });
   }, [t, formatTransferMetrics]);
 
   return null;

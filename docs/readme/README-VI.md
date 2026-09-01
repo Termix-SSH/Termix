@@ -4,7 +4,7 @@
 
 <h1>Termix</h1>
 
-<p>Quan ly SSH tu luu tru va truy cap may tinh tu xa</p>
+<p>Quản lý máy chủ tự lưu trữ, từ SSH và máy tính từ xa cho đến tự động hoá</p>
 
 <p>
   <a href="../README.md">English</a> ·
@@ -37,7 +37,7 @@
 
 <br />
 
-Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu ích, hãy cân nhắc [quyên góp](https://donate.termix.site/) để giúp trang trải chi phí máy chủ và thời gian phát triển.
+Termix miễn phí và mã nguồn mở. Nếu bạn thấy hữu ích, hãy cân nhắc [quyên góp](https://donate.termix.site/) để giúp trang trải chi phí máy chủ và thời gian phát triển.
 
 <br />
 
@@ -49,159 +49,201 @@ Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu �
 <p>
   <img src="../repo-images/Repo of the Day.png" alt="Repo of the Day Achievement" width="280" />
   <br />
-  <sub>Dat duoc vao ngay 1 thang 9 nam 2025</sub>
+  <sub>Đạt được vào ngày 1 tháng 9 năm 2025</sub>
 </p>
 
 </div>
 
 <br />
 
-## Tong Quan
+## Tổng quan
 
-Termix la nen tang quan ly may chu tat ca trong mot, ma nguon mo, mien phi vinh vien, tu luu tru. No cung cap giai phap da nen tang de quan ly may chu va co so ha tang cua ban thong qua mot giao dien truc quan duy nhat. Termix cung cap quyen truy cap terminal SSH, dieu khien may tinh tu xa (RDP, VNC, Telnet), kha nang tao duong ham SSH, quan ly tep tu xa va nhieu cong cu khac. Termix la giai phap thay the mien phi va tu luu tru hoan hao cho Termius, kha dung tren tat ca cac nen tang.
+Termix là nền tảng miễn phí, mã nguồn mở, tự lưu trữ để quản lý máy chủ của bạn. Nó gom vào một chỗ terminal SSH, máy tính từ xa (RDP, VNC, Telnet), truyền tệp, tunnel, Docker, số liệu và tự động hoá, trên web, máy tính và điện thoại. Đây là bản thay thế tự lưu trữ cho Termius và sẽ miễn phí mãi mãi.
 
 <br />
 
-## Tinh Nang
+## Tính năng
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-**Truy Cap Terminal SSH:**
-Terminal day du tinh nang voi ho tro chia man hinh (len den 4 bang) voi he thong tab kieu trinh duyet. Bao gom ho tro tuy chinh terminal bao gom cac chu de terminal pho bien, phong chu va cac thanh phan khac.
+**Terminal SSH:**
+Một terminal đầy đủ với các thẻ giống trình duyệt và chia đôi màn hình, tối đa 6 khung cùng lúc. Bạn tự chọn giao diện, phông chữ và màu sắc. Phía trên mỗi phiên có một thanh công cụ hiện CPU, bộ nhớ và ổ đĩa theo thời gian thực, kèm lối tắt tới tệp, Docker, tunnel và số liệu của máy chủ đó.
 
 </td>
 <td width="50%" valign="top">
 
-**Truy Cap Man Hinh Tu Xa:**
-Ho tro RDP, VNC va Telnet qua trinh duyet voi day du tuy chinh va chia man hinh.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Quan Ly Duong Ham SSH:**
-Tao va quan ly duong ham SSH giua cac may chu voi tu dong ket noi lai, giam sat suc khoe va chuyen tiep cuc bo, tu xa hoac SOCKS dong. Cai dat duong ham tu may khach desktop den may chu duoc luu tru cuc bo cho moi ban cai dat desktop; cac snapshot C2S preset tuy chon co the duoc luu tren may chu, doi ten, tai hoac xoa khi ban muon di chuyen mot cau hinh duong ham cuc bo giua cac may khach.
-
-</td>
-<td width="50%" valign="top">
-
-**Trinh Quan Ly Tep Tu Xa:**
-Quan ly tep truc tiep tren may chu tu xa voi ho tro xem va chinh sua ma, hinh anh, am thanh va video. Tai len, tai xuong, doi ten, xoa va di chuyen tep lien mach voi ho tro sudo. Bao gom ho tro di chuyen tep tu may chu nay sang may chu khac.
+**Máy tính từ xa:**
+RDP, VNC và Telnet ngay trong trình duyệt, dùng thẻ và chia đôi màn hình như mọi phiên khác. Có trình duyệt tệp cho ổ đĩa RDP và tải lên bằng cách kéo thả. Trên máy tính Windows, bạn còn có thể mở máy chủ bằng ứng dụng RDP của hệ điều hành.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Quan Ly Docker va Podman:**
-Khoi dong, dung, tam dung, xoa container. Xem thong ke container. Dieu khien container bang terminal docker exec. Ho tro ca Docker va Podman lam moi truong chay container. Khong duoc tao ra de thay the Portainer hay Dockge ma don gian la de quan ly container cua ban thay vi tao moi chung.
+**Tunnel SSH:**
+Chuyển tiếp cục bộ, từ xa và SOCKS động, có tự kết nối lại và kiểm tra tình trạng. Tunnel từ máy khách tới máy chủ trong ứng dụng máy tính được lưu ngay trên máy đó, và bạn có thể lưu cấu hình sẵn lên máy chủ để mang sang máy khác.
 
 </td>
 <td width="50%" valign="top">
 
-**Trinh Quan Ly May Chu SSH:**
-Luu, sap xep va quan ly cac ket noi SSH cua ban voi the va thu muc (ho tro tuy chinh thu muc va thu muc long nhau), de dang luu thong tin dang nhap co the tai su dung dong thoi co the tu dong hoa viec trien khai khoa SSH.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Chi So May Chu:**
-Xem muc su dung CPU, bo nho, o dia, mang, thoi gian hoat dong, thong tin he thong, tuong lua, giam sat cong, trinh xem nhat ky, nguoi dung/quyen, chung chi va nhieu hon nua tren hau het cac may chu chay Linux. Bao gom bieu do lich su theo chuoi thoi gian va canh bao dua tren nguong voi ho tro ntfy va webhook.
-
-</td>
-<td width="50%" valign="top">
-
-**Xac Thuc Nguoi Dung:**
-Quan ly nguoi dung an toan voi quyen quan tri (co the chinh sua thong tin cua nguoi dung khac) va ho tro OIDC/LDAP/SSO (co kiem soat truy cap), 2FA (TOTP) va passkey (WebAuthn). Xem phien hoat dong cua nguoi dung tren tat ca cac nen tang va thu hoi quyen. Lien ket tai khoan OIDC/Noi bo cua ban voi nhau. Xem nhat ky kiem toan cac hanh dong cua tat ca nguoi dung.
+**Trình quản lý tệp:**
+Duyệt, sửa, tải lên, tải xuống, đổi tên, di chuyển và xoá tệp qua SFTP, có hỗ trợ sudo. Xem và sửa mã nguồn, hình ảnh, âm thanh và video. Sao chép tệp thẳng từ máy chủ này sang máy chủ khác, hệ thống tự chọn đường nhanh nhất và kiểm tra tính toàn vẹn khi truyền.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Tich Hop Tailscale:**
-Liet ke cac thiet bi trong mang Tailscale de nhanh chong them vao lam may chu, va ket noi bang Tailscale SSH lam phuong thuc xac thuc, de cac ACL mang xu ly uy quyen ma khong can luu tru thong tin xac thuc.
+**Docker và Podman:**
+Khởi động, dừng, tạm dừng và xoá container, xem thông số của chúng và mở một shell bên trong. Chạy được với cả Docker lẫn Podman. Nó không nhằm thay thế Portainer hay Dockge, chỉ để quản lý những container bạn đã có.
 
 </td>
 <td width="50%" valign="top">
 
-**RBAC/Chia Se:**
-Tao vai tro va chia se may chu giua nguoi dung/vai tro. Ho tro tat ca cac loai xac thuc va tat ca cac giao thuc may chu.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Ket Noi Noi Tiep:**
-Ket noi voi cac thiet bi noi tiep (router, switch, vi dieu khien, v.v.) truc tiep tu trinh duyet hoac ung dung may tinh. Cau hinh toc do baud, bit du lieu, bit dung va chan le. Su dung Web Serial API tren trinh duyet duoc ho tro hoac backend ban dia trong ung dung Electron.
-
-</td>
-<td width="50%" valign="top">
-
-**Canh Bao:**
-Dat cac quy tac canh bao dua tren nguong cho chi so may chu (CPU, bo nho, o dia, v.v.) va nhan thong bao qua ntfy hoac webhook khi chung kich hoat. Xem canh bao dang kich hoat va da giai quyet trong nhat ky lich su.
+**Quản lý máy chủ:**
+Lưu và sắp xếp máy chủ bằng thẻ và thư mục lồng nhau mà bạn có thể đặt tên và tô màu. Dùng lại thông tin đăng nhập đã lưu cho nhiều máy chủ, tự động triển khai khoá SSH, gom máy chủ dưới một máy chủ cha, sửa và xuất hàng loạt, và dùng kết nối nhanh cho những lần kết nối một lần mà bạn không muốn lưu.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Trang Chu:**
-Trang chu co the tuy chinh hoan toan voi luoi widget keo va tha. Them widget cho trang thai may chu, lien ket dich vu, dong ho, ghi chu, feed RSS, thoi tiet, container Docker, bieu do chi so may chu, terminal nhung, iframe va nhieu hon nua.
+**Số liệu máy chủ:**
+CPU, bộ nhớ, ổ đĩa, mạng, nhiệt độ, thời gian hoạt động, tiến trình, cổng, lượt đăng nhập và thông tin hệ thống trên hầu hết máy chủ Linux, kèm biểu đồ lịch sử. Các thẻ quản lý cho phép bạn xử lý dịch vụ, tác vụ cron, gói phần mềm, người dùng, luật tường lửa, WireGuard, Tailscale, chứng chỉ SSL, nhật ký và kiểm tra tình trạng mà không cần rời Termix.
 
 </td>
 <td width="50%" valign="top">
 
-**Ma Hoa Co So Du Lieu:**
-Backend duoc luu tru duoi dang tep co so du lieu SQLite duoc ma hoa. Xem [tai lieu](https://docs.termix.site/security) de biet them.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Bieu Do Mang:**
-Tuy chinh Bang Dieu Khien de truc quan hoa homelab cua ban dua tren cac ket noi SSH voi ho tro trang thai.
-
-</td>
-<td width="50%" valign="top">
-
-**Cong Cu SSH:**
-Tao doan lenh co the tai su dung, thuc thi chi voi mot cu nhap chuot. Chay mot lenh dong thoi tren nhieu terminal dang mo.
+**Tự động hoá:**
+Chọn một điều kiện kích hoạt, rồi nói bạn muốn điều gì xảy ra. Điều kiện gồm một số liệu vượt ngưỡng, một máy chủ sập hoặc sống lại, kiểm tra tình trạng thay đổi, một lịch định sẵn, một sự kiện container, hoặc một webhook gửi đến. Các bước có thể chạy lệnh và đoạn lệnh, điều khiển container và tunnel, đánh thức máy chủ, gọi một địa chỉ, chờ, rẽ nhánh theo điều kiện, chạy một tự động hoá khác, và báo cho bạn qua ntfy, Discord hoặc webhook. Chạy thử giúp bạn kiểm tra an toàn trước.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Tab Lien Tuc:**
-Cac phien SSH va tab van mo tren cac thiet bi/lan lam moi neu duoc bat trong ho so nguoi dung.
+**Nhóm máy chủ:**
+Gom máy chủ vào một nhóm bằng cách tự chọn hoặc theo luật thẻ, để máy chủ mới tự vào nhóm. Chạy một lệnh trên mọi máy chủ cùng lúc, đẩy và lấy tệp trên tất cả, cài gói phần mềm, và thu thập danh sách hệ điều hành, nhân, kiến trúc và thời gian hoạt động.
 
 </td>
 <td width="50%" valign="top">
 
-**Ngon Ngu:**
-Ho tro tich hop khoang 30 ngon ngu (duoc quan ly boi [Crowdin](https://docs.termix.site/translations)).
+**Trợ lý AI:**
+Là tuỳ chọn, và tắt cho đến khi bạn tự bật. Kết nối OpenAI, Anthropic, Gemini, Ollama hoặc bất kỳ endpoint tương thích OpenAI nào rồi hỏi về hệ thống của bạn. Nó đọc được máy chủ, nhóm máy chủ, đoạn lệnh và cảnh báo, và đề xuất thay đổi để bạn duyệt chứ không tự làm. Nó không bao giờ chạm được vào thông tin đăng nhập, người dùng hay thiết lập. Quản trị viên có thể tắt hẳn cho cả hệ thống, còn bạn có thể ẩn nó ngay khi cài đặt ban đầu.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Chia Se Phien:**
-Chia se mot phien terminal, RDP, VNC, hoac Telnet truc tiep voi nguoi khac theo thoi gian thuc. Chia se qua lien ket (tham gia an danh, khong can tai khoan) hoac voi mot nguoi dung Termix cu the, va chon quyen truy cap chi doc hoac doc/ghi. Cac lien ket chia se co the tu dong het han hoac bi thu hoi bat cu luc nao, va tinh nang chia se phien co the duoc bat/tat toan cuc hoac theo tung host.
+**Đăng nhập và người dùng:**
+Tài khoản cục bộ cùng với đăng nhập qua OIDC, LDAP, GitHub và Google, kèm xác thực hai bước (TOTP), passkey (WebAuthn) và thiết bị tin cậy. Quản trị viên có thể quản lý người dùng, ánh xạ nhóm OIDC sang vai trò, xem mọi phiên đang hoạt động trên mọi nền tảng và thu hồi chúng. Bạn có thể liên kết tài khoản cục bộ với tài khoản OIDC, và xem nhật ký kiểm toán về những gì mọi người đã làm.
 
 </td>
 <td width="50%" valign="top">
 
-**Ung Dung Desktop Doc Lap + Dong Bo 2 Chieu:**
-Ung dung desktop Electron chay hoan toan doc lap voi backend va co so du lieu cuc bo rieng, khong can may chu. Tuy chon ket noi voi may chu Termix tu xa de tu dong dong bo 2 chieu cac host, thong tin dang nhap, doan ma va nhieu hon nua, va chon xem cac ket noi SSH duoc khoi tao cuc bo hay thong qua may chu tu xa.
+**Vai trò và chia sẻ:**
+Tạo vai trò và chia sẻ máy chủ với người dùng hoặc vai trò theo bốn mức: kết nối, xem, sửa và quản lý. Hoạt động với mọi kiểu xác thực và mọi giao thức, và bạn có thể thay thông tin đăng nhập dùng cho một máy chủ được chia sẻ.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Cảnh báo:**
+Đặt luật cho các số liệu máy chủ như CPU, bộ nhớ và ổ đĩa, rồi nhận thông báo qua ntfy, Discord hoặc webhook khi chúng kích hoạt. Xem cảnh báo đang bật và đã hết trong nhật ký, và bỏ qua những cái bạn không quan tâm.
+
+</td>
+<td width="50%" valign="top">
+
+**Trang chủ:**
+Một lưới tiện ích kéo thả do bạn tự dựng. Có tiện ích cho tình trạng máy chủ, ping, liên kết dịch vụ, dấu trang, tìm kiếm, đồng hồ, lịch, đếm ngược, ghi chú, RSS, thời tiết, hình ảnh, iframe, Docker, tunnel, biểu đồ số liệu, API riêng, và cả một terminal đang chạy.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Đoạn lệnh và công cụ:**
+Lưu những lệnh bạn hay dùng và chạy chỉ với một cú nhấp, có biến cho máy chủ và cho phần bạn tự nhập. Chạy một lệnh trên tất cả terminal đang mở, và tìm trong lịch sử lệnh với gợi ý tự động.
+
+</td>
+<td width="50%" valign="top">
+
+**Chia sẻ phiên:**
+Chia sẻ trực tiếp một phiên terminal, RDP, VNC hoặc Telnet. Gửi một liên kết mà ai cũng vào được không cần tài khoản, hoặc chia sẻ với một người dùng Termix cụ thể, ở chế độ chỉ xem hoặc cho phép thao tác. Chia sẻ có thể tự hết hạn hoặc bị thu hồi bất cứ lúc nào, và có thể tắt toàn bộ hoặc theo từng máy chủ.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Ghi phiên và nhật ký:**
+Ghi lại phiên terminal, RDP và VNC rồi xem lại sau. Tải nhật ký dạng văn bản của một phiên, và xem nhật ký kết nối để biết chính xác chuyện gì đã xảy ra trong lúc kết nối.
+
+</td>
+<td width="50%" valign="top">
+
+**Kết nối serial:**
+Làm việc với thiết bị serial như router, switch và vi điều khiển từ trình duyệt hoặc ứng dụng máy tính. Đặt tốc độ baud, bit dữ liệu, bit dừng và bit chẵn lẻ. Dùng Web Serial API trên các trình duyệt hỗ trợ, hoặc backend gốc trong ứng dụng máy tính.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Tailscale:**
+Lấy thiết bị từ tailnet của bạn để thêm làm máy chủ chỉ với vài cú nhấp, và kết nối bằng Tailscale SSH để ACL của tailnet lo phần quyền truy cập, không cần lưu thông tin đăng nhập. Headscale và endpoint tuỳ chỉnh cũng dùng được.
+
+</td>
+<td width="50%" valign="top">
+
+**Proxmox:**
+Nhập máy chủ thẳng từ một hệ thống Proxmox, và theo dõi số liệu của node và máy ảo, gồm CPU, bộ nhớ và dung lượng, trong một thẻ riêng.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Không gian làm việc và thẻ:**
+Lưu một bộ thẻ cùng cách chia màn hình rồi mở lại toàn bộ chỉ với một cú nhấp. Termix cũng nhớ phiên gần nhất, nên các thẻ của bạn quay lại sau khi tải lại trang và trên thiết bị khác.
+
+</td>
+<td width="50%" valign="top">
+
+**Cài đặt có hướng dẫn:**
+Một phần cài đặt ngắn sẽ hướng bạn chọn kiểu giao diện, chủ đề, những tính năng bạn muốn và máy chủ đầu tiên. Chế độ đơn giản ẩn bớt những gì bạn không dùng, và bạn có thể chạy lại phần cài đặt hoặc đổi kiểu bất cứ lúc nào.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Ứng dụng máy tính độc lập và đồng bộ:**
+Ứng dụng máy tính chạy độc lập với backend và cơ sở dữ liệu riêng, không cần máy chủ. Bạn cũng có thể nối nó với một máy chủ Termix để đồng bộ hai chiều máy chủ, thông tin đăng nhập, đoạn lệnh và nhiều thứ khác, và chọn kết nối xuất phát từ máy của bạn hay đi qua máy chủ.
+
+</td>
+<td width="50%" valign="top">
+
+**Dòng lệnh:**
+Công cụ `termix` cho shell và các script của bạn. Mở terminal, chạy một lệnh trên một máy chủ hoặc cả một nhóm, chuyển tệp qua SFTP, và quản lý máy chủ, đoạn lệnh và thông tin đăng nhập. Cài bằng `npm install -g @termix-cli/cli` hoặc tải bản chạy độc lập. Xem [tài liệu CLI](https://docs.termix.site/cli).
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Bảo mật:**
+Mật khẩu, khoá và các thông tin bí mật khác được mã hoá theo từng người dùng, và bản thân các tệp cơ sở dữ liệu cũng có thể mã hoá trên ổ đĩa. Xem [tài liệu](https://docs.termix.site/security) để biết cách hoạt động.
+
+</td>
+<td width="50%" valign="top">
+
+**Ngôn ngữ:**
+Có sẵn khoảng 30 ngôn ngữ, quản lý qua [Crowdin](https://docs.termix.site/translations).
 
 </td>
 </tr>
@@ -210,43 +252,46 @@ Ung dung desktop Electron chay hoan toan doc lap voi backend va co so du lieu cu
 <br />
 
 <details>
-<summary><b>Them tinh nang</b></summary>
+<summary><b>Thêm tính năng khác</b></summary>
 <br />
 
-- **Bang Dieu Khien** - Xem thong tin may chu trong nháy mat tren bang dieu khien cua ban
-- **Khoa API** - Tao khoa API theo pham vi nguoi dung voi ngay het han de su dung cho tu dong hoa/CI
-- **Xuat/Nhap Du Lieu** - Xuat va nhap may chu SSH, thong tin xac thuc va du lieu trinh quan ly tep
-- **Thiet Lap SSL Tu Dong** - Tao va quan ly chung chi SSL tich hop voi chuyen huong HTTPS
-- **Giao Dien Hien Dai** - Giao dien sach se, than thien voi may tinh/di dong duoc xay dung bang React, Tailwind CSS va Shadcn. Chon giua nhieu chu de UI khac nhau bao gom sang, toi, Dracula, v.v. Su dung duong dan URL de mo bat ky ket noi nao o che do toan man hinh.
-- **Lich Su Lenh** - Tu dong hoan thanh va xem cac lenh SSH da chay truoc do
-- **Ket Noi Nhanh** - Ket noi den may chu ma khong can luu du lieu ket noi
-- **Bang Lenh** - Nhan dup phim shift trai de truy cap nhanh cac ket noi SSH bang ban phim
-- **Tich Hop Proxmox** - Tu dong them may chu vao Termix tu instance Proxmox cua ban
-- **SSH Giau Tinh Nang** - Ho tro jump host, Warpgate, ket noi dua tren TOTP, SOCKS5, xac minh khoa may chu, tu dong dien mat khau, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, ghi nhat ky terminal, chuyen tiep SSH agent, Bitwarden SSH agent, ky SSH bang HashiCorp Vault va nhieu hon nua.
-- **Termix ID** - Mot tuong duong cua sshid.io duoc tich hop san trong Termix. Dang ky mot ten dinh danh, cong bo khoa SSH cong khai cua ban tai mot URL phan giai va su dung CA tich hop san de cap chung chi SSH.
+- **Bảng điều khiển** - Nhìn nhanh toàn bộ máy chủ, với các thẻ do bạn tự sắp xếp
+- **Sơ đồ mạng** - Vẽ homelab của bạn từ danh sách máy chủ, kèm trạng thái theo thời gian thực
+- **Theo dõi tmux** - Xem các phiên, cửa sổ và khung tmux, có xem trước và tìm kiếm
+- **Khoá API** - Khoá theo từng người dùng có ngày hết hạn, dùng cho script và CI
+- **Xuất và nhập** - Chuyển máy chủ, thông tin đăng nhập và dữ liệu trình quản lý tệp ra vào
+- **SSL tự động** - Chứng chỉ được tạo và gia hạn giúp bạn, kèm chuyển hướng HTTPS, hoặc dùng chứng chỉ của riêng bạn
+- **Cơ sở dữ liệu** - Mặc định là SQLite, đồng thời hỗ trợ PostgreSQL và MySQL
+- **Giao diện hiện đại** - Giao diện React gọn gàng chạy tốt trên máy tính và điện thoại, với các chủ đề như sáng, tối và Dracula. Mọi kết nối đều mở toàn màn hình được từ một địa chỉ
+- **Bảng lệnh** - Nhấn hai lần phím Shift trái để nhảy tới một máy chủ bằng bàn phím
+- **Phím tắt** - Chuyển giữa các thẻ, đóng thẻ và nhiều thao tác khác, đều gán lại được
+- **Wake-on-LAN** - Đánh thức một máy từ Termix hoặc từ một bước tự động hoá
+- **Xác thực qua proxy tin cậy** - Để reverse proxy lo phần đăng nhập rồi chuyển thông tin người dùng vào
+- **SSH nhiều tính năng** - Máy chủ trung gian, Warpgate, hỏi mã TOTP, SOCKS5, kiểm tra khoá máy chủ, tự điền mật khẩu, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, ghi nhật ký terminal, chuyển tiếp agent, SSH agent của Bitwarden, ký SSH bằng HashiCorp Vault và nhiều thứ khác
+- **Termix ID** - Bản dựng sẵn theo kiểu sshid.io. Đăng ký một tên, công bố khoá công khai của bạn tại một địa chỉ phân giải, và cấp chứng chỉ SSH từ CA tích hợp
 
 </details>
 
 <br />
 
-## Ho Tro Nen Tang
+## Nền tảng hỗ trợ
 
 <table align="center">
 <tr>
-<th align="center">Nen tang</th>
-<th align="center">Phan phoi</th>
+<th align="center">Nền tảng</th>
+<th align="center">Bản phân phối</th>
 </tr>
 <tr>
 <td align="center"><b>Web</b></td>
-<td>Bat ky trinh duyet hien dai nao (Chrome, Safari, Firefox) · Ho tro PWA</td>
+<td>Mọi trình duyệt hiện đại (Chrome, Safari, Firefox) · Hỗ trợ PWA</td>
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Portable · MSI Installer · Chocolatey</td>
+<td>Bản chạy ngay · Bộ cài MSI · Chocolatey</td>
 </tr>
 <tr>
 <td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
-<td>Portable · AUR · AppImage · Deb · Flatpak</td>
+<td>Bản chạy ngay · AUR · AppImage · Deb · Flatpak</td>
 </tr>
 <tr>
 <td align="center"><b>macOS</b> <sub>x64/ia32, v12.0+</sub></td>
@@ -264,11 +309,11 @@ Ung dung desktop Electron chay hoan toan doc lap voi backend va co so du lieu cu
 
 <br />
 
-## Cai Dat
+## Cài đặt
 
-Truy cap [Tai Lieu](https://docs.termix.site/install) Termix de biet them thong tin ve cach cai dat Termix tren tat ca cac nen tang.
+Xem [tài liệu Termix](https://docs.termix.site/install) để có hướng dẫn cài đặt đầy đủ trên mọi nền tảng.
 
-Tep Docker Compose mau (ban co the bo qua `guacd` va mang neu khong co y dinh su dung cac tinh nang dieu khien may tinh tu xa):
+Tệp Docker Compose mẫu (bạn có thể bỏ `guacd` và phần mạng nếu không định dùng máy tính từ xa):
 
 ```yaml
 services:
@@ -305,19 +350,45 @@ networks:
     driver: bridge
 ```
 
+### Dòng lệnh
+
+Termix cũng có CLI, để bạn quản lý máy chủ từ terminal và dùng Termix trong script của mình.
+
+```bash
+npm install -g @termix-cli/cli
+termix login --url https://termix.example.com
+termix ssh 1
+```
+
+Nó mở được terminal, chạy lệnh trên một máy chủ hoặc cả một nhóm, chuyển tệp qua SFTP, và quản lý máy chủ, đoạn lệnh và thông tin đăng nhập. Tài liệu đầy đủ ở [docs.termix.site/cli](https://docs.termix.site/cli).
+
+### Chạy trên cloud
+
+Bạn có thể chạy máy chủ Termix trên VPS thay vì trong mạng của mình. Nếu Termix chạy ngay trong mạng mà nó quản lý, một sự cố sẽ kéo nó sập theo, đúng lúc bạn cần nó để sửa. Chạy ở ngoài thì nó luôn truy cập được, cho bạn một IP cố định và vào được từ bất cứ đâu mà không cần VPN hay mở cổng.
+
+[GINERNET](https://docs.termix.site/install/ginernet) là nhà tài trợ của Termix, và tài liệu có hướng dẫn từng bước để triển khai trên nền tảng VPS của họ.
+
+<br />
+
+## Dữ liệu sử dụng
+
+Termix gửi một tín hiệu nhỏ ẩn danh mỗi ngày một lần, để tôi biết có bao nhiêu bản đang chạy và tính năng nào thực sự được dùng. Nó gồm một mã bản cài ngẫu nhiên, số người dùng và máy chủ bạn có, phiên bản ứng dụng, và những tính năng (terminal, trình quản lý tệp, tunnel, docker, v.v.) đã dùng trong 24 giờ qua. Nó không bao giờ chứa tên người dùng, tên máy chủ, địa chỉ IP, thông tin đăng nhập hay bất cứ thứ gì nhận dạng bạn hoặc máy chủ của bạn.
+
+Mặc định là bật. Bạn tắt nó trong phần Cài đặt quản trị, mục Chung, hoặc đặt `ENABLE_TELEMETRY=false` trước cả khi khởi động Termix.
+
 <br />
 
 ## Quyên góp
 
-Termix là dự án miễn phí và mã nguồn mở, không có gói đăng ký hay trả phí. Nếu bạn thấy hữu ích, hãy cân nhắc quyên góp để giúp trang trải chi phí máy chủ, tên miền và thời gian phát triển. Các khoản quyên góp cũng giúp tài trợ thời gian nghiên cứu và tìm hiểu những gì cần thiết để xây dựng các tính năng như SAML, Kubernetes và hỗ trợ Agent. Theo dõi tiến độ và quyên góp bên dưới.
+Termix miễn phí và mã nguồn mở, không có gói thuê bao hay bản trả phí. Nếu bạn thấy hữu ích, hãy cân nhắc quyên góp để giúp trang trải máy chủ, tên miền và thời gian phát triển. Quyên góp cũng giúp có thời gian tìm hiểu những thứ cần thiết cho các tính năng như SAML, Kubernetes và hỗ trợ agent. Theo dõi tiến độ và quyên góp ở bên dưới.
 
 [Quyên góp](https://donate.termix.site/)
 
 <br />
 
-## Nha Tai Tro
+## Nhà tài trợ
 
-Ban quan tam den viec dat quang cao tra phi de ho tro phat trien? Gui email toi [mail@termix.site](mailto:mail@termix.site).
+Bạn muốn đặt quảng cáo trả phí để ủng hộ việc phát triển? Gửi thư tới [mail@termix.site](mailto:mail@termix.site).
 
 <div align="center">
 
@@ -339,10 +410,6 @@ Ban quan tam den viec dat quang cao tra phi de ho tro phat trien? Gui email toi 
   <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
 </a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
 <a href="https://akamai.com/">
   <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
 </a>
@@ -354,18 +421,21 @@ Ban quan tam den viec dat quang cao tra phi de ho tro phat trien? Gui email toi 
 <a href="https://rackgenius.com/">
   <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
 </a>
-
+&nbsp;&nbsp;&nbsp;
+<a href="https://ginernet.com/">
+  <img src="https://ginernet.com/img/logo-web.png" height="40" alt="Ginernet" />
+</a>
 </div>
 
 <br />
 
-## Ho Tro
+## Hỗ trợ
 
-Neu ban can tro giup hoac muon yeu cau tinh nang voi Termix, hay truy cap trang [Van De](https://github.com/Termix-SSH/Support/issues), dang nhap va nhan `New Issue`. Vui long mo ta van de cang chi tiet cang tot, uu tien viet bang tieng Anh. Ban cung co the tham gia may chu [Discord](https://discord.gg/jVQGdvHDrf) va truy cap kenh ho tro, tuy nhien thoi gian phan hoi co the lau hon.
+Cần giúp đỡ hoặc muốn đề xuất tính năng? Hãy mở một [issue mới](https://github.com/Termix-SSH/Support/issues) và mô tả càng chi tiết càng tốt, bằng tiếng Anh nếu được. Bạn cũng có thể hỏi trong kênh hỗ trợ trên [Discord](https://discord.gg/jVQGdvHDrf), tuy nhiên ở đó có thể lâu được trả lời hơn.
 
 <br />
 
-## Anh Chup Man Hinh
+## Ảnh chụp màn hình
 
 <div align="center">
 
@@ -373,7 +443,7 @@ Neu ban can tro giup hoac muon yeu cau tinh nang voi Termix, hay truy cap trang 
 
 [![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
-<sub>Xem tong quan cap nhat tren YouTube</sub>
+<sub>Xem giới thiệu các bản cập nhật trên YouTube</sub>
 
 <br />
 <br />
@@ -413,18 +483,18 @@ Neu ban can tro giup hoac muon yeu cau tinh nang voi Termix, hay truy cap trang 
 </tr>
 </table>
 
-<sub>Mot so video va hinh anh co the da loi thoi hoac khong the hien chinh xac hoan toan cac tinh nang.</sub>
+<sub>Một số video và hình ảnh có thể đã cũ hoặc chưa thể hiện đầy đủ tính năng.</sub>
 
 </div>
 
 <br />
 
-## Tinh Nang Du Kien
+## Tính năng dự kiến
 
-Xem [Du An](https://github.com/orgs/Termix-SSH/projects/5) de biet tat ca cac tinh nang du kien. Neu ban muon dong gop, xem [Dong Gop](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+Toàn bộ tính năng dự kiến nằm ở [Projects](https://github.com/orgs/Termix-SSH/projects/5). Nếu bạn muốn đóng góp, xem [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
 
-## Giay Phep
+## Giấy phép
 
-Duoc phan phoi theo Giay Phep Apache Phien Ban 2.0. Xem `LICENSE` de biet them thong tin.
+Phát hành theo Giấy phép Apache phiên bản 2.0. Xem `LICENSE` để biết thêm chi tiết.

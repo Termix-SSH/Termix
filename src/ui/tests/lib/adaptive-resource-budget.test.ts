@@ -1,0 +1,162 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  computeAdaptiveResourceBudget,
+  markAdaptiveResourceUsed,
+  resetAdaptiveResourceState,
+  runAdaptiveBackgroundTask,
+} from "../../lib/adaptive-resource-budget";
+import {
+  clearLocalAdaptiveEngine,
+  getLocalAdaptiveStats,
+} from "../../lib/local-adaptive-engine";
+
+describe("adaptive resource budget", () => {
+  beforeEach(() => {
+    clearLocalAdaptiveEngine();
+    resetAdaptiveResourceState();
+    // jsdom reports the host's real core count, so the tier the runtime picks
+    // would otherwise depend on the machine (CI runners have 4 cores).
+    Object.defineProperty(navigator, "hardwareConcurrency", {
+      value: 8,
+      configurable: true,
+    });
+  });
+
+  it("uses hard environmental constraints before optional work", () => {
+    expect(computeAdaptiveResourceBudget({ visible: false }).tier).toBe(
+      "paused",
+    );
+    expect(
+      computeAdaptiveResourceBudget({ visible: true, saveData: true }).tier,
+    ).toBe("constrained");
+    expect(
+      computeAdaptiveResourceBudget({ visible: true, effectiveType: "3g" })
+        .allowNetworkPrefetch,
+    ).toBe(false);
+  });
+
+  it("scales eager work down on limited devices", () => {
+    const eager = computeAdaptiveResourceBudget({
+      visible: true,
+      deviceMemoryGb: 8,
+      hardwareConcurrency: 8,
+    });
+    expect(eager).toMatchObject({
+      tier: "eager",
+      maxPrefetchBytes: 512 * 1024,
+      maxConcurrentNetworkPrefetches: 2,
+    });
+
+    const balanced = computeAdaptiveResourceBudget({
+      visible: true,
+      deviceMemoryGb: 4,
+      hardwareConcurrency: 8,
+    });
+    expect(balanced).toMatchObject({
+      tier: "balanced",
+      maxPrefetchBytes: 128 * 1024,
+      maxConcurrentNetworkPrefetches: 1,
+    });
+  });
+
+  it("requires enough poor local feedback before degrading", () => {
+    const environment = { visible: true, deviceMemoryGb: 8 };
+    expect(
+      computeAdaptiveResourceBudget(environment, {
+        observations: 3,
+        successes: 0,
+        cancellations: 0,
+        fallbacks: 0,
+      }).tier,
+    ).toBe("eager");
+    expect(
+      computeAdaptiveResourceBudget(environment, {
+        observations: 4,
+        successes: 2,
+        cancellations: 0,
+        fallbacks: 0,
+      }),
+    ).toMatchObject({ tier: "balanced", reason: "feedback" });
+  });
+
+  it("degrades only after enough speculative work goes unused", () => {
+    const environment = { visible: true, deviceMemoryGb: 8 };
+    expect(
+      computeAdaptiveResourceBudget(environment, {
+        observations: 4,
+        successes: 4,
+        cancellations: 0,
+        fallbacks: 0,
+        usefulnessObservations: 3,
+        usefulPreloads: 0,
+      }).tier,
+    ).toBe("eager");
+    expect(
+      computeAdaptiveResourceBudget(environment, {
+        observations: 4,
+        successes: 4,
+        cancellations: 0,
+        fallbacks: 0,
+        usefulnessObservations: 4,
+        usefulPreloads: 0,
+      }),
+    ).toMatchObject({ tier: "balanced", reason: "feedback" });
+  });
+
+  it("bounds concurrency and records aggregate task outcomes", async () => {
+    let releaseFirst!: () => void;
+    let releaseSecond!: () => void;
+    const first = new Promise<void>((resolve) => (releaseFirst = resolve));
+    const second = new Promise<void>((resolve) => (releaseSecond = resolve));
+
+    expect(
+      runAdaptiveBackgroundTask("module", "tab:terminal", () => first),
+    ).toBe(true);
+    expect(runAdaptiveBackgroundTask("module", "tab:files", () => second)).toBe(
+      true,
+    );
+    expect(
+      runAdaptiveBackgroundTask("module", "tab:docker", async () => {}),
+    ).toBe(false);
+    expect(
+      runAdaptiveBackgroundTask(
+        "network",
+        "file-content:large",
+        async () => {},
+        {
+          estimatedBytes: 512 * 1024 + 1,
+        },
+      ),
+    ).toBe(false);
+
+    releaseFirst();
+    releaseSecond();
+    await vi.waitFor(() => {
+      expect(
+        getLocalAdaptiveStats("resource-budget:module")["tab:terminal"]
+          .successes,
+      ).toBe(1);
+      expect(
+        getLocalAdaptiveStats("resource-budget:module")["tab:files"].successes,
+      ).toBe(1);
+    });
+
+    // A finished task must free its slot no later than it records its outcome.
+    expect(
+      runAdaptiveBackgroundTask("module", "tab:docker", async () => {}),
+    ).toBe(true);
+  });
+
+  it("records whether foreground navigation used a preload", async () => {
+    expect(
+      runAdaptiveBackgroundTask("module", "tab:files", async () => {}),
+    ).toBe(true);
+    markAdaptiveResourceUsed("module", "tab:files");
+
+    await vi.waitFor(() => {
+      expect(
+        getLocalAdaptiveStats("resource-usefulness:module")["tab:files"],
+      ).toMatchObject({ observations: 1, successes: 1 });
+    });
+  });
+});

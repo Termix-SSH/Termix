@@ -51,8 +51,29 @@ export async function expandOidcUsername(
     const { createCurrentUserRepository } =
       await import("../database/repositories/factory.js");
     const user = await createCurrentUserRepository().findById(userId);
-    const oidcIdentifier = user?.oidcIdentifier;
+    let oidcIdentifier = user?.oidcIdentifier;
     if (!oidcIdentifier) return username;
+
+    const match = /^ldap:(\d+):(.+)$/.exec(oidcIdentifier);
+    if (match) {
+      // Make sure the SSO provider is actually LDAP, to prevent spoofing.
+      const { createCurrentSsoProviderRepository } =
+        await import("../database/repositories/factory.js");
+      const claimedProviderId = Number(match[1]);
+      const provider =
+        user?.ssoProviderId != null
+          ? await createCurrentSsoProviderRepository().findById(
+              user.ssoProviderId,
+            )
+          : null;
+
+      if (
+        provider?.type === "ldap" &&
+        user?.ssoProviderId === claimedProviderId
+      ) {
+        oidcIdentifier = match[2];
+      }
+    }
 
     return username.replace(/\$oidc\.preferred_username/g, oidcIdentifier);
   } catch {

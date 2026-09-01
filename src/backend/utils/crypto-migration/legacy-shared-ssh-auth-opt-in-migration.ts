@@ -1,9 +1,14 @@
+import { getErrorMessage } from "../error-message.js";
 import { DatabaseSaveTrigger } from "../database-save-trigger.js";
 import { databaseLogger } from "../logger.js";
 import {
   createCurrentSettingsRepository,
   getCurrentRepositorySqlite,
 } from "../../database/repositories/factory.js";
+import {
+  needsExplicitPersist,
+  resolveDatabaseDialect,
+} from "../../database/db/dialect.js";
 import { SharedHostSecretsManager } from "../shared-host-secrets-manager.js";
 
 const MIGRATION_FLAG = "legacy_shared_ssh_auth_opt_in_v1";
@@ -33,6 +38,13 @@ export async function runLegacySharedSshAuthOptInMigration(): Promise<LegacyShar
   try {
     if ((await settingsRepository.get(MIGRATION_FLAG)) === "done") {
       return null;
+    }
+
+    // The behavior being preserved here belongs to releases that only ran on
+    // SQLite, so Postgres and MySQL have no legacy shares to opt in. The probes
+    // below are synchronous and sqlite_master specific besides.
+    if (!needsExplicitPersist(resolveDatabaseDialect())) {
+      return { enabled: 0, resynced: 0, skipped: 0 };
     }
 
     const sqlite = getCurrentRepositorySqlite();
@@ -108,7 +120,7 @@ export async function runLegacySharedSshAuthOptInMigration(): Promise<LegacyShar
           {
             operation: "legacy_shared_ssh_auth_opt_in_resync_skip",
             hostId: host.id,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           },
         );
       }

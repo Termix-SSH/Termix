@@ -1,5 +1,20 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+
+const { createApiKeyMock } = vi.hoisted(() => ({
+  createApiKeyMock: vi.fn(),
+}));
+
+vi.mock("@/main-axios", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/main-axios")>()),
+  createApiKey: createApiKeyMock,
+}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -22,7 +37,10 @@ vi.mock("@/components/theme-provider", () => ({
 }));
 vi.mock("@/lib/electron", () => ({ isElectron: () => false }));
 
-import { AccordionSection } from "../../sidebar/UserProfilePanel";
+import {
+  AccordionSection,
+  NewApiKeyDialog,
+} from "../../sidebar/UserProfilePanel";
 
 afterEach(cleanup);
 
@@ -97,5 +115,56 @@ describe("AccordionSection", () => {
 
     expect(screen.queryByRole("button", { name: /Security/ })).toBeNull();
     expect(onToggle).not.toHaveBeenCalled();
+  });
+});
+
+describe("NewApiKeyDialog", () => {
+  it("keeps the one-time token visible until Done is clicked", async () => {
+    createApiKeyMock.mockResolvedValue({
+      id: "key-1",
+      name: "deploy",
+      userId: "user-1",
+      username: "user",
+      tokenPrefix: "tmx_test",
+      token: "tmx_test_secret",
+      createdAt: new Date().toISOString(),
+      expiresAt: null,
+      lastUsedAt: null,
+      isActive: true,
+    });
+    const onOpenChange = vi.fn();
+
+    render(
+      <NewApiKeyDialog
+        open
+        onOpenChange={onOpenChange}
+        onAdd={vi.fn()}
+        userId="user-1"
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "newUi.sidebar.userProfile.apiKeyNamePlaceholder",
+      ),
+      { target: { value: "deploy" } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /newUi.sidebar.userProfile.createKey/,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("tmx_test_secret")).toBeTruthy();
+    });
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "newUi.sidebar.userProfile.done",
+      }),
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

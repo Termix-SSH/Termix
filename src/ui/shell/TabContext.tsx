@@ -323,6 +323,7 @@ export function TabProvider({ children }: TabProviderProps) {
               return {
                 ...tab,
                 hostConfig: {
+                  ...tab.hostConfig,
                   ...newHostConfig,
                   instanceId: tab.hostConfig.instanceId,
                 },
@@ -332,6 +333,7 @@ export function TabProvider({ children }: TabProviderProps) {
             return {
               ...tab,
               hostConfig: {
+                ...tab.hostConfig,
                 ...newHostConfig,
                 instanceId: tab.hostConfig.instanceId,
               },

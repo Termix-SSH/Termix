@@ -15,6 +15,12 @@ const LAYOUT_PREVIEWS: Record<SplitMode, React.ReactNode> = {
       <div className="flex-1 border-2 border-current" />
     </div>
   ),
+  "2-way-horizontal": (
+    <div className="flex flex-col gap-0.5 size-full">
+      <div className="flex-1 border-2 border-current" />
+      <div className="flex-1 border-2 border-current" />
+    </div>
+  ),
   "3-way": (
     <div className="flex gap-0.5 size-full">
       <div className="flex-1 border-2 border-current" />
@@ -375,6 +381,10 @@ export function SplitScreenPanel({
             {
               keys: ["Ctrl", "Shift", "["],
               label: t("newUi.sidebar.splitScreen.hotkeysPrevTab"),
+            },
+            {
+              keys: ["Alt", "1-9"],
+              label: t("newUi.sidebar.splitScreen.hotkeysJumpTab"),
             },
           ].map(({ keys, label }) => (
             <div

@@ -1,5 +1,6 @@
 import { authLogger } from "../../utils/logger.js";
 import {
+  createCurrentAiRepository,
   createCurrentAlertRepository,
   createCurrentApiKeyRepository,
   createCurrentAuditLogRepository,
@@ -15,6 +16,9 @@ import {
   createCurrentHostFolderRepository,
   createCurrentHostMetricsPreferenceRepository,
   createCurrentHostRepository,
+  createCurrentHostSidebarPreferenceRepository,
+  createCurrentCredentialSidebarPreferenceRepository,
+  createCurrentUiPreferenceRepository,
   createCurrentNetworkTopologyRepository,
   createCurrentOpksshTokenRepository,
   createCurrentOpenTabRepository,
@@ -57,6 +61,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
     await createCurrentRoleRepository().removeAllRolesFromUser(userId);
+    await createCurrentAiRepository().deleteByUserId(userId);
     await createCurrentAlertRepository().deleteByUserId(userId);
     await createCurrentAuditLogRepository().anonymizeByUserId(userId);
 
@@ -77,6 +82,11 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await createCurrentHostHealthRepository().deleteByUserId(userId);
     await createCurrentHostMetricsPreferenceRepository().deleteByUserId(userId);
+    await createCurrentHostSidebarPreferenceRepository().deleteByUserId(userId);
+    await createCurrentCredentialSidebarPreferenceRepository().deleteByUserId(
+      userId,
+    );
+    await createCurrentUiPreferenceRepository().deleteByUserId(userId);
     await createCurrentHostRepository().deleteByUserId(userId);
     await createCurrentCredentialRepository().deleteByUserId(userId);
 

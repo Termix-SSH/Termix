@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
 import { TunnelTab } from "@/features/tunnel/TunnelTab.tsx";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 import type { Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
 
@@ -25,6 +26,11 @@ function sshHostToMinimalHost(h: SSHHost): Host {
     pin: h.pin ?? false,
     authType: h.authType,
     enableTerminal: h.enableTerminal ?? false,
+    enableCommandHistory: h.enableCommandHistory ?? false,
+    enableProxmox: h.enableProxmox ?? false,
+    enableProxmoxStats: h.enableProxmoxStats ?? false,
+    enableTmuxMonitor: h.enableTmuxMonitor ?? false,
+    enableTerminalToolbar: h.enableTerminalToolbar ?? true,
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
@@ -45,19 +51,25 @@ const TunnelApp: React.FC<TunnelAppProps> = ({ hostId }) => {
   const { t } = useTranslation();
   return (
     <FullScreenAppWrapper hostId={hostId}>
-      {(hostConfig, loading) => {
-        if (loading) {
+      {(hostConfig, phase) => {
+        if (phase === "loading") {
           return (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto" />
+            <div className="relative h-full w-full">
+              <ConnectionScreen
+                status="connecting"
+                message={t("hosts.loadingHost")}
+              />
             </div>
           );
         }
 
         if (!hostConfig) {
           return (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">{t("hosts.hostNotFound")}</p>
+            <div className="relative h-full w-full">
+              <ConnectionScreen
+                status="disconnected"
+                message={t("hosts.hostNotFound")}
+              />
             </div>
           );
         }

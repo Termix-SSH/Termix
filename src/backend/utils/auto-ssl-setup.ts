@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import { execSync } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
@@ -170,7 +171,7 @@ IP.3 = 0.0.0.0
       await this.logCertificateInfo();
     } catch (error) {
       throw new Error(
-        `SSL certificate generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `SSL certificate generation failed: ${getErrorMessage(error)}`,
         { cause: error },
       );
     }
@@ -214,7 +215,7 @@ IP.3 = 0.0.0.0
     } catch (error) {
       systemLogger.warn("Could not retrieve certificate information", {
         operation: "ssl_cert_info_error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -224,7 +225,7 @@ IP.3 = 0.0.0.0
     const keyPath = this.KEY_FILE;
 
     const sslEnvVars = {
-      ENABLE_SSL: "false",
+      ENABLE_SSL: "true",
       SSL_PORT: process.env.SSL_PORT || "8443",
       SSL_CERT_PATH: certPath,
       SSL_KEY_PATH: keyPath,

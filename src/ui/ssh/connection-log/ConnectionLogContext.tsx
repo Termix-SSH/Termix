@@ -88,3 +88,9 @@ export function useConnectionLog() {
   }
   return context;
 }
+
+// Loading and error screens render outside any provider, so they get undefined
+// instead of a crash.
+export function useOptionalConnectionLog() {
+  return useContext(ConnectionLogContext);
+}

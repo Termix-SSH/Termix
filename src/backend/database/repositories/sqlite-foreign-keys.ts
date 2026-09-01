@@ -23,21 +23,17 @@ export async function withSqliteForeignKeysDisabled<T>(
  * Backup restore writes tables in an order that is not dependency-safe, so the
  * constraints have to stand down for the duration.
  *
- * **This has no equivalent on Postgres or MySQL here.** Postgres needs
- * superuser to disable triggers, and MySQL's `SET FOREIGN_KEY_CHECKS = 0` is
- * per-connection, which a pool does not guarantee. Rather than run the import
- * with constraints enforced and have it fail partway through — leaving a
- * half-restored database — it refuses with a message that says why.
+ * Postgres and MySQL keep their constraints enabled. The portable importer
+ * writes through repositories and handles individual row failures, so it must
+ * still be allowed to run there; only SQLite needs this connection-local
+ * relaxation for legacy backups whose rows are not dependency ordered.
  */
 export async function withCurrentSqliteForeignKeysDisabled<T>(
   operation: () => Promise<T>,
 ): Promise<T> {
   const dialect = resolveDatabaseDialect();
   if (!needsExplicitPersist(dialect)) {
-    throw new Error(
-      `Importing a backup is only supported on SQLite; this deployment uses ${dialect}. ` +
-        `Restore into the database directly with its own tooling instead.`,
-    );
+    return operation();
   }
 
   return withSqliteForeignKeysDisabled(getCurrentRepositorySqlite(), operation);

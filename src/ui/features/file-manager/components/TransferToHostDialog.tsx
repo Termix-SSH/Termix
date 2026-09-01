@@ -76,7 +76,7 @@ interface TransferToHostDialogProps {
     destPath: string,
     destPathLabel: string,
     methodPreference: TransferMethodPreference,
-    parallelSegmentCount: number,
+    parallelSegmentCount?: number,
   ) => void;
 }
 
@@ -191,7 +191,7 @@ export function TransferToHostDialog({
   const destPathInputRef = useRef<HTMLInputElement>(null);
   const [methodPreference, setMethodPreference] =
     useState<TransferMethodPreference>("auto");
-  const [parallelSegmentCount, setParallelSegmentCount] = useState("2");
+  const [parallelSegmentCount, setParallelSegmentCount] = useState("auto");
   const [methodPreview, setMethodPreview] =
     useState<TransferMethodPreview | null>(null);
   const [methodPreviewLoading, setMethodPreviewLoading] = useState(false);
@@ -665,7 +665,9 @@ export function TransferToHostDialog({
       fullPath,
       destPath.trim(),
       methodPreference,
-      Math.max(1, Math.min(8, parseInt(parallelSegmentCount, 10) || 2)),
+      parallelSegmentCount === "auto"
+        ? undefined
+        : Math.max(1, Math.min(8, parseInt(parallelSegmentCount, 10))),
     );
     onOpenChange(false);
   };
@@ -982,6 +984,7 @@ export function TransferToHostDialog({
                         }
                         className="w-full appearance-none px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring pr-7"
                       >
+                        <option value="auto">{t("transfer.methodAuto")}</option>
                         {[1, 2, 3, 4].map((n) => (
                           <option key={n} value={n.toString()}>
                             {t("transfer.parallelSegmentsOption", { count: n })}

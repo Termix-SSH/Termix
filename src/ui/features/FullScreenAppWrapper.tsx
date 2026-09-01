@@ -13,11 +13,16 @@ import { Auth } from "@/auth/Auth.tsx";
 import { Toaster } from "@/components/sonner.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+
+export type FullScreenAppPhase = "loading" | "not-found" | "ready";
 
 interface FullScreenAppWrapperProps {
   hostId?: string;
-  children: (hostConfig: SSHHost | null, loading: boolean) => React.ReactNode;
+  children: (
+    hostConfig: SSHHost | null,
+    phase: FullScreenAppPhase,
+  ) => React.ReactNode;
 }
 
 export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
@@ -146,17 +151,8 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
 
   if (authLoading) {
     return (
-      <div
-        className="w-full h-screen overflow-hidden flex flex-col items-center justify-center gap-4"
-        style={{ backgroundColor: "var(--bg-base)" }}
-      >
-        <RefreshCw
-          className="size-8 animate-spin"
-          style={{ color: "var(--foreground)" }}
-        />
-        <p className="text-sm" style={{ color: "var(--foreground-secondary)" }}>
-          {t("common.loading")}
-        </p>
+      <div className="relative w-full h-screen overflow-hidden">
+        <ConnectionScreen status="connecting" message={t("common.loading")} />
       </div>
     );
   }
@@ -185,6 +181,12 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
     );
   }
 
+  const phase: FullScreenAppPhase = loading
+    ? "loading"
+    : !hostConfig && hostId
+      ? "not-found"
+      : "ready";
+
   return (
     <SidebarProvider>
       <TabProvider>
@@ -193,7 +195,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
             className="w-full h-screen overflow-hidden"
             style={{ backgroundColor: "var(--bg-base)" }}
           >
-            {children(hostConfig, loading)}
+            {children(hostConfig, phase)}
           </div>
         </CommandHistoryProvider>
       </TabProvider>
