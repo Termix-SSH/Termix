@@ -1077,15 +1077,12 @@ function startBackendServer() {
       // Classified whether or not the ready promise already settled: the
       // 15s ready timeout resolves optimistically, so a backend that dies
       // at second 20 still has to be reported rather than silently dropped.
+      // backendStopRequested is the only evidence that an exit was asked
+      // for, so it is the sole guard here -- past it, every exit means the
+      // backend is gone and the renderer must stop waiting for it.
       if (!backendStopRequested) {
-        backendFailure = classifyBackendFailure({
-          exitCode: code,
-          signal,
-          stderr: backendStderrTail,
-        });
-        if (backendFailure) {
-          logToFile("Backend failure classified as:", backendFailure.reason);
-        }
+        backendFailure = classifyBackendFailure(backendStderrTail);
+        logToFile("Backend failure classified as:", backendFailure.reason);
       }
       backendProcess = null;
       clearBackendPidFile();
