@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
   isNonEmptyString,
   isOptionalBoolean,
@@ -11,6 +12,24 @@ import {
   stripSensitiveFields,
   transformHostResponse,
 } from "../../../database/routes/host-normalizers.js";
+
+describe("applyHostKeyTypeUpdate", () => {
+  it("clears an existing key type when auto-detect sends null", () => {
+    const update: Record<string, unknown> = { keyType: "ssh-ed25519" };
+
+    applyHostKeyTypeUpdate(update, null);
+
+    expect(update.keyType).toBeNull();
+  });
+
+  it("does not change the key type when the field is omitted", () => {
+    const update: Record<string, unknown> = { keyType: "ssh-ed25519" };
+
+    applyHostKeyTypeUpdate(update, undefined);
+
+    expect(update.keyType).toBe("ssh-ed25519");
+  });
+});
 
 describe("containsOwnerPrivateAuthUpdate", () => {
   it("detects owner-only SSH auth fields, including explicit clears", () => {

@@ -14,6 +14,15 @@ export function isOptionalBoolean(
   return value === undefined || typeof value === "boolean";
 }
 
+export function applyHostKeyTypeUpdate(
+  target: Record<string, unknown>,
+  keyType: unknown,
+): void {
+  if (keyType !== undefined) {
+    target.keyType = keyType || null;
+  }
+}
+
 const PROTOCOL_ENABLE_FIELDS = [
   "enableSsh",
   "enableRdp",
