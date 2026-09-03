@@ -9,8 +9,14 @@ import {
   type ReactNode,
 } from "react";
 import { getBranding, type BrandingSettings } from "@/api/settings-api";
+import {
+  BRANDING_ICON_SELECTORS,
+  captureDefaultIconHrefs,
+  nextIconHref,
+} from "./branding-document.ts";
 
 const DEFAULT_APP_NAME = "Termix";
+const DEFAULT_ICON_HREFS: Record<string, string> = {};
 
 interface BrandingContextValue {
   ready: boolean;
@@ -29,23 +35,21 @@ const BrandingContext = createContext<BrandingContextValue>({
   applyBranding: () => {},
 });
 
-const ICON_SELECTORS = ['link[rel="icon"]', 'link[rel="apple-touch-icon"]'];
-
-// Captured once at module load, before any branding is ever applied, so a
-// cleared/reset logo can restore the bundled default rather than leaving the
-// last custom icon in place until a full page reload.
-const DEFAULT_ICON_HREFS: Partial<Record<string, string>> = {};
-for (const selector of ICON_SELECTORS) {
-  const link = document.querySelector<HTMLLinkElement>(selector);
-  if (link) DEFAULT_ICON_HREFS[selector] = link.href;
-}
-
 function applyDocumentBranding(settings: BrandingSettings): void {
   document.title = settings.appName;
-  for (const selector of ICON_SELECTORS) {
+  if (settings.logo) {
+    captureDefaultIconHrefs(DEFAULT_ICON_HREFS, (selector) =>
+      document.querySelector<HTMLLinkElement>(selector),
+    );
+  }
+  for (const selector of BRANDING_ICON_SELECTORS) {
     const link = document.querySelector<HTMLLinkElement>(selector);
     if (!link) continue;
-    link.href = settings.logo ?? DEFAULT_ICON_HREFS[selector] ?? link.href;
+    link.href = nextIconHref(
+      settings.logo,
+      DEFAULT_ICON_HREFS[selector],
+      link.href,
+    );
   }
 }
 

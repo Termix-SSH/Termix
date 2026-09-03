@@ -5,14 +5,10 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import type { BrandingSettings } from "@/api/settings-api";
 import { AccordionSection } from "./AdminSettingsShared";
-
-const BRANDING_LOGO_MAX_BYTES = 750 * 1024;
-const BRANDING_LOGO_ACCEPT = "image/png,image/jpeg,image/webp";
-const BRANDING_LOGO_ACCEPTED_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-]);
+import {
+  BRANDING_LOGO_ACCEPT,
+  isAcceptedBrandingLogoFile,
+} from "./branding-logo-file";
 
 export function AdminBrandingSection({
   open,
@@ -38,10 +34,7 @@ export function AdminBrandingSection({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !settings) return;
-    if (
-      !BRANDING_LOGO_ACCEPTED_TYPES.has(file.type) ||
-      file.size > BRANDING_LOGO_MAX_BYTES
-    ) {
+    if (!isAcceptedBrandingLogoFile(file)) {
       alert(t("admin.brandingLogoInvalid"));
       return;
     }
