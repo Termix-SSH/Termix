@@ -26,7 +26,11 @@ describe("GuacamoleToolbar Windows key", () => {
       } satisfies GuacamoleDisplayHandle,
     } as React.RefObject<GuacamoleDisplayHandle>;
     const { getByText } = render(
-      <GuacamoleToolbar displayRef={displayRef} protocol="rdp" />,
+      <GuacamoleToolbar
+        displayRef={displayRef}
+        protocol="rdp"
+        metaKeyFamily="win"
+      />,
     );
 
     fireEvent.click(getByText("Win+L"));
@@ -106,5 +110,35 @@ describe("GuacamoleToolbar Windows key", () => {
 
     fireEvent.click(getByLabelText("guacamole.toolbar.hide"));
     expect(onHide).toHaveBeenCalledOnce();
+  });
+
+  it("labels the VNC meta key Super instead of Windows", () => {
+    const displayRef = {
+      current: {
+        disconnect: vi.fn(),
+        isConnected: () => true,
+        sendKey: vi.fn(),
+        sendMouse: vi.fn(),
+        setClipboard: vi.fn(),
+        getFilesystem: () => null,
+        uploadFile: vi.fn(),
+        zoomIn: vi.fn(() => 1.25),
+        zoomOut: vi.fn(() => 0.75),
+        resetZoom: vi.fn(() => 1),
+      } satisfies GuacamoleDisplayHandle,
+    } as React.RefObject<GuacamoleDisplayHandle>;
+
+    const { getByText, queryByText } = render(
+      <GuacamoleToolbar
+        displayRef={displayRef}
+        protocol="vnc"
+        metaKeyFamily="super"
+      />,
+    );
+
+    expect(getByText("Super+L")).toBeTruthy();
+    expect(getByText("Super")).toBeTruthy();
+    expect(queryByText("Win+L")).toBeNull();
+    expect(queryByText("Win")).toBeNull();
   });
 });
