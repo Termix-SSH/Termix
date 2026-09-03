@@ -18,6 +18,7 @@ import {
   serializeProxmoxJumpHosts,
 } from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "../../hosts/proxmox-shared.js";
+import { execElevated } from "../../hosts/metrics/managers/exec-elevated.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -69,6 +70,26 @@ function execCommand(
       });
     });
   });
+}
+
+export async function execPveshCommand(
+  client: SSHClient,
+  command: string,
+  sudoPassword: string | undefined,
+  timeoutMs = 25000,
+): Promise<string> {
+  if (!sudoPassword) {
+    return execCommand(client, command, timeoutMs);
+  }
+
+  const result = await execElevated(client, command, sudoPassword, {
+    forceSudo: true,
+    timeoutMs,
+  });
+  if (result.code !== 0) {
+    throw new Error(result.stderr || `Command exited with code ${result.code}`);
+  }
+  return result.stdout;
 }
 
 // Parse all IPs from LXC net config, then return the one matching the preferred prefix.
@@ -407,9 +428,10 @@ async function discoverProxmoxGuestsForHost(
       throw error;
     }
 
-    const resourcesJson = await execCommand(
+    const resourcesJson = await execPveshCommand(
       client,
       "pvesh get /cluster/resources --output-format json 2>/dev/null",
+      host.sudoPassword,
     );
 
     let resources: Array<Record<string, unknown>>;
@@ -458,9 +480,10 @@ async function discoverProxmoxGuestsForHost(
       if (g.type === "lxc") {
         let configIp: string | null = null;
         try {
-          const cfgJson = await execCommand(
+          const cfgJson = await execPveshCommand(
             client,
             `pvesh get /nodes/${g.node}/lxc/${g.vmid}/config --output-format json 2>/dev/null`,
+            host.sudoPassword,
             25000,
           );
           configIp = parseLxcIp(JSON.parse(cfgJson), config.preferredPrefixes);
@@ -472,9 +495,10 @@ async function discoverProxmoxGuestsForHost(
         // Fall back to the live interface list for running containers.
         if (g.status === "running") {
           try {
-            const ifRaw = await execCommand(
+            const ifRaw = await execPveshCommand(
               client,
               `pvesh get /nodes/${g.node}/lxc/${g.vmid}/interfaces --output-format json 2>/dev/null`,
+              host.sudoPassword,
               12000,
             );
             const data = JSON.parse(ifRaw);
@@ -504,9 +528,10 @@ async function discoverProxmoxGuestsForHost(
       }
       if (g.type === "qemu" && g.status === "running") {
         try {
-          const ifJson = await execCommand(
+          const ifJson = await execPveshCommand(
             client,
             `pvesh get /nodes/${g.node}/qemu/${g.vmid}/agent/network-get-interfaces --output-format json 2>/dev/null`,
+            host.sudoPassword,
             12000,
           );
           const data = JSON.parse(ifJson);
