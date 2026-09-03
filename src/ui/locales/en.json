@@ -2952,6 +2952,7 @@
   },
   "errors": {
     "databaseConnection": "Could not connect to the database",
+    "embeddedServerFailed": "Termix's local server could not start",
     "unknownError": "Unknown error",
     "loginFailed": "Login failed",
     "failedPasswordReset": "Failed to initiate password reset",
@@ -2983,6 +2984,9 @@
     "registrationDisabled": "New account registration is currently disabled by an admin. Please log in or contact an administrator.",
     "userNotAllowed": "Your account is not authorized to register. Please contact an administrator.",
     "databaseConnectionFailed": "Failed to connect to the database server",
+    "embeddedServerPortInUse": "Port {{port}} is already in use by another program. This is usually a Termix Docker container or a leftover Termix process from a previous session. Close it, then restart Termix.",
+    "embeddedServerPortInUseUnknownPort": "One of the ports Termix needs is already in use by another program. Close whatever is using it, then restart Termix.",
+    "embeddedServerCrashed": "The local server stopped unexpectedly. Restart Termix, and check the desktop log if this keeps happening.",
     "resetCodeSent": "Reset code sent to Docker logs",
     "codeVerified": "Code verified successfully",
     "passwordResetSuccess": "Password reset successfully",
