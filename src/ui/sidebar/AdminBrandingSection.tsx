@@ -8,6 +8,11 @@ import { AccordionSection } from "./AdminSettingsShared";
 
 const BRANDING_LOGO_MAX_BYTES = 750 * 1024;
 const BRANDING_LOGO_ACCEPT = "image/png,image/jpeg,image/webp";
+const BRANDING_LOGO_ACCEPTED_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
 
 export function AdminBrandingSection({
   open,
@@ -33,7 +38,10 @@ export function AdminBrandingSection({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !settings) return;
-    if (file.size > BRANDING_LOGO_MAX_BYTES) {
+    if (
+      !BRANDING_LOGO_ACCEPTED_TYPES.has(file.type) ||
+      file.size > BRANDING_LOGO_MAX_BYTES
+    ) {
       alert(t("admin.brandingLogoInvalid"));
       return;
     }

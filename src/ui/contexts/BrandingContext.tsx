@@ -29,13 +29,23 @@ const BrandingContext = createContext<BrandingContextValue>({
   applyBranding: () => {},
 });
 
+const ICON_SELECTORS = ['link[rel="icon"]', 'link[rel="apple-touch-icon"]'];
+
+// Captured once at module load, before any branding is ever applied, so a
+// cleared/reset logo can restore the bundled default rather than leaving the
+// last custom icon in place until a full page reload.
+const DEFAULT_ICON_HREFS: Partial<Record<string, string>> = {};
+for (const selector of ICON_SELECTORS) {
+  const link = document.querySelector<HTMLLinkElement>(selector);
+  if (link) DEFAULT_ICON_HREFS[selector] = link.href;
+}
+
 function applyDocumentBranding(settings: BrandingSettings): void {
   document.title = settings.appName;
-  if (!settings.logo) return;
-  const iconSelectors = ['link[rel="icon"]', 'link[rel="apple-touch-icon"]'];
-  for (const selector of iconSelectors) {
+  for (const selector of ICON_SELECTORS) {
     const link = document.querySelector<HTMLLinkElement>(selector);
-    if (link) link.href = settings.logo;
+    if (!link) continue;
+    link.href = settings.logo ?? DEFAULT_ICON_HREFS[selector] ?? link.href;
   }
 }
 
