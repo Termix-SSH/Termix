@@ -21,7 +21,11 @@ describe("transfer completion toast", () => {
 
   it("clears the infinite duration inherited from the progress toast", () => {
     showTransferCompletionToast(
-      { transferId: "transfer-1", status: "completed" },
+      {
+        transferId: "transfer-1",
+        status: "success",
+        phase: "verifying",
+      },
       ((key: string) => key) as never,
       "progress-toast",
     );
