@@ -16,6 +16,7 @@ import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
+import { BrandingProvider } from "@/contexts/BrandingContext";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
@@ -447,7 +448,9 @@ prepareClientCacheVersion().finally(() => {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <RootApp />
+        <BrandingProvider>
+          <RootApp />
+        </BrandingProvider>
       </ThemeProvider>
     </StrictMode>,
   );

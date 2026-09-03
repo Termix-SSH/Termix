@@ -40,6 +40,7 @@ import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import { isPasskeySupported, loginWithPasskey } from "@/api/webauthn-api";
 import type { SSOProviderPublic } from "@/types/index";
 import { Checkbox } from "@/components/checkbox";
+import { useBranding } from "@/contexts/BrandingContext";
 import {
   changeAppLanguage,
   normalizeLanguageCode,
@@ -214,6 +215,7 @@ function Field({
 
 export function Auth({ onLogin }: AuthProps) {
   const { t } = useTranslation();
+  const branding = useBranding();
   const [view, setView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
   const [providerLoading, setProviderLoading] = useState<
@@ -1194,12 +1196,19 @@ export function Auth({ onLogin }: AuthProps) {
             }}
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-            <span className="text-4xl font-bold tracking-[0.3em] font-mono">
-              TERMIX
+            {branding.logo && (
+              <img
+                src={branding.logo}
+                alt=""
+                className="w-16 h-16 object-contain mb-1"
+              />
+            )}
+            <span className="text-4xl font-bold tracking-[0.3em] font-mono uppercase">
+              {branding.appName}
             </span>
             <div className="w-8 h-px bg-accent-brand" />
             <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-              {t("auth.tagline")}
+              {branding.tagline || t("auth.tagline")}
             </span>
           </div>
         </div>
