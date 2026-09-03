@@ -119,6 +119,7 @@ export const GuacamoleDisplay = forwardRef<
   const onStageChangeRef = useRef(onStageChange);
   onStageChangeRef.current = onStageChange;
   const keyboardRef = useRef<Guacamole.Keyboard | null>(null);
+  const unbindPointerRef = useRef<(() => void) | null>(null);
   const scaleRef = useRef<number>(1);
   const fitScaleRef = useRef<number>(1);
   const zoomRef = useRef<number>(1);
@@ -134,6 +135,8 @@ export const GuacamoleDisplay = forwardRef<
   const [hasError, setHasError] = useState(false);
 
   const disconnectClient = useCallback(() => {
+    unbindPointerRef.current?.();
+    unbindPointerRef.current = null;
     const client = clientRef.current;
     clientRef.current = null;
     isConnectingRef.current = false;
@@ -518,7 +521,12 @@ export const GuacamoleDisplay = forwardRef<
       client.sendMouseState(adjustedState);
     };
 
-    bindPointerInput(displayElement, touchMode, sendMouseState);
+    unbindPointerRef.current?.();
+    unbindPointerRef.current = bindPointerInput(
+      displayElement,
+      touchMode,
+      sendMouseState,
+    );
 
     const keyboard = new Guacamole.Keyboard(displayElement);
     keyboardRef.current = keyboard;
