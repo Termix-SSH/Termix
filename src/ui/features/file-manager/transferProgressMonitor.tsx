@@ -226,6 +226,7 @@ function showDefaultCompletionToast(
         id: toastId,
         description: metrics || undefined,
         className: TOAST_CLASS,
+        duration: undefined,
       },
     );
     return;
@@ -236,6 +237,7 @@ function showDefaultCompletionToast(
     id: toastId,
     description: metrics || undefined,
     className: TOAST_CLASS,
+    duration: undefined,
   });
 }
 
@@ -319,6 +321,7 @@ export function beginTransferProgressMonitoring(
       toast.error(`${t("transfer.transferError")}: ${message}`, {
         id: progressToast,
         className: TOAST_CLASS,
+        duration: undefined,
       });
       markTransferNotified(transferId);
       throw error;
