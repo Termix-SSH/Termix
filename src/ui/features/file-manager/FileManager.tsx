@@ -1268,7 +1268,7 @@ function FileManagerContent({
 
       toast.success(
         t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
-        { id: toastId },
+        { id: toastId, duration: undefined },
       );
     } catch (error: unknown) {
       const err = error instanceof Error ? error : null;
@@ -1282,10 +1282,13 @@ function FileManagerContent({
             ip: currentHost?.ip,
             port: currentHost?.port,
           }),
-          { id: toastId },
+          { id: toastId, duration: undefined },
         );
       } else {
-        toast.error(t("fileManager.failedToDownloadFile"), { id: toastId });
+        toast.error(t("fileManager.failedToDownloadFile"), {
+          id: toastId,
+          duration: undefined,
+        });
       }
       console.error("Download failed:", error);
     }
