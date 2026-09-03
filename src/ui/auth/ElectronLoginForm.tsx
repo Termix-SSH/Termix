@@ -317,7 +317,7 @@ export function ElectronLoginForm({
           className="w-full h-full border-0"
           title="Server Authentication"
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation allow-top-navigation allow-top-navigation-by-user-activation allow-modals allow-downloads"
-          allow="clipboard-read; clipboard-write"
+          allow="clipboard-read; clipboard-write; publickey-credentials-get; publickey-credentials-create"
         />
       </div>
     </div>
