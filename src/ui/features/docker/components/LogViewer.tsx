@@ -1,4 +1,3 @@
-import { getErrorMessage } from "../../../lib/error-message.js";
 import React from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
@@ -8,7 +7,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { DockerLogOptions } from "@/types";
 import { getContainerLogs, downloadContainerLogs } from "@/main-axios.ts";
-import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
+import { Select2 } from "@/components/select2";
 
 interface LogViewerProps {
   sessionId: string;
@@ -67,8 +66,6 @@ export function LogViewer({
   const [autoRefresh, setAutoRefresh] = React.useState(false);
   const [logSearch, setLogSearch] = React.useState("");
   const logsEndRef = React.useRef<HTMLDivElement>(null);
-  const rawLogsRef = React.useRef(rawLogs);
-  rawLogsRef.current = rawLogs;
 
   const fetchLogs = React.useCallback(async () => {
     setIsLoading(true);
@@ -78,17 +75,11 @@ export function LogViewer({
         timestamps: showTimestamps,
       };
       const data = await getContainerLogs(sessionId, containerId, options);
-      const next = data.logs.split("\n").filter(Boolean);
-      const changed =
-        next.length !== rawLogsRef.current.length ||
-        next.some((line, index) => line !== rawLogsRef.current[index]);
-      if (changed) {
-        rawLogsRef.current = next;
-        setRawLogs(next);
-      }
-      return changed;
+      setRawLogs(data.logs.split("\n").filter(Boolean));
     } catch (error) {
-      toast.error(`Failed to fetch logs: ${getErrorMessage(error)}`);
+      toast.error(
+        `Failed to fetch logs: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -98,17 +89,14 @@ export function LogViewer({
     fetchLogs();
   }, [fetchLogs]);
 
-  useAdaptivePolling(
-    fetchLogs,
-    {
-      minIntervalMs: 3_000,
-      maxIntervalMs: 18_000,
-      stablePollsPerStep: 2,
-      maxRequestDutyCycle: 0.2,
-    },
-    autoRefresh,
-    { runImmediately: false },
-  );
+  React.useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void fetchLogs();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchLogs]);
 
   React.useEffect(() => {
     if (autoRefresh && logsEndRef.current) {
@@ -132,7 +120,9 @@ export function LogViewer({
       document.body.removeChild(a);
       toast.success(t("docker.logsDownloaded"));
     } catch (error) {
-      toast.error(`Failed to download logs: ${getErrorMessage(error)}`);
+      toast.error(
+        `Failed to download logs: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsDownloading(false);
     }
@@ -158,7 +148,7 @@ export function LogViewer({
             label={t("docker.timestamps")}
           />
           <Separator orientation="vertical" className="h-4" />
-          <select
+          <Select2
             value={tailLines}
             onChange={(e) => setTailLines(e.target.value)}
             className="h-7 px-2 text-[10px] bg-background border border-border text-foreground outline-none uppercase font-bold"
@@ -168,7 +158,7 @@ export function LogViewer({
             <option value="500">{t("docker.last500")}</option>
             <option value="1000">{t("docker.last1000")}</option>
             <option value="all">{t("docker.allLogs")}</option>
-          </select>
+          </Select2>
           <Separator orientation="vertical" className="h-4" />
           <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
             {filteredLogs.length}/{rawLogs.length} {t("docker.lines")}

@@ -7,6 +7,7 @@ import Guacamole from "guacamole-common-js";
 import type { SessionLogRecord } from "@/api/session-log-api";
 import { parseAsciicast, type Asciicast } from "./asciicast";
 import "@xterm/xterm/css/xterm.css";
+import { Select2 } from "@/components/select2";
 
 const SPEEDS = [0.5, 1, 2, 4];
 
@@ -62,7 +63,7 @@ function PlaybackControls({
       <span className="w-10 text-right text-[10px] tabular-nums text-muted-foreground">
         {formatPosition(duration)}
       </span>
-      <select
+      <Select2
         value={speed}
         onChange={(event) => onSpeed(Number(event.target.value))}
         className="h-7 border border-border bg-background px-1 text-[10px]"
@@ -73,7 +74,7 @@ function PlaybackControls({
             {value}×
           </option>
         ))}
-      </select>
+      </Select2>
     </div>
   );
 }

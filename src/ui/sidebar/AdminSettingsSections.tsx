@@ -4,6 +4,7 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { SettingRow } from "@/components/section-card";
+import { Select2 } from "@/components/select2";
 import {
   Database,
   Lock,
@@ -1216,20 +1217,20 @@ export function AdminSSLSection({
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             {t("admin.sslChallengeType")}
           </label>
-          <select
+          <Select2
             value={settings.challengeType}
-            onChange={(e) =>
+            onChange={(event) =>
               setSettings((p) => ({
                 ...p,
-                challengeType: e.target.value as AcmeChallengeType,
+                challengeType: event.target.value as AcmeChallengeType,
               }))
             }
-            className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+            className="w-full text-xs h-8"
           >
             <option value="http-webroot">HTTP (webroot)</option>
             <option value="dns-cloudflare">DNS (Cloudflare)</option>
             <option value="manual">{t("admin.sslManualOption")}</option>
-          </select>
+          </Select2>
           <span className="text-[10px] text-muted-foreground">
             {t("admin.sslChallengeTypeDesc")}
           </span>

@@ -7,6 +7,7 @@ import { managerPost, type FirewallChain } from "@/main-axios";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";
+import { Select2 } from "@/components/select2";
 
 interface FirewallData {
   type: "iptables" | "nftables" | "none";
@@ -124,21 +125,21 @@ export function FirewallManagerCard({ hostId }: { hostId: number | null }) {
           {t("hostMetrics.managers.addInputRule")}
         </span>
         <div className="flex items-center gap-1.5">
-          <select
+          <Select2
             value={proto}
             onChange={(e) => setProto(e.target.value as "tcp" | "udp")}
             className="h-7 border border-border bg-background px-1 text-xs"
           >
             <option value="tcp">tcp</option>
             <option value="udp">udp</option>
-          </select>
+          </Select2>
           <input
             value={port}
             onChange={(e) => setPort(e.target.value)}
             placeholder={t("hostMetrics.ports.port")}
             className="h-7 w-16 border border-border bg-background px-1.5 text-xs outline-none focus:ring-1 focus:ring-ring"
           />
-          <select
+          <Select2
             value={target}
             onChange={(e) =>
               setTarget(e.target.value as "ACCEPT" | "DROP" | "REJECT")
@@ -148,7 +149,7 @@ export function FirewallManagerCard({ hostId }: { hostId: number | null }) {
             <option>ACCEPT</option>
             <option>DROP</option>
             <option>REJECT</option>
-          </select>
+          </Select2>
           <Button
             variant="outline"
             size="xs"

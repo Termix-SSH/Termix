@@ -86,6 +86,8 @@ export type Host = {
   enableTunnel: boolean;
   serverTunnels: {
     mode: "local" | "remote" | "dynamic";
+    localAddress?: string;
+    remoteAddress?: string;
     bindHost?: string;
     targetHost?: string;
     sourcePort: number;
@@ -252,6 +254,7 @@ export type TabType =
   | "admin-settings"
   | "docker"
   | "tunnel"
+  | "sftp"
   | "network_graph"
   | "tmux_monitor" // --- tmux-monitor ---
   | "serial"

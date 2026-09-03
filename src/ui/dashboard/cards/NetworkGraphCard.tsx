@@ -62,7 +62,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useTabsSafe } from "@/shell/TabContext";
 import { cn } from "@/lib/utils";
-import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
+import { Select2 } from "@/components/select2";
 
 const AVAILABLE_COLORS = [
   { value: "#ef4444", label: "Red" },
@@ -131,14 +131,12 @@ function buildNodeSvg(
 ): string {
   const isOnline = status === "online";
   const isOffline = status === "offline";
-  const useRealColors = readStatusColorScheme() === "status";
+  const useRealColors = localStorage.getItem("statusColorScheme") === "status";
   let statusColor: string;
   if (isOnline) {
     statusColor = useRealColors
       ? "rgb(16,185,129)"
       : resolveCssVar("--accent-brand", "rgb(16,185,129)");
-  } else if (status === "reachable") {
-    statusColor = "rgb(251,191,36)";
   } else if (isOffline) {
     statusColor = useRealColors ? "rgb(239,68,68)" : "rgba(16,185,129,0.2)";
   } else {
@@ -498,13 +496,9 @@ export function NetworkGraphCard({
     (cy: cytoscape.Core) => {
       cyRef.current = cy;
       if (embedded) {
-        cy.nodes().forEach((n) => {
-          n.ungrabify();
-        });
+        cy.nodes().forEach((n) => n.ungrabify());
       } else {
-        cy.nodes().forEach((n) => {
-          n.grabify();
-        });
+        cy.nodes().forEach((n) => n.grabify());
       }
       applyStyle(cy);
 
@@ -961,7 +955,7 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.selectHost")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedHostForAddNode}
                 onChange={(e) => setSelectedHostForAddNode(e.target.value)}
@@ -972,11 +966,11 @@ export function NetworkGraphCard({
                     {h.name || h.ip}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
             <div className="grid gap-2">
               <Label>{t("networkGraph.parentGroup")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedGroupForAddNode}
                 onChange={(e) => setSelectedGroupForAddNode(e.target.value)}
@@ -987,7 +981,7 @@ export function NetworkGraphCard({
                     {g.label}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
           </div>
           <DialogFooter>
@@ -1084,7 +1078,7 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.selectGroup")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedGroupForMove}
                 onChange={(e) => setSelectedGroupForMove(e.target.value)}
@@ -1097,7 +1091,7 @@ export function NetworkGraphCard({
                       {g.label}
                     </option>
                   ))}
-              </select>
+              </Select2>
             </div>
           </div>
           <DialogFooter>
@@ -1123,7 +1117,7 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.source")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedHostForEdge}
                 onChange={(e) => setSelectedHostForEdge(e.target.value)}
@@ -1136,11 +1130,11 @@ export function NetworkGraphCard({
                     {el.label}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
             <div className="grid gap-2">
               <Label>{t("networkGraph.target")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={targetHostForEdge}
                 onChange={(e) => setTargetHostForEdge(e.target.value)}
@@ -1153,7 +1147,7 @@ export function NetworkGraphCard({
                     {el.label}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
           </div>
           <DialogFooter>

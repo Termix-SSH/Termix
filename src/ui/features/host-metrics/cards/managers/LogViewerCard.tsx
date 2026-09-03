@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { managerGet, managerGetSub } from "@/main-axios";
 import { extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
-import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
+import { Select2 } from "@/components/select2";
 
 interface LogFiles {
   common: string[];
@@ -27,8 +27,6 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<string[]>([]);
   const bodyRef = useRef<HTMLPreElement | null>(null);
-  const contentRef = useRef(content);
-  contentRef.current = content;
 
   // Load the host's actual log files once.
   useEffect(() => {
@@ -45,56 +43,44 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hostId]);
 
-  const fetchLog = useCallback(async () => {
-    if (hostId == null) return false;
+  const fetchLog = async () => {
+    if (hostId == null) return;
     const params: Record<string, string | number> = { lines };
     if (mode === "unit") {
-      if (!unit.trim()) return false;
+      if (!unit.trim()) return;
       params.unit = unit.trim();
     } else {
       const p = customPath.trim() || path;
-      if (!p) return false;
+      if (!p) return;
       params.path = p;
     }
     setLoading(true);
     setError(null);
     try {
       const res = await managerGet<{ content: string }>(hostId, "logs", params);
-      const next = res.content || "";
-      const changed = next !== contentRef.current;
-      if (changed) {
-        contentRef.current = next;
-        setContent(next);
-        requestAnimationFrame(() => {
-          if (bodyRef.current)
-            bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-        });
-      }
-      return changed;
+      setContent(res.content || "");
+      requestAnimationFrame(() => {
+        if (bodyRef.current)
+          bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+      });
     } catch (e) {
       setError(extractError(e).message);
     } finally {
       setLoading(false);
     }
-  }, [customPath, hostId, lines, mode, path, unit]);
+  };
 
   useEffect(() => {
-    void fetchLog();
-    // Custom paths are applied on blur/manual refresh, not on every keystroke.
+    fetchLog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hostId, mode, path, unit, lines]);
+  }, [mode, path, unit, lines]);
 
-  useAdaptivePolling(
-    fetchLog,
-    {
-      minIntervalMs: 3_000,
-      maxIntervalMs: 18_000,
-      stablePollsPerStep: 2,
-      maxRequestDutyCycle: 0.2,
-    },
-    follow,
-    { runImmediately: false },
-  );
+  useEffect(() => {
+    if (!follow) return;
+    const id = setInterval(fetchLog, 3000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [follow, mode, path, unit, lines, customPath]);
 
   const shown = useMemo(() => {
     if (!grep) return content;
@@ -125,16 +111,16 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
       }
     >
       <div className="mb-2 flex items-center gap-1.5">
-        <select
+        <Select2
           value={mode}
           onChange={(e) => setMode(e.target.value as Mode)}
           className="h-7 border border-border bg-background px-1 text-[11px]"
         >
           <option value="file">{t("hostMetrics.managers.logFile")}</option>
           <option value="unit">{t("hostMetrics.managers.logUnit")}</option>
-        </select>
+        </Select2>
         {mode === "file" ? (
-          <select
+          <Select2
             value={customPath ? "" : path}
             onChange={(e) => {
               setCustomPath("");
@@ -147,7 +133,7 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
                 {f}
               </option>
             ))}
-          </select>
+          </Select2>
         ) : (
           <input
             value={unit}
@@ -157,7 +143,7 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
             className="h-7 flex-1 border border-border bg-background px-2 font-mono text-[11px] outline-none focus:ring-1 focus:ring-ring"
           />
         )}
-        <select
+        <Select2
           value={lines}
           onChange={(e) => setLines(Number(e.target.value))}
           className="h-7 border border-border bg-background px-1 text-[11px]"
@@ -167,7 +153,7 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
               {n}
             </option>
           ))}
-        </select>
+        </Select2>
       </div>
 
       {mode === "file" && (

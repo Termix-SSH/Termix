@@ -6,6 +6,7 @@ import type { Host } from "@/types/ui-types";
 import { getCredentials } from "@/api/credentials-api";
 import { mapCredentials } from "./HostManagerData";
 import { createQuickConnectHost } from "./quick-connect-host";
+import { Select2 } from "@/components/select2";
 
 interface QuickConnectPanelProps {
   onConnect: (host: Host, type: "terminal" | "files") => void;
@@ -169,7 +170,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.quickConnect.credentialLabel")}
             </label>
-            <select
+            <Select2
               value={credentialId}
               onChange={(e) => {
                 const newId = e.target.value;
@@ -187,7 +188,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
                   {c.username ? `${c.name} (${c.username})` : c.name}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
         )}
         <div className="flex flex-col gap-1.5 pt-1">
