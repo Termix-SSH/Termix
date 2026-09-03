@@ -36,6 +36,10 @@ import {
   requestDesktopAutoSession,
   requestTrustedProxyLogin,
 } from "@/main-axios";
+import {
+  getEmbeddedServerFailure,
+  type EmbeddedServerFailure,
+} from "@/lib/embedded-server-status";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import { isPasskeySupported, loginWithPasskey } from "@/api/webauthn-api";
 import type { SSOProviderPublic } from "@/types/index";
@@ -291,6 +295,11 @@ export function Auth({ onLogin }: AuthProps) {
     boolean | null
   >(!isElectron() || isInElectronWebView() ? true : null);
   const [desktopAutoSessionRetries, setDesktopAutoSessionRetries] = useState(0);
+  // Set only when the Electron main process reports that the embedded
+  // backend died for good, which is the one case where retrying the
+  // auto-session forever is wrong.
+  const [embeddedServerFailure, setEmbeddedServerFailure] =
+    useState<EmbeddedServerFailure | null>(null);
 
   useEffect(() => {
     if (proxySigninHandledRef.current || isElectron()) return;
@@ -426,8 +435,27 @@ export function Auth({ onLogin }: AuthProps) {
   // real form.
   useEffect(() => {
     if (desktopAutoSessionDone !== null) return;
+    if (embeddedServerFailure) return;
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // "Retry forever" holds only while the backend could still be booting.
+    // If the main process reports that it exited -- a port conflict being
+    // by far the most common cause -- there is nothing left to wait for, so
+    // the reason is shown instead of an unending spinner.
+    const retryUnlessBackendIsGone = async () => {
+      const failure = await getEmbeddedServerFailure();
+      if (cancelled) return;
+      if (failure) {
+        setEmbeddedServerFailure(failure);
+        return;
+      }
+      const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
+      retryTimer = setTimeout(() => {
+        if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
+      }, delay);
+    };
+
     requestDesktopAutoSession()
       .then((outcome) => {
         if (cancelled) return;
@@ -441,26 +469,25 @@ export function Auth({ onLogin }: AuthProps) {
           return;
         }
         if (outcome.kind === "retry") {
-          const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
-          retryTimer = setTimeout(() => {
-            if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
-          }, delay);
+          void retryUnlessBackendIsGone();
           return;
         }
         setDesktopAutoSessionDone(true);
       })
       .catch(() => {
         if (cancelled) return;
-        const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
-        retryTimer = setTimeout(() => {
-          if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
-        }, delay);
+        void retryUnlessBackendIsGone();
       });
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [desktopAutoSessionDone, desktopAutoSessionRetries, onLogin]);
+  }, [
+    desktopAutoSessionDone,
+    desktopAutoSessionRetries,
+    embeddedServerFailure,
+    onLogin,
+  ]);
 
   useEffect(() => {
     if (view === "totp" && totpInputRef.current) totpInputRef.current.focus();
@@ -1098,6 +1125,46 @@ export function Auth({ onLogin }: AuthProps) {
   // Electron, non-iframed: wait for the auto-session probe before rendering
   // anything, so a standalone desktop install never flashes a login form
   // it's about to skip past.
+  if (embeddedServerFailure) {
+    const detail =
+      embeddedServerFailure.reason === "port-in-use"
+        ? embeddedServerFailure.port !== null
+          ? t("messages.embeddedServerPortInUse", {
+              port: embeddedServerFailure.port,
+            })
+          : t("messages.embeddedServerPortInUseUnknownPort")
+        : t("messages.embeddedServerCrashed");
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
+        <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-sm w-full">
+          <div className="flex flex-col gap-1">
+            <p className="font-bold text-destructive">
+              {t("errors.embeddedServerFailed")}
+            </p>
+            <p className="text-sm text-muted-foreground">{detail}</p>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="text-xs text-muted-foreground">
+              {t("common.language")}
+            </span>
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (
     isElectron() &&
     !isInElectronWebView() &&

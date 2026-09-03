@@ -27,6 +27,8 @@ function invokeAllowed(channel, ...args) {
 contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   getPlatform: () => ipcRenderer.invoke("get-platform"),
+  getEmbeddedServerStatus: () =>
+    ipcRenderer.invoke("get-embedded-server-status"),
   openNativeRdp: (options) => ipcRenderer.invoke("open-native-rdp", options),
 
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),

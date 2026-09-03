@@ -12,6 +12,7 @@ import type { SSHHost } from "@/types";
 import { Auth } from "@/auth/Auth.tsx";
 import { Toaster } from "@/components/sonner.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor.ts";
+import { getEmbeddedServerFailure } from "@/lib/embedded-server-status.ts";
 import { useTranslation } from "react-i18next";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 
@@ -89,7 +90,18 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
           setAuthLoading(false);
           return;
         }
-        // "retry": keep retrying indefinitely with capped backoff.
+        // "retry": keep retrying indefinitely with capped backoff -- but
+        // only while the embedded backend could still be booting. Once the
+        // main process reports it exited for good (a port conflict, most
+        // often), fall through to the unauthenticated render, where Auth
+        // shows the actual reason rather than spinning forever.
+        if (await getEmbeddedServerFailure()) {
+          if (cancelled) return;
+          setIsAuthenticated(false);
+          setAuthLoading(false);
+          return;
+        }
+        if (cancelled) return;
         const delay = Math.min(1000 * 2 ** attempt, 10000);
         retryTimer = setTimeout(() => {
           if (!cancelled) checkAuth(attempt + 1);

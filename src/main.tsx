@@ -6,6 +6,7 @@ import "./ui/index.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
+import { getEmbeddedServerFailure } from "@/lib/embedded-server-status";
 import { Toaster } from "@/components/sonner";
 import { Auth, getStoredAuth, clearStoredAuth } from "@/auth/Auth";
 import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
@@ -274,12 +275,24 @@ function App() {
           setPhase("idle-auth");
           return;
         }
-        const delay = isElectron()
-          ? Math.min(1000 * 2 ** verifyRetryCount, 10000)
-          : 3000;
-        timerRef.current = setTimeout(() => {
-          setVerifyRetryCount((c) => c + 1);
-        }, delay);
+        // "Always eventually comes up" holds only while the embedded
+        // backend is still booting. If the main process reports it exited
+        // for good -- a port conflict being by far the most common cause --
+        // retrying forever leaves the user on an endless spinner with no
+        // hint of what is wrong, so hand over to Auth, which reports the
+        // reason instead.
+        void getEmbeddedServerFailure().then((failure) => {
+          if (failure) {
+            setPhase("idle-auth");
+            return;
+          }
+          const delay = isElectron()
+            ? Math.min(1000 * 2 ** verifyRetryCount, 10000)
+            : 3000;
+          timerRef.current = setTimeout(() => {
+            setVerifyRetryCount((c) => c + 1);
+          }, delay);
+        });
       });
   }, [phase, verifyRetryCount]);
 
