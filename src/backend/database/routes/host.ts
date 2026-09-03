@@ -33,6 +33,7 @@ import {
   createCurrentSharedHostAuthOverrideRepository,
 } from "../repositories/factory.js";
 import {
+  applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
   isNonEmptyString,
   isOptionalBoolean,
@@ -1173,9 +1174,7 @@ router.put(
       if (keyPassword !== undefined) {
         sshDataObj.keyPassword = keyPassword || null;
       }
-      if (keyType) {
-        sshDataObj.keyType = keyType;
-      }
+      applyHostKeyTypeUpdate(sshDataObj, keyType);
       sshDataObj.password = password || null;
     } else if (effectiveAuthType === "credential") {
       sshDataObj.password = password || null;
