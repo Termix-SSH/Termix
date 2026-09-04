@@ -38,8 +38,8 @@ describe("guacamole API origin", () => {
   it("uses the shared instance in the browser", async () => {
     isElectronMock.mockReturnValue(false);
 
-    await getGuacdStatus();
-    await getGuacamoleTokenFromHost(9, "vnc");
+    await getGuacdStatus("remote");
+    await getGuacamoleTokenFromHost(9, "remote", "vnc");
 
     expect(authApiMock.get).toHaveBeenCalledWith("/guacamole/status");
     expect(authApiMock.post).toHaveBeenCalledOnce();
@@ -52,8 +52,8 @@ describe("guacamole API origin", () => {
 
     // The embedded backend has no guacd, so asking it reports "disconnected"
     // even when the connected server can serve the session.
-    const status = await getGuacdStatus();
-    const token = await getGuacamoleTokenFromHost(9, "vnc");
+    const status = await getGuacdStatus("remote");
+    const token = await getGuacamoleTokenFromHost(9, "remote", "vnc");
 
     expect(status.guacd.status).toBe("connected");
     expect(token.token).toBe("remote-token");
@@ -69,6 +69,7 @@ describe("guacamole API origin", () => {
 
     await getGuacamoleTokenFromHost(
       9,
+      "remote",
       "rdp",
       {
         username: "admin",
@@ -93,7 +94,7 @@ describe("guacamole API origin", () => {
   it("sends an empty prompted domain for local RDP accounts", async () => {
     isElectronMock.mockReturnValue(false);
 
-    await getGuacamoleTokenFromHost(9, "rdp", {
+    await getGuacamoleTokenFromHost(9, "local", "rdp", {
       username: "local-admin",
       password: "secret",
       domain: "",
@@ -107,12 +108,53 @@ describe("guacamole API origin", () => {
     });
   });
 
+  // Support#1240: a host set to "This Device" is served by the embedded
+  // backend, so its token has to come from there too -- and its id must not
+  // be remapped onto a remote server that may not even be configured.
+  it("asks the embedded backend when the host originates locally", async () => {
+    isElectronMock.mockReturnValue(true);
+
+    const token = await getGuacamoleTokenFromHost(9, "local", "rdp");
+
+    expect(token.token).toBe("local-token");
+    expect(authApiMock.post).toHaveBeenCalledWith("/guacamole/connect-host/9", {
+      protocol: "rdp",
+    });
+    expect(remoteApiMock.post).not.toHaveBeenCalled();
+    expect(resolveRemoteHostIdMock).not.toHaveBeenCalled();
+  });
+
+  it("reports the embedded backend's own guacd for a local origin", async () => {
+    isElectronMock.mockReturnValue(true);
+
+    const status = await getGuacdStatus("local");
+
+    expect(status.guacd.status).toBe("disconnected");
+    expect(authApiMock.get).toHaveBeenCalledWith("/guacamole/status");
+    expect(remoteApiMock.get).not.toHaveBeenCalled();
+  });
+
+  it("uses the remote server for an explicitly remote origin", async () => {
+    isElectronMock.mockReturnValue(true);
+
+    await getGuacamoleTokenFromHost(9, "remote", "rdp");
+
+    expect(remoteApiMock.post).toHaveBeenCalledOnce();
+    expect(authApiMock.post).not.toHaveBeenCalled();
+  });
+
   it("does not fall back to a colliding local id when sync resolution fails", async () => {
     isElectronMock.mockReturnValue(true);
     resolveRemoteHostIdMock.mockResolvedValue(null);
 
     await expect(
-      getGuacamoleTokenFromHost(9, "rdp", undefined, "missing-sync-id"),
+      getGuacamoleTokenFromHost(
+        9,
+        "remote",
+        "rdp",
+        undefined,
+        "missing-sync-id",
+      ),
     ).rejects.toThrow("The synced host does not exist on the remote server");
     expect(remoteApiMock.post).not.toHaveBeenCalled();
   });

@@ -12,13 +12,49 @@ afterEach(() => {
 });
 
 describe("resolveConnectionOrigin", () => {
-  it("always resolves rdp/vnc/telnet to remote, even with a local override", async () => {
+  // Support#1240: these can now originate from the desktop, but only when a
+  // host opts in. Left on Default they stay remote, so an upgrade never moves
+  // an existing host onto a local guacd the user has not set up.
+  it("resolves rdp/vnc/telnet to remote when the host has no override", async () => {
+    win.IS_ELECTRON = true;
+    win.electronAPI = {
+      invoke: async (channel: string) =>
+        channel === "get-desktop-settings"
+          ? { defaultConnectionOrigin: "local" }
+          : null,
+    };
+    for (const connectionType of ["rdp", "vnc", "telnet"]) {
+      await expect(
+        resolveConnectionOrigin({ connectionType, connectionOrigin: null }),
+      ).resolves.toBe("remote");
+    }
+  });
+
+  it("honors an explicit local override for rdp/vnc/telnet", async () => {
     win.IS_ELECTRON = true;
     for (const connectionType of ["rdp", "vnc", "telnet"]) {
       await expect(
         resolveConnectionOrigin({ connectionType, connectionOrigin: "local" }),
+      ).resolves.toBe("local");
+    }
+  });
+
+  it("honors an explicit remote override for rdp/vnc/telnet", async () => {
+    win.IS_ELECTRON = true;
+    for (const connectionType of ["rdp", "vnc", "telnet"]) {
+      await expect(
+        resolveConnectionOrigin({ connectionType, connectionOrigin: "remote" }),
       ).resolves.toBe("remote");
     }
+  });
+
+  it("resolves rdp to local outside Electron, where there is only one backend", async () => {
+    await expect(
+      resolveConnectionOrigin({
+        connectionType: "rdp",
+        connectionOrigin: null,
+      }),
+    ).resolves.toBe("local");
   });
 
   it("always resolves serial to local, even with a remote override", async () => {

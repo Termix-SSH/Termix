@@ -83,6 +83,23 @@ type SnippetListItem = {
 };
 type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
 
+/**
+ * Whether the Connection Origin control is meaningful for a host.
+ *
+ * Every protocol Termix can dial from either backend belongs here. RDP, VNC
+ * and Telnet were added once they could originate from the desktop
+ * (Termix-SSH/Support#1240); before that the control was gated on SSH alone,
+ * so a host enabling only those protocols could never reach the setting.
+ */
+export function connectionOriginAppliesTo(protocols: HostProtocols): boolean {
+  return (
+    protocols.enableSsh ||
+    protocols.enableRdp ||
+    protocols.enableVnc ||
+    protocols.enableTelnet
+  );
+}
+
 export function mapSnippetResponse(
   res: unknown,
 ): { id: number; name: string }[] {
