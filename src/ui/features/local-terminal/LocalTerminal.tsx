@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FitAddon } from "@xterm/addon-fit";
+import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { useXTerm } from "react-xtermjs";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/components/theme-provider";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
 import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
+import {
+  handleTerminalClipboardKeyEvent,
+  createTerminalContextMenuHandler,
+} from "@/features/terminal/terminal-clipboard";
+import { RobustClipboardProvider } from "@/lib/clipboard-provider";
+import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 
 export function LocalTerminal({
   instanceId,
@@ -13,6 +22,7 @@ export function LocalTerminal({
   instanceId: string;
   isVisible: boolean;
 }) {
+  const { t } = useTranslation();
   const { theme: appTheme } = useTheme();
   const { instance: terminal, ref: xtermRef } = useXTerm();
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -55,9 +65,43 @@ export function LocalTerminal({
   useEffect(() => {
     if (!terminal || !window.electronAPI?.isElectron) return;
     const fitAddon = new FitAddon();
+    const clipboardProvider = new RobustClipboardProvider();
+    const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
     fitAddonRef.current = fitAddon;
     terminal.loadAddon(fitAddon);
+    terminal.loadAddon(clipboardAddon);
     fitAddon.fit();
+
+    async function writeTextToClipboard(text: string): Promise<boolean> {
+      const ok = await copyToClipboard(text);
+      if (!ok) toast.error(t("terminal.clipboardWriteFailed"));
+      return ok;
+    }
+
+    async function readTextFromClipboard(): Promise<string> {
+      const text = await readFromClipboard();
+      if (!text) toast.error(t("terminal.clipboardReadFailed"));
+      return text;
+    }
+
+    const clipboardActions = { writeTextToClipboard, readTextFromClipboard };
+
+    terminal.attachCustomKeyEventHandler((e: KeyboardEvent): boolean => {
+      if (e.type !== "keydown") return true;
+      // No native "paste" event listener here (unlike the SSH terminal), so
+      // plain Ctrl/Cmd+V reads the clipboard explicitly rather than relying
+      // on the browser's own paste event.
+      return handleTerminalClipboardKeyEvent(e, terminal, clipboardActions, {
+        plainPasteMode: "explicit",
+      });
+    });
+
+    const handleContextMenu = createTerminalContextMenuHandler(
+      terminal,
+      clipboardActions,
+    );
+    const element = xtermRef.current;
+    element?.addEventListener("contextmenu", handleContextMenu);
 
     let disposed = false;
     let removeData = () => {};
@@ -102,13 +146,15 @@ export function LocalTerminal({
       input.dispose();
       removeData();
       removeExit();
+      element?.removeEventListener("contextmenu", handleContextMenu);
+      clipboardProvider.dispose();
       const sessionId = sessionIdRef.current;
       sessionIdRef.current = null;
       if (sessionId) window.electronAPI.closeLocalTerminal(sessionId);
       fitAddonRef.current = null;
       fitAddon.dispose();
     };
-  }, [fit, instanceId, shell, terminal, xtermRef]);
+  }, [fit, instanceId, shell, t, terminal, xtermRef]);
 
   useEffect(() => {
     if (isVisible) requestAnimationFrame(fit);
