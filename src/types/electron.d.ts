@@ -192,6 +192,98 @@ export interface ElectronAPI {
     sessionId: string,
     callback: (exitCode: number) => void,
   ): () => void;
+
+  /** Local disk browsing for the dual-pane file manager (desktop only). */
+  localFs?: {
+    home: () => Promise<LocalFsResult<LocalFsHomeInfo>>;
+    list: (dirPath: string) => Promise<LocalFsResult<LocalDirectoryListing>>;
+    mkdir: (
+      parentPath: string,
+      name: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    ensureDir: (dirPath: string) => Promise<LocalFsResult<{ path: string }>>;
+    walk: (paths: string[]) => Promise<LocalFsResult<LocalWalkResult>>;
+    reveal: (targetPath: string) => Promise<LocalFsResult<unknown>>;
+    open: (targetPath: string) => Promise<LocalFsResult<unknown>>;
+  };
+
+  /** Streamed local<->remote transfers driven by the main process. */
+  localTransfer?: {
+    upload: (
+      options: LocalUploadRequest,
+    ) => Promise<LocalFsResult<{ bytes: number }>>;
+    download: (
+      options: LocalDownloadRequest,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    cancel: (
+      transferId: string,
+    ) => Promise<LocalFsResult<{ cancelled: boolean }>>;
+    onProgress: (
+      callback: (payload: LocalTransferProgress) => void,
+    ) => () => void;
+  };
+}
+
+export type LocalFsResult<T> =
+  ({ success: true } & T) | { success: false; error: string; code?: string };
+
+export interface LocalFsHomeInfo {
+  home: string;
+  separator: string;
+  platform: string;
+}
+
+export interface LocalFileEntry {
+  name: string;
+  path: string;
+  type: "file" | "directory" | "link";
+  size: number;
+  modifiedTimestamp?: number;
+  linkTarget?: string;
+  hidden: boolean;
+}
+
+export interface LocalDirectoryListing {
+  path: string;
+  parent: string | null;
+  entries: LocalFileEntry[];
+}
+
+export interface LocalWalkFile {
+  localPath: string;
+  /** Path relative to the drop root; "/"-separated and includes the root's own name. */
+  relativePath: string;
+  size: number;
+}
+
+export interface LocalWalkResult {
+  files: LocalWalkFile[];
+  emptyDirs: string[];
+  totalBytes: number;
+}
+
+export interface LocalUploadRequest {
+  transferId: string;
+  url: string;
+  headers: Record<string, string>;
+  fields: Record<string, string>;
+  localPath: string;
+  fileName: string;
+}
+
+export interface LocalDownloadRequest {
+  transferId: string;
+  url: string;
+  headers: Record<string, string>;
+  body: Record<string, unknown>;
+  destPath: string;
+  expectedSize?: number;
+}
+
+export interface LocalTransferProgress {
+  transferId: string;
+  transferred: number;
+  total?: number;
 }
 
 declare global {

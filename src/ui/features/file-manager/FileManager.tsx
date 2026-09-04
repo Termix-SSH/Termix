@@ -29,6 +29,9 @@ import { useTranslation } from "react-i18next";
 import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
+import { LocalFilePane } from "./LocalFilePane.tsx";
+import { useLocalTransfers } from "./hooks/useLocalTransfers.ts";
+import { isLocalFileBrowserAvailable } from "@/lib/local-files.ts";
 import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
 import { FileManagerTrashDialog } from "./FileManagerTrashDialog.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
@@ -106,6 +109,11 @@ import {
   renameOptimisticItem,
   restoreItems,
 } from "./optimistic-file-list";
+
+const LOCAL_PANE_OPEN_STORAGE_KEY = "termix:file-manager:local-pane:open";
+const LOCAL_PANE_WIDTH_STORAGE_KEY = "termix:file-manager:local-pane:width";
+const LOCAL_PANE_MIN_WIDTH = 300;
+const LOCAL_PANE_DEFAULT_WIDTH = 440;
 
 const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
 
@@ -195,6 +203,74 @@ function FileManagerContent({
   const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  // Desktop-only Local | Remote split view (Termius-style dual pane).
+  const localPaneAvailable = isLocalFileBrowserAvailable();
+  const [localPaneOpen, setLocalPaneOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(LOCAL_PANE_OPEN_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [localPaneRefreshToken, setLocalPaneRefreshToken] = useState(0);
+  const [localPaneWidth, setLocalPaneWidth] = useState<number>(() => {
+    try {
+      const saved = Number(localStorage.getItem(LOCAL_PANE_WIDTH_STORAGE_KEY));
+      return Number.isFinite(saved) && saved >= LOCAL_PANE_MIN_WIDTH
+        ? saved
+        : LOCAL_PANE_DEFAULT_WIDTH;
+    } catch {
+      return LOCAL_PANE_DEFAULT_WIDTH;
+    }
+  });
+  const panesRowRef = useRef<HTMLDivElement>(null);
+  const startLocalPaneResize = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = localPaneWidth;
+      const rowWidth = panesRowRef.current?.getBoundingClientRect().width ?? 0;
+      const maxWidth = Math.max(
+        LOCAL_PANE_MIN_WIDTH,
+        rowWidth ? rowWidth * 0.65 : Number.POSITIVE_INFINITY,
+      );
+      let latest = startWidth;
+      const onMove = (e: MouseEvent) => {
+        latest = Math.min(
+          maxWidth,
+          Math.max(LOCAL_PANE_MIN_WIDTH, startWidth + (e.clientX - startX)),
+        );
+        setLocalPaneWidth(latest);
+      };
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        try {
+          localStorage.setItem(LOCAL_PANE_WIDTH_STORAGE_KEY, String(latest));
+        } catch {
+          // storage unavailable
+        }
+      };
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    },
+    [localPaneWidth],
+  );
+  const toggleLocalPane = useCallback(() => {
+    setLocalPaneOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(LOCAL_PANE_OPEN_STORAGE_KEY, String(next));
+      } catch {
+        // storage unavailable
+      }
+      return next;
+    });
+  }, []);
   const [trashOpen, setTrashOpen] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -961,6 +1037,46 @@ function FileManagerContent({
     window.addEventListener("file-manager:refresh", handler);
     return () => window.removeEventListener("file-manager:refresh", handler);
   }, [currentHost?.id, handleRefreshDirectory]);
+
+  const localTransfers = useLocalTransfers({
+    sshSessionId,
+    hostId: currentHost?.id,
+    ensureSSHConnection,
+    onRemoteChanged: (remoteDir) => {
+      if (sshSessionId) invalidateCachedFileList(sshSessionId, remoteDir);
+      handleRefreshDirectory();
+      setSidebarRefreshTrigger((prev) => prev + 1);
+    },
+    onLocalChanged: () => setLocalPaneRefreshToken((prev) => prev + 1),
+  });
+
+  // Entries dragged from the local pane onto the remote grid (or onto one of
+  // its folders) upload into that folder, preserving directory structure.
+  const handleLocalFilesDrop = useCallback(
+    (localPaths: string[], targetDir?: FileItem) => {
+      const remoteDir = targetDir?.path ?? currentPathRef.current;
+      void localTransfers.uploadLocalPaths(localPaths, remoteDir);
+    },
+    [localTransfers],
+  );
+
+  // Remote rows dragged onto the local pane download into the folder shown
+  // there (or the folder row they were dropped on).
+  const handleRemoteItemsDroppedToLocal = useCallback(
+    (remotePaths: string[], localDir: string) => {
+      const known = new Map(files.map((f) => [f.path, f]));
+      const items: FileItem[] = remotePaths.map(
+        (p) =>
+          known.get(p) ?? {
+            name: p.split("/").filter(Boolean).pop() || p,
+            path: p,
+            type: "file",
+          },
+      );
+      void localTransfers.downloadRemoteItems(items, localDir);
+    },
+    [files, localTransfers],
+  );
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -3269,9 +3385,13 @@ function FileManagerContent({
           handleFilesDropped={handleFilesDropped}
           handleCreateNewFolder={handleCreateNewFolder}
           handleCreateNewFile={handleCreateNewFile}
+          showLocalPaneToggle={localPaneAvailable}
+          localPaneOpen={localPaneAvailable && localPaneOpen}
+          onToggleLocalPane={toggleLocalPane}
         />
 
         <div
+          ref={panesRowRef}
           className="flex-1 flex px-3 pb-3 pt-2 gap-3 min-h-0 relative"
           {...dragHandlers}
         >
@@ -3308,7 +3428,36 @@ function FileManagerContent({
             </div>
           </div>
 
-          <div className="flex-1 relative overflow-hidden min-h-0 flex flex-col border border-border bg-card">
+          {localPaneAvailable && localPaneOpen && (
+            <>
+              <div
+                className="hidden md:flex flex-shrink-0 relative overflow-hidden min-h-0 flex-col border border-border bg-card"
+                style={{
+                  width: localPaneWidth,
+                  minWidth: LOCAL_PANE_MIN_WIDTH,
+                  maxWidth: "65%",
+                }}
+              >
+                <LocalFilePane
+                  refreshToken={localPaneRefreshToken}
+                  onClose={toggleLocalPane}
+                  onRemoteItemsDropped={handleRemoteItemsDroppedToLocal}
+                />
+              </div>
+              {/* Drag handle between the local and remote panes */}
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={t("fileManager.localFiles")}
+                onMouseDown={startLocalPaneResize}
+                className="hidden md:block -mx-3 w-3 shrink-0 cursor-col-resize group relative z-10"
+              >
+                <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent group-hover:bg-accent-brand/60 transition-colors" />
+              </div>
+            </>
+          )}
+
+          <div className="flex-1 basis-0 relative overflow-hidden min-h-0 flex flex-col border border-border bg-card">
             <div className="flex-1 relative min-h-0 h-full">
               <FileManagerGrid
                 files={filteredFiles}
@@ -3318,6 +3467,10 @@ function FileManagerContent({
                 onSelectionChange={setSelection}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}
+                onUploadItems={handleItemsDropped}
+                onLocalFilesDrop={
+                  localPaneAvailable ? handleLocalFilesDrop : undefined
+                }
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onSortChange={(field) => {
