@@ -24,7 +24,6 @@ import {
   buildOriginWsUrl,
 } from "@/lib/connection-origin.ts";
 import {
-  getCookie,
   isElectron,
   logActivity,
   getSnippets,
@@ -80,9 +79,13 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
-import { isPhysicalShortcutKey, isTabKeyEvent } from "./terminal-key-event.ts";
+import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
+import {
+  handleTerminalClipboardKeyEvent,
+  createTerminalContextMenuHandler,
+} from "./terminal-clipboard.ts";
 import { quoteTerminalImagePath } from "./terminal-image-path.ts";
 import {
   getUserPreferences,
@@ -1098,10 +1101,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         hostConfig.id,
       ],
     );
-
-    function getUseRightClickCopyPaste() {
-      return getCookie("rightClickCopyPaste") !== "false";
-    }
 
     function attemptReconnection() {
       if (
@@ -2529,28 +2528,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
       });
       const element = xtermRef.current;
-      const handleContextMenu = (e: MouseEvent) => {
-        if (e.ctrlKey && onOpenFileManager) {
-          e.preventDefault();
-          e.stopPropagation();
-          onOpenFileManager();
-          return;
-        }
-
-        if (getUseRightClickCopyPaste()) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (terminal.hasSelection()) {
-            const text = terminal.getSelection();
-            writeTextToClipboard(text).then(() => terminal.clearSelection());
-          } else {
-            readTextFromClipboard().then((text) => {
-              if (text) terminal.paste(text);
-            });
-          }
-          return;
-        }
-      };
+      const handleContextMenu = createTerminalContextMenuHandler(
+        terminal,
+        { writeTextToClipboard, readTextFromClipboard },
+        { onCtrlClick: onOpenFileManager },
+      );
       element?.addEventListener("contextmenu", handleContextMenu);
 
       const handlePaste = (e: ClipboardEvent) => {
@@ -2865,86 +2847,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.ctrlKey &&
-          !e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyC", "c") &&
-          terminal.hasSelection()
+          !handleTerminalClipboardKeyEvent(
+            e,
+            terminal,
+            { writeTextToClipboard, readTextFromClipboard },
+            { plainPasteMode: "native" },
+          )
         ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            terminal.clearSelection();
-            return false;
-          }
-        }
-
-        if (
-          (e.metaKey &&
-            !e.shiftKey &&
-            !e.ctrlKey &&
-            !e.altKey &&
-            isPhysicalShortcutKey(e, "KeyC", "c")) ||
-          (e.ctrlKey &&
-            !e.shiftKey &&
-            !e.altKey &&
-            !e.metaKey &&
-            e.key === "Insert")
-        ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            return false;
-          }
-        }
-
-        if (
-          e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyC", "c")
-        ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            terminal.clearSelection();
-            return false;
-          }
-        }
-
-        if (
-          e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyV", "v")
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((text) => {
-            if (text) terminal.paste(text);
-          });
-          return false;
-        }
-
-        if (
-          e.ctrlKey &&
-          !e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyV", "v")
-        ) {
-          // Let the browser handle Ctrl+V natively, the paste event
-          // listener will intercept the result without triggering the
-          // clipboard permission popup
           return false;
         }
 
