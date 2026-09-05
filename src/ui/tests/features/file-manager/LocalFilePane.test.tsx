@@ -23,6 +23,18 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
+const sonnerToast = vi.hoisted(() => {
+  const fn = vi.fn() as ReturnType<typeof vi.fn> & Record<string, unknown>;
+  fn.success = vi.fn();
+  fn.error = vi.fn();
+  fn.info = vi.fn();
+  fn.warning = vi.fn();
+  fn.loading = vi.fn();
+  fn.dismiss = vi.fn();
+  return fn;
+});
+vi.mock("sonner", () => ({ toast: sonnerToast }));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
@@ -78,6 +90,13 @@ function installElectronApi() {
       })),
       list,
       mkdir: vi.fn(),
+      createFile: vi.fn(async () => ({ success: true as const, path: "" })),
+      rename: vi.fn(async () => ({ success: true as const, path: "" })),
+      trash: vi.fn(async () => ({
+        success: true as const,
+        trashed: 1,
+        failed: [],
+      })),
       ensureDir: vi.fn(),
       walk: vi.fn(),
       reveal: vi.fn(),
@@ -230,6 +249,150 @@ describe("LocalFilePane", () => {
     expect(
       screen.getByText("fileManager.localItemCount:2"),
     ).toBeInTheDocument();
+  });
+
+  it("opens a context menu for a row with entry actions", async () => {
+    const onUploadToRemote = vi.fn();
+    render(
+      <LocalFilePane
+        onRemoteItemsDropped={vi.fn()}
+        onUploadToRemote={onUploadToRemote}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(HOME)).toBeInTheDocument(),
+    );
+
+    const row = document.querySelector(
+      `[data-local-path="${HOME}/notes.txt"]`,
+    )!;
+    fireEvent.contextMenu(row, { clientX: 40, clientY: 50 });
+
+    const menu = screen.getByTestId("local-file-context-menu");
+    expect(menu).toBeInTheDocument();
+    expect(screen.getByText("fileManager.localOpen")).toBeInTheDocument();
+    expect(screen.getByText("fileManager.rename")).toBeInTheDocument();
+    expect(
+      screen.getByText("fileManager.localMoveToTrash"),
+    ).toBeInTheDocument();
+    // Background-only actions are not offered for a row.
+    expect(screen.queryByText("fileManager.newFolder")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("fileManager.localUploadToRemote"));
+    expect(onUploadToRemote).toHaveBeenCalledWith([`${HOME}/notes.txt`]);
+    expect(
+      screen.queryByTestId("local-file-context-menu"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("acts on the whole selection when right-clicking a selected row", async () => {
+    const onUploadToRemote = vi.fn();
+    render(
+      <LocalFilePane
+        onRemoteItemsDropped={vi.fn()}
+        onUploadToRemote={onUploadToRemote}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(HOME)).toBeInTheDocument(),
+    );
+
+    const projects = document.querySelector(
+      `[data-local-path="${HOME}/projects"]`,
+    )!;
+    const notes = document.querySelector(
+      `[data-local-path="${HOME}/notes.txt"]`,
+    )!;
+    fireEvent.click(projects);
+    fireEvent.click(notes, { metaKey: true });
+    fireEvent.contextMenu(notes, { clientX: 40, clientY: 50 });
+
+    fireEvent.click(screen.getByText("fileManager.localUploadToRemoteMany:2"));
+    expect(onUploadToRemote).toHaveBeenCalledWith(
+      expect.arrayContaining([`${HOME}/projects`, `${HOME}/notes.txt`]),
+    );
+    expect(onUploadToRemote.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  it("offers folder-level actions on the background and creates a file", async () => {
+    const api = installElectronApi();
+    render(<LocalFilePane onRemoteItemsDropped={vi.fn()} />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(HOME)).toBeInTheDocument(),
+    );
+
+    const body = screen
+      .getByText("fileManager.localItemCount:3")
+      .closest('[data-testid="local-file-pane"]')!
+      .querySelector(".thin-scrollbar")!;
+    fireEvent.contextMenu(body, { clientX: 100, clientY: 200 });
+
+    expect(screen.getByText("fileManager.newFolder")).toBeInTheDocument();
+    expect(screen.getByText("fileManager.refresh")).toBeInTheDocument();
+    expect(screen.queryByText("fileManager.rename")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("fileManager.newFile"));
+    const input = screen.getByPlaceholderText("fileManager.newFile");
+    fireEvent.change(input, { target: { value: "todo.md" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(api.localFs.createFile).toHaveBeenCalledWith(HOME, "todo.md"),
+    );
+  });
+
+  it("renames inline from the context menu", async () => {
+    const api = installElectronApi();
+    render(<LocalFilePane onRemoteItemsDropped={vi.fn()} />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(HOME)).toBeInTheDocument(),
+    );
+
+    const row = document.querySelector(
+      `[data-local-path="${HOME}/notes.txt"]`,
+    )!;
+    fireEvent.contextMenu(row, { clientX: 40, clientY: 50 });
+    fireEvent.click(screen.getByText("fileManager.rename"));
+
+    const input = screen.getByDisplayValue("notes.txt");
+    fireEvent.change(input, { target: { value: "renamed.txt" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(api.localFs.rename).toHaveBeenCalledWith(
+        `${HOME}/notes.txt`,
+        "renamed.txt",
+      ),
+    );
+  });
+
+  it("asks for confirmation before moving to the trash", async () => {
+    const api = installElectronApi();
+    render(<LocalFilePane onRemoteItemsDropped={vi.fn()} />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(HOME)).toBeInTheDocument(),
+    );
+
+    const row = document.querySelector(
+      `[data-local-path="${HOME}/notes.txt"]`,
+    )!;
+    fireEvent.contextMenu(row, { clientX: 40, clientY: 50 });
+    fireEvent.click(screen.getByText("fileManager.localMoveToTrash"));
+
+    // Nothing is trashed until the toast's confirm action is clicked.
+    expect(api.localFs.trash).not.toHaveBeenCalled();
+    expect(sonnerToast).toHaveBeenCalledWith(
+      "fileManager.localTrashConfirmSingle",
+      expect.objectContaining({ action: expect.anything() }),
+    );
+    const call = sonnerToast.mock.calls.find(
+      (c) => c[0] === "fileManager.localTrashConfirmSingle",
+    )!;
+    (call[1] as { action: { onClick: () => void } }).action.onClick();
+
+    await waitFor(() =>
+      expect(api.localFs.trash).toHaveBeenCalledWith([`${HOME}/notes.txt`]),
+    );
   });
 
   it("ignores OS file drags (those belong to the remote grid)", async () => {

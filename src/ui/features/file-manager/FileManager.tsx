@@ -3442,6 +3442,7 @@ function FileManagerContent({
                   refreshToken={localPaneRefreshToken}
                   onClose={toggleLocalPane}
                   onRemoteItemsDropped={handleRemoteItemsDroppedToLocal}
+                  onUploadToRemote={handleLocalFilesDrop}
                 />
               </div>
               {/* Drag handle between the local and remote panes */}
