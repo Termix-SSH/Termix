@@ -3,6 +3,7 @@ import {
   createHostEditorForm,
   buildHostEditorPayload,
   omitOwnerSshAuthFromSharedEdit,
+  connectionOriginAppliesTo,
   type HostProtocols,
 } from "../../sidebar/HostEditorData";
 import type { Host } from "@/types/ui-types";
@@ -639,5 +640,34 @@ describe("createHostEditorForm auto-tmux", () => {
       terminalConfig: { autoTmux: false },
     } as unknown as Host;
     expect(createHostEditorForm(host, { autoTmux: true }).autoTmux).toBe(false);
+  });
+});
+
+// Support#1240: RDP/VNC/Telnet can now originate from the desktop, so the
+// control has to appear for hosts that enable only those protocols -- it used
+// to be gated on SSH alone.
+describe("connectionOriginAppliesTo", () => {
+  const none = {
+    enableSsh: false,
+    enableRdp: false,
+    enableVnc: false,
+    enableTelnet: false,
+  };
+
+  it("applies to an SSH host", () => {
+    expect(connectionOriginAppliesTo({ ...none, enableSsh: true })).toBe(true);
+  });
+
+  it.each(["enableRdp", "enableVnc", "enableTelnet"] as const)(
+    "applies to a host that only enables %s",
+    (protocol) => {
+      expect(connectionOriginAppliesTo({ ...none, [protocol]: true })).toBe(
+        true,
+      );
+    },
+  );
+
+  it("does not apply when no supported protocol is enabled", () => {
+    expect(connectionOriginAppliesTo(none)).toBe(false);
   });
 });
