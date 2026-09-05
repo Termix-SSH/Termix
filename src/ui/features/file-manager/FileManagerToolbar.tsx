@@ -70,6 +70,9 @@ type FileManagerToolbarProps = {
   showLocalPaneToggle?: boolean;
   localPaneOpen?: boolean;
   onToggleLocalPane?: () => void;
+  /** Desktop directories sidebar (mobile uses the overlay instead). */
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 };
 
 function Breadcrumb({
@@ -226,6 +229,8 @@ export function FileManagerToolbar({
   showLocalPaneToggle = false,
   localPaneOpen = false,
   onToggleLocalPane,
+  sidebarOpen = true,
+  onToggleSidebar,
 }: FileManagerToolbarProps) {
   return (
     <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
@@ -234,9 +239,18 @@ export function FileManagerToolbar({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setMobileSidebarOpen((open) => !open)}
-            className="md:hidden size-8 rounded-none"
+            onClick={() => {
+              // Below md the sidebar is an overlay; above it, a persisted
+              // show/hide of the directories panel.
+              const isDesktop =
+                typeof window !== "undefined" &&
+                window.matchMedia("(min-width: 768px)").matches;
+              if (isDesktop && onToggleSidebar) onToggleSidebar();
+              else setMobileSidebarOpen((open) => !open);
+            }}
+            className={`size-8 rounded-none ${sidebarOpen ? "" : "md:bg-accent-brand/10 md:text-accent-brand"}`}
             title={t("fileManager.toggleSidebar")}
+            aria-pressed={!sidebarOpen}
           >
             <Layout className="size-4" />
           </Button>

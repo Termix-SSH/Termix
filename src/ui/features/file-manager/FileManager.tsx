@@ -111,6 +111,7 @@ import {
 } from "./optimistic-file-list";
 
 const LOCAL_PANE_OPEN_STORAGE_KEY = "termix:file-manager:local-pane:open";
+const SIDEBAR_OPEN_STORAGE_KEY = "termix:file-manager:sidebar:open";
 const LOCAL_PANE_WIDTH_STORAGE_KEY = "termix:file-manager:local-pane:width";
 const LOCAL_PANE_MIN_WIDTH = 300;
 const LOCAL_PANE_DEFAULT_WIDTH = 440;
@@ -213,6 +214,25 @@ function FileManagerContent({
     }
   });
   const [localPaneRefreshToken, setLocalPaneRefreshToken] = useState(0);
+  // Desktop directories sidebar visibility (mobile uses the overlay state).
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY) !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, String(next));
+      } catch {
+        // storage unavailable
+      }
+      return next;
+    });
+  }, []);
   const [localPaneWidth, setLocalPaneWidth] = useState<number>(() => {
     try {
       const saved = Number(localStorage.getItem(LOCAL_PANE_WIDTH_STORAGE_KEY));
@@ -3388,6 +3408,8 @@ function FileManagerContent({
           showLocalPaneToggle={localPaneAvailable}
           localPaneOpen={localPaneAvailable && localPaneOpen}
           onToggleLocalPane={toggleLocalPane}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
         />
 
         <div
@@ -3407,10 +3429,11 @@ function FileManagerContent({
           <div
             className={cn(
               "w-56 flex-shrink-0 h-full flex flex-col",
-              "md:flex",
               mobileSidebarOpen
                 ? "fixed left-0 top-0 bottom-0 w-64 z-30 flex"
-                : "hidden md:flex",
+                : sidebarOpen
+                  ? "hidden md:flex"
+                  : "hidden",
             )}
           >
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 border border-border bg-card">
