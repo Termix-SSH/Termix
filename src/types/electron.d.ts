@@ -201,6 +201,15 @@ export interface ElectronAPI {
       parentPath: string,
       name: string,
     ) => Promise<LocalFsResult<{ path: string }>>;
+    createFile: (
+      parentPath: string,
+      name: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    rename: (
+      oldPath: string,
+      newName: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    trash: (paths: string[]) => Promise<LocalFsResult<LocalTrashResult>>;
     ensureDir: (dirPath: string) => Promise<LocalFsResult<{ path: string }>>;
     walk: (paths: string[]) => Promise<LocalFsResult<LocalWalkResult>>;
     reveal: (targetPath: string) => Promise<LocalFsResult<unknown>>;
@@ -247,6 +256,11 @@ export interface LocalDirectoryListing {
   path: string;
   parent: string | null;
   entries: LocalFileEntry[];
+}
+
+export interface LocalTrashResult {
+  trashed: number;
+  failed: Array<{ path: string; error: string }>;
 }
 
 export interface LocalWalkFile {

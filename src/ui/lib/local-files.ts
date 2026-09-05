@@ -6,6 +6,7 @@ import type {
   LocalDirectoryListing,
   LocalFsHomeInfo,
   LocalFsResult,
+  LocalTrashResult,
   LocalWalkResult,
 } from "@/types/electron";
 import { isElectron } from "./electron";
@@ -52,6 +53,27 @@ export async function createLocalFolder(
   name: string,
 ): Promise<string> {
   return unwrap(await requireLocalFs().mkdir(parentPath, name)).path;
+}
+
+export async function createLocalFile(
+  parentPath: string,
+  name: string,
+): Promise<string> {
+  return unwrap(await requireLocalFs().createFile(parentPath, name)).path;
+}
+
+export async function renameLocalEntry(
+  oldPath: string,
+  newName: string,
+): Promise<string> {
+  return unwrap(await requireLocalFs().rename(oldPath, newName)).path;
+}
+
+/** Moves entries to the OS trash; resolves with per-path failures, if any. */
+export async function trashLocalPaths(
+  paths: string[],
+): Promise<LocalTrashResult> {
+  return unwrap(await requireLocalFs().trash(paths));
 }
 
 export async function ensureLocalDirectory(dirPath: string): Promise<string> {

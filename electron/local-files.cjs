@@ -19,6 +19,9 @@ const IPC = {
   HOME: "local-fs:home",
   LIST: "local-fs:list",
   MKDIR: "local-fs:mkdir",
+  CREATE_FILE: "local-fs:create-file",
+  RENAME: "local-fs:rename",
+  TRASH: "local-fs:trash",
   ENSURE_DIR: "local-fs:ensure-dir",
   WALK: "local-fs:walk",
   REVEAL: "local-fs:reveal",
@@ -47,6 +50,29 @@ function normalizeLocalPath(candidate) {
 
 function isHiddenEntry(name) {
   return name.startsWith(".");
+}
+
+// A single path segment: no separators, not "." / "..", no NULs.
+function requireEntryName(name, what) {
+  const safeName = String(name || "").trim();
+  if (
+    !safeName ||
+    safeName === "." ||
+    safeName === ".." ||
+    /[\/\\\0]/.test(safeName)
+  ) {
+    throw new Error(`Invalid ${what}`);
+  }
+  return safeName;
+}
+
+async function pathExists(target) {
+  try {
+    await fsp.lstat(target);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function describeEntry(dirPath, dirent) {
@@ -484,18 +510,61 @@ function registerLocalFileHandlers({ ipcMain, shell }) {
     IPC.MKDIR,
     wrap(async (_event, parentPath, name) => {
       const parent = normalizeLocalPath(parentPath);
-      const safeName = String(name || "").trim();
-      if (
-        !safeName ||
-        safeName === "." ||
-        safeName === ".." ||
-        /[\/\\\0]/.test(safeName)
-      ) {
-        throw new Error("Invalid folder name");
-      }
+      const safeName = requireEntryName(name, "folder name");
       const target = path.join(parent, safeName);
       await fsp.mkdir(target);
       return { path: target };
+    }),
+  );
+
+  ipcMain.handle(
+    IPC.CREATE_FILE,
+    wrap(async (_event, parentPath, name) => {
+      const parent = normalizeLocalPath(parentPath);
+      const safeName = requireEntryName(name, "file name");
+      const target = path.join(parent, safeName);
+      // "wx" fails if the file already exists rather than truncating it.
+      await fsp.writeFile(target, "", { flag: "wx" });
+      return { path: target };
+    }),
+  );
+
+  ipcMain.handle(
+    IPC.RENAME,
+    wrap(async (_event, oldPath, newName) => {
+      const source = normalizeLocalPath(oldPath);
+      const safeName = requireEntryName(newName, "name");
+      const target = path.join(path.dirname(source), safeName);
+      if (target === source) return { path: source };
+      if (await pathExists(target)) {
+        throw new Error(`"${safeName}" already exists`);
+      }
+      await fsp.rename(source, target);
+      return { path: target };
+    }),
+  );
+
+  // Moves entries to the OS trash (Finder Trash / Recycle Bin) rather than
+  // deleting outright, so a mis-click in the file manager is recoverable.
+  ipcMain.handle(
+    IPC.TRASH,
+    wrap(async (_event, targetPaths) => {
+      if (!Array.isArray(targetPaths) || targetPaths.length === 0) {
+        throw new Error("No local paths provided");
+      }
+      const failed = [];
+      for (const candidate of targetPaths) {
+        const target = normalizeLocalPath(candidate);
+        try {
+          await shell.trashItem(target);
+        } catch (error) {
+          failed.push({
+            path: target,
+            error: error && error.message ? error.message : String(error),
+          });
+        }
+      }
+      return { trashed: targetPaths.length - failed.length, failed };
     }),
   );
 
