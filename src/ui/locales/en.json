@@ -2260,6 +2260,7 @@
     "localTrashFailed": "Could not move to the Trash",
     "localRenameFailed": "Rename failed",
     "localCreateFailed": "Could not create item",
+    "goToParentFolder": "Go to parent folder",
     "emptyFolder": "This folder is empty",
     "searchFiles": "Search files...",
     "upload": "Upload",

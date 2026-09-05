@@ -23,6 +23,7 @@ import {
   Download,
   Upload,
   ArrowUp,
+  CornerLeftUp,
   ArrowDown,
   FileSymlink,
   Move,
@@ -104,6 +105,13 @@ interface FileManagerGridProps {
   sortBy?: "name" | "modified" | "size";
   sortOrder?: "asc" | "desc";
   onSortChange?: (field: "name" | "modified" | "size") => void;
+  /**
+   * Parent of the listed directory. When set (together with onNavigateUp) a
+   * pinned ".." entry is shown first; double-click goes up and drops on it
+   * target the parent folder.
+   */
+  parentPath?: string | null;
+  onNavigateUp?: () => void;
 }
 
 const getFileTypeColor = (file: FileItem): string => {
@@ -233,6 +241,8 @@ export function FileManagerGrid({
   sortBy,
   sortOrder,
   onSortChange,
+  parentPath,
+  onNavigateUp,
 }: FileManagerGridProps) {
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -1037,6 +1047,78 @@ export function FileManagerGrid({
     onUndo,
   ]);
 
+  // Pinned ".." entry (Termius-style). Behaves as a directory drop target
+  // for internal moves and local-pane uploads, and navigates up on open.
+  const parentEntry: FileItem | null =
+    parentPath && onNavigateUp
+      ? { name: "..", path: parentPath, type: "directory" }
+      : null;
+  const isParentTarget =
+    !!parentEntry && dragState.target?.path === parentEntry.path;
+
+  const parentEntryHandlers = parentEntry
+    ? {
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation();
+          if (e.detail === 2) onNavigateUp?.();
+        },
+        onDoubleClick: (e: React.MouseEvent) => e.stopPropagation(),
+        onContextMenu: (e: React.MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+        },
+        onDragOver: (e: React.DragEvent) => handleFileDragOver(e, parentEntry),
+        onDragLeave: (e: React.DragEvent) =>
+          handleFileDragLeave(e, parentEntry),
+        onDrop: (e: React.DragEvent) => handleFileDrop(e, parentEntry),
+      }
+    : null;
+
+  const parentListRow =
+    parentEntry && parentEntryHandlers ? (
+      <div
+        data-parent-entry
+        title={t("fileManager.goToParentFolder")}
+        style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
+        className={cn(
+          "grid gap-2 px-4 py-2 items-center text-xs cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
+          isParentTarget &&
+            "bg-accent-brand/20 border-accent-brand border-dashed",
+        )}
+        {...parentEntryHandlers}
+      >
+        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
+          <div className="shrink-0">
+            <CornerLeftUp className="size-4 text-muted-foreground" />
+          </div>
+          <span className="font-bold tracking-tight text-muted-foreground">
+            ..
+          </span>
+        </div>
+      </div>
+    ) : null;
+
+  const parentGridTile =
+    parentEntry && parentEntryHandlers ? (
+      <div
+        data-parent-entry
+        title={t("fileManager.goToParentFolder")}
+        className={cn(
+          "group flex flex-col items-center p-3 rounded-none border-2 border-transparent transition-all cursor-pointer hover:bg-muted/50 select-none",
+          isParentTarget &&
+            "bg-accent-brand/20 border-accent-brand border-dashed",
+        )}
+        {...parentEntryHandlers}
+      >
+        <div className="relative mb-2 pointer-events-none">
+          <CornerLeftUp className="size-12 text-muted-foreground" />
+        </div>
+        <p className="text-[11px] font-bold tracking-tight text-center text-muted-foreground pointer-events-none">
+          ..
+        </p>
+      </div>
+    ) : null;
+
   return (
     <div className="h-full flex flex-col bg-card overflow-hidden relative">
       <div className="flex-1 relative overflow-hidden">
@@ -1075,26 +1157,32 @@ export function FileManagerGrid({
           )}
 
           {files.length === 0 && !createIntent ? (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-10 gap-4 select-none pointer-events-none">
-              <Folder className="size-32" strokeWidth={1} />
-              <span className="text-2xl font-black uppercase tracking-[0.2em]">
-                {t("fileManager.emptyFolder")}
-              </span>
+            <div className="h-full flex flex-col">
+              {parentListRow}
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground opacity-10 gap-4 select-none pointer-events-none">
+                <Folder className="size-32" strokeWidth={1} />
+                <span className="text-2xl font-black uppercase tracking-[0.2em]">
+                  {t("fileManager.emptyFolder")}
+                </span>
+              </div>
             </div>
           ) : viewMode === "grid" ? (
             <div className={cn("flex flex-col", compact ? "gap-2" : "gap-4")}>
-              {createIntent && (
+              {(createIntent || parentGridTile) && (
                 <div
                   className={cn("grid", compact ? "gap-2" : "gap-4")}
                   style={{
                     gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
                   }}
                 >
-                  <CreateIntentGridItem
-                    intent={createIntent}
-                    onConfirm={onConfirmCreate}
-                    onCancel={onCancelCreate}
-                  />
+                  {parentGridTile}
+                  {createIntent && (
+                    <CreateIntentGridItem
+                      intent={createIntent}
+                      onConfirm={onConfirmCreate}
+                      onCancel={onCancelCreate}
+                    />
+                  )}
                 </div>
               )}
               <div
@@ -1279,6 +1367,7 @@ export function FileManagerGrid({
                   </span>
                 </div>
               </div>
+              {parentListRow}
               {createIntent && (
                 <CreateIntentListItem
                   intent={createIntent}
