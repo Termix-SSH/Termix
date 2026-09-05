@@ -37,6 +37,20 @@ import {
   isLocalFilesDrag,
   parseLocalFilesDragPayload,
 } from "./local-transfer-utils.ts";
+import {
+  useResizableColumns,
+  type ResizableColumnSpec,
+} from "./hooks/useResizableColumns.ts";
+import { ColumnResizeHandle } from "./components/ColumnResizeHandle.tsx";
+
+// Fixed list-view columns after the flexible name column; user-resizable.
+const LIST_COLUMNS: ResizableColumnSpec[] = [
+  { key: "modified", defaultWidth: 120, minWidth: 70 },
+  { key: "owner", defaultWidth: 150, minWidth: 60 },
+  { key: "size", defaultWidth: 80, minWidth: 56 },
+  { key: "permissions", defaultWidth: 90, minWidth: 70 },
+];
+const LIST_COLUMNS_STORAGE_KEY = "termix:file-manager:columns:remote";
 
 interface DragState {
   /**
@@ -271,6 +285,11 @@ export function FileManagerGrid({
     overscan: 16,
     getItemKey: (index) => files[index]?.path ?? index,
     enabled: viewMode === "list" && files.length > 0,
+  });
+
+  const listColumns = useResizableColumns({
+    storageKey: LIST_COLUMNS_STORAGE_KEY,
+    columns: LIST_COLUMNS,
   });
 
   const gridVirtualizer = useVirtualizer({
@@ -1200,12 +1219,13 @@ export function FileManagerGrid({
             <div className="flex flex-col">
               <div
                 className={cn(
-                  "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card",
+                  "grid gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border sticky top-0 bg-card z-10",
                   compact ? "px-2 py-1" : "px-4 py-2",
                 )}
+                style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
               >
                 <div
-                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors"
+                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
                   onClick={() => onSortChange?.("name")}
                 >
                   {t("fileManager.name")}
@@ -1217,10 +1237,13 @@ export function FileManagerGrid({
                     ))}
                 </div>
                 <div
-                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors"
+                  className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
                   onClick={() => onSortChange?.("modified")}
                 >
-                  {t("fileManager.modified")}
+                  <ColumnResizeHandle
+                    {...listColumns.getHandleProps("modified")}
+                  />
+                  <span className="truncate">{t("fileManager.modified")}</span>
                   {sortBy === "modified" &&
                     (sortOrder === "asc" ? (
                       <ArrowUp className="size-3" />
@@ -1228,12 +1251,18 @@ export function FileManagerGrid({
                       <ArrowDown className="size-3" />
                     ))}
                 </div>
-                <div className="hidden md:block" />
+                <div className="relative hidden md:flex items-center min-w-0">
+                  <ColumnResizeHandle
+                    {...listColumns.getHandleProps("owner")}
+                  />
+                  <span className="truncate">{t("fileManager.owner")}</span>
+                </div>
                 <div
-                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors justify-end"
+                  className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors justify-end min-w-0"
                   onClick={() => onSortChange?.("size")}
                 >
-                  {t("fileManager.size")}
+                  <ColumnResizeHandle {...listColumns.getHandleProps("size")} />
+                  <span className="truncate">{t("fileManager.size")}</span>
                   {sortBy === "size" &&
                     (sortOrder === "asc" ? (
                       <ArrowUp className="size-3" />
@@ -1241,13 +1270,21 @@ export function FileManagerGrid({
                       <ArrowDown className="size-3" />
                     ))}
                 </div>
-                <div className="text-right">{t("fileManager.permissions")}</div>
+                <div className="relative flex items-center justify-end min-w-0">
+                  <ColumnResizeHandle
+                    {...listColumns.getHandleProps("permissions")}
+                  />
+                  <span className="truncate">
+                    {t("fileManager.permissions")}
+                  </span>
+                </div>
               </div>
               {createIntent && (
                 <CreateIntentListItem
                   intent={createIntent}
                   onConfirm={onConfirmCreate}
                   onCancel={onCancelCreate}
+                  gridTemplateColumns={listColumns.gridTemplateColumns}
                 />
               )}
               <div
@@ -1273,8 +1310,11 @@ export function FileManagerGrid({
                       <div
                         data-file-path={file.path}
                         draggable={true}
+                        style={{
+                          gridTemplateColumns: listColumns.gridTemplateColumns,
+                        }}
                         className={cn(
-                          "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
+                          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
                           compact
                             ? "px-2 py-1 text-[11px]"
                             : "px-4 py-2 text-xs",
@@ -1332,7 +1372,7 @@ export function FileManagerGrid({
                           )}
                         </div>
 
-                        <span className="text-[10px] text-muted-foreground pointer-events-none">
+                        <span className="text-[10px] text-muted-foreground pointer-events-none truncate">
                           {file.modified || "—"}
                         </span>
 
@@ -1350,7 +1390,7 @@ export function FileManagerGrid({
                             : "—"}
                         </span>
 
-                        <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none">
+                        <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none truncate">
                           {file.permissions || "—"}
                         </span>
                       </div>
@@ -1536,10 +1576,12 @@ function CreateIntentListItem({
   intent,
   onConfirm,
   onCancel,
+  gridTemplateColumns,
 }: {
   intent: CreateIntent;
   onConfirm?: (name: string) => void;
   onCancel?: () => void;
+  gridTemplateColumns?: string;
 }) {
   const { t } = useTranslation();
   const [inputName, setInputName] = useState(intent.currentName);
@@ -1583,7 +1625,11 @@ function CreateIntentListItem({
 
   return (
     <div
-      className="grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
+      className="grid gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
+      style={{
+        gridTemplateColumns:
+          gridTemplateColumns ?? "minmax(0, 1fr) 120px 150px 80px 90px",
+      }}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >

@@ -42,6 +42,11 @@ import {
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import { LocalFileContextMenu } from "./LocalFileContextMenu.tsx";
+import {
+  useResizableColumns,
+  type ResizableColumnSpec,
+} from "./hooks/useResizableColumns.ts";
+import { ColumnResizeHandle } from "./components/ColumnResizeHandle.tsx";
 import { formatFileSize } from "./file-manager-utils.ts";
 import {
   LOCAL_FILES_DRAG_MIME,
@@ -57,6 +62,12 @@ import {
 const LAST_PATH_STORAGE_KEY = "termix:file-manager:local-pane:path";
 const SHOW_HIDDEN_STORAGE_KEY = "termix:file-manager:local-pane:hidden";
 const ROW_HEIGHT = 34;
+const COLUMNS_STORAGE_KEY = "termix:file-manager:columns:local";
+const LOCAL_COLUMNS: ResizableColumnSpec[] = [
+  { key: "modified", defaultWidth: 130, minWidth: 70 },
+  { key: "size", defaultWidth: 72, minWidth: 56 },
+  { key: "kind", defaultWidth: 64, minWidth: 48 },
+];
 
 export interface LocalFilePaneProps {
   /** Bump to force a re-read of the current directory. */
@@ -153,6 +164,12 @@ export function LocalFilePane({
       : entries.filter((entry) => !entry.hidden);
     return sortLocalEntries(filtered, sortBy, sortOrder);
   }, [entries, showHidden, sortBy, sortOrder]);
+
+  const columns = useResizableColumns({
+    storageKey: COLUMNS_STORAGE_KEY,
+    columns: LOCAL_COLUMNS,
+  });
+  const rowStyle = { gridTemplateColumns: columns.gridTemplateColumns };
 
   const virtualizer = useVirtualizer({
     count: visibleEntries.length,
@@ -756,39 +773,51 @@ export function LocalFilePane({
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[1fr_130px_72px_64px] gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card select-none">
+      <div
+        className="grid gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card select-none"
+        style={rowStyle}
+      >
         <button
           type="button"
-          className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left"
+          className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left min-w-0"
           onClick={() => toggleSort("name")}
         >
-          {t("fileManager.name")}
+          <span className="truncate">{t("fileManager.name")}</span>
           {sortIndicator("name")}
         </button>
-        <button
-          type="button"
-          className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left"
-          onClick={() => toggleSort("modified")}
-        >
-          {t("fileManager.modified")}
-          {sortIndicator("modified")}
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1 justify-end hover:text-accent-brand transition-colors"
-          onClick={() => toggleSort("size")}
-        >
-          {t("fileManager.size")}
-          {sortIndicator("size")}
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left"
-          onClick={() => toggleSort("kind")}
-        >
-          {t("fileManager.kind")}
-          {sortIndicator("kind")}
-        </button>
+        <div className="relative flex min-w-0">
+          <ColumnResizeHandle {...columns.getHandleProps("modified")} />
+          <button
+            type="button"
+            className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left min-w-0 flex-1"
+            onClick={() => toggleSort("modified")}
+          >
+            <span className="truncate">{t("fileManager.modified")}</span>
+            {sortIndicator("modified")}
+          </button>
+        </div>
+        <div className="relative flex min-w-0">
+          <ColumnResizeHandle {...columns.getHandleProps("size")} />
+          <button
+            type="button"
+            className="flex items-center gap-1 justify-end hover:text-accent-brand transition-colors min-w-0 flex-1"
+            onClick={() => toggleSort("size")}
+          >
+            <span className="truncate">{t("fileManager.size")}</span>
+            {sortIndicator("size")}
+          </button>
+        </div>
+        <div className="relative flex min-w-0">
+          <ColumnResizeHandle {...columns.getHandleProps("kind")} />
+          <button
+            type="button"
+            className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left min-w-0 flex-1"
+            onClick={() => toggleSort("kind")}
+          >
+            <span className="truncate">{t("fileManager.kind")}</span>
+            {sortIndicator("kind")}
+          </button>
+        </div>
       </div>
 
       {/* Body */}
@@ -807,7 +836,10 @@ export function LocalFilePane({
         onContextMenu={(e) => openContextMenu(e)}
       >
         {creating && (
-          <div className="grid grid-cols-[1fr_130px_72px_64px] gap-2 px-3 items-center text-xs border-b border-border h-[34px]">
+          <div
+            className="grid gap-2 px-3 items-center text-xs border-b border-border h-[34px]"
+            style={rowStyle}
+          >
             <div className="flex items-center gap-2.5">
               {creating === "folder" ? (
                 <Folder className="size-4 text-accent-brand shrink-0" />
@@ -882,8 +914,9 @@ export function LocalFilePane({
                   <div
                     data-local-path={entry.path}
                     draggable
+                    style={rowStyle}
                     className={cn(
-                      "grid grid-cols-[1fr_130px_72px_64px] gap-2 px-3 items-center text-xs cursor-default border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors h-[34px]",
+                      "grid gap-2 px-3 items-center text-xs cursor-default border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors h-[34px]",
                       isSelected && "bg-accent-brand/10",
                       isFolderTarget &&
                         "bg-accent-brand/20 outline outline-1 outline-dashed outline-accent-brand",
