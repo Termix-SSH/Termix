@@ -1331,9 +1331,13 @@ export function FileManagerGrid({
           ) : (
             <div className="flex flex-col">
               <div
+                // The scroller has p-4 (p-2 in compact mode); a sticky header at
+                // top-0 would stop short of the edge and rows would show through
+                // the gap. Stick it at the negative padding offset and widen it
+                // into the side padding so the columns stay aligned with the rows.
                 className={cn(
-                  "grid gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border sticky top-0 bg-card z-10",
-                  compact ? "px-2 py-1" : "px-4 py-2",
+                  "grid gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border sticky bg-card z-10",
+                  compact ? "-mx-2 -top-2 px-4 py-1" : "-mx-4 -top-4 px-8 py-2",
                 )}
                 style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
                 title={t("fileManager.columnsHint")}
