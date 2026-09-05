@@ -48,6 +48,7 @@ import {
   type ResizableColumnSpec,
 } from "./hooks/useResizableColumns.ts";
 import { ColumnResizeHandle } from "./components/ColumnResizeHandle.tsx";
+import { ColumnVisibilityMenu } from "./components/ColumnVisibilityMenu.tsx";
 import { formatFileSize } from "./file-manager-utils.ts";
 import {
   LOCAL_FILES_DRAG_MIME,
@@ -65,9 +66,14 @@ const SHOW_HIDDEN_STORAGE_KEY = "termix:file-manager:local-pane:hidden";
 const ROW_HEIGHT = 34;
 const COLUMNS_STORAGE_KEY = "termix:file-manager:columns:local";
 const LOCAL_COLUMNS: ResizableColumnSpec[] = [
-  { key: "modified", defaultWidth: 130, minWidth: 70 },
-  { key: "size", defaultWidth: 72, minWidth: 56 },
-  { key: "kind", defaultWidth: 64, minWidth: 48 },
+  {
+    key: "modified",
+    labelKey: "fileManager.modified",
+    defaultWidth: 130,
+    minWidth: 70,
+  },
+  { key: "size", labelKey: "fileManager.size", defaultWidth: 72, minWidth: 56 },
+  { key: "kind", labelKey: "fileManager.kind", defaultWidth: 64, minWidth: 48 },
 ];
 
 export interface LocalFilePaneProps {
@@ -171,6 +177,15 @@ export function LocalFilePane({
     columns: LOCAL_COLUMNS,
   });
   const rowStyle = { gridTemplateColumns: columns.gridTemplateColumns };
+  const [columnMenu, setColumnMenu] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, visible: false });
+  const closeColumnMenu = useCallback(
+    () => setColumnMenu((prev) => ({ ...prev, visible: false })),
+    [],
+  );
 
   const virtualizer = useVirtualizer({
     count: visibleEntries.length,
@@ -793,6 +808,12 @@ export function LocalFilePane({
       <div
         className="grid gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card select-none"
         style={rowStyle}
+        title={t("fileManager.columnsHint")}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setColumnMenu({ x: e.clientX, y: e.clientY, visible: true });
+        }}
       >
         <button
           type="button"
@@ -802,40 +823,54 @@ export function LocalFilePane({
           <span className="truncate">{t("fileManager.name")}</span>
           {sortIndicator("name")}
         </button>
-        <div className="relative flex min-w-0">
-          <ColumnResizeHandle {...columns.getHandleProps("modified")} />
-          <button
-            type="button"
-            className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left min-w-0 flex-1"
-            onClick={() => toggleSort("modified")}
-          >
-            <span className="truncate">{t("fileManager.modified")}</span>
-            {sortIndicator("modified")}
-          </button>
-        </div>
-        <div className="relative flex min-w-0">
-          <ColumnResizeHandle {...columns.getHandleProps("size")} />
-          <button
-            type="button"
-            className="flex items-center gap-1 justify-end hover:text-accent-brand transition-colors min-w-0 flex-1"
-            onClick={() => toggleSort("size")}
-          >
-            <span className="truncate">{t("fileManager.size")}</span>
-            {sortIndicator("size")}
-          </button>
-        </div>
-        <div className="relative flex min-w-0">
-          <ColumnResizeHandle {...columns.getHandleProps("kind")} />
-          <button
-            type="button"
-            className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left min-w-0 flex-1"
-            onClick={() => toggleSort("kind")}
-          >
-            <span className="truncate">{t("fileManager.kind")}</span>
-            {sortIndicator("kind")}
-          </button>
-        </div>
+        {columns.isVisible("modified") && (
+          <div className="relative flex min-w-0">
+            <ColumnResizeHandle {...columns.getHandleProps("modified")} />
+            <button
+              type="button"
+              className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left min-w-0 flex-1"
+              onClick={() => toggleSort("modified")}
+            >
+              <span className="truncate">{t("fileManager.modified")}</span>
+              {sortIndicator("modified")}
+            </button>
+          </div>
+        )}
+        {columns.isVisible("size") && (
+          <div className="relative flex min-w-0">
+            <ColumnResizeHandle {...columns.getHandleProps("size")} />
+            <button
+              type="button"
+              className="flex items-center gap-1 justify-end hover:text-accent-brand transition-colors min-w-0 flex-1"
+              onClick={() => toggleSort("size")}
+            >
+              <span className="truncate">{t("fileManager.size")}</span>
+              {sortIndicator("size")}
+            </button>
+          </div>
+        )}
+        {columns.isVisible("kind") && (
+          <div className="relative flex min-w-0">
+            <ColumnResizeHandle {...columns.getHandleProps("kind")} />
+            <button
+              type="button"
+              className="flex items-center gap-1 hover:text-accent-brand transition-colors text-left min-w-0 flex-1"
+              onClick={() => toggleSort("kind")}
+            >
+              <span className="truncate">{t("fileManager.kind")}</span>
+              {sortIndicator("kind")}
+            </button>
+          </div>
+        )}
       </div>
+
+      <ColumnVisibilityMenu
+        x={columnMenu.x}
+        y={columnMenu.y}
+        isVisible={columnMenu.visible}
+        columns={columns}
+        onClose={closeColumnMenu}
+      />
 
       {/* Body */}
       <div
@@ -1017,17 +1052,23 @@ export function LocalFilePane({
                         </span>
                       )}
                     </div>
-                    <span className="text-muted-foreground truncate pointer-events-none tabular-nums">
-                      {formatLocalModified(entry.modifiedTimestamp)}
-                    </span>
-                    <span className="text-muted-foreground text-right pointer-events-none tabular-nums">
-                      {entry.type === "directory"
-                        ? "--"
-                        : formatFileSize(entry.size)}
-                    </span>
-                    <span className="text-muted-foreground truncate pointer-events-none">
-                      {describeLocalKind(entry)}
-                    </span>
+                    {columns.isVisible("modified") && (
+                      <span className="text-muted-foreground truncate pointer-events-none tabular-nums">
+                        {formatLocalModified(entry.modifiedTimestamp)}
+                      </span>
+                    )}
+                    {columns.isVisible("size") && (
+                      <span className="text-muted-foreground text-right pointer-events-none tabular-nums">
+                        {entry.type === "directory"
+                          ? "--"
+                          : formatFileSize(entry.size)}
+                      </span>
+                    )}
+                    {columns.isVisible("kind") && (
+                      <span className="text-muted-foreground truncate pointer-events-none">
+                        {describeLocalKind(entry)}
+                      </span>
+                    )}
                   </div>
                 </div>
               );

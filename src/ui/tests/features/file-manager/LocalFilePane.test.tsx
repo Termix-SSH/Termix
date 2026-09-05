@@ -432,6 +432,39 @@ describe("LocalFilePane", () => {
     );
   });
 
+  it("lets the header context menu hide and show columns", async () => {
+    render(<LocalFilePane onRemoteItemsDropped={vi.fn()} />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(HOME)).toBeInTheDocument(),
+    );
+
+    const kindHeader = screen.getByText("fileManager.kind");
+    const kindCellsBefore = document.querySelectorAll(
+      `[data-local-path="${HOME}/notes.txt"] > span`,
+    ).length;
+
+    fireEvent.contextMenu(kindHeader, { clientX: 300, clientY: 60 });
+    const menu = screen.getByTestId("column-visibility-menu");
+    expect(menu).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("menuitemcheckbox", { name: "fileManager.kind" }),
+    );
+
+    // The sortable header button is gone; only the menu's checkbox remains.
+    expect(
+      screen.queryByRole("button", { name: "fileManager.kind" }),
+    ).toBeNull();
+    expect(
+      document.querySelectorAll(`[data-local-path="${HOME}/notes.txt"] > span`)
+        .length,
+    ).toBe(kindCellsBefore - 1);
+    expect(
+      JSON.parse(
+        localStorage.getItem("termix:file-manager:columns:local:hidden")!,
+      ),
+    ).toEqual(["kind"]);
+  });
+
   it("ignores OS file drags (those belong to the remote grid)", async () => {
     const onRemoteItemsDropped = vi.fn();
     render(<LocalFilePane onRemoteItemsDropped={onRemoteItemsDropped} />);
