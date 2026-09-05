@@ -54,6 +54,13 @@ export const HOSTLESS_WORKSPACE_TAB_TYPES: TabType[] = [
   "ai",
 ];
 
+function createWorkspaceSlotId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
 /**
  * Maps live tabs to WorkspaceTabSnapshots, generating a fresh slotId per tab.
  * slotId is a stable key within the saved payload, distinct from Tab.id
@@ -61,7 +68,7 @@ export const HOSTLESS_WORKSPACE_TAB_TYPES: TabType[] = [
  */
 export function buildWorkspaceTabSnapshots(
   tabs: Tab[],
-  genSlotId: () => string = () => crypto.randomUUID(),
+  genSlotId: () => string = createWorkspaceSlotId,
 ): { snapshots: WorkspaceTabSnapshot[]; slotIdByTabId: Map<string, string> } {
   const capturable = tabs.filter((t) =>
     WORKSPACE_CAPTURABLE_TYPES.includes(t.type),
