@@ -865,6 +865,52 @@ export function getFileManagerApiForSession(sessionId: string): AxiosInstance {
     : fileManagerApi;
 }
 
+export interface FileManagerRequestTarget {
+  /** Absolute base URL of the file-manager API that owns this session. */
+  baseURL: string;
+  /** Auth/identity headers the axios interceptors would attach. */
+  headers: Record<string, string>;
+}
+
+// Resolves the same origin + auth headers the axios instance above would use
+// for a session, for callers that cannot go through axios -- today the
+// Electron main process, which streams local files straight from disk to the
+// backend for the dual-pane file manager.
+export async function resolveFileManagerRequestTarget(
+  sessionId: string,
+): Promise<FileManagerRequestTarget> {
+  const headers: Record<string, string> = {};
+  const deviceId = getDeviceId();
+  if (deviceId) headers["X-Termix-Device-ID"] = deviceId;
+  if (isElectron()) headers["X-Electron-App"] = "true";
+
+  if (sessionOrigins.get(sessionId) === "remote") {
+    const [remoteConfig, remoteJwt] = await Promise.all([
+      window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
+        serverUrl?: string;
+      } | null>,
+      window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
+        string | null
+      >,
+    ]);
+    const baseUrl = (remoteConfig?.serverUrl || "").replace(/\/$/, "");
+    if (!baseUrl) {
+      throw new Error("Remote sync server is not configured");
+    }
+    if (remoteJwt) headers["Authorization"] = `Bearer ${remoteJwt}`;
+    return { baseURL: `${baseUrl}/ssh/file_manager`, headers };
+  }
+
+  const jwt = localStorage.getItem("jwt");
+  if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
+
+  const configured = fileManagerApi?.defaults?.baseURL || "";
+  const baseURL = /^https?:\/\//i.test(configured)
+    ? configured
+    : new URL(configured || "/ssh/file_manager", window.location.origin).href;
+  return { baseURL: baseURL.replace(/\/$/, ""), headers };
+}
+
 export function getTunnelApiForOrigin(
   origin: "local" | "remote",
 ): AxiosInstance {
@@ -1588,6 +1634,15 @@ export {
   addFolderShortcut,
   removeFolderShortcut,
 } from "@/api/file-manager-data-api";
+
+// Desktop-only local disk <-> remote transfers (dual-pane file manager).
+export {
+  uploadLocalFileToSession,
+  downloadSessionFileToLocal,
+  cancelLocalTransfer,
+  createLocalTransferId,
+  type LocalTransferProgressEvent,
+} from "@/api/local-transfer-api";
 
 export {
   getAllServerStatuses,

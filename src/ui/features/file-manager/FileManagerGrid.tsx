@@ -32,9 +32,33 @@ import { useTranslation } from "react-i18next";
 import type { FileItem } from "@/types/index";
 import type { CreateIntent } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
+import {
+  REMOTE_FILES_DRAG_MIME,
+  isLocalFilesDrag,
+  parseLocalFilesDragPayload,
+} from "./local-transfer-utils.ts";
+import {
+  useResizableColumns,
+  type ResizableColumnSpec,
+} from "./hooks/useResizableColumns.ts";
+import { ColumnResizeHandle } from "./components/ColumnResizeHandle.tsx";
+
+// Fixed list-view columns after the flexible name column; user-resizable.
+const LIST_COLUMNS: ResizableColumnSpec[] = [
+  { key: "modified", defaultWidth: 120, minWidth: 70 },
+  { key: "owner", defaultWidth: 150, minWidth: 60 },
+  { key: "size", defaultWidth: 80, minWidth: 56 },
+  { key: "permissions", defaultWidth: 90, minWidth: 70 },
+];
+const LIST_COLUMNS_STORAGE_KEY = "termix:file-manager:columns:remote";
 
 interface DragState {
-  type: "none" | "internal" | "external";
+  /**
+   * internal: rows of this grid being moved around
+   * external: files dragged in from the OS
+   * local: entries dragged from the desktop app's local pane
+   */
+  type: "none" | "internal" | "external" | "local";
   files: FileItem[];
   draggedFiles?: FileItem[];
   target?: FileItem;
@@ -50,6 +74,10 @@ interface FileManagerGridProps {
   onSelectionChange: (files: FileItem[]) => void;
   onRefresh: () => void;
   onUpload?: (files: FileList) => void;
+  /** OS drop that contains at least one directory (needs a recursive walk). */
+  onUploadItems?: (entries: FileSystemEntry[]) => void;
+  /** Entries dragged from the local pane; `targetDir` when dropped on a folder. */
+  onLocalFilesDrop?: (localPaths: string[], targetDir?: FileItem) => void;
   onDownload?: (files: FileItem[]) => void;
   onContextMenu?: (event: React.MouseEvent, file?: FileItem) => void;
   viewMode?: "grid" | "list";
@@ -178,6 +206,8 @@ export function FileManagerGrid({
   onSelectionChange,
   onRefresh,
   onUpload,
+  onUploadItems,
+  onLocalFilesDrop,
   onDownload,
   onContextMenu,
   viewMode = "grid",
@@ -255,6 +285,11 @@ export function FileManagerGrid({
     overscan: 16,
     getItemKey: (index) => files[index]?.path ?? index,
     enabled: viewMode === "list" && files.length > 0,
+  });
+
+  const listColumns = useResizableColumns({
+    storageKey: LIST_COLUMNS_STORAGE_KEY,
+    columns: LIST_COLUMNS,
   });
 
   const gridVirtualizer = useVirtualizer({
@@ -350,6 +385,8 @@ export function FileManagerGrid({
       files: filesToDrag.map((f) => f.path),
     };
     e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
+    // Lets sibling panes recognise this drag before the payload is readable.
+    e.dataTransfer.setData(REMOTE_FILES_DRAG_MIME, "1");
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -363,6 +400,20 @@ export function FileManagerGrid({
     ) {
       setDragState((prev) => ({ ...prev, target: targetFile }));
       e.dataTransfer.dropEffect = "move";
+    } else if (isLocalFilesDrag(e.dataTransfer)) {
+      e.dataTransfer.dropEffect = "copy";
+      const nextTarget =
+        targetFile.type === "directory" ? targetFile : undefined;
+      if (
+        dragState.type !== "local" ||
+        dragState.target?.path !== nextTarget?.path
+      ) {
+        setDragState((prev) => ({
+          ...prev,
+          type: "local",
+          target: nextTarget,
+        }));
+      }
     }
   };
 
@@ -378,6 +429,20 @@ export function FileManagerGrid({
   const handleFileDrop = (e: React.DragEvent, targetFile: FileItem) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isLocalFilesDrag(e.dataTransfer)) {
+      const localPaths = parseLocalFilesDragPayload(
+        e.dataTransfer.getData("text/plain"),
+      );
+      setDragState({ type: "none", files: [], counter: 0 });
+      if (localPaths) {
+        onLocalFilesDrop?.(
+          localPaths,
+          targetFile.type === "directory" ? targetFile : undefined,
+        );
+      }
+      return;
+    }
 
     if (dragState.type !== "internal" || dragState.files.length === 0) {
       setDragState((prev) => ({ ...prev, target: undefined }));
@@ -433,9 +498,12 @@ export function FileManagerGrid({
       const isInternalDrag = dragState.type === "internal";
 
       if (!isInternalDrag) {
+        const nextType = isLocalFilesDrag(e.dataTransfer)
+          ? "local"
+          : "external";
         setDragState((prev) => ({
           ...prev,
-          type: "external",
+          type: nextType,
           counter: prev.counter + 1,
         }));
       }
@@ -450,13 +518,17 @@ export function FileManagerGrid({
 
       const isInternalDrag = dragState.type === "internal";
 
-      if (!isInternalDrag && dragState.type === "external") {
+      if (
+        !isInternalDrag &&
+        (dragState.type === "external" || dragState.type === "local")
+      ) {
         setDragState((prev) => {
           const newCounter = prev.counter - 1;
           return {
             ...prev,
             counter: newCounter,
-            type: newCounter <= 0 ? "none" : "external",
+            type: newCounter <= 0 ? "none" : prev.type,
+            target: newCounter <= 0 ? undefined : prev.target,
           };
         });
       }
@@ -729,15 +801,39 @@ export function FileManagerGrid({
 
       if (dragState.type === "internal") {
         setDragState({ type: "none", files: [], counter: 0 });
-      } else if (dragState.type === "external") {
-        if (onUpload && e.dataTransfer.files.length > 0) {
-          onUpload(e.dataTransfer.files);
+        return;
+      }
+
+      // Read everything off dataTransfer before any setState: the browser
+      // clears it once the handler unwinds and a state flush can get there
+      // first.
+      const localPaths = isLocalFilesDrag(e.dataTransfer)
+        ? parseLocalFilesDragPayload(e.dataTransfer.getData("text/plain"))
+        : null;
+      const files = e.dataTransfer.files;
+      const entries: FileSystemEntry[] = [];
+      if (onUploadItems && e.dataTransfer.items?.length > 0) {
+        for (const item of Array.from(e.dataTransfer.items)) {
+          const entry = item.webkitGetAsEntry?.();
+          if (entry) entries.push(entry);
         }
       }
 
       setDragState({ type: "none", files: [], counter: 0 });
+
+      if (localPaths) {
+        onLocalFilesDrop?.(localPaths);
+        return;
+      }
+      if (onUploadItems && entries.some((entry) => entry.isDirectory)) {
+        onUploadItems(entries);
+        return;
+      }
+      if (onUpload && files.length > 0) {
+        onUpload(files);
+      }
     },
-    [onUpload, dragState],
+    [onUpload, onUploadItems, onLocalFilesDrop, dragState],
   );
 
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
@@ -949,7 +1045,7 @@ export function FileManagerGrid({
           className={cn(
             "absolute inset-0 overflow-y-auto thin-scrollbar",
             compact ? "p-2" : "p-4",
-            dragState.type === "external" &&
+            (dragState.type === "external" || dragState.type === "local") &&
               "bg-muted/20 border-2 border-dashed border-primary",
           )}
           onClick={handleGridClick}
@@ -964,12 +1060,15 @@ export function FileManagerGrid({
           onContextMenu={(e) => onContextMenu?.(e)}
           tabIndex={0}
         >
-          {dragState.type === "external" && (
+          {(dragState.type === "external" ||
+            (dragState.type === "local" && !dragState.target)) && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10 pointer-events-none">
               <div className="text-center p-8 bg-card/95 border border-accent-brand/40 flex flex-col items-center gap-4">
                 <Upload className="size-12 text-accent-brand" />
                 <p className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
-                  {t("fileManager.dragFilesToUpload")}
+                  {dragState.type === "local"
+                    ? t("fileManager.dropToUploadHere")
+                    : t("fileManager.dragFilesToUpload")}
                 </p>
               </div>
             </div>
@@ -1120,12 +1219,13 @@ export function FileManagerGrid({
             <div className="flex flex-col">
               <div
                 className={cn(
-                  "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card",
+                  "grid gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border sticky top-0 bg-card z-10",
                   compact ? "px-2 py-1" : "px-4 py-2",
                 )}
+                style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
               >
                 <div
-                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors"
+                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
                   onClick={() => onSortChange?.("name")}
                 >
                   {t("fileManager.name")}
@@ -1137,10 +1237,13 @@ export function FileManagerGrid({
                     ))}
                 </div>
                 <div
-                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors"
+                  className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
                   onClick={() => onSortChange?.("modified")}
                 >
-                  {t("fileManager.modified")}
+                  <ColumnResizeHandle
+                    {...listColumns.getHandleProps("modified")}
+                  />
+                  <span className="truncate">{t("fileManager.modified")}</span>
                   {sortBy === "modified" &&
                     (sortOrder === "asc" ? (
                       <ArrowUp className="size-3" />
@@ -1148,12 +1251,18 @@ export function FileManagerGrid({
                       <ArrowDown className="size-3" />
                     ))}
                 </div>
-                <div className="hidden md:block" />
+                <div className="relative hidden md:flex items-center min-w-0">
+                  <ColumnResizeHandle
+                    {...listColumns.getHandleProps("owner")}
+                  />
+                  <span className="truncate">{t("fileManager.owner")}</span>
+                </div>
                 <div
-                  className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors justify-end"
+                  className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors justify-end min-w-0"
                   onClick={() => onSortChange?.("size")}
                 >
-                  {t("fileManager.size")}
+                  <ColumnResizeHandle {...listColumns.getHandleProps("size")} />
+                  <span className="truncate">{t("fileManager.size")}</span>
                   {sortBy === "size" &&
                     (sortOrder === "asc" ? (
                       <ArrowUp className="size-3" />
@@ -1161,13 +1270,21 @@ export function FileManagerGrid({
                       <ArrowDown className="size-3" />
                     ))}
                 </div>
-                <div className="text-right">{t("fileManager.permissions")}</div>
+                <div className="relative flex items-center justify-end min-w-0">
+                  <ColumnResizeHandle
+                    {...listColumns.getHandleProps("permissions")}
+                  />
+                  <span className="truncate">
+                    {t("fileManager.permissions")}
+                  </span>
+                </div>
               </div>
               {createIntent && (
                 <CreateIntentListItem
                   intent={createIntent}
                   onConfirm={onConfirmCreate}
                   onCancel={onCancelCreate}
+                  gridTemplateColumns={listColumns.gridTemplateColumns}
                 />
               )}
               <div
@@ -1193,8 +1310,11 @@ export function FileManagerGrid({
                       <div
                         data-file-path={file.path}
                         draggable={true}
+                        style={{
+                          gridTemplateColumns: listColumns.gridTemplateColumns,
+                        }}
                         className={cn(
-                          "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
+                          "grid gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
                           compact
                             ? "px-2 py-1 text-[11px]"
                             : "px-4 py-2 text-xs",
@@ -1252,7 +1372,7 @@ export function FileManagerGrid({
                           )}
                         </div>
 
-                        <span className="text-[10px] text-muted-foreground pointer-events-none">
+                        <span className="text-[10px] text-muted-foreground pointer-events-none truncate">
                           {file.modified || "—"}
                         </span>
 
@@ -1270,7 +1390,7 @@ export function FileManagerGrid({
                             : "—"}
                         </span>
 
-                        <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none">
+                        <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none truncate">
                           {file.permissions || "—"}
                         </span>
                       </div>
@@ -1456,10 +1576,12 @@ function CreateIntentListItem({
   intent,
   onConfirm,
   onCancel,
+  gridTemplateColumns,
 }: {
   intent: CreateIntent;
   onConfirm?: (name: string) => void;
   onCancel?: () => void;
+  gridTemplateColumns?: string;
 }) {
   const { t } = useTranslation();
   const [inputName, setInputName] = useState(intent.currentName);
@@ -1503,7 +1625,11 @@ function CreateIntentListItem({
 
   return (
     <div
-      className="grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
+      className="grid gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
+      style={{
+        gridTemplateColumns:
+          gridTemplateColumns ?? "minmax(0, 1fr) 120px 150px 80px 90px",
+      }}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
