@@ -4,6 +4,8 @@ import type React from "react";
 export interface ResizableColumnSpec {
   /** Stable key, also used for persistence. */
   key: string;
+  /** i18n key for the column's label (used by the show/hide menu). */
+  labelKey: string;
   defaultWidth: number;
   minWidth?: number;
   maxWidth?: number;
@@ -44,6 +46,24 @@ function readStoredWidths(
   return widths;
 }
 
+function readHiddenKeys(
+  storageKey: string,
+  columns: ResizableColumnSpec[],
+): Set<string> {
+  try {
+    const raw = localStorage.getItem(`${storageKey}:hidden`);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    const known = new Set(columns.map((c) => c.key));
+    return new Set(
+      parsed.filter((k): k is string => typeof k === "string" && known.has(k)),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 function clamp(value: number, column: ResizableColumnSpec): number {
   const min = column.minWidth ?? DEFAULT_MIN;
   const max = column.maxWidth ?? DEFAULT_MAX;
@@ -63,6 +83,9 @@ export function useResizableColumns({
   const [widths, setWidths] = useState<Record<string, number>>(() =>
     readStoredWidths(storageKey, columns),
   );
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(() =>
+    readHiddenKeys(storageKey, columns),
+  );
   const [resizingKey, setResizingKey] = useState<string | null>(null);
   const widthsRef = useRef(widths);
   widthsRef.current = widths;
@@ -70,8 +93,39 @@ export function useResizableColumns({
   // Re-read if the pane is re-keyed (e.g. a different storage key).
   useEffect(() => {
     setWidths(readStoredWidths(storageKey, columns));
+    setHiddenKeys(readHiddenKeys(storageKey, columns));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
+
+  const isVisible = useCallback(
+    (key: string) => !hiddenKeys.has(key),
+    [hiddenKeys],
+  );
+
+  const visibleColumns = useMemo(
+    () => columns.filter((c) => !hiddenKeys.has(c.key)),
+    [columns, hiddenKeys],
+  );
+
+  const toggleColumn = useCallback(
+    (key: string) => {
+      setHiddenKeys((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        try {
+          localStorage.setItem(
+            `${storageKey}:hidden`,
+            JSON.stringify(Array.from(next)),
+          );
+        } catch {
+          // storage unavailable
+        }
+        return next;
+      });
+    },
+    [storageKey],
+  );
 
   const persist = useCallback(
     (next: Record<string, number>) => {
@@ -86,8 +140,11 @@ export function useResizableColumns({
 
   const gridTemplateColumns = useMemo(
     () =>
-      ["minmax(0, 1fr)", ...columns.map((c) => `${widths[c.key]}px`)].join(" "),
-    [columns, widths],
+      [
+        "minmax(0, 1fr)",
+        ...visibleColumns.map((c) => `${widths[c.key]}px`),
+      ].join(" "),
+    [visibleColumns, widths],
   );
 
   const startResize = useCallback(
@@ -167,5 +224,16 @@ export function useResizableColumns({
     [startResize, resetColumn, resizingKey],
   );
 
-  return { widths, gridTemplateColumns, getHandleProps, resizingKey };
+  return {
+    widths,
+    gridTemplateColumns,
+    getHandleProps,
+    resizingKey,
+    columns,
+    visibleColumns,
+    isVisible,
+    toggleColumn,
+  };
 }
+
+export type ResizableColumns = ReturnType<typeof useResizableColumns>;

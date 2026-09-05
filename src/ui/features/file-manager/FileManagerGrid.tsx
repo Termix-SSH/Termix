@@ -43,13 +43,29 @@ import {
   type ResizableColumnSpec,
 } from "./hooks/useResizableColumns.ts";
 import { ColumnResizeHandle } from "./components/ColumnResizeHandle.tsx";
+import { ColumnVisibilityMenu } from "./components/ColumnVisibilityMenu.tsx";
 
 // Fixed list-view columns after the flexible name column; user-resizable.
 const LIST_COLUMNS: ResizableColumnSpec[] = [
-  { key: "modified", defaultWidth: 120, minWidth: 70 },
-  { key: "owner", defaultWidth: 150, minWidth: 60 },
-  { key: "size", defaultWidth: 80, minWidth: 56 },
-  { key: "permissions", defaultWidth: 90, minWidth: 70 },
+  {
+    key: "modified",
+    labelKey: "fileManager.modified",
+    defaultWidth: 120,
+    minWidth: 70,
+  },
+  {
+    key: "owner",
+    labelKey: "fileManager.owner",
+    defaultWidth: 150,
+    minWidth: 60,
+  },
+  { key: "size", labelKey: "fileManager.size", defaultWidth: 80, minWidth: 56 },
+  {
+    key: "permissions",
+    labelKey: "fileManager.permissions",
+    defaultWidth: 90,
+    minWidth: 70,
+  },
 ];
 const LIST_COLUMNS_STORAGE_KEY = "termix:file-manager:columns:remote";
 
@@ -301,6 +317,15 @@ export function FileManagerGrid({
     storageKey: LIST_COLUMNS_STORAGE_KEY,
     columns: LIST_COLUMNS,
   });
+  const [columnMenu, setColumnMenu] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, visible: false });
+  const closeColumnMenu = useCallback(
+    () => setColumnMenu((prev) => ({ ...prev, visible: false })),
+    [],
+  );
 
   const gridVirtualizer = useVirtualizer({
     count: gridRowCount,
@@ -1311,6 +1336,12 @@ export function FileManagerGrid({
                   compact ? "px-2 py-1" : "px-4 py-2",
                 )}
                 style={{ gridTemplateColumns: listColumns.gridTemplateColumns }}
+                title={t("fileManager.columnsHint")}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setColumnMenu({ x: e.clientX, y: e.clientY, visible: true });
+                }}
               >
                 <div
                   className="flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
@@ -1324,49 +1355,68 @@ export function FileManagerGrid({
                       <ArrowDown className="size-3" />
                     ))}
                 </div>
-                <div
-                  className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
-                  onClick={() => onSortChange?.("modified")}
-                >
-                  <ColumnResizeHandle
-                    {...listColumns.getHandleProps("modified")}
-                  />
-                  <span className="truncate">{t("fileManager.modified")}</span>
-                  {sortBy === "modified" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="size-3" />
-                    ) : (
-                      <ArrowDown className="size-3" />
-                    ))}
-                </div>
-                <div className="relative hidden md:flex items-center min-w-0">
-                  <ColumnResizeHandle
-                    {...listColumns.getHandleProps("owner")}
-                  />
-                  <span className="truncate">{t("fileManager.owner")}</span>
-                </div>
-                <div
-                  className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors justify-end min-w-0"
-                  onClick={() => onSortChange?.("size")}
-                >
-                  <ColumnResizeHandle {...listColumns.getHandleProps("size")} />
-                  <span className="truncate">{t("fileManager.size")}</span>
-                  {sortBy === "size" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="size-3" />
-                    ) : (
-                      <ArrowDown className="size-3" />
-                    ))}
-                </div>
-                <div className="relative flex items-center justify-end min-w-0">
-                  <ColumnResizeHandle
-                    {...listColumns.getHandleProps("permissions")}
-                  />
-                  <span className="truncate">
-                    {t("fileManager.permissions")}
-                  </span>
-                </div>
+                {listColumns.isVisible("modified") && (
+                  <div
+                    className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors min-w-0"
+                    onClick={() => onSortChange?.("modified")}
+                  >
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("modified")}
+                    />
+                    <span className="truncate">
+                      {t("fileManager.modified")}
+                    </span>
+                    {sortBy === "modified" &&
+                      (sortOrder === "asc" ? (
+                        <ArrowUp className="size-3" />
+                      ) : (
+                        <ArrowDown className="size-3" />
+                      ))}
+                  </div>
+                )}
+                {listColumns.isVisible("owner") && (
+                  <div className="relative hidden md:flex items-center min-w-0">
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("owner")}
+                    />
+                    <span className="truncate">{t("fileManager.owner")}</span>
+                  </div>
+                )}
+                {listColumns.isVisible("size") && (
+                  <div
+                    className="relative flex items-center gap-1 cursor-pointer hover:text-accent-brand transition-colors justify-end min-w-0"
+                    onClick={() => onSortChange?.("size")}
+                  >
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("size")}
+                    />
+                    <span className="truncate">{t("fileManager.size")}</span>
+                    {sortBy === "size" &&
+                      (sortOrder === "asc" ? (
+                        <ArrowUp className="size-3" />
+                      ) : (
+                        <ArrowDown className="size-3" />
+                      ))}
+                  </div>
+                )}
+                {listColumns.isVisible("permissions") && (
+                  <div className="relative flex items-center justify-end min-w-0">
+                    <ColumnResizeHandle
+                      {...listColumns.getHandleProps("permissions")}
+                    />
+                    <span className="truncate">
+                      {t("fileManager.permissions")}
+                    </span>
+                  </div>
+                )}
               </div>
+              <ColumnVisibilityMenu
+                x={columnMenu.x}
+                y={columnMenu.y}
+                isVisible={columnMenu.visible}
+                columns={listColumns}
+                onClose={closeColumnMenu}
+              />
               {parentListRow}
               {createIntent && (
                 <CreateIntentListItem
@@ -1461,27 +1511,35 @@ export function FileManagerGrid({
                           )}
                         </div>
 
-                        <span className="text-[10px] text-muted-foreground pointer-events-none truncate">
-                          {file.modified || "—"}
-                        </span>
+                        {listColumns.isVisible("modified") && (
+                          <span className="text-[10px] text-muted-foreground pointer-events-none truncate">
+                            {file.modified || "—"}
+                          </span>
+                        )}
 
-                        <span className="text-[10px] text-muted-foreground truncate hidden md:block pointer-events-none">
-                          {file.owner
-                            ? `${file.owner}${file.group ? `:${file.group}` : ""}`
-                            : "—"}
-                        </span>
+                        {listColumns.isVisible("owner") && (
+                          <span className="text-[10px] text-muted-foreground truncate hidden md:block pointer-events-none">
+                            {file.owner
+                              ? `${file.owner}${file.group ? `:${file.group}` : ""}`
+                              : "—"}
+                          </span>
+                        )}
 
-                        <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none">
-                          {file.type === "file" &&
-                          file.size !== undefined &&
-                          file.size !== null
-                            ? formatFileSize(file.size)
-                            : "—"}
-                        </span>
+                        {listColumns.isVisible("size") && (
+                          <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none">
+                            {file.type === "file" &&
+                            file.size !== undefined &&
+                            file.size !== null
+                              ? formatFileSize(file.size)
+                              : "—"}
+                          </span>
+                        )}
 
-                        <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none truncate">
-                          {file.permissions || "—"}
-                        </span>
+                        {listColumns.isVisible("permissions") && (
+                          <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none truncate">
+                            {file.permissions || "—"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );

@@ -3,8 +3,8 @@ import { act, renderHook } from "@testing-library/react";
 import { useResizableColumns } from "@/features/file-manager/hooks/useResizableColumns";
 
 const columns = [
-  { key: "modified", defaultWidth: 120, minWidth: 70 },
-  { key: "size", defaultWidth: 80, minWidth: 56, maxWidth: 200 },
+  { key: "modified", labelKey: "m", defaultWidth: 120, minWidth: 70 },
+  { key: "size", labelKey: "s", defaultWidth: 80, minWidth: 56, maxWidth: 200 },
 ];
 const STORAGE_KEY = "test:columns";
 
@@ -56,6 +56,31 @@ describe("useResizableColumns", () => {
       useResizableColumns({ storageKey: STORAGE_KEY, columns }),
     );
     expect(result.current.widths).toEqual({ modified: 70, size: 200 });
+  });
+
+  it("hides and shows columns, dropping them from the template", () => {
+    const { result } = renderHook(() =>
+      useResizableColumns({ storageKey: STORAGE_KEY, columns }),
+    );
+    act(() => result.current.toggleColumn("size"));
+    expect(result.current.isVisible("size")).toBe(false);
+    expect(result.current.gridTemplateColumns).toBe("minmax(0, 1fr) 120px");
+    expect(result.current.visibleColumns.map((c) => c.key)).toEqual([
+      "modified",
+    ]);
+    expect(JSON.parse(localStorage.getItem(`${STORAGE_KEY}:hidden`)!)).toEqual([
+      "size",
+    ]);
+
+    // A fresh mount restores the hidden set; toggling again shows it.
+    const remount = renderHook(() =>
+      useResizableColumns({ storageKey: STORAGE_KEY, columns }),
+    );
+    expect(remount.result.current.isVisible("size")).toBe(false);
+    act(() => remount.result.current.toggleColumn("size"));
+    expect(remount.result.current.gridTemplateColumns).toBe(
+      "minmax(0, 1fr) 120px 80px",
+    );
   });
 
   it("resets a column to its default on double click", () => {
