@@ -395,6 +395,43 @@ describe("LocalFilePane", () => {
     );
   });
 
+  it("shows a pinned .. entry that goes up on double click and accepts drops", async () => {
+    const api = installElectronApi();
+    const onRemoteItemsDropped = vi.fn();
+    render(<LocalFilePane onRemoteItemsDropped={onRemoteItemsDropped} />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(HOME)).toBeInTheDocument(),
+    );
+
+    const parentRow = document.querySelector("[data-parent-entry]");
+    expect(parentRow).not.toBeNull();
+    // It is the first row, above the real entries.
+    const firstRow = screen
+      .getByTestId("local-file-pane")
+      .querySelector(".thin-scrollbar > *");
+    expect(firstRow).toBe(parentRow);
+
+    const payload = JSON.stringify({
+      type: "internal_files",
+      files: ["/srv/app/a.log"],
+    });
+    const dataTransfer = makeDataTransfer(
+      [REMOTE_FILES_DRAG_MIME, "text/plain"],
+      { "text/plain": payload, [REMOTE_FILES_DRAG_MIME]: "1" },
+    );
+    fireEvent.dragOver(parentRow!, { dataTransfer });
+    fireEvent.drop(parentRow!, { dataTransfer });
+    expect(onRemoteItemsDropped).toHaveBeenCalledWith(
+      ["/srv/app/a.log"],
+      "/Users",
+    );
+
+    fireEvent.click(parentRow!, { detail: 2 });
+    await waitFor(() =>
+      expect(api.localFs.list).toHaveBeenCalledWith("/Users"),
+    );
+  });
+
   it("ignores OS file drags (those belong to the remote grid)", async () => {
     const onRemoteItemsDropped = vi.fn();
     render(<LocalFilePane onRemoteItemsDropped={onRemoteItemsDropped} />);

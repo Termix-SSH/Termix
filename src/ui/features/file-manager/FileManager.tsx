@@ -3472,6 +3472,13 @@ function FileManagerContent({
                 onLocalFilesDrop={
                   localPaneAvailable ? handleLocalFilesDrop : undefined
                 }
+                parentPath={
+                  currentPath === "/"
+                    ? null
+                    : currentPath.substring(0, currentPath.lastIndexOf("/")) ||
+                      "/"
+                }
+                onNavigateUp={goUp}
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onSortChange={(field) => {
