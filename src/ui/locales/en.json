@@ -2261,6 +2261,8 @@
     "localRenameFailed": "Rename failed",
     "localCreateFailed": "Could not create item",
     "goToParentFolder": "Go to parent folder",
+    "resizeSidebar": "Drag to resize the sidebar (double-click to reset)",
+    "resizeLocalPane": "Drag to resize the local pane (double-click to reset)",
     "columns": "Columns",
     "columnsHint": "Right-click to choose columns",
     "emptyFolder": "This folder is empty",
