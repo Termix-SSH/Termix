@@ -43,6 +43,7 @@ import {
 } from "./monitor-helpers.js";
 import type { SSHHost, AuthenticatedRequest } from "../../../types/index.js";
 import { getTmuxAuthBehavior } from "./auth-utils.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const PANE_ID_RE = /^%\d+$/;
 // tmux session names cannot contain ":" or "."; keep to a conservative
@@ -923,4 +924,9 @@ app.put("/tmux_monitor/:hostId/tags", async (req, res) => {
 });
 
 const PORT = 30010;
-app.listen(PORT, "127.0.0.1", () => {});
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: sshLogger,
+  serviceName: "tmux",
+});

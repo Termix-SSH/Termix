@@ -3,6 +3,8 @@ import cookieParser from "cookie-parser";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import { AuthManager } from "../utils/auth-manager.js";
+import { listenOnServicePort } from "../utils/service-listen.js";
+import { homepageLogger } from "../utils/logger.js";
 import { homepageItemsRouter } from "../database/routes/homepage-items-routes.js";
 import { homepageLayoutRouter } from "../database/routes/homepage-layout-routes.js";
 import { homepageFaviconRouter } from "../database/routes/homepage-favicon-routes.js";
@@ -33,6 +35,11 @@ app.use("/homepage/rss", homepageRssRouter);
 app.use("/homepage/ping", homepagePingRouter);
 app.use("/homepage/proxy", homepageProxyRouter);
 
-app.listen(PORT, "127.0.0.1", () => {});
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: homepageLogger,
+  serviceName: "homepage",
+});
 
 export default app;

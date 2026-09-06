@@ -97,6 +97,7 @@ import {
   requestQueue,
   statusPollLimiter,
 } from "./state.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -3103,20 +3104,26 @@ process.on("SIGTERM", () => {
 });
 
 const PORT = 30005;
-app.listen(PORT, "127.0.0.1", async () => {
-  try {
-    await authManager.initialize();
-  } catch (err) {
-    statsLogger.error("Failed to initialize AuthManager", err, {
-      operation: "auth_init_error",
-    });
-  }
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: statsLogger,
+  serviceName: "metrics",
+  onListening: async () => {
+    try {
+      await authManager.initialize();
+    } catch (err) {
+      statsLogger.error("Failed to initialize AuthManager", err, {
+        operation: "auth_init_error",
+      });
+    }
 
-  setInterval(
-    () => {
-      authFailureTracker.cleanup();
-      pollingBackoff.cleanup();
-    },
-    10 * 60 * 1000,
-  );
+    setInterval(
+      () => {
+        authFailureTracker.cleanup();
+        pollingBackoff.cleanup();
+      },
+      10 * 60 * 1000,
+    );
+  },
 });

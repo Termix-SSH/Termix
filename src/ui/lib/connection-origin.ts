@@ -8,26 +8,28 @@ interface OriginResolvableHost {
   connectionOrigin?: ConnectionOrigin | null;
 }
 
+const GUACAMOLE_CONNECTION_TYPES = new Set(["rdp", "vnc", "telnet"]);
+
 /**
  * Resolves which backend a given host's interactive connection (SSH,
- * Docker console, Serial) should dial: the desktop app's embedded local
- * backend, or a connected remote sync server.
+ * Docker console, Serial, RDP/VNC/Telnet) should dial: the desktop app's
+ * embedded local backend, or a connected remote sync server.
  *
- * RDP/VNC/Telnet always resolve to "remote" -- guacd isn't bundled with the
- * embedded backend. Serial always resolves to "local" -- the hardware is
- * physically attached to this desktop machine. Everything else follows the
- * host's own override if set, falling back to the desktop-wide default.
+ * Serial always resolves to "local" -- the hardware is physically attached
+ * to this desktop machine. Everything else follows the host's own override
+ * if set, falling back to the desktop-wide default.
+ *
+ * RDP/VNC/Telnet are the exception to that fallback: left on Default they
+ * resolve to "remote" rather than following the desktop-wide setting. They
+ * need a guacd, which the desktop does not ship, so originating them here
+ * only works once the user has pointed Termix at one of their own (the
+ * global guacd URL setting, or a host's guacd Proxy override). Making that
+ * opt-in per host keeps an upgrade from moving working connections onto a
+ * guacd that isn't there -- see Termix-SSH/Support#1240.
  */
 export async function resolveConnectionOrigin(
   host: OriginResolvableHost,
 ): Promise<ConnectionOrigin> {
-  if (
-    host.connectionType === "rdp" ||
-    host.connectionType === "vnc" ||
-    host.connectionType === "telnet"
-  ) {
-    return "remote";
-  }
   if (host.connectionType === "serial") {
     return "local";
   }
@@ -36,6 +38,9 @@ export async function resolveConnectionOrigin(
   }
   if (host.connectionOrigin === "local" || host.connectionOrigin === "remote") {
     return host.connectionOrigin;
+  }
+  if (GUACAMOLE_CONNECTION_TYPES.has(host.connectionType ?? "")) {
+    return "remote";
   }
 
   try {

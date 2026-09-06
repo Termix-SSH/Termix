@@ -13,6 +13,7 @@ import {
   createCurrentRoleRepository,
 } from "../database/repositories/factory.js";
 import { DataCrypto } from "../utils/data-crypto.js";
+import { listenOnServicePort } from "../utils/service-listen.js";
 
 const app = express();
 app.set("trust proxy", "loopback");
@@ -318,12 +319,18 @@ app.delete("/activity/reset", async (req, res) => {
 app.use("/service-links", dashboardServiceLinksRouter);
 
 const PORT = 30006;
-app.listen(PORT, "127.0.0.1", async () => {
-  try {
-    await authManager.initialize();
-  } catch (err) {
-    dashboardLogger.error("Failed to initialize AuthManager", err, {
-      operation: "auth_init_error",
-    });
-  }
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: dashboardLogger,
+  serviceName: "dashboard",
+  onListening: async () => {
+    try {
+      await authManager.initialize();
+    } catch (err) {
+      dashboardLogger.error("Failed to initialize AuthManager", err, {
+        operation: "auth_init_error",
+      });
+    }
+  },
 });

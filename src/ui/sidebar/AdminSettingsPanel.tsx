@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { notifyAiStatusChanged } from "@/hooks/use-ai-availability";
+import { useBranding } from "@/contexts/BrandingContext";
 import {
   getAiGloballyEnabled,
   getAiPrivateEndpoints,
@@ -58,9 +59,12 @@ import {
   getTerminalImageStorageSettings,
   updateTerminalImageStorageSettings,
   testTerminalImageStorage,
+  getBranding,
+  updateBranding,
   type HostDefaults,
   type TerminalImageStorageSettings,
   type TerminalImageStorageTestResult,
+  type BrandingSettings,
 } from "@/api/settings-api";
 import {
   getSessionSharingGloballyEnabled,
@@ -133,6 +137,7 @@ import {
 import { cacheTouchInputSettings } from "@/features/terminal/touch-input-settings-store";
 import { AdminTouchInputSection } from "./AdminTouchInputSection";
 import { AdminImageStorageSection } from "./AdminImageStorageSection";
+import { AdminBrandingSection } from "./AdminBrandingSection";
 
 type ApiErrorLike = {
   response?: {
@@ -224,6 +229,11 @@ export function AdminSettingsPanel({
   const [imageStorageTesting, setImageStorageTesting] = useState(false);
   const [imageStorageTestResult, setImageStorageTestResult] =
     useState<TerminalImageStorageTestResult | null>(null);
+
+  const [brandingSettings, setBrandingSettings] =
+    useState<BrandingSettings | null>(null);
+  const [brandingSaving, setBrandingSaving] = useState(false);
+  const { applyBranding } = useBranding();
 
   // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
@@ -410,6 +420,7 @@ export function AdminSettingsPanel({
         stepCaEndpoints,
         secretSourceEndpoints,
         imageStorage,
+        branding,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -431,6 +442,7 @@ export function AdminSettingsPanel({
         getStepCaPrivateEndpoints(),
         getSecretSourcePrivateEndpoints(),
         getTerminalImageStorageSettings(),
+        getBranding(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -493,6 +505,9 @@ export function AdminSettingsPanel({
       }
       if (imageStorage.status === "fulfilled") {
         setImageStorageSettings(imageStorage.value);
+      }
+      if (branding.status === "fulfilled") {
+        setBrandingSettings(branding.value);
       }
     } catch {
       // non-fatal
@@ -736,6 +751,40 @@ export function AdminSettingsPanel({
       toast.error(apiErrorMessage(e, t("admin.imageStorageSaveFailed")));
     } finally {
       setImageStorageSaving(false);
+    }
+  }
+
+  async function handleSaveBranding() {
+    if (!brandingSettings) return;
+    setBrandingSaving(true);
+    try {
+      const saved = await updateBranding({
+        appName: brandingSettings.appName,
+        tagline: brandingSettings.tagline,
+        logo: brandingSettings.logo,
+      });
+      setBrandingSettings(saved);
+      applyBranding(saved);
+      toast.success(t("admin.brandingSaved"));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("admin.brandingSaveFailed")));
+    } finally {
+      setBrandingSaving(false);
+    }
+  }
+
+  async function handleResetBrandingLogo() {
+    if (!brandingSettings) return;
+    setBrandingSaving(true);
+    try {
+      const saved = await updateBranding({ logo: null });
+      setBrandingSettings(saved);
+      applyBranding(saved);
+      toast.success(t("admin.brandingSaved"));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("admin.brandingSaveFailed")));
+    } finally {
+      setBrandingSaving(false);
     }
   }
 
@@ -1379,6 +1428,16 @@ export function AdminSettingsPanel({
         testResult={imageStorageTestResult}
         onSave={() => void handleSaveImageStorage()}
         onTest={() => void handleTestImageStorage()}
+      />
+
+      <AdminBrandingSection
+        open={openSections.has("branding")}
+        onToggle={() => toggle("branding")}
+        settings={brandingSettings}
+        setSettings={setBrandingSettings}
+        saving={brandingSaving}
+        onSave={() => void handleSaveBranding()}
+        onResetLogo={() => void handleResetBrandingLogo()}
       />
 
       <AdminDatabaseSection

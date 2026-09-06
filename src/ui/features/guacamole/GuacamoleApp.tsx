@@ -22,7 +22,10 @@ import {
 } from "@/main-axios.ts";
 import { readConfiguredDimension } from "@/features/guacamole/guacamole-display-size.ts";
 import { getGuacamoleToken, parseGuacamoleConfig } from "@/api/guacamole-api";
-import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
+import {
+  resolveConnectionOrigin,
+  type ConnectionOrigin,
+} from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
 import { GuacamoleFileBrowser } from "@/features/guacamole/GuacamoleFileBrowser.tsx";
@@ -167,6 +170,7 @@ interface GuacamoleAppInnerProps {
     | "rdpAuthType"
     | "authOverrides"
     | "syncId"
+    | "connectionOrigin"
     | "ip"
     | "rdpPort"
     | "vncPort"
@@ -287,11 +291,17 @@ const GuacamoleAppInner = React.forwardRef<
     setGuacamoleConnectionId(null);
     setError(null);
 
+    // Outside Electron there is only one backend, so the origin is moot and
+    // the API layer ignores it; inside, it decides which backend mints the
+    // token and therefore has to match the one the session will run on.
+    let resolvedOrigin: ConnectionOrigin = "local";
+
     if (isElectron()) {
-      const origin = await resolveConnectionOrigin({
+      resolvedOrigin = await resolveConnectionOrigin({
         connectionType: resolvedProtocolForConnect,
+        connectionOrigin: hostConfig.connectionOrigin,
       });
-      if (origin === "remote") {
+      if (resolvedOrigin === "remote") {
         const remoteConfig = (await window.electronAPI?.invoke?.(
           "get-remote-sync-config",
         )) as { serverUrl?: string } | null;
@@ -308,7 +318,7 @@ const GuacamoleAppInner = React.forwardRef<
         type: resolvedProtocolForConnect.toUpperCase(),
       }),
     });
-    const status = await getGuacdStatus();
+    const status = await getGuacdStatus(resolvedOrigin);
     if (status.guacd.status !== "connected") {
       throw new Error(t("guacamole.guacdUnavailable"));
     }
@@ -325,27 +335,31 @@ const GuacamoleAppInner = React.forwardRef<
     // host activity because there is no host row.
     const result =
       hostId === 0
-        ? await getGuacamoleToken({
-            protocol: resolvedProtocolForConnect,
-            hostname: hostConfig.ip,
-            port:
-              resolvedProtocolForConnect === "vnc"
-                ? hostConfig.vncPort
-                : hostConfig.rdpPort,
-            username:
-              resolvedProtocolForConnect === "vnc"
-                ? hostConfig.vncUser
-                : hostConfig.rdpUser,
-            password:
-              resolvedProtocolForConnect === "vnc"
-                ? hostConfig.vncPassword
-                : hostConfig.rdpPassword,
-            domain: hostConfig.domain,
-            ignoreCert: true,
-            guacamoleConfig: parseGuacamoleConfig(hostConfig.guacamoleConfig),
-          })
+        ? await getGuacamoleToken(
+            {
+              protocol: resolvedProtocolForConnect,
+              hostname: hostConfig.ip,
+              port:
+                resolvedProtocolForConnect === "vnc"
+                  ? hostConfig.vncPort
+                  : hostConfig.rdpPort,
+              username:
+                resolvedProtocolForConnect === "vnc"
+                  ? hostConfig.vncUser
+                  : hostConfig.rdpUser,
+              password:
+                resolvedProtocolForConnect === "vnc"
+                  ? hostConfig.vncPassword
+                  : hostConfig.rdpPassword,
+              domain: hostConfig.domain,
+              ignoreCert: true,
+              guacamoleConfig: parseGuacamoleConfig(hostConfig.guacamoleConfig),
+            },
+            resolvedOrigin,
+          )
         : await getGuacamoleTokenFromHost(
             hostId,
+            resolvedOrigin,
             protocol,
             promptedCredentials ?? undefined,
             hostConfig.syncId,
@@ -547,6 +561,7 @@ const GuacamoleAppInner = React.forwardRef<
           token,
           protocol: resolvedProtocol,
           type: resolvedProtocol,
+          connectionOrigin: hostConfig.connectionOrigin,
           width: configuredWidth,
           height: configuredHeight,
           dpi: configuredDpi,

@@ -68,6 +68,7 @@ import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
 import { applyAgentAuth } from "../terminal-auth-helpers.js";
 import { applyCACertIfPresent } from "./ca-cert-auth.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 /**
  * The host id came from whichever database the client is displaying. If this
@@ -3168,14 +3169,20 @@ process.on("SIGTERM", () => {
 const PORT = 30004;
 
 try {
-  const server = app.listen(PORT, "127.0.0.1", async () => {
-    try {
-      await authManager.initialize();
-    } catch (err) {
-      fileLogger.error("Failed to initialize AuthManager", err, {
-        operation: "auth_init_error",
-      });
-    }
+  const server = listenOnServicePort({
+    app,
+    port: PORT,
+    logger: fileLogger,
+    serviceName: "file-manager",
+    onListening: async () => {
+      try {
+        await authManager.initialize();
+      } catch (err) {
+        fileLogger.error("Failed to initialize AuthManager", err, {
+          operation: "auth_init_error",
+        });
+      }
+    },
   });
 
   // Uploads are streamed and may legitimately take longer than Node's default
