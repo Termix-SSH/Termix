@@ -23,6 +23,11 @@ export function LocalTerminal({
   isVisible: boolean;
 }) {
   const { t } = useTranslation();
+  // Read via a ref inside the session-lifecycle effect below so a language
+  // change (which gives react-i18next a new `t` identity) doesn't tear down
+  // the running local shell and spawn a new session.
+  const tRef = useRef(t);
+  tRef.current = t;
   const { theme: appTheme } = useTheme();
   const { instance: terminal, ref: xtermRef } = useXTerm();
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -74,13 +79,13 @@ export function LocalTerminal({
 
     async function writeTextToClipboard(text: string): Promise<boolean> {
       const ok = await copyToClipboard(text);
-      if (!ok) toast.error(t("terminal.clipboardWriteFailed"));
+      if (!ok) toast.error(tRef.current("terminal.clipboardWriteFailed"));
       return ok;
     }
 
     async function readTextFromClipboard(): Promise<string> {
       const text = await readFromClipboard();
-      if (!text) toast.error(t("terminal.clipboardReadFailed"));
+      if (!text) toast.error(tRef.current("terminal.clipboardReadFailed"));
       return text;
     }
 
@@ -154,7 +159,7 @@ export function LocalTerminal({
       fitAddonRef.current = null;
       fitAddon.dispose();
     };
-  }, [fit, instanceId, shell, t, terminal, xtermRef]);
+  }, [fit, instanceId, shell, terminal, xtermRef]);
 
   useEffect(() => {
     if (isVisible) requestAnimationFrame(fit);
