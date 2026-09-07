@@ -168,7 +168,7 @@ jobs:
           git push origin --delete i18n_translate || true
 
       - name: Upload sources to Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: true
           upload_translations: false
@@ -186,7 +186,7 @@ jobs:
         run: node scripts/crowdin-pretranslate.cjs
 
       - name: Download translations from Crowdin
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: false
           upload_translations: false

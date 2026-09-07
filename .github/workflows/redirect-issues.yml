@@ -11,7 +11,7 @@ jobs:
     if: github.event.issue.author_association != 'OWNER' && github.event.issue.author_association != 'COLLABORATOR'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
             const n = context.issue.number;
