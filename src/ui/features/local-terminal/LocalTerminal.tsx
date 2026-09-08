@@ -4,6 +4,7 @@ import { useXTerm } from "react-xtermjs";
 import { useTheme } from "@/components/theme-provider";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import { getMacLineNavigationSequence } from "@/lib/mac-line-navigation";
 import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
 
 export function LocalTerminal({
@@ -59,6 +60,16 @@ export function LocalTerminal({
     terminal.loadAddon(fitAddon);
     fitAddon.fit();
 
+    const handleCustomKey = (e: KeyboardEvent): boolean => {
+      const sequence = getMacLineNavigationSequence(e);
+      if (!sequence) return true;
+      e.preventDefault();
+      e.stopPropagation();
+      terminal.input(sequence, true);
+      return false;
+    };
+    terminal.attachCustomKeyEventHandler(handleCustomKey);
+
     let disposed = false;
     let removeData = () => {};
     let removeExit = () => {};
@@ -98,6 +109,7 @@ export function LocalTerminal({
     if (xtermRef.current) observer.observe(xtermRef.current);
     return () => {
       disposed = true;
+      terminal.attachCustomKeyEventHandler(() => true);
       observer.disconnect();
       input.dispose();
       removeData();
