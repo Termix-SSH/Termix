@@ -113,6 +113,13 @@
       "when": 1787602476319,
       "tag": "0015_glossy_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1788856768522,
+      "tag": "0016_clever_umar",
+      "breakpoints": true
     }
   ]
 }
