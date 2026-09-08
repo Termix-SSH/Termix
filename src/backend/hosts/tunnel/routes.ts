@@ -18,7 +18,12 @@ import { SystemCrypto } from "../../utils/system-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 
-import { getTunnelMode, validateTunnelConfig } from "./utils.js";
+import {
+  RESERVED_TUNNEL_NAME_PREFIX,
+  getTunnelMode,
+  isReservedTunnelName,
+  validateTunnelConfig,
+} from "./utils.js";
 
 import {
   tunnelConfigs,
@@ -194,6 +199,20 @@ export function registerTunnelRoutes(app: express.Express): void {
       }
 
       const tunnelName = tunnelConfig.name;
+
+      // The "web:" prefix is reserved for web endpoint tunnels, which skip the
+      // retry machinery by name (see handleDisconnect). A user-supplied tunnel
+      // using it would silently lose its own retry/reconnect behaviour, and
+      // could collide with a live web endpoint forward. Rejected here, at the
+      // only point tunnel names are accepted from a request -- note
+      // validateTunnelConfig returns true unconditionally for any name that is
+      // not the legacy 6-part format, so it is no defence.
+      if (isReservedTunnelName(tunnelName)) {
+        return res.status(400).json({
+          error: `Tunnel names beginning with "${RESERVED_TUNNEL_NAME_PREFIX}" are reserved`,
+        });
+      }
+
       tunnelConfig.requestingUserId = userId;
 
       try {
