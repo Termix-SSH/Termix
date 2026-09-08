@@ -237,7 +237,7 @@ Kabuğunuz ve betikleriniz için bir `termix` CLI'ı. Terminal açın, tek bir s
 <td width="50%" valign="top">
 
 **Güvenlik:**
-Parolalar, anahtarlar ve diğer gizli bilgiler kullanıcı bazında şifrelenir, veritabanı dosyalarının kendisi de diskte şifrelenebilir. Nasıl çalıştığı için [belgelere](https://docs.termix.site/security) bakın.
+Parolalar, anahtarlar ve diğer gizli bilgiler kullanıcı bazında şifrelenir, veritabanı dosyalarının kendisi de diskte şifrelenebilir. Nasıl çalıştığı için [belgelere](https://docs.termix.site/features/authentication/security/) bakın.
 
 </td>
 <td width="50%" valign="top">

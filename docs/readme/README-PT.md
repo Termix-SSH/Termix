@@ -237,7 +237,7 @@ Um CLI `termix` para o teu shell e os teus scripts. Abre terminais, roda um coma
 <td width="50%" valign="top">
 
 **Segurança:**
-Senhas, chaves e outros segredos são criptografados por usuário, e os próprios arquivos do banco de dados podem ser criptografados em disco. Vê a [documentação](https://docs.termix.site/security) para entender como funciona.
+Senhas, chaves e outros segredos são criptografados por usuário, e os próprios arquivos do banco de dados podem ser criptografados em disco. Vê a [documentação](https://docs.termix.site/features/authentication/security/) para entender como funciona.
 
 </td>
 <td width="50%" valign="top">

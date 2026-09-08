@@ -237,7 +237,7 @@ A `termix` CLI for your shell and your scripts. Open terminals, run a command on
 <td width="50%" valign="top">
 
 **Security:**
-Passwords, keys, and other secrets are encrypted per user, and the database files themselves can be encrypted on disk. See the [docs](https://docs.termix.site/security) for how it works.
+Passwords, keys, and other secrets are encrypted per user, and the database files themselves can be encrypted on disk. See the [docs](https://docs.termix.site/features/authentication/security/) for how it works.
 
 </td>
 <td width="50%" valign="top">
