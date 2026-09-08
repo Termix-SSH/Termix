@@ -29,6 +29,7 @@ import {
   Sparkles,
   Presentation,
   Workflow,
+  Globe,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
@@ -87,6 +88,11 @@ const loadDockerManager = () =>
     default: m.DockerManager,
   }));
 const DockerManager = lazy(loadDockerManager);
+const loadWebEndpointTab = () =>
+  import("@/features/web-endpoint/WebEndpointTab").then((m) => ({
+    default: m.WebEndpointTab,
+  }));
+const WebEndpointTab = lazy(loadWebEndpointTab);
 const loadHostMetricsTab = () =>
   import("@/features/host-metrics/HostMetricsTab").then((m) => ({
     default: m.HostMetricsTab,
@@ -319,6 +325,8 @@ export function tabIcon(type: TabType) {
       return <Settings className="size-3.5" />;
     case "docker":
       return <Box className="size-3.5" />;
+    case "web-endpoint":
+      return <Globe className="size-3.5" />;
     case "tunnel":
       return <Network className="size-3.5" />;
     case "network_graph":
@@ -527,6 +535,18 @@ export function renderTabContent(
               : undefined
           }
         />,
+      );
+
+    case "web-endpoint":
+      if (!host)
+        return (
+          <EmptyState icon={Globe} messageKey="webEndpoint.noHostSelected" />
+        );
+      // Passed the endpoint ID, not the endpoint object: the tab resolves it
+      // against the host on every render, so an endpoint deleted while its tab
+      // is open shows a plain message instead of throwing.
+      return withTabSuspense(
+        <WebEndpointTab host={host} endpointId={tab.endpointId} />,
       );
 
     case "docker":
