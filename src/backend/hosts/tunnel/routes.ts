@@ -22,6 +22,7 @@ import {
   RESERVED_TUNNEL_NAME_PREFIX,
   getTunnelMode,
   isReservedTunnelName,
+  parseReservedTunnelName,
   validateTunnelConfig,
 } from "./utils.js";
 
@@ -51,6 +52,43 @@ const permissionManager = PermissionManager.getInstance();
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
+
+/**
+ * Ownership check for an action addressed by tunnel NAME alone.
+ *
+ * The existing check only ran inside `if (config && config.sourceHostId)`, and
+ * web endpoint tunnels are deliberately kept out of tunnelConfigs -- so
+ * `config` is always undefined for them and the check never ran at all. Host
+ * ids are small sequential integers and endpoint ids are client-supplied with
+ * no server-side randomness, so anyone could guess `web:{hostId}:{endpointId}`
+ * and force-close another user's live tunnel; manualDisconnects then makes the
+ * victim's own re-open fail for several seconds.
+ *
+ * A reserved name whose host id cannot be parsed FAILS CLOSED rather than
+ * falling through to the unchecked path.
+ */
+export async function authorizeTunnelAction(
+  userId: string,
+  tunnelName: string,
+  config: { sourceHostId?: number } | undefined,
+): Promise<{ allowed: boolean; hostId?: number }> {
+  const hostId =
+    config?.sourceHostId ?? parseReservedTunnelName(tunnelName)?.hostId;
+
+  if (hostId === undefined) {
+    // Not a reserved name and not a registered config: nothing to check
+    // against. Preserves the pre-existing behaviour for ordinary names;
+    // tightening that is a separate change with its own blast radius.
+    return { allowed: !isReservedTunnelName(tunnelName) };
+  }
+
+  const accessInfo = await permissionManager.canAccessHost(
+    userId,
+    hostId,
+    "connect",
+  );
+  return { allowed: accessInfo.hasAccess, hostId };
+}
 
 export function registerTunnelRoutes(app: express.Express): void {
   app.get(
@@ -488,15 +526,13 @@ export function registerTunnelRoutes(app: express.Express): void {
 
       try {
         const config = tunnelConfigs.get(tunnelName);
-        if (config && config.sourceHostId) {
-          const accessInfo = await permissionManager.canAccessHost(
-            userId,
-            config.sourceHostId,
-            "connect",
-          );
-          if (!accessInfo.hasAccess) {
-            return res.status(403).json({ error: "Access denied" });
-          }
+        const authorized = await authorizeTunnelAction(
+          userId,
+          tunnelName,
+          config,
+        );
+        if (!authorized.allowed) {
+          return res.status(403).json({ error: "Access denied" });
         }
 
         tunnelLogger.info("Tunnel stop request received", {
@@ -593,15 +629,13 @@ export function registerTunnelRoutes(app: express.Express): void {
 
       try {
         const config = tunnelConfigs.get(tunnelName);
-        if (config && config.sourceHostId) {
-          const accessInfo = await permissionManager.canAccessHost(
-            userId,
-            config.sourceHostId,
-            "connect",
-          );
-          if (!accessInfo.hasAccess) {
-            return res.status(403).json({ error: "Access denied" });
-          }
+        const authorized = await authorizeTunnelAction(
+          userId,
+          tunnelName,
+          config,
+        );
+        if (!authorized.allowed) {
+          return res.status(403).json({ error: "Access denied" });
         }
 
         retryCounters.delete(tunnelName);
