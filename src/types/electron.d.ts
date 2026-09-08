@@ -211,6 +211,7 @@ export interface ElectronAPI {
     ) => Promise<LocalFsResult<{ path: string }>>;
     trash: (paths: string[]) => Promise<LocalFsResult<LocalTrashResult>>;
     ensureDir: (dirPath: string) => Promise<LocalFsResult<{ path: string }>>;
+    exists: (paths: string[]) => Promise<LocalFsResult<{ existing: string[] }>>;
     walk: (paths: string[]) => Promise<LocalFsResult<LocalWalkResult>>;
     reveal: (targetPath: string) => Promise<LocalFsResult<unknown>>;
     open: (targetPath: string) => Promise<LocalFsResult<unknown>>;
@@ -276,22 +277,30 @@ export interface LocalWalkResult {
   totalBytes: number;
 }
 
+/**
+ * Which Termix backend a transfer talks to. The main process resolves the
+ * actual URL and credentials for the origin; the renderer never supplies them.
+ */
+export type LocalTransferOrigin = "local" | "remote";
+
 export interface LocalUploadRequest {
   transferId: string;
-  url: string;
-  headers: Record<string, string>;
+  origin: LocalTransferOrigin;
   fields: Record<string, string>;
   localPath: string;
   fileName: string;
+  deviceId?: string;
 }
 
 export interface LocalDownloadRequest {
   transferId: string;
-  url: string;
-  headers: Record<string, string>;
+  origin: LocalTransferOrigin;
   body: Record<string, unknown>;
   destPath: string;
   expectedSize?: number;
+  /** Replace an existing file at destPath; otherwise the transfer is refused with code EEXIST. */
+  overwrite?: boolean;
+  deviceId?: string;
 }
 
 export interface LocalTransferProgress {

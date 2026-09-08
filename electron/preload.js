@@ -141,6 +141,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("local-fs:rename", oldPath, newName),
     trash: (paths) => ipcRenderer.invoke("local-fs:trash", paths),
     ensureDir: (dirPath) => ipcRenderer.invoke("local-fs:ensure-dir", dirPath),
+    exists: (paths) => ipcRenderer.invoke("local-fs:exists", paths),
     walk: (paths) => ipcRenderer.invoke("local-fs:walk", paths),
     reveal: (targetPath) => ipcRenderer.invoke("local-fs:reveal", targetPath),
     open: (targetPath) => ipcRenderer.invoke("local-fs:open", targetPath),

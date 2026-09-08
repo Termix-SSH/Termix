@@ -5,15 +5,19 @@
 // own disk and moving bytes between it and the backend has to happen here.
 // Uploads/downloads are streamed through Electron's `net` stack against the
 // same file-manager HTTP routes the renderer already uses, so nothing is ever
-// buffered whole in memory and the existing auth (session cookies + bearer
-// JWT supplied by the renderer) keeps working unchanged.
+// buffered whole in memory.
+//
+// Trust boundary: the renderer never supplies a URL or headers. It names an
+// origin ("local" | "remote") and a route from a fixed allowlist; the main
+// process resolves the actual Termix backend URL and attaches credentials
+// itself (session cookies for the embedded backend, the stored Remote Sync JWT
+// for the remote server). Nothing here can be pointed at another host.
 
 const fs = require("fs");
 const fsp = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const { URL } = require("url");
-const { net } = require("electron");
 
 const IPC = {
   HOME: "local-fs:home",
@@ -23,6 +27,7 @@ const IPC = {
   RENAME: "local-fs:rename",
   TRASH: "local-fs:trash",
   ENSURE_DIR: "local-fs:ensure-dir",
+  EXISTS: "local-fs:exists",
   WALK: "local-fs:walk",
   REVEAL: "local-fs:reveal",
   OPEN: "local-fs:open",
@@ -242,27 +247,102 @@ function writeToRequest(request, chunk) {
   });
 }
 
-function createNetRequest(event, method, url) {
-  const parsed = new URL(url);
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Only http(s) transfer targets are supported");
+const TRANSFER_ROUTES = Object.freeze({
+  uploadFileStream: "/ssh/uploadFileStream",
+  downloadFileStream: "/ssh/downloadFileStream",
+});
+
+const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+
+const DEFAULT_LOCAL_FILE_MANAGER_BASE =
+  "http://localhost:30004/ssh/file_manager";
+
+function normalizeHttpBase(candidate, what) {
+  let parsed;
+  try {
+    parsed = new URL(String(candidate || ""));
+  } catch {
+    throw new Error(`${what} is not a valid URL`);
   }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`${what} must use http or https`);
+  }
+  return parsed.toString().replace(/\/$/, "");
+}
+
+// Resolves where a transfer may go. Only the two file-manager streaming
+// routes are reachable, and only on the embedded backend or the configured
+// Remote Sync server; credentials come from the main process, not the caller.
+function createTargetResolver({
+  localBaseUrl = DEFAULT_LOCAL_FILE_MANAGER_BASE,
+  getRemoteSyncConfig,
+  getRemoteSyncJwt,
+}) {
+  return function resolveTransferTarget({ origin, route, deviceId } = {}) {
+    const routePath = TRANSFER_ROUTES[route];
+    if (!routePath) {
+      throw new Error(`Unknown transfer route: ${String(route)}`);
+    }
+
+    const headers = { "X-Electron-App": "true" };
+    if (deviceId !== undefined && deviceId !== null && deviceId !== "") {
+      if (typeof deviceId !== "string" || !DEVICE_ID_PATTERN.test(deviceId)) {
+        throw new Error("Invalid device id");
+      }
+      headers["X-Termix-Device-ID"] = deviceId;
+    }
+
+    if (origin === "local") {
+      return {
+        url: `${normalizeHttpBase(localBaseUrl, "Local backend URL")}${routePath}`,
+        headers,
+      };
+    }
+
+    if (origin === "remote") {
+      const config =
+        typeof getRemoteSyncConfig === "function"
+          ? getRemoteSyncConfig()
+          : null;
+      if (!config || !config.serverUrl) {
+        throw new Error("Remote sync server is not configured");
+      }
+      const base = normalizeHttpBase(
+        config.serverUrl,
+        "Remote sync server URL",
+      );
+      const jwt =
+        typeof getRemoteSyncJwt === "function" ? getRemoteSyncJwt() : null;
+      if (jwt) headers.Authorization = `Bearer ${jwt}`;
+      return { url: `${base}/ssh/file_manager${routePath}`, headers };
+    }
+
+    throw new Error(`Unknown transfer origin: ${String(origin)}`);
+  };
+}
+
+function createNetRequest(net, event, method, url) {
   return net.request({
     method,
-    url: parsed.toString(),
+    url,
     session: event.sender.session,
     useSessionCookies: true,
   });
 }
 
 // Streams one local file to the backend's multipart `uploadFileStream` route.
-async function uploadLocalFile(event, options) {
-  const { transferId, url, headers, fields, localPath, fileName } =
+async function uploadLocalFile({ net, resolveTransferTarget }, event, options) {
+  const { transferId, origin, deviceId, fields, localPath, fileName } =
     options || {};
 
-  if (!transferId || !url || !localPath) {
+  if (!transferId || !localPath) {
     throw new Error("Missing upload parameters");
   }
+  const { url, headers } = resolveTransferTarget({
+    origin,
+    route: "uploadFileStream",
+    deviceId,
+  });
 
   const absPath = normalizeLocalPath(localPath);
   const stat = await fsp.stat(absPath);
@@ -294,7 +374,7 @@ async function uploadLocalFile(event, options) {
   const preambleBuffer = Buffer.from(preamble, "utf8");
   const epilogueBuffer = Buffer.from(epilogue, "utf8");
 
-  const request = createNetRequest(event, "POST", url);
+  const request = createNetRequest(net, event, "POST", url);
   for (const [key, value] of Object.entries(toHeaderMap(headers))) {
     request.setHeader(key, value);
   }
@@ -371,29 +451,88 @@ async function uploadLocalFile(event, options) {
   }
 }
 
-// Streams one remote file (via the backend's `downloadFileStream` route) into
-// a local destination, writing to a temp sibling and renaming on success so
-// a failed transfer never leaves a truncated file behind under the real name.
-async function downloadToLocal(event, options) {
-  const { transferId, url, headers, body, destPath, expectedSize } =
-    options || {};
+class LocalFileError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = "LocalFileError";
+    this.code = code;
+  }
+}
 
-  if (!transferId || !url || !destPath) {
+// Destinations with a download in flight, so two transfers can never race
+// each other onto the same file.
+const activeDestinations = new Set();
+
+function partialPathFor(absDest, transferId) {
+  const token = String(transferId)
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .slice(0, 48);
+  return `${absDest}.${token || "transfer"}.termix-part`;
+}
+
+// Moves a finished partial file onto its final name. Without `overwrite` the
+// publish is exclusive: an existing file is never replaced, even if it
+// appeared while the download was running.
+async function publishDownload(partialPath, absDest, overwrite) {
+  if (overwrite) {
+    await fsp.rename(partialPath, absDest);
+    return;
+  }
+  try {
+    // link() is atomic and fails with EEXIST if the name is taken.
+    await fsp.link(partialPath, absDest);
+  } catch (error) {
+    if (error && error.code === "EEXIST") {
+      throw new LocalFileError(
+        "EEXIST",
+        `"${path.basename(absDest)}" already exists`,
+      );
+    }
+    // Filesystems without hard links: fall back to an exclusive copy.
+    await fsp
+      .copyFile(partialPath, absDest, fs.constants.COPYFILE_EXCL)
+      .catch((copyError) => {
+        if (copyError && copyError.code === "EEXIST") {
+          throw new LocalFileError(
+            "EEXIST",
+            `"${path.basename(absDest)}" already exists`,
+          );
+        }
+        throw copyError;
+      });
+  }
+  await fsp.rm(partialPath, { force: true });
+}
+
+// Streams one remote file (via the backend's `downloadFileStream` route) into
+// a local destination. Bytes go to a transfer-unique temp sibling first and
+// are published under the real name only on success, so a failed transfer
+// never leaves a truncated file behind. Existing files are refused unless
+// the caller explicitly asked to overwrite.
+async function downloadToLocal({ net, resolveTransferTarget }, event, options) {
+  const { transferId, origin, deviceId, body, destPath, expectedSize } =
+    options || {};
+  const overwrite = options?.overwrite === true;
+
+  if (!transferId || !destPath) {
     throw new Error("Missing download parameters");
   }
+  const { url, headers } = resolveTransferTarget({
+    origin,
+    route: "downloadFileStream",
+    deviceId,
+  });
 
   const absDest = normalizeLocalPath(destPath);
-  await fsp.mkdir(path.dirname(absDest), { recursive: true });
-  const partialPath = `${absDest}.termix-part`;
-
-  const request = createNetRequest(event, "POST", url);
-  for (const [key, value] of Object.entries(toHeaderMap(headers))) {
-    request.setHeader(key, value);
+  if (activeDestinations.has(absDest)) {
+    throw new LocalFileError(
+      "EBUSY",
+      `"${path.basename(absDest)}" is already being downloaded`,
+    );
   }
-  const payload = Buffer.from(JSON.stringify(body || {}), "utf8");
-  request.setHeader("Content-Type", "application/json");
-  request.setHeader("Content-Length", String(payload.length));
+  activeDestinations.add(absDest);
 
+  const partialPath = partialPathFor(absDest, transferId);
   const report = makeProgressReporter(event.sender, transferId);
   const state = {
     cancelled: false,
@@ -402,9 +541,26 @@ async function downloadToLocal(event, options) {
       request.abort();
     },
   };
-  activeTransfers.set(transferId, state);
+  let request = null;
 
   try {
+    if (!overwrite && (await pathExists(absDest))) {
+      throw new LocalFileError(
+        "EEXIST",
+        `"${path.basename(absDest)}" already exists`,
+      );
+    }
+    await fsp.mkdir(path.dirname(absDest), { recursive: true });
+
+    request = createNetRequest(net, event, "POST", url);
+    for (const [key, value] of Object.entries(toHeaderMap(headers))) {
+      request.setHeader(key, value);
+    }
+    const payload = Buffer.from(JSON.stringify(body || {}), "utf8");
+    request.setHeader("Content-Type", "application/json");
+    request.setHeader("Content-Length", String(payload.length));
+    activeTransfers.set(transferId, state);
+
     await new Promise((resolve, reject) => {
       let settled = false;
       const fail = (error) => {
@@ -432,7 +588,8 @@ async function downloadToLocal(event, options) {
           Number(expectedSize) ||
           undefined;
 
-        const writeStream = fs.createWriteStream(partialPath);
+        // "wx": the temp name is ours alone; refuse to reuse a stale one.
+        const writeStream = fs.createWriteStream(partialPath, { flags: "wx" });
         let received = 0;
 
         response.on("data", (chunk) => {
@@ -466,13 +623,14 @@ async function downloadToLocal(event, options) {
       request.end();
     });
 
-    await fsp.rename(partialPath, absDest);
+    await publishDownload(partialPath, absDest, overwrite);
     return { success: true, path: absDest };
   } catch (error) {
     await fsp.rm(partialPath, { force: true }).catch(() => {});
     throw error;
   } finally {
     activeTransfers.delete(transferId);
+    activeDestinations.delete(absDest);
   }
 }
 
@@ -491,35 +649,43 @@ function wrap(handler) {
   };
 }
 
-function registerLocalFileHandlers({ ipcMain, shell }) {
-  ipcMain.handle(
-    IPC.HOME,
-    wrap(async () => ({
+// Builds the IPC handler map from injected dependencies so the whole boundary
+// can be exercised in tests with a Node http shim instead of Electron.
+function createLocalFileHandlers({
+  net,
+  shell,
+  getRemoteSyncConfig,
+  getRemoteSyncJwt,
+  localBaseUrl,
+}) {
+  if (!net || typeof net.request !== "function") {
+    throw new Error("createLocalFileHandlers requires a net implementation");
+  }
+  const resolveTransferTarget = createTargetResolver({
+    localBaseUrl,
+    getRemoteSyncConfig,
+    getRemoteSyncJwt,
+  });
+  const deps = { net, resolveTransferTarget };
+
+  return {
+    [IPC.HOME]: wrap(async () => ({
       home: os.homedir(),
       separator: path.sep,
       platform: process.platform,
     })),
-  );
 
-  ipcMain.handle(
-    IPC.LIST,
-    wrap(async (_event, dirPath) => listDirectory(dirPath)),
-  );
+    [IPC.LIST]: wrap(async (_event, dirPath) => listDirectory(dirPath)),
 
-  ipcMain.handle(
-    IPC.MKDIR,
-    wrap(async (_event, parentPath, name) => {
+    [IPC.MKDIR]: wrap(async (_event, parentPath, name) => {
       const parent = normalizeLocalPath(parentPath);
       const safeName = requireEntryName(name, "folder name");
       const target = path.join(parent, safeName);
       await fsp.mkdir(target);
       return { path: target };
     }),
-  );
 
-  ipcMain.handle(
-    IPC.CREATE_FILE,
-    wrap(async (_event, parentPath, name) => {
+    [IPC.CREATE_FILE]: wrap(async (_event, parentPath, name) => {
       const parent = normalizeLocalPath(parentPath);
       const safeName = requireEntryName(name, "file name");
       const target = path.join(parent, safeName);
@@ -527,28 +693,22 @@ function registerLocalFileHandlers({ ipcMain, shell }) {
       await fsp.writeFile(target, "", { flag: "wx" });
       return { path: target };
     }),
-  );
 
-  ipcMain.handle(
-    IPC.RENAME,
-    wrap(async (_event, oldPath, newName) => {
+    [IPC.RENAME]: wrap(async (_event, oldPath, newName) => {
       const source = normalizeLocalPath(oldPath);
       const safeName = requireEntryName(newName, "name");
       const target = path.join(path.dirname(source), safeName);
       if (target === source) return { path: source };
       if (await pathExists(target)) {
-        throw new Error(`"${safeName}" already exists`);
+        throw new LocalFileError("EEXIST", `"${safeName}" already exists`);
       }
       await fsp.rename(source, target);
       return { path: target };
     }),
-  );
 
-  // Moves entries to the OS trash (Finder Trash / Recycle Bin) rather than
-  // deleting outright, so a mis-click in the file manager is recoverable.
-  ipcMain.handle(
-    IPC.TRASH,
-    wrap(async (_event, targetPaths) => {
+    // Moves entries to the OS trash (Finder Trash / Recycle Bin) rather than
+    // deleting outright, so a mis-click in the file manager is recoverable.
+    [IPC.TRASH]: wrap(async (_event, targetPaths) => {
       if (!Array.isArray(targetPaths) || targetPaths.length === 0) {
         throw new Error("No local paths provided");
       }
@@ -566,67 +726,82 @@ function registerLocalFileHandlers({ ipcMain, shell }) {
       }
       return { trashed: targetPaths.length - failed.length, failed };
     }),
-  );
 
-  ipcMain.handle(
-    IPC.ENSURE_DIR,
-    wrap(async (_event, dirPath) => {
+    [IPC.ENSURE_DIR]: wrap(async (_event, dirPath) => {
       const target = normalizeLocalPath(dirPath);
       await fsp.mkdir(target, { recursive: true });
       return { path: target };
     }),
-  );
 
-  ipcMain.handle(
-    IPC.WALK,
-    wrap(async (_event, rootPaths) => {
+    // Which of the given paths already exist; lets the renderer ask about
+    // collisions before a batch download starts.
+    [IPC.EXISTS]: wrap(async (_event, targetPaths) => {
+      if (!Array.isArray(targetPaths)) {
+        throw new Error("Expected a list of paths");
+      }
+      const existing = [];
+      for (const candidate of targetPaths) {
+        const target = normalizeLocalPath(candidate);
+        if (await pathExists(target)) existing.push(target);
+      }
+      return { existing };
+    }),
+
+    [IPC.WALK]: wrap(async (_event, rootPaths) => {
       if (!Array.isArray(rootPaths) || rootPaths.length === 0) {
         throw new Error("No local paths provided");
       }
       return walkPaths(rootPaths);
     }),
-  );
 
-  ipcMain.handle(
-    IPC.REVEAL,
-    wrap(async (_event, targetPath) => {
+    [IPC.REVEAL]: wrap(async (_event, targetPath) => {
       shell.showItemInFolder(normalizeLocalPath(targetPath));
     }),
-  );
 
-  ipcMain.handle(
-    IPC.OPEN,
-    wrap(async (_event, targetPath) => {
+    [IPC.OPEN]: wrap(async (_event, targetPath) => {
       const error = await shell.openPath(normalizeLocalPath(targetPath));
       if (error) throw new Error(error);
     }),
-  );
 
-  ipcMain.handle(
-    IPC.UPLOAD,
-    wrap((event, options) => uploadLocalFile(event, options)),
-  );
+    [IPC.UPLOAD]: wrap((event, options) =>
+      uploadLocalFile(deps, event, options),
+    ),
 
-  ipcMain.handle(
-    IPC.DOWNLOAD,
-    wrap((event, options) => downloadToLocal(event, options)),
-  );
+    [IPC.DOWNLOAD]: wrap((event, options) =>
+      downloadToLocal(deps, event, options),
+    ),
 
-  ipcMain.handle(
-    IPC.CANCEL,
-    wrap(async (_event, transferId) => {
+    [IPC.CANCEL]: wrap(async (_event, transferId) => {
       const state = activeTransfers.get(transferId);
       if (!state) return { cancelled: false };
       state.abort();
       return { cancelled: true };
     }),
-  );
+  };
+}
+
+function registerLocalFileHandlers({ ipcMain, shell }) {
+  // Real Electron wiring; tests build the handlers directly instead.
+  const { net } = require("electron");
+  const remoteSync = require("./remote-sync.cjs");
+  const handlers = createLocalFileHandlers({
+    net,
+    shell,
+    getRemoteSyncConfig: remoteSync.getRemoteSyncConfig,
+    getRemoteSyncJwt: remoteSync.getRemoteSyncJwt,
+  });
+  for (const [channel, handler] of Object.entries(handlers)) {
+    ipcMain.handle(channel, handler);
+  }
 }
 
 module.exports = {
   IPC,
+  TRANSFER_ROUTES,
   registerLocalFileHandlers,
   // exported for tests / reuse
+  createLocalFileHandlers,
+  createTargetResolver,
   walkPaths,
   listDirectory,
 };
