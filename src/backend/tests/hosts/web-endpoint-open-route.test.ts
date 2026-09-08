@@ -298,3 +298,29 @@ describe("POST /tunnel/web-endpoint/open", () => {
     expect(resolveHostById).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The client resolves "/tunnel/web-endpoint/open" against a baseURL that
+ * already ends in /ssh, and nginx proxies /ssh through with the path intact --
+ * so the server must register the FULL "/ssh/tunnel/..." path, as every route
+ * in routes.ts does. Registering the unprefixed form 404s every call, and no
+ * handler unit test notices because they call the handler directly.
+ *
+ * This was caught only by opening a real tunnel against a deployed build.
+ */
+describe("route registration", () => {
+  it("registers the /ssh-prefixed path the client actually calls", async () => {
+    const posts: string[] = [];
+    const app = {
+      post: (path: string) => {
+        posts.push(path);
+      },
+    } as unknown as express.Express;
+
+    const { registerWebEndpointRoutes } =
+      await import("../../hosts/tunnel/web-endpoint-routes.js");
+    registerWebEndpointRoutes(app);
+
+    expect(posts).toContain("/ssh/tunnel/web-endpoint/open");
+  });
+});

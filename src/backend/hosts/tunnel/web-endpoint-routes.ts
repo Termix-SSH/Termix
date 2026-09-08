@@ -297,5 +297,14 @@ export function registerWebEndpointRoutes(app: express.Express): void {
   // Constructed here rather than at module scope so importing this module for
   // a handler unit test does not construct the auth singleton.
   const authenticateJWT = AuthManager.getInstance().createAuthMiddleware();
-  app.post("/tunnel/web-endpoint/open", authenticateJWT, handleWebEndpointOpen);
+  // The "/ssh" prefix is part of the path this service serves, exactly as
+  // every route in routes.ts carries it -- nginx proxies /ssh through with the
+  // path intact. Registering "/tunnel/..." here 404s every call, since the
+  // client resolves "/tunnel/web-endpoint/open" against a baseURL that already
+  // ends in /ssh.
+  app.post(
+    "/ssh/tunnel/web-endpoint/open",
+    authenticateJWT,
+    handleWebEndpointOpen,
+  );
 }
