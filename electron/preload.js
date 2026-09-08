@@ -129,6 +129,36 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener(channel, listener);
   },
 
+  // Dual-pane file manager: local disk browsing and streamed transfers.
+  localFs: {
+    home: () => ipcRenderer.invoke("local-fs:home"),
+    list: (dirPath) => ipcRenderer.invoke("local-fs:list", dirPath),
+    mkdir: (parentPath, name) =>
+      ipcRenderer.invoke("local-fs:mkdir", parentPath, name),
+    createFile: (parentPath, name) =>
+      ipcRenderer.invoke("local-fs:create-file", parentPath, name),
+    rename: (oldPath, newName) =>
+      ipcRenderer.invoke("local-fs:rename", oldPath, newName),
+    trash: (paths) => ipcRenderer.invoke("local-fs:trash", paths),
+    ensureDir: (dirPath) => ipcRenderer.invoke("local-fs:ensure-dir", dirPath),
+    walk: (paths) => ipcRenderer.invoke("local-fs:walk", paths),
+    reveal: (targetPath) => ipcRenderer.invoke("local-fs:reveal", targetPath),
+    open: (targetPath) => ipcRenderer.invoke("local-fs:open", targetPath),
+  },
+  localTransfer: {
+    upload: (options) => ipcRenderer.invoke("local-transfer:upload", options),
+    download: (options) =>
+      ipcRenderer.invoke("local-transfer:download", options),
+    cancel: (transferId) =>
+      ipcRenderer.invoke("local-transfer:cancel", transferId),
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("local-transfer:progress", listener);
+      return () =>
+        ipcRenderer.removeListener("local-transfer:progress", listener);
+    },
+  },
+
   invoke: invokeAllowed,
 });
 
