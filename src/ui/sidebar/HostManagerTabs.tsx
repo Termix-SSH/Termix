@@ -12,6 +12,7 @@ import {
   Settings,
   SquareTerminal,
   Terminal,
+  Globe,
 } from "lucide-react";
 
 export type HostTabId =
@@ -20,6 +21,7 @@ export type HostTabId =
   | "terminal"
   | "tunnels"
   | "docker"
+  | "web-ui"
   | "proxmox"
   | "files"
   | "host-metrics"
@@ -44,6 +46,7 @@ export const SSH_GROUP_TABS = new Set<HostTabId>([
   "terminal",
   "tunnels",
   "docker",
+  "web-ui",
   "proxmox",
   "files",
   "host-metrics",
@@ -100,6 +103,11 @@ export function makeHostSshSubTabs(t: (key: string) => string): HostTab[] {
       id: "docker",
       label: t("hosts.tabDocker"),
       icon: <Box className="size-3" />,
+    },
+    {
+      id: "web-ui",
+      label: t("hosts.tabWebUi"),
+      icon: <Globe className="size-3" />,
     },
     {
       id: "proxmox",
