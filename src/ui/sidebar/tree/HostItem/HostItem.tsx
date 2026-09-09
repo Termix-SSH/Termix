@@ -82,14 +82,15 @@ export function statusCheckEnabled(host: Host): boolean {
 export function buildStatusTooltip(
   host: Host,
   status: "online" | "reachable" | "offline",
+  t: (key: string) => string = (k) => k,
 ): string {
   const statusLabel =
     status === "online"
-      ? "Available"
+      ? t("hosts.status.available")
       : status === "reachable"
-        ? "Reachable, not authenticated"
-        : "Offline";
-  if (!statusCheckEnabled(host)) return "Monitoring disabled";
+        ? t("hosts.status.reachable")
+        : t("hosts.status.offline");
+  if (!statusCheckEnabled(host)) return t("hosts.status.monitoringDisabled");
   const protocols: string[] = [];
   if (host.enableSsh) protocols.push("SSH");
   if (host.enableRdp) protocols.push("RDP");
@@ -1026,7 +1027,7 @@ export function HostItem({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {buildStatusTooltip(host, availability)}
+                {buildStatusTooltip(host, availability, t)}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

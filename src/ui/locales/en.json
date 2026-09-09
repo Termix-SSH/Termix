@@ -776,7 +776,13 @@
     "tunnel": "Tunnel",
     "fileManager": "File Manager",
     "serverStats": "Host Metrics",
-    "status": "Status",
+    "status": {
+      "available": "Available",
+      "reachable": "Reachable, not authenticated",
+      "offline": "Offline",
+      "monitoringDisabled": "Monitoring disabled",
+      "label": "Status"
+    },
     "folderRenamed": "Folder \"{{oldName}}\" renamed to \"{{newName}}\" successfully",
     "failedToRenameFolder": "Failed to rename folder",
     "unsavedChangesDescription": "Your host changes have not been saved. Discard them?",
