@@ -6,6 +6,7 @@ import {
   HostAddressMismatchError,
   HostNotOnThisServerError,
   normalizeHostAddress,
+  resolveServerHostId,
   resolveServerJumpHosts,
 } from "../../../hosts/terminal/host-identity.js";
 
@@ -71,6 +72,16 @@ describe("resolveServerJumpHosts", () => {
     expect(resolveServerJumpHosts([{ hostId: 7 }], [{ hostId: 42 }])).toEqual([
       { hostId: 7 },
     ]);
+  });
+});
+
+describe("resolveServerHostId", () => {
+  it("uses the server-side row id after resolving a sync identity", () => {
+    expect(resolveServerHostId(4, { id: 5 })).toBe(5);
+  });
+
+  it("keeps the client id when no server-side row was resolved", () => {
+    expect(resolveServerHostId(4, null)).toBe(4);
   });
 });
 

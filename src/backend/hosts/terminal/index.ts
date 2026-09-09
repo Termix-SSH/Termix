@@ -65,6 +65,7 @@ import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
+  resolveServerHostId,
   resolveServerJumpHosts,
 } from "./host-identity.js";
 import { extractWebSocketToken } from "../../utils/ws-auth.js";
@@ -1755,7 +1756,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }
 
-    const statusHostId = resolvedHostData?.id ?? id;
+    const serverHostId = resolveServerHostId(id, resolvedHostData);
 
     // Resolve credentials server-side when frontend doesn't provide them
     let resolvedCredentials = {
@@ -1926,7 +1927,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     });
 
     sshConn.on("ready", () => {
-      clearOnlineStatus ??= hostSessionStatus.register(statusHostId);
+      clearOnlineStatus ??= hostSessionStatus.register(serverHostId);
       clearTimeout(connectionTimeout);
       isTailscaleRetrying = false;
       if (tailscaleCheckPending) {
@@ -2947,7 +2948,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     // Pre-fetch the stored host key before connect so the verifier callback
     // runs synchronously during SSH key exchange, avoiding LoginGraceTime
     // expiry on slow connections (especially through jump host tunnels).
-    const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(id);
+    const preloadedHostData =
+      await SSHHostKeyVerifier.preloadHostData(serverHostId);
 
     const connectConfig: Record<string, unknown> = {
       host: connectHost,
@@ -2967,7 +2969,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ? TAILSCALE_CHECK_TIMEOUT_MS
           : 120000,
       hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-        id,
+        serverHostId,
         ip,
         port,
         ws,
