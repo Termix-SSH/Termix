@@ -15,6 +15,7 @@ import { Sparkline } from "@/components/charts";
 import { managerPost } from "@/main-axios";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
+import { Select2 } from "@/components/select2";
 
 interface HealthCheck {
   id: string;
@@ -185,7 +186,7 @@ export function HealthCheckCard({ hostId }: { hostId: number | null }) {
                   placeholder={t("hostMetrics.managers.healthName")}
                   className="h-7 flex-1 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
                 />
-                <select
+                <Select2
                   value={c.type}
                   onChange={(e) =>
                     updateDraft(c.id, {
@@ -196,7 +197,7 @@ export function HealthCheckCard({ hostId }: { hostId: number | null }) {
                 >
                   <option value="tcp">TCP</option>
                   <option value="http">HTTP</option>
-                </select>
+                </Select2>
                 <button
                   onClick={() =>
                     setDraft((d) => d.filter((x) => x.id !== c.id))

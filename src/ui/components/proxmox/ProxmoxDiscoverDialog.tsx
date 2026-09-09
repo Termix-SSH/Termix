@@ -11,13 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/select";
+import { Select2 } from "@/components/select2";
 import {
   discoverProxmoxGuestsStream,
   bulkImportSSHHosts,
@@ -270,26 +264,19 @@ export function ProxmoxDiscoverDialog({
           {/* Host selector — hidden when launched from a specific host */}
           {!preselectedHostId && (
             <div className="flex gap-2">
-              <Select
+              <Select2
                 value={selectedHostId}
-                onValueChange={setSelectedHostId}
+                onChange={(event) => setSelectedHostId(event.target.value)}
                 disabled={discovering}
+                placeholder={t("hosts.proxmoxSelectHost")}
+                className="flex-1 text-xs h-8"
               >
-                <SelectTrigger className="flex-1 text-xs h-8">
-                  <SelectValue placeholder={t("hosts.proxmoxSelectHost")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {sshHosts.map((h) => (
-                    <SelectItem
-                      key={h.id}
-                      value={String(h.id)}
-                      className="text-xs"
-                    >
-                      {h.name || h.ip}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {sshHosts.map((h) => (
+                  <option key={h.id} value={String(h.id)}>
+                    {h.name || h.ip}
+                  </option>
+                ))}
+              </Select2>
               <Button
                 size="sm"
                 variant="outline"

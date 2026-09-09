@@ -7,7 +7,13 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
 import { Toaster } from "@/components/sonner";
-import { Auth, getStoredAuth, clearStoredAuth } from "@/auth/Auth";
+import {
+  Auth,
+  getStoredAuth,
+  clearStoredAuth,
+  markDesktopManualLogout,
+  clearDesktopManualLogout,
+} from "@/auth/Auth";
 import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
 import { applyAccentColor, applyFontSize } from "@/lib/theme";
 import { installElectronWheelZoomGuard } from "@/lib/electron-wheel-zoom";
@@ -80,6 +86,10 @@ const SharedSessionView = lazy(
 
 type Phase =
   "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
+
+type LogoutOptions = {
+  manual?: boolean;
+};
 
 function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -279,6 +289,7 @@ function App() {
 
   function handleLogin(u: string) {
     loggingOutRef.current = false;
+    clearDesktopManualLogout();
     setAuthUsername(u);
     fadingInFromLoginRef.current = true;
     setPhase("fading-in");
@@ -294,7 +305,7 @@ function App() {
     }
   }
 
-  function handleLogout() {
+  function handleLogout(options?: LogoutOptions) {
     // A single background hiccup can trigger several independent 401s at
     // once (e.g. a burst of unrelated polls all failing together in the
     // same tick), each calling this. React batches the resulting setPhase
@@ -308,6 +319,18 @@ function App() {
     if (loggingOutRef.current) return;
     loggingOutRef.current = true;
     clearStoredAuth();
+    localStorage.removeItem("jwt");
+    if (isElectron() && options?.manual) {
+      markDesktopManualLogout();
+    }
+    if (isElectron()) {
+      window.electronAPI?.clearSessionCookies?.().catch(() => {});
+    } else {
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = isSecure
+        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
+        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
+    }
     setPhase("fading-out");
     timerRef.current = setTimeout(() => {
       setAuthUsername("");

@@ -120,6 +120,7 @@ export interface QuickAction {
 
 export type Host = {
   id: number;
+  syncId?: string | null;
   name: string;
   ip: string;
   port: number;
@@ -480,8 +481,11 @@ export interface TunnelConnection {
   scope?: TunnelScope;
   mode?: TunnelMode;
   tunnelType?: "local" | "remote";
+  localAddress?: string;
+  remoteAddress?: string;
   bindHost?: string;
   sourceHostId?: number;
+  sourceHostSyncId?: string;
   sourceHostName?: string;
   sourcePort: number;
   endpointPort: number;
@@ -504,10 +508,13 @@ export interface TunnelConfig {
   scope?: TunnelScope;
   mode?: TunnelMode;
   tunnelType?: "local" | "remote";
+  localAddress?: string;
+  remoteAddress?: string;
   bindHost?: string;
   targetHost?: string;
 
   sourceHostId: number;
+  sourceHostSyncId?: string;
   tunnelIndex: number;
 
   requestingUserId?: string;

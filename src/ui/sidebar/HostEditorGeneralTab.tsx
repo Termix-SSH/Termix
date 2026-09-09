@@ -20,6 +20,7 @@ import { FolderPathPicker } from "./FolderPathPicker";
 import { HostParentPicker } from "./HostParentPicker";
 import { getSSHFolders, isElectron } from "@/main-axios";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
+import { Select2 } from "@/components/select2";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
   key: K,
@@ -438,7 +439,7 @@ export function HostEditorGeneralTab({
                   <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
                     {t("hosts.protocol")}
                   </span>
-                  <select
+                  <Select2
                     className="h-7 text-[10px] bg-background border border-border px-1"
                     value={knock.protocol}
                     onChange={(e) => {
@@ -452,7 +453,7 @@ export function HostEditorGeneralTab({
                   >
                     <option value="tcp">TCP</option>
                     <option value="udp">UDP</option>
-                  </select>
+                  </Select2>
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[9px] text-muted-foreground/60 uppercase font-bold tracking-wide px-0.5">
@@ -637,7 +638,7 @@ export function HostEditorGeneralTab({
                           <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                             {t("hosts.proxyType")}
                           </label>
-                          <select
+                          <Select2
                             className="h-7 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
                             value={node.type}
                             onChange={(e) => {
@@ -652,7 +653,7 @@ export function HostEditorGeneralTab({
                             <option value="socks5">SOCKS5</option>
                             <option value="socks4">SOCKS4</option>
                             <option value="http">HTTP</option>
-                          </select>
+                          </Select2>
                         </div>
                         <div className="flex flex-col gap-1">
                           <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -818,7 +819,7 @@ export function HostEditorGeneralTab({
                   <span className="text-[10px] font-bold text-muted-foreground shrink-0">
                     {i + 1}.
                   </span>
-                  <select
+                  <Select2
                     className="flex h-7 flex-1 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
                     value={jh.hostId}
                     onChange={(e) => {
@@ -835,7 +836,7 @@ export function HostEditorGeneralTab({
                           {h.name || h.ip}
                         </option>
                       ))}
-                  </select>
+                  </Select2>
                   <Button
                     variant="ghost"
                     size="icon"

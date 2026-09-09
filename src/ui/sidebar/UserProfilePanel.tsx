@@ -14,14 +14,12 @@ import {
   enableTOTP,
   disableTOTP,
   getVersionInfo,
-  releaseUrlFrom,
   getUserRoles,
   saveUserPreferences,
   getUserPreferences,
 } from "@/main-axios";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
-import { useHostSidebarPreferences } from "./tree/hooks/useHostSidebarPreferences";
 import {
   deleteWebAuthnCredential,
   listWebAuthnCredentials,
@@ -37,7 +35,6 @@ import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state"
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import { VersionBadge } from "@/components/version-badge";
 import {
   Dialog,
   DialogContent,
@@ -51,27 +48,33 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Copy,
   Database,
   Eye,
   EyeOff,
+  Fingerprint,
+  Hammer,
   KeyRound,
-  LayoutTemplate,
+  LayoutPanelLeft,
   Network,
   Palette,
+  Play,
+  Plug,
   Plus,
   RotateCcw,
+  ScrollText,
+  Server,
   Shield,
   ShieldCheck,
   Trash2,
   Type,
+  Usb,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
-import { visibleRailItems } from "./rail-items";
-import { InterfacePresetSettings } from "./InterfacePresetSettings";
-import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { KeybindingsDialog } from "./KeybindingsDialog";
 import {
   ACCENT_PRESET_COLORS,
@@ -84,14 +87,14 @@ import { useTheme } from "@/components/theme-provider";
 import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
-import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
-import { ConnectionDefaultsSettings } from "./ConnectionDefaultsSettings";
+import { Select2 } from "@/components/select2";
+import type { ElectronAiSettings } from "@/types/electron";
 
 type UserProfileSection =
   | "account"
-  | "interface"
   | "appearance"
   | "security"
+  | "ai"
   | "api-keys"
   | "data"
   | "c2s-tunnels";
@@ -146,6 +149,17 @@ const LANGUAGES = [
   { code: "uk", label: "Українська" },
   { code: "vi", label: "Tiếng Việt" },
 ];
+
+const DEFAULT_AI_SETTINGS: ElectronAiSettings = {
+  enabled: false,
+  provider: "openai-compatible",
+  baseUrl: "https://api.openai.com/v1",
+  model: "gpt-4.1-mini",
+  includeContext: true,
+  hasApiKey: false,
+  apiKey: "",
+  secureStorageAvailable: false,
+};
 
 export function AccordionSection({
   id,
@@ -212,7 +226,7 @@ type CreatedProfileApiKey = {
   expiresAt?: string | null;
 };
 
-export function NewApiKeyDialog({
+function NewApiKeyDialog({
   open,
   onOpenChange,
   onAdd,
@@ -226,23 +240,12 @@ export function NewApiKeyDialog({
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("");
-  const [createdToken, setCreatedToken] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-
-  const close = () => {
-    setName("");
-    setExpiry("");
-    setCreatedToken(null);
-    onOpenChange(false);
-  };
 
   const handleCreate = async () => {
     if (!name.trim()) {
       toast.error(t("newUi.sidebar.userProfile.apiKeyNameRequired"));
       return;
     }
-    if (creating) return;
-    setCreating(true);
     try {
       const created = await createApiKey(
         name.trim(),
@@ -250,22 +253,17 @@ export function NewApiKeyDialog({
         expiry ? new Date(expiry).toISOString() : undefined,
       );
       onAdd(created);
-      setCreatedToken(created.token);
+      onOpenChange(false);
+      setName("");
+      setExpiry("");
       toast.success(t("newUi.sidebar.userProfile.apiKeyCreated", { name }));
     } catch {
       toast.error(t("newUi.sidebar.userProfile.apiKeyCreateFailed"));
-    } finally {
-      setCreating(false);
     }
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (nextOpen || !createdToken) onOpenChange(nextOpen);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md rounded-none border-border bg-card p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 pt-5 pb-4 border-b border-border">
           <div className="flex items-center gap-2.5">
@@ -283,93 +281,53 @@ export function NewApiKeyDialog({
           </div>
         </DialogHeader>
 
-        {createdToken ? (
-          <div className="flex flex-col gap-3 px-5 py-4">
-            <span className="text-xs font-semibold text-accent-brand">
-              {t("newUi.sidebar.userProfile.apiKeyCreatedWarning")}
-            </span>
-            <div className="flex items-center gap-2 border border-border bg-muted/30 px-2 py-2">
-              <code className="min-w-0 flex-1 break-all text-xs text-accent-brand">
-                {createdToken}
-              </code>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                aria-label={t("newUi.sidebar.userProfile.copyApiKey")}
-                onClick={() => {
-                  copyToClipboard(createdToken);
-                  toast.info(t("newUi.sidebar.userProfile.copiedToClipboard"));
-                }}
-              >
-                <Copy className="size-3.5" />
-              </Button>
-            </div>
+        <div className="flex flex-col gap-4 px-5 py-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {t("newUi.sidebar.userProfile.apiKeyNameLabel")}
+            </label>
+            <Input
+              autoFocus
+              placeholder={t("newUi.sidebar.userProfile.apiKeyNamePlaceholder")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              className="rounded-none bg-muted/50 border-border text-sm h-9"
+            />
           </div>
-        ) : (
-          <div className="flex flex-col gap-4 px-5 py-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                {t("newUi.sidebar.userProfile.apiKeyNameLabel")}
-              </label>
-              <Input
-                autoFocus
-                placeholder={t(
-                  "newUi.sidebar.userProfile.apiKeyNamePlaceholder",
-                )}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                className="rounded-none bg-muted/50 border-border text-sm h-9"
-              />
-            </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                {t("newUi.sidebar.userProfile.expiryDateLabel")}{" "}
-                <span className="text-muted-foreground/50 normal-case font-medium">
-                  ({t("newUi.sidebar.userProfile.optional")})
-                </span>
-              </label>
-              <Input
-                type="date"
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
-                className="rounded-none bg-muted/50 border-border text-sm h-9"
-              />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {t("newUi.sidebar.userProfile.expiryDateLabel")}{" "}
+              <span className="text-muted-foreground/50 normal-case font-medium">
+                ({t("newUi.sidebar.userProfile.optional")})
+              </span>
+            </label>
+            <Input
+              type="date"
+              value={expiry}
+              onChange={(e) => setExpiry(e.target.value)}
+              className="rounded-none bg-muted/50 border-border text-sm h-9"
+            />
           </div>
-        )}
+        </div>
 
         <DialogFooter className="px-5 py-3 border-t border-border bg-muted/20">
-          {createdToken ? (
-            <Button
-              variant="outline"
-              className="rounded-none border-accent-brand/40 text-[10px] font-bold uppercase tracking-widest text-accent-brand"
-              onClick={close}
-            >
-              {t("newUi.sidebar.userProfile.done")}
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                onClick={close}
-                className="rounded-none text-[10px] font-bold uppercase tracking-widest"
-              >
-                {t("newUi.sidebar.userProfile.cancel")}
-              </Button>
-              <Button
-                variant="outline"
-                className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest gap-1.5"
-                onClick={handleCreate}
-                disabled={creating}
-              >
-                <KeyRound className="size-3" />{" "}
-                {t("newUi.sidebar.userProfile.createKey")}
-              </Button>
-            </>
-          )}
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            className="rounded-none text-[10px] font-bold uppercase tracking-widest"
+          >
+            {t("newUi.sidebar.userProfile.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest gap-1.5"
+            onClick={handleCreate}
+          >
+            <KeyRound className="size-3" />{" "}
+            {t("newUi.sidebar.userProfile.createKey")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -502,8 +460,6 @@ export function UserProfilePanel({
     storageMode?: string | null;
     commandAutocomplete?: boolean | null;
     commandPaletteEnabled?: boolean | null;
-    aiAssistantEnabled?: boolean | null;
-    aiReadOnlyCommands?: boolean | null;
     showHostTags?: boolean | null;
     hostTrayOnClick?: boolean | null;
     compactHostView?: boolean | null;
@@ -548,7 +504,6 @@ export function UserProfilePanel({
   const [versionStatus, setVersionStatus] = useState<
     "up_to_date" | "requires_update" | "beta"
   >("up_to_date");
-  const [releaseUrl, setReleaseUrl] = useState("");
   const [isOidc, setIsOidc] = useState(false);
   const [isDualAuth, setIsDualAuth] = useState(false);
 
@@ -668,72 +623,29 @@ export function UserProfilePanel({
     return v !== null ? v === "true" : true;
   });
   const [keybindingsDialogOpen, setKeybindingsDialogOpen] = useState(false);
-  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
-  const [aiReadOnlyCommands, setAiReadOnlyCommands] = useState(false);
-  // Null until the status call answers; the whole section stays hidden while
-  // unknown so a user who cannot have the feature never sees it mentioned.
-  const [aiGloballyEnabled, setAiGloballyEnabled] = useState<boolean | null>(
-    null,
+  const [showHostTags, setShowHostTags] = useState(() => {
+    const v = localStorage.getItem("showHostTags");
+    return v !== null ? v === "true" : true;
+  });
+  const [hostTrayOnClick, setHostTrayOnClick] = useState(
+    () => localStorage.getItem("hostTrayOnClick") !== "false",
   );
-  // Sidebar display customization (density, tags, tray trigger, status
-  // colors) now lives in the dedicated Customize Sidebar panel opened from
-  // the Hosts toolbar, not here -- resetToDefaults still needs write access.
-  const { update: updateSidebarPrefs } = useHostSidebarPreferences();
-  const uiPrefs = useUiPreferencesContext();
-
-  useEffect(() => {
-    let cancelled = false;
-    import("@/api/ai-api")
-      .then(({ getAiStatus }) => getAiStatus())
-      .then((status) => {
-        if (cancelled) return;
-        setAiGloballyEnabled(status.globallyEnabled);
-        setAiAssistantEnabled(status.enabled);
-        setAiReadOnlyCommands(status.allowReadOnlyCommands);
-      })
-      .catch(() => {
-        if (!cancelled) setAiGloballyEnabled(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  /**
-   * Turning the assistant off also hides its rail tab, so declining removes
-   * the feature from view entirely rather than leaving an inert entry behind.
-   */
-  const applyAiEnabled = (enabled: boolean) => {
-    setAiAssistantEnabled(enabled);
-
-    const hidden = new Set<string>(
-      JSON.parse(localStorage.getItem("hiddenRailTabs") ?? "[]"),
-    );
-    if (enabled) hidden.delete("ai");
-    else hidden.add("ai");
-
-    const serialized = JSON.stringify([...hidden]);
-    localStorage.setItem("hiddenRailTabs", serialized);
-    setHiddenRailTabs(hidden);
-    window.dispatchEvent(new Event("hiddenRailTabsChanged"));
-
-    if (storageMode === "cloud") {
-      saveToCloud({ aiAssistantEnabled: enabled, hiddenRailTabs: serialized });
-    }
-  };
+  const [compactHostView, setCompactHostView] = useState(
+    () => localStorage.getItem("compactHostView") === "true",
+  );
+  const [statusColorScheme, setStatusColorScheme] = useState(
+    () => localStorage.getItem("statusColorScheme") ?? "accent",
+  );
   const [pinAppRail, setPinAppRail] = useState(() =>
     readRailPreference("pinAppRail"),
   );
   const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(() =>
     readRailPreference("expandAppRailOnHover"),
   );
-  // Read values are unused now that the Snippets settings UI lives in
-  // SnippetsPanel.tsx; the setters still back the cloud-sync/reset/snapshot
-  // machinery for these two localStorage-backed prefs below.
-  const [_foldersCollapsed, setFoldersCollapsed] = useState(
+  const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
   );
-  const [_confirmSnippetExecution, setConfirmSnippetExecution] = useState(
+  const [confirmSnippetExecution, setConfirmSnippetExecution] = useState(
     () => localStorage.getItem("confirmSnippetExecution") === "true",
   );
   const [disableUpdateCheck, setDisableUpdateCheck] = useState(
@@ -753,6 +665,14 @@ export function UserProfilePanel({
 
   // API keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+
+  // Local Electron AI settings
+  const [aiSettings, setAiSettings] =
+    useState<ElectronAiSettings>(DEFAULT_AI_SETTINGS);
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiTesting, setAiTesting] = useState(false);
 
   // RBAC roles
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
@@ -799,7 +719,6 @@ export function UserProfilePanel({
       .then((info) => {
         setVersion(info.localVersion);
         setVersionStatus(info.status ?? "up_to_date");
-        setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});
   }, [t]);
@@ -817,6 +736,23 @@ export function UserProfilePanel({
       window.removeEventListener("pinAppRailChanged", pinHandler);
       window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
     };
+  }, []);
+
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI?.getAiSettings) {
+      return;
+    }
+
+    setAiLoading(true);
+    window.electronAPI
+      .getAiSettings()
+      .then((result) => {
+        if (result.success && result.settings) {
+          setAiSettings(result.settings);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAiLoading(false));
   }, []);
 
   function saveToCloud(prefs: Parameters<typeof saveUserPreferences>[0]) {
@@ -845,13 +781,6 @@ export function UserProfilePanel({
         "confirmTabClose",
         "hiddenRailTabs",
         "statusColorScheme",
-        "uiPreferences",
-        // Layout/view keys that were never snapshotted, so switching to cloud
-        // and back silently reset them.
-        "dashboardTab.slots",
-        "dashboardTab.mainWidthPct",
-        "termix-terminal-toolbar-density",
-        "fileManagerViewMode",
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
@@ -889,15 +818,26 @@ export function UserProfilePanel({
             String(prefs.commandPaletteEnabled),
           );
         }
-        if (prefs.aiAssistantEnabled != null) {
-          setAiAssistantEnabled(prefs.aiAssistantEnabled);
+        if (prefs.showHostTags != null) {
+          setShowHostTags(prefs.showHostTags);
+          localStorage.setItem("showHostTags", String(prefs.showHostTags));
+          window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
         }
-        if (prefs.aiReadOnlyCommands != null) {
-          setAiReadOnlyCommands(prefs.aiReadOnlyCommands);
+        if (prefs.hostTrayOnClick != null) {
+          setHostTrayOnClick(prefs.hostTrayOnClick);
+          localStorage.setItem(
+            "hostTrayOnClick",
+            String(prefs.hostTrayOnClick),
+          );
         }
-        // showHostTags/hostTrayOnClick/compactHostView/statusColorScheme are
-        // no longer restored here -- useHostSidebarPreferences independently
-        // fetches its own authoritative copy from /host-sidebar/preferences.
+        if (prefs.compactHostView != null) {
+          setCompactHostView(prefs.compactHostView);
+          localStorage.setItem(
+            "compactHostView",
+            String(prefs.compactHostView),
+          );
+          window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
+        }
         if (prefs.pinAppRail != null) {
           setPinAppRail(prefs.pinAppRail);
           localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
@@ -945,6 +885,11 @@ export function UserProfilePanel({
           localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
           window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
         }
+        if (prefs.statusColorScheme != null) {
+          setStatusColorScheme(prefs.statusColorScheme);
+          localStorage.setItem("statusColorScheme", prefs.statusColorScheme);
+          window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
+        }
       } catch {
         // leave UI as-is on error
       }
@@ -956,7 +901,6 @@ export function UserProfilePanel({
   }
 
   function resetToDefaults() {
-    clearLocalAdaptivePreferences();
     const DEFAULT_ACCENT = "#f59145";
     setTheme("system");
     setFontSize("md");
@@ -971,16 +915,14 @@ export function UserProfilePanel({
     localStorage.setItem("commandAutocomplete", "false");
     setCommandPaletteEnabled(true);
     localStorage.setItem("commandPaletteShortcutEnabled", "true");
-    updateSidebarPrefs((prev) => ({
-      ...prev,
-      display: {
-        ...prev.display,
-        showTags: true,
-        trayTrigger: "hover",
-        density: "comfortable",
-        statusColorScheme: "accent",
-      },
-    }));
+    setShowHostTags(true);
+    localStorage.setItem("showHostTags", "true");
+    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+    setHostTrayOnClick(true);
+    localStorage.setItem("hostTrayOnClick", "true");
+    setCompactHostView(false);
+    localStorage.setItem("compactHostView", "false");
+    window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
     setPinAppRail(false);
     localStorage.setItem("pinAppRail", "false");
     window.dispatchEvent(new Event("pinAppRailChanged"));
@@ -998,9 +940,9 @@ export function UserProfilePanel({
     setHiddenRailTabs(new Set());
     localStorage.removeItem("hiddenRailTabs");
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
-    // Back to the preset that matches the pre-preset UI, with nothing pinned.
-    uiPrefs?.setPreset("balanced");
-    uiPrefs?.clearAllOverrides();
+    setStatusColorScheme("accent");
+    localStorage.setItem("statusColorScheme", "accent");
+    window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
     if (storageMode === "cloud") {
       saveToCloud({
         theme: "system",
@@ -1009,6 +951,9 @@ export function UserProfilePanel({
         language: "en",
         commandAutocomplete: false,
         commandPaletteEnabled: true,
+        showHostTags: true,
+        hostTrayOnClick: true,
+        compactHostView: false,
         pinAppRail: false,
         expandAppRailOnHover: true,
         foldersCollapsed: true,
@@ -1016,6 +961,7 @@ export function UserProfilePanel({
         disableUpdateCheck: false,
         confirmTabClose: false,
         hiddenRailTabs: "[]",
+        statusColorScheme: "accent",
       });
     }
     localSnapshot.current = {};
@@ -1070,9 +1016,20 @@ export function UserProfilePanel({
       String(restoredPalette),
     );
 
-    // showHostTags/hostTrayOnClick/compactHostView/statusColorScheme are no
-    // longer part of this snapshot -- useHostSidebarPreferences keeps its own
-    // localStorage cache independent of storageMode switches.
+    const restoredHostTags = restore("showHostTags", "true") !== "false";
+    setShowHostTags(restoredHostTags);
+    localStorage.setItem("showHostTags", String(restoredHostTags));
+    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+
+    const restoredTrayOnClick = restore("hostTrayOnClick", "true") !== "false";
+    setHostTrayOnClick(restoredTrayOnClick);
+    localStorage.setItem("hostTrayOnClick", String(restoredTrayOnClick));
+
+    const restoredCompactHostView =
+      restore("compactHostView", "false") === "true";
+    setCompactHostView(restoredCompactHostView);
+    localStorage.setItem("compactHostView", String(restoredCompactHostView));
+    window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
 
     const restoredPinRail = restore("pinAppRail", "false") === "true";
     setPinAppRail(restoredPinRail);
@@ -1133,6 +1090,12 @@ export function UserProfilePanel({
     }
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
 
+    const restoredStatusScheme =
+      restore("statusColorScheme", "accent") ?? "accent";
+    setStatusColorScheme(restoredStatusScheme);
+    localStorage.setItem("statusColorScheme", restoredStatusScheme);
+    window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
+
     localStorage.removeItem("termix-local-snapshot");
     localSnapshot.current = {};
   }
@@ -1163,6 +1126,94 @@ export function UserProfilePanel({
         if (storageMode === "cloud") saveToCloud({ language });
       })
       .catch(() => {});
+  }
+
+  async function handleSaveAiSettings() {
+    if (!window.electronAPI?.saveAiSettings) {
+      toast.error(t("newUi.sidebar.userProfile.aiDesktopOnly"));
+      return;
+    }
+
+    setAiSaving(true);
+    try {
+      const result = await window.electronAPI.saveAiSettings({
+        enabled: aiSettings.enabled,
+        baseUrl: aiSettings.baseUrl,
+        model: aiSettings.model,
+        includeContext: aiSettings.includeContext,
+        apiKey: aiApiKey.trim() || undefined,
+      });
+      if (!result.success || !result.settings) {
+        throw new Error(result.error || "Failed to save AI settings");
+      }
+      setAiSettings(result.settings);
+      setAiApiKey("");
+      toast.success(t("newUi.sidebar.userProfile.aiSettingsSaved"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("newUi.sidebar.userProfile.aiSettingsSaveFailed"),
+      );
+    } finally {
+      setAiSaving(false);
+    }
+  }
+
+  async function handleTestAiSettings() {
+    if (!window.electronAPI?.testAiSettings) {
+      toast.error(t("newUi.sidebar.userProfile.aiDesktopOnly"));
+      return;
+    }
+
+    setAiTesting(true);
+    try {
+      const result = await window.electronAPI.testAiSettings({
+        enabled: aiSettings.enabled,
+        baseUrl: aiSettings.baseUrl,
+        model: aiSettings.model,
+        includeContext: aiSettings.includeContext,
+        apiKey: aiApiKey.trim() || undefined,
+      });
+      if (!result.success) {
+        throw new Error(result.error || "AI settings test failed");
+      }
+      toast.success(t("newUi.sidebar.userProfile.aiTestSuccess"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("newUi.sidebar.userProfile.aiTestFailed"),
+      );
+    } finally {
+      setAiTesting(false);
+    }
+  }
+
+  async function handleClearAiSettings() {
+    if (!window.electronAPI?.clearAiSettings) {
+      toast.error(t("newUi.sidebar.userProfile.aiDesktopOnly"));
+      return;
+    }
+
+    setAiSaving(true);
+    try {
+      const result = await window.electronAPI.clearAiSettings();
+      if (!result.success || !result.settings) {
+        throw new Error(result.error || "Failed to clear AI settings");
+      }
+      setAiSettings(result.settings);
+      setAiApiKey("");
+      toast.success(t("newUi.sidebar.userProfile.aiClearSuccess"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("newUi.sidebar.userProfile.aiClearFailed"),
+      );
+    } finally {
+      setAiSaving(false);
+    }
   }
 
   function toggle(id: UserProfileSection) {
@@ -1411,7 +1462,7 @@ export function UserProfilePanel({
       <NewApiKeyDialog
         open={newKeyOpen}
         onOpenChange={setNewKeyOpen}
-        onAdd={(key) => setApiKeys((prev) => [key as ApiKey, ...prev])}
+        onAdd={(key) => setApiKeys((prev) => [key, ...prev])}
         userId={userId}
       />
 
@@ -1564,7 +1615,21 @@ export function UserProfilePanel({
               <span className="text-sm font-bold text-accent-brand">
                 {version ? `v${version}` : "—"}
               </span>
-              <VersionBadge status={versionStatus} releaseUrl={releaseUrl} />
+              <span
+                className={`text-[10px] px-1.5 py-0.5 font-semibold leading-none ${
+                  versionStatus === "beta"
+                    ? "bg-blue-500/20 text-blue-400"
+                    : versionStatus === "requires_update"
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "bg-accent-brand/20 text-accent-brand"
+                }`}
+              >
+                {versionStatus === "beta"
+                  ? t("dashboard.beta").toUpperCase()
+                  : versionStatus === "requires_update"
+                    ? t("dashboard.updateAvailable").toUpperCase()
+                    : t("dashboardTab.stable")}
+              </span>
             </div>
           </div>
 
@@ -1593,27 +1658,6 @@ export function UserProfilePanel({
                 className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"
               >
                 {t("newUi.sidebar.userProfile.betaProgramLearnMore")}
-              </a>
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-3 mt-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium">
-                  {t("newUi.sidebar.userProfile.cliTitle")}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.cliDescription")}
-                </span>
-              </div>
-              <a
-                href="https://docs.termix.site/cli"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"
-              >
-                {t("newUi.sidebar.userProfile.cliLearnMore")}
               </a>
             </div>
           </div>
@@ -1649,23 +1693,6 @@ export function UserProfilePanel({
         </div>
       </AccordionSection>
 
-      {/* Interface */}
-      <AccordionSection
-        id="interface"
-        label={t("newUi.sidebar.userProfile.sectionInterface")}
-        icon={<LayoutTemplate size={13} />}
-        open={openSections.has("interface")}
-        onToggle={() => toggle("interface")}
-      >
-        <div className="flex flex-col gap-4 pt-3">
-          <InterfacePresetSettings
-            onRunSetupAgain={() =>
-              window.dispatchEvent(new Event("termix:open-onboarding"))
-            }
-          />
-        </div>
-      </AccordionSection>
-
       {/* Appearance */}
       <AccordionSection
         id="appearance"
@@ -1679,7 +1706,7 @@ export function UserProfilePanel({
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.userProfile.languageLabel")}
             </span>
-            <select
+            <Select2
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value)}
               className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full"
@@ -1689,7 +1716,7 @@ export function UserProfilePanel({
                   {lang.label}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -1697,7 +1724,7 @@ export function UserProfilePanel({
               {t("newUi.sidebar.userProfile.themeLabel")}
             </span>
             <div className="relative">
-              <select
+              <Select2
                 value={theme}
                 onChange={(e) => handleThemeChange(e.target.value as ThemeId)}
                 className="w-full px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring appearance-none pr-7"
@@ -1707,7 +1734,7 @@ export function UserProfilePanel({
                     {themeLabel[th.id]}
                   </option>
                 ))}
-              </select>
+              </Select2>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
             </div>
             <div className="flex gap-1 mt-0.5">
@@ -1816,7 +1843,6 @@ export function UserProfilePanel({
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
               {t("newUi.sidebar.userProfile.settingsTerminal")}
             </span>
-            <ConnectionDefaultsSettings />
             <SettingRow
               label={t("newUi.sidebar.userProfile.commandAutocomplete")}
               description={t(
@@ -1833,29 +1859,6 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
-            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium leading-snug">
-                  {t("newUi.sidebar.userProfile.localEcho")}
-                </span>
-                <span className="text-xs text-muted-foreground leading-snug">
-                  {t("newUi.sidebar.userProfile.localEchoDesc")}
-                </span>
-              </div>
-              <select
-                defaultValue={
-                  localStorage.getItem("terminalLocalEchoMode") ?? "auto"
-                }
-                onChange={(e) =>
-                  localStorage.setItem("terminalLocalEchoMode", e.target.value)
-                }
-                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="off">{t("hosts.localEchoOff")}</option>
-                <option value="auto">{t("hosts.localEchoAuto")}</option>
-                <option value="on">{t("hosts.localEchoOn")}</option>
-              </select>
-            </div>
             <SettingRow
               label={t("newUi.sidebar.userProfile.keyboardShortcuts")}
               description={t(
@@ -1879,7 +1882,7 @@ export function UserProfilePanel({
                   {t("newUi.sidebar.userProfile.terminalLinkBehaviorDesc")}
                 </span>
               </div>
-              <select
+              <Select2
                 value={terminalLinkClickBehavior}
                 onChange={(e) => {
                   setTerminalLinkClickBehavior(e.target.value);
@@ -1896,7 +1899,7 @@ export function UserProfilePanel({
                 <option value="direct">
                   {t("hosts.linkClickBehaviorDirect")}
                 </option>
-              </select>
+              </Select2>
             </div>
             <SettingRow
               label={t("newUi.sidebar.userProfile.commandPalette")}
@@ -1918,34 +1921,6 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
-            {aiGloballyEnabled && (
-              <>
-                <SettingRow
-                  label={t("ai.enableTitle")}
-                  description={t("ai.enableDescription")}
-                >
-                  <FakeSwitch
-                    checked={aiAssistantEnabled}
-                    onChange={applyAiEnabled}
-                  />
-                </SettingRow>
-                {aiAssistantEnabled && (
-                  <SettingRow
-                    label={t("ai.readOnlyCommands")}
-                    description={t("ai.readOnlyCommandsDescription")}
-                  >
-                    <FakeSwitch
-                      checked={aiReadOnlyCommands}
-                      onChange={(v) => {
-                        setAiReadOnlyCommands(v);
-                        if (storageMode === "cloud")
-                          saveToCloud({ aiReadOnlyCommands: v });
-                      }}
-                    />
-                  </SettingRow>
-                )}
-              </>
-            )}
             <SettingRow
               label={t("newUi.sidebar.userProfile.reopenTabsOnLogin")}
               description={t("newUi.sidebar.userProfile.reopenTabsOnLoginDesc")}
@@ -1980,11 +1955,68 @@ export function UserProfilePanel({
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-              {t("newUi.sidebar.userProfile.settingsAppRail")}
+              {t("newUi.sidebar.userProfile.settingsSidebar")}
             </span>
-            <p className="text-[10px] text-muted-foreground mb-2">
-              {t("newUi.sidebar.userProfile.sidebarSettingsMoved")}
-            </p>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.showHostTags")}
+              description={t("newUi.sidebar.userProfile.showHostTagsDesc")}
+            >
+              <FakeSwitch
+                checked={showHostTags}
+                onChange={(v) => {
+                  setShowHostTags(v);
+                  localStorage.setItem("showHostTags", v.toString());
+                  window.dispatchEvent(new Event("showHostTagsChanged"));
+                  if (storageMode === "cloud") saveToCloud({ showHostTags: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.hostTrayOnClick")}
+              description={t("newUi.sidebar.userProfile.hostTrayOnClickDesc")}
+            >
+              <FakeSwitch
+                checked={hostTrayOnClick}
+                onChange={(v) => {
+                  setHostTrayOnClick(v);
+                  localStorage.setItem("hostTrayOnClick", v.toString());
+                  window.dispatchEvent(new Event("hostTrayOnClickChanged"));
+                  if (storageMode === "cloud")
+                    saveToCloud({ hostTrayOnClick: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.compactHostView")}
+              description={t("newUi.sidebar.userProfile.compactHostViewDesc")}
+            >
+              <FakeSwitch
+                checked={compactHostView}
+                onChange={(v) => {
+                  setCompactHostView(v);
+                  localStorage.setItem("compactHostView", v.toString());
+                  window.dispatchEvent(new Event("compactHostViewChanged"));
+                  if (storageMode === "cloud")
+                    saveToCloud({ compactHostView: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.statusColors")}
+              description={t("newUi.sidebar.userProfile.statusColorsDesc")}
+            >
+              <FakeSwitch
+                checked={statusColorScheme === "status"}
+                onChange={(v) => {
+                  const scheme = v ? "status" : "accent";
+                  setStatusColorScheme(scheme);
+                  localStorage.setItem("statusColorScheme", scheme);
+                  window.dispatchEvent(new Event("statusColorSchemeChanged"));
+                  if (storageMode === "cloud")
+                    saveToCloud({ statusColorScheme: scheme });
+                }}
+              />
+            </SettingRow>
             <SettingRow
               label={t("newUi.sidebar.userProfile.pinAppRail")}
               description={t("newUi.sidebar.userProfile.pinAppRailDesc")}
@@ -2020,35 +2052,134 @@ export function UserProfilePanel({
             <p className="text-[10px] text-muted-foreground mb-2">
               {t("newUi.sidebar.userProfile.navigationTabsDesc")}
             </p>
-            {visibleRailItems()
-              .filter((tab) => tab.id !== "ai" || aiGloballyEnabled)
-              .map((tab) => (
-                <div
-                  key={tab.id}
-                  className="flex items-center justify-between py-1.5"
-                >
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                    <span className="text-muted-foreground">
-                      <tab.icon size={12} />
-                    </span>
-                    {t(tab.labelKey)}
-                  </span>
-                  <FakeSwitch
-                    checked={!hiddenRailTabs.has(tab.id)}
-                    onChange={(visible) => {
-                      const next = new Set(hiddenRailTabs);
-                      if (visible) next.delete(tab.id);
-                      else next.add(tab.id);
-                      setHiddenRailTabs(next);
-                      const serialized = JSON.stringify([...next]);
-                      localStorage.setItem("hiddenRailTabs", serialized);
-                      window.dispatchEvent(new Event("hiddenRailTabsChanged"));
-                      if (storageMode === "cloud")
-                        saveToCloud({ hiddenRailTabs: serialized });
-                    }}
-                  />
-                </div>
-              ))}
+            {(
+              [
+                {
+                  id: "hosts",
+                  icon: <Server size={12} />,
+                  label: t("nav.hosts"),
+                },
+                {
+                  id: "credentials",
+                  icon: <KeyRound size={12} />,
+                  label: t("nav.credentials"),
+                },
+                {
+                  id: "termix-id",
+                  icon: <Fingerprint size={12} />,
+                  label: t("nav.termixId"),
+                },
+                {
+                  id: "connections",
+                  icon: <Plug size={12} />,
+                  label: t("nav.connections"),
+                },
+                {
+                  id: "quick-connect",
+                  icon: <Zap size={12} />,
+                  label: t("nav.quickConnect"),
+                },
+                {
+                  id: "serial",
+                  icon: <Usb size={12} />,
+                  label: t("nav.serial"),
+                },
+                {
+                  id: "ssh-tools",
+                  icon: <Hammer size={12} />,
+                  label: t("nav.sshTools"),
+                },
+                {
+                  id: "snippets",
+                  icon: <Play size={12} />,
+                  label: t("nav.snippets"),
+                },
+                {
+                  id: "history",
+                  icon: <Clock size={12} />,
+                  label: t("nav.history"),
+                },
+                {
+                  id: "session-logs",
+                  icon: <ScrollText size={12} />,
+                  label: t("nav.sessionLogs"),
+                },
+                {
+                  id: "split-screen",
+                  icon: <LayoutPanelLeft size={12} />,
+                  label: t("nav.splitScreen"),
+                },
+                {
+                  id: "network_graph",
+                  icon: <Network size={12} />,
+                  label: t("nav.networkGraph"),
+                },
+              ] as { id: string; icon: React.ReactNode; label: string }[]
+            ).map((tab) => (
+              <div
+                key={tab.id}
+                className="flex items-center justify-between py-1.5"
+              >
+                <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <span className="text-muted-foreground">{tab.icon}</span>
+                  {tab.label}
+                </span>
+                <FakeSwitch
+                  checked={!hiddenRailTabs.has(tab.id)}
+                  onChange={(visible) => {
+                    const next = new Set(hiddenRailTabs);
+                    if (visible) next.delete(tab.id);
+                    else next.add(tab.id);
+                    setHiddenRailTabs(next);
+                    const serialized = JSON.stringify([...next]);
+                    localStorage.setItem("hiddenRailTabs", serialized);
+                    window.dispatchEvent(new Event("hiddenRailTabsChanged"));
+                    if (storageMode === "cloud")
+                      saveToCloud({ hiddenRailTabs: serialized });
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-1 border-t border-border pt-3">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+              {t("newUi.sidebar.userProfile.settingsSnippets")}
+            </span>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.foldersCollapsed")}
+              description={t("newUi.sidebar.userProfile.foldersCollapsedDesc")}
+            >
+              <FakeSwitch
+                checked={foldersCollapsed}
+                onChange={(v) => {
+                  setFoldersCollapsed(v);
+                  localStorage.setItem(
+                    "defaultSnippetFoldersCollapsed",
+                    v.toString(),
+                  );
+                  window.dispatchEvent(
+                    new Event("defaultSnippetFoldersCollapsedChanged"),
+                  );
+                  if (storageMode === "cloud")
+                    saveToCloud({ foldersCollapsed: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.confirmExecution")}
+              description={t("newUi.sidebar.userProfile.confirmExecutionDesc")}
+            >
+              <FakeSwitch
+                checked={confirmSnippetExecution}
+                onChange={(v) => {
+                  setConfirmSnippetExecution(v);
+                  localStorage.setItem("confirmSnippetExecution", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ confirmSnippetExecution: v });
+                }}
+              />
+            </SettingRow>
           </div>
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
@@ -2332,7 +2463,7 @@ export function UserProfilePanel({
                 className="h-8 text-xs"
                 disabled={passkeyLoading}
               />
-              <select
+              <Select2
                 value={passkeyUserVerification}
                 onChange={(e) =>
                   setPasskeyUserVerification(
@@ -2351,7 +2482,7 @@ export function UserProfilePanel({
                 <option value="discouraged">
                   {t("newUi.sidebar.userProfile.passkeyUvDiscouraged")}
                 </option>
-              </select>
+              </Select2>
             </div>
             <Button
               variant="outline"
@@ -2405,6 +2536,159 @@ export function UserProfilePanel({
               setShowPassword={setShowPassword}
               onLogout={onLogout}
             />
+          )}
+        </div>
+      </AccordionSection>
+
+      {/* AI */}
+      <AccordionSection
+        id="ai"
+        label={t("newUi.sidebar.userProfile.sectionAi")}
+        icon={<Zap className="size-3.5" />}
+        open={openSections.has("ai")}
+        onToggle={() => toggle("ai")}
+      >
+        <div className="flex flex-col gap-3 pt-3">
+          {!isElectron() ? (
+            <div className="border border-border bg-muted/30 px-3 py-3 text-xs text-muted-foreground leading-relaxed">
+              {t("newUi.sidebar.userProfile.aiDesktopOnly")}
+            </div>
+          ) : (
+            <>
+              <SettingRow
+                label={t("newUi.sidebar.userProfile.aiEnable")}
+                description={t("newUi.sidebar.userProfile.aiEnableDesc")}
+              >
+                <FakeSwitch
+                  checked={aiSettings.enabled}
+                  onChange={(enabled) =>
+                    setAiSettings((prev) => ({ ...prev, enabled }))
+                  }
+                  disabled={aiLoading}
+                />
+              </SettingRow>
+
+              <div className="grid grid-cols-1 gap-2">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("newUi.sidebar.userProfile.aiBaseUrl")}
+                  </span>
+                  <Input
+                    value={aiSettings.baseUrl}
+                    onChange={(event) =>
+                      setAiSettings((prev) => ({
+                        ...prev,
+                        baseUrl: event.target.value,
+                      }))
+                    }
+                    placeholder="https://api.openai.com/v1"
+                    className="h-8 text-xs"
+                    disabled={aiLoading}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("newUi.sidebar.userProfile.aiModel")}
+                  </span>
+                  <Input
+                    value={aiSettings.model}
+                    onChange={(event) =>
+                      setAiSettings((prev) => ({
+                        ...prev,
+                        model: event.target.value,
+                      }))
+                    }
+                    placeholder="gpt-4.1-mini"
+                    className="h-8 text-xs"
+                    disabled={aiLoading}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("newUi.sidebar.userProfile.aiApiKey")}
+                  </span>
+                  <Input
+                    type="password"
+                    value={aiApiKey}
+                    onChange={(event) => setAiApiKey(event.target.value)}
+                    placeholder={
+                      aiSettings.hasApiKey && aiSettings.apiKey
+                        ? aiSettings.apiKey
+                        : "sk-..."
+                    }
+                    className="h-8 text-xs"
+                    disabled={aiLoading || !aiSettings.secureStorageAvailable}
+                  />
+                  <span className="text-[10px] text-muted-foreground leading-relaxed">
+                    {aiSettings.secureStorageAvailable
+                      ? aiSettings.hasApiKey
+                        ? t("newUi.sidebar.userProfile.aiKeySaved")
+                        : t("newUi.sidebar.userProfile.aiApiKeyDesc")
+                      : t(
+                          "newUi.sidebar.userProfile.aiSecureStorageUnavailable",
+                        )}
+                  </span>
+                </label>
+              </div>
+
+              <SettingRow
+                label={t("newUi.sidebar.userProfile.aiIncludeContext")}
+                description={t(
+                  "newUi.sidebar.userProfile.aiIncludeContextDesc",
+                )}
+              >
+                <FakeSwitch
+                  checked={aiSettings.includeContext}
+                  onChange={(includeContext) =>
+                    setAiSettings((prev) => ({ ...prev, includeContext }))
+                  }
+                  disabled={aiLoading}
+                />
+              </SettingRow>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  size="sm"
+                  className="h-7 text-[10px] font-bold uppercase tracking-widest"
+                  onClick={handleSaveAiSettings}
+                  disabled={
+                    aiSaving ||
+                    aiLoading ||
+                    (!aiSettings.secureStorageAvailable && !!aiApiKey.trim())
+                  }
+                >
+                  {aiSaving
+                    ? t("common.saving")
+                    : t("newUi.sidebar.userProfile.aiSave")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px] font-bold uppercase tracking-widest"
+                  onClick={handleTestAiSettings}
+                  disabled={
+                    aiTesting ||
+                    aiLoading ||
+                    (!aiSettings.hasApiKey && !aiApiKey.trim())
+                  }
+                >
+                  {aiTesting
+                    ? t("newUi.sidebar.userProfile.aiTesting")
+                    : t("newUi.sidebar.userProfile.aiTest")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-destructive"
+                  onClick={handleClearAiSettings}
+                  disabled={aiSaving || aiLoading}
+                >
+                  {t("newUi.sidebar.userProfile.aiClear")}
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </AccordionSection>

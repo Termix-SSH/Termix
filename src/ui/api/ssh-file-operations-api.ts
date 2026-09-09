@@ -509,6 +509,18 @@ export async function uploadSSHFile(
       form,
       {
         timeout: 0,
+        onUploadProgress: (event) => {
+          const totalBytes =
+            typeof event.total === "number" && event.total > 0
+              ? event.total
+              : file.size;
+          onChunkProgress?.({
+            chunkIndex: 0,
+            totalChunks: 1,
+            bytesSent: Math.min(event.loaded, totalBytes),
+            totalBytes,
+          });
+        },
       },
     );
     return response.data;

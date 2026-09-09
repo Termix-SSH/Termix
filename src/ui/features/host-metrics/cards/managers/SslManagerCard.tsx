@@ -9,6 +9,7 @@ import {
   extractError,
 } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
+import { Select2 } from "@/components/select2";
 
 interface CertInfo {
   client: string;
@@ -221,7 +222,7 @@ export function SslManagerCard({ hostId }: { hostId: number | null }) {
             className="h-7 w-full border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
           />
           <div className="flex items-center gap-1.5">
-            <select
+            <Select2
               value={challenge}
               onChange={(e) => setChallenge(e.target.value as Challenge)}
               className="h-7 flex-1 border border-border bg-background px-1 text-xs"
@@ -233,7 +234,7 @@ export function SslManagerCard({ hostId }: { hostId: number | null }) {
                 {t("hostMetrics.managers.sslHttpWebroot")}
               </option>
               <option value="dns">{t("hostMetrics.managers.sslDns")}</option>
-            </select>
+            </Select2>
           </div>
           {challenge === "http-webroot" && (
             <input

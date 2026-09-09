@@ -17,6 +17,7 @@ import {
   type AuditLogFilters,
 } from "@/api/audit-log-api";
 import type { AdminUser } from "./AdminManagementSections";
+import { Select2 } from "@/components/select2";
 
 const RESOURCE_TYPES = [
   "user",
@@ -176,7 +177,7 @@ export function AdminAuditLogSection({
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterUser")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterUserId}
               onChange={(e) => setFilterUserId(e.target.value)}
@@ -187,14 +188,14 @@ export function AdminAuditLogSection({
                   {u.username}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterAction")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterAction}
               onChange={(e) => setFilterAction(e.target.value)}
@@ -205,14 +206,14 @@ export function AdminAuditLogSection({
                   {a.replace(/_/g, " ")}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterResourceType")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterResourceType}
               onChange={(e) => setFilterResourceType(e.target.value)}
@@ -223,14 +224,14 @@ export function AdminAuditLogSection({
                   {r}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterStatus")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterSuccess}
               onChange={(e) =>
@@ -240,7 +241,7 @@ export function AdminAuditLogSection({
               <option value="">{t("admin.auditLogFilterAll")}</option>
               <option value="true">{t("admin.auditLogSuccess")}</option>
               <option value="false">{t("admin.auditLogFailed")}</option>
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">

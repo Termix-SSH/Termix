@@ -9,6 +9,43 @@ interface CommandAutocompleteProps {
   visible: boolean;
 }
 
+interface CommandAutosuggestionProps {
+  suggestion: string;
+  position: { top: number; left: number };
+  style?: React.CSSProperties;
+  visible: boolean;
+}
+
+export function CommandAutosuggestion({
+  suggestion,
+  position,
+  style,
+  visible,
+}: CommandAutosuggestionProps) {
+  if (!visible || !suggestion) {
+    return null;
+  }
+
+  return (
+    <div
+      className="pointer-events-none fixed z-[9998] whitespace-pre text-muted-foreground/45"
+      style={{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+        fontVariantLigatures: "none",
+        fontFeatureSettings: '"liga" 0, "calt" 0',
+        textRendering: "optimizeLegibility",
+        WebkitFontSmoothing: "antialiased",
+        transition: "opacity 80ms ease-out",
+        willChange: "contents",
+        ...style,
+      }}
+    >
+      {suggestion}
+    </div>
+  );
+}
+
 export function CommandAutocomplete({
   suggestions,
   selectedIndex,
