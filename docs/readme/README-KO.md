@@ -237,7 +237,7 @@ Proxmox 인스턴스에서 호스트를 바로 가져오고, 노드와 게스트
 <td width="50%" valign="top">
 
 **보안:**
-비밀번호와 키를 비롯한 비밀 정보는 사용자별로 암호화되고, 데이터베이스 파일 자체도 디스크에서 암호화할 수 있습니다. 어떻게 동작하는지는 [문서](https://docs.termix.site/security)에서 볼 수 있습니다.
+비밀번호와 키를 비롯한 비밀 정보는 사용자별로 암호화되고, 데이터베이스 파일 자체도 디스크에서 암호화할 수 있습니다. 어떻게 동작하는지는 [문서](https://docs.termix.site/features/authentication/security/)에서 볼 수 있습니다.
 
 </td>
 <td width="50%" valign="top">

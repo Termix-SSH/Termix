@@ -237,7 +237,7 @@ Công cụ `termix` cho shell và các script của bạn. Mở terminal, chạy
 <td width="50%" valign="top">
 
 **Bảo mật:**
-Mật khẩu, khoá và các thông tin bí mật khác được mã hoá theo từng người dùng, và bản thân các tệp cơ sở dữ liệu cũng có thể mã hoá trên ổ đĩa. Xem [tài liệu](https://docs.termix.site/security) để biết cách hoạt động.
+Mật khẩu, khoá và các thông tin bí mật khác được mã hoá theo từng người dùng, và bản thân các tệp cơ sở dữ liệu cũng có thể mã hoá trên ổ đĩa. Xem [tài liệu](https://docs.termix.site/features/authentication/security/) để biết cách hoạt động.
 
 </td>
 <td width="50%" valign="top">
