@@ -33,6 +33,11 @@ import type {
 } from "@/features/guacamole/GuacamoleDisplay.tsx";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import {
+  detectRuntimeMetaKeyFamily,
+  metaKeyLabels,
+  type MetaKeyFamily,
+} from "@/features/guacamole/guacamole-meta-key.ts";
 
 interface GuacamoleToolbarProps {
   displayRef: React.RefObject<GuacamoleDisplayHandle>;
@@ -44,6 +49,7 @@ interface GuacamoleToolbarProps {
   onTouchModeChange?: (mode: GuacamoleTouchMode) => void;
   zoom?: number;
   onHide?: () => void;
+  metaKeyFamily?: MetaKeyFamily;
 }
 
 const MODIFIER_KEYSYMS = {
@@ -133,8 +139,12 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
   onTouchModeChange,
   zoom = 1,
   onHide,
+  metaKeyFamily,
 }) => {
   const { t } = useTranslation();
+  const meta = metaKeyLabels(
+    metaKeyFamily ?? detectRuntimeMetaKeyFamily(protocol),
+  );
   const [position, setPosition] = useState({ x: 0, y: 12 });
   const [collapsed, setCollapsed] = useState(false);
   const [showFKeys, setShowFKeys] = useState(false);
@@ -402,16 +412,16 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                   CAD
                 </TipBtn>
                 <TipBtn
-                  tooltip={t("guacamole.toolbar.winL")}
+                  tooltip={t(meta.lockTooltip)}
                   onClick={() => sendCombo(MODIFIER_KEYSYMS.win, 0x006c)}
                 >
-                  Win+L
+                  {meta.lock}
                 </TipBtn>
                 <TipBtn
-                  tooltip={t("guacamole.toolbar.winKey")}
+                  tooltip={t(meta.keyTooltip)}
                   onClick={() => sendCombo(MODIFIER_KEYSYMS.win)}
                 >
-                  Win
+                  {meta.short}
                 </TipBtn>
               </>
             )}
@@ -433,7 +443,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                       MODIFIER_KEYSYMS.shift,
                       t("guacamole.toolbar.shift"),
                     ],
-                    ["win", MODIFIER_KEYSYMS.win, t("guacamole.toolbar.win")],
+                    ["win", MODIFIER_KEYSYMS.win, t(meta.stickyKey)],
                   ] as [string, number, string][]
                 ).map(([key, ks, label]) => (
                   <Tooltip key={key}>
