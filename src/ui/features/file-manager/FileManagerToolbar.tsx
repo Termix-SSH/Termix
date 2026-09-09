@@ -8,6 +8,7 @@ import {
   Folder,
   FolderPlus,
   Grid3X3,
+  Laptop,
   Layout,
   List,
   Plus,
@@ -65,6 +66,13 @@ type FileManagerToolbarProps = {
   handleFilesDropped: (fileList: FileList) => void;
   handleCreateNewFolder: () => void;
   handleCreateNewFile: () => void;
+  /** Desktop app only: show the Local | Remote split-view toggle. */
+  showLocalPaneToggle?: boolean;
+  localPaneOpen?: boolean;
+  onToggleLocalPane?: () => void;
+  /** Desktop directories sidebar (mobile uses the overlay instead). */
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 };
 
 function Breadcrumb({
@@ -218,6 +226,11 @@ export function FileManagerToolbar({
   handleFilesDropped,
   handleCreateNewFolder,
   handleCreateNewFile,
+  showLocalPaneToggle = false,
+  localPaneOpen = false,
+  onToggleLocalPane,
+  sidebarOpen = true,
+  onToggleSidebar,
 }: FileManagerToolbarProps) {
   return (
     <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
@@ -226,9 +239,18 @@ export function FileManagerToolbar({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setMobileSidebarOpen((open) => !open)}
-            className="md:hidden size-8 rounded-none"
+            onClick={() => {
+              // Below md the sidebar is an overlay; above it, a persisted
+              // show/hide of the directories panel.
+              const isDesktop =
+                typeof window !== "undefined" &&
+                window.matchMedia("(min-width: 768px)").matches;
+              if (isDesktop && onToggleSidebar) onToggleSidebar();
+              else setMobileSidebarOpen((open) => !open);
+            }}
+            className={`size-8 rounded-none ${sidebarOpen ? "" : "md:bg-accent-brand/10 md:text-accent-brand"}`}
             title={t("fileManager.toggleSidebar")}
+            aria-pressed={!sidebarOpen}
           >
             <Layout className="size-4" />
           </Button>
@@ -309,6 +331,23 @@ export function FileManagerToolbar({
               className="h-8 pl-8 text-xs bg-muted/50 border-border rounded-none focus:ring-1 focus:ring-accent-brand/50"
             />
           </div>
+
+          {showLocalPaneToggle && (
+            <Button
+              variant={localPaneOpen ? "secondary" : "ghost"}
+              size="icon"
+              onClick={onToggleLocalPane}
+              title={
+                localPaneOpen
+                  ? t("fileManager.hideLocalFiles")
+                  : t("fileManager.showLocalFiles")
+              }
+              aria-pressed={localPaneOpen}
+              className={`hidden md:inline-flex size-8 rounded-none border border-border ${localPaneOpen ? "bg-accent-brand/10 text-accent-brand border-accent-brand/40" : ""}`}
+            >
+              <Laptop className="size-4" />
+            </Button>
+          )}
 
           <div className="flex items-center border border-border rounded-none overflow-hidden">
             <Button
