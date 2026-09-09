@@ -23,10 +23,12 @@ import {
 import type { SyncEntityType } from "../repositories/sync-tombstone-repository.js";
 import {
   deserializeSyncReferences,
+  orderSyncRows,
   serializeSyncReferences,
   type SyncReferenceEntity,
 } from "./sync-references.js";
 import { timestampAtOrAfter } from "../sync-timestamp.js";
+import { validateParentHostId } from "./host-parent-validation.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -115,6 +117,15 @@ async function findReferenceSyncId(
   id: number,
   userId: string,
 ): Promise<string | null> {
+  if (entityType === "hosts") {
+    const [row] = await context.drizzle
+      .select({ syncId: hosts.syncId })
+      .from(hosts)
+      .where(and(eq(hosts.id, id), eq(hosts.userId, userId)))
+      .limit(1);
+    return row?.syncId ?? null;
+  }
+
   if (entityType === "sshCredentials") {
     const [row] = await context.drizzle
       .select({ syncId: sshCredentials.syncId })
@@ -138,6 +149,15 @@ async function findReferenceId(
   syncId: string,
   userId: string,
 ): Promise<number | null> {
+  if (entityType === "hosts") {
+    const [row] = await context.drizzle
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(and(eq(hosts.syncId, syncId), eq(hosts.userId, userId)))
+      .limit(1);
+    return row?.id ?? null;
+  }
+
   if (entityType === "sshCredentials") {
     const [row] = await context.drizzle
       .select({ id: sshCredentials.id })
@@ -281,7 +301,7 @@ router.get(
         }),
       );
 
-      res.json({ rows: decrypted });
+      res.json({ rows: orderSyncRows(entityType, decrypted) });
     } catch (err) {
       databaseLogger.error(`Failed to pull sync rows for ${entityType}`, err, {
         operation: "sync_pull",
@@ -409,6 +429,17 @@ router.post(
         (referenceType, referenceSyncId) =>
           findReferenceId(context, referenceType, referenceSyncId, userId),
       );
+      if (
+        entityType === "hosts" &&
+        typeof resolvedPayload.parentHostId === "number"
+      ) {
+        const parentError = await validateParentHostId(
+          userId,
+          typeof existing?.id === "number" ? existing.id : null,
+          resolvedPayload.parentHostId,
+        );
+        if (parentError) return res.status(400).json({ error: parentError });
+      }
       const writePayload = stripWritePayload(entityType, resolvedPayload);
       const encryptedPayload = encryptIfNeeded(
         entityType,
