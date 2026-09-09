@@ -17,7 +17,24 @@ import {
 } from "vitest";
 
 const require = createRequire(import.meta.url);
+
+type PublishFs = {
+  rename: (from: string, to: string) => Promise<void>;
+  link: (from: string, to: string) => Promise<void>;
+  copyFileExcl: (from: string, to: string) => Promise<void>;
+  rm: (target: string) => Promise<void>;
+  lstat: (target: string) => Promise<fs.Stats>;
+};
+
 const localFiles = require("../../../../electron/local-files.cjs") as {
+  publishDownload: (
+    partialPath: string,
+    absDest: string,
+    overwrite: boolean,
+    transferId: string,
+    io?: PublishFs,
+  ) => Promise<void>;
+  defaultPublishFs: PublishFs;
   IPC: Record<string, string>;
   TRANSFER_ROUTES: Record<string, string>;
   createTargetResolver: (deps: {
@@ -34,6 +51,7 @@ const localFiles = require("../../../../electron/local-files.cjs") as {
     getRemoteSyncConfig?: () => { serverUrl?: string } | null;
     getRemoteSyncJwt?: () => string | null;
     localBaseUrl?: string;
+    publishFs?: PublishFs;
   }) => Record<
     string,
     (
@@ -388,6 +406,169 @@ describe("local-files download boundary", () => {
     ]);
     expect(result.success).toBe(true);
     expect(result.existing).toEqual([present]);
+  });
+});
+
+// Simulates the Windows rename contract on top of the real filesystem:
+// rename() onto a name that already exists fails instead of replacing it.
+// Every rename is recorded so a test can prove the swap never relied on
+// rename-over-existing.
+function windowsLikeFs(
+  overrides: Partial<PublishFs> = {},
+): PublishFs & { renames: Array<[string, string]> } {
+  const base = localFiles.defaultPublishFs;
+  const renames: Array<[string, string]> = [];
+  return {
+    ...base,
+    renames,
+    rename: async (from, to) => {
+      renames.push([from, to]);
+      if (fs.existsSync(to)) {
+        throw Object.assign(new Error(`EEXIST: file already exists, rename`), {
+          code: "EEXIST",
+        });
+      }
+      await base.rename(from, to);
+    },
+    ...overrides,
+  };
+}
+
+describe("local-files replace primitive (Windows-safe overwrite)", () => {
+  let root: string;
+  beforeEach(async () => {
+    root = await fsp.mkdtemp(path.join(os.tmpdir(), "termix-replace-"));
+  });
+  afterEach(() => fsp.rm(root, { recursive: true, force: true }));
+
+  const seed = async (name: string, existing: string, fresh: Buffer) => {
+    const dest = path.join(root, name);
+    const partial = `${dest}.t1.termix-part`;
+    await fsp.writeFile(dest, existing);
+    await fsp.writeFile(partial, fresh);
+    return { dest, partial };
+  };
+
+  it("replaces an existing file without renaming onto an occupied name", async () => {
+    const fresh = crypto.randomBytes(4096);
+    const { dest, partial } = await seed("swap.bin", "original", fresh);
+    const io = windowsLikeFs();
+
+    await localFiles.publishDownload(partial, dest, true, "t1", io);
+
+    expect((await fsp.readFile(dest)).equals(fresh)).toBe(true);
+    expect(await fsp.readdir(root)).toEqual(["swap.bin"]);
+    // Every rename targeted a name that was free at the time.
+    expect(io.renames.length).toBeGreaterThan(0);
+    for (const [, to] of io.renames) {
+      expect(to === dest || to.endsWith(".termix-replaced")).toBe(true);
+    }
+  });
+
+  it("restores the original byte-for-byte when publishing the new contents fails", async () => {
+    const fresh = crypto.randomBytes(1024);
+    const { dest, partial } = await seed("restore.bin", "original", fresh);
+    const denied = () =>
+      Promise.reject(
+        Object.assign(new Error("EACCES: permission denied"), {
+          code: "EACCES",
+        }),
+      );
+    const io = windowsLikeFs({ link: denied, copyFileExcl: denied });
+
+    await expect(
+      localFiles.publishDownload(partial, dest, true, "t1", io),
+    ).rejects.toMatchObject({ code: "EACCES" });
+
+    expect(await fsp.readFile(dest, "utf8")).toBe("original");
+    // Only the original and the caller-owned partial remain: no aside copy.
+    expect((await fsp.readdir(root)).sort()).toEqual(
+      ["restore.bin", "restore.bin.t1.termix-part"].sort(),
+    );
+  });
+
+  it("reports EBUSY and touches nothing when the existing file cannot be moved aside (open on Windows)", async () => {
+    const fresh = crypto.randomBytes(1024);
+    const { dest, partial } = await seed("locked.bin", "original", fresh);
+    const io = windowsLikeFs({
+      rename: () =>
+        Promise.reject(
+          Object.assign(new Error("EPERM: operation not permitted"), {
+            code: "EPERM",
+          }),
+        ),
+    });
+
+    await expect(
+      localFiles.publishDownload(partial, dest, true, "t1", io),
+    ).rejects.toMatchObject({ code: "EBUSY" });
+
+    expect(await fsp.readFile(dest, "utf8")).toBe("original");
+    expect((await fsp.readFile(partial)).equals(fresh)).toBe(true);
+  });
+
+  it("refuses to replace a folder with a file", async () => {
+    const dest = path.join(root, "folder");
+    await fsp.mkdir(dest);
+    await fsp.writeFile(path.join(dest, "inner.txt"), "keep");
+    const partial = `${dest}.t1.termix-part`;
+    await fsp.writeFile(partial, "new");
+
+    await expect(
+      localFiles.publishDownload(partial, dest, true, "t1", windowsLikeFs()),
+    ).rejects.toMatchObject({ code: "EISDIR" });
+    expect(await fsp.readFile(path.join(dest, "inner.txt"), "utf8")).toBe(
+      "keep",
+    );
+  });
+
+  it("falls back to an exclusive publish when the file to replace has disappeared", async () => {
+    const dest = path.join(root, "gone.bin");
+    const partial = `${dest}.t1.termix-part`;
+    await fsp.writeFile(partial, "new");
+
+    await localFiles.publishDownload(
+      partial,
+      dest,
+      true,
+      "t1",
+      windowsLikeFs(),
+    );
+    expect(await fsp.readFile(dest, "utf8")).toBe("new");
+    expect(await fsp.readdir(root)).toEqual(["gone.bin"]);
+  });
+
+  it("works end to end through the download handler on a Windows-like filesystem", async () => {
+    const payload = crypto.randomBytes(16 * 1024 + 3);
+    const backend = await startBackend(payload);
+    try {
+      const io = windowsLikeFs();
+      const handlers = localFiles.createLocalFileHandlers({
+        net: fakeNet,
+        shell: {},
+        localBaseUrl: backend.url,
+        publishFs: io,
+      });
+      const dest = path.join(root, "e2e.bin");
+      await fsp.writeFile(dest, "original");
+
+      const result = await handlers[localFiles.IPC.DOWNLOAD](fakeEvent, {
+        transferId: "e2e-1",
+        origin: "local",
+        body: { sessionId: "1", path: "/remote/file.bin" },
+        destPath: dest,
+        overwrite: true,
+      });
+
+      expect(result.success).toBe(true);
+      expect((await fsp.readFile(dest)).equals(payload)).toBe(true);
+      expect(await fsp.readdir(root)).toEqual(["e2e.bin"]);
+      for (const [, to] of io.renames) {
+        expect(to === dest || to.endsWith(".termix-replaced")).toBe(true);
+      }
+    } finally {
+      backend.close();
+    }
   });
 });
 

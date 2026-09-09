@@ -470,38 +470,134 @@ function partialPathFor(absDest, transferId) {
   return `${absDest}.${token || "transfer"}.termix-part`;
 }
 
-// Moves a finished partial file onto its final name. Without `overwrite` the
-// publish is exclusive: an existing file is never replaced, even if it
-// appeared while the download was running.
-async function publishDownload(partialPath, absDest, overwrite) {
-  if (overwrite) {
-    await fsp.rename(partialPath, absDest);
-    return;
-  }
+// File operations used to publish a download, injectable so the replace
+// strategy can be tested against Windows-like semantics (where rename() onto
+// an existing name fails) without running on Windows.
+const defaultPublishFs = Object.freeze({
+  rename: (from, to) => fsp.rename(from, to),
+  link: (from, to) => fsp.link(from, to),
+  copyFileExcl: (from, to) =>
+    fsp.copyFile(from, to, fs.constants.COPYFILE_EXCL),
+  rm: (target) => fsp.rm(target, { force: true }),
+  lstat: (target) => fsp.lstat(target),
+});
+
+function replacedPathFor(absDest, transferId) {
+  const token = String(transferId)
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .slice(0, 48);
+  return `${absDest}.${token || "transfer"}.termix-replaced`;
+}
+
+// Puts `sourcePath` under `absDest` without ever replacing an existing file:
+// link() is atomic and fails with EEXIST if the name is taken; filesystems
+// without hard links fall back to an exclusive copy. The source is removed
+// once the destination exists.
+async function publishExclusive(io, sourcePath, absDest) {
+  const exists = () =>
+    new LocalFileError("EEXIST", `"${path.basename(absDest)}" already exists`);
   try {
-    // link() is atomic and fails with EEXIST if the name is taken.
-    await fsp.link(partialPath, absDest);
+    await io.link(sourcePath, absDest);
   } catch (error) {
-    if (error && error.code === "EEXIST") {
+    if (error && error.code === "EEXIST") throw exists();
+    try {
+      await io.copyFileExcl(sourcePath, absDest);
+    } catch (copyError) {
+      if (copyError && copyError.code === "EEXIST") throw exists();
+      throw copyError;
+    }
+  }
+  await io.rm(sourcePath);
+}
+
+// Replaces `absDest` with the finished partial. rename() over an existing
+// file is not portable: POSIX replaces it, but on Windows the call commonly
+// fails (EEXIST / EPERM, always when the file is open), so the swap never
+// renames onto an occupied name. Instead:
+//   1. move the current file aside to a transfer-unique sibling
+//      (renaming to a fresh name is safe everywhere);
+//   2. publish the partial exclusively under the now-free name;
+//   3. delete the aside copy.
+// If step 1 fails nothing has changed and the caller gets EBUSY. If step 2
+// fails the aside copy is moved back, so the original survives.
+async function replaceExisting(io, partialPath, absDest, transferId) {
+  let current;
+  try {
+    current = await io.lstat(absDest);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      // Nothing to replace after all (the file went away meanwhile).
+      await publishExclusive(io, partialPath, absDest);
+      return;
+    }
+    throw error;
+  }
+  if (current.isDirectory()) {
+    throw new LocalFileError(
+      "EISDIR",
+      `"${path.basename(absDest)}" is a folder and cannot be replaced by a file`,
+    );
+  }
+
+  const asidePath = replacedPathFor(absDest, transferId);
+  try {
+    await io.rename(absDest, asidePath);
+  } catch (error) {
+    if (
+      error &&
+      (error.code === "EPERM" ||
+        error.code === "EBUSY" ||
+        error.code === "EACCES")
+    ) {
       throw new LocalFileError(
-        "EEXIST",
-        `"${path.basename(absDest)}" already exists`,
+        "EBUSY",
+        `"${path.basename(absDest)}" is in use and could not be replaced`,
       );
     }
-    // Filesystems without hard links: fall back to an exclusive copy.
-    await fsp
-      .copyFile(partialPath, absDest, fs.constants.COPYFILE_EXCL)
-      .catch((copyError) => {
-        if (copyError && copyError.code === "EEXIST") {
-          throw new LocalFileError(
-            "EEXIST",
-            `"${path.basename(absDest)}" already exists`,
-          );
-        }
-        throw copyError;
-      });
+    throw error;
   }
-  await fsp.rm(partialPath, { force: true });
+
+  try {
+    await publishExclusive(io, partialPath, absDest);
+  } catch (error) {
+    // Put the original back under its name; the partial is cleaned up by
+    // the caller.
+    await io.rm(absDest).catch(() => {});
+    await io.rename(asidePath, absDest).catch(() => {});
+    throw error;
+  }
+
+  // The old contents are no longer reachable under the real name; removing
+  // the aside copy can still fail on Windows if another process holds it
+  // open, so retry once before giving up and leaving it for the user.
+  try {
+    await io.rm(asidePath);
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await io.rm(asidePath).catch((error) => {
+      console.warn(
+        `[local-files] replaced "${absDest}" but could not remove the previous copy at "${asidePath}": ${error && error.message}`,
+      );
+    });
+  }
+}
+
+// Moves a finished partial file onto its final name. Without `overwrite` the
+// publish is exclusive: an existing file is never replaced, even if it
+// appeared while the download was running. With `overwrite` the existing file
+// is swapped out in a way that also works on Windows.
+async function publishDownload(
+  partialPath,
+  absDest,
+  overwrite,
+  transferId,
+  io = defaultPublishFs,
+) {
+  if (overwrite) {
+    await replaceExisting(io, partialPath, absDest, transferId);
+    return;
+  }
+  await publishExclusive(io, partialPath, absDest);
 }
 
 // Streams one remote file (via the backend's `downloadFileStream` route) into
@@ -509,7 +605,11 @@ async function publishDownload(partialPath, absDest, overwrite) {
 // are published under the real name only on success, so a failed transfer
 // never leaves a truncated file behind. Existing files are refused unless
 // the caller explicitly asked to overwrite.
-async function downloadToLocal({ net, resolveTransferTarget }, event, options) {
+async function downloadToLocal(
+  { net, resolveTransferTarget, publishFs },
+  event,
+  options,
+) {
   const { transferId, origin, deviceId, body, destPath, expectedSize } =
     options || {};
   const overwrite = options?.overwrite === true;
@@ -623,7 +723,13 @@ async function downloadToLocal({ net, resolveTransferTarget }, event, options) {
       request.end();
     });
 
-    await publishDownload(partialPath, absDest, overwrite);
+    await publishDownload(
+      partialPath,
+      absDest,
+      overwrite,
+      transferId,
+      publishFs || defaultPublishFs,
+    );
     return { success: true, path: absDest };
   } catch (error) {
     await fsp.rm(partialPath, { force: true }).catch(() => {});
@@ -657,6 +763,7 @@ function createLocalFileHandlers({
   getRemoteSyncConfig,
   getRemoteSyncJwt,
   localBaseUrl,
+  publishFs,
 }) {
   if (!net || typeof net.request !== "function") {
     throw new Error("createLocalFileHandlers requires a net implementation");
@@ -666,7 +773,11 @@ function createLocalFileHandlers({
     getRemoteSyncConfig,
     getRemoteSyncJwt,
   });
-  const deps = { net, resolveTransferTarget };
+  const deps = {
+    net,
+    resolveTransferTarget,
+    publishFs: publishFs || defaultPublishFs,
+  };
 
   return {
     [IPC.HOME]: wrap(async () => ({
@@ -802,6 +913,8 @@ module.exports = {
   // exported for tests / reuse
   createLocalFileHandlers,
   createTargetResolver,
+  publishDownload,
+  defaultPublishFs,
   walkPaths,
   listDirectory,
 };
