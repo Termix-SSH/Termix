@@ -206,6 +206,9 @@ export const hosts = sqliteTable(
     enableDocker: integer("enable_docker", { mode: "boolean" })
       .notNull()
       .default(false),
+    enableWebUi: integer("enable_web_ui", { mode: "boolean" })
+      .notNull()
+      .default(false),
     enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -230,6 +233,7 @@ export const hosts = sqliteTable(
     defaultPath: text("default_path"),
     statsConfig: text("stats_config"),
     dockerConfig: text("docker_config"),
+    webUiConfig: text("web_ui_config"),
     enableProxmox: integer("enable_proxmox", { mode: "boolean" })
       .notNull()
       .default(false),

@@ -89,7 +89,11 @@ export function SidebarTree({
   openOnDoubleClick = false,
 }: {
   children: (Host | HostFolder)[];
-  onOpenTab: (host: Host, type: TabType) => void;
+  onOpenTab: (
+    host: Host,
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost: (host: Host) => void;
   onShareHost?: (host: Host) => void;
   onProxmoxDiscover?: (host: Host) => void;
@@ -1019,7 +1023,9 @@ export function SidebarTree({
                     <HostItem
                       host={item}
                       depth={depth}
-                      onOpenTab={(type) => onOpenTab(item, type)}
+                      onOpenTab={(type, options) =>
+                        onOpenTab(item, type, options)
+                      }
                       onEditHost={() => onEditHost(item)}
                       onShareHost={
                         onShareHost ? () => onShareHost(item) : undefined
