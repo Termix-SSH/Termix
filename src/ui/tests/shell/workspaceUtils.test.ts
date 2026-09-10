@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildWorkspacePayload,
   buildWorkspaceTabSnapshots,
@@ -6,6 +6,8 @@ import {
   resolveWorkspaceTabTarget,
 } from "../../shell/workspaceUtils";
 import type { Host, Tab, WorkspaceTabSnapshot } from "@/types/ui-types";
+
+afterEach(() => vi.unstubAllGlobals());
 
 function makeHost(overrides: Partial<Host> = {}): Host {
   return {
@@ -39,6 +41,17 @@ function makeTab(overrides: Partial<Tab> = {}): Tab {
 }
 
 describe("buildWorkspaceTabSnapshots", () => {
+  it("falls back when randomUUID is unavailable", () => {
+    vi.stubGlobal("crypto", {});
+    const tabs = [makeTab({ id: "t1" }), makeTab({ id: "t2" })];
+
+    const { snapshots } = buildWorkspaceTabSnapshots(tabs);
+
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[0].slotId).toBeTruthy();
+    expect(snapshots[1].slotId).not.toBe(snapshots[0].slotId);
+  });
+
   it("captures host-bound and singleton tabs with generated slot ids", () => {
     let counter = 0;
     const genSlotId = () => `slot-${counter++}`;
