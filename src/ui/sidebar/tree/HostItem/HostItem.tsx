@@ -66,7 +66,11 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import { useHostStatus, useServerStatusMeta } from "@/lib/ServerStatusContext";
+import {
+  useHostStatus,
+  useHostStatusReason,
+  useServerStatusMeta,
+} from "@/lib/ServerStatusContext";
 import {
   Tooltip,
   TooltipContent,
@@ -313,6 +317,7 @@ export function HostItem({
   const statusLoading = !initialLoadComplete && statusCheckOn;
   // Per-host subscription — status polls only re-render rows that flipped.
   const liveStatus = useHostStatus(Number(host.id), statusCheckOn);
+  const statusReason = useHostStatusReason(Number(host.id), statusCheckOn);
   const availability =
     liveStatus === "online" ||
     liveStatus === "reachable" ||
@@ -1175,7 +1180,9 @@ export function HostItem({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {buildStatusTooltip(host, availability)}
+                {statusReason === "host_key_changed"
+                  ? `${t("hostKey.keyChangedWarning")}: ${t("hostKey.keyChangedDescription")}`
+                  : buildStatusTooltip(host, availability)}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

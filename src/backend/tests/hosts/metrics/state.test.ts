@@ -1,10 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  authFailureTracker,
   canStartInitialMetrics,
   ConcurrentLimiter,
   HostPollCache,
   metricsConcurrencyFor,
 } from "../../../hosts/metrics/state.js";
+
+describe("auth failure tracking", () => {
+  it("permanently pauses polling after a host key mismatch", () => {
+    const hostId = 991266;
+    authFailureTracker.recordFailure(hostId, "HOST_KEY", true);
+
+    expect(authFailureTracker.shouldSkip(hostId)).toBe(true);
+    expect(authFailureTracker.getSkipReason(hostId)).toContain(
+      "host key changed",
+    );
+
+    authFailureTracker.reset(hostId);
+  });
+});
 
 describe("initial metrics admission", () => {
   it("requires both an active viewer and a confirmed online status", () => {

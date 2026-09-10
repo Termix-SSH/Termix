@@ -134,6 +134,9 @@ export function ServerStatusProvider({
                 newStatuses.set(id, {
                   status,
                   lastChecked: statusData?.lastChecked || now,
+                  ...(statusData?.reason === "host_key_changed"
+                    ? { reason: statusData.reason }
+                    : {}),
                 });
               }
             });
@@ -144,7 +147,8 @@ export function ServerStatusProvider({
             previousStatuses.size !== newStatuses.size ||
             [...newStatuses].some(
               ([id, entry]) =>
-                previousStatuses.get(id)?.status !== entry.status,
+                previousStatuses.get(id)?.status !== entry.status ||
+                previousStatuses.get(id)?.reason !== entry.reason,
             );
           store.applyStatuses(newStatuses);
           return changed;
@@ -272,7 +276,7 @@ export function useHostStatus(
 ): StatusValue | null {
   const store = useStatusStore();
 
-  const status = useSyncExternalStore(
+  const snapshot = useSyncExternalStore(
     (onChange) => store.subscribeHost(hostId, onChange),
     () => store.getHostSnapshot(hostId),
     () => store.getHostSnapshot(hostId),
@@ -281,7 +285,23 @@ export function useHostStatus(
   if (!statusCheckEnabled) {
     return null;
   }
-  return status;
+  return snapshot.split(":", 1)[0] as StatusValue;
+}
+
+export function useHostStatusReason(
+  hostId: number,
+  statusCheckEnabled: boolean = true,
+): ServerStatusEntry["reason"] | null {
+  const store = useStatusStore();
+  const snapshot = useSyncExternalStore(
+    (onChange) => store.subscribeHost(hostId, onChange),
+    () => store.getHostSnapshot(hostId),
+    () => store.getHostSnapshot(hostId),
+  );
+  if (!statusCheckEnabled) return null;
+  return snapshot.endsWith(":host_key_changed")
+    ? "host_key_changed"
+    : undefined;
 }
 
 /** Meta flags without depending on the full status map. */
