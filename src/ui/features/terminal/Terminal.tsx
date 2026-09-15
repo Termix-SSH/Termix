@@ -207,6 +207,25 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         DEFAULT_TERMINAL_CONFIG.theme,
     };
 
+    // Ctrl+/- / Ctrl+wheel terminal zoom is persisted per-host and takes
+    // precedence over the configured font size, so it survives the periodic
+    // option refreshes (keepalive/refit/reconnect) that would otherwise snap
+    // the size back to config.fontSize.
+    const fontSizeStorageKey = `terminal_fontsize_host_${hostConfig.id}`;
+    const readFontSizeOverride = (): number | null => {
+      try {
+        const stored = Number(localStorage.getItem(fontSizeStorageKey));
+        return Number.isFinite(stored) && stored > 0 ? stored : null;
+      } catch {
+        return null;
+      }
+    };
+    const configuredFontSize = config.fontSize;
+    const fontSizeOverride = readFontSizeOverride();
+    if (fontSizeOverride !== null) {
+      config.fontSize = fontSizeOverride;
+    }
+
     const activeTheme = previewTheme || config.theme;
     const themeColors = resolveTermixThemeColors(
       activeTheme,
@@ -543,6 +562,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       null,
     );
     const terminalFontSizeRef = useRef(config.fontSize);
+    const lastConfiguredFontSizeRef = useRef(configuredFontSize);
     const DEBOUNCE_MS = 140;
 
     const logTerminalActivity = async () => {
@@ -642,6 +662,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminalFontSizeRef.current = nextFontSize;
       terminal.options.fontSize = nextFontSize;
+      try {
+        localStorage.setItem(fontSizeStorageKey, String(nextFontSize));
+      } catch {
+        // ignore persistence failures (private mode, disabled storage)
+      }
       performFit();
       hardRefresh();
     }
@@ -2403,12 +2428,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const fontFamily = resolveTerminalFontFamily(config.fontFamily);
       ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
 
+      // Resolve the effective font size: a persisted zoom override wins, but if
+      // the configured font size itself changed (e.g. user edited it in
+      // Settings) drop the override so the new configured value takes effect.
+      let effectiveFontSize = config.fontSize;
+      if (config.fontSize !== lastConfiguredFontSizeRef.current) {
+        lastConfiguredFontSizeRef.current = config.fontSize;
+        try {
+          localStorage.removeItem(fontSizeStorageKey);
+        } catch {
+          // ignore
+        }
+      } else {
+        const override = readFontSizeOverride();
+        if (override !== null) effectiveFontSize = override;
+      }
+
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
       terminal.options.cursorStyle = config.cursorStyle;
       terminal.options.scrollback = config.scrollback;
-      terminal.options.fontSize = config.fontSize;
-      terminalFontSizeRef.current = config.fontSize;
+      terminal.options.fontSize = effectiveFontSize;
+      terminalFontSizeRef.current = effectiveFontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
       terminal.options.macOptionIsMeta = config.macOptionIsMeta;
@@ -2479,12 +2520,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         config.customThemeColors,
       );
 
+      // Honor a persisted zoom override for the initial font size too.
+      const initialFontSize = readFontSizeOverride() ?? config.fontSize;
+
       // Set initial options before opening the terminal
       terminal.options = {
         cursorBlink: config.cursorBlink,
         cursorStyle: config.cursorStyle,
         scrollback: config.scrollback,
-        fontSize: config.fontSize,
+        fontSize: initialFontSize,
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
