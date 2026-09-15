@@ -19,6 +19,10 @@ describe("GuacamoleToolbar Windows key", () => {
         sendMouse: vi.fn(),
         setClipboard: vi.fn(),
         getFilesystem: () => null,
+        uploadFile: async () => {},
+        zoomIn: vi.fn(() => 1.25),
+        zoomOut: vi.fn(() => 0.75),
+        resetZoom: vi.fn(() => 1),
       } satisfies GuacamoleDisplayHandle,
     } as React.RefObject<GuacamoleDisplayHandle>;
     const { getByText } = render(
@@ -43,5 +47,64 @@ describe("GuacamoleToolbar Windows key", () => {
     sendKey.mockClear();
     fireEvent.click(getByText("guacamole.toolbar.win"));
     expect(sendKey).toHaveBeenCalledWith(0xffeb, true);
+  });
+
+  it("exposes VNC zoom controls without showing them for RDP", () => {
+    const zoomIn = vi.fn(() => 1.25);
+    const zoomOut = vi.fn(() => 0.75);
+    const resetZoom = vi.fn(() => 1);
+    const displayRef = {
+      current: {
+        disconnect: vi.fn(),
+        isConnected: () => true,
+        sendKey: vi.fn(),
+        sendMouse: vi.fn(),
+        setClipboard: vi.fn(),
+        getFilesystem: () => null,
+        uploadFile: async () => {},
+        zoomIn,
+        zoomOut,
+        resetZoom,
+      } satisfies GuacamoleDisplayHandle,
+    } as React.RefObject<GuacamoleDisplayHandle>;
+    const { getByLabelText, getByText } = render(
+      <GuacamoleToolbar displayRef={displayRef} protocol="vnc" zoom={1.25} />,
+    );
+
+    fireEvent.click(getByLabelText("guacamole.toolbar.zoomOut"));
+    fireEvent.click(getByLabelText("guacamole.toolbar.zoomIn"));
+    fireEvent.click(getByText("125%"));
+    expect(zoomOut).toHaveBeenCalledOnce();
+    expect(zoomIn).toHaveBeenCalledOnce();
+    expect(resetZoom).toHaveBeenCalledOnce();
+  });
+
+  it("offers an explicit session-only hide action", () => {
+    const onHide = vi.fn();
+    const displayRef = {
+      current: {
+        disconnect: vi.fn(),
+        isConnected: () => true,
+        sendKey: vi.fn(),
+        sendMouse: vi.fn(),
+        setClipboard: vi.fn(),
+        getFilesystem: () => null,
+        uploadFile: vi.fn(),
+        zoomIn: vi.fn(() => 1.25),
+        zoomOut: vi.fn(() => 0.75),
+        resetZoom: vi.fn(() => 1),
+      } satisfies GuacamoleDisplayHandle,
+    } as React.RefObject<GuacamoleDisplayHandle>;
+
+    const { getByLabelText } = render(
+      <GuacamoleToolbar
+        displayRef={displayRef}
+        protocol="rdp"
+        onHide={onHide}
+      />,
+    );
+
+    fireEvent.click(getByLabelText("guacamole.toolbar.hide"));
+    expect(onHide).toHaveBeenCalledOnce();
   });
 });

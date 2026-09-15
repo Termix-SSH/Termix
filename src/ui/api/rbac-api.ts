@@ -110,6 +110,24 @@ export async function removeRoleFromUser(
   }
 }
 
+export interface RoleMember {
+  userId: string;
+  username: string;
+  grantedAt: string;
+  grantedBy: string | null;
+}
+
+export async function getRoleMembers(
+  roleId: number,
+): Promise<{ members: RoleMember[] }> {
+  try {
+    const response = await rbacApi.get(`/rbac/roles/${roleId}/members`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get role members");
+  }
+}
+
 export type SharePermissionLevel = "connect" | "view" | "edit" | "manage";
 
 export interface ShareTarget {
@@ -170,6 +188,42 @@ export async function shareFolder(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "share folder");
+  }
+}
+
+export interface FolderAccessRule {
+  id: number;
+  folder: string;
+  targetType: "user" | "role";
+  userId: string | null;
+  roleId: number | null;
+  username: string | null;
+  roleName: string | null;
+  roleDisplayName: string | null;
+  permissionLevel: SharePermissionLevel;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+/** Standing shares on a folder - what hosts added to it later inherit. */
+export async function getFolderAccess(
+  folder: string,
+): Promise<{ rules: FolderAccessRule[] }> {
+  try {
+    const response = await rbacApi.get("/rbac/folder/access", {
+      params: { folder },
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get folder access");
+  }
+}
+
+export async function revokeFolderAccess(ruleId: number): Promise<void> {
+  try {
+    await rbacApi.delete(`/rbac/folder/access/${ruleId}`);
+  } catch (error) {
+    throw handleApiError(error, "revoke folder access");
   }
 }
 
@@ -266,10 +320,14 @@ export async function revokeHostAccess(
 export async function getHostAuthOverride(
   hostId: number,
   protocol: AuthOverrideProtocol,
+  remoteShared = false,
 ): Promise<{ protocol: AuthOverrideProtocol; credentialId: number | null }> {
   try {
-    const response = await rbacApi.get(
-      `/rbac/host-access/${hostId}/auth/${protocol}`,
+    const api = remoteShared ? await getConnectedRemoteApi() : rbacApi;
+    if (!api) throw new Error("Remote server is not connected");
+    const targetHostId = remoteShared ? Math.abs(hostId) : hostId;
+    const response = await api.get(
+      `/rbac/host-access/${targetHostId}/auth/${protocol}`,
     );
     return response.data;
   } catch (error) {
@@ -281,14 +339,18 @@ export async function setHostAuthOverride(
   hostId: number,
   protocol: AuthOverrideProtocol,
   credentialId: number | null,
+  remoteShared = false,
 ): Promise<{
   success: boolean;
   protocol: AuthOverrideProtocol;
   credentialId: number | null;
 }> {
   try {
-    const response = await rbacApi.put(
-      `/rbac/host-access/${hostId}/auth/${protocol}`,
+    const api = remoteShared ? await getConnectedRemoteApi() : rbacApi;
+    if (!api) throw new Error("Remote server is not connected");
+    const targetHostId = remoteShared ? Math.abs(hostId) : hostId;
+    const response = await api.put(
+      `/rbac/host-access/${targetHostId}/auth/${protocol}`,
       { credentialId },
     );
     return response.data;
@@ -318,6 +380,66 @@ export async function shareSnippet(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "share snippet");
+  }
+}
+
+export async function shareSnippetFolder(
+  folder: string,
+  targets: ShareTarget[],
+  durationHours?: number,
+): Promise<{ success: boolean; snippetsShared: number }> {
+  try {
+    const response = await rbacApi.post("/rbac/snippet-folder/share", {
+      folder,
+      targets,
+      durationHours,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share snippet folder");
+  }
+}
+
+export type CredentialPermissionLevel = "use" | "manage";
+
+export async function shareCredential(
+  credentialId: number,
+  targets: ShareTarget[],
+  permissionLevel: CredentialPermissionLevel,
+  durationHours?: number,
+): Promise<{ success: boolean; expiresAt: string | null }> {
+  try {
+    const response = await rbacApi.post(
+      `/rbac/credential/${credentialId}/share`,
+      { targets, permissionLevel, durationHours },
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share credential");
+  }
+}
+
+export async function getCredentialAccess(
+  credentialId: number,
+): Promise<{ access: AccessRecord[] }> {
+  try {
+    const response = await rbacApi.get(
+      `/rbac/credential/${credentialId}/access`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "get credential access");
+  }
+}
+
+export async function revokeCredentialAccess(
+  credentialId: number,
+  accessId: number,
+): Promise<void> {
+  try {
+    await rbacApi.delete(`/rbac/credential/${credentialId}/access/${accessId}`);
+  } catch (error) {
+    throw handleApiError(error, "revoke credential access");
   }
 }
 

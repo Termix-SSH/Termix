@@ -140,6 +140,7 @@ async function persistGuacamoleRecording(
 }
 
 const websocketOptions = {
+  host: "127.0.0.1",
   port: GUAC_WS_PORT,
 };
 

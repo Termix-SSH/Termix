@@ -7,15 +7,26 @@ import {
 import type { AxiosInstance } from "axios";
 import type { GuacamoleConfig } from "@/types/guacamole-config";
 import { resolveRemoteHostId } from "@/lib/remote-server-api";
+import type { ConnectionOrigin } from "@/lib/connection-origin";
 
 /**
- * The embedded desktop backend does not bundle guacd, which is why
- * resolveConnectionOrigin() pins RDP/VNC/Telnet to "remote". These calls have to
- * follow: asking the embedded backend reports the guacd *it* cannot reach,
- * rather than the one on the connected server that serves the session.
+ * Picks the backend that will actually serve this session, so the token and
+ * status come from the same place as the connection.
+ *
+ * Outside Electron there is only one backend. Inside it, a host left on
+ * Default still resolves to the connected server -- asking the embedded
+ * backend would report the guacd *it* can reach rather than the one serving
+ * the session. A host explicitly set to "This Device" (Support#1240) is
+ * served by the embedded backend against the user's own guacd, so its calls
+ * have to go there instead.
+ *
+ * Callers pass the origin explicitly rather than defaulting it: a default
+ * silently sent a missed call site to the remote server, which fails with a
+ * bare network error on a desktop that has none configured.
  */
-function guacamoleApi(): AxiosInstance {
-  return isElectron() ? getRemoteGuacamoleApi() : authApi;
+function guacamoleApi(origin: ConnectionOrigin): AxiosInstance {
+  if (!isElectron()) return authApi;
+  return origin === "local" ? authApi : getRemoteGuacamoleApi();
 }
 
 export interface GuacamoleTokenRequest {
@@ -157,11 +168,12 @@ function toGuacamoleParams(
 
 export async function getGuacamoleToken(
   request: GuacamoleTokenRequest,
+  origin: ConnectionOrigin,
 ): Promise<GuacamoleTokenResponse> {
   try {
     const guacParams = toGuacamoleParams(request.guacamoleConfig);
 
-    const response = await guacamoleApi().post("/guacamole/token", {
+    const response = await guacamoleApi(origin).post("/guacamole/token", {
       type: request.protocol,
       hostname: request.hostname,
       port: request.port,
@@ -180,6 +192,7 @@ export async function getGuacamoleToken(
 
 export async function getGuacamoleTokenFromHost(
   hostId: number,
+  origin: ConnectionOrigin,
   protocol?: "rdp" | "vnc" | "telnet",
   promptedCredentials?: {
     username?: string;
@@ -189,14 +202,17 @@ export async function getGuacamoleTokenFromHost(
   syncId?: string | null,
 ): Promise<GuacamoleTokenResponse> {
   try {
-    const remoteHostId = isElectron()
-      ? await resolveRemoteHostId(syncId)
-      : null;
-    if (isElectron() && syncId && remoteHostId === null) {
+    // A locally-originated session is served by the embedded backend, which
+    // knows the host by its local id -- remapping it onto the remote
+    // server's id would address the wrong row, or fail outright when no
+    // server is configured at all.
+    const useRemote = isElectron() && origin === "remote";
+    const remoteHostId = useRemote ? await resolveRemoteHostId(syncId) : null;
+    if (useRemote && syncId && remoteHostId === null) {
       throw new Error("The synced host does not exist on the remote server");
     }
     const targetHostId = remoteHostId ?? hostId;
-    const response = await guacamoleApi().post(
+    const response = await guacamoleApi(origin).post(
       `/guacamole/connect-host/${targetHostId}`,
       {
         ...(protocol ? { protocol } : {}),
@@ -217,9 +233,9 @@ export async function getGuacamoleTokenFromHost(
   }
 }
 
-export async function getGuacdStatus(): Promise<{
+export async function getGuacdStatus(origin: ConnectionOrigin): Promise<{
   guacd: { status: string };
 }> {
-  const response = await guacamoleApi().get("/guacamole/status");
+  const response = await guacamoleApi(origin).get("/guacamole/status");
   return response.data;
 }

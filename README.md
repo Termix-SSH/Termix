@@ -331,6 +331,11 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+      GUACD_HOST: "guacd"
+      GUACD_TUNNEL_HOST: "termix"
+      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
+      # guacd, not the Termix container, reads and writes redirected-drive files.
+      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
     depends_on:
       - guacd
     networks:
@@ -340,8 +345,10 @@ services:
     image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
-    ports:
-      - "4822:4822"
+    volumes:
+      # The official guacd image runs as a non-root user. Keep the drive path
+      # in this writable shared volume instead of bind-mounting /drive.
+      - termix-data:/termix-data
     networks:
       - termix-net
 
@@ -353,6 +360,15 @@ networks:
   termix-net:
     driver: bridge
 ```
+
+For multiple Termix backend instances, set the same `REDIS_URL` and optional
+`TERMIX_REDIS_PREFIX` on every instance. Redis synchronizes collaboration room
+presence, control requests, controller state, and events. It also routes Step CA
+OAuth callbacks back to the instance holding the user's terminal; the optional
+`TERMIX_STEP_CA_REDIS_PREFIX` isolates those short-lived encrypted messages.
+Keep WebSocket session affinity enabled because live SSH and remote desktop
+transports remain attached to the backend instance that opened them. A single
+instance needs no Redis.
 
 ### Command Line Interface
 
@@ -428,10 +444,6 @@ Interested in a paid placement to support development? Email [mail@termix.site](
 &nbsp;&nbsp;&nbsp;
 <a href="https://ginernet.com/">
   <img src="https://ginernet.com/img/logo-web.png" height="40" alt="Ginernet" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.hetzner.com/?mtm_campaign=termix&mtm_medium=referral&mtm_content=sponsoring_link">
-  <img src="https://www.plesk.com/wp-content/uploads/2016/08/hetzner-logo-clear-space.png" height="40" alt="Hetzner" />
 </a>
 </div>
 

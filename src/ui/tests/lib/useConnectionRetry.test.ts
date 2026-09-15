@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { computeReconnectDelay } from "../../lib/useConnectionRetry.ts";
+import { renderHook, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import {
+  computeReconnectDelay,
+  useConnectionRetry,
+} from "../../lib/useConnectionRetry.ts";
 
 describe("connection retry delay", () => {
   it("uses exponential backoff with bounded jitter", () => {
@@ -10,5 +14,17 @@ describe("connection retry delay", () => {
 
   it("never exceeds the configured cap", () => {
     expect(computeReconnectDelay(8, 2000, 8000, () => 1)).toBe(8000);
+  });
+});
+
+describe("useConnectionRetry", () => {
+  it("turns a rejected async connection into a failed state", async () => {
+    const connect = vi.fn().mockRejectedValue(new Error("offline"));
+    const { result } = renderHook(() =>
+      useConnectionRetry({ connect, enabled: false }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(connect).toHaveBeenCalledOnce();
   });
 });

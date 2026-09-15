@@ -27,6 +27,7 @@ import {
   Plug,
   ScrollText,
   Sparkles,
+  Presentation,
   Workflow,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
@@ -39,6 +40,10 @@ import type {
 import type { GuacamoleAppHandle } from "@/features/guacamole/GuacamoleApp";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Tab, TabType, Host } from "@/types/ui-types";
+import {
+  isQuickConnectHost,
+  quickConnectGuacHost,
+} from "@/sidebar/quick-connect-host";
 import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 import {
@@ -57,6 +62,11 @@ const loadTerminalFeature = () =>
     default: m.Terminal,
   }));
 const TerminalFeature = lazy(loadTerminalFeature);
+const CollabRoomTab = lazy(() =>
+  import("@/features/collab/CollabRoomTab").then((m) => ({
+    default: m.CollabRoomTab,
+  })),
+);
 const LocalTerminal = lazy(() =>
   import("@/features/local-terminal/LocalTerminal").then((m) => ({
     default: m.LocalTerminal,
@@ -212,6 +222,7 @@ function hostToSSHHost(h: Host): SSHHost {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
+    enableTerminalToolbar: h.enableTerminalToolbar ?? true,
     dockerConfig: h.dockerConfig ?? null,
     showTerminalInSidebar: true,
     showFileManagerInSidebar: true,
@@ -222,6 +233,7 @@ function hostToSSHHost(h: Host): SSHHost {
     tunnelConnections: [],
     connectionType: "ssh",
     connectionOrigin: h.connectionOrigin ?? null,
+    isShared: h.isShared ?? false,
     // Carries the host's identity to a delegated backend. Without it the
     // remote side resolves our local row id against its own table.
     syncId: h.syncId ?? null,
@@ -318,6 +330,8 @@ export function tabIcon(type: TabType) {
       return <LayoutGrid className="size-3.5" />;
     case "fleet-inventory":
       return <Boxes className="size-3.5" />;
+    case "collab":
+      return <Presentation className="size-3.5" />;
     case "termix-id":
       return <Fingerprint className="size-3.5" />;
     case "alerts":
@@ -578,6 +592,9 @@ export function renderTabContent(
           tabId={tab.id}
           protocol={tab.type as "rdp" | "vnc" | "telnet"}
           isVisible={isVisible}
+          quickConnectHost={
+            isQuickConnectHost(host) ? quickConnectGuacHost(host) : undefined
+          }
         />,
       );
 
@@ -613,6 +630,11 @@ export function renderTabContent(
     case "fleet-inventory":
       return withTabSuspense(
         <FleetInventoryTab fleetId={tab.fleetId} isVisible={isVisible} />,
+      );
+
+    case "collab":
+      return withTabSuspense(
+        <CollabRoomTab roomId={tab.collabRoomId} isVisible={isVisible} />,
       );
 
     case "termix-id":

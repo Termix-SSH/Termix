@@ -68,7 +68,13 @@ export interface LDAPProviderConfig {
 
 export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
 export type SSHAuthType =
-  "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "stepca"
+  | "tailscale";
 
 export type GuacamoleAuthType = "password" | "credential";
 
@@ -105,7 +111,7 @@ export interface HostFeatureFlags {
   enableFileManager: boolean; // SSH only
   enableDocker: boolean; // SSH only
   enableTmuxMonitor: boolean; // SSH only
-  enableTerminalToolbar: boolean; // SSH only
+  enableTerminalToolbar: boolean; // SSH, RDP, VNC, and Telnet
   enableRemoteDesktop: boolean; // RDP, VNC only
 }
 
@@ -133,6 +139,7 @@ export type Host = {
     | "credential"
     | "none"
     | "opkssh"
+    | "stepca"
     | "tailscale"
     | "agent"
     | "vault";
@@ -298,6 +305,7 @@ export interface HostData {
     | "credential"
     | "none"
     | "opkssh"
+    | "stepca"
     | "tailscale"
     | "agent"
     | "vault";
@@ -482,6 +490,7 @@ export interface TunnelConnection {
   tunnelType?: "local" | "remote";
   bindHost?: string;
   sourceHostId?: number;
+  sourceHostSyncId?: string;
   sourceHostName?: string;
   sourcePort: number;
   endpointPort: number;
@@ -508,6 +517,7 @@ export interface TunnelConfig {
   targetHost?: string;
 
   sourceHostId: number;
+  sourceHostSyncId?: string;
   tunnelIndex: number;
 
   requestingUserId?: string;
@@ -830,7 +840,13 @@ export type ErrorType =
 // ============================================================================
 
 export type AuthType =
-  "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "stepca"
+  | "tailscale";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 
