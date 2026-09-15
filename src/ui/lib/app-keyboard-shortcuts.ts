@@ -6,6 +6,13 @@ export function isShiftKey(event: Pick<KeyboardEvent, "key" | "code">) {
   );
 }
 
+export function getAltDigitShortcut(
+  event: Pick<KeyboardEvent, "key" | "code">,
+) {
+  const match = /^Digit([1-9])$/.exec(event.code);
+  return match && event.key === match[1] ? Number(match[1]) : null;
+}
+
 export function dispatchCtrlW(target: EventTarget | null) {
   if (!target) return false;
 
