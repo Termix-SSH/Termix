@@ -17,6 +17,7 @@ import terminalRoutes from "./routes/terminal.js";
 import sessionLogRoutes from "./routes/session-log-routes.js";
 import guacamoleRoutes from "../hosts/guacamole/routes.js";
 import sessionSharingRoutes from "../hosts/session-sharing/routes.js";
+import collabRoutes from "../hosts/collab/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
@@ -29,6 +30,7 @@ import termixIdRoutes from "./routes/termix-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
+import secretSourceRoutes from "./routes/secret-sources.js";
 import alertRulesRoutes from "./routes/alert-rules-routes.js";
 import aiRoutes from "../ai/index.js";
 import automationsRoutes from "./routes/automations.js";
@@ -73,7 +75,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.set("trust proxy", true);
+app.set("trust proxy", "loopback");
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -259,9 +261,8 @@ async function fetchGitHubAPI<T>(
   }
 }
 
-app.use(bodyParser.json({ limit: "1gb" }));
-app.use(bodyParser.urlencoded({ limit: "1gb", extended: true }));
-app.use(bodyParser.raw({ limit: "5gb", type: "application/octet-stream" }));
+app.use(bodyParser.json({ limit: "2mb" }));
+app.use(bodyParser.urlencoded({ limit: "2mb", extended: true }));
 app.use(cookieParser());
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
@@ -1753,6 +1754,7 @@ app.use("/terminal", terminalRoutes);
 app.use("/session_logs", sessionLogRoutes);
 app.use("/guacamole", guacamoleRoutes);
 app.use("/session-sharing", sessionSharingRoutes);
+app.use("/collab", collabRoutes);
 app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
@@ -1765,6 +1767,7 @@ app.use("/termix-id", termixIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
 app.use("/vault", vaultRoutes);
+app.use("/secret-sources", secretSourceRoutes);
 // Before the alert routes, which are mounted at the root and would otherwise
 // have first claim on the path.
 app.use("/automations", automationsRoutes);
@@ -2035,7 +2038,7 @@ httpServer.on("error", (err: NodeJS.ErrnoException) => {
 });
 
 export const serverReady = new Promise<void>((resolve) => {
-  httpServer.listen(HTTP_PORT, async () => {
+  httpServer.listen(HTTP_PORT, "127.0.0.1", async () => {
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
@@ -2084,7 +2087,7 @@ if (
       });
     });
 
-    httpsServer.listen(sslConfig.port, () => {
+    httpsServer.listen(sslConfig.port, "127.0.0.1", () => {
       databaseLogger.success(
         `Backend is now also listening for HTTPS directly`,
         {

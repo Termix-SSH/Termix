@@ -37,7 +37,20 @@ function writeJson(filePath, value) {
   if (!fs.existsSync(userDataPath)) {
     fs.mkdirSync(userDataPath, { recursive: true });
   }
-  fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
+  const temporaryPath = `${filePath}.${process.pid}-${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, JSON.stringify(value, null, 2), {
+      mode: 0o600,
+    });
+    fs.renameSync(temporaryPath, filePath);
+  } catch (error) {
+    try {
+      fs.unlinkSync(temporaryPath);
+    } catch {
+      // already absent
+    }
+    throw error;
+  }
 }
 
 function getDesktopSettingsPath() {
@@ -191,6 +204,7 @@ class RemoteSyncEngine {
     this.getMainWindow = getMainWindow;
     this.localJwt = null;
     this.timer = null;
+    this.startupTimer = null;
     this.syncing = false;
     this.status = {
       connected: false,
@@ -220,11 +234,15 @@ class RemoteSyncEngine {
     const config = getRemoteSyncConfig();
     this.status.connected = !!config?.serverUrl;
     if (this.timer) clearInterval(this.timer);
+    if (this.startupTimer) clearTimeout(this.startupTimer);
     this.timer = setInterval(() => this.syncNow(), SYNC_INTERVAL_MS);
     if (config?.serverUrl) {
       // Fire an initial sync shortly after startup rather than waiting a
       // full interval, but don't block app boot on it.
-      setTimeout(() => this.syncNow(), 5000);
+      this.startupTimer = setTimeout(() => {
+        this.startupTimer = null;
+        this.syncNow();
+      }, 5000);
     }
   }
 
@@ -232,6 +250,10 @@ class RemoteSyncEngine {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
+    }
+    if (this.startupTimer) {
+      clearTimeout(this.startupTimer);
+      this.startupTimer = null;
     }
   }
 

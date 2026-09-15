@@ -61,6 +61,63 @@ export async function getSessionTimeout(): Promise<{ timeoutHours: number }> {
   }
 }
 
+// How long a detached terminal session is kept alive server-side.
+export async function getTerminalSessionSettings(): Promise<{
+  timeoutMinutes: number;
+  enabled: boolean;
+}> {
+  try {
+    const response = await authApi.get("/terminal/session_settings");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch terminal session settings");
+  }
+}
+
+export async function updateTerminalSessionSettings(input: {
+  timeoutMinutes?: number;
+  enabled?: boolean;
+}): Promise<void> {
+  try {
+    await authApi.patch("/terminal/session_settings", input);
+  } catch (error) {
+    handleApiError(error, "update terminal session settings");
+  }
+}
+
+export interface StepCaSettings {
+  configured: boolean;
+  caUrl: string;
+  fingerprint: string;
+  provisioner: string;
+}
+
+export async function getStepCaSettings(): Promise<StepCaSettings> {
+  try {
+    const response = await authApi.get("/users/step-ca-settings");
+    return {
+      configured: !!response.data.configured,
+      caUrl: response.data.caUrl ?? "",
+      fingerprint: response.data.fingerprint ?? "",
+      provisioner: response.data.provisioner ?? "",
+    };
+  } catch (error) {
+    handleApiError(error, "fetch Step CA settings");
+  }
+}
+
+export async function updateStepCaSettings(input: {
+  caUrl: string;
+  fingerprint: string;
+  provisioner: string;
+}): Promise<void> {
+  try {
+    await authApi.patch("/users/step-ca-settings", input);
+  } catch (error) {
+    handleApiError(error, "update Step CA settings");
+  }
+}
+
 export async function updateSessionTimeout(
   timeoutHours: number,
 ): Promise<void> {
@@ -269,6 +326,44 @@ export async function testTerminalImageStorage(
 }
 
 // ============================================================================
+// WHITE LABEL BRANDING
+// ============================================================================
+
+export interface BrandingSettings {
+  appName: string;
+  tagline: string;
+  /** PNG data URL, or null when no custom logo is configured. */
+  logo: string | null;
+}
+
+export interface BrandingSettingsUpdate {
+  appName?: string;
+  tagline?: string;
+  logo?: string | null;
+}
+
+/** Public endpoint -- no auth required, so the login screen can read it. */
+export async function getBranding(): Promise<BrandingSettings> {
+  try {
+    const response = await authApi.get("/users/branding");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch branding settings");
+  }
+}
+
+export async function updateBranding(
+  update: BrandingSettingsUpdate,
+): Promise<BrandingSettings> {
+  try {
+    const response = await authApi.patch("/users/branding", update);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update branding settings");
+  }
+}
+
+// ============================================================================
 // HOST DEFAULTS SETTINGS
 // ============================================================================
 
@@ -288,6 +383,7 @@ export type HostDefaults = {
   cursorBlink?: boolean;
   enableSessionLogging?: boolean;
   enableCommandHistory?: boolean;
+  autoTmux?: boolean;
 };
 
 export async function getHostDefaults(): Promise<HostDefaults> {

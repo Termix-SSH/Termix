@@ -347,10 +347,20 @@ export function C2STunnelPresetManager(): React.ReactElement {
       getSSHHosts(),
     ]);
     setHosts(nextHosts);
+    const hostsById = new Map(nextHosts.map((host) => [host.id, host]));
     const normalizedConfig = Array.isArray(config)
       ? (config as TunnelConnection[])
           .filter((tunnel) => tunnel.scope === "c2s")
-          .map(normalizeClientTunnel)
+          .map((tunnel) => {
+            const sourceHost = tunnel.sourceHostId
+              ? hostsById.get(tunnel.sourceHostId)
+              : undefined;
+            return normalizeClientTunnel({
+              ...tunnel,
+              sourceHostSyncId:
+                tunnel.sourceHostSyncId || sourceHost?.syncId || undefined,
+            });
+          })
       : [];
     setLocalConfig(normalizedConfig);
     setSavedLocalConfig(normalizedConfig);
@@ -473,6 +483,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
     if (!host) return;
     updateTunnel(index, {
       sourceHostId: host.id,
+      sourceHostSyncId: host.syncId || undefined,
       sourceHostName: host.name,
       endpointHost: host.name,
       endpointPort: 22,

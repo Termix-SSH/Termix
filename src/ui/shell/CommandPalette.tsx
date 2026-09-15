@@ -140,6 +140,7 @@ export function CommandPalette({
     [],
   );
   const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [selectedValue, setSelectedValue] = useState("");
   const { runSnippet, dialog: runSnippetDialog } = useSnippetRunner();
 
   useEffect(() => {
@@ -207,6 +208,20 @@ export function CommandPalette({
       })
     : [];
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const firstHost = filteredHosts[0];
+    if (search.trim() && firstHost) {
+      setSelectedValue(`host-${firstHost.id}`);
+      return;
+    }
+    setSelectedValue(
+      window.electronAPI?.isElectron
+        ? "quick-action-local-terminal"
+        : "quick-action-add-host",
+    );
+  }, [filteredHosts, isOpen, search]);
+
   const activeTargetTab =
     terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0];
 
@@ -234,7 +249,13 @@ export function CommandPalette({
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <Command className="rounded-none" shouldFilter={false} loop>
+        <Command
+          className="rounded-none"
+          shouldFilter={false}
+          loop
+          value={selectedValue}
+          onValueChange={setSelectedValue}
+        >
           <div className="flex items-center border-b border-border px-4 py-1">
             <Search className="size-4 text-muted-foreground mr-3" />
             <CommandPrimitive.Input

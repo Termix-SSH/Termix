@@ -1,4 +1,8 @@
 import { useRef, useState } from "react";
+import {
+  SecretReferenceHint,
+  SecretSourceManager,
+} from "./SecretSourceManager";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Copy, Info, Lock, Upload, X } from "lucide-react";
@@ -42,6 +46,7 @@ export function CredentialEditorView({
   // shows a "Save as New" action that clones it and reassigns the host.
   saveAsNewHost?: Host | "new";
 }) {
+  const [showSecretSources, setShowSecretSources] = useState(false);
   const [credForm, setCredForm] = useState(() => ({
     name: credential?.name ?? "",
     username: credential?.username ?? "",
@@ -291,7 +296,15 @@ export function CredentialEditorView({
                 value={credForm.password}
                 onChange={(e) => setCredField("password", e.target.value)}
               />
+              <SecretReferenceHint
+                onManage={() => setShowSecretSources((v) => !v)}
+              />
             </div>
+            {showSecretSources && (
+              <SecretSourceManager
+                onClose={() => setShowSecretSources(false)}
+              />
+            )}
             <div className="flex flex-col gap-4">
               <div className="p-3 border border-border bg-muted/20">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">

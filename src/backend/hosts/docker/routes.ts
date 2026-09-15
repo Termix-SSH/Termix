@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import express from "express";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
@@ -300,7 +301,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
         if (resolvedCredentials.password) {
           config.password = resolvedCredentials.password;
         }
-      } else if (resolvedCredentials.authType === "opkssh") {
+      } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
         try {
           const { getOPKSSHToken } = await import("../opkssh-auth.js");
           const token = await getOPKSSHToken(userId, hostId);

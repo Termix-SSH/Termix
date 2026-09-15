@@ -63,6 +63,8 @@ function generateSSHKeyPair(
 export function registerCredentialKeyRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireCredentialViewPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -94,6 +96,8 @@ export function registerCredentialKeyRoutes(
   router.post(
     "/detect-key-type",
     authenticateJWT,
+    requireCredentialViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const { privateKey, keyPassword } = req.body;
 
@@ -150,6 +154,8 @@ export function registerCredentialKeyRoutes(
   router.post(
     "/detect-public-key-type",
     authenticateJWT,
+    requireCredentialViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const { publicKey } = req.body;
 
@@ -209,6 +215,8 @@ export function registerCredentialKeyRoutes(
   router.post(
     "/validate-key-pair",
     authenticateJWT,
+    requireCredentialViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const { privateKey, publicKey, keyPassword } = req.body;
 
@@ -274,6 +282,8 @@ export function registerCredentialKeyRoutes(
   router.post(
     "/generate-key-pair",
     authenticateJWT,
+    requireCredentialViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const { keyType = "ssh-ed25519", keySize = 2048, passphrase } = req.body;
 
@@ -339,6 +349,8 @@ export function registerCredentialKeyRoutes(
   router.post(
     "/generate-public-key",
     authenticateJWT,
+    requireCredentialViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const { privateKey, keyPassword } = req.body;
 

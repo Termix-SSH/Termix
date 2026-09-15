@@ -76,10 +76,15 @@ export function execWithSudoBuffer(
   session: SSHSession,
   command: string,
   sudoPassword: string,
-): Promise<{ stdout: Buffer; stderr: string; code: number }> {
+  maxStdoutBytes?: number,
+): Promise<{
+  stdout: Buffer;
+  stderr: string;
+  code: number;
+  exceededLimit?: boolean;
+}> {
   return new Promise((resolve) => {
-    const escapedPassword = sudoPassword.replace(/'/g, "'\"'\"'");
-    const sudoCommand = `echo '${escapedPassword}' | sudo -S ${command} 2>&1`;
+    const sudoCommand = `sudo -S -p '' ${command} 2>&1`;
 
     execChannel(session, sudoCommand, (err, stream) => {
       if (err) {
@@ -88,9 +93,33 @@ export function execWithSudoBuffer(
       }
 
       const stdoutChunks: Buffer[] = [];
+      let stdoutBytes = 0;
       let stderr = "";
+      let settled = false;
+
+      const finish = (
+        code: number,
+        extra: { exceededLimit?: boolean } = {},
+      ) => {
+        if (settled) return;
+        settled = true;
+        resolve({
+          stdout: Buffer.concat(stdoutChunks),
+          stderr,
+          code,
+          ...extra,
+        });
+      };
 
       stream.on("data", (chunk: Buffer) => {
+        if (settled) return;
+        stdoutBytes += chunk.length;
+        if (maxStdoutBytes !== undefined && stdoutBytes > maxStdoutBytes) {
+          stderr = `Command output exceeds ${maxStdoutBytes} bytes`;
+          finish(1, { exceededLimit: true });
+          stream.close();
+          return;
+        }
         stdoutChunks.push(chunk);
       });
 
@@ -99,6 +128,7 @@ export function execWithSudoBuffer(
       });
 
       stream.on("close", (code: number) => {
+        if (settled) return;
         let stdout = Buffer.concat(stdoutChunks);
         const sudoPromptMatch = stdout
           .toString("utf8", 0, Math.min(stdout.length, 256))
@@ -106,15 +136,74 @@ export function execWithSudoBuffer(
         if (sudoPromptMatch) {
           stdout = stdout.subarray(Buffer.byteLength(sudoPromptMatch[0]));
         }
+        settled = true;
         resolve({ stdout, stderr, code: code || 0 });
       });
 
       stream.on("error", (streamErr: Error) => {
+        stderr = streamErr.message;
+        finish(1);
+      });
+
+      stream.write(`${sudoPassword}\n`);
+    });
+  });
+}
+
+export function execBuffer(
+  session: SSHSession,
+  command: string,
+  maxStdoutBytes?: number,
+): Promise<{
+  stdout: Buffer;
+  stderr: string;
+  code: number;
+  exceededLimit?: boolean;
+}> {
+  return new Promise((resolve) => {
+    execChannel(session, command, (err, stream) => {
+      if (err) {
+        resolve({ stdout: Buffer.alloc(0), stderr: err.message, code: 1 });
+        return;
+      }
+
+      const stdoutChunks: Buffer[] = [];
+      let stdoutBytes = 0;
+      let stderr = "";
+      let settled = false;
+
+      const finish = (
+        code: number,
+        extra: { exceededLimit?: boolean } = {},
+      ) => {
+        if (settled) return;
+        settled = true;
         resolve({
           stdout: Buffer.concat(stdoutChunks),
-          stderr: streamErr.message,
-          code: 1,
+          stderr,
+          code,
+          ...extra,
         });
+      };
+
+      stream.on("data", (chunk: Buffer) => {
+        if (settled) return;
+        stdoutBytes += chunk.length;
+        if (maxStdoutBytes !== undefined && stdoutBytes > maxStdoutBytes) {
+          stderr = `Command output exceeds ${maxStdoutBytes} bytes`;
+          finish(1, { exceededLimit: true });
+          stream.close();
+          return;
+        }
+        stdoutChunks.push(chunk);
+      });
+      stream.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+      stream.on("close", (code: number) => finish(code || 0));
+      stream.on("error", (streamErr: Error) => {
+        stderr = stderr || streamErr.message;
+        finish(1);
       });
     });
   });

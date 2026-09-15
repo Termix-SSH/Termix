@@ -130,7 +130,54 @@ export function registerUserTotpRoutes(
       }
 
       if (userRecord.totpEnabled) {
-        return res.status(400).json({ error: "TOTP is already enabled" });
+        const credential = req.body?.credential;
+        if (!credential) {
+          return res.status(400).json({
+            error: "A TOTP code or password is required",
+          });
+        }
+
+        const userDataKey = authManager.getUserDataKey(userId);
+        let verified = await verifyTotpReauth(
+          userRecord,
+          credential,
+          userDataKey,
+        );
+        if (!verified && !userRecord.isOidc && userRecord.passwordHash) {
+          verified = await bcrypt.compare(credential, userRecord.passwordHash);
+        }
+        if (!verified) {
+          return res.status(401).json({
+            error: "Incorrect password or invalid TOTP code",
+          });
+        }
+
+        const existingSecret = userDataKey
+          ? LazyFieldEncryption.safeGetFieldValue(
+              userRecord.totpSecret,
+              userDataKey,
+              userId,
+              "totpSecret",
+            )
+          : userRecord.totpSecret;
+        if (!existingSecret) {
+          return res.status(409).json({ error: "TOTP secret is unavailable" });
+        }
+
+        const otpauthUrl = speakeasy.otpauthURL({
+          secret: existingSecret,
+          label: `Termix (${userRecord.username})`,
+          encoding: "base32",
+        });
+        authLogger.info("Additional TOTP authenticator enrollment started", {
+          operation: "totp_add_authenticator",
+          userId,
+        });
+        return res.json({
+          secret: existingSecret,
+          qr_code: await QRCode.toDataURL(otpauthUrl),
+          additional: true,
+        });
       }
 
       const secret = speakeasy.generateSecret({

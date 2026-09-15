@@ -14,6 +14,34 @@ export function isOptionalBoolean(
   return value === undefined || typeof value === "boolean";
 }
 
+export function applyHostKeyTypeUpdate(
+  target: Record<string, unknown>,
+  keyType: unknown,
+): void {
+  if (keyType !== undefined) {
+    target.keyType = keyType || null;
+  }
+}
+
+const PROTOCOL_ENABLE_FIELDS = [
+  "enableSsh",
+  "enableRdp",
+  "enableVnc",
+  "enableTelnet",
+] as const;
+
+export function normalizeProtocolEnableFields(
+  values: Record<string, unknown>,
+): Partial<Record<(typeof PROTOCOL_ENABLE_FIELDS)[number], 0 | 1>> {
+  return Object.fromEntries(
+    PROTOCOL_ENABLE_FIELDS.flatMap((field) =>
+      typeof values[field] === "boolean"
+        ? [[field, values[field] ? 1 : 0]]
+        : [],
+    ),
+  );
+}
+
 export const OWNER_PRIVATE_AUTH_FIELDS = {
   ssh: [
     "authType",
@@ -346,6 +374,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableTelnet",
   "sshPort",
   "rdpPort",
+  "rdpAuthType",
   "vncPort",
   "telnetPort",
   "defaultPath",

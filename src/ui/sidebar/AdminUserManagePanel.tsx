@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getUserList } from "@/main-axios";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -118,6 +119,23 @@ export function AdminUserManagePanel({
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ManageTabId>("account");
+  // Who inherits the hosts and credentials when this account goes:
+  // the deleting admin by default, another user, or nobody.
+  const [successor, setSuccessor] = useState<"me" | "none" | string>("me");
+  const [successorOptions, setSuccessorOptions] = useState<
+    Array<{ id: string; username: string }>
+  >([]);
+  useEffect(() => {
+    getUserList()
+      .then((r) =>
+        setSuccessorOptions(
+          r.users
+            .filter((u) => u.userId !== user.id)
+            .map((u) => ({ id: u.userId, username: u.username })),
+        ),
+      )
+      .catch(() => {});
+  }, [user.id]);
   const [editor, setEditor] = useState<EditorState>(null);
   const [editorTab, setEditorTab] = useState("general");
   const [editorProtocols, setEditorProtocols] = useState({
@@ -332,7 +350,8 @@ export function AdminUserManagePanel({
   async function handleDeleteUser() {
     setDeleteLoading(true);
     try {
-      await deleteUser(user.username);
+      if (successor === "me") await deleteUser(user.username);
+      else await deleteUser(user.username, successor);
       toast.success(t("admin.deleteUserSuccess", { username: user.username }));
       onUserDeleted();
     } catch (e) {
@@ -1209,6 +1228,25 @@ export function AdminUserManagePanel({
                     username: user.username,
                   })}
                 </span>
+                <label className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+                  {t("admin.deleteSuccessorLabel")}
+                  <select
+                    value={successor}
+                    onChange={(e) => setSuccessor(e.target.value)}
+                    className="h-7 border border-border bg-background px-2 text-xs text-foreground outline-none"
+                  >
+                    <option value="me">{t("admin.deleteSuccessorMe")}</option>
+                    {successorOptions.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.username}
+                      </option>
+                    ))}
+                    <option value="none">
+                      {t("admin.deleteSuccessorNone")}
+                    </option>
+                  </select>
+                  <span>{t("admin.deleteSuccessorDesc")}</span>
+                </label>
                 <Button
                   variant="outline"
                   size="sm"

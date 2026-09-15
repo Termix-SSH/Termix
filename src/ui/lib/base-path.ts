@@ -1,6 +1,10 @@
 export function getBasePath(): string {
-  const runtime = (window as unknown as Record<string, unknown>)
-    .__TERMIX_BASE_PATH__ as string | undefined;
+  const runtime =
+    document
+      .querySelector<HTMLMetaElement>('meta[name="termix-base-path"]')
+      ?.content.trim() ||
+    ((window as unknown as Record<string, unknown>).__TERMIX_BASE_PATH__ as
+      string | undefined);
   if (runtime) {
     return runtime.endsWith("/") ? runtime.slice(0, -1) : runtime;
   }

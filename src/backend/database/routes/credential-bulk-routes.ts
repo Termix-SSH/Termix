@@ -6,6 +6,8 @@ import { createCurrentCredentialRepository } from "../repositories/factory.js";
 export function registerCredentialBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireEditPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -42,6 +44,8 @@ export function registerCredentialBulkRoutes(
   router.put(
     "/reorder",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { positions } = req.body as {

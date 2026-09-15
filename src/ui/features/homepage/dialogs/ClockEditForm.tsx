@@ -2,12 +2,16 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/input";
 import { Switch } from "@/components/switch";
 import type { ClockConfig, WidgetEditFormProps } from "@/types/homepage-types";
+import { validateClockTimezone } from "../clock-timezone";
 
 export function ClockEditForm({
   config,
   onChange,
 }: WidgetEditFormProps<ClockConfig>) {
   const { t } = useTranslation();
+
+  const invalidTimezone = !validateClockTimezone(config.timezone).valid;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -20,8 +24,16 @@ export function ClockEditForm({
             onChange({ ...config, timezone: e.target.value || undefined })
           }
           placeholder="America/New_York (leave blank for local)"
-          className="h-8 text-sm"
+          aria-invalid={invalidTimezone}
+          className={
+            invalidTimezone ? "h-8 text-sm border-destructive" : "h-8 text-sm"
+          }
         />
+        {invalidTimezone && (
+          <p className="text-[10px] text-destructive">
+            {t("homepage.invalidTimezone")}
+          </p>
+        )}
       </div>
       <div className="flex items-center justify-between">
         <label className="text-xs font-medium text-foreground">
