@@ -129,3 +129,64 @@ export function validateTunnelConfig(
     String(parsed.endpointPort) === String(tunnelConfig.endpointPort)
   );
 }
+
+/**
+ * Tunnel names beginning with this prefix are reserved for web endpoint
+ * tunnels: they are opened on demand and never retried on disconnect (see the
+ * early return in `handleDisconnect`). A user-supplied tunnel name using this
+ * prefix would silently disable its own retry/reconnect behaviour, and could
+ * collide with a live web endpoint forward -- so the prefix is rejected at the
+ * point tunnel names are accepted from a request (the /ssh/tunnel/connect
+ * route).
+ */
+export const RESERVED_TUNNEL_NAME_PREFIX = "web:";
+
+export function isReservedTunnelName(tunnelName: string): boolean {
+  return tunnelName.startsWith(RESERVED_TUNNEL_NAME_PREFIX);
+}
+
+/**
+ * The exact inverse of `parseReservedTunnelName`. Routes that open or close a
+ * web endpoint tunnel must call this rather than composing the string inline,
+ * so the two can never drift apart.
+ */
+export function buildWebEndpointTunnelName(
+  hostId: number,
+  endpointId: string,
+): string {
+  return `${RESERVED_TUNNEL_NAME_PREFIX}${hostId}:${endpointId}`;
+}
+
+/**
+ * Recovers the host id and endpoint id encoded in a web endpoint tunnel name,
+ * so a route that only has the name -- /ssh/tunnel/disconnect is not told
+ * which host a reserved tunnel belongs to -- can still perform an ownership
+ * check.
+ *
+ * Returns null for anything that is not a reserved name, or whose host id
+ * segment is not a positive integer. Callers must treat null as "cannot
+ * verify ownership" and FAIL CLOSED, never fall through to an unchecked path.
+ *
+ * The endpoint id is taken verbatim as everything after the first ":"
+ * following the host id, so it may itself contain colons -- endpoint ids are
+ * client-supplied with no character restriction. Splitting on the first colon
+ * rather than the last is safe because the host id segment is digits only.
+ */
+export function parseReservedTunnelName(
+  tunnelName: string,
+): { hostId: number; endpointId: string } | null {
+  if (!isReservedTunnelName(tunnelName)) return null;
+
+  const rest = tunnelName.slice(RESERVED_TUNNEL_NAME_PREFIX.length);
+  const separatorIndex = rest.indexOf(":");
+  if (separatorIndex === -1) return null;
+
+  const hostIdPart = rest.slice(0, separatorIndex);
+  const endpointId = rest.slice(separatorIndex + 1);
+  if (!/^[0-9]+$/.test(hostIdPart) || !endpointId) return null;
+
+  const hostId = Number(hostIdPart);
+  if (!Number.isInteger(hostId) || hostId < 1) return null;
+
+  return { hostId, endpointId };
+}

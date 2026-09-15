@@ -31,6 +31,7 @@ import {
   Trash2,
   Users,
   Zap,
+  Globe,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -79,6 +80,8 @@ import {
   getPreferredHostAction,
   recordHostActionPreference,
 } from "@/lib/local-adaptive-preferences";
+import type { WebEndpoint } from "@/types/index";
+import { openWebEndpointExternally } from "@/api/web-endpoint-api";
 
 export function statusCheckEnabled(host: Host): boolean {
   return host.statsConfig?.statusCheckEnabled !== false;
@@ -104,12 +107,40 @@ export function buildStatusTooltip(
   return `${protocols.join(", ")}: ${statusLabel}`;
 }
 
-export function getSshActions(
-  host: Host,
-): { type: TabType; icon: typeof Terminal; label: string }[] {
+export function getSshActions(host: Host): {
+  type: TabType;
+  icon: typeof Terminal;
+  label: string;
+  endpointId?: string;
+}[] {
   const metricsEnabled =
     host.enableSsh && host.statsConfig?.metricsEnabled !== false;
-  return [
+
+  // Gated on enableWebUi ALONE -- unlike every entry below, which requires
+  // enableSsh. A "direct" endpoint needs no SSH at all; SSH matters only
+  // per-endpoint, for "tunnel" access, which the open route enforces.
+  //
+  // One entry, not one per endpoint: a host may declare up to 16, and a row of
+  // 16 identical globes is unusable. With a single endpoint the entry acts on
+  // it directly and wears its label; with several it carries no endpointId and
+  // the click surfaces a picker instead.
+  const webEndpoints = host.enableWebUi
+    ? (host.webUiConfig?.endpoints ?? [])
+    : [];
+  const webEndpointActions =
+    webEndpoints.length > 0
+      ? [
+          {
+            type: "web-endpoint" as TabType,
+            icon: Globe,
+            label: webEndpoints.length === 1 ? webEndpoints[0].label : "Web UI",
+            endpointId:
+              webEndpoints.length === 1 ? webEndpoints[0].id : undefined,
+          },
+        ]
+      : [];
+
+  const connectionActions = [
     host.enableSsh &&
       host.enableTerminal && {
         type: "terminal" as TabType,
@@ -157,6 +188,8 @@ export function getSshActions(
     icon: typeof Terminal;
     label: string;
   }[];
+
+  return [...connectionActions, ...webEndpointActions];
 }
 
 export async function writeClipboardText(value: string): Promise<void> {
@@ -244,7 +277,10 @@ export function HostItem({
   onDropChildHosts,
 }: {
   host: Host;
-  onOpenTab: (type: TabType) => void;
+  onOpenTab: (
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost?: () => void;
   onShareHost?: () => void;
   onDelete: () => void;
@@ -457,29 +493,100 @@ export function HostItem({
         : host.enableTelnet
           ? "telnet"
           : "terminal";
-  const openHostTab = (type: TabType) => {
+  const openHostTab = (
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => {
     markTabSurfaceUsed(type);
     recordHostActionPreference(host.id, type);
-    onOpenTab(type);
+    onOpenTab(type, options);
   };
+
+  // Mirrors getSshActions: the single Web UI entry carries an endpointId only
+  // when the host has exactly one endpoint. Without one, the click opens a
+  // picker instead of a tab.
+  const webEndpoints: WebEndpoint[] = host.enableWebUi
+    ? (host.webUiConfig?.endpoints ?? [])
+    : [];
+
+  const openWebEndpoint = (endpoint: WebEndpoint) => {
+    if (endpoint.render === "external") {
+      // No tab at all: hand it to the real browser. On the desktop main's
+      // setWindowOpenHandler routes it to shell.openExternal.
+      openWebEndpointExternally(host, endpoint).catch((error: unknown) => {
+        toast.error(
+          error instanceof Error ? error.message : t("hosts.webUiOpenFailed"),
+        );
+      });
+      return;
+    }
+    openHostTab("web-endpoint", {
+      endpointId: endpoint.id,
+      label: endpoint.label,
+    });
+  };
+
+  const handleWebEndpointAction = (endpointId?: string) => {
+    const endpoint = endpointId
+      ? webEndpoints.find((candidate) => candidate.id === endpointId)
+      : undefined;
+    if (endpoint) openWebEndpoint(endpoint);
+  };
+
+  const isWebEndpointPicker = (action: {
+    type: TabType;
+    endpointId?: string;
+  }) => action.type === "web-endpoint" && !action.endpointId;
 
   const connectionButtons = (
     <>
-      {sshActions.map(({ type, icon: Icon, label }) => (
-        <button
-          key={type}
-          title={label}
-          onPointerEnter={() => preloadTabSurface(type)}
-          onFocus={() => preloadTabSurface(type)}
-          onClick={(e) => {
-            e.stopPropagation();
-            openHostTab(type);
-          }}
-          className={trayButtonClass}
-        >
-          <Icon className="size-3.5" />
-        </button>
-      ))}
+      {sshActions.map(({ type, icon: Icon, label, endpointId }) =>
+        isWebEndpointPicker({ type, endpointId }) ? (
+          <DropdownMenu key={type}>
+            <DropdownMenuTrigger asChild>
+              <button
+                title={label}
+                onClick={(e) => e.stopPropagation()}
+                className={trayButtonClass}
+              >
+                <Icon className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {webEndpoints.map((endpoint) => (
+                <DropdownMenuItem
+                  key={endpoint.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openWebEndpoint(endpoint);
+                  }}
+                >
+                  <Globe className="size-3.5 mr-2" />
+                  {endpoint.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <button
+            key={type}
+            title={label}
+            onPointerEnter={() => preloadTabSurface(type)}
+            onFocus={() => preloadTabSurface(type)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (type === "web-endpoint") {
+                handleWebEndpointAction(endpointId);
+                return;
+              }
+              openHostTab(type);
+            }}
+            className={trayButtonClass}
+          >
+            <Icon className="size-3.5" />
+          </button>
+        ),
+      )}
       {host.enableSsh &&
         (host.enableRdp || host.enableVnc || host.enableTelnet) &&
         sshActions.length > 0 && (
@@ -646,18 +753,45 @@ export function HostItem({
               {t("common.connect")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {sshActions.map(({ type, icon: Icon, label }) => (
-                <DropdownMenuItem
-                  key={type}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openHostTab(type);
-                  }}
-                >
-                  <Icon className="size-3.5 mr-2" />
-                  {label}
-                </DropdownMenuItem>
-              ))}
+              {sshActions.map(({ type, icon: Icon, label, endpointId }) =>
+                isWebEndpointPicker({ type, endpointId }) ? (
+                  <DropdownMenuSub key={type}>
+                    <DropdownMenuSubTrigger>
+                      <Icon className="size-3.5 mr-2" />
+                      {label}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {webEndpoints.map((endpoint) => (
+                        <DropdownMenuItem
+                          key={endpoint.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openWebEndpoint(endpoint);
+                          }}
+                        >
+                          <Globe className="size-3.5 mr-2" />
+                          {endpoint.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ) : (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (type === "web-endpoint") {
+                        handleWebEndpointAction(endpointId);
+                        return;
+                      }
+                      openHostTab(type);
+                    }}
+                  >
+                    <Icon className="size-3.5 mr-2" />
+                    {label}
+                  </DropdownMenuItem>
+                ),
+              )}
               {host.enableRdp && (
                 <DropdownMenuItem
                   onClick={(e) => {

@@ -216,6 +216,29 @@ export { tabIcon, renderTabContent } from "@/shell/tabUtils";
 
 // ─── AppShell ────────────────────────────────────────────────────────────────
 
+/**
+ * Tab types whose open/close is mirrored to the backend's open-tabs record, so
+ * they survive a reload or reopen on another device.
+ *
+ * "web-endpoint" is deliberately ABSENT. The backend closes an idle tunnel
+ * after ten minutes and re-binds a fresh kernel-assigned port on the next
+ * open, so a restored web-endpoint tab could never hold a valid URL -- and the
+ * endpoint may have been edited or deleted meanwhile besides. Restoring one
+ * would mean re-opening the tunnel on restore, which is a feature, not
+ * symmetry. A web-endpoint tab is session-only and simply closes on reload,
+ * the same as "local-terminal" already does.
+ */
+export const PERSISTENT_TAB_TYPES: TabType[] = [
+  "terminal",
+  "rdp",
+  "vnc",
+  "telnet",
+  "files",
+  "docker",
+  "host-metrics",
+  "tunnel",
+];
+
 export function AppShell({
   username,
   onLogout,
@@ -1165,17 +1188,6 @@ export function AppShell({
     return () => window.removeEventListener("termix:open-tab", handle);
   }, [allHosts]);
 
-  const PERSISTENT_TAB_TYPES: TabType[] = [
-    "terminal",
-    "rdp",
-    "vnc",
-    "telnet",
-    "files",
-    "docker",
-    "host-metrics",
-    "tunnel",
-  ];
-
   function buildWorkspacePayload(): WorkspacePayload {
     return buildWorkspacePayloadUtil({
       tabs,
@@ -1579,6 +1591,7 @@ export function AppShell({
       joinShareId?: string | null;
       collabRoomId?: string;
     },
+    options?: { endpointId?: string; label?: string },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
     const instanceId =
@@ -1632,8 +1645,11 @@ export function AppShell({
         (t) =>
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
-      finalLabel =
-        same.length === 0 ? host.name : `${host.name} (${same.length + 1})`;
+      finalLabel = options?.label
+        ? options.label
+        : same.length === 0
+          ? host.name
+          : `${host.name} (${same.length + 1})`;
 
       // Retrofit the first duplicate's label to "(1)" if needed
       const next =
@@ -1660,6 +1676,7 @@ export function AppShell({
           initialPath,
           serialConfig,
           collabRoomId: restore?.collabRoomId,
+          endpointId: options?.endpointId,
         },
       ];
     });
@@ -1678,14 +1695,18 @@ export function AppShell({
     return tabId;
   }, []);
 
-  function connectHost(host: Host, preferredType?: TabType) {
+  function connectHost(
+    host: Host,
+    preferredType?: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) {
     const type = resolveHostTabType(host, preferredType);
     // --- tmux-monitor --- singleton tab, not a per-host tab
     if (type === "tmux_monitor") {
       openSingletonTab(type, undefined, host);
       return;
     }
-    openTab(host, type);
+    openTab(host, type, undefined, options);
   }
 
   const saveQuickConnectHost = useCallback(
@@ -2397,8 +2418,8 @@ export function AppShell({
               className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
             >
               <HostsPanel
-                onOpenTab={(host, type) => {
-                  connectHost(host, type);
+                onOpenTab={(host, type, options) => {
+                  connectHost(host, type, options);
                   if (isMobile) setSidebarOpen(false);
                 }}
                 onEditHost={editHostInManager}

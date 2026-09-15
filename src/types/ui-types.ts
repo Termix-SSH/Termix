@@ -1,5 +1,5 @@
 import type { GuacamoleConfig } from "./guacamole-config.js";
-import type { TerminalConfig } from "./index.js";
+import type { TerminalConfig, WebUiConfig } from "./index.js";
 import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
@@ -105,6 +105,8 @@ export type Host = {
   dockerConfig?: {
     runtime?: "docker" | "podman";
   } | null;
+  enableWebUi?: boolean;
+  webUiConfig?: WebUiConfig | null;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
@@ -257,6 +259,7 @@ export type TabType =
   | "admin-settings"
   | "docker"
   | "tunnel"
+  | "web-endpoint"
   | "network_graph"
   | "tmux_monitor" // --- tmux-monitor ---
   | "serial"
@@ -300,6 +303,8 @@ export type Tab = {
   initialPath?: string;
   /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
   fleetId?: number;
+  /** Which web endpoint this tab shows. Only set when type is "web-endpoint". */
+  endpointId?: string;
   /** Which collab room a collab tab is showing. */
   collabRoomId?: string;
   serialConfig?: SerialConfig;

@@ -15,6 +15,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "save-remote-sync-config",
   "save-remote-sync-jwt",
   "test-server-connection",
+  "allow-invalid-certificate-for-origin",
 ]);
 
 function invokeAllowed(channel, ...args) {

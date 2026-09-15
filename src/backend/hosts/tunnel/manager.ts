@@ -39,6 +39,7 @@ import {
   getTunnelMarker,
   getTunnelMode,
   getTunnelScope,
+  isReservedTunnelName,
   normalizeTunnelName,
 } from "./utils.js";
 
@@ -423,7 +424,36 @@ export async function handleDisconnect(
   tunnelName: string,
   tunnelConfig: TunnelConfig | null,
   shouldRetry = true,
+  closingClient?: Client,
 ): Promise<void> {
+  if (isReservedTunnelName(tunnelName)) {
+    // Web endpoint tunnels are reopened on demand by the tab that needs them,
+    // never resurrected in the background -- so they skip the retry machinery
+    // entirely. (maxRetries: 0 would NOT achieve this: the retry path reads
+    // `maxRetries || 3`, so 0 falls through to 3.)
+    //
+    // `sourceClient.end()` -- called from a runtime's own close() -- only
+    // STARTS an async teardown; the SSH client's "close" event, and therefore
+    // this call, land later. By then a fresh open (a staleness reopen, or an
+    // idle close followed by a new open) may already have registered a NEW
+    // runtime under the same name. `closingClient` is the connection this
+    // particular deferred disconnect is about: if the runtime currently
+    // registered under this name belongs to a different client, a reopen has
+    // already replaced it and there is nothing here to clean up. Touching it
+    // would tear down the new tunnel instead of the stale one -- which
+    // surfaces as a 200 with a good port followed by a silent connection
+    // reset and no error anywhere.
+    const current = activeTunnelRuntimes.get(tunnelName);
+    if (closingClient && current && current.sourceClient !== closingClient) {
+      return;
+    }
+    // Forced: cleanupTunnelResources no-ops while tunnelConnecting holds the
+    // name, and a web tunnel has no retry pass to self-heal a runtime left
+    // behind (connectSSHTunnel force-cleans at the top of every retry).
+    await cleanupTunnelResources(tunnelName, true);
+    return;
+  }
+
   if (tunnelVerifications.has(tunnelName)) {
     try {
       const verification = tunnelVerifications.get(tunnelName);
@@ -757,11 +787,14 @@ export async function establishDirectTunnel(
       .catch(() => socket.destroy());
   });
 
-  await new Promise<void>((resolve, reject) => {
+  const boundPort = await new Promise<number>((resolve, reject) => {
     tcpServer.once("error", reject);
     tcpServer.listen({ host: bindHost, port: sourcePort }, () => {
       tcpServer.removeListener("error", reject);
-      resolve();
+      // Under sourcePort 0 the kernel picks the port, so the REQUESTED value
+      // is not what we are listening on. Recording sourcePort here would make
+      // the runtime advertise port 0 and any caller reusing it fail.
+      resolve((tcpServer.address() as { port: number }).port);
     });
   });
 
@@ -770,12 +803,17 @@ export async function establishDirectTunnel(
     tunnelName,
     mode,
     bindHost,
-    sourcePort,
+    sourcePort: boundPort,
     targetHost,
     targetPort,
   });
 
+  let idleTimer: NodeJS.Timeout | undefined;
+  // Null means "in use". Set to a timestamp when the socket set empties.
+  let idleSince: number | null = null;
+
   const close = () => {
+    if (idleTimer) clearInterval(idleTimer);
     for (const s of sockets) s.destroy();
     sockets.clear();
     tcpServer.close();
@@ -786,6 +824,53 @@ export async function establishDirectTunnel(
     }
   };
 
+  // Web endpoint tunnels are opened on demand and must not outlive their use.
+  // The socket set is only visible from inside this closure, so the timer
+  // lives here rather than in an outside sweeper.
+  if (tunnelConfig.idleTimeoutMs && tunnelConfig.idleTimeoutMs > 0) {
+    const idleTimeoutMs = tunnelConfig.idleTimeoutMs;
+    idleSince = Date.now();
+    idleTimer = setInterval(
+      () => {
+        if (sockets.size > 0) {
+          // Still in use; the clock restarts when the last socket goes.
+          idleSince = null;
+          return;
+        }
+        if (idleSince === null) {
+          idleSince = Date.now();
+          return;
+        }
+        if (Date.now() - idleSince < idleTimeoutMs) return;
+
+        // This timer belongs to THIS closure, but cleanupTunnelResources acts
+        // by NAME. If a reopen has already registered a replacement under the
+        // same name, cleaning up here would tear down the successor rather
+        // than this idle tunnel.
+        if (
+          activeTunnelRuntimes.get(tunnelName)?.sourceClient !== sourceClient
+        ) {
+          return;
+        }
+
+        tunnelLogger.info("Closing idle tunnel", {
+          operation: "tunnel_idle_close",
+          tunnelName,
+          bindPort: boundPort,
+        });
+        // NOT close(): that tears down the listener but leaves the entry in
+        // activeTunnelRuntimes, so a caller would keep being handed a port
+        // whose listener is gone. cleanupTunnelResources calls close() and
+        // then deletes the entry.
+        void cleanupTunnelResources(tunnelName, true);
+        // Poll well under the timeout so "empty for N" means roughly that,
+        // rather than "empty at the instant of a single N-spaced tick".
+      },
+      Math.min(30_000, idleTimeoutMs),
+    );
+    idleTimer.unref();
+  }
+
   sourceClient.on("close", () => {
     close();
   });
@@ -794,7 +879,7 @@ export async function establishDirectTunnel(
     sourceClient,
     tcpServer,
     bindHost,
-    bindPort: sourcePort,
+    bindPort: boundPort,
     close,
   });
   activeTunnels.set(tunnelName, sourceClient);
@@ -1184,6 +1269,7 @@ export async function connectSSHTunnel(
           tunnelName,
           tunnelConfig,
           !manualDisconnects.has(tunnelName),
+          conn,
         );
       }
     }
@@ -1230,7 +1316,7 @@ export async function connectSSHTunnel(
       errorType === "CONNECTION_FAILED" ||
       manualDisconnects.has(tunnelName);
 
-    handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry);
+    handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry, conn);
   });
 
   conn.on("close", () => {
@@ -1256,6 +1342,7 @@ export async function connectSSHTunnel(
           tunnelName,
           tunnelConfig,
           !manualDisconnects.has(tunnelName),
+          conn,
         );
       }
     }
@@ -1350,7 +1437,7 @@ export async function connectSSHTunnel(
       const shouldNotRetry =
         errorType === "AUTHENTICATION_FAILED" ||
         errorType === "CONNECTION_FAILED";
-      handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry);
+      handleDisconnect(tunnelName, tunnelConfig, !shouldNotRetry, conn);
     }
   });
 

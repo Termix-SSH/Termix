@@ -189,7 +189,11 @@ export function HostsPanel({
   onEditingChange,
   active = true,
 }: {
-  onOpenTab: (host: Host, type: TabType) => void;
+  onOpenTab: (
+    host: Host,
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
   loading?: boolean;
