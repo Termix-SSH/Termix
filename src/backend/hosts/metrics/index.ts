@@ -35,6 +35,7 @@ import { collectNetworkMetrics } from "./widgets/network-collector.js";
 import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
+import { detectPlatform } from "./widgets/common-utils.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
@@ -1760,17 +1761,19 @@ async function collectMetrics(
 
       const collectFn = async (client: Client) => {
         onAuthenticated?.();
-        const cpu = await collectCpuMetrics(client);
-        const memory = await collectMemoryMetrics(client);
+        const platform = await detectPlatform(client);
+        const cpu = await collectCpuMetrics(client, platform);
+        const memory = await collectMemoryMetrics(client, platform);
         const disk = await collectDiskMetrics(
           client,
           excludedMounts,
           monitoredMounts,
+          platform,
         );
-        const network = await collectNetworkMetrics(client);
-        const uptime = await collectUptimeMetrics(client);
+        const network = await collectNetworkMetrics(client, platform);
+        const uptime = await collectUptimeMetrics(client, platform);
         const processes = await collectProcessesMetrics(client);
-        const system = await collectSystemMetrics(client);
+        const system = await collectSystemMetrics(client, platform);
 
         let login_stats = {
           recentLogins: [],
