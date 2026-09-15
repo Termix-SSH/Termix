@@ -32,6 +32,7 @@ const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { resolveLocalShell } = require("./local-shell.cjs");
+const { registerLocalFileHandlers } = require("./local-files.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -3272,6 +3273,10 @@ async function testServerConnection(
 }
 
 ipcMain.handle("test-server-connection", testServerConnection);
+
+// Local disk browsing + streamed local<->remote transfers for the file
+// manager's dual-pane mode (see electron/local-files.cjs).
+registerLocalFileHandlers({ ipcMain, shell });
 
 function createMenu() {
   if (process.platform === "darwin") {

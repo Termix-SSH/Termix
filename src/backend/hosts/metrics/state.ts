@@ -176,6 +176,10 @@ class AuthFailureTracker {
     return null;
   }
 
+  resetHostKeyFailure(hostId: number): void {
+    if (this.failures.get(hostId)?.reason === "HOST_KEY") this.reset(hostId);
+  }
+
   reset(hostId: number): void {
     this.failures.delete(hostId);
   }
