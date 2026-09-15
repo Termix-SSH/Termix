@@ -31,6 +31,7 @@ export type Host = {
     | "credential"
     | "none"
     | "opkssh"
+    | "stepca"
     | "tailscale"
     | "vault"
     | "agent";
@@ -207,6 +208,10 @@ export type Credential = {
   pin?: boolean;
   sortOrder?: number | null;
   certPublicKey?: string;
+  /** Set when someone else owns this credential and shared it with you. */
+  isShared?: boolean;
+  ownerUsername?: string | null;
+  permissionLevel?: "use" | "manage";
 };
 
 // HashiCorp Vault SSH signer profile — shareable connection settings only
@@ -270,6 +275,7 @@ export type TabType =
   | "ssh-tools"
   | "automations"
   | "ai"
+  | "collab"
   | "split-screen";
 
 export type SerialConfig = {
@@ -297,6 +303,8 @@ export type Tab = {
   initialPath?: string;
   /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
   fleetId?: number;
+  /** Which collab room a collab tab is showing. */
+  collabRoomId?: string;
   serialConfig?: SerialConfig;
   /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
   splitConfig?: SplitTabConfig;
@@ -343,6 +351,7 @@ export type AdminSection =
   | "roles"
   | "host-defaults"
   | "image-storage"
+  | "branding"
   | "database"
   | "api-keys"
   | "audit-log"
@@ -360,6 +369,12 @@ export type ThemeId =
   | "one-dark"
   | "gruvbox";
 export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
+export type UiFontId =
+  | "jetbrains-mono"
+  | "system-sans"
+  | "fira-code"
+  | "source-code-pro"
+  | "caskaydia-cove";
 
 export type ToolsTab =
   "ssh-tools" | "snippets" | "macros" | "history" | "split-screen";

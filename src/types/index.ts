@@ -68,7 +68,13 @@ export interface LDAPProviderConfig {
 
 export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
 export type SSHAuthType =
-  "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "stepca"
+  | "tailscale";
 
 export type GuacamoleAuthType = "password" | "credential";
 
@@ -105,7 +111,7 @@ export interface HostFeatureFlags {
   enableFileManager: boolean; // SSH only
   enableDocker: boolean; // SSH only
   enableTmuxMonitor: boolean; // SSH only
-  enableTerminalToolbar: boolean; // SSH only
+  enableTerminalToolbar: boolean; // SSH, RDP, VNC, and Telnet
   enableRemoteDesktop: boolean; // RDP, VNC only
 }
 
@@ -120,7 +126,6 @@ export interface QuickAction {
 
 export type Host = {
   id: number;
-  syncId?: string | null;
   name: string;
   ip: string;
   port: number;
@@ -134,6 +139,7 @@ export type Host = {
     | "credential"
     | "none"
     | "opkssh"
+    | "stepca"
     | "tailscale"
     | "agent"
     | "vault";
@@ -299,6 +305,7 @@ export interface HostData {
     | "credential"
     | "none"
     | "opkssh"
+    | "stepca"
     | "tailscale"
     | "agent"
     | "vault";
@@ -837,7 +844,13 @@ export type ErrorType =
 // ============================================================================
 
 export type AuthType =
-  "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "stepca"
+  | "tailscale";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 

@@ -32,6 +32,17 @@ type GeneralSettingsSectionProps = {
   onToggleAiGloballyEnabled: () => void;
   aiPrivateEndpoints: string[];
   onSaveAiPrivateEndpoints: (hosts: string[]) => void;
+  notificationPrivateEndpoints: string[];
+  onSaveNotificationPrivateEndpoints: (hosts: string[]) => void;
+  stepCaPrivateEndpoints: string[];
+  onSaveStepCaPrivateEndpoints: (hosts: string[]) => void;
+  secretSourcePrivateEndpoints: string[];
+  onSaveSecretSourcePrivateEndpoints: (hosts: string[]) => void;
+  stepCaSettings: { caUrl: string; fingerprint: string; provisioner: string };
+  setStepCaSettings: Dispatch<
+    SetStateAction<{ caUrl: string; fingerprint: string; provisioner: string }>
+  >;
+  handleSaveStepCaSettings: () => void;
   handleToggleSessionSharingGloballyEnabled: () => void;
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
@@ -49,6 +60,9 @@ type GeneralSettingsSectionProps = {
   sessionTimeout: string;
   setSessionTimeout: Dispatch<SetStateAction<string>>;
   handleSaveSessionTimeout: () => void;
+  terminalTimeout: string;
+  setTerminalTimeout: Dispatch<SetStateAction<string>>;
+  handleSaveTerminalTimeout: () => void;
   statusInterval: string;
   setStatusInterval: Dispatch<SetStateAction<string>>;
   metricsInterval: string;
@@ -81,6 +95,15 @@ export function AdminGeneralSettingsSection({
   onToggleAiGloballyEnabled,
   aiPrivateEndpoints,
   onSaveAiPrivateEndpoints,
+  notificationPrivateEndpoints,
+  onSaveNotificationPrivateEndpoints,
+  stepCaPrivateEndpoints,
+  onSaveStepCaPrivateEndpoints,
+  secretSourcePrivateEndpoints,
+  onSaveSecretSourcePrivateEndpoints,
+  stepCaSettings,
+  setStepCaSettings,
+  handleSaveStepCaSettings,
   handleToggleSessionSharingGloballyEnabled,
   allowRegistration,
   handleToggleRegistration,
@@ -98,6 +121,9 @@ export function AdminGeneralSettingsSection({
   sessionTimeout,
   setSessionTimeout,
   handleSaveSessionTimeout,
+  terminalTimeout,
+  setTerminalTimeout,
+  handleSaveTerminalTimeout,
   statusInterval,
   setStatusInterval,
   metricsInterval,
@@ -185,6 +211,116 @@ export function AdminGeneralSettingsSection({
             />
           </div>
         )}
+        <div className="flex flex-col gap-1.5 py-2">
+          <span className="text-xs font-medium">
+            {t("admin.notificationPrivateEndpoints")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.notificationPrivateEndpointsDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            defaultValue={notificationPrivateEndpoints.join(", ")}
+            placeholder="ntfy.internal, 192.168.1.20"
+            onBlur={(event) =>
+              onSaveNotificationPrivateEndpoints(
+                event.target.value
+                  .split(",")
+                  .map((entry) => entry.trim())
+                  .filter(Boolean),
+              )
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-1.5 py-2">
+          <span className="text-xs font-medium">
+            {t("admin.stepCaPrivateEndpoints")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.stepCaPrivateEndpointsDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            defaultValue={stepCaPrivateEndpoints.join(", ")}
+            placeholder="ca.internal, sso.internal"
+            onBlur={(event) =>
+              onSaveStepCaPrivateEndpoints(
+                event.target.value
+                  .split(",")
+                  .map((entry) => entry.trim())
+                  .filter(Boolean),
+              )
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5 py-2">
+          <span className="text-xs font-medium">
+            {t("admin.secretSourcePrivateEndpoints")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.secretSourcePrivateEndpointsDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            defaultValue={secretSourcePrivateEndpoints.join(", ")}
+            placeholder="connect.internal, 10.0.0.5"
+            onBlur={(event) =>
+              onSaveSecretSourcePrivateEndpoints(
+                event.target.value
+                  .split(",")
+                  .map((entry) => entry.trim())
+                  .filter(Boolean),
+              )
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("admin.stepCa")}
+          </span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t("admin.stepCaDesc")}
+          </span>
+          <Input
+            className="rounded-none"
+            placeholder="https://ca.internal:9000"
+            value={stepCaSettings.caUrl}
+            onChange={(e) =>
+              setStepCaSettings((p) => ({ ...p, caUrl: e.target.value }))
+            }
+          />
+          <Input
+            className="rounded-none font-mono text-xs"
+            placeholder={t("admin.stepCaFingerprint")}
+            value={stepCaSettings.fingerprint}
+            onChange={(e) =>
+              setStepCaSettings((p) => ({ ...p, fingerprint: e.target.value }))
+            }
+          />
+          <div className="flex items-center gap-2">
+            <Input
+              className="rounded-none"
+              placeholder={t("admin.stepCaProvisioner")}
+              value={stepCaSettings.provisioner}
+              onChange={(e) =>
+                setStepCaSettings((p) => ({
+                  ...p,
+                  provisioner: e.target.value,
+                }))
+              }
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+              onClick={handleSaveStepCaSettings}
+            >
+              {t("common.save")}
+            </Button>
+          </div>
+        </div>
         <SettingRow
           label={t("admin.allowRegistration")}
           description={t("admin.allowRegistrationDesc")}
@@ -272,6 +408,36 @@ export function AdminGeneralSettingsSection({
           </div>
           <span className="text-[10px] text-muted-foreground">
             {t("admin.sessionTimeoutRange")}
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-2 pt-3 mt-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("admin.terminalSessionTimeout")}
+          </span>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={1440}
+              value={terminalTimeout}
+              onChange={(e) => setTerminalTimeout(e.target.value)}
+              className="w-20 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">
+              {t("admin.minutes")}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+              onClick={handleSaveTerminalTimeout}
+            >
+              {t("common.save")}
+            </Button>
+          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {t("admin.terminalSessionTimeoutDesc")}
           </span>
         </div>
 
@@ -1072,6 +1238,17 @@ export function AdminHostDefaultsSection({
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("admin.hostDefaultsTerminal")}
           </span>
+          <SettingRow
+            label={t("admin.hostDefaultsAutoTmux")}
+            description={t("admin.hostDefaultsAutoTmuxDesc")}
+          >
+            <AdminToggle
+              on={defaults.autoTmux ?? false}
+              onToggle={() =>
+                setDefaults((p) => ({ ...p, autoTmux: !(p.autoTmux ?? false) }))
+              }
+            />
+          </SettingRow>
           <SettingRow
             label={t("admin.hostDefaultsSessionLogging")}
             description={t("admin.hostDefaultsSessionLoggingDesc")}

@@ -392,7 +392,7 @@ function LocalPane({
   onEntryContextMenu,
 }: {
   pane: LocalPaneState;
-  setPane: (updater: (pane: LocalPaneState) => LocalPaneState) => void;
+  setPane: (updater: React.SetStateAction<LocalPaneState>) => void;
   loadPath: (path: string) => Promise<void>;
   selectedPaths: Set<string>;
   setSelectedPaths: (paths: Set<string>) => void;
@@ -648,8 +648,7 @@ function RemotePane({
       onDragOver={(event) => {
         if (!acceptsDrop) return;
         event.preventDefault();
-        event.dataTransfer.dropEffect =
-          dragPayload?.kind === "remote" ? "copyMove" : "copy";
+        event.dataTransfer.dropEffect = "copy";
       }}
       onDrop={(event) => {
         if (!acceptsDrop) return;
@@ -813,7 +812,7 @@ export function SftpTransferTab() {
     useState<PermissionsTarget | null>(null);
 
   const setLocalPane = useCallback(
-    (updater: (pane: LocalPaneState) => LocalPaneState) =>
+    (updater: React.SetStateAction<LocalPaneState>) =>
       setLocalPaneState(updater),
     [],
   );
@@ -842,7 +841,7 @@ export function SftpTransferTab() {
       setLocalPane((current) => ({ ...current, loading: true, error: null }));
       try {
         const result = await electronApi.listLocalDirectory(nextPath);
-        if (!result.success) {
+        if (result.success === false) {
           setLocalPane((current) => ({
             ...current,
             path: result.path || nextPath,
@@ -972,8 +971,6 @@ export function SftpTransferTab() {
           .map((entry) => ({
             ...entry,
             type: entry.type,
-            created: entry.created,
-            createdTimestamp: entry.createdTimestamp,
             modified: entry.modified,
             modifiedTimestamp: entry.modifiedTimestamp,
             path: joinRemotePath(refreshed.path || pane.path, entry.name),
@@ -1126,8 +1123,6 @@ export function SftpTransferTab() {
             entries: refreshed.files.map((entry) => ({
               ...entry,
               type: entry.type,
-              created: entry.created,
-              createdTimestamp: entry.createdTimestamp,
               modified: entry.modified,
               modifiedTimestamp: entry.modifiedTimestamp,
               path: joinRemotePath(refreshed.path, entry.name),
@@ -1323,7 +1318,7 @@ export function SftpTransferTab() {
           file.name,
           data,
         );
-        if (!result.success) {
+        if (result.success === false) {
           throw new Error(result.error || `Failed to write ${file.name}`);
         }
         completedBytes += file.size || 0;
@@ -1414,8 +1409,11 @@ export function SftpTransferTab() {
             localPane.path,
             value,
           );
-          if (!result?.success) {
-            throw new Error(result?.error || "Failed to create folder");
+          if (!result || result.success === false) {
+            throw new Error(
+              (result && "error" in result ? result.error : undefined) ||
+                "Failed to create folder",
+            );
           }
           await loadLocalPath(localPane.path);
         } else {
@@ -1431,8 +1429,11 @@ export function SftpTransferTab() {
             nameDialog.entry.path,
             value,
           );
-          if (!result?.success) {
-            throw new Error(result?.error || "Failed to rename item");
+          if (!result || result.success === false) {
+            throw new Error(
+              (result && "error" in result ? result.error : undefined) ||
+                "Failed to rename item",
+            );
           }
           await loadLocalPath(localPane.path);
         } else {
@@ -1465,7 +1466,7 @@ export function SftpTransferTab() {
         }
         for (const entry of entries) {
           const result = await window.electronAPI.trashLocalPath(entry.path);
-          if (!result.success) {
+          if (result.success === false) {
             throw new Error(result.error || `Failed to delete ${entry.name}`);
           }
         }
@@ -1501,8 +1502,11 @@ export function SftpTransferTab() {
         entry.path,
         permissions,
       );
-      if (!result?.success) {
-        throw new Error(result?.error || "Failed to update permissions");
+      if (!result || result.success === false) {
+        throw new Error(
+          (result && "error" in result ? result.error : undefined) ||
+            "Failed to update permissions",
+        );
       }
       await loadLocalPath(localPane.path);
       toast.success("Permissions updated");

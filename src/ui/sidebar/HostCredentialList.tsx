@@ -42,6 +42,7 @@ function CredentialItem({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const isKey = cred.type === "key";
   const visibleHosts = usedByHosts.slice(0, 2);
   const remainingHosts = Math.max(0, usedByHosts.length - visibleHosts.length);

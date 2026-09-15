@@ -14,6 +14,7 @@ import {
 } from "./ssh-primitives.js";
 import { sendC2SMessage, writeC2SRemoteChunk } from "./c2s-relay-utils.js";
 import { getTunnelMode } from "./utils.js";
+import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 
 export type C2SOpenMessage = {
   type: "open" | "test";
@@ -33,27 +34,32 @@ function normalizeAddress(
   return address || fallback;
 }
 
+export async function resolveC2SSourceHostId(
+  tunnelConfig: Partial<TunnelConfig>,
+  findHostIdBySyncId: (syncId: string) => Promise<number | null>,
+): Promise<number> {
+  const sourceHostSyncId = tunnelConfig.sourceHostSyncId?.trim();
+  if (sourceHostSyncId) {
+    const remoteHostId = await findHostIdBySyncId(sourceHostSyncId);
+    if (!remoteHostId) {
+      throw new Error("Endpoint SSH host was not found on the remote server");
+    }
+    return remoteHostId;
+  }
+
+  if (!tunnelConfig.sourceHostId) {
+    throw new Error("Endpoint SSH host is required");
+  }
+  return tunnelConfig.sourceHostId;
+}
+
 async function resolveC2STunnelSource(
   tunnelConfig: Partial<TunnelConfig>,
   userId: string,
 ): Promise<TunnelConfig> {
-  if (!tunnelConfig.sourceHostId) {
-    throw new Error("Endpoint SSH host is required");
-  }
-
-  let sourceHostId = tunnelConfig.sourceHostId;
-  if (tunnelConfig.sourceHostSyncId) {
-    const { createCurrentHostResolutionRepository } =
-      await import("../../database/repositories/factory.js");
-    const syncedHostId =
-      await createCurrentHostResolutionRepository().findHostIdBySyncIdForUser(
-        tunnelConfig.sourceHostSyncId,
-        userId,
-      );
-    if (syncedHostId) {
-      sourceHostId = syncedHostId;
-    }
-  }
+  const sourceHostId = await resolveC2SSourceHostId(tunnelConfig, (syncId) =>
+    createCurrentHostResolutionRepository().findHostIdBySyncId(syncId),
+  );
 
   const accessInfo = await permissionManager.canAccessHost(
     userId,
@@ -80,7 +86,7 @@ async function resolveC2STunnelSource(
   );
 
   return {
-    name: tunnelConfig.name || `c2s:${tunnelConfig.sourceHostId}`,
+    name: tunnelConfig.name || `c2s:${sourceHostId}`,
     scope: "c2s",
     mode: tunnelConfig.mode || "local",
     tunnelType:

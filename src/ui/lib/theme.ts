@@ -1,6 +1,7 @@
 import type {
   DashboardCardConfig,
   FontSizeId,
+  UiFontId,
   SplitMode,
 } from "@/types/ui-types";
 
@@ -87,6 +88,40 @@ export function applyFontSize(id: FontSizeId) {
   root.classList.remove("fs-xs", "fs-sm", "fs-md", "fs-lg", "fs-xl");
   root.classList.add(`fs-${id}`);
   localStorage.setItem("termix-font-size", id);
+}
+
+export const UI_FONTS: { id: UiFontId; label: string; family: string }[] = [
+  {
+    id: "jetbrains-mono",
+    label: "JetBrains Mono",
+    family: '"JetBrains Mono Variable", monospace',
+  },
+  {
+    id: "system-sans",
+    label: "System Sans",
+    family: "ui-sans-serif, system-ui, sans-serif",
+  },
+  {
+    id: "fira-code",
+    label: "Fira Code",
+    family: '"Fira Code", monospace',
+  },
+  {
+    id: "source-code-pro",
+    label: "Source Code Pro",
+    family: '"Source Code Pro", monospace',
+  },
+  {
+    id: "caskaydia-cove",
+    label: "Caskaydia Cove",
+    family: '"Caskaydia Cove Nerd Font Mono", monospace',
+  },
+];
+
+export function applyUiFont(id: UiFontId) {
+  const font = UI_FONTS.find((candidate) => candidate.id === id) ?? UI_FONTS[0];
+  document.documentElement.style.setProperty("--font-ui", font.family);
+  localStorage.setItem("termix-ui-font", font.id);
 }
 
 export const FOLDER_COLORS = [

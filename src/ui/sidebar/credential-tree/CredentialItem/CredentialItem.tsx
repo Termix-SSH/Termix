@@ -7,6 +7,7 @@ import {
   Pencil,
   Pin,
   Trash2,
+  Share2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -71,6 +72,7 @@ export function CredentialItem({
   onEdit,
   onClone,
   onDelete,
+  onShare,
 }: {
   cred: Credential;
   usedByCount?: number;
@@ -104,6 +106,7 @@ export function CredentialItem({
   onEdit: () => void;
   onClone: () => void;
   onDelete: () => void;
+  onShare?: () => void;
 }) {
   const { t } = useTranslation();
   const reorderEdge = isReorderHovered ? reorderHoverEdge : null;
@@ -158,38 +161,61 @@ export function CredentialItem({
     </>
   ) : null;
 
+  // A recipient sees only what their grant allows: "manage" may edit and
+  // re-share, "use" may only use. Cloning and deleting stay with the owner.
+  const canEdit = !cred.isShared || cred.permissionLevel === "manage";
+  const canShare =
+    !!onShare && (!cred.isShared || cred.permissionLevel === "manage");
   const managementButtons = (
     <>
-      <button
-        title={t("credentials.editCredentialAction")}
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
-        className={trayButtonClass}
-      >
-        <Pencil className="size-3.5" />
-      </button>
-      <button
-        title={t("credentials.cloneCredentialAction")}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClone();
-        }}
-        className={trayButtonClass}
-      >
-        <CopyPlus className="size-3.5" />
-      </button>
-      <button
-        title={t("credentials.deleteCredentialAction")}
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className={`${trayButtonClass} hover:text-destructive`}
-      >
-        <Trash2 className="size-3.5" />
-      </button>
+      {canEdit && (
+        <button
+          title={t("credentials.editCredentialAction")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className={trayButtonClass}
+        >
+          <Pencil className="size-3.5" />
+        </button>
+      )}
+      {canShare && (
+        <button
+          title={t("credentials.shareCredentialAction")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onShare?.();
+          }}
+          className={trayButtonClass}
+        >
+          <Share2 className="size-3.5" />
+        </button>
+      )}
+      {!cred.isShared && (
+        <>
+          <button
+            title={t("credentials.cloneCredentialAction")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClone();
+            }}
+            className={trayButtonClass}
+          >
+            <CopyPlus className="size-3.5" />
+          </button>
+          <button
+            title={t("credentials.deleteCredentialAction")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className={`${trayButtonClass} hover:text-destructive`}
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </>
+      )}
     </>
   );
 
@@ -200,10 +226,10 @@ export function CredentialItem({
   const trayCollapsed = `max-h-0 opacity-0 ${isCompact ? "" : "-mt-1"}`;
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
-      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[60px] opacity-100" : trayCollapsed}`
+      ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[60px] opacity-100" : trayCollapsed}`
       : shouldUseClickTray
-        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[60px] opacity-100" : trayCollapsed}`
-        : `overflow-hidden transition-all duration-150 ease-out ${trayCollapsed} group-hover:max-h-[60px] group-hover:opacity-100 ${isCompact ? "" : "group-hover:mt-0"} ${isMenuOpen ? `!max-h-[60px] !opacity-100 ${isCompact ? "" : "!mt-0"}` : ""}`;
+        ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState ? "max-h-[60px] opacity-100" : trayCollapsed}`
+        : `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayCollapsed} group-hover:max-h-[60px] group-hover:opacity-100 ${isCompact ? "" : "group-hover:mt-0"} ${isMenuOpen ? `!max-h-[60px] !opacity-100 ${isCompact ? "" : "!mt-0"}` : ""}`;
 
   return (
     <div
@@ -265,6 +291,17 @@ export function CredentialItem({
             className={`${tokens.nameTextSize} font-semibold truncate text-foreground leading-none tracking-tight`}
           >
             {cred.name}
+            {cred.isShared && (
+              <span
+                className="ml-1 inline-flex items-center gap-0.5 text-[9px] uppercase text-accent-brand/80"
+                title={t("credentials.sharedBy", {
+                  owner: cred.ownerUsername ?? "",
+                })}
+              >
+                <Share2 className="size-2.5" />
+                {t("credentials.sharedBadge")}
+              </span>
+            )}
           </span>
           <span
             className={`text-[9px] px-1 py-px font-bold border leading-none shrink-0 ${isKey ? "border-accent-brand/30 text-accent-brand" : "border-border/60 text-muted-foreground/60"}`}

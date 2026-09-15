@@ -105,9 +105,22 @@ export function parseSSHConfig(content: string): SSHConfigHost[] {
   return results;
 }
 
+export function importedHostUsername(
+  connectionType: string,
+  authType: unknown,
+  username: unknown,
+): string | null {
+  if (isNonEmptyString(username)) return username;
+  if (connectionType !== "ssh" || authType === "credential") return "";
+  return null;
+}
+
 export function registerHostBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireCreatePermission: RequestHandler,
+  requireEditPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -172,6 +185,8 @@ export function registerHostBulkRoutes(
   router.patch(
     "/bulk-update",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostIds, updates } = req.body;
@@ -376,6 +391,8 @@ export function registerHostBulkRoutes(
   router.put(
     "/reorder",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { positions } = req.body as {
@@ -422,6 +439,9 @@ export function registerHostBulkRoutes(
   router.post(
     "/bulk-import",
     authenticateJWT,
+    requireCreatePermission,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const {
@@ -558,10 +578,12 @@ export function registerHostBulkRoutes(
             continue;
           }
 
-          if (
-            effectiveConnectionType === "ssh" &&
-            !isNonEmptyString(hostData.username)
-          ) {
+          const username = importedHostUsername(
+            effectiveConnectionType,
+            hostData.authType,
+            hostData.username,
+          );
+          if (username === null) {
             results.failed++;
             results.errors.push(
               `Host ${i + 1}: Username required for SSH connections`,
@@ -578,13 +600,14 @@ export function registerHostBulkRoutes(
               "credential",
               "none",
               "opkssh",
+              "stepca",
               "tailscale",
               "vault",
             ].includes(hostData.authType)
           ) {
             results.failed++;
             results.errors.push(
-              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', 'tailscale', or 'vault'`,
+              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', 'stepca', 'tailscale', or 'vault'`,
             );
             continue;
           }
@@ -660,12 +683,12 @@ export function registerHostBulkRoutes(
           const sshDataObj: Record<string, unknown> = {
             userId: userId,
             connectionType: effectiveConnectionType,
-            name: hostData.name || `${hostData.username || ""}@${hostData.ip}`,
+            name: hostData.name || `${username}@${hostData.ip}`,
             folder: hostData.folder || "Default",
             tags: Array.isArray(hostData.tags) ? hostData.tags.join(",") : "",
             ip: hostData.ip,
             port: hostData.port,
-            username: hostData.username || null,
+            username,
             pin: hostData.pin || false,
             enableTerminal: hostData.enableTerminal !== false,
             enableTunnel: hostData.enableTunnel !== false,
@@ -832,6 +855,9 @@ export function registerHostBulkRoutes(
   router.post(
     "/ssh-config-import",
     authenticateJWT,
+    requireCreatePermission,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { content, overwrite } = req.body;

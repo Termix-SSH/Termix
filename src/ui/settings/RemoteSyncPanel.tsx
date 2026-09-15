@@ -11,6 +11,7 @@ import {
 import { RemoteSyncServerPicker } from "./RemoteSyncServerPicker.tsx";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm.tsx";
 import { invalidateServerStatusCache } from "@/lib/hosts-request-cache.ts";
+import { toast } from "sonner";
 
 interface RemoteSyncConfig {
   serverUrl: string;
@@ -32,9 +33,15 @@ type DesktopSettings = { defaultConnectionOrigin: "local" | "remote" };
 
 interface RemoteSyncPanelProps {
   initialServerUrl?: string;
+  reconnectRequested?: boolean;
+  onReconnectRequestHandled?: () => void;
 }
 
-export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
+export function RemoteSyncPanel({
+  initialServerUrl,
+  reconnectRequested = false,
+  onReconnectRequestHandled,
+}: RemoteSyncPanelProps) {
   const { t } = useTranslation();
   const [config, setConfig] = useState<RemoteSyncConfig | null>(null);
   const [status, setStatus] = useState<RemoteSyncStatus | null>(null);
@@ -79,7 +86,20 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
     setStep("picker");
   }, [initialServerUrl, config]);
 
+  useEffect(() => {
+    if (!reconnectRequested || !config?.serverUrl) return;
+    setPendingServerUrl(config.serverUrl);
+    setStep("login");
+    onReconnectRequestHandled?.();
+  }, [config?.serverUrl, onReconnectRequestHandled, reconnectRequested]);
+
   const handleConnectClick = () => setStep("picker");
+
+  const handleReconnectClick = () => {
+    if (!config?.serverUrl) return;
+    setPendingServerUrl(config.serverUrl);
+    setStep("login");
+  };
 
   const handleServerConfigured = (serverUrl: string) => {
     setPendingServerUrl(serverUrl);
@@ -99,7 +119,19 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
   const handleSyncNow = async () => {
     setSyncingNow(true);
     try {
-      await window.electronAPI?.invoke?.("remote-sync-now");
+      const result = (await window.electronAPI?.invoke?.("remote-sync-now")) as
+        RemoteSyncStatus | null | undefined;
+      if (!result || result.needsReauth || result.lastError) {
+        toast.error(result?.lastError || t("remoteSync.syncUnavailable"));
+      } else {
+        toast.success(t("remoteSync.syncSuccess"));
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : t("remoteSync.syncUnavailable"),
+      );
     } finally {
       setSyncingNow(false);
       await refresh();
@@ -171,7 +203,7 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
                     type="button"
                     size="sm"
                     className="text-[10px] h-7"
-                    onClick={handleConnectClick}
+                    onClick={handleReconnectClick}
                   >
                     {t("remoteSync.bannerReconnect")}
                   </Button>

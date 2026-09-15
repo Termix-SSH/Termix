@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Fingerprint,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -33,10 +34,17 @@ import {
   getCurrentToken,
   getOidcSilentLoginDefault,
   requestDesktopAutoSession,
+  requestTrustedProxyLogin,
 } from "@/main-axios";
+import {
+  getEmbeddedServerFailure,
+  type EmbeddedServerFailure,
+} from "@/lib/embedded-server-status";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
+import { isPasskeySupported, loginWithPasskey } from "@/api/webauthn-api";
 import type { SSOProviderPublic } from "@/types/index";
 import { Checkbox } from "@/components/checkbox";
+import { useBranding } from "@/contexts/BrandingContext";
 import {
   changeAppLanguage,
   normalizeLanguageCode,
@@ -225,12 +233,20 @@ function Field({
 
 export function Auth({ onLogin }: AuthProps) {
   const { t } = useTranslation();
+  const branding = useBranding();
   const localDesktopAuth = isElectron() && !isInElectronWebView();
   const [view, setView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
   const [providerLoading, setProviderLoading] = useState<
     Record<number, boolean>
   >({});
+  const [passkeySupported] = useState(() => {
+    try {
+      return isPasskeySupported();
+    } catch {
+      return false;
+    }
+  });
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -273,6 +289,7 @@ export function Auth({ onLogin }: AuthProps) {
   const [ldapUsername, setLdapUsername] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
   const silentSigninHandledRef = useRef(false);
+  const proxySigninHandledRef = useRef(false);
   const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
   const [oidcSilentLoginDefaultLoaded, setOidcSilentLoginDefaultLoaded] =
     useState(false);
@@ -295,6 +312,30 @@ export function Auth({ onLogin }: AuthProps) {
     boolean | null
   >(!localDesktopAuth || hasDesktopManualLogout() ? true : null);
   const [desktopAutoSessionRetries, setDesktopAutoSessionRetries] = useState(0);
+  // Set only when the Electron main process reports that the embedded
+  // backend died for good, which is the one case where retrying the
+  // auto-session forever is wrong.
+  const [embeddedServerFailure, setEmbeddedServerFailure] =
+    useState<EmbeddedServerFailure | null>(null);
+
+  useEffect(() => {
+    if (proxySigninHandledRef.current || isElectron()) return;
+    proxySigninHandledRef.current = true;
+    requestTrustedProxyLogin()
+      .then((result) => {
+        if (!result.enabled || !result.success) return;
+        storeAuth(result.username || "");
+        onLogin(
+          result.username || "",
+          result.userId || undefined,
+          !!result.is_admin,
+        );
+      })
+      .catch(() => {
+        // Leave the login screen visible. The backend logs the reason without
+        // exposing trusted proxy configuration to an untrusted client.
+      });
+  }, [onLogin]);
 
   useEffect(() => {
     try {
@@ -360,17 +401,48 @@ export function Auth({ onLogin }: AuthProps) {
       setDbHealthChecking(false);
       return;
     }
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Right after a server update/restart (or behind a reverse proxy that's
+    // still warming up), the very first request can transiently fail even
+    // though the backend/database is fine seconds later. A single failure
+    // here used to permanently show the "could not connect to the database"
+    // screen, forcing users to manually reload -- sometimes repeatedly.
+    // Retry a few times with backoff before treating it as a real failure.
+    const maxAttempts = 5;
+    const attempt = (attemptNumber: number) => {
+      getSetupRequired()
+        .then((res) => {
+          if (cancelled) return;
+          if (res.setup_required) {
+            setFirstUser(true);
+            setView("register");
+          }
+          setDbConnectionFailed(false);
+          setDbHealthChecking(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attemptNumber >= maxAttempts) {
+            setDbConnectionFailed(true);
+            setDbHealthChecking(false);
+            return;
+          }
+          const delay = Math.min(500 * 2 ** attemptNumber, 5000);
+          retryTimer = setTimeout(() => {
+            if (!cancelled) attempt(attemptNumber + 1);
+          }, delay);
+        });
+    };
+
     setDbHealthChecking(true);
-    getSetupRequired()
-      .then((res) => {
-        if (res.setup_required) {
-          setFirstUser(true);
-          setView("register");
-        }
-        setDbConnectionFailed(false);
-      })
-      .catch(() => setDbConnectionFailed(true))
-      .finally(() => setDbHealthChecking(false));
+    attempt(0);
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [desktopAutoSessionDone, localDesktopAuth]);
 
   // A cold first launch spawns the embedded backend as a separate process
@@ -386,8 +458,27 @@ export function Auth({ onLogin }: AuthProps) {
   // "declined" stops retrying and shows a local recovery panel.
   useEffect(() => {
     if (desktopAutoSessionDone !== null) return;
+    if (embeddedServerFailure) return;
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // "Retry forever" holds only while the backend could still be booting.
+    // If the main process reports that it exited -- a port conflict being
+    // by far the most common cause -- there is nothing left to wait for, so
+    // the reason is shown instead of an unending spinner.
+    const retryUnlessBackendIsGone = async () => {
+      const failure = await getEmbeddedServerFailure();
+      if (cancelled) return;
+      if (failure) {
+        setEmbeddedServerFailure(failure);
+        return;
+      }
+      const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
+      retryTimer = setTimeout(() => {
+        if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
+      }, delay);
+    };
+
     requestDesktopAutoSession()
       .then((outcome) => {
         if (cancelled) return;
@@ -402,26 +493,25 @@ export function Auth({ onLogin }: AuthProps) {
           return;
         }
         if (outcome.kind === "retry") {
-          const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
-          retryTimer = setTimeout(() => {
-            if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
-          }, delay);
+          void retryUnlessBackendIsGone();
           return;
         }
         setDesktopAutoSessionDone(true);
       })
       .catch(() => {
         if (cancelled) return;
-        const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
-        retryTimer = setTimeout(() => {
-          if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
-        }, delay);
+        void retryUnlessBackendIsGone();
       });
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [desktopAutoSessionDone, desktopAutoSessionRetries, onLogin]);
+  }, [
+    desktopAutoSessionDone,
+    desktopAutoSessionRetries,
+    embeddedServerFailure,
+    onLogin,
+  ]);
 
   useEffect(() => {
     if (view === "totp" && totpInputRef.current) totpInputRef.current.focus();
@@ -622,6 +712,72 @@ export function Auth({ onLogin }: AuthProps) {
         error?.response?.data?.error ||
           error?.message ||
           t("errors.unknownError"),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasskeyLogin() {
+    setLoading(true);
+    try {
+      const res = await loginWithPasskey(
+        username.trim() || undefined,
+        rememberMe,
+      );
+      if (res.requires_totp) {
+        setTotpTempToken(res.temp_token ?? "");
+        setView("totp");
+        return;
+      }
+      if (!res?.success) throw new Error(t("auth.passkeyLoginFailed"));
+      if (isInMobileWebView()) {
+        const token = res?.token ?? "";
+        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: "AUTH_SUCCESS", token }),
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
+      if (isInElectronWebView()) {
+        // Same as handleLogin: the iframe never sends X-Electron-App, so read
+        // the JWT back from the cookie that was just set.
+        const token = res?.token ?? (await getCurrentToken());
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            source: "passkey_auth_component",
+            platform: "desktop",
+            token: token ?? null,
+            timestamp: Date.now(),
+          },
+          "*",
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
+      const meRes = await getUserInfo();
+      storeAuth(meRes.username || res.username || "");
+      toast.success(t("messages.loginSuccess"));
+      onLogin(
+        meRes.username || res.username || "",
+        meRes.userId || undefined,
+        !!meRes.is_admin,
+      );
+    } catch (err: unknown) {
+      const error = err as {
+        name?: string;
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
+      // Closing or cancelling the browser prompt is not a failure worth a toast.
+      if (error?.name === "NotAllowedError" || error?.name === "AbortError") {
+        return;
+      }
+      toast.error(
+        error?.response?.data?.error ||
+          error?.message ||
+          t("auth.passkeyLoginFailed"),
       );
     } finally {
       setLoading(false);
@@ -1019,7 +1175,51 @@ export function Auth({ onLogin }: AuthProps) {
   // Electron, non-iframed: wait for the auto-session probe before rendering
   // anything, so a standalone desktop install never flashes a login form
   // it's about to skip past.
-  if (localDesktopAuth && desktopAutoSessionDone === null) {
+  if (embeddedServerFailure) {
+    const detail =
+      embeddedServerFailure.reason === "port-in-use"
+        ? embeddedServerFailure.port !== null
+          ? t("messages.embeddedServerPortInUse", {
+              port: embeddedServerFailure.port,
+            })
+          : t("messages.embeddedServerPortInUseUnknownPort")
+        : t("messages.embeddedServerCrashed");
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
+        <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-sm w-full">
+          <div className="flex flex-col gap-1">
+            <p className="font-bold text-destructive">
+              {t("errors.embeddedServerFailed")}
+            </p>
+            <p className="text-sm text-muted-foreground">{detail}</p>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="text-xs text-muted-foreground">
+              {t("common.language")}
+            </span>
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    isElectron() &&
+    !isInElectronWebView() &&
+    desktopAutoSessionDone === null
+  ) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -1184,12 +1384,19 @@ export function Auth({ onLogin }: AuthProps) {
             }}
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-            <span className="text-4xl font-bold tracking-[0.3em] font-mono">
-              TERMIX
+            {branding.logo && (
+              <img
+                src={branding.logo}
+                alt=""
+                className="w-16 h-16 object-contain mb-1"
+              />
+            )}
+            <span className="text-4xl font-bold tracking-[0.3em] font-mono uppercase">
+              {branding.appName}
             </span>
             <div className="w-8 h-px bg-accent-brand" />
             <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-              {t("auth.tagline")}
+              {branding.tagline || t("auth.tagline")}
             </span>
           </div>
         </div>
@@ -1534,6 +1741,20 @@ export function Auth({ onLogin }: AuthProps) {
                           </Button>
                         );
                       })}
+                      {passkeySupported && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handlePasskeyLogin}
+                          disabled={loading}
+                          className="w-full h-10 font-bold"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Fingerprint className="size-4" />
+                            {t("auth.signInWithPasskey")}
+                          </span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1601,6 +1822,20 @@ export function Auth({ onLogin }: AuthProps) {
                         </span>
                       )}
                     </Button>
+                    {passkeySupported && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePasskeyLogin}
+                        disabled={loading}
+                        className="w-full h-10 font-bold"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Fingerprint className="size-4" />
+                          {t("auth.signInWithPasskey")}
+                        </span>
+                      </Button>
+                    )}
                   </form>
                 )}
 

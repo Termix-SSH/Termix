@@ -6,6 +6,7 @@ import "./ui/index.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./ui/i18n/i18n";
 import { isElectron } from "@/lib/electron";
+import { getEmbeddedServerFailure } from "@/lib/embedded-server-status";
 import { Toaster } from "@/components/sonner";
 import {
   Auth,
@@ -15,13 +16,14 @@ import {
   clearDesktopManualLogout,
 } from "@/auth/Auth";
 import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
-import { applyAccentColor, applyFontSize } from "@/lib/theme";
+import { applyAccentColor, applyFontSize, applyUiFont } from "@/lib/theme";
 import { installElectronWheelZoomGuard } from "@/lib/electron-wheel-zoom";
-import type { FontSizeId } from "@/types/ui-types";
+import type { FontSizeId, UiFontId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
+import { BrandingProvider } from "@/contexts/BrandingContext";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
@@ -83,6 +85,8 @@ const ElectronVersionCheck = lazy(() =>
 const SharedSessionView = lazy(
   () => import("@/features/session-sharing/SharedSessionView"),
 );
+// Anonymous guest view for collab rooms (?view=collab-guest&token=<guestLinkToken>).
+const CollabGuestView = lazy(() => import("@/features/collab/CollabGuestView"));
 
 type Phase =
   "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
@@ -212,6 +216,10 @@ function App() {
       "termix-font-size",
     ) as FontSizeId | null;
     applyFontSize(savedSize ?? "md");
+    applyUiFont(
+      (localStorage.getItem("termix-ui-font") as UiFontId | null) ??
+        "jetbrains-mono",
+    );
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
@@ -278,12 +286,24 @@ function App() {
           setPhase("idle-auth");
           return;
         }
-        const delay = isElectron()
-          ? Math.min(1000 * 2 ** verifyRetryCount, 10000)
-          : 3000;
-        timerRef.current = setTimeout(() => {
-          setVerifyRetryCount((c) => c + 1);
-        }, delay);
+        // "Always eventually comes up" holds only while the embedded
+        // backend is still booting. If the main process reports it exited
+        // for good -- a port conflict being by far the most common cause --
+        // retrying forever leaves the user on an endless spinner with no
+        // hint of what is wrong, so hand over to Auth, which reports the
+        // reason instead.
+        void getEmbeddedServerFailure().then((failure) => {
+          if (failure) {
+            setPhase("idle-auth");
+            return;
+          }
+          const delay = isElectron()
+            ? Math.min(1000 * 2 ** verifyRetryCount, 10000)
+            : 3000;
+          timerRef.current = setTimeout(() => {
+            setVerifyRetryCount((c) => c + 1);
+          }, delay);
+        });
       });
   }, [phase, verifyRetryCount]);
 
@@ -427,6 +447,13 @@ function RootApp() {
       </Suspense>
     );
   }
+  if (searchParams.get("view") === "collab-guest") {
+    return (
+      <Suspense fallback={null}>
+        <CollabGuestView />
+      </Suspense>
+    );
+  }
 
   if (isFullscreen) {
     return (
@@ -457,7 +484,9 @@ prepareClientCacheVersion().finally(() => {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <RootApp />
+        <BrandingProvider>
+          <RootApp />
+        </BrandingProvider>
       </ThemeProvider>
     </StrictMode>,
   );

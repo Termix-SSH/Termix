@@ -46,8 +46,11 @@ describe("RAIL_ITEMS", () => {
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
+      "port-forwarding",
+      "sftp",
       "termix-id",
       "connections",
+      "collab",
       "quick-connect",
       "serial",
       "ssh-tools",

@@ -13,11 +13,15 @@ type Select2Option = {
 };
 
 type Select2Props = Omit<
-  React.SelectHTMLAttributes<HTMLSelectElement>,
-  "multiple" | "size"
-> & {
-  placeholder?: string;
-};
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "value" | "defaultValue" | "onChange"
+> &
+  Pick<
+    React.SelectHTMLAttributes<HTMLSelectElement>,
+    "value" | "defaultValue" | "onChange" | "required"
+  > & {
+    placeholder?: string;
+  };
 
 function getText(children: React.ReactNode): string {
   return React.Children.toArray(children)

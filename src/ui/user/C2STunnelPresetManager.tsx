@@ -374,11 +374,10 @@ export function C2STunnelPresetManager(): React.ReactElement {
           .filter((tunnel) => tunnel.scope === "c2s")
           .map((tunnel) => {
             const normalized = normalizeClientTunnel(tunnel);
-            const host = nextHosts.find(
-              (item) =>
-                item.id === normalized.sourceHostId ||
-                (normalized.sourceHostSyncId &&
-                  item.syncId === normalized.sourceHostSyncId),
+            const host = nextHosts.find((item) =>
+              normalized.sourceHostSyncId
+                ? item.syncId === normalized.sourceHostSyncId
+                : item.id === normalized.sourceHostId,
             );
             if (!host) return normalized;
             return normalizeClientTunnel({

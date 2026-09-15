@@ -27,6 +27,7 @@ const mainAxios = vi.hoisted(() => ({
   getCurrentToken: vi.fn(),
   getOidcSilentLoginDefault: vi.fn(),
   requestDesktopAutoSession: vi.fn(),
+  requestTrustedProxyLogin: vi.fn(),
 }));
 
 const ssoProviderApi = vi.hoisted(() => ({
@@ -98,6 +99,10 @@ beforeEach(() => {
   mainAxios.getSetupRequired.mockResolvedValue({ setup_required: false });
   mainAxios.getOidcSilentLoginDefault.mockResolvedValue({ enabled: false });
   mainAxios.requestDesktopAutoSession.mockResolvedValue({ kind: "declined" });
+  mainAxios.requestTrustedProxyLogin.mockResolvedValue({
+    enabled: false,
+    success: false,
+  });
   ssoProviderApi.getSSOProviders.mockResolvedValue([]);
 });
 
@@ -130,6 +135,10 @@ describe("Auth local desktop flow", () => {
   it("shows local recovery instead of register when auto-session is declined", async () => {
     mainAxios.isElectron.mockReturnValue(true);
     mainAxios.requestDesktopAutoSession.mockResolvedValue({ kind: "declined" });
+    mainAxios.requestTrustedProxyLogin.mockResolvedValue({
+      enabled: false,
+      success: false,
+    });
 
     renderAuth();
 

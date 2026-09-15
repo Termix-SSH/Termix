@@ -62,6 +62,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useTabsSafe } from "@/shell/TabContext";
 import { cn } from "@/lib/utils";
+import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
 import { Select2 } from "@/components/select2";
 
 const AVAILABLE_COLORS = [
@@ -131,12 +132,14 @@ function buildNodeSvg(
 ): string {
   const isOnline = status === "online";
   const isOffline = status === "offline";
-  const useRealColors = localStorage.getItem("statusColorScheme") === "status";
+  const useRealColors = readStatusColorScheme() === "status";
   let statusColor: string;
   if (isOnline) {
     statusColor = useRealColors
       ? "rgb(16,185,129)"
       : resolveCssVar("--accent-brand", "rgb(16,185,129)");
+  } else if (status === "reachable") {
+    statusColor = "rgb(251,191,36)";
   } else if (isOffline) {
     statusColor = useRealColors ? "rgb(239,68,68)" : "rgba(16,185,129,0.2)";
   } else {
@@ -496,9 +499,13 @@ export function NetworkGraphCard({
     (cy: cytoscape.Core) => {
       cyRef.current = cy;
       if (embedded) {
-        cy.nodes().forEach((n) => n.ungrabify());
+        cy.nodes().forEach((n) => {
+          n.ungrabify();
+        });
       } else {
-        cy.nodes().forEach((n) => n.grabify());
+        cy.nodes().forEach((n) => {
+          n.grabify();
+        });
       }
       applyStyle(cy);
 

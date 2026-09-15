@@ -48,6 +48,16 @@ vi.mock("../../../automations/engine.js", () => ({
   AutomationEngine: { getInstance: () => ({ run }) },
 }));
 
+vi.mock("../../../utils/permission-manager.js", () => ({
+  PermissionManager: {
+    getInstance: () => ({
+      requirePermission:
+        () => (_req: unknown, _res: unknown, next: () => void) =>
+          next(),
+    }),
+  },
+}));
+
 vi.mock("../../../utils/auth-manager.js", () => ({
   AuthManager: {
     getInstance: () => ({

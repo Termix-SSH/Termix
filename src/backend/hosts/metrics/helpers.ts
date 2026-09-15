@@ -1,4 +1,5 @@
 import type { Client } from "ssh2";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 
 export type StatsCapableHost = {
   connectionType?: string;
@@ -13,7 +14,8 @@ export type TcpPingStatsConfig = {
 export function supportsMetrics(host: StatsCapableHost): boolean {
   const connectionType = host.connectionType || "ssh";
   if (connectionType !== "ssh") return false;
-  if (host.authType === "none" || host.authType === "opkssh") return false;
+  if (host.authType === "none" || usesIssuedCertificate(host.authType))
+    return false;
   return true;
 }
 

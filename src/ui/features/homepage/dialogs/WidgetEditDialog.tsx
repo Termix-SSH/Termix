@@ -76,6 +76,7 @@ import { ServiceGridEditForm } from "./ServiceGridEditForm";
 import { DashboardLinksEditForm } from "./DashboardLinksEditForm";
 import { SearchLinksEditForm } from "./SearchLinksEditForm";
 import { LinkTreeEditForm } from "./LinkTreeEditForm";
+import { validateClockTimezone } from "../clock-timezone";
 
 interface WidgetEditDialogProps {
   widget: CanvasWidget | null;
@@ -100,8 +101,20 @@ export function WidgetEditDialog({
 
   if (!widget) return null;
 
+  // Configs that need checking before they can be stored. The clock keeps the
+  // normalized zone rather than the raw input, so "America/New York" is filed
+  // as "America/New_York"; the form flags an unusable one and Save stays off.
+  const clockTimezone =
+    widget.typeId === "clock" ? validateClockTimezone(config.timezone) : null;
+  const configInvalid = clockTimezone ? !clockTimezone.valid : false;
+
   const handleSave = () => {
-    onSave(widget.id, title || null, config);
+    if (configInvalid) return;
+    onSave(
+      widget.id,
+      title || null,
+      clockTimezone ? { ...config, timezone: clockTimezone.timezone } : config,
+    );
     onClose();
   };
 
@@ -368,7 +381,7 @@ export function WidgetEditDialog({
           <Button variant="outline" size="sm" onClick={onClose}>
             {t("homepage.cancel")}
           </Button>
-          <Button size="sm" onClick={handleSave}>
+          <Button size="sm" onClick={handleSave} disabled={configInvalid}>
             {t("homepage.save")}
           </Button>
         </DialogFooter>

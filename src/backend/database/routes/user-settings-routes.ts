@@ -1,4 +1,5 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { RequestHandler, Router } from "express";
 import { restartGuacServer } from "../../hosts/guacamole/guacamole-server.js";
 import {
@@ -7,8 +8,19 @@ import {
   setGlobalLogLevel,
 } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  AUDIT_FORWARD_TOKEN_SETTING,
+  AUDIT_FORWARD_URL_ENV,
+  AUDIT_FORWARD_URL_SETTING,
+} from "../../utils/audit-forwarder.js";
 import { getTelemetryEnvOverride } from "../../utils/analytics.js";
 import { AI_PRIVATE_ALLOWLIST_KEY, parseAllowlist } from "../../ai/egress.js";
+import { STEP_CA_PRIVATE_ALLOWLIST_KEY } from "../../utils/step-ca-egress.js";
+import { SECRET_SOURCE_PRIVATE_ALLOWLIST_KEY } from "../../utils/secret-source-egress.js";
+import {
+  NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
+  parseNotificationAllowlist,
+} from "../../utils/notification-egress.js";
 import {
   createCurrentSettingsRepository,
   createCurrentUserRepository,
@@ -35,6 +47,7 @@ export type HostDefaults = {
   cursorBlink?: boolean;
   enableSessionLogging?: boolean;
   enableCommandHistory?: boolean;
+  autoTmux?: boolean;
 };
 
 async function getAdminActor(
@@ -669,6 +682,125 @@ export function registerUserSettingsRoutes(
    *                 enabled:
    *                   type: boolean
    */
+  /**
+   * @openapi
+   * /users/audit-forwarding:
+   *   get:
+   *     summary: Get audit log forwarding settings (admin only)
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: Forwarding target. The token itself is never returned.
+   */
+  router.get("/audit-forwarding", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      if (!(await getAdminActor(userId))) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const settingsRepository = createCurrentSettingsRepository();
+      const url =
+        (await settingsRepository.get(AUDIT_FORWARD_URL_SETTING)) ?? "";
+      const hasToken = !!(await settingsRepository.get(
+        AUDIT_FORWARD_TOKEN_SETTING,
+      ));
+      res.json({
+        url,
+        hasToken,
+        envConfigured: !!process.env[AUDIT_FORWARD_URL_ENV]?.trim(),
+      });
+    } catch (err) {
+      authLogger.error("Failed to get audit forwarding settings", err);
+      res
+        .status(500)
+        .json({ error: "Failed to get audit forwarding settings" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/audit-forwarding:
+   *   patch:
+   *     summary: Update audit log forwarding settings (admin only)
+   *     description: Sets the collector URL audit entries are shipped to. An empty URL disables forwarding and clears the stored token. Omitting token keeps the stored one.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               url:
+   *                 type: string
+   *               token:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Setting updated.
+   *       403:
+   *         description: Not authorized.
+   */
+  router.patch("/audit-forwarding", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { url, token } = req.body ?? {};
+      if (
+        typeof url !== "string" ||
+        (token !== undefined && typeof token !== "string")
+      ) {
+        return res.status(400).json({ error: "url must be a string" });
+      }
+      const trimmedUrl = url.trim();
+      if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+        return res.status(400).json({ error: "url must be http(s)" });
+      }
+
+      const settingsRepository = createCurrentSettingsRepository();
+      if (!trimmedUrl) {
+        await settingsRepository.delete(AUDIT_FORWARD_URL_SETTING);
+        await settingsRepository.delete(AUDIT_FORWARD_TOKEN_SETTING);
+      } else {
+        await settingsRepository.set(AUDIT_FORWARD_URL_SETTING, trimmedUrl);
+        if (token !== undefined) {
+          if (token.trim()) {
+            await settingsRepository.set(
+              AUDIT_FORWARD_TOKEN_SETTING,
+              token.trim(),
+            );
+          } else {
+            await settingsRepository.delete(AUDIT_FORWARD_TOKEN_SETTING);
+          }
+        }
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: actor.username ?? userId,
+        action: "update_audit_forwarding",
+        resourceType: "setting",
+        details: JSON.stringify({ enabled: !!trimmedUrl }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ url: trimmedUrl, hasToken: !!token?.trim() });
+    } catch (err) {
+      authLogger.error("Failed to update audit forwarding settings", err);
+      res
+        .status(500)
+        .json({ error: "Failed to update audit forwarding settings" });
+    }
+  });
+
   router.get("/session-sharing-enabled", authenticateJWT, async (_req, res) => {
     try {
       res.json({
@@ -951,6 +1083,250 @@ export function registerUserSettingsRoutes(
     } catch (err) {
       authLogger.error("Failed to update AI private endpoint allowlist", err);
       res.status(500).json({ error: "Failed to update the allowlist" });
+    }
+  });
+
+  /**
+   * GET/PATCH a comma-list of private hosts an outbound feature may reach.
+   * Shared by notifications and Step CA; each keeps its own setting key.
+   */
+  const registerPrivateEndpointAllowlist = (
+    path: string,
+    settingKey: string,
+    auditAction: string,
+    label: string,
+  ) => {
+    router.get(path, authenticateJWT, async (req, res) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      try {
+        if (!(await getAdminActor(userId))) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+        const raw = await createCurrentSettingsRepository().get(settingKey);
+        res.json({ hosts: parseNotificationAllowlist(raw) });
+      } catch (err) {
+        authLogger.error(`Failed to get ${label} allowlist`, err);
+        res.status(500).json({ error: "Failed to get the allowlist" });
+      }
+    });
+
+    router.patch(path, authenticateJWT, async (req, res) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      try {
+        const actor = await getAdminActor(userId);
+        if (!actor) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+
+        const { hosts } = req.body;
+        if (!Array.isArray(hosts)) {
+          return res.status(400).json({ error: "hosts must be an array" });
+        }
+        if (hosts.length > 50) {
+          return res
+            .status(400)
+            .json({ error: "At most 50 hosts are allowed" });
+        }
+        const cleaned: string[] = [];
+        for (const entry of hosts) {
+          if (typeof entry !== "string") {
+            return res
+              .status(400)
+              .json({ error: "Each host must be a string" });
+          }
+          const host = entry.trim().toLowerCase();
+          if (!host) continue;
+          if (!/^[a-z0-9._:-]+$/.test(host)) {
+            return res
+              .status(400)
+              .json({ error: `${entry} is not a valid hostname` });
+          }
+          if (!cleaned.includes(host)) cleaned.push(host);
+        }
+
+        await createCurrentSettingsRepository().set(
+          settingKey,
+          JSON.stringify(cleaned),
+        );
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId,
+          username: actor.username ?? userId,
+          action: auditAction,
+          resourceType: "setting",
+          details: JSON.stringify({ hosts: cleaned }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+        res.json({ hosts: cleaned });
+      } catch (err) {
+        authLogger.error(`Failed to update ${label} allowlist`, err);
+        res.status(500).json({ error: "Failed to update the allowlist" });
+      }
+    });
+  };
+
+  /**
+   * @openapi
+   * /users/notification-private-endpoints:
+   *   get:
+   *     summary: Get the private hosts notification channels may contact (admin only)
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Replace that allowlist (admin only)
+   *     tags:
+   *       - Users
+   */
+  registerPrivateEndpointAllowlist(
+    "/notification-private-endpoints",
+    NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
+    "update_notification_private_endpoints",
+    "notification endpoint",
+  );
+
+  /**
+   * @openapi
+   * /users/step-ca-private-endpoints:
+   *   get:
+   *     summary: Get the private hosts the Step CA certificate flow may contact (admin only)
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Replace that allowlist (admin only)
+   *     tags:
+   *       - Users
+   */
+  registerPrivateEndpointAllowlist(
+    "/step-ca-private-endpoints",
+    STEP_CA_PRIVATE_ALLOWLIST_KEY,
+    "update_step_ca_private_endpoints",
+    "Step CA endpoint",
+  );
+
+  /**
+   * @openapi
+   * /users/secret-source-private-endpoints:
+   *   get:
+   *     summary: Get the private hosts secret sources (1Password Connect) may contact (admin only)
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Replace that allowlist (admin only)
+   *     tags:
+   *       - Users
+   */
+  registerPrivateEndpointAllowlist(
+    "/secret-source-private-endpoints",
+    SECRET_SOURCE_PRIVATE_ALLOWLIST_KEY,
+    "update_secret_source_private_endpoints",
+    "secret source endpoint",
+  );
+
+  /**
+   * @openapi
+   * /users/step-ca-settings:
+   *   get:
+   *     summary: Step CA settings. Admins get the values; everyone else only whether it is configured.
+   *     tags:
+   *       - Users
+   *   patch:
+   *     summary: Set the Step CA URL, root fingerprint and OIDC provisioner (admin only). Empty values clear the configuration.
+   *     tags:
+   *       - Users
+   */
+  router.get("/step-ca-settings", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const { readStepCaSettings } =
+        await import("../../hosts/step-ca-auth.js");
+      const settings = await readStepCaSettings();
+      if (!(await getAdminActor(userId))) {
+        return res.json({ configured: settings !== null });
+      }
+      res.json({
+        configured: settings !== null,
+        caUrl: settings?.caUrl ?? "",
+        fingerprint: settings?.fingerprint ?? "",
+        provisioner: settings?.provisioner ?? "",
+      });
+    } catch (err) {
+      authLogger.error("Failed to get Step CA settings", err);
+      res.status(500).json({ error: "Failed to get Step CA settings" });
+    }
+  });
+
+  router.patch("/step-ca-settings", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { caUrl, fingerprint, provisioner } = req.body ?? {};
+      if (
+        [caUrl, fingerprint, provisioner].some((v) => typeof v !== "string")
+      ) {
+        return res.status(400).json({
+          error: "caUrl, fingerprint and provisioner must be strings",
+        });
+      }
+      const values = {
+        caUrl: caUrl.trim(),
+        fingerprint: fingerprint.trim(),
+        provisioner: provisioner.trim(),
+      };
+      const clearing =
+        !values.caUrl && !values.fingerprint && !values.provisioner;
+      if (!clearing) {
+        const { normalizeCaUrl, normalizeFingerprint } =
+          await import("../../utils/step-ca-client.js");
+        try {
+          values.caUrl = normalizeCaUrl(values.caUrl);
+          values.fingerprint = normalizeFingerprint(values.fingerprint);
+        } catch (err) {
+          return res.status(400).json({ error: getErrorMessage(err) });
+        }
+        if (!values.provisioner) {
+          return res.status(400).json({ error: "provisioner is required" });
+        }
+      }
+
+      const { STEP_CA_SETTING_KEYS } =
+        await import("../../hosts/step-ca-auth.js");
+      const settings = createCurrentSettingsRepository();
+      if (clearing) {
+        await settings.delete(STEP_CA_SETTING_KEYS.url);
+        await settings.delete(STEP_CA_SETTING_KEYS.fingerprint);
+        await settings.delete(STEP_CA_SETTING_KEYS.provisioner);
+      } else {
+        await settings.set(STEP_CA_SETTING_KEYS.url, values.caUrl);
+        await settings.set(
+          STEP_CA_SETTING_KEYS.fingerprint,
+          values.fingerprint,
+        );
+        await settings.set(
+          STEP_CA_SETTING_KEYS.provisioner,
+          values.provisioner,
+        );
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: actor.username ?? userId,
+        action: "update_step_ca_settings",
+        resourceType: "setting",
+        details: JSON.stringify({ configured: !clearing, caUrl: values.caUrl }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+      res.json({ configured: !clearing, ...values });
+    } catch (err) {
+      authLogger.error("Failed to update Step CA settings", err);
+      res.status(500).json({ error: "Failed to update Step CA settings" });
     }
   });
 

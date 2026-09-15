@@ -13,6 +13,7 @@ const {
 } = require("electron");
 const path = require("path");
 const { getUnpackedAppRoot } = require("./backend-paths.cjs");
+const { classifyBackendFailure } = require("./backend-failure.cjs");
 const fs = require("fs");
 const os = require("os");
 const https = require("https");
@@ -21,7 +22,7 @@ const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
 const crypto = require("crypto");
-const { URL } = require("url");
+const { URL, pathToFileURL } = require("url");
 const { fork, spawn } = require("child_process");
 const pty = require("node-pty");
 const WebSocket = require("ws");
@@ -31,6 +32,7 @@ const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { resolveLocalShell } = require("./local-shell.cjs");
+const { registerLocalFileHandlers } = require("./local-files.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -536,6 +538,16 @@ function httpFetch(url, options = {}) {
       // Node's http/https modules never auto-decompress, so an unhandled
       // content-encoding here silently turns the body into garbage bytes.
       let stream = res;
+      const maxResponseBytes = options.maxResponseBytes || 10 * 1024 * 1024;
+      let responseBytes = 0;
+      let settled = false;
+      const fail = (error) => {
+        if (settled) return;
+        settled = true;
+        stream.destroy();
+        req.destroy();
+        reject(error);
+      };
       const encoding = (res.headers["content-encoding"] || "")
         .toLowerCase()
         .trim();
@@ -552,8 +564,17 @@ function httpFetch(url, options = {}) {
         return;
       }
 
-      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("data", (chunk) => {
+        responseBytes += chunk.length;
+        if (responseBytes > maxResponseBytes) {
+          fail(new Error(`Response exceeds ${maxResponseBytes} bytes`));
+          return;
+        }
+        chunks.push(chunk);
+      });
       stream.on("end", () => {
+        if (settled) return;
+        settled = true;
         const data = Buffer.concat(chunks).toString("utf8");
         resolve({
           ok: res.statusCode >= 200 && res.statusCode < 300,
@@ -562,7 +583,7 @@ function httpFetch(url, options = {}) {
           json: () => Promise.resolve(JSON.parse(data)),
         });
       });
-      stream.on("error", reject);
+      stream.on("error", fail);
     });
 
     req.on("error", reject);
@@ -613,6 +634,17 @@ app.commandLine.appendSwitch("--enable-features=NetworkService");
 let mainWindow = null;
 let backendProcess = null;
 let backendStartFailed = false;
+// Why the embedded backend died, once it has. Null while it is healthy
+// or still starting. The renderer polls this to tell "still booting"
+// (keep waiting) apart from "never coming back" (show the reason).
+let backendFailure = null;
+// Set while we are deliberately tearing the backend down on quit, so a
+// SIGKILL we sent ourselves is not reported to the user as a crash.
+let backendStopRequested = false;
+// Tail of the embedded backend's stderr, kept only so a failed start can be
+// classified after the fact.
+const BACKEND_STDERR_TAIL_LIMIT = 8192;
+let backendStderrTail = "";
 let tray = null;
 let isQuitting = false;
 const tempFiles = new Map();
@@ -1385,6 +1417,9 @@ function reapOrphanedBackendProcess() {
 
 function startBackendServer() {
   reapOrphanedBackendProcess();
+  backendFailure = null;
+  backendStopRequested = false;
+  backendStderrTail = "";
   return new Promise((resolve) => {
     const { entryPath, backendCwd } = getBackendPaths();
 
@@ -1394,6 +1429,7 @@ function startBackendServer() {
 
     if (!fs.existsSync(entryPath)) {
       logToFile("Backend entry not found:", entryPath);
+      backendFailure = { reason: "crashed", port: null };
       resolve(false);
       return;
     }
@@ -1452,14 +1488,32 @@ function startBackendServer() {
       }
     });
 
+    // The reason for a failed start is only ever visible in what the child
+    // wrote to stderr before dying, so keep a bounded tail of it. Bounded
+    // because a backend that stays up for days can otherwise log without
+    // limit into a buffer nothing ever drains.
     backendProcess.stderr.on("data", (data) => {
-      logToFile("[backend:stderr]", data.toString().trim());
+      const chunk = data.toString();
+      backendStderrTail = (backendStderrTail + chunk).slice(
+        -BACKEND_STDERR_TAIL_LIMIT,
+      );
+      logToFile("[backend:stderr]", chunk.trim());
     });
 
     backendProcess.on("exit", (code, signal) => {
       logToFile(`Backend process exited with code ${code}, signal ${signal}`);
       if (!resolved && code !== 0) {
         backendStartFailed = true;
+      }
+      // Classified whether or not the ready promise already settled: the
+      // 15s ready timeout resolves optimistically, so a backend that dies
+      // at second 20 still has to be reported rather than silently dropped.
+      // backendStopRequested is the only evidence that an exit was asked
+      // for, so it is the sole guard here -- past it, every exit means the
+      // backend is gone and the renderer must stop waiting for it.
+      if (!backendStopRequested) {
+        backendFailure = classifyBackendFailure(backendStderrTail);
+        logToFile("Backend failure classified as:", backendFailure.reason);
       }
       backendProcess = null;
       clearBackendPidFile();
@@ -1472,6 +1526,7 @@ function startBackendServer() {
 
     backendProcess.on("error", (err) => {
       logToFile("Failed to start backend process:", err.message);
+      backendFailure = { reason: "crashed", port: null };
       backendProcess = null;
       if (!resolved) {
         resolved = true;
@@ -1494,6 +1549,7 @@ function stopBackendServer() {
   if (!backendProcess) return;
 
   console.log("Stopping embedded backend server...");
+  backendStopRequested = true;
 
   try {
     backendProcess.send({ type: "shutdown" });
@@ -1623,11 +1679,12 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
+      sandbox: true,
+      webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
       partition: termixSessionPartition,
-      allowRunningInsecureContent: true,
-      webviewTag: true,
+      allowRunningInsecureContent: false,
+      webviewTag: false,
       offscreen: false,
     },
     show: true,
@@ -1807,6 +1864,13 @@ function createWindow() {
     }
     return { action: "deny" };
   });
+
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const allowedUrl = isDev
+      ? url.startsWith("http://localhost:5173/")
+      : url === pathToFileURL(path.join(appRoot, "dist", "index.html")).href;
+    if (!allowedUrl) event.preventDefault();
+  });
 }
 
 ipcMain.handle("get-app-version", () => {
@@ -1930,6 +1994,10 @@ ipcMain.handle("get-embedded-server-status", () => {
   return {
     running:
       backendProcess !== null && !backendProcess.killed && !backendStartFailed,
+    // A backend that is merely slow to boot reports no failure, so the
+    // renderer keeps waiting for it. Only a classified failure means the
+    // process is gone for good and waiting is pointless.
+    failure: backendFailure,
     dataDir: isDev ? null : getBackendDataDir(),
   };
 });
@@ -2076,7 +2144,7 @@ ipcMain.handle("clear-remote-sync-config", async () => {
   return result;
 });
 
-ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
+ipcMain.handle("save-remote-sync-jwt", async (_event, token) => {
   const result = remoteSync.saveRemoteSyncJwt(token);
   if (result.success) {
     remoteSync.getRemoteSyncEngine()?.updateStatus({
@@ -2084,7 +2152,8 @@ ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
       needsReauth: false,
       lastError: null,
     });
-    remoteSync.getRemoteSyncEngine()?.syncNow();
+    const status = await remoteSync.getRemoteSyncEngine()?.syncNow();
+    return { ...result, status: status || null };
   }
   return result;
 });
@@ -4339,6 +4408,10 @@ async function testServerConnection(
 }
 
 ipcMain.handle("test-server-connection", testServerConnection);
+
+// Local disk browsing + streamed local<->remote transfers for the file
+// manager's dual-pane mode (see electron/local-files.cjs).
+registerLocalFileHandlers({ ipcMain, shell });
 
 function createMenu() {
   if (process.platform === "darwin") {

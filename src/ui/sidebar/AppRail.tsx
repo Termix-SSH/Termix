@@ -3,29 +3,20 @@ import { useTranslation } from "react-i18next";
 import {
   Bell,
   Check,
-  ArrowLeftRight,
-  Clock,
-  Fingerprint,
-  Hammer,
-  KeyRound,
-  LayoutPanelLeft,
   LogOut,
-  Network,
+  PanelRight,
   Pin,
-  Play,
-  Plug,
-  ScrollText,
-  Server,
   Settings,
   SlidersHorizontal,
-  Usb,
+  SquareArrowOutUpRight,
   User,
-  Zap,
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { getAlertFirings } from "@/api/alerts-api";
 import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
+import { visibleRailItems } from "./rail-items";
+import { useAiAvailability } from "@/hooks/use-ai-availability";
 
 export type RailView =
   | "hosts"
@@ -40,7 +31,12 @@ export type RailView =
   | "session-logs"
   | "user-profile"
   | "admin-settings"
-  | "alerts";
+  | "alerts"
+  | "automations"
+  | "ai"
+  | "fleets"
+  | "workspaces"
+  | "collab";
 
 export type HideableRailView =
   | Exclude<RailView, "user-profile" | "admin-settings">
@@ -54,6 +50,8 @@ type RailItem =
       icon: React.ReactNode;
       title: string;
       dot?: boolean;
+      promotable?: boolean;
+      rightDockable?: boolean;
     }
   | { kind: "tab"; tabType: TabType; icon: React.ReactNode; title: string }
   | { kind: "separator" };
@@ -62,90 +60,34 @@ function buildRailButtons(
   splitMode: SplitMode,
   t: (key: string) => string,
   hidden: Set<string>,
-  showElectronItems: boolean,
 ): RailItem[] {
-  const all: RailItem[] = [
-    { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
-    { kind: "separator" },
-    {
-      view: "credentials",
-      icon: <KeyRound size={16} />,
-      title: t("nav.credentials"),
-    },
-    ...(showElectronItems
-      ? [
-          { kind: "separator" as const },
-          {
-            view: "port-forwarding" as RailView,
-            icon: <Network size={16} />,
-            title: t("nav.portForwarding"),
-          },
-          { kind: "separator" as const },
-          {
-            view: "sftp" as RailView,
-            icon: <ArrowLeftRight size={16} />,
-            title: t("nav.sftp"),
-          },
-          { kind: "separator" as const },
-        ]
-      : []),
-    { kind: "separator" },
-    {
-      view: "termix-id",
-      icon: <Fingerprint size={16} />,
-      title: t("nav.termixId"),
-    },
-    { kind: "separator" },
-    {
-      view: "connections",
-      icon: <Plug size={16} />,
-      title: t("nav.connections"),
-    },
-    { kind: "separator" },
-    {
-      view: "quick-connect",
-      icon: <Zap size={16} />,
-      title: t("nav.quickConnect"),
-    },
-    { kind: "separator" },
-    {
-      view: "serial",
-      icon: <Usb size={16} />,
-      title: t("nav.serial"),
-    },
-    { kind: "separator" },
-    { view: "ssh-tools", icon: <Hammer size={16} />, title: t("nav.sshTools") },
-    { kind: "separator" },
-    { view: "snippets", icon: <Play size={16} />, title: t("nav.snippets") },
-    { kind: "separator" },
-    { view: "history", icon: <Clock size={16} />, title: t("nav.history") },
-    { kind: "separator" },
-    {
-      view: "session-logs",
-      icon: <ScrollText size={16} />,
-      title: t("nav.sessionLogs"),
-    },
-    { kind: "separator" },
-    {
-      view: "split-screen",
-      icon: <LayoutPanelLeft size={16} />,
-      title: t("nav.splitScreen"),
-      dot: splitMode !== "none",
-    },
-    { kind: "separator" },
-    {
-      kind: "tab",
-      tabType: "network_graph" as TabType,
-      icon: <Network size={16} />,
-      title: t("nav.networkGraph"),
-    },
-    { kind: "separator" },
-  ];
+  const all: RailItem[] = [];
+  for (const item of visibleRailItems()) {
+    const Icon = item.icon;
+    if (item.kind === "tab") {
+      all.push({
+        kind: "tab",
+        tabType: item.id as TabType,
+        icon: <Icon size={16} />,
+        title: t(item.labelKey),
+      });
+    } else {
+      all.push({
+        view: item.id as RailView,
+        icon: <Icon size={16} />,
+        title: t(item.labelKey),
+        dot: item.id === "split-screen" ? splitMode !== "none" : undefined,
+        promotable: item.promotable,
+        rightDockable: item.rightDockable,
+      });
+    }
+    if (item.separatorAfter) all.push({ kind: "separator" });
+  }
 
   // Filter out hidden items, then collapse consecutive/leading/trailing separators
   const filtered = all.filter((item) => {
     if (item.kind === "separator") return true;
-    if (item.kind === "tab") return !hidden.has(item.tabType);
+    if ("tabType" in item) return !hidden.has(item.tabType);
     return !hidden.has(item.view);
   });
 
@@ -175,6 +117,7 @@ export function AppRail({
   isAdmin,
   onRailClick,
   onOpenTab,
+  onOpenInRightDock,
   onLogout,
 }: {
   railView: RailView;
@@ -184,6 +127,7 @@ export function AppRail({
   isAdmin: boolean;
   onRailClick: (view: RailView) => void;
   onOpenTab?: (type: TabType) => void;
+  onOpenInRightDock?: (view: RailView) => void;
   onLogout: (options?: { manual?: boolean }) => void;
 }) {
   const { t } = useTranslation();
@@ -193,6 +137,14 @@ export function AppRail({
     readRailPreference("expandAppRailOnHover"),
   );
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  // Which promotable item was right-clicked, so the menu can offer to open it
+  // as a tab. Null when the right-click landed on empty rail space.
+  const [menuTarget, setMenuTarget] = useState<{
+    view: RailView;
+    title: string;
+    promotable?: boolean;
+    rightDockable?: boolean;
+  } | null>(null);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
 
   useEffect(() => {
@@ -275,6 +227,8 @@ export function AppRail({
     };
   }, [menuPos]);
 
+  const { userEnabled: aiEnabled } = useAiAvailability();
+
   useEffect(() => {
     const handler = () => {
       try {
@@ -322,15 +276,14 @@ export function AppRail({
   }, []);
 
   const railExpanded = pinned || (expandOnHover && hovered);
-  const effectiveHiddenTabs = isRemoteSyncConnected
-    ? hiddenTabs
-    : new Set([...hiddenTabs, "termix-id"]);
-  const railButtons = buildRailButtons(
-    splitMode,
-    t,
-    effectiveHiddenTabs,
-    isElectron(),
-  );
+  const effectiveHiddenTabs = new Set([
+    ...hiddenTabs,
+    ...(isRemoteSyncConnected ? [] : ["termix-id"]),
+    // The assistant is hidden until an admin has enabled it instance-wide and
+    // the user has said yes, so someone who declined never sees the entry.
+    ...(aiEnabled ? [] : ["ai"]),
+  ]);
+  const railButtons = buildRailButtons(splitMode, t, effectiveHiddenTabs);
   const setRailPinned = (nextPinned: boolean) => {
     setPinned(nextPinned);
     localStorage.setItem("pinAppRail", String(nextPinned));
@@ -362,6 +315,9 @@ export function AppRail({
           x: Math.min(e.clientX, window.innerWidth - MENU_W - 8),
           y: Math.min(e.clientY, window.innerHeight - MENU_H - 8),
         });
+        if (!(e.target as HTMLElement).closest("[data-rail-promotable]")) {
+          setMenuTarget(null);
+        }
       }}
     >
       <div className="flex flex-col flex-1 gap-1 overflow-y-auto scrollbar-none min-h-0">
@@ -372,7 +328,7 @@ export function AppRail({
               className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
               style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
             />
-          ) : item.kind === "tab" ? (
+          ) : "tabType" in item ? (
             <button
               key={item.tabType}
               onClick={() => onOpenTab?.(item.tabType)}
@@ -396,7 +352,35 @@ export function AppRail({
           ) : (
             <button
               key={item.view}
-              onClick={() => onRailClick(item.view)}
+              onClick={(e) => {
+                if (item.promotable && (e.ctrlKey || e.metaKey)) {
+                  onOpenTab?.(item.view as TabType);
+                  return;
+                }
+                onRailClick(item.view);
+              }}
+              onAuxClick={(e) => {
+                if (e.button !== 1 || !item.promotable) return;
+                e.preventDefault();
+                onOpenTab?.(item.view as TabType);
+              }}
+              onContextMenu={() => {
+                if (item.promotable || item.rightDockable)
+                  setMenuTarget({
+                    view: item.view,
+                    title: item.title,
+                    promotable: item.promotable,
+                    rightDockable: item.rightDockable,
+                  });
+              }}
+              data-rail-promotable={
+                item.promotable || item.rightDockable ? "" : undefined
+              }
+              title={
+                item.promotable
+                  ? `${item.title}\n${t("nav.openAsTabHint")}`
+                  : item.title
+              }
               style={btnStyle}
               className={`${btnBase} ${
                 sidebarOpen && railView === item.view
@@ -459,6 +443,7 @@ export function AppRail({
             view: "alerts" as RailView,
             icon: <Bell size={16} />,
             title: t("nav.alerts"),
+            promotable: true,
           },
           {
             view: "user-profile" as RailView,
@@ -477,7 +462,33 @@ export function AppRail({
         ].map((item) => (
           <button
             key={item.view}
-            onClick={() => onRailClick(item.view)}
+            onClick={(e) => {
+              if (item.promotable && (e.ctrlKey || e.metaKey)) {
+                onOpenTab?.(item.view as TabType);
+                return;
+              }
+              onRailClick(item.view);
+            }}
+            onAuxClick={(e) => {
+              if (e.button !== 1 || !item.promotable) return;
+              e.preventDefault();
+              onOpenTab?.(item.view as TabType);
+            }}
+            onContextMenu={() => {
+              if (item.promotable)
+                setMenuTarget({
+                  view: item.view,
+                  title: item.title,
+                  promotable: item.promotable,
+                  rightDockable: true,
+                });
+            }}
+            data-rail-promotable={item.promotable ? "" : undefined}
+            title={
+              item.promotable
+                ? `${item.title}\n${t("nav.openAsTabHint")}`
+                : item.title
+            }
             style={btnStyle}
             className={`${btnBase} ${
               sidebarOpen && railView === item.view
@@ -560,6 +571,39 @@ export function AppRail({
           style={{ position: "fixed", left: menuPos.x, top: menuPos.y }}
           className="z-[10000] bg-popover border border-border shadow-lg py-1 min-w-[190px]"
         >
+          {menuTarget && (
+            <>
+              {menuTarget.promotable && (
+                <button
+                  onClick={() => {
+                    onOpenTab?.(menuTarget.view as TabType);
+                    setMenuPos(null);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                >
+                  <span className="shrink-0 w-3 flex items-center justify-center">
+                    <SquareArrowOutUpRight className="size-3" />
+                  </span>
+                  {t("nav.openAsTab")}
+                </button>
+              )}
+              {menuTarget.rightDockable && (
+                <button
+                  onClick={() => {
+                    onOpenInRightDock?.(menuTarget.view);
+                    setMenuPos(null);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                >
+                  <span className="shrink-0 w-3 flex items-center justify-center">
+                    <PanelRight className="size-3" />
+                  </span>
+                  {t("nav.openInRightDock")}
+                </button>
+              )}
+              <div className="h-px bg-border my-1" />
+            </>
+          )}
           <button
             onClick={togglePinned}
             className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"

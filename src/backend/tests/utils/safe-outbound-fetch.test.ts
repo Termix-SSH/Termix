@@ -3,6 +3,7 @@ import type { LookupAddress, LookupOptions } from "dns";
 import {
   createDnsLookupHook,
   isBlockedAddress,
+  readResponseTextLimited,
 } from "../../utils/safe-outbound-fetch.js";
 
 describe("isBlockedAddress", () => {
@@ -47,10 +48,42 @@ describe("isBlockedAddress", () => {
   });
 });
 
+describe("readResponseTextLimited", () => {
+  it("reads a response within the configured limit", async () => {
+    const response = new Response("hello");
+    await expect(readResponseTextLimited(response, 5)).resolves.toBe("hello");
+  });
+
+  it("rejects a declared oversized response before buffering it", async () => {
+    const response = new Response("small", {
+      headers: { "content-length": "100" },
+    });
+    await expect(readResponseTextLimited(response, 10)).rejects.toThrow(
+      "Response exceeds 10 bytes",
+    );
+  });
+
+  it("stops a chunked response once its actual body exceeds the limit", async () => {
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("12345"));
+          controller.enqueue(new TextEncoder().encode("6"));
+          controller.close();
+        },
+      }),
+    );
+    await expect(readResponseTextLimited(response, 5)).rejects.toThrow(
+      "Response exceeds 5 bytes",
+    );
+  });
+});
+
 function runHook(
   addresses: LookupAddress[] | string | undefined,
   error: NodeJS.ErrnoException | null = null,
   lookupOptions: LookupOptions = { all: true },
+  allowPrivate = false,
 ) {
   const fakeLookup = vi.fn(
     (
@@ -66,7 +99,7 @@ function runHook(
     },
   );
 
-  const hook = createDnsLookupHook(fakeLookup);
+  const hook = createDnsLookupHook(fakeLookup, allowPrivate);
   const callback = vi.fn();
 
   hook("example.invalid", lookupOptions, callback);
@@ -92,6 +125,21 @@ const publicAddresses: LookupAddress[] = [
 ];
 
 describe("createDnsLookupHook", () => {
+  it("permits private results only for an explicitly authorized host", () => {
+    const { callback } = runHook(
+      [{ address: "192.168.1.20", family: 4 }],
+      null,
+      { all: true },
+      true,
+    );
+
+    expect(callback).toHaveBeenCalledWith(
+      null,
+      [{ address: "192.168.1.20", family: 4 }],
+      0,
+    );
+  });
+
   it("allows a public IPv4 address through", () => {
     const { callback } = runHook([
       {

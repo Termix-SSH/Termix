@@ -64,6 +64,7 @@ export function useConnectionRetry({
     null,
   );
   const isMountedRef = useRef(true);
+  const markFailedRef = useRef<() => void>(() => {});
 
   const clearTimers = useCallback(() => {
     if (retryTimeoutRef.current) {
@@ -79,7 +80,13 @@ export function useConnectionRetry({
   const runConnect = useCallback(() => {
     if (!isMountedRef.current) return;
     setStatus("connecting");
-    void connectRef.current();
+    try {
+      void Promise.resolve(connectRef.current()).catch(() => {
+        markFailedRef.current();
+      });
+    } catch {
+      markFailedRef.current();
+    }
   }, []);
 
   const scheduleRetry = useCallback(() => {
@@ -130,6 +137,7 @@ export function useConnectionRetry({
       setNextRetryInMs(null);
     }
   }, [clearTimers, scheduleRetry]);
+  markFailedRef.current = markFailed;
 
   const retryNow = useCallback(() => {
     clearTimers();

@@ -58,12 +58,19 @@ export function parseSysfsThermalOutput(output: string): TemperatureSensor[] {
 export function parseSensorsOutput(output: string): TemperatureSensor[] {
   const seen = new Set<string>();
   const sensors: TemperatureSensor[] = [];
+  let device = "";
 
   for (const line of output.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed && !line.startsWith(" ") && !trimmed.includes(":")) {
+      device = trimmed;
+      continue;
+    }
     const match = line.match(/^\s*([^:]+):\s*([+-]?\d+(?:\.\d+)?)\s*°?C\b/i);
     if (!match) continue;
 
-    const sensor = normalizeSensor(match[1], Number(match[2]));
+    const label = device ? `${device}: ${match[1]}` : match[1];
+    const sensor = normalizeSensor(label, Number(match[2]));
     if (!sensor) continue;
 
     const key = `${sensor.label.toLowerCase()}:${sensor.celsius}`;

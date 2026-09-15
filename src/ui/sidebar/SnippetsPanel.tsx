@@ -863,6 +863,7 @@ function ShareSnippetDialog({
 
 function SnippetCard({
   snippet,
+  showCommands,
   selectedTabIds,
   terminalTabs,
   activeTabId,
@@ -880,6 +881,7 @@ function SnippetCard({
   t,
 }: {
   snippet: Snippet;
+  showCommands: boolean;
   selectedTabIds: Set<string>;
   terminalTabs: Tab[];
   activeTabId: string;
@@ -967,9 +969,11 @@ function SnippetCard({
             />
           )}
         </div>
-        <span className="text-xs text-muted-foreground font-mono px-1 min-w-0 break-all whitespace-pre-wrap">
-          {snippet.content}
-        </span>
+        {showCommands && (
+          <span className="text-xs text-muted-foreground font-mono px-1 min-w-0 break-all whitespace-pre-wrap">
+            {snippet.content}
+          </span>
+        )}
         {targetHosts.length > 0 && (
           <div className="flex flex-wrap gap-1 px-1">
             {targetHosts.map((host) => (
@@ -1247,6 +1251,7 @@ function ExecutionResultDialog({
 
 function VirtualFolderGroup({
   folderName,
+  showCommands,
   snippets: folderSnippets,
   selectedTabIds,
   terminalTabs,
@@ -1267,6 +1272,7 @@ function VirtualFolderGroup({
   open,
   onToggleOpen,
 }: {
+  showCommands: boolean;
   folderName: string;
   snippets: Snippet[];
   selectedTabIds: Set<string>;
@@ -1313,6 +1319,7 @@ function VirtualFolderGroup({
         >
           {folderSnippets.map((snippet) => (
             <SnippetCard
+              showCommands={showCommands}
               key={snippet.id}
               snippet={snippet}
               selectedTabIds={selectedTabIds}
@@ -1381,6 +1388,10 @@ export function SnippetsPanel({
   const [executionSnippetName, setExecutionSnippetName] = useState("");
   const [foldersCollapsedDefault, setFoldersCollapsedDefault] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
+  );
+  // Compact list: names only, the command stays in the tooltip/editor.
+  const [showCommands, setShowCommands] = useState(
+    () => localStorage.getItem("snippetShowCommands") !== "false",
   );
   const [confirmExecution, setConfirmExecution] = useState(
     () => localStorage.getItem("confirmSnippetExecution") === "true",
@@ -1963,6 +1974,20 @@ export function SnippetsPanel({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="text-xs w-64 p-2">
                 <SettingRow
+                  label={t("newUi.sidebar.userProfile.showSnippetCommands")}
+                  description={t(
+                    "newUi.sidebar.userProfile.showSnippetCommandsDesc",
+                  )}
+                >
+                  <FakeSwitch
+                    checked={showCommands}
+                    onChange={(v) => {
+                      setShowCommands(v);
+                      localStorage.setItem("snippetShowCommands", v.toString());
+                    }}
+                  />
+                </SettingRow>
+                <SettingRow
                   label={t("newUi.sidebar.userProfile.foldersCollapsed")}
                   description={t(
                     "newUi.sidebar.userProfile.foldersCollapsedDesc",
@@ -2155,6 +2180,7 @@ export function SnippetsPanel({
                 >
                   {uncategorizedSnippets.map((snippet) => (
                     <SnippetCard
+                      showCommands={showCommands}
                       key={snippet.id}
                       snippet={snippet}
                       selectedTabIds={selectedTabIds}
@@ -2252,6 +2278,7 @@ export function SnippetsPanel({
                   >
                     {folderSnippets.map((snippet) => (
                       <SnippetCard
+                        showCommands={showCommands}
                         key={snippet.id}
                         snippet={snippet}
                         selectedTabIds={selectedTabIds}
@@ -2292,6 +2319,7 @@ export function SnippetsPanel({
             if (folderSnippets.length === 0) return null;
             return (
               <VirtualFolderGroup
+                showCommands={showCommands}
                 key={`virtual-${folderName}`}
                 folderName={folderName}
                 snippets={folderSnippets}

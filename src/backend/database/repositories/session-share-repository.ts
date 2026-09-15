@@ -13,7 +13,9 @@ export type SessionShareRecord = typeof sessionShares.$inferSelect;
 export type SessionShareParticipantRecord =
   typeof sessionShareParticipants.$inferSelect;
 
-export type SessionShareType = "link" | "user";
+// "room" shares are minted internally by the collab-room routes and are
+// joinable by any member of the room whose stage references them.
+export type SessionShareType = "link" | "user" | "room";
 export type SessionSharePermissionLevel = "read-only" | "read-write";
 
 export interface SessionShareCreateInput {

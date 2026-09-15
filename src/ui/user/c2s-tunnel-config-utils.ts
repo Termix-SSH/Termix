@@ -18,7 +18,7 @@ export function getTunnelMode(tunnel: Partial<TunnelConnection>): TunnelMode {
 }
 
 export function normalizeClientTunnel(
-  tunnel: Partial<TunnelConnection>,
+  tunnel: Partial<ClientTunnel>,
 ): ClientTunnel {
   const mode = getTunnelMode(tunnel);
   const metadata = tunnel as Partial<ClientTunnel>;

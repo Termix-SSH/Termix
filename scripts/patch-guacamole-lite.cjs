@@ -25,11 +25,20 @@ const clientConnectionPath = path.join(
   "lib",
   "ClientConnection.js",
 );
+const serverPath = path.join(
+  __dirname,
+  "..",
+  "node_modules",
+  "guacamole-lite",
+  "lib",
+  "Server.js",
+);
 
 if (
   !fs.existsSync(guacdClientPath) ||
   !fs.existsSync(cryptPath) ||
-  !fs.existsSync(clientConnectionPath)
+  !fs.existsSync(clientConnectionPath) ||
+  !fs.existsSync(serverPath)
 ) {
   console.log("[patch-guacamole-lite] File not found, skipping");
   process.exit(0);
@@ -52,6 +61,7 @@ function missingAnchor(patch) {
 let guacdClientContent = fs.readFileSync(guacdClientPath, "utf8");
 let cryptContent = fs.readFileSync(cryptPath, "utf8");
 let clientConnectionContent = fs.readFileSync(clientConnectionPath, "utf8");
+let serverContent = fs.readFileSync(serverPath, "utf8");
 
 // Patch 1: protocol version negotiation.
 // guacamole-lite originally only accepted 1.0.0/1.1.0. Support the protocol
@@ -358,6 +368,27 @@ if (!clientConnectionContent.includes("compiledSettings.readOnly")) {
   patched = true;
 }
 
+// Patch 9: ClientConnection closes malformed-token WebSockets in its
+// constructor, but Server.newConnection still called connect() afterwards.
+// That dereferenced the absent connection settings and turned one bad token
+// into an unhandled rejection that could terminate the backend process.
+const oldConnectionSetup =
+  "        newConnection.on('ready', async (clientConnection) => {";
+const newConnectionSetup =
+  "        if (!newConnection.connectionSettings || !newConnection.connectionSettings.connection) {\n" +
+  "            return;\n" +
+  "        }\n" +
+  "\n" +
+  oldConnectionSetup;
+
+if (!serverContent.includes("!newConnection.connectionSettings.connection")) {
+  if (!serverContent.includes(oldConnectionSetup)) {
+    missingAnchor("invalid-token connection guard");
+  }
+  serverContent = serverContent.replace(oldConnectionSetup, newConnectionSetup);
+  patched = true;
+}
+
 if (!patched) {
   console.log("[patch-guacamole-lite] Already patched");
   process.exit(0);
@@ -366,6 +397,7 @@ if (!patched) {
 fs.writeFileSync(guacdClientPath, guacdClientContent);
 fs.writeFileSync(cryptPath, cryptContent);
 fs.writeFileSync(clientConnectionPath, clientConnectionContent);
+fs.writeFileSync(serverPath, serverContent);
 console.log(
-  "[patch-guacamole-lite] Patched protocol VERSION_1_3_0/1_5_0 support, name handshake, required arguments, UTF-8 token decrypt, and read-only join input filtering",
+  "[patch-guacamole-lite] Patched protocol negotiation, name handshake, required arguments, UTF-8 token decrypt, read-only joins, and malformed-token handling",
 );

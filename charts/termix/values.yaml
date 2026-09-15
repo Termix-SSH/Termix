@@ -75,6 +75,7 @@ env:
   PORT: "8080"
   DATA_DIR: /app/data
   NODE_ENV: production
+  TERMIX_REQUIRE_EXTERNAL_SECRETS: "false"
   GUACD_RECORDING_PATH: /termix-data/session_recordings/guacamole
   GUACD_RECORDING_BACKEND_PATH: /app/data/session_recordings/guacamole
 
@@ -86,6 +87,9 @@ secrets:
   name: ""
   data:
     JWT_SECRET: ""
+    DATABASE_KEY: ""
+    ENCRYPTION_KEY: ""
+    INTERNAL_AUTH_TOKEN: ""
     DATABASE_URL: ""
     GUACAMOLE_ENCRYPTION_KEY: ""
 

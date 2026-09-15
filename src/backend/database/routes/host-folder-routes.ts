@@ -6,6 +6,7 @@ import {
   createCurrentCredentialRepository,
   createCurrentFileManagerBookmarkRepository,
   createCurrentHostFolderRepository,
+  createCurrentFolderAccessRepository,
   createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentSshCredentialUsageRepository,
@@ -17,12 +18,25 @@ import { isNonEmptyString } from "./host-normalizers.js";
 
 type HostFolderRoutesDeps = {
   authenticateJWT: RequestHandler;
+  requireViewPermission: RequestHandler;
+  requireEditPermission: RequestHandler;
+  requireDeletePermission: RequestHandler;
+  requireCredentialEditPermission: RequestHandler;
+  requireDataAccess: RequestHandler;
   statsServerUrl: string;
 };
 
 export function registerHostFolderRoutes(
   router: Router,
-  { authenticateJWT, statsServerUrl }: HostFolderRoutesDeps,
+  {
+    authenticateJWT,
+    requireViewPermission,
+    requireEditPermission,
+    requireDeletePermission,
+    requireCredentialEditPermission,
+    requireDataAccess,
+    statsServerUrl,
+  }: HostFolderRoutesDeps,
 ): void {
   /**
    * @openapi
@@ -54,6 +68,9 @@ export function registerHostFolderRoutes(
   router.put(
     "/folders/rename",
     authenticateJWT,
+    requireEditPermission,
+    requireCredentialEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { oldName, newName } = req.body;
@@ -76,6 +93,11 @@ export function registerHostFolderRoutes(
             oldName,
             newName,
           );
+        await createCurrentFolderAccessRepository().renameFolder(
+          userId,
+          oldName,
+          newName,
+        );
 
         res.json({
           message: "Folder renamed successfully",
@@ -113,6 +135,8 @@ export function registerHostFolderRoutes(
   router.get(
     "/folders",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
 
@@ -170,6 +194,8 @@ export function registerHostFolderRoutes(
   router.put(
     "/folders/metadata",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { name, color, icon, credentialId } = req.body;
@@ -275,6 +301,8 @@ export function registerHostFolderRoutes(
   router.put(
     "/folders/reorder",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { positions } = req.body as {
@@ -346,6 +374,8 @@ export function registerHostFolderRoutes(
   router.delete(
     "/folders/:name/hosts",
     authenticateJWT,
+    requireDeletePermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const folderName = Array.isArray(req.params.name)

@@ -1,3 +1,4 @@
+import { Select2 } from "@/components/select2";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,15 +13,24 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
+import {
   TERMINAL_FONT_ZOOM_MIN,
   TERMINAL_FONT_ZOOM_MAX,
 } from "@/features/terminal/terminal-font-zoom";
 import {
   Globe,
+  Info,
   Layers, // --- tmux-monitor ---
   Network,
   Palette,
+  Pencil,
   Plus,
+  Settings,
   Shield,
   Upload,
   X,
@@ -61,6 +71,7 @@ import {
   createHostEditorForm,
   mapSnippetResponse,
   omitOwnerSshAuthFromSharedEdit,
+  terminalAppearanceKeys,
   type HostAuthType,
   type HostBellStyle,
   type HostBackspaceMode,
@@ -68,6 +79,7 @@ import {
   type HostFastScrollModifier,
   type HostProtocols,
 } from "./HostEditorData";
+import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import {
   HostDockerTab,
   HostProxmoxTab,
@@ -82,8 +94,17 @@ import {
 } from "./HostEditorGuacamoleTabs";
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { VaultProfileManager } from "./VaultProfileManager";
+import {
+  SecretReferenceHint,
+  SecretSourceManager,
+} from "./SecretSourceManager";
 import { findHostByTunnelEndpoint } from "@/features/tunnel/tunnel-endpoints";
-import { Select2 } from "@/components/select2";
+import {
+  toCredentialOption,
+  type CredentialOption,
+} from "./quick-created-credential";
+
+const CUSTOM_FONT_OPTION = "__custom__";
 
 export function HostEditor({
   host,
@@ -92,33 +113,64 @@ export function HostEditor({
   onSave,
   protocols,
   onProtocolChange,
+  onDirtyChange,
   onTabChange,
   hosts,
   credentials,
   adminTargetUserId,
+  simpleMode = false,
+  onEditCredential,
 }: {
   host: Host | null;
   activeTab: string;
+  /** Collapses the General tab to the fields needed to reach a host. */
+  simpleMode?: boolean;
   onBack: () => void;
   onSave: (saved: SSHHost) => void;
   protocols: HostProtocols;
   onProtocolChange: (p: Partial<typeof protocols>) => void;
+  onDirtyChange?: (dirty: boolean) => void;
   onTabChange: (tab: string) => void;
   hosts: Host[];
   credentials: { id: string; name: string; username: string }[];
   // When set, the editor works on another user's host through the admin
   // impersonation endpoints instead of the signed-in user's own data.
   adminTargetUserId?: string;
+  // Opens the currently-selected credential for editing (from within the
+  // host editor), so the user can tweak/rotate it without leaving the flow.
+  onEditCredential?: (credentialId: string) => void;
 }) {
   const { t } = useTranslation();
   const { setPreviewTerminalTheme } = useTabsSafe();
-  const [form, setForm] = useState(() => createHostEditorForm(host));
+  const connectionDefaults = useConnectionDefaults();
+  const [form, setForm] = useState(() =>
+    createHostEditorForm(host, undefined, connectionDefaults),
+  );
+  const [isCustomFont, setIsCustomFont] = useState(
+    () => !TERMINAL_FONTS.some((f) => f.value === form.fontFamily),
+  );
 
-  const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
-    setForm((p) => ({ ...p, [k]: v }));
+  const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
+    onDirtyChange?.(true);
+    setForm((p) => ({
+      ...p,
+      [k]: v,
+      ...(terminalAppearanceKeys.includes(
+        k as (typeof terminalAppearanceKeys)[number],
+      )
+        ? { inheritTerminalAppearance: false }
+        : {}),
+    }));
+  };
 
-  const setGuacField = (key: string, value: unknown) =>
-    setField("guacamoleConfig", { ...form.guacamoleConfig, [key]: value });
+  const setGuacField = (key: string, value: unknown) => {
+    onDirtyChange?.(true);
+    setForm((current) => ({
+      ...current,
+      inheritRemoteDesktopDefaults: false,
+      guacamoleConfig: { ...current.guacamoleConfig, [key]: value },
+    }));
+  };
 
   const [saving, setSaving] = useState(false);
   const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
@@ -137,14 +189,18 @@ export function HostEditor({
   >([]);
   const [tailscaleHasApiKey, setTailscaleHasApiKey] = useState(false);
   const [tailscaleLoading, setTailscaleLoading] = useState(false);
+  const [tailscaleDeviceError, setTailscaleDeviceError] = useState(false);
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
   const [showVaultManager, setShowVaultManager] = useState(false);
+  const [showSecretSources, setShowSecretSources] = useState(false);
   const [quickCredentialName, setQuickCredentialName] = useState("");
   const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
   const [showQuickCredentialDialog, setShowQuickCredentialDialog] =
     useState(false);
+  const [quickCreatedCredential, setQuickCreatedCredential] =
+    useState<CredentialOption | null>(null);
   const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>([]);
   const [savingTheme, setSavingTheme] = useState(false);
 
@@ -224,11 +280,15 @@ export function HostEditor({
   }, [adminTargetUserId]);
 
   useEffect(() => {
-    if (host) return;
+    if (!connectionDefaults.ready) return;
+    if (host) {
+      setForm(createHostEditorForm(host, undefined, connectionDefaults));
+      return;
+    }
     getHostDefaults()
-      .then((d) => setForm(createHostEditorForm(null, d)))
+      .then((d) => setForm(createHostEditorForm(null, d, connectionDefaults)))
       .catch(() => {});
-  }, [host]);
+  }, [host, connectionDefaults]);
 
   useEffect(() => {
     if (!host?.id || form.vncAuthType !== "direct" || form.vncPassword) return;
@@ -258,12 +318,14 @@ export function HostEditor({
   useEffect(() => {
     if (form.authType !== "tailscale") return;
     setTailscaleLoading(true);
+    setTailscaleDeviceError(false);
     getTailscaleDevices()
       .then((res) => {
         setTailscaleDevices(res?.devices ?? []);
         setTailscaleHasApiKey(res?.hasApiKey ?? false);
+        setTailscaleDeviceError(!!res?.error);
       })
-      .catch(() => {})
+      .catch(() => setTailscaleDeviceError(true))
       .finally(() => setTailscaleLoading(false));
   }, [form.authType]);
 
@@ -295,8 +357,15 @@ export function HostEditor({
   };
 
   const authMethod = form.authType;
-  const selectedCredential = credentials.find(
-    (c) => c.id === form.credentialId,
+  const availableCredentials =
+    quickCreatedCredential &&
+    !credentials.some(
+      (credential) => credential.id === quickCreatedCredential.id,
+    )
+      ? [...credentials, quickCreatedCredential]
+      : credentials;
+  const selectedCredential = availableCredentials.find(
+    (c) => String(c.id) === String(form.credentialId),
   );
 
   const canQuickCreateCredential =
@@ -331,8 +400,11 @@ export function HostEditor({
       if (authMethod === "password") {
         data.authType = "password";
         data.password =
-          form.password ||
-          (host?.hasPassword ? await fetchField("password") : null);
+          form.password && form.password !== "existing_password"
+            ? form.password
+            : host?.hasPassword
+              ? await fetchField("password")
+              : null;
       } else {
         const key =
           form.key && form.key !== "existing_key"
@@ -349,14 +421,24 @@ export function HostEditor({
         data.authType = "key";
         data.key = key;
         data.keyPassword = keyPassword;
-        data.password = form.password || null;
+        data.password =
+          form.password && form.password !== "existing_password"
+            ? form.password
+            : null;
       }
 
-      if (adminTargetUserId) {
-        await adminCreateUserCredential(adminTargetUserId, data);
-      } else {
-        await createCredential(data);
-      }
+      const created = adminTargetUserId
+        ? await adminCreateUserCredential(adminTargetUserId, data)
+        : await createCredential(data);
+      const credential = toCredentialOption(created);
+      if (!credential) throw new Error(t("hosts.failedToSaveCredential"));
+
+      setQuickCreatedCredential(credential);
+      setForm((current) => ({
+        ...current,
+        authType: "credential",
+        credentialId: credential.id,
+      }));
       toast.success(t("hosts.credentialCreated"));
       if (!adminTargetUserId) {
         window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
@@ -381,6 +463,7 @@ export function HostEditor({
     proto: keyof typeof protocols,
     value: boolean,
   ) => {
+    onDirtyChange?.(true);
     onProtocolChange({ [proto]: value });
     const tabForProto: Record<string, string> = {
       enableSsh: "ssh",
@@ -435,6 +518,7 @@ export function HostEditor({
               handleProtocolToggle={handleProtocolToggle}
               hosts={hosts}
               host={host}
+              simpleMode={simpleMode}
             />
           )}
 
@@ -494,9 +578,16 @@ export function HostEditor({
                 >
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.authMethod")}
+                      {t("hosts.authenticationMethod")}
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.authenticationMethodDesc")}
+                    </p>
+                    <div
+                      className="flex flex-wrap gap-2"
+                      role="radiogroup"
+                      aria-label={t("hosts.authenticationMethod")}
+                    >
                       {[
                         "password",
                         "key",
@@ -504,11 +595,15 @@ export function HostEditor({
                         "vault",
                         "none",
                         "opkssh",
+                        "stepca",
                         "tailscale",
                         "agent",
                       ].map((m) => (
                         <button
                           key={m}
+                          type="button"
+                          role="radio"
+                          aria-checked={authMethod === m}
                           disabled={lockAuthReferences}
                           title={
                             lockAuthReferences
@@ -558,6 +653,26 @@ export function HostEditor({
                           {t("hosts.oidcUsernameHint")}
                         </p>
                       )}
+                      {authMethod === "stepca" && (
+                        <div className="flex flex-col gap-2 border-t border-border pt-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              {t("hosts.stepcaLabel")}
+                            </span>
+                            <a
+                              href="https://smallstep.com/docs/step-ca/provisioners/#oauthoidc-single-sign-on"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-accent-brand hover:underline"
+                            >
+                              {t("hosts.docsLink")}
+                            </a>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {t("hosts.stepcaDesc")}
+                          </p>
+                        </div>
+                      )}
                       {authMethod === "tailscale" && (
                         <p className="text-[10px] text-muted-foreground/60">
                           {t("hosts.tailscaleUsernameHint")}
@@ -571,12 +686,33 @@ export function HostEditor({
                         </label>
                         <PasswordInput
                           className="h-8 text-xs pr-8"
-                          placeholder="••••••••"
-                          value={form.password}
+                          placeholder={
+                            form.password === "existing_password"
+                              ? t("hosts.passwordSaved")
+                              : "••••••••"
+                          }
+                          value={
+                            form.password === "existing_password"
+                              ? ""
+                              : form.password
+                          }
+                          onFocus={() => {
+                            if (form.password === "existing_password")
+                              setField("password", "");
+                          }}
                           onChange={(e) => setField("password", e.target.value)}
+                        />
+                        <SecretReferenceHint
+                          onManage={() => setShowSecretSources((v) => !v)}
                         />
                       </div>
                     )}
+                    {(authMethod === "password" || authMethod === "key") &&
+                      showSecretSources && (
+                        <SecretSourceManager
+                          onClose={() => setShowSecretSources(false)}
+                        />
+                      )}
                     {authMethod === "key" && (
                       <>
                         <div className="flex flex-col gap-1.5 col-span-2">
@@ -690,8 +826,20 @@ export function HostEditor({
                           </label>
                           <PasswordInput
                             className="h-8 text-xs pr-8"
-                            placeholder="••••••••"
-                            value={form.password}
+                            placeholder={
+                              form.password === "existing_password"
+                                ? t("hosts.passwordSaved")
+                                : "••••••••"
+                            }
+                            value={
+                              form.password === "existing_password"
+                                ? ""
+                                : form.password
+                            }
+                            onFocus={() => {
+                              if (form.password === "existing_password")
+                                setField("password", "");
+                            }}
                             onChange={(e) =>
                               setField("password", e.target.value)
                             }
@@ -791,38 +939,54 @@ export function HostEditor({
                           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {t("hosts.storedCredential")}
                           </label>
-                          <Select2
-                            value={form.credentialId}
-                            disabled={lockAuthReferences}
-                            title={
-                              lockAuthReferences
-                                ? t("hosts.sharing.ownerOnlyControl")
-                                : undefined
-                            }
-                            onChange={(e) => {
-                              const newId = e.target.value;
-                              setField("credentialId", newId);
-                              if (!form.overrideCredentialUsername) {
-                                const cred = credentials.find(
-                                  (c) => c.id === newId,
-                                );
-                                if (cred?.username)
-                                  setField("username", cred.username);
+                          <div className="flex items-center gap-2">
+                            <Select2
+                              value={form.credentialId}
+                              disabled={lockAuthReferences}
+                              title={
+                                lockAuthReferences
+                                  ? t("hosts.sharing.ownerOnlyControl")
+                                  : undefined
                               }
-                            }}
-                            className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <option value="">
-                              {t("hosts.selectACredential")}
-                            </option>
-                            {credentials.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.username
-                                  ? `${c.name} (${c.username})`
-                                  : c.name}
+                              onChange={(e) => {
+                                const newId = e.target.value;
+                                setField("credentialId", newId);
+                                if (!form.overrideCredentialUsername) {
+                                  const cred = availableCredentials.find(
+                                    (c) => c.id === newId,
+                                  );
+                                  if (cred?.username)
+                                    setField("username", cred.username);
+                                }
+                              }}
+                              className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value="">
+                                {t("hosts.selectACredential")}
                               </option>
-                            ))}
-                          </Select2>
+                              {availableCredentials.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.username
+                                    ? `${c.name} (${c.username})`
+                                    : c.name}
+                                </option>
+                              ))}
+                            </Select2>
+                            {onEditCredential && form.credentialId && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 px-2.5 shrink-0"
+                                title={t("hosts.editCredentialAction")}
+                                onClick={() =>
+                                  onEditCredential(form.credentialId)
+                                }
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         {selectedCredential?.username && (
                           <div className="flex items-center justify-between col-span-2 pt-1">
@@ -854,8 +1018,20 @@ export function HostEditor({
                           </label>
                           <PasswordInput
                             className="h-8 text-xs pr-8"
-                            placeholder="••••••••"
-                            value={form.password}
+                            placeholder={
+                              form.password === "existing_password"
+                                ? t("hosts.passwordSaved")
+                                : "••••••••"
+                            }
+                            value={
+                              form.password === "existing_password"
+                                ? ""
+                                : form.password
+                            }
+                            onFocus={() => {
+                              if (form.password === "existing_password")
+                                setField("password", "");
+                            }}
                             onChange={(e) =>
                               setField("password", e.target.value)
                             }
@@ -899,13 +1075,17 @@ export function HostEditor({
                           {t("hosts.tailscaleDocsLink")}
                         </a>
                       </div>
-                      {!tailscaleHasApiKey && !tailscaleLoading ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          {t("hosts.tailscaleNoApiKey")}
-                        </p>
-                      ) : tailscaleLoading ? (
+                      {tailscaleLoading ? (
                         <p className="text-[10px] text-muted-foreground">
                           {t("hosts.tailscaleLoadingDevices")}
+                        </p>
+                      ) : tailscaleDeviceError ? (
+                        <p className="text-[10px] text-destructive">
+                          {t("hosts.tailscaleDeviceLoadFailed")}
+                        </p>
+                      ) : !tailscaleHasApiKey ? (
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.tailscaleNoApiKey")}
                         </p>
                       ) : tailscaleDevices.length === 0 ? (
                         <p className="text-[10px] text-muted-foreground">
@@ -957,25 +1137,13 @@ export function HostEditor({
                       )}
                     </div>
                   )}
-                  {authMethod === "warpgate" && (
-                    <div className="flex flex-col gap-2 border-t border-border pt-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.warpgateLabel")}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {t("hosts.warpgateDesc")}
-                      </p>
-                    </div>
-                  )}
                   {authMethod === "agent" && (
                     <div className="flex flex-col gap-2 border-t border-border pt-3">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         {t("hosts.agentLabel")}
                       </span>
                       <p className="text-[10px] text-muted-foreground">
-                        {t("hosts.agentDesc")}
+                        {t("hosts.agentAuthenticationDesc")}
                       </p>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -990,6 +1158,21 @@ export function HostEditor({
                         />
                         <p className="text-[10px] text-muted-foreground">
                           {t("hosts.agentSocketPathHint")}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.agentIdentityLabel")}
+                        </label>
+                        <Input
+                          placeholder={t("hosts.agentIdentityPlaceholder")}
+                          value={form.agentIdentity}
+                          onChange={(e) =>
+                            setField("agentIdentity", e.target.value)
+                          }
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.agentIdentityHint")}
                         </p>
                       </div>
                     </div>
@@ -1042,8 +1225,20 @@ export function HostEditor({
                       </label>
                       <PasswordInput
                         className="h-8 text-xs pr-8"
-                        placeholder="••••••••"
-                        value={form.sudoPassword}
+                        placeholder={
+                          form.sudoPassword === "existing_sudo_password"
+                            ? t("hosts.sudoPasswordSaved")
+                            : "••••••••"
+                        }
+                        value={
+                          form.sudoPassword === "existing_sudo_password"
+                            ? ""
+                            : form.sudoPassword
+                        }
+                        onFocus={() => {
+                          if (form.sudoPassword === "existing_sudo_password")
+                            setField("sudoPassword", "");
+                        }}
                         onChange={(e) =>
                           setField("sudoPassword", e.target.value)
                         }
@@ -1062,180 +1257,243 @@ export function HostEditor({
                 icon={<Palette className="size-3.5" />}
               >
                 <div className="flex flex-col gap-4 py-3">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.themePreview")}
-                    </label>
-                    <TerminalPreview
-                      theme={form.theme}
-                      fontSize={form.fontSize}
-                      fontFamily={form.fontFamily}
-                      cursorStyle={form.cursorStyle}
-                      cursorBlink={form.cursorBlink}
-                      letterSpacing={form.letterSpacing}
-                      lineHeight={form.lineHeight}
-                      customThemeColors={form.customThemeColors ?? undefined}
+                  <SettingRow
+                    label={t("hosts.useUserDefaults", {
+                      defaultValue: "Use user defaults",
+                    })}
+                    description={t("hosts.useUserTerminalDefaultsDesc", {
+                      defaultValue:
+                        "Keep this host synchronized with Terminal defaults from User Profile.",
+                    })}
+                  >
+                    <FakeSwitch
+                      checked={form.inheritTerminalAppearance}
+                      onChange={(value) =>
+                        setField("inheritTerminalAppearance", value)
+                      }
                     />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
+                  </SettingRow>
+                  <fieldset
+                    disabled={form.inheritTerminalAppearance}
+                    className={
+                      form.inheritTerminalAppearance
+                        ? "contents opacity-60"
+                        : "contents"
+                    }
+                  >
+                    <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.colorTheme")}
+                        {t("hosts.themePreview")}
                       </label>
-                      <Select2
-                        value={form.theme}
-                        onChange={(e) => {
-                          const newTheme = e.target.value;
-                          setField("theme", newTheme);
-                          setPreviewTerminalTheme(newTheme);
-                          if (
-                            newTheme === "custom" &&
-                            !form.customThemeColors
-                          ) {
-                            setField("customThemeColors", {
-                              ...TERMINAL_THEMES.termixDark.colors,
-                            });
+                      <TerminalPreview
+                        theme={form.theme}
+                        fontSize={form.fontSize}
+                        fontFamily={form.fontFamily}
+                        cursorStyle={form.cursorStyle}
+                        cursorBlink={form.cursorBlink}
+                        letterSpacing={form.letterSpacing}
+                        lineHeight={form.lineHeight}
+                        customThemeColors={form.customThemeColors ?? undefined}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.colorTheme")}
+                        </label>
+                        <Select2
+                          value={form.theme}
+                          onChange={(e) => {
+                            const newTheme = e.target.value;
+                            setField("theme", newTheme);
+                            setPreviewTerminalTheme(newTheme);
+                            if (
+                              newTheme === "custom" &&
+                              !form.customThemeColors
+                            ) {
+                              setField("customThemeColors", {
+                                ...TERMINAL_THEMES.termixDark.colors,
+                              });
+                            }
+                          }}
+                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          {Object.entries(TERMINAL_THEMES)
+                            .filter(
+                              ([key]) =>
+                                key !== "termixDark" && key !== "termixLight",
+                            )
+                            .map(([key, theme]) => (
+                              <option key={key} value={key}>
+                                {theme.name}
+                              </option>
+                            ))}
+                        </Select2>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.fontFamilyLabel")}
+                          </label>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="size-3 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                {t("hosts.fontFamilyCustomHint")}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Select2
+                          value={
+                            isCustomFont ? CUSTOM_FONT_OPTION : form.fontFamily
                           }
-                        }}
-                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        {Object.entries(TERMINAL_THEMES)
-                          .filter(
-                            ([key]) =>
-                              key !== "termixDark" && key !== "termixLight",
-                          )
-                          .map(([key, theme]) => (
-                            <option key={key} value={key}>
-                              {theme.name}
+                          onChange={(e) => {
+                            if (e.target.value === CUSTOM_FONT_OPTION) {
+                              setIsCustomFont(true);
+                              setField("fontFamily", "");
+                            } else {
+                              setIsCustomFont(false);
+                              setField("fontFamily", e.target.value);
+                            }
+                          }}
+                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring font-mono"
+                        >
+                          {TERMINAL_FONTS.map((f) => (
+                            <option key={f.value} value={f.value}>
+                              {f.label}
                             </option>
                           ))}
-                      </Select2>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.fontFamilyLabel")}
-                      </label>
-                      <Select2
-                        value={form.fontFamily}
-                        onChange={(e) => setField("fontFamily", e.target.value)}
-                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring font-mono"
-                      >
-                        {TERMINAL_FONTS.map((f) => (
-                          <option key={f.value} value={f.value}>
-                            {f.label}
+                          <option value={CUSTOM_FONT_OPTION}>
+                            {t("hosts.fontFamilyCustomOption")}
                           </option>
-                        ))}
-                      </Select2>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.fontSizeLabel")}
-                        </label>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          {form.fontSize}px
-                        </span>
+                        </Select2>
+                        {isCustomFont && (
+                          <Input
+                            value={form.fontFamily}
+                            onChange={(e) =>
+                              setField("fontFamily", e.target.value)
+                            }
+                            placeholder={t("hosts.fontFamilyCustomPlaceholder")}
+                            className="h-9 text-xs font-mono"
+                          />
+                        )}
                       </div>
-                      <Slider
-                        min={TERMINAL_FONT_ZOOM_MIN}
-                        max={TERMINAL_FONT_ZOOM_MAX}
-                        step={1}
-                        value={[form.fontSize]}
-                        onValueChange={([v]) => setField("fontSize", v)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.cursorStyleLabel")}
-                      </label>
-                      <Select2
-                        value={form.cursorStyle}
-                        onChange={(e) =>
-                          setField(
-                            "cursorStyle",
-                            e.target.value as HostCursorStyle,
-                          )
-                        }
-                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        {CURSOR_STYLES.map((s) => (
-                          <option key={s.value} value={s.value}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </Select2>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.letterSpacingPx")}
-                        </label>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          {form.letterSpacing}px
-                        </span>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.fontSizeLabel")}
+                          </label>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {form.fontSize}px
+                          </span>
+                        </div>
+                        <Slider
+                          min={TERMINAL_FONT_ZOOM_MIN}
+                          max={TERMINAL_FONT_ZOOM_MAX}
+                          step={1}
+                          value={[form.fontSize]}
+                          onValueChange={([v]) => setField("fontSize", v)}
+                        />
                       </div>
-                      <Slider
-                        min={-2}
-                        max={10}
-                        step={0.5}
-                        value={[form.letterSpacing]}
-                        onValueChange={([v]) => setField("letterSpacing", v)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.lineHeightLabel")}
+                          {t("hosts.cursorStyleLabel")}
                         </label>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          {form.lineHeight.toFixed(1)}
-                        </span>
+                        <Select2
+                          value={form.cursorStyle}
+                          onChange={(e) =>
+                            setField(
+                              "cursorStyle",
+                              e.target.value as HostCursorStyle,
+                            )
+                          }
+                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          {CURSOR_STYLES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </Select2>
                       </div>
-                      <Slider
-                        min={1.0}
-                        max={2.0}
-                        step={0.1}
-                        value={[form.lineHeight]}
-                        onValueChange={([v]) => setField("lineHeight", v)}
-                      />
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.letterSpacingPx")}
+                          </label>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {form.letterSpacing}px
+                          </span>
+                        </div>
+                        <Slider
+                          min={-2}
+                          max={10}
+                          step={0.5}
+                          value={[form.letterSpacing]}
+                          onValueChange={([v]) => setField("letterSpacing", v)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.lineHeightLabel")}
+                          </label>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {form.lineHeight.toFixed(1)}
+                          </span>
+                        </div>
+                        <Slider
+                          min={1.0}
+                          max={2.0}
+                          step={0.1}
+                          value={[form.lineHeight]}
+                          onValueChange={([v]) => setField("lineHeight", v)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.bellStyleLabel")}
+                        </label>
+                        <Select2
+                          value={form.bellStyle}
+                          onChange={(e) =>
+                            setField(
+                              "bellStyle",
+                              e.target.value as HostBellStyle,
+                            )
+                          }
+                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          {BELL_STYLES.map((b) => (
+                            <option key={b.value} value={b.value}>
+                              {b.label}
+                            </option>
+                          ))}
+                        </Select2>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.backspaceModeLabel")}
+                        </label>
+                        <Select2
+                          value={form.backspaceMode}
+                          onChange={(e) =>
+                            setField(
+                              "backspaceMode",
+                              e.target.value as HostBackspaceMode,
+                            )
+                          }
+                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="normal">Normal (DEL)</option>
+                          <option value="control-h">Control-H (BS)</option>
+                        </Select2>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.bellStyleLabel")}
-                      </label>
-                      <Select2
-                        value={form.bellStyle}
-                        onChange={(e) =>
-                          setField("bellStyle", e.target.value as HostBellStyle)
-                        }
-                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        {BELL_STYLES.map((b) => (
-                          <option key={b.value} value={b.value}>
-                            {b.label}
-                          </option>
-                        ))}
-                      </Select2>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.backspaceModeLabel")}
-                      </label>
-                      <Select2
-                        value={form.backspaceMode}
-                        onChange={(e) =>
-                          setField(
-                            "backspaceMode",
-                            e.target.value as HostBackspaceMode,
-                          )
-                        }
-                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        <option value="normal">Normal (DEL)</option>
-                        <option value="control-h">Control-H (BS)</option>
-                      </Select2>
-                    </div>
-                  </div>
+                  </fieldset>
                   {form.theme === "custom" && (
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-col gap-1.5">
@@ -1428,6 +1686,15 @@ export function HostEditor({
                     />
                   </SettingRow>
                   <SettingRow
+                    label={t("hosts.macOptionIsMetaLabel")}
+                    description={t("hosts.macOptionIsMetaShortDesc")}
+                  >
+                    <FakeSwitch
+                      checked={form.macOptionIsMeta}
+                      onChange={(v) => setField("macOptionIsMeta", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
                     label={t("hosts.syntaxHighlightingLabel")}
                     description={t("hosts.syntaxHighlightingDesc")}
                   >
@@ -1557,6 +1824,27 @@ export function HostEditor({
                     />
                   </div>
                   <SettingRow
+                    label={t("hosts.enableAutoTmux")}
+                    description={
+                      <>
+                        {t("hosts.enableAutoTmuxDesc")}{" "}
+                        <a
+                          href="https://docs.termix.site/features/terminal/tmux"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent-brand hover:underline"
+                        >
+                          {t("hosts.docsLink")}
+                        </a>
+                      </>
+                    }
+                  >
+                    <FakeSwitch
+                      checked={form.autoTmux}
+                      onChange={(v) => setField("autoTmux", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
                     label={t("hosts.sshAgentForwardingLabel")}
                     description={t("hosts.sshAgentForwardingShortDesc")}
                   >
@@ -1581,27 +1869,6 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.autoMosh}
                       onChange={(v) => setField("autoMosh", v)}
-                    />
-                  </SettingRow>
-                  <SettingRow
-                    label={t("hosts.enableAutoTmux")}
-                    description={
-                      <>
-                        {t("hosts.enableAutoTmuxDesc")}{" "}
-                        <a
-                          href="https://docs.termix.site/features/terminal/tmux"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </>
-                    }
-                  >
-                    <FakeSwitch
-                      checked={form.autoTmux}
-                      onChange={(v) => setField("autoTmux", v)}
                     />
                   </SettingRow>
                   <SettingRow
@@ -1655,6 +1922,39 @@ export function HostEditor({
                       onChange={(v) => setField("enableCommandHistory", v)}
                     />
                   </SettingRow>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.localEchoLabel")}
+                    </label>
+                    <Select2
+                      value={form.localEcho}
+                      onChange={(e) =>
+                        setField(
+                          "localEcho",
+                          e.target.value as "default" | "off" | "auto" | "on",
+                        )
+                      }
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="default">
+                        {t("hosts.localEchoDefault")}
+                      </option>
+                      <option value="off">{t("hosts.localEchoOff")}</option>
+                      <option value="auto">{t("hosts.localEchoAuto")}</option>
+                      <option value="on">{t("hosts.localEchoOn")}</option>
+                    </Select2>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.localEchoDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/appearance"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </p>
+                  </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {t("hosts.linkClickBehaviorLabel")}
@@ -2299,13 +2599,38 @@ export function HostEditor({
           )}
 
           {activeTab === "rdp" && (
-            <HostEditorRdpTab
-              form={form}
-              setField={setField}
-              setGuacField={setGuacField}
-              host={host}
-              credentials={credentials}
-            />
+            <>
+              <SectionCard
+                title={t("hosts.rdpDefaults", {
+                  defaultValue: "RDP defaults",
+                })}
+                icon={<Settings className="size-3.5" />}
+              >
+                <SettingRow
+                  label={t("hosts.useUserDefaults", {
+                    defaultValue: "Use user defaults",
+                  })}
+                  description={t("hosts.useUserRdpDefaultsDesc", {
+                    defaultValue:
+                      "Inherit performance, redirection, and clipboard settings from User Profile.",
+                  })}
+                >
+                  <FakeSwitch
+                    checked={form.inheritRemoteDesktopDefaults}
+                    onChange={(value) =>
+                      setField("inheritRemoteDesktopDefaults", value)
+                    }
+                  />
+                </SettingRow>
+              </SectionCard>
+              <HostEditorRdpTab
+                form={form}
+                setField={setField}
+                setGuacField={setGuacField}
+                host={host}
+                credentials={availableCredentials}
+              />
+            </>
           )}
 
           {activeTab === "vnc" && (
@@ -2314,7 +2639,7 @@ export function HostEditor({
               setField={setField}
               setGuacField={setGuacField}
               host={host}
-              credentials={credentials}
+              credentials={availableCredentials}
             />
           )}
 
@@ -2324,7 +2649,7 @@ export function HostEditor({
               setField={setField}
               setGuacField={setGuacField}
               host={host}
-              credentials={credentials}
+              credentials={availableCredentials}
             />
           )}
         </div>
