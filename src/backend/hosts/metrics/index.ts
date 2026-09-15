@@ -73,6 +73,7 @@ import {
 } from "./helpers.js";
 import {
   type HostStatus,
+  isHostKeyVerificationError,
   statusAfterAuthentication,
   statusAfterReachabilityCheck,
 } from "./host-status.js";
@@ -147,6 +148,7 @@ interface SSHHostWithCredentials {
 type StatusEntry = {
   status: HostStatus;
   lastChecked: string;
+  reason?: "host_key_changed";
 };
 
 interface StatsConfig {
@@ -627,6 +629,10 @@ class PollingManager {
                 this.statusStore.get(refreshedHost.id)?.status,
               ),
         lastChecked: new Date().toISOString(),
+        ...(isOnline &&
+        this.statusStore.get(refreshedHost.id)?.reason === "host_key_changed"
+          ? { reason: "host_key_changed" as const }
+          : {}),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
       if (isOnline && this.activeViewers.has(refreshedHost.id)) {
@@ -709,6 +715,7 @@ class PollingManager {
       pollingBackoff.reset(refreshedHost.id);
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
+      const hostKeyChanged = isHostKeyVerificationError(error);
       if (!authenticated) {
         this.metricsAuthenticatedHosts.delete(refreshedHost.id);
         this.statusStore.set(refreshedHost.id, {
@@ -719,6 +726,7 @@ class PollingManager {
                 this.statusStore.get(refreshedHost.id)?.status,
               ),
           lastChecked: new Date().toISOString(),
+          ...(hostKeyChanged ? { reason: "host_key_changed" as const } : {}),
         });
       }
       const isAuthError =
@@ -738,6 +746,19 @@ class PollingManager {
             hostId: refreshedHost.id,
           });
         }
+        return;
+      }
+
+      if (hostKeyChanged) {
+        authFailureTracker.recordFailure(refreshedHost.id, "HOST_KEY", true);
+        statsLogger.error(
+          "Stats collector host key verification failed",
+          error,
+          {
+            operation: "stats_host_key_verification_failed",
+            hostId: refreshedHost.id,
+          },
+        );
         return;
       }
 
@@ -1869,6 +1890,8 @@ async function collectMetrics(
           error.message.includes("Invalid SSH key format")
         ) {
           authFailureTracker.recordFailure(host.id, "AUTH", true);
+        } else if (isHostKeyVerificationError(error)) {
+          authFailureTracker.recordFailure(host.id, "HOST_KEY", true);
         } else if (
           error.message.includes("authentication") ||
           error.message.includes("Permission denied") ||
