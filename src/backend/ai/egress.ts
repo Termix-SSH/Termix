@@ -51,8 +51,7 @@ function normalizeHost(hostname: string): string {
 /**
  * True when the URL names a destination the SSRF guard would refuse. A bare
  * hostname that is not an IP literal (e.g. "ollama.internal") is treated as
- * private only if it is "localhost" -- anything else resolves through DNS and
- * is caught at connect time by the guard instead.
+ * private only if it is "localhost" -- anything else needs DNS resolution.
  */
 export function isPrivateDestination(rawUrl: string): boolean {
   let url: URL;
@@ -98,11 +97,17 @@ export function evaluateEgress(
 
   const host = normalizeHost(url.hostname);
   const isPrivate = isPrivateDestination(rawUrl);
+  const normalized = allowlist.map((entry) => entry.trim().toLowerCase());
+
+  // An explicitly allowlisted hostname may resolve to a private address. It
+  // must use the private fetch path; sending it through safeOutboundFetch
+  // would reject it after DNS resolution and make hostname allowlist entries
+  // ineffective. Only administrators can write this list.
+  if (normalized.includes(host)) {
+    return { allowed: true, isPrivate: true };
+  }
 
   if (!isPrivate) return { allowed: true, isPrivate: false };
-
-  const normalized = allowlist.map((entry) => entry.trim().toLowerCase());
-  if (normalized.includes(host)) return { allowed: true, isPrivate: true };
 
   return {
     allowed: false,

@@ -1357,11 +1357,19 @@ export function DashboardTab({
         const hostId = Number(host.id);
         const knownStatus = statuses?.[hostId]?.status;
         if (knownStatus === "offline") return null;
-        if (host.authType === "none" || host.authType === "opkssh") return null;
+        if (
+          host.authType === "none" ||
+          host.authType === "opkssh" ||
+          host.authType === "stepca"
+        )
+          return null;
 
         try {
           const existing = newSessions.get(hostId);
-          if (!existing) {
+          if (existing && !(await sendMetricsHeartbeat(existing))) {
+            newSessions.delete(hostId);
+          }
+          if (!newSessions.has(hostId)) {
             const reg = await registerMetricsViewer(hostId);
             if (reg.skipped) return null;
             if (reg.success && reg.viewerSessionId) {
@@ -1484,8 +1492,14 @@ export function DashboardTab({
     if (!isVisible || viewerSessionsRef.current.size === 0) return;
     const heartbeat = setInterval(async () => {
       if (document.visibilityState === "hidden") return;
-      for (const [, sessionId] of viewerSessionsRef.current) {
-        sendMetricsHeartbeat(sessionId).catch(() => {});
+      for (const [hostId, sessionId] of viewerSessionsRef.current) {
+        sendMetricsHeartbeat(sessionId)
+          .then((alive) => {
+            if (!alive && viewerSessionsRef.current.get(hostId) === sessionId) {
+              viewerSessionsRef.current.delete(hostId);
+            }
+          })
+          .catch(() => {});
       }
     }, 30000);
     return () => clearInterval(heartbeat);

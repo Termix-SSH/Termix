@@ -10,6 +10,8 @@ interface OPKSSHDialogProps {
   stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
   error?: string;
   providers?: Array<{ alias: string; issuer: string }>;
+  /** Issuer name shown in the title; defaults to OPKSSH. */
+  label?: string;
   onCancel: () => void;
   onOpenUrl: () => void;
   onSelectProvider?: (alias: string) => void;
@@ -26,6 +28,7 @@ export function OPKSSHDialog({
   onOpenUrl,
   onSelectProvider,
   backgroundColor,
+  label,
 }: OPKSSHDialogProps) {
   const { t } = useTranslation();
 
@@ -42,7 +45,9 @@ export function OPKSSHDialog({
           <div className="flex items-center gap-2">
             <Shield className="size-4 text-accent-brand" />
             <h3 className="text-xs font-bold uppercase tracking-widest">
-              {t("terminal.opksshAuthRequired")}
+              {label
+                ? t("terminal.certAuthRequired", { provider: label })
+                : t("terminal.opksshAuthRequired")}
             </h3>
           </div>
           {stage === "chooser" && (

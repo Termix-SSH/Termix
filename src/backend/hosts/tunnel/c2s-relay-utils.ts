@@ -2,24 +2,14 @@ import type { IncomingMessage } from "http";
 import type { Duplex } from "stream";
 import type { ClientChannel } from "ssh2";
 import type { WebSocket } from "ws";
+import { extractWebSocketToken } from "../../utils/ws-auth.js";
 
 const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
 const C2S_WS_LOW_WATERMARK = 256 * 1024;
 const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
 
 export function extractRequestToken(req: IncomingMessage): string | undefined {
-  const cookieHeader = req.headers.cookie;
-  if (cookieHeader) {
-    const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-    if (match) return decodeURIComponent(match[1]);
-  }
-
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.slice("Bearer ".length);
-  }
-
-  return undefined;
+  return extractWebSocketToken(req);
 }
 
 export function sendC2SError(ws: WebSocket, message: string): void {

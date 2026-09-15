@@ -350,6 +350,13 @@ networks:
     driver: bridge
 ```
 
+部署多个 Termix 后端实例时，请为所有实例配置相同的 `REDIS_URL`，并可选配置
+`TERMIX_REDIS_PREFIX`。Redis 会同步协作房间的在线成员、控制请求、控制权和事件，
+也会把 Step CA OAuth 回调路由回持有用户终端的实例；可通过
+`TERMIX_STEP_CA_REDIS_PREFIX` 隔离这些短期加密消息。实时 SSH 与远程桌面传输仍
+依附于创建连接的后端实例，因此负载均衡器需要保持 WebSocket 会话亲和性。
+单实例部署无需 Redis。
+
 ### 命令行工具
 
 Termix 还提供命令行工具，你可以在终端里管理服务器，也可以把 Termix 用在自己的脚本中。
@@ -390,51 +397,42 @@ Termix 免费且开源，没有订阅也没有付费方案。如果你觉得它�
 
 有意通过付费展示位支持开发吗？请发邮件到 [mail@termix.site](mailto:mail@termix.site)。
 
-<!-- SPONSORS:START -->
-
 <div align="center">
 
 <br />
 
 <a href="https://www.digitalocean.com/">
-  <img src="https://termix.site/img/sponsors/digitalocean.svg" height="40" alt="DigitalOcean" />
+  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
 </a>
 &nbsp;&nbsp;&nbsp;
 <a href="https://crowdin.com/">
-  <img src="https://termix.site/img/sponsors/crowdin.svg" height="40" alt="Crowdin" />
+  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
 </a>
 &nbsp;&nbsp;&nbsp;
 <a href="https://www.blacksmith.sh/">
-  <img src="https://termix.site/img/sponsors/blacksmith.svg" height="40" alt="Blacksmith" />
+  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
 </a>
 &nbsp;&nbsp;&nbsp;
 <a href="https://www.cloudflare.com/">
-  <img src="https://termix.site/img/sponsors/cloudflare.png" height="40" alt="Cloudflare" />
+  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
 </a>
 &nbsp;&nbsp;&nbsp;
 <a href="https://akamai.com/">
-  <img src="https://termix.site/img/sponsors/akamai.svg" height="40" alt="Akamai" />
+  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
 </a>
 &nbsp;&nbsp;&nbsp;
 <a href="https://aws.amazon.com/">
-  <img src="https://termix.site/img/sponsors/aws.png" height="40" alt="AWS" />
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
 </a>
 &nbsp;&nbsp;&nbsp;
 <a href="https://rackgenius.com/">
-  <img src="https://termix.site/img/sponsors/rackgenius.png" height="40" alt="Rack Genius" />
+  <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
 </a>
 &nbsp;&nbsp;&nbsp;
 <a href="https://ginernet.com/">
-  <img src="https://termix.site/img/sponsors/ginernet.png" height="40" alt="Ginernet" />
+  <img src="https://ginernet.com/img/logo-web.png" height="40" alt="Ginernet" />
 </a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.hetzner.com/?mtm_campaign=termix&mtm_medium=referral&mtm_content=sponsoring_link">
-  <img src="https://termix.site/img/sponsors/hetzner.png" height="40" alt="Hetzner" />
-</a>
-
 </div>
-
-<!-- SPONSORS:END -->
 
 <br />
 

@@ -48,6 +48,14 @@ vi.mock("../../../utils/permission-manager.js", () => ({
   PermissionManager: {
     getInstance: () => ({
       canAccessHost: async () => state.access,
+      requirePermission:
+        () =>
+        (
+          _req: express.Request,
+          _res: express.Response,
+          next: express.NextFunction,
+        ) =>
+          next(),
       requireAdmin:
         () =>
         (
@@ -255,14 +263,10 @@ describe("shared host authentication override routes", () => {
     expect(unauthenticatedResponse.status).toBe(401);
   });
 
-  it("rejects recognized but unsupported protocols and invalid protocol names", async () => {
-    const unsupportedResponse = await invoke("get", {}, "rdp");
-    expect(unsupportedResponse).toEqual({
-      status: 400,
-      body: {
-        error: "RDP authentication overrides are not supported yet",
-      },
-    });
+  it("serves every real protocol and rejects invalid protocol names", async () => {
+    const rdpResponse = await invoke("get", {}, "rdp");
+    expect(rdpResponse.status).toBe(200);
+    expect(rdpResponse.body.protocol).toBe("rdp");
     expect(state.writes).toEqual([]);
 
     const invalidResponse = await invoke("get", {}, "smtp");

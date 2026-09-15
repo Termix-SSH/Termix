@@ -68,6 +68,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
 import { visibleRailItems } from "./rail-items";
 import { InterfacePresetSettings } from "./InterfacePresetSettings";
@@ -77,11 +78,13 @@ import {
   ACCENT_PRESET_COLORS,
   applyAccentColor,
   applyFontSize,
+  applyUiFont,
   FONT_SIZES,
+  UI_FONTS,
 } from "@/lib/theme";
 import type { ApiKey } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
-import type { FontSizeId, ThemeId } from "@/types/ui-types";
+import type { FontSizeId, ThemeId, UiFontId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
@@ -493,10 +496,14 @@ export function UserProfilePanel({
   userPrefs,
   onPrefsChange,
   remoteSyncInitialServerUrl,
+  remoteSyncReconnectRequested,
+  onRemoteSyncReconnectHandled,
 }: {
   username?: string;
   onLogout?: () => void;
   remoteSyncInitialServerUrl?: string;
+  remoteSyncReconnectRequested?: boolean;
+  onRemoteSyncReconnectHandled?: () => void;
   userPrefs?: {
     reopenTabsOnLogin: boolean;
     storageMode?: string | null;
@@ -564,6 +571,9 @@ export function UserProfilePanel({
   const [totpLoading, setTotpLoading] = useState(false);
   const [showDisableTotp, setShowDisableTotp] = useState(false);
   const [disableTotpInput, setDisableTotpInput] = useState("");
+  const [showAddTotp, setShowAddTotp] = useState(false);
+  const [addTotpInput, setAddTotpInput] = useState("");
+  const [addingTotpAuthenticator, setAddingTotpAuthenticator] = useState(false);
   const [passkeys, setPasskeys] = useState<WebAuthnCredentialSummary[]>([]);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyName, setPasskeyName] = useState("");
@@ -596,6 +606,10 @@ export function UserProfilePanel({
   );
   const [fontSize, setFontSize] = useState<FontSizeId>(
     () => (localStorage.getItem("termix-font-size") as FontSizeId) ?? "md",
+  );
+  const [uiFont, setUiFont] = useState<UiFontId>(
+    () =>
+      (localStorage.getItem("termix-ui-font") as UiFontId) ?? "jetbrains-mono",
   );
   const [language, setLanguage] = useState(() =>
     normalizeLanguageCode(localStorage.getItem("i18nextLng")),
@@ -706,9 +720,7 @@ export function UserProfilePanel({
   const applyAiEnabled = (enabled: boolean) => {
     setAiAssistantEnabled(enabled);
 
-    const hidden = new Set<string>(
-      JSON.parse(localStorage.getItem("hiddenRailTabs") ?? "[]"),
-    );
+    const hidden = readHiddenRailTabs();
     if (enabled) hidden.delete("ai");
     else hidden.add("ai");
 
@@ -831,6 +843,7 @@ export function UserProfilePanel({
       const SNAPSHOT_KEYS = [
         "termix-accent",
         "termix-font-size",
+        "termix-ui-font",
         "i18nextLng",
         "commandAutocomplete",
         "commandPaletteShortcutEnabled",
@@ -840,6 +853,7 @@ export function UserProfilePanel({
         "pinAppRail",
         "expandAppRailOnHover",
         "defaultSnippetFoldersCollapsed",
+        "snippetShowCommands",
         "confirmSnippetExecution",
         "disableUpdateCheck",
         "confirmTabClose",
@@ -961,6 +975,8 @@ export function UserProfilePanel({
     setTheme("system");
     setFontSize("md");
     applyFontSize("md");
+    setUiFont("jetbrains-mono");
+    applyUiFont("jetbrains-mono");
     setAccentColor(DEFAULT_ACCENT);
     setCustomColorInput(DEFAULT_ACCENT);
     localStorage.setItem("termix-accent", DEFAULT_ACCENT);
@@ -1046,6 +1062,12 @@ export function UserProfilePanel({
       (restore("termix-font-size", "md") as FontSizeId) ?? "md";
     setFontSize(restoredFontSize);
     applyFontSize(restoredFontSize);
+
+    const restoredUiFont =
+      (restore("termix-ui-font", "jetbrains-mono") as UiFontId) ??
+      "jetbrains-mono";
+    setUiFont(restoredUiFont);
+    applyUiFont(restoredUiFont);
 
     const restoredAccent = restore("termix-accent", "#f59145") ?? "#f59145";
     setAccentColor(restoredAccent);
@@ -1156,6 +1178,11 @@ export function UserProfilePanel({
     if (storageMode === "cloud") saveToCloud({ fontSize: id });
   }
 
+  function handleUiFontChange(id: UiFontId) {
+    setUiFont(id);
+    applyUiFont(id);
+  }
+
   function handleLanguageChange(code: string) {
     void changeAppLanguage(code)
       .then((language) => {
@@ -1184,6 +1211,29 @@ export function UserProfilePanel({
       setTotpStep("setup");
     } catch {
       toast.error(t("newUi.sidebar.userProfile.totpSetupFailed"));
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleAddTotpAuthenticator() {
+    if (!addTotpInput) {
+      toast.error(t("newUi.sidebar.userProfile.totpAddInputRequired"));
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const result = await setupTOTP(addTotpInput);
+      setTotpQrCode(result.qr_code);
+      setTotpSecret(result.secret);
+      setAddingTotpAuthenticator(true);
+      setShowAddTotp(false);
+      setAddTotpInput("");
+      setTotpStep("setup");
+    } catch (e: unknown) {
+      toast.error(
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpAddFailed")),
+      );
     } finally {
       setTotpLoading(false);
     }
@@ -1620,7 +1670,11 @@ export function UserProfilePanel({
 
           {isElectron() && (
             <div className="border-t border-border pt-3 mt-3">
-              <RemoteSyncPanel initialServerUrl={remoteSyncInitialServerUrl} />
+              <RemoteSyncPanel
+                initialServerUrl={remoteSyncInitialServerUrl}
+                reconnectRequested={remoteSyncReconnectRequested}
+                onReconnectRequestHandled={onRemoteSyncReconnectHandled}
+              />
             </div>
           )}
 
@@ -1721,6 +1775,29 @@ export function UserProfilePanel({
                 />
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Type className="size-3" />
+              {t("newUi.sidebar.userProfile.interfaceFontLabel")}
+            </span>
+            <select
+              value={uiFont}
+              onChange={(event) =>
+                handleUiFontChange(event.target.value as UiFontId)
+              }
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full"
+            >
+              {UI_FONTS.map((font) => (
+                <option key={font.id} value={font.id}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-[10px] text-muted-foreground">
+              {t("newUi.sidebar.userProfile.interfaceFontDescription")}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -2110,14 +2187,25 @@ export function UserProfilePanel({
                 </span>
               </div>
               {totpEnabled ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 ml-3 text-[10px] h-7 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setShowDisableTotp((o) => !o)}
-                >
-                  {t("newUi.sidebar.userProfile.disable")}
-                </Button>
+                <div className="ml-3 flex shrink-0 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                    onClick={() => setShowAddTotp((open) => !open)}
+                    disabled={totpLoading || totpStep !== "idle"}
+                  >
+                    {t("newUi.sidebar.userProfile.totpAddAuthenticator")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setShowDisableTotp((o) => !o)}
+                  >
+                    {t("newUi.sidebar.userProfile.disable")}
+                  </Button>
+                </div>
               ) : (
                 <Button
                   variant="outline"
@@ -2130,6 +2218,50 @@ export function UserProfilePanel({
                 </Button>
               )}
             </div>
+
+            {totpEnabled && showAddTotp && (
+              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpAddTitle")}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpAddDescription")}
+                </span>
+                <Input
+                  placeholder={t(
+                    "newUi.sidebar.userProfile.totpDisablePlaceholder",
+                  )}
+                  value={addTotpInput}
+                  onChange={(e) => setAddTotpInput(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleAddTotpAuthenticator()
+                  }
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setShowAddTotp(false);
+                      setAddTotpInput("");
+                    }}
+                  >
+                    {t("newUi.sidebar.userProfile.cancel")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                    onClick={handleAddTotpAuthenticator}
+                    disabled={totpLoading}
+                  >
+                    {t("common.continue")}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Disable TOTP form */}
             {totpEnabled && showDisableTotp && (
@@ -2171,14 +2303,17 @@ export function UserProfilePanel({
             )}
 
             {/* TOTP setup: scan QR */}
-            {!totpEnabled && totpStep === "setup" && (
+            {totpStep === "setup" && (
               <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     {t("newUi.sidebar.userProfile.setupTotp")}
                   </span>
                   <button
-                    onClick={() => setTotpStep("idle")}
+                    onClick={() => {
+                      setTotpStep("idle");
+                      setAddingTotpAuthenticator(false);
+                    }}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-3.5" />
@@ -2214,15 +2349,33 @@ export function UserProfilePanel({
                   </button>
                 </div>
                 <span className="text-[10px] text-muted-foreground text-center">
-                  {t("newUi.sidebar.userProfile.totpInstructions")}
+                  {t(
+                    addingTotpAuthenticator
+                      ? "newUi.sidebar.userProfile.totpAddScanInstructions"
+                      : "newUi.sidebar.userProfile.totpInstructions",
+                  )}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  onClick={() => setTotpStep("verify")}
+                  onClick={() => {
+                    if (addingTotpAuthenticator) {
+                      setAddingTotpAuthenticator(false);
+                      setTotpStep("idle");
+                      toast.success(
+                        t("newUi.sidebar.userProfile.totpAddSuccess"),
+                      );
+                    } else {
+                      setTotpStep("verify");
+                    }
+                  }}
                 >
-                  {t("newUi.sidebar.userProfile.totpContinueVerify")}
+                  {t(
+                    addingTotpAuthenticator
+                      ? "newUi.sidebar.userProfile.done"
+                      : "newUi.sidebar.userProfile.totpContinueVerify",
+                  )}
                 </Button>
               </div>
             )}

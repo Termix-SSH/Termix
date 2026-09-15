@@ -9,6 +9,7 @@ vi.mock("@/main-axios", () => ({ getRemoteStatsApi: () => remoteApi }));
 
 import {
   getConnectedRemoteApi,
+  hydrateLocalSharedHostAuth,
   markRemoteSharedHosts,
   resolveRemoteHostId,
 } from "@/lib/remote-server-api";
@@ -50,15 +51,63 @@ describe("remote server API", () => {
   it("keeps only shared remote hosts and gives them collision-free ids", () => {
     const rows = markRemoteSharedHosts([
       { id: 4, isShared: false },
-      { id: 9, isShared: true, syncId: "shared-host" },
+      {
+        id: 9,
+        isShared: true,
+        syncId: "shared-host",
+        connectionOrigin: "local",
+      },
     ] as SSHHost[]);
 
     expect(rows).toEqual([
       expect.objectContaining({
         id: -9,
         syncId: "shared-host",
-        connectionOrigin: "remote",
+        connectionOrigin: "local",
       }),
     ]);
+  });
+
+  it("hydrates a remote shared host for a local connection without persisting remote ids", async () => {
+    isElectron.mockReturnValue(true);
+    invoke.mockResolvedValue({ serverUrl: "https://termix.example" });
+    remoteApi.get.mockResolvedValue({
+      data: {
+        username: "recipient",
+        authType: "key",
+        key: "PRIVATE KEY",
+        keyPassword: "passphrase",
+        keyType: "ed25519",
+      },
+    });
+
+    const result = await hydrateLocalSharedHostAuth({
+      id: -9,
+      isShared: true,
+      syncId: "shared-host",
+      credentialId: 77,
+      username: "owner",
+      authType: "key",
+    });
+
+    expect(remoteApi.get).toHaveBeenCalledWith(
+      "/host/db/host/9/local-connection-auth",
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: -9,
+        syncId: null,
+        credentialId: undefined,
+        username: "recipient",
+        key: "PRIVATE KEY",
+        keyPassword: "passphrase",
+      }),
+    );
+  });
+
+  it("leaves local and owned hosts untouched", async () => {
+    const host = { id: 9, isShared: false, username: "root" };
+    await expect(hydrateLocalSharedHostAuth(host)).resolves.toBe(host);
+    expect(remoteApi.get).not.toHaveBeenCalled();
   });
 });

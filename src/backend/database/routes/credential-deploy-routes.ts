@@ -359,6 +359,9 @@ async function deploySSHKeyToHost(
 export function registerCredentialDeployRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireCredentialViewPermission: RequestHandler,
+  requireHostEditPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -398,6 +401,9 @@ export function registerCredentialDeployRoutes(
   router.post(
     "/:id/deploy-to-host",
     authenticateJWT,
+    requireCredentialViewPermission,
+    requireHostEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const id = Array.isArray(req.params.id)
         ? req.params.id[0]

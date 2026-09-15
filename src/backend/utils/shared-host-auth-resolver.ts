@@ -33,29 +33,30 @@ export function requiresPersonalHostAuthentication(
   host: Pick<HostResolutionHostRecord, "credentialId" | "authType">,
   protocol: AuthOverrideProtocol,
 ): boolean {
-  switch (protocol) {
-    case "ssh":
-      return (
-        !!host.credentialId ||
-        host.authType === "password" ||
-        host.authType === "key" ||
-        host.authType === "credential" ||
-        host.authType === "agent"
-      );
-    // These cases document the extension point without enabling behavior.
-    case "rdp":
-    case "vnc":
-    case "telnet":
-      throw new Error(
-        `${protocol.toUpperCase()} shared-host authentication is not implemented`,
-      );
-  }
+  // Owner auth for RDP/VNC/Telnet is snapshotted for every recipient, so only
+  // SSH, which sits behind shareSshAuth, can leave a recipient without auth.
+  if (protocol !== "ssh") return false;
+  return (
+    !!host.credentialId ||
+    host.authType === "password" ||
+    host.authType === "key" ||
+    host.authType === "credential" ||
+    host.authType === "agent"
+  );
+}
+
+/** Whether the owner's auth for this protocol is available to recipients. */
+export function isOwnerAuthShared(
+  host: Pick<HostResolutionHostRecord, "shareSshAuth">,
+  protocol: AuthOverrideProtocol,
+): boolean {
+  return protocol === "ssh" ? !!host.shareSshAuth : true;
 }
 
 /**
  * Applies the shared-host authentication precedence independently from any
- * transport: recipient override, explicitly shared owner auth, secretless
- * auth, then "required". Only SSH is currently enabled by callers.
+ * transport: recipient override, shared owner auth, secretless auth, then
+ * "required".
  */
 export async function resolveRecipientSharedHostAuthentication(
   host: HostResolutionHostRecord,
@@ -96,8 +97,8 @@ export async function resolveRecipientSharedHostAuthentication(
     }
   }
 
-  if (protocol === "ssh" && host.shareSshAuth) {
-    if (host.authType === "agent") {
+  if (isOwnerAuthShared(host, protocol)) {
+    if (protocol === "ssh" && host.authType === "agent") {
       return {
         source: "owner-shared",
         authType: "agent",

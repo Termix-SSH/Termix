@@ -32,7 +32,8 @@ export type RailView =
   | "automations"
   | "ai"
   | "fleets"
-  | "workspaces";
+  | "workspaces"
+  | "collab";
 
 export type HideableRailView =
   | Exclude<RailView, "user-profile" | "admin-settings">

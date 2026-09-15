@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const GuacdClient = require("../node_modules/guacamole-lite/lib/GuacdClient.js");
+const GuacamoleLite = require("../node_modules/guacamole-lite/lib/Server.js");
 
 type PatchedGuacdClient = {
   connectionSettings: Record<string, unknown>;
@@ -26,6 +27,50 @@ function createPatchedClient(
 }
 
 describe("patch-guacamole-lite", () => {
+  it("rejects a malformed token without starting or retaining a connection", async () => {
+    const server = Object.assign(Object.create(GuacamoleLite.prototype), {
+      connectionsCount: 0,
+      clientOptions: {
+        crypt: {
+          cypher: "AES-256-CBC",
+          key: Buffer.alloc(32, 7),
+        },
+        log: {
+          level: 0,
+          stdLog: vi.fn(),
+          errorLog: vi.fn(),
+        },
+      },
+      callbacks: {
+        processConnectionSettings: vi.fn(),
+      },
+      extractGuacdOptions: vi.fn(async () => ({
+        guacdOptions: { host: "127.0.0.1", port: 4822 },
+        connectionInfo: null,
+        isJoin: false,
+        targetSessionId: null,
+      })),
+      activeConnections: new Map(),
+      emit: vi.fn(),
+    });
+    const webSocket = {
+      OPEN: 1,
+      readyState: 1,
+      send: vi.fn(),
+      close: vi.fn(),
+      on: vi.fn(),
+      removeAllListeners: vi.fn(),
+    };
+
+    await server.newConnection(webSocket, {
+      url: "/guacamole/websocket/?token=not-an-encrypted-token",
+    });
+
+    expect(webSocket.close).toHaveBeenCalledOnce();
+    expect(server.activeConnections.size).toBe(0);
+    expect(server.emit).not.toHaveBeenCalledWith("open", expect.anything());
+  });
+
   it("handles guacd dynamic argument requests", () => {
     const guacdClientPath = path.join(
       process.cwd(),

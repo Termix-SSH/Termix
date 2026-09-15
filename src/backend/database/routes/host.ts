@@ -1,4 +1,6 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { applyFolderAccessRules } from "../../utils/folder-access-inheritance.js";
+import { findUsableCredential } from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import axios from "axios";
@@ -28,12 +30,15 @@ import {
   createCurrentHostRepository,
   createCurrentUserRepository,
   createCurrentSyncTombstoneRepository,
+  createCurrentSharedHostAuthOverrideRepository,
 } from "../repositories/factory.js";
 import {
+  applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
   isNonEmptyString,
   isOptionalBoolean,
   isValidPort,
+  normalizeProtocolEnableFields,
   OWNER_PRIVATE_AUTH_FIELDS,
   OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS,
   sanitizeHostForRecipient,
@@ -42,6 +47,7 @@ import {
 } from "./host-normalizers.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
+import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostFileManagerBookmarkRoutes } from "./host-file-manager-bookmark-routes.js";
 import { registerHostCommandHistoryRoutes } from "./host-command-history-routes.js";
@@ -62,6 +68,7 @@ import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../repositories/host-resolution-repository.js";
+import { AUTH_PROTOCOL_METADATA } from "../../../types/auth-protocols.js";
 import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
@@ -125,6 +132,7 @@ registerHostInternalRoutes(router);
 router.post(
   ["/db/host", "/enroll"],
   authenticateJWT,
+  permissionManager.requirePermission("hosts.create"),
   requireDataAccess,
   requireHostEnrollmentAccessForPath,
   upload.single("key"),
@@ -261,7 +269,8 @@ router.post(
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
-      !isOptionalBoolean(shareSshAuth)
+      !isOptionalBoolean(shareSshAuth) ||
+      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(isOptionalBoolean)
     ) {
       sshLogger.warn("Invalid SSH data input validation failed", {
         operation: "host_create",
@@ -392,10 +401,7 @@ router.post(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
-      enableSsh: enableSsh ? 1 : 0,
-      enableRdp: enableRdp ? 1 : 0,
-      enableVnc: enableVnc ? 1 : 0,
-      enableTelnet: enableTelnet ? 1 : 0,
+      ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
@@ -498,6 +504,20 @@ router.post(
       }
 
       const createdHost = result;
+      // Standing folder shares apply to the newcomer.
+      try {
+        await applyFolderAccessRules(
+          createdHost.id,
+          userId!,
+          createdHost.folder,
+        );
+      } catch (folderAccessError) {
+        sshLogger.warn("Failed to inherit folder access on host create", {
+          operation: "host_create_folder_access",
+          hostId: createdHost.id,
+          error: getErrorMessage(folderAccessError),
+        });
+      }
       const baseHost = transformHostResponse(createdHost);
 
       const resolvedHost =
@@ -712,11 +732,7 @@ router.post(
       let resolvedUsername = username;
 
       if (authType === "credential" && credentialId) {
-        const cred =
-          await createCurrentHostResolutionRepository().findCredentialByIdForUser(
-            Number(credentialId),
-            userId,
-          );
+        const cred = await findUsableCredential(Number(credentialId), userId);
 
         if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
@@ -817,6 +833,7 @@ router.post(
 router.put(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
   upload.single("key"),
   async (req: Request, res: Response) => {
@@ -954,6 +971,9 @@ router.put(
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
+      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(
+        isOptionalBoolean,
+      ) ||
       !hostId
     ) {
       sshLogger.warn("Invalid SSH data input validation failed for update", {
@@ -1085,10 +1105,7 @@ router.put(
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
-      enableSsh: enableSsh ? 1 : 0,
-      enableRdp: enableRdp ? 1 : 0,
-      enableVnc: enableVnc ? 1 : 0,
-      enableTelnet: enableTelnet ? 1 : 0,
+      ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
@@ -1157,9 +1174,7 @@ router.put(
       if (keyPassword !== undefined) {
         sshDataObj.keyPassword = keyPassword || null;
       }
-      if (keyType) {
-        sshDataObj.keyType = keyType;
-      }
+      applyHostKeyTypeUpdate(sshDataObj, keyType);
       sshDataObj.password = password || null;
     } else if (effectiveAuthType === "credential") {
       sshDataObj.password = password || null;
@@ -1370,6 +1385,21 @@ router.put(
         sshDataObj,
       );
 
+      // A host that moved into a folder inherits that folder's standing shares.
+      try {
+        await applyFolderAccessRules(
+          Number(hostId),
+          ownerId,
+          sshDataObj.folder as string | null | undefined,
+        );
+      } catch (folderAccessError) {
+        sshLogger.warn("Failed to inherit folder access on host update", {
+          operation: "host_update_folder_access",
+          hostId: parseInt(hostId),
+          error: getErrorMessage(folderAccessError),
+        });
+      }
+
       // Keep every recipient's re-encrypted secret snapshots in sync with
       // the updated host record.
       try {
@@ -1455,9 +1485,94 @@ router.put(
  *       500:
  *         description: Failed to fetch SSH data.
  */
+/**
+ * @openapi
+ * /host/db/host/{id}/terminal-config:
+ *   patch:
+ *     summary: Update a host's terminal behaviour flags
+ *     description: Merges the given flags into the host's terminalConfig. Owner or a recipient with edit access. Currently supports autoTmux; used by the "enable Auto-Tmux" action shown when a persisted session expires.
+ *     tags:
+ *       - Hosts
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               autoTmux:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Updated.
+ *       403:
+ *         description: No edit access.
+ *       404:
+ *         description: Host not found.
+ */
+router.patch(
+  "/db/host/:id/terminal-config",
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId!;
+    const hostId = parseInt(String(req.params.id), 10);
+    const { autoTmux } = req.body ?? {};
+
+    if (isNaN(hostId)) {
+      return res.status(400).json({ error: "Invalid host ID" });
+    }
+    if (typeof autoTmux !== "boolean") {
+      return res.status(400).json({ error: "autoTmux must be a boolean" });
+    }
+
+    try {
+      const access = await permissionManager.canAccessHost(
+        userId,
+        hostId,
+        "edit",
+      );
+      if (!access.hasAccess) {
+        return res.status(403).json({ error: "Access denied to host" });
+      }
+      const ownerId =
+        await createCurrentHostResolutionRepository().findHostOwnerId(hostId);
+      const host = ownerId
+        ? await createCurrentHostRepository().findByIdForUser(ownerId, hostId)
+        : null;
+      if (!host || !ownerId) {
+        return res.status(404).json({ error: "Host not found" });
+      }
+
+      let terminalConfig: Record<string, unknown> = {};
+      if (host.terminalConfig) {
+        try {
+          terminalConfig = JSON.parse(host.terminalConfig);
+        } catch {
+          terminalConfig = {};
+        }
+      }
+      await createCurrentHostRepository().updateForUser(ownerId, hostId, {
+        terminalConfig: JSON.stringify({ ...terminalConfig, autoTmux }),
+      });
+
+      res.json({ success: true, autoTmux });
+    } catch (error) {
+      sshLogger.error("Failed to update host terminal config", error, {
+        operation: "host_terminal_config_update",
+        hostId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to update terminal config" });
+    }
+  },
+);
+
 router.get(
   "/db/host",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1601,6 +1716,7 @@ router.get(
 router.get(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const hostId = Array.isArray(req.params.id)
@@ -1691,6 +1807,78 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to fetch SSH host" });
+    }
+  },
+);
+
+/**
+ * Returns the minimum authentication material needed by the desktop app to
+ * connect to a shared host from the recipient's own network. The response is
+ * deliberately transient: callers must not persist it or include it in logs.
+ */
+router.get(
+  "/db/host/:id/local-connection-auth",
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const hostId = Number(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId) || !Number.isInteger(hostId) || hostId <= 0) {
+      return res.status(400).json({ error: "Invalid userId or hostId" });
+    }
+
+    try {
+      const access = await permissionManager.canAccessHost(
+        userId,
+        hostId,
+        "connect",
+      );
+      if (!access.hasAccess || !access.isShared) {
+        return res.status(404).json({ error: "Shared host not found" });
+      }
+
+      const repository = createCurrentHostResolutionRepository();
+      const ownerId = await repository.findHostOwnerId(hostId);
+      const host = ownerId
+        ? await repository.findHostById(hostId, ownerId)
+        : null;
+      if (!host) {
+        return res.status(404).json({ error: "Shared host not found" });
+      }
+
+      const resolved = await resolveHostCredentials(
+        {
+          ...transformHostResponse(host),
+          isShared: true,
+          permissionLevel: access.permissionLevel,
+        },
+        userId,
+      );
+
+      res.setHeader("Cache-Control", "no-store");
+      return res.json({
+        username: resolved.username,
+        authType: resolved.authType,
+        password: resolved.password || null,
+        key: resolved.key || null,
+        keyPassword: resolved.keyPassword || null,
+        keyType: resolved.keyType || null,
+      });
+    } catch (error) {
+      sshLogger.error(
+        "Failed to resolve shared host local authentication",
+        error,
+        {
+          operation: "shared_host_local_auth_resolve",
+          hostId,
+          userId,
+        },
+      );
+      return res
+        .status(500)
+        .json({ error: "Failed to resolve shared host authentication" });
     }
   },
 );
@@ -2223,6 +2411,7 @@ router.get(
 router.delete(
   "/db/host/:id",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -2354,11 +2543,18 @@ router.delete(
   },
 );
 
-registerHostFileManagerBookmarkRoutes(router, authenticateJWT);
+registerHostFileManagerBookmarkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+);
 
 router.get(
   "/transfer/recent",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const sourceHostIdQuery = Array.isArray(req.query.sourceHostId)
@@ -2395,6 +2591,8 @@ router.get(
 router.post(
   "/transfer/recent",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { sourceHostId, destHostId, destPath, destPathLabel } = req.body;
@@ -2426,7 +2624,12 @@ router.post(
     }
   },
 );
-registerHostCommandHistoryRoutes(router, authenticateJWT);
+registerHostCommandHistoryRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
+);
 
 async function resolveHostCredentials(
   host: Record<string, unknown>,
@@ -2455,6 +2658,24 @@ async function resolveHostCredentials(
         required: needsPersonalCredential,
         ownerAuthShared: !!host.shareSshAuth,
       };
+      // Owner auth for the remote desktop protocols is always snapshotted
+      // for recipients; only their own override credential varies per user.
+      const authOverrides: Record<string, unknown> = {
+        ssh: baseSshOverrideState,
+      };
+      const overrideCredentialIds =
+        await createCurrentSharedHostAuthOverrideRepository().listCredentialIds(
+          host.id,
+          requestingUserId,
+        );
+      for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+        if (!host[AUTH_PROTOCOL_METADATA[protocol].enableField]) continue;
+        authOverrides[protocol] = {
+          credentialId: overrideCredentialIds[protocol],
+          required: false,
+          ownerAuthShared: true,
+        };
+      }
       const recipientHost: Record<string, unknown> = {
         ...host,
         credentialId: null,
@@ -2462,9 +2683,7 @@ async function resolveHostCredentials(
         key: null,
         keyPassword: null,
         keyType: null,
-        authOverrides: {
-          ssh: baseSshOverrideState,
-        },
+        authOverrides,
       };
 
       try {
@@ -2480,6 +2699,7 @@ async function resolveHostCredentials(
           return {
             ...recipientHost,
             authOverrides: {
+              ...authOverrides,
               ssh: {
                 credentialId: resolution.credentialId,
                 required: false,
@@ -2505,6 +2725,7 @@ async function resolveHostCredentials(
             return {
               ...recipientHost,
               authOverrides: {
+                ...authOverrides,
                 ssh: {
                   required: false,
                   ownerAuthShared: true,
@@ -2524,6 +2745,7 @@ async function resolveHostCredentials(
             return {
               ...recipientHost,
               authOverrides: {
+                ...authOverrides,
                 ssh: {
                   required: false,
                   ownerAuthShared: true,
@@ -2547,6 +2769,7 @@ async function resolveHostCredentials(
           return {
             ...recipientHost,
             authOverrides: {
+              ...authOverrides,
               ssh: {
                 required: false,
                 ownerAuthShared: !!host.shareSshAuth,
@@ -2567,10 +2790,7 @@ async function resolveHostCredentials(
 
       const credential =
         preloadedCredentials?.get(credentialId) ??
-        (await createCurrentHostResolutionRepository().findCredentialByIdForUser(
-          credentialId,
-          credentialOwnerId,
-        ));
+        (await findUsableCredential(credentialId, credentialOwnerId));
 
       if (credential) {
         const resolvedHost: Record<string, unknown> = {
@@ -2605,13 +2825,27 @@ async function resolveHostCredentials(
 
 registerHostFolderRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
+  requireDeletePermission: permissionManager.requirePermission("hosts.delete"),
+  requireCredentialEditPermission:
+    permissionManager.requirePermission("credentials.edit"),
+  requireDataAccess,
   statsServerUrl: STATS_SERVER_URL,
 });
 
-registerHostBulkRoutes(router, authenticateJWT);
+registerHostBulkRoutes(
+  router,
+  authenticateJWT,
+  permissionManager.requirePermission("hosts.create"),
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
+);
 
 registerHostAutostartRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
+  requireEditPermission: permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
 });
 
@@ -2656,6 +2890,8 @@ registerHostAutostartRoutes(router, {
 router.get(
   "/ssh/opkssh/token/:hostId",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.view"),
+  requireDataAccess,
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
@@ -2727,6 +2963,8 @@ router.get(
 router.delete(
   "/ssh/opkssh/token/:hostId",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.edit"),
+  requireDataAccess,
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId;
@@ -2756,9 +2994,11 @@ router.delete(
 );
 
 registerHostOpksshRoutes(router);
+registerHostStepCaRoutes(router);
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,
+  requireViewPermission: permissionManager.requirePermission("hosts.view"),
   requireDataAccess,
 });
 

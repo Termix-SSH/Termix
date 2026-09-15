@@ -2,6 +2,7 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
@@ -11,8 +12,8 @@ import {
   resolveSnippetCommand,
 } from "./snippets-execution.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { resolveHostById } from "../../hosts/host-resolver.js";
 import {
-  createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentSnippetRepository,
@@ -68,6 +69,7 @@ async function getAccessibleSnippet(snippetId: number, userId: string) {
 }
 
 const authManager = AuthManager.getInstance();
+const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
@@ -90,6 +92,7 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 router.get(
   "/folders",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -144,6 +147,7 @@ router.get(
 router.post(
   "/folders",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -226,6 +230,7 @@ router.post(
 router.put(
   "/folders/:name/metadata",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -306,6 +311,7 @@ router.put(
 router.put(
   "/folders/rename",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -382,6 +388,7 @@ router.put(
 router.delete(
   "/folders/:name",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -466,6 +473,7 @@ router.delete(
 router.put(
   "/reorder",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -579,32 +587,16 @@ router.post(
       }
 
       const { Client } = await import("ssh2");
-      const repository = createCurrentHostResolutionRepository();
-      const host = await repository.findHostById(parseInt(hostId), userId);
+      const host = await resolveHostById(parseInt(hostId), userId);
 
-      if (!host || host.userId !== userId) {
+      if (!host) {
         return res.status(404).json({ error: "Host not found" });
       }
 
-      let password = host.password;
-      let privateKey = host.key;
-      let passphrase = host.keyPassword;
-      let authType = host.authType;
-
-      if (host.credentialId) {
-        const cred = await repository.findCredentialByIdForUser(
-          host.credentialId as number,
-          userId,
-        );
-
-        if (cred) {
-          authType = (cred.authType || authType) as string;
-          password = (cred.password || undefined) as string | undefined;
-          privateKey = (cred.privateKey || cred.key || undefined) as
-            string | undefined;
-          passphrase = (cred.keyPassword || undefined) as string | undefined;
-        }
-      }
+      const password = host.password;
+      const privateKey = host.key;
+      const passphrase = host.keyPassword;
+      const authType = host.authType;
 
       const conn = new Client();
       let output = "";
@@ -796,6 +788,7 @@ router.post(
 router.get(
   "/export",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -872,6 +865,7 @@ router.get(
 router.post(
   "/bulk-import",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -932,6 +926,7 @@ router.post(
 router.get(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1003,6 +998,7 @@ router.get(
 router.get(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.view"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1073,6 +1069,7 @@ router.get(
 router.post(
   "/",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.create"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1183,6 +1180,7 @@ router.post(
 router.put(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.edit"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -1261,6 +1259,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.delete"),
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;

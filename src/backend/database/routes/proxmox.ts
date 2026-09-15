@@ -13,7 +13,12 @@ import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
 import { resolveHostById } from "../../hosts/host-resolver.js";
 import { createJumpHostChain } from "../../hosts/jump-host-chain.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
+import {
+  parseProxmoxJumpHosts,
+  serializeProxmoxJumpHosts,
+} from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "../../hosts/proxmox-shared.js";
+import { execElevated } from "../../hosts/metrics/managers/exec-elevated.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -65,6 +70,26 @@ function execCommand(
       });
     });
   });
+}
+
+export async function execPveshCommand(
+  client: SSHClient,
+  command: string,
+  sudoPassword: string | undefined,
+  timeoutMs = 25000,
+): Promise<string> {
+  if (!sudoPassword) {
+    return execCommand(client, command, timeoutMs);
+  }
+
+  const result = await execElevated(client, command, sudoPassword, {
+    forceSudo: true,
+    timeoutMs,
+  });
+  if (result.code !== 0) {
+    throw new Error(result.stderr || `Command exited with code ${result.code}`);
+  }
+  return result.stdout;
 }
 
 // Parse all IPs from LXC net config, then return the one matching the preferred prefix.
@@ -182,20 +207,6 @@ type ProxmoxSyncResult = {
   skipped: number;
   errors: string[];
 };
-
-function parseJumpHostsField(raw: unknown): unknown[] | null {
-  if (!raw) return null;
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
 
 function parseJsonObject(value: unknown): Record<string, unknown> {
   if (!value) return {};
@@ -417,9 +428,10 @@ async function discoverProxmoxGuestsForHost(
       throw error;
     }
 
-    const resourcesJson = await execCommand(
+    const resourcesJson = await execPveshCommand(
       client,
       "pvesh get /cluster/resources --output-format json 2>/dev/null",
+      host.sudoPassword,
     );
 
     let resources: Array<Record<string, unknown>>;
@@ -468,9 +480,10 @@ async function discoverProxmoxGuestsForHost(
       if (g.type === "lxc") {
         let configIp: string | null = null;
         try {
-          const cfgJson = await execCommand(
+          const cfgJson = await execPveshCommand(
             client,
             `pvesh get /nodes/${g.node}/lxc/${g.vmid}/config --output-format json 2>/dev/null`,
+            host.sudoPassword,
             25000,
           );
           configIp = parseLxcIp(JSON.parse(cfgJson), config.preferredPrefixes);
@@ -482,9 +495,10 @@ async function discoverProxmoxGuestsForHost(
         // Fall back to the live interface list for running containers.
         if (g.status === "running") {
           try {
-            const ifRaw = await execCommand(
+            const ifRaw = await execPveshCommand(
               client,
               `pvesh get /nodes/${g.node}/lxc/${g.vmid}/interfaces --output-format json 2>/dev/null`,
+              host.sudoPassword,
               12000,
             );
             const data = JSON.parse(ifRaw);
@@ -514,9 +528,10 @@ async function discoverProxmoxGuestsForHost(
       }
       if (g.type === "qemu" && g.status === "running") {
         try {
-          const ifJson = await execCommand(
+          const ifJson = await execPveshCommand(
             client,
             `pvesh get /nodes/${g.node}/qemu/${g.vmid}/agent/network-get-interfaces --output-format json 2>/dev/null`,
+            host.sudoPassword,
             12000,
           );
           const data = JSON.parse(ifJson);
@@ -599,7 +614,7 @@ async function discoverProxmoxGuestsForHost(
       guests,
       credentialId: hostCredentialId,
       defaultCredentialId: config.defaultCredentialId,
-      jumpHosts: parseJumpHostsField(
+      jumpHosts: parseProxmoxJumpHosts(
         (host as unknown as { jumpHosts?: unknown }).jumpHosts,
       ),
       config,
@@ -770,9 +785,7 @@ async function syncProxmoxHost(
         telnetPort: null,
         defaultPath: "/",
         tunnelConnections: "[]",
-        jumpHosts:
-          (discovery.host as unknown as { jumpHosts?: string | null })
-            .jumpHosts ?? null,
+        jumpHosts: serializeProxmoxJumpHosts(discovery.jumpHosts),
         quickActions: null,
         statsConfig: null,
         dockerConfig: null,

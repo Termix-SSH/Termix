@@ -10,12 +10,13 @@ import {
 // ALERTS
 // ============================================================================
 
-export async function setupTOTP(): Promise<{
+export async function setupTOTP(credential?: string): Promise<{
   secret: string;
   qr_code: string;
+  additional?: boolean;
 }> {
   try {
-    const response = await authApi.post("/users/totp/setup");
+    const response = await authApi.post("/users/totp/setup", { credential });
     return response.data;
   } catch (error) {
     handleApiError(error as AxiosError, "setup TOTP");

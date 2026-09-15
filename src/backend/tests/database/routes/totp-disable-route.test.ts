@@ -42,6 +42,7 @@ const PASSWORD = "correct-horse";
  */
 describe("POST /totp/disable", () => {
   let handler: (req: unknown, res: unknown) => Promise<void>;
+  let setupHandler: (req: unknown, res: unknown) => Promise<void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -66,8 +67,10 @@ describe("POST /totp/disable", () => {
     );
 
     handler = routes.get("/totp/disable") as never;
+    setupHandler = routes.get("/totp/setup") as never;
     findById.mockResolvedValue({
       id: "user-1",
+      username: "test-user",
       isOidc: false,
       passwordHash: bcrypt.hashSync(PASSWORD, 4),
       totpSecret: secret,
@@ -91,6 +94,40 @@ describe("POST /totp/disable", () => {
     };
     return handler({ userId: "user-1", body }, res).then(() => res);
   }
+
+  function callSetup(body: Record<string, unknown>) {
+    const res = {
+      statusCode: 200,
+      body: undefined as unknown,
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      json(payload: unknown) {
+        this.body = payload;
+        return this;
+      },
+    };
+    return setupHandler({ userId: "user-1", body }, res).then(() => res);
+  }
+
+  it("reveals the existing enrollment only after re-authentication", async () => {
+    const denied = await callSetup({ credential: "wrong" });
+    expect(denied.statusCode).toBe(401);
+
+    const allowed = await callSetup({ credential: PASSWORD });
+    expect(allowed.statusCode).toBe(200);
+    expect(allowed.body).toEqual(
+      expect.objectContaining({ secret, additional: true }),
+    );
+    expect(userUpdate).not.toHaveBeenCalled();
+  });
+
+  it("requires a credential before adding another authenticator", async () => {
+    const res = await callSetup({});
+    expect(res.statusCode).toBe(400);
+    expect(userUpdate).not.toHaveBeenCalled();
+  });
 
   it("accepts the TOTP code on its own", async () => {
     // What the dialog sends: one value, in whichever field the client used.

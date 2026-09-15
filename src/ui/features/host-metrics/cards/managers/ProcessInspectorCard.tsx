@@ -164,7 +164,8 @@ export function ProcessInspectorCard({ hostId }: { hostId: number | null }) {
               {depth > 0 && (
                 <span className="text-muted-foreground/40">└ </span>
               )}
-              {p.command}
+              {/* `comm` is capped at 15 chars by the kernel; the full command line is in args. */}
+              {p.args || p.command}
             </span>
             <button
               onClick={() => kill(p.pid, "TERM")}

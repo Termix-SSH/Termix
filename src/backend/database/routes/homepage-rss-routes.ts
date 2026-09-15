@@ -1,6 +1,9 @@
 import express, { type Request, type Response } from "express";
 import { homepageLogger } from "../../utils/logger.js";
-import { safeOutboundFetch } from "../../utils/safe-outbound-fetch.js";
+import {
+  readResponseTextLimited,
+  safeOutboundFetch,
+} from "../../utils/safe-outbound-fetch.js";
 
 export const homepageRssRouter = express.Router();
 
@@ -8,6 +11,7 @@ const rssCache = new Map<string, { data: RssItem[]; expires: number }>();
 const CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutes
 const CACHE_SIZE = 50;
 const FETCH_TIMEOUT_MS = 8000;
+const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 interface RssItem {
   title: string;
@@ -21,7 +25,7 @@ function fetchXml(url: string): Promise<string> {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   }).then(async (res) => {
     if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`);
-    return res.text();
+    return readResponseTextLimited(res, MAX_RESPONSE_BYTES);
   });
 }
 
@@ -131,7 +135,7 @@ homepageRssRouter.get("/", async (req: Request, res: Response) => {
     rssCache.set(feedUrl, { data: items, expires: Date.now() + CACHE_TTL_MS });
 
     res.json(items.slice(0, max));
-  } catch (err) {
+  } catch {
     homepageLogger.warn("Failed to fetch RSS feed", { feedUrl });
     res.status(500).json({ error: "Failed to fetch feed" });
   }
