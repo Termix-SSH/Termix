@@ -56,6 +56,7 @@ import {
   type CollabRoomDetail,
   type CollabStage,
 } from "@/api/collab-api";
+import { resolveConnectionOrigin } from "@/lib/connection-origin";
 
 const PING_INTERVAL_MS = 30000;
 const POLL_FALLBACK_MS = 15000;
@@ -349,6 +350,10 @@ export function CollabRoomTab({
       }
       const response = await getGuacamoleTokenFromHost(
         Number(host.id),
+        await resolveConnectionOrigin({
+          connectionType: protocol,
+          connectionOrigin: host.connectionOrigin,
+        }),
         protocol,
       );
       if (!response.guacamoleConnectionId) {

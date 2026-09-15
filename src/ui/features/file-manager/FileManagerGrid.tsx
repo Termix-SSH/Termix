@@ -1120,7 +1120,7 @@ export function FileManagerGrid({
             <div className="flex flex-col">
               <div
                 className={cn(
-                  "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card",
+                  "grid grid-cols-[minmax(140px,1fr)_120px_150px_80px_90px] gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border bg-card",
                   compact ? "px-2 py-1" : "px-4 py-2",
                 )}
               >
@@ -1194,7 +1194,7 @@ export function FileManagerGrid({
                         data-file-path={file.path}
                         draggable={true}
                         className={cn(
-                          "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
+                          "grid grid-cols-[minmax(140px,1fr)_120px_150px_80px_90px] gap-2 items-center cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
                           compact
                             ? "px-2 py-1 text-[11px]"
                             : "px-4 py-2 text-xs",
@@ -1503,7 +1503,7 @@ function CreateIntentListItem({
 
   return (
     <div
-      className="grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
+      className="grid grid-cols-[minmax(140px,1fr)_120px_150px_80px_90px] gap-2 px-4 py-2 items-center border-b border-accent-brand/30 bg-accent-brand/5 rounded-none"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
