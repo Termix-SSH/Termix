@@ -88,6 +88,20 @@ export function execCommand(
   });
 }
 
+export type HostPlatform = "darwin" | "linux" | "other";
+
+export async function detectPlatform(client: Client): Promise<HostPlatform> {
+  try {
+    const { stdout } = await execCommand(client, "uname -s", 10000);
+    const kernel = stdout.trim().toLowerCase();
+    if (kernel === "darwin") return "darwin";
+    if (kernel === "linux") return "linux";
+    return "other";
+  } catch {
+    return "other";
+  }
+}
+
 export function toFixedNum(
   n: number | null | undefined,
   digits = 2,
