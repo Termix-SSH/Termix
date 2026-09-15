@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import express from "express";
 import net from "net";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
@@ -52,6 +53,7 @@ import { registerHostMetricsHistoryRoutes } from "./history-routes.js";
 import { registerProxmoxStatsRoutes } from "./proxmox-stats-routes.js";
 import { registerProxmoxStatsHistoryRoutes } from "./proxmox-stats-history-routes.js";
 import { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
+import { hostSessionStatus } from "../terminal/host-session-status.js";
 import { AlertEngine } from "./alert-engine.js";
 import {
   notifyAutomationMetrics,
@@ -95,6 +97,7 @@ import {
   requestQueue,
   statusPollLimiter,
 } from "./state.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -205,11 +208,42 @@ class PollingManager {
   private statusInFlight = new Set<number>();
   private metricsInFlight = new Set<number>();
   private initialMetricsRequested = new Set<number>();
+  private terminalOnlineHosts = new Set<number>();
+  private metricsAuthenticatedHosts = new Set<number>();
+  private unsubscribeHostSessionStatus: () => void;
 
   constructor() {
+    this.unsubscribeHostSessionStatus = hostSessionStatus.subscribe(
+      (hostId, online) => this.setTerminalSessionOnline(hostId, online),
+    );
     this.viewerCleanupInterval = setInterval(() => {
       this.cleanupInactiveViewers();
     }, 60000);
+  }
+
+  private setTerminalSessionOnline(hostId: number, online: boolean): void {
+    if (online) {
+      this.terminalOnlineHosts.add(hostId);
+      const config = this.pollingConfigs.get(hostId);
+      if (config && isTcpPingEnabled(config.statsConfig)) {
+        this.statusStore.set(hostId, {
+          status: "online",
+          lastChecked: new Date().toISOString(),
+        });
+      }
+      return;
+    }
+
+    this.terminalOnlineHosts.delete(hostId);
+    if (
+      !this.metricsAuthenticatedHosts.has(hostId) &&
+      this.statusStore.get(hostId)?.status === "online"
+    ) {
+      this.statusStore.set(hostId, {
+        status: "reachable",
+        lastChecked: new Date().toISOString(),
+      });
+    }
   }
 
   /**
@@ -577,27 +611,21 @@ class PollingManager {
         isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
       }
       const config = this.pollingConfigs.get(refreshedHost.id);
-      let authenticated: boolean | undefined;
-      if (
-        isOnline &&
-        supportsMetrics(refreshedHost) &&
-        !config?.statsConfig.metricsEnabled
-      ) {
-        try {
-          await withSshConnection(refreshedHost, async () => undefined);
-          authenticated = true;
-        } catch {
-          authenticated = false;
-        }
-      }
+      // Routine status polling is TCP-only. Hosts with metrics disabled
+      // never get a full SSH auth attempt here, since on RADIUS/Duo-backed
+      // devices that fires a live 2FA push every interval with no session
+      // to show for it; those hosts settle at "reachable" rather than
+      // "online", since metrics collection (the only path that
+      // authenticates and can promote a host to "online") never runs for
+      // them.
       const statusEntry: StatusEntry = {
         status:
-          authenticated === undefined
-            ? statusAfterReachabilityCheck(
+          isOnline && this.terminalOnlineHosts.has(refreshedHost.id)
+            ? "online"
+            : statusAfterReachabilityCheck(
                 isOnline,
                 this.statusStore.get(refreshedHost.id)?.status,
-              )
-            : statusAfterAuthentication(authenticated),
+              ),
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
@@ -659,6 +687,7 @@ class PollingManager {
     try {
       const metrics = await collectMetrics(refreshedHost, () => {
         authenticated = true;
+        this.metricsAuthenticatedHosts.add(refreshedHost.id);
         this.statusStore.set(refreshedHost.id, {
           status: statusAfterAuthentication(true),
           lastChecked: new Date().toISOString(),
@@ -681,11 +710,14 @@ class PollingManager {
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
       if (!authenticated) {
+        this.metricsAuthenticatedHosts.delete(refreshedHost.id);
         this.statusStore.set(refreshedHost.id, {
-          status: statusAfterAuthentication(
-            false,
-            this.statusStore.get(refreshedHost.id)?.status,
-          ),
+          status: this.terminalOnlineHosts.has(refreshedHost.id)
+            ? "online"
+            : statusAfterAuthentication(
+                false,
+                this.statusStore.get(refreshedHost.id)?.status,
+              ),
           lastChecked: new Date().toISOString(),
         });
       }
@@ -981,6 +1013,7 @@ class PollingManager {
   }
 
   destroy(): void {
+    this.unsubscribeHostSessionStatus();
     clearInterval(this.viewerCleanupInterval);
     for (const hostId of this.pollingConfigs.keys()) {
       this.stopPollingForHost(hostId);
@@ -1003,6 +1036,7 @@ function validateHostId(
 }
 
 const app = express();
+app.set("trust proxy", "loopback");
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 app.use(cookieParser());
@@ -1391,7 +1425,7 @@ async function buildSshConfig(
     host.authType === "warpgate"
   ) {
     // no credentials needed
-  } else if (host.authType === "opkssh") {
+  } else if (usesIssuedCertificate(host.authType)) {
     // cert auth setup happens in createSshFactory (needs client instance)
   } else if (host.authType === "vault") {
     // cert auth setup happens in createSshFactory (needs client instance)
@@ -1435,7 +1469,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
     const client = new Client();
 
     // Set up OPKSSH cert auth if needed (requires client instance)
-    if (host.authType === "opkssh" && host.userId) {
+    if (usesIssuedCertificate(host.authType) && host.userId) {
       const { getOPKSSHToken } = await import("../opkssh-auth.js");
       const token = await getOPKSSHToken(host.userId, host.id);
       if (!token) {
@@ -2354,7 +2388,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
     const config = await buildSshConfig(host);
     const client = new Client();
 
-    if (host.authType === "opkssh" && host.userId) {
+    if (usesIssuedCertificate(host.authType) && host.userId) {
       const { getOPKSSHToken } = await import("../opkssh-auth.js");
       const token = await getOPKSSHToken(host.userId, host.id);
       if (!token) {
@@ -3070,20 +3104,26 @@ process.on("SIGTERM", () => {
 });
 
 const PORT = 30005;
-app.listen(PORT, async () => {
-  try {
-    await authManager.initialize();
-  } catch (err) {
-    statsLogger.error("Failed to initialize AuthManager", err, {
-      operation: "auth_init_error",
-    });
-  }
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: statsLogger,
+  serviceName: "metrics",
+  onListening: async () => {
+    try {
+      await authManager.initialize();
+    } catch (err) {
+      statsLogger.error("Failed to initialize AuthManager", err, {
+        operation: "auth_init_error",
+      });
+    }
 
-  setInterval(
-    () => {
-      authFailureTracker.cleanup();
-      pollingBackoff.cleanup();
-    },
-    10 * 60 * 1000,
-  );
+    setInterval(
+      () => {
+        authFailureTracker.cleanup();
+        pollingBackoff.cleanup();
+      },
+      10 * 60 * 1000,
+    );
+  },
 });

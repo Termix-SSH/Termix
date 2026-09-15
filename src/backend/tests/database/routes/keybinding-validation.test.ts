@@ -36,6 +36,13 @@ describe("isValidKeybindingAction", () => {
     expect(isValidKeybindingAction({ type: "paste" })).toBe(true);
   });
 
+  it.each(["nextTab", "previousTab", "openCommandPalette"])(
+    "accepts the global %s action",
+    (type) => {
+      expect(isValidKeybindingAction({ type })).toBe(true);
+    },
+  );
+
   it("rejects an unknown action type", () => {
     expect(isValidKeybindingAction({ type: "explode" })).toBe(false);
   });

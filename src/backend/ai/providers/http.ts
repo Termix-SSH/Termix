@@ -1,4 +1,4 @@
-import { getFetchDispatcher } from "../../utils/proxy-agent.js";
+import { fetchWithProxy } from "../../utils/proxy-agent.js";
 import { safeOutboundFetch } from "../../utils/safe-outbound-fetch.js";
 import { evaluateEgress, readPrivateAllowlist } from "../egress.js";
 import { AiProviderError } from "./types.js";
@@ -9,8 +9,8 @@ import { AiProviderError } from "./types.js";
  *
  * Public hosts use safeOutboundFetch, which re-checks the resolved address at
  * connect time. Allowlisted private hosts cannot use it (its whole job is to
- * refuse them), so they fall back to plain fetch with the proxy dispatcher --
- * still respecting corporate proxy configuration.
+ * refuse them), so they use the installed Undici fetch implementation with
+ * its matching proxy dispatcher -- still respecting proxy configuration.
  */
 export async function providerFetch(
   url: string,
@@ -24,10 +24,7 @@ export async function providerFetch(
   }
 
   if (decision.isPrivate) {
-    return fetch(url, {
-      ...init,
-      dispatcher: getFetchDispatcher(url),
-    } as RequestInit);
+    return fetchWithProxy(url, init);
   }
 
   return safeOutboundFetch(url, init) as unknown as Promise<Response>;

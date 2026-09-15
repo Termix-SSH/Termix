@@ -14,6 +14,10 @@ import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
+import {
+  resolveTerminalContextMenuAction,
+  selectedTextToCopy,
+} from "@/features/terminal/terminal-clipboard-actions";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
@@ -82,10 +86,15 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
-import { isPhysicalShortcutKey, isTabKeyEvent } from "./terminal-key-event.ts";
+import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
+import {
+  handleTerminalClipboardKeyEvent,
+  getUseRightClickCopyPaste,
+} from "./terminal-clipboard.ts";
 import { quoteTerminalImagePath } from "./terminal-image-path.ts";
+import { hydrateLocalSharedHostAuth } from "@/lib/remote-server-api.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -133,6 +142,8 @@ interface SSHTerminalProps {
   onOpenTab?: (type: TabType) => void;
   /** False when this terminal sits in an unfocused split pane. */
   isFocusedPane?: boolean;
+  /** Fires when the backend reports the created session id (collab presenting). */
+  onSessionReady?: (sessionId: string) => void;
 }
 
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
@@ -156,6 +167,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     {
       hostConfig,
       isVisible,
+      onSessionReady,
       splitScreen = false,
       onClose,
       onTitleChange,
@@ -269,6 +281,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
       error?: string;
       providers?: Array<{ alias: string; issuer: string }>;
+      /** Which issuer is asking (OPKSSH by default, "Step CA", ...). */
+      label?: string;
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -898,6 +912,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
     }
 
+    function applyLocalEchoToOutput(output: string): string {
+      const alternateScreen = updateAlternateScreenMode(
+        output,
+        alternateScreenModeRef.current,
+      );
+      if (
+        alternateScreenModeRef.current ||
+        alternateScreen.isActive ||
+        alternateScreen.sawSequence
+      ) {
+        if (!alternateScreenModeRef.current && alternateScreen.isActive) {
+          localEchoRef.current?.reset();
+        }
+        return output;
+      }
+      return localEchoRef.current?.handleOutput(output) ?? output;
+    }
+
     async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
       let passwordToFill = isSudoPrompt
         ? hostConfig.terminalConfig?.sudoPassword || hostConfig.password
@@ -1101,8 +1133,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       ],
     );
 
-    function getUseRightClickCopyPaste() {
-      return getCookie("rightClickCopyPaste") !== "false";
+    function getCopyOnSelect() {
+      return getCookie("copyOnSelect") === "true";
     }
 
     function attemptReconnection() {
@@ -1181,6 +1213,56 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }, delay);
     }
 
+    // A persisted session that timed out reconnects to a fresh shell below.
+    // Say so, and offer the setting that would have kept it alive.
+    async function explainSessionExpiry() {
+      const hostLabel = hostConfig.name || hostConfig.ip;
+      let minutes: number | null = null;
+      try {
+        const { getTerminalSessionSettings } =
+          await import("@/api/settings-api");
+        minutes = (await getTerminalSessionSettings()).timeoutMinutes;
+      } catch {
+        /* the notice still makes sense without the number */
+      }
+      const notice = minutes
+        ? t("terminal.sessionExpiredNotice", { host: hostLabel, minutes })
+        : t("terminal.sessionExpiredNoticeNoMinutes", { host: hostLabel });
+      addLog({ type: "warning", stage: "connection", message: notice });
+
+      const canEnable =
+        typeof hostConfig.id === "number" &&
+        !hostConfig.terminalConfig?.autoTmux &&
+        !hostConfig.joinShareId;
+      toast.warning(notice, {
+        duration: 15000,
+        ...(canEnable
+          ? {
+              action: {
+                label: t("terminal.enableAutoTmuxAction"),
+                onClick: () => {
+                  void import("@/api/host-terminal-config-api")
+                    .then(({ setHostAutoTmux }) =>
+                      setHostAutoTmux(hostConfig.id as number, true),
+                    )
+                    .then(() => {
+                      window.dispatchEvent(
+                        new CustomEvent("termix:hosts-changed"),
+                      );
+                      toast.success(
+                        t("terminal.autoTmuxEnabled", { host: hostLabel }),
+                      );
+                    })
+                    .catch(() =>
+                      toast.error(t("terminal.autoTmuxEnableFailed")),
+                    );
+                },
+              },
+            }
+          : {}),
+      });
+    }
+
     async function connectToHost(cols: number, rows: number) {
       if (isConnectingRef.current) {
         return;
@@ -1203,6 +1285,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           window.location.port === "");
 
       let baseWsUrl: string;
+      let wsProtocols: string[] = [];
+      let outboundHostConfig = hostConfig;
 
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
@@ -1225,7 +1309,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           isConnectingRef.current = false;
           return;
         }
-        baseWsUrl = resolvedUrl;
+        if (origin === "local") {
+          try {
+            outboundHostConfig = await hydrateLocalSharedHostAuth(hostConfig);
+          } catch (error) {
+            const message = getErrorMessage(
+              error,
+              "Failed to load shared SSH authentication",
+            );
+            setIsConnected(false);
+            setIsConnecting(false);
+            updateConnectionError(message);
+            addLog({ type: "error", stage: "auth", message });
+            isConnectingRef.current = false;
+            return;
+          }
+        }
+        baseWsUrl = resolvedUrl.url;
+        wsProtocols = resolvedUrl.protocols;
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
       }
@@ -1248,7 +1349,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         connectionTimeoutRef.current = null;
       }
 
-      const ws = new WebSocket(baseWsUrl);
+      const ws = new WebSocket(baseWsUrl, wsProtocols);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
       updateConnectionError(null);
@@ -1256,13 +1357,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isReconnectingRef.current = false;
       setIsConnecting(true);
 
-      setupWebSocketListeners(ws, cols, rows);
+      setupWebSocketListeners(ws, cols, rows, outboundHostConfig);
     }
 
     function setupWebSocketListeners(
       ws: WebSocket,
       cols: number,
       rows: number,
+      outboundHostConfig: TerminalHostConfig,
     ) {
       ws.addEventListener("open", () => {
         alternateScreenModeRef.current = false;
@@ -1339,7 +1441,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               data: {
                 cols,
                 rows,
-                hostConfig,
+                hostConfig: outboundHostConfig,
                 initialPath,
                 executeCommand,
                 tmuxAttachSession,
@@ -1375,7 +1477,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           }
           trackInput(data);
-          const predicted = localEchoRef.current?.handleInput(data);
+          const predicted = alternateScreenModeRef.current
+            ? ""
+            : localEchoRef.current?.handleInput(data);
           if (predicted) terminal.write(predicted);
           ws.send(JSON.stringify({ type: "input", data }));
         });
@@ -1415,8 +1519,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 currentAutocompleteCommand.current = "";
               }
 
-              const output =
-                localEchoRef.current?.handleOutput(msg.data) ?? msg.data;
+              const output = applyLocalEchoToOutput(msg.data);
               terminal.write(formatTerminalOutput(output));
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
@@ -1427,8 +1530,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               maybeOfferPasswordFill(strippedData);
             } else {
               const stringData = String(msg.data);
-              const output =
-                localEchoRef.current?.handleOutput(stringData) ?? stringData;
+              const output = applyLocalEchoToOutput(stringData);
               terminal.write(formatTerminalOutput(output));
             }
           } else if (msg.type === "error") {
@@ -1770,6 +1872,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 requestId: msg.requestId || "",
                 stage: "chooser",
                 providers: msg.providers,
+                label: typeof msg.label === "string" ? msg.label : undefined,
               });
               if (opksshTimeoutRef.current) {
                 clearTimeout(opksshTimeoutRef.current);
@@ -1936,6 +2039,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "sessionCreated") {
             sessionIdRef.current = msg.sessionId;
+            onSessionReady?.(msg.sessionId);
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
                 patchOpenTab(hostConfig.instanceId!, {
@@ -1975,6 +2079,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             isAttachingSessionRef.current = false;
             sessionIdRef.current = null;
             wasSessionExpiredRef.current = true;
+            void explainSessionExpiry();
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
                 patchOpenTab(hostConfig.instanceId!, {
@@ -2539,10 +2644,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        if (getUseRightClickCopyPaste()) {
+        const action = resolveTerminalContextMenuAction({
+          rightClickCopyPaste: getUseRightClickCopyPaste(),
+          copyOnSelect: getCopyOnSelect(),
+          hasSelection: terminal.hasSelection(),
+        });
+        if (action !== "native") {
           e.preventDefault();
           e.stopPropagation();
-          if (terminal.hasSelection()) {
+          if (action === "copy") {
             const text = terminal.getSelection();
             writeTextToClipboard(text).then(() => terminal.clearSelection());
           } else {
@@ -2554,6 +2664,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
       };
       element?.addEventListener("contextmenu", handleContextMenu);
+
+      const handleSelectionMouseUp = (e: MouseEvent) => {
+        const text = selectedTextToCopy({
+          copyOnSelect: getCopyOnSelect(),
+          button: e.button,
+          selection: terminal.getSelection(),
+        });
+        if (text) void writeTextToClipboard(text);
+      };
+      element?.addEventListener("mouseup", handleSelectionMouseUp);
+
+      const handleMiddleClick = (e: MouseEvent) => {
+        if (
+          e.button !== 1 ||
+          !getCopyOnSelect() ||
+          !getUseRightClickCopyPaste()
+        ) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        readTextFromClipboard().then((text) => {
+          if (text) terminal.paste(text);
+        });
+      };
+      element?.addEventListener("auxclick", handleMiddleClick);
 
       const handlePaste = (e: ClipboardEvent) => {
         const text = e.clipboardData?.getData("text");
@@ -2640,6 +2776,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         resizeObserver.disconnect();
         clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
+        element?.removeEventListener("mouseup", handleSelectionMouseUp);
+        element?.removeEventListener("auxclick", handleMiddleClick);
         element?.removeEventListener("paste", handlePaste);
         element?.removeEventListener("mousedown", handleTmuxDragStart);
         element?.removeEventListener("mousemove", handleTmuxDragMove);
@@ -2885,86 +3023,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.ctrlKey &&
-          !e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyC", "c") &&
-          terminal.hasSelection()
+          !handleTerminalClipboardKeyEvent(
+            e,
+            terminal,
+            { writeTextToClipboard, readTextFromClipboard },
+            { plainPasteMode: "native" },
+          )
         ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            terminal.clearSelection();
-            return false;
-          }
-        }
-
-        if (
-          (e.metaKey &&
-            !e.shiftKey &&
-            !e.ctrlKey &&
-            !e.altKey &&
-            isPhysicalShortcutKey(e, "KeyC", "c")) ||
-          (e.ctrlKey &&
-            !e.shiftKey &&
-            !e.altKey &&
-            !e.metaKey &&
-            e.key === "Insert")
-        ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            return false;
-          }
-        }
-
-        if (
-          e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyC", "c")
-        ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            terminal.clearSelection();
-            return false;
-          }
-        }
-
-        if (
-          e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyV", "v")
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((text) => {
-            if (text) terminal.paste(text);
-          });
-          return false;
-        }
-
-        if (
-          e.ctrlKey &&
-          !e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyV", "v")
-        ) {
-          // Let the browser handle Ctrl+V natively, the paste event
-          // listener will intercept the result without triggering the
-          // clipboard permission popup
           return false;
         }
 
@@ -3561,6 +3626,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             stage={opksshDialog.stage}
             error={opksshDialog.error}
             providers={opksshDialog.providers}
+            label={opksshDialog.label}
             onCancel={() => {
               if (webSocketRef.current) {
                 webSocketRef.current.send(

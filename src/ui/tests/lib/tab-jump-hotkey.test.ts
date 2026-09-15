@@ -56,9 +56,7 @@ describe("tab-jump-hotkey", () => {
         keyEvent({ code: "Digit3", metaKey: true, altKey: false }),
       ),
     ).toBe(false);
-    expect(getTabJumpDigit(keyEvent({ code: "Digit3", altKey: true }))).toBe(
-      3,
-    );
+    expect(getTabJumpDigit(keyEvent({ code: "Digit3", altKey: true }))).toBe(3);
     expect(tabJumpHotkeyKeys()).toEqual(["Alt", "1-9"]);
     vi.unstubAllGlobals();
   });

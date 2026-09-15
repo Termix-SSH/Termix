@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, like, or, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { snippetFolders, snippets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
@@ -106,6 +106,25 @@ export class SnippetRepository {
 
   async listFoldersForExport(userId: string): Promise<SnippetFolderRecord[]> {
     return this.listFolders(userId);
+  }
+
+  /** Snippets in a folder or any of its subfolders ("Parent / Child"). */
+  async listOwnedSnippetsInFolder(
+    userId: string,
+    folder: string,
+  ): Promise<SnippetRecord[]> {
+    return this.context.drizzle
+      .select()
+      .from(snippets)
+      .where(
+        and(
+          eq(snippets.userId, userId),
+          or(
+            eq(snippets.folder, folder),
+            like(snippets.folder, `${folder} / %`),
+          ),
+        ),
+      );
   }
 
   async listOwnedSnippets(userId: string): Promise<SnippetRecord[]> {

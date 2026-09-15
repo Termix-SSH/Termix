@@ -1,11 +1,17 @@
 import { createRequire } from "node:module";
-import { chmodSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { chmodSpawnHelpers } = require("../../../scripts/patch-node-pty.cjs");
+const { chmodSpawnHelpers } = require("../../../../scripts/patch-node-pty.cjs");
 
 describe("patch-node-pty", () => {
   it("restores execute permissions on spawn-helper binaries", () => {

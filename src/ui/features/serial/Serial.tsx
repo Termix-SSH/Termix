@@ -10,6 +10,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
 import { isElectron } from "@/lib/electron";
+import { websocketAuthProtocols } from "@/lib/ws-auth";
 import { useTheme } from "@/components/theme-provider";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
@@ -102,9 +103,7 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
   const buildWsUrl = useCallback(() => {
     // Serial is always local -- the device is physically attached to this
     // desktop machine, so it never routes through a remote server.
-    const token = localStorage.getItem("jwt");
-    const base = "ws://127.0.0.1:30011";
-    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+    return "ws://127.0.0.1:30011";
   }, []);
 
   const disconnectWs = useCallback(() => {
@@ -124,7 +123,10 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
       return;
     }
 
-    const ws = new WebSocket(url);
+    const ws = new WebSocket(
+      url,
+      websocketAuthProtocols(localStorage.getItem("jwt")),
+    );
     wsRef.current = ws;
 
     ws.onopen = () => {

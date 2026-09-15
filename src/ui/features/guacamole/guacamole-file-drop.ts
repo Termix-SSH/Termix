@@ -12,3 +12,11 @@ export function getFileDropDisposition(
   if (!hasDraggedFiles(types) || fileCount === 0) return "ignore";
   return canUpload ? "upload" : "reject";
 }
+
+export function canUploadToRdpDrive(
+  uploadAllowed: boolean,
+  driveEnabled: boolean,
+  hasFilesystem: boolean,
+): boolean {
+  return uploadAllowed && (driveEnabled || hasFilesystem);
+}

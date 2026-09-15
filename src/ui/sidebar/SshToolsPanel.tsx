@@ -19,6 +19,9 @@ export function SshToolsPanel({
   const [rightClickPaste, setRightClickPaste] = useState(
     () => getCookie("rightClickCopyPaste") !== "false",
   );
+  const [copyOnSelect, setCopyOnSelect] = useState(
+    () => getCookie("copyOnSelect") === "true",
+  );
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
     () =>
       new Set(
@@ -346,6 +349,27 @@ export function SshToolsPanel({
           >
             <span
               className={`pointer-events-none inline-block h-3 w-3 bg-background shadow-sm transition-transform ${rightClickPaste ? "translate-x-4" : "translate-x-0.5"}`}
+            />
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">
+            {t("newUi.sidebar.sshTools.copyOnSelect")}
+          </span>
+          <button
+            onClick={() => {
+              const next = !copyOnSelect;
+              setCopyOnSelect(next);
+              setCookie("copyOnSelect", next ? "true" : "false");
+            }}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center border-2 transition-colors ${
+              copyOnSelect
+                ? "bg-accent-brand border-accent-brand"
+                : "bg-muted border-border"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-3 w-3 bg-background shadow-sm transition-transform ${copyOnSelect ? "translate-x-4" : "translate-x-0.5"}`}
             />
           </button>
         </div>

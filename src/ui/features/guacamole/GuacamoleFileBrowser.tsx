@@ -19,6 +19,7 @@ import {
   parentPath,
   saveBlobAs,
   uploadFile,
+  describeUploadError,
   type RemoteFileEntry,
 } from "./guacamole-filesystem.ts";
 
@@ -76,9 +77,9 @@ export function GuacamoleFileBrowser({
           toast.success(t("guacamole.files.uploaded", { name: file.name }));
         } catch (err) {
           toast.error(
-            err instanceof Error
-              ? err.message
-              : t("guacamole.files.uploadFailed", { name: file.name }),
+            describeUploadError(err, (key) =>
+              t(`guacamole.files.${key}`, { name: file.name }),
+            ),
           );
         } finally {
           setBusyName(null);

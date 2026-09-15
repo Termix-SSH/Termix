@@ -85,21 +85,24 @@ function AiProviderEditForm({
   const [models, setModels] = useState<string[]>([]);
   const [customModel, setCustomModel] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [detectWarning, setDetectWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const detectModels = useCallback(async () => {
     setDetecting(true);
+    setDetectWarning(null);
     try {
       const detected = await getAiProviderModels(provider.id);
       setModels(detected);
       setCustomModel(!!defaultModel && !detected.includes(defaultModel));
-    } catch {
+    } catch (error) {
       setModels([]);
       setCustomModel(true);
+      setDetectWarning(getErrorMessage(error, t("ai.modelDetectFailed")));
     } finally {
       setDetecting(false);
     }
-  }, [provider.id, defaultModel]);
+  }, [provider.id, defaultModel, t]);
 
   useEffect(() => {
     void detectModels();
@@ -203,6 +206,11 @@ function AiProviderEditForm({
             placeholder={t("ai.defaultModelPlaceholder")}
           />
         )}
+        {detectWarning && (
+          <p className="text-[11px] leading-snug text-destructive">
+            {detectWarning}
+          </p>
+        )}
       </div>
 
       <div className="flex gap-2">
@@ -269,8 +277,8 @@ export function AiProviderSettings({
         apiKey: apiKey.trim() || null,
       });
       setModels(result.models);
-      if (result.source === "fallback") {
-        setDetectWarning(t("ai.modelDetectFailed"));
+      if (result.source !== "live") {
+        setDetectWarning(result.warning || t("ai.modelDetectFailed"));
       }
       // Pick the first suggestion so the field is never left empty.
       setDefaultModel((current) => current || result.models[0] || "");

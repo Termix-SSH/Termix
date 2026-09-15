@@ -7,12 +7,19 @@ import { createCurrentHostRepository } from "../repositories/factory.js";
 
 type HostAutostartRoutesDeps = {
   authenticateJWT: RequestHandler;
+  requireViewPermission: RequestHandler;
+  requireEditPermission: RequestHandler;
   requireDataAccess: RequestHandler;
 };
 
 export function registerHostAutostartRoutes(
   router: Router,
-  { authenticateJWT, requireDataAccess }: HostAutostartRoutesDeps,
+  {
+    authenticateJWT,
+    requireViewPermission,
+    requireEditPermission,
+    requireDataAccess,
+  }: HostAutostartRoutesDeps,
 ): void {
   /**
    * @openapi
@@ -44,6 +51,7 @@ export function registerHostAutostartRoutes(
   router.post(
     "/autostart/enable",
     authenticateJWT,
+    requireEditPermission,
     requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
@@ -204,6 +212,8 @@ export function registerHostAutostartRoutes(
   router.delete(
     "/autostart/disable",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { sshConfigId } = req.body;
@@ -259,6 +269,8 @@ export function registerHostAutostartRoutes(
   router.get(
     "/autostart/status",
     authenticateJWT,
+    requireViewPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
 

@@ -171,6 +171,7 @@ export function HostProxmoxTab({
                   {t("hosts.authTypeCredential")}
                 </option>
                 <option value="opkssh">{t("hosts.authTypeOpkssh")}</option>
+                <option value="stepca">{t("hosts.authTypeStepca")}</option>
                 <option value="none">{t("hosts.authTypeNone")}</option>
               </select>
             </SettingRow>

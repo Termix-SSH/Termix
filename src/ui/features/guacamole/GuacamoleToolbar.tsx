@@ -16,6 +16,10 @@ import {
   FolderOpen,
   Touchpad,
   MousePointer,
+  ZoomIn,
+  ZoomOut,
+  Scan,
+  X,
 } from "lucide-react";
 import {
   Tooltip,
@@ -38,6 +42,8 @@ interface GuacamoleToolbarProps {
   fileBrowserOpen?: boolean;
   onToggleFileBrowser?: () => void;
   onTouchModeChange?: (mode: GuacamoleTouchMode) => void;
+  zoom?: number;
+  onHide?: () => void;
 }
 
 const MODIFIER_KEYSYMS = {
@@ -73,6 +79,7 @@ function TipBtn({
       <TooltipTrigger asChild>
         <button
           type="button"
+          aria-label={tooltip}
           onClick={onClick}
           className={cn(BTN_BASE, className)}
         >
@@ -102,6 +109,7 @@ function TipIconBtn({
       <TooltipTrigger asChild>
         <button
           type="button"
+          aria-label={tooltip}
           onClick={onClick}
           className={cn(BTN_ICON, className)}
         >
@@ -123,6 +131,8 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
   fileBrowserOpen = false,
   onToggleFileBrowser,
   onTouchModeChange,
+  zoom = 1,
+  onHide,
 }) => {
   const { t } = useTranslation();
   const [position, setPosition] = useState({ x: 0, y: 12 });
@@ -350,6 +360,37 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
               </>
             )}
 
+            {protocol === "vnc" && (
+              <>
+                <div className={SEP} />
+                <TipIconBtn
+                  tooltip={t("guacamole.toolbar.zoomOut")}
+                  onClick={() => displayRef.current?.zoomOut()}
+                >
+                  <ZoomOut className="size-3.5" />
+                </TipIconBtn>
+                <TipBtn
+                  tooltip={t("guacamole.toolbar.resetZoom")}
+                  onClick={() => displayRef.current?.resetZoom()}
+                  className="min-w-12 tabular-nums"
+                >
+                  {Math.round(zoom * 100)}%
+                </TipBtn>
+                <TipIconBtn
+                  tooltip={t("guacamole.toolbar.zoomIn")}
+                  onClick={() => displayRef.current?.zoomIn()}
+                >
+                  <ZoomIn className="size-3.5" />
+                </TipIconBtn>
+                <TipIconBtn
+                  tooltip={t("guacamole.toolbar.fitToScreen")}
+                  onClick={() => displayRef.current?.resetZoom()}
+                >
+                  <Scan className="size-3.5" />
+                </TipIconBtn>
+              </>
+            )}
+
             {/* System combos — RDP/VNC only */}
             {isRdpVnc && (
               <>
@@ -531,6 +572,14 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                 {t("guacamole.toolbar.collapse")}
               </TooltipContent>
             </Tooltip>
+            {onHide && (
+              <TipIconBtn
+                tooltip={t("guacamole.toolbar.hide")}
+                onClick={onHide}
+              >
+                <X className="size-3.5" />
+              </TipIconBtn>
+            )}
           </div>
         )}
       </div>

@@ -3,6 +3,7 @@ import Busboy from "busboy";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { fileLogger } from "../../utils/logger.js";
 import {
+  execBuffer,
   execChannel,
   execWithSudo,
   execWithSudoBuffer,
@@ -64,7 +65,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const linkPath = decodeURIComponent(req.query.path as string);
+    const linkPath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -165,7 +166,7 @@ export function registerFileContentRoutes(
   app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const rawPath = decodeURIComponent(req.query.path as string);
+    const rawPath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -262,10 +263,10 @@ export function registerFileContentRoutes(
    *       500:
    *         description: Failed to read file.
    */
-  app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
+  app.get("/ssh/file_manager/ssh/readFile", async (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const filePath = decodeURIComponent(req.query.path as string);
+    const filePath = req.query.path as string;
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {
@@ -295,166 +296,133 @@ export function registerFileContentRoutes(
     const MAX_READ_SIZE = 500 * 1024 * 1024;
     const escapedPath = filePath.replace(/'/g, "'\"'\"'");
 
-    execChannel(
-      sshConn,
-      `stat -c%s '${escapedPath}' 2>/dev/null || wc -c < '${escapedPath}'`,
-      (sizeErr, sizeStream) => {
-        if (sizeErr) {
-          fileLogger.error("SSH file size check error:", sizeErr);
-          return res.status(500).json({ error: sizeErr.message });
-        }
+    const isPermissionDenied = (message: string) =>
+      message.toLowerCase().includes("permission denied");
+    const isFileNotFound = (message: string) => {
+      const lower = message.toLowerCase();
+      return (
+        lower.includes("no such file or directory") ||
+        lower.includes("cannot access") ||
+        lower.includes("not found") ||
+        lower.includes("resource not found")
+      );
+    };
 
-        let sizeData = "";
-        let sizeErrorData = "";
+    try {
+      let sizeResult = await execBuffer(
+        sshConn,
+        `stat -c%s '${escapedPath}' 2>/dev/null || wc -c < '${escapedPath}'`,
+      );
+      let sizeError = sizeResult.stderr || sizeResult.stdout.toString("utf8");
 
-        sizeStream.on("data", (chunk: Buffer) => {
-          sizeData += chunk.toString();
+      if (
+        sizeResult.code !== 0 &&
+        isPermissionDenied(sizeError) &&
+        sshConn.sudoPassword
+      ) {
+        sizeResult = await execWithSudoBuffer(
+          sshConn,
+          `stat -c%s '${escapedPath}'`,
+          sshConn.sudoPassword,
+        );
+        sizeError = sizeResult.stderr || sizeResult.stdout.toString("utf8");
+      }
+
+      if (sizeResult.code !== 0) {
+        const missing = isFileNotFound(sizeError);
+        const permissionDenied = isPermissionDenied(sizeError);
+        fileLogger.error(`File size check failed: ${sizeError}`);
+        return res.status(missing ? 404 : permissionDenied ? 403 : 500).json({
+          error: `Cannot check file size: ${sizeError}`,
+          fileNotFound: missing,
+          needsSudo: permissionDenied,
         });
+      }
 
-        sizeStream.stderr.on("data", (chunk: Buffer) => {
-          sizeErrorData += chunk.toString();
+      const fileSize = parseInt(sizeResult.stdout.toString("utf8").trim(), 10);
+      if (isNaN(fileSize)) {
+        fileLogger.error("Invalid file size response:", sizeResult.stdout);
+        return res.status(500).json({ error: "Cannot determine file size" });
+      }
+
+      if (fileSize > MAX_READ_SIZE) {
+        fileLogger.warn("File too large for reading", {
+          operation: "file_read",
+          sessionId,
+          filePath,
+          fileSize,
+          maxSize: MAX_READ_SIZE,
         });
-
-        sizeStream.on("close", (sizeCode) => {
-          if (sizeCode !== 0) {
-            const errorLower = sizeErrorData.toLowerCase();
-            const isFileNotFound =
-              errorLower.includes("no such file or directory") ||
-              errorLower.includes("cannot access") ||
-              errorLower.includes("not found") ||
-              errorLower.includes("resource not found");
-
-            fileLogger.error(`File size check failed: ${sizeErrorData}`);
-            return res.status(isFileNotFound ? 404 : 500).json({
-              error: `Cannot check file size: ${sizeErrorData}`,
-              fileNotFound: isFileNotFound,
-            });
-          }
-
-          const fileSize = parseInt(sizeData.trim(), 10);
-
-          if (isNaN(fileSize)) {
-            fileLogger.error("Invalid file size response:", sizeData);
-            return res
-              .status(500)
-              .json({ error: "Cannot determine file size" });
-          }
-
-          if (fileSize > MAX_READ_SIZE) {
-            fileLogger.warn("File too large for reading", {
-              operation: "file_read",
-              sessionId,
-              filePath,
-              fileSize,
-              maxSize: MAX_READ_SIZE,
-            });
-            return res.status(400).json({
-              error: `File too large to open in editor. Maximum size is ${MAX_READ_SIZE / 1024 / 1024}MB, file is ${(fileSize / 1024 / 1024).toFixed(2)}MB. Use download instead.`,
-              fileSize,
-              maxSize: MAX_READ_SIZE,
-              tooLarge: true,
-            });
-          }
-
-          execChannel(sshConn, `cat '${escapedPath}'`, (err, stream) => {
-            if (err) {
-              fileLogger.error("SSH readFile error:", err);
-              return res.status(500).json({ error: err.message });
-            }
-
-            let binaryData = Buffer.alloc(0);
-            let errorData = "";
-
-            stream.on("data", (chunk: Buffer) => {
-              binaryData = Buffer.concat([binaryData, chunk]);
-            });
-
-            stream.stderr.on("data", (chunk: Buffer) => {
-              errorData += chunk.toString();
-            });
-
-            stream.on("close", (code) => {
-              if (code !== 0) {
-                const isPermissionDenied = errorData
-                  .toLowerCase()
-                  .includes("permission denied");
-
-                if (isPermissionDenied && sshConn.sudoPassword) {
-                  execWithSudoBuffer(
-                    sshConn,
-                    `cat '${escapedPath}'`,
-                    sshConn.sudoPassword,
-                  )
-                    .then((result) => {
-                      if (result.code !== 0) {
-                        return res.status(403).json({
-                          error: `Permission denied: ${result.stderr || result.stdout.toString("utf8")}`,
-                          needsSudo: true,
-                        });
-                      }
-
-                      const sudoData = result.stdout;
-                      const isBinary = detectBinary(sudoData);
-                      res.json({
-                        content: isBinary
-                          ? sudoData.toString("base64")
-                          : sudoData.toString("utf8"),
-                        isBinary,
-                        size: sudoData.length,
-                      });
-                    })
-                    .catch(() => {
-                      res
-                        .status(403)
-                        .json({ error: "Permission denied", needsSudo: true });
-                    });
-                  return;
-                }
-
-                fileLogger.error(
-                  `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-                );
-
-                const isFileNotFound =
-                  errorData.includes("No such file or directory") ||
-                  errorData.includes("cannot access") ||
-                  errorData.includes("not found");
-
-                return res.status(isFileNotFound ? 404 : 500).json({
-                  error: `Command failed: ${errorData}`,
-                  fileNotFound: isFileNotFound,
-                });
-              }
-
-              const isBinary = detectBinary(binaryData);
-              fileLogger.success("File read successfully", {
-                operation: "file_read_success",
-                sessionId,
-                userId,
-                path: filePath,
-                bytes: binaryData.length,
-              });
-
-              if (isBinary) {
-                const base64Content = binaryData.toString("base64");
-                res.json({
-                  content: base64Content,
-                  path: filePath,
-                  encoding: "base64",
-                });
-              } else {
-                const textContent = binaryData.toString("utf8");
-                res.json({
-                  content: textContent,
-                  path: filePath,
-                  encoding: "utf8",
-                });
-              }
-            });
-          });
+        return res.status(400).json({
+          error: `File too large to open in editor. Maximum size is ${MAX_READ_SIZE / 1024 / 1024}MB, file is ${(fileSize / 1024 / 1024).toFixed(2)}MB. Use download instead.`,
+          fileSize,
+          maxSize: MAX_READ_SIZE,
+          tooLarge: true,
         });
-      },
-    );
+      }
+
+      let contentResult = await execBuffer(
+        sshConn,
+        `cat '${escapedPath}'`,
+        MAX_READ_SIZE,
+      );
+      let contentError =
+        contentResult.stderr || contentResult.stdout.toString("utf8");
+
+      if (
+        contentResult.code !== 0 &&
+        isPermissionDenied(contentError) &&
+        sshConn.sudoPassword
+      ) {
+        contentResult = await execWithSudoBuffer(
+          sshConn,
+          `cat '${escapedPath}'`,
+          sshConn.sudoPassword,
+          MAX_READ_SIZE,
+        );
+        contentError =
+          contentResult.stderr || contentResult.stdout.toString("utf8");
+      }
+
+      if (contentResult.exceededLimit) {
+        return res.status(400).json({
+          error: `File grew beyond the ${MAX_READ_SIZE / 1024 / 1024}MB read limit`,
+          maxSize: MAX_READ_SIZE,
+          tooLarge: true,
+        });
+      }
+
+      if (contentResult.code !== 0) {
+        const missing = isFileNotFound(contentError);
+        const permissionDenied = isPermissionDenied(contentError);
+        fileLogger.error(
+          `SSH readFile command failed with code ${contentResult.code}: ${contentError.replace(/\n/g, " ").trim()}`,
+        );
+        return res.status(missing ? 404 : permissionDenied ? 403 : 500).json({
+          error: `Command failed: ${contentError}`,
+          fileNotFound: missing,
+          needsSudo: permissionDenied,
+        });
+      }
+
+      const isBinary = detectBinary(contentResult.stdout);
+      fileLogger.success("File read successfully", {
+        operation: "file_read_success",
+        sessionId,
+        userId,
+        path: filePath,
+        bytes: contentResult.stdout.length,
+      });
+      return res.json({
+        content: contentResult.stdout.toString(isBinary ? "base64" : "utf8"),
+        path: filePath,
+        encoding: isBinary ? "base64" : "utf8",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      fileLogger.error("SSH readFile error:", error);
+      return res.status(500).json({ error: message });
+    }
   });
 
   /**
@@ -1369,6 +1337,20 @@ export function registerFileContentRoutes(
       let fileName: string | undefined;
       let uploadStartTime: number;
       let resolved = false;
+      let requestAborted = false;
+      let cleanupStarted = false;
+      let destroyUpload: (() => void) | undefined;
+
+      const abortUpload = () => {
+        if (req.complete || cleanupStarted) return;
+        requestAborted = true;
+        cleanupStarted = true;
+        destroyUpload?.();
+      };
+
+      req.once("aborted", abortUpload);
+      req.once("error", abortUpload);
+      req.once("close", abortUpload);
 
       const bb = Busboy({ headers: req.headers });
 
@@ -1433,10 +1415,27 @@ export function registerFileContentRoutes(
           getSessionSftp(sshConn)
             .then((sftp) => {
               const writeStream = sftp.createWriteStream(fullPath);
+              const removePartialFile = () => {
+                writeStream.destroy();
+                sftp.unlink(fullPath, (err) => {
+                  if (err) {
+                    fileLogger.error(
+                      "Failed to remove partial file after aborted upload:",
+                      err,
+                    );
+                  }
+                });
+              };
+              destroyUpload = removePartialFile;
+
+              if (requestAborted) {
+                removePartialFile();
+                return;
+              }
 
               writeStream.on("error", (err) => {
                 fileLogger.error("SFTP write stream error during upload:", err);
-                if (!resolved) {
+                if (!resolved && !requestAborted) {
                   resolved = true;
                   res
                     .status(500)
@@ -1464,30 +1463,10 @@ export function registerFileContentRoutes(
                 });
               });
 
-              writeStream.on("close", () => {
-                if (resolved) return;
-                resolved = true;
-                fileLogger.success("Streaming file upload completed", {
-                  operation: "file_upload_stream_complete",
-                  sessionId,
-                  userId,
-                  path: fullPath,
-                  duration: Date.now() - uploadStartTime,
-                });
-                res.json({
-                  message: "File uploaded successfully",
-                  path: fullPath,
-                  toast: {
-                    type: "success",
-                    message: `File uploaded: ${fullPath}`,
-                  },
-                });
-              });
-
               fileStream.on("error", (err) => {
                 fileLogger.error("File read stream error during upload:", err);
                 writeStream.destroy();
-                if (!resolved) {
+                if (!resolved && !requestAborted) {
                   resolved = true;
                   res
                     .status(500)
@@ -1502,7 +1481,7 @@ export function registerFileContentRoutes(
             .catch((err: Error) => {
               fileStream.resume();
               fileLogger.error("SFTP session error during stream upload:", err);
-              if (!resolved) {
+              if (!resolved && !requestAborted) {
                 resolved = true;
                 res.status(500).json({ error: `SFTP error: ${err.message}` });
               }
@@ -1512,7 +1491,7 @@ export function registerFileContentRoutes(
 
       bb.on("error", (err: Error) => {
         fileLogger.error("Busboy parse error during stream upload:", err);
-        if (!resolved) {
+        if (!resolved && !requestAborted) {
           resolved = true;
           res.status(500).json({ error: `Upload parse error: ${err.message}` });
         }

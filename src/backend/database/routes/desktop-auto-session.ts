@@ -33,6 +33,11 @@ export function extractBearerOrCookieToken(req: Request): string | undefined {
   return undefined;
 }
 
+export function isNativeTokenExportRequest(req: Request): boolean {
+  const userAgent = req.get("user-agent") || "";
+  return /^(Termix-Mobile|Termix-Desktop)\//.test(userAgent);
+}
+
 /**
  * Decides who the desktop auto-session endpoint should silently log in as.
  *
