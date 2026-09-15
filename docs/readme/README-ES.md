@@ -237,7 +237,7 @@ Un CLI `termix` para tu shell y tus scripts. Abre terminales, ejecuta un comando
 <td width="50%" valign="top">
 
 **Seguridad:**
-Las contraseñas, las claves y otros secretos se cifran por usuario, y los propios archivos de la base de datos se pueden cifrar en disco. Mira la [documentación](https://docs.termix.site/security) para saber cómo funciona.
+Las contraseñas, las claves y otros secretos se cifran por usuario, y los propios archivos de la base de datos se pueden cifrar en disco. Mira la [documentación](https://docs.termix.site/features/authentication/security/) para saber cómo funciona.
 
 </td>
 <td width="50%" valign="top">
