@@ -192,6 +192,121 @@ export interface ElectronAPI {
     sessionId: string,
     callback: (exitCode: number) => void,
   ): () => void;
+
+  /** Local disk browsing for the dual-pane file manager (desktop only). */
+  localFs?: {
+    home: () => Promise<LocalFsResult<LocalFsHomeInfo>>;
+    list: (dirPath: string) => Promise<LocalFsResult<LocalDirectoryListing>>;
+    mkdir: (
+      parentPath: string,
+      name: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    createFile: (
+      parentPath: string,
+      name: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    rename: (
+      oldPath: string,
+      newName: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    trash: (paths: string[]) => Promise<LocalFsResult<LocalTrashResult>>;
+    ensureDir: (dirPath: string) => Promise<LocalFsResult<{ path: string }>>;
+    exists: (paths: string[]) => Promise<LocalFsResult<{ existing: string[] }>>;
+    walk: (paths: string[]) => Promise<LocalFsResult<LocalWalkResult>>;
+    reveal: (targetPath: string) => Promise<LocalFsResult<unknown>>;
+    open: (targetPath: string) => Promise<LocalFsResult<unknown>>;
+  };
+
+  /** Streamed local<->remote transfers driven by the main process. */
+  localTransfer?: {
+    upload: (
+      options: LocalUploadRequest,
+    ) => Promise<LocalFsResult<{ bytes: number }>>;
+    download: (
+      options: LocalDownloadRequest,
+    ) => Promise<LocalFsResult<{ path: string }>>;
+    cancel: (
+      transferId: string,
+    ) => Promise<LocalFsResult<{ cancelled: boolean }>>;
+    onProgress: (
+      callback: (payload: LocalTransferProgress) => void,
+    ) => () => void;
+  };
+}
+
+export type LocalFsResult<T> =
+  ({ success: true } & T) | { success: false; error: string; code?: string };
+
+export interface LocalFsHomeInfo {
+  home: string;
+  separator: string;
+  platform: string;
+}
+
+export interface LocalFileEntry {
+  name: string;
+  path: string;
+  type: "file" | "directory" | "link";
+  size: number;
+  modifiedTimestamp?: number;
+  linkTarget?: string;
+  hidden: boolean;
+}
+
+export interface LocalDirectoryListing {
+  path: string;
+  parent: string | null;
+  entries: LocalFileEntry[];
+}
+
+export interface LocalTrashResult {
+  trashed: number;
+  failed: Array<{ path: string; error: string }>;
+}
+
+export interface LocalWalkFile {
+  localPath: string;
+  /** Path relative to the drop root; "/"-separated and includes the root's own name. */
+  relativePath: string;
+  size: number;
+}
+
+export interface LocalWalkResult {
+  files: LocalWalkFile[];
+  emptyDirs: string[];
+  totalBytes: number;
+}
+
+/**
+ * Which Termix backend a transfer talks to. The main process resolves the
+ * actual URL and credentials for the origin; the renderer never supplies them.
+ */
+export type LocalTransferOrigin = "local" | "remote";
+
+export interface LocalUploadRequest {
+  transferId: string;
+  origin: LocalTransferOrigin;
+  fields: Record<string, string>;
+  localPath: string;
+  fileName: string;
+  deviceId?: string;
+}
+
+export interface LocalDownloadRequest {
+  transferId: string;
+  origin: LocalTransferOrigin;
+  body: Record<string, unknown>;
+  destPath: string;
+  expectedSize?: number;
+  /** Replace an existing file at destPath; otherwise the transfer is refused with code EEXIST. */
+  overwrite?: boolean;
+  deviceId?: string;
+}
+
+export interface LocalTransferProgress {
+  transferId: string;
+  transferred: number;
+  total?: number;
 }
 
 declare global {

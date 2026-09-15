@@ -61,7 +61,7 @@ describe("logAudit", () => {
 });
 
 describe("getRequestMeta", () => {
-  it("extracts ip from x-forwarded-for header", () => {
+  it("uses the proxy-validated Express IP", () => {
     const req = {
       headers: {
         "x-forwarded-for": "10.0.0.1, 10.0.0.2",
@@ -71,7 +71,7 @@ describe("getRequestMeta", () => {
       socket: {},
     };
     const meta = getRequestMeta(req as never);
-    expect(meta.ipAddress).toBe("10.0.0.1");
+    expect(meta.ipAddress).toBe("127.0.0.1");
     expect(meta.userAgent).toBe("TestAgent/1.0");
   });
 
@@ -85,16 +85,16 @@ describe("getRequestMeta", () => {
     expect(meta.ipAddress).toBe("192.168.1.1");
   });
 
-  it("splits and trims a forwarded header sent as an array", () => {
+  it("ignores an unvalidated forwarded header", () => {
     const req = {
       headers: {
         "x-forwarded-for": ["10.0.0.1, 10.0.0.2"],
         "user-agent": "TestAgent/1.0",
       },
-      socket: {},
+      socket: { remoteAddress: "203.0.113.9" },
     };
     const meta = getRequestMeta(req as never);
-    expect(meta.ipAddress).toBe("10.0.0.1");
+    expect(meta.ipAddress).toBe("203.0.113.9");
   });
 
   it("falls back to the socket peer when there is no forwarded header or req.ip", () => {

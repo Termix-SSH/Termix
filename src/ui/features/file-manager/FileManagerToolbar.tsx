@@ -12,6 +12,7 @@ import {
   List,
   Plus,
   RefreshCw,
+  Rows3,
   Search,
   Trash2,
   Upload,
@@ -33,6 +34,7 @@ import type { FileItem } from "@/types/index";
 type SortBy = "name" | "modified" | "size";
 type SortOrder = "asc" | "desc";
 type ViewMode = "grid" | "list";
+type Density = "comfortable" | "compact";
 
 type FileManagerToolbarProps = {
   t: (key: string) => string;
@@ -46,6 +48,8 @@ type FileManagerToolbarProps = {
   setSearchQuery: (query: string) => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  density: Density;
+  setDensity: (density: Density) => void;
   sortBy: SortBy;
   setSortBy: (sortBy: SortBy) => void;
   sortOrder: SortOrder;
@@ -197,6 +201,8 @@ export function FileManagerToolbar({
   setSearchQuery,
   viewMode,
   setViewMode,
+  density,
+  setDensity,
   sortBy,
   setSortBy,
   sortOrder,
@@ -320,6 +326,21 @@ export function FileManagerToolbar({
               className={`size-8 rounded-none border-y-0 border-r-0 border-border ${viewMode === "list" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
             >
               <List className="size-4" />
+            </Button>
+            <Button
+              variant={density === "compact" ? "secondary" : "ghost"}
+              size="icon"
+              onClick={() =>
+                setDensity(density === "compact" ? "comfortable" : "compact")
+              }
+              className={`size-8 rounded-none border-y-0 border-r-0 border-l border-border ${density === "compact" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+              title={t(
+                density === "compact"
+                  ? "fileManager.comfortableLayout"
+                  : "fileManager.compactLayout",
+              )}
+            >
+              <Rows3 className="size-4" />
             </Button>
           </div>
 

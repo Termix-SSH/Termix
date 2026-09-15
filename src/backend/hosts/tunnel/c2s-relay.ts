@@ -14,6 +14,7 @@ import {
 } from "./ssh-primitives.js";
 import { sendC2SMessage, writeC2SRemoteChunk } from "./c2s-relay-utils.js";
 import { getTunnelMode } from "./utils.js";
+import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 
 export type C2SOpenMessage = {
   type: "open" | "test";
@@ -25,17 +26,36 @@ export type C2SOpenMessage = {
 const permissionManager = PermissionManager.getInstance();
 let c2sRemoteStreamCounter = 0;
 
+export async function resolveC2SSourceHostId(
+  tunnelConfig: Partial<TunnelConfig>,
+  findHostIdBySyncId: (syncId: string) => Promise<number | null>,
+): Promise<number> {
+  const sourceHostSyncId = tunnelConfig.sourceHostSyncId?.trim();
+  if (sourceHostSyncId) {
+    const remoteHostId = await findHostIdBySyncId(sourceHostSyncId);
+    if (!remoteHostId) {
+      throw new Error("Endpoint SSH host was not found on the remote server");
+    }
+    return remoteHostId;
+  }
+
+  if (!tunnelConfig.sourceHostId) {
+    throw new Error("Endpoint SSH host is required");
+  }
+  return tunnelConfig.sourceHostId;
+}
+
 async function resolveC2STunnelSource(
   tunnelConfig: Partial<TunnelConfig>,
   userId: string,
 ): Promise<TunnelConfig> {
-  if (!tunnelConfig.sourceHostId) {
-    throw new Error("Endpoint SSH host is required");
-  }
+  const sourceHostId = await resolveC2SSourceHostId(tunnelConfig, (syncId) =>
+    createCurrentHostResolutionRepository().findHostIdBySyncId(syncId),
+  );
 
   const accessInfo = await permissionManager.canAccessHost(
     userId,
-    tunnelConfig.sourceHostId,
+    sourceHostId,
     "connect",
   );
   if (!accessInfo.hasAccess) {
@@ -43,13 +63,13 @@ async function resolveC2STunnelSource(
   }
 
   const { resolveHostById } = await import("../host-resolver.js");
-  const resolvedHost = await resolveHostById(tunnelConfig.sourceHostId, userId);
+  const resolvedHost = await resolveHostById(sourceHostId, userId);
   if (!resolvedHost) {
     throw new Error("Endpoint SSH host not found");
   }
 
   return {
-    name: tunnelConfig.name || `c2s:${tunnelConfig.sourceHostId}`,
+    name: tunnelConfig.name || `c2s:${sourceHostId}`,
     scope: "c2s",
     mode: tunnelConfig.mode || "local",
     tunnelType:
@@ -57,7 +77,7 @@ async function resolveC2STunnelSource(
       (tunnelConfig.mode === "remote" ? "remote" : "local"),
     bindHost: tunnelConfig.bindHost,
     targetHost: tunnelConfig.targetHost || "127.0.0.1",
-    sourceHostId: resolvedHost.id || tunnelConfig.sourceHostId,
+    sourceHostId: resolvedHost.id || sourceHostId,
     tunnelIndex: tunnelConfig.tunnelIndex || 0,
     requestingUserId: userId,
     hostName:

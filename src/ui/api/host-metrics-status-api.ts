@@ -256,10 +256,18 @@ export async function stopMetricsPolling(
 
 export async function sendMetricsHeartbeat(
   viewerSessionId: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await statsApi.post("/metrics/heartbeat", { viewerSessionId });
+    const response = await statsApi.post(
+      "/metrics/heartbeat",
+      { viewerSessionId },
+      { validateStatus: (status) => status === 200 || status === 404 },
+    );
+    return response.status !== 404;
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return false;
+    }
     handleApiError(error, "send metrics heartbeat");
     throw error;
   }

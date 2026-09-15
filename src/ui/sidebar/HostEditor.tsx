@@ -25,7 +25,6 @@ import {
   Globe,
   Info,
   Layers, // --- tmux-monitor ---
-  LayoutGrid,
   Network,
   Palette,
   Pencil,
@@ -94,6 +93,10 @@ import {
 } from "./HostEditorGuacamoleTabs";
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { VaultProfileManager } from "./VaultProfileManager";
+import {
+  SecretReferenceHint,
+  SecretSourceManager,
+} from "./SecretSourceManager";
 import { findHostByTunnelEndpoint } from "@/features/tunnel/tunnel-endpoints";
 import {
   toCredentialOption,
@@ -190,6 +193,7 @@ export function HostEditor({
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
   const [showVaultManager, setShowVaultManager] = useState(false);
+  const [showSecretSources, setShowSecretSources] = useState(false);
   const [quickCredentialName, setQuickCredentialName] = useState("");
   const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
   const [showQuickCredentialDialog, setShowQuickCredentialDialog] =
@@ -590,6 +594,7 @@ export function HostEditor({
                         "vault",
                         "none",
                         "opkssh",
+                        "stepca",
                         "tailscale",
                         "agent",
                       ].map((m) => (
@@ -647,6 +652,26 @@ export function HostEditor({
                           {t("hosts.oidcUsernameHint")}
                         </p>
                       )}
+                      {authMethod === "stepca" && (
+                        <div className="flex flex-col gap-2 border-t border-border pt-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              {t("hosts.stepcaLabel")}
+                            </span>
+                            <a
+                              href="https://smallstep.com/docs/step-ca/provisioners/#oauthoidc-single-sign-on"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-accent-brand hover:underline"
+                            >
+                              {t("hosts.docsLink")}
+                            </a>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {t("hosts.stepcaDesc")}
+                          </p>
+                        </div>
+                      )}
                       {authMethod === "tailscale" && (
                         <p className="text-[10px] text-muted-foreground/60">
                           {t("hosts.tailscaleUsernameHint")}
@@ -676,8 +701,17 @@ export function HostEditor({
                           }}
                           onChange={(e) => setField("password", e.target.value)}
                         />
+                        <SecretReferenceHint
+                          onManage={() => setShowSecretSources((v) => !v)}
+                        />
                       </div>
                     )}
+                    {(authMethod === "password" || authMethod === "key") &&
+                      showSecretSources && (
+                        <SecretSourceManager
+                          onClose={() => setShowSecretSources(false)}
+                        />
+                      )}
                     {authMethod === "key" && (
                       <>
                         <div className="flex flex-col gap-1.5 col-span-2">
@@ -1789,6 +1823,27 @@ export function HostEditor({
                     />
                   </div>
                   <SettingRow
+                    label={t("hosts.enableAutoTmux")}
+                    description={
+                      <>
+                        {t("hosts.enableAutoTmuxDesc")}{" "}
+                        <a
+                          href="https://docs.termix.site/features/terminal/tmux"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent-brand hover:underline"
+                        >
+                          {t("hosts.docsLink")}
+                        </a>
+                      </>
+                    }
+                  >
+                    <FakeSwitch
+                      checked={form.autoTmux}
+                      onChange={(v) => setField("autoTmux", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
                     label={t("hosts.sshAgentForwardingLabel")}
                     description={t("hosts.sshAgentForwardingShortDesc")}
                   >
@@ -1813,27 +1868,6 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.autoMosh}
                       onChange={(v) => setField("autoMosh", v)}
-                    />
-                  </SettingRow>
-                  <SettingRow
-                    label={t("hosts.enableAutoTmux")}
-                    description={
-                      <>
-                        {t("hosts.enableAutoTmuxDesc")}{" "}
-                        <a
-                          href="https://docs.termix.site/features/terminal/tmux"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </>
-                    }
-                  >
-                    <FakeSwitch
-                      checked={form.autoTmux}
-                      onChange={(v) => setField("autoTmux", v)}
                     />
                   </SettingRow>
                   <SettingRow
@@ -2154,22 +2188,6 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.enableTmuxMonitor}
                       onChange={(v) => setField("enableTmuxMonitor", v)}
-                    />
-                  </SettingRow>
-                </div>
-              </SectionCard>
-              <SectionCard
-                title={t("terminalToolbar.title")}
-                icon={<LayoutGrid className="size-3.5" />}
-              >
-                <div className="flex flex-col gap-4 py-3">
-                  <SettingRow
-                    label={t("hosts.enableTerminalToolbar")}
-                    description={t("hosts.enableTerminalToolbarDesc")}
-                  >
-                    <FakeSwitch
-                      checked={form.enableTerminalToolbar}
-                      onChange={(v) => setField("enableTerminalToolbar", v)}
                     />
                   </SettingRow>
                 </div>

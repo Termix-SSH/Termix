@@ -93,7 +93,7 @@ import type {
   PendingSudoOperation,
   SSHConnectionError,
 } from "./file-manager-types.ts";
-import { formatFileSize } from "./file-manager-utils.ts";
+import { formatFileSize, runWithConcurrency } from "./file-manager-utils.ts";
 import {
   invalidateCachedFileList,
   peekCachedFileList,
@@ -154,6 +154,11 @@ function FileManagerContent({
     const saved = localStorage.getItem("fileManagerViewMode");
     return saved === "grid" || saved === "list" ? saved : "grid";
   });
+  const [density, setDensity] = useState<"comfortable" | "compact">(() =>
+    localStorage.getItem("fileManagerDensity") === "compact"
+      ? "compact"
+      : "comfortable",
+  );
   // Picking an interface preset seeds this key from another part of the app.
   useEffect(() => {
     const handler = () => {
@@ -884,6 +889,25 @@ function FileManagerContent({
     }
   }, [navIndex, navHistory, sshSessionId]);
 
+  useEffect(() => {
+    const handleMouseNavigation = (event: MouseEvent) => {
+      if (event.button !== 3 && event.button !== 4) return;
+      event.preventDefault();
+      if (event.button === 3) goBack();
+      else goForward();
+    };
+    const preventBrowserMouseNavigation = (event: MouseEvent) => {
+      if (event.button === 3 || event.button === 4) event.preventDefault();
+    };
+
+    window.addEventListener("mouseup", handleMouseNavigation);
+    window.addEventListener("auxclick", preventBrowserMouseNavigation);
+    return () => {
+      window.removeEventListener("mouseup", handleMouseNavigation);
+      window.removeEventListener("auxclick", preventBrowserMouseNavigation);
+    };
+  }, [goBack, goForward]);
+
   const goUp = useCallback(() => {
     if (currentPath === "/") return;
     const parent =
@@ -1121,15 +1145,13 @@ function FileManagerContent({
     }
   }
 
-  function handleFilesDropped(fileList: FileList) {
+  async function handleFilesDropped(fileList: FileList) {
     if (!sshSessionId) {
       toast.error(t("fileManager.noSSHConnection"));
       return;
     }
 
-    Array.from(fileList).forEach((file) => {
-      handleUploadFile(file);
-    });
+    await runWithConcurrency(Array.from(fileList), 3, handleUploadFile);
   }
 
   async function handleUploadFile(file: File) {
@@ -1246,7 +1268,7 @@ function FileManagerContent({
 
       toast.success(
         t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
-        { id: toastId },
+        { id: toastId, duration: undefined },
       );
     } catch (error: unknown) {
       const err = error instanceof Error ? error : null;
@@ -1260,10 +1282,13 @@ function FileManagerContent({
             ip: currentHost?.ip,
             port: currentHost?.port,
           }),
-          { id: toastId },
+          { id: toastId, duration: undefined },
         );
       } else {
-        toast.error(t("fileManager.failedToDownloadFile"), { id: toastId });
+        toast.error(t("fileManager.failedToDownloadFile"), {
+          id: toastId,
+          duration: undefined,
+        });
       }
       console.error("Download failed:", error);
     }
@@ -3146,6 +3171,10 @@ function FileManagerContent({
   }, [viewMode]);
 
   useEffect(() => {
+    localStorage.setItem("fileManagerDensity", density);
+  }, [density]);
+
+  useEffect(() => {
     localStorage.setItem("fileManagerSortBy", sortBy);
     localStorage.setItem("fileManagerSortOrder", sortOrder);
   }, [sortBy, sortOrder]);
@@ -3223,6 +3252,8 @@ function FileManagerContent({
           setSearchQuery={setSearchQuery}
           viewMode={viewMode}
           setViewMode={setViewMode}
+          density={density}
+          setDensity={setDensity}
           sortBy={sortBy}
           setSortBy={setSortBy}
           sortOrder={sortOrder}
@@ -3304,6 +3335,7 @@ function FileManagerContent({
                 }
                 onContextMenu={handleContextMenu}
                 viewMode={viewMode}
+                density={density}
                 onRename={handleRenameConfirm}
                 editingFile={editingFile}
                 onStartEdit={handleStartEdit}

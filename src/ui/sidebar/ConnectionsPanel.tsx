@@ -314,6 +314,14 @@ export function ConnectionsPanel({
 }) {
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
+
+  const [persistMinutes, setPersistMinutes] = useState(30);
+  useEffect(() => {
+    import("@/api/settings-api")
+      .then(({ getTerminalSessionSettings }) => getTerminalSessionSettings())
+      .then((settings) => setPersistMinutes(settings.timeoutMinutes))
+      .catch(() => {});
+  }, []);
   const [activeSessions, setActiveSessions] = useState<ActiveSessionInfo[]>([]);
   const activeSessionsRef = useRef(activeSessions);
   activeSessionsRef.current = activeSessions;
@@ -589,7 +597,9 @@ export function ConnectionsPanel({
           />
           <div className="px-3 py-1.5 border-b border-border/40">
             <span className="text-[10px] text-muted-foreground/50">
-              {t("connections.backgroundDesc")}
+              {t("connections.backgroundDesc", {
+                minutes: persistMinutes,
+              })}
             </span>
           </div>
           {filteredBackgroundTabs.map((record) => {

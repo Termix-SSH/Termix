@@ -54,7 +54,7 @@ export function registerFileListingRoutes(
   app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
     const sessionId = req.query.sessionId as string;
     const sshConn = sshSessions[sessionId];
-    const sshPath = decodeURIComponent((req.query.path as string) || "/");
+    const sshPath = (req.query.path as string) || "/";
     const userId = (req as AuthenticatedRequest).userId;
 
     if (!sessionId) {

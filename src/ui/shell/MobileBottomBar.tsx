@@ -12,17 +12,7 @@ import type { RailView } from "@/sidebar/AppRail";
 import { visibleRailItems } from "@/sidebar/rail-items";
 import { useAiAvailability } from "@/hooks/use-ai-availability";
 import type { SplitMode } from "@/types/ui-types";
-
-function readHiddenRailTabs(): Set<string> {
-  try {
-    const raw = localStorage.getItem("hiddenRailTabs");
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
-  } catch {
-    return new Set();
-  }
-}
+import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 
 export function MobileBottomBar({
   railView,

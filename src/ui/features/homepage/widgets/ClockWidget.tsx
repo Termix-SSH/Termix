@@ -8,9 +8,16 @@ import {
 } from "@/types/homepage-types";
 import { WidgetTitle } from "./WidgetTitle";
 import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
+import { isValidTimezone } from "../clock-timezone";
 
 function ClockWidget({ widget, config }: WidgetComponentProps<ClockConfig>) {
-  const { timezone, showSeconds, format } = config;
+  const { showSeconds, format } = config;
+  // Configs saved before the edit dialog validated timezones can still hold an
+  // unusable one (e.g. "America/New York"), which makes toLocaleTimeString throw.
+  const timezone =
+    config.timezone && isValidTimezone(config.timezone)
+      ? config.timezone
+      : undefined;
   const [now, setNow] = useState(new Date());
 
   // Minute-level is enough without seconds; pause when the tab is backgrounded.

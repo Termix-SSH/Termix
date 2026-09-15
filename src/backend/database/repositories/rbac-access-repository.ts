@@ -207,6 +207,18 @@ export class RbacAccessRepository {
     return rowsAffected(result);
   }
 
+  /** Grants the departing user handed out now count as the successor's. */
+  async reassignHostAccessGrantedBy(
+    fromUserId: string,
+    toUserId: string,
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(hostAccess)
+      .set({ grantedBy: toUserId })
+      .where(eq(hostAccess.grantedBy, fromUserId));
+    await this.afterWrite();
+  }
+
   async deleteHostAccessForUserReferences(userId: string): Promise<number> {
     const directResult = await this.context.drizzle
       .delete(hostAccess)

@@ -3,6 +3,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const safeFetch = vi.hoisted(() => vi.fn());
 const logs = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn() }));
 
+vi.mock("../../database/repositories/factory.js", () => ({
+  getCurrentSettingValue: () => null,
+}));
 vi.mock("../../utils/safe-outbound-fetch.js", () => ({
   safeOutboundFetch: safeFetch,
 }));

@@ -57,6 +57,8 @@ function makeFakeWs(readyState = 1 /* OPEN */) {
   return {
     readyState,
     send: vi.fn(),
+    close: vi.fn(),
+    terminate: vi.fn(),
   } as unknown as import("ws").WebSocket;
 }
 const WS_OPEN = 1;
@@ -206,7 +208,83 @@ describe("TerminalSessionManager - multiplayer participants", () => {
       ownerWs,
     );
     expect(ownerParticipant?.isOwner).toBe(true);
-    expect(ownerWs.send).not.toHaveBeenCalled();
+    // The join is announced to everyone already in the session - and that is
+    // the only unsolicited message the owner receives.
+    expect(ownerWs.send).toHaveBeenCalledTimes(1);
+    const announced = JSON.parse(
+      (ownerWs.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as string,
+    );
+    expect(announced.type).toBe("participants");
+    expect(announced.participants).toHaveLength(2);
+
+    sessionManager.destroySession(id);
+  });
+
+  it("setRoomShareControl makes only the controller read-write and never touches the owner", () => {
+    const id = createConnectedSession();
+    const ownerWs = makeFakeWs();
+    sessionManager.attachWs(id, "owner-1", ownerWs);
+    const aliceWs = makeFakeWs();
+    const bobWs = makeFakeWs();
+    const session = sessionManager.joinAsParticipant(id, aliceWs, {
+      userId: "alice",
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    })!;
+    sessionManager.joinAsParticipant(id, bobWs, {
+      userId: "bob",
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    });
+
+    sessionManager.setRoomShareControl(id, "stage-share", "alice");
+    expect(
+      sessionManager.getParticipantForWs(session, aliceWs)?.permissionLevel,
+    ).toBe("read-write");
+    expect(
+      sessionManager.getParticipantForWs(session, bobWs)?.permissionLevel,
+    ).toBe("read-only");
+    expect(
+      sessionManager.getParticipantForWs(session, ownerWs)?.permissionLevel,
+    ).toBe("read-write");
+
+    sessionManager.setRoomShareControl(id, "stage-share", null);
+    expect(
+      sessionManager.getParticipantForWs(session, aliceWs)?.permissionLevel,
+    ).toBe("read-only");
+
+    sessionManager.destroySession(id);
+  });
+
+  it("disconnectShareParticipants revokes only the selected share participants", () => {
+    const id = createConnectedSession();
+    const ownerWs = makeFakeWs();
+    const aliceWs = makeFakeWs();
+    const guestWs = makeFakeWs();
+    sessionManager.attachWs(id, "owner-1", ownerWs);
+    const session = sessionManager.joinAsParticipant(id, aliceWs, {
+      userId: "alice",
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    })!;
+    sessionManager.joinAsParticipant(id, guestWs, {
+      userId: null,
+      permissionLevel: "read-only",
+      shareId: "stage-share",
+    });
+
+    expect(
+      sessionManager.disconnectShareParticipants(id, "stage-share", {
+        userId: "alice",
+        reason: "Removed",
+      }),
+    ).toBe(1);
+    expect(sessionManager.getParticipantForWs(session, aliceWs)).toBeNull();
+    expect(sessionManager.getParticipantForWs(session, guestWs)).not.toBeNull();
+    expect(sessionManager.getParticipantForWs(session, ownerWs)?.isOwner).toBe(
+      true,
+    );
+    expect(aliceWs.close).toHaveBeenCalledWith(1008, "Removed");
 
     sessionManager.destroySession(id);
   });
