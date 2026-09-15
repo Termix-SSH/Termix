@@ -1,5 +1,10 @@
 import type { Client } from "ssh2";
-import { execCommand, toFixedNum } from "./common-utils.js";
+import {
+  execCommand,
+  execPowerShell,
+  toFixedNum,
+  type HostPlatform,
+} from "./common-utils.js";
 
 const PSEUDO_FS_RE = /^(tmpfs|devtmpfs|overlay|udev|none|shm)$/;
 
@@ -204,10 +209,52 @@ export function mergeMonitoredFilesystems(
   return result;
 }
 
-export async function collectDiskMetrics(
+function humanizeBytes(bytes: number): string {
+  const units = ["B", "K", "M", "G", "T", "P"];
+  let value = Math.max(0, bytes);
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  const rounded =
+    unitIndex > 0 && value < 10 ? value.toFixed(1) : Math.round(value);
+  return `${rounded}${units[unitIndex]}`;
+}
+
+interface WindowsDiskRow {
+  drive: string;
+  total: number;
+  free: number;
+}
+
+const WINDOWS_DISK_SCRIPT =
+  'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {' +
+  " [PSCustomObject]@{drive=$_.DeviceID; total=$_.Size; free=$_.FreeSpace}" +
+  " } | ConvertTo-Json -Compress";
+
+export function parseWindowsDiskJson(output: string): WindowsDiskRow[] {
+  const trimmed = output.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    return rows
+      .filter((row): row is Record<string, unknown> => Boolean(row?.drive))
+      .map((row) => ({
+        drive: String(row.drive),
+        total: Number(row.total),
+        free: Number(row.free),
+      }))
+      .filter((row) => Number.isFinite(row.total) && row.total > 0);
+  } catch {
+    return [];
+  }
+}
+
+async function collectWindowsDiskMetrics(
   client: Client,
   excludedMounts?: string[] | null,
-  monitoredMounts?: MonitoredMount[] | null,
 ): Promise<{
   percent: number | null;
   usedHuman: string | null;
@@ -216,6 +263,70 @@ export async function collectDiskMetrics(
   mount: string | null;
   filesystems: DiskFilesystem[];
 }> {
+  try {
+    const { stdout } = await execPowerShell(client, WINDOWS_DISK_SCRIPT);
+    const rows = parseWindowsDiskJson(stdout);
+
+    const filesystems: DiskFilesystem[] = rows.map((row) => {
+      const usedBytes = row.total - row.free;
+      const percent = Math.max(0, Math.min(100, (usedBytes / row.total) * 100));
+      return {
+        filesystem: row.drive,
+        type: "NTFS",
+        mount: row.drive,
+        percent: toFixedNum(percent, 0),
+        usedHuman: humanizeBytes(usedBytes),
+        totalHuman: humanizeBytes(row.total),
+        availableHuman: humanizeBytes(row.free),
+        usedBytes,
+        totalBytes: row.total,
+        availableBytes: row.free,
+      };
+    });
+
+    const filtered = filterExcludedFilesystems(filesystems, excludedMounts);
+    const primary =
+      filtered.find((fs) => fs.mount.toUpperCase().startsWith("C")) ??
+      filtered[0] ??
+      null;
+
+    return {
+      percent: primary?.percent ?? null,
+      usedHuman: primary?.usedHuman ?? null,
+      totalHuman: primary?.totalHuman ?? null,
+      availableHuman: primary?.availableHuman ?? null,
+      mount: primary?.mount ?? null,
+      filesystems: filtered,
+    };
+  } catch {
+    return {
+      percent: null,
+      usedHuman: null,
+      totalHuman: null,
+      availableHuman: null,
+      mount: null,
+      filesystems: [],
+    };
+  }
+}
+
+export async function collectDiskMetrics(
+  client: Client,
+  excludedMounts?: string[] | null,
+  monitoredMounts?: MonitoredMount[] | null,
+  platform?: HostPlatform,
+): Promise<{
+  percent: number | null;
+  usedHuman: string | null;
+  totalHuman: string | null;
+  availableHuman: string | null;
+  mount: string | null;
+  filesystems: DiskFilesystem[];
+}> {
+  if (platform === "windows") {
+    return collectWindowsDiskMetrics(client, excludedMounts);
+  }
+
   try {
     const [diskOutHuman, diskOutBytes] = await Promise.all([
       execCommand(client, "df -hT -P | tail -n +2"),

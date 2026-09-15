@@ -1,5 +1,10 @@
 import type { Client } from "ssh2";
-import { execCommand, toFixedNum, type HostPlatform } from "./common-utils.js";
+import {
+  execCommand,
+  execPowerShell,
+  toFixedNum,
+  type HostPlatform,
+} from "./common-utils.js";
 
 export function parseCpuLine(
   cpuLine: string,
@@ -89,6 +94,39 @@ async function collectDarwinCpuMetrics(client: Client): Promise<{
   };
 }
 
+// No POSIX-style load average exists on Windows, so `load` always stays null.
+async function collectWindowsCpuMetrics(client: Client): Promise<{
+  percent: number | null;
+  cores: number | null;
+  load: [number, number, number] | null;
+}> {
+  let cpuPercent: number | null = null;
+  let cores: number | null = null;
+
+  try {
+    const { stdout } = await execPowerShell(
+      client,
+      "$cpu=(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average; $cores=(Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors; [PSCustomObject]@{cpu=$cpu; cores=$cores} | ConvertTo-Json -Compress",
+      25000,
+    );
+    const parsed = JSON.parse(stdout.trim());
+    const cpuNum = Number(parsed?.cpu);
+    const coresNum = Number(parsed?.cores);
+    cpuPercent = Number.isFinite(cpuNum)
+      ? Math.max(0, Math.min(100, cpuNum))
+      : null;
+    cores = Number.isFinite(coresNum) && coresNum > 0 ? coresNum : null;
+  } catch {
+    cpuPercent = null;
+  }
+
+  return {
+    percent: toFixedNum(cpuPercent, 0),
+    cores,
+    load: null,
+  };
+}
+
 export async function collectCpuMetrics(
   client: Client,
   platform?: HostPlatform,
@@ -99,6 +137,9 @@ export async function collectCpuMetrics(
 }> {
   if (platform === "darwin") {
     return collectDarwinCpuMetrics(client);
+  }
+  if (platform === "windows") {
+    return collectWindowsCpuMetrics(client);
   }
 
   let cpuPercent: number | null = null;

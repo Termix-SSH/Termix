@@ -4,6 +4,7 @@ import {
   parseNetworkCounters,
   parseDarwinIfconfig,
   parseDarwinNetstat,
+  parseWindowsAdapterJson,
 } from "../../../../hosts/metrics/widgets/network-collector.js";
 
 const PROC_NET = `Inter-|   Receive                                                |  Transmit
@@ -56,5 +57,36 @@ describe("darwin network parsing", () => {
       rx: "987654321",
       tx: "123456789",
     });
+  });
+});
+
+describe("parseWindowsAdapterJson", () => {
+  it("handles ConvertTo-Json collapsing a single result to an object", () => {
+    const rows = parseWindowsAdapterJson(
+      '{"name":"Ethernet","ip":"10.0.0.5","state":"UP","rx":1000,"tx":2000}',
+    );
+    expect(rows).toEqual([
+      { name: "Ethernet", ip: "10.0.0.5", state: "UP", rx: "1000", tx: "2000" },
+    ]);
+  });
+
+  it("parses an array of adapters", () => {
+    const rows = parseWindowsAdapterJson(
+      '[{"name":"Ethernet","ip":"10.0.0.5","state":"UP","rx":1000,"tx":2000},' +
+        '{"name":"Wi-Fi","ip":null,"state":"UP","rx":500,"tx":700}]',
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toEqual({
+      name: "Wi-Fi",
+      ip: "",
+      state: "UP",
+      rx: "500",
+      tx: "700",
+    });
+  });
+
+  it("returns an empty array for blank or invalid output", () => {
+    expect(parseWindowsAdapterJson("")).toEqual([]);
+    expect(parseWindowsAdapterJson("not json")).toEqual([]);
   });
 });

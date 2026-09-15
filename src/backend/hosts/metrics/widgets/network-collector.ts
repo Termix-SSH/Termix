@@ -1,5 +1,9 @@
 import type { Client } from "ssh2";
-import { execCommand, type HostPlatform } from "./common-utils.js";
+import {
+  execCommand,
+  execPowerShell,
+  type HostPlatform,
+} from "./common-utils.js";
 
 export interface NetworkCounters {
   rx: string;
@@ -152,6 +156,93 @@ async function collectDarwinNetworkMetrics(client: Client): Promise<{
   return { interfaces };
 }
 
+interface WindowsAdapterRow {
+  name: string;
+  ip: string;
+  state: string;
+  rx: string;
+  tx: string;
+}
+
+const WINDOWS_ADAPTER_SCRIPT =
+  "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {" +
+  " $stats = Get-NetAdapterStatistics -Name $_.Name -ErrorAction SilentlyContinue;" +
+  " $addr = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress;" +
+  " [PSCustomObject]@{name=$_.Name; ip=$addr; state='UP'; rx=$stats.ReceivedBytes; tx=$stats.SentBytes}" +
+  " } | ConvertTo-Json -Compress";
+
+export function parseWindowsAdapterJson(output: string): WindowsAdapterRow[] {
+  const trimmed = output.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    return rows
+      .filter((row): row is Record<string, unknown> => Boolean(row?.name))
+      .map((row) => ({
+        name: String(row.name),
+        ip: row.ip ? String(row.ip) : "",
+        state: String(row.state ?? "UNKNOWN"),
+        rx: String(row.rx ?? ""),
+        tx: String(row.tx ?? ""),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+async function collectWindowsNetworkMetrics(client: Client): Promise<{
+  interfaces: Array<{
+    name: string;
+    ip: string;
+    state: string;
+    rxBytes: string | null;
+    txBytes: string | null;
+    rxRateBps: number | null;
+    txRateBps: number | null;
+  }>;
+}> {
+  const interfaces: Array<{
+    name: string;
+    ip: string;
+    state: string;
+    rxBytes: string | null;
+    txBytes: string | null;
+    rxRateBps: number | null;
+    txRateBps: number | null;
+  }> = [];
+
+  try {
+    const firstReadAt = Date.now();
+    const before = await execPowerShell(client, WINDOWS_ADAPTER_SCRIPT);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const after = await execPowerShell(client, WINDOWS_ADAPTER_SCRIPT);
+    const elapsedSeconds = (Date.now() - firstReadAt) / 1000;
+
+    const beforeRows = parseWindowsAdapterJson(before.stdout);
+    const afterMap = new Map(
+      parseWindowsAdapterJson(after.stdout).map((row) => [row.name, row]),
+    );
+
+    for (const row of beforeRows) {
+      const afterRow = afterMap.get(row.name);
+      interfaces.push({
+        name: row.name,
+        ip: row.ip,
+        state: row.state,
+        rxBytes: row.rx || null,
+        txBytes: row.tx || null,
+        rxRateBps: counterRate(row.rx, afterRow?.rx, elapsedSeconds),
+        txRateBps: counterRate(row.tx, afterRow?.tx, elapsedSeconds),
+      });
+    }
+  } catch {
+    // expected
+  }
+
+  return { interfaces };
+}
+
 export async function collectNetworkMetrics(
   client: Client,
   platform?: HostPlatform,
@@ -168,6 +259,9 @@ export async function collectNetworkMetrics(
 }> {
   if (platform === "darwin") {
     return collectDarwinNetworkMetrics(client);
+  }
+  if (platform === "windows") {
+    return collectWindowsNetworkMetrics(client);
   }
 
   const interfaces: Array<{

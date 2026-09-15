@@ -1,5 +1,9 @@
 import type { Client } from "ssh2";
-import { execCommand, type HostPlatform } from "./common-utils.js";
+import {
+  execCommand,
+  execPowerShell,
+  type HostPlatform,
+} from "./common-utils.js";
 
 function formatUptime(uptimeSeconds: number): string {
   const days = Math.floor(uptimeSeconds / 86400);
@@ -36,6 +40,34 @@ async function collectDarwinUptimeMetrics(client: Client): Promise<{
   };
 }
 
+async function collectWindowsUptimeMetrics(client: Client): Promise<{
+  seconds: number | null;
+  formatted: string | null;
+}> {
+  let uptimeSeconds: number | null = null;
+  let uptimeFormatted: string | null = null;
+
+  try {
+    const { stdout } = await execPowerShell(
+      client,
+      "$os=Get-CimInstance Win32_OperatingSystem; [PSCustomObject]@{seconds=((Get-Date) - $os.LastBootUpTime).TotalSeconds} | ConvertTo-Json -Compress",
+    );
+    const parsed = JSON.parse(stdout.trim());
+    const seconds = Number(parsed?.seconds);
+    if (Number.isFinite(seconds)) {
+      uptimeSeconds = Math.max(0, seconds);
+      uptimeFormatted = formatUptime(uptimeSeconds);
+    }
+  } catch {
+    // expected
+  }
+
+  return {
+    seconds: uptimeSeconds,
+    formatted: uptimeFormatted,
+  };
+}
+
 export async function collectUptimeMetrics(
   client: Client,
   platform?: HostPlatform,
@@ -45,6 +77,9 @@ export async function collectUptimeMetrics(
 }> {
   if (platform === "darwin") {
     return collectDarwinUptimeMetrics(client);
+  }
+  if (platform === "windows") {
+    return collectWindowsUptimeMetrics(client);
   }
 
   let uptimeSeconds: number | null = null;

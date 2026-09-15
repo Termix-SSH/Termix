@@ -6,6 +6,7 @@ import {
   selectPrimaryFilesystem,
   filterExcludedFilesystems,
   mergeMonitoredFilesystems,
+  parseWindowsDiskJson,
 } from "../../../../hosts/metrics/widgets/disk-collector.js";
 
 describe("parseDfLines", () => {
@@ -220,5 +221,35 @@ describe("mergeMonitoredFilesystems", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].label).toBe("Media");
+  });
+});
+
+describe("parseWindowsDiskJson", () => {
+  it("handles ConvertTo-Json collapsing a single result to an object", () => {
+    const rows = parseWindowsDiskJson(
+      '{"drive":"C:","total":1000000000,"free":400000000}',
+    );
+    expect(rows).toEqual([{ drive: "C:", total: 1000000000, free: 400000000 }]);
+  });
+
+  it("parses an array of drives", () => {
+    const rows = parseWindowsDiskJson(
+      '[{"drive":"C:","total":1000,"free":400},{"drive":"D:","total":2000,"free":1900}]',
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toEqual({ drive: "D:", total: 2000, free: 1900 });
+  });
+
+  it("drops drives with a zero or missing total", () => {
+    const rows = parseWindowsDiskJson(
+      '[{"drive":"C:","total":0,"free":0},{"drive":"D:","total":100,"free":50}]',
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].drive).toBe("D:");
+  });
+
+  it("returns an empty array for blank or invalid output", () => {
+    expect(parseWindowsDiskJson("")).toEqual([]);
+    expect(parseWindowsDiskJson("not json")).toEqual([]);
   });
 });

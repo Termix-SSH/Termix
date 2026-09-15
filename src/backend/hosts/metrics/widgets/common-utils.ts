@@ -88,18 +88,48 @@ export function execCommand(
   });
 }
 
-export type HostPlatform = "darwin" | "linux" | "other";
+export type HostPlatform = "darwin" | "linux" | "windows" | "other";
+
+// Windows OpenSSH's default shell is usually cmd.exe (occasionally
+// PowerShell), so scripts are sent base64-encoded via -EncodedCommand -
+// that avoids every cmd.exe quoting/escaping pitfall entirely, since the
+// argument ends up being plain alphanumeric text with no shell metacharacters.
+export function encodePowerShellCommand(script: string): string {
+  return Buffer.from(script, "utf16le").toString("base64");
+}
+
+export function execPowerShell(
+  client: Client,
+  script: string,
+  timeoutMs = 30000,
+): Promise<{ stdout: string; stderr: string; code: number | null }> {
+  const encoded = encodePowerShellCommand(script);
+  return execCommand(
+    client,
+    `powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`,
+    timeoutMs,
+  );
+}
 
 export async function detectPlatform(client: Client): Promise<HostPlatform> {
   try {
-    const { stdout } = await execCommand(client, "uname -s", 10000);
+    const { stdout, code } = await execCommand(client, "uname -s", 10000);
     const kernel = stdout.trim().toLowerCase();
     if (kernel === "darwin") return "darwin";
     if (kernel === "linux") return "linux";
-    return "other";
+    if (code === 0 && kernel) return "other";
   } catch {
-    return "other";
+    // expected on hosts with no POSIX shell (e.g. Windows via cmd.exe)
   }
+
+  try {
+    const { stdout } = await execPowerShell(client, "'WIN_OK'", 10000);
+    if (stdout.includes("WIN_OK")) return "windows";
+  } catch {
+    // expected on hosts with no PowerShell available
+  }
+
+  return "other";
 }
 
 export function toFixedNum(

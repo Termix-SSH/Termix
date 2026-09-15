@@ -1746,11 +1746,12 @@ async function collectMetrics(
           client,
           excludedMounts,
           monitoredMounts,
+          platform,
         );
         const network = await collectNetworkMetrics(client, platform);
         const uptime = await collectUptimeMetrics(client, platform);
         const processes = await collectProcessesMetrics(client);
-        const system = await collectSystemMetrics(client);
+        const system = await collectSystemMetrics(client, platform);
 
         let login_stats = {
           recentLogins: [],

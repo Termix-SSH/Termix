@@ -1,6 +1,7 @@
 import type { Client } from "ssh2";
 import {
   execCommand,
+  execPowerShell,
   toFixedNum,
   kibToGiB,
   type HostPlatform,
@@ -63,6 +64,43 @@ async function collectDarwinMemoryMetrics(client: Client): Promise<{
   };
 }
 
+// Win32_OperatingSystem reports TotalVisibleMemorySize/FreePhysicalMemory in KB.
+async function collectWindowsMemoryMetrics(client: Client): Promise<{
+  percent: number | null;
+  usedGiB: number | null;
+  totalGiB: number | null;
+}> {
+  let memPercent: number | null = null;
+  let usedGiB: number | null = null;
+  let totalGiB: number | null = null;
+
+  try {
+    const { stdout } = await execPowerShell(
+      client,
+      "$os=Get-CimInstance Win32_OperatingSystem; [PSCustomObject]@{total=$os.TotalVisibleMemorySize; free=$os.FreePhysicalMemory} | ConvertTo-Json -Compress",
+    );
+    const parsed = JSON.parse(stdout.trim());
+    const totalKb = Number(parsed?.total);
+    const freeKb = Number(parsed?.free);
+    if (Number.isFinite(totalKb) && Number.isFinite(freeKb) && totalKb > 0) {
+      const usedKb = totalKb - freeKb;
+      memPercent = Math.max(0, Math.min(100, (usedKb / totalKb) * 100));
+      usedGiB = kibToGiB(usedKb);
+      totalGiB = kibToGiB(totalKb);
+    }
+  } catch {
+    memPercent = null;
+    usedGiB = null;
+    totalGiB = null;
+  }
+
+  return {
+    percent: toFixedNum(memPercent, 0),
+    usedGiB: usedGiB ? toFixedNum(usedGiB, 2) : null,
+    totalGiB: totalGiB ? toFixedNum(totalGiB, 2) : null,
+  };
+}
+
 export async function collectMemoryMetrics(
   client: Client,
   platform?: HostPlatform,
@@ -73,6 +111,9 @@ export async function collectMemoryMetrics(
 }> {
   if (platform === "darwin") {
     return collectDarwinMemoryMetrics(client);
+  }
+  if (platform === "windows") {
+    return collectWindowsMemoryMetrics(client);
   }
 
   let memPercent: number | null = null;
