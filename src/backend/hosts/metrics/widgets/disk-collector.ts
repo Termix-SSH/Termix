@@ -54,8 +54,8 @@ export function parseDfLines(output: string): DfRow[] {
     .filter((row) => row.parts.length >= 7 && !PSEUDO_FS_RE.test(row.type));
 }
 
-// Finds the index of the most-utilized real filesystem in a `df -T -B1`-style
-// row set (parts[2] = total bytes, parts[3] = used bytes), so a nearly-full
+// Finds the index of the most-utilized real filesystem in a `df -TkP`-style
+// row set (parts[2] = total KB, parts[3] = used KB), so a nearly-full
 // secondary mount (e.g. /data) isn't hidden behind a healthy root filesystem.
 export function findWorstMountIndex(bytesRows: DfRow[]): {
   index: number;
@@ -93,20 +93,22 @@ export function findWorstMountIndex(bytesRows: DfRow[]): {
   };
 }
 
-// Merges the `df -T -B1` and `df -T -h` row sets into one filesystem list.
-// Byte rows drive the maths; human rows only supply the display strings,
-// matched by mount point so a mismatched row count can't shift the columns.
+// Merges the size-row (`df -TkP` by default; parts[2..4] in `blockSizeBytes`
+// units) and `df -T -h` row sets into one filesystem list. Byte rows drive
+// the maths; human rows only supply the display strings, matched by mount
+// point so a mismatched row count can't shift the columns.
 export function buildFilesystemList(
   bytesRows: DfRow[],
   humanRows: DfRow[],
+  blockSizeBytes = 1,
 ): DiskFilesystem[] {
   const aligned = humanRows.length === bytesRows.length;
 
   return bytesRows
     .map((row, index) => {
-      const totalBytes = Number(row.parts[2]);
-      const usedBytes = Number(row.parts[3]);
-      const availableBytes = Number(row.parts[4]);
+      const totalBytes = Number(row.parts[2]) * blockSizeBytes;
+      const usedBytes = Number(row.parts[3]) * blockSizeBytes;
+      const availableBytes = Number(row.parts[4]) * blockSizeBytes;
       if (!Number.isFinite(totalBytes) || totalBytes <= 0) return null;
 
       const humanRow = aligned
@@ -217,12 +219,12 @@ export async function collectDiskMetrics(
   try {
     const [diskOutHuman, diskOutBytes] = await Promise.all([
       execCommand(client, "df -hT -P | tail -n +2"),
-      execCommand(client, "df -TB1 -P | tail -n +2"),
+      execCommand(client, "df -TkP | tail -n +2"),
     ]);
 
     const humanRows = parseDfLines(diskOutHuman.stdout);
     const bytesRows = parseDfLines(diskOutBytes.stdout);
-    let detected = buildFilesystemList(bytesRows, humanRows);
+    let detected = buildFilesystemList(bytesRows, humanRows, 1024);
     const monitored = (monitoredMounts ?? []).filter((entry) =>
       Boolean(entry.path.trim()),
     );
@@ -233,12 +235,13 @@ export async function collectDiskMetrics(
           try {
             const [customHuman, customBytes] = await Promise.all([
               execCommand(client, `df -hT -P -- ${path} | tail -n +2`),
-              execCommand(client, `df -TB1 -P -- ${path} | tail -n +2`),
+              execCommand(client, `df -TkP -- ${path} | tail -n +2`),
             ]);
             return (
               buildFilesystemList(
                 parseDfLines(customBytes.stdout),
                 parseDfLines(customHuman.stdout),
+                1024,
               )[0] ?? null
             );
           } catch {

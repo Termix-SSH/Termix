@@ -15,7 +15,7 @@ export async function collectSystemMetrics(client: Client): Promise<{
     const kernelOut = await execCommand(client, "uname -r");
     const osOut = await execCommand(
       client,
-      "cat /etc/os-release | grep '^PRETTY_NAME=' | cut -d'\"' -f2",
+      "command -v sw_vers >/dev/null 2>&1 && echo \"$(sw_vers -productName) $(sw_vers -productVersion)\" || (cat /etc/os-release 2>/dev/null | grep '^PRETTY_NAME=' | cut -d'\"' -f2)",
     );
 
     hostname = hostnameOut.stdout.trim() || null;
