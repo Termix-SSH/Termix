@@ -12,7 +12,7 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-guacamole-common-js.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-xterm-android-ime.cjs",
+    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-guacamole-common-js.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-xterm-android-ime.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "node scripts/generate-dialect-schema.cjs --check && eslint .",
