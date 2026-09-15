@@ -9,7 +9,10 @@ const SYNCED_ENTITY_TYPES = Object.freeze([
   "snippets",
   "dashboardServiceLinks",
   "homepageItems",
-  "userPreferences",
+  // Keep desktop preferences local-only. Some deployed Termix servers expose
+  // user preferences as a singleton row keyed by user_id, while older sync
+  // upsert paths expect numeric ids; skipping this optional entity keeps
+  // remote sync compatible without requiring a backend update.
 ]);
 
 module.exports = { SYNCED_ENTITY_TYPES };

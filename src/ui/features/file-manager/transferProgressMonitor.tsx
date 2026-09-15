@@ -89,6 +89,7 @@ export interface BeginTransferMonitoringOptions {
     finalStatus: TransferProgressResponse,
     toastId: string | number,
   ) => void;
+  onProgress?: (status: TransferProgressResponse) => void;
   formatTransferMetrics?: (timings?: TransferTimings) => string;
 }
 
@@ -290,6 +291,7 @@ export function beginTransferProgressMonitoring(
   const waitForCompletion = pollTransferUntilComplete(
     transferId,
     (status) => {
+      options.onProgress?.(status);
       const { rate, stalled } = progressTracker.update(status);
       renderTransferProgressToast(
         progressToast,
