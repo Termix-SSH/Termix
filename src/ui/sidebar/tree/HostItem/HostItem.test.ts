@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import type { Host } from "@/types/ui-types";
-import { buildStatusTooltip, statusCheckEnabled } from "@/sidebar/tree/HostItem/HostItem";
+import {
+  buildStatusTooltip,
+  statusCheckEnabled,
+} from "@/sidebar/tree/HostItem/HostItem";
 
 // Minimal host factory – only the fields buildStatusTooltip reads.
 function makeHost(overrides: Partial<Host> = {}): Host {
@@ -53,7 +56,13 @@ describe("buildStatusTooltip", () => {
 
   it("returns 'Monitoring disabled' when status check is disabled", () => {
     const host = makeHost({
-      statsConfig: { statusCheckEnabled: false },
+      statsConfig: {
+        enabledWidgets: [],
+        statusCheckEnabled: false,
+        statusCheckInterval: 30,
+        metricsEnabled: false,
+        metricsInterval: 30,
+      },
     });
     const tooltip = buildStatusTooltip(host, "online", t);
     expect(tooltip).toBe("Monitoring disabled");
@@ -100,7 +109,13 @@ describe("statusCheckEnabled", () => {
 
   it("returns false when statusCheckEnabled is explicitly false", () => {
     const host = makeHost({
-      statsConfig: { statusCheckEnabled: false },
+      statsConfig: {
+        enabledWidgets: [],
+        statusCheckEnabled: false,
+        statusCheckInterval: 30,
+        metricsEnabled: false,
+        metricsInterval: 30,
+      },
     });
     expect(statusCheckEnabled(host)).toBe(false);
   });

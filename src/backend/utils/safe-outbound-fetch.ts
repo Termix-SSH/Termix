@@ -71,7 +71,10 @@ export function isBlockedAddress(address: string): boolean {
 // fake DNS resolver, instead of only through a real fetch()/Agent call —
 // the actual bug here lived entirely in this callback, several layers
 // below where undici's own "fetch failed" wrapping would otherwise hide it.
-export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
+export function createDnsLookupHook(
+  dnsLookup: DnsLookupFn = lookup,
+  allowPrivate = false,
+) {
   return function lookupHook(
     host: string,
     lookupOptions: LookupOptions,
@@ -110,7 +113,10 @@ export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
           );
         }
 
-        if (addrs.some(({ address }) => isBlockedAddress(address))) {
+        if (
+          !allowPrivate &&
+          addrs.some(({ address }) => isBlockedAddress(address))
+        ) {
           return callback(
             new Error("Private destinations are not allowed"),
             "",
@@ -141,9 +147,50 @@ export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
   };
 }
 
+export interface OutboundTlsOptions {
+  /** PEM bundle to trust instead of the system store (private CAs). */
+  ca?: string;
+  /**
+   * Skip certificate verification. Only for the one request that fetches a
+   * private CA's root by fingerprint, where the caller verifies the result.
+   */
+  rejectUnauthorized?: boolean;
+}
+
+export async function readResponseTextLimited(
+  response: Response,
+  maxBytes: number,
+): Promise<string> {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    await response.body?.cancel().catch(() => {});
+    throw new Error(`Response exceeds ${maxBytes} bytes`);
+  }
+
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw new Error(`Response exceeds ${maxBytes} bytes`);
+    }
+    chunks.push(value);
+  }
+
+  return Buffer.concat(chunks, total).toString("utf8");
+}
+
 export async function safeOutboundFetch(
   rawUrl: string,
   options: RequestInit,
+  allowedPrivateHosts: readonly string[] = [],
+  tls: OutboundTlsOptions = {},
 ): Promise<Response> {
   const url = new URL(rawUrl);
   if (
@@ -155,13 +202,20 @@ export async function safeOutboundFetch(
   }
 
   const hostname = url.hostname.replace(/^\[|\]$/g, "");
-  if (isIP(hostname) && isBlockedAddress(hostname)) {
+  const allowPrivate = allowedPrivateHosts.some(
+    (host) => host.trim().toLowerCase() === hostname.toLowerCase(),
+  );
+  if (!allowPrivate && isIP(hostname) && isBlockedAddress(hostname)) {
     throw new Error("Private destinations are not allowed");
   }
 
   const dispatcher = new Agent({
     connect: {
-      lookup: createDnsLookupHook(lookup),
+      lookup: createDnsLookupHook(lookup, allowPrivate),
+      ...(tls.ca ? { ca: tls.ca } : {}),
+      ...(tls.rejectUnauthorized === false
+        ? { rejectUnauthorized: false }
+        : {}),
     },
   });
 

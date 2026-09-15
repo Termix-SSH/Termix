@@ -12,6 +12,7 @@ const faviconCache = new Map<
 >();
 const CACHE_SIZE = 100;
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+const MAX_FAVICON_BYTES = 512 * 1024;
 
 function evictIfNeeded() {
   if (faviconCache.size >= CACHE_SIZE) {
@@ -25,14 +26,31 @@ function fetchUrl(url: string): Promise<{ data: Buffer; contentType: string }> {
     const mod = url.startsWith("https") ? https : http;
     const req = mod.get(url, { timeout: 5000 }, (res) => {
       const chunks: Buffer[] = [];
-      res.on("data", (chunk: Buffer) => chunks.push(chunk));
+      let bytes = 0;
+      let settled = false;
+      const fail = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        res.destroy();
+        reject(error);
+      };
+      res.on("data", (chunk: Buffer) => {
+        bytes += chunk.length;
+        if (bytes > MAX_FAVICON_BYTES) {
+          fail(new Error("Favicon response too large"));
+          return;
+        }
+        chunks.push(chunk);
+      });
       res.on("end", () => {
+        if (settled) return;
+        settled = true;
         resolve({
           data: Buffer.concat(chunks),
           contentType: res.headers["content-type"] || "image/x-icon",
         });
       });
-      res.on("error", reject);
+      res.on("error", fail);
     });
     req.on("error", reject);
     req.on("timeout", () => {
@@ -95,7 +113,7 @@ homepageFaviconRouter.get("/", async (req: Request, res: Response) => {
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.send(data);
-  } catch (err) {
+  } catch {
     homepageLogger.warn("Failed to fetch favicon", { domain });
     res.status(500).json({ error: "Failed to fetch favicon" });
   }

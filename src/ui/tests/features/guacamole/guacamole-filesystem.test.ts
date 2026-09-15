@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   STREAM_INDEX_MIMETYPE,
   basename,
@@ -6,7 +6,10 @@ import {
   joinPath,
   parentPath,
   parseDirectoryIndex,
+  createClientFileStream,
+  type GuacamoleFileStreamClient,
 } from "../../../features/guacamole/guacamole-filesystem.js";
+import type Guacamole from "guacamole-common-js";
 
 describe("path helpers", () => {
   it("joins onto the root without doubling the separator", () => {
@@ -84,5 +87,21 @@ describe("parseDirectoryIndex", () => {
 
   it("returns nothing for an empty directory", () => {
     expect(parseDirectoryIndex("{}", "/")).toEqual([]);
+  });
+});
+
+describe("direct RDP upload", () => {
+  it("opens a connection-level file stream when no filesystem object is available", () => {
+    const stream = {} as Guacamole.OutputStream;
+    const client = {
+      createFileStream: vi.fn(() => stream),
+    } as GuacamoleFileStreamClient;
+    const file = new File(["hello"], "notes.txt", { type: "text/plain" });
+
+    expect(createClientFileStream(client, file)).toBe(stream);
+    expect(client.createFileStream).toHaveBeenCalledWith(
+      "text/plain",
+      "notes.txt",
+    );
   });
 });

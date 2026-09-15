@@ -10,9 +10,8 @@ import {
 /**
  * The security regression test for the whole feature.
  *
- * PermissionManager.requirePermission is defined but mounted on zero routes,
- * so RBAC strings do not gate anything at the route layer. "The assistant
- * cannot reach credentials or user administration" is therefore a property of
+ * Tools run in-process and never pass through the RBAC-gated routers, so "the
+ * assistant cannot reach credentials or user administration" is a property of
  * this catalog, and nothing else. If a future change adds a tool that touches a
  * forbidden domain, this test is what catches it.
  */

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -57,6 +57,11 @@ import {
   canShareHost,
 } from "@/sidebar/host-permissions";
 import { HostAuthOverrideModal } from "@/sidebar/HostAuthOverrideModal";
+import {
+  AUTH_OVERRIDE_PROTOCOLS,
+  AUTH_PROTOCOL_METADATA,
+  type AuthOverrideProtocol,
+} from "@/types/auth-protocols";
 import {
   useStatusColorScheme,
   getStatusClasses,
@@ -320,6 +325,19 @@ export function HostItem({
           ? "online"
           : "offline";
   const isOnline = availability === "online";
+  const previousAvailability = useRef(availability);
+  const [statusLocking, setStatusLocking] = useState(false);
+
+  useEffect(() => {
+    const justCameOnline =
+      previousAvailability.current !== "online" && availability === "online";
+    previousAvailability.current = availability;
+    if (!justCameOnline) return;
+
+    setStatusLocking(true);
+    const timeout = window.setTimeout(() => setStatusLocking(false), 400);
+    return () => window.clearTimeout(timeout);
+  }, [availability]);
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const alwaysShowTray = trayTrigger === "always";
@@ -328,10 +346,17 @@ export function HostItem({
     !alwaysShowTray && !actionsOnly && (trayTrigger === "click" || isTouchOnly);
   const showPasswordCopy = !host.isShared && canCopyHostPassword(host);
   const showSudoPasswordCopy = !host.isShared && canCopyHostSudoPassword(host);
-  const canOverrideAuth = canOverrideHostAuth(host, "ssh");
-  const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
+  const authOverrideProtocols = AUTH_OVERRIDE_PROTOCOLS.filter((protocol) =>
+    canOverrideHostAuth(host, protocol),
+  );
+  const [authOverrideProtocol, setAuthOverrideProtocol] =
+    useState<AuthOverrideProtocol | null>(null);
   const [parentDragOver, setParentDragOver] = useState(false);
   const [nativeRdpAvailable, setNativeRdpAvailable] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!window.electronAPI?.isElectron) return;
@@ -396,6 +421,16 @@ export function HostItem({
       }
     } catch {
       toast.error(t("hosts.nativeRdpFailed"));
+    }
+  }
+
+  async function handleWakeOnLan(e: MouseEvent) {
+    e.stopPropagation();
+    try {
+      await wakeOnLan(Number(host.id));
+      toast.success(t("hosts.wakeOnLanSuccess", { name: host.name }));
+    } catch {
+      toast.error(t("hosts.wakeOnLanError"));
     }
   }
 
@@ -505,15 +540,7 @@ export function HostItem({
       {host.macAddress && (
         <button
           title={t("hosts.wakeOnLanAction")}
-          onClick={async (e) => {
-            e.stopPropagation();
-            try {
-              await wakeOnLan(Number(host.id));
-              toast.success(t("hosts.wakeOnLanSuccess", { name: host.name }));
-            } catch {
-              toast.error(t("hosts.wakeOnLanError"));
-            }
-          }}
+          onClick={handleWakeOnLan}
           className={trayButtonClass}
         >
           <Zap className="size-3.5" />
@@ -583,12 +610,29 @@ export function HostItem({
           <Boxes className="size-3.5" />
         </button>
       )}
-      <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
+      <DropdownMenu
+        open={isMenuOpen}
+        onOpenChange={(open) => {
+          if (!open) setContextMenuPosition(null);
+          onMenuOpenChange?.(open);
+        }}
+      >
         <DropdownMenuTrigger asChild>
           <button
             title={t("hosts.moreOptions")}
-            onClick={(e) => e.stopPropagation()}
-            className={trayButtonClass}
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenuPosition(null);
+            }}
+            className={`${trayButtonClass} ${contextMenuPosition ? "fixed z-50 size-px opacity-0 pointer-events-none" : ""}`}
+            style={
+              contextMenuPosition
+                ? {
+                    left: contextMenuPosition.x,
+                    top: contextMenuPosition.y,
+                  }
+                : undefined
+            }
           >
             <MoreHorizontal className="size-3.5" />
           </button>
@@ -597,6 +641,100 @@ export function HostItem({
           align="start"
           className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
         >
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Terminal className="size-3.5 mr-2" />
+              {t("common.connect")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {sshActions.map(({ type, icon: Icon, label }) => (
+                <DropdownMenuItem
+                  key={type}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab(type);
+                  }}
+                >
+                  <Icon className="size-3.5 mr-2" />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+              {host.enableRdp && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab("rdp");
+                  }}
+                >
+                  <Monitor className="size-3.5 mr-2" />
+                  {t("hosts.connectRdp")}
+                </DropdownMenuItem>
+              )}
+              {host.enableVnc && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab("vnc");
+                  }}
+                >
+                  <MousePointerClick className="size-3.5 mr-2" />
+                  {t("hosts.connectVnc")}
+                </DropdownMenuItem>
+              )}
+              {host.enableTelnet && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openHostTab("telnet");
+                  }}
+                >
+                  <MessagesSquare className="size-3.5 mr-2" />
+                  {t("hosts.connectTelnet")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          {onEditHost && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditHost();
+              }}
+            >
+              <Pencil className="size-3.5 mr-2" />
+              {t("hosts.editHostAction")}
+            </DropdownMenuItem>
+          )}
+          {onShareHost && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onShareHost();
+              }}
+            >
+              <Share2 className="size-3.5 mr-2" />
+              {t("hosts.shareHost")}
+            </DropdownMenuItem>
+          )}
+          {host.enableProxmox && onProxmoxDiscover && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onProxmoxDiscover();
+              }}
+            >
+              <Boxes className="size-3.5 mr-2" />
+              {t("hosts.proxmoxDiscoverAction")}
+            </DropdownMenuItem>
+          )}
+          {host.macAddress && (
+            <DropdownMenuItem onClick={handleWakeOnLan}>
+              <Zap className="size-3.5 mr-2" />
+              {t("hosts.wakeOnLanAction")}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
@@ -607,17 +745,20 @@ export function HostItem({
             <Copy className="size-3.5 mr-2" />
             {t("hosts.copyAddress")}
           </DropdownMenuItem>
-          {canOverrideAuth && (
+          {authOverrideProtocols.map((protocol) => (
             <DropdownMenuItem
+              key={protocol}
               onClick={(e) => {
                 e.stopPropagation();
-                setAuthOverrideOpen(true);
+                setAuthOverrideProtocol(protocol);
               }}
             >
               <KeyRound className="size-3.5 mr-2" />
-              {t("hosts.sharing.authOverrideAction")}
+              {t("hosts.sharing.authOverrideActionProtocol", {
+                protocol: AUTH_PROTOCOL_METADATA[protocol].label,
+              })}
             </DropdownMenuItem>
-          )}
+          ))}
           {showPasswordCopy && (
             <DropdownMenuItem
               onClick={(e) => handleCopyPassword(e, "password")}
@@ -831,9 +972,9 @@ export function HostItem({
   const trayCollapsedClass = `max-h-0 opacity-0 ${isCompact ? "" : "-mt-[3.5px]"}`;
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
-      ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
+      ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
       : shouldUseClickTray
-        ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
+        ? `overflow-hidden transition-[max-height,opacity,margin] duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : trayCollapsedClass}`
         : // No transition in hover mode: the row's height is set by the
           // virtualizer and snaps in a single frame, so animating the tray
           // against it leaves the open tray overflowing its shortened row for
@@ -930,7 +1071,14 @@ export function HostItem({
       }}
       onMouseEnter={() => onHoverChange?.(true)}
       onMouseLeave={() => onHoverChange?.(false)}
-      className={`group relative flex items-stretch select-none transition-colors hover:bg-muted/50 ${
+      onContextMenu={(event) => {
+        if (selectionMode || arrangeMode) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setContextMenuPosition({ x: event.clientX, y: event.clientY });
+        onMenuOpenChange?.(true);
+      }}
+      className={`group relative flex items-stretch select-none transition-colors motion-interactive hover:bg-muted/50 ${
         canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
       } ${
         selected
@@ -973,7 +1121,8 @@ export function HostItem({
       {/* Status stripe */}
       {showStatusStripes && (
         <div
-          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(availability, statusScheme, "stripe", statusLoading)}`}
+          data-locking={statusLocking}
+          className={`host-status-stripe w-[3px] shrink-0 transition-colors motion-interactive ${getStatusClasses(availability, statusScheme, "stripe", statusLoading)}`}
         />
       )}
 
@@ -1139,7 +1288,7 @@ export function HostItem({
                     <Cpu className="size-2.5 shrink-0 text-muted-foreground/40" />
                     <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
+                        className={`motion-meter h-full rounded-full ${host.cpu > 80 ? "bg-red-400" : host.cpu > 50 ? "bg-yellow-400" : "bg-accent-brand"}`}
                         style={{ width: `${host.cpu}%` }}
                       />
                     </div>
@@ -1153,7 +1302,7 @@ export function HostItem({
                     <MemoryStick className="size-2.5 shrink-0 text-muted-foreground/40" />
                     <div className="w-9 h-1 bg-muted-foreground/15 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
+                        className={`motion-meter h-full rounded-full ${host.ram > 80 ? "bg-red-400" : host.ram > 60 ? "bg-yellow-400" : "bg-accent-brand/60"}`}
                         style={{ width: `${host.ram}%` }}
                       />
                     </div>
@@ -1183,12 +1332,14 @@ export function HostItem({
             </div>
           </div>
         </div>
-        {canOverrideAuth && (
+        {authOverrideProtocol && (
           <HostAuthOverrideModal
-            open={authOverrideOpen}
-            onOpenChange={setAuthOverrideOpen}
+            open
+            onOpenChange={(open) => {
+              if (!open) setAuthOverrideProtocol(null);
+            }}
             host={host}
-            protocol="ssh"
+            protocol={authOverrideProtocol}
           />
         )}
       </div>

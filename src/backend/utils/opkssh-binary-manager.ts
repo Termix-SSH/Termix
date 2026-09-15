@@ -1,10 +1,26 @@
 import { getErrorMessage } from "./error-message.js";
 import { createWriteStream, promises as fs } from "fs";
+import crypto from "crypto";
 import path from "path";
 import { pipeline } from "stream/promises";
 import { systemLogger } from "./logger.js";
 
 const OPKSSH_REPO = "openpubkey/opkssh";
+const DEFAULT_OPKSSH_VERSION = "v0.16.0";
+const DEFAULT_CHECKSUMS: Record<string, string> = {
+  "opkssh-linux-amd64":
+    "c018c3e7baf98612b923e742dd87be38650bf61e3b755fb2bc90de177568b1bf",
+  "opkssh-linux-arm64":
+    "9dd10c2b6ce99cde18e52c054877ca014134b291fd82afe71741c68db4f83d44",
+  "opkssh-osx-amd64":
+    "e1ccddb4a73c7dd24e0677e9c933462b954dde9a151fcd96c8ee7ba83bc3f146",
+  "opkssh-osx-arm64":
+    "be279812cc4d44a28f8cb6eef4b13515fae16b6d00ae61e21630e0c061b02cbd",
+  "opkssh-windows-amd64.exe":
+    "db8991ceaac7ac224b704510ca6fba2114998291d4283de4bc2d3b8efa66ad07",
+  "opkssh-windows-arm64.exe":
+    "c35352dc2d12ef3775b280aa85dc1e97ff90cd8ad4beb62c3e2357fdf80ba5af",
+};
 
 function getBinaryDir(): string {
   const dataDir =
@@ -14,6 +30,65 @@ function getBinaryDir(): string {
 
 function getVersionFile(): string {
   return path.join(getBinaryDir(), "version.txt");
+}
+
+function getChecksumFile(): string {
+  return path.join(getBinaryDir(), "checksum.txt");
+}
+
+function getTrustedRelease(binaryName: string): {
+  version: string;
+  checksum: string;
+} {
+  const version = process.env.OPKSSH_VERSION || DEFAULT_OPKSSH_VERSION;
+  const configuredChecksum = process.env.OPKSSH_SHA256?.trim().toLowerCase();
+  const checksum =
+    version === DEFAULT_OPKSSH_VERSION
+      ? DEFAULT_CHECKSUMS[binaryName]
+      : configuredChecksum;
+  if (!checksum || !/^[0-9a-f]{64}$/.test(checksum)) {
+    throw new Error(
+      `OPKSSH ${version} has no trusted SHA-256 checksum for ${binaryName}`,
+    );
+  }
+  return { version, checksum };
+}
+
+async function sha256File(filePath: string): Promise<string> {
+  const contents = await fs.readFile(filePath);
+  return crypto.createHash("sha256").update(contents).digest("hex");
+}
+
+async function verifyChecksum(
+  filePath: string,
+  expectedChecksum: string,
+): Promise<void> {
+  const actualChecksum = await sha256File(filePath);
+  if (actualChecksum !== expectedChecksum) {
+    throw new Error(`OPKSSH checksum mismatch for ${path.basename(filePath)}`);
+  }
+}
+
+async function replaceBinary(
+  temporaryPath: string,
+  binaryPath: string,
+): Promise<void> {
+  const backupPath = `${binaryPath}.previous`;
+  let backedUp = false;
+  try {
+    await fs.rename(binaryPath, backupPath);
+    backedUp = true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+
+  try {
+    await fs.rename(temporaryPath, binaryPath);
+    if (backedUp) await fs.rm(backupPath, { force: true });
+  } catch (error) {
+    if (backedUp) await fs.rename(backupPath, binaryPath);
+    throw error;
+  }
 }
 
 function getBundledDir(): string {
@@ -45,6 +120,10 @@ export class OPKSSHBinaryManager {
 
     try {
       await fs.access(expectedPath);
+      const storedChecksum = (await fs.readFile(getChecksumFile(), "utf8"))
+        .trim()
+        .toLowerCase();
+      await verifyChecksum(expectedPath, storedChecksum);
       const needsUpdate = await this.checkForUpdate();
       if (needsUpdate) {
         systemLogger.info("Newer OPKSSH version available, updating...", {
@@ -76,22 +155,17 @@ export class OPKSSHBinaryManager {
   ): Promise<boolean> {
     const binaryName = this.getBinaryName();
     const bundledPath = path.join(getBundledDir(), binaryName);
-    const bundledVersionFile = path.join(getBundledDir(), "version.txt");
+    const { version, checksum } = getTrustedRelease(binaryName);
 
     try {
       await fs.access(bundledPath);
+      await verifyChecksum(bundledPath, checksum);
       await fs.mkdir(getBinaryDir(), { recursive: true });
       await fs.copyFile(bundledPath, expectedPath);
       await fs.chmod(expectedPath, 0o755);
+      await fs.writeFile(getChecksumFile(), checksum, "utf8");
 
-      try {
-        const bundledVersion = (
-          await fs.readFile(bundledVersionFile, "utf8")
-        ).trim();
-        await fs.writeFile(getVersionFile(), bundledVersion, "utf8");
-      } catch {
-        // Bundled version file is optional
-      }
+      await fs.writeFile(getVersionFile(), version, "utf8");
 
       systemLogger.info("Using bundled OPKSSH binary", {
         operation: "opkssh_binary_bundled_used",
@@ -118,6 +192,8 @@ export class OPKSSHBinaryManager {
 
       const binaryName = this.getBinaryName();
       const binaryPath = path.join(getBinaryDir(), binaryName);
+      const temporaryPath = `${binaryPath}.download-${crypto.randomUUID()}`;
+      const { checksum } = getTrustedRelease(binaryName);
 
       const response = await fetch(asset.browser_download_url);
       if (!response.ok) {
@@ -128,15 +204,22 @@ export class OPKSSHBinaryManager {
         throw new Error("Response body is null");
       }
 
-      const fileStream = createWriteStream(binaryPath);
-      await pipeline(
-        response.body as unknown as NodeJS.ReadableStream,
-        fileStream,
-      );
-
-      await fs.chmod(binaryPath, 0o755);
+      try {
+        const fileStream = createWriteStream(temporaryPath, { mode: 0o600 });
+        await pipeline(
+          response.body as unknown as NodeJS.ReadableStream,
+          fileStream,
+        );
+        await verifyChecksum(temporaryPath, checksum);
+        await fs.chmod(temporaryPath, 0o755);
+        await replaceBinary(temporaryPath, binaryPath);
+      } catch (error) {
+        await fs.rm(temporaryPath, { force: true });
+        throw error;
+      }
 
       await fs.writeFile(getVersionFile(), release.tag_name, "utf8");
+      await fs.writeFile(getChecksumFile(), checksum, "utf8");
 
       systemLogger.info(
         `OPKSSH binary downloaded successfully to ${binaryPath}`,
@@ -173,8 +256,7 @@ export class OPKSSHBinaryManager {
         return true;
       }
 
-      const release = await this.getLatestRelease();
-      const latestVersion = release.tag_name;
+      const latestVersion = getTrustedRelease(this.getBinaryName()).version;
 
       if (localVersion !== latestVersion) {
         return true;
@@ -191,7 +273,8 @@ export class OPKSSHBinaryManager {
   }
 
   private static async getLatestRelease(): Promise<GitHubRelease> {
-    const url = `https://api.github.com/repos/${OPKSSH_REPO}/releases/latest`;
+    const { version } = getTrustedRelease(this.getBinaryName());
+    const url = `https://api.github.com/repos/${OPKSSH_REPO}/releases/tags/${encodeURIComponent(version)}`;
     const response = await fetch(url, {
       headers: {
         "User-Agent": "Termix",

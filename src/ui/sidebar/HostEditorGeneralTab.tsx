@@ -8,6 +8,7 @@ import { FakeSwitch, SectionCard, SettingRow } from "@/components/section-card";
 import type { Host } from "@/types/ui-types";
 import {
   Globe,
+  LayoutGrid,
   Monitor,
   MousePointerClick,
   Plus,
@@ -19,6 +20,7 @@ import {
 import { FolderPathPicker } from "./FolderPathPicker";
 import { HostParentPicker } from "./HostParentPicker";
 import { getSSHFolders, isElectron } from "@/main-axios";
+import { connectionOriginAppliesTo } from "./HostEditorData";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
@@ -169,6 +171,23 @@ export function HostEditorGeneralTab({
               </div>
             );
           })}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title={t("hosts.connectionToolbar")}
+        icon={<LayoutGrid className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-4 py-3">
+          <SettingRow
+            label={t("hosts.showConnectionToolbar")}
+            description={t("hosts.showConnectionToolbarDesc")}
+          >
+            <FakeSwitch
+              checked={form.enableTerminalToolbar}
+              onChange={(value) => setField("enableTerminalToolbar", value)}
+            />
+          </SettingRow>
         </div>
       </SectionCard>
 
@@ -763,10 +782,16 @@ export function HostEditorGeneralTab({
               ) : null}
             </div>
           )}
-          {isElectron() && protocols.enableSsh && (
+          {isElectron() && connectionOriginAppliesTo(protocols) && (
             <SettingRow
               label={t("hosts.connectionOrigin")}
-              description={t("hosts.connectionOriginDesc")}
+              description={
+                protocols.enableRdp ||
+                protocols.enableVnc ||
+                protocols.enableTelnet
+                  ? `${t("hosts.connectionOriginDesc")} ${t("hosts.connectionOriginGuacamoleNote")}`
+                  : t("hosts.connectionOriginDesc")
+              }
             >
               <select
                 className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
