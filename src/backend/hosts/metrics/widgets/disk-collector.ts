@@ -59,7 +59,7 @@ export function parseDfLines(output: string): DfRow[] {
     .filter((row) => row.parts.length >= 7 && !PSEUDO_FS_RE.test(row.type));
 }
 
-// Finds the index of the most-utilized real filesystem in a `df -TkP`-style
+// Finds the index of the most-utilized real filesystem in a GNU `df -TkP`-style
 // row set (parts[2] = total KB, parts[3] = used KB), so a nearly-full
 // secondary mount (e.g. /data) isn't hidden behind a healthy root filesystem.
 export function findWorstMountIndex(bytesRows: DfRow[]): {
@@ -98,8 +98,8 @@ export function findWorstMountIndex(bytesRows: DfRow[]): {
   };
 }
 
-// Merges the size-row (`df -TkP` by default; parts[2..4] in `blockSizeBytes`
-// units) and `df -T -h` row sets into one filesystem list. Byte rows drive
+// Merges a GNU `df -TkP` size-row set (parts[2..4] in `blockSizeBytes` units)
+// and a `df -hT -P` human-row set into one filesystem list. Byte rows drive
 // the maths; human rows only supply the display strings, matched by mount
 // point so a mismatched row count can't shift the columns.
 export function buildFilesystemList(
@@ -222,6 +222,143 @@ function humanizeBytes(bytes: number): string {
   return `${rounded}${units[unitIndex]}`;
 }
 
+// BSD/macOS `df -T` takes a filesystem-type argument to *filter* by, unlike
+// GNU `df -T` which *prints* a type column - so macOS needs its own command
+// (`df -Pk`, no type column) and gets the type separately from `mount`.
+const DARWIN_SKIP_MOUNT_RE =
+  /^\/System\/Volumes\/(VM|Preboot|Update|xarts|iSCPreboot|Hardware)(\/|$)/;
+const DARWIN_SKIP_TYPE_RE = /^(devfs|autofs)$/;
+
+export function parseDarwinMountTypes(output: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const line of output.split("\n")) {
+    // Device names can contain spaces (e.g. autofs's "map auto_home"), so
+    // match the literal " on " / " (" separators rather than a single token.
+    const match = line.match(/^.+? on (.+?) \(([^,)]+)/);
+    if (match) map.set(match[1], match[2].trim());
+  }
+  return map;
+}
+
+export function parseDarwinDfRows(
+  output: string,
+  typeByMount: Map<string, string>,
+): DiskFilesystem[] {
+  return output
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split(/\s+/);
+      if (parts.length < 6) return null;
+
+      const filesystem = parts[0];
+      const totalKb = Number(parts[1]);
+      const usedKb = Number(parts[2]);
+      const availableKb = Number(parts[3]);
+      const mount = parts.slice(5).join(" ");
+      if (!Number.isFinite(totalKb) || totalKb <= 0) return null;
+      if (DARWIN_SKIP_MOUNT_RE.test(mount)) return null;
+
+      const type = typeByMount.get(mount) || "";
+      if (DARWIN_SKIP_TYPE_RE.test(type)) return null;
+
+      const totalBytes = totalKb * 1024;
+      const usedBytes = Number.isFinite(usedKb) ? usedKb * 1024 : null;
+      const availableBytes = Number.isFinite(availableKb)
+        ? availableKb * 1024
+        : null;
+      const percent =
+        usedBytes !== null
+          ? Math.max(0, Math.min(100, (usedBytes / totalBytes) * 100))
+          : null;
+
+      return {
+        filesystem,
+        type,
+        mount,
+        percent: toFixedNum(percent, 0),
+        usedHuman: usedBytes !== null ? humanizeBytes(usedBytes) : null,
+        totalHuman: humanizeBytes(totalBytes),
+        availableHuman:
+          availableBytes !== null ? humanizeBytes(availableBytes) : null,
+        usedBytes,
+        totalBytes,
+        availableBytes,
+      };
+    })
+    .filter((fs): fs is DiskFilesystem => fs !== null);
+}
+
+async function collectDarwinDiskMetrics(
+  client: Client,
+  excludedMounts?: string[] | null,
+  monitoredMounts?: MonitoredMount[] | null,
+): Promise<{
+  percent: number | null;
+  usedHuman: string | null;
+  totalHuman: string | null;
+  availableHuman: string | null;
+  mount: string | null;
+  filesystems: DiskFilesystem[];
+}> {
+  try {
+    const [dfOut, mountOut] = await Promise.all([
+      execCommand(client, "df -Pk | tail -n +2"),
+      execCommand(client, "mount"),
+    ]);
+
+    const typeByMount = parseDarwinMountTypes(mountOut.stdout);
+    let detected = parseDarwinDfRows(dfOut.stdout, typeByMount);
+
+    const monitored = (monitoredMounts ?? []).filter((entry) =>
+      Boolean(entry.path.trim()),
+    );
+    if (monitored.length > 0) {
+      const customFilesystems = await Promise.all(
+        monitored.map(async (entry) => {
+          const path = shellQuote(entry.path.trim());
+          try {
+            const custom = await execCommand(
+              client,
+              `df -Pk -- ${path} | tail -n +2`,
+            );
+            return parseDarwinDfRows(custom.stdout, typeByMount)[0] ?? null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      detected = mergeMonitoredFilesystems(
+        detected,
+        monitored,
+        customFilesystems,
+      );
+    }
+
+    const filesystems = filterExcludedFilesystems(detected, excludedMounts);
+    const primary = selectPrimaryFilesystem(filesystems);
+
+    return {
+      percent: primary?.percent ?? null,
+      usedHuman: primary?.usedHuman ?? null,
+      totalHuman: primary?.totalHuman ?? null,
+      availableHuman: primary?.availableHuman ?? null,
+      mount: primary?.mount ?? null,
+      filesystems,
+    };
+  } catch {
+    return {
+      percent: null,
+      usedHuman: null,
+      totalHuman: null,
+      availableHuman: null,
+      mount: null,
+      filesystems: [],
+    };
+  }
+}
+
 interface WindowsDiskRow {
   drive: string;
   total: number;
@@ -325,6 +462,9 @@ export async function collectDiskMetrics(
 }> {
   if (platform === "windows") {
     return collectWindowsDiskMetrics(client, excludedMounts);
+  }
+  if (platform === "darwin") {
+    return collectDarwinDiskMetrics(client, excludedMounts, monitoredMounts);
   }
 
   try {
