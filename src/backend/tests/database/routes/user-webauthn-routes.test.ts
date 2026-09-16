@@ -18,16 +18,14 @@ vi.mock("@simplewebauthn/server", () => ({
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({ findById: mocks.user }),
   createCurrentWebauthnCredentialRepository: () => ({
-    findByCredentialId: vi
-      .fn()
-      .mockResolvedValue({
-        id: 1,
-        credentialId: "key",
-        userId: "user",
-        publicKey: "YQ",
-        counter: 0,
-        transports: "[]",
-      }),
+    findByCredentialId: vi.fn().mockResolvedValue({
+      id: 1,
+      credentialId: "key",
+      userId: "user",
+      publicKey: "YQ",
+      counter: 0,
+      transports: "[]",
+    }),
     updateAuthState: mocks.update,
   }),
   getCurrentSettingValue: vi.fn(),
