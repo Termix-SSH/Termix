@@ -2,8 +2,8 @@ import { Globe } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { isElectron } from "@/lib/electron";
 import {
-  unreachableTunnelReason,
-  type TunnelRefusalReason,
+  webEndpointRefusalReason,
+  type WebEndpointRefusalReason,
 } from "@/lib/web-endpoint-url";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -42,7 +42,13 @@ function endpointId(): string {
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-const BIND_HOST_REFUSAL_MESSAGES: Record<TunnelRefusalReason, string> = {
+// Only the tunnel-bind reasons render here; this preview sits inside the
+// tunnel-access block. The direct cookie refusal is enforced at open time in
+// WebEndpointTab / openWebEndpointExternally, where the target host is known.
+const BIND_HOST_REFUSAL_MESSAGES: Record<
+  Exclude<WebEndpointRefusalReason, "direct-shares-session-cookie">,
+  string
+> = {
   "loopback-bind-on-remote-backend": "hosts.webUiBindHostUnreachable",
   "shares-session-cookie-with-termix": "hosts.webUiBindHostSharesSessionCookie",
 };
@@ -380,11 +386,17 @@ export function HostEditorWebUiSection({
                           // with nothing to connect to, and a tunnel reached at
                           // Termix's own hostname would hand the tunnelled
                           // service this session.
-                          const refusal = unreachableTunnelReason(
+                          const refusal = webEndpointRefusalReason(
                             endpoint,
                             isElectron(),
+                            undefined,
                           );
                           if (!refusal) return null;
+                          // Unreachable from this tunnel-only block; narrows
+                          // the union to the reasons this preview renders.
+                          if (refusal === "direct-shares-session-cookie") {
+                            return null;
+                          }
                           return (
                             <p className="text-[11px] text-destructive">
                               {t(BIND_HOST_REFUSAL_MESSAGES[refusal])}

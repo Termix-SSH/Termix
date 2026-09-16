@@ -4,8 +4,8 @@ import { isElectron } from "@/lib/electron";
 import {
   currentTunnelHost,
   resolveWebEndpointUrl,
-  unreachableTunnelReason,
-  type TunnelRefusalReason,
+  webEndpointRefusalReason,
+  type WebEndpointRefusalReason,
 } from "@/lib/web-endpoint-url";
 import type { WebEndpoint } from "@/types/index";
 
@@ -14,11 +14,13 @@ import type { WebEndpoint } from "@/types/index";
  * toasts `error.message` directly. Matches how requireNumericHostId already
  * reports.
  */
-const TUNNEL_REFUSAL_MESSAGES: Record<TunnelRefusalReason, string> = {
+const REFUSAL_MESSAGES: Record<WebEndpointRefusalReason, string> = {
   "loopback-bind-on-remote-backend":
     "This endpoint tunnels to 127.0.0.1 on the machine running Termix, which your browser cannot reach. Set its Bind Host to an address that machine answers on, such as 0.0.0.0.",
   "shares-session-cookie-with-termix":
-    "Opening this tunnel would send your Termix session to the tunnelled service, because it would be reached at the same hostname Termix is. Use the desktop app, open Termix at localhost, or make this a direct endpoint.",
+    "Opening this tunnel would send your Termix session to the tunnelled service, because it would be reached at the same hostname Termix is. Use the desktop app, or open Termix at localhost.",
+  "direct-shares-session-cookie":
+    "Opening this endpoint would send your Termix session to it, because your browser reaches it at the same site Termix is served from and cookies ignore the port. Use the desktop app, or serve this UI from a different hostname.",
 };
 
 /**
@@ -129,11 +131,12 @@ export async function openWebEndpointExternally(
   endpoint: WebEndpoint,
 ): Promise<void> {
   // The same gate the embedded tab applies. Opening in the real browser is not
-  // the safer path: the cookie jar is the browser's either way, so a tunnel URL
-  // on the page's own host string leaks the session exactly as a frame would.
-  const refusal = unreachableTunnelReason(endpoint, isElectron());
+  // the safer path: the cookie jar is the browser's either way, so a URL on the
+  // page's own host string -- tunnel OR direct -- leaks the session exactly as
+  // a frame would.
+  const refusal = webEndpointRefusalReason(endpoint, isElectron(), host.ip);
   if (refusal) {
-    throw new Error(TUNNEL_REFUSAL_MESSAGES[refusal]);
+    throw new Error(REFUSAL_MESSAGES[refusal]);
   }
 
   const localPort =

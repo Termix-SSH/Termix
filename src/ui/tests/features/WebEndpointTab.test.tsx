@@ -331,6 +331,76 @@ describe("WebEndpointTab", () => {
     expect(document.querySelector("iframe")).toBeNull();
   });
 
+  /**
+   * The leak the tunnel guard did not cover: a DIRECT endpoint points at the
+   * host's own address, so when that host is the one serving Termix the frame
+   * is same-site with Termix and the browser attaches the `jwt` cookie. A
+   * different port is not a different cookie key.
+   */
+  it("refuses a direct endpoint on the same host that serves Termix", async () => {
+    electron.isElectron.mockReturnValue(false);
+    pageHostname = "termix.example";
+    const { WebEndpointTab } =
+      await import("@/features/web-endpoint/WebEndpointTab");
+    render(
+      <WebEndpointTab
+        host={host({ ip: "termix.example" }, [
+          endpoint({ access: "direct", port: 8443 }),
+        ])}
+        endpointId="e1"
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText("webEndpoint.directSharesSessionCookie"),
+      ).toBeInTheDocument(),
+    );
+    // Refusing after framing would have leaked on the very first request.
+    expect(document.querySelector("iframe")).toBeNull();
+  });
+
+  it("refuses a direct endpoint on a sub domain of the page host", async () => {
+    electron.isElectron.mockReturnValue(false);
+    pageHostname = "termix.example.com";
+    const { WebEndpointTab } =
+      await import("@/features/web-endpoint/WebEndpointTab");
+    render(
+      <WebEndpointTab
+        host={host({ ip: "ui.termix.example.com" }, [
+          endpoint({ access: "direct" }),
+        ])}
+        endpointId="e1"
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText("webEndpoint.directSharesSessionCookie"),
+      ).toBeInTheDocument(),
+    );
+    expect(document.querySelector("iframe")).toBeNull();
+  });
+
+  it("still frames a direct same-host endpoint on the desktop, whose jar has no jwt", async () => {
+    electron.isElectron.mockReturnValue(true);
+    pageHostname = "termix.example";
+    const { WebEndpointTab } =
+      await import("@/features/web-endpoint/WebEndpointTab");
+    render(
+      <WebEndpointTab
+        host={host({ ip: "termix.example" }, [
+          endpoint({ access: "direct", port: 8443 }),
+        ])}
+        endpointId="e1"
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTitle("Proxmox")).toHaveAttribute(
+        "src",
+        "https://termix.example:8443/",
+      ),
+    );
+  });
+
   it("still frames a DIRECT endpoint on a hostname that refuses tunnels", async () => {
     electron.isElectron.mockReturnValue(false);
     pageHostname = "termix.example.com";

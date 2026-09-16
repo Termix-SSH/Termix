@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import {
   currentTunnelHost,
   resolveWebEndpointUrl,
-  unreachableTunnelReason,
-  type TunnelRefusalReason,
+  webEndpointRefusalReason,
+  type WebEndpointRefusalReason,
 } from "@/lib/web-endpoint-url";
 import {
   allowInvalidCertificateForOrigin,
@@ -18,9 +18,10 @@ import { isElectron } from "@/lib/electron";
 import { Button } from "@/components/button";
 import type { Host } from "@/types/ui-types";
 
-const TUNNEL_REFUSAL_MESSAGES: Record<TunnelRefusalReason, string> = {
+const REFUSAL_MESSAGES: Record<WebEndpointRefusalReason, string> = {
   "loopback-bind-on-remote-backend": "webEndpoint.tunnelUnreachableFromBrowser",
   "shares-session-cookie-with-termix": "webEndpoint.tunnelSharesSessionCookie",
+  "direct-shares-session-cookie": "webEndpoint.directSharesSessionCookie",
 };
 
 /**
@@ -67,15 +68,16 @@ export function WebEndpointTab({
     const mine = ++resolveGenerationRef.current;
     setError(null);
     try {
-      // Checked BEFORE the open call, not after. Two reasons a tunnel must not
-      // be opened from a browser: a loopback bind on a remote backend succeeds
-      // server-side and leaves the browser nothing to connect to, and a tunnel
-      // URL on the page's own host string would hand the tunnelled service
-      // Termix's session cookie. The second is a security refusal, so binding
-      // the port and then declining to navigate would be no protection.
-      const refusal = unreachableTunnelReason(endpoint, isElectron());
+      // Checked BEFORE the open call, not after. A tunnel must not be opened
+      // from a browser when a loopback bind on a remote backend would leave
+      // nothing to connect to, or when the tunnel URL would land on the page's
+      // own host string. A DIRECT endpoint on the same host that serves Termix
+      // leaks the session cookie exactly the same way -- cookies ignore the
+      // port -- so it is refused here too, before any navigation, rather than
+      // framing the URL and leaking on the first request.
+      const refusal = webEndpointRefusalReason(endpoint, isElectron(), host.ip);
       if (refusal) {
-        throw new Error(t(TUNNEL_REFUSAL_MESSAGES[refusal]));
+        throw new Error(t(REFUSAL_MESSAGES[refusal]));
       }
 
       // Always re-resolved rather than reloading the frame: the backend closes

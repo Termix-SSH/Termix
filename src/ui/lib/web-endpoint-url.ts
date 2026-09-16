@@ -88,13 +88,48 @@ export function separatedTunnelHost(pageHost: string): string | null {
   return LOOPBACK_ALIASES[pageHost.trim().toLowerCase()] ?? null;
 }
 
+/** Lowercase, trim, drop surrounding IPv6 brackets and a single trailing dot. */
+function normalizeHost(host: string): string {
+  let h = host.trim().toLowerCase();
+  if (h.startsWith("[") && h.endsWith("]")) h = h.slice(1, -1);
+  if (h.endsWith(".")) h = h.slice(0, -1);
+  return h;
+}
+
+/**
+ * Whether a browser would attach Termix's `jwt` cookie to a request for
+ * `targetHost` while the page is served from `pageHost` -- or accept a
+ * `Set-Cookie` from `targetHost` into the jar Termix's own API reads.
+ *
+ * The web client sets `jwt` host-only (no `Domain`), so the port is irrelevant
+ * and the disclosure direction is exactly an equal host. The reverse direction
+ * -- the target answering `Set-Cookie: jwt=...; Domain=<parent>` -- reaches
+ * Termix whenever the two share a domain, so a parent/sub relationship counts
+ * too. The suffix check is anchored on a dot boundary so `eviltermix.example`
+ * is not treated as same-site with `termix.example`.
+ *
+ * A precise registrable-domain (eTLD+1) test would also catch sibling
+ * subdomains under a shared parent, but needs a public-suffix list this app
+ * does not bundle; the exact/parent/sub check closes the reported same-host
+ * case and the Domain-scoped reverse without one.
+ */
+export function sharesCookieSiteWithPage(
+  targetHost: string,
+  pageHost: string,
+): boolean {
+  const t = normalizeHost(targetHost);
+  const p = normalizeHost(pageHost);
+  if (!t || !p) return false;
+  if (t === p) return true;
+  return t.endsWith("." + p) || p.endsWith("." + t);
+}
+
 function defaultPageHost(): string {
   return typeof window === "undefined" ? "127.0.0.1" : window.location.hostname;
 }
 
 /**
- * Why a tunnel endpoint must not be opened from this client, or null when it
- * may be.
+ * Why a web endpoint must not be opened from this client.
  *
  * `loopback-bind-on-remote-backend` -- the forward binds where the backend
  * runs. In a browser that is the server, so a loopback bind answers only to
@@ -104,19 +139,49 @@ function defaultPageHost(): string {
  * `shares-session-cookie-with-termix` -- the tunnel URL would resolve to the
  * same host string the page is served from, handing Termix's session token to
  * the tunnelled service. See `separatedTunnelHost`.
+ *
+ * `direct-shares-session-cookie` -- the same leak without a tunnel: a direct
+ * endpoint's target host shares Termix's cookie site, so the browser attaches
+ * the `jwt` to it (and accepts one back). A different port is not a different
+ * cookie key. See `sharesCookieSiteWithPage`.
  */
-export type TunnelRefusalReason =
-  "loopback-bind-on-remote-backend" | "shares-session-cookie-with-termix";
+export type WebEndpointRefusalReason =
+  | "loopback-bind-on-remote-backend"
+  | "shares-session-cookie-with-termix"
+  | "direct-shares-session-cookie";
 
-export function unreachableTunnelReason(
+/**
+ * Why a web endpoint must not be opened from this client, or null when it may.
+ *
+ * Covers both access modes. A tunnel is refused when its forward would either
+ * be unreachable (loopback bind on a remote backend) or resolve to the page's
+ * own host string (`shares-session-cookie-with-termix`). A DIRECT endpoint is
+ * refused when its target host shares Termix's cookie site
+ * (`direct-shares-session-cookie`) -- the same leak, reached without a tunnel:
+ * cookies ignore the port, so a UI on the very host serving Termix receives
+ * the session. `hostAddress` is the direct endpoint's target host and is
+ * ignored for tunnels.
+ *
+ * The desktop is exempt: its session is Bearer-only with no `jwt` in the jar,
+ * and its API base ("localhost") is already separated from where tunnels
+ * resolve ("127.0.0.1").
+ */
+export function webEndpointRefusalReason(
   endpoint: Pick<WebEndpoint, "access" | "bindHost">,
   runningInElectron: boolean,
+  hostAddress: string | undefined,
   pageHost: string = defaultPageHost(),
-): TunnelRefusalReason | null {
-  if (endpoint.access !== "tunnel") return null;
-  // The desktop reaches its own backend over loopback, and its API base is
-  // "localhost" while tunnels resolve to "127.0.0.1" -- already separated.
+): WebEndpointRefusalReason | null {
   if (runningInElectron) return null;
+
+  if (endpoint.access === "direct") {
+    if (hostAddress && sharesCookieSiteWithPage(hostAddress, pageHost)) {
+      return "direct-shares-session-cookie";
+    }
+    return null;
+  }
+
+  if (endpoint.access !== "tunnel") return null;
 
   const bindHost = (endpoint.bindHost ?? "").trim().toLowerCase();
   // Reported first when both apply: the bind address is what the user has to
