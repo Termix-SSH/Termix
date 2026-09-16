@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   ArrowDown,
   ArrowUp,
@@ -29,12 +30,18 @@ import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import type { LocalFileEntry } from "@/types/electron";
 import {
+  createLocalFile,
   createLocalFolder,
   getLocalHome,
   listLocalDirectory,
   openLocalPath,
+  renameLocalEntry,
   revealLocalPath,
+  trashLocalPaths,
 } from "@/lib/local-files.ts";
+import { copyToClipboard } from "@/lib/clipboard.ts";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { LocalFileContextMenu } from "./LocalFileContextMenu.tsx";
 import { formatFileSize } from "./file-manager-utils.ts";
 import {
   LOCAL_FILES_DRAG_MIME,
@@ -60,6 +67,11 @@ export interface LocalFilePaneProps {
    * `remotePaths` are the dragged remote paths; `localDir` is where they go.
    */
   onRemoteItemsDropped: (remotePaths: string[], localDir: string) => void;
+  /**
+   * "Upload to server" from the context menu: sends the given local paths to
+   * the remote pane's current folder. Omit to hide the action.
+   */
+  onUploadToRemote?: (localPaths: string[]) => void;
   onPathChange?: (localPath: string) => void;
 }
 
@@ -93,9 +105,11 @@ export function LocalFilePane({
   refreshToken,
   onClose,
   onRemoteItemsDropped,
+  onUploadToRemote,
   onPathChange,
 }: LocalFilePaneProps) {
   const { t } = useTranslation();
+  const { confirmWithToast } = useConfirmation();
   const [homePath, setHomePath] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [parentPath, setParentPath] = useState<string | null>(null);
@@ -111,14 +125,25 @@ export function LocalFilePane({
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
   const [nav, setNav] = useState({ canBack: false, canForward: false });
-  const [creatingFolder, setCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
+  const [creating, setCreating] = useState<"folder" | "file" | null>(null);
+  const [newEntryName, setNewEntryName] = useState("");
+  const [renaming, setRenaming] = useState<{
+    path: string;
+    name: string;
+  } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    entries: LocalFileEntry[];
+    visible: boolean;
+  }>({ x: 0, y: 0, entries: [], visible: false });
   const [dropTarget, setDropTarget] = useState<
     { kind: "pane" } | { kind: "folder"; path: string } | null
   >(null);
   const dragCounter = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const newFolderInputRef = useRef<HTMLInputElement>(null);
+  const newEntryInputRef = useRef<HTMLInputElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const currentPathRef = useRef<string | null>(null);
   currentPathRef.current = currentPath;
 
@@ -231,8 +256,19 @@ export function LocalFilePane({
   }, [showHidden]);
 
   useEffect(() => {
-    if (creatingFolder) newFolderInputRef.current?.focus();
-  }, [creatingFolder]);
+    if (creating) newEntryInputRef.current?.focus();
+  }, [creating]);
+
+  useEffect(() => {
+    if (!renaming) return;
+    const input = renameInputRef.current;
+    if (!input) return;
+    input.focus();
+    // Select the stem so typing replaces the name but keeps the extension.
+    const dot = renaming.name.lastIndexOf(".");
+    input.setSelectionRange(0, dot > 0 ? dot : renaming.name.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renaming?.path]);
 
   const goBack = () => {
     if (historyIndexRef.current <= 0) return;
@@ -282,13 +318,7 @@ export function LocalFilePane({
   const handleRowClick = (entry: LocalFileEntry, event: React.MouseEvent) => {
     event.stopPropagation();
     if (event.detail === 2) {
-      if (entry.type === "directory") {
-        void navigateTo(entry.path);
-      } else {
-        void openLocalPath(entry.path).catch(() => {
-          void revealLocalPath(entry.path);
-        });
-      }
+      openEntry(entry);
       return;
     }
 
@@ -415,16 +445,169 @@ export function LocalFilePane({
     finishDrop(event, entry.path);
   };
 
-  const submitNewFolder = async () => {
-    const name = newFolderName.trim();
-    setCreatingFolder(false);
-    setNewFolderName("");
-    if (!name || !currentPath) return;
+  const reportError = (err: unknown, fallbackKey: string) => {
+    const message = err instanceof Error ? err.message : String(err ?? "");
+    toast.error(t(fallbackKey), message ? { description: message } : undefined);
+  };
+
+  const submitNewEntry = async () => {
+    const kind = creating;
+    const name = newEntryName.trim();
+    setCreating(null);
+    setNewEntryName("");
+    if (!kind || !name || !currentPath) return;
     try {
-      await createLocalFolder(currentPath, name);
+      if (kind === "folder") await createLocalFolder(currentPath, name);
+      else await createLocalFile(currentPath, name);
       await load(currentPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      reportError(err, "fileManager.localCreateFailed");
+    }
+  };
+
+  const startRename = (entry: LocalFileEntry) => {
+    setRenaming({ path: entry.path, name: entry.name });
+  };
+
+  const submitRename = async () => {
+    const current = renaming;
+    setRenaming(null);
+    if (!current || !currentPath) return;
+    const nextName = current.name.trim();
+    const entry = entries.find((e) => e.path === current.path);
+    if (!entry || !nextName || nextName === entry.name) return;
+    try {
+      await renameLocalEntry(entry.path, nextName);
+      await load(currentPath);
+    } catch (err) {
+      reportError(err, "fileManager.localRenameFailed");
+    }
+  };
+
+  const openEntry = (entry: LocalFileEntry) => {
+    if (entry.type === "directory") {
+      void navigateTo(entry.path);
+    } else {
+      void openLocalPath(entry.path).catch(() => {
+        void revealLocalPath(entry.path);
+      });
+    }
+  };
+
+  const copyEntryPaths = (targets: LocalFileEntry[]) => {
+    if (targets.length === 0) return;
+    void copyToClipboard(targets.map((e) => e.path).join("\n")).then((ok) => {
+      if (ok) {
+        toast.success(
+          targets.length === 1
+            ? t("fileManager.pathCopiedToClipboard")
+            : t("fileManager.pathsCopiedToClipboard", {
+                count: targets.length,
+              }),
+        );
+      } else {
+        toast.error(t("fileManager.failedToCopyPath"));
+      }
+    });
+  };
+
+  const trashEntries = (targets: LocalFileEntry[]) => {
+    if (targets.length === 0 || !currentPath) return;
+    const hasDirectory = targets.some((e) => e.type === "directory");
+    const message =
+      targets.length === 1
+        ? t(
+            hasDirectory
+              ? "fileManager.localTrashConfirmFolder"
+              : "fileManager.localTrashConfirmSingle",
+            { name: targets[0].name },
+          )
+        : t("fileManager.localTrashConfirmMany", { count: targets.length });
+
+    void confirmWithToast(
+      message,
+      async () => {
+        try {
+          const result = await trashLocalPaths(targets.map((e) => e.path));
+          if (result.failed.length === 0) {
+            toast.success(
+              t("fileManager.localTrashed", { count: result.trashed }),
+            );
+          } else {
+            toast.error(t("fileManager.localTrashFailed"), {
+              description: result.failed
+                .map((f) => `${f.path}: ${f.error}`)
+                .join("\n"),
+            });
+          }
+        } catch (err) {
+          reportError(err, "fileManager.localTrashFailed");
+        }
+        await load(currentPath);
+      },
+      "destructive",
+    );
+  };
+
+  const selectedEntries = () =>
+    visibleEntries.filter((e) => selected.has(e.path));
+
+  const openContextMenu = (event: React.MouseEvent, entry?: LocalFileEntry) => {
+    event.preventDefault();
+    event.stopPropagation();
+    let targets: LocalFileEntry[] = [];
+    if (entry) {
+      if (selected.has(entry.path)) {
+        targets = selectedEntries();
+      } else {
+        setSelected(new Set([entry.path]));
+        setAnchorPath(entry.path);
+        targets = [entry];
+      }
+    }
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      entries: targets,
+      visible: true,
+    });
+  };
+
+  const closeContextMenu = useCallback(
+    () => setContextMenu((prev) => ({ ...prev, visible: false })),
+    [],
+  );
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    // Inline editors handle their own keys.
+    if ((event.target as HTMLElement).tagName === "INPUT") return;
+    const targets = selectedEntries();
+    if (event.key === "Enter" && targets.length === 1) {
+      event.preventDefault();
+      openEntry(targets[0]);
+    } else if (event.key === "F2" && targets.length === 1) {
+      event.preventDefault();
+      startRename(targets[0]);
+    } else if (
+      (event.key === "Delete" ||
+        (event.key === "Backspace" && (event.metaKey || event.ctrlKey))) &&
+      targets.length > 0
+    ) {
+      event.preventDefault();
+      trashEntries(targets);
+    } else if (event.key === "F5") {
+      event.preventDefault();
+      refresh();
+    } else if (event.key === "Escape") {
+      setSelected(new Set());
+      setAnchorPath(null);
+    } else if (
+      event.key === "a" &&
+      (event.metaKey || event.ctrlKey) &&
+      visibleEntries.length > 0
+    ) {
+      event.preventDefault();
+      setSelected(new Set(visibleEntries.map((e) => e.path)));
     }
   };
 
@@ -524,7 +707,7 @@ export function LocalFilePane({
             variant="ghost"
             size="icon"
             className="size-7 rounded-none border-l border-border"
-            onClick={() => setCreatingFolder(true)}
+            onClick={() => setCreating("folder")}
             disabled={!currentPath}
             title={t("fileManager.newFolder")}
           >
@@ -615,29 +798,40 @@ export function LocalFilePane({
           "flex-1 min-h-0 overflow-y-auto thin-scrollbar relative",
           showPaneOverlay && "bg-muted/20",
         )}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
         onClick={() => {
           setSelected(new Set());
           setAnchorPath(null);
         }}
+        onContextMenu={(e) => openContextMenu(e)}
       >
-        {creatingFolder && (
+        {creating && (
           <div className="grid grid-cols-[1fr_130px_72px_64px] gap-2 px-3 items-center text-xs border-b border-border h-[34px]">
             <div className="flex items-center gap-2.5">
-              <Folder className="size-4 text-accent-brand shrink-0" />
+              {creating === "folder" ? (
+                <Folder className="size-4 text-accent-brand shrink-0" />
+              ) : (
+                <File className="size-4 text-muted-foreground shrink-0" />
+              )}
               <input
-                ref={newFolderInputRef}
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
+                ref={newEntryInputRef}
+                value={newEntryName}
+                onChange={(e) => setNewEntryName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") void submitNewFolder();
+                  if (e.key === "Enter") void submitNewEntry();
                   if (e.key === "Escape") {
-                    setCreatingFolder(false);
-                    setNewFolderName("");
+                    setCreating(null);
+                    setNewEntryName("");
                   }
                 }}
-                onBlur={() => void submitNewFolder()}
+                onBlur={() => void submitNewEntry()}
                 onClick={(e) => e.stopPropagation()}
-                placeholder={t("fileManager.newFolder")}
+                placeholder={
+                  creating === "folder"
+                    ? t("fileManager.newFolder")
+                    : t("fileManager.newFile")
+                }
                 className="flex-1 min-w-0 border border-accent-brand/60 bg-card px-2 py-0.5 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50"
               />
             </div>
@@ -696,6 +890,7 @@ export function LocalFilePane({
                       entry.hidden && "opacity-60",
                     )}
                     onClick={(e) => handleRowClick(entry, e)}
+                    onContextMenu={(e) => openContextMenu(e, entry)}
                     onDragStart={(e) => handleRowDragStart(e, entry)}
                     onDragOver={(e) => handleFolderDragOver(e, entry)}
                     onDragLeave={(e) => handleFolderDragLeave(e, entry)}
@@ -706,14 +901,38 @@ export function LocalFilePane({
                       <span className="shrink-0">
                         <LocalEntryIcon entry={entry} />
                       </span>
-                      <span className="font-bold truncate tracking-tight">
-                        {entry.name}
-                        {entry.type === "link" && entry.linkTarget && (
-                          <span className="text-accent-brand ml-1 font-normal">
-                            → {entry.linkTarget}
-                          </span>
-                        )}
-                      </span>
+                      {renaming?.path === entry.path ? (
+                        <input
+                          ref={renameInputRef}
+                          value={renaming.name}
+                          onChange={(e) =>
+                            setRenaming({
+                              path: entry.path,
+                              name: e.target.value,
+                            })
+                          }
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === "Enter") void submitRename();
+                            if (e.key === "Escape") setRenaming(null);
+                          }}
+                          onBlur={() => void submitRename()}
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          draggable={false}
+                          onDragStart={(e) => e.preventDefault()}
+                          className="flex-1 min-w-0 border border-accent-brand/60 bg-card px-2 py-0.5 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto"
+                        />
+                      ) : (
+                        <span className="font-bold truncate tracking-tight">
+                          {entry.name}
+                          {entry.type === "link" && entry.linkTarget && (
+                            <span className="text-accent-brand ml-1 font-normal">
+                              → {entry.linkTarget}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                     <span className="text-muted-foreground truncate pointer-events-none tabular-nums">
                       {formatLocalModified(entry.modifiedTimestamp)}
@@ -744,6 +963,31 @@ export function LocalFilePane({
           </div>
         )}
       </div>
+
+      <LocalFileContextMenu
+        x={contextMenu.x}
+        y={contextMenu.y}
+        entries={contextMenu.entries}
+        isVisible={contextMenu.visible}
+        showHidden={showHidden}
+        canUpload={!!onUploadToRemote}
+        onClose={closeContextMenu}
+        onOpen={openEntry}
+        onUploadToRemote={(targets) =>
+          onUploadToRemote?.(targets.map((e) => e.path))
+        }
+        onReveal={(entry) => {
+          const target = entry?.path ?? currentPath;
+          if (target) void revealLocalPath(target);
+        }}
+        onRename={startRename}
+        onCopyPath={copyEntryPaths}
+        onNewFolder={() => setCreating("folder")}
+        onNewFile={() => setCreating("file")}
+        onRefresh={refresh}
+        onToggleHidden={() => setShowHidden((prev) => !prev)}
+        onDelete={trashEntries}
+      />
 
       {/* Footer */}
       <div className="flex items-center justify-between px-3 py-1 border-t border-border text-[10px] text-muted-foreground">
