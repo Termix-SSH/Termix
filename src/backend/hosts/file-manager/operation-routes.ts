@@ -7,6 +7,7 @@ import {
   getSessionSftp,
   type SSHSession,
 } from "./session.js";
+import { ensureDirectoryTreeSftp } from "./transfer-sftp-dir.js";
 import { buildDeleteCommand } from "./operation-commands.js";
 import {
   emptyTrash,
@@ -354,99 +355,20 @@ export function registerFileOperationRoutes(
       userId,
       path: fullPath,
     });
-    const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
-
-    const createCommand = `mkdir -p '${escapedPath}' && echo "SUCCESS" && exit 0`;
-
-    execChannel(sshConn, createCommand, (err, stream) => {
-      if (err) {
-        fileLogger.error("SSH createFolder error:", err);
-        if (!res.headersSent) {
-          return res.status(500).json({ error: err.message });
-        }
-        return;
-      }
-
-      let outputData = "";
-      let errorData = "";
-
-      stream.on("data", (chunk: Buffer) => {
-        outputData += chunk.toString();
+    try {
+      await ensureDirectoryTreeSftp(await getSessionSftp(sshConn), fullPath);
+      res.json({
+        message: "Folder created successfully",
+        path: fullPath,
+        toast: { type: "success", message: `Folder created: ${fullPath}` },
       });
-
-      stream.stderr.on("data", (chunk: Buffer) => {
-        errorData += chunk.toString();
-
-        if (chunk.toString().includes("Permission denied")) {
-          fileLogger.error(`Permission denied creating folder: ${fullPath}`);
-          if (!res.headersSent) {
-            return res.status(403).json({
-              error: `Permission denied: Cannot create folder ${fullPath}. Check directory permissions.`,
-            });
-          }
-          return;
-        }
+    } catch (error) {
+      fileLogger.error("SFTP createFolder failed", error);
+      const code = (error as { code?: string | number }).code;
+      res.status(code === 3 || code === "EACCES" ? 403 : 500).json({
+        error: (error as Error).message,
       });
-
-      stream.on("close", (code) => {
-        if (outputData.includes("SUCCESS")) {
-          fileLogger.success("Directory created successfully", {
-            operation: "file_mkdir_success",
-            sessionId,
-            userId,
-            path: fullPath,
-          });
-          if (!res.headersSent) {
-            res.json({
-              message: "Folder created successfully",
-              path: fullPath,
-              toast: {
-                type: "success",
-                message: `Folder created: ${fullPath}`,
-              },
-            });
-          }
-          return;
-        }
-
-        if (code !== 0) {
-          fileLogger.error(
-            `SSH createFolder command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-          );
-          if (!res.headersSent) {
-            return res.status(500).json({
-              error: `Command failed: ${errorData}`,
-              toast: {
-                type: "error",
-                message: `Folder creation failed: ${errorData}`,
-              },
-            });
-          }
-          return;
-        }
-
-        fileLogger.success("Directory created successfully", {
-          operation: "file_mkdir_success",
-          sessionId,
-          userId,
-          path: fullPath,
-        });
-        if (!res.headersSent) {
-          res.json({
-            message: "Folder created successfully",
-            path: fullPath,
-            toast: { type: "success", message: `Folder created: ${fullPath}` },
-          });
-        }
-      });
-
-      stream.on("error", (streamErr) => {
-        fileLogger.error("SSH createFolder stream error:", streamErr);
-        if (!res.headersSent) {
-          res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-        }
-      });
-    });
+    }
   });
 
   /**

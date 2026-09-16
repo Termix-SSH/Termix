@@ -1199,16 +1199,12 @@ function FileManagerContent({
         const parentDir = dir.split("/").slice(0, -1).join("/");
         const targetPath = parentDir ? `${base}${parentDir}/` : base;
         const folderName = dir.split("/").pop()!;
-        try {
-          await createSSHFolder(
-            sshSessionId,
-            targetPath,
-            folderName,
-            currentHost?.id,
-          );
-        } catch {
-          // directory may already exist
-        }
+        await createSSHFolder(
+          sshSessionId,
+          targetPath,
+          folderName,
+          currentHost?.id,
+        );
       }
 
       for (const { file, relativePath } of files) {
