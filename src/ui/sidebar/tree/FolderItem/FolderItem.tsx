@@ -79,7 +79,11 @@ export function FolderItem({
 }: {
   folder: HostFolder;
   depth?: number;
-  onOpenTab: (host: Host, type: TabType) => void;
+  onOpenTab: (
+    host: Host,
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost?: (host: Host) => void;
   onShareHost?: (host: Host) => void;
   onDeleteHost: (host: Host) => void;
@@ -342,7 +346,7 @@ export function FolderItem({
               <HostItem
                 key={i}
                 host={child}
-                onOpenTab={(t) => onOpenTab(child, t)}
+                onOpenTab={(t, options) => onOpenTab(child, t, options)}
                 onEditHost={onEditHost ? () => onEditHost(child) : undefined}
                 onShareHost={onShareHost ? () => onShareHost(child) : undefined}
                 onProxmoxDiscover={

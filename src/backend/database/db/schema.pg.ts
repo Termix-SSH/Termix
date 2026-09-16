@@ -214,6 +214,9 @@ export const hosts = pgTable(
     enableDocker: boolean("enable_docker")
       .notNull()
       .default(false),
+    enableWebUi: boolean("enable_web_ui")
+      .notNull()
+      .default(false),
     enableTmuxMonitor: boolean("enable_tmux_monitor")
       .notNull()
       .default(false),
@@ -238,6 +241,7 @@ export const hosts = pgTable(
     defaultPath: text("default_path"),
     statsConfig: text("stats_config"),
     dockerConfig: text("docker_config"),
+    webUiConfig: text("web_ui_config"),
     enableProxmox: boolean("enable_proxmox")
       .notNull()
       .default(false),

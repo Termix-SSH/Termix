@@ -105,6 +105,57 @@ export interface ProxmoxConfig {
   };
 }
 
+export type WebEndpointAccess = "direct" | "tunnel";
+export type WebEndpointRender = "external" | "embedded";
+
+/** One web UI a host serves, declared in the host's settings. */
+export interface WebEndpoint {
+  /**
+   * Stable identifier. Must NOT be derived from the port: it keys both the
+   * tunnel name and the tab identity, so editing a port has to leave a live
+   * tunnel findable under the same name.
+   */
+  id: string;
+  label: string;
+  scheme: "http" | "https";
+  port: number;
+  /** Defaults to "/". Normalized at the storage boundary, never here. */
+  path?: string;
+  access: WebEndpointAccess;
+  render: WebEndpointRender;
+  /**
+   * Direct endpoints only. Allows an invalid TLS certificate for this
+   * endpoint's exact origin. A no-op for tunnel access, whose host component
+   * is loopback and therefore already exempt.
+   */
+  ignoreCert?: boolean;
+  /**
+   * Tunnel endpoints only. Where the backend binds the forward, exactly as
+   * the server tunnels feature exposes it. Defaults to 127.0.0.1, reachable
+   * only from the machine running the backend. A web deployment runs the
+   * backend on a server, so reaching the forward from a browser needs an
+   * address that machine answers on -- which also exposes the target's web UI
+   * to anyone who can reach the port, with no login in front of it.
+   */
+  bindHost?: string;
+  /**
+   * Tunnel endpoints only. Which port the forward listens on, as the server
+   * tunnels feature's Source Port does. Left unset the kernel picks a free
+   * one, which is fine when backend and browser share a machine -- but a
+   * container can only publish ports it knows in advance.
+   */
+  localPort?: number;
+}
+
+export interface WebUiConfig {
+  endpoints: WebEndpoint[];
+}
+
+/** A host may declare at most this many web endpoints. */
+export const MAX_WEB_ENDPOINTS = 16;
+/** Endpoint labels are truncated to this length. */
+export const MAX_WEB_ENDPOINT_LABEL_LENGTH = 64;
+
 export interface HostFeatureFlags {
   enableTerminal: boolean; // SSH, Telnet only
   enableTunnel: boolean; // SSH only
@@ -209,6 +260,8 @@ export type Host = {
   ignoreCert?: boolean;
   guacamoleConfig?: string | GuacamoleConfig;
   dockerConfig?: Record<string, unknown> | null;
+  enableWebUi?: boolean;
+  webUiConfig?: WebUiConfig | null;
 
   enableSsh?: boolean;
   enableRdp?: boolean;
@@ -369,6 +422,8 @@ export interface HostData {
   ignoreCert?: boolean;
   guacamoleConfig?: GuacamoleConfig | null;
   dockerConfig?: Record<string, unknown> | null;
+  enableWebUi?: boolean;
+  webUiConfig?: WebUiConfig | null;
 
   enableSsh?: boolean;
   enableRdp?: boolean;
@@ -560,6 +615,12 @@ export interface TunnelConfig {
 
   keepaliveInterval?: number;
   keepaliveCountMax?: number;
+  /**
+   * When set, the tunnel closes itself once it has had no connected sockets
+   * for this long. Used by web endpoint tunnels, which are opened on demand
+   * and must not outlive their tab.
+   */
+  idleTimeoutMs?: number;
 }
 
 export interface C2STunnelPreset {

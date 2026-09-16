@@ -44,6 +44,7 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "enableTunnel",
     "enableFileManager",
     "enableDocker",
+    "enableWebUi",
     "enableProxmox",
     "enableTmuxMonitor",
     "showTerminalInSidebar",
@@ -57,6 +58,7 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   advanced: [
     "statsConfig",
     "dockerConfig",
+    "webUiConfig",
     "proxmoxConfig",
     "terminalConfig",
     "guacamoleConfig",

@@ -8,6 +8,7 @@ import {
   createCurrentHostResolutionRepository,
 } from "../repositories/factory.js";
 import { validateParentHostId } from "./host-parent-validation.js";
+import { serializeWebUiConfig } from "./host-web-endpoints.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -280,6 +281,10 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableFileManager = updates.enableFileManager;
         if (typeof updates.enableDocker === "boolean")
           simpleUpdates.enableDocker = updates.enableDocker;
+        if (typeof updates.enableWebUi === "boolean") {
+          simpleUpdates.enableWebUi = updates.enableWebUi;
+          if (!updates.enableWebUi) simpleUpdates.webUiConfig = null;
+        }
         if (typeof updates.enableTmuxMonitor === "boolean")
           simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
         if (typeof updates.enableTerminalToolbar === "boolean")
@@ -694,6 +699,7 @@ export function registerHostBulkRoutes(
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
             enableDocker: hostData.enableDocker || false,
+            enableWebUi: hostData.enableWebUi || false,
             enableProxmox: hostData.enableProxmox || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
@@ -718,6 +724,9 @@ export function registerHostBulkRoutes(
               : null,
             dockerConfig: hostData.dockerConfig
               ? JSON.stringify(hostData.dockerConfig)
+              : null,
+            webUiConfig: hostData.enableWebUi
+              ? serializeWebUiConfig(hostData.webUiConfig)
               : null,
             proxmoxConfig: hostData.proxmoxConfig
               ? JSON.stringify(hostData.proxmoxConfig)
@@ -964,6 +973,7 @@ export function registerHostBulkRoutes(
             enableTunnel: true,
             enableFileManager: true,
             enableDocker: false,
+            enableWebUi: false,
             enableProxmox: false,
             enableTmuxMonitor: false,
             enableTerminalToolbar: true,
@@ -981,6 +991,7 @@ export function registerHostBulkRoutes(
             quickActions: null,
             statsConfig: null,
             dockerConfig: null,
+            webUiConfig: null,
             proxmoxConfig: null,
             terminalConfig: null,
             forceKeyboardInteractive: "false",

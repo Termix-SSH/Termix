@@ -792,6 +792,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           jump_hosts TEXT,
           enable_file_manager INTEGER NOT NULL DEFAULT 1,
           enable_docker INTEGER NOT NULL DEFAULT 0,
+          enable_web_ui INTEGER NOT NULL DEFAULT 0,
           show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1,
           show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0,
           show_tunnel_in_sidebar INTEGER NOT NULL DEFAULT 0,
@@ -800,6 +801,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           default_path TEXT,
           stats_config TEXT,
           docker_config TEXT,
+          web_ui_config TEXT,
           terminal_config TEXT,
           quick_actions TEXT,
           notes TEXT,
@@ -922,8 +924,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, docker_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, security, ignore_cert, guacamole_config, mac_address, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, enable_web_ui, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, docker_config, web_ui_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, security, ignore_cert, guacamole_config, mac_address, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -956,6 +958,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.jumpHosts || null,
           decrypted.enableFileManager ? 1 : 0,
           decrypted.enableDocker ? 1 : 0,
+          decrypted.enableWebUi ? 1 : 0,
           decrypted.showTerminalInSidebar ? 1 : 0,
           decrypted.showFileManagerInSidebar ? 1 : 0,
           decrypted.showTunnelInSidebar ? 1 : 0,
@@ -964,6 +967,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.defaultPath || null,
           decrypted.statsConfig || null,
           decrypted.dockerConfig || null,
+          decrypted.webUiConfig || null,
           decrypted.terminalConfig || null,
           decrypted.quickActions || null,
           decrypted.notes || null,

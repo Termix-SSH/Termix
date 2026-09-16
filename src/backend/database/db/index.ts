@@ -306,6 +306,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         tunnel_connections TEXT,
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
         enable_docker INTEGER NOT NULL DEFAULT 0,
+        enable_web_ui INTEGER NOT NULL DEFAULT 0,
         default_path TEXT,
         autostart_password TEXT,
         autostart_key TEXT,
@@ -313,6 +314,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         force_keyboard_interactive TEXT,
         stats_config TEXT,
         docker_config TEXT,
+        web_ui_config TEXT,
         terminal_config TEXT,
         notes TEXT,
         use_socks5 INTEGER,
@@ -1159,6 +1161,12 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_web_ui",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_data", "web_ui_config", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "enable_proxmox",

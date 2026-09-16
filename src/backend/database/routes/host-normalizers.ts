@@ -1,4 +1,5 @@
 import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
+import { parseWebUiConfig } from "./host-web-endpoints.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -180,6 +181,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableTunnel?: unknown;
   enableFileManager?: unknown;
   enableDocker?: unknown;
+  enableWebUi?: unknown;
   enableProxmox?: unknown;
   enableTmuxMonitor?: unknown;
   enableTerminalToolbar?: unknown;
@@ -195,6 +197,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   quickActions?: unknown;
   statsConfig?: unknown;
   dockerConfig?: unknown;
+  webUiConfig?: unknown;
   proxmoxConfig?: unknown;
   enableProxmoxStats?: unknown;
   proxmoxStatsConfig?: unknown;
@@ -359,6 +362,8 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableTunnel",
   "enableFileManager",
   "enableDocker",
+  "enableWebUi",
+  "webUiConfig",
   "enableProxmox",
   "enableProxmoxStats",
   "enableTmuxMonitor",
@@ -461,6 +466,7 @@ export function transformHostResponse(
     enableTunnel: !!host.enableTunnel,
     enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
+    enableWebUi: !!host.enableWebUi,
     enableProxmox: !!host.enableProxmox,
     enableProxmoxStats: !!host.enableProxmoxStats,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
@@ -513,6 +519,9 @@ export function transformHostResponse(
     dockerConfig: host.dockerConfig
       ? JSON.parse(host.dockerConfig as string)
       : undefined,
+    // Guarded, unlike dockerConfig directly above: parseWebUiConfig never
+    // throws, so a half-written config cannot take out the whole host listing.
+    webUiConfig: parseWebUiConfig(host.webUiConfig),
     proxmoxConfig: host.proxmoxConfig
       ? JSON.parse(host.proxmoxConfig as string)
       : undefined,

@@ -141,6 +141,13 @@
       "when": 1787602480861,
       "tag": "0019_certain_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1788856825810,
+      "tag": "0020_wise_green_goblin",
+      "breakpoints": true
     }
   ]
 }
