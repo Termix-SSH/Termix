@@ -133,19 +133,30 @@ describe("requireNumericHostId", () => {
  * the tunnelled service this session exactly as an embedded frame would.
  */
 describe("openWebEndpointExternally", () => {
-  it.each([false, true])(
-    "refuses shared-cookie external navigation (desktop=%s)",
-    async (desktop) => {
-      isElectron.mockReturnValue(desktop);
-      const { openWebEndpointExternally } =
-        await import("@/api/web-endpoint-api");
-      for (const access of ["direct", "tunnel"] as const) {
-        await expect(
-          openWebEndpointExternally(host, endpoint({ access })),
-        ).rejects.toThrow(/cannot isolate/);
-      }
-      expect(windowOpen).not.toHaveBeenCalled();
-      expect(tunnelPost).not.toHaveBeenCalled();
-    },
-  );
+  it("refuses shared-cookie browser windows before opening a tunnel", async () => {
+    const { openWebEndpointExternally } =
+      await import("@/api/web-endpoint-api");
+    await expect(openWebEndpointExternally(host, endpoint())).rejects.toThrow(
+      /desktop app/,
+    );
+    expect(windowOpen).not.toHaveBeenCalled();
+    expect(tunnelPost).not.toHaveBeenCalled();
+  });
+  it("opens desktop endpoints through the isolated-window bridge", async () => {
+    isElectron.mockReturnValue(true);
+    const invoke = vi.fn().mockResolvedValue({ success: true });
+    Object.defineProperty(window, "electronAPI", {
+      configurable: true,
+      value: { invoke },
+    });
+    const { openWebEndpointExternally } =
+      await import("@/api/web-endpoint-api");
+    await openWebEndpointExternally(host, endpoint({ ignoreCert: true }));
+    expect(invoke).toHaveBeenCalledWith("open-isolated-web-endpoint", {
+      url: "https://127.0.0.1:41234/",
+      ignoreCert: true,
+    });
+    expect(windowOpen).not.toHaveBeenCalled();
+    delete (window as unknown as { electronAPI?: unknown }).electronAPI;
+  });
 });

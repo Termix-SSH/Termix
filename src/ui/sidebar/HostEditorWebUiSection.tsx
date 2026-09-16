@@ -323,7 +323,7 @@ export function HostEditorWebUiSection({
                             <SelectItem
                               value="external"
                               className="text-xs"
-                              disabled
+                              disabled={!isElectron()}
                             >
                               {t("hosts.webUiRenderExternal")}
                             </SelectItem>

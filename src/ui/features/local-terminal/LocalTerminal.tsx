@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/components/theme-provider";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import { getMacLineNavigationSequence } from "@/lib/mac-line-navigation";
 import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
 import {
   handleTerminalClipboardKeyEvent,
@@ -93,6 +94,13 @@ export function LocalTerminal({
 
     terminal.attachCustomKeyEventHandler((e: KeyboardEvent): boolean => {
       if (e.type !== "keydown") return true;
+      const sequence = getMacLineNavigationSequence(e);
+      if (sequence) {
+        e.preventDefault();
+        e.stopPropagation();
+        terminal.input(sequence, true);
+        return false;
+      }
       // No native "paste" event listener here (unlike the SSH terminal), so
       // plain Ctrl/Cmd+V reads the clipboard explicitly rather than relying
       // on the browser's own paste event.
@@ -147,6 +155,7 @@ export function LocalTerminal({
     if (xtermRef.current) observer.observe(xtermRef.current);
     return () => {
       disposed = true;
+      terminal.attachCustomKeyEventHandler(() => true);
       observer.disconnect();
       input.dispose();
       removeData();

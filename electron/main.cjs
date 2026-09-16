@@ -632,6 +632,15 @@ if (isInsecureModeEnabled()) {
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
+const { createWebEndpointWindows } = require("./web-endpoint-window.cjs");
+const webEndpointWindows = createWebEndpointWindows({
+  BrowserWindow,
+  session,
+  getMainWindow: () => mainWindow,
+});
+ipcMain.handle("open-isolated-web-endpoint", (event, options) =>
+  webEndpointWindows.open(event, options),
+);
 let backendProcess = null;
 let backendStartFailed = false;
 // Why the embedded backend died, once it has. Null while it is healthy
@@ -815,6 +824,15 @@ ipcMain.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
 app.on(
   "certificate-error",
   (event, _webContents, url, error, certificate, callback) => {
+    if (
+      webEndpointWindows.handleCertificateError(
+        event,
+        _webContents,
+        url,
+        callback,
+      )
+    )
+      return;
     if (isWebEndpointCertificateAllowed(url)) {
       event.preventDefault();
       logToFile("Allowed invalid certificate for configured web endpoint", {

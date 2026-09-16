@@ -400,12 +400,12 @@ export function registerUserWebAuthnRoutes(
    * /users/webauthn/authenticate/verify:
    *   post:
    *     summary: Finish passkey login
-   *     description: Verifies the WebAuthn assertion and issues a session token (or a TOTP challenge).
+   *     description: Verifies the WebAuthn assertion and issues a session token. Verified WebAuthn user verification satisfies 2FA; possession-only keys retain the configured TOTP challenge.
    *     tags:
    *       - WebAuthn
    *     responses:
    *       200:
-   *         description: Login succeeded or TOTP verification required.
+   *         description: Login succeeded.
    *       400:
    *         description: Challenge expired or invalid response.
    *       401:
@@ -488,7 +488,10 @@ export function registerUserWebAuthnRoutes(
         },
       );
 
-      if (userRecord.totpEnabled) {
+      if (
+        userRecord.totpEnabled &&
+        verification.authenticationInfo.userVerified !== true
+      ) {
         const deviceFingerprint = generateDeviceFingerprint(
           deviceInfo,
           getDeviceId(req),

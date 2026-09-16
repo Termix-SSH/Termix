@@ -1,3 +1,8 @@
+import {
+  fontSizeStorageKey as getFontSizeStorageKey,
+  readFontSize,
+  saveFontSize,
+} from "./font-size-storage";
 import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import {
@@ -52,7 +57,8 @@ import {
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
-import { getAltDigitShortcut } from "@/lib/app-keyboard-shortcuts";
+import { getMacLineNavigationSequence } from "@/lib/mac-line-navigation";
+import { isTabJumpHotkey } from "@/lib/tab-jump-hotkey";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import {
   highlightTerminalOutput,
@@ -207,6 +213,38 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         terminalDefaults.theme ||
         DEFAULT_TERMINAL_CONFIG.theme,
     };
+
+    // Ctrl+/- / Ctrl+wheel terminal zoom is persisted per-host and takes
+    // precedence over the configured font size, so it survives the periodic
+    // option refreshes (keepalive/refit/reconnect) that would otherwise snap
+    // the size back to config.fontSize.
+    const fontSizeStorageKey = getFontSizeStorageKey(
+      hostConfig.syncId ?? hostConfig.id,
+    );
+    const configuredFontSize = config.fontSize;
+    const fontSizePersistenceRef = useRef({
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    });
+    fontSizePersistenceRef.current = {
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    };
+    const readFontSizeOverride = () => {
+      try {
+        return readFontSize(
+          localStorage,
+          fontSizeStorageKey,
+          configuredFontSize,
+        );
+      } catch {
+        return null;
+      }
+    };
+    const fontSizeOverride = readFontSizeOverride();
+    if (fontSizeOverride !== null) {
+      config.fontSize = fontSizeOverride;
+    }
 
     const activeTheme = previewTheme || config.theme;
     const themeColors = resolveTermixThemeColors(
@@ -643,6 +681,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminalFontSizeRef.current = nextFontSize;
       terminal.options.fontSize = nextFontSize;
+      try {
+        saveFontSize(
+          localStorage,
+          fontSizePersistenceRef.current.key,
+          fontSizePersistenceRef.current.configured,
+          nextFontSize,
+        );
+      } catch {
+        // ignore persistence failures (private mode, disabled storage)
+      }
       performFit();
       hardRefresh();
     }
@@ -2404,12 +2452,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const fontFamily = resolveTerminalFontFamily(config.fontFamily);
       ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
 
+      // Resolve the effective font size: a persisted zoom override wins, but if
+      // the configured font size itself changed (e.g. user edited it in
+      // Settings) drop the override so the new configured value takes effect.
+      const effectiveFontSize = readFontSizeOverride() ?? configuredFontSize;
+
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
       terminal.options.cursorStyle = config.cursorStyle;
       terminal.options.scrollback = config.scrollback;
-      terminal.options.fontSize = config.fontSize;
-      terminalFontSizeRef.current = config.fontSize;
+      terminal.options.fontSize = effectiveFontSize;
+      terminalFontSizeRef.current = effectiveFontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
       terminal.options.macOptionIsMeta = config.macOptionIsMeta;
@@ -2480,12 +2533,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         config.customThemeColors,
       );
 
+      // Honor a persisted zoom override for the initial font size too.
+      const initialFontSize = readFontSizeOverride() ?? config.fontSize;
+
       // Set initial options before opening the terminal
       terminal.options = {
         cursorBlink: config.cursorBlink,
         cursorStyle: config.cursorStyle,
         scrollback: config.scrollback,
-        fontSize: config.fontSize,
+        fontSize: initialFontSize,
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
@@ -2964,6 +3020,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         }
 
+        const macLineNav = getMacLineNavigationSequence(e);
+        if (macLineNav) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: macLineNav }),
+            );
+          }
+          return false;
+        }
+
         // Forward global app shortcuts to AppShell directly — xterm swallows
         // all keydown events and synthetic re-dispatch is unreliable.
         // stopPropagation prevents the same event from also firing the window listener.
@@ -2988,11 +3056,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "ArrowUp",
             "ArrowDown",
           ];
-          if (arrowCodes.includes(e.code) || getAltDigitShortcut(e) !== null) {
+          if (arrowCodes.includes(e.code)) {
             e.stopPropagation();
             globalShortcutHandler.current?.(e);
             return false;
           }
+        }
+
+        if (isTabJumpHotkey(e)) {
+          e.stopPropagation();
+          globalShortcutHandler.current?.(e);
+          return false;
         }
 
         const fontZoomDirection = getTerminalFontZoomDirection(e);

@@ -10,6 +10,7 @@ import {
 } from "@/lib/web-endpoint-url";
 import {
   allowInvalidCertificateForOrigin,
+  openWebEndpointExternally,
   openWebEndpointTunnel,
   requireNumericHostId,
 } from "@/api/web-endpoint-api";
@@ -184,6 +185,19 @@ export function WebEndpointTab({
         >
           {t("webEndpoint.copyUrl")}
         </Button>
+        {isElectron() && (
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => {
+              void openWebEndpointExternally(host, endpoint).catch((error) =>
+                toast.error(error.message),
+              );
+            }}
+          >
+            {t("webEndpoint.openIsolatedWindow")}
+          </Button>
+        )}
       </div>
       <p className="px-2 py-1 text-xs text-muted-foreground">
         {t("webEndpoint.isolationNotice")}

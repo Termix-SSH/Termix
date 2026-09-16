@@ -1,3 +1,7 @@
+import {
+  currentTunnelHost,
+  resolveWebEndpointUrl,
+} from "@/lib/web-endpoint-url";
 import axios from "axios";
 import { handleApiError, tunnelApi } from "@/main-axios";
 import { isElectron } from "@/lib/electron";
@@ -101,12 +105,35 @@ export function requireNumericHostId(id: string): number {
   return numericId;
 }
 
-/** External windows share the browser's cookie jar, including on redirects. */
+/** Desktop windows use a dedicated ephemeral session, including login popups. */
 export async function openWebEndpointExternally(
-  _host: { id: string; ip: string },
-  _endpoint: WebEndpoint,
+  host: { id: string; ip: string },
+  endpoint: WebEndpoint,
 ): Promise<void> {
-  throw new Error(
-    "External opening cannot isolate your Termix session. Choose Embedded in the endpoint settings.",
-  );
+  if (!isElectron() || !window.electronAPI?.invoke) {
+    throw new Error(
+      "Isolated windows require the desktop app. Choose Embedded in the endpoint settings.",
+    );
+  }
+  const localPort =
+    endpoint.access === "tunnel"
+      ? await openWebEndpointTunnel(requireNumericHostId(host.id), endpoint.id)
+      : undefined;
+  const url = resolveWebEndpointUrl({
+    hostAddress: host.ip,
+    endpoint,
+    localPort,
+    tunnelHost: currentTunnelHost(true) ?? undefined,
+  });
+  const result = await window.electronAPI.invoke("open-isolated-web-endpoint", {
+    url,
+    ignoreCert: endpoint.ignoreCert === true,
+  });
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !("success" in result) ||
+    result.success !== true
+  )
+    throw new Error("Failed to open isolated web endpoint");
 }

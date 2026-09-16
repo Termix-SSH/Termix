@@ -210,7 +210,10 @@ export interface ElectronAPI {
       newName: string,
     ) => Promise<LocalFsResult<{ path: string }>>;
     trash: (paths: string[]) => Promise<LocalFsResult<LocalTrashResult>>;
-    ensureDir: (dirPath: string) => Promise<LocalFsResult<{ path: string }>>;
+    ensureDir: (
+      dirPath: string,
+      rootPath?: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
     exists: (paths: string[]) => Promise<LocalFsResult<{ existing: string[] }>>;
     walk: (paths: string[]) => Promise<LocalFsResult<LocalWalkResult>>;
     reveal: (targetPath: string) => Promise<LocalFsResult<unknown>>;
@@ -297,6 +300,8 @@ export interface LocalDownloadRequest {
   origin: LocalTransferOrigin;
   body: Record<string, unknown>;
   destPath: string;
+  /** Selected download folder; destPath must resolve strictly inside it (code EINVAL otherwise). */
+  rootPath: string;
   expectedSize?: number;
   /** Replace an existing file at destPath; otherwise the transfer is refused with code EEXIST. */
   overwrite?: boolean;
