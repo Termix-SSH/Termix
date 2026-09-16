@@ -477,7 +477,11 @@ export function FileWindow({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success(t("fileManager.fileDownloadedSuccessfully"));
+        toast.success(
+          t("fileManager.fileDownloadedSuccessfully", {
+            name: response.fileName || file.name,
+          }),
+        );
       }
     } catch (error: unknown) {
       console.error("Failed to download file:", error);
