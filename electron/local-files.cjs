@@ -71,6 +71,36 @@ function requireEntryName(name, what) {
   return safeName;
 }
 
+// Asserts that `candidate` (already absolute) lies strictly inside `root`
+// after normalisation on the *current* platform. `pathImpl` is injectable so
+// the Windows rules can be exercised in tests on any OS. Traversal that
+// survives normalisation ("..\\x" is a plain file name on POSIX but a parent
+// reference on Windows) is caught here, as are absolute / drive-qualified
+// names that path.join or path.resolve would let take over.
+function assertWithinRoot(rootPath, candidate, pathImpl = path) {
+  if (typeof rootPath !== "string" || !rootPath.trim()) {
+    throw new LocalFileError("EINVAL", "A download folder is required");
+  }
+  const root = pathImpl.normalize(pathImpl.resolve(rootPath));
+  const target = pathImpl.normalize(pathImpl.resolve(candidate));
+  const rel = pathImpl.relative(root, target);
+  const escapes =
+    rel === "" ||
+    rel === ".." ||
+    rel.startsWith(`..${pathImpl.sep}`) ||
+    pathImpl.isAbsolute(rel) ||
+    // A different drive on Windows yields an absolute relative path; a UNC
+    // or drive-qualified segment must never survive either.
+    rel.split(pathImpl.sep).some((seg) => seg === ".." || seg === "");
+  if (escapes) {
+    throw new LocalFileError(
+      "EINVAL",
+      `"${pathImpl.basename(candidate)}" would be written outside the selected folder`,
+    );
+  }
+  return target;
+}
+
 async function pathExists(target) {
   try {
     await fsp.lstat(target);
@@ -610,8 +640,15 @@ async function downloadToLocal(
   event,
   options,
 ) {
-  const { transferId, origin, deviceId, body, destPath, expectedSize } =
-    options || {};
+  const {
+    transferId,
+    origin,
+    deviceId,
+    body,
+    destPath,
+    rootPath,
+    expectedSize,
+  } = options || {};
   const overwrite = options?.overwrite === true;
 
   if (!transferId || !destPath) {
@@ -623,7 +660,9 @@ async function downloadToLocal(
     deviceId,
   });
 
-  const absDest = normalizeLocalPath(destPath);
+  // The renderer builds destPath from remote names; never trust that it
+  // stayed inside the folder the user picked.
+  const absDest = assertWithinRoot(rootPath, normalizeLocalPath(destPath));
   if (activeDestinations.has(absDest)) {
     throw new LocalFileError(
       "EBUSY",
@@ -838,8 +877,11 @@ function createLocalFileHandlers({
       return { trashed: targetPaths.length - failed.length, failed };
     }),
 
-    [IPC.ENSURE_DIR]: wrap(async (_event, dirPath) => {
-      const target = normalizeLocalPath(dirPath);
+    [IPC.ENSURE_DIR]: wrap(async (_event, dirPath, rootPath) => {
+      let target = normalizeLocalPath(dirPath);
+      // Transfers pass the folder the user picked; the directory skeleton of
+      // a downloaded tree must stay inside it.
+      if (rootPath !== undefined) target = assertWithinRoot(rootPath, target);
       await fsp.mkdir(target, { recursive: true });
       return { path: target };
     }),
@@ -915,6 +957,7 @@ module.exports = {
   createTargetResolver,
   publishDownload,
   defaultPublishFs,
+  assertWithinRoot,
   walkPaths,
   listDirectory,
 };

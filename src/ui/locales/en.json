@@ -2252,6 +2252,7 @@
     "localReplace": "Replace",
     "localSkipExisting": "Skip",
     "localSkippedExisting": "Skipped {{count}} existing item(s)",
+    "localUnsafeNamesSkipped": "Skipped {{count}} item(s) whose names cannot be used on this computer",
     "emptyFolder": "This folder is empty",
     "searchFiles": "Search files...",
     "upload": "Upload",

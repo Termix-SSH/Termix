@@ -60,8 +60,12 @@ export async function localPathsExist(paths: string[]): Promise<string[]> {
   return unwrap(await requireLocalFs().exists(paths)).existing;
 }
 
-export async function ensureLocalDirectory(dirPath: string): Promise<string> {
-  return unwrap(await requireLocalFs().ensureDir(dirPath)).path;
+/** Creates `dirPath` (and parents). With `rootPath`, refuses anything outside it. */
+export async function ensureLocalDirectory(
+  dirPath: string,
+  rootPath?: string,
+): Promise<string> {
+  return unwrap(await requireLocalFs().ensureDir(dirPath, rootPath)).path;
 }
 
 export async function walkLocalPaths(

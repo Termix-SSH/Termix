@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   LOCAL_FILES_DRAG_MIME,
   REMOTE_FILES_DRAG_MIME,
+  UnsafeLocalNameError,
+  assertSafeLocalComponent,
+  buildLocalDestination,
   describeLocalKind,
   formatLocalModified,
   isLocalFilesDrag,
@@ -100,6 +103,88 @@ describe("path helpers", () => {
     expect(remoteDirForRelativePath("/dst", "proj/src/main.rs")).toBe(
       "/dst/proj/src",
     );
+  });
+});
+
+describe("download destination safety", () => {
+  const WIN = "\\";
+  const POSIX = "/";
+
+  it("keeps ordinary nested folders under the selected directory (Windows)", () => {
+    expect(
+      buildLocalDestination(
+        "C:\\Downloads\\selected",
+        "docs/2026/report.pdf",
+        WIN,
+      ),
+    ).toBe("C:\\Downloads\\selected\\docs\\2026\\report.pdf");
+    expect(
+      buildLocalDestination("C:\\Downloads\\selected\\", "a.txt", WIN),
+    ).toBe("C:\\Downloads\\selected\\a.txt");
+  });
+
+  it("rejects backslash traversal in a POSIX file name on Windows", () => {
+    // The reviewer's reproduction: "..\\outside.txt" is a legal POSIX name.
+    expect(() =>
+      buildLocalDestination("C:\\Downloads\\selected", "..\\outside.txt", WIN),
+    ).toThrow(UnsafeLocalNameError);
+    expect(() =>
+      buildLocalDestination(
+        "C:\\Downloads\\selected",
+        "sub/..\\..\\x.txt",
+        WIN,
+      ),
+    ).toThrow(UnsafeLocalNameError);
+    expect(() =>
+      buildLocalDestination("C:\\Downloads\\selected", "dir\\file.txt", WIN),
+    ).toThrow(UnsafeLocalNameError);
+  });
+
+  it("rejects absolute and drive-qualified names on Windows", () => {
+    for (const name of [
+      "C:\\Windows\\evil.dll",
+      "C:evil.txt",
+      "D:",
+      "\\\\server\\share\\x",
+      "\\absolute.txt",
+    ]) {
+      expect(() =>
+        buildLocalDestination("C:\\Downloads\\selected", name, WIN),
+      ).toThrow(UnsafeLocalNameError);
+    }
+  });
+
+  it("rejects names Windows cannot store: reserved devices, trailing dots/spaces, control chars", () => {
+    for (const name of [
+      "CON",
+      "nul.txt",
+      "COM1",
+      "report.",
+      "report ",
+      "a\u0007b",
+      "q?.txt",
+      "a|b",
+    ]) {
+      expect(() => assertSafeLocalComponent(name, WIN)).toThrow(
+        UnsafeLocalNameError,
+      );
+    }
+    expect(assertSafeLocalComponent("console.log", WIN)).toBe("console.log");
+    expect(assertSafeLocalComponent("nulled.txt", WIN)).toBe("nulled.txt");
+  });
+
+  it("rejects traversal and separators on every platform, but allows POSIX-legal backslashes on POSIX", () => {
+    for (const rel of ["..", "../x", "a/../../x", "./x", "a\0b", ""]) {
+      expect(() => buildLocalDestination("/home/max/dl", rel, POSIX)).toThrow(
+        UnsafeLocalNameError,
+      );
+    }
+    // On macOS/Linux a backslash is just a character in a file name and the
+    // result is still inside the selected folder.
+    expect(
+      buildLocalDestination("/home/max/dl", "..\\outside.txt", POSIX),
+    ).toBe("/home/max/dl/..\\outside.txt");
+    expect(buildLocalDestination("/", "etc/hosts", POSIX)).toBe("/etc/hosts");
   });
 });
 

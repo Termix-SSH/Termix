@@ -103,6 +103,100 @@ export function joinLocalPath(
   return `${trimmedBase}${sep}${name}`;
 }
 
+/** Thrown when a remote name cannot be used as a local path component. */
+export class UnsafeLocalNameError extends Error {
+  readonly code = "EINVAL";
+  constructor(
+    readonly name: string,
+    readonly reason: string,
+  ) {
+    super(`Unsafe file name "${name}": ${reason}`);
+  }
+}
+
+// Windows refuses these device names in any directory, with any extension.
+const WINDOWS_RESERVED_NAMES =
+  /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.[^.]*)?$/i;
+
+/**
+ * Validates one remote path component for use as a single local path
+ * segment on the destination platform (`separator` "\\" means Windows).
+ *
+ * A POSIX file name may legally contain "\\", ":" or end in a dot, all of
+ * which Windows treats as separators, drive prefixes or strips — so a remote
+ * name like "..\\outside.txt" would otherwise be normalised out of the
+ * selected download folder. Anything that is not a plain name is rejected;
+ * traversal ("..") and separators are rejected on every platform.
+ */
+export function assertSafeLocalComponent(
+  name: string,
+  separator: string,
+): string {
+  if (name === "" || name === "." || name === "..") {
+    throw new UnsafeLocalNameError(name, "empty or traversal component");
+  }
+  if (name.includes("/") || name.includes("\0")) {
+    throw new UnsafeLocalNameError(name, "contains a path separator or NUL");
+  }
+  if (separator === "\\") {
+    if (/[\\:*?"<>|]/.test(name)) {
+      throw new UnsafeLocalNameError(
+        name,
+        "contains a character Windows does not allow in file names",
+      );
+    }
+    if (/[\u0001-\u001f]/.test(name)) {
+      throw new UnsafeLocalNameError(name, "contains control characters");
+    }
+    if (/[. ]$/.test(name)) {
+      throw new UnsafeLocalNameError(
+        name,
+        "Windows strips trailing dots and spaces",
+      );
+    }
+    if (WINDOWS_RESERVED_NAMES.test(name)) {
+      throw new UnsafeLocalNameError(name, "reserved device name on Windows");
+    }
+  }
+  return name;
+}
+
+function samePathPrefix(a: string, b: string, separator: string): boolean {
+  return separator === "\\" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+/**
+ * Builds the local destination for a "/"-separated relative remote path
+ * under `localDir`, validating every component for the destination platform
+ * and asserting the result stays strictly inside `localDir`.
+ */
+export function buildLocalDestination(
+  localDir: string,
+  relativePath: string,
+  separator: string,
+): string {
+  const sep = separator || "/";
+  const parts = relativePath.split("/").filter((p) => p !== "");
+  if (parts.length === 0) {
+    throw new UnsafeLocalNameError(relativePath, "empty path");
+  }
+  const dest = parts.reduce(
+    (acc, part) => joinLocalPath(acc, assertSafeLocalComponent(part, sep), sep),
+    localDir,
+  );
+  const root = localDir.endsWith(sep) ? localDir : `${localDir}${sep}`;
+  if (
+    !samePathPrefix(dest.slice(0, root.length), root, sep) ||
+    dest.length <= root.length
+  ) {
+    throw new UnsafeLocalNameError(
+      relativePath,
+      "destination escapes the selected folder",
+    );
+  }
+  return dest;
+}
+
 export function remoteBaseName(remotePath: string): string {
   const trimmed = remotePath.replace(/\/+$/, "");
   return trimmed.split("/").pop() || trimmed || "/";

@@ -18,7 +18,8 @@ import {
   walkLocalPaths,
 } from "@/lib/local-files.ts";
 import {
-  joinLocalPath,
+  UnsafeLocalNameError,
+  buildLocalDestination,
   joinRemotePath,
   planRemoteDirectories,
   remoteBaseName,
@@ -326,11 +327,10 @@ export function useLocalTransfers({
       const sessionId = sshSessionId;
 
       const { separator } = await getLocalHome();
+      // Every remote name is validated for the local platform and the result
+      // must stay inside `localDir`; anything else is reported and skipped.
       const toLocalPath = (relativePath: string) =>
-        relativePath
-          .split("/")
-          .filter(Boolean)
-          .reduce((acc, part) => joinLocalPath(acc, part, separator), localDir);
+        buildLocalDestination(localDir, relativePath, separator);
 
       // Expand directories into a flat file plan first so the toast can show
       // a real total. Listing is the only part that goes through the
@@ -396,9 +396,44 @@ export function useLocalTransfers({
         return;
       }
 
+      // Drop anything whose remote name cannot become a safe local path
+      // (separators, traversal, Windows-invalid characters). These never
+      // reach the filesystem; the user is told how many were skipped.
+      const unsafe: string[] = [];
+      const safeDest = (relativePath: string): string | null => {
+        try {
+          return toLocalPath(relativePath);
+        } catch (error) {
+          if (error instanceof UnsafeLocalNameError) {
+            unsafe.push(relativePath);
+            return null;
+          }
+          throw error;
+        }
+      };
+      const plannedDirs = emptyDirs
+        .map((dir) => ({ dir, dest: safeDest(dir) }))
+        .filter((d): d is { dir: string; dest: string } => d.dest !== null);
+      const plannedFiles = plan
+        .map((entry) => ({ entry, dest: safeDest(entry.relativePath) }))
+        .filter(
+          (p): p is { entry: RemoteDownloadPlanEntry; dest: string } =>
+            p.dest !== null,
+        );
+      if (unsafe.length > 0) {
+        toast.error(
+          t("fileManager.localUnsafeNamesSkipped", { count: unsafe.length }),
+          { description: unsafe.slice(0, 3).join(", ") },
+        );
+        console.warn("Skipped remote items with unsafe local names:", unsafe);
+      }
+      if (plannedFiles.length === 0 && plannedDirs.length === 0) {
+        return;
+      }
+
       // Collision policy: never replace silently. Find destinations that
       // already exist and let the user choose Replace or Skip for the batch.
-      const destinations = plan.map((entry) => toLocalPath(entry.relativePath));
+      const destinations = plannedFiles.map((p) => p.dest);
       let existing: Set<string>;
       try {
         existing = new Set(await localPathsExist(destinations));
@@ -415,18 +450,16 @@ export function useLocalTransfers({
       }
       const skipped = overwriteExisting
         ? []
-        : plan.filter((_, i) => existing.has(destinations[i]));
+        : plannedFiles.filter(({ dest }) => existing.has(dest));
       const work = overwriteExisting
-        ? plan.map((entry, i) => ({ entry, dest: destinations[i] }))
-        : plan
-            .map((entry, i) => ({ entry, dest: destinations[i] }))
-            .filter(({ dest }) => !existing.has(dest));
+        ? plannedFiles
+        : plannedFiles.filter(({ dest }) => !existing.has(dest));
       if (skipped.length > 0) {
         toast.info(
           t("fileManager.localSkippedExisting", { count: skipped.length }),
         );
       }
-      if (work.length === 0 && emptyDirs.length === 0) {
+      if (work.length === 0 && plannedDirs.length === 0) {
         onLocalChanged(localDir);
         return;
       }
@@ -437,9 +470,9 @@ export function useLocalTransfers({
         work.length,
         workBytes,
         async ({ isCancelled, setCurrentTransfer, report }) => {
-          for (const dir of emptyDirs) {
+          for (const { dest } of plannedDirs) {
             if (isCancelled()) throw new TransferCancelledError();
-            await ensureLocalDirectory(toLocalPath(dir));
+            await ensureLocalDirectory(dest, localDir);
           }
 
           const failed: string[] = [];
@@ -456,6 +489,7 @@ export function useLocalTransfers({
                 sessionId,
                 remotePath: entry.remotePath,
                 destPath: dest,
+                rootPath: localDir,
                 expectedSize: entry.size,
                 overwrite: overwriteExisting && existing.has(dest),
                 transferId,

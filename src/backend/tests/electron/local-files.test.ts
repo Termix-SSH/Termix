@@ -27,6 +27,11 @@ type PublishFs = {
 };
 
 const localFiles = require("../../../../electron/local-files.cjs") as {
+  assertWithinRoot: (
+    rootPath: string,
+    candidate: string,
+    pathImpl?: typeof path,
+  ) => string;
   publishDownload: (
     partialPath: string,
     absDest: string,
@@ -257,6 +262,7 @@ describe("local-files download boundary", () => {
       origin: "local",
       body: { sessionId: "1", path: "/remote/file.bin" },
       destPath: dest,
+      rootPath: root,
       ...extra,
     });
 
@@ -312,6 +318,7 @@ describe("local-files download boundary", () => {
         origin: "local",
         body: {},
         destPath: dest,
+        rootPath: root,
       });
       await new Promise((r) => setTimeout(r, 100));
       await fsp.writeFile(dest, "someone else wrote this");
@@ -339,6 +346,7 @@ describe("local-files download boundary", () => {
         origin: "local",
         body: {},
         destPath: dest,
+        rootPath: root,
       });
       await new Promise((r) => setTimeout(r, 50));
       const second = await slowHandlers[localFiles.IPC.DOWNLOAD](fakeEvent, {
@@ -346,6 +354,7 @@ describe("local-files download boundary", () => {
         origin: "local",
         body: {},
         destPath: dest,
+        rootPath: root,
       });
       expect(second.success).toBe(false);
       expect(second.code).toBe("EBUSY");
@@ -387,6 +396,7 @@ describe("local-files download boundary", () => {
         origin: "local",
         body: {},
         destPath: path.join(root, "never.bin"),
+        rootPath: root,
       });
       expect(bad.success).toBe(false);
       expect(bad.error).toMatch(/no route/);
@@ -433,6 +443,134 @@ function windowsLikeFs(
     ...overrides,
   };
 }
+
+describe("download destination containment", () => {
+  const win = path.win32;
+  const root = "C:\\Downloads\\selected";
+
+  it("accepts ordinary nested destinations on Windows", () => {
+    expect(
+      localFiles.assertWithinRoot(root, "C:\\Downloads\\selected\\a.txt", win),
+    ).toBe("C:\\Downloads\\selected\\a.txt");
+    expect(
+      localFiles.assertWithinRoot(
+        root,
+        "C:\\Downloads\\selected\\docs\\2026\\report.pdf",
+        win,
+      ),
+    ).toBe("C:\\Downloads\\selected\\docs\\2026\\report.pdf");
+    // case-insensitive drive/dir comparison, like the filesystem
+    expect(
+      localFiles.assertWithinRoot(root, "c:\\downloads\\SELECTED\\b.txt", win),
+    ).toBe("c:\\downloads\\SELECTED\\b.txt");
+  });
+
+  it("rejects backslash traversal that normalises out of the root on Windows", () => {
+    // The reviewer's reproduction: selected\..\outside.txt -> Downloads\outside.txt
+    expect(() =>
+      localFiles.assertWithinRoot(
+        root,
+        "C:\\Downloads\\selected\\..\\outside.txt",
+        win,
+      ),
+    ).toThrow(/outside the selected folder/);
+    expect(() =>
+      localFiles.assertWithinRoot(
+        root,
+        "C:\\Downloads\\selected\\sub\\..\\..\\..\\x.txt",
+        win,
+      ),
+    ).toThrow(/outside the selected folder/);
+    // the root itself is not a valid file destination
+    expect(() => localFiles.assertWithinRoot(root, root, win)).toThrow(
+      /outside the selected folder/,
+    );
+  });
+
+  it("rejects absolute, drive-qualified and UNC destinations on Windows", () => {
+    for (const dest of [
+      "C:\\Windows\\evil.dll",
+      "D:\\Downloads\\selected\\x.txt",
+      "\\\\server\\share\\x.txt",
+      "C:\\Downloads\\selected-other\\x.txt",
+    ]) {
+      expect(() => localFiles.assertWithinRoot(root, dest, win)).toThrow(
+        /outside the selected folder/,
+      );
+    }
+  });
+
+  it("requires a root and rejects POSIX traversal too", () => {
+    expect(() => localFiles.assertWithinRoot("", "/tmp/x", path.posix)).toThrow(
+      /download folder is required/,
+    );
+    expect(() =>
+      localFiles.assertWithinRoot(
+        "/home/max/dl",
+        "/home/max/dl/../x",
+        path.posix,
+      ),
+    ).toThrow(/outside the selected folder/);
+    expect(
+      localFiles.assertWithinRoot(
+        "/home/max/dl",
+        "/home/max/dl/..\\x",
+        path.posix,
+      ),
+    ).toBe("/home/max/dl/..\\x");
+  });
+
+  it("refuses a download whose destination escapes the root, before any network or disk write", async () => {
+    const payload = crypto.randomBytes(1024);
+    const backend = await startBackend(payload);
+    const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), "termix-contain-"));
+    const selected = path.join(tmp, "selected");
+    await fsp.mkdir(selected);
+    try {
+      const handlers = localFiles.createLocalFileHandlers({
+        net: fakeNet,
+        shell: {},
+        localBaseUrl: backend.url,
+      });
+      const requestsBefore = backend.seen.length;
+      const result = await handlers[localFiles.IPC.DOWNLOAD](fakeEvent, {
+        transferId: "escape-1",
+        origin: "local",
+        body: { sessionId: "1", path: "/remote/file.bin" },
+        destPath: path.join(selected, "..", "outside.txt"),
+        rootPath: selected,
+      });
+      expect(result.success).toBe(false);
+      expect(result.code).toBe("EINVAL");
+      expect(backend.seen.length).toBe(requestsBefore);
+      expect(await fsp.readdir(tmp)).toEqual(["selected"]);
+
+      // and the same for the directory skeleton
+      const dir = await handlers[localFiles.IPC.ENSURE_DIR](
+        fakeEvent,
+        path.join(selected, "..", "escaped-dir"),
+        selected,
+      );
+      expect(dir.success).toBe(false);
+      expect(dir.code).toBe("EINVAL");
+      expect(await fsp.readdir(tmp)).toEqual(["selected"]);
+
+      // a missing root is refused as well
+      const noRoot = await handlers[localFiles.IPC.DOWNLOAD](fakeEvent, {
+        transferId: "escape-2",
+        origin: "local",
+        body: { sessionId: "1", path: "/remote/file.bin" },
+        destPath: path.join(selected, "ok.bin"),
+      });
+      expect(noRoot.success).toBe(false);
+      expect(noRoot.code).toBe("EINVAL");
+      expect(await fsp.readdir(selected)).toEqual([]);
+    } finally {
+      backend.close();
+      await fsp.rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("local-files replace primitive (Windows-safe overwrite)", () => {
   let root: string;
@@ -557,6 +695,7 @@ describe("local-files replace primitive (Windows-safe overwrite)", () => {
         origin: "local",
         body: { sessionId: "1", path: "/remote/file.bin" },
         destPath: dest,
+        rootPath: root,
         overwrite: true,
       });
 

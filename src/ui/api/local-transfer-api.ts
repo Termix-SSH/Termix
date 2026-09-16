@@ -119,6 +119,8 @@ export async function downloadSessionFileToLocal(options: {
   sessionId: string;
   remotePath: string;
   destPath: string;
+  /** The folder the user picked; the main process refuses any destination outside it. */
+  rootPath: string;
   expectedSize?: number;
   overwrite?: boolean;
   transferId?: string;
@@ -140,6 +142,7 @@ export async function downloadSessionFileToLocal(options: {
       deviceId: getDeviceId() ?? undefined,
       body: { sessionId: options.sessionId, path: options.remotePath },
       destPath: options.destPath,
+      rootPath: options.rootPath,
       expectedSize: options.expectedSize,
       overwrite: options.overwrite === true,
     });
