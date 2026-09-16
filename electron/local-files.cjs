@@ -101,6 +101,45 @@ function assertWithinRoot(rootPath, candidate, pathImpl = path) {
   return target;
 }
 
+// Resolve a deliberately selected linked root once, but never follow links
+// supplied as descendants of a downloaded tree.
+async function prepareDownloadPath(rootPath, candidate, directory = false) {
+  const target = assertWithinRoot(rootPath, normalizeLocalPath(candidate));
+  const selected = path.resolve(rootPath);
+  const realRoot = await fsp.realpath(selected);
+  if (!(await fsp.stat(realRoot)).isDirectory()) {
+    throw new LocalFileError("EINVAL", "The download root is not a directory");
+  }
+  const parts = path.relative(selected, target).split(path.sep);
+  let current = realRoot;
+  for (let i = 0; i < parts.length; i++) {
+    current = path.join(current, parts[i]);
+    const needsDirectory = directory || i < parts.length - 1;
+    if (needsDirectory) {
+      await fsp.mkdir(current).catch((error) => {
+        if (error.code !== "EEXIST") throw error;
+      });
+    }
+    const stat = await fsp.lstat(current).catch((error) => {
+      if (error.code === "ENOENT" && !needsDirectory) return null;
+      throw error;
+    });
+    if (stat?.isSymbolicLink()) {
+      throw new LocalFileError(
+        "EINVAL",
+        "Downloads cannot follow links inside the selected folder",
+      );
+    }
+    if (needsDirectory && !stat.isDirectory()) {
+      throw new LocalFileError(
+        "ENOTDIR",
+        "A download parent is not a directory",
+      );
+    }
+  }
+  return { root: realRoot, path: current };
+}
+
 async function pathExists(target) {
   try {
     await fsp.lstat(target);
@@ -662,7 +701,8 @@ async function downloadToLocal(
 
   // The renderer builds destPath from remote names; never trust that it
   // stayed inside the folder the user picked.
-  const absDest = assertWithinRoot(rootPath, normalizeLocalPath(destPath));
+  const destination = await prepareDownloadPath(rootPath, destPath);
+  const absDest = destination.path;
   if (activeDestinations.has(absDest)) {
     throw new LocalFileError(
       "EBUSY",
@@ -671,7 +711,10 @@ async function downloadToLocal(
   }
   activeDestinations.add(absDest);
 
-  const partialPath = partialPathFor(absDest, transferId);
+  const partialPath = partialPathFor(
+    path.join(destination.root, path.basename(absDest)),
+    transferId,
+  );
   const report = makeProgressReporter(event.sender, transferId);
   const state = {
     cancelled: false,
@@ -689,7 +732,6 @@ async function downloadToLocal(
         `"${path.basename(absDest)}" already exists`,
       );
     }
-    await fsp.mkdir(path.dirname(absDest), { recursive: true });
 
     request = createNetRequest(net, event, "POST", url);
     for (const [key, value] of Object.entries(toHeaderMap(headers))) {
@@ -762,6 +804,7 @@ async function downloadToLocal(
       request.end();
     });
 
+    await prepareDownloadPath(destination.root, absDest);
     await publishDownload(
       partialPath,
       absDest,
@@ -881,8 +924,11 @@ function createLocalFileHandlers({
       let target = normalizeLocalPath(dirPath);
       // Transfers pass the folder the user picked; the directory skeleton of
       // a downloaded tree must stay inside it.
-      if (rootPath !== undefined) target = assertWithinRoot(rootPath, target);
-      await fsp.mkdir(target, { recursive: true });
+      if (rootPath !== undefined) {
+        target = (await prepareDownloadPath(rootPath, target, true)).path;
+      } else {
+        await fsp.mkdir(target, { recursive: true });
+      }
       return { path: target };
     }),
 
