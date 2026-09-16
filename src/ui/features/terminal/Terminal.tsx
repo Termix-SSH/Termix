@@ -52,6 +52,7 @@ import {
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
+import { getAltDigitShortcut } from "@/lib/app-keyboard-shortcuts";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import {
   highlightTerminalOutput,
@@ -2987,7 +2988,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "ArrowUp",
             "ArrowDown",
           ];
-          if (arrowCodes.includes(e.code) || /^Digit[1-9]$/.test(e.code)) {
+          if (arrowCodes.includes(e.code) || getAltDigitShortcut(e) !== null) {
             e.stopPropagation();
             globalShortcutHandler.current?.(e);
             return false;
