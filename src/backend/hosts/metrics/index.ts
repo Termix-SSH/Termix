@@ -35,6 +35,7 @@ import { collectNetworkMetrics } from "./widgets/network-collector.js";
 import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
+import { detectPlatform } from "./widgets/common-utils.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
@@ -73,6 +74,7 @@ import {
 } from "./helpers.js";
 import {
   type HostStatus,
+  isHostKeyVerificationError,
   statusAfterAuthentication,
   statusAfterReachabilityCheck,
 } from "./host-status.js";
@@ -97,6 +99,7 @@ import {
   requestQueue,
   statusPollLimiter,
 } from "./state.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -146,6 +149,7 @@ interface SSHHostWithCredentials {
 type StatusEntry = {
   status: HostStatus;
   lastChecked: string;
+  reason?: "host_key_changed";
 };
 
 interface StatsConfig {
@@ -626,6 +630,10 @@ class PollingManager {
                 this.statusStore.get(refreshedHost.id)?.status,
               ),
         lastChecked: new Date().toISOString(),
+        ...(isOnline &&
+        this.statusStore.get(refreshedHost.id)?.reason === "host_key_changed"
+          ? { reason: "host_key_changed" as const }
+          : {}),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
       if (isOnline && this.activeViewers.has(refreshedHost.id)) {
@@ -708,6 +716,7 @@ class PollingManager {
       pollingBackoff.reset(refreshedHost.id);
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
+      const hostKeyChanged = isHostKeyVerificationError(error);
       if (!authenticated) {
         this.metricsAuthenticatedHosts.delete(refreshedHost.id);
         this.statusStore.set(refreshedHost.id, {
@@ -718,6 +727,7 @@ class PollingManager {
                 this.statusStore.get(refreshedHost.id)?.status,
               ),
           lastChecked: new Date().toISOString(),
+          ...(hostKeyChanged ? { reason: "host_key_changed" as const } : {}),
         });
       }
       const isAuthError =
@@ -737,6 +747,19 @@ class PollingManager {
             hostId: refreshedHost.id,
           });
         }
+        return;
+      }
+
+      if (hostKeyChanged) {
+        authFailureTracker.recordFailure(refreshedHost.id, "HOST_KEY", true);
+        statsLogger.error(
+          "Stats collector host key verification failed",
+          error,
+          {
+            operation: "stats_host_key_verification_failed",
+            hostId: refreshedHost.id,
+          },
+        );
         return;
       }
 
@@ -1738,17 +1761,19 @@ async function collectMetrics(
 
       const collectFn = async (client: Client) => {
         onAuthenticated?.();
-        const cpu = await collectCpuMetrics(client);
-        const memory = await collectMemoryMetrics(client);
+        const platform = await detectPlatform(client);
+        const cpu = await collectCpuMetrics(client, platform);
+        const memory = await collectMemoryMetrics(client, platform);
         const disk = await collectDiskMetrics(
           client,
           excludedMounts,
           monitoredMounts,
+          platform,
         );
-        const network = await collectNetworkMetrics(client);
-        const uptime = await collectUptimeMetrics(client);
+        const network = await collectNetworkMetrics(client, platform);
+        const uptime = await collectUptimeMetrics(client, platform);
         const processes = await collectProcessesMetrics(client);
-        const system = await collectSystemMetrics(client);
+        const system = await collectSystemMetrics(client, platform);
 
         let login_stats = {
           recentLogins: [],
@@ -1868,6 +1893,8 @@ async function collectMetrics(
           error.message.includes("Invalid SSH key format")
         ) {
           authFailureTracker.recordFailure(host.id, "AUTH", true);
+        } else if (isHostKeyVerificationError(error)) {
+          authFailureTracker.recordFailure(host.id, "HOST_KEY", true);
         } else if (
           error.message.includes("authentication") ||
           error.message.includes("Permission denied") ||
@@ -3103,20 +3130,26 @@ process.on("SIGTERM", () => {
 });
 
 const PORT = 30005;
-app.listen(PORT, "127.0.0.1", async () => {
-  try {
-    await authManager.initialize();
-  } catch (err) {
-    statsLogger.error("Failed to initialize AuthManager", err, {
-      operation: "auth_init_error",
-    });
-  }
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: statsLogger,
+  serviceName: "metrics",
+  onListening: async () => {
+    try {
+      await authManager.initialize();
+    } catch (err) {
+      statsLogger.error("Failed to initialize AuthManager", err, {
+        operation: "auth_init_error",
+      });
+    }
 
-  setInterval(
-    () => {
-      authFailureTracker.cleanup();
-      pollingBackoff.cleanup();
-    },
-    10 * 60 * 1000,
-  );
+    setInterval(
+      () => {
+        authFailureTracker.cleanup();
+        pollingBackoff.cleanup();
+      },
+      10 * 60 * 1000,
+    );
+  },
 });

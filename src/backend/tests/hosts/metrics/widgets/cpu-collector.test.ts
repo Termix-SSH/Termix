@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { parseCpuLine } from "../../../../hosts/metrics/widgets/cpu-collector.js";
+import {
+  parseCpuLine,
+  parseDarwinCpuUsageLine,
+} from "../../../../hosts/metrics/widgets/cpu-collector.js";
 
 describe("parseCpuLine", () => {
   it("parses a standard /proc/stat cpu line", () => {
@@ -25,5 +28,18 @@ describe("parseCpuLine", () => {
 
   it("returns undefined when there are fewer than 4 numeric fields", () => {
     expect(parseCpuLine("cpu 1 2 3")).toBeUndefined();
+  });
+});
+
+describe("parseDarwinCpuUsageLine", () => {
+  it("parses macOS `top -l 1` CPU usage line", () => {
+    const result = parseDarwinCpuUsageLine(
+      "CPU usage: 12.34% user, 5.66% sys, 82.00% idle",
+    );
+    expect(result?.percent).toBeCloseTo(18.0, 5);
+  });
+
+  it("returns undefined for unrelated lines", () => {
+    expect(parseDarwinCpuUsageLine("Processes: 400 total")).toBeUndefined();
   });
 });

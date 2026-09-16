@@ -17,7 +17,11 @@ import { nanoid } from "nanoid";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
-import { parseUserAgent } from "../../utils/user-agent-parser.js";
+import {
+  generateDeviceFingerprint,
+  getDeviceId,
+  parseUserAgent,
+} from "../../utils/user-agent-parser.js";
 import {
   createCurrentUserRepository,
   createCurrentWebauthnCredentialRepository,
@@ -396,7 +400,7 @@ export function registerUserWebAuthnRoutes(
    * /users/webauthn/authenticate/verify:
    *   post:
    *     summary: Finish passkey login
-   *     description: Verifies the WebAuthn assertion and issues a session token. A verified security key already satisfies 2FA, so TOTP is not required.
+   *     description: Verifies the WebAuthn assertion and issues a session token. Verified WebAuthn user verification satisfies 2FA; possession-only keys retain the configured TOTP challenge.
    *     tags:
    *       - WebAuthn
    *     responses:
@@ -483,6 +487,32 @@ export function registerUserWebAuthnRoutes(
           lastUsedAt: new Date().toISOString(),
         },
       );
+
+      if (
+        userRecord.totpEnabled &&
+        verification.authenticationInfo.userVerified !== true
+      ) {
+        const deviceFingerprint = generateDeviceFingerprint(
+          deviceInfo,
+          getDeviceId(req),
+        );
+        const isTrusted = deviceFingerprint
+          ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
+          : false;
+
+        if (!isTrusted) {
+          const tempToken = await authManager.generateJWTToken(userRecord.id, {
+            pendingTOTP: true,
+            expiresIn: "10m",
+          });
+          return res.json({
+            success: true,
+            requires_totp: true,
+            temp_token: tempToken,
+            rememberMe: !!req.body?.rememberMe,
+          });
+        }
+      }
 
       const token = await authManager.generateJWTToken(userRecord.id, {
         rememberMe: !!req.body?.rememberMe,

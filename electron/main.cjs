@@ -13,6 +13,7 @@ const {
 } = require("electron");
 const path = require("path");
 const { getUnpackedAppRoot } = require("./backend-paths.cjs");
+const { classifyBackendFailure } = require("./backend-failure.cjs");
 const fs = require("fs");
 const os = require("os");
 const https = require("https");
@@ -31,6 +32,7 @@ const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { resolveLocalShell } = require("./local-shell.cjs");
+const { registerLocalFileHandlers } = require("./local-files.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -632,6 +634,17 @@ app.commandLine.appendSwitch("--enable-features=NetworkService");
 let mainWindow = null;
 let backendProcess = null;
 let backendStartFailed = false;
+// Why the embedded backend died, once it has. Null while it is healthy
+// or still starting. The renderer polls this to tell "still booting"
+// (keep waiting) apart from "never coming back" (show the reason).
+let backendFailure = null;
+// Set while we are deliberately tearing the backend down on quit, so a
+// SIGKILL we sent ourselves is not reported to the user as a crash.
+let backendStopRequested = false;
+// Tail of the embedded backend's stderr, kept only so a failed start can be
+// classified after the fact.
+const BACKEND_STDERR_TAIL_LIMIT = 8192;
+let backendStderrTail = "";
 let tray = null;
 let isQuitting = false;
 const tempFiles = new Map();
@@ -974,6 +987,9 @@ function reapOrphanedBackendProcess() {
 
 function startBackendServer() {
   reapOrphanedBackendProcess();
+  backendFailure = null;
+  backendStopRequested = false;
+  backendStderrTail = "";
   return new Promise((resolve) => {
     const { entryPath, backendCwd } = getBackendPaths();
 
@@ -983,6 +999,7 @@ function startBackendServer() {
 
     if (!fs.existsSync(entryPath)) {
       logToFile("Backend entry not found:", entryPath);
+      backendFailure = { reason: "crashed", port: null };
       resolve(false);
       return;
     }
@@ -1041,14 +1058,32 @@ function startBackendServer() {
       }
     });
 
+    // The reason for a failed start is only ever visible in what the child
+    // wrote to stderr before dying, so keep a bounded tail of it. Bounded
+    // because a backend that stays up for days can otherwise log without
+    // limit into a buffer nothing ever drains.
     backendProcess.stderr.on("data", (data) => {
-      logToFile("[backend:stderr]", data.toString().trim());
+      const chunk = data.toString();
+      backendStderrTail = (backendStderrTail + chunk).slice(
+        -BACKEND_STDERR_TAIL_LIMIT,
+      );
+      logToFile("[backend:stderr]", chunk.trim());
     });
 
     backendProcess.on("exit", (code, signal) => {
       logToFile(`Backend process exited with code ${code}, signal ${signal}`);
       if (!resolved && code !== 0) {
         backendStartFailed = true;
+      }
+      // Classified whether or not the ready promise already settled: the
+      // 15s ready timeout resolves optimistically, so a backend that dies
+      // at second 20 still has to be reported rather than silently dropped.
+      // backendStopRequested is the only evidence that an exit was asked
+      // for, so it is the sole guard here -- past it, every exit means the
+      // backend is gone and the renderer must stop waiting for it.
+      if (!backendStopRequested) {
+        backendFailure = classifyBackendFailure(backendStderrTail);
+        logToFile("Backend failure classified as:", backendFailure.reason);
       }
       backendProcess = null;
       clearBackendPidFile();
@@ -1061,6 +1096,7 @@ function startBackendServer() {
 
     backendProcess.on("error", (err) => {
       logToFile("Failed to start backend process:", err.message);
+      backendFailure = { reason: "crashed", port: null };
       backendProcess = null;
       if (!resolved) {
         resolved = true;
@@ -1083,6 +1119,7 @@ function stopBackendServer() {
   if (!backendProcess) return;
 
   console.log("Stopping embedded backend server...");
+  backendStopRequested = true;
 
   try {
     backendProcess.send({ type: "shutdown" });
@@ -1527,6 +1564,10 @@ ipcMain.handle("get-embedded-server-status", () => {
   return {
     running:
       backendProcess !== null && !backendProcess.killed && !backendStartFailed,
+    // A backend that is merely slow to boot reports no failure, so the
+    // renderer keeps waiting for it. Only a classified failure means the
+    // process is gone for good and waiting is pointless.
+    failure: backendFailure,
     dataDir: isDev ? null : getBackendDataDir(),
   };
 });
@@ -3232,6 +3273,10 @@ async function testServerConnection(
 }
 
 ipcMain.handle("test-server-connection", testServerConnection);
+
+// Local disk browsing + streamed local<->remote transfers for the file
+// manager's dual-pane mode (see electron/local-files.cjs).
+registerLocalFileHandlers({ ipcMain, shell });
 
 function createMenu() {
   if (process.platform === "darwin") {

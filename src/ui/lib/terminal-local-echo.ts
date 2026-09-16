@@ -1,7 +1,7 @@
 export type LocalEchoMode = "off" | "auto" | "on";
 
 const PASSWORD_PROMPT =
-  /(?:password|passphrase|verification code|one[- ]time|otp|token)\s*[:：]?\s*$/i;
+  /(?:password|passphrase|verification code|one[- ]time|otp|token)(?:[^\r\n:：]{0,160})?[:：]\s*$/i;
 const SAFE_INPUT = /^[\x20-\x7e]$/;
 
 type PendingCharacter = { value: string; sentAt: number; predicted: boolean };

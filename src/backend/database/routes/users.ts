@@ -42,6 +42,7 @@ import {
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserImageStorageRoutes } from "./user-image-storage-routes.js";
+import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerTouchInputSettingsRoutes } from "./touch-input-settings-routes.js";
 import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
@@ -3061,6 +3062,7 @@ registerAcmeSSLRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);
 registerUserImageStorageRoutes(router, requireAdmin);
+registerBrandingRoutes(router, requireAdmin);
 
 registerSSOProviderRoutes(router);
 registerLDAPAuthRoutes(router);

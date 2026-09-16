@@ -237,7 +237,7 @@ Un CLI `termix` pour votre shell et vos scripts. Ouvrez des terminaux, lancez un
 <td width="50%" valign="top">
 
 **Sécurité:**
-Les mots de passe, les clés et les autres secrets sont chiffrés par utilisateur, et les fichiers de base de données eux-mêmes peuvent être chiffrés sur le disque. Voir la [documentation](https://docs.termix.site/security) pour le détail.
+Les mots de passe, les clés et les autres secrets sont chiffrés par utilisateur, et les fichiers de base de données eux-mêmes peuvent être chiffrés sur le disque. Voir la [documentation](https://docs.termix.site/features/authentication/security/) pour le détail.
 
 </td>
 <td width="50%" valign="top">

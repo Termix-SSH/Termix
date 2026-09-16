@@ -17,6 +17,7 @@ import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
 import {
   resolveConnectionOrigin,
   buildOriginWsUrl,
+  type ConnectionOrigin,
 } from "@/lib/connection-origin.ts";
 import { isPasteShortcut, pasteTextToRemote } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
@@ -47,6 +48,12 @@ export interface GuacamoleConnectionConfig {
   width?: number;
   height?: number;
   dpi?: number;
+  /**
+   * Which backend serves this session. Supplied by the owning app so the
+   * websocket dials the same backend that minted the token; omitted by
+   * shared/collab views, which follow the default for the connection type.
+   */
+  connectionOrigin?: ConnectionOrigin | null;
   [key: string]: unknown;
 }
 
@@ -119,6 +126,7 @@ export const GuacamoleDisplay = forwardRef<
   const onStageChangeRef = useRef(onStageChange);
   onStageChangeRef.current = onStageChange;
   const keyboardRef = useRef<Guacamole.Keyboard | null>(null);
+  const unbindPointerRef = useRef<(() => void) | null>(null);
   const scaleRef = useRef<number>(1);
   const fitScaleRef = useRef<number>(1);
   const zoomRef = useRef<number>(1);
@@ -134,6 +142,8 @@ export const GuacamoleDisplay = forwardRef<
   const [hasError, setHasError] = useState(false);
 
   const disconnectClient = useCallback(() => {
+    unbindPointerRef.current?.();
+    unbindPointerRef.current = null;
     const client = clientRef.current;
     clientRef.current = null;
     isConnectingRef.current = false;
@@ -221,28 +231,39 @@ export const GuacamoleDisplay = forwardRef<
         const connectionProtocol =
           connectionConfig.protocol ?? connectionConfig.type;
 
+        // Resolved before the token is minted, not just before the socket is
+        // opened: the token has to come from whichever backend will serve the
+        // session, so both steps have to agree on the origin.
+        const origin = await resolveConnectionOrigin({
+          connectionType: connectionProtocol,
+          connectionOrigin: connectionConfig.connectionOrigin,
+        });
+
         if (connectionConfig.token) {
           token = connectionConfig.token;
         } else {
-          const data = await getGuacamoleToken({
-            protocol: connectionProtocol ?? "rdp",
-            hostname: String(connectionConfig.hostname ?? ""),
-            port: connectionConfig.port,
-            username: connectionConfig.username,
-            password: connectionConfig.password,
-            domain: connectionConfig.domain,
-            security:
-              typeof connectionConfig.security === "string"
-                ? connectionConfig.security
-                : undefined,
-            ignoreCert:
-              typeof connectionConfig.ignoreCert === "boolean"
-                ? connectionConfig.ignoreCert
-                : undefined,
-            guacamoleConfig: connectionConfig.guacamoleConfig as Parameters<
-              typeof getGuacamoleToken
-            >[0]["guacamoleConfig"],
-          });
+          const data = await getGuacamoleToken(
+            {
+              protocol: connectionProtocol ?? "rdp",
+              hostname: String(connectionConfig.hostname ?? ""),
+              port: connectionConfig.port,
+              username: connectionConfig.username,
+              password: connectionConfig.password,
+              domain: connectionConfig.domain,
+              security:
+                typeof connectionConfig.security === "string"
+                  ? connectionConfig.security
+                  : undefined,
+              ignoreCert:
+                typeof connectionConfig.ignoreCert === "boolean"
+                  ? connectionConfig.ignoreCert
+                  : undefined,
+              guacamoleConfig: connectionConfig.guacamoleConfig as Parameters<
+                typeof getGuacamoleToken
+              >[0]["guacamoleConfig"],
+            },
+            origin,
+          );
           token = data.token;
         }
 
@@ -256,9 +277,6 @@ export const GuacamoleDisplay = forwardRef<
 
         let wsBase: string | null;
         if (isElectron()) {
-          const origin = await resolveConnectionOrigin({
-            connectionType: connectionProtocol,
-          });
           const target = await buildOriginWsUrl({
             origin,
             localPort: 30008,
@@ -518,7 +536,12 @@ export const GuacamoleDisplay = forwardRef<
       client.sendMouseState(adjustedState);
     };
 
-    bindPointerInput(displayElement, touchMode, sendMouseState);
+    unbindPointerRef.current?.();
+    unbindPointerRef.current = bindPointerInput(
+      displayElement,
+      touchMode,
+      sendMouseState,
+    );
 
     const keyboard = new Guacamole.Keyboard(displayElement);
     keyboardRef.current = keyboard;
