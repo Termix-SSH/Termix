@@ -26,18 +26,6 @@ interface DialogResult {
   [key: string]: unknown;
 }
 
-export interface LocalFileEntry {
-  name: string;
-  path: string;
-  type: "file" | "directory" | "link" | "other";
-  size: number;
-  created?: string;
-  modified: string;
-  permissions?: string;
-  owner?: string;
-  group?: string;
-}
-
 export interface LocalDirectoryResult {
   success: boolean;
   path: string;
@@ -53,15 +41,6 @@ export interface LocalCollectedFile {
   size: number;
   created?: string;
   modified: string;
-}
-
-export interface LocalFileReadResult {
-  success: boolean;
-  path?: string;
-  name?: string;
-  size?: number;
-  data?: string;
-  error?: string;
 }
 
 export type LocalPathMutationResult =
@@ -262,7 +241,6 @@ export interface ElectronAPI {
     truncated?: boolean;
     error?: string;
   }>;
-  readLocalFile?: (path: string) => Promise<LocalFileReadResult>;
   createLocalFolder?: (
     parentPath: string,
     folderName: string,
@@ -275,11 +253,6 @@ export interface ElectronAPI {
   chmodLocalPath?: (
     path: string,
     permissions: string,
-  ) => Promise<LocalPathMutationResult>;
-  writeLocalFile?: (
-    targetDir: string,
-    fileName: string,
-    data: string,
   ) => Promise<LocalPathMutationResult>;
 
   openExternalEditor: (fileData: {
@@ -394,7 +367,10 @@ export interface ElectronAPI {
       newName: string,
     ) => Promise<LocalFsResult<{ path: string }>>;
     trash: (paths: string[]) => Promise<LocalFsResult<LocalTrashResult>>;
-    ensureDir: (dirPath: string) => Promise<LocalFsResult<{ path: string }>>;
+    ensureDir: (
+      dirPath: string,
+      rootPath?: string,
+    ) => Promise<LocalFsResult<{ path: string }>>;
     exists: (paths: string[]) => Promise<LocalFsResult<{ existing: string[] }>>;
     walk: (paths: string[]) => Promise<LocalFsResult<LocalWalkResult>>;
     reveal: (targetPath: string) => Promise<LocalFsResult<unknown>>;
@@ -430,7 +406,12 @@ export interface LocalFsHomeInfo {
 export interface LocalFileEntry {
   name: string;
   path: string;
-  type: "file" | "directory" | "link";
+  type: "file" | "directory" | "link" | "other";
+  created?: string;
+  modified?: string;
+  permissions?: string;
+  owner?: string;
+  group?: string;
   size: number;
   modifiedTimestamp?: number;
   linkTarget?: string;
@@ -481,6 +462,8 @@ export interface LocalDownloadRequest {
   origin: LocalTransferOrigin;
   body: Record<string, unknown>;
   destPath: string;
+  /** Selected download folder; destPath must resolve strictly inside it (code EINVAL otherwise). */
+  rootPath: string;
   expectedSize?: number;
   /** Replace an existing file at destPath; otherwise the transfer is refused with code EEXIST. */
   overwrite?: boolean;

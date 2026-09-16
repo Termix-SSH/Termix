@@ -950,8 +950,8 @@ function getAiAgentCommandWarnings(command) {
   return Array.from(new Set(warnings));
 }
 
-function buildAiAgentMessages(session, payload = {}) {
-  const context = payload.context || {};
+function buildAiAgentMessages(session, payload = {}, includeContext = true) {
+  const context = includeContext ? payload.context || {} : {};
   const safeContext = JSON.stringify({
     hostName: redactAiText(context.hostName).slice(0, 120),
     username: redactAiText(context.username).slice(0, 120),
@@ -961,7 +961,9 @@ function buildAiAgentMessages(session, payload = {}) {
       -AI_MAX_CONTEXT_LENGTH,
     ),
   });
-  const recentHistory = session.history.slice(-AI_AGENT_HISTORY_LIMIT);
+  const recentHistory = session.history
+    .filter((entry) => includeContext || entry.role !== "terminal")
+    .slice(-AI_AGENT_HISTORY_LIMIT);
 
   return [
     {
@@ -1037,7 +1039,11 @@ async function requestAiAgentAction(settings, session, payload, timeoutMs) {
       },
       body: JSON.stringify({
         model: settings.model,
-        messages: buildAiAgentMessages(session, payload),
+        messages: buildAiAgentMessages(
+          session,
+          payload,
+          settings.includeContext === true,
+        ),
         temperature: 0.1,
         response_format: { type: "json_object" },
       }),
@@ -3938,6 +3944,8 @@ function getLocalEntry(entryPath, name = path.basename(entryPath)) {
     size: stat.isFile() ? stat.size : 0,
     created: stat.birthtime.toISOString(),
     modified: stat.mtime.toISOString(),
+    modifiedTimestamp: stat.mtimeMs,
+    hidden: name.startsWith("."),
     permissions: (stat.mode & 0o777).toString(8).padStart(3, "0"),
     owner: String(stat.uid),
     group: String(stat.gid),
@@ -4103,30 +4111,6 @@ ipcMain.handle("collect-local-files", (_event, paths) => {
   }
 });
 
-ipcMain.handle("read-local-file", (_event, filePath) => {
-  try {
-    if (typeof filePath !== "string" || !filePath) {
-      return { success: false, error: "Missing file path" };
-    }
-    const stat = fs.statSync(filePath);
-    if (!stat.isFile()) {
-      return { success: false, error: "Path is not a file" };
-    }
-    return {
-      success: true,
-      path: filePath,
-      name: path.basename(filePath),
-      size: stat.size,
-      data: fs.readFileSync(filePath).toString("base64"),
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to read file",
-    };
-  }
-});
-
 ipcMain.handle("create-local-folder", (_event, parentPath, folderName) => {
   try {
     ensureLocalDirectory(parentPath);
@@ -4189,24 +4173,6 @@ ipcMain.handle("chmod-local-path", (_event, entryPath, permissions) => {
       success: false,
       error:
         error instanceof Error ? error.message : "Failed to update permissions",
-    };
-  }
-});
-
-ipcMain.handle("write-local-file", (_event, targetDir, fileName, data) => {
-  try {
-    ensureLocalDirectory(targetDir);
-    const safeName = validateLocalName(fileName);
-    if (typeof data !== "string") {
-      throw new Error("Missing file data");
-    }
-    const targetPath = path.join(targetDir, safeName);
-    fs.writeFileSync(targetPath, Buffer.from(data, "base64"));
-    return { success: true, ...getLocalEntry(targetPath, safeName) };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to write file",
     };
   }
 });

@@ -13,7 +13,7 @@ const collector = source.slice(
 );
 const handler = source.slice(
   source.indexOf('ipcMain.handle("collect-local-files"'),
-  source.indexOf('ipcMain.handle("read-local-file"'),
+  source.indexOf('ipcMain.handle("create-local-folder"'),
 );
 
 describe("local collection limit", () => {

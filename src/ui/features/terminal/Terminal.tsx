@@ -1,3 +1,8 @@
+import {
+  fontSizeStorageKey as getFontSizeStorageKey,
+  readFontSize,
+  saveFontSize,
+} from "./font-size-storage";
 import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import {
@@ -52,7 +57,8 @@ import {
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
-import { getAltDigitShortcut } from "@/lib/app-keyboard-shortcuts";
+import { getMacLineNavigationSequence } from "@/lib/mac-line-navigation";
+import { isTabJumpHotkey } from "@/lib/tab-jump-hotkey";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import {
   highlightTerminalOutput,
@@ -241,6 +247,38 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         terminalDefaults.theme ||
         DEFAULT_TERMINAL_CONFIG.theme,
     };
+
+    // Ctrl+/- / Ctrl+wheel terminal zoom is persisted per-host and takes
+    // precedence over the configured font size, so it survives the periodic
+    // option refreshes (keepalive/refit/reconnect) that would otherwise snap
+    // the size back to config.fontSize.
+    const fontSizeStorageKey = getFontSizeStorageKey(
+      hostConfig.syncId ?? hostConfig.id,
+    );
+    const configuredFontSize = config.fontSize;
+    const fontSizePersistenceRef = useRef({
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    });
+    fontSizePersistenceRef.current = {
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    };
+    const readFontSizeOverride = () => {
+      try {
+        return readFontSize(
+          localStorage,
+          fontSizeStorageKey,
+          configuredFontSize,
+        );
+      } catch {
+        return null;
+      }
+    };
+    const fontSizeOverride = readFontSizeOverride();
+    if (fontSizeOverride !== null) {
+      config.fontSize = fontSizeOverride;
+    }
 
     const activeTheme = previewTheme || config.theme;
     const themeColors = resolveTermixThemeColors(
@@ -462,6 +500,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       null,
     );
     const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
+    const agentRequestVersion = useRef(0);
+    useEffect(
+      () => () => {
+        agentRequestVersion.current += 1;
+      },
+      [],
+    );
     const [agentPanelOpen, setAgentPanelOpen] = useState(false);
     const [agentPrompt, setAgentPrompt] = useState("");
     const [agentMode, setAgentMode] =
@@ -1014,6 +1059,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
+        const requestVersion = ++agentRequestVersion.current;
         setAgentLoading(true);
         setAgentError(null);
         try {
@@ -1026,18 +1072,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             observation,
             context: buildAiTerminalContext(),
           });
+          if (requestVersion !== agentRequestVersion.current) {
+            if ("sessionId" in result && result.sessionId)
+              void window.electronAPI?.cancelTerminalAgentSession?.(
+                String(result.sessionId),
+              );
+            return;
+          }
           if (!result.success || !result.action) {
             throw new Error(result.error || "Agent failed to continue");
           }
           applyAgentResult(result.action);
         } catch (error) {
+          if (requestVersion !== agentRequestVersion.current) return;
           const message =
             error instanceof Error ? error.message : "Agent failed to continue";
           setAgentError(message);
           appendAgentTranscript("system", message);
         } finally {
-          setAgentLoading(false);
-          setAgentRunningCommand(false);
+          if (requestVersion === agentRequestVersion.current) {
+            setAgentLoading(false);
+            setAgentRunningCommand(false);
+          }
         }
       },
       [
@@ -1139,6 +1195,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
 
       setAgentPanelOpen(true);
+      const requestVersion = ++agentRequestVersion.current;
       setAgentLoading(true);
       setAgentError(null);
       setAgentAction(null);
@@ -1152,6 +1209,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           mode: agentMode,
           context: buildAiTerminalContext(),
         });
+        if (requestVersion !== agentRequestVersion.current) {
+          if ("sessionId" in result && result.sessionId)
+            void window.electronAPI?.cancelTerminalAgentSession?.(
+              String(result.sessionId),
+            );
+          return;
+        }
         if (!result.success || !result.sessionId || !result.action) {
           throw new Error(result.error || "Agent failed to start");
         }
@@ -1159,12 +1223,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         setAgentPrompt("");
         applyAgentResult(result.action);
       } catch (error) {
+        if (requestVersion !== agentRequestVersion.current) return;
         const message =
           error instanceof Error ? error.message : "Agent failed to start";
         setAgentError(message);
         appendAgentTranscript("system", message);
       } finally {
-        setAgentLoading(false);
+        if (requestVersion === agentRequestVersion.current) {
+          setAgentLoading(false);
+        }
       }
     }, [
       agentMode,
@@ -1184,6 +1251,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return;
       }
 
+      const requestVersion = ++agentRequestVersion.current;
       setAgentLoading(true);
       setAgentError(null);
       appendAgentTranscript("user", agentPrompt);
@@ -1193,18 +1261,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           message: agentPrompt,
           context: buildAiTerminalContext(),
         });
+        if (requestVersion !== agentRequestVersion.current) {
+          if ("sessionId" in result && result.sessionId)
+            void window.electronAPI?.cancelTerminalAgentSession?.(
+              String(result.sessionId),
+            );
+          return;
+        }
         if (!result.success || !result.action) {
           throw new Error(result.error || "Agent failed to continue");
         }
         setAgentPrompt("");
         applyAgentResult(result.action);
       } catch (error) {
+        if (requestVersion !== agentRequestVersion.current) return;
         const message =
           error instanceof Error ? error.message : "Agent failed to continue";
         setAgentError(message);
         appendAgentTranscript("system", message);
       } finally {
-        setAgentLoading(false);
+        if (requestVersion === agentRequestVersion.current) {
+          setAgentLoading(false);
+        }
       }
     }, [
       agentPrompt,
@@ -1215,6 +1293,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     ]);
 
     const handleStopAgent = useCallback(() => {
+      agentRequestVersion.current += 1;
       clearAgentCapture();
       if (agentSessionId && window.electronAPI?.cancelTerminalAgentSession) {
         void window.electronAPI.cancelTerminalAgentSession(agentSessionId);
@@ -1339,6 +1418,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminalFontSizeRef.current = nextFontSize;
       terminal.options.fontSize = nextFontSize;
+      try {
+        saveFontSize(
+          localStorage,
+          fontSizePersistenceRef.current.key,
+          fontSizePersistenceRef.current.configured,
+          nextFontSize,
+        );
+      } catch {
+        // ignore persistence failures (private mode, disabled storage)
+      }
       performFit();
       hardRefresh();
     }
@@ -3132,12 +3221,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const fontFamily = resolveTerminalFontFamily(config.fontFamily);
       ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
 
+      // Resolve the effective font size: a persisted zoom override wins, but if
+      // the configured font size itself changed (e.g. user edited it in
+      // Settings) drop the override so the new configured value takes effect.
+      const effectiveFontSize = readFontSizeOverride() ?? configuredFontSize;
+
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
       terminal.options.cursorStyle = config.cursorStyle;
       terminal.options.scrollback = config.scrollback;
-      terminal.options.fontSize = config.fontSize;
-      terminalFontSizeRef.current = config.fontSize;
+      terminal.options.fontSize = effectiveFontSize;
+      terminalFontSizeRef.current = effectiveFontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
       terminal.options.macOptionIsMeta = config.macOptionIsMeta;
@@ -3208,12 +3302,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         config.customThemeColors,
       );
 
+      // Honor a persisted zoom override for the initial font size too.
+      const initialFontSize = readFontSizeOverride() ?? config.fontSize;
+
       // Set initial options before opening the terminal
       terminal.options = {
         cursorBlink: config.cursorBlink,
         cursorStyle: config.cursorStyle,
         scrollback: config.scrollback,
-        fontSize: config.fontSize,
+        fontSize: initialFontSize,
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
@@ -3704,6 +3801,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           void openAiCommandDialog();
           return false;
         }
+        const macLineNav = getMacLineNavigationSequence(e);
+        if (macLineNav) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: macLineNav }),
+            );
+          }
+          return false;
+        }
+
         // Forward global app shortcuts to AppShell directly — xterm swallows
         // all keydown events and synthetic re-dispatch is unreliable.
         // stopPropagation prevents the same event from also firing the window listener.
@@ -3728,11 +3837,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "ArrowUp",
             "ArrowDown",
           ];
-          if (arrowCodes.includes(e.code) || getAltDigitShortcut(e) !== null) {
+          if (arrowCodes.includes(e.code)) {
             e.stopPropagation();
             globalShortcutHandler.current?.(e);
             return false;
           }
+        }
+
+        if (isTabJumpHotkey(e)) {
+          e.stopPropagation();
+          globalShortcutHandler.current?.(e);
+          return false;
         }
 
         const fontZoomDirection = getTerminalFontZoomDirection(e);
@@ -4304,7 +4419,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   variant="ghost"
                   className="size-7"
                   onClick={handleStopAgent}
-                  disabled={!agentSessionId && !agentRunningCommand}
+                  disabled={
+                    !agentSessionId && !agentRunningCommand && !agentLoading
+                  }
                   title="Stop agent"
                 >
                   <Square className="size-3.5" />

@@ -1,4 +1,12 @@
 import {
+  uploadLocalFileToSession,
+  downloadSessionFileToLocal,
+} from "@/api/local-transfer-api";
+import {
+  assertSafeLocalComponent,
+  buildLocalDestination,
+} from "@/features/file-manager/local-transfer-utils";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -47,10 +55,8 @@ import {
   getSSHHosts,
   getTransferProgressPercent,
   listSSHFiles,
-  readSSHFile,
   renameSSHItem,
   transferToHost,
-  uploadSSHFile,
   type HostConnectionState,
   type TransferProgressResponse,
 } from "@/main-axios";
@@ -227,24 +233,6 @@ function parentRemotePath(remotePath: string): string {
   if (normalized === "/") return "/";
   const index = normalized.lastIndexOf("/");
   return index <= 0 ? "/" : normalized.slice(0, index);
-}
-
-function base64ToFile(data: string, fileName: string): File {
-  const binary = atob(data);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new File([bytes], fileName);
-}
-
-function utf8ToBase64(value: string): string {
-  const bytes = new TextEncoder().encode(value);
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary);
 }
 
 function connectionLabel(state: HostConnectionState): string {
@@ -1023,7 +1011,7 @@ export function SftpTransferTab() {
     if (!destPane.sessionId || paths.length === 0) return;
     if (
       !window.electronAPI?.collectLocalFiles ||
-      !window.electronAPI?.readLocalFile
+      !window.electronAPI?.localTransfer
     ) {
       toast.error("Local browsing is available in the Electron app only.");
       return;
@@ -1087,18 +1075,12 @@ export function SftpTransferTab() {
               ? Math.round((completedBytes / totalBytes) * 100)
               : undefined,
         });
-        const read = await window.electronAPI.readLocalFile(target.path);
-        if (!read.success || !read.data) {
-          throw new Error(read.error || `Failed to read ${target.path}`);
-        }
-        await uploadSSHFile(
-          destPane.sessionId,
-          target.remoteDir,
-          target.fileName,
-          base64ToFile(read.data, target.fileName),
-          undefined,
-          undefined,
-          ({ bytesSent }) => {
+        await uploadLocalFileToSession({
+          sessionId: destPane.sessionId,
+          remoteDir: target.remoteDir,
+          fileName: target.fileName,
+          localPath: target.path,
+          onProgress: ({ transferred: bytesSent }) => {
             const nextBytes = completedBytes + bytesSent;
             setTransferProgress({
               label,
@@ -1112,7 +1094,7 @@ export function SftpTransferTab() {
                   : undefined,
             });
           },
-        );
+        });
         completedBytes += target.size || 0;
       }
 
@@ -1277,7 +1259,7 @@ export function SftpTransferTab() {
     entries: BrowserEntry[],
   ) => {
     if (!pane.sessionId || !localPane.path) return;
-    if (!window.electronAPI?.writeLocalFile) {
+    if (!window.electronAPI?.localTransfer) {
       toast.error("Local writing is available in the Electron app only.");
       return;
     }
@@ -1315,19 +1297,17 @@ export function SftpTransferTab() {
               ? Math.round((completedBytes / totalBytes) * 100)
               : undefined,
         });
-        const read = await readSSHFile(pane.sessionId, file.path);
-        const data =
-          read.encoding === "base64"
-            ? read.content
-            : utf8ToBase64(read.content || "");
-        const result = await window.electronAPI.writeLocalFile(
-          localPane.path,
-          file.name,
-          data,
-        );
-        if (result.success === false) {
-          throw new Error(result.error || `Failed to write ${file.name}`);
-        }
+        const platform = await window.electronAPI.getPlatform();
+        const separator = platform === "win32" ? "\\" : "/";
+        assertSafeLocalComponent(file.name, separator);
+        await downloadSessionFileToLocal({
+          sessionId: pane.sessionId,
+          remotePath: file.path,
+          rootPath: localPane.path,
+          destPath: buildLocalDestination(localPane.path, file.name, separator),
+          expectedSize: file.size,
+          overwrite: false,
+        });
         completedBytes += file.size || 0;
         setTransferProgress({
           label,

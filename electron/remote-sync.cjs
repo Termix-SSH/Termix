@@ -17,19 +17,6 @@ const path = require("path");
 const { orderSyncWrites } = require("./sync-write-order.cjs");
 const { SYNCED_ENTITY_TYPES } = require("./remote-sync-entities.cjs");
 
-const ENTITY_REFERENCE_FIELDS = {
-  hosts: {
-    credentialId: "sshCredentials",
-    rdpCredentialId: "sshCredentials",
-    vncCredentialId: "sshCredentials",
-    telnetCredentialId: "sshCredentials",
-    vaultProfileId: "vaultProfiles",
-  },
-  sshFolders: {
-    credentialId: "sshCredentials",
-  },
-};
-
 const SYNC_INTERVAL_MS = 90 * 1000;
 const EMBEDDED_BASE_URL = "http://127.0.0.1:30001";
 
@@ -213,70 +200,6 @@ function isJwtExpiredOrExpiringSoon(token, marginMs = 60 * 1000) {
   return Date.now() + marginMs >= expiresAt;
 }
 
-function getReferenceEntityTypes(entityType) {
-  return [...new Set(Object.values(ENTITY_REFERENCE_FIELDS[entityType] || {}))];
-}
-
-function getIdKey(id) {
-  if (typeof id === "number" && Number.isFinite(id)) return String(id);
-  if (typeof id === "string" && id.trim()) return id;
-  return null;
-}
-
-function buildIdSyncMaps(rows) {
-  const syncIdById = new Map();
-  const idBySyncId = new Map();
-  for (const row of rows) {
-    const idKey = getIdKey(row?.id);
-    if (!idKey || typeof row?.syncId !== "string" || !row.syncId) continue;
-    syncIdById.set(idKey, row.syncId);
-    idBySyncId.set(row.syncId, row.id);
-  }
-  return { syncIdById, idBySyncId };
-}
-
-function mapReferenceId(value, referenceMap, direction) {
-  const sourceId = getIdKey(value);
-  if (!sourceId) return value;
-
-  const sourceSyncIdById =
-    direction === "local-to-remote"
-      ? referenceMap.local.syncIdById
-      : referenceMap.remote.syncIdById;
-  const targetIdBySyncId =
-    direction === "local-to-remote"
-      ? referenceMap.remote.idBySyncId
-      : referenceMap.local.idBySyncId;
-
-  const syncId = sourceSyncIdById.get(sourceId);
-  if (!syncId) return null;
-  return targetIdBySyncId.get(syncId) ?? null;
-}
-
-function mapRowReferences(row, entityType, direction, referenceMaps) {
-  const fieldConfig = ENTITY_REFERENCE_FIELDS[entityType];
-  if (!fieldConfig) return row;
-
-  let next = row;
-  for (const [field, referenceEntityType] of Object.entries(fieldConfig)) {
-    if (!(field in row) || row[field] === null || row[field] === undefined) {
-      continue;
-    }
-
-    const referenceMap = referenceMaps?.[referenceEntityType];
-    const mappedValue = referenceMap
-      ? mapReferenceId(row[field], referenceMap, direction)
-      : null;
-
-    if (mappedValue !== row[field]) {
-      if (next === row) next = { ...row };
-      next[field] = mappedValue;
-    }
-  }
-
-  return next;
-}
-
 class RemoteSyncEngine {
   constructor(getMainWindow) {
     this.getMainWindow = getMainWindow;
@@ -390,18 +313,12 @@ class RemoteSyncEngine {
           lastPulledAt: null,
           lastPushedAt: null,
         };
-        const referenceMaps = await this.buildReferenceMaps({
-          entityType,
-          remoteBaseUrl: config.serverUrl.replace(/\/$/, ""),
-          remoteJwt,
-        });
 
         const result = await this.syncEntity({
           entityType,
           remoteBaseUrl: config.serverUrl.replace(/\/$/, ""),
           remoteJwt,
           since: entityState.lastPulledAt,
-          referenceMaps,
         });
 
         if (result.authFailure) {
@@ -541,35 +458,7 @@ class RemoteSyncEngine {
     });
   }
 
-  async buildReferenceMaps({ entityType, remoteBaseUrl, remoteJwt }) {
-    const referenceEntityTypes = getReferenceEntityTypes(entityType);
-    if (referenceEntityTypes.length === 0) return null;
-
-    const maps = {};
-    for (const referenceEntityType of referenceEntityTypes) {
-      const [localRows, remoteRows] = await Promise.all([
-        this.pullSide(EMBEDDED_BASE_URL, this.localJwt, referenceEntityType),
-        this.pullSide(remoteBaseUrl, remoteJwt, referenceEntityType),
-      ]);
-      maps[referenceEntityType] = {
-        local: buildIdSyncMaps(localRows),
-        remote: buildIdSyncMaps(remoteRows),
-      };
-    }
-    return maps;
-  }
-
-  rewriteRowReferences(row, entityType, direction, referenceMaps) {
-    return mapRowReferences(row, entityType, direction, referenceMaps);
-  }
-
-  async syncEntity({
-    entityType,
-    remoteBaseUrl,
-    remoteJwt,
-    since,
-    referenceMaps,
-  }) {
+  async syncEntity({ entityType, remoteBaseUrl, remoteJwt, since }) {
     const syncedAt = new Date().toISOString();
     try {
       const [localRows, remoteRows, localTombstones, remoteTombstones] =
@@ -612,23 +501,13 @@ class RemoteSyncEngine {
           writes.push({
             baseUrl: remoteBaseUrl,
             token: remoteJwt,
-            row: this.rewriteRowReferences(
-              localRow,
-              entityType,
-              "local-to-remote",
-              referenceMaps,
-            ),
+            row: localRow,
           });
         } else if (remoteRow && (!localRow || remoteTime > localTime)) {
           writes.push({
             baseUrl: EMBEDDED_BASE_URL,
             token: this.localJwt,
-            row: this.rewriteRowReferences(
-              remoteRow,
-              entityType,
-              "remote-to-local",
-              referenceMaps,
-            ),
+            row: remoteRow,
           });
         }
       }
@@ -719,10 +598,4 @@ module.exports = {
   getRemoteSyncUserInfo,
   isJwtExpiredOrExpiringSoon,
   decodeJwtExpiry,
-  __test__: {
-    buildIdSyncMaps,
-    getReferenceEntityTypes,
-    mapReferenceId,
-    mapRowReferences,
-  },
 };

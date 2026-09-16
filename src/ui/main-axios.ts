@@ -884,6 +884,11 @@ export function getFileManagerApiForSession(sessionId: string): AxiosInstance {
     : fileManagerApi;
 }
 
+/** Which backend currently holds a live SSH session (see setSessionOrigin). */
+export function getSessionOrigin(sessionId: string): "local" | "remote" {
+  return sessionOrigins.get(sessionId) === "remote" ? "remote" : "local";
+}
+
 export function getTunnelApiForOrigin(
   origin: "local" | "remote",
 ): AxiosInstance {
@@ -1607,6 +1612,15 @@ export {
   addFolderShortcut,
   removeFolderShortcut,
 } from "@/api/file-manager-data-api";
+
+// Desktop-only local disk <-> remote transfers (dual-pane file manager).
+export {
+  uploadLocalFileToSession,
+  downloadSessionFileToLocal,
+  cancelLocalTransfer,
+  createLocalTransferId,
+  type LocalTransferProgressEvent,
+} from "@/api/local-transfer-api";
 
 export {
   getAllServerStatuses,

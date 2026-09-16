@@ -118,7 +118,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   statLocalPaths: (paths) => ipcRenderer.invoke("stat-local-paths", paths),
   collectLocalFiles: (paths) =>
     ipcRenderer.invoke("collect-local-files", paths),
-  readLocalFile: (filePath) => ipcRenderer.invoke("read-local-file", filePath),
   createLocalFolder: (parentPath, folderName) =>
     ipcRenderer.invoke("create-local-folder", parentPath, folderName),
   renameLocalPath: (entryPath, newName) =>
@@ -127,8 +126,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("trash-local-path", entryPath),
   chmodLocalPath: (entryPath, permissions) =>
     ipcRenderer.invoke("chmod-local-path", entryPath, permissions),
-  writeLocalFile: (targetDir, fileName, data) =>
-    ipcRenderer.invoke("write-local-file", targetDir, fileName, data),
   createTempFile: (fileData) =>
     ipcRenderer.invoke("create-temp-file", fileData),
   createTempFolder: (folderData) =>
@@ -171,7 +168,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     rename: (oldPath, newName) =>
       ipcRenderer.invoke("local-fs:rename", oldPath, newName),
     trash: (paths) => ipcRenderer.invoke("local-fs:trash", paths),
-    ensureDir: (dirPath) => ipcRenderer.invoke("local-fs:ensure-dir", dirPath),
+    ensureDir: (dirPath, rootPath) =>
+      ipcRenderer.invoke("local-fs:ensure-dir", dirPath, rootPath),
     exists: (paths) => ipcRenderer.invoke("local-fs:exists", paths),
     walk: (paths) => ipcRenderer.invoke("local-fs:walk", paths),
     reveal: (targetPath) => ipcRenderer.invoke("local-fs:reveal", targetPath),
