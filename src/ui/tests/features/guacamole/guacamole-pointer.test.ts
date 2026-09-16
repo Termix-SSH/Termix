@@ -47,4 +47,36 @@ describe("bindPointerInput", () => {
 
     expect(touchModeCount).toBeGreaterThan(plainTouchCount);
   });
+
+  it("does not forward a wheel flood as individual remote scroll clicks", () => {
+    vi.useFakeTimers();
+    const element = document.createElement("div");
+    const onState = vi.fn();
+    const dispose = bindPointerInput(element, null, onState);
+
+    for (let i = 0; i < 30; i++) {
+      element.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: 120,
+          deltaMode: 0,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+
+    const presses = onState.mock.calls.filter(
+      ([state]) => state.up === true || state.down === true,
+    );
+    expect(presses.length).toBeLessThanOrEqual(2);
+
+    vi.advanceTimersByTime(40);
+    const laterPresses = onState.mock.calls.filter(
+      ([state]) => state.up === true || state.down === true,
+    );
+    expect(laterPresses.length).toBeLessThanOrEqual(4);
+
+    dispose();
+    vi.useRealTimers();
+  });
 });

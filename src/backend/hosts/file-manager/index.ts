@@ -29,7 +29,7 @@ import type {
   ConnectionStage,
 } from "../../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
-import { resolveHostById } from "../host-resolver.js";
+import { resolveHostById, resolveHostBySyncId } from "../host-resolver.js";
 import {
   startHostTransfer,
   getTransferStatus,
@@ -63,6 +63,7 @@ import {
   hostAddressMismatch,
   HostAddressMismatchError,
   HostNotOnThisServerError,
+  resolveServerHostId,
 } from "../terminal/host-identity.js";
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
@@ -977,7 +978,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
   }
 
-  const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(hostId);
+  let serverHostId = hostId;
+  if (hostSyncId && userId) {
+    const resolvedHost = await resolveHostBySyncId(hostSyncId, userId);
+    assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
+    serverHostId = resolveServerHostId(hostId, resolvedHost) ?? hostId;
+  }
+
+  const preloadedHostData =
+    await SSHHostKeyVerifier.preloadHostData(serverHostId);
   const keepalive = resolveSshKeepalive(
     hostKeepaliveInterval,
     hostKeepaliveCountMax,
@@ -994,7 +1003,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
     hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-      hostId,
+      serverHostId,
       resolvedIp,
       resolvedPort,
       null,
@@ -1132,7 +1141,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
     try {
       const { getOPKSSHToken } = await import("../opkssh-auth.js");
-      const token = await getOPKSSHToken(userId, hostId);
+      const token = await getOPKSSHToken(userId, serverHostId);
 
       if (!token) {
         connectionLogs.push(
@@ -1188,7 +1197,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       const { setupVaultSshSignerAuth } =
         await import("../vault-ssh-connect.js");
       await setupVaultSshSignerAuth(config as ConnectConfig, client, {
-        id: hostId,
+        id: serverHostId,
         username: resolvedUsername,
         userId,
         vaultProfile: { id: resolvedVaultProfileId },
@@ -1296,7 +1305,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       operation: "file_ssh_connected",
       sessionId,
       userId,
-      hostId,
+      hostId: serverHostId,
       ip,
       port,
       username,
@@ -1324,7 +1333,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       userId,
       ip,
       port,
-      hostId,
+      hostId: serverHostId,
       username,
       sudoPassword: resolvedCredentials.sudoPassword,
       scpLegacy: resolvedScpLegacy,
@@ -1339,7 +1348,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           username: await getAuditUsername(userId),
           action: "file_manager_connect",
           resourceType: "host",
-          resourceId: hostId ? String(hostId) : undefined,
+          resourceId: serverHostId ? String(serverHostId) : undefined,
           resourceName: `${username}@${ip}:${port}`,
           ipAddress,
           userAgent,

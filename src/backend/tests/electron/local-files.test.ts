@@ -266,6 +266,39 @@ describe("local-files download boundary", () => {
       ...extra,
     });
 
+  it("rejects existing linked parents for downloads and directory creation", async () => {
+    const selected = path.join(root, "selected");
+    const outside = path.join(root, "outside");
+    await fsp.mkdir(selected);
+    await fsp.mkdir(outside);
+    await fsp.symlink(outside, path.join(selected, "linked"), "junction");
+    const result = await download(path.join(selected, "linked", "file.bin"), {
+      rootPath: selected,
+    });
+    expect(result.success).toBe(false);
+    const mkdir = await handlers[localFiles.IPC.ENSURE_DIR](
+      fakeEvent,
+      path.join(selected, "linked", "new"),
+      selected,
+    );
+    expect(mkdir.success).toBe(false);
+    expect(await fsp.readdir(outside)).toEqual([]);
+  });
+
+  it("allows an explicitly selected linked root", async () => {
+    const actual = path.join(root, "actual");
+    const selected = path.join(root, "selected");
+    await fsp.mkdir(actual);
+    await fsp.symlink(actual, selected, "junction");
+    const result = await download(path.join(selected, "nested", "file.bin"), {
+      rootPath: selected,
+    });
+    expect(result.success).toBe(true);
+    expect(await fsp.readFile(path.join(actual, "nested", "file.bin"))).toEqual(
+      payload,
+    );
+  });
+
   it("ignores renderer-supplied url/headers and talks to the resolved backend only", async () => {
     const dest = path.join(root, "a.bin");
     const result = await download(dest, {
@@ -327,6 +360,41 @@ describe("local-files download boundary", () => {
       expect(result.code).toBe("EEXIST");
       expect(await fsp.readFile(dest, "utf8")).toBe("someone else wrote this");
       expect(await fsp.readdir(root)).toEqual(["race.bin"]);
+    } finally {
+      await slow.close();
+    }
+  });
+
+  it("rejects a destination parent replaced by a link during download", async () => {
+    const selected = path.join(root, "selected");
+    const nested = path.join(selected, "nested");
+    const outside = path.join(root, "outside");
+    await fsp.mkdir(nested, { recursive: true });
+    await fsp.mkdir(outside);
+    const slow = await startBackend(payload, { delayMs: 300 });
+    const slowHandlers = localFiles.createLocalFileHandlers({
+      net: fakeNet,
+      shell: {},
+      localBaseUrl: slow.url,
+    });
+    try {
+      const pending = slowHandlers[localFiles.IPC.DOWNLOAD](fakeEvent, {
+        transferId: "parent-race",
+        origin: "local",
+        body: {},
+        rootPath: selected,
+        destPath: path.join(nested, "file.bin"),
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await fsp.rename(nested, path.join(selected, "original"));
+      await fsp.symlink(outside, nested, "junction");
+      const result = await pending;
+      expect(result.success).toBe(false);
+      expect(await fsp.readdir(outside)).toEqual([]);
+      expect((await fsp.readdir(selected)).sort()).toEqual([
+        "nested",
+        "original",
+      ]);
     } finally {
       await slow.close();
     }
