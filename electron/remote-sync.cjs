@@ -14,6 +14,7 @@
 const { app, safeStorage } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { orderSyncWrites } = require("./sync-write-order.cjs");
 const { SYNCED_ENTITY_TYPES } = require("./remote-sync-entities.cjs");
 
 const ENTITY_REFERENCE_FIELDS = {
@@ -600,65 +601,42 @@ class RemoteSyncEngine {
         ...remoteBySyncId.keys(),
       ]);
 
+      const writes = [];
       for (const syncId of allSyncIds) {
         if (tombstonedSyncIds.has(syncId)) continue;
-
         const localRow = localBySyncId.get(syncId);
         const remoteRow = remoteBySyncId.get(syncId);
-
-        if (localRow && !remoteRow) {
-          await this.pushRow(
-            remoteBaseUrl,
-            remoteJwt,
-            entityType,
-            this.rewriteRowReferences(
+        const localTime = new Date(localRow?.updatedAt || 0).getTime();
+        const remoteTime = new Date(remoteRow?.updatedAt || 0).getTime();
+        if (localRow && (!remoteRow || localTime > remoteTime)) {
+          writes.push({
+            baseUrl: remoteBaseUrl,
+            token: remoteJwt,
+            row: this.rewriteRowReferences(
               localRow,
               entityType,
               "local-to-remote",
               referenceMaps,
             ),
-          );
-        } else if (remoteRow && !localRow) {
-          await this.pushRow(
-            EMBEDDED_BASE_URL,
-            this.localJwt,
-            entityType,
-            this.rewriteRowReferences(
+          });
+        } else if (remoteRow && (!localRow || remoteTime > localTime)) {
+          writes.push({
+            baseUrl: EMBEDDED_BASE_URL,
+            token: this.localJwt,
+            row: this.rewriteRowReferences(
               remoteRow,
               entityType,
               "remote-to-local",
               referenceMaps,
             ),
-          );
-        } else if (localRow && remoteRow) {
-          const localUpdatedAt = new Date(localRow.updatedAt || 0).getTime();
-          const remoteUpdatedAt = new Date(remoteRow.updatedAt || 0).getTime();
-          if (localUpdatedAt > remoteUpdatedAt) {
-            await this.pushRow(
-              remoteBaseUrl,
-              remoteJwt,
-              entityType,
-              this.rewriteRowReferences(
-                localRow,
-                entityType,
-                "local-to-remote",
-                referenceMaps,
-              ),
-            );
-          } else if (remoteUpdatedAt > localUpdatedAt) {
-            await this.pushRow(
-              EMBEDDED_BASE_URL,
-              this.localJwt,
-              entityType,
-              this.rewriteRowReferences(
-                remoteRow,
-                entityType,
-                "remote-to-local",
-                referenceMaps,
-              ),
-            );
-          }
+          });
         }
+      }
+      for (const { baseUrl, token, row } of orderSyncWrites(
+        entityType,
+        writes,
+      )) {
+        await this.pushRow(baseUrl, token, entityType, row);
       }
 
       // Apply tombstones to whichever side hasn't already deleted the row.

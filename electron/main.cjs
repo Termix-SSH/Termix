@@ -15,6 +15,7 @@ const path = require("path");
 const { getUnpackedAppRoot } = require("./backend-paths.cjs");
 const { classifyBackendFailure } = require("./backend-failure.cjs");
 const fs = require("fs");
+const { renameLocalPath } = require("./rename-local-path.cjs");
 const os = require("os");
 const https = require("https");
 const http = require("http");
@@ -4083,15 +4084,15 @@ ipcMain.handle("collect-local-files", (_event, paths) => {
         entryPath,
         path.basename(entryPath),
         files,
-        limit,
+        limit + 1,
       );
-      if (files.length >= limit) break;
+      if (files.length > limit) break;
     }
 
     return {
       success: true,
-      files,
-      truncated: files.length >= limit,
+      files: files.slice(0, limit),
+      truncated: files.length > limit,
     };
   } catch (error) {
     return {
@@ -4148,7 +4149,7 @@ ipcMain.handle("rename-local-path", (_event, entryPath, newName) => {
     }
     const safeName = validateLocalName(newName);
     const targetPath = path.join(path.dirname(entryPath), safeName);
-    fs.renameSync(entryPath, targetPath);
+    renameLocalPath(entryPath, targetPath);
     return { success: true, ...getLocalEntry(targetPath, safeName) };
   } catch (error) {
     return {

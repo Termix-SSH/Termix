@@ -67,6 +67,7 @@ import { getDeviceId } from "@/lib/device-id";
 export type ServerStatus = {
   status: "online" | "reachable" | "offline";
   lastChecked: string;
+  reason?: "host_key_changed";
 };
 
 export type SSHHostWithStatus = SSHHost & {

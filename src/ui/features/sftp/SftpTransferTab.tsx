@@ -1036,6 +1036,13 @@ export function SftpTransferTab() {
       setTransferLabel(null);
       return;
     }
+    if (collected.truncated) {
+      toast.error(
+        "Too many files selected. Select fewer than 10,001 files and retry; no files were uploaded.",
+      );
+      setTransferLabel(null);
+      return;
+    }
     if (collected.files.length === 0) {
       toast.error("No local files selected");
       setTransferLabel(null);

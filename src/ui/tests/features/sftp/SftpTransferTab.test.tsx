@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { toast } from "sonner";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -99,6 +100,7 @@ function installElectronApi() {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   api.getSSHHosts.mockResolvedValue([
     {
       id: 1,
@@ -217,6 +219,29 @@ describe("SftpTransferTab context menus", () => {
     fireEvent.change(selects[0], { target: { value: "1" } });
 
     expect(await screen.findByText("2026-07-18 10:30")).toBeTruthy();
+  });
+
+  it("refuses a truncated local selection before reading or uploading files", async () => {
+    const electronAPI = installElectronApi();
+    electronAPI.collectLocalFiles.mockResolvedValue({
+      success: true,
+      files: [],
+      truncated: true,
+    } as never);
+    render(<SftpTransferTab />);
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    await screen.findByText("remote.txt");
+    await userEvent.click(await screen.findByText("local.txt"));
+    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringMatching(/Too many files/),
+      ),
+    );
+    expect(electronAPI.readLocalFile).not.toHaveBeenCalled();
+    expect(api.uploadSSHFile).not.toHaveBeenCalled();
+    expect(api.createSSHFolder).not.toHaveBeenCalled();
   });
 
   it("reports local upload progress through the SFTP status bar", async () => {
