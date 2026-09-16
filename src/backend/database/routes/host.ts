@@ -2056,6 +2056,7 @@ router.get(
       );
 
       const baseExportData = {
+        exportId: resolvedHost.id,
         connectionType: exportedConnectionType,
         name: resolvedHost.name,
         ip: resolvedHost.ip,
@@ -2109,6 +2110,7 @@ router.get(
             overrideCredentialUsername:
               !!resolvedHost.overrideCredentialUsername,
             enableTerminal: !!resolvedHost.enableTerminal,
+            enableCommandHistory: resolvedHost.enableCommandHistory !== false,
             enableTunnel: !!resolvedHost.enableTunnel,
             enableFileManager: resolvedHost.enableFileManager !== false,
             scpLegacy: !!resolvedHost.scpLegacy,
@@ -2237,6 +2239,7 @@ router.get(
         );
 
         const baseExportData = {
+          exportId: resolvedHost.id,
           connectionType: exportedConnectionType,
           name: resolvedHost.name,
           ip: resolvedHost.ip,
@@ -2272,6 +2275,7 @@ router.get(
               overrideCredentialUsername:
                 !!resolvedHost.overrideCredentialUsername,
               enableTerminal: !!resolvedHost.enableTerminal,
+              enableCommandHistory: resolvedHost.enableCommandHistory !== false,
               enableTunnel: !!resolvedHost.enableTunnel,
               enableFileManager: resolvedHost.enableFileManager !== false,
               enableDocker: !!resolvedHost.enableDocker,

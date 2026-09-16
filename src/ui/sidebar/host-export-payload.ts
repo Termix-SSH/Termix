@@ -41,6 +41,8 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   quickActions: ["quickActions"],
   featureFlags: [
     "enableTerminal",
+    "enableCommandHistory",
+    "enableTerminalToolbar",
     "enableTunnel",
     "enableFileManager",
     "enableDocker",
@@ -114,6 +116,7 @@ export function buildExportPayload(
   withCredentials: boolean,
 ): ExportPayload {
   const allowed = new Set<string>([
+    "exportId",
     ...CREDENTIAL_KEYS,
     ...FIELD_GROUP_KEYS.connection,
   ]);
