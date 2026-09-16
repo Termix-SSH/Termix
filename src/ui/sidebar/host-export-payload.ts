@@ -116,6 +116,7 @@ export function buildExportPayload(
   withCredentials: boolean,
 ): ExportPayload {
   const allowed = new Set<string>([
+    "exportId",
     ...CREDENTIAL_KEYS,
     ...FIELD_GROUP_KEYS.connection,
   ]);

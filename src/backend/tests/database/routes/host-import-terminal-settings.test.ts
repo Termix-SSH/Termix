@@ -43,6 +43,8 @@ const host = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.create.mockResolvedValue({ id: 71 });
+  mocks.update.mockResolvedValue({ id: 19 });
   mocks.list.mockResolvedValue([{ ...host, id: 19 }]);
 });
 
@@ -78,3 +80,85 @@ it.each([false, true])(
     });
   },
 );
+
+async function importHosts(
+  hosts: Record<string, unknown>[],
+  overwrite = false,
+) {
+  const res = { json: vi.fn(), status: vi.fn().mockReturnThis() };
+  await handler(
+    { userId: "user-1", body: { hosts, overwrite } } as unknown as Request,
+    res as unknown as Response,
+    vi.fn(),
+  );
+  return res;
+}
+
+it("imports forward jump references first and replaces source IDs with destination IDs", async () => {
+  mocks.create
+    .mockResolvedValueOnce({ id: 501 })
+    .mockResolvedValueOnce({ id: 502 });
+  const raw = {
+    hosts: [
+      { ...host, exportId: 10, jumpHosts: [{ hostId: 20 }] },
+      { ...host, ip: "192.0.2.2", exportId: 20 },
+    ],
+  };
+  const payload = buildExportPayload(raw, null, new Set(["jumpHosts"]), false);
+  const res = await importHosts(payload.hosts);
+  expect(res.json).toHaveBeenCalledWith(
+    expect.objectContaining({ success: 2, failed: 0 }),
+  );
+  expect(mocks.create.mock.calls[0][1].ip).toBe("192.0.2.2");
+  expect(JSON.parse(mocks.create.mock.calls[1][1].jumpHosts)).toEqual([
+    { hostId: 501 },
+  ]);
+  expect(mocks.create.mock.calls[1][1]).not.toHaveProperty("exportId");
+  expect(mocks.create.mock.calls[1][1]).not.toHaveProperty("id");
+});
+
+it("maps overwritten jump hosts to their existing destination ID", async () => {
+  mocks.list.mockResolvedValue([{ ...host, ip: "192.0.2.2", id: 801 }]);
+  const res = await importHosts(
+    [
+      { ...host, exportId: 10, jumpHosts: [{ hostId: 20 }] },
+      { ...host, ip: "192.0.2.2", exportId: 20 },
+    ],
+    true,
+  );
+  expect(res.json).toHaveBeenCalledWith(
+    expect.objectContaining({ success: 1, updated: 1, failed: 0 }),
+  );
+  expect(JSON.parse(mocks.create.mock.calls[0][1].jumpHosts)).toEqual([
+    { hostId: 801 },
+  ]);
+});
+
+it.each([
+  [{ ...host, jumpHosts: [{ hostId: 20 }] }],
+  [{ ...host, exportId: 10, jumpHosts: [{ hostId: 10 }] }],
+  [
+    { ...host, exportId: 10 },
+    { ...host, exportId: 10 },
+  ],
+])(
+  "rejects missing, cyclic, and ambiguous jump references before writing",
+  async (...hosts) => {
+    const res = await importHosts(hosts);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+  },
+);
+
+it("does not save dependent hosts when importing their jump host fails", async () => {
+  mocks.create.mockRejectedValueOnce(new Error("Write failed"));
+  const res = await importHosts([
+    { ...host, exportId: 10, jumpHosts: [{ hostId: 20 }] },
+    { ...host, ip: "192.0.2.2", exportId: 20 },
+  ]);
+  expect(res.json).toHaveBeenCalledWith(
+    expect.objectContaining({ failed: 2, success: 0 }),
+  );
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+});

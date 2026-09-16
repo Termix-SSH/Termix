@@ -2056,6 +2056,7 @@ router.get(
       );
 
       const baseExportData = {
+        exportId: resolvedHost.id,
         connectionType: exportedConnectionType,
         name: resolvedHost.name,
         ip: resolvedHost.ip,
@@ -2238,6 +2239,7 @@ router.get(
         );
 
         const baseExportData = {
+          exportId: resolvedHost.id,
           connectionType: exportedConnectionType,
           name: resolvedHost.name,
           ip: resolvedHost.ip,

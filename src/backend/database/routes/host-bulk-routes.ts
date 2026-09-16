@@ -1,3 +1,7 @@
+import {
+  prepareHostImports,
+  remapImportedJumpHosts,
+} from "./host-import-order.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
@@ -467,6 +471,14 @@ export function registerHostBulkRoutes(
           .json({ error: "Maximum 100 hosts allowed per import" });
       }
 
+      let orderedHosts: ReturnType<typeof prepareHostImports>;
+      try {
+        orderedHosts = prepareHostImports(hostsToImport);
+      } catch (error) {
+        return res.status(400).json({ error: getErrorMessage(error) });
+      }
+      const importedIds = new Map<unknown, number>();
+
       const results = {
         success: 0,
         updated: 0,
@@ -558,9 +570,7 @@ export function registerHostBulkRoutes(
         }
       }
 
-      for (let i = 0; i < hostsToImport.length; i++) {
-        const hostData = normalizeImportedHost(hostsToImport[i]);
-
+      for (const { host: hostData, index: i, exportId } of orderedHosts) {
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
 
@@ -685,6 +695,10 @@ export function registerHostBulkRoutes(
             }
           }
 
+          const jumpHosts = remapImportedJumpHosts(
+            hostData.jumpHosts,
+            importedIds,
+          );
           const sshDataObj: Record<string, unknown> = {
             userId: userId,
             connectionType: effectiveConnectionType,
@@ -714,9 +728,7 @@ export function registerHostBulkRoutes(
             tunnelConnections: hostData.tunnelConnections
               ? JSON.stringify(hostData.tunnelConnections)
               : "[]",
-            jumpHosts: hostData.jumpHosts
-              ? JSON.stringify(hostData.jumpHosts)
-              : null,
+            jumpHosts: jumpHosts ? JSON.stringify(jumpHosts) : null,
             quickActions: hostData.quickActions
               ? JSON.stringify(hostData.quickActions)
               : null,
@@ -806,15 +818,21 @@ export function registerHostBulkRoutes(
           const existing = existingHostMap?.get(lookupKey);
 
           if (existing) {
-            await hostRepository.updateEncryptedForUser(
+            const saved = await hostRepository.updateEncryptedForUser(
               userId,
               existing.id,
               sshDataObj,
             );
+            if (!saved) throw new Error("Host no longer exists");
+            if (exportId !== undefined) importedIds.set(exportId, existing.id);
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
-            await hostRepository.createEncryptedForUser(userId, sshDataObj);
+            const saved = await hostRepository.createEncryptedForUser(
+              userId,
+              sshDataObj,
+            );
+            if (exportId !== undefined) importedIds.set(exportId, saved.id);
             results.success++;
           }
         } catch (error) {
