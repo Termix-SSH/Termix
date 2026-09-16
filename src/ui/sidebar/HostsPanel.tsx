@@ -1037,7 +1037,7 @@ export function HostsPanel({
         update={updateSidebarPrefs}
       />
 
-      {!managerEditing && (
+      {active && !managerEditing && (
         <div className="flex flex-col flex-1 min-h-0">
           <SidebarTree
             children={
