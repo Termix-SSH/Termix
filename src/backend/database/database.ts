@@ -383,7 +383,7 @@ app.get("/version", authenticateJWT, async (req, res) => {
         operation: "version_check",
         rawTag,
       });
-      return res.status(401).send("Remote Version Not Found");
+      return res.json({ localVersion, status: "unknown" });
     }
 
     const versionComparison = compareSemver(localVersion, remoteVersion);
@@ -414,7 +414,7 @@ app.get("/version", authenticateJWT, async (req, res) => {
     databaseLogger.error("Version check failed", err, {
       operation: "version_check",
     });
-    res.status(500).send("Fetch Error");
+    res.json({ localVersion, status: "unknown" });
   }
 });
 

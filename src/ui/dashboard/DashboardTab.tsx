@@ -139,7 +139,7 @@ function StatsBarCard({
   hosts: Host[];
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
 }) {
@@ -851,7 +851,7 @@ function CardItem({
   >;
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
@@ -1079,7 +1079,7 @@ type PanelColumnProps = {
   >;
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
@@ -1340,7 +1340,7 @@ export function DashboardTab({
   const [uptimeFormatted, setUptimeFormatted] = useState("");
   const [versionText, setVersionText] = useState("");
   const [versionStatus, setVersionStatus] = useState<
-    "up_to_date" | "requires_update" | "beta"
+    "up_to_date" | "requires_update" | "beta" | "unknown"
   >("up_to_date");
   const [releaseUrl, setReleaseUrl] = useState("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
@@ -1442,7 +1442,7 @@ export function DashboardTab({
     getVersionInfo()
       .then((info) => {
         setVersionText(info.localVersion ?? "");
-        setVersionStatus(info.status ?? "up_to_date");
+        setVersionStatus(info.status ?? "unknown");
         setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});

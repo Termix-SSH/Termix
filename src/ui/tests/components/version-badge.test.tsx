@@ -93,3 +93,8 @@ describe("VersionBadge", () => {
     expect(badge.className).toBe(badge.className.trim());
   });
 });
+
+it("does not claim the installed version is current when the update check failed", () => {
+  const { container } = render(<VersionBadge status="unknown" />);
+  expect(container.textContent).toBe("");
+});
