@@ -13,6 +13,7 @@ import {
   ArrowUp,
   ChevronLeft,
   ChevronRight,
+  CornerLeftUp,
   Download,
   Eye,
   EyeOff,
@@ -630,6 +631,22 @@ export function LocalFilePane({
 
   const showPaneOverlay = dropTarget?.kind === "pane";
 
+  // Pinned ".." entry (Termius-style): double-click goes up, and remote
+  // items dropped on it download into the parent folder.
+  const parentEntry: LocalFileEntry | null = parentPath
+    ? {
+        name: "..",
+        path: parentPath,
+        type: "directory",
+        size: 0,
+        hidden: false,
+      }
+    : null;
+  const isParentDropTarget =
+    !!parentEntry &&
+    dropTarget?.kind === "folder" &&
+    dropTarget.path === parentEntry.path;
+
   const sortIndicator = (field: LocalSortField) =>
     sortBy === field ? (
       sortOrder === "asc" ? (
@@ -835,6 +852,39 @@ export function LocalFilePane({
         }}
         onContextMenu={(e) => openContextMenu(e)}
       >
+        {parentEntry && (
+          <div
+            data-parent-entry
+            title={t("fileManager.goToParentFolder")}
+            style={rowStyle}
+            className={cn(
+              "grid gap-2 px-3 items-center text-xs cursor-default border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors h-[34px]",
+              isParentDropTarget &&
+                "bg-accent-brand/20 outline outline-1 outline-dashed outline-accent-brand",
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.detail === 2) goUp();
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDragOver={(e) => handleFolderDragOver(e, parentEntry)}
+            onDragLeave={(e) => handleFolderDragLeave(e, parentEntry)}
+            onDrop={(e) => handleFolderDrop(e, parentEntry)}
+          >
+            <div className="flex items-center gap-2.5 overflow-hidden pointer-events-none">
+              <span className="shrink-0">
+                <CornerLeftUp className="size-4 text-muted-foreground" />
+              </span>
+              <span className="font-bold tracking-tight text-muted-foreground">
+                ..
+              </span>
+            </div>
+          </div>
+        )}
+
         {creating && (
           <div
             className="grid gap-2 px-3 items-center text-xs border-b border-border h-[34px]"
@@ -886,7 +936,7 @@ export function LocalFilePane({
             </Button>
           </div>
         ) : visibleEntries.length === 0 && !loading ? (
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-10 gap-4 select-none pointer-events-none">
+          <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center text-muted-foreground opacity-10 gap-4 select-none pointer-events-none">
             <Folder className="size-24" strokeWidth={1} />
             <span className="text-xl font-black uppercase tracking-[0.2em]">
               {t("fileManager.emptyFolder")}
