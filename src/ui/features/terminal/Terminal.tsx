@@ -57,7 +57,8 @@ import {
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
-import { getAltDigitShortcut } from "@/lib/app-keyboard-shortcuts";
+import { getMacLineNavigationSequence } from "@/lib/mac-line-navigation";
+import { isTabJumpHotkey } from "@/lib/tab-jump-hotkey";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import {
   highlightTerminalOutput,
@@ -3019,6 +3020,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         }
 
+        const macLineNav = getMacLineNavigationSequence(e);
+        if (macLineNav) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: macLineNav }),
+            );
+          }
+          return false;
+        }
+
         // Forward global app shortcuts to AppShell directly — xterm swallows
         // all keydown events and synthetic re-dispatch is unreliable.
         // stopPropagation prevents the same event from also firing the window listener.
@@ -3043,11 +3056,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "ArrowUp",
             "ArrowDown",
           ];
-          if (arrowCodes.includes(e.code) || getAltDigitShortcut(e) !== null) {
+          if (arrowCodes.includes(e.code)) {
             e.stopPropagation();
             globalShortcutHandler.current?.(e);
             return false;
           }
+        }
+
+        if (isTabJumpHotkey(e)) {
+          e.stopPropagation();
+          globalShortcutHandler.current?.(e);
+          return false;
         }
 
         const fontZoomDirection = getTerminalFontZoomDirection(e);

@@ -40,11 +40,7 @@ import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { defaultSizes, SplitView, type RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
-import {
-  dispatchCtrlW,
-  getAltDigitShortcut,
-  isShiftKey,
-} from "@/lib/app-keyboard-shortcuts";
+import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
 import { findMatchingKeybinding } from "@/lib/keybinding-match";
 import type {
@@ -167,6 +163,7 @@ import type {
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
+import { getTabJumpDigit } from "@/lib/tab-jump-hotkey";
 import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
@@ -824,18 +821,18 @@ export function AppShell({
           }
           return;
         }
+      }
 
-        // Alt+1..9 — jump directly to the tab at that position
-        const digit = getAltDigitShortcut(e);
-        if (digit !== null) {
-          const currentTabs = tabsRef.current;
-          const index = digit - 1;
-          if (index < currentTabs.length) {
-            e.preventDefault();
-            setActiveTabId(currentTabs[index].id);
-          }
-          return;
+      // Cmd+1..9 on macOS, Alt+1..9 elsewhere — jump directly to the tab at that position
+      const tabDigit = getTabJumpDigit(e);
+      if (tabDigit !== null) {
+        const currentTabs = tabsRef.current;
+        const index = tabDigit - 1;
+        if (index < currentTabs.length) {
+          e.preventDefault();
+          setActiveTabId(currentTabs[index].id);
         }
+        return;
       }
 
       // Ctrl+Shift+] / Ctrl+Shift+[ — cycle through open tabs (] = next, [ = previous)
