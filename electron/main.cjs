@@ -617,7 +617,7 @@ if (process.platform === "linux") {
   }
 }
 
-if (process.platform === "win32") {
+if (process.platform === "win32" || process.env.ELECTRON_DISABLE_GPU === "1") {
   app.disableHardwareAcceleration();
 }
 
