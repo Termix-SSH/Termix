@@ -845,7 +845,7 @@ export const DEFAULT_TERMINAL_CONFIG = {
   scrollback: 10000,
   bellStyle: "none" as const,
   rightClickSelectsWord: false,
-  macOptionIsMeta: true,
+  macOptionIsMeta: false,
   fastScrollModifier: "alt" as const,
   fastScrollSensitivity: 5,
   minimumContrastRatio: 1,

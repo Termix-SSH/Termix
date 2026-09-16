@@ -671,3 +671,18 @@ describe("connectionOriginAppliesTo", () => {
     expect(connectionOriginAppliesTo(none)).toBe(false);
   });
 });
+
+describe("macOS Option character defaults", () => {
+  it("leaves Option available for keyboard-layout characters by default", () => {
+    const form = createHostEditorForm(null);
+    expect(form.macOptionIsMeta).toBe(false);
+    expect(
+      buildHostEditorPayload(form, sshOnly).terminalConfig?.macOptionIsMeta,
+    ).toBe(false);
+  });
+
+  it("preserves an explicitly saved Meta preference", () => {
+    const host = { terminalConfig: { macOptionIsMeta: true } } as Host;
+    expect(createHostEditorForm(host).macOptionIsMeta).toBe(true);
+  });
+});
