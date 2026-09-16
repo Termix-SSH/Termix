@@ -222,6 +222,16 @@ A short setup walks you through picking an interface preset, your theme, the fea
 <tr>
 <td width="50%" valign="top">
 
+**Linux desktop startup crashes:**
+
+If Electron crashes during GPU initialization on Wayland/Vulkan, launch with hardware acceleration disabled:
+
+```sh
+ELECTRON_DISABLE_GPU=1 ./Termix.AppImage
+```
+
+Use the path to your installed executable if you are not using AppImage. This opt-in workaround uses software rendering and may reduce graphics performance. Remove the variable to restore the default Linux rendering behavior.
+
 **Desktop Standalone and Sync:**
 The desktop app runs on its own with a local backend and database, no server needed. You can also connect it to a Termix server for two-way sync of hosts, credentials, snippets, and more, and choose whether connections start locally or through the server.
 
