@@ -31,6 +31,8 @@ import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
 import { LocalFilePane } from "./LocalFilePane.tsx";
 import { useLocalTransfers } from "./hooks/useLocalTransfers.ts";
+import { usePaneWidth } from "./hooks/usePaneWidth.ts";
+import { PaneResizeHandle } from "./components/PaneResizeHandle.tsx";
 import { isLocalFileBrowserAvailable } from "@/lib/local-files.ts";
 import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
 import { FileManagerTrashDialog } from "./FileManagerTrashDialog.tsx";
@@ -115,6 +117,9 @@ const SIDEBAR_OPEN_STORAGE_KEY = "termix:file-manager:sidebar:open";
 const LOCAL_PANE_WIDTH_STORAGE_KEY = "termix:file-manager:local-pane:width";
 const LOCAL_PANE_MIN_WIDTH = 300;
 const LOCAL_PANE_DEFAULT_WIDTH = 440;
+const SIDEBAR_WIDTH_STORAGE_KEY = "termix:file-manager:sidebar:width";
+const SIDEBAR_MIN_WIDTH = 160;
+const SIDEBAR_DEFAULT_WIDTH = 224; // matches the previous fixed w-56
 
 const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
 
@@ -233,53 +238,21 @@ function FileManagerContent({
       return next;
     });
   }, []);
-  const [localPaneWidth, setLocalPaneWidth] = useState<number>(() => {
-    try {
-      const saved = Number(localStorage.getItem(LOCAL_PANE_WIDTH_STORAGE_KEY));
-      return Number.isFinite(saved) && saved >= LOCAL_PANE_MIN_WIDTH
-        ? saved
-        : LOCAL_PANE_DEFAULT_WIDTH;
-    } catch {
-      return LOCAL_PANE_DEFAULT_WIDTH;
-    }
-  });
   const panesRowRef = useRef<HTMLDivElement>(null);
-  const startLocalPaneResize = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      const startX = event.clientX;
-      const startWidth = localPaneWidth;
-      const rowWidth = panesRowRef.current?.getBoundingClientRect().width ?? 0;
-      const maxWidth = Math.max(
-        LOCAL_PANE_MIN_WIDTH,
-        rowWidth ? rowWidth * 0.65 : Number.POSITIVE_INFINITY,
-      );
-      let latest = startWidth;
-      const onMove = (e: MouseEvent) => {
-        latest = Math.min(
-          maxWidth,
-          Math.max(LOCAL_PANE_MIN_WIDTH, startWidth + (e.clientX - startX)),
-        );
-        setLocalPaneWidth(latest);
-      };
-      const onUp = () => {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        try {
-          localStorage.setItem(LOCAL_PANE_WIDTH_STORAGE_KEY, String(latest));
-        } catch {
-          // storage unavailable
-        }
-      };
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    },
-    [localPaneWidth],
-  );
+  const localPaneSize = usePaneWidth({
+    storageKey: LOCAL_PANE_WIDTH_STORAGE_KEY,
+    defaultWidth: LOCAL_PANE_DEFAULT_WIDTH,
+    minWidth: LOCAL_PANE_MIN_WIDTH,
+    maxFraction: 0.65,
+    containerRef: panesRowRef,
+  });
+  const sidebarSize = usePaneWidth({
+    storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+    minWidth: SIDEBAR_MIN_WIDTH,
+    maxFraction: 0.4,
+    containerRef: panesRowRef,
+  });
   const toggleLocalPane = useCallback(() => {
     setLocalPaneOpen((prev) => {
       const next = !prev;
@@ -3428,13 +3401,18 @@ function FileManagerContent({
           {/* Sidebar — fixed overlay on mobile, static on desktop */}
           <div
             className={cn(
-              "w-56 flex-shrink-0 h-full flex flex-col",
+              "flex-shrink-0 h-full flex flex-col",
               mobileSidebarOpen
                 ? "fixed left-0 top-0 bottom-0 w-64 z-30 flex"
                 : sidebarOpen
                   ? "hidden md:flex"
                   : "hidden",
             )}
+            style={
+              mobileSidebarOpen
+                ? undefined
+                : { width: sidebarSize.width, minWidth: SIDEBAR_MIN_WIDTH }
+            }
           >
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 border border-border bg-card">
               <FileManagerSidebar
@@ -3450,13 +3428,21 @@ function FileManagerContent({
               />
             </div>
           </div>
+          {sidebarOpen && !mobileSidebarOpen && (
+            <PaneResizeHandle
+              label={t("fileManager.resizeSidebar")}
+              onMouseDown={sidebarSize.startResize}
+              onDoubleClick={sidebarSize.resetWidth}
+              active={sidebarSize.isResizing}
+            />
+          )}
 
           {localPaneAvailable && localPaneOpen && (
             <>
               <div
                 className="hidden md:flex flex-shrink-0 relative overflow-hidden min-h-0 flex-col border border-border bg-card"
                 style={{
-                  width: localPaneWidth,
+                  width: localPaneSize.width,
                   minWidth: LOCAL_PANE_MIN_WIDTH,
                   maxWidth: "65%",
                 }}
@@ -3468,16 +3454,12 @@ function FileManagerContent({
                   onUploadToRemote={handleLocalFilesDrop}
                 />
               </div>
-              {/* Drag handle between the local and remote panes */}
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                aria-label={t("fileManager.localFiles")}
-                onMouseDown={startLocalPaneResize}
-                className="hidden md:block -mx-3 w-3 shrink-0 cursor-col-resize group relative z-10"
-              >
-                <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent group-hover:bg-accent-brand/60 transition-colors" />
-              </div>
+              <PaneResizeHandle
+                label={t("fileManager.resizeLocalPane")}
+                onMouseDown={localPaneSize.startResize}
+                onDoubleClick={localPaneSize.resetWidth}
+                active={localPaneSize.isResizing}
+              />
             </>
           )}
 
