@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   toFixedNum,
   kibToGiB,
+  encodePowerShellCommand,
 } from "../../../../hosts/metrics/widgets/common-utils.js";
 
 describe("toFixedNum", () => {
@@ -28,5 +29,13 @@ describe("kibToGiB", () => {
     expect(kibToGiB(1024 * 1024)).toBe(1);
     expect(kibToGiB(0)).toBe(0);
     expect(kibToGiB(2 * 1024 * 1024)).toBe(2);
+  });
+});
+
+describe("encodePowerShellCommand", () => {
+  it("UTF-16LE base64 encodes the script, decodable back to the source", () => {
+    const script = "Write-Output 'hello'";
+    const encoded = encodePowerShellCommand(script);
+    expect(Buffer.from(encoded, "base64").toString("utf16le")).toBe(script);
   });
 });

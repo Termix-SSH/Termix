@@ -64,6 +64,13 @@ export function resolveServerJumpHosts(
   return clientJumpHosts?.length ? clientJumpHosts : serverJumpHosts;
 }
 
+export function resolveServerHostId(
+  clientHostId: number | null,
+  resolvedHost: { id?: unknown } | null,
+): number | null {
+  return typeof resolvedHost?.id === "number" ? resolvedHost.id : clientHostId;
+}
+
 /**
  * Thrown where a mismatch is reported by rejecting rather than by messaging
  * the socket. Callers whose host-resolution is wrapped in a "failed to resolve

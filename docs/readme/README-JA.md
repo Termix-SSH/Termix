@@ -237,7 +237,7 @@ Proxmox のインスタンスからそのままホストを取り込めます。
 <td width="50%" valign="top">
 
 **セキュリティ:**
-パスワードや鍵などの秘密情報はユーザーごとに暗号化され、データベースのファイル自体もディスク上で暗号化できます。仕組みは[ドキュメント](https://docs.termix.site/security)をご覧ください。
+パスワードや鍵などの秘密情報はユーザーごとに暗号化され、データベースのファイル自体もディスク上で暗号化できます。仕組みは[ドキュメント](https://docs.termix.site/features/authentication/security/)をご覧ください。
 
 </td>
 <td width="50%" valign="top">

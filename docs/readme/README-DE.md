@@ -237,7 +237,7 @@ Ein `termix`-CLI für deine Shell und deine Skripte. Terminals öffnen, einen Be
 <td width="50%" valign="top">
 
 **Sicherheit:**
-Passwörter, Schlüssel und andere Geheimnisse werden pro Benutzer verschlüsselt, und die Datenbankdateien selbst lassen sich auf der Festplatte verschlüsseln. Wie das funktioniert, steht in der [Dokumentation](https://docs.termix.site/security).
+Passwörter, Schlüssel und andere Geheimnisse werden pro Benutzer verschlüsselt, und die Datenbankdateien selbst lassen sich auf der Festplatte verschlüsseln. Wie das funktioniert, steht in der [Dokumentation](https://docs.termix.site/features/authentication/security/).
 
 </td>
 <td width="50%" valign="top">
