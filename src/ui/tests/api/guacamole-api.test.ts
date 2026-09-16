@@ -23,6 +23,7 @@ vi.mock("@/lib/remote-server-api", () => ({
 
 import {
   getGuacdStatus,
+  getGuacamoleConnectionId,
   getGuacamoleTokenFromHost,
 } from "../../api/guacamole-api";
 
@@ -158,4 +159,15 @@ describe("guacamole API origin", () => {
     ).rejects.toThrow("The synced host does not exist on the remote server");
     expect(remoteApiMock.post).not.toHaveBeenCalled();
   });
+});
+
+it("looks up the session on the backend that issued its token", async () => {
+  isElectronMock.mockReturnValue(true);
+  const signal = new AbortController().signal;
+  await getGuacamoleConnectionId("connect/id", "remote", signal);
+  expect(remoteApiMock.get).toHaveBeenCalledWith(
+    "/guacamole/connection/connect%2Fid",
+    { signal },
+  );
+  expect(authApiMock.get).not.toHaveBeenCalled();
 });
