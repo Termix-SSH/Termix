@@ -57,6 +57,7 @@ import { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
 import { hostSessionStatus } from "../terminal/host-session-status.js";
 import { AlertEngine } from "./alert-engine.js";
 import {
+  notifyAutomationInternalEvent,
   notifyAutomationMetrics,
   notifyAutomationStatus,
 } from "./automation-bridge.js";
@@ -1094,6 +1095,10 @@ app.post("/internal/login-alert", async (req, res) => {
     sshUser: string;
     fromIp: string;
   };
+  notifyAutomationInternalEvent("user_login", userId, hostId, {
+    sshUser,
+    fromIp,
+  });
   AlertEngine.getInstance()
     .evaluateUserLogin(hostId, userId, sshUser, fromIp)
     .catch(() => {});
