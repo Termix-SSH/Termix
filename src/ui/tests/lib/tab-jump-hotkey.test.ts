@@ -10,6 +10,7 @@ function keyEvent(
   init: Partial<KeyboardEvent> & Pick<KeyboardEvent, "code">,
 ): KeyboardEvent {
   return {
+    key: init.code.replace("Digit", ""),
     altKey: false,
     ctrlKey: false,
     metaKey: false,
@@ -41,6 +42,21 @@ describe("tab-jump-hotkey", () => {
       3,
     );
     expect(tabJumpHotkeyKeys()).toEqual(["Cmd", "1-9"]);
+    vi.unstubAllGlobals();
+  });
+
+  it("leaves Option characters and non-digit logical keys available to the terminal", () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    expect(
+      isTabJumpHotkey(keyEvent({ code: "Digit7", key: "|", altKey: true })),
+    ).toBe(false);
+    expect(
+      isTabJumpHotkey(keyEvent({ code: "Digit7", key: "7", metaKey: true })),
+    ).toBe(true);
+    vi.stubGlobal("navigator", { platform: "Linux" });
+    expect(
+      isTabJumpHotkey(keyEvent({ code: "Digit7", key: "|", altKey: true })),
+    ).toBe(false);
     vi.unstubAllGlobals();
   });
 

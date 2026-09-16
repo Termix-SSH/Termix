@@ -70,7 +70,7 @@
     "jszip": "^3.10.1",
     "ldapjs": "^3.0.7",
     "motion": "^13.1.1",
-    "multer": "^2.2.0",
+    "multer": "^2.3.0",
     "mysql2": "^3.23.4",
     "nanoid": "^6.0.1",
     "node-pty": "^1.1.0",
@@ -78,7 +78,7 @@
     "qrcode": "^1.5.4",
     "redis": "^6.2.1",
     "serialport": "^13.0.0",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.4",
     "socks": "^2.8.7",
     "speakeasy": "^2.0.0",
     "ssh2": "^1.17.0",
@@ -219,13 +219,16 @@
     "brace-expansion@2": "^2.1.4",
     "brace-expansion@5": "^5.0.9",
     "esbuild": "^0.28.1",
-    "fast-uri@3": "^3.1.5",
+    "fast-uri@3": "^3.1.6",
     "ip-address": "^10.5.0",
-    "js-yaml@4": "^4.3.1",
+    "js-yaml@4": "^4.3.2",
     "nanoid@3": "^3.3.18",
     "postcss": "^8.5.26",
     "tar": "^7.5.22",
     "undici@6": "^6.28.0",
-    "undici@7": "^7.29.0"
+    "undici@7": "^7.29.0",
+    "@xmldom/xmldom": "^0.8.15",
+    "browserslist": "^4.28.7",
+    "qs": "^6.16.0"
   }
 }

@@ -3,6 +3,7 @@ export type StatusValue = "online" | "reachable" | "offline" | "degraded";
 export interface ServerStatusEntry {
   status: StatusValue;
   lastChecked: string;
+  reason?: "host_key_changed";
 }
 
 type Listener = () => void;
@@ -44,8 +45,9 @@ export class ServerStatusStore {
   }
 
   /** Snapshot string for a host — used as useSyncExternalStore getSnapshot. */
-  getHostSnapshot(hostId: number): StatusValue {
-    return this.getStatus(hostId);
+  getHostSnapshot(hostId: number): string {
+    const status = this.getStatus(hostId);
+    return `${status}:${this.statuses.get(hostId)?.reason ?? ""}`;
   }
 
   getMetaSnapshot(): string {
@@ -119,7 +121,11 @@ export class ServerStatusStore {
 
     for (const [id, entry] of next) {
       const prev = this.statuses.get(id);
-      if (!prev || prev.status !== entry.status) {
+      if (
+        !prev ||
+        prev.status !== entry.status ||
+        prev.reason !== entry.reason
+      ) {
         changedIds.push(id);
       }
     }

@@ -1,3 +1,4 @@
+import { getAltDigitShortcut } from "./app-keyboard-shortcuts";
 export function isMacPlatform(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Mac|iPhone|iPad|iPod/.test(navigator.platform);
@@ -8,7 +9,13 @@ export function isTabJumpHotkey(e: KeyboardEvent): boolean {
   if (isMacPlatform()) {
     return e.metaKey && !e.altKey && !e.ctrlKey && !e.shiftKey;
   }
-  return e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey;
+  return (
+    e.altKey &&
+    !e.ctrlKey &&
+    !e.shiftKey &&
+    !e.metaKey &&
+    getAltDigitShortcut(e) !== null
+  );
 }
 
 export function getTabJumpDigit(e: KeyboardEvent): number | null {
