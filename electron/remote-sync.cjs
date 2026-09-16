@@ -17,6 +17,9 @@ const path = require("path");
 const { orderSyncWrites } = require("./sync-write-order.cjs");
 const { SYNCED_ENTITY_TYPES } = require("./remote-sync-entities.cjs");
 
+const { createRemoteSyncFetch } = require("./remote-sync-fetch.cjs");
+const fetchRemoteSync = createRemoteSyncFetch(getRemoteSyncConfig);
+
 const SYNC_INTERVAL_MS = 90 * 1000;
 const EMBEDDED_BASE_URL = "http://127.0.0.1:30001";
 
@@ -155,13 +158,13 @@ async function getRemoteSyncUserInfo() {
   }
 
   const baseUrl = config.serverUrl.replace(/\/$/, "");
-  const userResponse = await fetch(`${baseUrl}/users/me`, {
+  const userResponse = await fetchRemoteSync(`${baseUrl}/users/me`, {
     headers: { Authorization: `Bearer ${token}`, "X-Electron-App": "true" },
   });
   if (!userResponse.ok) return null;
 
   const user = await userResponse.json();
-  const rolesResponse = await fetch(
+  const rolesResponse = await fetchRemoteSync(
     `${baseUrl}/rbac/users/${encodeURIComponent(user.userId)}/roles`,
     {
       headers: { Authorization: `Bearer ${token}`, "X-Electron-App": "true" },
@@ -372,7 +375,7 @@ class RemoteSyncEngine {
   }
 
   async fetchJson(url, token, options = {}) {
-    const res = await fetch(url, {
+    const res = await fetchRemoteSync(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
