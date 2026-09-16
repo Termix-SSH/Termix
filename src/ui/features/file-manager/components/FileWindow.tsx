@@ -471,13 +471,16 @@ export function FileWindow({
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = response.fileName || file.name;
+        const downloadName = response.fileName || file.name;
+        link.download = downloadName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        toast.success(t("fileManager.fileDownloadedSuccessfully"));
+        toast.success(
+          t("fileManager.fileDownloadedSuccessfully", { name: downloadName }),
+        );
       }
     } catch (error: unknown) {
       console.error("Failed to download file:", error);
