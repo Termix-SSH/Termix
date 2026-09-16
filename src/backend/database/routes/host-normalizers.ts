@@ -185,6 +185,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableProxmox?: unknown;
   enableTmuxMonitor?: unknown;
   enableTerminalToolbar?: unknown;
+  enableCommandHistory?: unknown;
   showTerminalInSidebar?: unknown;
   showFileManagerInSidebar?: unknown;
   showTunnelInSidebar?: unknown;

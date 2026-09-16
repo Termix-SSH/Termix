@@ -703,6 +703,7 @@ export function registerHostBulkRoutes(
             enableProxmox: hostData.enableProxmox || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
+            enableCommandHistory: hostData.enableCommandHistory !== false,
             showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
             showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
             showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,

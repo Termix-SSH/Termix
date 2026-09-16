@@ -41,6 +41,8 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   quickActions: ["quickActions"],
   featureFlags: [
     "enableTerminal",
+    "enableCommandHistory",
+    "enableTerminalToolbar",
     "enableTunnel",
     "enableFileManager",
     "enableDocker",

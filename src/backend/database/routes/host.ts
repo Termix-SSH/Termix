@@ -2109,6 +2109,7 @@ router.get(
             overrideCredentialUsername:
               !!resolvedHost.overrideCredentialUsername,
             enableTerminal: !!resolvedHost.enableTerminal,
+            enableCommandHistory: resolvedHost.enableCommandHistory !== false,
             enableTunnel: !!resolvedHost.enableTunnel,
             enableFileManager: resolvedHost.enableFileManager !== false,
             scpLegacy: !!resolvedHost.scpLegacy,
@@ -2272,6 +2273,7 @@ router.get(
               overrideCredentialUsername:
                 !!resolvedHost.overrideCredentialUsername,
               enableTerminal: !!resolvedHost.enableTerminal,
+              enableCommandHistory: resolvedHost.enableCommandHistory !== false,
               enableTunnel: !!resolvedHost.enableTunnel,
               enableFileManager: resolvedHost.enableFileManager !== false,
               enableDocker: !!resolvedHost.enableDocker,
