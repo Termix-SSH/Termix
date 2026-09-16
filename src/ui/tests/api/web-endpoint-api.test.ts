@@ -133,63 +133,19 @@ describe("requireNumericHostId", () => {
  * the tunnelled service this session exactly as an embedded frame would.
  */
 describe("openWebEndpointExternally", () => {
-  it("opens at the other loopback spelling, never at the page's own host", async () => {
-    const { openWebEndpointExternally } =
-      await import("@/api/web-endpoint-api");
-    await openWebEndpointExternally(host, endpoint());
-
-    const opened = new URL(windowOpen.mock.calls[0][0] as string);
-    expect(opened.hostname).toBe("127.0.0.1");
-    expect(opened.hostname).not.toBe(pageHostname);
-  });
-
-  it("refuses, without opening a tunnel, when the page host has no alias", async () => {
-    pageHostname = "termix.example.com";
-    const { openWebEndpointExternally } =
-      await import("@/api/web-endpoint-api");
-
-    await expect(openWebEndpointExternally(host, endpoint())).rejects.toThrow(
-      /session/i,
-    );
-    // Binding the port and then declining to navigate would be no protection:
-    // the refusal has to happen before the forward exists.
-    expect(tunnelPost).not.toHaveBeenCalled();
-    expect(windowOpen).not.toHaveBeenCalled();
-  });
-
-  it("refuses a loopback bind this browser could not reach anyway", async () => {
-    const { openWebEndpointExternally } =
-      await import("@/api/web-endpoint-api");
-    await expect(
-      openWebEndpointExternally(host, endpoint({ bindHost: undefined })),
-    ).rejects.toThrow(/127\.0\.0\.1/);
-    expect(tunnelPost).not.toHaveBeenCalled();
-  });
-
-  it("still opens a direct endpoint on a host that refuses tunnels", async () => {
-    pageHostname = "termix.example.com";
-    const { openWebEndpointExternally } =
-      await import("@/api/web-endpoint-api");
-    await openWebEndpointExternally(
-      host,
-      endpoint({ access: "direct", bindHost: undefined }),
-    );
-    expect(windowOpen).toHaveBeenCalledWith(
-      "https://192.168.1.10:8006/",
-      "_blank",
-      "noopener,noreferrer",
-    );
-  });
-
-  it("is unaffected on the desktop, where localhost and 127.0.0.1 already differ", async () => {
-    isElectron.mockReturnValue(true);
-    const { openWebEndpointExternally } =
-      await import("@/api/web-endpoint-api");
-    await openWebEndpointExternally(host, endpoint({ bindHost: undefined }));
-    expect(windowOpen).toHaveBeenCalledWith(
-      "https://127.0.0.1:41234/",
-      "_blank",
-      "noopener,noreferrer",
-    );
-  });
+  it.each([false, true])(
+    "refuses shared-cookie external navigation (desktop=%s)",
+    async (desktop) => {
+      isElectron.mockReturnValue(desktop);
+      const { openWebEndpointExternally } =
+        await import("@/api/web-endpoint-api");
+      for (const access of ["direct", "tunnel"] as const) {
+        await expect(
+          openWebEndpointExternally(host, endpoint({ access })),
+        ).rejects.toThrow(/cannot isolate/);
+      }
+      expect(windowOpen).not.toHaveBeenCalled();
+      expect(tunnelPost).not.toHaveBeenCalled();
+    },
+  );
 });

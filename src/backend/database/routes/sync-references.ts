@@ -1,6 +1,6 @@
 import type { SyncEntityType } from "../repositories/sync-tombstone-repository.js";
 
-export type SyncReferenceEntity = "sshCredentials" | "vaultProfiles";
+export type SyncReferenceEntity = "hosts" | "sshCredentials" | "vaultProfiles";
 
 interface SyncReference {
   field: string;
@@ -8,12 +8,14 @@ interface SyncReference {
   entityType: SyncReferenceEntity;
 }
 
+const CREDENTIAL_REFERENCE: SyncReference = {
+  field: "credentialId",
+  syncField: "credentialSyncId",
+  entityType: "sshCredentials",
+};
+
 const HOST_REFERENCES: SyncReference[] = [
-  {
-    field: "credentialId",
-    syncField: "credentialSyncId",
-    entityType: "sshCredentials",
-  },
+  CREDENTIAL_REFERENCE,
   {
     field: "rdpCredentialId",
     syncField: "rdpCredentialSyncId",
@@ -34,11 +36,51 @@ const HOST_REFERENCES: SyncReference[] = [
     syncField: "vaultProfileSyncId",
     entityType: "vaultProfiles",
   },
+  {
+    field: "parentHostId",
+    syncField: "parentHostSyncId",
+    entityType: "hosts",
+  },
 ];
+
+export function orderSyncRows(
+  entityType: SyncEntityType,
+  rows: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  if (entityType !== "hosts") return rows;
+
+  const bySyncId = new Map(
+    rows
+      .filter((row) => typeof row.syncId === "string")
+      .map((row) => [row.syncId as string, row]),
+  );
+  const ordered: Record<string, unknown>[] = [];
+  const visited = new Set<Record<string, unknown>>();
+  const visiting = new Set<Record<string, unknown>>();
+
+  const visit = (row: Record<string, unknown>) => {
+    if (visited.has(row)) return;
+    if (visiting.has(row)) return;
+    visiting.add(row);
+
+    const parentSyncId = row.parentHostSyncId;
+    if (typeof parentSyncId === "string") {
+      const parent = bySyncId.get(parentSyncId);
+      if (parent) visit(parent);
+    }
+
+    visiting.delete(row);
+    visited.add(row);
+    ordered.push(row);
+  };
+
+  rows.forEach(visit);
+  return ordered;
+}
 
 const REFERENCES: Partial<Record<SyncEntityType, SyncReference[]>> = {
   hosts: HOST_REFERENCES,
-  sshFolders: [HOST_REFERENCES[0]],
+  sshFolders: [CREDENTIAL_REFERENCE],
 };
 
 export async function serializeSyncReferences(

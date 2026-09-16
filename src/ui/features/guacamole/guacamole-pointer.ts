@@ -1,4 +1,8 @@
 import Guacamole from "guacamole-common-js";
+import {
+  createScrollCoalescer,
+  isScrollButtonState,
+} from "./guacamole-scroll.js";
 
 export type GuacamoleTouchMode = "touchscreen" | "touchpad";
 
@@ -16,22 +20,46 @@ export function bindPointerInput(
   element: HTMLElement,
   touchMode: GuacamoleTouchMode | null | undefined,
   onState: (state: Guacamole.Mouse.State) => void,
-): void {
+): () => void {
+  const coalescer = createScrollCoalescer((state) => {
+    onState(state as Guacamole.Mouse.State);
+  });
+  let expectingScrollRelease = false;
+
+  const handleState = (state: Guacamole.Mouse.State) => {
+    coalescer.notePointer(state);
+    if (isScrollButtonState(state)) {
+      coalescer.ingestClick(state.down ? 1 : -1);
+      expectingScrollRelease = true;
+      return;
+    }
+    if (
+      expectingScrollRelease &&
+      !state.left &&
+      !state.middle &&
+      !state.right
+    ) {
+      expectingScrollRelease = false;
+      return;
+    }
+    expectingScrollRelease = false;
+    onState(state);
+  };
+
   const mouse = new Guacamole.Mouse(element);
-  mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = onState;
+  mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = handleState;
 
   if (touchMode === "touchscreen") {
     const touchscreen = new Guacamole.Mouse.Touchscreen(element);
     touchscreen.onEach(["mousedown", "mousemove", "mouseup"], (event) =>
-      onState(event.state),
+      handleState(event.state),
     );
-    return;
-  }
-
-  if (touchMode === "touchpad") {
+  } else if (touchMode === "touchpad") {
     const touchpad = new Guacamole.Mouse.Touchpad(element);
     touchpad.onEach(["mousedown", "mousemove", "mouseup"], (event) =>
-      onState(event.state),
+      handleState(event.state),
     );
   }
+
+  return () => coalescer.dispose();
 }

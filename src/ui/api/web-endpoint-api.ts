@@ -1,27 +1,7 @@
 import axios from "axios";
 import { handleApiError, tunnelApi } from "@/main-axios";
 import { isElectron } from "@/lib/electron";
-import {
-  currentTunnelHost,
-  resolveWebEndpointUrl,
-  webEndpointRefusalReason,
-  type WebEndpointRefusalReason,
-} from "@/lib/web-endpoint-url";
 import type { WebEndpoint } from "@/types/index";
-
-/**
- * Plain English rather than i18n keys: this module has no `t`, and the sidebar
- * toasts `error.message` directly. Matches how requireNumericHostId already
- * reports.
- */
-const REFUSAL_MESSAGES: Record<WebEndpointRefusalReason, string> = {
-  "loopback-bind-on-remote-backend":
-    "This endpoint tunnels to 127.0.0.1 on the machine running Termix, which your browser cannot reach. Set its Bind Host to an address that machine answers on, such as 0.0.0.0.",
-  "shares-session-cookie-with-termix":
-    "Opening this tunnel would send your Termix session to the tunnelled service, because it would be reached at the same hostname Termix is. Use the desktop app, or open Termix at localhost.",
-  "direct-shares-session-cookie":
-    "Opening this endpoint would send your Termix session to it, because your browser reaches it at the same site Termix is served from and cookies ignore the port. Use the desktop app, or serve this UI from a different hostname.",
-};
 
 /**
  * Thrown when the backend rejects a web endpoint tunnel open with a specific,
@@ -121,40 +101,12 @@ export function requireNumericHostId(id: string): number {
   return numericId;
 }
 
-/**
- * Opens an endpoint in the user's real browser instead of a Termix tab. On the
- * desktop, main's setWindowOpenHandler intercepts window.open and routes
- * http/https to shell.openExternal -- one code path for both platforms.
- */
+/** External windows share the browser's cookie jar, including on redirects. */
 export async function openWebEndpointExternally(
-  host: { id: string; ip: string },
-  endpoint: WebEndpoint,
+  _host: { id: string; ip: string },
+  _endpoint: WebEndpoint,
 ): Promise<void> {
-  // The same gate the embedded tab applies. Opening in the real browser is not
-  // the safer path: the cookie jar is the browser's either way, so a URL on the
-  // page's own host string -- tunnel OR direct -- leaks the session exactly as
-  // a frame would.
-  const refusal = webEndpointRefusalReason(endpoint, isElectron(), host.ip);
-  if (refusal) {
-    throw new Error(REFUSAL_MESSAGES[refusal]);
-  }
-
-  const localPort =
-    endpoint.access === "tunnel"
-      ? await openWebEndpointTunnel(requireNumericHostId(host.id), endpoint.id)
-      : undefined;
-
-  const url = resolveWebEndpointUrl({
-    hostAddress: host.ip,
-    endpoint,
-    localPort,
-    // Non-null for a tunnel by the time we get here; the refusal above is what
-    // a null separated host produces.
-    tunnelHost: currentTunnelHost(isElectron()) ?? undefined,
-  });
-
-  if (endpoint.access === "direct" && endpoint.ignoreCert) {
-    await allowInvalidCertificateForOrigin(new URL(url).origin);
-  }
-  window.open(url, "_blank", "noopener,noreferrer");
+  throw new Error(
+    "External opening cannot isolate your Termix session. Choose Embedded in the endpoint settings.",
+  );
 }

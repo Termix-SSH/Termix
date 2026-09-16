@@ -75,7 +75,7 @@ function newEndpoint(label: string): WebEndpoint {
     port: 443,
     path: "/",
     access: "direct",
-    render: "external",
+    render: "embedded",
   };
 }
 
@@ -320,7 +320,11 @@ export function HostEditorWebUiSection({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="external" className="text-xs">
+                            <SelectItem
+                              value="external"
+                              className="text-xs"
+                              disabled
+                            >
                               {t("hosts.webUiRenderExternal")}
                             </SelectItem>
                             <SelectItem value="embedded" className="text-xs">

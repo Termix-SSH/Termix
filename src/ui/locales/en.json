@@ -806,7 +806,13 @@
     "tunnel": "Tunnel",
     "fileManager": "File Manager",
     "serverStats": "Host Metrics",
-    "status": "Status",
+    "status": {
+      "available": "Available",
+      "reachable": "Reachable, not authenticated",
+      "offline": "Offline",
+      "monitoringDisabled": "Monitoring disabled",
+      "label": "Status"
+    },
     "folderRenamed": "Folder \"{{oldName}}\" renamed to \"{{newName}}\" successfully",
     "failedToRenameFolder": "Failed to rename folder",
     "unsavedChangesDescription": "Your host changes have not been saved. Discard them?",
@@ -1833,7 +1839,7 @@
     "webUiAccessTunnel": "SSH tunnel",
     "webUiAccessTunnelUnavailable": "An SSH tunnel needs SSH enabled on this host and a connection origin of this device.",
     "webUiRender": "Open in",
-    "webUiRenderExternal": "External browser",
+    "webUiRenderExternal": "External browser (unavailable: shared session)",
     "webUiRenderEmbedded": "Termix tab",
     "webUiRenderEmbeddedDesc": "Embedding is best effort: some web interfaces refuse to load in a frame, and a login that relies on same-site cookies may loop. The external browser always works.",
     "webUiIgnoreCert": "Allow invalid certificate",
@@ -2065,6 +2071,12 @@
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (Lock Screen)",
       "winKey": "Windows Key",
+      "superL": "Super+L (Lock Screen)",
+      "superKey": "Super Key",
+      "super": "Super",
+      "cmdL": "Cmd+L (Lock Screen)",
+      "cmdKey": "Command Key",
+      "cmd": "Cmd",
       "ctrl": "Ctrl",
       "alt": "Alt",
       "shift": "Shift",
@@ -4943,6 +4955,8 @@
     "copyUrl": "Copy URL",
     "urlCopied": "URL copied",
     "copyFailed": "Failed to copy URL",
-    "openExternally": "Open externally"
+    "openExternally": "Open externally",
+    "isolationUnavailable": "This browser cannot isolate web endpoints from your Termix session. Use a browser with credentialless iframe support.",
+    "isolationNotice": "Web endpoints use an isolated session. Pages requiring browser storage or pop-up sign-in may not work here."
   }
 }

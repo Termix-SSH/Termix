@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ExternalLink, Globe, RotateCw } from "lucide-react";
+import { Globe, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   currentTunnelHost,
@@ -78,6 +78,10 @@ export function WebEndpointTab({
       const refusal = webEndpointRefusalReason(endpoint, isElectron(), host.ip);
       if (refusal) {
         throw new Error(t(REFUSAL_MESSAGES[refusal]));
+      }
+
+      if (!("credentialless" in HTMLIFrameElement.prototype)) {
+        throw new Error(t("webEndpoint.isolationUnavailable"));
       }
 
       // Always re-resolved rather than reloading the frame: the backend closes
@@ -180,17 +184,10 @@ export function WebEndpointTab({
         >
           {t("webEndpoint.copyUrl")}
         </Button>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() =>
-            url && window.open(url, "_blank", "noopener,noreferrer")
-          }
-        >
-          <ExternalLink data-icon="inline-start" />
-          {t("webEndpoint.openExternally")}
-        </Button>
       </div>
+      <p className="px-2 py-1 text-xs text-muted-foreground">
+        {t("webEndpoint.isolationNotice")}
+      </p>
       {url && (
         // Keyed on generation as well as url: a re-resolved tunnel usually
         // returns the SAME port, so url alone would not change and React would
@@ -198,8 +195,16 @@ export function WebEndpointTab({
         <iframe
           key={`${generation}:${url}`}
           title={endpoint.label}
-          src={url}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          ref={(frame) => {
+            if (!frame) return;
+            // Set isolation before the first navigation, including redirects.
+            (
+              frame as HTMLIFrameElement & { credentialless: boolean }
+            ).credentialless = true;
+            frame.src = url;
+          }}
+          sandbox="allow-scripts allow-forms"
+          referrerPolicy="no-referrer"
           className="h-full w-full flex-1 border-0"
         />
       )}

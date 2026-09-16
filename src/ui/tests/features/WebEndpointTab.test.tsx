@@ -66,6 +66,11 @@ let pageHostname = "localhost";
 const realLocation = window.location;
 
 beforeEach(() => {
+  Object.defineProperty(HTMLIFrameElement.prototype, "credentialless", {
+    configurable: true,
+    writable: true,
+    value: false,
+  });
   pageHostname = "localhost";
   electron.isElectron.mockReturnValue(true);
   Object.defineProperty(window, "location", {
@@ -76,6 +81,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  delete (HTMLIFrameElement.prototype as { credentialless?: boolean })
+    .credentialless;
   Object.defineProperty(window, "location", {
     configurable: true,
     value: realLocation,
@@ -85,6 +92,34 @@ afterEach(() => {
 });
 
 describe("WebEndpointTab", () => {
+  it("refuses unsupported environments before creating a tunnel or iframe", async () => {
+    delete (HTMLIFrameElement.prototype as { credentialless?: boolean })
+      .credentialless;
+    const { WebEndpointTab } =
+      await import("@/features/web-endpoint/WebEndpointTab");
+    render(
+      <WebEndpointTab
+        host={host({}, [endpoint({ access: "tunnel" })])}
+        endpointId="e1"
+      />,
+    );
+    await screen.findByText("webEndpoint.isolationUnavailable");
+    expect(openWebEndpointTunnel).not.toHaveBeenCalled();
+    expect(document.querySelector("iframe")).toBeNull();
+  });
+  it("isolates cookie state and denies parent access, popups and top navigation", async () => {
+    const { WebEndpointTab } =
+      await import("@/features/web-endpoint/WebEndpointTab");
+    render(<WebEndpointTab host={host({}, [endpoint()])} endpointId="e1" />);
+    const frame = (await screen.findByTitle("Proxmox")) as HTMLIFrameElement;
+    expect(
+      (frame as HTMLIFrameElement & { credentialless: boolean }).credentialless,
+    ).toBe(true);
+    expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-forms");
+    expect(frame.getAttribute("referrerpolicy")).toBe("no-referrer");
+    expect(screen.queryByText("webEndpoint.openExternally")).toBeNull();
+  });
+
   it("renders an iframe at the direct URL", async () => {
     const { WebEndpointTab } =
       await import("@/features/web-endpoint/WebEndpointTab");

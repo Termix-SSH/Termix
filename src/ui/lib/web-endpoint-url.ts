@@ -111,7 +111,8 @@ function normalizeHost(host: string): string {
  * A precise registrable-domain (eTLD+1) test would also catch sibling
  * subdomains under a shared parent, but needs a public-suffix list this app
  * does not bundle; the exact/parent/sub check closes the reported same-host
- * case and the Domain-scoped reverse without one.
+ * case only. This is defense in depth, not cookie isolation: embedded frames
+ * must use credentialless plus an opaque sandbox origin, including redirects.
  */
 export function sharesCookieSiteWithPage(
   targetHost: string,

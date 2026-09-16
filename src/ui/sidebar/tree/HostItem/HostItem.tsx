@@ -67,7 +67,11 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import { useHostStatus, useServerStatusMeta } from "@/lib/ServerStatusContext";
+import {
+  useHostStatus,
+  useHostStatusReason,
+  useServerStatusMeta,
+} from "@/lib/ServerStatusContext";
 import {
   Tooltip,
   TooltipContent,
@@ -90,14 +94,15 @@ export function statusCheckEnabled(host: Host): boolean {
 export function buildStatusTooltip(
   host: Host,
   status: "online" | "reachable" | "offline",
+  t: (key: string) => string = (k) => k,
 ): string {
   const statusLabel =
     status === "online"
-      ? "Available"
+      ? t("hosts.status.available")
       : status === "reachable"
-        ? "Reachable, not authenticated"
-        : "Offline";
-  if (!statusCheckEnabled(host)) return "Monitoring disabled";
+        ? t("hosts.status.reachable")
+        : t("hosts.status.offline");
+  if (!statusCheckEnabled(host)) return t("hosts.status.monitoringDisabled");
   const protocols: string[] = [];
   if (host.enableSsh) protocols.push("SSH");
   if (host.enableRdp) protocols.push("RDP");
@@ -349,6 +354,7 @@ export function HostItem({
   const statusLoading = !initialLoadComplete && statusCheckOn;
   // Per-host subscription — status polls only re-render rows that flipped.
   const liveStatus = useHostStatus(Number(host.id), statusCheckOn);
+  const statusReason = useHostStatusReason(Number(host.id), statusCheckOn);
   const availability =
     liveStatus === "online" ||
     liveStatus === "reachable" ||
@@ -1309,7 +1315,9 @@ export function HostItem({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {buildStatusTooltip(host, availability)}
+                {statusReason === "host_key_changed"
+                  ? `${t("hostKey.keyChangedWarning")}: ${t("hostKey.keyChangedDescription")}`
+                  : buildStatusTooltip(host, availability, t)}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
