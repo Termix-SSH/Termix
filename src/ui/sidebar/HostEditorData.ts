@@ -240,7 +240,7 @@ export function createHostEditorForm(
     bellStyle: (terminalConfig.bellStyle ?? "none") as
       "none" | "sound" | "visual" | "both",
     rightClickSelectsWord: host?.terminalConfig?.rightClickSelectsWord ?? false,
-    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? true,
+    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? false,
     fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ?? "alt") as
       "alt" | "ctrl" | "shift",
     fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
