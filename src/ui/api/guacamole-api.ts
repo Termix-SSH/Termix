@@ -44,6 +44,7 @@ export interface GuacamoleTokenRequest {
 export interface GuacamoleTokenResponse {
   token: string;
   guacamoleConnectionId?: string | null;
+  termixConnectId?: string;
 }
 
 type GuacamoleConfigSource = {
@@ -238,4 +239,16 @@ export async function getGuacdStatus(origin: ConnectionOrigin): Promise<{
 }> {
   const response = await guacamoleApi(origin).get("/guacamole/status");
   return response.data;
+}
+
+export async function getGuacamoleConnectionId(
+  connectId: string,
+  origin: ConnectionOrigin,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  const response = await guacamoleApi(origin).get(
+    `/guacamole/connection/${encodeURIComponent(connectId)}`,
+    { signal },
+  );
+  return response.data.guacamoleConnectionId ?? null;
 }

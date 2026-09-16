@@ -57,30 +57,12 @@ export interface GuacSessionInfo {
 const guacSessionByConnectId = new Map<string, GuacSessionInfo>();
 // Keyed by guacd's own guacamoleConnectionId, for join-time lookups.
 const guacSessionByGuacamoleId = new Map<string, GuacSessionInfo>();
-const pendingConnectResolvers = new Map<
-  string,
-  (info: GuacSessionInfo | null) => void
->();
-
-export function waitForGuacdOpen(
-  termixConnectId: string,
-  timeoutMs = 10000,
-): Promise<GuacSessionInfo | null> {
-  const existing = guacSessionByConnectId.get(termixConnectId);
-  if (existing) return Promise.resolve(existing);
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (info: GuacSessionInfo | null) => {
-      if (settled) return;
-      settled = true;
-      pendingConnectResolvers.delete(termixConnectId);
-      resolve(info);
-    };
-
-    pendingConnectResolvers.set(termixConnectId, finish);
-    setTimeout(() => finish(null), timeoutMs);
-  });
+export function getGuacSessionByConnectId(
+  connectId: string,
+  userId: string,
+): GuacSessionInfo | null {
+  const info = guacSessionByConnectId.get(connectId);
+  return info?.ownerUserId === userId ? info : null;
 }
 
 export function getGuacSessionInfo(
@@ -231,9 +213,6 @@ function createGuacServer(): GuacamoleLite {
       };
       guacSessionByConnectId.set(termixMeta.termixConnectId, info);
       guacSessionByGuacamoleId.set(guacamoleConnectionId, info);
-
-      const resolver = pendingConnectResolvers.get(termixMeta.termixConnectId);
-      if (resolver) resolver(info);
     }
   });
 
