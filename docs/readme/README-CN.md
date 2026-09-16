@@ -237,7 +237,7 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 <td width="50%" valign="top">
 
 **安全:**
-密码、密钥和其他机密按用户加密，数据库文件本身也可以在磁盘上加密。具体原理请查看[文档](https://docs.termix.site/security)。
+密码、密钥和其他机密按用户加密，数据库文件本身也可以在磁盘上加密。具体原理请查看[文档](https://docs.termix.site/features/authentication/security/)。
 
 </td>
 <td width="50%" valign="top">
