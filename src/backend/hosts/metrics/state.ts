@@ -97,7 +97,7 @@ class MetricsCache {
 interface AuthFailureRecord {
   count: number;
   lastFailure: number;
-  reason: "TOTP" | "AUTH" | "TIMEOUT";
+  reason: "TOTP" | "AUTH" | "TIMEOUT" | "HOST_KEY";
   permanent: boolean;
 }
 
@@ -108,7 +108,7 @@ class AuthFailureTracker {
 
   recordFailure(
     hostId: number,
-    reason: "TOTP" | "AUTH" | "TIMEOUT",
+    reason: "TOTP" | "AUTH" | "TIMEOUT" | "HOST_KEY",
     permanent = false,
   ): void {
     const existing = this.failures.get(hostId);
@@ -153,6 +153,10 @@ class AuthFailureTracker {
       return "TOTP authentication required (metrics unavailable)";
     }
 
+    if (record.reason === "HOST_KEY") {
+      return "SSH host key changed (verification required)";
+    }
+
     if (record.permanent) {
       return "Authentication permanently failed";
     }
@@ -170,6 +174,10 @@ class AuthFailureTracker {
     }
 
     return null;
+  }
+
+  resetHostKeyFailure(hostId: number): void {
+    if (this.failures.get(hostId)?.reason === "HOST_KEY") this.reset(hostId);
   }
 
   reset(hostId: number): void {

@@ -1,3 +1,8 @@
+import {
+  fontSizeStorageKey as getFontSizeStorageKey,
+  readFontSize,
+  saveFontSize,
+} from "./font-size-storage";
 import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import {
@@ -52,6 +57,7 @@ import {
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
+import { getAltDigitShortcut } from "@/lib/app-keyboard-shortcuts";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import {
   highlightTerminalOutput,
@@ -211,16 +217,29 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     // precedence over the configured font size, so it survives the periodic
     // option refreshes (keepalive/refit/reconnect) that would otherwise snap
     // the size back to config.fontSize.
-    const fontSizeStorageKey = `terminal_fontsize_host_${hostConfig.id}`;
-    const readFontSizeOverride = (): number | null => {
+    const fontSizeStorageKey = getFontSizeStorageKey(
+      hostConfig.syncId ?? hostConfig.id,
+    );
+    const configuredFontSize = config.fontSize;
+    const fontSizePersistenceRef = useRef({
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    });
+    fontSizePersistenceRef.current = {
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    };
+    const readFontSizeOverride = () => {
       try {
-        const stored = Number(localStorage.getItem(fontSizeStorageKey));
-        return Number.isFinite(stored) && stored > 0 ? stored : null;
+        return readFontSize(
+          localStorage,
+          fontSizeStorageKey,
+          configuredFontSize,
+        );
       } catch {
         return null;
       }
     };
-    const configuredFontSize = config.fontSize;
     const fontSizeOverride = readFontSizeOverride();
     if (fontSizeOverride !== null) {
       config.fontSize = fontSizeOverride;
@@ -562,7 +581,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       null,
     );
     const terminalFontSizeRef = useRef(config.fontSize);
-    const lastConfiguredFontSizeRef = useRef(configuredFontSize);
     const DEBOUNCE_MS = 140;
 
     const logTerminalActivity = async () => {
@@ -663,7 +681,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminalFontSizeRef.current = nextFontSize;
       terminal.options.fontSize = nextFontSize;
       try {
-        localStorage.setItem(fontSizeStorageKey, String(nextFontSize));
+        saveFontSize(
+          localStorage,
+          fontSizePersistenceRef.current.key,
+          fontSizePersistenceRef.current.configured,
+          nextFontSize,
+        );
       } catch {
         // ignore persistence failures (private mode, disabled storage)
       }
@@ -2431,18 +2454,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       // Resolve the effective font size: a persisted zoom override wins, but if
       // the configured font size itself changed (e.g. user edited it in
       // Settings) drop the override so the new configured value takes effect.
-      let effectiveFontSize = config.fontSize;
-      if (config.fontSize !== lastConfiguredFontSizeRef.current) {
-        lastConfiguredFontSizeRef.current = config.fontSize;
-        try {
-          localStorage.removeItem(fontSizeStorageKey);
-        } catch {
-          // ignore
-        }
-      } else {
-        const override = readFontSizeOverride();
-        if (override !== null) effectiveFontSize = override;
-      }
+      const effectiveFontSize = readFontSizeOverride() ?? configuredFontSize;
 
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
@@ -3031,7 +3043,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "ArrowUp",
             "ArrowDown",
           ];
-          if (arrowCodes.includes(e.code) || /^Digit[1-9]$/.test(e.code)) {
+          if (arrowCodes.includes(e.code) || getAltDigitShortcut(e) !== null) {
             e.stopPropagation();
             globalShortcutHandler.current?.(e);
             return false;

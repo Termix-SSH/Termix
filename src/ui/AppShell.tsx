@@ -40,7 +40,11 @@ import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { defaultSizes, SplitView, type RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
-import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
+import {
+  dispatchCtrlW,
+  getAltDigitShortcut,
+  isShiftKey,
+} from "@/lib/app-keyboard-shortcuts";
 import { parseCustomKeybindings } from "@/api/open-tabs-api";
 import { findMatchingKeybinding } from "@/lib/keybinding-match";
 import type {
@@ -822,10 +826,10 @@ export function AppShell({
         }
 
         // Alt+1..9 — jump directly to the tab at that position
-        const digitMatch = /^Digit([1-9])$/.exec(e.code);
-        if (digitMatch) {
+        const digit = getAltDigitShortcut(e);
+        if (digit !== null) {
           const currentTabs = tabsRef.current;
-          const index = Number(digitMatch[1]) - 1;
+          const index = digit - 1;
           if (index < currentTabs.length) {
             e.preventDefault();
             setActiveTabId(currentTabs[index].id);

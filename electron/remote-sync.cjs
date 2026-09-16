@@ -14,6 +14,7 @@
 const { app, safeStorage } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { orderSyncWrites } = require("./sync-write-order.cjs");
 const { SYNCED_ENTITY_TYPES } = require("./remote-sync-entities.cjs");
 
 const SYNC_INTERVAL_MS = 90 * 1000;
@@ -489,35 +490,32 @@ class RemoteSyncEngine {
         ...remoteBySyncId.keys(),
       ]);
 
+      const writes = [];
       for (const syncId of allSyncIds) {
         if (tombstonedSyncIds.has(syncId)) continue;
-
         const localRow = localBySyncId.get(syncId);
         const remoteRow = remoteBySyncId.get(syncId);
-
-        if (localRow && !remoteRow) {
-          await this.pushRow(remoteBaseUrl, remoteJwt, entityType, localRow);
-        } else if (remoteRow && !localRow) {
-          await this.pushRow(
-            EMBEDDED_BASE_URL,
-            this.localJwt,
-            entityType,
-            remoteRow,
-          );
-        } else if (localRow && remoteRow) {
-          const localUpdatedAt = new Date(localRow.updatedAt || 0).getTime();
-          const remoteUpdatedAt = new Date(remoteRow.updatedAt || 0).getTime();
-          if (localUpdatedAt > remoteUpdatedAt) {
-            await this.pushRow(remoteBaseUrl, remoteJwt, entityType, localRow);
-          } else if (remoteUpdatedAt > localUpdatedAt) {
-            await this.pushRow(
-              EMBEDDED_BASE_URL,
-              this.localJwt,
-              entityType,
-              remoteRow,
-            );
-          }
+        const localTime = new Date(localRow?.updatedAt || 0).getTime();
+        const remoteTime = new Date(remoteRow?.updatedAt || 0).getTime();
+        if (localRow && (!remoteRow || localTime > remoteTime)) {
+          writes.push({
+            baseUrl: remoteBaseUrl,
+            token: remoteJwt,
+            row: localRow,
+          });
+        } else if (remoteRow && (!localRow || remoteTime > localTime)) {
+          writes.push({
+            baseUrl: EMBEDDED_BASE_URL,
+            token: this.localJwt,
+            row: remoteRow,
+          });
         }
+      }
+      for (const { baseUrl, token, row } of orderSyncWrites(
+        entityType,
+        writes,
+      )) {
+        await this.pushRow(baseUrl, token, entityType, row);
       }
 
       // Apply tombstones to whichever side hasn't already deleted the row.
