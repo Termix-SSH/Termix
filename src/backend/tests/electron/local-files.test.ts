@@ -228,6 +228,50 @@ describe("local-files transfer target resolution", () => {
     }).headers;
     expect(Object.keys(headers)).toEqual(["X-Electron-App"]);
   });
+
+  it("sends the renderer's local token as a Bearer header so transfers outlive the jwt cookie", () => {
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1MSJ9.c2ln-_X";
+    const target = resolve({
+      origin: "local",
+      route: "uploadFileStream",
+      authToken: jwt,
+    });
+    expect(target.headers.Authorization).toBe(`Bearer ${jwt}`);
+    expect(target.url).toBe(
+      "http://127.0.0.1:30004/ssh/file_manager/ssh/uploadFileStream",
+    );
+    // Absent or empty: no header at all (the session cookie is the fallback).
+    for (const authToken of [undefined, null, ""]) {
+      expect(
+        resolve({ origin: "local", route: "downloadFileStream", authToken })
+          .headers.Authorization,
+      ).toBeUndefined();
+    }
+  });
+
+  it("refuses anything but a compact JWT as the local token", () => {
+    for (const authToken of [
+      "tmx_apikey",
+      "a.b",
+      "x\r\nX-Injected: 1",
+      "Bearer abc.def.ghi",
+      { toString: () => "a.b.c" },
+      "a.b.".padEnd(9000, "c"),
+    ]) {
+      expect(() =>
+        resolve({ origin: "local", route: "uploadFileStream", authToken }),
+      ).toThrow(/Invalid auth token/);
+    }
+  });
+
+  it("never lets the renderer's token replace the main process's Remote Sync JWT", () => {
+    const target = resolve({
+      origin: "remote",
+      route: "uploadFileStream",
+      authToken: "aaa.bbb.ccc",
+    });
+    expect(target.headers.Authorization).toBe("Bearer remote-jwt");
+  });
 });
 
 describe("local-files download boundary", () => {
@@ -854,6 +898,74 @@ describe("local-files upload boundary", () => {
       expect(received.hash).toBe(
         crypto.createHash("sha256").update(payload).digest("hex"),
       );
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+      await fsp.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("puts the renderer's local token on the wire as a Bearer header (cookie no longer required)", async () => {
+    const seen: http.IncomingHttpHeaders[] = [];
+    const server = http.createServer((req, res) => {
+      seen.push(req.headers);
+      req.resume();
+      req.on("end", () => {
+        // The real backend answers 401 "Missing authentication token" when
+        // neither cookie nor Bearer header is present.
+        if (!req.headers.authorization) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: "Missing authentication token" }));
+          return;
+        }
+        res.end(JSON.stringify({ message: "ok" }));
+      });
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    const port = (server.address() as { port: number }).port;
+    const root = await fsp.mkdtemp(path.join(os.tmpdir(), "termix-upload-"));
+    const localPath = path.join(root, "small.txt");
+    await fsp.writeFile(localPath, "hello");
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1MSJ9.c2ln";
+    try {
+      const handlers = localFiles.createLocalFileHandlers({
+        net: fakeNet,
+        shell: {},
+        localBaseUrl: `http://127.0.0.1:${port}/ssh/file_manager`,
+      });
+      const withoutToken = await handlers[localFiles.IPC.UPLOAD](fakeEvent, {
+        transferId: "up-auth-0",
+        origin: "local",
+        fields: { sessionId: "42", path: "/home/ubuntu" },
+        localPath,
+        fileName: "small.txt",
+      });
+      expect(withoutToken.success).toBe(false);
+      expect(withoutToken.error).toMatch(/Missing authentication token/);
+
+      const withToken = await handlers[localFiles.IPC.UPLOAD](fakeEvent, {
+        transferId: "up-auth-1",
+        origin: "local",
+        authToken: jwt,
+        fields: { sessionId: "42", path: "/home/ubuntu" },
+        localPath,
+        fileName: "small.txt",
+        headers: { Authorization: "Bearer leaked" },
+      });
+      expect(withToken.success).toBe(true);
+      expect(seen[1]?.authorization).toBe(`Bearer ${jwt}`);
+      expect(seen[1]?.["x-electron-app"]).toBe("true");
+
+      const malformed = await handlers[localFiles.IPC.UPLOAD](fakeEvent, {
+        transferId: "up-auth-2",
+        origin: "local",
+        authToken: "not a token\r\nX-Injected: 1",
+        fields: { sessionId: "42", path: "/home/ubuntu" },
+        localPath,
+        fileName: "small.txt",
+      });
+      expect(malformed.success).toBe(false);
+      expect(malformed.error).toMatch(/Invalid auth token/);
+      expect(seen.length).toBe(2); // the malformed one never reached the network
     } finally {
       await new Promise<void>((r) => server.close(() => r()));
       await fsp.rm(root, { recursive: true, force: true });

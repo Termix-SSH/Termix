@@ -455,6 +455,8 @@ export interface LocalUploadRequest {
   localPath: string;
   fileName: string;
   deviceId?: string;
+  /** The renderer's token for the embedded backend (origin "local"); sent as a Bearer header. */
+  authToken?: string;
 }
 
 export interface LocalDownloadRequest {
@@ -468,6 +470,8 @@ export interface LocalDownloadRequest {
   /** Replace an existing file at destPath; otherwise the transfer is refused with code EEXIST. */
   overwrite?: boolean;
   deviceId?: string;
+  /** The renderer's token for the embedded backend (origin "local"); sent as a Bearer header. */
+  authToken?: string;
 }
 
 export interface LocalTransferProgress {
