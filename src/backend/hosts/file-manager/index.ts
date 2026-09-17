@@ -129,7 +129,19 @@ const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
-app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
+// uploadFileChunk streams its octet-stream body straight into SFTP; the raw
+// body parser would otherwise buffer the whole chunk in memory first and,
+// worse, drain the request so nothing is left for the route to pipe (the
+// remote file ended up empty and the request never completed).
+const rawBodyParser = express.raw({
+  limit: "5gb",
+  type: "application/octet-stream",
+});
+const STREAMED_BODY_ROUTES = new Set(["/ssh/file_manager/ssh/uploadFileChunk"]);
+app.use((req, res, next) => {
+  if (STREAMED_BODY_ROUTES.has(req.path)) return next();
+  rawBodyParser(req, res, next);
+});
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();

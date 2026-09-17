@@ -7,6 +7,8 @@ export interface LocalTransferBatchStatus {
   totalFiles: number;
   completedFiles: number;
   currentFileName?: string;
+  /** Files being transferred right now (parallel transfers). */
+  activeFiles?: number;
   bytesDone: number;
   totalBytes: number;
   mbPerSec?: number;
@@ -31,11 +33,17 @@ export function LocalTransferProgressToast({
   const title =
     status.direction === "upload"
       ? t("fileManager.localUploadingProgress", {
-          current: Math.min(status.completedFiles + 1, status.totalFiles),
+          current: Math.min(
+            status.completedFiles + Math.max(1, status.activeFiles ?? 1),
+            status.totalFiles,
+          ),
           total: status.totalFiles,
         })
       : t("fileManager.localDownloadingProgress", {
-          current: Math.min(status.completedFiles + 1, status.totalFiles),
+          current: Math.min(
+            status.completedFiles + Math.max(1, status.activeFiles ?? 1),
+            status.totalFiles,
+          ),
           total: status.totalFiles,
         });
 
@@ -49,6 +57,14 @@ export function LocalTransferProgressToast({
               className="text-xs text-muted-foreground truncate"
               title={status.currentFileName}
             >
+              {(status.activeFiles ?? 0) > 1 && (
+                <span className="mr-1 text-foreground/70">
+                  {t("fileManager.localTransferInFlight", {
+                    count: status.activeFiles,
+                  })}
+                  {" · "}
+                </span>
+              )}
               {status.currentFileName}
             </p>
           )}

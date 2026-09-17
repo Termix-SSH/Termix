@@ -774,7 +774,9 @@ async function downloadToLocal(
     }
     const payload = Buffer.from(JSON.stringify(body || {}), "utf8");
     request.setHeader("Content-Type", "application/json");
-    request.setHeader("Content-Length", String(payload.length));
+    // No explicit Content-Length: Electron's net module forbids apps from
+    // setting it (the request fails with net::ERR_INVALID_ARGUMENT) and
+    // computes it itself from the buffered body when chunked encoding is off.
     activeTransfers.set(transferId, state);
 
     await new Promise((resolve, reject) => {
@@ -835,8 +837,7 @@ async function downloadToLocal(
         });
       });
 
-      request.write(payload);
-      request.end();
+      request.end(payload);
     });
 
     await prepareDownloadPath(destination.root, absDest);

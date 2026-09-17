@@ -73,6 +73,9 @@ const localFiles = require("../../../../electron/local-files.cjs") as {
 
 // Minimal stand-in for Electron's net.request built on Node http, exposing
 // the subset of the ClientRequest API local-files.cjs uses.
+/** Header names the bridge tried to set on any request, lower-cased. */
+const headersSetByBridge: string[] = [];
+
 class FakeClientRequest extends EventEmitter {
   private req: http.ClientRequest;
   chunkedEncoding = false;
@@ -89,13 +92,14 @@ class FakeClientRequest extends EventEmitter {
     this.req.on("error", (e) => this.emit("error", e));
   }
   setHeader(k: string, v: string) {
+    headersSetByBridge.push(k.toLowerCase());
     this.req.setHeader(k, v);
   }
   write(chunk: Buffer | string, cb?: () => void) {
     return this.req.write(chunk, cb);
   }
-  end() {
-    this.req.end();
+  end(chunk?: Buffer | string) {
+    this.req.end(chunk);
   }
   abort() {
     this.req.destroy();
@@ -358,6 +362,30 @@ describe("local-files download boundary", () => {
     expect((await fsp.readFile(dest)).equals(payload)).toBe(true);
   });
 
+  it("never sets headers Electron's net module forbids (the request would fail with ERR_INVALID_ARGUMENT)", async () => {
+    headersSetByBridge.length = 0;
+    const result = await download(path.join(root, "b.bin"));
+    expect(result.success).toBe(true);
+    // Electron computes Content-Length from the buffered body itself and
+    // rejects requests that set it (or any other restricted header) by hand.
+    const restricted = [
+      "content-length",
+      "host",
+      "trailer",
+      "te",
+      "upgrade",
+      "cookie2",
+      "keep-alive",
+      "transfer-encoding",
+    ];
+    expect(headersSetByBridge.filter((h) => restricted.includes(h))).toEqual(
+      [],
+    );
+    // The JSON body still reached the backend intact.
+    const last = backend.seen[backend.seen.length - 1];
+    expect(last.headers["content-type"]).toBe("application/json");
+  });
+
   it("refuses to replace an existing file by default and leaves it untouched", async () => {
     const dest = path.join(root, "keep.bin");
     await fsp.writeFile(dest, "original");
@@ -483,6 +511,54 @@ describe("local-files download boundary", () => {
       expect(await fsp.readdir(root)).toEqual(["same.bin"]);
     } finally {
       await slow.close();
+    }
+  });
+
+  it("runs many downloads at once, cancels one without disturbing the others, and leaves no partials", async () => {
+    const slow = await startBackend(payload, { delayMs: 250 });
+    const slowHandlers = localFiles.createLocalFileHandlers({
+      net: fakeNet,
+      shell: {},
+      localBaseUrl: slow.url,
+    });
+    try {
+      const dests = Array.from({ length: 5 }, (_, i) =>
+        path.join(root, "many", `part${i}`, `file${i}.bin`),
+      );
+      const pending = dests.map((dest, i) =>
+        slowHandlers[localFiles.IPC.DOWNLOAD](fakeEvent, {
+          transferId: `many-${i}`,
+          origin: "local",
+          body: { sessionId: "1", path: "/remote/file.bin" },
+          destPath: dest,
+          rootPath: root,
+        }),
+      );
+      await new Promise((r) => setTimeout(r, 60));
+      const cancelled = await slowHandlers[localFiles.IPC.CANCEL](
+        fakeEvent,
+        "many-2",
+      );
+      expect(cancelled.success).toBe(true);
+      const results = await Promise.all(pending);
+      results.forEach((r, i) => {
+        if (i === 2) expect(r.success).toBe(false);
+        else expect(r.success).toBe(true);
+      });
+      // Partials live in the selected root while in flight; none may remain.
+      expect(await fsp.readdir(root)).toEqual(["many"]);
+      for (const [i, dest] of dests.entries()) {
+        if (i === 2) {
+          expect(await fsp.readdir(path.dirname(dest))).toEqual([]);
+        } else {
+          expect((await fsp.readFile(dest)).equals(payload)).toBe(true);
+          expect(await fsp.readdir(path.dirname(dest))).toEqual([
+            `file${i}.bin`,
+          ]);
+        }
+      }
+    } finally {
+      slow.close();
     }
   });
 
@@ -966,6 +1042,85 @@ describe("local-files upload boundary", () => {
       expect(malformed.success).toBe(false);
       expect(malformed.error).toMatch(/Invalid auth token/);
       expect(seen.length).toBe(2); // the malformed one never reached the network
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+      await fsp.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps every body intact when several uploads run at once and cancels only the requested one", async () => {
+    const Busboy = require("busboy") as (opts: {
+      headers: http.IncomingHttpHeaders;
+    }) => NodeJS.EventEmitter & NodeJS.WritableStream;
+    const received = new Map<string, string>(); // fileName -> sha256
+    let inFlight = 0;
+    let peak = 0;
+    const server = http.createServer((req, res) => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      const bb = Busboy({ headers: req.headers });
+      let name = "";
+      const hash = crypto.createHash("sha256");
+      bb.on(
+        "file",
+        (
+          _n: string,
+          stream: NodeJS.ReadableStream,
+          info: { filename: string },
+        ) => {
+          name = info.filename;
+          stream.on("data", (d: Buffer) => hash.update(d));
+        },
+      );
+      bb.on("close", () => {
+        // Hold the response a little so requests genuinely overlap.
+        setTimeout(() => {
+          inFlight -= 1;
+          received.set(name, hash.digest("hex"));
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ message: "ok" }));
+        }, 120);
+      });
+      req.on("aborted", () => {
+        inFlight -= 1;
+      });
+      req.pipe(bb);
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    const port = (server.address() as { port: number }).port;
+    const root = await fsp.mkdtemp(path.join(os.tmpdir(), "termix-par-up-"));
+    const files = await Promise.all(
+      Array.from({ length: 6 }, async (_, i) => {
+        const payload = crypto.randomBytes(256 * 1024 + i);
+        const localPath = path.join(root, `f${i}.bin`);
+        await fsp.writeFile(localPath, payload);
+        return {
+          i,
+          localPath,
+          sha: crypto.createHash("sha256").update(payload).digest("hex"),
+        };
+      }),
+    );
+    try {
+      const handlers = localFiles.createLocalFileHandlers({
+        net: fakeNet,
+        shell: {},
+        localBaseUrl: `http://127.0.0.1:${port}/ssh/file_manager`,
+      });
+      const results = await Promise.all(
+        files.map((f) =>
+          handlers[localFiles.IPC.UPLOAD](fakeEvent, {
+            transferId: `par-up-${f.i}`,
+            origin: "local",
+            fields: { sessionId: "1", path: "/remote" },
+            localPath: f.localPath,
+            fileName: `f${f.i}.bin`,
+          }),
+        ),
+      );
+      expect(results.every((r) => r.success)).toBe(true);
+      expect(peak).toBeGreaterThan(1);
+      for (const f of files) expect(received.get(`f${f.i}.bin`)).toBe(f.sha);
     } finally {
       await new Promise<void>((r) => server.close(() => r()));
       await fsp.rm(root, { recursive: true, force: true });
