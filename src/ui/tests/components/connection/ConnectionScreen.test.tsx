@@ -21,7 +21,7 @@ describe("ConnectionScreen", () => {
     expect(screen.getByText("common.loading")).toBeTruthy();
     const status = screen.getByRole("status");
     expect(status.getAttribute("data-status")).toBe("connecting");
-    expect(status.querySelector('[data-active="true"]')).toBeTruthy();
+    expect(status.querySelector(".animate-spin")).toBeTruthy();
   });
 
   it("renders the disconnected state without a provider", () => {

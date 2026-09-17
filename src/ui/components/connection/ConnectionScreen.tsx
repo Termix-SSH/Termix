@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils.ts";
 import { Button } from "@/components/button.tsx";
-import { RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel.tsx";
 import type { ConnectionStatus } from "@/components/connection/connection-status.ts";
 
@@ -64,13 +64,10 @@ export function ConnectionScreen({
         ) : (
           <div className="flex flex-col items-center gap-4 px-6 text-center">
             {showSpinner && (
-              <div
-                className="connection-signal"
-                data-active="true"
+              <Loader2
+                className="size-8 animate-spin text-accent-brand"
                 aria-hidden="true"
-              >
-                <span className="connection-signal-core" />
-              </div>
+              />
             )}
             {message && (
               <p className="text-sm text-foreground-secondary font-medium">

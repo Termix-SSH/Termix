@@ -609,55 +609,6 @@ html.fs-xl {
   transform: translateX(105%);
 }
 
-.connection-signal {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 24px;
-  color: var(--accent-brand);
-}
-
-.connection-signal::before,
-.connection-signal::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 16px;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.22;
-}
-
-.connection-signal::before {
-  right: 50%;
-  margin-right: 5px;
-  transform-origin: right;
-}
-
-.connection-signal::after {
-  left: 50%;
-  margin-left: 5px;
-  transform-origin: left;
-}
-
-.connection-signal-core {
-  width: 7px;
-  height: 7px;
-  border: 1px solid currentColor;
-  background: color-mix(in oklab, currentColor 18%, transparent);
-  transform: rotate(45deg);
-}
-
-.connection-signal[data-active="true"]::before,
-.connection-signal[data-active="true"]::after {
-  animation: connection-signal-flow 900ms var(--motion-ease-enter) infinite;
-}
-
-.connection-signal[data-active="true"]::after {
-  animation-delay: 120ms;
-}
-
 .host-status-stripe {
   position: relative;
   isolation: isolate;
@@ -738,20 +689,6 @@ html.fs-xl {
   }
 }
 
-@keyframes connection-signal-flow {
-  0% {
-    opacity: 0.12;
-    transform: scaleX(0.2);
-  }
-  45% {
-    opacity: 0.72;
-  }
-  100% {
-    opacity: 0.22;
-    transform: scaleX(1);
-  }
-}
-
 @keyframes host-signal-lock {
   0% {
     opacity: 0;
@@ -779,8 +716,6 @@ html.fs-xl {
   .motion-workspace-layout,
   .motion-transfer-phase,
   .transfer-progress-indeterminate,
-  .connection-signal[data-active="true"]::before,
-  .connection-signal[data-active="true"]::after,
   .host-status-stripe[data-locking="true"]::after {
     animation: none;
   }
