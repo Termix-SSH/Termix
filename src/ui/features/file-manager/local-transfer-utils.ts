@@ -330,3 +330,63 @@ export function formatLocalModified(
   }
   return `${month} ${day}  ${date.getFullYear()}`;
 }
+
+// ---------------------------------------------------------------------------
+// Parallel transfers
+
+export const TRANSFER_CONCURRENCY_STORAGE_KEY =
+  "termix:file-manager:transfer-concurrency";
+export const DEFAULT_TRANSFER_CONCURRENCY = 4;
+export const MAX_TRANSFER_CONCURRENCY = 8;
+
+export function clampTransferConcurrency(value: unknown): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return DEFAULT_TRANSFER_CONCURRENCY;
+  return Math.min(MAX_TRANSFER_CONCURRENCY, Math.max(1, n));
+}
+
+/** How many files are transferred at the same time (1 = one after another). */
+export function getTransferConcurrency(): number {
+  try {
+    const raw = localStorage.getItem(TRANSFER_CONCURRENCY_STORAGE_KEY);
+    return raw === null
+      ? DEFAULT_TRANSFER_CONCURRENCY
+      : clampTransferConcurrency(raw);
+  } catch {
+    return DEFAULT_TRANSFER_CONCURRENCY;
+  }
+}
+
+export function setTransferConcurrency(value: number): number {
+  const clamped = clampTransferConcurrency(value);
+  try {
+    localStorage.setItem(TRANSFER_CONCURRENCY_STORAGE_KEY, String(clamped));
+  } catch {
+    // storage unavailable
+  }
+  return clamped;
+}
+
+/**
+ * Runs `worker` over `items` with at most `limit` in flight, preserving the
+ * original order of dispatch. Stops dispatching new items once `shouldStop()`
+ * returns true; items already in flight run to completion (the caller
+ * cancels those through their own transfer ids). Never rejects because of a
+ * single item: worker errors are the worker's business.
+ */
+export async function runWithConcurrency<T>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<void>,
+  shouldStop: () => boolean = () => false,
+): Promise<void> {
+  const size = Math.max(1, Math.min(limit, items.length));
+  let next = 0;
+  const lanes = Array.from({ length: size }, async () => {
+    while (next < items.length && !shouldStop()) {
+      const index = next++;
+      await worker(items[index], index);
+    }
+  });
+  await Promise.all(lanes);
+}

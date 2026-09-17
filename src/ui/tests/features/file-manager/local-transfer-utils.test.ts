@@ -1,11 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   LOCAL_FILES_DRAG_MIME,
   REMOTE_FILES_DRAG_MIME,
   UnsafeLocalNameError,
   assertSafeLocalComponent,
   buildLocalDestination,
+  clampTransferConcurrency,
   describeLocalKind,
+  getTransferConcurrency,
+  runWithConcurrency,
+  setTransferConcurrency,
+  DEFAULT_TRANSFER_CONCURRENCY,
+  TRANSFER_CONCURRENCY_STORAGE_KEY,
   formatLocalModified,
   isLocalFilesDrag,
   isRemoteFilesDrag,
@@ -266,5 +272,90 @@ describe("local entry presentation", () => {
     expect(
       sortLocalEntries(entries, "modified", "asc").map((e) => e.name),
     ).toEqual(["zeta", "alpha", "b.txt", "a.txt"]);
+  });
+});
+
+describe("parallel transfers", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("clamps and persists the concurrency preference", () => {
+    expect(getTransferConcurrency()).toBe(DEFAULT_TRANSFER_CONCURRENCY);
+    expect(clampTransferConcurrency(0)).toBe(1);
+    expect(clampTransferConcurrency(99)).toBe(8);
+    expect(clampTransferConcurrency("3.7")).toBe(3);
+    expect(clampTransferConcurrency("nope")).toBe(DEFAULT_TRANSFER_CONCURRENCY);
+    expect(setTransferConcurrency(6)).toBe(6);
+    expect(localStorage.getItem(TRANSFER_CONCURRENCY_STORAGE_KEY)).toBe("6");
+    expect(getTransferConcurrency()).toBe(6);
+  });
+
+  const deferred = () => {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  };
+
+  it("never runs more than `limit` workers at once and processes everything", async () => {
+    const gates = Array.from({ length: 6 }, deferred);
+    const started: number[] = [];
+    let active = 0;
+    let peak = 0;
+    const run = runWithConcurrency([0, 1, 2, 3, 4, 5], 3, async (i) => {
+      started.push(i);
+      active += 1;
+      peak = Math.max(peak, active);
+      await gates[i].promise;
+      active -= 1;
+    });
+    await Promise.resolve();
+    expect(started).toEqual([0, 1, 2]); // exactly `limit` dispatched
+    gates[1].resolve();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(started).toEqual([0, 1, 2, 3]); // a free lane picks up the next item
+    for (const g of gates) g.resolve();
+    await run;
+    expect(started).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(peak).toBe(3);
+  });
+
+  it("stops dispatching once asked to, letting in-flight items finish", async () => {
+    let stop = false;
+    const done: number[] = [];
+    await runWithConcurrency(
+      [1, 2, 3, 4, 5],
+      2,
+      async (i) => {
+        await new Promise((r) => setTimeout(r, 1));
+        done.push(i);
+        if (i === 2) stop = true;
+      },
+      () => stop,
+    );
+    expect(done.length).toBeLessThan(5);
+    expect(done).toContain(1);
+    expect(done).toContain(2);
+  });
+
+  it("does not reject the batch when a single item fails (the worker reports it)", async () => {
+    const failed: number[] = [];
+    await runWithConcurrency([1, 2, 3], 2, async (i) => {
+      try {
+        if (i === 2) throw new Error("boom");
+      } catch {
+        failed.push(i);
+      }
+    });
+    expect(failed).toEqual([2]);
+  });
+
+  it("handles an empty list and a limit larger than the list", async () => {
+    let calls = 0;
+    await runWithConcurrency([], 4, async () => {
+      calls += 1;
+    });
+    await runWithConcurrency([1], 8, async () => {
+      calls += 1;
+    });
+    expect(calls).toBe(1);
   });
 });

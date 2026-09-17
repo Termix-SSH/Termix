@@ -38,6 +38,12 @@ import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state"
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import {
+  MAX_TRANSFER_CONCURRENCY,
+  TRANSFER_CONCURRENCY_STORAGE_KEY,
+  getTransferConcurrency,
+  setTransferConcurrency,
+} from "@/features/file-manager/local-transfer-utils";
 import { VersionBadge } from "@/components/version-badge";
 import {
   Dialog,
@@ -692,6 +698,9 @@ export function UserProfilePanel({
   const [terminalLinkClickBehavior, setTerminalLinkClickBehavior] = useState(
     () => localStorage.getItem("terminalLinkClickBehavior") ?? "confirm",
   );
+  const [transferConcurrency, setTransferConcurrencyState] = useState(() =>
+    getTransferConcurrency(),
+  );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
@@ -906,6 +915,7 @@ export function UserProfilePanel({
         "dashboardTab.mainWidthPct",
         "termix-terminal-toolbar-density",
         "fileManagerViewMode",
+        TRANSFER_CONCURRENCY_STORAGE_KEY,
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
@@ -2101,6 +2111,31 @@ export function UserProfilePanel({
                 <option value="direct">
                   {t("hosts.linkClickBehaviorDirect")}
                 </option>
+              </Select2>
+            </div>
+            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium leading-snug">
+                  {t("newUi.sidebar.userProfile.transferConcurrency")}
+                </span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  {t("newUi.sidebar.userProfile.transferConcurrencyDesc")}
+                </span>
+              </div>
+              <Select2
+                value={transferConcurrency}
+                onChange={(e) =>
+                  setTransferConcurrencyState(
+                    setTransferConcurrency(Number(e.target.value)),
+                  )
+                }
+                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                {Array.from({ length: MAX_TRANSFER_CONCURRENCY }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
               </Select2>
             </div>
             <SettingRow

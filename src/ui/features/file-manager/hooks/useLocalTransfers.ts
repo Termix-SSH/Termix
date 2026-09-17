@@ -20,6 +20,8 @@ import {
 import {
   UnsafeLocalNameError,
   buildLocalDestination,
+  getTransferConcurrency,
+  runWithConcurrency,
   joinRemotePath,
   planRemoteDirectories,
   remoteBaseName,
@@ -79,6 +81,13 @@ function askReplaceExisting(
   });
 }
 
+/** One line a user can act on, taken from whatever the bridge or backend said. */
+function describeTransferError(error: unknown): string | undefined {
+  const message =
+    error instanceof Error ? error.message : String(error ?? "").trim();
+  return message ? message.slice(0, 200) : undefined;
+}
+
 class TransferCancelledError extends Error {
   constructor() {
     super("Transfer cancelled");
@@ -128,19 +137,25 @@ export function useLocalTransfers({
       totalBytes: number,
       work: (ctx: {
         isCancelled: () => boolean;
-        setCurrentTransfer: (id: string | null) => void;
-        report: (
-          completedFiles: number,
-          bytesDone: number,
-          currentFileName?: string,
-        ) => void;
-      }) => Promise<{ failed: string[] }>,
+        /** Marks a transfer as in flight so Cancel can reach it. */
+        trackTransfer: (id: string, fileName: string) => void;
+        /** Progress of one in-flight transfer; bytes are summed across all. */
+        progress: (id: string, transferred: number) => void;
+        /** Transfer finished (success or failure); its size is now settled. */
+        settleTransfer: (id: string, size: number) => void;
+      }) => Promise<{ failed: string[]; reason?: string }>,
     ) => {
       batchCounter.current += 1;
       const toastId = `local-transfer-${batchCounter.current}`;
       let cancelled = false;
       let cancelling = false;
-      let currentTransfer: string | null = null;
+      const inFlight = new Map<
+        string,
+        { fileName: string; transferred: number }
+      >();
+      let settledBytes = 0;
+      let completedFiles = 0;
+      let lastFileName: string | undefined;
       const speed = createSpeedometer();
 
       const status: LocalTransferBatchStatus = {
@@ -159,7 +174,7 @@ export function useLocalTransfers({
               cancelled = true;
               cancelling = true;
               render();
-              if (currentTransfer) void cancelLocalTransfer(currentTransfer);
+              for (const id of inFlight.keys()) void cancelLocalTransfer(id);
             },
           }),
           { id: toastId, duration: Infinity },
@@ -168,17 +183,36 @@ export function useLocalTransfers({
       render();
 
       try {
-        const { failed } = await work({
+        const refresh = () => {
+          let bytesDone = settledBytes;
+          for (const entry of inFlight.values()) bytesDone += entry.transferred;
+          status.completedFiles = completedFiles;
+          status.bytesDone = bytesDone;
+          status.activeFiles = inFlight.size;
+          status.currentFileName =
+            lastFileName ?? inFlight.values().next().value?.fileName;
+          status.mbPerSec = speed(bytesDone);
+          render();
+        };
+        const { failed, reason } = await work({
           isCancelled: () => cancelled,
-          setCurrentTransfer: (id) => {
-            currentTransfer = id;
+          trackTransfer: (id, fileName) => {
+            inFlight.set(id, { fileName, transferred: 0 });
+            lastFileName = fileName;
+            refresh();
           },
-          report: (completedFiles, bytesDone, currentFileName) => {
-            status.completedFiles = completedFiles;
-            status.bytesDone = bytesDone;
-            status.currentFileName = currentFileName;
-            status.mbPerSec = speed(bytesDone);
-            render();
+          progress: (id, transferred) => {
+            const entry = inFlight.get(id);
+            if (!entry) return;
+            entry.transferred = transferred;
+            lastFileName = entry.fileName;
+            refresh();
+          },
+          settleTransfer: (id, size) => {
+            inFlight.delete(id);
+            settledBytes += size;
+            completedFiles += 1;
+            refresh();
           },
         });
 
@@ -193,13 +227,19 @@ export function useLocalTransfers({
             t(`fileManager.local${key}Complete`, { count: totalFiles }),
           );
         } else if (failed.length === totalFiles) {
-          toast.error(t(`fileManager.local${key}Failed`));
+          // Every file failed the same way more often than not (auth,
+          // permissions, a dead session); say why instead of just "failed".
+          toast.error(
+            t(`fileManager.local${key}Failed`),
+            reason ? { description: reason } : undefined,
+          );
         } else {
           toast.warning(
             t(`fileManager.local${key}Partial`, {
               done: totalFiles - failed.length,
               failed: failed.length,
             }),
+            reason ? { description: reason } : undefined,
           );
         }
       } catch (error) {
@@ -251,7 +291,7 @@ export function useLocalTransfers({
         "upload",
         plan.files.length,
         plan.totalBytes,
-        async ({ isCancelled, setCurrentTransfer, report }) => {
+        async ({ isCancelled, trackTransfer, progress, settleTransfer }) => {
           await ensureSSHConnection();
 
           const dirs = planRemoteDirectories(
@@ -264,50 +304,51 @@ export function useLocalTransfers({
               ? joinRemotePath(remoteDir, dir.slice(0, dir.lastIndexOf("/")))
               : remoteDir;
             const name = dir.split("/").pop()!;
-            try {
-              await createSSHFolder(sessionId, parent, name, hostId);
-            } catch {
-              // directory may already exist
-            }
+            // The backend tolerates existing directories (#1442), so a
+            // failure here is real and should stop the batch up front.
+            await createSSHFolder(sessionId, parent, name, hostId);
           }
 
+          // Files go up several at a time (see "Simultaneous File Transfers"
+          // in the profile settings); directories were created above, so
+          // order between files no longer matters.
           const failed: string[] = [];
-          let bytesDone = 0;
-          let completed = 0;
-          for (const file of plan.files) {
-            if (isCancelled()) break;
-            const fileName = file.relativePath.split("/").pop()!;
-            const targetDir = remoteDirForRelativePath(
-              remoteDir,
-              file.relativePath,
-            );
-            const transferId = createLocalTransferId("local-upload");
-            setCurrentTransfer(transferId);
-            report(completed, bytesDone, fileName);
-            try {
-              await uploadLocalFileToSession({
-                sessionId,
-                remoteDir: targetDir,
-                localPath: file.localPath,
-                fileName,
-                hostId,
-                transferId,
-                onProgress: ({ transferred }) =>
-                  report(completed, bytesDone + transferred, fileName),
-              });
-              bytesDone += file.size;
-            } catch (error) {
-              if (isCancelled()) break;
-              failed.push(file.relativePath);
-              bytesDone += file.size;
-              console.error(`Failed to upload ${file.localPath}:`, error);
-            } finally {
-              setCurrentTransfer(null);
-            }
-            completed += 1;
-            report(completed, bytesDone, fileName);
-          }
-          return { failed };
+          let reason: string | undefined;
+          await runWithConcurrency(
+            plan.files,
+            getTransferConcurrency(),
+            async (file) => {
+              const fileName = file.relativePath.split("/").pop()!;
+              const targetDir = remoteDirForRelativePath(
+                remoteDir,
+                file.relativePath,
+              );
+              const transferId = createLocalTransferId("local-upload");
+              trackTransfer(transferId, fileName);
+              try {
+                await uploadLocalFileToSession({
+                  sessionId,
+                  remoteDir: targetDir,
+                  localPath: file.localPath,
+                  fileName,
+                  hostId,
+                  transferId,
+                  onProgress: ({ transferred }) =>
+                    progress(transferId, transferred),
+                });
+              } catch (error) {
+                if (!isCancelled()) {
+                  failed.push(file.relativePath);
+                  reason ??= describeTransferError(error);
+                  console.error(`Failed to upload ${file.localPath}:`, error);
+                }
+              } finally {
+                settleTransfer(transferId, file.size);
+              }
+            },
+            isCancelled,
+          );
+          return { failed, reason };
         },
       );
 
@@ -469,46 +510,49 @@ export function useLocalTransfers({
         "download",
         work.length,
         workBytes,
-        async ({ isCancelled, setCurrentTransfer, report }) => {
+        async ({ isCancelled, trackTransfer, progress, settleTransfer }) => {
           for (const { dest } of plannedDirs) {
             if (isCancelled()) throw new TransferCancelledError();
             await ensureLocalDirectory(dest, localDir);
           }
 
           const failed: string[] = [];
-          let bytesDone = 0;
-          let completed = 0;
-          for (const { entry, dest } of work) {
-            if (isCancelled()) break;
-            const fileName = entry.relativePath.split("/").pop()!;
-            const transferId = createLocalTransferId("local-download");
-            setCurrentTransfer(transferId);
-            report(completed, bytesDone, fileName);
-            try {
-              await downloadSessionFileToLocal({
-                sessionId,
-                remotePath: entry.remotePath,
-                destPath: dest,
-                rootPath: localDir,
-                expectedSize: entry.size,
-                overwrite: overwriteExisting && existing.has(dest),
-                transferId,
-                onProgress: ({ transferred }) =>
-                  report(completed, bytesDone + transferred, fileName),
-              });
-              bytesDone += entry.size ?? 0;
-            } catch (error) {
-              if (isCancelled()) break;
-              failed.push(entry.relativePath);
-              bytesDone += entry.size ?? 0;
-              console.error(`Failed to download ${entry.remotePath}:`, error);
-            } finally {
-              setCurrentTransfer(null);
-            }
-            completed += 1;
-            report(completed, bytesDone, fileName);
-          }
-          return { failed };
+          let reason: string | undefined;
+          await runWithConcurrency(
+            work,
+            getTransferConcurrency(),
+            async ({ entry, dest }) => {
+              const fileName = entry.relativePath.split("/").pop()!;
+              const transferId = createLocalTransferId("local-download");
+              trackTransfer(transferId, fileName);
+              try {
+                await downloadSessionFileToLocal({
+                  sessionId,
+                  remotePath: entry.remotePath,
+                  destPath: dest,
+                  rootPath: localDir,
+                  expectedSize: entry.size,
+                  overwrite: overwriteExisting && existing.has(dest),
+                  transferId,
+                  onProgress: ({ transferred }) =>
+                    progress(transferId, transferred),
+                });
+              } catch (error) {
+                if (!isCancelled()) {
+                  failed.push(entry.relativePath);
+                  reason ??= describeTransferError(error);
+                  console.error(
+                    `Failed to download ${entry.remotePath}:`,
+                    error,
+                  );
+                }
+              } finally {
+                settleTransfer(transferId, entry.size ?? 0);
+              }
+            },
+            isCancelled,
+          );
+          return { failed, reason };
         },
       );
 
