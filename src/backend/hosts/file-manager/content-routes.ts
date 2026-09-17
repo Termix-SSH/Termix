@@ -1443,8 +1443,8 @@ export function registerFileContentRoutes(
                 }
               });
 
-              writeStream.on("finish", () => {
-                if (resolved) return;
+              const completeUpload = () => {
+                if (resolved || requestAborted) return;
                 resolved = true;
                 fileLogger.success("Streaming file upload completed", {
                   operation: "file_upload_stream_complete",
@@ -1461,6 +1461,21 @@ export function registerFileContentRoutes(
                     message: `File uploaded: ${fullPath}`,
                   },
                 });
+              };
+
+              let sourceEnded = false;
+              fileStream.on("end", () => {
+                sourceEnded = true;
+              });
+              writeStream.on("finish", completeUpload);
+              // ssh2's SFTP WriteStream destroys itself inside _final (autoClose),
+              // and a Writable destroyed before its final callback never emits
+              // 'finish' on current Node. 'close' fires once the handle has been
+              // closed after the last write was acknowledged, so it is the
+              // completion signal that reliably arrives -- but only trust it
+              // when the whole body was consumed and nothing aborted the upload.
+              writeStream.on("close", () => {
+                if (sourceEnded) completeUpload();
               });
 
               fileStream.on("error", (err) => {
@@ -1580,7 +1595,8 @@ export function registerFileContentRoutes(
             fail(500, `Upload failed: ${err.message}`);
           });
 
-          writeStream.on("finish", () => {
+          let sourceEnded = false;
+          const completeChunk = () => {
             if (resolved) return;
             resolved = true;
             const nextOffset = offset + bytesWritten;
@@ -1603,6 +1619,12 @@ export function registerFileContentRoutes(
               nextOffset,
               complete: nextOffset >= totalSize,
             });
+          };
+          writeStream.on("finish", completeChunk);
+          // See uploadFileStream: ssh2's WriteStream does not emit 'finish'
+          // on current Node; 'close' after the body ended is completion.
+          writeStream.on("close", () => {
+            if (sourceEnded) completeChunk();
           });
 
           req.on("error", (err) => {
@@ -1610,8 +1632,20 @@ export function registerFileContentRoutes(
             fail(500, `Upload stream error: ${err.message}`);
           });
 
+          if (Buffer.isBuffer(req.body)) {
+            // Some middleware already drained the request into req.body;
+            // there is nothing left to pipe, so write what it collected.
+            bytesWritten = req.body.length;
+            sourceEnded = true;
+            writeStream.end(req.body);
+            return;
+          }
+
           req.on("data", (chunk: Buffer) => {
             bytesWritten += chunk.length;
+          });
+          req.on("end", () => {
+            sourceEnded = true;
           });
 
           req.pipe(writeStream as unknown as NodeJS.WritableStream);
