@@ -14,7 +14,8 @@ https://youtu.be/lngaePO96tM
 
 - Added a side-by-side local and remote view to the desktop file manager
 - Added a dedicated tab for transferring files directly between two servers
-- Added inline autosuggestions in the terminal
+- Added a dedicated Port Forwarding tab to the desktop app sidebar
+- Added inline autosuggestions in the terminal using command history
 - Added collaboration rooms for sharing a terminal or remote desktop session with a group
 - Added Step CA as an SSH authentication type
 - Added 1Password Connect as a credential source for SSH
@@ -22,6 +23,7 @@ https://youtu.be/lngaePO96tM
 - Added automatic sharing for hosts added to an already-shared folder
 - Added per-host Web Endpoints
 - Added quick connect for RDP and VNC
+- Added a button to pin the sidebar rail open instead of it auto-collapsing
 - Added a compact snippet list option
 - Added copy/paste support to the local terminal
 - Added a terminal copy-on-select option
