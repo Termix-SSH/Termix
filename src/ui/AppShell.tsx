@@ -669,6 +669,30 @@ export function AppShell({
     return tabNodesRef.current.get(tabId)!;
   }, []);
 
+  // Portal render order for tab content, kept independent of the tab bar's
+  // visual order. Reordering tabs in the bar reorders `tabs`, and mapping
+  // that array directly to portals reshuffles the Suspense-wrapped portal
+  // children's sibling order in the fiber tree — React then runs its
+  // Offscreen disconnect/reconnect pass on the ones that moved, which tears
+  // down and rebuilds every passive effect underneath (including
+  // react-xtermjs's terminal-creation effect), dropping the live terminal
+  // and its WebSocket. Portal position doesn't need to track tab order at
+  // all, so we only ever append new ids and drop closed ones here.
+  const portalOrderRef = useRef<string[]>([]);
+  {
+    const liveIds = new Set(tabs.map((t) => t.id));
+    portalOrderRef.current = portalOrderRef.current.filter((id) =>
+      liveIds.has(id),
+    );
+    const known = new Set(portalOrderRef.current);
+    for (const tab of tabs) {
+      if (!known.has(tab.id)) portalOrderRef.current.push(tab.id);
+    }
+  }
+  const tabsByPortalOrder = portalOrderRef.current
+    .map((id) => tabs.find((t) => t.id === id))
+    .filter((t): t is Tab => t !== undefined);
+
   const onPaneContentRef = useCallback(
     (paneIndex: number, el: HTMLDivElement | null) => {
       setPaneContentEls((prev) => {
@@ -3056,7 +3080,7 @@ export function AppShell({
                     display: isSplit && !isMobile ? "none" : undefined,
                   }}
                 >
-                  {tabs.map((tab) => {
+                  {tabsByPortalOrder.map((tab) => {
                     const tabNode = getTabNode(
                       tab.id,
                       tab.type === "terminal" || tab.type === "local-terminal",

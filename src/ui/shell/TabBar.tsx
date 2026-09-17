@@ -107,9 +107,23 @@ export function TabBar({
   } | null>(null);
   const dragTargetRef = useRef<number | null>(null);
   const didDrag = useRef(false);
+  // Reordering moves the active tab's DOM position without changing which
+  // tab is active, so the indicator shouldn't animate at all -- it should
+  // just stay put on the same tab. Framer's layoutId animation still fires
+  // off the position change, so this suppresses it for the render right
+  // after a reorder.
+  const suppressIndicatorAnimRef = useRef(false);
 
   const isSplit = splitMode !== "none";
   const paneCount = PANE_COUNTS[splitMode];
+
+  useEffect(() => {
+    if (!suppressIndicatorAnimRef.current) return;
+    const id = requestAnimationFrame(() => {
+      suppressIndicatorAnimRef.current = false;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [tabs]);
 
   useEffect(() => {
     const el = tabBarRef.current;
@@ -165,6 +179,7 @@ export function TabBar({
       if (to !== index) {
         const next = [...tabs];
         if (next[0].id !== id) next.splice(to, 0, next.splice(index, 1)[0]);
+        suppressIndicatorAnimRef.current = true;
         onReorderTabs(next);
       }
       dragData.current = null;
@@ -330,7 +345,7 @@ export function TabBar({
                     data-workspace-indicator={tab.id}
                     className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-accent-brand z-10"
                     transition={
-                      reduceMotion
+                      reduceMotion || suppressIndicatorAnimRef.current
                         ? { duration: 0 }
                         : {
                             type: "spring",
@@ -419,19 +434,25 @@ export function TabBar({
             (() => {
               const tab = tabs.find((t) => t.id === dragTabId)!;
               const active = tab.id === activeTabId;
+              const dragTabWidth = tabEls.current.get(dragTabId)?.offsetWidth;
+              const dragTabHeight = tabEls.current.get(dragTabId)?.offsetHeight;
               return (
                 <div
                   style={{
                     position: "fixed",
                     left: dragPos.x,
                     top: dragPos.y,
-                    width: tabEls.current.get(dragTabId)?.offsetWidth,
-                    height: tabEls.current.get(dragTabId)?.offsetHeight,
+                    width:
+                      dragTabWidth !== undefined ? dragTabWidth + 2 : undefined,
+                    height:
+                      dragTabHeight !== undefined
+                        ? dragTabHeight + 1
+                        : undefined,
                     pointerEvents: "none",
                     zIndex: 9999,
                     opacity: 0.85,
                   }}
-                  className={`flex items-center gap-2 shrink-0 border border-border text-sm shadow-lg
+                  className={`flex items-center gap-2 shrink-0 border-x border-b border-border text-sm shadow-lg
                 ${
                   tab.type === "dashboard"
                     ? `px-3.5 ${active ? "border-b-2 border-b-accent-brand bg-surface text-foreground" : "bg-sidebar text-muted-foreground"}`
