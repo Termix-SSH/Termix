@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -729,26 +730,40 @@ export function HostItem({
           onMenuOpenChange?.(open);
         }}
       >
-        <DropdownMenuTrigger asChild>
-          <button
-            title={t("hosts.moreOptions")}
-            onClick={(e) => {
-              e.stopPropagation();
-              setContextMenuPosition(null);
-            }}
-            className={`${trayButtonClass} ${contextMenuPosition ? "fixed z-50 size-px opacity-0 pointer-events-none" : ""}`}
-            style={
-              contextMenuPosition
-                ? {
-                    left: contextMenuPosition.x,
-                    top: contextMenuPosition.y,
-                  }
-                : undefined
-            }
-          >
-            <MoreHorizontal className="size-3.5" />
-          </button>
-        </DropdownMenuTrigger>
+        {contextMenuPosition ? (
+          createPortal(
+            <DropdownMenuTrigger asChild>
+              <button
+                title={t("hosts.moreOptions")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenuPosition(null);
+                }}
+                className="fixed z-50 size-px opacity-0 pointer-events-none"
+                style={{
+                  left: contextMenuPosition.x,
+                  top: contextMenuPosition.y,
+                }}
+              >
+                <MoreHorizontal className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>,
+            document.body,
+          )
+        ) : (
+          <DropdownMenuTrigger asChild>
+            <button
+              title={t("hosts.moreOptions")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setContextMenuPosition(null);
+              }}
+              className={trayButtonClass}
+            >
+              <MoreHorizontal className="size-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+        )}
         <DropdownMenuContent
           align="start"
           className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
@@ -1094,7 +1109,7 @@ export function HostItem({
     </>
   );
 
-  const trayOpenState = isTrayOpen || isMenuOpen;
+  const trayOpenState = isTrayOpen || (isMenuOpen && !contextMenuPosition);
   // Hover mode keeps the tray open from React state rather than group-hover so
   // the virtualizer can reserve the expanded height for this row.
   const hoverTrayOpen =
@@ -1102,7 +1117,7 @@ export function HostItem({
     !actionsOnly &&
     !shouldUseClickTray &&
     !selectionMode &&
-    (isHovered || isMenuOpen);
+    (isHovered || (isMenuOpen && !contextMenuPosition));
   // A collapsed tray must not earn the text column's gap-[3.5px]. Clipping to
   // max-h-0 leaves it a flex item, so every closed row measured ~3.5px taller
   // than its slot and the virtualizer spread the rows apart to match. The
