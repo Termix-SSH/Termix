@@ -6,42 +6,38 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SftpTransferTab } from "@/features/sftp/SftpTransferTab";
 
 const api = vi.hoisted(() => ({
+  addTransferRecent: vi.fn(),
   browseSSHDirectory: vi.fn(),
   changeSSHPermissions: vi.fn(),
   createSSHFolder: vi.fn(),
   deleteSSHItem: vi.fn(),
   ensureSSHSessionForHost: vi.fn(),
   getSSHHosts: vi.fn(),
-  listSSHFiles: vi.fn(),
-  readSSHFile: vi.fn(),
+  getTransferProgressPercent: vi.fn(() => undefined),
   renameSSHItem: vi.fn(),
   transferToHost: vi.fn(),
-  uploadSSHFile: vi.fn(),
   beginTransferProgressMonitoring: vi.fn(),
 }));
 
-const streams = vi.hoisted(() => ({ upload: vi.fn(), download: vi.fn() }));
-vi.mock("@/api/local-transfer-api", () => ({
-  uploadLocalFileToSession: streams.upload,
-  downloadSessionFileToLocal: streams.download,
-}));
-
 vi.mock("@/main-axios", () => ({
+  addTransferRecent: api.addTransferRecent,
   browseSSHDirectory: api.browseSSHDirectory,
   changeSSHPermissions: api.changeSSHPermissions,
   createSSHFolder: api.createSSHFolder,
   deleteSSHItem: api.deleteSSHItem,
   ensureSSHSessionForHost: api.ensureSSHSessionForHost,
   getSSHHosts: api.getSSHHosts,
-  listSSHFiles: api.listSSHFiles,
-  readSSHFile: api.readSSHFile,
+  getTransferProgressPercent: api.getTransferProgressPercent,
   renameSSHItem: api.renameSSHItem,
   transferToHost: api.transferToHost,
-  uploadSSHFile: api.uploadSSHFile,
 }));
 
 vi.mock("@/features/file-manager/transferProgressMonitor", () => ({
   beginTransferProgressMonitoring: api.beginTransferProgressMonitoring,
+}));
+
+vi.mock("@/features/file-manager/transferMetricsFormat", () => ({
+  createFormatTransferMetrics: () => () => "",
 }));
 
 vi.mock("react-i18next", () => ({
@@ -52,67 +48,8 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-function installElectronApi() {
-  const electronAPI = {
-    getPlatform: vi.fn().mockResolvedValue("darwin"),
-    localTransfer: {},
-    getLocalHomeDirectory: vi.fn().mockResolvedValue("/Users/test"),
-    listLocalDirectory: vi.fn().mockResolvedValue({
-      success: true,
-      path: "/Users/test",
-      parent: "/Users",
-      entries: [
-        {
-          name: "local.txt",
-          path: "/Users/test/local.txt",
-          type: "file",
-          size: 12,
-          created: "2026-07-19T23:00:00",
-          modified: "2026-07-20T00:00:00.000Z",
-          permissions: "644",
-        },
-      ],
-    }),
-    createLocalFolder: vi.fn().mockResolvedValue({ success: true }),
-    renameLocalPath: vi.fn().mockResolvedValue({ success: true }),
-    trashLocalPath: vi.fn().mockResolvedValue({ success: true }),
-    chmodLocalPath: vi.fn().mockResolvedValue({ success: true }),
-    writeLocalFile: vi.fn().mockResolvedValue({ success: true }),
-    collectLocalFiles: vi.fn().mockResolvedValue({
-      success: true,
-      files: [
-        {
-          path: "/Users/test/local.txt",
-          name: "local.txt",
-          relativePath: "local.txt",
-          size: 12,
-          created: "2026-07-19T23:00:00",
-          modified: "2026-07-20T00:00:00.000Z",
-        },
-      ],
-    }),
-    readLocalFile: vi.fn().mockResolvedValue({
-      success: true,
-      path: "/Users/test/local.txt",
-      name: "local.txt",
-      data: "aGVsbG8=",
-    }),
-  };
-
-  Object.defineProperty(window, "electronAPI", {
-    configurable: true,
-    value: electronAPI,
-  });
-
-  return electronAPI;
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
-  streams.upload.mockImplementation(async (options) => {
-    options.onProgress?.({ transferred: 12 });
-  });
-  streams.download.mockResolvedValue(undefined);
   api.getSSHHosts.mockResolvedValue([
     {
       id: 1,
@@ -120,209 +57,158 @@ beforeEach(() => {
       ip: "10.0.0.1",
       enableFileManager: true,
       connectionType: "ssh",
+      defaultPath: "/srv",
+    },
+    {
+      id: 2,
+      name: "backup",
+      ip: "10.0.0.2",
+      enableFileManager: true,
+      connectionType: "ssh",
+      defaultPath: "/srv",
     },
   ]);
-  api.ensureSSHSessionForHost.mockResolvedValue({
+  api.ensureSSHSessionForHost.mockImplementation(async (host) => ({
     state: "ready",
-    sessionId: "session-1",
-  });
-  api.listSSHFiles.mockResolvedValue({
-    path: "/srv",
-    files: [
-      {
-        name: "remote.txt",
-        type: "file",
-        size: 24,
-        created: "2026-07-18T10:30:00",
-      },
-    ],
-  });
-  api.browseSSHDirectory.mockResolvedValue({
-    status: "ok",
-    path: "/srv",
-    files: [
-      {
-        name: "remote.txt",
-        type: "file",
-        size: 24,
-        created: "2026-07-18T10:30:00",
-      },
-    ],
-  });
-  api.transferToHost.mockResolvedValue({ transferId: "transfer-1" });
-  api.uploadSSHFile.mockImplementation(
-    async (
-      _sessionId: string,
-      _path: string,
-      _fileName: string,
-      file: File,
-      _hostId?: number,
-      _userId?: string,
-      onProgress?: (progress: {
-        chunkIndex: number;
-        totalChunks: number;
-        bytesSent: number;
-        totalBytes: number;
-      }) => void,
-    ) => {
-      onProgress?.({
-        chunkIndex: 0,
-        totalChunks: 1,
-        bytesSent: file.size,
-        totalBytes: file.size,
-      });
-      return {};
-    },
+    sessionId: String(host.id),
+  }));
+  api.browseSSHDirectory.mockImplementation(
+    async (sessionId: string, path: string) => ({
+      status: "ok",
+      path,
+      files: [
+        {
+          name: `remote-${sessionId}.txt`,
+          type: "file",
+          size: 24,
+          modified: "2026-07-18T10:30:00.000Z",
+        },
+      ],
+    }),
   );
-  installElectronApi();
+  api.transferToHost.mockResolvedValue({ transferId: "transfer-1" });
+  api.beginTransferProgressMonitoring.mockReturnValue({
+    toastId: "toast-1",
+    waitForCompletion: Promise.resolve({
+      transferId: "transfer-1",
+      status: "success",
+      phase: "transferring",
+    }),
+  });
 });
 
-describe("SftpTransferTab context menus", () => {
-  it("renames a local file from the row context menu", async () => {
-    const electronAPI = installElectronApi();
-    render(<SftpTransferTab />);
+async function selectHosts() {
+  const selects = await screen.findAllByRole("combobox");
+  fireEvent.change(selects[0], { target: { value: "1" } });
+  fireEvent.change(selects[1], { target: { value: "2" } });
+  await screen.findByText("remote-1.txt");
+  await screen.findByText("remote-2.txt");
+}
 
-    fireEvent.contextMenu(await screen.findByText("local.txt"));
-    await userEvent.click(screen.getByText("Rename"));
-    const nameInput = screen.getByDisplayValue("local.txt");
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "renamed.txt");
-    await userEvent.click(screen.getByText("Save"));
+describe("SftpTransferTab", () => {
+  it("loads file manager-enabled hosts into both host pickers", async () => {
+    render(<SftpTransferTab />);
+    const selects = await screen.findAllByRole("combobox");
+    expect(selects).toHaveLength(2);
+    expect(api.getSSHHosts).toHaveBeenCalled();
+  });
+
+  it("copies a source server file to the destination server via the context menu", async () => {
+    render(<SftpTransferTab />);
+    await selectHosts();
+
+    fireEvent.contextMenu(screen.getByText("remote-1.txt"));
+    await userEvent.click(screen.getByText("sftpTransfer.copyToTarget"));
 
     await waitFor(() => {
-      expect(electronAPI.renameLocalPath).toHaveBeenCalledWith(
-        "/Users/test/local.txt",
+      expect(api.transferToHost).toHaveBeenCalledWith(
+        "1",
+        ["/srv/remote-1.txt"],
+        "2",
+        "/srv",
+        false,
+        "auto",
+      );
+    });
+  });
+
+  it("records the destination as a transfer recent after a successful copy", async () => {
+    render(<SftpTransferTab />);
+    await selectHosts();
+
+    fireEvent.contextMenu(screen.getByText("remote-1.txt"));
+    await userEvent.click(screen.getByText("sftpTransfer.copyToTarget"));
+
+    await waitFor(() => {
+      expect(api.addTransferRecent).toHaveBeenCalledWith(1, 2, "/srv", "/srv");
+    });
+  });
+
+  it("blocks a same-host transfer where the destination is inside the source path", async () => {
+    render(<SftpTransferTab />);
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    fireEvent.change(selects[1], { target: { value: "1" } });
+    const rows = await screen.findAllByText("remote-1.txt");
+
+    // Destination pane starts at the same "/srv" listing as the source, so
+    // browsing into the selected source file's own path (as if it were a
+    // folder) makes the destination nested inside the source selection.
+    const destPathInput = screen.getAllByDisplayValue("/srv")[1];
+    fireEvent.change(destPathInput, {
+      target: { value: "/srv/remote-1.txt" },
+    });
+    fireEvent.keyDown(destPathInput, { key: "Enter" });
+    await waitFor(() =>
+      expect(api.browseSSHDirectory).toHaveBeenCalledTimes(3),
+    );
+
+    fireEvent.contextMenu(rows[0]);
+    await userEvent.click(screen.getByText("sftpTransfer.copyToTarget"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "sftpTransfer.destinationInsideSource",
+      );
+    });
+    expect(api.transferToHost).not.toHaveBeenCalled();
+  });
+
+  it("renames a remote file from the row context menu", async () => {
+    render(<SftpTransferTab />);
+    await selectHosts();
+
+    fireEvent.contextMenu(screen.getByText("remote-1.txt"));
+    await userEvent.click(screen.getByText("sftpTransfer.rename"));
+    const nameInput = screen.getByDisplayValue("remote-1.txt");
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "renamed.txt");
+    await userEvent.click(screen.getByText("sftpTransfer.save"));
+
+    await waitFor(() => {
+      expect(api.renameSSHItem).toHaveBeenCalledWith(
+        "1",
+        "/srv/remote-1.txt",
         "renamed.txt",
       );
     });
   });
 
-  it("copies a source server file to the destination server pane", async () => {
+  it("deletes a remote file after confirming", async () => {
     render(<SftpTransferTab />);
+    await selectHosts();
 
-    await userEvent.click(screen.getByText("Server to Server"));
-    const selects = await screen.findAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "1" } });
-    fireEvent.change(selects[1], { target: { value: "1" } });
-
-    const remoteRows = await screen.findAllByText("remote.txt");
-    fireEvent.contextMenu(remoteRows[0]);
-    await userEvent.click(screen.getByText("Copy to Target Directory"));
+    fireEvent.contextMenu(screen.getByText("remote-1.txt"));
+    await userEvent.click(screen.getByText("sftpTransfer.delete"));
+    const confirmButtons = await screen.findAllByText("sftpTransfer.delete");
+    await userEvent.click(confirmButtons[confirmButtons.length - 1]);
 
     await waitFor(() => {
-      expect(api.transferToHost).toHaveBeenCalledWith(
-        "session-1",
-        ["/srv/remote.txt"],
-        "session-1",
-        "/srv",
+      expect(api.deleteSSHItem).toHaveBeenCalledWith(
+        "1",
+        "/srv/remote-1.txt",
         false,
-        "auto",
-        2,
       );
     });
-  });
-
-  it("shows created timestamps for local and remote file rows", async () => {
-    render(<SftpTransferTab />);
-
-    expect(await screen.findByText("2026-07-19 23:00")).toBeTruthy();
-
-    const selects = await screen.findAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "1" } });
-
-    expect(await screen.findByText("2026-07-18 10:30")).toBeTruthy();
-  });
-
-  it("refuses a truncated local selection before reading or uploading files", async () => {
-    const electronAPI = installElectronApi();
-    electronAPI.collectLocalFiles.mockResolvedValue({
-      success: true,
-      files: [],
-      truncated: true,
-    } as never);
-    render(<SftpTransferTab />);
-    const selects = await screen.findAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "1" } });
-    await screen.findByText("remote.txt");
-    await userEvent.click(await screen.findByText("local.txt"));
-    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        expect.stringMatching(/Too many files/),
-      ),
-    );
-    expect(electronAPI.readLocalFile).not.toHaveBeenCalled();
-    expect(streams.upload).not.toHaveBeenCalled();
-    expect(api.createSSHFolder).not.toHaveBeenCalled();
-  });
-
-  it("downloads through the contained no-overwrite stream and reports collisions", async () => {
-    streams.download.mockRejectedValue(new Error("Destination already exists"));
-    render(<SftpTransferTab />);
-    const selects = await screen.findAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "1" } });
-    fireEvent.contextMenu(await screen.findByText("remote.txt"));
-    await userEvent.click(screen.getByText("Copy to Target Directory"));
-    await waitFor(() =>
-      expect(streams.download).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sessionId: "session-1",
-          remotePath: "/srv/remote.txt",
-          rootPath: "/Users/test",
-          destPath: "/Users/test/remote.txt",
-          overwrite: false,
-        }),
-      ),
-    );
-    expect(api.readSSHFile).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("Destination already exists"),
-    );
-    expect(toast.success).not.toHaveBeenCalled();
-  });
-
-  it("streams empty files without reading base64 into the renderer", async () => {
-    const electronAPI = installElectronApi();
-    electronAPI.collectLocalFiles.mockResolvedValue({
-      success: true,
-      files: [
-        {
-          path: "/Users/test/empty",
-          name: "empty",
-          relativePath: "empty",
-          size: 0,
-        },
-      ],
-    } as never);
-    render(<SftpTransferTab />);
-    const selects = await screen.findAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "1" } });
-    await screen.findByText("remote.txt");
-    await userEvent.click(await screen.findByText("local.txt"));
-    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
-    await waitFor(() =>
-      expect(streams.upload).toHaveBeenCalledWith(
-        expect.objectContaining({ localPath: "/Users/test/empty" }),
-      ),
-    );
-    expect(electronAPI.readLocalFile).not.toHaveBeenCalled();
-  });
-
-  it("reports local upload progress through the SFTP status bar", async () => {
-    render(<SftpTransferTab />);
-
-    const selects = await screen.findAllByRole("combobox");
-    fireEvent.change(selects[0], { target: { value: "1" } });
-    await screen.findByText("remote.txt");
-
-    await userEvent.click(await screen.findByText("local.txt"));
-    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
-
-    await waitFor(() => {
-      expect(streams.upload).toHaveBeenCalled();
-    });
-    expect(streams.upload.mock.calls[0][0].onProgress).toEqual(
-      expect.any(Function),
-    );
   });
 });

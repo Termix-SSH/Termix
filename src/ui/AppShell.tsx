@@ -2412,7 +2412,25 @@ export function AppShell({
           node.style.pointerEvents = activeInline ? "auto" : "none";
           node.style.zIndex = activeInline ? "1" : "0";
         } else {
-          node.classList.toggle("motion-workspace-enter", activeInline);
+          // Transient only: "both" fill-mode keeps the keyframes' transform
+          // applied for as long as the class stays on, which turns this node
+          // into a new containing block and breaks position:fixed for every
+          // descendant (e.g. right-click context menus rendering offset by
+          // this node's own position instead of the viewport). Strip the
+          // class once the animation finishes so the transform doesn't linger.
+          if (
+            activeInline &&
+            !node.classList.contains("motion-workspace-enter")
+          ) {
+            node.classList.add("motion-workspace-enter");
+            node.addEventListener(
+              "animationend",
+              () => node.classList.remove("motion-workspace-enter"),
+              { once: true },
+            );
+          } else if (!activeInline) {
+            node.classList.remove("motion-workspace-enter");
+          }
           node.style.visibility = "";
           node.style.pointerEvents = "";
           node.style.zIndex = activeInline ? "2" : "";

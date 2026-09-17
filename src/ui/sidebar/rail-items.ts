@@ -79,13 +79,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
   },
   {
-    id: "sftp",
-    icon: ArrowLeftRight,
-    labelKey: "nav.sftp",
-    electronOnly: true,
-    separatorAfter: true,
-  },
-  {
     id: "termix-id",
     icon: Fingerprint,
     labelKey: "nav.termixId",
@@ -121,6 +114,12 @@ export const RAIL_ITEMS: RailItemDef[] = [
     mobilePrimary: true,
     promotable: true,
     rightDockable: true,
+  },
+  {
+    id: "sftp",
+    icon: ArrowLeftRight,
+    labelKey: "nav.sftp",
+    separatorAfter: true,
   },
   {
     id: "snippets",

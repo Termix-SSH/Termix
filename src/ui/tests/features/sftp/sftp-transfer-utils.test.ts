@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildLocalUploadTargets,
-  getRequiredRemoteDirectories,
   hasSameHostTransferConflict,
   joinRemotePath,
   normalizeRemoteDir,
@@ -15,43 +13,6 @@ describe("sftp transfer utilities", () => {
     );
     expect(joinRemotePath("/", "tmp/file.txt")).toBe("/tmp/file.txt");
     expect(joinRemotePath("home/user", "logs")).toBe("/home/user/logs");
-  });
-
-  it("preserves relative local folder paths in upload targets", () => {
-    const targets = buildLocalUploadTargets(
-      [
-        {
-          path: "/Users/me/project/README.md",
-          name: "README.md",
-          relativePath: "project/README.md",
-          size: 12,
-        },
-        {
-          path: "/Users/me/project/src/index.ts",
-          name: "index.ts",
-          relativePath: "project/src/index.ts",
-          size: 34,
-        },
-      ],
-      "/var/www/",
-    );
-
-    expect(targets).toMatchObject([
-      {
-        remoteDir: "/var/www/project",
-        fileName: "README.md",
-        remotePath: "/var/www/project/README.md",
-      },
-      {
-        remoteDir: "/var/www/project/src",
-        fileName: "index.ts",
-        remotePath: "/var/www/project/src/index.ts",
-      },
-    ]);
-    expect(getRequiredRemoteDirectories(targets)).toEqual([
-      "/var/www/project",
-      "/var/www/project/src",
-    ]);
   });
 
   it("detects same-host destination conflicts", () => {

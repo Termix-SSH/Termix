@@ -1,30 +1,20 @@
 import {
-  uploadLocalFileToSession,
-  downloadSessionFileToLocal,
-} from "@/api/local-transfer-api";
-import {
-  assertSafeLocalComponent,
-  buildLocalDestination,
-} from "@/features/file-manager/local-transfer-utils";
-import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
 } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   ArrowLeftRight,
-  ChevronDown,
   File as FileIcon,
   Folder,
-  FolderOpen,
-  HardDrive,
   RefreshCw,
   Server,
-  Upload,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -47,74 +37,43 @@ import {
 import { Input } from "@/components/input";
 import { Label } from "@/components/label";
 import {
+  addTransferRecent,
   browseSSHDirectory,
   changeSSHPermissions,
   createSSHFolder,
   deleteSSHItem,
   ensureSSHSessionForHost,
   getSSHHosts,
-  getTransferProgressPercent,
-  listSSHFiles,
   renameSSHItem,
   transferToHost,
   type HostConnectionState,
   type TransferProgressResponse,
 } from "@/main-axios";
 import type { SSHHost } from "@/types";
-import type { LocalCollectedFile, LocalFileEntry } from "@/types/electron";
 import { PermissionsDialog } from "@/features/file-manager/components/PermissionsDialog";
+import { formatFileSize } from "@/features/file-manager/file-manager-utils";
 import { beginTransferProgressMonitoring } from "@/features/file-manager/transferProgressMonitor";
+import { createFormatTransferMetrics } from "@/features/file-manager/transferMetricsFormat";
 import {
-  buildLocalUploadTargets,
-  getRequiredRemoteDirectories,
   hasSameHostTransferConflict,
   joinRemotePath,
   normalizeRemoteDir,
 } from "./sftp-transfer-utils";
 import { Select2 } from "@/components/select2";
 
-type TransferMode = "local-server" | "server-server";
 type EntryType = "file" | "directory" | "link" | "other";
-type PaneId = "local" | "source" | "dest";
-type DragPayload =
-  | { kind: "local"; paths: string[] }
-  | {
-      kind: "remote";
-      paths: string[];
-      sourceHostId: string;
-      sourceSessionId: string;
-    };
+type PaneId = "source" | "dest";
 
 interface BrowserEntry {
   name: string;
   path: string;
   type: EntryType;
   size?: number;
-  created?: string;
   modified?: string;
-  createdTimestamp?: number;
   modifiedTimestamp?: number;
   permissions?: string;
   owner?: string;
   group?: string;
-}
-
-interface SftpTransferProgress {
-  label: string;
-  detail?: string;
-  currentItem?: number;
-  totalItems?: number;
-  bytesTransferred?: number;
-  totalBytes?: number;
-  percent?: number;
-}
-
-interface LocalPaneState {
-  path: string;
-  parent: string;
-  entries: BrowserEntry[];
-  loading: boolean;
-  error: string | null;
 }
 
 interface RemotePaneState {
@@ -147,14 +106,6 @@ interface PermissionsTarget {
   entry: BrowserEntry;
 }
 
-const defaultLocalPane = (): LocalPaneState => ({
-  path: "",
-  parent: "",
-  entries: [],
-  loading: false,
-  error: null,
-});
-
 const defaultRemotePane = (): RemotePaneState => ({
   hostId: "",
   sessionId: null,
@@ -166,66 +117,22 @@ const defaultRemotePane = (): RemotePaneState => ({
   loading: false,
 });
 
-function formatSize(size?: number): string {
-  if (!size) return "-";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let value = size;
-  let index = 0;
-  while (value >= 1024 && index < units.length - 1) {
-    value /= 1024;
-    index++;
+function formatModified(entry: BrowserEntry): string {
+  if (entry.modifiedTimestamp !== undefined) {
+    const date = new Date(entry.modifiedTimestamp * 1000);
+    if (!Number.isNaN(date.getTime())) {
+      const pad = (part: number) => String(part).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
   }
-  return `${value < 10 && index > 0 ? value.toFixed(1) : Math.round(value)} ${units[index]}`;
-}
-
-function formatDateTime(value?: string | number): string {
-  if (value === undefined || value === null || value === "") return "-";
-  const date =
-    typeof value === "number" ? new Date(value * 1000) : new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  const pad = (part: number) => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function formatProgressDetail(progress: SftpTransferProgress): string {
-  const parts: string[] = [];
-  if (progress.currentItem !== undefined && progress.totalItems !== undefined) {
-    parts.push(`${progress.currentItem}/${progress.totalItems} items`);
+  if (entry.modified) {
+    const date = new Date(entry.modified);
+    if (!Number.isNaN(date.getTime())) {
+      const pad = (part: number) => String(part).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
   }
-  if (
-    progress.bytesTransferred !== undefined &&
-    progress.totalBytes !== undefined &&
-    progress.totalBytes > 0
-  ) {
-    parts.push(
-      `${formatSize(progress.bytesTransferred)} / ${formatSize(progress.totalBytes)}`,
-    );
-  }
-  if (progress.detail) parts.push(progress.detail);
-  return parts.join(" - ");
-}
-
-function progressFromTransferStatus(
-  status: TransferProgressResponse,
-  fallbackLabel: string,
-): SftpTransferProgress {
-  const percent = getTransferProgressPercent(status);
-  const label =
-    status.phase === "compressing"
-      ? "Compressing source files..."
-      : status.phase === "extracting"
-        ? "Extracting at destination..."
-        : status.phase === "reconnecting"
-          ? "Reconnecting transfer..."
-          : fallbackLabel;
-  return {
-    label,
-    currentItem: status.itemsCompleted,
-    totalItems: status.totalItems,
-    bytesTransferred: status.bytesTransferred,
-    totalBytes: status.totalBytes,
-    percent,
-  };
+  return "-";
 }
 
 function parentRemotePath(remotePath: string): string {
@@ -235,18 +142,18 @@ function parentRemotePath(remotePath: string): string {
   return index <= 0 ? "/" : normalized.slice(0, index);
 }
 
-function connectionLabel(state: HostConnectionState): string {
+function connectionLabel(state: HostConnectionState, t: TFunction): string {
   switch (state) {
     case "ready":
-      return "Ready";
+      return t("transfer.hostReady");
     case "connecting":
-      return "Connecting";
+      return t("transfer.hostConnecting");
     case "auth_required":
-      return "Authentication required";
+      return t("transfer.hostAuthRequired");
     case "error":
-      return "Connection failed";
+      return t("transfer.hostConnectionFailed");
     default:
-      return "Disconnected";
+      return t("transfer.hostDisconnected");
   }
 }
 
@@ -261,6 +168,7 @@ function FileRow({
   onDropPayload,
   acceptsDrop,
   onContextMenu,
+  t,
 }: {
   entry: BrowserEntry;
   selected: boolean;
@@ -275,6 +183,7 @@ function FileRow({
     event: MouseEvent<HTMLDivElement>,
     entry: BrowserEntry,
   ) => void;
+  t: TFunction;
 }) {
   const Icon = entry.type === "directory" ? Folder : FileIcon;
   const canDrop = entry.type === "directory" && !!onDropPayload && acceptsDrop;
@@ -323,9 +232,9 @@ function FileRow({
       </button>
       <div
         className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground"
-        title={entry.created || undefined}
+        title={entry.modified || undefined}
       >
-        {formatDateTime(entry.created ?? entry.createdTimestamp)}
+        {formatModified(entry)}
       </div>
       <div className="flex items-center justify-end gap-2 px-3 py-2 text-[10px] text-muted-foreground">
         {entry.type === "directory" && onOpen ? (
@@ -334,10 +243,10 @@ function FileRow({
             className="font-bold uppercase tracking-widest hover:text-accent-brand"
             onClick={onOpen}
           >
-            Open
+            {t("sftpTransfer.open")}
           </button>
         ) : (
-          <span>{formatSize(entry.size)}</span>
+          <span>{formatFileSize(entry.size)}</span>
         )}
       </div>
     </div>
@@ -368,209 +277,74 @@ function ContextMenuButton({
   );
 }
 
-function LocalPane({
-  pane,
-  setPane,
-  loadPath,
-  selectedPaths,
-  setSelectedPaths,
-  onDragStart,
-  onDragEnd,
-  onPaneContextMenu,
-  onEntryContextMenu,
-}: {
-  pane: LocalPaneState;
-  setPane: (updater: React.SetStateAction<LocalPaneState>) => void;
-  loadPath: (path: string) => Promise<void>;
-  selectedPaths: Set<string>;
-  setSelectedPaths: (paths: Set<string>) => void;
-  onDragStart: (paths: string[]) => void;
-  onDragEnd: () => void;
-  onPaneContextMenu: (event: MouseEvent<HTMLDivElement>) => void;
-  onEntryContextMenu: (
-    event: MouseEvent<HTMLDivElement>,
-    entry: BrowserEntry,
-  ) => void;
-}) {
-  const electronApi = window.electronAPI;
-  const electronReady = !!electronApi?.listLocalDirectory;
-
-  const toggle = (entryPath: string) => {
-    const next = new Set(selectedPaths);
-    if (next.has(entryPath)) next.delete(entryPath);
-    else next.add(entryPath);
-    setSelectedPaths(next);
-  };
-
-  const getDragPaths = (entryPath: string): string[] => {
-    if (selectedPaths.has(entryPath) && selectedPaths.size > 0) {
-      return [...selectedPaths];
-    }
-    setSelectedPaths(new Set([entryPath]));
-    return [entryPath];
-  };
-
-  return (
-    <section className="flex min-h-0 flex-1 flex-col border border-border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <HardDrive className="size-4 text-accent-brand" />
-          <span className="text-xs font-bold uppercase tracking-widest">
-            Local
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-none"
-            disabled={
-              !electronReady || !pane.parent || pane.parent === pane.path
-            }
-            onClick={() => void loadPath(pane.parent)}
-          >
-            <FolderOpen className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-none"
-            disabled={!electronReady || pane.loading}
-            onClick={() => void loadPath(pane.path)}
-          >
-            <RefreshCw
-              className={`size-3.5 ${pane.loading ? "animate-spin" : ""}`}
-            />
-          </Button>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Input
-          value={pane.path}
-          onChange={(event) =>
-            setPane((current) => ({ ...current, path: event.target.value }))
-          }
-          onKeyDown={(event) => {
-            if (event.key === "Enter") void loadPath(pane.path);
-          }}
-          disabled={!electronReady}
-          className="h-8 rounded-none border-border bg-muted/40 font-mono text-xs"
-        />
-      </div>
-      {pane.error ? (
-        <div className="p-3 text-xs text-red-400">{pane.error}</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-[minmax(0,1fr)_8.5rem_5rem] border-b border-border/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            <span>Name</span>
-            <span>Created</span>
-            <span className="text-right">Size</span>
-          </div>
-          <div
-            className="min-h-0 flex-1 overflow-y-auto"
-            onContextMenu={onPaneContextMenu}
-          >
-            {pane.entries.length === 0 && !pane.loading ? (
-              <div className="p-3 text-xs text-muted-foreground">No files</div>
-            ) : (
-              pane.entries.map((entry) => (
-                <FileRow
-                  key={entry.path}
-                  entry={entry}
-                  selected={selectedPaths.has(entry.path)}
-                  onToggle={() => toggle(entry.path)}
-                  draggable
-                  onDragStart={() => onDragStart(getDragPaths(entry.path))}
-                  onDragEnd={onDragEnd}
-                  onOpen={
-                    entry.type === "directory"
-                      ? () => void loadPath(entry.path)
-                      : undefined
-                  }
-                  onContextMenu={onEntryContextMenu}
-                />
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
 function RemotePane({
   title,
   hosts,
   pane,
   setPane,
-  selectable,
-  draggable = false,
-  dragPayload,
+  dragActive,
   onDragStart,
   onDragEnd,
   onDropPayload,
   onPaneContextMenu,
   onEntryContextMenu,
+  t,
 }: {
   title: string;
   hosts: SSHHost[];
   pane: RemotePaneState;
   setPane: (updater: (pane: RemotePaneState) => RemotePaneState) => void;
-  selectable: boolean;
-  draggable?: boolean;
-  dragPayload?: DragPayload | null;
-  onDragStart?: (paths: string[], pane: RemotePaneState) => void;
-  onDragEnd?: () => void;
+  dragActive: boolean;
+  onDragStart: (paths: string[], pane: RemotePaneState) => void;
+  onDragEnd: () => void;
   onDropPayload?: (destinationPath: string) => void;
   onPaneContextMenu: (event: MouseEvent<HTMLDivElement>) => void;
   onEntryContextMenu: (
     event: MouseEvent<HTMLDivElement>,
     entry: BrowserEntry,
   ) => void;
+  t: TFunction;
 }) {
   const selectedHost = hosts.find((host) => String(host.id) === pane.hostId);
-  const acceptsDrop = !!dragPayload && !!pane.sessionId && !!onDropPayload;
+  const acceptsDrop = dragActive && !!pane.sessionId && !!onDropPayload;
 
   const loadRemotePath = useCallback(
     async (sessionId: string, nextPath: string) => {
       setPane((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const result = await listSSHFiles(sessionId, nextPath);
-        const base = normalizeRemoteDir(result.path || nextPath);
-        setPane((current) => ({
-          ...current,
-          path: base,
-          entries: (result.files as BrowserEntry[])
-            .filter((entry) => entry.name !== "." && entry.name !== "..")
-            .map((entry) => ({
-              name: entry.name,
-              type: entry.type,
-              path: joinRemotePath(base, entry.name),
-              size: entry.size,
-              created: entry.created,
-              createdTimestamp: entry.createdTimestamp,
-              modified: entry.modified,
-              modifiedTimestamp: entry.modifiedTimestamp,
-            }))
-            .sort((a, b) => {
-              if (a.type === "directory" && b.type !== "directory") return -1;
-              if (a.type !== "directory" && b.type === "directory") return 1;
-              return a.name.localeCompare(b.name);
-            }),
-          selectedPaths: new Set(),
-          loading: false,
-        }));
-      } catch (error) {
+      const result = await browseSSHDirectory(sessionId, nextPath);
+      if (result.status !== "ok") {
         setPane((current) => ({
           ...current,
           entries: [],
           loading: false,
-          error:
-            error instanceof Error ? error.message : "Failed to list files",
+          error: t("sftpTransfer.failedToListFiles"),
         }));
+        return;
       }
+      const base = normalizeRemoteDir(result.path || nextPath);
+      setPane((current) => ({
+        ...current,
+        path: base,
+        entries: (result.files as BrowserEntry[])
+          .filter((entry) => entry.name !== "." && entry.name !== "..")
+          .map((entry) => ({
+            name: entry.name,
+            type: entry.type,
+            path: joinRemotePath(base, entry.name),
+            size: entry.size,
+            modified: entry.modified,
+            modifiedTimestamp: entry.modifiedTimestamp,
+          }))
+          .sort((a, b) => {
+            if (a.type === "directory" && b.type !== "directory") return -1;
+            if (a.type !== "directory" && b.type === "directory") return 1;
+            return a.name.localeCompare(b.name);
+          }),
+        selectedPaths: new Set(),
+        loading: false,
+      }));
     },
-    [setPane],
+    [setPane, t],
   );
 
   const connect = useCallback(
@@ -667,28 +441,25 @@ function RemotePane({
       </div>
 
       <div className="grid gap-2 border-b border-border px-3 py-2">
-        <div className="relative">
-          <Select2
-            value={pane.hostId}
-            onChange={(event) => {
-              const host = hosts.find(
-                (item) => String(item.id) === event.target.value,
-              );
-              if (host) void connect(host);
-            }}
-            className="h-8 w-full appearance-none border border-border bg-background px-2 pr-7 text-xs outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="" disabled>
-              Select host
+        <Select2
+          value={pane.hostId}
+          onChange={(event) => {
+            const host = hosts.find(
+              (item) => String(item.id) === event.target.value,
+            );
+            if (host) void connect(host);
+          }}
+          className="h-8 w-full rounded-none border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="" disabled>
+            {t("sftpTransfer.selectHost")}
+          </option>
+          {hosts.map((host) => (
+            <option key={host.id} value={String(host.id)}>
+              {host.name || host.ip}
             </option>
-            {hosts.map((host) => (
-              <option key={host.id} value={String(host.id)}>
-                {host.name || host.ip}
-              </option>
-            ))}
-          </Select2>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
-        </div>
+          ))}
+        </Select2>
         <div className="flex items-center gap-2">
           <Input
             value={pane.path}
@@ -712,7 +483,7 @@ function RemotePane({
               void loadRemotePath(pane.sessionId, parentRemotePath(pane.path))
             }
           >
-            Up
+            {t("sftpTransfer.up")}
           </Button>
         </div>
         <div
@@ -725,8 +496,8 @@ function RemotePane({
           }`}
         >
           {selectedHost
-            ? connectionLabel(pane.connectionState)
-            : "No host selected"}
+            ? connectionLabel(pane.connectionState, t)
+            : t("sftpTransfer.noHostSelected")}
           {pane.error ? `: ${pane.error}` : ""}
         </div>
       </div>
@@ -736,24 +507,23 @@ function RemotePane({
         onContextMenu={onPaneContextMenu}
       >
         <div className="grid grid-cols-[minmax(0,1fr)_8.5rem_5rem] border-b border-border/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          <span>Name</span>
-          <span>Created</span>
-          <span className="text-right">Size</span>
+          <span>{t("sftpTransfer.name")}</span>
+          <span>{t("sftpTransfer.modified")}</span>
+          <span className="text-right">{t("sftpTransfer.size")}</span>
         </div>
         {pane.entries.length === 0 && !pane.loading ? (
-          <div className="p-3 text-xs text-muted-foreground">No files</div>
+          <div className="p-3 text-xs text-muted-foreground">
+            {t("sftpTransfer.noFiles")}
+          </div>
         ) : (
           pane.entries.map((entry) => (
             <FileRow
               key={entry.path}
               entry={entry}
               selected={pane.selectedPaths.has(entry.path)}
-              onToggle={() => selectable && toggle(entry.path)}
-              draggable={draggable && selectable}
-              onDragStart={() => {
-                if (!onDragStart) return;
-                onDragStart(getDragPaths(entry.path), pane);
-              }}
+              onToggle={() => toggle(entry.path)}
+              draggable
+              onDragStart={() => onDragStart(getDragPaths(entry.path), pane)}
               onDragEnd={onDragEnd}
               acceptsDrop={acceptsDrop}
               onDropPayload={
@@ -767,6 +537,7 @@ function RemotePane({
                   : undefined
               }
               onContextMenu={onEntryContextMenu}
+              t={t}
             />
           ))
         )}
@@ -777,20 +548,17 @@ function RemotePane({
 
 export function SftpTransferTab() {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<TransferMode>("local-server");
+  const formatTransferMetrics = useMemo(
+    () => createFormatTransferMetrics(t),
+    [t],
+  );
   const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [hostsLoading, setHostsLoading] = useState(false);
-  const [localPane, setLocalPaneState] = useState(defaultLocalPane);
-  const [localSelectedPaths, setLocalSelectedPaths] = useState<Set<string>>(
-    new Set(),
-  );
   const [sourcePane, setSourcePaneState] = useState(defaultRemotePane);
   const [destPane, setDestPaneState] = useState(defaultRemotePane);
-  const [serverMove, setServerMove] = useState(false);
-  const [transferLabel, setTransferLabel] = useState<string | null>(null);
-  const [transferProgress, setTransferProgress] =
-    useState<SftpTransferProgress | null>(null);
-  const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
+  const [move, setMove] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [nameDialog, setNameDialog] = useState<NameDialogState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ContextMenuState | null>(
@@ -798,12 +566,6 @@ export function SftpTransferTab() {
   );
   const [permissionsTarget, setPermissionsTarget] =
     useState<PermissionsTarget | null>(null);
-
-  const setLocalPane = useCallback(
-    (updater: React.SetStateAction<LocalPaneState>) =>
-      setLocalPaneState(updater),
-    [],
-  );
 
   const setSourcePane = useCallback(
     (updater: (pane: RemotePaneState) => RemotePaneState) =>
@@ -814,55 +576,6 @@ export function SftpTransferTab() {
     (updater: (pane: RemotePaneState) => RemotePaneState) =>
       setDestPaneState(updater),
     [],
-  );
-
-  const loadLocalPath = useCallback(
-    async (nextPath: string) => {
-      const electronApi = window.electronAPI;
-      if (!electronApi?.listLocalDirectory) {
-        setLocalPane((current) => ({
-          ...current,
-          error: "Local browsing is available in the Electron app only.",
-        }));
-        return;
-      }
-      setLocalPane((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const result = await electronApi.listLocalDirectory(nextPath);
-        if (result.success === false) {
-          setLocalPane((current) => ({
-            ...current,
-            path: result.path || nextPath,
-            entries: [],
-            loading: false,
-            error: result.error || "Failed to load local directory",
-          }));
-          return;
-        }
-        setLocalPane({
-          path: result.path,
-          parent: result.parent || result.path,
-          entries: result.entries.map((entry: LocalFileEntry) => ({
-            ...entry,
-            type: entry.type,
-          })),
-          loading: false,
-          error: null,
-        });
-        setLocalSelectedPaths(new Set());
-      } catch (error) {
-        setLocalPane((current) => ({
-          ...current,
-          entries: [],
-          loading: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Failed to load local directory",
-        }));
-      }
-    },
-    [setLocalPane],
   );
 
   useEffect(() => {
@@ -883,21 +596,6 @@ export function SftpTransferTab() {
   }, []);
 
   useEffect(() => {
-    const electronApi = window.electronAPI;
-    if (!electronApi?.getLocalHomeDirectory) {
-      void loadLocalPath("");
-      return;
-    }
-    void electronApi
-      .getLocalHomeDirectory()
-      .then((home) => loadLocalPath(home));
-  }, [loadLocalPath]);
-
-  useEffect(() => {
-    setDragPayload(null);
-  }, [mode]);
-
-  useEffect(() => {
     if (!contextMenu) return;
     const close = () => setContextMenu(null);
     window.addEventListener("click", close);
@@ -908,28 +606,14 @@ export function SftpTransferTab() {
     };
   }, [contextMenu]);
 
-  const localSelectionCount = localSelectedPaths.size;
   const sourceSelectionCount = sourcePane.selectedPaths.size;
 
-  const getRemotePane = (paneId: PaneId): RemotePaneState | null => {
-    if (paneId === "source") return sourcePane;
-    if (paneId === "dest") return destPane;
-    return null;
-  };
-
-  const getPaneEntries = (paneId: PaneId): BrowserEntry[] => {
-    if (paneId === "local") return localPane.entries;
-    return getRemotePane(paneId)?.entries || [];
-  };
-
-  const getPaneSelectedPaths = (paneId: PaneId): Set<string> => {
-    if (paneId === "local") return localSelectedPaths;
-    return getRemotePane(paneId)?.selectedPaths || new Set();
-  };
+  const getPane = (paneId: PaneId): RemotePaneState =>
+    paneId === "source" ? sourcePane : destPane;
 
   const getContextPaths = (menu: ContextMenuState): string[] => {
     if (!menu.entry) return [];
-    const selectedPaths = getPaneSelectedPaths(menu.paneId);
+    const selectedPaths = getPane(menu.paneId).selectedPaths;
     if (selectedPaths.has(menu.entry.path) && selectedPaths.size > 0) {
       return [...selectedPaths];
     }
@@ -938,41 +622,41 @@ export function SftpTransferTab() {
 
   const getContextEntries = (menu: ContextMenuState): BrowserEntry[] => {
     const paths = new Set(getContextPaths(menu));
-    return getPaneEntries(menu.paneId).filter((entry) => paths.has(entry.path));
+    return getPane(menu.paneId).entries.filter((entry) =>
+      paths.has(entry.path),
+    );
   };
 
-  const refreshRemotePane = async (paneId: "source" | "dest") => {
-    const pane = paneId === "source" ? sourcePane : destPane;
+  const refreshRemotePane = async (paneId: PaneId) => {
+    const pane = getPane(paneId);
     const setPane = paneId === "source" ? setSourcePane : setDestPane;
     if (!pane.sessionId) return;
     setPane((current) => ({ ...current, loading: true, error: null }));
-    try {
-      const refreshed = await browseSSHDirectory(pane.sessionId, pane.path);
-      if (refreshed.status !== "ok") {
-        throw new Error("Failed to refresh directory");
-      }
-      setPane((current) => ({
-        ...current,
-        path: normalizeRemoteDir(refreshed.path || pane.path),
-        entries: refreshed.files
-          .filter((entry) => entry.name !== "." && entry.name !== "..")
-          .map((entry) => ({
-            ...entry,
-            type: entry.type,
-            modified: entry.modified,
-            modifiedTimestamp: entry.modifiedTimestamp,
-            path: joinRemotePath(refreshed.path || pane.path, entry.name),
-          })),
-        selectedPaths: new Set(),
-        loading: false,
-      }));
-    } catch (error) {
+    const refreshed = await browseSSHDirectory(pane.sessionId, pane.path);
+    if (refreshed.status !== "ok") {
       setPane((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : "Failed to refresh",
+        error: t("sftpTransfer.failedToRefresh"),
       }));
+      return;
     }
+    const base = normalizeRemoteDir(refreshed.path || pane.path);
+    setPane((current) => ({
+      ...current,
+      path: base,
+      entries: refreshed.files
+        .filter((entry) => entry.name !== "." && entry.name !== "..")
+        .map((entry) => ({
+          ...entry,
+          type: entry.type,
+          modified: entry.modified,
+          modifiedTimestamp: entry.modifiedTimestamp,
+          path: joinRemotePath(base, entry.name),
+        })),
+      selectedPaths: new Set(),
+      loading: false,
+    }));
   };
 
   const openPaneContextMenu = (
@@ -990,152 +674,26 @@ export function SftpTransferTab() {
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!getPaneSelectedPaths(paneId).has(entry.path)) {
-      if (paneId === "local") {
-        setLocalSelectedPaths(new Set([entry.path]));
-      } else {
-        const setPane = paneId === "source" ? setSourcePane : setDestPane;
-        setPane((current) => ({
-          ...current,
-          selectedPaths: new Set([entry.path]),
-        }));
-      }
+    if (!getPane(paneId).selectedPaths.has(entry.path)) {
+      const setPane = paneId === "source" ? setSourcePane : setDestPane;
+      setPane((current) => ({
+        ...current,
+        selectedPaths: new Set([entry.path]),
+      }));
     }
     setContextMenu({ x: event.clientX, y: event.clientY, paneId, entry });
   };
 
-  const uploadLocalSelection = async (
-    paths = [...localSelectedPaths],
-    destinationPath = destPane.path,
-  ) => {
-    if (!destPane.sessionId || paths.length === 0) return;
-    if (
-      !window.electronAPI?.collectLocalFiles ||
-      !window.electronAPI?.localTransfer
-    ) {
-      toast.error("Local browsing is available in the Electron app only.");
-      return;
-    }
-
-    setTransferLabel("Preparing local upload...");
-    const collected = await window.electronAPI.collectLocalFiles(paths);
-    if (!collected.success) {
-      toast.error(collected.error || "Failed to collect local files");
-      setTransferLabel(null);
-      return;
-    }
-    if (collected.truncated) {
-      toast.error(
-        "Too many files selected. Select fewer than 10,001 files and retry; no files were uploaded.",
-      );
-      setTransferLabel(null);
-      return;
-    }
-    if (collected.files.length === 0) {
-      toast.error("No local files selected");
-      setTransferLabel(null);
-      return;
-    }
-
-    const targets = buildLocalUploadTargets(
-      collected.files as LocalCollectedFile[],
-      destinationPath,
-    );
-    const totalBytes = targets.reduce(
-      (sum, target) => sum + (target.size || 0),
-      0,
-    );
-    let completedBytes = 0;
-
-    try {
-      setTransferProgress({
-        label: "Preparing local upload...",
-        currentItem: 0,
-        totalItems: targets.length,
-        bytesTransferred: 0,
-        totalBytes,
-        percent: targets.length === 0 ? 100 : 0,
-      });
-      for (const dir of getRequiredRemoteDirectories(targets)) {
-        await createSSHFolder(destPane.sessionId, "/", dir.replace(/^\/+/, ""));
-      }
-
-      for (let index = 0; index < targets.length; index++) {
-        const target = targets[index];
-        const label = `Uploading ${index + 1} of ${targets.length}: ${target.relativePath}`;
-        setTransferLabel(label);
-        setTransferProgress({
-          label,
-          currentItem: index + 1,
-          totalItems: targets.length,
-          bytesTransferred: completedBytes,
-          totalBytes,
-          percent:
-            totalBytes > 0
-              ? Math.round((completedBytes / totalBytes) * 100)
-              : undefined,
-        });
-        await uploadLocalFileToSession({
-          sessionId: destPane.sessionId,
-          remoteDir: target.remoteDir,
-          fileName: target.fileName,
-          localPath: target.path,
-          onProgress: ({ transferred: bytesSent }) => {
-            const nextBytes = completedBytes + bytesSent;
-            setTransferProgress({
-              label,
-              currentItem: index + 1,
-              totalItems: targets.length,
-              bytesTransferred: nextBytes,
-              totalBytes,
-              percent:
-                totalBytes > 0
-                  ? Math.min(100, Math.round((nextBytes / totalBytes) * 100))
-                  : undefined,
-            });
-          },
-        });
-        completedBytes += target.size || 0;
-      }
-
-      toast.success(
-        `Uploaded ${targets.length} file${targets.length === 1 ? "" : "s"}`,
-      );
-      if (destPane.sessionId) {
-        const refreshed = await browseSSHDirectory(
-          destPane.sessionId,
-          destPane.path,
-        );
-        if (refreshed.status === "ok") {
-          setDestPane((current) => ({
-            ...current,
-            entries: refreshed.files.map((entry) => ({
-              ...entry,
-              type: entry.type,
-              modified: entry.modified,
-              modifiedTimestamp: entry.modifiedTimestamp,
-              path: joinRemotePath(refreshed.path, entry.name),
-            })),
-          }));
-        }
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed");
-    } finally {
-      setTransferLabel(null);
-      setTransferProgress(null);
-    }
-  };
-
-  const transferRemoteSelection = async ({
+  const runTransfer = async ({
     paths,
     destinationPath,
     sourceSessionId,
     sourceHostId,
     destinationSessionId,
     destinationHostId,
-    move,
+    move: moveFiles,
     refreshTarget,
+    sourceRefreshTarget,
   }: {
     paths: string[];
     destinationPath: string;
@@ -1144,208 +702,128 @@ export function SftpTransferTab() {
     destinationSessionId: string | null;
     destinationHostId: string;
     move: boolean;
-    refreshTarget?: "source" | "dest";
+    refreshTarget?: PaneId;
+    sourceRefreshTarget?: PaneId;
   }) => {
     if (!sourceSessionId || !destinationSessionId || paths.length === 0) {
       return;
     }
+    const destDir = normalizeRemoteDir(destinationPath);
     if (
       sourceHostId === destinationHostId &&
-      hasSameHostTransferConflict(paths, destinationPath)
+      hasSameHostTransferConflict(paths, destDir)
     ) {
-      toast.error("Destination cannot be inside the selected source path.");
+      toast.error(t("sftpTransfer.destinationInsideSource"));
       return;
     }
 
-    const startingLabel = "Starting server transfer...";
-    const runningLabel = move
-      ? "Moving server files..."
-      : "Copying server files...";
-    setTransferLabel(startingLabel);
-    setTransferProgress({
-      label: startingLabel,
-      currentItem: 0,
-      totalItems: paths.length,
-      percent: 0,
-    });
+    setTransferring(true);
     try {
-      const result = await transferToHost(
+      const { transferId } = await transferToHost(
         sourceSessionId,
         paths,
         destinationSessionId,
-        normalizeRemoteDir(destinationPath),
-        move,
+        destDir,
+        moveFiles,
         "auto",
-        2,
       );
-      beginTransferProgressMonitoring(result.transferId, t, {
-        initialStatus: {
-          totalItems: paths.length,
-          sourcePaths: paths,
-          destPath: normalizeRemoteDir(destinationPath),
-          moveRequested: move,
-        },
-        onProgress: (status) => {
-          const nextProgress = progressFromTransferStatus(status, runningLabel);
-          setTransferProgress(nextProgress);
-          setTransferLabel(nextProgress.label);
-        },
-        onComplete: () => {
-          setTransferLabel(null);
-          setTransferProgress(null);
-          toast.success(move ? "Move completed" : "Copy completed");
-          if (refreshTarget) void refreshRemotePane(refreshTarget);
-        },
+      const monitorHandle = beginTransferProgressMonitoring(transferId, t, {
+        formatTransferMetrics,
       });
+      if (!monitorHandle) return;
+
+      const finalStatus: TransferProgressResponse =
+        await monitorHandle.waitForCompletion;
+
+      if (
+        finalStatus.status === "success" ||
+        finalStatus.status === "partial"
+      ) {
+        void addTransferRecent(
+          Number(sourceHostId),
+          Number(destinationHostId),
+          destDir,
+          destDir,
+        );
+        if (refreshTarget) void refreshRemotePane(refreshTarget);
+        if (moveFiles && sourceRefreshTarget) {
+          void refreshRemotePane(sourceRefreshTarget);
+        }
+      }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Transfer failed");
-      setTransferLabel(null);
-      setTransferProgress(null);
+      toast.error(
+        error instanceof Error ? error.message : t("transfer.transferError"),
+      );
+    } finally {
+      setTransferring(false);
     }
   };
 
-  const transferServerSelection = async (
+  const transferSelection = async (
     paths = [...sourcePane.selectedPaths],
     destinationPath = destPane.path,
     sourceSessionId = sourcePane.sessionId,
     sourceHostId = sourcePane.hostId,
   ) => {
-    await transferRemoteSelection({
+    await runTransfer({
       paths,
       destinationPath,
       sourceSessionId,
       sourceHostId,
       destinationSessionId: destPane.sessionId,
       destinationHostId: destPane.hostId,
-      move: serverMove,
+      move,
       refreshTarget: "dest",
+      sourceRefreshTarget: "source",
     });
   };
 
-  const startLocalDrag = (paths: string[]) => {
-    setDragPayload({ kind: "local", paths });
-  };
+  const dragSourceRef = useRef<{
+    paths: string[];
+    hostId: string;
+    sessionId: string;
+    paneId: PaneId;
+  }>({ paths: [], hostId: "", sessionId: "", paneId: "source" });
 
-  const startRemoteDrag = (paths: string[], pane: RemotePaneState) => {
+  const startRemoteDrag = (
+    paneId: PaneId,
+    paths: string[],
+    pane: RemotePaneState,
+  ) => {
     if (!pane.sessionId) return;
-    setDragPayload({
-      kind: "remote",
+    setDragActive(true);
+    dragSourceRef.current = {
       paths,
-      sourceHostId: pane.hostId,
-      sourceSessionId: pane.sessionId,
-    });
+      hostId: pane.hostId,
+      sessionId: pane.sessionId,
+      paneId,
+    };
   };
 
   const handleDestinationDrop = (destinationPath: string) => {
-    if (!dragPayload || transferLabel) return;
-    const payload = dragPayload;
-    setDragPayload(null);
-
-    if (payload.kind === "local") {
-      void uploadLocalSelection(payload.paths, destinationPath);
-      return;
-    }
-
-    void transferServerSelection(
-      payload.paths,
+    if (!dragActive || transferring) return;
+    setDragActive(false);
+    const { paths, hostId, sessionId, paneId } = dragSourceRef.current;
+    void runTransfer({
+      paths,
       destinationPath,
-      payload.sourceSessionId,
-      payload.sourceHostId,
-    );
-  };
-
-  const copyRemoteFilesToLocal = async (
-    pane: RemotePaneState,
-    entries: BrowserEntry[],
-  ) => {
-    if (!pane.sessionId || !localPane.path) return;
-    if (!window.electronAPI?.localTransfer) {
-      toast.error("Local writing is available in the Electron app only.");
-      return;
-    }
-    const files = entries.filter((entry) => entry.type === "file");
-    if (files.length !== entries.length) {
-      toast.error("Remote folder to local copy is not available yet.");
-      return;
-    }
-    if (files.length === 0) return;
-
-    setTransferLabel("Copying remote file to local folder...");
-    const totalBytes = files.reduce((sum, file) => sum + (file.size || 0), 0);
-    let completedBytes = 0;
-    setTransferProgress({
-      label: "Copying remote file to local folder...",
-      currentItem: 0,
-      totalItems: files.length,
-      bytesTransferred: 0,
-      totalBytes,
-      percent: 0,
+      sourceSessionId: sessionId,
+      sourceHostId: hostId,
+      destinationSessionId: destPane.sessionId,
+      destinationHostId: destPane.hostId,
+      move,
+      refreshTarget: "dest",
+      sourceRefreshTarget: paneId,
     });
-    try {
-      for (let index = 0; index < files.length; index++) {
-        const file = files[index];
-        const label = `Copying ${index + 1} of ${files.length}: ${file.name}`;
-        setTransferLabel(label);
-        setTransferProgress({
-          label,
-          currentItem: index + 1,
-          totalItems: files.length,
-          bytesTransferred: completedBytes,
-          totalBytes,
-          percent:
-            totalBytes > 0
-              ? Math.round((completedBytes / totalBytes) * 100)
-              : undefined,
-        });
-        const platform = await window.electronAPI.getPlatform();
-        const separator = platform === "win32" ? "\\" : "/";
-        assertSafeLocalComponent(file.name, separator);
-        await downloadSessionFileToLocal({
-          sessionId: pane.sessionId,
-          remotePath: file.path,
-          rootPath: localPane.path,
-          destPath: buildLocalDestination(localPane.path, file.name, separator),
-          expectedSize: file.size,
-          overwrite: false,
-        });
-        completedBytes += file.size || 0;
-        setTransferProgress({
-          label,
-          currentItem: index + 1,
-          totalItems: files.length,
-          bytesTransferred: completedBytes,
-          totalBytes,
-          percent:
-            totalBytes > 0
-              ? Math.min(100, Math.round((completedBytes / totalBytes) * 100))
-              : undefined,
-        });
-      }
-      toast.success(
-        `Copied ${files.length} file${files.length === 1 ? "" : "s"} to local`,
-      );
-      await loadLocalPath(localPane.path);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Copy failed");
-    } finally {
-      setTransferLabel(null);
-      setTransferProgress(null);
-    }
   };
 
   const handleCopyToTarget = async (menu: ContextMenuState) => {
     const paths = getContextPaths(menu);
-    const entries = getContextEntries(menu);
     setContextMenu(null);
     if (paths.length === 0) return;
 
-    if (menu.paneId === "local") {
-      await uploadLocalSelection(paths, destPane.path);
-      return;
-    }
-
     if (menu.paneId === "source") {
-      await transferRemoteSelection({
+      await runTransfer({
         paths,
         destinationPath: destPane.path,
         sourceSessionId: sourcePane.sessionId,
@@ -1358,29 +836,20 @@ export function SftpTransferTab() {
       return;
     }
 
-    if (mode === "server-server") {
-      await transferRemoteSelection({
-        paths,
-        destinationPath: sourcePane.path,
-        sourceSessionId: destPane.sessionId,
-        sourceHostId: destPane.hostId,
-        destinationSessionId: sourcePane.sessionId,
-        destinationHostId: sourcePane.hostId,
-        move: false,
-        refreshTarget: "source",
-      });
-      return;
-    }
-
-    await copyRemoteFilesToLocal(destPane, entries);
+    await runTransfer({
+      paths,
+      destinationPath: sourcePane.path,
+      sourceSessionId: destPane.sessionId,
+      sourceHostId: destPane.hostId,
+      destinationSessionId: sourcePane.sessionId,
+      destinationHostId: sourcePane.hostId,
+      move: false,
+      refreshTarget: "source",
+    });
   };
 
   const handleRefreshPane = async (paneId: PaneId) => {
     setContextMenu(null);
-    if (paneId === "local") {
-      await loadLocalPath(localPane.path);
-      return;
-    }
     await refreshRemotePane(paneId);
   };
 
@@ -1389,51 +858,24 @@ export function SftpTransferTab() {
     const value = nameDialog.value.trim();
     if (!value) return;
 
+    const pane = getPane(nameDialog.paneId);
+    if (!pane.sessionId) return;
+
     try {
       if (nameDialog.kind === "mkdir") {
-        if (nameDialog.paneId === "local") {
-          const result = await window.electronAPI?.createLocalFolder?.(
-            localPane.path,
-            value,
-          );
-          if (!result || result.success === false) {
-            throw new Error(
-              (result && "error" in result ? result.error : undefined) ||
-                "Failed to create folder",
-            );
-          }
-          await loadLocalPath(localPane.path);
-        } else {
-          const pane = getRemotePane(nameDialog.paneId);
-          if (!pane?.sessionId) throw new Error("No remote session connected");
-          await createSSHFolder(pane.sessionId, pane.path, value);
-          await refreshRemotePane(nameDialog.paneId);
-        }
-        toast.success("Folder created");
+        await createSSHFolder(pane.sessionId, pane.path, value);
+        await refreshRemotePane(nameDialog.paneId);
+        toast.success(t("sftpTransfer.folderCreated"));
       } else if (nameDialog.entry) {
-        if (nameDialog.paneId === "local") {
-          const result = await window.electronAPI?.renameLocalPath?.(
-            nameDialog.entry.path,
-            value,
-          );
-          if (!result || result.success === false) {
-            throw new Error(
-              (result && "error" in result ? result.error : undefined) ||
-                "Failed to rename item",
-            );
-          }
-          await loadLocalPath(localPane.path);
-        } else {
-          const pane = getRemotePane(nameDialog.paneId);
-          if (!pane?.sessionId) throw new Error("No remote session connected");
-          await renameSSHItem(pane.sessionId, nameDialog.entry.path, value);
-          await refreshRemotePane(nameDialog.paneId);
-        }
-        toast.success("Item renamed");
+        await renameSSHItem(pane.sessionId, nameDialog.entry.path, value);
+        await refreshRemotePane(nameDialog.paneId);
+        toast.success(t("sftpTransfer.itemRenamed"));
       }
       setNameDialog(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Action failed");
+      toast.error(
+        error instanceof Error ? error.message : t("sftpTransfer.actionFailed"),
+      );
     }
   };
 
@@ -1444,37 +886,23 @@ export function SftpTransferTab() {
     setDeleteTarget(null);
     if (entries.length === 0) return;
 
+    const pane = getPane(paneId);
+    if (!pane.sessionId) return;
+
     try {
-      if (paneId === "local") {
-        if (!window.electronAPI?.trashLocalPath) {
-          throw new Error(
-            "Local delete is available in the Electron app only.",
-          );
-        }
-        for (const entry of entries) {
-          const result = await window.electronAPI.trashLocalPath(entry.path);
-          if (result.success === false) {
-            throw new Error(result.error || `Failed to delete ${entry.name}`);
-          }
-        }
-        await loadLocalPath(localPane.path);
-      } else {
-        const pane = getRemotePane(paneId);
-        if (!pane?.sessionId) throw new Error("No remote session connected");
-        for (const entry of entries) {
-          await deleteSSHItem(
-            pane.sessionId,
-            entry.path,
-            entry.type === "directory",
-          );
-        }
-        await refreshRemotePane(paneId);
+      for (const entry of entries) {
+        await deleteSSHItem(
+          pane.sessionId,
+          entry.path,
+          entry.type === "directory",
+        );
       }
-      toast.success(
-        `Deleted ${entries.length} item${entries.length === 1 ? "" : "s"}`,
-      );
+      await refreshRemotePane(paneId);
+      toast.success(t("sftpTransfer.itemsDeleted", { count: entries.length }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed");
+      toast.error(
+        error instanceof Error ? error.message : t("sftpTransfer.deleteFailed"),
+      );
     }
   };
 
@@ -1483,79 +911,35 @@ export function SftpTransferTab() {
     permissions: string,
   ) => {
     if (!permissionsTarget) return;
-    const paneId = permissionsTarget.paneId;
-    if (paneId === "local") {
-      const result = await window.electronAPI?.chmodLocalPath?.(
-        entry.path,
-        permissions,
-      );
-      if (!result || result.success === false) {
-        throw new Error(
-          (result && "error" in result ? result.error : undefined) ||
-            "Failed to update permissions",
-        );
-      }
-      await loadLocalPath(localPane.path);
-      toast.success("Permissions updated");
-      return;
-    }
-
-    const pane = getRemotePane(paneId);
-    if (!pane?.sessionId) throw new Error("No remote session connected");
+    const pane = getPane(permissionsTarget.paneId);
+    if (!pane.sessionId)
+      throw new Error(t("sftpTransfer.noRemoteSessionConnected"));
     await changeSSHPermissions(pane.sessionId, entry.path, permissions);
-    await refreshRemotePane(paneId);
-    toast.success("Permissions updated");
+    await refreshRemotePane(permissionsTarget.paneId);
+    toast.success(t("sftpTransfer.permissionsUpdated"));
   };
 
-  const canTransfer = useMemo(() => {
-    if (mode === "local-server") {
-      return (
-        localSelectedPaths.size > 0 && destPane.sessionId && !transferLabel
-      );
-    }
-    return (
-      sourcePane.selectedPaths.size > 0 &&
-      sourcePane.sessionId &&
-      destPane.sessionId &&
-      !transferLabel
-    );
-  }, [
-    destPane.sessionId,
-    localSelectedPaths.size,
-    mode,
-    sourcePane,
-    transferLabel,
-  ]);
+  const canTransfer =
+    sourcePane.selectedPaths.size > 0 &&
+    !!sourcePane.sessionId &&
+    !!destPane.sessionId &&
+    !transferring;
 
   const contextEntries = contextMenu ? getContextEntries(contextMenu) : [];
   const contextPaths = contextMenu ? getContextPaths(contextMenu) : [];
   const singleContextEntry =
     contextEntries.length === 1 ? contextEntries[0] : contextMenu?.entry;
-  const contextRemotePane = contextMenu
-    ? getRemotePane(contextMenu.paneId)
+  const contextPane = contextMenu ? getPane(contextMenu.paneId) : null;
+  const otherPane = contextMenu
+    ? getPane(contextMenu.paneId === "source" ? "dest" : "source")
     : null;
-  const remoteToLocalHasFolder =
-    contextMenu?.paneId === "dest" &&
-    mode === "local-server" &&
-    contextEntries.some((entry) => entry.type === "directory");
   const canCopyContext =
     !!contextMenu?.entry &&
     contextPaths.length > 0 &&
-    !transferLabel &&
-    (contextMenu.paneId === "local"
-      ? !!destPane.sessionId
-      : contextMenu.paneId === "source"
-        ? !!sourcePane.sessionId && !!destPane.sessionId
-        : mode === "server-server"
-          ? !!destPane.sessionId && !!sourcePane.sessionId
-          : !!destPane.sessionId &&
-            !!localPane.path &&
-            !remoteToLocalHasFolder);
-  const canMutateContextPane =
-    !!contextMenu &&
-    (contextMenu.paneId === "local"
-      ? !!window.electronAPI?.createLocalFolder
-      : !!contextRemotePane?.sessionId);
+    !transferring &&
+    !!contextPane?.sessionId &&
+    !!otherPane?.sessionId;
+  const canMutateContextPane = !!contextPane?.sessionId;
   const permissionsDialogFile = permissionsTarget
     ? {
         ...permissionsTarget.entry,
@@ -1570,148 +954,73 @@ export function SftpTransferTab() {
     <div className="flex h-full min-h-0 flex-col bg-background">
       <header className="flex shrink-0 flex-col gap-3 border-b border-border px-4 py-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <h1 className="text-sm font-bold uppercase tracking-widest">SFTP</h1>
+          <h1 className="text-sm font-bold uppercase tracking-widest">
+            {t("sftpTransfer.title")}
+          </h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            Transfer files between this Mac and SSH hosts, or between two SSH
-            hosts.
+            {t("sftpTransfer.description")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex overflow-hidden border border-border">
-            <button
-              type="button"
-              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest ${
-                mode === "local-server"
-                  ? "bg-accent-brand/10 text-accent-brand"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-              onClick={() => setMode("local-server")}
-            >
-              Local to Server
-            </button>
-            <button
-              type="button"
-              className={`border-l border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest ${
-                mode === "server-server"
-                  ? "bg-accent-brand/10 text-accent-brand"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-              onClick={() => setMode("server-server")}
-            >
-              Server to Server
-            </button>
-          </div>
-          {mode === "server-server" && (
-            <Label className="flex items-center gap-2 border border-border px-3 py-1.5 text-xs">
-              <input
-                type="checkbox"
-                checked={serverMove}
-                onChange={(event) => setServerMove(event.target.checked)}
-              />
-              Move
-            </Label>
-          )}
+          <Label className="flex items-center gap-2 border border-border px-3 py-1.5 text-xs">
+            <input
+              type="checkbox"
+              checked={move}
+              onChange={(event) => setMove(event.target.checked)}
+            />
+            {t("sftpTransfer.move")}
+          </Label>
           <Button
             className="h-8 rounded-none"
             disabled={!canTransfer}
-            onClick={() =>
-              mode === "local-server"
-                ? void uploadLocalSelection()
-                : void transferServerSelection()
-            }
+            onClick={() => void transferSelection()}
           >
-            {mode === "local-server" ? (
-              <Upload className="size-4" />
-            ) : (
-              <ArrowLeftRight className="size-4" />
-            )}
-            {mode === "local-server" ? "Upload" : serverMove ? "Move" : "Copy"}
+            <ArrowLeftRight className="size-4" />
+            {move ? t("sftpTransfer.move") : t("sftpTransfer.copy")}
           </Button>
         </div>
       </header>
 
       <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-2 text-xs text-muted-foreground">
         <span>
-          {mode === "local-server"
-            ? `${localSelectionCount} local item${localSelectionCount === 1 ? "" : "s"} selected`
-            : `${sourceSelectionCount} source item${sourceSelectionCount === 1 ? "" : "s"} selected`}
+          {t("sftpTransfer.itemsSelected", { count: sourceSelectionCount })}
         </span>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
-          {transferProgress ? (
-            <>
-              <div className="min-w-0 flex-1 text-right">
-                <div className="truncate font-medium text-foreground">
-                  {transferProgress.label}
-                </div>
-                <div className="truncate text-[10px]">
-                  {formatProgressDetail(transferProgress)}
-                </div>
-              </div>
-              <div className="h-1.5 w-32 overflow-hidden bg-muted">
-                <div
-                  className="h-full bg-accent-brand transition-[width]"
-                  style={{
-                    width: `${Math.min(100, Math.max(0, transferProgress.percent ?? 0))}%`,
-                  }}
-                />
-              </div>
-              {transferProgress.percent !== undefined && (
-                <span className="w-9 text-right tabular-nums">
-                  {transferProgress.percent}%
-                </span>
-              )}
-            </>
-          ) : (
-            <span>
-              {hostsLoading ? "Loading hosts..." : transferLabel || "Ready"}
-            </span>
-          )}
-        </div>
+        <span>
+          {hostsLoading
+            ? t("sftpTransfer.loadingHosts")
+            : t("sftpTransfer.ready")}
+        </span>
       </div>
 
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-2">
-        {mode === "local-server" ? (
-          <LocalPane
-            pane={localPane}
-            setPane={setLocalPane}
-            loadPath={loadLocalPath}
-            selectedPaths={localSelectedPaths}
-            setSelectedPaths={setLocalSelectedPaths}
-            onDragStart={startLocalDrag}
-            onDragEnd={() => setDragPayload(null)}
-            onPaneContextMenu={(event) => openPaneContextMenu(event, "local")}
-            onEntryContextMenu={(event, entry) =>
-              openEntryContextMenu(event, "local", entry)
-            }
-          />
-        ) : (
-          <RemotePane
-            title="Source Server"
-            hosts={hosts}
-            pane={sourcePane}
-            setPane={setSourcePane}
-            selectable
-            draggable
-            onDragStart={startRemoteDrag}
-            onDragEnd={() => setDragPayload(null)}
-            onPaneContextMenu={(event) => openPaneContextMenu(event, "source")}
-            onEntryContextMenu={(event, entry) =>
-              openEntryContextMenu(event, "source", entry)
-            }
-          />
-        )}
         <RemotePane
-          title="Destination Server"
+          title={t("sftpTransfer.sourceServer")}
+          hosts={hosts}
+          pane={sourcePane}
+          setPane={setSourcePane}
+          dragActive={false}
+          onDragStart={(paths, pane) => startRemoteDrag("source", paths, pane)}
+          onDragEnd={() => setDragActive(false)}
+          onPaneContextMenu={(event) => openPaneContextMenu(event, "source")}
+          onEntryContextMenu={(event, entry) =>
+            openEntryContextMenu(event, "source", entry)
+          }
+          t={t}
+        />
+        <RemotePane
+          title={t("sftpTransfer.destinationServer")}
           hosts={hosts}
           pane={destPane}
           setPane={setDestPane}
-          selectable
-          dragPayload={dragPayload}
+          dragActive={dragActive}
+          onDragStart={(paths, pane) => startRemoteDrag("dest", paths, pane)}
+          onDragEnd={() => setDragActive(false)}
           onDropPayload={handleDestinationDrop}
           onPaneContextMenu={(event) => openPaneContextMenu(event, "dest")}
           onEntryContextMenu={(event, entry) =>
             openEntryContextMenu(event, "dest", entry)
           }
+          t={t}
         />
       </main>
 
@@ -1727,7 +1036,7 @@ export function SftpTransferTab() {
                 disabled={!canCopyContext}
                 onClick={() => void handleCopyToTarget(contextMenu)}
               >
-                Copy to Target Directory
+                {t("sftpTransfer.copyToTarget")}
               </ContextMenuButton>
               <ContextMenuButton
                 disabled={contextEntries.length !== 1 || !canMutateContextPane}
@@ -1742,7 +1051,7 @@ export function SftpTransferTab() {
                   });
                 }}
               >
-                Rename
+                {t("sftpTransfer.rename")}
               </ContextMenuButton>
               <ContextMenuButton
                 disabled={!canMutateContextPane || contextEntries.length === 0}
@@ -1751,7 +1060,7 @@ export function SftpTransferTab() {
                   setContextMenu(null);
                 }}
               >
-                Delete
+                {t("sftpTransfer.delete")}
               </ContextMenuButton>
               <ContextMenuButton
                 disabled={contextEntries.length !== 1 || !canMutateContextPane}
@@ -1764,19 +1073,16 @@ export function SftpTransferTab() {
                   });
                 }}
               >
-                Edit Permissions
+                {t("sftpTransfer.editPermissions")}
               </ContextMenuButton>
             </>
           ) : (
             <>
               <ContextMenuButton
-                disabled={
-                  contextMenu.paneId !== "local" &&
-                  !contextRemotePane?.sessionId
-                }
+                disabled={!contextPane?.sessionId}
                 onClick={() => void handleRefreshPane(contextMenu.paneId)}
               >
-                Refresh
+                {t("sftpTransfer.refresh")}
               </ContextMenuButton>
               <ContextMenuButton
                 disabled={!canMutateContextPane}
@@ -1789,14 +1095,9 @@ export function SftpTransferTab() {
                   setContextMenu(null);
                 }}
               >
-                Create New Folder
+                {t("sftpTransfer.createNewFolder")}
               </ContextMenuButton>
             </>
-          )}
-          {remoteToLocalHasFolder && (
-            <div className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
-              Remote folder to local copy is not available yet.
-            </div>
           )}
         </div>
       )}
@@ -1808,7 +1109,9 @@ export function SftpTransferTab() {
         <DialogContent className="rounded-none border-border bg-card sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-xs font-bold uppercase tracking-widest">
-              {nameDialog?.kind === "mkdir" ? "Create New Folder" : "Rename"}
+              {nameDialog?.kind === "mkdir"
+                ? t("sftpTransfer.createNewFolder")
+                : t("sftpTransfer.rename")}
             </DialogTitle>
           </DialogHeader>
           <Input
@@ -1830,14 +1133,14 @@ export function SftpTransferTab() {
               className="rounded-none text-xs"
               onClick={() => setNameDialog(null)}
             >
-              Cancel
+              {t("sftpTransfer.cancel")}
             </Button>
             <Button
               variant="outline"
               className="rounded-none text-xs"
               onClick={() => void handleNameDialogSubmit()}
             >
-              Save
+              {t("sftpTransfer.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1850,23 +1153,25 @@ export function SftpTransferTab() {
         <AlertDialogContent className="rounded-none border-border bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xs font-bold uppercase tracking-widest">
-              Delete Selected Items
+              {t("sftpTransfer.deleteSelectedItems")}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground">
-              {deleteTarget
-                ? `Delete ${getContextEntries(deleteTarget).length} selected item${getContextEntries(deleteTarget).length === 1 ? "" : "s"}?`
-                : "Delete selected items?"}
+              {t("sftpTransfer.deleteConfirm", {
+                count: deleteTarget
+                  ? getContextEntries(deleteTarget).length
+                  : 0,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-none text-xs">
-              Cancel
+              {t("sftpTransfer.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               className="rounded-none text-xs"
               onClick={() => void handleDeleteConfirmed()}
             >
-              Delete
+              {t("sftpTransfer.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
