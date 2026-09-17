@@ -1075,18 +1075,21 @@ export function LocalFilePane({
             })}
           </div>
         )}
-
-        {showPaneOverlay && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10 pointer-events-none">
-            <div className="text-center p-6 bg-card/95 border border-accent-brand/40 flex flex-col items-center gap-3">
-              <Download className="size-10 text-accent-brand" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
-                {t("fileManager.dropToDownloadHere")}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Sits outside the scrolling list: an absolutely positioned child of a
+          scroll container scrolls away with the content, so the hint would
+          land above the viewport whenever the list is scrolled down. */}
+      {showPaneOverlay && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 border-2 border-dashed border-primary z-10 pointer-events-none">
+          <div className="text-center p-6 bg-card/95 border border-accent-brand/40 flex flex-col items-center gap-3">
+            <Download className="size-10 text-accent-brand" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
+              {t("fileManager.dropToDownloadHere")}
+            </p>
+          </div>
+        </div>
+      )}
 
       <LocalFileContextMenu
         x={contextMenu.x}

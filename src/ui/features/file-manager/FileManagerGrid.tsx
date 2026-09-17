@@ -1169,20 +1169,6 @@ export function FileManagerGrid({
           onContextMenu={(e) => onContextMenu?.(e)}
           tabIndex={0}
         >
-          {(dragState.type === "external" ||
-            (dragState.type === "local" && !dragState.target)) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10 pointer-events-none">
-              <div className="text-center p-8 bg-card/95 border border-accent-brand/40 flex flex-col items-center gap-4">
-                <Upload className="size-12 text-accent-brand" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
-                  {dragState.type === "local"
-                    ? t("fileManager.dropToUploadHere")
-                    : t("fileManager.dragFilesToUpload")}
-                </p>
-              </div>
-            </div>
-          )}
-
           {files.length === 0 && !createIntent ? (
             <div className="h-full flex flex-col">
               {parentListRow}
@@ -1562,6 +1548,24 @@ export function FileManagerGrid({
             />
           )}
         </div>
+
+        {/* Sibling of the scroll container, not a child: an absolutely
+            positioned child of a scroll container scrolls away with the
+            content, so the hint would land above the viewport whenever the
+            list is scrolled down. */}
+        {(dragState.type === "external" ||
+          (dragState.type === "local" && !dragState.target)) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10 pointer-events-none">
+            <div className="text-center p-8 bg-card/95 border border-accent-brand/40 flex flex-col items-center gap-4">
+              <Upload className="size-12 text-accent-brand" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-accent-brand">
+                {dragState.type === "local"
+                  ? t("fileManager.dropToUploadHere")
+                  : t("fileManager.dragFilesToUpload")}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="px-4 py-1.5 bg-muted/30 border-t border-border flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
