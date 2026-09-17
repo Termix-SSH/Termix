@@ -1,0 +1,328 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { toast } from "sonner";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { SftpTransferTab } from "@/features/sftp/SftpTransferTab";
+
+const api = vi.hoisted(() => ({
+  browseSSHDirectory: vi.fn(),
+  changeSSHPermissions: vi.fn(),
+  createSSHFolder: vi.fn(),
+  deleteSSHItem: vi.fn(),
+  ensureSSHSessionForHost: vi.fn(),
+  getSSHHosts: vi.fn(),
+  listSSHFiles: vi.fn(),
+  readSSHFile: vi.fn(),
+  renameSSHItem: vi.fn(),
+  transferToHost: vi.fn(),
+  uploadSSHFile: vi.fn(),
+  beginTransferProgressMonitoring: vi.fn(),
+}));
+
+const streams = vi.hoisted(() => ({ upload: vi.fn(), download: vi.fn() }));
+vi.mock("@/api/local-transfer-api", () => ({
+  uploadLocalFileToSession: streams.upload,
+  downloadSessionFileToLocal: streams.download,
+}));
+
+vi.mock("@/main-axios", () => ({
+  browseSSHDirectory: api.browseSSHDirectory,
+  changeSSHPermissions: api.changeSSHPermissions,
+  createSSHFolder: api.createSSHFolder,
+  deleteSSHItem: api.deleteSSHItem,
+  ensureSSHSessionForHost: api.ensureSSHSessionForHost,
+  getSSHHosts: api.getSSHHosts,
+  listSSHFiles: api.listSSHFiles,
+  readSSHFile: api.readSSHFile,
+  renameSSHItem: api.renameSSHItem,
+  transferToHost: api.transferToHost,
+  uploadSSHFile: api.uploadSSHFile,
+}));
+
+vi.mock("@/features/file-manager/transferProgressMonitor", () => ({
+  beginTransferProgressMonitoring: api.beginTransferProgressMonitoring,
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+function installElectronApi() {
+  const electronAPI = {
+    getPlatform: vi.fn().mockResolvedValue("darwin"),
+    localTransfer: {},
+    getLocalHomeDirectory: vi.fn().mockResolvedValue("/Users/test"),
+    listLocalDirectory: vi.fn().mockResolvedValue({
+      success: true,
+      path: "/Users/test",
+      parent: "/Users",
+      entries: [
+        {
+          name: "local.txt",
+          path: "/Users/test/local.txt",
+          type: "file",
+          size: 12,
+          created: "2026-07-19T23:00:00",
+          modified: "2026-07-20T00:00:00.000Z",
+          permissions: "644",
+        },
+      ],
+    }),
+    createLocalFolder: vi.fn().mockResolvedValue({ success: true }),
+    renameLocalPath: vi.fn().mockResolvedValue({ success: true }),
+    trashLocalPath: vi.fn().mockResolvedValue({ success: true }),
+    chmodLocalPath: vi.fn().mockResolvedValue({ success: true }),
+    writeLocalFile: vi.fn().mockResolvedValue({ success: true }),
+    collectLocalFiles: vi.fn().mockResolvedValue({
+      success: true,
+      files: [
+        {
+          path: "/Users/test/local.txt",
+          name: "local.txt",
+          relativePath: "local.txt",
+          size: 12,
+          created: "2026-07-19T23:00:00",
+          modified: "2026-07-20T00:00:00.000Z",
+        },
+      ],
+    }),
+    readLocalFile: vi.fn().mockResolvedValue({
+      success: true,
+      path: "/Users/test/local.txt",
+      name: "local.txt",
+      data: "aGVsbG8=",
+    }),
+  };
+
+  Object.defineProperty(window, "electronAPI", {
+    configurable: true,
+    value: electronAPI,
+  });
+
+  return electronAPI;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  streams.upload.mockImplementation(async (options) => {
+    options.onProgress?.({ transferred: 12 });
+  });
+  streams.download.mockResolvedValue(undefined);
+  api.getSSHHosts.mockResolvedValue([
+    {
+      id: 1,
+      name: "prod",
+      ip: "10.0.0.1",
+      enableFileManager: true,
+      connectionType: "ssh",
+    },
+  ]);
+  api.ensureSSHSessionForHost.mockResolvedValue({
+    state: "ready",
+    sessionId: "session-1",
+  });
+  api.listSSHFiles.mockResolvedValue({
+    path: "/srv",
+    files: [
+      {
+        name: "remote.txt",
+        type: "file",
+        size: 24,
+        created: "2026-07-18T10:30:00",
+      },
+    ],
+  });
+  api.browseSSHDirectory.mockResolvedValue({
+    status: "ok",
+    path: "/srv",
+    files: [
+      {
+        name: "remote.txt",
+        type: "file",
+        size: 24,
+        created: "2026-07-18T10:30:00",
+      },
+    ],
+  });
+  api.transferToHost.mockResolvedValue({ transferId: "transfer-1" });
+  api.uploadSSHFile.mockImplementation(
+    async (
+      _sessionId: string,
+      _path: string,
+      _fileName: string,
+      file: File,
+      _hostId?: number,
+      _userId?: string,
+      onProgress?: (progress: {
+        chunkIndex: number;
+        totalChunks: number;
+        bytesSent: number;
+        totalBytes: number;
+      }) => void,
+    ) => {
+      onProgress?.({
+        chunkIndex: 0,
+        totalChunks: 1,
+        bytesSent: file.size,
+        totalBytes: file.size,
+      });
+      return {};
+    },
+  );
+  installElectronApi();
+});
+
+describe("SftpTransferTab context menus", () => {
+  it("renames a local file from the row context menu", async () => {
+    const electronAPI = installElectronApi();
+    render(<SftpTransferTab />);
+
+    fireEvent.contextMenu(await screen.findByText("local.txt"));
+    await userEvent.click(screen.getByText("Rename"));
+    const nameInput = screen.getByDisplayValue("local.txt");
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "renamed.txt");
+    await userEvent.click(screen.getByText("Save"));
+
+    await waitFor(() => {
+      expect(electronAPI.renameLocalPath).toHaveBeenCalledWith(
+        "/Users/test/local.txt",
+        "renamed.txt",
+      );
+    });
+  });
+
+  it("copies a source server file to the destination server pane", async () => {
+    render(<SftpTransferTab />);
+
+    await userEvent.click(screen.getByText("Server to Server"));
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    fireEvent.change(selects[1], { target: { value: "1" } });
+
+    const remoteRows = await screen.findAllByText("remote.txt");
+    fireEvent.contextMenu(remoteRows[0]);
+    await userEvent.click(screen.getByText("Copy to Target Directory"));
+
+    await waitFor(() => {
+      expect(api.transferToHost).toHaveBeenCalledWith(
+        "session-1",
+        ["/srv/remote.txt"],
+        "session-1",
+        "/srv",
+        false,
+        "auto",
+        2,
+      );
+    });
+  });
+
+  it("shows created timestamps for local and remote file rows", async () => {
+    render(<SftpTransferTab />);
+
+    expect(await screen.findByText("2026-07-19 23:00")).toBeTruthy();
+
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+
+    expect(await screen.findByText("2026-07-18 10:30")).toBeTruthy();
+  });
+
+  it("refuses a truncated local selection before reading or uploading files", async () => {
+    const electronAPI = installElectronApi();
+    electronAPI.collectLocalFiles.mockResolvedValue({
+      success: true,
+      files: [],
+      truncated: true,
+    } as never);
+    render(<SftpTransferTab />);
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    await screen.findByText("remote.txt");
+    await userEvent.click(await screen.findByText("local.txt"));
+    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringMatching(/Too many files/),
+      ),
+    );
+    expect(electronAPI.readLocalFile).not.toHaveBeenCalled();
+    expect(streams.upload).not.toHaveBeenCalled();
+    expect(api.createSSHFolder).not.toHaveBeenCalled();
+  });
+
+  it("downloads through the contained no-overwrite stream and reports collisions", async () => {
+    streams.download.mockRejectedValue(new Error("Destination already exists"));
+    render(<SftpTransferTab />);
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    fireEvent.contextMenu(await screen.findByText("remote.txt"));
+    await userEvent.click(screen.getByText("Copy to Target Directory"));
+    await waitFor(() =>
+      expect(streams.download).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionId: "session-1",
+          remotePath: "/srv/remote.txt",
+          rootPath: "/Users/test",
+          destPath: "/Users/test/remote.txt",
+          overwrite: false,
+        }),
+      ),
+    );
+    expect(api.readSSHFile).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Destination already exists"),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("streams empty files without reading base64 into the renderer", async () => {
+    const electronAPI = installElectronApi();
+    electronAPI.collectLocalFiles.mockResolvedValue({
+      success: true,
+      files: [
+        {
+          path: "/Users/test/empty",
+          name: "empty",
+          relativePath: "empty",
+          size: 0,
+        },
+      ],
+    } as never);
+    render(<SftpTransferTab />);
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    await screen.findByText("remote.txt");
+    await userEvent.click(await screen.findByText("local.txt"));
+    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
+    await waitFor(() =>
+      expect(streams.upload).toHaveBeenCalledWith(
+        expect.objectContaining({ localPath: "/Users/test/empty" }),
+      ),
+    );
+    expect(electronAPI.readLocalFile).not.toHaveBeenCalled();
+  });
+
+  it("reports local upload progress through the SFTP status bar", async () => {
+    render(<SftpTransferTab />);
+
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    await screen.findByText("remote.txt");
+
+    await userEvent.click(await screen.findByText("local.txt"));
+    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
+
+    await waitFor(() => {
+      expect(streams.upload).toHaveBeenCalled();
+    });
+    expect(streams.upload.mock.calls[0][0].onProgress).toEqual(
+      expect.any(Function),
+    );
+  });
+});

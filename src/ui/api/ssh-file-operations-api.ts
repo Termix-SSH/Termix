@@ -510,6 +510,18 @@ export async function uploadSSHFile(
       form,
       {
         timeout: 0,
+        onUploadProgress: (event) => {
+          const totalBytes =
+            typeof event.total === "number" && event.total > 0
+              ? event.total
+              : file.size;
+          onChunkProgress?.({
+            chunkIndex: 0,
+            totalChunks: 1,
+            bytesSent: Math.min(event.loaded, totalBytes),
+            totalBytes,
+          });
+        },
       },
     );
     return response.data;
@@ -1031,7 +1043,7 @@ export async function ensureSSHSessionForHost(
 export interface BrowseSSHDirectoryResult {
   status: "ok" | "not_found" | "error";
   path: string;
-  files: Array<{ name: string; type: "file" | "directory" | "link" }>;
+  files: FileItem[];
 }
 
 export async function browseSSHDirectory(
@@ -1043,10 +1055,7 @@ export async function browseSSHDirectory(
     return {
       status: "ok",
       path: result.path,
-      files: result.files as Array<{
-        name: string;
-        type: "file" | "directory" | "link";
-      }>,
+      files: result.files,
     };
   } catch (err) {
     const status =

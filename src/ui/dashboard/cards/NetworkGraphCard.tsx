@@ -63,6 +63,7 @@ import { useTranslation } from "react-i18next";
 import { useTabsSafe } from "@/shell/TabContext";
 import { cn } from "@/lib/utils";
 import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
+import { Select2 } from "@/components/select2";
 
 const AVAILABLE_COLORS = [
   { value: "#ef4444", label: "Red" },
@@ -961,7 +962,7 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.selectHost")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedHostForAddNode}
                 onChange={(e) => setSelectedHostForAddNode(e.target.value)}
@@ -972,11 +973,11 @@ export function NetworkGraphCard({
                     {h.name || h.ip}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
             <div className="grid gap-2">
               <Label>{t("networkGraph.parentGroup")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedGroupForAddNode}
                 onChange={(e) => setSelectedGroupForAddNode(e.target.value)}
@@ -987,7 +988,7 @@ export function NetworkGraphCard({
                     {g.label}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
           </div>
           <DialogFooter>
@@ -1084,7 +1085,7 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.selectGroup")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedGroupForMove}
                 onChange={(e) => setSelectedGroupForMove(e.target.value)}
@@ -1097,7 +1098,7 @@ export function NetworkGraphCard({
                       {g.label}
                     </option>
                   ))}
-              </select>
+              </Select2>
             </div>
           </div>
           <DialogFooter>
@@ -1123,7 +1124,7 @@ export function NetworkGraphCard({
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>{t("networkGraph.source")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={selectedHostForEdge}
                 onChange={(e) => setSelectedHostForEdge(e.target.value)}
@@ -1136,11 +1137,11 @@ export function NetworkGraphCard({
                     {el.label}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
             <div className="grid gap-2">
               <Label>{t("networkGraph.target")}</Label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={targetHostForEdge}
                 onChange={(e) => setTargetHostForEdge(e.target.value)}
@@ -1153,7 +1154,7 @@ export function NetworkGraphCard({
                     {el.label}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
           </div>
           <DialogFooter>

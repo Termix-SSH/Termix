@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Boxes,
   Braces,
   Clock,
@@ -68,6 +69,20 @@ export const RAIL_ITEMS: RailItemDef[] = [
     id: "credentials",
     icon: KeyRound,
     labelKey: "nav.credentials",
+    separatorAfter: true,
+  },
+  {
+    id: "port-forwarding",
+    icon: Network,
+    labelKey: "nav.portForwarding",
+    electronOnly: true,
+    separatorAfter: true,
+  },
+  {
+    id: "sftp",
+    icon: ArrowLeftRight,
+    labelKey: "nav.sftp",
+    electronOnly: true,
     separatorAfter: true,
   },
   {

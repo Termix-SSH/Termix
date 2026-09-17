@@ -156,7 +156,13 @@ export function MobileBottomBar({
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => window.dispatchEvent(new Event("termix:logout"))}
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("termix:logout", {
+                  detail: { manual: true },
+                }),
+              )
+            }
           >
             <LogOut className="size-4" />
             {t("common.logout")}

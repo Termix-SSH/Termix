@@ -38,6 +38,7 @@ import {
   type ShareTarget,
 } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
+import { Select2 } from "@/components/select2";
 
 const PERMISSION_LEVELS: SharePermissionLevel[] = [
   "connect",
@@ -431,7 +432,7 @@ export function HostShareModal({
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("hosts.sharing.permissionLevelLabel")}
             </span>
-            <select
+            <Select2
               value={permissionLevel}
               onChange={(e) =>
                 setPermissionLevel(e.target.value as SharePermissionLevel)
@@ -443,7 +444,7 @@ export function HostShareModal({
                   {t(`hosts.sharing.levels.${level}.label`)}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <DropdownMenu>

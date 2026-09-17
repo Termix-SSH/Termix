@@ -6,6 +6,7 @@ import { Input } from "@/components/input";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import { getCredentials } from "@/main-axios";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
+import { Select2 } from "@/components/select2";
 import { resolveConnectionOrigin } from "@/lib/connection-origin";
 import { HostEditorWebUiSection } from "./HostEditorWebUiSection";
 
@@ -48,7 +49,7 @@ export function HostDockerTab({
             label={t("hosts.containerRuntime")}
             description={t("hosts.containerRuntimeDesc")}
           >
-            <select
+            <Select2
               value={runtime}
               onChange={(e) =>
                 setField("dockerConfig", {
@@ -64,7 +65,7 @@ export function HostDockerTab({
               <option value="podman">
                 {t("hosts.containerRuntimePodman")}
               </option>
-            </select>
+            </Select2>
           </SettingRow>
         )}
       </div>
@@ -157,7 +158,7 @@ export function HostProxmoxTab({
               label={t("hosts.proxmoxDefaultAuthType")}
               description={t("hosts.proxmoxDefaultAuthTypeDesc")}
             >
-              <select
+              <Select2
                 value={cfg.defaultAuthType ?? "password"}
                 onChange={(e) =>
                   setField("proxmoxConfig", {
@@ -175,13 +176,13 @@ export function HostProxmoxTab({
                 <option value="opkssh">{t("hosts.authTypeOpkssh")}</option>
                 <option value="stepca">{t("hosts.authTypeStepca")}</option>
                 <option value="none">{t("hosts.authTypeNone")}</option>
-              </select>
+              </Select2>
             </SettingRow>
             <SettingRow
               label={t("hosts.proxmoxDefaultCredential")}
               description={t("hosts.proxmoxDefaultCredentialDesc")}
             >
-              <select
+              <Select2
                 value={cfg.defaultCredentialId ?? ""}
                 onChange={(e) =>
                   setField("proxmoxConfig", {
@@ -199,7 +200,7 @@ export function HostProxmoxTab({
                     {c.username ? `${c.name} (${c.username})` : c.name}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </SettingRow>
             <SettingRow
               label={t("hosts.proxmoxWindowsDetection")}

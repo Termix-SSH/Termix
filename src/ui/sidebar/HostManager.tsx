@@ -42,6 +42,7 @@ import {
   SSH_GROUP_TABS,
   TabStrip,
 } from "./HostManagerTabs";
+import { Select2 } from "@/components/select2";
 
 export function HostManager({
   pendingEditId,
@@ -179,9 +180,13 @@ export function HostManager({
     reloadLinkedIds();
 
     window.addEventListener("termix:hosts-changed", reloadHosts);
+    window.addEventListener("ssh-hosts:changed", reloadHosts);
+    window.addEventListener("hosts:refresh", reloadHosts);
     window.addEventListener("termix:credentials-changed", reloadCredentials);
     return () => {
       window.removeEventListener("termix:hosts-changed", reloadHosts);
+      window.removeEventListener("ssh-hosts:changed", reloadHosts);
+      window.removeEventListener("hosts:refresh", reloadHosts);
       window.removeEventListener(
         "termix:credentials-changed",
         reloadCredentials,
@@ -830,7 +835,7 @@ export function HostManager({
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("credentials.targetHostLabel")}
               </label>
-              <select
+              <Select2
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                 value={deployDialog.hostId}
                 onChange={(e) =>
@@ -849,7 +854,7 @@ export function HostManager({
                       {h.name || h.ip}
                     </option>
                   ))}
-              </select>
+              </Select2>
             </div>
             <div className="flex justify-end gap-2">
               <Button

@@ -12,6 +12,7 @@ import {
   Monitor,
   MousePointerClick,
   Network,
+  ArrowLeftRight,
   Server,
   Settings,
   Terminal,
@@ -128,6 +129,11 @@ const loadTunnelTab = () =>
     default: m.TunnelTab,
   }));
 const TunnelTab = lazy(loadTunnelTab);
+const SftpTransferTab = lazy(() =>
+  import("@/features/sftp/SftpTransferTab").then((m) => ({
+    default: m.SftpTransferTab,
+  })),
+);
 const NetworkGraphCard = lazy(() =>
   import("@/dashboard/cards/NetworkGraphCard").then((m) => ({
     default: m.NetworkGraphCard,
@@ -329,6 +335,8 @@ export function tabIcon(type: TabType) {
       return <Globe className="size-3.5" />;
     case "tunnel":
       return <Network className="size-3.5" />;
+    case "sftp":
+      return <ArrowLeftRight className="size-3.5" />;
     case "network_graph":
       return <Network className="size-3.5" />;
     // --- tmux-monitor ---
@@ -599,6 +607,9 @@ export function renderTabContent(
       return withTabSuspense(
         <TunnelTab label={label} host={host} isVisible={isVisible} />,
       );
+
+    case "sftp":
+      return withTabSuspense(<SftpTransferTab />);
 
     case "rdp":
     case "vnc":

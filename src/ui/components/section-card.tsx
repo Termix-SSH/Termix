@@ -65,10 +65,12 @@ export function SettingRow({
 
 export function FakeSwitch({
   defaultChecked = false,
+  disabled = false,
   checked,
   onChange,
 }: {
   defaultChecked?: boolean;
+  disabled?: boolean;
   checked?: boolean;
   onChange?: (v: boolean) => void;
 }) {
@@ -76,6 +78,7 @@ export function FakeSwitch({
   const on = checked !== undefined ? checked : internalOn;
   return (
     <button
+      disabled={disabled}
       onClick={() => {
         const next = !on;
         if (checked === undefined) setInternalOn(next);

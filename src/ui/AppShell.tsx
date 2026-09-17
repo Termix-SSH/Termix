@@ -133,6 +133,11 @@ const CredentialsPanel = lazy(() =>
     default: m.CredentialsPanel,
   })),
 );
+const PortForwardingPanel = lazy(() =>
+  import("@/sidebar/PortForwardingPanel").then((m) => ({
+    default: m.PortForwardingPanel,
+  })),
+);
 const TermixIdPanel = lazy(() =>
   import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
 );
@@ -245,7 +250,7 @@ export function AppShell({
   onLogout,
 }: {
   username: string;
-  onLogout: () => void;
+  onLogout: (options?: { manual?: boolean }) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { setTheme } = useTheme();
@@ -898,7 +903,12 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    const handle = () => onLogout();
+    const handle = (event: Event) => {
+      const manual =
+        event instanceof CustomEvent &&
+        (event.detail as { manual?: boolean } | undefined)?.manual === true;
+      onLogout(manual ? { manual: true } : undefined);
+    };
     window.addEventListener("termix:logout", handle);
     return () => window.removeEventListener("termix:logout", handle);
   }, [onLogout]);
@@ -1898,6 +1908,7 @@ export function AppShell({
         "host-manager": t("nav.hostManager"),
         docker: t("nav.docker"),
         tunnel: t("nav.tunnels"),
+        sftp: t("nav.sftp"),
         network_graph: t("nav.networkGraph"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
         homepage: t("nav.homepage"),
@@ -2242,6 +2253,12 @@ export function AppShell({
   }
 
   function handleRailClick(view: RailView) {
+    if (view === "sftp") {
+      openSingletonTab("sftp");
+      if (isMobile) setSidebarOpen(false);
+      return;
+    }
+
     if (railView === view && sidebarOpen) {
       setSidebarOpen(false);
     } else {
@@ -2440,6 +2457,12 @@ export function AppShell({
               />
             </div>
           </>
+        )}
+
+        {railView === "port-forwarding" && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <PortForwardingPanel />
+          </div>
         )}
 
         {railView === "termix-id" && (
@@ -2851,6 +2874,7 @@ export function AppShell({
         variant="ghost"
         size="icon"
         className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+        title="Collapse sidebar"
         onClick={() => {
           setSettingsFullscreen(false);
           setSidebarOpen(false);

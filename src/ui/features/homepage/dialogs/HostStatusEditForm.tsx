@@ -6,6 +6,7 @@ import type {
   HostStatusConfig,
   WidgetEditFormProps,
 } from "@/types/homepage-types";
+import { Select2 } from "@/components/select2";
 
 interface SimpleHost {
   id: string;
@@ -80,7 +81,7 @@ export function HostStatusEditForm({
         <label className="text-xs font-medium text-muted-foreground">
           {t("homepage.host")}
         </label>
-        <select
+        <Select2
           className="h-8 border border-border bg-background text-sm px-2"
           value={config.hostId || ""}
           onChange={(e) =>
@@ -93,7 +94,7 @@ export function HostStatusEditForm({
               {h.name}
             </option>
           ))}
-        </select>
+        </Select2>
       </div>
 
       <div className="flex flex-col gap-1.5">
