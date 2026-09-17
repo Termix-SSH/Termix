@@ -19,13 +19,13 @@ https://youtu.be/lngaePO96tM
 - Added Step CA as an SSH authentication type
 - Added 1Password Connect as a credential source for SSH
 - Added the ability to share credentials with specific users and roles
-- Added folder-level credential shares
+- Added automatic sharing for hosts added to an already-shared folder
 - Added per-host Web Endpoints
 - Added quick connect for RDP and VNC
 - Added a compact snippet list option
 - Added copy/paste support to the local terminal
 - Added a terminal copy-on-select option
-- Added configurable global hotkeys
+- Added tab switching and command palette actions to custom keybindings
 - Added selectable host temperature sensors
 - Added accessible interface font choices
 - Added VNC display zoom controls
