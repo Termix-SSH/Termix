@@ -5,13 +5,11 @@ on:
     paths:
       - "charts/**"
       - ".github/workflows/helm.yml"
-      - "deploy/**"
   push:
     branches: [main]
     paths:
       - "charts/**"
       - ".github/workflows/helm.yml"
-      - "deploy/**"
   workflow_dispatch:
     inputs:
       publish:
