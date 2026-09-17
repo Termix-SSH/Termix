@@ -34,7 +34,7 @@ import type { FileItem } from "@/types/index";
 import type { CreateIntent } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
 import {
-  REMOTE_FILES_DRAG_MIME,
+  beginRemoteFilesDrag,
   isLocalFilesDrag,
   parseLocalFilesDragPayload,
 } from "./local-transfer-utils.ts";
@@ -415,14 +415,10 @@ export function FileManagerGrid({
       mousePosition: { x: e.clientX, y: e.clientY },
     });
 
-    const dragData = {
-      type: "internal_files",
-      files: filesToDrag.map((f) => f.path),
-    };
-    e.dataTransfer.setData("text/plain", JSON.stringify(dragData));
-    // Lets sibling panes recognise this drag before the payload is readable.
-    e.dataTransfer.setData(REMOTE_FILES_DRAG_MIME, "1");
-    e.dataTransfer.effectAllowed = "move";
+    beginRemoteFilesDrag(
+      e.dataTransfer,
+      filesToDrag.map((f) => f.path),
+    );
   };
 
   const handleFileDragOver = (e: React.DragEvent, targetFile: FileItem) => {
