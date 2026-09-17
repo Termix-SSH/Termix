@@ -322,6 +322,8 @@ const TRANSFER_ROUTES = Object.freeze({
 });
 
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+// A compact JWT (base64url segments joined by dots); anything else is refused.
+const AUTH_TOKEN_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 const DEFAULT_LOCAL_FILE_MANAGER_BASE =
   "http://localhost:30004/ssh/file_manager";
@@ -347,7 +349,12 @@ function createTargetResolver({
   getRemoteSyncConfig,
   getRemoteSyncJwt,
 }) {
-  return function resolveTransferTarget({ origin, route, deviceId } = {}) {
+  return function resolveTransferTarget({
+    origin,
+    route,
+    deviceId,
+    authToken,
+  } = {}) {
     const routePath = TRANSFER_ROUTES[route];
     if (!routePath) {
       throw new Error(`Unknown transfer route: ${String(route)}`);
@@ -362,6 +369,24 @@ function createTargetResolver({
     }
 
     if (origin === "local") {
+      // The desktop renderer authenticates against the embedded backend with
+      // the token it keeps in localStorage (see the Electron branch of the
+      // axios request interceptor), and the `jwt` cookie only exists for a
+      // while after an interactive login. Send that same token here, so a
+      // transfer does not depend on a cookie the rest of the app no longer
+      // needs; the session cookie still rides along as a fallback. The
+      // renderer already uses this token on every request it makes itself,
+      // so forwarding it grants nothing new, and the URL stays ours.
+      if (authToken !== undefined && authToken !== null && authToken !== "") {
+        if (
+          typeof authToken !== "string" ||
+          authToken.length > 8192 ||
+          !AUTH_TOKEN_PATTERN.test(authToken)
+        ) {
+          throw new Error("Invalid auth token");
+        }
+        headers.Authorization = `Bearer ${authToken}`;
+      }
       return {
         url: `${normalizeHttpBase(localBaseUrl, "Local backend URL")}${routePath}`,
         headers,
@@ -401,8 +426,15 @@ function createNetRequest(net, event, method, url) {
 
 // Streams one local file to the backend's multipart `uploadFileStream` route.
 async function uploadLocalFile({ net, resolveTransferTarget }, event, options) {
-  const { transferId, origin, deviceId, fields, localPath, fileName } =
-    options || {};
+  const {
+    transferId,
+    origin,
+    deviceId,
+    authToken,
+    fields,
+    localPath,
+    fileName,
+  } = options || {};
 
   if (!transferId || !localPath) {
     throw new Error("Missing upload parameters");
@@ -411,6 +443,7 @@ async function uploadLocalFile({ net, resolveTransferTarget }, event, options) {
     origin,
     route: "uploadFileStream",
     deviceId,
+    authToken,
   });
 
   const absPath = normalizeLocalPath(localPath);
@@ -683,6 +716,7 @@ async function downloadToLocal(
     transferId,
     origin,
     deviceId,
+    authToken,
     body,
     destPath,
     rootPath,
@@ -697,6 +731,7 @@ async function downloadToLocal(
     origin,
     route: "downloadFileStream",
     deviceId,
+    authToken,
   });
 
   // The renderer builds destPath from remote names; never trust that it

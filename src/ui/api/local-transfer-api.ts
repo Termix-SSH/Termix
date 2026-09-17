@@ -58,6 +58,22 @@ function transferOriginFor(sessionId: string): LocalTransferOrigin {
   return getSessionOrigin(sessionId);
 }
 
+/**
+ * The token the desktop renderer uses for the embedded backend. The `jwt`
+ * cookie the main process would otherwise rely on lasts only a day after an
+ * interactive login, while this token (and every request the app makes with
+ * it) keeps working, so transfers must carry it too. Remote-origin transfers
+ * are authenticated by the main process from its own Remote Sync state.
+ */
+function localAuthTokenFor(origin: LocalTransferOrigin): string | undefined {
+  if (origin !== "local") return undefined;
+  try {
+    return localStorage.getItem("jwt") || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function createLocalTransferId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -90,11 +106,13 @@ export async function uploadLocalFileToSession(options: {
   if (options.onProgress) {
     progressListeners.set(transferId, options.onProgress);
   }
+  const origin = transferOriginFor(options.sessionId);
   try {
     const result = await api.upload({
       transferId,
-      origin: transferOriginFor(options.sessionId),
+      origin,
       deviceId: getDeviceId() ?? undefined,
+      authToken: localAuthTokenFor(origin),
       fields,
       localPath: options.localPath,
       fileName: options.fileName,
@@ -135,11 +153,13 @@ export async function downloadSessionFileToLocal(options: {
   if (options.onProgress) {
     progressListeners.set(transferId, options.onProgress);
   }
+  const origin = transferOriginFor(options.sessionId);
   try {
     const result = await api.download({
       transferId,
-      origin: transferOriginFor(options.sessionId),
+      origin,
       deviceId: getDeviceId() ?? undefined,
+      authToken: localAuthTokenFor(origin),
       body: { sessionId: options.sessionId, path: options.remotePath },
       destPath: options.destPath,
       rootPath: options.rootPath,
