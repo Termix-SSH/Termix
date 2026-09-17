@@ -618,7 +618,7 @@ if (process.platform === "linux") {
   }
 }
 
-if (process.platform === "win32") {
+if (process.platform === "win32" || process.env.ELECTRON_DISABLE_GPU === "1") {
   app.disableHardwareAcceleration();
 }
 
@@ -633,6 +633,15 @@ if (isInsecureModeEnabled()) {
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
+const { createWebEndpointWindows } = require("./web-endpoint-window.cjs");
+const webEndpointWindows = createWebEndpointWindows({
+  BrowserWindow,
+  session,
+  getMainWindow: () => mainWindow,
+});
+ipcMain.handle("open-isolated-web-endpoint", (event, options) =>
+  webEndpointWindows.open(event, options),
+);
 let backendProcess = null;
 let backendStartFailed = false;
 // Why the embedded backend died, once it has. Null while it is healthy
@@ -1195,9 +1204,84 @@ function openPathWithEditor(filePath, editorPath) {
   });
 }
 
+// Origins the renderer has explicitly marked as allowed to present an invalid
+// certificate, for web endpoints whose ignoreCert is set. Session scoped and
+// never persisted.
+//
+// Deliberately NOT wired into isInvalidCertificateAllowedForUrl: that function
+// also governs this process's own outbound TLS via getTlsVerificationOptions,
+// and widening it would grant more privilege than the feature needs.
+//
+// Entries expire rather than living until the app restarts (days, on a
+// desktop app). Main has no host-database access, so it cannot verify a
+// renderer's claim that an origin really is a configured web endpoint -- an
+// unbounded allowance would make that an indefinite window rather than a
+// momentary one. The renderer re-registers before each load, which refreshes
+// the expiry, so a live endpoint keeps working while a stale entry lapses.
+const WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS = 5 * 60 * 1000;
+const webEndpointCertificateAllowlist = new Map();
+
+function isWebEndpointCertificateAllowed(url) {
+  try {
+    const parsed = new URL(url);
+    // The allowance exists solely to suppress a TLS certificate error, so a
+    // non-https origin in the map is meaningless at best.
+    if (parsed.protocol !== "https:") return false;
+
+    const expiresAt = webEndpointCertificateAllowlist.get(parsed.origin);
+    if (expiresAt === undefined) return false;
+    if (Date.now() >= expiresAt) {
+      webEndpointCertificateAllowlist.delete(parsed.origin);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+ipcMain.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
+  try {
+    // Store the PARSED origin, never the caller's string, so a path or a
+    // wildcard cannot widen the allowance.
+    const parsed = new URL(String(origin));
+    if (parsed.protocol !== "https:") {
+      return { success: false };
+    }
+    webEndpointCertificateAllowlist.set(
+      parsed.origin,
+      Date.now() + WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS,
+    );
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
+});
+
 app.on(
   "certificate-error",
   (event, _webContents, url, error, certificate, callback) => {
+    if (
+      webEndpointWindows.handleCertificateError(
+        event,
+        _webContents,
+        url,
+        callback,
+      )
+    )
+      return;
+    if (isWebEndpointCertificateAllowed(url)) {
+      event.preventDefault();
+      logToFile("Allowed invalid certificate for configured web endpoint", {
+        url,
+        error,
+        issuer: certificate?.issuerName,
+        subject: certificate?.subjectName,
+      });
+      callback(true);
+      return;
+    }
+
     if (isInvalidCertificateAllowedForUrl(url)) {
       event.preventDefault();
       logToFile("Allowed invalid certificate for configured server", {

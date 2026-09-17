@@ -21,7 +21,7 @@ import {
 } from "../../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
-import { waitForGuacdOpen } from "./guacamole-server.js";
+import { getGuacSessionByConnectId } from "./guacamole-server.js";
 import {
   logAudit,
   getAuditUsername,
@@ -41,6 +41,16 @@ const authManager = AuthManager.getInstance();
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 
 router.use(authManager.createAuthMiddleware());
+
+router.get("/connection/:connectId", (req: AuthenticatedRequest, res) => {
+  if (!req.userId)
+    return res.status(401).json({ error: "Authentication required" });
+  const session = getGuacSessionByConnectId(
+    String(req.params.connectId),
+    req.userId,
+  );
+  res.json({ guacamoleConnectionId: session?.guacamoleConnectionId ?? null });
+});
 
 /**
  * @openapi
@@ -206,7 +216,10 @@ router.post("/token", async (req, res) => {
  *                 guacamoleConnectionId:
  *                   type: string
  *                   nullable: true
- *                   description: guacd's own connection id for this session, once the handshake completes. Used to mint session-share join tokens.
+ *                   description: Null until the WebSocket handshake completes. Query /guacamole/connection/{connectId} for the session-sharing ID.
+ *                 termixConnectId:
+ *                   type: string
+ *                   description: Correlation ID for looking up this connection after the WebSocket opens.
  *       400:
  *         description: Invalid request or unsupported connection type
  *       403:
@@ -726,8 +739,6 @@ router.post(
           return res.status(400).json({ error: "Invalid connection type" });
       }
 
-      const sessionInfo = await waitForGuacdOpen(termixConnectId, 10000);
-
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
         userId,
@@ -743,7 +754,8 @@ router.post(
 
       res.json({
         token,
-        guacamoleConnectionId: sessionInfo?.guacamoleConnectionId ?? null,
+        termixConnectId,
+        guacamoleConnectionId: null,
       });
     } catch (error) {
       guacLogger.error("Failed to generate guacamole token for host", error, {

@@ -8,10 +8,11 @@ COPY package*.json ./
 COPY .npmrc ./
 COPY vendor ./vendor
 
-COPY scripts/patch-guacamole-lite.cjs ./scripts/
+COPY scripts/patch-guacamole-lite.cjs scripts/patch-ssh2-agent.cjs ./scripts/
 
 RUN npm ci --ignore-scripts && \
     node scripts/patch-guacamole-lite.cjs && \
+    node scripts/patch-ssh2-agent.cjs && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -68,10 +69,11 @@ COPY package*.json ./
 COPY .npmrc ./
 COPY vendor ./vendor
 
-COPY scripts/patch-guacamole-lite.cjs ./scripts/
+COPY scripts/patch-guacamole-lite.cjs scripts/patch-ssh2-agent.cjs ./scripts/
 
 RUN npm ci --omit=dev --ignore-scripts && \
     node scripts/patch-guacamole-lite.cjs && \
+    node scripts/patch-ssh2-agent.cjs && \
     rm -rf node_modules/better-sqlite3/prebuilds && \
     npm run build-release --prefix node_modules/better-sqlite3 && \
     test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node && \

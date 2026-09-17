@@ -156,7 +156,7 @@ export async function getReleasesRSS(
 }
 
 export interface VersionInfo {
-  status?: "up_to_date" | "requires_update" | "beta";
+  status?: "up_to_date" | "requires_update" | "beta" | "unknown";
   /** Same value as remoteVersion; the endpoint sends both. */
   version?: string;
   localVersion?: string;

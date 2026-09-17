@@ -139,7 +139,7 @@ function StatsBarCard({
   hosts: Host[];
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
 }) {
@@ -473,7 +473,20 @@ export function HostStatusCard({
           return (
             <div
               key={i}
-              onClick={() => onOpenTab(host, "host-metrics")}
+              onClick={() =>
+                onOpenTab(
+                  host,
+                  host.enableSsh
+                    ? "host-metrics"
+                    : host.enableRdp
+                      ? "rdp"
+                      : host.enableVnc
+                        ? "vnc"
+                        : host.enableTelnet
+                          ? "telnet"
+                          : "host-metrics",
+                )
+              }
               className="flex min-w-0 items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
             >
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -838,7 +851,7 @@ function CardItem({
   >;
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
@@ -1066,7 +1079,7 @@ type PanelColumnProps = {
   >;
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
@@ -1327,7 +1340,7 @@ export function DashboardTab({
   const [uptimeFormatted, setUptimeFormatted] = useState("");
   const [versionText, setVersionText] = useState("");
   const [versionStatus, setVersionStatus] = useState<
-    "up_to_date" | "requires_update" | "beta"
+    "up_to_date" | "requires_update" | "beta" | "unknown"
   >("up_to_date");
   const [releaseUrl, setReleaseUrl] = useState("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
@@ -1429,7 +1442,7 @@ export function DashboardTab({
     getVersionInfo()
       .then((info) => {
         setVersionText(info.localVersion ?? "");
-        setVersionStatus(info.status ?? "up_to_date");
+        setVersionStatus(info.status ?? "unknown");
         setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});

@@ -568,7 +568,7 @@ export function UserProfilePanel({
   const [authMethod, setAuthMethod] = useState("");
   const [version, setVersion] = useState("");
   const [versionStatus, setVersionStatus] = useState<
-    "up_to_date" | "requires_update" | "beta"
+    "up_to_date" | "requires_update" | "beta" | "unknown"
   >("up_to_date");
   const [releaseUrl, setReleaseUrl] = useState("");
   const [isOidc, setIsOidc] = useState(false);
@@ -833,7 +833,7 @@ export function UserProfilePanel({
     getVersionInfo()
       .then((info) => {
         setVersion(info.localVersion);
-        setVersionStatus(info.status ?? "up_to_date");
+        setVersionStatus(info.status ?? "unknown");
         setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});

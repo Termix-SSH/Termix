@@ -191,6 +191,8 @@ export function createHostEditorForm(
     enableFileManager: host?.enableFileManager ?? false,
     scpLegacy: host?.scpLegacy ?? false,
     enableDocker: host?.enableDocker ?? false,
+    enableWebUi: host?.enableWebUi ?? false,
+    webUiConfig: host?.webUiConfig ?? { endpoints: [] },
     dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
@@ -238,7 +240,7 @@ export function createHostEditorForm(
     bellStyle: (terminalConfig.bellStyle ?? "none") as
       "none" | "sound" | "visual" | "both",
     rightClickSelectsWord: host?.terminalConfig?.rightClickSelectsWord ?? false,
-    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? true,
+    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? false,
     fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ?? "alt") as
       "alt" | "ctrl" | "shift",
     fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
@@ -494,6 +496,8 @@ export function buildHostEditorPayload(
     scpLegacy: form.scpLegacy,
     enableDocker: form.enableDocker,
     dockerConfig: form.enableDocker ? form.dockerConfig : null,
+    enableWebUi: form.enableWebUi,
+    webUiConfig: form.enableWebUi ? form.webUiConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableTerminalToolbar: form.enableTerminalToolbar,
     allowSessionSharing: form.allowSessionSharing,

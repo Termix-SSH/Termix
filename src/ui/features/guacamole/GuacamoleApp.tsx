@@ -1,3 +1,4 @@
+import { watchGuacamoleConnectionId } from "./guacamole-session-id";
 import { getErrorMessage } from "../../lib/error-message.js";
 import React, {
   useState,
@@ -198,6 +199,10 @@ const GuacamoleAppInner = React.forwardRef<
   const [guacamoleConnectionId, setGuacamoleConnectionId] = useState<
     string | null
   >(null);
+  const [sessionLookup, setSessionLookup] = useState<{
+    id: string;
+    origin: ConnectionOrigin;
+  } | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -208,6 +213,14 @@ const GuacamoleAppInner = React.forwardRef<
       ? "touchscreen"
       : null,
   );
+  useEffect(() => {
+    if (!isDisplayReady || !sessionLookup) return;
+    return watchGuacamoleConnectionId(
+      sessionLookup.id,
+      sessionLookup.origin,
+      setGuacamoleConnectionId,
+    );
+  }, [isDisplayReady, sessionLookup]);
   const displayRef = useRef<GuacamoleDisplayHandle>(null);
   const [displayZoom, setDisplayZoom] = useState(1);
   const [filesystem, setFilesystem] = useState<Guacamole.Object | null>(null);
@@ -288,6 +301,8 @@ const GuacamoleAppInner = React.forwardRef<
 
   const fetchToken = useCallback(async (): Promise<void> => {
     setToken(null);
+    setIsDisplayReady(false);
+    setSessionLookup(null);
     setGuacamoleConnectionId(null);
     setError(null);
 
@@ -365,6 +380,11 @@ const GuacamoleAppInner = React.forwardRef<
             hostConfig.syncId,
           );
     if (result) {
+      setSessionLookup(
+        result.termixConnectId
+          ? { id: result.termixConnectId, origin: resolvedOrigin }
+          : null,
+      );
       setToken(result.token);
       setGuacamoleConnectionId(result.guacamoleConnectionId ?? null);
       if (hostId !== 0) {

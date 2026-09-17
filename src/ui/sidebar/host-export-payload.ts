@@ -41,9 +41,12 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   quickActions: ["quickActions"],
   featureFlags: [
     "enableTerminal",
+    "enableCommandHistory",
+    "enableTerminalToolbar",
     "enableTunnel",
     "enableFileManager",
     "enableDocker",
+    "enableWebUi",
     "enableProxmox",
     "enableTmuxMonitor",
     "showTerminalInSidebar",
@@ -57,6 +60,7 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   advanced: [
     "statsConfig",
     "dockerConfig",
+    "webUiConfig",
     "proxmoxConfig",
     "terminalConfig",
     "guacamoleConfig",
@@ -112,6 +116,7 @@ export function buildExportPayload(
   withCredentials: boolean,
 ): ExportPayload {
   const allowed = new Set<string>([
+    "exportId",
     ...CREDENTIAL_KEYS,
     ...FIELD_GROUP_KEYS.connection,
   ]);

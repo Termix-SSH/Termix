@@ -93,6 +93,8 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     enableFileManager: h.enableFileManager ?? true,
     enableDocker: h.enableDocker ?? false,
     dockerConfig: h.dockerConfig ?? null,
+    enableWebUi: h.enableWebUi ?? false,
+    webUiConfig: h.webUiConfig ?? { endpoints: [] },
     enableProxmox: h.enableProxmox ?? false,
     enableProxmoxStats: h.enableProxmoxStats ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false,

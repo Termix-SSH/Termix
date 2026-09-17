@@ -82,6 +82,7 @@ import {
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import {
   HostDockerTab,
+  HostWebUiTab,
   HostProxmoxTab,
   HostFilesTab,
 } from "./HostEditorFeatureTabs";
@@ -2584,6 +2585,14 @@ export function HostEditor({
 
           {activeTab === "docker" && (
             <HostDockerTab form={form} setField={setField} />
+          )}
+
+          {activeTab === "web-ui" && (
+            <HostWebUiTab
+              form={form}
+              setField={setField}
+              protocols={protocols}
+            />
           )}
 
           {activeTab === "proxmox" && (

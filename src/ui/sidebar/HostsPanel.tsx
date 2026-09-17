@@ -189,7 +189,11 @@ export function HostsPanel({
   onEditingChange,
   active = true,
 }: {
-  onOpenTab: (host: Host, type: TabType) => void;
+  onOpenTab: (
+    host: Host,
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
   loading?: boolean;
@@ -1033,7 +1037,7 @@ export function HostsPanel({
         update={updateSidebarPrefs}
       />
 
-      {!managerEditing && (
+      {active && !managerEditing && (
         <div className="flex flex-col flex-1 min-h-0">
           <SidebarTree
             children={

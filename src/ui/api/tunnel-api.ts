@@ -53,7 +53,7 @@ export async function getTunnelStatuses(): Promise<
 
     try {
       const remoteResult = await getRemoteTunnelApi().get("/tunnel/status");
-      return { ...localStatuses, ...(remoteResult.data || {}) };
+      return { ...(remoteResult.data || {}), ...localStatuses };
     } catch {
       return localStatuses;
     }
@@ -74,7 +74,8 @@ export function subscribeTunnelStatuses(
   let stopRemotePolling: (() => void) | null = null;
 
   const emitMerged = () => {
-    onStatuses({ ...latestLocal, ...latestRemote });
+    // Controls target the local backend, so its state wins name collisions.
+    onStatuses({ ...latestRemote, ...latestLocal });
   };
 
   const waitToReconnect = () =>
