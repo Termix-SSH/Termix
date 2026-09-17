@@ -73,6 +73,9 @@ const localFiles = require("../../../../electron/local-files.cjs") as {
 
 // Minimal stand-in for Electron's net.request built on Node http, exposing
 // the subset of the ClientRequest API local-files.cjs uses.
+/** Header names the bridge tried to set on any request, lower-cased. */
+const headersSetByBridge: string[] = [];
+
 class FakeClientRequest extends EventEmitter {
   private req: http.ClientRequest;
   chunkedEncoding = false;
@@ -89,13 +92,14 @@ class FakeClientRequest extends EventEmitter {
     this.req.on("error", (e) => this.emit("error", e));
   }
   setHeader(k: string, v: string) {
+    headersSetByBridge.push(k.toLowerCase());
     this.req.setHeader(k, v);
   }
   write(chunk: Buffer | string, cb?: () => void) {
     return this.req.write(chunk, cb);
   }
-  end() {
-    this.req.end();
+  end(chunk?: Buffer | string) {
+    this.req.end(chunk);
   }
   abort() {
     this.req.destroy();
@@ -312,6 +316,30 @@ describe("local-files download boundary", () => {
     expect(last.headers.cookie).toBeUndefined();
     expect(last.headers["x-electron-app"]).toBe("true");
     expect((await fsp.readFile(dest)).equals(payload)).toBe(true);
+  });
+
+  it("never sets headers Electron's net module forbids (the request would fail with ERR_INVALID_ARGUMENT)", async () => {
+    headersSetByBridge.length = 0;
+    const result = await download(path.join(root, "b.bin"));
+    expect(result.success).toBe(true);
+    // Electron computes Content-Length from the buffered body itself and
+    // rejects requests that set it (or any other restricted header) by hand.
+    const restricted = [
+      "content-length",
+      "host",
+      "trailer",
+      "te",
+      "upgrade",
+      "cookie2",
+      "keep-alive",
+      "transfer-encoding",
+    ];
+    expect(headersSetByBridge.filter((h) => restricted.includes(h))).toEqual(
+      [],
+    );
+    // The JSON body still reached the backend intact.
+    const last = backend.seen[backend.seen.length - 1];
+    expect(last.headers["content-type"]).toBe("application/json");
   });
 
   it("refuses to replace an existing file by default and leaves it untouched", async () => {
