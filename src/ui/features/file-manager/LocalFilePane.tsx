@@ -899,7 +899,7 @@ export function LocalFilePane({
             )}
             onClick={(e) => {
               e.stopPropagation();
-              if (e.detail === 2) goUp();
+              goUp();
             }}
             onContextMenu={(e) => {
               e.preventDefault();
