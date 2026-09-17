@@ -2289,7 +2289,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             autosuggestionSuppressedRef.current = true;
             clearAutosuggestion();
           } else if (isCommandEdit) {
-            scheduleAutosuggestionUpdate();
+            // Don't recompute here - cursorX isn't updated until the
+            // server echoes the input back and it's written to the
+            // terminal (see the "data" message handler below). Recomputing
+            // now reads a stale cursor position and misplaces the ghost text.
+            clearAutosuggestion();
           }
 
           ws.send(JSON.stringify({ type: "input", data }));
