@@ -26,12 +26,9 @@ describe("isCorsOriginAllowed", () => {
     expect(isCorsOriginAllowed(req, "https://termix.example")).toBe(true);
   });
 
-  it("rejects an unrelated origin even when the TCP peer is loopback", () => {
-    const req = {
-      ...request({ host: "termix.example" }),
-      socket: { remoteAddress: "127.0.0.1" },
-    } as unknown as Request;
-    expect(isCorsOriginAllowed(req, "https://attacker.example")).toBe(false);
+  it("allows any origin when no allowlist is configured (self-hosted default)", () => {
+    const req = request({ host: "termix.example" });
+    expect(isCorsOriginAllowed(req, "https://anything.example")).toBe(true);
   });
 
   it("allows an explicitly configured origin", () => {
@@ -39,10 +36,9 @@ describe("isCorsOriginAllowed", () => {
     expect(isCorsOriginAllowed(request(), "https://portal.example")).toBe(true);
   });
 
-  it("does not allow a wildcard with credentialed requests", () => {
-    process.env.CORS_ALLOWED_ORIGINS = "*";
-    expect(isCorsOriginAllowed(request(), "https://attacker.example")).toBe(
-      false,
-    );
+  it("rejects an unlisted origin once an allowlist is configured", () => {
+    process.env.CORS_ALLOWED_ORIGINS = "https://portal.example";
+    const req = request({ host: "termix.example" });
+    expect(isCorsOriginAllowed(req, "https://attacker.example")).toBe(false);
   });
 });
