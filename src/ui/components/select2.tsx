@@ -148,7 +148,7 @@ function Select2({
           aria-expanded={open}
           aria-required={required}
           className={cn(
-            "border-input bg-background text-foreground flex h-9 w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+            "border-input bg-background text-foreground flex h-9 w-full items-center justify-between gap-2 rounded-none border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
             className,
           )}
           onKeyDown={(event) => {
@@ -213,7 +213,7 @@ function Select2({
                     aria-selected={isSelected}
                     disabled={option.disabled}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50",
+                      "flex w-full items-center gap-2 rounded-none px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50",
                       isSelected && "bg-muted text-accent-foreground",
                     )}
                     onClick={() => selectValue(option.value)}
