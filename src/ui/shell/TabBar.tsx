@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 import { Button } from "@/components/button";
 import { Separator } from "@/components/separator";
 import {
@@ -107,23 +107,48 @@ export function TabBar({
   } | null>(null);
   const dragTargetRef = useRef<number | null>(null);
   const didDrag = useRef(false);
-  // Reordering moves the active tab's DOM position without changing which
-  // tab is active, so the indicator shouldn't animate at all -- it should
-  // just stay put on the same tab. Framer's layoutId animation still fires
-  // off the position change, so this suppresses it for the render right
-  // after a reorder.
-  const suppressIndicatorAnimRef = useRef(false);
+  // Hand-rolled instead of a Framer layoutId: a shared layoutId matched
+  // multiple tabs sharing the same indicator element across re-renders, and
+  // reordering tabs (which doesn't change which tab is active) could make it
+  // measure the wrong tab's rect or animate a spurious slide. Measuring the
+  // active tab's own DOM node directly is always correct.
+  const [indicatorRect, setIndicatorRect] = useState<{
+    left: number;
+    width: number;
+  } | null>(null);
+  const skipIndicatorAnimRef = useRef(false);
 
   const isSplit = splitMode !== "none";
   const paneCount = PANE_COUNTS[splitMode];
 
+  const measureIndicator = useCallback(() => {
+    const el = activeTabId ? tabEls.current.get(activeTabId) : null;
+    if (!el) {
+      setIndicatorRect(null);
+      return;
+    }
+    setIndicatorRect({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [activeTabId]);
+
   useEffect(() => {
-    if (!suppressIndicatorAnimRef.current) return;
+    measureIndicator();
+  }, [measureIndicator, tabs, splitMode, dragTargetIndex]);
+
+  useEffect(() => {
+    const el = tabBarRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measureIndicator);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [measureIndicator]);
+
+  useEffect(() => {
+    if (!skipIndicatorAnimRef.current) return;
     const id = requestAnimationFrame(() => {
-      suppressIndicatorAnimRef.current = false;
+      skipIndicatorAnimRef.current = false;
     });
     return () => cancelAnimationFrame(id);
-  }, [tabs]);
+  }, [indicatorRect]);
 
   useEffect(() => {
     const el = tabBarRef.current;
@@ -179,7 +204,7 @@ export function TabBar({
       if (to !== index) {
         const next = [...tabs];
         if (next[0].id !== id) next.splice(to, 0, next.splice(index, 1)[0]);
-        suppressIndicatorAnimRef.current = true;
+        skipIndicatorAnimRef.current = true;
         onReorderTabs(next);
       }
       dragData.current = null;
@@ -235,8 +260,22 @@ export function TabBar({
       >
         <div
           ref={tabBarRef}
-          className="flex h-full flex-1 min-w-0 overflow-x-auto scrollbar-none pl-px"
+          className="relative flex h-full flex-1 min-w-0 overflow-x-auto scrollbar-none pl-px"
         >
+          {indicatorRect && !dragTabId && (
+            <span
+              data-tab-indicator={activeTabId}
+              className="pointer-events-none absolute bottom-0 h-0.5 bg-accent-brand z-10"
+              style={{
+                left: indicatorRect.left,
+                width: indicatorRect.width,
+                transition:
+                  reduceMotion || skipIndicatorAnimRef.current
+                    ? "none"
+                    : "left 200ms ease, width 200ms ease",
+              }}
+            />
+          )}
           {tabs.map((tab, index) => {
             const active = tab.id === activeTabId;
             const isDragging = dragTabId === tab.id;
@@ -339,23 +378,6 @@ export function TabBar({
                     : `px-2.5 md:px-4 font-medium ${active ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
                 }`}
               >
-                {active && (
-                  <motion.span
-                    layoutId="active-workspace-tab"
-                    data-workspace-indicator={tab.id}
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-accent-brand z-10"
-                    transition={
-                      reduceMotion || suppressIndicatorAnimRef.current
-                        ? { duration: 0 }
-                        : {
-                            type: "spring",
-                            stiffness: 520,
-                            damping: 42,
-                            mass: 0.55,
-                          }
-                    }
-                  />
-                )}
                 {/* Focused-pane indicator: brand accent bottom border overlay */}
                 {showFocusIndicator && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-brand/70 z-10" />

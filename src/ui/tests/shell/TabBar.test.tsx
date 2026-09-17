@@ -42,7 +42,7 @@ describe("TabBar workspace continuity", () => {
   it("keeps one shared indicator on the active workspace", () => {
     const { container, rerender } = renderTabBar("dashboard");
     expect(
-      container.querySelector('[data-workspace-indicator="dashboard"]'),
+      container.querySelector('[data-tab-indicator="dashboard"]'),
     ).toBeTruthy();
 
     rerender(
@@ -64,11 +64,9 @@ describe("TabBar workspace continuity", () => {
       />,
     );
 
+    expect(container.querySelectorAll("[data-tab-indicator]")).toHaveLength(1);
     expect(
-      container.querySelectorAll("[data-workspace-indicator]"),
-    ).toHaveLength(1);
-    expect(
-      container.querySelector('[data-workspace-indicator="terminal-1"]'),
+      container.querySelector('[data-tab-indicator="terminal-1"]'),
     ).toBeTruthy();
   });
 
