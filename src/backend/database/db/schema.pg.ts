@@ -223,6 +223,9 @@ export const hosts = pgTable(
     enableTerminalToolbar: boolean("enable_terminal_toolbar")
       .notNull()
       .default(true),
+    enableAiAssistant: boolean("enable_ai_assistant")
+      .notNull()
+      .default(false),
     showTerminalInSidebar: boolean("show_terminal_in_sidebar")
       .notNull()
       .default(true),

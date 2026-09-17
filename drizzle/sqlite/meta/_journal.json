@@ -127,6 +127,13 @@
       "when": 1788856824791,
       "tag": "0017_quick_the_hood",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1789677306965,
+      "tag": "0018_free_rockslide",
+      "breakpoints": true
     }
   ]
 }

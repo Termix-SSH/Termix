@@ -39,20 +39,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getSetting: (key) => ipcRenderer.invoke("get-setting", key),
   setSetting: (key, value) => ipcRenderer.invoke("set-setting", key, value),
-  getAiSettings: () => ipcRenderer.invoke("get-ai-settings"),
-  saveAiSettings: (settings) =>
-    ipcRenderer.invoke("save-ai-settings", settings),
-  testAiSettings: (settings) =>
-    ipcRenderer.invoke("test-ai-settings", settings),
-  clearAiSettings: () => ipcRenderer.invoke("clear-ai-settings"),
-  generateTerminalCommand: (payload) =>
-    ipcRenderer.invoke("generate-terminal-command", payload),
-  startTerminalAgentSession: (payload) =>
-    ipcRenderer.invoke("start-terminal-agent-session", payload),
-  continueTerminalAgentSession: (payload) =>
-    ipcRenderer.invoke("continue-terminal-agent-session", payload),
-  cancelTerminalAgentSession: (sessionId) =>
-    ipcRenderer.invoke("cancel-terminal-agent-session", sessionId),
   getC2STunnelConfig: () => ipcRenderer.invoke("get-c2s-tunnel-config"),
   saveC2STunnelConfig: (config) =>
     ipcRenderer.invoke("save-c2s-tunnel-config", config),

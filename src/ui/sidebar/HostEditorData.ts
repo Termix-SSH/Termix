@@ -196,6 +196,7 @@ export function createHostEditorForm(
     dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
+    enableAiAssistant: host?.enableAiAssistant ?? false,
     allowSessionSharing: host?.allowSessionSharing ?? true,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
@@ -500,6 +501,7 @@ export function buildHostEditorPayload(
     webUiConfig: form.enableWebUi ? form.webUiConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableTerminalToolbar: form.enableTerminalToolbar,
+    enableAiAssistant: form.enableAiAssistant,
     allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
     proxmoxConfig:

@@ -163,6 +163,7 @@ export interface HostFeatureFlags {
   enableDocker: boolean; // SSH only
   enableTmuxMonitor: boolean; // SSH only
   enableTerminalToolbar: boolean; // SSH, RDP, VNC, and Telnet
+  enableAiAssistant: boolean; // SSH only
   enableRemoteDesktop: boolean; // RDP, VNC only
 }
 
@@ -222,6 +223,7 @@ export type Host = {
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
+  enableAiAssistant: boolean;
   allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | null;
   enableProxmoxStats: boolean;
@@ -383,6 +385,7 @@ export interface HostData {
   enableProxmox?: boolean;
   enableTmuxMonitor?: boolean;
   enableTerminalToolbar?: boolean;
+  enableAiAssistant?: boolean;
   allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   enableProxmoxStats?: boolean;

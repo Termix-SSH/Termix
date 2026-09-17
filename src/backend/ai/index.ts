@@ -924,6 +924,129 @@ router.post(
 
 /**
  * @openapi
+ * /ai/proposals/{id}/mark-run-in-terminal:
+ *   post:
+ *     summary: Record that a run_command proposal was executed in an open terminal
+ *     description: >
+ *       For the terminal-docked assistant only. The command is typed into the
+ *       user's already-open SSH session client-side, not re-run over a pooled
+ *       connection here; this just marks the proposal applied with the output
+ *       the client captured, so the card and the pooled-connection /apply path
+ *       stay in sync without running the command twice.
+ *     tags:
+ *       - AI
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hostId:
+ *                 type: integer
+ *               summary:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Proposal marked applied.
+ *       400:
+ *         description: The proposal is not a run_command proposal, or the hostId does not match.
+ *       404:
+ *         description: Proposal not found.
+ */
+router.post(
+  "/proposals/:id/mark-run-in-terminal",
+  authenticateJWT,
+  permissionManager.requirePermission("ai.apply_proposals"),
+  requireDataAccess,
+  aiGate,
+  async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId as string;
+    const id = parseId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid proposal id" });
+
+    const { hostId, summary } = req.body ?? {};
+    const resolvedHostId = parseId(hostId);
+    if (!resolvedHostId) {
+      return res.status(400).json({ error: "hostId is required" });
+    }
+
+    const repository = createCurrentAiRepository();
+
+    try {
+      const stored = await repository.findProposal(id, userId);
+      if (!stored) return res.status(404).json({ error: "Proposal not found" });
+      if (stored.kind !== "propose_run_command") {
+        return res
+          .status(400)
+          .json({ error: "Only run_command proposals can be marked this way" });
+      }
+      if (stored.status !== "pending") {
+        return res
+          .status(400)
+          .json({ error: `This proposal was already ${stored.status}` });
+      }
+
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(stored.payload) as Record<string, unknown>;
+      } catch {
+        return res
+          .status(400)
+          .json({ error: "The proposal payload is invalid" });
+      }
+      if (parseId(payload.hostId) !== resolvedHostId) {
+        return res
+          .status(400)
+          .json({ error: "This proposal is for a different host" });
+      }
+
+      const resultSummary =
+        typeof summary === "string" && summary.trim()
+          ? summary.trim().slice(0, 2000)
+          : "Run in the open terminal session";
+      await repository.setProposalStatus(id, userId, "applied", resultSummary);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "ai_proposal_applied",
+        resourceType: "ai_proposal",
+        resourceId: String(id),
+        resourceName: stored.kind,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ success: true, summary: resultSummary });
+    } catch (err) {
+      const message = getErrorMessage(
+        err,
+        "Failed to mark the proposal applied",
+      );
+      databaseLogger.error(
+        "Failed to mark AI proposal applied in terminal",
+        err,
+        {
+          operation: "ai_proposal_mark_run_in_terminal_failed",
+          userId,
+        },
+      );
+      res.status(400).json({ error: message });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /ai/proposals/{id}/reject:
  *   post:
  *     summary: Reject a pending proposal

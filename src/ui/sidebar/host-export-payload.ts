@@ -43,6 +43,7 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "enableTerminal",
     "enableCommandHistory",
     "enableTerminalToolbar",
+    "enableAiAssistant",
     "enableTunnel",
     "enableFileManager",
     "enableDocker",

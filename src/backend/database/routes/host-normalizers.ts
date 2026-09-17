@@ -185,6 +185,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableProxmox?: unknown;
   enableTmuxMonitor?: unknown;
   enableTerminalToolbar?: unknown;
+  enableAiAssistant?: unknown;
   enableCommandHistory?: unknown;
   showTerminalInSidebar?: unknown;
   showFileManagerInSidebar?: unknown;
@@ -369,6 +370,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableProxmoxStats",
   "enableTmuxMonitor",
   "enableTerminalToolbar",
+  "enableAiAssistant",
   "showTerminalInSidebar",
   "showFileManagerInSidebar",
   "showTunnelInSidebar",
@@ -472,6 +474,7 @@ export function transformHostResponse(
     enableProxmoxStats: !!host.enableProxmoxStats,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
     enableTerminalToolbar: host.enableTerminalToolbar !== false,
+    enableAiAssistant: !!host.enableAiAssistant,
     showTerminalInSidebar: !!host.showTerminalInSidebar,
     showFileManagerInSidebar: !!host.showFileManagerInSidebar,
     showTunnelInSidebar: !!host.showTunnelInSidebar,

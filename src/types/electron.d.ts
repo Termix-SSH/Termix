@@ -47,80 +47,6 @@ export type LocalPathMutationResult =
   | ({ success: true } & Partial<LocalFileEntry>)
   | { success: false; error?: string };
 
-export interface ElectronAiSettings {
-  enabled: boolean;
-  provider: "openai-compatible";
-  baseUrl: string;
-  model: string;
-  includeContext: boolean;
-  hasApiKey: boolean;
-  apiKey?: string;
-  secureStorageAvailable: boolean;
-}
-
-export interface ElectronAiSettingsUpdate {
-  enabled?: boolean;
-  baseUrl?: string;
-  model?: string;
-  includeContext?: boolean;
-  apiKey?: string;
-  clearApiKey?: boolean;
-}
-
-export interface ElectronAiCommandContext {
-  hostName?: string;
-  username?: string;
-  currentCommand?: string;
-  promptPath?: string;
-  visibleOutput?: string;
-}
-
-export interface ElectronAiCommandResult {
-  command: string;
-  explanation: string;
-  warnings: string[];
-}
-
-export type ElectronTerminalAgentMode = "safe" | "yolo";
-
-export type ElectronTerminalAgentAction =
-  | {
-      type: "run_command";
-      command: string;
-      message?: string;
-      warnings: string[];
-      risky: boolean;
-    }
-  | {
-      type: "ask_user" | "final_answer";
-      message: string;
-      warnings: string[];
-      risky: false;
-    };
-
-export interface ElectronTerminalAgentPayload {
-  sessionId?: string;
-  prompt?: string;
-  message?: string;
-  observation?: string;
-  mode?: ElectronTerminalAgentMode;
-  context?: ElectronAiCommandContext;
-}
-
-export interface ElectronTerminalAgentResult {
-  success: boolean;
-  sessionId?: string;
-  action?: ElectronTerminalAgentAction;
-  error?: string;
-}
-
-export interface ElectronAiResult<T = unknown> {
-  success: boolean;
-  settings?: ElectronAiSettings;
-  result?: T;
-  error?: string;
-}
-
 export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
@@ -132,27 +58,6 @@ export interface ElectronAPI {
   }) => Promise<{ success: boolean; error?: string }>;
   getSetting?: (key: string) => Promise<string | null | undefined>;
   setSetting?: (key: string, value: string) => Promise<void>;
-  getAiSettings?: () => Promise<ElectronAiResult>;
-  saveAiSettings?: (
-    settings: ElectronAiSettingsUpdate,
-  ) => Promise<ElectronAiResult>;
-  testAiSettings?: (
-    settings?: ElectronAiSettingsUpdate,
-  ) => Promise<ElectronAiResult>;
-  clearAiSettings?: () => Promise<ElectronAiResult>;
-  generateTerminalCommand?: (payload: {
-    prompt: string;
-    context?: ElectronAiCommandContext;
-  }) => Promise<ElectronAiResult<ElectronAiCommandResult>>;
-  startTerminalAgentSession?: (
-    payload: ElectronTerminalAgentPayload,
-  ) => Promise<ElectronTerminalAgentResult>;
-  continueTerminalAgentSession?: (
-    payload: ElectronTerminalAgentPayload,
-  ) => Promise<ElectronTerminalAgentResult>;
-  cancelTerminalAgentSession?: (
-    sessionId: string,
-  ) => Promise<{ success: boolean; error?: string }>;
 
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;

@@ -20,6 +20,7 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("@/lib/ServerStatusContext", () => ({
   useHostStatus: () => null,
+  useHostStatusReason: () => null,
   useServerStatus: () => ({
     getStatus: () => "online",
     initialLoadComplete: true,

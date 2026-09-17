@@ -1,0 +1,1 @@
+ALTER TABLE `ssh_data` ADD `enable_ai_assistant` boolean DEFAULT false NOT NULL;

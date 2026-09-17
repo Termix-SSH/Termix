@@ -180,6 +180,27 @@ export async function rejectAiProposal(id: number): Promise<void> {
   }
 }
 
+/**
+ * For the terminal-docked assistant: records that a run_command proposal was
+ * typed into the user's open terminal instead of run over a pooled connection.
+ */
+export async function markAiProposalRunInTerminal(
+  id: number,
+  hostId: number,
+  summary?: string,
+): Promise<{ success: boolean; summary: string }> {
+  try {
+    return (
+      await authApi.post(`/ai/proposals/${id}/mark-run-in-terminal`, {
+        hostId,
+        summary,
+      })
+    ).data;
+  } catch (error) {
+    throw handleApiError(error, "mark AI proposal run in terminal");
+  }
+}
+
 // --- admin ---
 
 export async function getAiGloballyEnabled(): Promise<boolean> {

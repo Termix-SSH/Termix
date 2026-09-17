@@ -5,7 +5,23 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OPKSSHBinaryManager } from "../../utils/opkssh-binary-manager.js";
 
-const binaryName = "opkssh-linux-amd64";
+// Mirrors the manager's own platform/arch mapping so the test's fake release
+// asset matches whatever OS and architecture actually run the suite.
+const OS_MAP: Record<string, string> = {
+  win32: "windows",
+  linux: "linux",
+  darwin: "osx",
+};
+const ARCH_MAP: Record<string, string> = {
+  x64: "amd64",
+  arm64: "arm64",
+};
+const mappedOs = OS_MAP[process.platform] ?? process.platform;
+const mappedArch = ARCH_MAP[process.arch] ?? process.arch;
+const binaryName =
+  process.platform === "win32"
+    ? `opkssh-${mappedOs}-${mappedArch}.exe`
+    : `opkssh-${mappedOs}-${mappedArch}`;
 let dataDir: string;
 
 beforeEach(async () => {

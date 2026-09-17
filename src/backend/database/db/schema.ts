@@ -215,6 +215,9 @@ export const hosts = sqliteTable(
     enableTerminalToolbar: integer("enable_terminal_toolbar", { mode: "boolean" })
       .notNull()
       .default(true),
+    enableAiAssistant: integer("enable_ai_assistant", { mode: "boolean" })
+      .notNull()
+      .default(false),
     showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
       .notNull()
       .default(true),

@@ -112,6 +112,7 @@ export type Host = {
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
+  enableAiAssistant: boolean;
   proxmoxConfig?: {
     source?: {
       source: "proxmox";

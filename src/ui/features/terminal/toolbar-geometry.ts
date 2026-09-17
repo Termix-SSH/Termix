@@ -16,6 +16,8 @@ export type ToolbarDensity = "icon" | "labeled" | "expanded";
 
 export const TOOLBAR_POSITION_STORAGE_KEY =
   "termix-terminal-toolbar-position-v2";
+export const AI_PANEL_POSITION_STORAGE_KEY =
+  "termix-terminal-ai-panel-position";
 const TOOLBAR_MARGIN = 8;
 const RECOVERY_SIZE = 44;
 
@@ -31,28 +33,42 @@ export function sanitizeToolbarPosition(value: unknown): ToolbarPosition {
     : getDefaultToolbarPosition();
 }
 
-export function readStoredToolbarPosition(): ToolbarPosition {
+function readStoredPosition(storageKey: string): ToolbarPosition {
   if (typeof window === "undefined") return getDefaultToolbarPosition();
   try {
     return sanitizeToolbarPosition(
-      JSON.parse(
-        window.localStorage.getItem(TOOLBAR_POSITION_STORAGE_KEY) ?? "null",
-      ),
+      JSON.parse(window.localStorage.getItem(storageKey) ?? "null"),
     );
   } catch {
     return getDefaultToolbarPosition();
   }
 }
 
-export function persistToolbarPosition(position: ToolbarPosition): void {
+function persistPosition(storageKey: string, position: ToolbarPosition): void {
   try {
     window.localStorage.setItem(
-      TOOLBAR_POSITION_STORAGE_KEY,
+      storageKey,
       JSON.stringify(sanitizeToolbarPosition(position)),
     );
   } catch {
     // Storage may be unavailable in hardened browser contexts.
   }
+}
+
+export function readStoredToolbarPosition(): ToolbarPosition {
+  return readStoredPosition(TOOLBAR_POSITION_STORAGE_KEY);
+}
+
+export function persistToolbarPosition(position: ToolbarPosition): void {
+  persistPosition(TOOLBAR_POSITION_STORAGE_KEY, position);
+}
+
+export function readStoredAiPanelPosition(): ToolbarPosition {
+  return readStoredPosition(AI_PANEL_POSITION_STORAGE_KEY);
+}
+
+export function persistAiPanelPosition(position: ToolbarPosition): void {
+  persistPosition(AI_PANEL_POSITION_STORAGE_KEY, position);
 }
 
 export function clampToolbarPosition(

@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Bot,
   ChevronDown,
   ClipboardPaste,
   GripVertical,
@@ -119,6 +120,8 @@ interface TerminalToolbarProps {
   onOpenTab?: (type: TabType) => void;
   onOpenFiles?: () => void;
   isFocused: boolean;
+  showAiAssistant?: boolean;
+  onToggleAiAssistant?: () => void;
 }
 
 export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
@@ -133,6 +136,8 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   onOpenTab,
   onOpenFiles,
   isFocused,
+  showAiAssistant,
+  onToggleAiAssistant,
 }) => {
   const { t } = useTranslation();
   const [density, setDensity] =
@@ -256,6 +261,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     isConnected,
     isMobile,
     isTmuxAttached,
+    showAiAssistant,
     t,
   ]);
 
@@ -739,6 +745,12 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
             <ClipboardPaste className="size-4" />
             {density !== "icon" && t("terminalToolbar.paste")}
           </span>
+          {showAiAssistant && (
+            <span className={CONTROL}>
+              <Bot className="size-4" />
+              {density !== "icon" && t("ai.assistant")}
+            </span>
+          )}
           <span className={cn(CONTROL, "h-8 px-2")}>
             <LayoutGrid className="size-4" />
             <ChevronDown className="size-4" />
@@ -820,6 +832,21 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                 >
                   {imageButtons}
                 </div>
+                {showAiAssistant && (
+                  <>
+                    <div className={SEPARATOR} />
+                    <button
+                      type="button"
+                      className={CONTROL}
+                      aria-label={t("ai.assistant")}
+                      title={t("ai.assistant")}
+                      onClick={onToggleAiAssistant}
+                    >
+                      <Bot className="size-4 shrink-0" />
+                      {effectiveDensity !== "icon" && t("ai.assistant")}
+                    </button>
+                  </>
+                )}
                 <div className={SEPARATOR} />
                 {densitySelect}
                 <button

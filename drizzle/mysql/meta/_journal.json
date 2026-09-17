@@ -148,6 +148,13 @@
       "when": 1788856825810,
       "tag": "0020_wise_green_goblin",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1789677308051,
+      "tag": "0021_thick_galactus",
+      "breakpoints": true
     }
   ]
 }

@@ -13,8 +13,11 @@ import { describe, expect, it } from "vitest";
 const require = createRequire(import.meta.url);
 const { chmodSpawnHelpers } = require("../../../../scripts/patch-node-pty.cjs");
 
+// chmod's execute bit is a POSIX concept; Windows/NTFS has no equivalent mode bit.
+const itPosix = process.platform === "win32" ? it.skip : it;
+
 describe("patch-node-pty", () => {
-  it("restores execute permissions on spawn-helper binaries", () => {
+  itPosix("restores execute permissions on spawn-helper binaries", () => {
     const root = join(tmpdir(), `termix-node-pty-${Date.now()}`);
     const helper = join(root, "prebuilds", "darwin-arm64", "spawn-helper");
     mkdirSync(join(root, "prebuilds", "darwin-arm64"), { recursive: true });

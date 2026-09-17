@@ -235,6 +235,7 @@ function hostToSSHHost(h: Host): SSHHost {
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
     enableTerminalToolbar: h.enableTerminalToolbar ?? true,
+    enableAiAssistant: h.enableAiAssistant ?? false,
     dockerConfig: h.dockerConfig ?? null,
     enableWebUi: h.enableWebUi ?? false,
     webUiConfig: h.webUiConfig ?? { endpoints: [] },
