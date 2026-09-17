@@ -214,7 +214,7 @@ describe("planRemoteDirectories", () => {
 describe("remote rows dragged out of the grid", () => {
   it("allows both a move (within the grid) and a copy (download onto the local pane)", () => {
     const store: Record<string, string> = {};
-    const dataTransfer = {
+    const dataTransfer: Pick<DataTransfer, "effectAllowed" | "setData"> = {
       effectAllowed: "uninitialized",
       setData: (type: string, value: string) => {
         store[type] = value;
