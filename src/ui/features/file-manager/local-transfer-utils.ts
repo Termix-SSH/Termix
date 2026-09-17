@@ -72,6 +72,27 @@ export function isLocalFilesDrag(
   return Array.from(dataTransfer.types ?? []).includes(LOCAL_FILES_DRAG_MIME);
 }
 
+/**
+ * Marks a drag that starts on remote rows. Within the remote grid a drop is a
+ * move; onto the local pane it is a copy (a download). The source has to
+ * allow both, because Chromium refuses a drop whose dropEffect is not in
+ * effectAllowed without firing any event at all -- the drop just silently
+ * does nothing.
+ */
+export function beginRemoteFilesDrag(
+  dataTransfer: Pick<DataTransfer, "setData" | "effectAllowed">,
+  remotePaths: string[],
+): void {
+  const payload: InternalFilesDragPayload = {
+    type: "internal_files",
+    files: remotePaths,
+  };
+  dataTransfer.setData("text/plain", JSON.stringify(payload));
+  // Lets sibling panes recognise this drag before the payload is readable.
+  dataTransfer.setData(REMOTE_FILES_DRAG_MIME, "1");
+  dataTransfer.effectAllowed = "copyMove";
+}
+
 /** True while a drag that started in the remote grid is over the element. */
 export function isRemoteFilesDrag(
   dataTransfer: Pick<DataTransfer, "types"> | null | undefined,

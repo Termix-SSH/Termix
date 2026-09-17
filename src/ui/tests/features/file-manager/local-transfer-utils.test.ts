@@ -4,6 +4,7 @@ import {
   REMOTE_FILES_DRAG_MIME,
   UnsafeLocalNameError,
   assertSafeLocalComponent,
+  beginRemoteFilesDrag,
   buildLocalDestination,
   describeLocalKind,
   formatLocalModified,
@@ -207,6 +208,27 @@ describe("planRemoteDirectories", () => {
 
   it("returns nothing for flat file drops", () => {
     expect(planRemoteDirectories(["a.txt", "b.txt"])).toEqual([]);
+  });
+});
+
+describe("remote rows dragged out of the grid", () => {
+  it("allows both a move (within the grid) and a copy (download onto the local pane)", () => {
+    const store: Record<string, string> = {};
+    const dataTransfer = {
+      effectAllowed: "uninitialized",
+      setData: (type: string, value: string) => {
+        store[type] = value;
+      },
+    };
+    beginRemoteFilesDrag(dataTransfer, ["/srv/a.txt", "/srv/dir"]);
+    // Chromium silently drops nothing when dropEffect ("copy" on the local
+    // pane) is not part of effectAllowed, so "move" alone breaks downloads.
+    expect(dataTransfer.effectAllowed).toBe("copyMove");
+    expect(isRemoteFilesDrag({ types: Object.keys(store) })).toBe(true);
+    expect(parseInternalFilesDragPayload(store["text/plain"])).toEqual([
+      "/srv/a.txt",
+      "/srv/dir",
+    ]);
   });
 });
 
