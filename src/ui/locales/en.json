@@ -2827,6 +2827,18 @@
     "temperature": "Temperature",
     "highestTemperature": "Highest temperature",
     "primaryTemperatureSensor": "Primary sensor",
+    "gpu": {
+      "title": "GPU",
+      "noDevice": "No NVIDIA GPU detected. Install the NVIDIA driver (it provides nvidia-smi) to see GPU metrics.",
+      "driver": "Driver {{version}}",
+      "utilization": "Utilization",
+      "memory": "VRAM",
+      "temperature": "Temp",
+      "power": "Power",
+      "fan": "Fan",
+      "processes": "GPU processes",
+      "noProcesses": "No processes are using the GPU"
+    },
     "failedToFetchHostConfig": "Failed to fetch host configuration",
     "serverOffline": "Server Offline",
     "cannotFetchMetrics": "Cannot fetch metrics from offline server",

@@ -111,7 +111,7 @@ Save and organize hosts with tags and nested folders you can name and color. Reu
 <td width="50%" valign="top">
 
 **Host Metrics:**
-CPU, memory, disk, network, temperature, uptime, processes, ports, logins, and system info on most Linux servers, with history graphs. Manager cards let you handle services, cron jobs, packages, users, firewall rules, WireGuard, Tailscale, SSL certs, logs, and health checks without leaving Termix.
+CPU, memory, disk, network, temperature, NVIDIA GPU, uptime, processes, ports, logins, and system info on most Linux servers, with history graphs. Manager cards let you handle services, cron jobs, packages, users, firewall rules, WireGuard, Tailscale, SSL certs, logs, and health checks without leaving Termix.
 
 </td>
 <td width="50%" valign="top">

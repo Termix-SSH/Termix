@@ -65,6 +65,13 @@ describe("defaultLayoutFromWidgets", () => {
     }
   });
 
+  it("keeps the opt-in gpu card when deriving enabledWidgets", () => {
+    expect(deriveEnabledWidgets([{ id: "gpu" }, { id: "cpu" }])).toEqual([
+      "cpu",
+      "gpu",
+    ]);
+  });
+
   it("round-trips: deriveEnabledWidgets(defaultLayout) === input order", () => {
     const layout = defaultLayoutFromWidgets(["ports", "cpu", "firewall"]);
     expect(deriveEnabledWidgets(layout.slots)).toEqual([

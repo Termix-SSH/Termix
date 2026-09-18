@@ -10,6 +10,7 @@ import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type { SSHHost } from "@/types/index";
+import type { GpuMetrics } from "@/types/stats-widgets";
 
 // ============================================================================
 // RBAC TYPE DEFINITIONS
@@ -204,6 +205,7 @@ export type ServerMetrics = {
       celsius: number;
     }>;
   };
+  gpu?: GpuMetrics;
   lastChecked: string;
 };
 

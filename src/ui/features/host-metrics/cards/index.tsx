@@ -16,6 +16,8 @@ import { PortsCard } from "./PortsCard";
 import { ProcessesCard } from "./ProcessesCard";
 import { FirewallCard } from "./FirewallCard";
 import { TemperatureCard } from "./TemperatureCard";
+import { GpuCard } from "./GpuCard";
+import type { GpuHistories } from "./gpu-history";
 import { ServiceManagerCard } from "./managers/ServiceManagerCard";
 import { ProcessInspectorCard } from "./managers/ProcessInspectorCard";
 import { PackageManagerCard } from "./managers/PackageManagerCard";
@@ -37,6 +39,7 @@ export interface MetricCardHistories {
   cpu: number[];
   memory: number[];
   disk: number[];
+  gpu: GpuHistories;
 }
 
 export interface CardRenderContext {
@@ -80,7 +83,7 @@ function historyCard(
   id: HostMetricsCardId,
   labelKey: string,
   Comp: HistoryMetricCard,
-  series: keyof MetricCardHistories,
+  series: "cpu" | "memory" | "disk",
 ): CardDefinition {
   return {
     id,
@@ -132,6 +135,14 @@ export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
     "hostMetrics.temperature",
     TemperatureCard,
   ),
+  gpu: {
+    id: "gpu",
+    labelKey: "hostMetrics.gpu.title",
+    kind: "metric",
+    render: ({ metrics, histories }) => (
+      <GpuCard metrics={metrics} gpuHistories={histories.gpu} />
+    ),
+  },
   service_manager: managerCard(
     "service_manager",
     "hostMetrics.managers.services",

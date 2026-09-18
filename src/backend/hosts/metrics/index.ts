@@ -40,6 +40,7 @@ import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { collectTemperatureMetrics } from "./widgets/temperature-collector.js";
+import { collectGpuMetrics, type GpuMetrics } from "./widgets/gpu-collector.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -1860,6 +1861,13 @@ async function collectMetrics(
           // expected
         }
 
+        let gpu: GpuMetrics = { source: "none", gpus: [], processes: [] };
+        try {
+          gpu = await collectGpuMetrics(client);
+        } catch {
+          // expected
+        }
+
         const result = {
           cpu,
           memory,
@@ -1872,6 +1880,7 @@ async function collectMetrics(
           ports,
           firewall,
           temperature,
+          gpu,
         };
 
         metricsCache.set(host.id, result);
