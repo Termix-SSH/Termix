@@ -56,7 +56,7 @@ import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { notifyAutomationInternalEvent } from "../../hosts/metrics/automation-bridge.js";
+import { notifyAutomationInternalEvent } from "../../hosts/automation-events.js";
 import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,

@@ -14,7 +14,7 @@ import {
   pickResolvedPassword,
   pickResolvedUsername,
 } from "../../hosts/credential-username.js";
-import { notifyAutomationInternalEvent } from "../../hosts/metrics/automation-bridge.js";
+import { notifyAutomationInternalEvent } from "../../hosts/automation-events.js";
 import {
   createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,

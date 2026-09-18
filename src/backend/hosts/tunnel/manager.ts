@@ -46,7 +46,7 @@ import {
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { handleSocks5Connect } from "./socks5-relay.js";
-import { notifyAutomationInternalEvent } from "../metrics/automation-bridge.js";
+import { notifyAutomationInternalEvent } from "../automation-events.js";
 
 export const activeTunnels = new Map<string, Client>();
 export const retryCounters = new Map<string, number>();

@@ -267,7 +267,7 @@ export class AutomationEngine {
       // its own failure, so the event is not emitted for runs that this event
       // already started.
       if (request.triggerType !== "internal_event") {
-        import("../hosts/metrics/automation-bridge.js")
+        import("../hosts/automation-events.js")
           .then(({ notifyAutomationInternalEvent }) =>
             notifyAutomationInternalEvent(
               "automation_failed",
