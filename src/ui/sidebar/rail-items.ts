@@ -200,13 +200,34 @@ export const RAIL_ITEMS: RailItemDef[] = [
 ];
 
 /**
+ * Runtime-registered rail items, for a future plugin loader to add
+ * destinations that don't exist at build time. Keyed by id so a plugin can
+ * cleanly unregister its own entries without touching anyone else's.
+ */
+const registeredRailItems = new Map<string, RailItemDef>();
+
+export function registerRailItem(def: RailItemDef): void {
+  registeredRailItems.set(def.id, def);
+}
+
+export function unregisterRailItem(id: string): void {
+  registeredRailItems.delete(id);
+}
+
+/**
  * Rail items available in the current build. Electron-only destinations are
  * dropped in the browser build so they never reach the rail, the mobile bar,
- * or the visibility toggles.
+ * or the visibility toggles. Runtime-registered items are appended after the
+ * built-in list.
  */
 export function visibleRailItems(): RailItemDef[] {
   const electron = isElectron();
-  return RAIL_ITEMS.filter((item) => !item.electronOnly || electron);
+  return [
+    ...RAIL_ITEMS.filter((item) => !item.electronOnly || electron),
+    ...[...registeredRailItems.values()].filter(
+      (item) => !item.electronOnly || electron,
+    ),
+  ];
 }
 
 /**
@@ -247,8 +268,8 @@ const LABEL_KEYS: Record<string, string> = Object.fromEntries(
   ]),
 );
 
-/** Translated label for any rail destination. */
+/** Translated label for any rail destination, including registered ones. */
 export function railItemLabel(id: string, t: (key: string) => string): string {
-  const key = LABEL_KEYS[id];
+  const key = LABEL_KEYS[id] ?? registeredRailItems.get(id)?.labelKey;
   return key ? t(key) : id;
 }

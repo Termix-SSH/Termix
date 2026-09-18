@@ -199,6 +199,42 @@ const tabSurfaceLoaders: Partial<Record<TabType, () => Promise<unknown>>> = {
   telnet: loadGuacamoleApp,
 };
 
+/**
+ * A plugin-contributed tab surface. `component` is the loader's resolved
+ * default export, rendered with the same Tab it would have received from the
+ * switch in renderTabContent -- plugins get the raw tab record and decide
+ * for themselves what they need out of it.
+ */
+export type PluginTabComponent = React.ComponentType<{ tab: Tab }>;
+export type PluginTabLoader = () => Promise<{ default: PluginTabComponent }>;
+
+interface PluginTabEntry {
+  loader: PluginTabLoader;
+  icon?: React.ReactNode;
+  // Built lazily on first render and cached here, so every render of the same
+  // plugin tab reuses one lazy component instead of remounting it each time.
+  LazyComponent?: PluginTabComponent;
+}
+
+/**
+ * Runtime registry for plugin tab ids that don't exist in the built-in
+ * TabType union. Registered once a plugin loads, looked up by tabIcon and
+ * renderTabContent instead of a switch case.
+ */
+const registeredTabComponents = new Map<string, PluginTabEntry>();
+
+export function registerTabComponent(
+  id: string,
+  loader: PluginTabLoader,
+  icon?: React.ReactNode,
+): void {
+  registeredTabComponents.set(id, { loader, icon });
+}
+
+export function unregisterTabComponent(id: string): void {
+  registeredTabComponents.delete(id);
+}
+
 /** Download a likely next tab without starting a connection or mounting UI. */
 export function preloadTabSurface(type: TabType): void {
   const loader = tabSurfaceLoaders[type];
@@ -371,6 +407,8 @@ export function tabIcon(type: TabType) {
       return <Sparkles className="size-3.5" />;
     case "split-screen":
       return <LayoutPanelLeft className="size-3.5" />;
+    default:
+      return registeredTabComponents.get(type)?.icon;
   }
 }
 
@@ -755,5 +793,17 @@ export function renderTabContent(
     case "user-profile":
     case "admin-settings":
       return null;
+
+    default: {
+      const entry = registeredTabComponents.get(tab.type);
+      if (!entry) return null;
+      if (!entry.LazyComponent) {
+        entry.LazyComponent = lazy(() =>
+          entry.loader().then((m) => ({ default: m.default })),
+        ) as unknown as PluginTabComponent;
+      }
+      const PluginTab = entry.LazyComponent;
+      return withTabSuspense(<PluginTab tab={tab} />);
+    }
   }
 }

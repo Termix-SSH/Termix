@@ -247,7 +247,7 @@ export type HostFolder = {
   sortOrder?: number | null;
 };
 
-export type TabType =
+export type KnownTabType =
   | "dashboard"
   | "terminal"
   | "local-terminal"
@@ -281,6 +281,16 @@ export type TabType =
   | "ai"
   | "collab"
   | "split-screen";
+
+/**
+ * TabType covers every built-in tab plus any plugin-contributed tab id.
+ * `string & {}` (rather than plain `string`) keeps IDE autocomplete
+ * suggesting the known members while still accepting an arbitrary id, since
+ * a bare `string` would widen every literal and kill autocomplete entirely.
+ * Plugin tab ids are resolved at render time via the tab-component registry
+ * in tabUtils.tsx, not through this type.
+ */
+export type TabType = KnownTabType | (string & {});
 
 export type SerialConfig = {
   path: string;
