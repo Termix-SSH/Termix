@@ -4551,7 +4551,7 @@
         "confirmTabClose": "Confirm Tab Close",
         "confirmTabCloseDesc": "Ask before closing terminal tabs",
         "transferConcurrency": "Simultaneous File Transfers",
-        "transferConcurrencyDesc": "How many files the Local | Remote file manager uploads or downloads at the same time. Lower this if your server limits SFTP channels.",
+        "transferConcurrencyDesc": "How many files the side by side local/remote manager uploads or downloads at the same time. Lower this if your server limits SFTP channels.",
         "settingsAppRail": "App Rail",
         "sidebarSettingsMoved": "Host sidebar display settings have moved to the Customize sidebar panel, opened from the Hosts toolbar.",
         "showHostTags": "Show Host Tags",
