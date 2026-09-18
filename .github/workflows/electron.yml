@@ -533,11 +533,24 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NODE_OPTIONS: --max-old-space-size=4096
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
         run: |
           if [ "${{ steps.check_certs.outputs.has_certs }}" != "true" ]; then
             npm run build
           fi
           npx electron-builder --mac dmg --universal --x64 --arm64 --publish never
+
+      - name: Check sharp packages after build (debug)
+        if: always()
+        run: |
+          echo "--- node_modules/@img (source tree) ---"
+          ls -la node_modules/@img/ 2>&1 || true
+          echo "--- x64 unpacked app @img ---"
+          find release/mac -maxdepth 6 -path "*app.asar.unpacked/node_modules/@img*" 2>&1 || true
+          echo "--- arm64 unpacked app @img ---"
+          find release/mac-arm64 -maxdepth 6 -path "*app.asar.unpacked/node_modules/@img*" 2>&1 || true
+          echo "--- universal unpacked app @img ---"
+          find release/mac-universal -maxdepth 6 -path "*app.asar.unpacked/node_modules/@img*" 2>&1 || true
 
       - name: Verify macOS sharp packaging
         run: |
