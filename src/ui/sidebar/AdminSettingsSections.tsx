@@ -321,15 +321,17 @@ export function AdminGeneralSettingsSection({
             </Button>
           </div>
         </div>
-        <SettingRow
-          label={t("admin.allowRegistration")}
-          description={t("admin.allowRegistrationDesc")}
-        >
-          <AdminToggle
-            on={allowRegistration}
-            onToggle={handleToggleRegistration}
-          />
-        </SettingRow>
+        <div className="border-t border-border pt-3 mt-2">
+          <SettingRow
+            label={t("admin.allowRegistration")}
+            description={t("admin.allowRegistrationDesc")}
+          >
+            <AdminToggle
+              on={allowRegistration}
+              onToggle={handleToggleRegistration}
+            />
+          </SettingRow>
+        </div>
         <SettingRow
           label={t("admin.allowPasswordLogin")}
           description={t("admin.allowPasswordLoginDesc")}

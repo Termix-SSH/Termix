@@ -744,7 +744,7 @@
     "workspaces": "Workspaces",
     "hostManager": "Host Manager",
     "credentials": "Credentials",
-    "portForwarding": "Port Forwarding",
+    "portForwarding": "Forwarding",
     "sftp": "SFTP",
     "connections": "Connections",
     "alerts": "Alerts",
