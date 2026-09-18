@@ -113,7 +113,7 @@ export function parseNvidiaSmiGpus(output: string): GpuDevice[] {
       memoryUsedMiB,
       memoryTotalMiB,
       memoryPercent:
-        memoryUsedMiB !== null && memoryTotalMiB
+        memoryUsedMiB !== null && memoryTotalMiB !== null && memoryTotalMiB !== 0
           ? toFixedNum((memoryUsedMiB / memoryTotalMiB) * 100, 1)
           : null,
       temperatureCelsius: parseReading(temperature),
