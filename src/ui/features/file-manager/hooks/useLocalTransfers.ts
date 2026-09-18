@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "@/types/index";
+import type { LocalWalkResult } from "@/types/electron";
 import {
   cancelLocalTransfer,
   createLocalTransferId,
@@ -271,7 +272,7 @@ export function useLocalTransfers({
       }
       if (localPaths.length === 0) return;
 
-      let plan;
+      let plan: LocalWalkResult;
       try {
         plan = await walkLocalPaths(localPaths);
       } catch (error) {
