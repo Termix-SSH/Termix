@@ -176,32 +176,6 @@ export function HostEditorGeneralTab({
       </SectionCard>
 
       <SectionCard
-        title={t("hosts.connectionToolbar")}
-        icon={<LayoutGrid className="size-3.5" />}
-      >
-        <div className="flex flex-col gap-4 py-3">
-          <SettingRow
-            label={t("hosts.showConnectionToolbar")}
-            description={t("hosts.showConnectionToolbarDesc")}
-          >
-            <FakeSwitch
-              checked={form.enableTerminalToolbar}
-              onChange={(value) => setField("enableTerminalToolbar", value)}
-            />
-          </SettingRow>
-          <SettingRow
-            label={t("hosts.enableAiAssistant")}
-            description={t("hosts.enableAiAssistantDesc")}
-          >
-            <FakeSwitch
-              checked={form.enableAiAssistant}
-              onChange={(value) => setField("enableAiAssistant", value)}
-            />
-          </SettingRow>
-        </div>
-      </SectionCard>
-
-      <SectionCard
         title={t("hosts.connectionDetails")}
         icon={<Globe className="size-3.5" />}
       >
@@ -888,6 +862,32 @@ export function HostEditorGeneralTab({
               ))}
             </div>
           </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title={t("hosts.connectionToolbar")}
+        icon={<LayoutGrid className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-4 py-3">
+          <SettingRow
+            label={t("hosts.showConnectionToolbar")}
+            description={t("hosts.showConnectionToolbarDesc")}
+          >
+            <FakeSwitch
+              checked={form.enableTerminalToolbar}
+              onChange={(value) => setField("enableTerminalToolbar", value)}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t("hosts.enableAiAssistant")}
+            description={t("hosts.enableAiAssistantDesc")}
+          >
+            <FakeSwitch
+              checked={form.enableAiAssistant}
+              onChange={(value) => setField("enableAiAssistant", value)}
+            />
+          </SettingRow>
         </div>
       </SectionCard>
     </>
