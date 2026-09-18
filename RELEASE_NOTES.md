@@ -39,6 +39,7 @@ https://youtu.be/lngaePO96tM
 - Improved motion and transition animations throughout the app
 - Improved macOS packaging and terminal keyboard shortcuts
 - Improved the terminal AI assistant with a toggle for terminal context
+- Began plugin backend work (cut cross feature imports, added plugin DB tables, made the rail/tab system use registries, and updated nginx and manifests for plugins)
 
 <!-- /UPDATE_LOG -->
 
