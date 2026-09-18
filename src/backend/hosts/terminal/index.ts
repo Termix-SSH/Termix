@@ -73,7 +73,7 @@ import {
   createWebSocketDuplex,
   waitForWebSocketOpen,
 } from "../cloudflare-websocket.js";
-import { hostSessionStatus } from "./host-session-status.js";
+import { hostSessionStatus } from "../host-session-status.js";
 
 interface ConnectToHostData {
   cols: number;
