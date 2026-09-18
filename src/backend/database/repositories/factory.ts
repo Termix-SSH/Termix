@@ -32,6 +32,10 @@ import { UiPreferenceRepository } from "./ui-preference-repository.js";
 import { NetworkTopologyRepository } from "./network-topology-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
 import { OpksshTokenRepository } from "./opkssh-token-repository.js";
+import { PluginRepository } from "./plugin-repository.js";
+import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
+import { PluginRegistryRepository } from "./plugin-registry-repository.js";
+import { PluginInstallCountRepository } from "./plugin-install-count-repository.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
 import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
@@ -362,6 +366,38 @@ export function createCurrentOpksshTokenRepository(): OpksshTokenRepository {
   return new OpksshTokenRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("opkssh_token_repository_write"),
+  );
+}
+
+export function createCurrentPluginRepository(): PluginRepository {
+  return new PluginRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("plugin_repository_write"),
+  );
+}
+
+export function createCurrentPluginPermissionGrantRepository(): PluginPermissionGrantRepository {
+  return new PluginPermissionGrantRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "plugin_permission_grant_repository_write",
+    ),
+  );
+}
+
+export function createCurrentPluginRegistryRepository(): PluginRegistryRepository {
+  return new PluginRegistryRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("plugin_registry_repository_write"),
+  );
+}
+
+export function createCurrentPluginInstallCountRepository(): PluginInstallCountRepository {
+  return new PluginInstallCountRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryLazyWriteHook(
+      "plugin_install_count_repository_write",
+    ),
   );
 }
 

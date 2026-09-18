@@ -2180,3 +2180,99 @@ export const folderAccess = sqliteTable(
     index("idx_folder_access_owner_folder").on(table.ownerUserId, table.folder),
   ],
 );
+
+// --- plugins begin ---
+
+/**
+ * An installed plugin. id matches the manifest's own id (not autoincrement),
+ * so a plugin can be looked up the same way the manifest and registry refer
+ * to it. manifest_json is the full manifest as it was at install time, kept
+ * for audit/rollback even after a registry updates or removes the entry.
+ */
+export const plugins = sqliteTable(
+  "plugins",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    version: text("version").notNull(),
+    tier: text("tier").notNull().default("available"),
+    source: text("source").notNull().default("community"),
+    registryId: text("registry_id"),
+    state: text("state").notNull().default("disabled"),
+    installedAt: text("installed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    autoUpdate: integer("auto_update", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    manifestJson: text("manifest_json").notNull(),
+  },
+  (table) => [index("idx_plugins_registry_id").on(table.registryId)],
+);
+
+export const pluginPermissionGrants = sqliteTable(
+  "plugin_permission_grants",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id")
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    capability: text("capability").notNull(),
+    grantedAt: text("granted_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  // A plugin's grants are always read together, and re-granting the same
+  // capability should update the existing row rather than duplicate it.
+  (table) => [
+    uniqueIndex("idx_plugin_permission_grants_plugin_capability").on(
+      table.pluginId,
+      table.capability,
+    ),
+  ],
+);
+
+export const pluginRegistries = sqliteTable("plugin_registries", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  kind: text("kind").notNull().default("community"),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  signingKey: text("signing_key"),
+  lastCheckedAt: text("last_checked_at"),
+  lastIndexHash: text("last_index_hash"),
+});
+
+/**
+ * Install counts populated by a background job (GitHub release download
+ * counts, aggregated telemetry, or a manual override) rather than by the
+ * install/uninstall actions themselves — kept separate from `plugins` so
+ * that job can overwrite counts without touching install state.
+ */
+export const pluginInstallCounts = sqliteTable(
+  "plugin_install_counts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id").notNull(),
+    registryId: text("registry_id").notNull(),
+    count: integer("count").notNull().default(0),
+    source: text("source").notNull().default("aggregate-telemetry"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_install_counts_plugin_registry").on(
+      table.pluginId,
+      table.registryId,
+    ),
+  ],
+);
+
+// --- plugins end ---

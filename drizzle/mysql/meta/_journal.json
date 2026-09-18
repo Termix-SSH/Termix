@@ -155,6 +155,13 @@
       "when": 1789677308051,
       "tag": "0021_thick_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1789744021971,
+      "tag": "0022_secret_blacklash",
+      "breakpoints": true
     }
   ]
 }

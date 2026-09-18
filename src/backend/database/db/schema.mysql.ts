@@ -2183,3 +2183,99 @@ export const folderAccess = mysqlTable(
     index("idx_folder_access_owner_folder").on(table.ownerUserId, table.folder),
   ],
 );
+
+// --- plugins begin ---
+
+/**
+ * An installed plugin. id matches the manifest's own id (not autoincrement),
+ * so a plugin can be looked up the same way the manifest and registry refer
+ * to it. manifest_json is the full manifest as it was at install time, kept
+ * for audit/rollback even after a registry updates or removes the entry.
+ */
+export const plugins = mysqlTable(
+  "plugins",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    version: text("version").notNull(),
+    tier: text("tier").notNull().default("available"),
+    source: text("source").notNull().default("community"),
+    registryId: varchar("registry_id", { length: 255 }),
+    state: text("state").notNull().default("disabled"),
+    installedAt: text("installed_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    autoUpdate: boolean("auto_update")
+      .notNull()
+      .default(false),
+    manifestJson: text("manifest_json").notNull(),
+  },
+  (table) => [index("idx_plugins_registry_id").on(table.registryId)],
+);
+
+export const pluginPermissionGrants = mysqlTable(
+  "plugin_permission_grants",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pluginId: varchar("plugin_id", { length: 255 })
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    capability: varchar("capability", { length: 255 }).notNull(),
+    grantedAt: text("granted_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  // A plugin's grants are always read together, and re-granting the same
+  // capability should update the existing row rather than duplicate it.
+  (table) => [
+    uniqueIndex("idx_plugin_permission_grants_plugin_capability").on(
+      table.pluginId,
+      table.capability,
+    ),
+  ],
+);
+
+export const pluginRegistries = mysqlTable("plugin_registries", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: text("url").notNull(),
+  kind: text("kind").notNull().default("community"),
+  enabled: boolean("enabled").notNull().default(true),
+  signingKey: text("signing_key"),
+  lastCheckedAt: text("last_checked_at"),
+  lastIndexHash: text("last_index_hash"),
+});
+
+/**
+ * Install counts populated by a background job (GitHub release download
+ * counts, aggregated telemetry, or a manual override) rather than by the
+ * install/uninstall actions themselves — kept separate from `plugins` so
+ * that job can overwrite counts without touching install state.
+ */
+export const pluginInstallCounts = mysqlTable(
+  "plugin_install_counts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pluginId: varchar("plugin_id", { length: 255 }).notNull(),
+    registryId: varchar("registry_id", { length: 255 }).notNull(),
+    count: int("count").notNull().default(0),
+    source: text("source").notNull().default("aggregate-telemetry"),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_install_counts_plugin_registry").on(
+      table.pluginId,
+      table.registryId,
+    ),
+  ],
+);
+
+// --- plugins end ---

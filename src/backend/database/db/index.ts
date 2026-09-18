@@ -681,6 +681,53 @@ async function initializeCompleteDatabase(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_folder_access_owner_folder ON folder_access (owner_user_id, folder);
 
+    CREATE TABLE IF NOT EXISTS plugins (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        version TEXT NOT NULL,
+        tier TEXT NOT NULL DEFAULT 'available',
+        source TEXT NOT NULL DEFAULT 'community',
+        registry_id TEXT,
+        state TEXT NOT NULL DEFAULT 'disabled',
+        installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        auto_update INTEGER NOT NULL DEFAULT 0,
+        manifest_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_plugins_registry_id ON plugins (registry_id);
+
+    CREATE TABLE IF NOT EXISTS plugin_permission_grants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        capability TEXT NOT NULL,
+        granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        granted_by TEXT NOT NULL,
+        UNIQUE (plugin_id, capability),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE,
+        FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS plugin_registries (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'community',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        signing_key TEXT,
+        last_checked_at TEXT,
+        last_index_hash TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS plugin_install_counts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        registry_id TEXT NOT NULL,
+        count INTEGER NOT NULL DEFAULT 0,
+        source TEXT NOT NULL DEFAULT 'aggregate-telemetry',
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, registry_id)
+    );
+
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,

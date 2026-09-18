@@ -134,6 +134,13 @@
       "when": 1789677306965,
       "tag": "0018_free_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1789744020871,
+      "tag": "0019_magenta_mongoose",
+      "breakpoints": true
     }
   ]
 }
