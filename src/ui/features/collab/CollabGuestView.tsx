@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, Presentation } from "lucide-react";
+import { AlertCircle, Eye, Presentation, Users } from "lucide-react";
 import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
-import { GuestTerminalView } from "@/features/session-sharing/SharedSessionView";
+import {
+  GuestTerminalView,
+  type SessionParticipantInfo,
+} from "@/features/session-sharing/SharedSessionView";
 import {
   resolveCollabGuestStage,
   type CollabGuestStage,
@@ -21,6 +24,7 @@ export default function CollabGuestView() {
   const [roomName, setRoomName] = useState<string | null>(null);
   const [stage, setStage] = useState<CollabGuestStage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [participantCount, setParticipantCount] = useState(0);
   const stageShareIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -40,6 +44,7 @@ export default function CollabGuestView() {
         if (nextShareId !== stageShareIdRef.current) {
           stageShareIdRef.current = nextShareId;
           setStage(result.stage);
+          setParticipantCount(0);
         }
       } catch {
         if (!cancelled) setError(t("collab.guest.linkInvalid"));
@@ -55,17 +60,26 @@ export default function CollabGuestView() {
 
   return (
     <div
-      className="flex flex-col h-screen w-screen"
+      className="fixed inset-0 flex flex-col"
       style={{ backgroundColor: "var(--bg-base)", color: "var(--foreground)" }}
     >
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border text-sm">
-        <Presentation className="size-4 text-muted-foreground" />
-        <span className="font-semibold">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border text-sm shrink-0">
+        <Presentation className="size-4 text-muted-foreground shrink-0" />
+        <span className="font-semibold truncate min-w-0">
           {roomName ?? t("collab.guest.title")}
         </span>
-        <span className="text-xs text-muted-foreground">
-          {t("sessionSharing.guestView.readOnlyBadge")}
-        </span>
+        <div className="flex items-center gap-3 shrink-0 ml-auto text-xs text-muted-foreground">
+          {participantCount >= 2 && (
+            <span className="flex items-center gap-1">
+              <Users className="size-3.5" />
+              {participantCount}
+            </span>
+          )}
+          <span className="flex items-center gap-1">
+            <Eye className="size-3.5" />
+            {t("sessionSharing.guestView.readOnlyBadge")}
+          </span>
+        </div>
       </div>
       <div className="relative flex-1 min-h-0">
         {error ? (
@@ -80,6 +94,10 @@ export default function CollabGuestView() {
             key={stage.shareId}
             share={{ permissionLevel: "read-only" }}
             wsQuery={`roomGuestToken=${encodeURIComponent(token ?? "")}`}
+            hideBadges
+            onParticipantsChange={(participants: SessionParticipantInfo[]) =>
+              setParticipantCount(participants.length)
+            }
           />
         ) : stage.connectParams?.token ? (
           <GuacamoleDisplay

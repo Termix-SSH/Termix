@@ -42,6 +42,7 @@ import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { getErrorMessage } from "@/lib/error-message";
 import {
+  deleteCollabRoom,
   endCollabRoom,
   dismissCollabControlRequest,
   getCollabRoom,
@@ -111,6 +112,8 @@ export function CollabRoomTab({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(true);
   const [endOpen, setEndOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [takeoverChoice, setTakeoverChoice] = useState<PresentChoice | null>(
     null,
   );
@@ -409,6 +412,20 @@ export function CollabRoomTab({
     }
   }
 
+  async function handleDelete() {
+    if (!roomId) return;
+    setDeleting(true);
+    try {
+      await deleteCollabRoom(roomId);
+      setDraft(null);
+      setEnded(true);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   async function openInviteDialog() {
     setInviteOpen(true);
     setInviteSelection(new Set());
@@ -595,6 +612,16 @@ export function CollabRoomTab({
               onClick={() => setEndOpen(true)}
             >
               {t("collab.endRoom")}
+            </Button>
+          )}
+          {isHost && detail?.room.persistent && (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-8 text-xs"
+              onClick={() => setDeleteOpen(true)}
+            >
+              {t("collab.deleteRoom")}
             </Button>
           )}
         </div>
@@ -897,6 +924,31 @@ export function CollabRoomTab({
               onClick={() => void handleEnd()}
             >
               {t("collab.endRoom")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("collab.deleteConfirmTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("collab.deleteDescription", { name: detail?.room.name })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+              onClick={() => void handleDelete()}
+            >
+              {t("collab.deleteRoom")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

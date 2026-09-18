@@ -187,10 +187,38 @@ router.get(
     const userId = (req as AuthenticatedRequest).userId!;
     const roomId = String(req.params.id);
     try {
-      const access = await requireRoomMember(roomId, userId);
+      let access = await requireRoomMember(roomId, userId);
       if (!access) {
         return res.status(404).json({ error: "Room not found" });
       }
+
+      // The presenter's own client never calls /stage (it drives the stage
+      // locally instead), so this is the only place that can notice its
+      // session died - e.g. the tab was closed without hitting "stop
+      // presenting". Without this, presenterUserId stays stuck pointing at a
+      // dead session forever, and the presenter's next visit shows the
+      // "presenting in another tab" dead end with nothing to stop.
+      if (access.room.stageShareId && access.room.stageProtocol) {
+        const share =
+          await createCurrentSessionShareRepository().findActiveById(
+            access.room.stageShareId,
+          );
+        const protocol = access.room.stageProtocol as LiveProtocol;
+        if (!share || !isLiveSession(protocol, share.sessionId)) {
+          await setStageController(roomId, null);
+          await createCurrentCollabRoomRepository().clearStage(roomId);
+          collabRoomHub.broadcast(roomId, {
+            type: "collab_stage_changed",
+            roomId,
+            stage: null,
+          });
+          access = await requireRoomMember(roomId, userId);
+          if (!access) {
+            return res.status(404).json({ error: "Room not found" });
+          }
+        }
+      }
+
       const members =
         await createCurrentCollabRoomRepository().listMembers(roomId);
       const mayReviewControlRequests =
@@ -1138,6 +1166,60 @@ router.post(
         operation: "collab_room_end_error",
       });
       res.status(500).json({ error: "Failed to end room" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /collab/rooms/{id}:
+ *   delete:
+ *     summary: Permanently delete a room (host only)
+ *     description: Revokes the active stage and removes the room and its membership. This cannot be undone.
+ *     tags:
+ *       - Collab
+ */
+router.delete(
+  "/rooms/:id",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId!;
+    const roomId = String(req.params.id);
+    try {
+      const access = await requireRoomMember(roomId, userId);
+      if (!access) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      if (!access.isHost) {
+        return res
+          .status(403)
+          .json({ error: "Only the host can delete the room" });
+      }
+
+      await revokeStageShare(access.room);
+      await setStageController(roomId, null);
+      await collabRuntimeStore.clearRequests(roomId);
+      collabRoomHub.broadcast(roomId, { type: "collab_room_ended", roomId });
+      await createCurrentCollabRoomRepository().deleteRoom(roomId);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "collab_room_delete",
+        resourceType: "collab_room",
+        resourceId: roomId,
+        resourceName: access.room.name,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      sshLogger.error("Failed to delete collab room", error, {
+        operation: "collab_room_delete_error",
+      });
+      res.status(500).json({ error: "Failed to delete room" });
     }
   },
 );

@@ -121,9 +121,14 @@ function CenteredMessage({
 export function GuestTerminalView({
   share,
   wsQuery,
+  hideBadges = false,
+  onParticipantsChange,
 }: {
   share: Pick<ResolvedShareLink, "permissionLevel">;
   wsQuery: string;
+  /** Suppress the built-in overlay badges when the host page renders its own. */
+  hideBadges?: boolean;
+  onParticipantsChange?: (participants: SessionParticipantInfo[]) => void;
 }) {
   const { t } = useTranslation();
   const { instance: terminal, ref: xtermRef } = useXTerm();
@@ -133,6 +138,8 @@ export function GuestTerminalView({
   );
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onParticipantsChangeRef = useRef(onParticipantsChange);
+  onParticipantsChangeRef.current = onParticipantsChange;
 
   useEffect(() => {
     if (!terminal || !xtermRef.current) return;
@@ -178,7 +185,9 @@ export function GuestTerminalView({
             break;
           case "participants":
             if (Array.isArray(msg.participants)) {
-              setParticipants(msg.participants as SessionParticipantInfo[]);
+              const next = msg.participants as SessionParticipantInfo[];
+              setParticipants(next);
+              onParticipantsChangeRef.current?.(next);
             }
             break;
           case "sessionExpired":
@@ -217,12 +226,18 @@ export function GuestTerminalView({
 
   return (
     <div className="relative w-full h-full">
-      <ParticipantsBadge
-        participants={participants}
-        ownerLabel={t("sessionSharing.guestView.ownerLabel")}
-      />
-      {share.permissionLevel === "read-only" && (
-        <ReadOnlyBadge label={t("sessionSharing.guestView.readOnlyBadge")} />
+      {!hideBadges && (
+        <>
+          <ParticipantsBadge
+            participants={participants}
+            ownerLabel={t("sessionSharing.guestView.ownerLabel")}
+          />
+          {share.permissionLevel === "read-only" && (
+            <ReadOnlyBadge
+              label={t("sessionSharing.guestView.readOnlyBadge")}
+            />
+          )}
+        </>
       )}
       {ended && (
         <div

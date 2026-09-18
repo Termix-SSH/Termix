@@ -197,6 +197,14 @@ export async function endCollabRoom(roomId: string): Promise<void> {
   }
 }
 
+export async function deleteCollabRoom(roomId: string): Promise<void> {
+  try {
+    await authApi.delete(`/collab/rooms/${roomId}`);
+  } catch (error) {
+    throw handleApiError(error, "delete collab room");
+  }
+}
+
 export async function setCollabGuestLink(
   roomId: string,
   enabled: boolean,

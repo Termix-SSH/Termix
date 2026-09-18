@@ -72,7 +72,7 @@ export function CollabPanel({
       <div className="flex items-center gap-1.5">
         <Button
           size="sm"
-          className="h-8 text-xs flex-1"
+          className="h-8 text-xs flex-1 border border-accent-brand/40 bg-accent-brand/10 text-accent-brand font-semibold hover:bg-accent-brand/20"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="size-3.5 mr-1" />

@@ -1968,6 +1968,9 @@
     "endConfirmTitle": "End this meeting?",
     "endDescription": "{{name}} will end for everyone and cannot be reopened.",
     "endPersistentDescription": "The active presentation in {{name}} will stop. The room remains available for reuse.",
+    "deleteRoom": "Delete room",
+    "deleteConfirmTitle": "Delete this room?",
+    "deleteDescription": "{{name}} will be permanently deleted for everyone and cannot be undone.",
     "invitedTo": "You were invited to \"{{name}}\"",
     "guest": {
       "title": "Meeting",
