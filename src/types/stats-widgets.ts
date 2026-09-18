@@ -9,7 +9,8 @@ export type WidgetType =
   | "login_stats"
   | "ports"
   | "firewall"
-  | "temperature";
+  | "temperature"
+  | "gpu";
 
 export interface ListeningPort {
   protocol: "tcp" | "udp";
@@ -59,6 +60,34 @@ export interface TemperatureMetrics {
   source: "sysfs" | "sensors" | "none";
   highestCelsius: number | null;
   sensors: TemperatureSensor[];
+}
+
+export interface GpuDevice {
+  index: number;
+  uuid: string;
+  name: string;
+  driverVersion: string | null;
+  utilizationPercent: number | null;
+  memoryUsedMiB: number | null;
+  memoryTotalMiB: number | null;
+  memoryPercent: number | null;
+  temperatureCelsius: number | null;
+  powerDrawWatts: number | null;
+  powerLimitWatts: number | null;
+  fanPercent: number | null;
+}
+
+export interface GpuProcess {
+  gpuIndex: number | null;
+  pid: number;
+  name: string;
+  memoryUsedMiB: number | null;
+}
+
+export interface GpuMetrics {
+  source: "nvidia-smi" | "none";
+  gpus: GpuDevice[];
+  processes: GpuProcess[];
 }
 
 export interface StatsConfig {

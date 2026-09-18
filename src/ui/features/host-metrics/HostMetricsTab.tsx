@@ -56,21 +56,10 @@ import {
   defaultHeightFor,
   type MetricCardHistories,
 } from "./cards";
+import { appendGpuHistories } from "./cards/gpu-history";
+import { metricsChangeKey } from "./metrics-change-key";
 
 const HISTORY_LEN = 30;
-
-function metricsChangeKey(data: ServerMetrics): string {
-  const bucket = (value: number | null | undefined) =>
-    value == null ? null : Math.round(value / 5) * 5;
-  return JSON.stringify({
-    cpu: bucket(data.cpu.percent),
-    memory: bucket(data.memory.percent),
-    disk: bucket(data.disk.percent),
-    running: data.processes?.running ?? null,
-    ports: data.ports?.ports?.length ?? 0,
-    firewall: data.firewall?.status ?? null,
-  });
-}
 
 interface QuickAction {
   name: string;
@@ -131,6 +120,7 @@ function HostMetricsInner({
     cpu: [],
     memory: [],
     disk: [],
+    gpu: {},
   });
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -232,7 +222,7 @@ function HostMetricsInner({
     if (hostConfig?.id !== currentHostConfig?.id) {
       setServerStatus("offline");
       setMetrics(null);
-      setHistories({ cpu: [], memory: [], disk: [] });
+      setHistories({ cpu: [], memory: [], disk: [], gpu: {} });
     }
     setCurrentHostConfig(hostConfig);
   }, [hostConfig?.id]);
@@ -267,6 +257,7 @@ function HostMetricsInner({
         cpu: add(prev.cpu, data.cpu?.percent),
         memory: add(prev.memory, data.memory?.percent),
         disk: add(prev.disk, data.disk?.percent),
+        gpu: appendGpuHistories(prev.gpu, data.gpu?.gpus, HISTORY_LEN),
       };
     });
   }, []);

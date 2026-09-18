@@ -54,6 +54,7 @@ export const METRIC_CARD_IDS: HostMetricCardId[] = [
   "ports",
   "firewall",
   "temperature",
+  "gpu",
 ];
 
 export const MANAGER_CARD_IDS: HostMetricManagerId[] = [
@@ -106,6 +107,7 @@ const DEFAULT_COLSPAN: Partial<Record<HostMetricsCardId, HostMetricsColSpan>> =
     ports: 2,
     firewall: 2,
     login_stats: 2,
+    gpu: 2,
   };
 
 // All cards default to content/auto height (null); the masonry packs them
