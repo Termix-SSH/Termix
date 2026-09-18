@@ -354,7 +354,7 @@ export function FileManagerToolbar({
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="icon"
               onClick={() => setViewMode("grid")}
-              className={`size-8 rounded-none border-y-0 border-l-0 border-r border-border ${viewMode === "grid" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+              className={`size-8 rounded-none ${viewMode === "grid" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
             >
               <Grid3X3 className="size-4" />
             </Button>
@@ -362,7 +362,7 @@ export function FileManagerToolbar({
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="icon"
               onClick={() => setViewMode("list")}
-              className={`size-8 rounded-none border-y-0 border-r-0 border-border ${viewMode === "list" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+              className={`size-8 rounded-none border-l border-border ${viewMode === "list" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
             >
               <List className="size-4" />
             </Button>
@@ -372,7 +372,7 @@ export function FileManagerToolbar({
               onClick={() =>
                 setDensity(density === "compact" ? "comfortable" : "compact")
               }
-              className={`size-8 rounded-none border-y-0 border-r-0 border-l border-border ${density === "compact" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+              className={`size-8 rounded-none border-l border-border ${density === "compact" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
               title={t(
                 density === "compact"
                   ? "fileManager.comfortableLayout"
