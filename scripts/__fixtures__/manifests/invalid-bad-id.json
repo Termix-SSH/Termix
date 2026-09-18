@@ -1,0 +1,22 @@
+{
+  "id": "Sample_Plugin!",
+  "name": "Sample Plugin",
+  "version": "1.0.0",
+  "description": "Has an id that violates the required pattern.",
+  "author": {
+    "name": "Jane Doe"
+  },
+  "license": "MIT",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": false,
+    "platforms": ["linux"]
+  },
+  "permissions": [],
+  "sidecars": []
+}

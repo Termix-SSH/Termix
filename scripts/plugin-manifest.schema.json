@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://termix.site/schemas/plugin-manifest.schema.json",
+  "title": "Termix Plugin Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "version",
+    "description",
+    "author",
+    "license",
+    "engine",
+    "capabilities",
+    "permissions",
+    "sidecars"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Unique plugin id, lowercase alphanumeric and hyphens only."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$",
+      "description": "Semver version string."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri"
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["termix", "api"],
+      "properties": {
+        "termix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Informational-only Termix version range this plugin targets. Not mechanically enforced."
+        },
+        "api": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Plugin SDK major version, as a string. The real compatibility gate."
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "frontend", "electron", "platforms"],
+      "properties": {
+        "backend": { "type": "boolean" },
+        "frontend": { "type": "boolean" },
+        "electron": { "type": "boolean" },
+        "platforms": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "hosts.read",
+          "hosts.write",
+          "credentials.use",
+          "ssh.exec",
+          "ssh.sftp",
+          "storage.own",
+          "storage.secrets",
+          "network.outbound",
+          "events.read",
+          "notify.send",
+          "users.read",
+          "process.sidecar",
+          "ui.tab",
+          "ui.rail",
+          "ui.card",
+          "ui.settings",
+          "ui.palette"
+        ]
+      }
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey", "icon", "openFrom"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "icon": { "type": "string", "minLength": 1 },
+              "openFrom": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["rail", "host-context-menu", "palette"]
+                },
+                "minItems": 1
+              }
+            }
+          }
+        },
+        "hostCapability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "labelKey", "editorTab"],
+          "properties": {
+            "key": { "type": "string", "minLength": 1 },
+            "labelKey": { "type": "string", "minLength": 1 },
+            "editorTab": { "type": "string", "minLength": 1 }
+          }
+        },
+        "permissionGroup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["group", "permissions"],
+          "properties": {
+            "group": { "type": "string", "minLength": 1 },
+            "permissions": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1
+            },
+            "defaultForRole": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        "settingsPanel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["titleKey"],
+          "properties": {
+            "titleKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "dashboardCards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "titleKey": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "apiPrefix": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Mounted at /plugin-api/<id>/<apiPrefix>/*."
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plugins": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Semver range string."
+          }
+        }
+      }
+    },
+    "sidecars": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "binary"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "binary": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "sample-plugin",
+  "name": "Sample Plugin",
+  "version": "1.0.0",
+  "description": "A sample plugin used for schema validation tests.",
+  "author": {
+    "name": "Jane Doe",
+    "url": "https://example.com"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/example/sample-plugin",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": false,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["hosts.read", "ui.tab", "ui.rail"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "sample-plugin-tab",
+        "titleKey": "samplePlugin.tab.title",
+        "icon": "Box",
+        "openFrom": ["rail", "palette"]
+      }
+    ],
+    "settingsPanel": {
+      "titleKey": "samplePlugin.settings.title"
+    },
+    "apiPrefix": "sample"
+  },
+  "dependencies": {
+    "plugins": {
+      "other-plugin": "^1.0.0"
+    }
+  },
+  "sidecars": []
+}
