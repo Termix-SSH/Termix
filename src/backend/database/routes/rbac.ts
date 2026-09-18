@@ -19,7 +19,7 @@ import {
   type SharePermissionLevel,
 } from "../../utils/permission-manager.js";
 import {
-  PERMISSION_CATALOG,
+  getPermissionCatalog,
   isValidPermission,
 } from "../../utils/permission-catalog.js";
 import {
@@ -1238,7 +1238,7 @@ router.get(
   "/permissions/catalog",
   authenticateJWT,
   async (_req: AuthenticatedRequest, res: Response) => {
-    res.json({ catalog: PERMISSION_CATALOG });
+    res.json({ catalog: getPermissionCatalog() });
   },
 );
 

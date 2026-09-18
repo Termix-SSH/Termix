@@ -118,6 +118,27 @@ describe("PermissionManager.hasPermission wildcard matching", () => {
     withPermissions(["hosts.read.*"]);
     expect(await manager.hasPermission("u1", "hosts.write")).toBe(false);
   });
+
+  it("resolves wildcards for a runtime-registered permission group", async () => {
+    const { registerPermissionGroup, unregisterPermissionGroup } =
+      await import("../../utils/permission-catalog.js");
+
+    registerPermissionGroup({
+      group: "testplugin",
+      permissions: ["testplugin.view", "testplugin.manage"],
+    });
+
+    try {
+      withPermissions(["testplugin.*"]);
+      expect(await manager.hasPermission("u1", "testplugin.view")).toBe(true);
+      expect(await manager.hasPermission("u1", "testplugin.manage")).toBe(true);
+
+      withPermissions(["*"]);
+      expect(await manager.hasPermission("u1", "testplugin.view")).toBe(true);
+    } finally {
+      unregisterPermissionGroup("testplugin");
+    }
+  });
 });
 
 describe("PermissionManager.canAccessHost level hierarchy", () => {
