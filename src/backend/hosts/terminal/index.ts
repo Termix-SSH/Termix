@@ -67,7 +67,7 @@ import {
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
   resolveServerHostId,
   resolveServerJumpHosts,
-} from "./host-identity.js";
+} from "../host-identity.js";
 import { extractWebSocketToken } from "../../utils/ws-auth.js";
 import {
   createWebSocketDuplex,

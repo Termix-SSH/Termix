@@ -18,7 +18,7 @@ import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
-} from "../terminal/host-identity.js";
+} from "../host-identity.js";
 import { extractWebSocketToken } from "../../utils/ws-auth.js";
 import {
   asObject,

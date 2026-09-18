@@ -64,7 +64,7 @@ import {
   HostAddressMismatchError,
   HostNotOnThisServerError,
   resolveServerHostId,
-} from "../terminal/host-identity.js";
+} from "../host-identity.js";
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
 import { applyAgentAuth } from "../terminal-auth-helpers.js";

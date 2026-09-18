@@ -8,7 +8,7 @@ import {
   normalizeHostAddress,
   resolveServerHostId,
   resolveServerJumpHosts,
-} from "../../../hosts/terminal/host-identity.js";
+} from "../../hosts/host-identity.js";
 
 /**
  * The desktop app lists hosts out of its own embedded database and identifies
