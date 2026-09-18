@@ -379,6 +379,7 @@ function HostMetricsInner({
     }
 
     setMetrics(data);
+    pushHistory(data);
     setServerStatus("online");
     logServerActivity();
     addLog({
