@@ -136,6 +136,9 @@ export function AppRail({
   const [expandOnHover, setExpandOnHover] = useState(() =>
     readRailPreference("expandAppRailOnHover"),
   );
+  const [showPinButton, setShowPinButton] = useState(() =>
+    readRailPreference("showPinAppRailButton"),
+  );
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   // Which promotable item was right-clicked, so the menu can offer to open it
   // as a tab. Null when the right-click landed on empty rail space.
@@ -201,11 +204,21 @@ export function AppRail({
     const pinHandler = () => setPinned(readRailPreference("pinAppRail"));
     const hoverHandler = () =>
       setExpandOnHover(readRailPreference("expandAppRailOnHover"));
+    const showPinButtonHandler = () =>
+      setShowPinButton(readRailPreference("showPinAppRailButton"));
     window.addEventListener("pinAppRailChanged", pinHandler);
     window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    window.addEventListener(
+      "showPinAppRailButtonChanged",
+      showPinButtonHandler,
+    );
     return () => {
       window.removeEventListener("pinAppRailChanged", pinHandler);
       window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+      window.removeEventListener(
+        "showPinAppRailButtonChanged",
+        showPinButtonHandler,
+      );
     };
   }, []);
 
@@ -410,34 +423,40 @@ export function AppRail({
       </div>
 
       <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
-        <button
-          onClick={() => setRailPinned(!pinned)}
-          style={btnStyle}
-          title={pinned ? t("nav.collapseSideMenu") : t("nav.keepSideMenuOpen")}
-          className={`${btnBase} ${
-            pinned
-              ? "text-accent-brand bg-accent-brand/10 hover:text-accent-brand"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-          }`}
-        >
-          <span
-            className="shrink-0 flex items-center justify-center"
-            style={{ width: 16, height: 16 }}
-          >
-            <Pin size={16} />
-          </span>
-          <span
-            className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${
-              railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"
+        {showPinButton && (
+          <button
+            onClick={() => setRailPinned(!pinned)}
+            style={btnStyle}
+            title={
+              pinned ? t("nav.collapseSideMenu") : t("nav.keepSideMenuOpen")
+            }
+            className={`${btnBase} ${
+              pinned
+                ? "text-accent-brand bg-accent-brand/10 hover:text-accent-brand"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
             }`}
           >
-            {pinned ? t("nav.collapseSideMenu") : t("nav.keepSideMenuOpen")}
-          </span>
-        </button>
-        <div
-          className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
-          style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
-        />
+            <span
+              className="shrink-0 flex items-center justify-center"
+              style={{ width: 16, height: 16 }}
+            >
+              <Pin size={16} />
+            </span>
+            <span
+              className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${
+                railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"
+              }`}
+            >
+              {pinned ? t("nav.collapseSideMenu") : t("nav.keepSideMenuOpen")}
+            </span>
+          </button>
+        )}
+        {showPinButton && (
+          <div
+            className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
+            style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
+          />
+        )}
         {[
           {
             view: "alerts" as RailView,

@@ -1141,6 +1141,9 @@ export const userPreferences = sqliteTable("user_preferences", {
   expandAppRailOnHover: integer("expand_app_rail_on_hover", {
     mode: "boolean",
   }),
+  showPinAppRailButton: integer("show_pin_app_rail_button", {
+    mode: "boolean",
+  }),
   foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
   confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),

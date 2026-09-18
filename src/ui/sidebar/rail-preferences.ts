@@ -1,17 +1,22 @@
 import { getUserPreferences, saveUserPreferences } from "@/api/open-tabs-api";
 
-export type RailPreference = "pinAppRail" | "expandAppRailOnHover";
+export type RailPreference =
+  "pinAppRail" | "expandAppRailOnHover" | "showPinAppRailButton";
 
 const CHANGE_EVENT: Record<RailPreference, string> = {
   pinAppRail: "pinAppRailChanged",
   expandAppRailOnHover: "expandAppRailOnHoverChanged",
+  showPinAppRailButton: "showPinAppRailButtonChanged",
 };
 
-// pinAppRail defaults off, expandAppRailOnHover defaults on, so each key needs
-// its own read rather than a shared === "true" check.
+// pinAppRail and showPinAppRailButton default off, expandAppRailOnHover
+// defaults on, so each key needs its own read rather than a shared
+// === "true" check.
 export function readRailPreference(key: RailPreference): boolean {
   const stored = localStorage.getItem(key);
-  return key === "pinAppRail" ? stored === "true" : stored !== "false";
+  return key === "expandAppRailOnHover"
+    ? stored !== "false"
+    : stored === "true";
 }
 
 /**

@@ -523,6 +523,7 @@ export function UserProfilePanel({
     compactHostView?: boolean | null;
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
+    showPinAppRailButton?: boolean | null;
     foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
@@ -749,6 +750,9 @@ export function UserProfilePanel({
   const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(() =>
     readRailPreference("expandAppRailOnHover"),
   );
+  const [showPinAppRailButton, setShowPinAppRailButton] = useState(() =>
+    readRailPreference("showPinAppRailButton"),
+  );
   // Read values are unused now that the Snippets settings UI lives in
   // SnippetsPanel.tsx; the setters still back the cloud-sync/reset/snapshot
   // machinery for these two localStorage-backed prefs below.
@@ -833,11 +837,21 @@ export function UserProfilePanel({
     const pinHandler = () => setPinAppRail(readRailPreference("pinAppRail"));
     const hoverHandler = () =>
       setExpandAppRailOnHover(readRailPreference("expandAppRailOnHover"));
+    const showPinButtonHandler = () =>
+      setShowPinAppRailButton(readRailPreference("showPinAppRailButton"));
     window.addEventListener("pinAppRailChanged", pinHandler);
     window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    window.addEventListener(
+      "showPinAppRailButtonChanged",
+      showPinButtonHandler,
+    );
     return () => {
       window.removeEventListener("pinAppRailChanged", pinHandler);
       window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+      window.removeEventListener(
+        "showPinAppRailButtonChanged",
+        showPinButtonHandler,
+      );
     };
   }, []);
 
@@ -862,6 +876,7 @@ export function UserProfilePanel({
         "compactHostView",
         "pinAppRail",
         "expandAppRailOnHover",
+        "showPinAppRailButton",
         "defaultSnippetFoldersCollapsed",
         "snippetShowCommands",
         "confirmSnippetExecution",
@@ -935,6 +950,14 @@ export function UserProfilePanel({
             String(prefs.expandAppRailOnHover),
           );
           window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
+        }
+        if (prefs.showPinAppRailButton != null) {
+          setShowPinAppRailButton(prefs.showPinAppRailButton);
+          localStorage.setItem(
+            "showPinAppRailButton",
+            String(prefs.showPinAppRailButton),
+          );
+          window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
         }
         if (prefs.foldersCollapsed != null) {
           setFoldersCollapsed(prefs.foldersCollapsed);
@@ -1014,6 +1037,9 @@ export function UserProfilePanel({
     setExpandAppRailOnHover(true);
     localStorage.setItem("expandAppRailOnHover", "true");
     window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
+    setShowPinAppRailButton(false);
+    localStorage.setItem("showPinAppRailButton", "false");
+    window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
     setFoldersCollapsed(true);
     localStorage.removeItem("defaultSnippetFoldersCollapsed");
     setConfirmSnippetExecution(false);
@@ -1038,6 +1064,7 @@ export function UserProfilePanel({
         commandPaletteEnabled: true,
         pinAppRail: false,
         expandAppRailOnHover: true,
+        showPinAppRailButton: false,
         foldersCollapsed: true,
         confirmSnippetExecution: false,
         disableUpdateCheck: false,
@@ -1120,6 +1147,12 @@ export function UserProfilePanel({
       String(restoredExpandRailOnHover),
     );
     window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
+
+    const restoredShowPinButton =
+      restore("showPinAppRailButton", "false") === "true";
+    setShowPinAppRailButton(restoredShowPinButton);
+    localStorage.setItem("showPinAppRailButton", String(restoredShowPinButton));
+    window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
 
     const restoredFolders =
       restore("defaultSnippetFoldersCollapsed", null) !== "false";
@@ -2121,6 +2154,20 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setExpandAppRailOnHover(v);
                   setRailPreference("expandAppRailOnHover", v);
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.showPinAppRailButton")}
+              description={t(
+                "newUi.sidebar.userProfile.showPinAppRailButtonDesc",
+              )}
+            >
+              <FakeSwitch
+                checked={showPinAppRailButton}
+                onChange={(v) => {
+                  setShowPinAppRailButton(v);
+                  setRailPreference("showPinAppRailButton", v);
                 }}
               />
             </SettingRow>

@@ -114,6 +114,7 @@ export interface UserPreferences {
   hostTrayOnClick?: boolean | null;
   pinAppRail?: boolean | null;
   expandAppRailOnHover?: boolean | null;
+  showPinAppRailButton?: boolean | null;
   foldersCollapsed?: boolean | null;
   confirmSnippetExecution?: boolean | null;
   disableUpdateCheck?: boolean | null;

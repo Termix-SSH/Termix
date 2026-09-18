@@ -1144,6 +1144,7 @@ export const userPreferences = mysqlTable("user_preferences", {
   hostTrayOnClick: boolean("host_tray_on_click"),
   pinAppRail: boolean("pin_app_rail"),
   expandAppRailOnHover: boolean("expand_app_rail_on_hover"),
+  showPinAppRailButton: boolean("show_pin_app_rail_button"),
   foldersCollapsed: boolean("folders_collapsed"),
   confirmSnippetExecution: boolean("confirm_snippet_execution"),
   disableUpdateCheck: boolean("disable_update_check"),

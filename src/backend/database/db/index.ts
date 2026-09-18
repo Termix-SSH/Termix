@@ -1004,6 +1004,11 @@ const migrateSchema = () => {
     "expand_app_rail_on_hover",
     "INTEGER",
   );
+  addColumnIfNotExists(
+    "user_preferences",
+    "show_pin_app_rail_button",
+    "INTEGER",
+  );
   addColumnIfNotExists("user_preferences", "folders_collapsed", "INTEGER");
   addColumnIfNotExists("user_preferences", "confirm_snippet_execution", "INTEGER");
   addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");

@@ -26,6 +26,7 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   hostTrayOnClick: row?.hostTrayOnClick ?? null,
   pinAppRail: row?.pinAppRail ?? null,
   expandAppRailOnHover: row?.expandAppRailOnHover ?? null,
+  showPinAppRailButton: row?.showPinAppRailButton ?? null,
   foldersCollapsed: row?.foldersCollapsed ?? null,
   confirmSnippetExecution: row?.confirmSnippetExecution ?? null,
   disableUpdateCheck: row?.disableUpdateCheck ?? null,
@@ -103,6 +104,9 @@ export function validateDefaultsJson(value: string): boolean {
  *                   type: boolean
  *                   nullable: true
  *                 expandAppRailOnHover:
+ *                   type: boolean
+ *                   nullable: true
+ *                 showPinAppRailButton:
  *                   type: boolean
  *                   nullable: true
  *                 foldersCollapsed:
@@ -186,6 +190,8 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 type: boolean
  *               expandAppRailOnHover:
  *                 type: boolean
+ *               showPinAppRailButton:
+ *                 type: boolean
  *               confirmSnippetExecution:
  *                 type: boolean
  *               disableUpdateCheck:
@@ -217,6 +223,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     commandPaletteEnabled,
     pinAppRail,
     expandAppRailOnHover,
+    showPinAppRailButton,
     confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
@@ -239,6 +246,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     commandPaletteEnabled?: boolean | null;
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
+    showPinAppRailButton?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
@@ -384,6 +392,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     commandPaletteEnabled,
     pinAppRail,
     expandAppRailOnHover,
+    showPinAppRailButton,
     confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
@@ -413,6 +422,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (pinAppRail !== undefined) updates.pinAppRail = pinAppRail;
   if (expandAppRailOnHover !== undefined)
     updates.expandAppRailOnHover = expandAppRailOnHover;
+  if (showPinAppRailButton !== undefined)
+    updates.showPinAppRailButton = showPinAppRailButton;
   if (confirmSnippetExecution !== undefined)
     updates.confirmSnippetExecution = confirmSnippetExecution;
   if (disableUpdateCheck !== undefined)
