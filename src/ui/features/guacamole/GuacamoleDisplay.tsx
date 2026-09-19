@@ -140,6 +140,14 @@ export const GuacamoleDisplay = forwardRef<
   const isConnectingRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
+  // RDP's guacd backend (FreeRDP) can report the Guacamole-level CONNECTED
+  // state from a single early sync before the actual RDP handshake with the
+  // remote host has finished negotiating - a handshake that can then still
+  // fail up to ~30s later. Waiting for a couple of real frame syncs before
+  // announcing the connection avoids a black screen with no connecting UI
+  // during that window; VNC/telnet fail before ever reaching CONNECTED, so
+  // they are unaffected.
+  const syncCountRef = useRef(0);
 
   const disconnectClient = useCallback(() => {
     unbindPointerRef.current?.();
@@ -416,6 +424,7 @@ export const GuacamoleDisplay = forwardRef<
     isConnectingRef.current = true;
     setIsReady(false);
     setHasError(false);
+    syncCountRef.current = 0;
 
     // Let layout settle before measuring without depending on animation frames,
     // which may be throttled while Electron windows or tabs are inactive.
@@ -576,8 +585,10 @@ export const GuacamoleDisplay = forwardRef<
           break;
         case 3:
           isConnectingRef.current = false;
-          setIsReady(true);
-          onConnect?.();
+          if (protocol !== "rdp") {
+            setIsReady(true);
+            onConnect?.();
+          }
           // A configured resolution is the size the session should render at;
           // resizing it to the container would discard it. rescaleDisplay still
           // fits that fixed display into whatever space is available.
@@ -616,6 +627,18 @@ export const GuacamoleDisplay = forwardRef<
       isConnectingRef.current = false;
       onError?.(errorMessage);
     };
+
+    if (protocol === "rdp") {
+      client.onsync = () => {
+        if (!isMountedRef.current || clientRef.current !== client) return;
+        if (syncCountRef.current >= 2) return;
+        syncCountRef.current += 1;
+        if (syncCountRef.current >= 2) {
+          setIsReady(true);
+          onConnect?.();
+        }
+      };
+    }
 
     client.onclipboard = (stream: Guacamole.InputStream, mimetype: string) => {
       if (mimetype === "text/plain") {

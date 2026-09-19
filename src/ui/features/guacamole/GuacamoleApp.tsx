@@ -329,9 +329,7 @@ const GuacamoleAppInner = React.forwardRef<
     addLog({
       type: "info",
       stage: "guac_guacd",
-      message: t("guacamole.connecting", {
-        type: resolvedProtocolForConnect.toUpperCase(),
-      }),
+      message: t("guacamole.checkingGuacd"),
     });
     const status = await getGuacdStatus(resolvedOrigin);
     if (status.guacd.status !== "connected") {
@@ -341,7 +339,7 @@ const GuacamoleAppInner = React.forwardRef<
     addLog({
       type: "info",
       stage: "guac_token",
-      message: t("guacamole.connecting", {
+      message: t("guacamole.requestingToken", {
         type: resolvedProtocolForConnect.toUpperCase(),
       }),
     });
@@ -598,15 +596,34 @@ const GuacamoleAppInner = React.forwardRef<
           setConnectionError(err);
           addLog({ type: "error", stage: "error", message: err });
         }}
-        onStageChange={(stage) =>
-          addLog({
-            type: "info",
-            stage,
-            message: t("guacamole.connecting", {
-              type: resolvedProtocol.toUpperCase(),
-            }),
-          })
-        }
+        onStageChange={(stage) => {
+          const type = resolvedProtocol.toUpperCase();
+          switch (stage) {
+            case "guac_connecting":
+              addLog({
+                type: "info",
+                stage,
+                message: t("guacamole.openingSession", { type }),
+              });
+              break;
+            case "guac_handshake":
+              addLog({
+                type: "info",
+                stage,
+                message: t("guacamole.negotiating", { type }),
+              });
+              break;
+            case "guac_ready":
+              addLog({
+                type: "success",
+                stage,
+                message: t("guacamole.sessionReady", { type }),
+              });
+              break;
+            default:
+              break;
+          }
+        }}
         onZoomChange={setDisplayZoom}
         onFilesystem={setFilesystem}
         onDropFiles={handleDropFiles}

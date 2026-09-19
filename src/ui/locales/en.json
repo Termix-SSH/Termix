@@ -2047,6 +2047,11 @@
   },
   "guacamole": {
     "connecting": "Connecting to {{type}} session...",
+    "checkingGuacd": "Checking remote desktop service...",
+    "requestingToken": "Requesting {{type}} connection token...",
+    "openingSession": "Opening {{type}} session...",
+    "negotiating": "Negotiating {{type}} handshake...",
+    "sessionReady": "{{type}} session ready",
     "connectionError": "Connection error",
     "connectionFailed": "Connection failed",
     "failedToConnect": "Failed to get connection token",
