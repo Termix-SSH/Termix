@@ -19,6 +19,7 @@ import {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   createRef,
   lazy,
   Suspense,
@@ -2376,7 +2377,10 @@ export function AppShell({
   // Move each tab's stable DOM node to the right container (pane or normal-view).
   // This is vanilla DOM so React's portal target never changes — changing the portal
   // target causes a remount which is exactly what we're trying to avoid.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so visibility/display are corrected before
+  // the browser paints — otherwise the previous tab's node can flash on screen
+  // for a frame while still visible.
+  useLayoutEffect(() => {
     const normalView = normalViewRef.current;
     if (!normalView) return;
 

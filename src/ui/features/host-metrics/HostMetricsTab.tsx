@@ -443,7 +443,7 @@ function HostMetricsInner({
       }
     },
     enabled:
-      isActuallyVisible &&
+      isPageVisible &&
       metricsEnabled &&
       !totpRequired &&
       !!currentHostConfig?.id,
@@ -453,6 +453,10 @@ function HostMetricsInner({
   const metricsRetryRef = React.useRef(metricsRetry);
   metricsRetryRef.current = metricsRetry;
 
+  // Connects once per host and stays connected while this tab exists, even
+  // when the user switches to another tab and back. Only the browser tab
+  // going into the background (isPageVisible) pauses/resumes it -- switching
+  // between Termix tabs must not tear down and reconnect the session.
   React.useEffect(() => {
     if (!metricsEnabled || !currentHostConfig?.id) return;
 
@@ -471,7 +475,7 @@ function HostMetricsInner({
 
     const debounce = setTimeout(() => {
       if (cancelled) return;
-      if (isActuallyVisible) {
+      if (isPageVisible) {
         clearLogs();
         metricsRetryRef.current.reset();
         metricsRetryRef.current.retryNow();
@@ -489,7 +493,7 @@ function HostMetricsInner({
         stopMetricsPolling(currentHostConfig.id).catch(() => {});
       }
     };
-  }, [currentHostConfig?.id, isActuallyVisible, metricsEnabled]);
+  }, [currentHostConfig?.id, isPageVisible, metricsEnabled]);
 
   // After a successful TOTP submit, resume the connect flow immediately.
   React.useEffect(() => {
