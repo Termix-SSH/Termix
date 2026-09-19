@@ -8,8 +8,7 @@ const state = vi.hoisted(() => ({
   sessions: [] as unknown[],
 }));
 
-// Reproduces a package that shipped without the native binary for the running
-// architecture: importing sharp throws instead of resolving.
+// A package shipped without the native binary for this architecture.
 vi.mock("sharp", () => {
   throw new Error(
     'Could not load the "sharp" module using the darwin-x64 runtime',
