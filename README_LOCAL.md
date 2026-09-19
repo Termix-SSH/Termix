@@ -365,13 +365,27 @@ Upstream распространяется под **Apache License 2.0**, © 2025
 
 ```bash
 upstream  https://github.com/Termix-SSH/Termix.git   # чужой репозиторий, только чтение
-origin    <ваш форк, когда появится>                 # или отсутствует
+origin    https://github.com/ASXRND/Termix.git       # наш форк (публичный)
 main                                         # зеркало upstream, коммитить сюда нельзя
-local/macos-pty-fixes                        # наша рабочая ветка с правками
+local/macos-pty-fixes                        # наша ветка, привязана к origin/local/macos-pty-fixes
 ```
 
-`origin` переименован в `upstream` специально: чтобы случайный `git push` не
-пытался что-то отправить в чужой репозиторий.
+`origin` указывает на форк, `upstream` — на чужой репозиторий: случайный
+`git push` может уйти только в свой форк.
+
+Отправка правок в форк (креды берутся из macOS Keychain):
+
+```bash
+git push origin local/macos-pty-fixes     # или просто git push (ветка уже трекается)
+```
+
+Восстановление ветки из форка на другой машине:
+
+```bash
+git clone https://github.com/ASXRND/Termix.git termix
+cd termix && git checkout local/macos-pty-fixes
+npm ci && npm run build:mac-local
+```
 
 ### 11.3. Рабочий цикл
 
