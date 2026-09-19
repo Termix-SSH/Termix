@@ -1086,7 +1086,9 @@ function stopBackendServer() {
   });
 }
 
-const gotTheLock = app.requestSingleInstanceLock();
+// App Sandbox denies the singleton socket bind, which reads as a held lock and
+// quits the app on every launch. macOS reactivates bundled apps anyway.
+const gotTheLock = process.mas || app.requestSingleInstanceLock();
 if (!gotTheLock) {
   console.log("Another instance is already running, quitting...");
   app.quit();
