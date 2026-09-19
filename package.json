@@ -12,7 +12,7 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-guacamole-common-js.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-xterm-android-ime.cjs",
+    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-guacamole-common-js.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-xterm-android-ime.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "node scripts/generate-dialect-schema.cjs --check && eslint .",
@@ -41,6 +41,7 @@
     "build:linux-targz": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --linux tar.gz",
     "build:mac": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac --universal",
     "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never",
+    "build:mac-local": "node scripts/build-mac-local.cjs",
     "schema:generate": "node scripts/generate-dialect-schema.cjs",
     "schema:check": "node scripts/generate-dialect-schema.cjs --check",
     "schema:migrations": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts"
@@ -226,5 +227,14 @@
     "tar": "^7.5.22",
     "undici@6": "^6.28.0",
     "undici@7": "^7.29.0"
+  },
+  "allowScripts": {
+    "node-pty@1.1.0": true,
+    "better-sqlite3@13.0.2": true,
+    "@serialport/bindings-cpp@13.0.0": true,
+    "cpu-features@0.0.10": true,
+    "esbuild@0.28.2": true,
+    "ssh2@1.17.0": true,
+    "fsevents@2.3.3": true
   }
 }

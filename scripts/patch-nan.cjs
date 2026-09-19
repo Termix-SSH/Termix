@@ -1,3 +1,6 @@
+// Modified for the local macOS build — see README_LOCAL.md.
+// 2026-09-19: regenerate cpu-features/buildcheck.gypi when the install script
+// was skipped (Apache-2.0 §4b notice).
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -125,9 +128,40 @@ if (fs.existsSync(callbacksPath)) {
   }
 }
 
-if (nanHeaderPatched || bindingPatched || implPatched || callbacksPatched) {
+// 4. cpu-features: its install script is
+//    `node buildcheck.js > buildcheck.gypi && node-gyp rebuild`, but npm can
+//    run only the `node-gyp rebuild` part, leaving buildcheck.gypi missing so
+//    gyp aborts with "buildcheck.gypi not found ... while reading includes of
+//    deps/cpu_features/cpu_features.gyp". Regenerate the generated include.
+const cpuFeaturesGypiPath = path.join(cpuFeaturesDir, "buildcheck.gypi");
+const cpuFeaturesBuildcheckPath = path.join(cpuFeaturesDir, "buildcheck.js");
+let cpuFeaturesGypiGenerated = false;
+
+if (
+  fs.existsSync(cpuFeaturesDir) &&
+  fs.existsSync(cpuFeaturesBuildcheckPath) &&
+  !fs.existsSync(cpuFeaturesGypiPath)
+) {
+  const { execFileSync } = require("node:child_process");
+  const generated = execFileSync(
+    process.execPath,
+    [cpuFeaturesBuildcheckPath],
+    { cwd: cpuFeaturesDir, encoding: "utf8" },
+  );
+  fs.writeFileSync(cpuFeaturesGypiPath, generated);
+  cpuFeaturesGypiGenerated = true;
+}
+
+if (
+  nanHeaderPatched ||
+  bindingPatched ||
+  implPatched ||
+  callbacksPatched ||
+  cpuFeaturesGypiGenerated
+) {
   console.log(
-    "[patch-nan] Applied compatibility patches for Electron 42 / V8 13+",
+    "[patch-nan] Applied compatibility patches for Electron 42 / V8 13+" +
+      (cpuFeaturesGypiGenerated ? " and regenerated cpu-features gyp include" : ""),
   );
 } else {
   console.log("[patch-nan] Already patched or target code not found");
