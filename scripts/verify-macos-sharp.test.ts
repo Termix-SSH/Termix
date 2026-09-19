@@ -9,16 +9,22 @@ const { expectedArchitecture, verifyApp } = require("./verify-macos-sharp.cjs");
 
 const temporaryDirectories: string[] = [];
 
-function createApp(architectures: string[]) {
+// A universal build has mergeASARs: false, so @electron/universal ships
+// app-x64.asar.unpacked and app-arm64.asar.unpacked side by side instead of
+// a single app.asar.unpacked. A plain x64/arm64-only build only ever has one.
+function createApp(architectures: string[], universal = false) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "termix-sharp-test-"));
   temporaryDirectories.push(root);
   const app = path.join(root, "Termix.app");
-  const modules = path.join(
-    app,
-    "Contents/Resources/app.asar.unpacked/node_modules/@img",
-  );
 
   for (const architecture of architectures) {
+    const unpackedDir = universal
+      ? `app-${architecture}.asar.unpacked`
+      : "app.asar.unpacked";
+    const modules = path.join(
+      app,
+      `Contents/Resources/${unpackedDir}/node_modules/@img`,
+    );
     const sharp = path.join(modules, `sharp-darwin-${architecture}/lib`);
     const libvips = path.join(
       modules,
@@ -50,8 +56,14 @@ describe("macOS sharp artifact verification", () => {
 
   it("accepts a universal app with both sharp architectures", () => {
     expect(() =>
-      verifyApp(createApp(["x64", "arm64"]), "universal", false),
+      verifyApp(createApp(["x64", "arm64"], true), "universal", false),
     ).not.toThrow();
+  });
+
+  it("rejects a universal app missing one architecture's sharp binaries", () => {
+    expect(() =>
+      verifyApp(createApp(["arm64"], true), "universal", false),
+    ).toThrow(/sharp-darwin-x64/);
   });
 
   it("rejects an x64 app containing only arm64 sharp binaries", () => {
