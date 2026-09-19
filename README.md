@@ -89,7 +89,7 @@ Local, remote, and dynamic SOCKS forwarding with auto reconnect and health check
 <td width="50%" valign="top">
 
 **File Manager:**
-Browse, edit, upload, download, rename, move, and delete files over SFTP, with sudo support. View and edit code, images, audio, and video. Copy files straight from one server to another, with the fastest route picked for you and transfers checked for integrity.
+Browse, edit, upload, download, rename, move, and delete files over SFTP, with sudo support. View and edit code, images, audio, and video. Copy files straight from one server to another in a dedicated transfer tab, with the fastest route picked for you and transfers checked for integrity. The desktop app also has a side-by-side local and remote view.
 
 </td>
 </tr>
@@ -214,30 +214,6 @@ Save a set of tabs with their split layout and reopen the whole thing in one cli
 </td>
 <td width="50%" valign="top">
 
-**Guided Setup:**
-A short setup walks you through picking an interface preset, your theme, the features you want, and your first host. Simple mode hides what you do not use, and you can rerun setup or switch presets any time.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Linux desktop startup crashes:**
-
-If Electron crashes during GPU initialization on Wayland/Vulkan, launch with hardware acceleration disabled:
-
-```sh
-ELECTRON_DISABLE_GPU=1 ./Termix.AppImage
-```
-
-Use the path to your installed executable if you are not using AppImage. This opt-in workaround uses software rendering and may reduce graphics performance. Remove the variable to restore the default Linux rendering behavior.
-
-**Desktop Standalone and Sync:**
-The desktop app runs on its own with a local backend and database, no server needed. You can also connect it to a Termix server for two-way sync of hosts, credentials, snippets, and more, and choose whether connections start locally or through the server.
-
-</td>
-<td width="50%" valign="top">
-
 **Command Line Interface:**
 A `termix` CLI for your shell and your scripts. Open terminals, run a command on one host or a whole fleet, move files over SFTP, and manage hosts, snippets, and credentials. Install with `npm install -g @termix-cli/cli` or grab a standalone binary. See the [CLI docs](https://docs.termix.site/cli).
 
@@ -277,8 +253,13 @@ Around 30 languages built in, managed through [Crowdin](https://docs.termix.site
 - **Keyboard Shortcuts** - Move between tabs, close tabs, and more, all rebindable
 - **Wake-on-LAN** - Wake a machine from Termix or from an automation step
 - **Trusted Proxy Auth** - Let a reverse proxy handle sign-in and pass the user through
-- **SSH Feature Rich** - Jump hosts, Warpgate, TOTP prompts, SOCKS5, host key verification, password autofill, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal logging, agent forwarding, Bitwarden SSH agent, HashiCorp Vault SSH signing, and more
+- **White Label** - Admins can rebrand the instance with their own name, logo, and colors
+- **Web Endpoints** - Open a host's own web UI, like a router admin page, embedded inside Termix instead of a separate tab
+- **Collaboration Rooms** - Persistent rooms where a group can jump between sessions together, with a presenter stage and invites
+- **SSH Feature Rich** - Jump hosts, Warpgate, TOTP prompts, SOCKS5, host key verification, password autofill, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal logging, agent forwarding, Bitwarden SSH agent, HashiCorp Vault SSH signing, Step CA, 1Password Connect, and more
 - **Termix ID** - A built-in take on sshid.io. Claim a handle, publish your public keys at a resolver URL, and issue SSH certificates from the built-in CA
+- **Command History Autosuggestions** - Inline suggestions in the terminal as you type, based on your command history
+- **Desktop Standalone and Sync** - The desktop app runs on its own with a local backend and database, and can optionally sync with a Termix server
 
 </details>
 
@@ -341,11 +322,6 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
-      GUACD_HOST: "guacd"
-      GUACD_TUNNEL_HOST: "termix"
-      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
-      # guacd, not the Termix container, reads and writes redirected-drive files.
-      GUACD_DRIVE_PATH: "/termix-data/rdp-drive"
     depends_on:
       - guacd
     networks:
@@ -355,10 +331,8 @@ services:
     image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
-    volumes:
-      # The official guacd image runs as a non-root user. Keep the drive path
-      # in this writable shared volume instead of bind-mounting /drive.
-      - termix-data:/termix-data
+    ports:
+      - "4822:4822"
     networks:
       - termix-net
 
@@ -370,15 +344,6 @@ networks:
   termix-net:
     driver: bridge
 ```
-
-For multiple Termix backend instances, set the same `REDIS_URL` and optional
-`TERMIX_REDIS_PREFIX` on every instance. Redis synchronizes collaboration room
-presence, control requests, controller state, and events. It also routes Step CA
-OAuth callbacks back to the instance holding the user's terminal; the optional
-`TERMIX_STEP_CA_REDIS_PREFIX` isolates those short-lived encrypted messages.
-Keep WebSocket session affinity enabled because live SSH and remote desktop
-transports remain attached to the backend instance that opened them. A single
-instance needs no Redis.
 
 ### Command Line Interface
 
