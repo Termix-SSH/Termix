@@ -1842,7 +1842,7 @@ export function AppShell({
     const check = async () => {
       try {
         const { listCollabRooms } = await import("@/api/collab-api");
-        const { rooms } = await listCollabRooms();
+        const { rooms = [] } = await listCollabRooms();
         if (cancelled) return;
         let seen: string[] = [];
         try {

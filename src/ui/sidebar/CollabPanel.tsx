@@ -35,7 +35,7 @@ export function CollabPanel({
   const refresh = useCallback(async () => {
     try {
       const result = await listCollabRooms();
-      setRooms(result.rooms);
+      setRooms(result.rooms ?? []);
     } catch {
       /* the list stays as-is */
     } finally {
