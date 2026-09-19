@@ -43,13 +43,22 @@ function containsFile(root, suffix) {
   return false;
 }
 
-function verifyApp(app, architecture, runtimeCheck) {
-  const modules = path.join(
-    app,
-    "Contents/Resources/app.asar.unpacked/node_modules",
-  );
+// electron-builder's mac config sets mergeASARs: false, so a universal build
+// isn't a single merged app.asar. @electron/universal instead ships two full
+// copies side by side (app-x64.asar[.unpacked] and app-arm64.asar[.unpacked])
+// with a small chooser entrypoint that picks one at runtime based on
+// process.arch. A plain (non-universal) build still has one app.asar.unpacked.
+function unpackedModulesDir(app, arch, architecture) {
+  const resources = path.join(app, "Contents/Resources");
+  if (architecture === "universal") {
+    return path.join(resources, `app-${arch}.asar.unpacked/node_modules`);
+  }
+  return path.join(resources, "app.asar.unpacked/node_modules");
+}
 
+function verifyApp(app, architecture, runtimeCheck) {
   for (const arch of architectures[architecture]) {
+    const modules = unpackedModulesDir(app, arch, architecture);
     for (const [packageName, nativeSuffix] of [
       [`sharp-darwin-${arch}`, ".node"],
       [`sharp-libvips-darwin-${arch}`, ".dylib"],
@@ -69,7 +78,6 @@ function verifyApp(app, architecture, runtimeCheck) {
   if (!runtimeCheck) return;
 
   const executable = path.join(app, "Contents/MacOS/Termix");
-  const sharpPath = path.join(modules, "sharp");
   const smoke = [
     "const sharp = require(process.argv[1]);",
     "sharp({create:{width:1,height:1,channels:4,background:'#000'}})",
@@ -77,6 +85,8 @@ function verifyApp(app, architecture, runtimeCheck) {
   ].join("");
 
   for (const arch of architectures[architecture]) {
+    const modules = unpackedModulesDir(app, arch, architecture);
+    const sharpPath = path.join(modules, "sharp");
     const result = spawnSync(
       "arch",
       [
