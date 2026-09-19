@@ -7,7 +7,6 @@ import express, {
 } from "express";
 import { randomUUID } from "crypto";
 import multer from "multer";
-import sharp from "sharp";
 import {
   createConcurrencyLimiter,
   exceedsNormalizedImageSize,
@@ -54,6 +53,27 @@ const imageUpload = multer({
   },
 });
 const imageUploadMiddleware = imageUpload.single("image");
+
+type SharpFactory = typeof import("sharp").default;
+
+let sharpFactory: SharpFactory | null = null;
+let sharpLoadFailure: string | null = null;
+
+// A static import of sharp takes backend startup down with it when the native
+// binary for the running architecture is missing. Resolve on first use so only
+// image upload is lost.
+async function loadSharp(): Promise<SharpFactory> {
+  if (sharpFactory) return sharpFactory;
+  if (sharpLoadFailure !== null) throw new Error(sharpLoadFailure);
+  try {
+    sharpFactory = (await import("sharp")).default;
+    return sharpFactory;
+  } catch (error) {
+    sharpLoadFailure = getErrorMessage(error, "unknown");
+    throw new Error(sharpLoadFailure);
+  }
+}
+
 const imageProcessingLimiter = createConcurrencyLimiter(4, 4);
 const imageMultipartAdmissionLimiter = createConcurrencyLimiter(4, 4);
 let imageUploadSequence = 0;
@@ -205,6 +225,24 @@ router.post(
           code: "IMAGE_TERMINAL_NOT_CONNECTED",
         });
       }
+    }
+
+    let sharp: SharpFactory;
+    try {
+      sharp = await loadSharp();
+    } catch (error) {
+      databaseLogger.error(
+        "Image processing unavailable: sharp failed to load",
+        error,
+        {
+          operation: "terminal_image_upload_sharp_unavailable",
+          reason: getErrorMessage(error, "unknown"),
+        },
+      );
+      return res.status(503).json({
+        error: "Image processing is unavailable on this installation",
+        code: "IMAGE_PROCESSING_UNAVAILABLE",
+      });
     }
 
     let normalizedImage: Buffer;
