@@ -1,4 +1,10 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import {
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useReducedMotion } from "motion/react";
 import { Button } from "@/components/button";
@@ -130,7 +136,11 @@ export function TabBar({
     setIndicatorRect({ left: el.offsetLeft, width: el.offsetWidth });
   }, [activeTabId]);
 
-  useEffect(() => {
+  // useLayoutEffect so the indicator is measured for the new tab order before
+  // paint -- with useEffect there was a frame right after a drag-drop reorder
+  // where the indicator (which stays hidden during the drag) reappeared at
+  // its pre-reorder position before this caught up, flashing at the old spot.
+  useLayoutEffect(() => {
     measureIndicator();
   }, [measureIndicator, tabs, splitMode, dragTargetIndex]);
 
@@ -197,11 +207,11 @@ export function TabBar({
       setDragTargetIndex(newTarget);
     }
 
-    function onPointerUp() {
+    function endDrag(commit: boolean) {
       if (!dragData.current) return;
       const { id, index } = dragData.current;
       const to = dragTargetRef.current ?? index;
-      if (to !== index) {
+      if (commit && to !== index) {
         const next = [...tabs];
         if (next[0].id !== id) next.splice(to, 0, next.splice(index, 1)[0]);
         skipIndicatorAnimRef.current = true;
@@ -217,11 +227,29 @@ export function TabBar({
       }, 0);
     }
 
+    function onPointerUp() {
+      endDrag(true);
+    }
+
+    // The browser can abort a pointer gesture without ever firing pointerup
+    // (OS/browser cancels it, focus leaves the window, capture is lost some
+    // other way). Without this, dragTabId stays stuck non-null forever and
+    // every tab keeps rendering with a stale translateX from the aborted
+    // drag, which can visually butt two tabs together with no seam between
+    // them until something else forces a re-render.
+    function onPointerCancel() {
+      endDrag(false);
+    }
+
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
+    window.addEventListener("lostpointercapture", onPointerCancel);
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
+      window.removeEventListener("lostpointercapture", onPointerCancel);
     };
   }, [dragTabId, tabs, onReorderTabs]);
 
@@ -356,9 +384,17 @@ export function TabBar({
                   );
                 }}
                 style={{
-                  transform: isDragging
-                    ? "none"
-                    : `translateX(${translateX}px)`,
+                  // Only set a transform while a drag is actually shifting
+                  // tabs around. Leaving a permanent translateX(0) on every
+                  // tab gives each one its own transform node, which opts it
+                  // out of the pixel snapping a plain box gets when painted.
+                  // The 1px seam then lands on a fractional device pixel at
+                  // non-100% zoom and anti-aliases down to nothing, so two
+                  // tabs look merged into one.
+                  transform:
+                    dragTabId && !isDragging
+                      ? `translateX(${translateX}px)`
+                      : undefined,
                   transition:
                     dragTabId && !isDragging ? "transform 200ms ease" : "none",
                   opacity: isDragging ? 0 : 1,

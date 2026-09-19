@@ -653,11 +653,9 @@ html.fs-xl {
 @keyframes motion-workspace-enter {
   from {
     opacity: 0;
-    transform: translateY(3px) scale(0.998);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 

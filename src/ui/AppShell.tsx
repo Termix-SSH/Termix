@@ -657,6 +657,10 @@ export function AppShell({
   // target never changes (changing the target causes a remount).
   const tabNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const normalViewRef = useRef<HTMLDivElement>(null);
+  // Tab id the enter animation has already played for, so a re-render while
+  // the tab stays active (there can be several right after a switch) doesn't
+  // replay it — only a genuine switch to a different tab should.
+  const lastAnimatedTabIdRef = useRef<string | null>(null);
 
   const getTabNode = useCallback((tabId: string, isTerminal: boolean) => {
     if (!tabNodesRef.current.has(tabId)) {
@@ -2409,6 +2413,7 @@ export function AppShell({
         node.style.pointerEvents = "auto";
         node.style.display = "";
         node.style.zIndex = "";
+        node.style.contentVisibility = "";
       } else {
         if (node.parentElement !== normalView) normalView.appendChild(node);
         if (isTerminal) {
@@ -2416,17 +2421,25 @@ export function AppShell({
           node.style.visibility = activeInline ? "visible" : "hidden";
           node.style.pointerEvents = activeInline ? "auto" : "none";
           node.style.zIndex = activeInline ? "1" : "0";
+          // xterm renders to a <canvas>; visibility:hidden alone can still let
+          // a stale composited frame flash through for a tick when switching
+          // to/from a non-terminal tab. content-visibility:hidden fully skips
+          // painting the subtree while keeping its layout box intact, so
+          // fitAddon.fit() still sees correct dimensions once it's shown again.
+          node.style.contentVisibility = activeInline ? "" : "hidden";
         } else {
-          // Transient only: "both" fill-mode keeps the keyframes' transform
-          // applied for as long as the class stays on, which turns this node
-          // into a new containing block and breaks position:fixed for every
-          // descendant (e.g. right-click context menus rendering offset by
-          // this node's own position instead of the viewport). Strip the
-          // class once the animation finishes so the transform doesn't linger.
-          if (
-            activeInline &&
-            !node.classList.contains("motion-workspace-enter")
-          ) {
+          // Plays a quick opacity fade-in on the tab that just became active.
+          // Only play it on an actual switch into this tab -- gating on the
+          // class alone replayed the animation on every unrelated re-render
+          // that happened while the tab was still active (any render after
+          // animationend had stripped the class), which looked like the
+          // panel kept growing for up to a second after switching.
+          if (activeInline && lastAnimatedTabIdRef.current !== tab.id) {
+            lastAnimatedTabIdRef.current = tab.id;
+            node.classList.remove("motion-workspace-enter");
+            // Force a reflow so re-adding the class restarts the animation
+            // instead of no-oping because it was already removed this tick.
+            void node.offsetWidth;
             node.classList.add("motion-workspace-enter");
             node.addEventListener(
               "animationend",
@@ -2435,6 +2448,9 @@ export function AppShell({
             );
           } else if (!activeInline) {
             node.classList.remove("motion-workspace-enter");
+            if (lastAnimatedTabIdRef.current === tab.id) {
+              lastAnimatedTabIdRef.current = null;
+            }
           }
           node.style.visibility = "";
           node.style.pointerEvents = "";
