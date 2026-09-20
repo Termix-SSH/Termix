@@ -549,6 +549,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Delete dev branch in Termix
         env:
