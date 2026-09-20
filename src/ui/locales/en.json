@@ -4472,7 +4472,9 @@
         "resizeReconnect": "Reconnect",
         "clearAll": "Clear All",
         "saved": "Connection defaults saved",
-        "saveFailed": "Failed to save connection defaults"
+        "saveFailed": "Failed to save connection defaults",
+        "savedThemeLabel": "Apply Saved Theme",
+        "savedThemePlaceholder": "Choose a saved theme"
       },
       "userProfile": {
         "donateTitle": "Keep Termix alive",

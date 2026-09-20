@@ -24,6 +24,11 @@ import {
   type TerminalDefaults,
   type TriState,
 } from "@/lib/connection-defaults";
+import {
+  getUserPreferences,
+  parseCustomThemes,
+  type SavedCustomTheme,
+} from "@/api/open-tabs-api";
 
 const inputClass =
   "h-8 w-full border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring";
@@ -104,12 +109,20 @@ export function ConnectionDefaultsSettings() {
   const [terminal, setTerminal] = useState<TerminalDefaults>({});
   const [rdp, setRdp] = useState<RemoteDesktopDefaults>({});
   const [saving, setSaving] = useState(false);
+  const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>([]);
 
   useEffect(() => {
     if (!defaults.ready) return;
     setTerminal(defaults.terminal);
     setRdp(defaults.rdp);
   }, [defaults.ready, defaults.terminal, defaults.rdp]);
+
+  useEffect(() => {
+    if (!open) return;
+    getUserPreferences()
+      .then((prefs) => setSavedThemes(parseCustomThemes(prefs.customThemes)))
+      .catch(() => {});
+  }, [open]);
 
   const configuredCount = useMemo(() => {
     const count = (source: Record<string, unknown>) =>
@@ -125,6 +138,17 @@ export function ConnectionDefaultsSettings() {
     key: K,
     value: RemoteDesktopDefaults[K],
   ) => setRdp((current) => ({ ...current, [key]: value }));
+
+  const applySavedTheme = (id: string) => {
+    if (!id) return;
+    const theme = savedThemes.find((entry) => entry.id === id);
+    if (!theme) return;
+    setTerminal((current) => ({
+      ...current,
+      theme: "custom",
+      customThemeColors: { ...theme.colors },
+    }));
+  };
 
   async function save() {
     setSaving(true);
@@ -242,6 +266,31 @@ export function ConnectionDefaultsSettings() {
                       ))}
                   </select>
                 </Field>
+
+                {savedThemes.length > 0 && (
+                  <Field
+                    label={t(
+                      "newUi.sidebar.connectionDefaults.savedThemeLabel",
+                    )}
+                  >
+                    <select
+                      className={inputClass}
+                      value=""
+                      onChange={(e) => applySavedTheme(e.target.value)}
+                    >
+                      <option value="">
+                        {t(
+                          "newUi.sidebar.connectionDefaults.savedThemePlaceholder",
+                        )}
+                      </option>
+                      {savedThemes.map((theme) => (
+                        <option key={theme.id} value={theme.id}>
+                          {theme.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
 
                 <Field label={t("hosts.fontSizeLabel")}>
                   <input
