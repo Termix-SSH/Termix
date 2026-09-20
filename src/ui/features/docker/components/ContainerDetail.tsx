@@ -17,15 +17,16 @@ import { ContainerStats } from "./ContainerStats.tsx";
 import { ConsoleTerminal } from "./ConsoleTerminal.tsx";
 import { DockerBadge } from "./ContainerCard.tsx";
 
+type DetailTab = "logs" | "stats" | "console";
+
 interface ContainerDetailProps {
   sessionId: string;
   containerId: string;
   containers: DockerContainer[];
   hostConfig: SSHHost;
   onBack: () => void;
+  initialTab?: DetailTab;
 }
-
-type DetailTab = "logs" | "stats" | "console";
 
 export function ContainerDetail({
   sessionId,
@@ -33,9 +34,14 @@ export function ContainerDetail({
   containers,
   hostConfig,
   onBack,
+  initialTab = "logs",
 }: ContainerDetailProps): React.ReactElement {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = React.useState<DetailTab>("logs");
+  const [activeTab, setActiveTab] = React.useState<DetailTab>(initialTab);
+
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+  }, [containerId, initialTab]);
 
   const container = containers.find((c) => c.id === containerId);
   const containerName = container

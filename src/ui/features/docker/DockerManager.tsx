@@ -9,6 +9,8 @@ import {
   AlertCircle,
   Box,
   ExternalLink,
+  Grid3X3,
+  List as ListIcon,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -27,12 +29,16 @@ import {
   getSSHHosts,
 } from "@/main-axios.ts";
 import { ContainerList } from "./components/ContainerList.tsx";
+import { ContainerTable } from "./components/ContainerTable.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
 import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
 import { useTabsSafe } from "@/shell/TabContext.tsx";
-import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
+import {
+  useAreaPreferences,
+  useUiPreferencesContext,
+} from "@/contexts/UiPreferencesContext";
 import {
   ConnectionLogProvider,
   useConnectionLog,
@@ -71,6 +77,7 @@ function DockerManagerInner({
   const { addLog, setLogs, clearLogs } = useConnectionLog();
   const { currentTab, removeTab } = useTabsSafe();
   const dockerPrefs = useAreaPreferences("docker");
+  const uiPrefsCtx = useUiPreferencesContext();
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [containers, setContainers] = React.useState<DockerContainer[]>([]);
@@ -78,6 +85,20 @@ function DockerManagerInner({
   const [selectedContainer, setSelectedContainer] = React.useState<
     string | null
   >(null);
+  const [detailInitialTab, setDetailInitialTab] = React.useState<
+    "logs" | "stats" | "console"
+  >("logs");
+  const [containerLayout, setContainerLayout] = React.useState<
+    "card" | "table"
+  >(dockerPrefs.containerLayout);
+
+  const handleSetContainerLayout = React.useCallback(
+    (layout: "card" | "table") => {
+      setContainerLayout(layout);
+      uiPrefsCtx?.setOverride("docker", "containerLayout", layout);
+    },
+    [uiPrefsCtx],
+  );
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [dockerValidation, setDockerValidation] =
     React.useState<DockerValidation | null>(null);
@@ -674,6 +695,7 @@ function DockerManagerInner({
             containers={containers}
             hostConfig={currentHostConfig}
             onBack={handleBack}
+            initialTab={detailInitialTab}
           />
         ) : (
           <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
@@ -724,6 +746,29 @@ function DockerManagerInner({
                   </option>
                 </Select2>
                 <Separator orientation="vertical" className="h-8 mx-1" />
+                <div className="flex items-center border border-border overflow-hidden">
+                  <Button
+                    variant={containerLayout === "card" ? "secondary" : "ghost"}
+                    size="icon"
+                    onClick={() => handleSetContainerLayout("card")}
+                    className={`size-8 rounded-none ${containerLayout === "card" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+                    title={t("docker.cardView")}
+                  >
+                    <Grid3X3 className="size-4" />
+                  </Button>
+                  <Button
+                    variant={
+                      containerLayout === "table" ? "secondary" : "ghost"
+                    }
+                    size="icon"
+                    onClick={() => handleSetContainerLayout("table")}
+                    className={`size-8 rounded-none border-l border-border ${containerLayout === "table" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+                    title={t("docker.listView")}
+                  >
+                    <ListIcon className="size-4" />
+                  </Button>
+                </div>
+                <Separator orientation="vertical" className="h-8 mx-1" />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -754,12 +799,27 @@ function DockerManagerInner({
                     {t("docker.loadingContainers")}
                   </span>
                 </div>
+              ) : containerLayout === "table" ? (
+                <ContainerTable
+                  containers={containers}
+                  sessionId={sessionId}
+                  onSelectContainer={(id, tab) => {
+                    setSelectedContainer(id);
+                    setDetailInitialTab(tab ?? "logs");
+                    setViewMode("detail");
+                  }}
+                  selectedContainerId={selectedContainer}
+                  onRefresh={refreshContainers}
+                  search={search}
+                  statusFilter={statusFilter}
+                />
               ) : (
                 <ContainerList
                   containers={containers}
                   sessionId={sessionId}
                   onSelectContainer={(id) => {
                     setSelectedContainer(id);
+                    setDetailInitialTab("logs");
                     setViewMode("detail");
                   }}
                   selectedContainerId={selectedContainer}

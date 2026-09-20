@@ -43,6 +43,7 @@ export type UiEmptyStateVerbosity = "minimal" | "guided";
 export type UiToolbarDensity = "icon" | "labeled" | "expanded";
 export type UiFileViewMode = "grid" | "list";
 export type UiDockerViewMode = "list" | "detail";
+export type UiDockerContainerLayout = "card" | "table";
 export type UiHostEditorMode = "simple" | "full";
 
 export interface UiChromePreferences {
@@ -84,6 +85,7 @@ export interface UiFileManagerPreferences {
 
 export interface UiDockerPreferences {
   viewMode: UiDockerViewMode;
+  containerLayout: UiDockerContainerLayout;
 }
 
 export interface UiHostMetricsPreferences {
@@ -228,7 +230,7 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     },
     terminal: { toolbarDensity: "icon" },
     fileManager: { viewMode: "grid", showHiddenFiles: false },
-    docker: { viewMode: "list" },
+    docker: { viewMode: "list", containerLayout: "card" },
     hostMetrics: { enabledCards: SIMPLE_HOST_METRICS_CARDS, columns: 1 },
     hostEditor: { mode: "simple" },
     homepage: { enabledWidgets: null },
@@ -253,7 +255,7 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     terminal: { toolbarDensity: "labeled" },
     // FileManager.tsx has always defaulted to grid when nothing is stored.
     fileManager: { viewMode: "grid", showHiddenFiles: false },
-    docker: { viewMode: "list" },
+    docker: { viewMode: "list", containerLayout: "card" },
     // 3 is defaultLayoutFromWidgets's own default, i.e. today's behavior.
     hostMetrics: { enabledCards: BALANCED_HOST_METRICS_CARDS, columns: 3 },
     hostEditor: { mode: "full" },
@@ -279,7 +281,7 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     terminal: { toolbarDensity: "expanded" },
     // List packs more files and metadata per screen than the grid.
     fileManager: { viewMode: "list", showHiddenFiles: true },
-    docker: { viewMode: "detail" },
+    docker: { viewMode: "detail", containerLayout: "table" },
     hostMetrics: { enabledCards: ADVANCED_HOST_METRICS_CARDS, columns: 4 },
     hostEditor: { mode: "full" },
     homepage: { enabledWidgets: null },
@@ -339,6 +341,7 @@ const AREA_SPECS: {
   },
   docker: {
     viewMode: { kind: "enum", values: ["list", "detail"] },
+    containerLayout: { kind: "enum", values: ["card", "table"] },
   },
   hostMetrics: {
     enabledCards: { kind: "stringArray" },
