@@ -4462,6 +4462,7 @@
         "actionNextTab": "Switch to next tab",
         "actionPreviousTab": "Switch to previous tab",
         "actionOpenCommandPalette": "Open quick search",
+        "actionReconnectSession": "Reconnect current session",
         "controlCodeLabel": "Letter",
         "textLabel": "Text to send",
         "appendEnterLabel": "Press Enter after sending",

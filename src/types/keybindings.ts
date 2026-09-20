@@ -15,7 +15,8 @@ export type KeybindingActionType =
   | "runSnippet"
   | "nextTab"
   | "previousTab"
-  | "openCommandPalette";
+  | "openCommandPalette"
+  | "reconnectSession";
 
 export interface KeybindingAction {
   type: KeybindingActionType;

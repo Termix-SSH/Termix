@@ -47,6 +47,7 @@ const ACTION_LABEL_KEYS: Record<KeybindingActionType, string> = {
   nextTab: "newUi.sidebar.keybindings.actionNextTab",
   previousTab: "newUi.sidebar.keybindings.actionPreviousTab",
   openCommandPalette: "newUi.sidebar.keybindings.actionOpenCommandPalette",
+  reconnectSession: "newUi.sidebar.keybindings.actionReconnectSession",
 };
 
 function generateId(): string {
@@ -509,6 +510,9 @@ export function KeybindingsDialog({
                 </option>
                 <option value="openCommandPalette">
                   {t("newUi.sidebar.keybindings.actionOpenCommandPalette")}
+                </option>
+                <option value="reconnectSession">
+                  {t("newUi.sidebar.keybindings.actionReconnectSession")}
                 </option>
               </select>
               {actionType === "paste" && (

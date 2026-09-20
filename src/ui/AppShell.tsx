@@ -517,9 +517,12 @@ export function AppShell({
           ).filter(
             (binding) =>
               binding.enabled &&
-              ["nextTab", "previousTab", "openCommandPalette"].includes(
-                binding.action.type,
-              ),
+              [
+                "nextTab",
+                "previousTab",
+                "openCommandPalette",
+                "reconnectSession",
+              ].includes(binding.action.type),
           );
         })
         .catch(() => {});
@@ -536,6 +539,17 @@ export function AppShell({
     const runAction = (type: KeybindingActionType) => {
       if (type === "openCommandPalette") {
         setCommandPaletteOpen(true);
+        return;
+      }
+      if (type === "reconnectSession") {
+        const tabId = activeTabIdRef.current;
+        if (!tabId) return;
+        const termRef = terminalRefs.current.get(tabId);
+        (
+          termRef?.current as
+            | import("@/features/terminal/Terminal").TerminalHandle
+            | null
+        )?.reconnect();
         return;
       }
       const currentTabs = tabsRef.current;
