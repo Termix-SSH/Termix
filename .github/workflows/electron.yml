@@ -468,6 +468,13 @@ jobs:
 
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
+          if ! security find-identity -v -p codesigning $KEYCHAIN_PATH | grep -q "3rd Party Mac Developer Installer"; then
+            echo "No '3rd Party Mac Developer Installer' identity found in the keychain."
+            echo "electron-builder needs this to wrap the signed .app into a .pkg for MAS."
+            echo "Check that MAC_INSTALLER_CERTIFICATE_BASE64 holds a valid, non-expired installer cert."
+            exit 1
+          fi
+
       - name: Build macOS App Store Package
         if: steps.check_certs.outputs.has_certs == 'true'
         env:
@@ -1065,6 +1072,13 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
 
           security find-identity -v -p codesigning $KEYCHAIN_PATH
+
+          if ! security find-identity -v -p codesigning $KEYCHAIN_PATH | grep -q "3rd Party Mac Developer Installer"; then
+            echo "No '3rd Party Mac Developer Installer' identity found in the keychain."
+            echo "electron-builder needs this to wrap the signed .app into a .pkg for MAS."
+            echo "Check that MAC_INSTALLER_CERTIFICATE_BASE64 holds a valid, non-expired installer cert."
+            exit 1
+          fi
 
       - name: Check for App Store Connect API credentials
         id: check_asc_creds
