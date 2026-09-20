@@ -1,0 +1,23 @@
+name: Redirect issues
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  close:
+    if: github.event.issue.author_association != 'OWNER' && github.event.issue.author_association != 'COLLABORATOR'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const n = context.issue.number;
+            await github.rest.issues.createComment({
+              ...context.repo, issue_number: n,
+              body: "Do not create issues here. Use the dedicated support repo and issue template system: https://github.com/Termix-SSH/Support"
+            });
+            await github.rest.issues.update({ ...context.repo, issue_number: n, state: "closed", state_reason: "not_planned" });
+            await github.rest.issues.lock({ ...context.repo, issue_number: n, lock_reason: "off-topic" });

@@ -2053,7 +2053,7 @@
     "failedToUploadFile": "Caricamento file non riuscito",
     "uploadingFolderFiles": "Caricamento del/dei file {{count}} in corso...",
     "uploadedFolderFiles": "File caricati con successo {{count}}",
-    "uploadedFolderPartial": "Uploaded {{uploaded}} file(s), {{failed}} failed",
+    "uploadedFolderPartial": "Caricamento del/i file {{uploaded}} non riuscito/i {{failed}}",
     "fileDownloadedSuccessfully": "File \"{{name}}\" scaricato con successo",
     "failedToDownloadFile": "Scaricamento file non riuscito",
     "fileCreatedSuccessfully": "File \"{{name}}\" creato con successo",
