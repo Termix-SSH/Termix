@@ -4370,7 +4370,14 @@
         "packageUpgradeAll": "Upgrade all packages",
         "packageNameLabel": "Package name",
         "packageNameRequired": "A package name is required",
-        "packageHint": "Requires manage-level access per host and elevates using the host's stored sudo password."
+        "packageHint": "Requires manage-level access per host and elevates using the host's stored sudo password.",
+        "shareFleet": "Share Fleet",
+        "shareFleetTitle": "Share \"{{name}}\"",
+        "shareFleetDescription": "Shares this fleet's current member hosts with the selected users or roles. Hosts added to the fleet later are not shared automatically - share again to include them.",
+        "shareSelectionRequired": "Select at least one user or role",
+        "fleetSharedSuccessfully": "Shared {{shared}} of {{total}} host(s) in this fleet",
+        "failedToShareFleet": "Failed to share fleet",
+        "noMembersToShare": "This fleet has no member hosts to share yet."
       },
       "workspaces": {
         "title": "Workspaces",

@@ -1,4 +1,9 @@
-import { authApi, handleApiError } from "@/main-axios";
+import {
+  authApi,
+  handleApiError,
+  type SharePermissionLevel,
+  type ShareTarget,
+} from "@/main-axios";
 
 export interface FleetRow {
   id: number;
@@ -243,5 +248,34 @@ export async function runFleetPackageAction(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "run fleet package action");
+  }
+}
+
+export interface FleetShareHostResult {
+  hostId: number;
+  shared: boolean;
+  reason?: string;
+}
+
+export async function shareFleet(
+  fleetId: number,
+  shareData: {
+    targets: ShareTarget[];
+    permissionLevel: SharePermissionLevel;
+    durationHours?: number;
+  },
+): Promise<{
+  success: boolean;
+  permissionLevel: SharePermissionLevel;
+  expiresAt: string | null;
+  hostsShared: number;
+  hostsTotal: number;
+  hostResults: FleetShareHostResult[];
+}> {
+  try {
+    const response = await authApi.post(`/fleets/${fleetId}/share`, shareData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share fleet");
   }
 }
