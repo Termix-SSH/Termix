@@ -31,11 +31,19 @@ export function getContainerRuntimeConfig(raw: unknown): {
   };
 }
 
+/**
+ * Non-interactive SSH shells don't source ~/.zprofile or ~/.bash_profile,
+ * so PATH additions from installers like Homebrew or OrbStack are missing.
+ * Extend PATH with their common install locations before invoking the CLI.
+ */
+const EXTRA_PATH_DIRS =
+  '/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:"$HOME/.orbstack/bin"';
+
 export function containerCommand(
   runtime: ContainerRuntime | undefined,
   args: string,
 ): string {
-  return `${normalizeContainerRuntime(runtime)} ${args}`;
+  return `PATH="${EXTRA_PATH_DIRS}:$PATH" ${normalizeContainerRuntime(runtime)} ${args}`;
 }
 
 export function getRuntimeLabel(runtime: ContainerRuntime): string {

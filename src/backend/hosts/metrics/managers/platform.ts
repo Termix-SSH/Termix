@@ -13,10 +13,24 @@ export interface PlatformInfo {
 }
 
 /**
+ * Non-interactive SSH shells don't source ~/.zprofile or ~/.bash_profile,
+ * so PATH additions from installers like Homebrew or OrbStack are missing.
+ * Extend PATH with their common install locations before probing.
+ */
+export const EXTRA_PATH_DIRS =
+  '/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:"$HOME/.orbstack/bin"';
+
+const DOCKER_PROBE =
+  `command -v docker >/dev/null 2>&1` +
+  ` || [ -S /var/run/docker.sock ]` +
+  ` || [ -S "$HOME/.orbstack/run/docker.sock" ]`;
+
+/**
  * Single probe that reports which tooling is available. Each line is
  * "key=value" so the parser is trivial and order-independent.
  */
 export const PLATFORM_PROBE_COMMAND = [
+  `PATH="${EXTRA_PATH_DIRS}:$PATH"`,
   "echo systemd=$(command -v systemctl >/dev/null 2>&1 && echo 1 || echo 0)",
   "echo apt=$(command -v apt-get >/dev/null 2>&1 && echo 1 || echo 0)",
   "echo dnf=$(command -v dnf >/dev/null 2>&1 && echo 1 || echo 0)",
@@ -24,7 +38,7 @@ export const PLATFORM_PROBE_COMMAND = [
   "echo pacman=$(command -v pacman >/dev/null 2>&1 && echo 1 || echo 0)",
   "echo certbot=$(command -v certbot >/dev/null 2>&1 && echo 1 || echo 0)",
   'echo acmesh=$( { command -v acme.sh >/dev/null 2>&1 || [ -x "$HOME/.acme.sh/acme.sh" ]; } && echo 1 || echo 0)',
-  "echo docker=$(command -v docker >/dev/null 2>&1 && echo 1 || echo 0)",
+  `echo docker=$(${DOCKER_PROBE} && echo 1 || echo 0)`,
   'echo os=$(. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME")',
 ].join("; ");
 
