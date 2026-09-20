@@ -830,7 +830,22 @@ export function UserProfilePanel({
         setVersionStatus(info.status ?? "unknown");
         setReleaseUrl(releaseUrlFrom(info));
       })
-      .catch(() => {});
+      .catch(() => {
+        // Backend/network unreachable (offline machine). The installer
+        // version is still known locally via Electron, so use that instead
+        // of leaving the version blank.
+        if (isElectron()) {
+          window.electronAPI
+            ?.getAppVersion?.()
+            .then((appVersion) => {
+              if (appVersion) {
+                setVersion(appVersion);
+                setVersionStatus("unknown");
+              }
+            })
+            .catch(() => {});
+        }
+      });
   }, [t]);
 
   // The rail can toggle these from its right-click menu while this panel is
