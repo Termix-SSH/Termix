@@ -10,6 +10,9 @@ const SYNCED_ENTITY_TYPES = Object.freeze([
   "dashboardServiceLinks",
   "homepageItems",
   "userPreferences",
+  // networkTopology stores host references by their local numeric id inside
+  // the topology JSON, so it must sync after hosts have been reconciled.
+  "networkTopology",
 ]);
 
 module.exports = { SYNCED_ENTITY_TYPES };

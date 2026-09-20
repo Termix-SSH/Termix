@@ -14,7 +14,8 @@ export type SyncEntityType =
   | "vaultProfiles"
   | "dashboardServiceLinks"
   | "homepageItems"
-  | "userPreferences";
+  | "userPreferences"
+  | "networkTopology";
 
 export class SyncTombstoneRepository {
   constructor(

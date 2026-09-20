@@ -10,6 +10,7 @@ import {
   dashboardServiceLinks,
   homepageItems,
   userPreferences,
+  networkTopology,
 } from "../db/schema.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -52,7 +53,8 @@ interface EntityConfig {
     | typeof vaultProfiles
     | typeof dashboardServiceLinks
     | typeof homepageItems
-    | typeof userPreferences;
+    | typeof userPreferences
+    | typeof networkTopology;
   // Fields that only make sense on the device that created the row, or
   // that are managed elsewhere and must never be overwritten by a sync
   // payload from the other side.
@@ -75,6 +77,11 @@ const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
   userPreferences: {
     table: userPreferences,
     readOnlyFields: ["storageMode"],
+    singleton: true,
+  },
+  networkTopology: {
+    table: networkTopology,
+    readOnlyFields: [],
     singleton: true,
   },
 };
