@@ -225,6 +225,7 @@ export function HostEditorWebUiSection({
                         >
                           <SelectTrigger
                             aria-label={t("hosts.webUiScheme")}
+                            size="sm"
                             className="h-7 w-24 text-xs"
                           >
                             <SelectValue />
@@ -289,6 +290,7 @@ export function HostEditorWebUiSection({
                         >
                           <SelectTrigger
                             aria-label={t("hosts.webUiAccess")}
+                            size="sm"
                             className="h-7 flex-1 text-xs"
                           >
                             <SelectValue />
@@ -315,6 +317,7 @@ export function HostEditorWebUiSection({
                         >
                           <SelectTrigger
                             aria-label={t("hosts.webUiRender")}
+                            size="sm"
                             className="h-7 flex-1 text-xs"
                           >
                             <SelectValue />
