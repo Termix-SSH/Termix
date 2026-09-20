@@ -154,6 +154,20 @@ export function CustomizeSidebarPanel({
               />
             </SettingRow>
             <SettingRow
+              label={t("hosts.focusExistingTab")}
+              description={t("hosts.focusExistingTabDesc")}
+            >
+              <FakeSwitch
+                checked={preferences.display.focusExistingTab}
+                onChange={(v) =>
+                  update((prev) => ({
+                    ...prev,
+                    display: { ...prev.display, focusExistingTab: v },
+                  }))
+                }
+              />
+            </SettingRow>
+            <SettingRow
               label={t("newUi.sidebar.userProfile.statusColors")}
               description={t("newUi.sidebar.userProfile.statusColorsDesc")}
             >

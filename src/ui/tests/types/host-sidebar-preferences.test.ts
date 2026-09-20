@@ -27,6 +27,7 @@ describe("defaultHostSidebarPreferences", () => {
         statusColorScheme: "accent",
         openOnDoubleClick: false,
         showFolderPaths: true,
+        focusExistingTab: true,
       },
     });
   });
@@ -65,6 +66,7 @@ describe("sanitizeHostSidebarPreferences", () => {
         statusColorScheme: "status",
         openOnDoubleClick: true,
         showFolderPaths: false,
+        focusExistingTab: false,
       },
     };
     expect(sanitizeHostSidebarPreferences(valid)).toEqual(valid);
@@ -87,6 +89,16 @@ describe("sanitizeHostSidebarPreferences", () => {
     expect(
       sanitizeHostSidebarPreferences({ display: { showFolderPaths: "no" } })
         .display.showFolderPaths,
+    ).toBe(true);
+  });
+
+  it("defaults focusExistingTab to true when missing or not a boolean", () => {
+    expect(
+      sanitizeHostSidebarPreferences({ display: {} }).display.focusExistingTab,
+    ).toBe(true);
+    expect(
+      sanitizeHostSidebarPreferences({ display: { focusExistingTab: "no" } })
+        .display.focusExistingTab,
     ).toBe(true);
   });
 

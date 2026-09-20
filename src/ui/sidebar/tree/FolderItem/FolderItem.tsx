@@ -69,6 +69,7 @@ export function FolderItem({
   showTags = true,
   openOnDoubleClick = false,
   showFolderPaths = true,
+  focusExistingTab = true,
   arrangeMode = false,
   isDragging = false,
   onReorderDrop,
@@ -83,7 +84,11 @@ export function FolderItem({
   onOpenTab: (
     host: Host,
     type: TabType,
-    options?: { endpointId?: string; label?: string },
+    options?: {
+      endpointId?: string;
+      label?: string;
+      forceNewTab?: boolean;
+    },
   ) => void;
   onEditHost?: (host: Host) => void;
   onShareHost?: (host: Host) => void;
@@ -118,6 +123,8 @@ export function FolderItem({
   openOnDoubleClick?: boolean;
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths?: boolean;
+  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
+  focusExistingTab?: boolean;
   /** When true (rearranging unlocked), the header can be dragged and its
    * top/bottom edges become reorder drop zones. The middle still accepts
    * hosts dropped into the folder. */
@@ -342,6 +349,7 @@ export function FolderItem({
                 showTags={showTags}
                 openOnDoubleClick={openOnDoubleClick}
                 showFolderPaths={showFolderPaths}
+                focusExistingTab={focusExistingTab}
                 arrangeMode={arrangeMode}
                 onReorderDrop={onReorderDrop}
                 onFolderDragStart={onFolderDragStart}
@@ -378,6 +386,7 @@ export function FolderItem({
                 trayTrigger={trayTrigger}
                 showTags={showTags}
                 openOnDoubleClick={openOnDoubleClick}
+                focusExistingTab={focusExistingTab}
                 arrangeMode={arrangeMode}
                 onReorderDrop={
                   onReorderDrop

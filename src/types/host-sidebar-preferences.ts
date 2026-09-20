@@ -51,6 +51,8 @@ export interface HostSidebarDisplayPreferences {
   openOnDoubleClick: boolean;
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths: boolean;
+  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
+  focusExistingTab: boolean;
 }
 
 export interface HostSidebarPreferences {
@@ -133,6 +135,7 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       statusColorScheme: "accent",
       openOnDoubleClick: false,
       showFolderPaths: true,
+      focusExistingTab: true,
     },
   };
 }
@@ -210,6 +213,10 @@ export function sanitizeHostSidebarPreferences(
       typeof displayObj.showFolderPaths === "boolean"
         ? displayObj.showFolderPaths
         : defaults.display.showFolderPaths,
+    focusExistingTab:
+      typeof displayObj.focusExistingTab === "boolean"
+        ? displayObj.focusExistingTab
+        : defaults.display.focusExistingTab,
   };
 
   return {

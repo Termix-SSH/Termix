@@ -88,12 +88,17 @@ export function SidebarTree({
   showTags = true,
   openOnDoubleClick = false,
   showFolderPaths = true,
+  focusExistingTab = true,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (
     host: Host,
     type: TabType,
-    options?: { endpointId?: string; label?: string },
+    options?: {
+      endpointId?: string;
+      label?: string;
+      forceNewTab?: boolean;
+    },
   ) => void;
   onEditHost: (host: Host) => void;
   onShareHost?: (host: Host) => void;
@@ -111,6 +116,8 @@ export function SidebarTree({
   openOnDoubleClick?: boolean;
   /** When false, nested folders hide the parent-path breadcrumb before their name. */
   showFolderPaths?: boolean;
+  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
+  focusExistingTab?: boolean;
 }) {
   const { t } = useTranslation();
   // Knobs with no other owner come straight from the interface preset; the
@@ -1000,6 +1007,7 @@ export function SidebarTree({
                       showTags={showTags}
                       openOnDoubleClick={openOnDoubleClick}
                       showFolderPaths={showFolderPaths}
+                      focusExistingTab={focusExistingTab}
                       arrangeMode={arrangeMode}
                       isDragging={
                         draggedReorderKey === `folder:${item.path ?? item.name}`
@@ -1076,6 +1084,7 @@ export function SidebarTree({
                       trayTrigger={trayTrigger}
                       showTags={showTags}
                       openOnDoubleClick={openOnDoubleClick}
+                      focusExistingTab={focusExistingTab}
                       showResourceBars={showResourceBars}
                       showStatusStripes={showStatusStripes}
                       rowActions={rowActions}

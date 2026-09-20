@@ -192,7 +192,11 @@ export function HostsPanel({
   onOpenTab: (
     host: Host,
     type: TabType,
-    options?: { endpointId?: string; label?: string },
+    options?: {
+      endpointId?: string;
+      label?: string;
+      forceNewTab?: boolean;
+    },
   ) => void;
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
@@ -1077,6 +1081,7 @@ export function HostsPanel({
             showTags={sidebarPrefs.display.showTags}
             openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
             showFolderPaths={sidebarPrefs.display.showFolderPaths}
+            focusExistingTab={sidebarPrefs.display.focusExistingTab}
           />
         </div>
       )}

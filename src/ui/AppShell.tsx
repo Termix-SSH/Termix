@@ -547,8 +547,7 @@ export function AppShell({
         const termRef = terminalRefs.current.get(tabId);
         (
           termRef?.current as
-            | import("@/features/terminal/Terminal").TerminalHandle
-            | null
+            import("@/features/terminal/Terminal").TerminalHandle | null
         )?.reconnect();
         return;
       }
@@ -1656,8 +1655,20 @@ export function AppShell({
       joinShareId?: string | null;
       collabRoomId?: string;
     },
-    options?: { endpointId?: string; label?: string },
+    options?: { endpointId?: string; label?: string; forceNewTab?: boolean },
   ) {
+    if (!restore && !options?.forceNewTab) {
+      const existing = tabsRef.current.find(
+        (t) =>
+          t.type === type &&
+          t.host?.id === host.id &&
+          t.endpointId === options?.endpointId,
+      );
+      if (existing) {
+        setActiveTabId(existing.id);
+        return existing.id;
+      }
+    }
     const tabId = `${host.name}-${type}-${Date.now()}`;
     const instanceId =
       restore?.instanceId ??
@@ -1763,7 +1774,7 @@ export function AppShell({
   function connectHost(
     host: Host,
     preferredType?: TabType,
-    options?: { endpointId?: string; label?: string },
+    options?: { endpointId?: string; label?: string; forceNewTab?: boolean },
   ) {
     const type = resolveHostTabType(host, preferredType);
     // --- tmux-monitor --- singleton tab, not a per-host tab

@@ -28,6 +28,7 @@ import {
   Pin,
   Server,
   Share2,
+  SquarePlus,
   Terminal,
   Trash2,
   Users,
@@ -268,6 +269,7 @@ export function HostItem({
   trayTrigger = "hover",
   showTags = true,
   openOnDoubleClick = false,
+  focusExistingTab = true,
   showResourceBars = true,
   showStatusStripes = true,
   rowActions = "full",
@@ -285,7 +287,7 @@ export function HostItem({
   host: Host;
   onOpenTab: (
     type: TabType,
-    options?: { endpointId?: string; label?: string },
+    options?: { endpointId?: string; label?: string; forceNewTab?: boolean },
   ) => void;
   onEditHost?: () => void;
   onShareHost?: () => void;
@@ -312,6 +314,8 @@ export function HostItem({
   showTags?: boolean;
   /** Requires a double click to launch instead of a single click. */
   openOnDoubleClick?: boolean;
+  /** When true, clicking a host with an already-open tab focuses it instead of opening a new one. */
+  focusExistingTab?: boolean;
   /** Preset-driven: hides the CPU/RAM bars without changing density. */
   showResourceBars?: boolean;
   /** Preset-driven: hides the per-row status color stripe. */
@@ -502,11 +506,14 @@ export function HostItem({
           : "terminal";
   const openHostTab = (
     type: TabType,
-    options?: { endpointId?: string; label?: string },
+    options?: { endpointId?: string; label?: string; forceNewTab?: boolean },
   ) => {
     markTabSurfaceUsed(type);
     recordHostActionPreference(host.id, type);
-    onOpenTab(type, options);
+    onOpenTab(type, {
+      ...options,
+      forceNewTab: options?.forceNewTab ?? !focusExistingTab,
+    });
   };
 
   // Mirrors getSshActions: the single Web UI entry carries an endpointId only
@@ -848,6 +855,17 @@ export function HostItem({
               )}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+          {focusExistingTab && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                openHostTab(defaultAction, { forceNewTab: true });
+              }}
+            >
+              <SquarePlus className="size-3.5 mr-2" />
+              {t("hosts.openInNewTab")}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           {onEditHost && (
             <DropdownMenuItem
@@ -1241,6 +1259,13 @@ export function HostItem({
             ? "bg-muted/15"
             : ""
       } ${isMenuOpen ? "bg-muted/50" : ""} ${parentDragOver ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10" : ""} ${isDragging ? "opacity-40" : ""}`}
+      onMouseDown={(e) => {
+        // Middle-click always opens a new tab, matching browser tab behavior.
+        if (e.button === 1 && !selectionMode && !isTouchOnly) {
+          e.preventDefault();
+          openHostTab(defaultAction, { forceNewTab: true });
+        }
+      }}
       onClick={(e) => {
         if (selectionMode) {
           onToggleSelect?.();
@@ -1264,12 +1289,14 @@ export function HostItem({
           return;
         }
         if (openOnDoubleClick) return;
-        openHostTab(defaultAction);
+        const forceNewTab = e.ctrlKey || e.metaKey;
+        openHostTab(defaultAction, forceNewTab ? { forceNewTab } : undefined);
       }}
       onDoubleClick={(e) => {
         if (selectionMode || isTouchOnly || !openOnDoubleClick) return;
         e.stopPropagation();
-        openHostTab(defaultAction);
+        const forceNewTab = e.ctrlKey || e.metaKey;
+        openHostTab(defaultAction, forceNewTab ? { forceNewTab } : undefined);
       }}
     >
       {/* Status stripe */}
