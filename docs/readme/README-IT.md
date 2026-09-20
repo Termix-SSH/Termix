@@ -83,13 +83,13 @@ RDP, VNC e Telnet nel browser, in schede e schermo diviso come qualsiasi altra s
 <td width="50%" valign="top">
 
 **Tunnel SSH:**
-Inoltro locale, remoto e SOCKS dinamico, con riconnessione automatica e controlli di stato. I tunnel da client a server dell'app desktop restano su quella macchina, e puoi salvare delle preimpostazioni sul server per portare una configurazione su un altro computer.
+Inoltro locale, remoto e SOCKS dinamico, con riconnessione automatica e controlli di stato. I tunnel da client a server dell'app desktop restano su quella macchina, e puoi salvare delle preimpostazioni sul server per portare una configurazione su un altro client.
 
 </td>
 <td width="50%" valign="top">
 
 **Gestore file:**
-Sfoglia, modifica, carica, scarica, rinomina, sposta ed elimina file via SFTP, anche con sudo. Guarda e modifica codice, immagini, audio e video. Copia i file direttamente da un server all'altro: il percorso più veloce viene scelto per te e i trasferimenti vengono verificati.
+Sfoglia, modifica, carica, scarica, rinomina, sposta ed elimina file via SFTP, anche con sudo. Guarda e modifica codice, immagini, audio e video. Copia i file direttamente da un server all'altro in una scheda dedicata di trasferimento, con il percorso più veloce scelto per te e i trasferimenti controllati per integrità. L'app desktop ha anche una vista affiancata di locale e remoto.
 
 </td>
 </tr>
@@ -111,7 +111,7 @@ Salva e organizza gli host con etichette e cartelle annidate a cui puoi dare nom
 <td width="50%" valign="top">
 
 **Metriche host:**
-CPU, memoria, disco, rete, temperatura, tempo di accensione, processi, porte, accessi e informazioni di sistema sulla maggior parte dei server Linux, con grafici storici. Le schede di gestione ti fanno seguire servizi, cron, pacchetti, utenti, regole del firewall, WireGuard, Tailscale, certificati SSL, log e controlli di stato senza uscire da Termix.
+CPU, memoria, disco, rete, temperatura, GPU NVIDIA, tempo di accensione, processi, porte, accessi e informazioni di sistema sulla maggior parte dei server Linux, con grafici storici. Le schede di gestione ti fanno seguire servizi, cron, pacchetti, utenti, regole del firewall, WireGuard, Tailscale, certificati SSL, log e controlli di stato senza uscire da Termix.
 
 </td>
 <td width="50%" valign="top">
@@ -214,20 +214,6 @@ Salva un insieme di schede con la loro disposizione divisa e riapri tutto con un
 </td>
 <td width="50%" valign="top">
 
-**Configurazione guidata:**
-Una breve configurazione ti accompagna nella scelta di una preimpostazione dell'interfaccia, del tema, delle funzionalità che vuoi e del primo host. La modalità semplice nasconde quello che non usi, e puoi rifare la configurazione o cambiare preimpostazione quando vuoi.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Desktop autonomo e sincronizzazione:**
-L'app desktop funziona da sola, con backend e database locali, senza bisogno di un server. Puoi anche collegarla a un server Termix per sincronizzare nei due sensi host, credenziali, frammenti e altro, e scegliere se le connessioni partono dal tuo computer o passano dal server.
-
-</td>
-<td width="50%" valign="top">
-
 **Riga di comando:**
 Una CLI `termix` per la tua shell e i tuoi script. Apri terminali, esegui un comando su un host o su un'intera flotta, sposta file via SFTP e gestisci host, frammenti e credenziali. Installala con `npm install -g @termix-cli/cli` oppure prendi un binario autonomo. Vedi la [documentazione della CLI](https://docs.termix.site/cli).
 
@@ -237,7 +223,7 @@ Una CLI `termix` per la tua shell e i tuoi script. Apri terminali, esegui un com
 <td width="50%" valign="top">
 
 **Sicurezza:**
-Password, chiavi e altri segreti sono cifrati per ogni utente, e gli stessi file del database possono essere cifrati su disco. Guarda la [documentazione](https://docs.termix.site/security) per capire come funziona.
+Password, chiavi e altri segreti sono cifrati per ogni utente, e gli stessi file del database possono essere cifrati su disco. Guarda la [documentazione](https://docs.termix.site/features/authentication/security/) per capire come funziona.
 
 </td>
 <td width="50%" valign="top">
@@ -267,8 +253,13 @@ Circa 30 lingue incluse, gestite tramite [Crowdin](https://docs.termix.site/tran
 - **Scorciatoie da tastiera** - Spostarsi tra le schede, chiuderle e altro, tutto riassegnabile
 - **Wake-on-LAN** - Accendi una macchina da Termix o da un passaggio di un'automazione
 - **Autenticazione tramite proxy fidato** - Lascia che un reverse proxy gestisca l'accesso e passi l'utente
-- **SSH molto completo** - Host di salto, Warpgate, richieste TOTP, SOCKS5, verifica delle chiavi host, riempimento automatico della password, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, log del terminale, inoltro dell'agente, agente SSH di Bitwarden, firma SSH con HashiCorp Vault e altro
+- **White label** - Gli amministratori possono rimarchiare l'istanza con nome, logo e colori propri
+- **Endpoint web** - Apri l'interfaccia web di un host, come la pagina di amministrazione di un router, incorporata dentro Termix invece che in una scheda separata
+- **Stanze di collaborazione** - Stanze persistenti dove un gruppo può passare insieme da una sessione all'altra, con un palco per il presentatore e inviti
+- **SSH molto completo** - Host di salto, Warpgate, richieste TOTP, SOCKS5, verifica delle chiavi host, riempimento automatico della password, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, log del terminale, inoltro dell'agente, agente SSH di Bitwarden, firma SSH con HashiCorp Vault, Step CA, 1Password Connect e altro
 - **Termix ID** - Una versione integrata di sshid.io. Prendi un identificativo, pubblica le tue chiavi pubbliche su un URL di risoluzione ed emetti certificati SSH dalla CA integrata
+- **Suggerimenti automatici nella cronologia comandi** - Suggerimenti in linea nel terminale mentre scrivi, basati sulla tua cronologia comandi
+- **Desktop autonomo e sincronizzazione** - L'app desktop funziona da sola, con backend e database locali, e può facoltativamente sincronizzarsi con un server Termix
 
 </details>
 
@@ -312,6 +303,10 @@ Circa 30 lingue incluse, gestite tramite [Crowdin](https://docs.termix.site/tran
 ## Installazione
 
 Vai alla [documentazione di Termix](https://docs.termix.site/install) per le istruzioni complete di installazione su tutte le piattaforme.
+
+Vuoi installare su Kubernetes? Il chart Helm è in `charts/termix`, e le istruzioni di configurazione
+per Ingress, Traefik, Argo CD, GitHub Actions e GitLab CI sono su
+[docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes).
 
 Esempio di file Docker Compose (puoi togliere `guacd` e la rete se non pensi di usare il desktop remoto):
 
@@ -364,7 +359,7 @@ Può aprire terminali, eseguire un comando su un host o su un'intera flotta, spo
 
 ### Hosting in cloud
 
-Puoi far girare il server Termix su un VPS invece che dentro la tua rete. Se Termix gira sulla rete che gestisce, un guasto se lo porta via proprio quando ti servirebbe per sistemare le cose. Fuori resta raggiungibile, ti dà un IP fisso e ci entri da ovunque senza VPN né porte aperte.
+Puoi far girare il server Termix su un VPS invece che dentro la tua rete. Se Termix gira sulla rete che gestisce, un guasto se lo porta via proprio quando ti servirebbe per sistemare le cose. Farlo girare altrove lo mantiene raggiungibile, ti dà un IP fisso e ti permette di entrare da ovunque senza VPN né porte aperte.
 
 [GINERNET](https://docs.termix.site/install/ginernet) sponsorizza Termix, e nella documentazione c'è una guida passo passo per il rilascio sulla loro piattaforma VPS.
 
@@ -507,3 +502,5 @@ Tutte le funzionalità pianificate sono su [Projects](https://github.com/orgs/Te
 ## Licenza
 
 Distribuito con licenza Apache versione 2.0. Vedi `LICENSE` per maggiori informazioni.
+</content>
+</invoke>

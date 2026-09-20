@@ -5,6 +5,7 @@ import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { sshLogger } from "../utils/logger.js";
 import { parseWsMessage } from "../utils/ws-message.js";
+import { extractWebSocketToken } from "../utils/ws-auth.js";
 
 interface SerialConnectData {
   path: string;
@@ -16,7 +17,7 @@ interface SerialConnectData {
 
 const authManager = AuthManager.getInstance();
 
-const wss = new WebSocketServer({ port: 30011 });
+const wss = new WebSocketServer({ host: "127.0.0.1", port: 30011 });
 
 wss.on("error", (error) => {
   sshLogger.error("Serial WebSocket server error", error, {
@@ -28,26 +29,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
 
   try {
-    let token: string | undefined;
-
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-      const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
-    }
-
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        token = authHeader.slice("Bearer ".length);
-      }
-    }
-
-    if (!token) {
-      const urlObj = new URL(req.url || "", "http://localhost");
-      const qp = urlObj.searchParams.get("token");
-      if (qp) token = qp;
-    }
+    const token = extractWebSocketToken(req);
 
     if (!token) {
       ws.close(1008, "Authentication required");

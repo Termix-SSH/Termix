@@ -12,6 +12,7 @@ declare module "guacamole-common-js" {
       createClipboardStream(mimetype: string): OutputStream;
       onstatechange: ((state: number) => void) | null;
       onerror: ((error: Status) => void) | null;
+      onsync: ((timestamp: number) => void) | null;
       onclipboard: ((stream: InputStream, mimetype: string) => void) | null;
       onaudio: ((stream: InputStream, mimetype: string) => void) | null;
       onfile:

@@ -13,7 +13,9 @@ const {
 } = require("electron");
 const path = require("path");
 const { getUnpackedAppRoot } = require("./backend-paths.cjs");
+const { classifyBackendFailure } = require("./backend-failure.cjs");
 const fs = require("fs");
+const { renameLocalPath } = require("./rename-local-path.cjs");
 const os = require("os");
 const https = require("https");
 const http = require("http");
@@ -21,7 +23,7 @@ const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
 const crypto = require("crypto");
-const { URL } = require("url");
+const { URL, pathToFileURL } = require("url");
 const { fork, spawn } = require("child_process");
 const pty = require("node-pty");
 const WebSocket = require("ws");
@@ -31,6 +33,7 @@ const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 const { resolveLocalShell } = require("./local-shell.cjs");
+const { registerLocalFileHandlers } = require("./local-files.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -536,6 +539,16 @@ function httpFetch(url, options = {}) {
       // Node's http/https modules never auto-decompress, so an unhandled
       // content-encoding here silently turns the body into garbage bytes.
       let stream = res;
+      const maxResponseBytes = options.maxResponseBytes || 10 * 1024 * 1024;
+      let responseBytes = 0;
+      let settled = false;
+      const fail = (error) => {
+        if (settled) return;
+        settled = true;
+        stream.destroy();
+        req.destroy();
+        reject(error);
+      };
       const encoding = (res.headers["content-encoding"] || "")
         .toLowerCase()
         .trim();
@@ -552,8 +565,17 @@ function httpFetch(url, options = {}) {
         return;
       }
 
-      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("data", (chunk) => {
+        responseBytes += chunk.length;
+        if (responseBytes > maxResponseBytes) {
+          fail(new Error(`Response exceeds ${maxResponseBytes} bytes`));
+          return;
+        }
+        chunks.push(chunk);
+      });
       stream.on("end", () => {
+        if (settled) return;
+        settled = true;
         const data = Buffer.concat(chunks).toString("utf8");
         resolve({
           ok: res.statusCode >= 200 && res.statusCode < 300,
@@ -562,7 +584,7 @@ function httpFetch(url, options = {}) {
           json: () => Promise.resolve(JSON.parse(data)),
         });
       });
-      stream.on("error", reject);
+      stream.on("error", fail);
     });
 
     req.on("error", reject);
@@ -596,7 +618,7 @@ if (process.platform === "linux") {
   }
 }
 
-if (process.platform === "win32") {
+if (process.platform === "win32" || process.env.ELECTRON_DISABLE_GPU === "1") {
   app.disableHardwareAcceleration();
 }
 
@@ -611,8 +633,28 @@ if (isInsecureModeEnabled()) {
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
+const { createWebEndpointWindows } = require("./web-endpoint-window.cjs");
+const webEndpointWindows = createWebEndpointWindows({
+  BrowserWindow,
+  session,
+  getMainWindow: () => mainWindow,
+});
+ipcMain.handle("open-isolated-web-endpoint", (event, options) =>
+  webEndpointWindows.open(event, options),
+);
 let backendProcess = null;
 let backendStartFailed = false;
+// Why the embedded backend died, once it has. Null while it is healthy
+// or still starting. The renderer polls this to tell "still booting"
+// (keep waiting) apart from "never coming back" (show the reason).
+let backendFailure = null;
+// Set while we are deliberately tearing the backend down on quit, so a
+// SIGKILL we sent ourselves is not reported to the user as a crash.
+let backendStopRequested = false;
+// Tail of the embedded backend's stderr, kept only so a failed start can be
+// classified after the fact.
+const BACKEND_STDERR_TAIL_LIMIT = 8192;
+let backendStderrTail = "";
 let tray = null;
 let isQuitting = false;
 const tempFiles = new Map();
@@ -726,9 +768,84 @@ function openPathWithEditor(filePath, editorPath) {
   });
 }
 
+// Origins the renderer has explicitly marked as allowed to present an invalid
+// certificate, for web endpoints whose ignoreCert is set. Session scoped and
+// never persisted.
+//
+// Deliberately NOT wired into isInvalidCertificateAllowedForUrl: that function
+// also governs this process's own outbound TLS via getTlsVerificationOptions,
+// and widening it would grant more privilege than the feature needs.
+//
+// Entries expire rather than living until the app restarts (days, on a
+// desktop app). Main has no host-database access, so it cannot verify a
+// renderer's claim that an origin really is a configured web endpoint -- an
+// unbounded allowance would make that an indefinite window rather than a
+// momentary one. The renderer re-registers before each load, which refreshes
+// the expiry, so a live endpoint keeps working while a stale entry lapses.
+const WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS = 5 * 60 * 1000;
+const webEndpointCertificateAllowlist = new Map();
+
+function isWebEndpointCertificateAllowed(url) {
+  try {
+    const parsed = new URL(url);
+    // The allowance exists solely to suppress a TLS certificate error, so a
+    // non-https origin in the map is meaningless at best.
+    if (parsed.protocol !== "https:") return false;
+
+    const expiresAt = webEndpointCertificateAllowlist.get(parsed.origin);
+    if (expiresAt === undefined) return false;
+    if (Date.now() >= expiresAt) {
+      webEndpointCertificateAllowlist.delete(parsed.origin);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+ipcMain.handle("allow-invalid-certificate-for-origin", (_event, origin) => {
+  try {
+    // Store the PARSED origin, never the caller's string, so a path or a
+    // wildcard cannot widen the allowance.
+    const parsed = new URL(String(origin));
+    if (parsed.protocol !== "https:") {
+      return { success: false };
+    }
+    webEndpointCertificateAllowlist.set(
+      parsed.origin,
+      Date.now() + WEB_ENDPOINT_CERTIFICATE_ALLOWLIST_TTL_MS,
+    );
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
+});
+
 app.on(
   "certificate-error",
   (event, _webContents, url, error, certificate, callback) => {
+    if (
+      webEndpointWindows.handleCertificateError(
+        event,
+        _webContents,
+        url,
+        callback,
+      )
+    )
+      return;
+    if (isWebEndpointCertificateAllowed(url)) {
+      event.preventDefault();
+      logToFile("Allowed invalid certificate for configured web endpoint", {
+        url,
+        error,
+        issuer: certificate?.issuerName,
+        subject: certificate?.subjectName,
+      });
+      callback(true);
+      return;
+    }
+
     if (isInvalidCertificateAllowedForUrl(url)) {
       event.preventDefault();
       logToFile("Allowed invalid certificate for configured server", {
@@ -955,6 +1072,9 @@ function reapOrphanedBackendProcess() {
 
 function startBackendServer() {
   reapOrphanedBackendProcess();
+  backendFailure = null;
+  backendStopRequested = false;
+  backendStderrTail = "";
   return new Promise((resolve) => {
     const { entryPath, backendCwd } = getBackendPaths();
 
@@ -964,6 +1084,7 @@ function startBackendServer() {
 
     if (!fs.existsSync(entryPath)) {
       logToFile("Backend entry not found:", entryPath);
+      backendFailure = { reason: "crashed", port: null };
       resolve(false);
       return;
     }
@@ -1022,14 +1143,32 @@ function startBackendServer() {
       }
     });
 
+    // The reason for a failed start is only ever visible in what the child
+    // wrote to stderr before dying, so keep a bounded tail of it. Bounded
+    // because a backend that stays up for days can otherwise log without
+    // limit into a buffer nothing ever drains.
     backendProcess.stderr.on("data", (data) => {
-      logToFile("[backend:stderr]", data.toString().trim());
+      const chunk = data.toString();
+      backendStderrTail = (backendStderrTail + chunk).slice(
+        -BACKEND_STDERR_TAIL_LIMIT,
+      );
+      logToFile("[backend:stderr]", chunk.trim());
     });
 
     backendProcess.on("exit", (code, signal) => {
       logToFile(`Backend process exited with code ${code}, signal ${signal}`);
       if (!resolved && code !== 0) {
         backendStartFailed = true;
+      }
+      // Classified whether or not the ready promise already settled: the
+      // 15s ready timeout resolves optimistically, so a backend that dies
+      // at second 20 still has to be reported rather than silently dropped.
+      // backendStopRequested is the only evidence that an exit was asked
+      // for, so it is the sole guard here -- past it, every exit means the
+      // backend is gone and the renderer must stop waiting for it.
+      if (!backendStopRequested) {
+        backendFailure = classifyBackendFailure(backendStderrTail);
+        logToFile("Backend failure classified as:", backendFailure.reason);
       }
       backendProcess = null;
       clearBackendPidFile();
@@ -1042,6 +1181,7 @@ function startBackendServer() {
 
     backendProcess.on("error", (err) => {
       logToFile("Failed to start backend process:", err.message);
+      backendFailure = { reason: "crashed", port: null };
       backendProcess = null;
       if (!resolved) {
         resolved = true;
@@ -1064,6 +1204,7 @@ function stopBackendServer() {
   if (!backendProcess) return;
 
   console.log("Stopping embedded backend server...");
+  backendStopRequested = true;
 
   try {
     backendProcess.send({ type: "shutdown" });
@@ -1193,11 +1334,12 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
+      sandbox: true,
+      webSecurity: true,
       preload: path.join(__dirname, "preload.js"),
       partition: termixSessionPartition,
-      allowRunningInsecureContent: true,
-      webviewTag: true,
+      allowRunningInsecureContent: false,
+      webviewTag: false,
       offscreen: false,
     },
     show: true,
@@ -1377,6 +1519,13 @@ function createWindow() {
     }
     return { action: "deny" };
   });
+
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const allowedUrl = isDev
+      ? url.startsWith("http://localhost:5173/")
+      : url === pathToFileURL(path.join(appRoot, "dist", "index.html")).href;
+    if (!allowedUrl) event.preventDefault();
+  });
 }
 
 ipcMain.handle("get-app-version", () => {
@@ -1500,6 +1649,10 @@ ipcMain.handle("get-embedded-server-status", () => {
   return {
     running:
       backendProcess !== null && !backendProcess.killed && !backendStartFailed,
+    // A backend that is merely slow to boot reports no failure, so the
+    // renderer keeps waiting for it. Only a classified failure means the
+    // process is gone for good and waiting is pointless.
+    failure: backendFailure,
     dataDir: isDev ? null : getBackendDataDir(),
   };
 });
@@ -1646,7 +1799,7 @@ ipcMain.handle("clear-remote-sync-config", async () => {
   return result;
 });
 
-ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
+ipcMain.handle("save-remote-sync-jwt", async (_event, token) => {
   const result = remoteSync.saveRemoteSyncJwt(token);
   if (result.success) {
     remoteSync.getRemoteSyncEngine()?.updateStatus({
@@ -1654,7 +1807,8 @@ ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
       needsReauth: false,
       lastError: null,
     });
-    remoteSync.getRemoteSyncEngine()?.syncNow();
+    const status = await remoteSync.getRemoteSyncEngine()?.syncNow();
+    return { ...result, status: status || null };
   }
   return result;
 });
@@ -1716,6 +1870,7 @@ ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
       if (mode === "remote") {
         const sourceHostId = Number(tunnel.sourceHostId);
         const sourcePort = Number(tunnel.sourcePort);
+        const remoteAddress = getC2SRemoteAddress(tunnel);
         if (
           !Number.isInteger(sourceHostId) ||
           sourceHostId < 1 ||
@@ -1728,7 +1883,7 @@ ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
             error: "Invalid remote client tunnel endpoint or port",
           };
         }
-        const listenerKey = `${sourceHostId}:${sourcePort}`;
+        const listenerKey = `${sourceHostId}:${remoteAddress}:${sourcePort}`;
         if (autoStartRemoteListeners.has(listenerKey)) {
           return {
             success: false,
@@ -1739,7 +1894,7 @@ ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
         continue;
       }
 
-      const bindHost = tunnel.bindHost || "127.0.0.1";
+      const bindHost = getC2SLocalAddress(tunnel);
       const sourcePort = Number(tunnel.sourcePort);
       const listenerKey = `${bindHost}:${sourcePort}`;
       if (autoStartListeners.has(listenerKey)) {
@@ -1751,7 +1906,9 @@ ipcMain.handle("save-c2s-tunnel-config", async (_event, config) => {
       autoStartListeners.add(listenerKey);
     }
     for (const listenerKey of autoStartListeners) {
-      const [bindHost, sourcePort] = listenerKey.split(":");
+      const sourcePortSeparator = listenerKey.lastIndexOf(":");
+      const bindHost = listenerKey.slice(0, sourcePortSeparator);
+      const sourcePort = listenerKey.slice(sourcePortSeparator + 1);
       const result = await checkLocalPortAvailable(
         bindHost,
         Number(sourcePort),
@@ -1814,6 +1971,34 @@ function checkTcpConnection(host, port) {
   });
 }
 
+function getC2SAddress(value, fallback) {
+  const address = typeof value === "string" ? value.trim() : "";
+  return address || fallback;
+}
+
+function getC2SLocalAddress(tunnel) {
+  return getC2SAddress(tunnel?.localAddress || tunnel?.bindHost, "127.0.0.1");
+}
+
+function getC2SRemoteAddress(tunnel) {
+  return getC2SAddress(
+    tunnel?.remoteAddress || tunnel?.targetHost,
+    "127.0.0.1",
+  );
+}
+
+function normalizeC2STunnelAddresses(tunnel) {
+  const localAddress = getC2SLocalAddress(tunnel);
+  const remoteAddress = getC2SRemoteAddress(tunnel);
+  return {
+    ...tunnel,
+    localAddress,
+    remoteAddress,
+    bindHost: localAddress,
+    targetHost: remoteAddress,
+  };
+}
+
 const c2sTunnelRuntimes = new Map();
 const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
 const C2S_WS_LOW_WATERMARK = 256 * 1024;
@@ -1840,23 +2025,147 @@ function getC2SRelayUrl() {
   return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
-async function getC2SRelayHeaders() {
-  const jwt = remoteSync.getRemoteSyncJwt();
-  if (!jwt) return {};
+function getC2SRemoteBaseUrl() {
+  const config = remoteSync.getRemoteSyncConfig();
+  const serverUrl = config?.serverUrl;
+  if (!serverUrl) {
+    throw new Error(
+      "No remote Termix server connected -- enable Remote Sync first",
+    );
+  }
+  return serverUrl.replace(/\/$/, "");
+}
+
+const C2S_REMOTE_SESSION_EXPIRED_ERROR =
+  "Remote Termix session expired. Reconnect Remote Sync and try again.";
+
+function normalizeC2SAuthToken(authToken) {
+  return typeof authToken === "string" ? authToken.trim() : "";
+}
+
+function isC2SAuthError(message) {
+  const value = String(message || "")
+    .trim()
+    .toLowerCase();
+  return (
+    value === "authentication required" ||
+    value === "missing authentication token" ||
+    value === "invalid token" ||
+    value === "session expired" ||
+    value === "session not found"
+  );
+}
+
+function normalizeC2SErrorMessage(message, fallback = "Client tunnel failed") {
+  const value = message || fallback;
+  return isC2SAuthError(value) ? C2S_REMOTE_SESSION_EXPIRED_ERROR : value;
+}
+
+function createC2SFailure(message, fallback) {
+  const error = normalizeC2SErrorMessage(message, fallback);
+  return {
+    success: false,
+    error,
+    ...(error === C2S_REMOTE_SESSION_EXPIRED_ERROR
+      ? { code: "REMOTE_SESSION_EXPIRED" }
+      : {}),
+  };
+}
+
+async function fetchC2SRemoteJson(pathname) {
+  const remoteSyncJwt = remoteSync.getRemoteSyncJwt();
+  if (!remoteSyncJwt || remoteSync.isJwtExpiredOrExpiringSoon(remoteSyncJwt)) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+
+  const url = `${getC2SRemoteBaseUrl()}${pathname}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${remoteSyncJwt}`,
+      "X-Electron-App": "true",
+    },
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status}): ${url}`);
+  }
+  return response.json();
+}
+
+async function resolveC2SRemoteSourceHost(tunnel) {
+  const normalized = normalizeC2STunnelAddresses(tunnel);
+  const sourceHostSyncId =
+    typeof normalized.sourceHostSyncId === "string"
+      ? normalized.sourceHostSyncId.trim()
+      : "";
+  if (!sourceHostSyncId) return normalized;
+
+  const data = await fetchC2SRemoteJson("/sync/hosts");
+  const remoteHost = (Array.isArray(data?.rows) ? data.rows : []).find(
+    (row) => row?.syncId === sourceHostSyncId,
+  );
+  const remoteHostId = Number(remoteHost?.id);
+  if (!Number.isInteger(remoteHostId) || remoteHostId < 1) {
+    throw new Error(
+      "Intermediate Host is not available on the remote Termix server yet. Run Remote Sync for hosts, then try again.",
+    );
+  }
 
   return {
-    Authorization: `Bearer ${jwt}`,
+    ...normalized,
+    sourceHostId: remoteHostId,
+    sourceHostSyncId,
+    sourceHostName: remoteHost.name || normalized.sourceHostName,
+    endpointHost: normalized.endpointHost || remoteHost.name,
   };
+}
+
+async function getC2SRelayHeaders(relayUrl) {
+  const headers = { "X-Electron-App": "true" };
+
+  const remoteSyncJwt = remoteSync.getRemoteSyncJwt();
+  if (remoteSyncJwt && !remoteSync.isJwtExpiredOrExpiringSoon(remoteSyncJwt)) {
+    headers.Authorization = `Bearer ${remoteSyncJwt}`;
+    return headers;
+  }
+
+  if (remoteSyncJwt) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+
+  if (!mainWindow?.webContents?.session) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+
+  const cookieUrl = relayUrl
+    .replace(/^ws:/, "http:")
+    .replace(/^wss:/, "https:");
+  const cookies = await mainWindow.webContents.session.cookies.get({
+    url: cookieUrl,
+    name: "jwt",
+  });
+  const jwt = cookies[0]?.value;
+  if (!jwt) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+
+  headers.Cookie = `jwt=${encodeURIComponent(jwt)}`;
+  return headers;
 }
 
 function getC2STunnelName(tunnel, index = 0) {
   if (tunnel.name) return tunnel.name;
+  const localAddress = getC2SLocalAddress(tunnel);
+  const remoteAddress = getC2SRemoteAddress(tunnel);
   return [
     "c2s",
     index,
     tunnel.sourceHostId || 0,
     tunnel.mode || tunnel.tunnelType || "local",
-    tunnel.bindHost || "127.0.0.1",
+    localAddress,
+    remoteAddress,
     tunnel.sourcePort,
     tunnel.endpointPort || 0,
   ].join("::");
@@ -1942,10 +2251,12 @@ async function openC2SRelay(
   targetPort,
   socket,
   initialData,
+  authToken,
 ) {
+  const tunnelConfig = normalizeC2STunnelAddresses(tunnel);
   const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders();
+  const headers = await getC2SRelayHeaders(relayUrl, authToken);
   logToFile(`[c2s] opening relay for ${tunnelName}`, {
     relayUrl,
     targetHost,
@@ -2004,7 +2315,7 @@ async function openC2SRelay(
     ws.send(
       JSON.stringify({
         type: "open",
-        tunnelConfig: tunnel,
+        tunnelConfig,
         targetHost,
         targetPort,
       }),
@@ -2033,11 +2344,12 @@ async function openC2SRelay(
           ws.send(pendingChunks.shift());
         }
       } else if (message.type === "error") {
-        logToFile("[c2s] relay error:", message.error);
-        setC2STunnelError(
-          tunnelName,
-          message.error || "Relay rejected the client tunnel",
+        const relayError = normalizeC2SErrorMessage(
+          message.error,
+          "Relay rejected the client tunnel",
         );
+        logToFile("[c2s] relay error:", relayError);
+        setC2STunnelError(tunnelName, relayError);
         cleanup();
       }
     } catch (error) {
@@ -2048,9 +2360,10 @@ async function openC2SRelay(
   });
 }
 
-async function testC2SRelay(tunnel, targetHost, targetPort) {
+async function testC2SRelay(tunnel, targetHost, targetPort, authToken) {
+  const tunnelConfig = normalizeC2STunnelAddresses(tunnel);
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders();
+  const headers = await getC2SRelayHeaders(relayUrl, authToken);
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
@@ -2077,7 +2390,7 @@ async function testC2SRelay(tunnel, targetHost, targetPort) {
       ws.send(
         JSON.stringify({
           type: "test",
-          tunnelConfig: tunnel,
+          tunnelConfig,
           targetHost,
           targetPort,
         }),
@@ -2093,19 +2406,16 @@ async function testC2SRelay(tunnel, targetHost, targetPort) {
           settle({ success: true });
         } else if (message.type === "error") {
           clearTimeout(timer);
-          settle({
-            success: false,
-            error: message.error || "Tunnel test failed",
-          });
+          settle(createC2SFailure(message.error, "Tunnel test failed"));
         }
       } catch (error) {
         clearTimeout(timer);
-        settle({ success: false, error: error.message });
+        settle(createC2SFailure(error.message, "Tunnel test failed"));
       }
     });
     ws.on("error", (error) => {
       clearTimeout(timer);
-      settle({ success: false, error: error.message });
+      settle(createC2SFailure(error.message, "Tunnel test failed"));
     });
     ws.on("close", () => {
       clearTimeout(timer);
@@ -2114,64 +2424,67 @@ async function testC2SRelay(tunnel, targetHost, targetPort) {
   });
 }
 
-async function testC2STunnel(tunnel, index = 0) {
-  const mode = tunnel.mode || tunnel.tunnelType || "local";
+async function testC2STunnel(tunnel, index = 0, authToken) {
+  const resolvedTunnel = await resolveC2SRemoteSourceHost(tunnel);
+  const mode = resolvedTunnel.mode || resolvedTunnel.tunnelType || "local";
   const testTunnel = {
-    ...tunnel,
-    name: `${getC2STunnelName(tunnel, index)}::test`,
+    ...normalizeC2STunnelAddresses(resolvedTunnel),
+    name: `${getC2STunnelName(resolvedTunnel, index)}::test`,
     mode,
   };
-  const bindHost = tunnel.bindHost || "127.0.0.1";
-  const sourcePort = Number(tunnel.sourcePort);
-  const endpointPort = Number(tunnel.endpointPort);
+  const localAddress = getC2SLocalAddress(testTunnel);
+  const remoteAddress = getC2SRemoteAddress(testTunnel);
+  const sourcePort = Number(resolvedTunnel.sourcePort);
+  const endpointPort = Number(resolvedTunnel.endpointPort);
 
-  if (!tunnel.sourceHostId) {
+  if (!resolvedTunnel.sourceHostId) {
     return { success: false, error: "Endpoint SSH host is required" };
   }
 
   if (mode === "remote") {
-    const localTarget = await checkTcpConnection(bindHost, endpointPort);
+    const localTarget = await checkTcpConnection(localAddress, endpointPort);
     if (!localTarget.success) {
       return {
         success: false,
-        error: `Local target ${bindHost}:${endpointPort} is not reachable: ${localTarget.error}`,
+        error: `Local target ${localAddress}:${endpointPort} is not reachable: ${localTarget.error}`,
       };
     }
 
-    return testC2SRelay(testTunnel, undefined, undefined);
+    return testC2SRelay(testTunnel, undefined, undefined, authToken);
   }
 
   if (!Number.isInteger(sourcePort) || sourcePort < 1 || sourcePort > 65535) {
     return { success: false, error: "Invalid local port" };
   }
 
-  const runtime = c2sTunnelRuntimes.get(getC2STunnelName(tunnel, index));
+  const runtime = c2sTunnelRuntimes.get(
+    getC2STunnelName(resolvedTunnel, index),
+  );
   if (!runtime) {
-    const availability = await checkLocalPortAvailable(bindHost, sourcePort);
+    const availability = await checkLocalPortAvailable(
+      localAddress,
+      sourcePort,
+    );
     if (!availability.available) {
       return {
         success: false,
-        error: `Local listener ${bindHost}:${sourcePort} is not available: ${availability.error}`,
+        error: `Local listener ${localAddress}:${sourcePort} is not available: ${availability.error}`,
       };
     }
   }
 
   if (mode === "dynamic") {
-    return testC2SRelay(testTunnel, undefined, undefined);
+    return testC2SRelay(testTunnel, undefined, undefined, authToken);
   }
 
   if (!Number.isInteger(endpointPort) || endpointPort < 1) {
     return { success: false, error: "Invalid remote port" };
   }
 
-  return testC2SRelay(
-    testTunnel,
-    tunnel.targetHost || "127.0.0.1",
-    endpointPort,
-  );
+  return testC2SRelay(testTunnel, remoteAddress, endpointPort, authToken);
 }
 
-function handleC2SDynamicConnection(tunnel, socket) {
+function handleC2SDynamicConnection(tunnel, socket, authToken) {
   const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   let buffer = Buffer.alloc(0);
   let stage = "greeting";
@@ -2209,12 +2522,21 @@ function handleC2SDynamicConnection(tunnel, socket) {
         socket.off("data", onData);
         const remainder = buffer.subarray(target.bytesRead);
         socket.write(Buffer.from([0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]));
-        openC2SRelay(tunnel, target.host, target.port, socket, remainder).catch(
-          (error) => {
-            logToFile("[c2s] dynamic relay failed:", error.message);
-            fail(0x05, error.message || "Dynamic relay failed");
-          },
-        );
+        openC2SRelay(
+          tunnel,
+          target.host,
+          target.port,
+          socket,
+          remainder,
+          authToken,
+        ).catch((error) => {
+          const message = normalizeC2SErrorMessage(
+            error.message,
+            "Dynamic relay failed",
+          );
+          logToFile("[c2s] dynamic relay failed:", message);
+          fail(0x05, message);
+        });
       }
     } catch (error) {
       logToFile("[c2s] SOCKS5 parse failed:", error.message);
@@ -2226,13 +2548,24 @@ function handleC2SDynamicConnection(tunnel, socket) {
   socket.on("error", () => socket.destroy());
 }
 
-function handleC2SLocalConnection(tunnel, socket) {
+function handleC2SLocalConnection(tunnel, socket, authToken) {
   const tunnelName = tunnel.name || getC2STunnelName(tunnel);
-  const targetHost = tunnel.targetHost || "127.0.0.1";
+  const targetHost = getC2SRemoteAddress(tunnel);
   const targetPort = Number(tunnel.endpointPort);
-  openC2SRelay(tunnel, targetHost, targetPort, socket).catch((error) => {
-    logToFile("[c2s] local relay failed:", error.message);
-    setC2STunnelError(tunnelName, error.message || "Local relay failed");
+  openC2SRelay(
+    tunnel,
+    targetHost,
+    targetPort,
+    socket,
+    undefined,
+    authToken,
+  ).catch((error) => {
+    const message = normalizeC2SErrorMessage(
+      error.message,
+      "Local relay failed",
+    );
+    logToFile("[c2s] local relay failed:", message);
+    setC2STunnelError(tunnelName, message);
     socket.destroy();
   });
 }
@@ -2286,9 +2619,11 @@ function writeC2SRemoteChunk(target, chunk, ws, closeTarget) {
   }
 }
 
-async function startC2SRemoteTunnel(tunnel, index = 0) {
+async function startC2SRemoteTunnel(tunnel, index = 0, authToken) {
   const tunnelName = getC2STunnelName(tunnel, index);
-  const localHost = tunnel.bindHost || "127.0.0.1";
+  const tunnelConfig = normalizeC2STunnelAddresses(tunnel);
+  const localHost = getC2SLocalAddress(tunnelConfig);
+  const remoteHost = getC2SRemoteAddress(tunnelConfig);
   const localPort = Number(tunnel.endpointPort);
   const remotePort = Number(tunnel.sourcePort);
 
@@ -2319,17 +2654,18 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
     if (
       runtime.mode === "remote" &&
       runtime.sourceHostId === Number(tunnel.sourceHostId) &&
+      runtime.remoteAddress === remoteHost &&
       runtime.sourcePort === remotePort
     ) {
       return {
         success: false,
-        error: `Another client remote tunnel already uses ${remotePort} on this endpoint`,
+        error: `Another client remote tunnel already uses ${remoteHost}:${remotePort} on this endpoint`,
       };
     }
   }
 
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders();
+  const headers = await getC2SRelayHeaders(relayUrl, authToken);
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
@@ -2358,6 +2694,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
     sourceHostId: Number(tunnel.sourceHostId),
     sourcePort: remotePort,
     bindHost: localHost,
+    remoteAddress: remoteHost,
     status: { connected: false, status: "CONNECTING" },
     close: cleanup,
   });
@@ -2374,6 +2711,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
     ws.on("open", () => {
       logToFile(`[c2s] opening remote tunnel ${tunnelName}`, {
         relayUrl,
+        remoteHost,
         remotePort,
         localHost,
         localPort,
@@ -2381,7 +2719,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
       ws.send(
         JSON.stringify({
           type: "open",
-          tunnelConfig: { ...tunnel, name: tunnelName, mode: "remote" },
+          tunnelConfig: { ...tunnelConfig, name: tunnelName, mode: "remote" },
         }),
       );
     });
@@ -2393,9 +2731,13 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
       try {
         message = JSON.parse(data.toString());
       } catch (error) {
-        setC2STunnelError(tunnelName, error.message || "Invalid relay message");
+        const message = normalizeC2SErrorMessage(
+          error.message,
+          "Invalid relay message",
+        );
+        setC2STunnelError(tunnelName, message);
         cleanup();
-        settle({ success: false, error: error.message });
+        settle(createC2SFailure(message, "Invalid relay message"));
         return;
       }
 
@@ -2409,12 +2751,15 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
       }
 
       if (message.type === "error") {
-        const error = message.error || "Relay rejected the client tunnel";
+        const error = normalizeC2SErrorMessage(
+          message.error,
+          "Relay rejected the client tunnel",
+        );
         setC2STunnelError(tunnelName, error);
         cleanup();
         c2sTunnelRuntimes.delete(tunnelName);
         emitC2STunnelStatuses();
-        settle({ success: false, error });
+        settle(createC2SFailure(error, "Relay rejected the client tunnel"));
         return;
       }
 
@@ -2496,32 +2841,40 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
     });
 
     ws.on("error", (error) => {
-      setC2STunnelError(tunnelName, error.message || "Relay connection failed");
+      const message = normalizeC2SErrorMessage(
+        error.message,
+        "Relay connection failed",
+      );
+      setC2STunnelError(tunnelName, message);
       cleanup();
       c2sTunnelRuntimes.delete(tunnelName);
       emitC2STunnelStatuses();
-      settle({ success: false, error: error.message });
+      settle(createC2SFailure(message, "Relay connection failed"));
     });
   });
 }
 
-async function startC2STunnel(tunnel, index = 0) {
-  const mode = tunnel.mode || tunnel.tunnelType || "local";
-  const tunnelName = getC2STunnelName(tunnel, index);
-  const bindHost = tunnel.bindHost || "127.0.0.1";
-  const sourcePort = Number(tunnel.sourcePort);
+async function startC2STunnel(tunnel, index = 0, authToken) {
+  const resolvedTunnel = await resolveC2SRemoteSourceHost(tunnel);
+  const mode = resolvedTunnel.mode || resolvedTunnel.tunnelType || "local";
+  const tunnelName = getC2STunnelName(resolvedTunnel, index);
+  const tunnelConfig = normalizeC2STunnelAddresses(resolvedTunnel);
+  const bindHost = getC2SLocalAddress(tunnelConfig);
+  const sourcePort = Number(resolvedTunnel.sourcePort);
   logToFile(`[c2s] starting tunnel ${tunnelName}`, {
     mode,
     bindHost,
+    remoteAddress: getC2SRemoteAddress(tunnelConfig),
     sourcePort,
-    sourceHostId: tunnel.sourceHostId,
-    endpointPort: tunnel.endpointPort,
+    sourceHostId: resolvedTunnel.sourceHostId,
+    sourceHostSyncId: resolvedTunnel.sourceHostSyncId,
+    endpointPort: resolvedTunnel.endpointPort,
   });
 
   if (mode === "remote") {
-    return startC2SRemoteTunnel(tunnel, index);
+    return startC2SRemoteTunnel(resolvedTunnel, index, authToken);
   }
-  if (!tunnel.sourceHostId) {
+  if (!resolvedTunnel.sourceHostId) {
     return { success: false, error: "Endpoint SSH host is required" };
   }
   if (!Number.isInteger(sourcePort) || sourcePort < 1 || sourcePort > 65535) {
@@ -2559,9 +2912,17 @@ async function startC2STunnel(tunnel, index = 0) {
     sockets.add(socket);
     socket.on("close", () => sockets.delete(socket));
     if (mode === "dynamic") {
-      handleC2SDynamicConnection({ ...tunnel, name: tunnelName, mode }, socket);
+      handleC2SDynamicConnection(
+        { ...tunnelConfig, name: tunnelName, mode },
+        socket,
+        authToken,
+      );
     } else {
-      handleC2SLocalConnection({ ...tunnel, name: tunnelName, mode }, socket);
+      handleC2SLocalConnection(
+        { ...tunnelConfig, name: tunnelName, mode },
+        socket,
+        authToken,
+      );
     }
   });
 
@@ -2711,19 +3072,27 @@ ipcMain.handle("check-local-port-available", async (_event, host, port) => {
   return checkLocalPortAvailable(host, sourcePort);
 });
 
-ipcMain.handle("start-c2s-tunnel", async (_event, tunnel, index) => {
+ipcMain.handle("start-c2s-tunnel", async (_event, tunnel, index, authToken) => {
   try {
-    return await startC2STunnel(tunnel, Number(index) || 0);
+    return await startC2STunnel(
+      tunnel,
+      Number(index) || 0,
+      normalizeC2SAuthToken(authToken),
+    );
   } catch (error) {
-    return { success: false, error: error.message };
+    return createC2SFailure(error.message, "Failed to start client tunnel");
   }
 });
 
-ipcMain.handle("test-c2s-tunnel", async (_event, tunnel, index) => {
+ipcMain.handle("test-c2s-tunnel", async (_event, tunnel, index, authToken) => {
   try {
-    return await testC2STunnel(tunnel, Number(index) || 0);
+    return await testC2STunnel(
+      tunnel,
+      Number(index) || 0,
+      normalizeC2SAuthToken(authToken),
+    );
   } catch (error) {
-    return { success: false, error: error.message };
+    return createC2SFailure(error.message, "Failed to test client tunnel");
   }
 });
 
@@ -3006,6 +3375,255 @@ ipcMain.handle("show-open-dialog", async (_event, options) => {
   return dialog.showOpenDialog(mainWindow, options || {});
 });
 
+function toLocalFileType(stat) {
+  if (stat.isDirectory()) return "directory";
+  if (stat.isFile()) return "file";
+  if (stat.isSymbolicLink()) return "link";
+  return "other";
+}
+
+function getLocalEntry(entryPath, name = path.basename(entryPath)) {
+  const stat = fs.lstatSync(entryPath);
+  return {
+    name,
+    path: entryPath,
+    type: toLocalFileType(stat),
+    size: stat.isFile() ? stat.size : 0,
+    created: stat.birthtime.toISOString(),
+    modified: stat.mtime.toISOString(),
+    modifiedTimestamp: stat.mtimeMs,
+    hidden: name.startsWith("."),
+    permissions: (stat.mode & 0o777).toString(8).padStart(3, "0"),
+    owner: String(stat.uid),
+    group: String(stat.gid),
+  };
+}
+
+function normalizeRelativeLocalPath(relativePath) {
+  return relativePath.split(path.sep).join("/");
+}
+
+function validateLocalName(name) {
+  if (typeof name !== "string" || !name.trim()) {
+    throw new Error("Missing name");
+  }
+  const trimmed = name.trim();
+  if (
+    trimmed.includes("/") ||
+    trimmed.includes("\\") ||
+    trimmed === "." ||
+    trimmed === ".."
+  ) {
+    throw new Error("Name cannot contain path separators");
+  }
+  return trimmed;
+}
+
+function ensureLocalDirectory(dirPath) {
+  if (typeof dirPath !== "string" || !dirPath) {
+    throw new Error("Missing directory path");
+  }
+  const stat = fs.statSync(dirPath);
+  if (!stat.isDirectory()) {
+    throw new Error("Path is not a directory");
+  }
+}
+
+function collectLocalFilesFromPath(rootPath, rootName, files, limit) {
+  if (files.length >= limit) return;
+
+  const stat = fs.lstatSync(rootPath);
+  if (stat.isSymbolicLink()) return;
+
+  if (stat.isFile()) {
+    files.push({
+      path: rootPath,
+      name: path.basename(rootPath),
+      relativePath: normalizeRelativeLocalPath(rootName),
+      size: stat.size,
+      created: stat.birthtime.toISOString(),
+      modified: stat.mtime.toISOString(),
+    });
+    return;
+  }
+
+  if (!stat.isDirectory()) return;
+
+  for (const childName of fs.readdirSync(rootPath)) {
+    if (files.length >= limit) return;
+    const childPath = path.join(rootPath, childName);
+    collectLocalFilesFromPath(
+      childPath,
+      path.join(rootName, childName),
+      files,
+      limit,
+    );
+  }
+}
+
+ipcMain.handle("get-local-home-directory", () => os.homedir());
+
+ipcMain.handle("list-local-directory", (_event, dirPath) => {
+  try {
+    const requestedPath =
+      typeof dirPath === "string" && dirPath.trim() ? dirPath : os.homedir();
+    const stat = fs.statSync(requestedPath);
+    if (!stat.isDirectory()) {
+      return {
+        success: false,
+        path: requestedPath,
+        entries: [],
+        error: "Path is not a directory",
+      };
+    }
+
+    const entries = fs
+      .readdirSync(requestedPath, { withFileTypes: true })
+      .map((entry) => {
+        try {
+          return getLocalEntry(
+            path.join(requestedPath, entry.name),
+            entry.name,
+          );
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (a.type === "directory" && b.type !== "directory") return -1;
+        if (a.type !== "directory" && b.type === "directory") return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+    return {
+      success: true,
+      path: requestedPath,
+      parent: path.dirname(requestedPath),
+      entries,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      path: typeof dirPath === "string" ? dirPath : "",
+      entries: [],
+      error: error instanceof Error ? error.message : "Failed to list path",
+    };
+  }
+});
+
+ipcMain.handle("stat-local-paths", (_event, paths) => {
+  const pathList = Array.isArray(paths) ? paths : [];
+  return pathList.map((entryPath) => {
+    try {
+      return { success: true, ...getLocalEntry(entryPath) };
+    } catch (error) {
+      return {
+        success: false,
+        path: entryPath,
+        error: error instanceof Error ? error.message : "Failed to stat path",
+      };
+    }
+  });
+});
+
+ipcMain.handle("collect-local-files", (_event, paths) => {
+  try {
+    const pathList = Array.isArray(paths) ? paths : [];
+    const files = [];
+    const limit = 10000;
+
+    for (const entryPath of pathList) {
+      if (typeof entryPath !== "string" || !entryPath) continue;
+      collectLocalFilesFromPath(
+        entryPath,
+        path.basename(entryPath),
+        files,
+        limit + 1,
+      );
+      if (files.length > limit) break;
+    }
+
+    return {
+      success: true,
+      files: files.slice(0, limit),
+      truncated: files.length > limit,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      files: [],
+      error: error instanceof Error ? error.message : "Failed to collect files",
+    };
+  }
+});
+
+ipcMain.handle("create-local-folder", (_event, parentPath, folderName) => {
+  try {
+    ensureLocalDirectory(parentPath);
+    const safeName = validateLocalName(folderName);
+    const targetPath = path.join(parentPath, safeName);
+    fs.mkdirSync(targetPath);
+    return { success: true, ...getLocalEntry(targetPath, safeName) };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create folder",
+    };
+  }
+});
+
+ipcMain.handle("rename-local-path", (_event, entryPath, newName) => {
+  try {
+    if (typeof entryPath !== "string" || !entryPath) {
+      throw new Error("Missing path");
+    }
+    const safeName = validateLocalName(newName);
+    const targetPath = path.join(path.dirname(entryPath), safeName);
+    renameLocalPath(entryPath, targetPath);
+    return { success: true, ...getLocalEntry(targetPath, safeName) };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to rename path",
+    };
+  }
+});
+
+ipcMain.handle("trash-local-path", async (_event, entryPath) => {
+  try {
+    if (typeof entryPath !== "string" || !entryPath) {
+      throw new Error("Missing path");
+    }
+    await shell.trashItem(entryPath);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete path",
+    };
+  }
+});
+
+ipcMain.handle("chmod-local-path", (_event, entryPath, permissions) => {
+  try {
+    if (typeof entryPath !== "string" || !entryPath) {
+      throw new Error("Missing path");
+    }
+    if (typeof permissions !== "string" || !/^[0-7]{3,4}$/.test(permissions)) {
+      throw new Error("Permissions must be an octal value");
+    }
+    fs.chmodSync(entryPath, parseInt(permissions, 8));
+    return { success: true, ...getLocalEntry(entryPath) };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to update permissions",
+    };
+  }
+});
+
 ipcMain.handle("create-temp-file", async (_event, fileData) => {
   try {
     const result = createManagedTempFile(
@@ -3204,6 +3822,10 @@ async function testServerConnection(
 }
 
 ipcMain.handle("test-server-connection", testServerConnection);
+
+// Local disk browsing + streamed local<->remote transfers for the file
+// manager's dual-pane mode (see electron/local-files.cjs).
+registerLocalFileHandlers({ ipcMain, shell });
 
 function createMenu() {
   if (process.platform === "darwin") {

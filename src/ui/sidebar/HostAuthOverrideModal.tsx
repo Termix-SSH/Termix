@@ -16,8 +16,12 @@ import {
   setHostAuthOverride,
 } from "@/main-axios";
 import type { Credential, Host } from "@/types/ui-types";
-import type { AuthOverrideProtocol } from "@/types/auth-protocols";
+import {
+  AUTH_PROTOCOL_METADATA,
+  type AuthOverrideProtocol,
+} from "@/types/auth-protocols";
 import { mapCredentials } from "./HostManagerData";
+import { getConnectedRemoteApi } from "@/lib/remote-server-api";
 
 export function HostAuthOverrideModal({
   open,
@@ -41,6 +45,7 @@ export function HostAuthOverrideModal({
   const ownerAuthShared =
     overrideState?.ownerAuthShared ??
     (protocol === "ssh" ? !!host.shareSshAuth : false);
+  const remoteShared = !!host.isShared && Number(host.id) < 0;
 
   useEffect(() => {
     if (!open) return;
@@ -48,9 +53,18 @@ export function HostAuthOverrideModal({
     setLoading(true);
     setLoadError(false);
 
+    const credentialsRequest = remoteShared
+      ? getConnectedRemoteApi().then((api) => {
+          if (!api) throw new Error("Remote server is not connected");
+          return api.get("/credentials").then((response) => response.data);
+        })
+      : getCredentials();
+
     Promise.all([
-      getCredentials(),
-      getHostAuthOverride(Number(host.id), protocol),
+      credentialsRequest,
+      remoteShared
+        ? getHostAuthOverride(Number(host.id), protocol, true)
+        : getHostAuthOverride(Number(host.id), protocol),
     ])
       .then(([credentialResult, overrideResult]) => {
         if (cancelled) return;
@@ -73,13 +87,22 @@ export function HostAuthOverrideModal({
     return () => {
       cancelled = true;
     };
-  }, [host.id, open, protocol]);
+  }, [host.id, open, protocol, remoteShared]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const credentialId = selectedId ? Number(selectedId) : null;
-      await setHostAuthOverride(Number(host.id), protocol, credentialId);
+      if (remoteShared) {
+        await setHostAuthOverride(
+          Number(host.id),
+          protocol,
+          credentialId,
+          true,
+        );
+      } else {
+        await setHostAuthOverride(Number(host.id), protocol, credentialId);
+      }
       toast.success(
         credentialId === null
           ? t(
@@ -106,7 +129,11 @@ export function HostAuthOverrideModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("hosts.sharing.authOverrideTitle")}</DialogTitle>
+            <DialogTitle>
+              {t("hosts.sharing.authOverrideTitleProtocol", {
+                protocol: AUTH_PROTOCOL_METADATA[protocol].label,
+              })}
+            </DialogTitle>
             <DialogDescription>
               {t(
                 ownerAuthShared

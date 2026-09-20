@@ -1,7 +1,7 @@
 export type LocalEchoMode = "off" | "auto" | "on";
 
 const PASSWORD_PROMPT =
-  /(?:password|passphrase|verification code|one[- ]time|otp|token)\s*[:：]?\s*$/i;
+  /(?:password|passphrase|verification code|one[- ]time|otp|token)(?:[^\r\n:：]{0,160})?[:：]\s*$/i;
 const SAFE_INPUT = /^[\x20-\x7e]$/;
 
 type PendingCharacter = { value: string; sentAt: number; predicted: boolean };
@@ -81,7 +81,7 @@ export class TerminalLocalEcho {
   private rollback() {
     const count = this.pending.filter((item) => item.predicted).length;
     this.pending = [];
-    return count > 0 ? `\x1b[${count}D\x1b[K` : "";
+    return count > 0 ? `\x1b[${count}D\x1b[${count}X` : "";
   }
 
   private stripAnsi(value: string) {

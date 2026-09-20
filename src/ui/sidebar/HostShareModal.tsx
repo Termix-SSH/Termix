@@ -1,4 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  getFolderAccess,
+  revokeFolderAccess,
+  type FolderAccessRule,
+} from "@/api/rbac-api";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -33,6 +38,7 @@ import {
   type ShareTarget,
 } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
+import { Select2 } from "@/components/select2";
 
 const PERMISSION_LEVELS: SharePermissionLevel[] = [
   "connect",
@@ -177,6 +183,19 @@ export function HostShareModal({
     setAccessList(res.accessList ?? []);
   }
 
+  const [folderRules, setFolderRules] = useState<FolderAccessRule[]>([]);
+  const refreshFolderRules = useCallback(async () => {
+    if (!isFolderShare || !folder) return;
+    try {
+      setFolderRules((await getFolderAccess(folder)).rules);
+    } catch {
+      setFolderRules([]);
+    }
+  }, [isFolderShare, folder]);
+  useEffect(() => {
+    if (open) void refreshFolderRules();
+  }, [open, refreshFolderRules]);
+
   async function handleShare() {
     if ((!host && !folder) || selectedCount === 0) return;
     const targets: ShareTarget[] = [
@@ -196,6 +215,7 @@ export function HostShareModal({
           permissionLevel,
           ...(durationHours ? { durationHours } : {}),
         });
+        await refreshFolderRules();
         setFolderShareSummary({
           hostsShared: result.hostsShared,
           hostsTotal: result.hostsTotal,
@@ -412,7 +432,7 @@ export function HostShareModal({
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("hosts.sharing.permissionLevelLabel")}
             </span>
-            <select
+            <Select2
               value={permissionLevel}
               onChange={(e) =>
                 setPermissionLevel(e.target.value as SharePermissionLevel)
@@ -424,7 +444,7 @@ export function HostShareModal({
                   {t(`hosts.sharing.levels.${level}.label`)}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <DropdownMenu>
@@ -496,6 +516,42 @@ export function HostShareModal({
             shared: folderShareSummary.hostsShared,
             total: folderShareSummary.hostsTotal,
           })}
+        </div>
+      )}
+
+      {isFolderShare && folderRules.length > 0 && (
+        <div className="flex flex-col gap-1 px-3 pb-2 shrink-0">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("hosts.sharing.folderRulesTitle")}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            {t("hosts.sharing.folderRulesHint")}
+          </span>
+          {folderRules.map((rule) => (
+            <div
+              key={rule.id}
+              className="flex items-center gap-2 text-xs px-1 py-0.5"
+            >
+              <span className="flex-1 truncate">
+                {rule.targetType === "role"
+                  ? rule.roleDisplayName || rule.roleName
+                  : rule.username}
+              </span>
+              <span className="text-[10px] uppercase text-muted-foreground">
+                {rule.permissionLevel}
+              </span>
+              <button
+                type="button"
+                className="text-[10px] text-muted-foreground hover:text-destructive"
+                title={t("hosts.sharing.folderRuleRemove")}
+                onClick={() => {
+                  void revokeFolderAccess(rule.id).then(refreshFolderRules);
+                }}
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 

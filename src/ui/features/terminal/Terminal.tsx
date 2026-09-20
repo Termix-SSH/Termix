@@ -1,3 +1,8 @@
+import {
+  fontSizeStorageKey as getFontSizeStorageKey,
+  readFontSize,
+  saveFontSize,
+} from "./font-size-storage";
 import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import {
@@ -14,6 +19,10 @@ import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
+import {
+  resolveTerminalContextMenuAction,
+  selectedTextToCopy,
+} from "@/features/terminal/terminal-clipboard-actions";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
@@ -48,6 +57,8 @@ import {
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
+import { getMacLineNavigationSequence } from "@/lib/mac-line-navigation";
+import { isTabJumpHotkey } from "@/lib/tab-jump-hotkey";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import {
   highlightTerminalOutput,
@@ -59,9 +70,14 @@ import {
   buildImageUploadFormData,
   type TerminalImageUploadSource,
 } from "@/features/terminal/terminal-image-upload.ts";
-import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
+import {
+  CommandAutocomplete,
+  CommandAutosuggestion,
+} from "./command-history/CommandAutocomplete.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { useAiAvailability } from "@/hooks/use-ai-availability.ts";
+import { TerminalAiPanel } from "./TerminalAiPanel.tsx";
 import {
   ConnectionLogProvider,
   useConnectionLog,
@@ -69,7 +85,7 @@ import {
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-import { Save } from "lucide-react";
+import { Bot, Save } from "lucide-react";
 import { authApi } from "@/main-axios.ts";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
@@ -80,10 +96,15 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
-import { isPhysicalShortcutKey, isTabKeyEvent } from "./terminal-key-event.ts";
+import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
+import {
+  handleTerminalClipboardKeyEvent,
+  getUseRightClickCopyPaste,
+} from "./terminal-clipboard.ts";
 import { quoteTerminalImagePath } from "./terminal-image-path.ts";
+import { hydrateLocalSharedHostAuth } from "@/lib/remote-server-api.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -131,6 +152,8 @@ interface SSHTerminalProps {
   onOpenTab?: (type: TabType) => void;
   /** False when this terminal sits in an unfocused split pane. */
   isFocusedPane?: boolean;
+  /** Fires when the backend reports the created session id (collab presenting). */
+  onSessionReady?: (sessionId: string) => void;
 }
 
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
@@ -154,6 +177,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     {
       hostConfig,
       isVisible,
+      onSessionReady,
       splitScreen = false,
       onClose,
       onTitleChange,
@@ -194,6 +218,38 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         terminalDefaults.theme ||
         DEFAULT_TERMINAL_CONFIG.theme,
     };
+
+    // Ctrl+/- / Ctrl+wheel terminal zoom is persisted per-host and takes
+    // precedence over the configured font size, so it survives the periodic
+    // option refreshes (keepalive/refit/reconnect) that would otherwise snap
+    // the size back to config.fontSize.
+    const fontSizeStorageKey = getFontSizeStorageKey(
+      hostConfig.syncId ?? hostConfig.id,
+    );
+    const configuredFontSize = config.fontSize;
+    const fontSizePersistenceRef = useRef({
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    });
+    fontSizePersistenceRef.current = {
+      key: fontSizeStorageKey,
+      configured: configuredFontSize,
+    };
+    const readFontSizeOverride = () => {
+      try {
+        return readFontSize(
+          localStorage,
+          fontSizeStorageKey,
+          configuredFontSize,
+        );
+      } catch {
+        return null;
+      }
+    };
+    const fontSizeOverride = readFontSizeOverride();
+    if (fontSizeOverride !== null) {
+      config.fontSize = fontSizeOverride;
+    }
 
     const activeTheme = previewTheme || config.theme;
     const themeColors = resolveTermixThemeColors(
@@ -267,6 +323,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
       error?: string;
       providers?: Array<{ alias: string; issuer: string }>;
+      /** Which issuer is asking (OPKSSH by default, "Step CA", ...). */
+      label?: string;
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -397,12 +455,26 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       top: 0,
       left: 0,
     });
+    const [autosuggestion, setAutosuggestion] = useState("");
+    const [autosuggestionPosition, setAutosuggestionPosition] = useState({
+      top: 0,
+      left: 0,
+    });
+    const [autosuggestionStyle, setAutosuggestionStyle] =
+      useState<React.CSSProperties>({});
+    const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+    const { userEnabled: aiAssistantEnabledForUser } = useAiAvailability();
+    const isAiAssistantAvailable =
+      aiAssistantEnabledForUser && host?.enableAiAssistant === true;
     const autocompleteHistory = useRef<string[]>([]);
     const currentAutocompleteCommand = useRef<string>("");
+    const currentAutosuggestionCommand = useRef<string>("");
 
     const showAutocompleteRef = useRef(false);
     const autocompleteSuggestionsRef = useRef<string[]>([]);
     const autocompleteSelectedIndexRef = useRef(0);
+    const autosuggestionRef = useRef("");
+    const autosuggestionSuppressedRef = useRef(false);
 
     const searchAddonRef = useRef<SearchAddon | null>(null);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -516,6 +588,176 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }, [showSearch]);
 
+    useEffect(() => {
+      autosuggestionRef.current = autosuggestion;
+    }, [autosuggestion]);
+
+    const isAutocompleteEnabled = useCallback(
+      () => localStorage.getItem("commandAutocomplete") === "true",
+      [],
+    );
+
+    const getCursorScreenPosition = useCallback(() => {
+      if (!terminal || !xtermRef.current) return null;
+
+      const screen =
+        xtermRef.current.querySelector<HTMLElement>(".xterm-screen") ??
+        xtermRef.current;
+      const rows =
+        xtermRef.current.querySelector<HTMLElement>(".xterm-rows") ?? screen;
+      const screenRect = screen.getBoundingClientRect();
+      const rowsRect = rows.getBoundingClientRect();
+      const computedStyle = window.getComputedStyle(rows);
+      const terminalWithCore = terminal as typeof terminal & {
+        _core?: {
+          _renderService?: {
+            dimensions?: {
+              css?: {
+                cell?: {
+                  width?: number;
+                  height?: number;
+                };
+              };
+            };
+          };
+        };
+      };
+      const measuredCell =
+        terminalWithCore._core?._renderService?.dimensions?.css?.cell;
+      const fallbackCellWidth =
+        terminal.cols > 0 ? rowsRect.width / terminal.cols : 10;
+      const fallbackCellHeight =
+        terminal.rows > 0 ? rowsRect.height / terminal.rows : 20;
+      const cellWidth = measuredCell?.width || fallbackCellWidth;
+      const cellHeight = measuredCell?.height || fallbackCellHeight;
+      const fontSize =
+        typeof terminal.options.fontSize === "number"
+          ? `${terminal.options.fontSize}px`
+          : computedStyle.fontSize;
+      const lineHeight =
+        typeof terminal.options.lineHeight === "number"
+          ? `${cellHeight}px`
+          : computedStyle.lineHeight;
+      const fontFamily =
+        typeof terminal.options.fontFamily === "string"
+          ? terminal.options.fontFamily
+          : computedStyle.fontFamily;
+
+      return {
+        top: Math.max(
+          0,
+          screenRect.top + terminal.buffer.active.cursorY * cellHeight,
+        ),
+        left: Math.max(
+          0,
+          screenRect.left + terminal.buffer.active.cursorX * cellWidth,
+        ),
+        style: {
+          fontFamily,
+          fontSize,
+          lineHeight,
+          letterSpacing: `${terminal.options.letterSpacing ?? 0}px`,
+        },
+      };
+    }, [terminal, xtermRef]);
+
+    const clearAutosuggestion = useCallback(() => {
+      autosuggestionRef.current = "";
+      currentAutosuggestionCommand.current = "";
+      setAutosuggestion("");
+    }, []);
+
+    const updateAutosuggestion = useCallback(() => {
+      if (!isAutocompleteEnabled() || autosuggestionSuppressedRef.current) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const currentCommand = getCurrentCommandRef.current().trim();
+      if (!currentCommand || showAutocompleteRef.current) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const suggestion = autocompleteHistory.current.find(
+        (command) =>
+          command.startsWith(currentCommand) &&
+          command !== currentCommand &&
+          command.length > currentCommand.length,
+      );
+
+      if (!suggestion) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const position = getCursorScreenPosition();
+      if (!position) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const suffix = suggestion.substring(currentCommand.length);
+      currentAutosuggestionCommand.current = currentCommand;
+      autosuggestionRef.current = suffix;
+      setAutosuggestion(suffix);
+      setAutosuggestionPosition({ top: position.top, left: position.left });
+      setAutosuggestionStyle(position.style);
+    }, [clearAutosuggestion, getCursorScreenPosition, isAutocompleteEnabled]);
+
+    const scheduleAutosuggestionUpdate = useCallback(() => {
+      window.requestAnimationFrame(() => {
+        updateAutosuggestion();
+      });
+    }, [updateAutosuggestion]);
+
+    const acceptAutosuggestion = useCallback(() => {
+      const suffix = autosuggestionRef.current;
+      if (!suffix || webSocketRef.current?.readyState !== 1) return false;
+
+      for (const char of suffix) {
+        webSocketRef.current.send(
+          JSON.stringify({ type: "input", data: char }),
+        );
+      }
+
+      updateCurrentCommandRef.current(
+        `${currentAutosuggestionCommand.current}${suffix}`,
+      );
+      autosuggestionSuppressedRef.current = false;
+      clearAutosuggestion();
+      return true;
+    }, [clearAutosuggestion]);
+
+    const toggleAiAssistant = useCallback(() => {
+      setAiAssistantOpen((open) => !open);
+    }, []);
+
+    const closeAiAssistant = useCallback(() => {
+      setAiAssistantOpen(false);
+      setTimeout(() => terminal?.focus(), 50);
+    }, [terminal]);
+
+    const handleRunCommandInTerminal = useCallback(
+      (command: string) => {
+        const trimmedCommand = command.trim();
+        if (
+          !trimmedCommand ||
+          webSocketRef.current?.readyState !== WebSocket.OPEN
+        ) {
+          return;
+        }
+
+        clearAutosuggestion();
+        trackInput(trimmedCommand);
+        webSocketRef.current.send(
+          JSON.stringify({ type: "input", data: `${trimmedCommand}\r` }),
+        );
+        setTimeout(() => terminal?.focus(), 50);
+      },
+      [clearAutosuggestion, terminal, trackInput],
+    );
+
     const activityLoggingRef = useRef(false);
     const passwordPromptShownRef = useRef(false);
     const passwordPromptBufferRef = useRef("");
@@ -628,6 +870,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminalFontSizeRef.current = nextFontSize;
       terminal.options.fontSize = nextFontSize;
+      try {
+        saveFontSize(
+          localStorage,
+          fontSizePersistenceRef.current.key,
+          fontSizePersistenceRef.current.configured,
+          nextFontSize,
+        );
+      } catch {
+        // ignore persistence failures (private mode, disabled storage)
+      }
       performFit();
       hardRefresh();
     }
@@ -896,6 +1148,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
     }
 
+    function applyLocalEchoToOutput(output: string): string {
+      const alternateScreen = updateAlternateScreenMode(
+        output,
+        alternateScreenModeRef.current,
+      );
+      if (
+        alternateScreenModeRef.current ||
+        alternateScreen.isActive ||
+        alternateScreen.sawSequence
+      ) {
+        if (!alternateScreenModeRef.current && alternateScreen.isActive) {
+          localEchoRef.current?.reset();
+        }
+        return output;
+      }
+      return localEchoRef.current?.handleOutput(output) ?? output;
+    }
+
     async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
       let passwordToFill = isSudoPrompt
         ? hostConfig.terminalConfig?.sudoPassword || hostConfig.password
@@ -1099,8 +1369,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       ],
     );
 
-    function getUseRightClickCopyPaste() {
-      return getCookie("rightClickCopyPaste") !== "false";
+    function getCopyOnSelect() {
+      return getCookie("copyOnSelect") === "true";
     }
 
     function attemptReconnection() {
@@ -1179,6 +1449,56 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }, delay);
     }
 
+    // A persisted session that timed out reconnects to a fresh shell below.
+    // Say so, and offer the setting that would have kept it alive.
+    async function explainSessionExpiry() {
+      const hostLabel = hostConfig.name || hostConfig.ip;
+      let minutes: number | null = null;
+      try {
+        const { getTerminalSessionSettings } =
+          await import("@/api/settings-api");
+        minutes = (await getTerminalSessionSettings()).timeoutMinutes;
+      } catch {
+        /* the notice still makes sense without the number */
+      }
+      const notice = minutes
+        ? t("terminal.sessionExpiredNotice", { host: hostLabel, minutes })
+        : t("terminal.sessionExpiredNoticeNoMinutes", { host: hostLabel });
+      addLog({ type: "warning", stage: "connection", message: notice });
+
+      const canEnable =
+        typeof hostConfig.id === "number" &&
+        !hostConfig.terminalConfig?.autoTmux &&
+        !hostConfig.joinShareId;
+      toast.warning(notice, {
+        duration: 15000,
+        ...(canEnable
+          ? {
+              action: {
+                label: t("terminal.enableAutoTmuxAction"),
+                onClick: () => {
+                  void import("@/api/host-terminal-config-api")
+                    .then(({ setHostAutoTmux }) =>
+                      setHostAutoTmux(hostConfig.id as number, true),
+                    )
+                    .then(() => {
+                      window.dispatchEvent(
+                        new CustomEvent("termix:hosts-changed"),
+                      );
+                      toast.success(
+                        t("terminal.autoTmuxEnabled", { host: hostLabel }),
+                      );
+                    })
+                    .catch(() =>
+                      toast.error(t("terminal.autoTmuxEnableFailed")),
+                    );
+                },
+              },
+            }
+          : {}),
+      });
+    }
+
     async function connectToHost(cols: number, rows: number) {
       if (isConnectingRef.current) {
         return;
@@ -1201,6 +1521,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           window.location.port === "");
 
       let baseWsUrl: string;
+      let wsProtocols: string[] = [];
+      let outboundHostConfig = hostConfig;
 
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
@@ -1223,7 +1545,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           isConnectingRef.current = false;
           return;
         }
-        baseWsUrl = resolvedUrl;
+        if (origin === "local") {
+          try {
+            outboundHostConfig = await hydrateLocalSharedHostAuth(hostConfig);
+          } catch (error) {
+            const message = getErrorMessage(
+              error,
+              "Failed to load shared SSH authentication",
+            );
+            setIsConnected(false);
+            setIsConnecting(false);
+            updateConnectionError(message);
+            addLog({ type: "error", stage: "auth", message });
+            isConnectingRef.current = false;
+            return;
+          }
+        }
+        baseWsUrl = resolvedUrl.url;
+        wsProtocols = resolvedUrl.protocols;
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
       }
@@ -1246,7 +1585,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         connectionTimeoutRef.current = null;
       }
 
-      const ws = new WebSocket(baseWsUrl);
+      const ws = new WebSocket(baseWsUrl, wsProtocols);
       webSocketRef.current = ws;
       wasDisconnectedBySSH.current = false;
       updateConnectionError(null);
@@ -1254,13 +1593,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isReconnectingRef.current = false;
       setIsConnecting(true);
 
-      setupWebSocketListeners(ws, cols, rows);
+      setupWebSocketListeners(ws, cols, rows, outboundHostConfig);
     }
 
     function setupWebSocketListeners(
       ws: WebSocket,
       cols: number,
       rows: number,
+      outboundHostConfig: TerminalHostConfig,
     ) {
       ws.addEventListener("open", () => {
         alternateScreenModeRef.current = false;
@@ -1337,7 +1677,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               data: {
                 cols,
                 rows,
-                hostConfig,
+                hostConfig: outboundHostConfig,
                 initialPath,
                 executeCommand,
                 tmuxAttachSession,
@@ -1360,6 +1700,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             if (termixMatch && onOpenFileInEditor) {
               const filePath = termixMatch[1].trim();
               trackInput(data);
+              clearAutosuggestion();
               terminal.write("\r\n");
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(
@@ -1373,8 +1714,40 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           }
           trackInput(data);
-          const predicted = localEchoRef.current?.handleInput(data);
+          const predicted = alternateScreenModeRef.current
+            ? ""
+            : localEchoRef.current?.handleInput(data);
           if (predicted) terminal.write(predicted);
+
+          const resetsCurrentCommand =
+            data === "\r" ||
+            data === "\n" ||
+            data.includes("\x03") ||
+            data.includes("\x04") ||
+            data.includes("\x15");
+          const isCursorNavigation = data.includes("\x1b");
+          const isCommandEdit =
+            data.includes("\x08") ||
+            data.includes("\x7f") ||
+            Array.from(data).some((char) => {
+              const charCode = char.charCodeAt(0);
+              return charCode >= 32 && charCode <= 126;
+            });
+
+          if (resetsCurrentCommand) {
+            autosuggestionSuppressedRef.current = false;
+            clearAutosuggestion();
+          } else if (isCursorNavigation) {
+            autosuggestionSuppressedRef.current = true;
+            clearAutosuggestion();
+          } else if (isCommandEdit) {
+            // Don't recompute here - cursorX isn't updated until the
+            // server echoes the input back and it's written to the
+            // terminal (see the "data" message handler below). Recomputing
+            // now reads a stale cursor position and misplaces the ghost text.
+            clearAutosuggestion();
+          }
+
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -1413,9 +1786,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 currentAutocompleteCommand.current = "";
               }
 
-              const output =
-                localEchoRef.current?.handleOutput(msg.data) ?? msg.data;
+              const output = applyLocalEchoToOutput(msg.data);
               terminal.write(formatTerminalOutput(output));
+              scheduleAutosuggestionUpdate();
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
               const strippedData = msg.data.replace(
@@ -1425,9 +1798,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               maybeOfferPasswordFill(strippedData);
             } else {
               const stringData = String(msg.data);
-              const output =
-                localEchoRef.current?.handleOutput(stringData) ?? stringData;
+              const output = applyLocalEchoToOutput(stringData);
               terminal.write(formatTerminalOutput(output));
+              scheduleAutosuggestionUpdate();
             }
           } else if (msg.type === "error") {
             const errorMessage = msg.message || t("terminal.unknownError");
@@ -1768,6 +2141,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 requestId: msg.requestId || "",
                 stage: "chooser",
                 providers: msg.providers,
+                label: typeof msg.label === "string" ? msg.label : undefined,
               });
               if (opksshTimeoutRef.current) {
                 clearTimeout(opksshTimeoutRef.current);
@@ -1934,6 +2308,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "sessionCreated") {
             sessionIdRef.current = msg.sessionId;
+            onSessionReady?.(msg.sessionId);
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
                 patchOpenTab(hostConfig.instanceId!, {
@@ -1973,6 +2348,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             isAttachingSessionRef.current = false;
             sessionIdRef.current = null;
             wasSessionExpiredRef.current = true;
+            void explainSessionExpiry();
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
                 patchOpenTab(hostConfig.instanceId!, {
@@ -2243,12 +2619,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         setShowAutocomplete(false);
         setAutocompleteSuggestions([]);
         currentAutocompleteCommand.current = "";
+        clearAutosuggestion();
 
         setTimeout(() => {
           terminal?.focus();
         }, 50);
       },
-      [terminal, updateCurrentCommand],
+      [clearAutosuggestion, terminal, updateCurrentCommand],
     );
 
     const handleDeleteCommand = useCallback(
@@ -2298,12 +2675,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const fontFamily = resolveTerminalFontFamily(config.fontFamily);
       ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
 
+      // Resolve the effective font size: a persisted zoom override wins, but if
+      // the configured font size itself changed (e.g. user edited it in
+      // Settings) drop the override so the new configured value takes effect.
+      const effectiveFontSize = readFontSizeOverride() ?? configuredFontSize;
+
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
       terminal.options.cursorStyle = config.cursorStyle;
       terminal.options.scrollback = config.scrollback;
-      terminal.options.fontSize = config.fontSize;
-      terminalFontSizeRef.current = config.fontSize;
+      terminal.options.fontSize = effectiveFontSize;
+      terminalFontSizeRef.current = effectiveFontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
       terminal.options.macOptionIsMeta = config.macOptionIsMeta;
@@ -2374,12 +2756,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         config.customThemeColors,
       );
 
+      // Honor a persisted zoom override for the initial font size too.
+      const initialFontSize = readFontSizeOverride() ?? config.fontSize;
+
       // Set initial options before opening the terminal
       terminal.options = {
         cursorBlink: config.cursorBlink,
         cursorStyle: config.cursorStyle,
         scrollback: config.scrollback,
-        fontSize: config.fontSize,
+        fontSize: initialFontSize,
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
@@ -2537,10 +2922,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
-        if (getUseRightClickCopyPaste()) {
+        const action = resolveTerminalContextMenuAction({
+          rightClickCopyPaste: getUseRightClickCopyPaste(),
+          copyOnSelect: getCopyOnSelect(),
+          hasSelection: terminal.hasSelection(),
+        });
+        if (action !== "native") {
           e.preventDefault();
           e.stopPropagation();
-          if (terminal.hasSelection()) {
+          if (action === "copy") {
             const text = terminal.getSelection();
             writeTextToClipboard(text).then(() => terminal.clearSelection());
           } else {
@@ -2552,6 +2942,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
       };
       element?.addEventListener("contextmenu", handleContextMenu);
+
+      const handleSelectionMouseUp = (e: MouseEvent) => {
+        const text = selectedTextToCopy({
+          copyOnSelect: getCopyOnSelect(),
+          button: e.button,
+          selection: terminal.getSelection(),
+        });
+        if (text) void writeTextToClipboard(text);
+      };
+      element?.addEventListener("mouseup", handleSelectionMouseUp);
+
+      const handleMiddleClick = (e: MouseEvent) => {
+        if (
+          e.button !== 1 ||
+          !getCopyOnSelect() ||
+          !getUseRightClickCopyPaste()
+        ) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        readTextFromClipboard().then((text) => {
+          if (text) terminal.paste(text);
+        });
+      };
+      element?.addEventListener("auxclick", handleMiddleClick);
 
       const handlePaste = (e: ClipboardEvent) => {
         const text = e.clipboardData?.getData("text");
@@ -2638,6 +3054,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         resizeObserver.disconnect();
         clipboardProvider.dispose();
         element?.removeEventListener("contextmenu", handleContextMenu);
+        element?.removeEventListener("mouseup", handleSelectionMouseUp);
+        element?.removeEventListener("auxclick", handleMiddleClick);
         element?.removeEventListener("paste", handlePaste);
         element?.removeEventListener("mousedown", handleTmuxDragStart);
         element?.removeEventListener("mousemove", handleTmuxDragMove);
@@ -2825,6 +3243,31 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         }
 
+        if (
+          isAiAssistantAvailable &&
+          e.ctrlKey &&
+          e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "a"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleAiAssistant();
+          return false;
+        }
+        const macLineNav = getMacLineNavigationSequence(e);
+        if (macLineNav) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+            webSocketRef.current.send(
+              JSON.stringify({ type: "input", data: macLineNav }),
+            );
+          }
+          return false;
+        }
+
         // Forward global app shortcuts to AppShell directly — xterm swallows
         // all keydown events and synthetic re-dispatch is unreliable.
         // stopPropagation prevents the same event from also firing the window listener.
@@ -2849,11 +3292,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "ArrowUp",
             "ArrowDown",
           ];
-          if (arrowCodes.includes(e.code) || /^Digit[1-9]$/.test(e.code)) {
+          if (arrowCodes.includes(e.code)) {
             e.stopPropagation();
             globalShortcutHandler.current?.(e);
             return false;
           }
+        }
+
+        if (isTabJumpHotkey(e)) {
+          e.stopPropagation();
+          globalShortcutHandler.current?.(e);
+          return false;
         }
 
         const fontZoomDirection = getTerminalFontZoomDirection(e);
@@ -2865,86 +3314,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.ctrlKey &&
-          !e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyC", "c") &&
-          terminal.hasSelection()
+          !handleTerminalClipboardKeyEvent(
+            e,
+            terminal,
+            { writeTextToClipboard, readTextFromClipboard },
+            { plainPasteMode: "native" },
+          )
         ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            terminal.clearSelection();
-            return false;
-          }
-        }
-
-        if (
-          (e.metaKey &&
-            !e.shiftKey &&
-            !e.ctrlKey &&
-            !e.altKey &&
-            isPhysicalShortcutKey(e, "KeyC", "c")) ||
-          (e.ctrlKey &&
-            !e.shiftKey &&
-            !e.altKey &&
-            !e.metaKey &&
-            e.key === "Insert")
-        ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            return false;
-          }
-        }
-
-        if (
-          e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyC", "c")
-        ) {
-          const selection = terminal.getSelection();
-          if (selection) {
-            e.preventDefault();
-            e.stopPropagation();
-            writeTextToClipboard(selection);
-            terminal.clearSelection();
-            return false;
-          }
-        }
-
-        if (
-          e.ctrlKey &&
-          e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyV", "v")
-        ) {
-          e.preventDefault();
-          e.stopPropagation();
-          readTextFromClipboard().then((text) => {
-            if (text) terminal.paste(text);
-          });
-          return false;
-        }
-
-        if (
-          e.ctrlKey &&
-          !e.shiftKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          isPhysicalShortcutKey(e, "KeyV", "v")
-        ) {
-          // Let the browser handle Ctrl+V natively, the paste event
-          // listener will intercept the result without triggering the
-          // clipboard permission popup
           return false;
         }
 
@@ -3050,6 +3426,31 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
+        const shouldAcceptAutosuggestion =
+          autosuggestionRef.current &&
+          ((e.key === "ArrowRight" &&
+            !e.ctrlKey &&
+            !e.altKey &&
+            !e.metaKey &&
+            !e.shiftKey) ||
+            (e.key === "End" &&
+              !e.ctrlKey &&
+              !e.altKey &&
+              !e.metaKey &&
+              !e.shiftKey) ||
+            (e.ctrlKey &&
+              !e.altKey &&
+              !e.metaKey &&
+              !e.shiftKey &&
+              e.key.toLowerCase() === "f"));
+
+        if (shouldAcceptAutosuggestion) {
+          e.preventDefault();
+          e.stopPropagation();
+          acceptAutosuggestion();
+          return false;
+        }
+
         if (
           isTabKeyEvent(e) &&
           e.shiftKey &&
@@ -3089,12 +3490,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             localStorage.getItem("commandAutocomplete") === "true";
 
           if (!autocompleteEnabled) {
+            clearAutosuggestion();
             sendTabToShell();
             return false;
           }
 
           const currentCmd = getCurrentCommandRef.current().trim();
           if (currentCmd.length === 0) {
+            clearAutosuggestion();
             sendTabToShell();
             return false;
           }
@@ -3120,10 +3523,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
 
               updateCurrentCommandRef.current(completedCommand);
+              clearAutosuggestion();
             } else if (matches.length > 1) {
               currentAutocompleteCommand.current = currentCmd;
               setAutocompleteSuggestions(matches);
               setAutocompleteSelectedIndex(0);
+              clearAutosuggestion();
 
               const cursorY = terminal.buffer.active.cursorY;
               const cursorX = terminal.buffer.active.cursorX;
@@ -3160,6 +3565,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               setShowAutocomplete(true);
             } else {
+              clearAutosuggestion();
               sendTabToShell();
             }
           }
@@ -3170,7 +3576,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       terminal.attachCustomKeyEventHandler(handleCustomKey);
-    }, [terminal]);
+    }, [isAiAssistantAvailable, toggleAiAssistant, terminal]);
 
     useEffect(() => {
       if (!terminal || !hostConfig || !isVisible) return;
@@ -3392,6 +3798,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }}
         />
 
+        {isConnected &&
+          isAiAssistantAvailable &&
+          host?.enableTerminalToolbar === false && (
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              onClick={toggleAiAssistant}
+              title={t("ai.assistant") + " (Ctrl+Shift+A)"}
+              className="absolute top-2 right-2 z-[110] size-8 bg-black/60 text-white/75 hover:bg-black/80 hover:text-white"
+            >
+              <Bot className="size-4" />
+            </Button>
+          )}
+
         {host && host.enableTerminalToolbar !== false && (
           <TerminalToolbar
             host={host}
@@ -3416,6 +3837,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }}
             isFocused={isFocusedPane}
+            showAiAssistant={isAiAssistantAvailable}
+            onToggleAiAssistant={toggleAiAssistant}
+          />
+        )}
+
+        {aiAssistantOpen && isAiAssistantAvailable && hostConfig.id && (
+          <TerminalAiPanel
+            hostLabel={`${hostConfig.username}@${hostConfig.name || hostConfig.ip}`}
+            hostId={hostConfig.id}
+            activeTab={`terminal:${hostConfig.name || hostConfig.ip}`}
+            onClose={closeAiAssistant}
+            onRunInTerminal={handleRunCommandInTerminal}
           />
         )}
 
@@ -3541,6 +3974,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             stage={opksshDialog.stage}
             error={opksshDialog.error}
             providers={opksshDialog.providers}
+            label={opksshDialog.label}
             onCancel={() => {
               if (webSocketRef.current) {
                 webSocketRef.current.send(
@@ -3795,6 +4229,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           selectedIndex={autocompleteSelectedIndex}
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
+        />
+        <CommandAutosuggestion
+          visible={!showAutocomplete && Boolean(autosuggestion)}
+          suggestion={autosuggestion}
+          position={autosuggestionPosition}
+          style={autosuggestionStyle}
         />
 
         <TerminalSearchBar

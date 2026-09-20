@@ -16,24 +16,25 @@ import {
   getRequestUserId,
   registerDockerSshRoutes,
 } from "./routes.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const sshLogger = logger;
 
 const app = express();
+app.set("trust proxy", "loopback");
 
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 
 app.use(cookieParser());
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
-
-const authManager = AuthManager.getInstance();
-app.use(authManager.createAuthMiddleware());
 
 registerDockerSshRoutes(app);
 
@@ -47,14 +48,20 @@ registerDockerContainerRoutes(app, {
 
 const PORT = 30007;
 
-app.listen(PORT, async () => {
-  try {
-    await authManager.initialize();
-  } catch (err) {
-    sshLogger.error("Failed to initialize Docker backend", err, {
-      operation: "startup",
-    });
-  }
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: sshLogger,
+  serviceName: "docker",
+  onListening: async () => {
+    try {
+      await authManager.initialize();
+    } catch (err) {
+      sshLogger.error("Failed to initialize Docker backend", err, {
+        operation: "startup",
+      });
+    }
+  },
 });
 
 process.on("SIGINT", () => {

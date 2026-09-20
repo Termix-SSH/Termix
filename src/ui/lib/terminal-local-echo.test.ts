@@ -11,14 +11,33 @@ describe("TerminalLocalEcho", () => {
   it("rolls back a prediction when remote output differs", () => {
     const echo = new TerminalLocalEcho("on");
     echo.handleInput("a");
-    expect(echo.handleOutput("z")).toBe("\x1b[1D\x1b[Kz");
+    expect(echo.handleOutput("z")).toBe("\x1b[1D\x1b[1Xz");
   });
 
-  it("does not expose password input", () => {
+  it("only erases the predicted cells during rollback", () => {
     const echo = new TerminalLocalEcho("on");
-    expect(echo.handleOutput("Pass")).toBe("Pass");
-    expect(echo.handleOutput("word: ")).toBe("word: ");
+    echo.handleInput("a");
+    echo.handleInput("b");
+    expect(echo.handleOutput("\x1b[C")).toBe("\x1b[2D\x1b[2X\x1b[C");
+  });
+
+  it.each([
+    ["split prompt", ["Pass", "word: "]],
+    ["sudo prompt", ["[sudo] password for alice: "]],
+    ["ssh-keygen prompt", ["Enter passphrase (empty for no passphrase): "]],
+    ["passwd prompt", ["New password: "]],
+  ])("does not expose input after a %s", (_name, chunks) => {
+    const echo = new TerminalLocalEcho("on");
+    for (const chunk of chunks) expect(echo.handleOutput(chunk)).toBe(chunk);
     expect(echo.handleInput("s")).toBe("");
+  });
+
+  it("does not treat ordinary password text as a hidden-input prompt", () => {
+    const echo = new TerminalLocalEcho("on");
+    expect(echo.handleOutput("Your password has expired\r\n$ ")).toBe(
+      "Your password has expired\r\n$ ",
+    );
+    expect(echo.handleInput("s")).toBe("s");
   });
 
   it("does not predict control input, paste, or wide characters", () => {

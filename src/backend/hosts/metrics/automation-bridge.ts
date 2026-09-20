@@ -6,6 +6,9 @@
  * automations layer must never disturb metric collection, and a static import
  * would create a cycle (automations reads repositories, which the metrics
  * module also pulls in).
+ *
+ * For the generic (non-metrics) internal event notifier, see
+ * `hosts/automation-events.ts` -- that one is shared across features.
  */
 
 import type { MetricsSnapshot } from "../../automations/conditions.js";
@@ -43,20 +46,6 @@ export function notifyAutomationHealthCheck(
   import("../../automations/triggers.js")
     .then((triggers) =>
       triggers.onHealthCheck({ hostId, userId, checkId, ok, detail }),
-    )
-    .catch(() => {});
-}
-
-export function notifyAutomationInternalEvent(
-  event: string,
-  userId: string,
-  hostId?: number,
-  details?: Record<string, unknown>,
-): void {
-  if (!userId) return;
-  import("../../automations/triggers.js")
-    .then((triggers) =>
-      triggers.onInternalEvent({ event, userId, hostId, details }),
     )
     .catch(() => {});
 }

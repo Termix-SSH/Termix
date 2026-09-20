@@ -36,10 +36,15 @@ import {
   requestDesktopAutoSession,
   requestTrustedProxyLogin,
 } from "@/main-axios";
+import {
+  getEmbeddedServerFailure,
+  type EmbeddedServerFailure,
+} from "@/lib/embedded-server-status";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import { isPasskeySupported, loginWithPasskey } from "@/api/webauthn-api";
 import type { SSOProviderPublic } from "@/types/index";
 import { Checkbox } from "@/components/checkbox";
+import { useBranding } from "@/contexts/BrandingContext";
 import {
   changeAppLanguage,
   normalizeLanguageCode,
@@ -49,6 +54,7 @@ import {
   removeSilentSigninFromSearch,
   shouldTriggerSilentSignin,
 } from "./silent-signin";
+import { Select2 } from "@/components/select2";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -89,6 +95,7 @@ const LANGUAGES = [
 ];
 
 const STORAGE_KEY = "termix_auth";
+const DESKTOP_MANUAL_LOGOUT_KEY = "termix_desktop_manual_logout";
 
 export function getStoredAuth(): {
   loggedIn: boolean;
@@ -105,6 +112,18 @@ export function getStoredAuth(): {
 
 export function clearStoredAuth() {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+export function markDesktopManualLogout() {
+  localStorage.setItem(DESKTOP_MANUAL_LOGOUT_KEY, "true");
+}
+
+export function clearDesktopManualLogout() {
+  localStorage.removeItem(DESKTOP_MANUAL_LOGOUT_KEY);
+}
+
+function hasDesktopManualLogout() {
+  return localStorage.getItem(DESKTOP_MANUAL_LOGOUT_KEY) === "true";
 }
 
 function storeAuth(username: string) {
@@ -214,6 +233,8 @@ function Field({
 
 export function Auth({ onLogin }: AuthProps) {
   const { t } = useTranslation();
+  const branding = useBranding();
+  const localDesktopAuth = isElectron() && !isInElectronWebView();
   const [view, setView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
   const [providerLoading, setProviderLoading] = useState<
@@ -274,23 +295,28 @@ export function Auth({ onLogin }: AuthProps) {
     useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
-  const [dbHealthChecking, setDbHealthChecking] = useState(true);
+  const [dbHealthChecking, setDbHealthChecking] = useState(
+    () => !localDesktopAuth || !hasDesktopManualLogout(),
+  );
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
+  const [desktopManualLogoutActive, setDesktopManualLogoutActive] = useState(
+    () => localDesktopAuth && hasDesktopManualLogout(),
+  );
 
-  // Electron, non-iframed only: the desktop app never shows a login form
-  // when running standalone -- the embedded backend auto-provisions a
-  // single local user on first boot, and this component silently exchanges
-  // that for a session instead of rendering login/register.
-  // null = probe still in flight (Electron only, blocks rendering below).
-  // true = probe settled with no auto-login (not applicable outside
-  // Electron, multiple users exist, or setup is genuinely required) --
-  // safe to fall through to the normal form/health-check flow.
-  // Auto-login success never sets this; it calls onLogin directly and this
-  // component unmounts.
+  // Electron, non-iframed only: the desktop app owns an embedded local
+  // backend with an auto-provisioned local user, so it should never show
+  // username/password registration for that local surface. null means the
+  // auto-session probe is still in flight; true means the probe settled
+  // without a session and the local recovery panel can render.
   const [desktopAutoSessionDone, setDesktopAutoSessionDone] = useState<
     boolean | null
-  >(!isElectron() || isInElectronWebView() ? true : null);
+  >(!localDesktopAuth || hasDesktopManualLogout() ? true : null);
   const [desktopAutoSessionRetries, setDesktopAutoSessionRetries] = useState(0);
+  // Set only when the Electron main process reports that the embedded
+  // backend died for good, which is the one case where retrying the
+  // auto-session forever is wrong.
+  const [embeddedServerFailure, setEmbeddedServerFailure] =
+    useState<EmbeddedServerFailure | null>(null);
 
   useEffect(() => {
     if (proxySigninHandledRef.current || isElectron()) return;
@@ -341,6 +367,11 @@ export function Auth({ onLogin }: AuthProps) {
   }, [t]);
 
   useEffect(() => {
+    if (localDesktopAuth) {
+      setSsoProvidersLoaded(true);
+      setOidcSilentLoginDefaultLoaded(true);
+      return;
+    }
     getRegistrationAllowed()
       .then((res) => setRegistrationAllowed(res.allowed))
       .catch(() => {});
@@ -358,7 +389,7 @@ export function Auth({ onLogin }: AuthProps) {
       .then((res) => setOidcSilentLoginDefault(res.enabled))
       .catch(() => {})
       .finally(() => setOidcSilentLoginDefaultLoaded(true));
-  }, []);
+  }, [localDesktopAuth]);
 
   useEffect(() => {
     // Runs once the auto-session probe has settled (immediately outside
@@ -366,6 +397,10 @@ export function Auth({ onLogin }: AuthProps) {
     // Electron). Waiting avoids flashing a login screen the user is about
     // to skip past via auto-login.
     if (desktopAutoSessionDone !== true) return;
+    if (localDesktopAuth) {
+      setDbHealthChecking(false);
+      return;
+    }
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -408,7 +443,7 @@ export function Auth({ onLogin }: AuthProps) {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [desktopAutoSessionDone]);
+  }, [desktopAutoSessionDone, localDesktopAuth]);
 
   // A cold first launch spawns the embedded backend as a separate process
   // that can take anywhere from a couple seconds to much longer to finish
@@ -419,20 +454,37 @@ export function Auth({ onLogin }: AuthProps) {
   // "retry" outcome (connection error, not a real verdict) is retried
   // forever with capped backoff rather than ever giving up and falling
   // through to the login form: that form is not a valid destination for a
-  // standalone install with no remote sync configured, since the only
-  // local account has no password to log in with. Only a definitive
-  // "declined" (backend reachable and says no -- multiple users, or the
-  // sole local user has a real credential) stops retrying and shows the
-  // real form.
+  // standalone install with no remote sync configured. Only a definitive
+  // "declined" stops retrying and shows a local recovery panel.
   useEffect(() => {
     if (desktopAutoSessionDone !== null) return;
+    if (embeddedServerFailure) return;
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // "Retry forever" holds only while the backend could still be booting.
+    // If the main process reports that it exited -- a port conflict being
+    // by far the most common cause -- there is nothing left to wait for, so
+    // the reason is shown instead of an unending spinner.
+    const retryUnlessBackendIsGone = async () => {
+      const failure = await getEmbeddedServerFailure();
+      if (cancelled) return;
+      if (failure) {
+        setEmbeddedServerFailure(failure);
+        return;
+      }
+      const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
+      retryTimer = setTimeout(() => {
+        if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
+      }, delay);
+    };
+
     requestDesktopAutoSession()
       .then((outcome) => {
         if (cancelled) return;
         if (outcome.kind === "success") {
           storeAuth(outcome.data.username || "");
+          clearDesktopManualLogout();
           onLogin(
             outcome.data.username || "",
             outcome.data.userId || undefined,
@@ -441,26 +493,25 @@ export function Auth({ onLogin }: AuthProps) {
           return;
         }
         if (outcome.kind === "retry") {
-          const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
-          retryTimer = setTimeout(() => {
-            if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
-          }, delay);
+          void retryUnlessBackendIsGone();
           return;
         }
         setDesktopAutoSessionDone(true);
       })
       .catch(() => {
         if (cancelled) return;
-        const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
-        retryTimer = setTimeout(() => {
-          if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
-        }, delay);
+        void retryUnlessBackendIsGone();
       });
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [desktopAutoSessionDone, desktopAutoSessionRetries, onLogin]);
+  }, [
+    desktopAutoSessionDone,
+    desktopAutoSessionRetries,
+    embeddedServerFailure,
+    onLogin,
+  ]);
 
   useEffect(() => {
     if (view === "totp" && totpInputRef.current) totpInputRef.current.focus();
@@ -519,26 +570,41 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       if (isInElectronWebView()) {
-        window.parent.postMessage(
-          {
-            type: "AUTH_SUCCESS",
-            source: "oidc_callback",
-            platform: "desktop",
-            timestamp: Date.now(),
-          },
-          "*",
-        );
-        setWebviewAuthSuccess(true);
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname,
-        );
+        // Electron Remote Sync embeds the remote server in an iframe. The
+        // OIDC callback authenticates by setting the remote origin's
+        // HttpOnly cookie, so read the JWT back before notifying the parent.
+        const postToken = (token: string | null) => {
+          window.parent.postMessage(
+            {
+              type: "AUTH_SUCCESS",
+              source: "oidc_callback",
+              platform: "desktop",
+              token,
+              timestamp: Date.now(),
+            },
+            "*",
+          );
+          setWebviewAuthSuccess(true);
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
+        };
+        const urlToken = urlParams.get("token");
+        if (urlToken) {
+          postToken(urlToken);
+        } else {
+          getCurrentToken()
+            .then((token) => postToken(token ?? null))
+            .catch(() => postToken(null));
+        }
         return;
       }
       getUserInfo()
         .then((meRes) => {
           storeAuth(meRes.username || "");
+          clearDesktopManualLogout();
           onLogin(
             meRes.username || "",
             meRes.userId || undefined,
@@ -574,6 +640,13 @@ export function Auth({ onLogin }: AuthProps) {
     resetAll();
     if (v === "reset") setUsername(currentUsername);
     setView(v);
+  }
+
+  function continueLocalDesktopSession() {
+    clearDesktopManualLogout();
+    setDesktopManualLogoutActive(false);
+    setDesktopAutoSessionRetries(0);
+    setDesktopAutoSessionDone(null);
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -623,6 +696,7 @@ export function Auth({ onLogin }: AuthProps) {
       }
       const meRes = await getUserInfo();
       storeAuth(meRes.username || username.trim());
+      clearDesktopManualLogout();
       toast.success(t("messages.loginSuccess"));
       onLogin(
         meRes.username || username.trim(),
@@ -764,6 +838,7 @@ export function Auth({ onLogin }: AuthProps) {
       }
       const meRes = await getUserInfo();
       storeAuth(meRes.username || username.trim());
+      clearDesktopManualLogout();
       toast.success(t("messages.registrationSuccess"));
       onLogin(
         meRes.username || username.trim(),
@@ -823,6 +898,7 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       storeAuth(res.username || username);
+      clearDesktopManualLogout();
       toast.success(t("messages.loginSuccess"));
       onLogin(
         res.username || username,
@@ -1034,6 +1110,7 @@ export function Auth({ onLogin }: AuthProps) {
         );
         const meRes = await getUserInfo();
         storeAuth(meRes.username || "");
+        clearDesktopManualLogout();
         toast.success(t("messages.loginSuccess"));
         onLogin(
           meRes.username || "",
@@ -1098,6 +1175,46 @@ export function Auth({ onLogin }: AuthProps) {
   // Electron, non-iframed: wait for the auto-session probe before rendering
   // anything, so a standalone desktop install never flashes a login form
   // it's about to skip past.
+  if (embeddedServerFailure) {
+    const detail =
+      embeddedServerFailure.reason === "port-in-use"
+        ? embeddedServerFailure.port !== null
+          ? t("messages.embeddedServerPortInUse", {
+              port: embeddedServerFailure.port,
+            })
+          : t("messages.embeddedServerPortInUseUnknownPort")
+        : t("messages.embeddedServerCrashed");
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
+        <div className="flex flex-col gap-5 p-6 border border-border bg-card max-w-sm w-full">
+          <div className="flex flex-col gap-1">
+            <p className="font-bold text-destructive">
+              {t("errors.embeddedServerFailed")}
+            </p>
+            <p className="text-sm text-muted-foreground">{detail}</p>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="text-xs text-muted-foreground">
+              {t("common.language")}
+            </span>
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (
     isElectron() &&
     !isInElectronWebView() &&
@@ -1139,7 +1256,7 @@ export function Auth({ onLogin }: AuthProps) {
             <span className="text-xs text-muted-foreground">
               {t("common.language")}
             </span>
-            <select
+            <Select2
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value)}
               className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
@@ -1149,7 +1266,7 @@ export function Auth({ onLogin }: AuthProps) {
                   {lang.label}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
         </div>
       </div>
@@ -1159,6 +1276,79 @@ export function Auth({ onLogin }: AuthProps) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+
+  if (localDesktopAuth)
+    return (
+      <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
+        <div className="flex flex-1 overflow-hidden">
+          <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle, color-mix(in oklch, var(--border) 80%, transparent) 1px, transparent 1px)",
+                backgroundSize: "24px 24px",
+              }}
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
+              <span className="text-4xl font-bold tracking-[0.3em] font-mono">
+                TERMIX
+              </span>
+              <div className="w-8 h-px bg-accent-brand" />
+              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
+                {t("auth.tagline")}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
+            <div className="w-full max-w-sm flex flex-col gap-6">
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-1">
+                  <h1 className="text-xl font-bold">
+                    {desktopManualLogoutActive
+                      ? "Local desktop signed out"
+                      : "Local desktop session unavailable"}
+                  </h1>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {desktopManualLogoutActive
+                      ? "You signed out of the local desktop session. Continue locally to use this device's embedded Termix server again."
+                      : "Termix could not create a local desktop session. Retry the embedded local session instead of registering a new account."}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant={desktopManualLogoutActive ? "outline" : "default"}
+                  className="w-full"
+                  onClick={continueLocalDesktopSession}
+                >
+                  {desktopManualLogoutActive
+                    ? "Continue with local desktop"
+                    : "Retry local desktop session"}
+                </Button>
+                <Separator />
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-muted-foreground">
+                    {t("common.language")}
+                  </span>
+                  <Select2
+                    value={language}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    {LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.label}
+                      </option>
+                    ))}
+                  </Select2>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
 
@@ -1194,12 +1384,19 @@ export function Auth({ onLogin }: AuthProps) {
             }}
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 px-12">
-            <span className="text-4xl font-bold tracking-[0.3em] font-mono">
-              TERMIX
+            {branding.logo && (
+              <img
+                src={branding.logo}
+                alt=""
+                className="w-16 h-16 object-contain mb-1"
+              />
+            )}
+            <span className="text-4xl font-bold tracking-[0.3em] font-mono uppercase">
+              {branding.appName}
             </span>
             <div className="w-8 h-px bg-accent-brand" />
             <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.25em]">
-              {t("auth.tagline")}
+              {branding.tagline || t("auth.tagline")}
             </span>
           </div>
         </div>
@@ -1731,7 +1928,7 @@ export function Auth({ onLogin }: AuthProps) {
                   <span className="text-xs text-muted-foreground">
                     {t("common.language")}
                   </span>
-                  <select
+                  <Select2
                     value={language}
                     onChange={(e) => handleLanguageChange(e.target.value)}
                     className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
@@ -1741,7 +1938,7 @@ export function Auth({ onLogin }: AuthProps) {
                         {lang.label}
                       </option>
                     ))}
-                  </select>
+                  </Select2>
                 </div>
               </div>
             )}

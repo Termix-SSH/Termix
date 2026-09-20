@@ -4,6 +4,7 @@ import { Button } from "@/components/button";
 import { Separator } from "@/components/separator";
 import { LayoutPanelLeft, X, ChevronDown } from "lucide-react";
 import { PANE_COUNTS, SPLIT_MODES } from "@/lib/theme";
+import { tabJumpHotkeyKeys } from "@/lib/tab-jump-hotkey";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, SplitMode } from "@/types/ui-types";
 
@@ -383,7 +384,7 @@ export function SplitScreenPanel({
               label: t("newUi.sidebar.splitScreen.hotkeysPrevTab"),
             },
             {
-              keys: ["Alt", "1-9"],
+              keys: tabJumpHotkeyKeys(),
               label: t("newUi.sidebar.splitScreen.hotkeysJumpTab"),
             },
           ].map(({ keys, label }) => (

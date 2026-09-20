@@ -114,7 +114,11 @@ export async function probeAiModels(input: {
   baseUrl?: string | null;
   apiKey?: string | null;
   providerId?: number | null;
-}): Promise<{ models: string[]; source: "live" | "fallback" | "none" }> {
+}): Promise<{
+  models: string[];
+  source: "live" | "fallback" | "none";
+  warning?: string;
+}> {
   try {
     return (await authApi.post("/ai/probe-models", input)).data;
   } catch (error) {
@@ -176,6 +180,27 @@ export async function rejectAiProposal(id: number): Promise<void> {
   }
 }
 
+/**
+ * For the terminal-docked assistant: records that a run_command proposal was
+ * typed into the user's open terminal instead of run over a pooled connection.
+ */
+export async function markAiProposalRunInTerminal(
+  id: number,
+  hostId: number,
+  summary?: string,
+): Promise<{ success: boolean; summary: string }> {
+  try {
+    return (
+      await authApi.post(`/ai/proposals/${id}/mark-run-in-terminal`, {
+        hostId,
+        summary,
+      })
+    ).data;
+  } catch (error) {
+    throw handleApiError(error, "mark AI proposal run in terminal");
+  }
+}
+
 // --- admin ---
 
 export async function getAiGloballyEnabled(): Promise<boolean> {
@@ -210,5 +235,66 @@ export async function setAiPrivateEndpoints(
       .hosts;
   } catch (error) {
     throw handleApiError(error, "update AI endpoint allowlist");
+  }
+}
+
+export async function getNotificationPrivateEndpoints(): Promise<string[]> {
+  try {
+    return (await authApi.get("/users/notification-private-endpoints")).data
+      .hosts;
+  } catch (error) {
+    throw handleApiError(error, "get notification endpoint allowlist");
+  }
+}
+
+export async function getStepCaPrivateEndpoints(): Promise<string[]> {
+  try {
+    return (await authApi.get("/users/step-ca-private-endpoints")).data.hosts;
+  } catch (error) {
+    throw handleApiError(error, "get Step CA endpoint allowlist");
+  }
+}
+
+export async function setStepCaPrivateEndpoints(
+  hosts: string[],
+): Promise<string[]> {
+  try {
+    return (await authApi.patch("/users/step-ca-private-endpoints", { hosts }))
+      .data.hosts;
+  } catch (error) {
+    throw handleApiError(error, "update Step CA endpoint allowlist");
+  }
+}
+
+export async function getSecretSourcePrivateEndpoints(): Promise<string[]> {
+  try {
+    return (await authApi.get("/users/secret-source-private-endpoints")).data
+      .hosts;
+  } catch (error) {
+    throw handleApiError(error, "get secret source endpoint allowlist");
+  }
+}
+
+export async function setSecretSourcePrivateEndpoints(
+  hosts: string[],
+): Promise<string[]> {
+  try {
+    return (
+      await authApi.patch("/users/secret-source-private-endpoints", { hosts })
+    ).data.hosts;
+  } catch (error) {
+    throw handleApiError(error, "update secret source endpoint allowlist");
+  }
+}
+
+export async function setNotificationPrivateEndpoints(
+  hosts: string[],
+): Promise<string[]> {
+  try {
+    return (
+      await authApi.patch("/users/notification-private-endpoints", { hosts })
+    ).data.hosts;
+  } catch (error) {
+    throw handleApiError(error, "update notification endpoint allowlist");
   }
 }

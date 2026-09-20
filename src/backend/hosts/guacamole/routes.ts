@@ -2,9 +2,15 @@ import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
 import { withRecordingSettings } from "./recording-settings.js";
+import { withDriveSettings } from "./drive-settings.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
+import {
+  resolveRecipientSharedHostAuthentication,
+  type RecipientSharedHostAuthResolution,
+} from "../../utils/shared-host-auth-resolver.js";
+import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
@@ -15,14 +21,19 @@ import {
 } from "../../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
-import { waitForGuacdOpen } from "./guacamole-server.js";
+import { getGuacSessionByConnectId } from "./guacamole-server.js";
 import {
   logAudit,
   getAuditUsername,
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
-import { buildRdpSettings, resolveRdpDomain } from "./rdp-settings.js";
+import {
+  buildRdpSettings,
+  resolveRdpAuthTypeForConnect,
+  resolveRdpDomain,
+} from "./rdp-settings.js";
+import { createMacosVncCompatibilityProxy } from "./macos-vnc-proxy.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -30,6 +41,16 @@ const authManager = AuthManager.getInstance();
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 
 router.use(authManager.createAuthMiddleware());
+
+router.get("/connection/:connectId", (req: AuthenticatedRequest, res) => {
+  if (!req.userId)
+    return res.status(401).json({ error: "Authentication required" });
+  const session = getGuacSessionByConnectId(
+    String(req.params.connectId),
+    req.userId,
+  );
+  res.json({ guacamoleConnectionId: session?.guacamoleConnectionId ?? null });
+});
 
 /**
  * @openapi
@@ -195,7 +216,10 @@ router.post("/token", async (req, res) => {
  *                 guacamoleConnectionId:
  *                   type: string
  *                   nullable: true
- *                   description: guacd's own connection id for this session, once the handshake completes. Used to mint session-share join tokens.
+ *                   description: Null until the WebSocket handshake completes. Query /guacamole/connection/{connectId} for the session-sharing ID.
+ *                 termixConnectId:
+ *                   type: string
+ *                   description: Correlation ID for looking up this connection after the WebSocket opens.
  *       400:
  *         description: Invalid request or unsupported connection type
  *       403:
@@ -318,6 +342,7 @@ router.post(
       const hostRecord = host as Record<string, unknown>;
       const hostRepository = hostResolutionRepository;
       const isSharedConnection = host.userId !== userId;
+      let sharedAuthResolution: RecipientSharedHostAuthResolution | null = null;
 
       if (isSharedConnection) {
         // Recipients never read the owner's raw secrets; wipe them and use
@@ -331,30 +356,35 @@ router.post(
         host.telnetPassword = null;
 
         try {
-          const { SharedHostSecretsManager } =
-            await import("../../utils/shared-host-secrets-manager.js");
-          const secret =
-            await SharedHostSecretsManager.getInstance().getSecretForUser(
-              hostId,
-              userId,
-              connectionType as "rdp" | "vnc" | "telnet",
-            );
-          if (secret) {
+          const resolution = await resolveRecipientSharedHostAuthentication(
+            host,
+            hostId,
+            userId,
+            connectionType as AuthOverrideProtocol,
+          );
+          sharedAuthResolution = resolution;
+          const auth =
+            resolution.source === "personal-override"
+              ? { ...resolution.credential, domain: null }
+              : resolution.source === "owner-shared"
+                ? resolution.secret
+                : null;
+          if (auth) {
             if (connectionType === "rdp") {
-              host.rdpUser = secret.username ?? null;
-              host.rdpPassword = secret.password ?? null;
-              if (secret.domain) host.rdpDomain = secret.domain;
+              host.rdpUser = auth.username ?? null;
+              host.rdpPassword = auth.password ?? null;
+              if (auth.domain) host.rdpDomain = auth.domain;
             } else if (connectionType === "vnc") {
-              host.vncUser = secret.username ?? null;
-              host.vncPassword = secret.password ?? null;
+              host.vncUser = auth.username ?? null;
+              host.vncPassword = auth.password ?? null;
             } else if (connectionType === "telnet") {
-              host.telnetUser = secret.username ?? null;
-              host.telnetPassword = secret.password ?? null;
+              host.telnetUser = auth.username ?? null;
+              host.telnetPassword = auth.password ?? null;
             }
           }
         } catch (e) {
-          guacLogger.warn("Failed to resolve shared host secret", {
-            operation: "guac_shared_secret_resolve",
+          guacLogger.warn("Failed to resolve shared host auth", {
+            operation: "guac_shared_auth_resolve",
             hostId,
             protocol: connectionType,
             error: getErrorMessage(e, "Unknown"),
@@ -440,10 +470,11 @@ router.post(
       let username: string;
       let password: string;
 
-      const rdpAuthTypeForConnect = isSharedConnection
-        ? null
-        : (host.rdpAuthType as string) ||
-          (host.rdpCredentialId ? "credential" : "direct");
+      const rdpAuthTypeForConnect = resolveRdpAuthTypeForConnect({
+        storedAuthType: host.rdpAuthType as string | null,
+        credentialId: host.rdpCredentialId as number | null,
+        sharedResolution: isSharedConnection ? sharedAuthResolution : undefined,
+      });
 
       switch (connectionType) {
         case "rdp":
@@ -495,20 +526,24 @@ router.post(
         }
       }
 
+      let tunnelEndpoint: ReturnType<typeof resolveJumpTunnelEndpoint> | null =
+        null;
+      if (jumpHosts.length > 0 || (connectionType === "vnc" && !username)) {
+        let guacdUrl: string | undefined;
+        try {
+          guacdUrl =
+            (await createCurrentSettingsRepository().get("guac_url")) ??
+            undefined;
+        } catch {
+          // Environment/default guacd configuration remains available.
+        }
+        const guacdHost =
+          perConnectionGuacdHost || resolveGuacdOptions(guacdUrl).host;
+        tunnelEndpoint = resolveJumpTunnelEndpoint(guacdHost);
+      }
+
       if (jumpHosts.length > 0) {
         try {
-          let guacdUrl: string | undefined;
-          try {
-            guacdUrl =
-              (await createCurrentSettingsRepository().get("guac_url")) ??
-              undefined;
-          } catch {
-            // Environment/default guacd configuration remains available.
-          }
-          const guacdHost =
-            perConnectionGuacdHost || resolveGuacdOptions(guacdUrl).host;
-          const tunnelEndpoint = resolveJumpTunnelEndpoint(guacdHost);
-
           // The chain dials the first hop through that hop's own SOCKS5
           // settings; the target host's proxy config does not apply to it.
           const jumpClient = await createJumpHostChain(jumpHosts, userId);
@@ -543,7 +578,7 @@ router.post(
               );
             });
             server.on("error", reject);
-            server.listen(0, tunnelEndpoint.bindHost, () => {
+            server.listen(0, tunnelEndpoint!.bindHost, () => {
               const addr = server.address() as net.AddressInfo;
               // Auto-cleanup after 1 hour
               setTimeout(
@@ -556,7 +591,7 @@ router.post(
               resolve(addr.port);
             });
           });
-          hostname = tunnelEndpoint.advertisedHost;
+          hostname = tunnelEndpoint!.advertisedHost;
           port = tunnelPort;
           guacLogger.info("SSH tunnel established for guacamole", {
             operation: "guac_ssh_tunnel",
@@ -570,6 +605,36 @@ router.post(
           });
           return res.status(500).json({
             error: "Failed to establish SSH tunnel to remote host",
+          });
+        }
+      }
+
+      if (connectionType === "vnc" && !username) {
+        try {
+          const proxy = await createMacosVncCompatibilityProxy({
+            targetHost: hostname,
+            targetPort: port,
+            bindHost: tunnelEndpoint!.bindHost,
+          });
+          hostname = tunnelEndpoint!.advertisedHost;
+          port = proxy.port;
+          setTimeout(proxy.close, 60 * 60 * 1000).unref();
+          guacLogger.info("VNC compatibility proxy established", {
+            operation: "guac_vnc_compatibility_proxy",
+            hostId,
+            proxyPort: port,
+          });
+        } catch (proxyError) {
+          guacLogger.error(
+            "Failed to establish VNC compatibility proxy",
+            proxyError,
+            {
+              operation: "guac_vnc_compatibility_proxy_error",
+              hostId,
+            },
+          );
+          return res.status(500).json({
+            error: "Failed to establish VNC compatibility proxy",
           });
         }
       }
@@ -617,10 +682,7 @@ router.post(
 
       switch (connectionType) {
         case "rdp":
-          if (guacConfig["enable-drive"] && !guacConfig["drive-path"]) {
-            guacConfig["drive-path"] = "/drive";
-            guacConfig["create-drive-path"] = true;
-          }
+          guacConfig = withDriveSettings(guacConfig, userId);
           token = tokenService.createRdpToken(
             hostname,
             username,
@@ -677,8 +739,6 @@ router.post(
           return res.status(400).json({ error: "Invalid connection type" });
       }
 
-      const sessionInfo = await waitForGuacdOpen(termixConnectId, 10000);
-
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
         userId,
@@ -694,7 +754,8 @@ router.post(
 
       res.json({
         token,
-        guacamoleConnectionId: sessionInfo?.guacamoleConnectionId ?? null,
+        termixConnectId,
+        guacamoleConnectionId: null,
       });
     } catch (error) {
       guacLogger.error("Failed to generate guacamole token for host", error, {

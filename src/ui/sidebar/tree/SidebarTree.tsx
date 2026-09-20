@@ -89,7 +89,11 @@ export function SidebarTree({
   openOnDoubleClick = false,
 }: {
   children: (Host | HostFolder)[];
-  onOpenTab: (host: Host, type: TabType) => void;
+  onOpenTab: (
+    host: Host,
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost: (host: Host) => void;
   onShareHost?: (host: Host) => void;
   onProxmoxDiscover?: (host: Host) => void;
@@ -1019,7 +1023,9 @@ export function SidebarTree({
                     <HostItem
                       host={item}
                       depth={depth}
-                      onOpenTab={(type) => onOpenTab(item, type)}
+                      onOpenTab={(type, options) =>
+                        onOpenTab(item, type, options)
+                      }
                       onEditHost={() => onEditHost(item)}
                       onShareHost={
                         onShareHost ? () => onShareHost(item) : undefined
@@ -1101,7 +1107,7 @@ export function SidebarTree({
 
       {/* Floating selection bar */}
       {selectionMode && (
-        <div className="absolute bottom-4 inset-x-3 z-50">
+        <div className="motion-panel-enter absolute bottom-4 inset-x-3 z-50">
           <div className="bg-popover border border-border shadow-xl px-2.5 py-2 flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-semibold tabular-nums shrink-0">
               {t("hosts.nSelected", { count: selectedHostIds.size })}

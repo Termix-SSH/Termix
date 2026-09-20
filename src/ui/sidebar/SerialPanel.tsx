@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw, Usb, TriangleAlert } from "lucide-react";
 import { Input } from "@/components/input";
 import { isElectron } from "@/lib/electron";
+import { websocketAuthProtocols } from "@/lib/ws-auth";
 import type { SerialConfig } from "@/types/ui-types";
+import { Select2 } from "@/components/select2";
 
 const BAUD_RATES = [
   300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800,
@@ -34,9 +36,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
   const buildWsUrl = () => {
     // Serial is always local -- the device is physically attached to this
     // desktop machine, so it never routes through a remote server.
-    const token = localStorage.getItem("jwt");
-    const base = "ws://127.0.0.1:30011";
-    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+    return "ws://127.0.0.1:30011";
   };
 
   const refreshPorts = useCallback(() => {
@@ -48,7 +48,10 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
       return;
     }
 
-    const ws = new WebSocket(url);
+    const ws = new WebSocket(
+      url,
+      websocketAuthProtocols(localStorage.getItem("jwt")),
+    );
     ws.onopen = () => ws.send(JSON.stringify({ type: "list_ports" }));
     ws.onmessage = (ev) => {
       try {
@@ -127,7 +130,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("serial.baudRateLabel")}
             </label>
-            <select
+            <Select2
               value={baudRate}
               onChange={(e) => setBaudRate(Number(e.target.value))}
               className="flex h-7 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -137,7 +140,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
                   {r}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -145,7 +148,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
               <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {t("serial.dataBitsLabel")}
               </label>
-              <select
+              <Select2
                 value={dataBits}
                 onChange={(e) =>
                   setDataBits(Number(e.target.value) as 5 | 6 | 7 | 8)
@@ -157,28 +160,28 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
                     {b}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {t("serial.stopBitsLabel")}
               </label>
-              <select
+              <Select2
                 value={stopBits}
                 onChange={(e) => setStopBits(Number(e.target.value) as 1 | 2)}
                 className="flex h-7 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value={1}>1</option>
                 <option value={2}>2</option>
-              </select>
+              </Select2>
             </div>
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {t("serial.parityLabel")}
               </label>
-              <select
+              <Select2
                 value={parity}
                 onChange={(e) =>
                   setParity(e.target.value as "none" | "even" | "odd")
@@ -188,7 +191,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
                 <option value="none">{t("serial.parityNone")}</option>
                 <option value="even">{t("serial.parityEven")}</option>
                 <option value="odd">{t("serial.parityOdd")}</option>
-              </select>
+              </Select2>
             </div>
           </div>
 
@@ -225,7 +228,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
             </button>
           </div>
           {availablePorts.length > 0 && (
-            <select
+            <Select2
               value={path}
               onChange={(e) => setPath(e.target.value)}
               className="flex h-7 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -236,7 +239,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
                   {p}
                 </option>
               ))}
-            </select>
+            </Select2>
           )}
           <Input
             placeholder={t("serial.portPlaceholder")}
@@ -253,7 +256,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
           <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             {t("serial.baudRateLabel")}
           </label>
-          <select
+          <Select2
             value={baudRate}
             onChange={(e) => setBaudRate(Number(e.target.value))}
             className="flex h-7 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -263,7 +266,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
                 {r}
               </option>
             ))}
-          </select>
+          </Select2>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -271,7 +274,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("serial.dataBitsLabel")}
             </label>
-            <select
+            <Select2
               value={dataBits}
               onChange={(e) =>
                 setDataBits(Number(e.target.value) as 5 | 6 | 7 | 8)
@@ -283,28 +286,28 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
                   {b}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("serial.stopBitsLabel")}
             </label>
-            <select
+            <Select2
               value={stopBits}
               onChange={(e) => setStopBits(Number(e.target.value) as 1 | 2)}
               className="flex h-7 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
             >
               <option value={1}>1</option>
               <option value={2}>2</option>
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("serial.parityLabel")}
             </label>
-            <select
+            <Select2
               value={parity}
               onChange={(e) =>
                 setParity(e.target.value as "none" | "even" | "odd")
@@ -314,7 +317,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
               <option value="none">{t("serial.parityNone")}</option>
               <option value="even">{t("serial.parityEven")}</option>
               <option value="odd">{t("serial.parityOdd")}</option>
-            </select>
+            </Select2>
           </div>
         </div>
 

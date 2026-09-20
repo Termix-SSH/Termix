@@ -37,6 +37,12 @@ import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state"
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import {
+  MAX_TRANSFER_CONCURRENCY,
+  TRANSFER_CONCURRENCY_STORAGE_KEY,
+  getTransferConcurrency,
+  setTransferConcurrency,
+} from "@/features/file-manager/local-transfer-utils";
 import { VersionBadge } from "@/components/version-badge";
 import {
   Dialog,
@@ -68,6 +74,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
 import { visibleRailItems } from "./rail-items";
 import { InterfacePresetSettings } from "./InterfacePresetSettings";
@@ -77,13 +84,16 @@ import {
   ACCENT_PRESET_COLORS,
   applyAccentColor,
   applyFontSize,
+  applyUiFont,
   FONT_SIZES,
+  UI_FONTS,
 } from "@/lib/theme";
 import type { ApiKey } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
-import type { FontSizeId, ThemeId } from "@/types/ui-types";
+import type { FontSizeId, ThemeId, UiFontId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
+import { Select2 } from "@/components/select2";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
 import { ConnectionDefaultsSettings } from "./ConnectionDefaultsSettings";
 
@@ -493,10 +503,14 @@ export function UserProfilePanel({
   userPrefs,
   onPrefsChange,
   remoteSyncInitialServerUrl,
+  remoteSyncReconnectRequested,
+  onRemoteSyncReconnectHandled,
 }: {
   username?: string;
   onLogout?: () => void;
   remoteSyncInitialServerUrl?: string;
+  remoteSyncReconnectRequested?: boolean;
+  onRemoteSyncReconnectHandled?: () => void;
   userPrefs?: {
     reopenTabsOnLogin: boolean;
     storageMode?: string | null;
@@ -509,6 +523,7 @@ export function UserProfilePanel({
     compactHostView?: boolean | null;
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
+    showPinAppRailButton?: boolean | null;
     foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
@@ -546,7 +561,7 @@ export function UserProfilePanel({
   const [authMethod, setAuthMethod] = useState("");
   const [version, setVersion] = useState("");
   const [versionStatus, setVersionStatus] = useState<
-    "up_to_date" | "requires_update" | "beta"
+    "up_to_date" | "requires_update" | "beta" | "unknown"
   >("up_to_date");
   const [releaseUrl, setReleaseUrl] = useState("");
   const [isOidc, setIsOidc] = useState(false);
@@ -564,6 +579,9 @@ export function UserProfilePanel({
   const [totpLoading, setTotpLoading] = useState(false);
   const [showDisableTotp, setShowDisableTotp] = useState(false);
   const [disableTotpInput, setDisableTotpInput] = useState("");
+  const [showAddTotp, setShowAddTotp] = useState(false);
+  const [addTotpInput, setAddTotpInput] = useState("");
+  const [addingTotpAuthenticator, setAddingTotpAuthenticator] = useState(false);
   const [passkeys, setPasskeys] = useState<WebAuthnCredentialSummary[]>([]);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyName, setPasskeyName] = useState("");
@@ -596,6 +614,10 @@ export function UserProfilePanel({
   );
   const [fontSize, setFontSize] = useState<FontSizeId>(
     () => (localStorage.getItem("termix-font-size") as FontSizeId) ?? "md",
+  );
+  const [uiFont, setUiFont] = useState<UiFontId>(
+    () =>
+      (localStorage.getItem("termix-ui-font") as UiFontId) ?? "jetbrains-mono",
   );
   const [language, setLanguage] = useState(() =>
     normalizeLanguageCode(localStorage.getItem("i18nextLng")),
@@ -663,6 +685,9 @@ export function UserProfilePanel({
   const [terminalLinkClickBehavior, setTerminalLinkClickBehavior] = useState(
     () => localStorage.getItem("terminalLinkClickBehavior") ?? "confirm",
   );
+  const [transferConcurrency, setTransferConcurrencyState] = useState(() =>
+    getTransferConcurrency(),
+  );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
@@ -706,9 +731,7 @@ export function UserProfilePanel({
   const applyAiEnabled = (enabled: boolean) => {
     setAiAssistantEnabled(enabled);
 
-    const hidden = new Set<string>(
-      JSON.parse(localStorage.getItem("hiddenRailTabs") ?? "[]"),
-    );
+    const hidden = readHiddenRailTabs();
     if (enabled) hidden.delete("ai");
     else hidden.add("ai");
 
@@ -726,6 +749,9 @@ export function UserProfilePanel({
   );
   const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(() =>
     readRailPreference("expandAppRailOnHover"),
+  );
+  const [showPinAppRailButton, setShowPinAppRailButton] = useState(() =>
+    readRailPreference("showPinAppRailButton"),
   );
   // Read values are unused now that the Snippets settings UI lives in
   // SnippetsPanel.tsx; the setters still back the cloud-sync/reset/snapshot
@@ -798,7 +824,7 @@ export function UserProfilePanel({
     getVersionInfo()
       .then((info) => {
         setVersion(info.localVersion);
-        setVersionStatus(info.status ?? "up_to_date");
+        setVersionStatus(info.status ?? "unknown");
         setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});
@@ -811,11 +837,21 @@ export function UserProfilePanel({
     const pinHandler = () => setPinAppRail(readRailPreference("pinAppRail"));
     const hoverHandler = () =>
       setExpandAppRailOnHover(readRailPreference("expandAppRailOnHover"));
+    const showPinButtonHandler = () =>
+      setShowPinAppRailButton(readRailPreference("showPinAppRailButton"));
     window.addEventListener("pinAppRailChanged", pinHandler);
     window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    window.addEventListener(
+      "showPinAppRailButtonChanged",
+      showPinButtonHandler,
+    );
     return () => {
       window.removeEventListener("pinAppRailChanged", pinHandler);
       window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+      window.removeEventListener(
+        "showPinAppRailButtonChanged",
+        showPinButtonHandler,
+      );
     };
   }, []);
 
@@ -831,6 +867,7 @@ export function UserProfilePanel({
       const SNAPSHOT_KEYS = [
         "termix-accent",
         "termix-font-size",
+        "termix-ui-font",
         "i18nextLng",
         "commandAutocomplete",
         "commandPaletteShortcutEnabled",
@@ -839,7 +876,9 @@ export function UserProfilePanel({
         "compactHostView",
         "pinAppRail",
         "expandAppRailOnHover",
+        "showPinAppRailButton",
         "defaultSnippetFoldersCollapsed",
+        "snippetShowCommands",
         "confirmSnippetExecution",
         "disableUpdateCheck",
         "confirmTabClose",
@@ -852,6 +891,7 @@ export function UserProfilePanel({
         "dashboardTab.mainWidthPct",
         "termix-terminal-toolbar-density",
         "fileManagerViewMode",
+        TRANSFER_CONCURRENCY_STORAGE_KEY,
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
@@ -911,6 +951,14 @@ export function UserProfilePanel({
           );
           window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
         }
+        if (prefs.showPinAppRailButton != null) {
+          setShowPinAppRailButton(prefs.showPinAppRailButton);
+          localStorage.setItem(
+            "showPinAppRailButton",
+            String(prefs.showPinAppRailButton),
+          );
+          window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
+        }
         if (prefs.foldersCollapsed != null) {
           setFoldersCollapsed(prefs.foldersCollapsed);
           localStorage.setItem(
@@ -961,6 +1009,8 @@ export function UserProfilePanel({
     setTheme("system");
     setFontSize("md");
     applyFontSize("md");
+    setUiFont("jetbrains-mono");
+    applyUiFont("jetbrains-mono");
     setAccentColor(DEFAULT_ACCENT);
     setCustomColorInput(DEFAULT_ACCENT);
     localStorage.setItem("termix-accent", DEFAULT_ACCENT);
@@ -987,6 +1037,9 @@ export function UserProfilePanel({
     setExpandAppRailOnHover(true);
     localStorage.setItem("expandAppRailOnHover", "true");
     window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
+    setShowPinAppRailButton(false);
+    localStorage.setItem("showPinAppRailButton", "false");
+    window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
     setFoldersCollapsed(true);
     localStorage.removeItem("defaultSnippetFoldersCollapsed");
     setConfirmSnippetExecution(false);
@@ -1011,6 +1064,7 @@ export function UserProfilePanel({
         commandPaletteEnabled: true,
         pinAppRail: false,
         expandAppRailOnHover: true,
+        showPinAppRailButton: false,
         foldersCollapsed: true,
         confirmSnippetExecution: false,
         disableUpdateCheck: false,
@@ -1046,6 +1100,12 @@ export function UserProfilePanel({
       (restore("termix-font-size", "md") as FontSizeId) ?? "md";
     setFontSize(restoredFontSize);
     applyFontSize(restoredFontSize);
+
+    const restoredUiFont =
+      (restore("termix-ui-font", "jetbrains-mono") as UiFontId) ??
+      "jetbrains-mono";
+    setUiFont(restoredUiFont);
+    applyUiFont(restoredUiFont);
 
     const restoredAccent = restore("termix-accent", "#f59145") ?? "#f59145";
     setAccentColor(restoredAccent);
@@ -1087,6 +1147,12 @@ export function UserProfilePanel({
       String(restoredExpandRailOnHover),
     );
     window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
+
+    const restoredShowPinButton =
+      restore("showPinAppRailButton", "false") === "true";
+    setShowPinAppRailButton(restoredShowPinButton);
+    localStorage.setItem("showPinAppRailButton", String(restoredShowPinButton));
+    window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
 
     const restoredFolders =
       restore("defaultSnippetFoldersCollapsed", null) !== "false";
@@ -1156,6 +1222,11 @@ export function UserProfilePanel({
     if (storageMode === "cloud") saveToCloud({ fontSize: id });
   }
 
+  function handleUiFontChange(id: UiFontId) {
+    setUiFont(id);
+    applyUiFont(id);
+  }
+
   function handleLanguageChange(code: string) {
     void changeAppLanguage(code)
       .then((language) => {
@@ -1184,6 +1255,29 @@ export function UserProfilePanel({
       setTotpStep("setup");
     } catch {
       toast.error(t("newUi.sidebar.userProfile.totpSetupFailed"));
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleAddTotpAuthenticator() {
+    if (!addTotpInput) {
+      toast.error(t("newUi.sidebar.userProfile.totpAddInputRequired"));
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const result = await setupTOTP(addTotpInput);
+      setTotpQrCode(result.qr_code);
+      setTotpSecret(result.secret);
+      setAddingTotpAuthenticator(true);
+      setShowAddTotp(false);
+      setAddTotpInput("");
+      setTotpStep("setup");
+    } catch (e: unknown) {
+      toast.error(
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpAddFailed")),
+      );
     } finally {
       setTotpLoading(false);
     }
@@ -1620,7 +1714,11 @@ export function UserProfilePanel({
 
           {isElectron() && (
             <div className="border-t border-border pt-3 mt-3">
-              <RemoteSyncPanel initialServerUrl={remoteSyncInitialServerUrl} />
+              <RemoteSyncPanel
+                initialServerUrl={remoteSyncInitialServerUrl}
+                reconnectRequested={remoteSyncReconnectRequested}
+                onReconnectRequestHandled={onRemoteSyncReconnectHandled}
+              />
             </div>
           )}
 
@@ -1679,7 +1777,7 @@ export function UserProfilePanel({
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.userProfile.languageLabel")}
             </span>
-            <select
+            <Select2
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value)}
               className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full"
@@ -1689,7 +1787,7 @@ export function UserProfilePanel({
                   {lang.label}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -1697,7 +1795,7 @@ export function UserProfilePanel({
               {t("newUi.sidebar.userProfile.themeLabel")}
             </span>
             <div className="relative">
-              <select
+              <Select2
                 value={theme}
                 onChange={(e) => handleThemeChange(e.target.value as ThemeId)}
                 className="w-full px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring appearance-none pr-7"
@@ -1707,7 +1805,7 @@ export function UserProfilePanel({
                     {themeLabel[th.id]}
                   </option>
                 ))}
-              </select>
+              </Select2>
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
             </div>
             <div className="flex gap-1 mt-0.5">
@@ -1721,6 +1819,29 @@ export function UserProfilePanel({
                 />
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Type className="size-3" />
+              {t("newUi.sidebar.userProfile.interfaceFontLabel")}
+            </span>
+            <select
+              value={uiFont}
+              onChange={(event) =>
+                handleUiFontChange(event.target.value as UiFontId)
+              }
+              className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full"
+            >
+              {UI_FONTS.map((font) => (
+                <option key={font.id} value={font.id}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-[10px] text-muted-foreground">
+              {t("newUi.sidebar.userProfile.interfaceFontDescription")}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -1879,7 +2000,7 @@ export function UserProfilePanel({
                   {t("newUi.sidebar.userProfile.terminalLinkBehaviorDesc")}
                 </span>
               </div>
-              <select
+              <Select2
                 value={terminalLinkClickBehavior}
                 onChange={(e) => {
                   setTerminalLinkClickBehavior(e.target.value);
@@ -1896,7 +2017,32 @@ export function UserProfilePanel({
                 <option value="direct">
                   {t("hosts.linkClickBehaviorDirect")}
                 </option>
-              </select>
+              </Select2>
+            </div>
+            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium leading-snug">
+                  {t("newUi.sidebar.userProfile.transferConcurrency")}
+                </span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  {t("newUi.sidebar.userProfile.transferConcurrencyDesc")}
+                </span>
+              </div>
+              <Select2
+                value={transferConcurrency}
+                onChange={(e) =>
+                  setTransferConcurrencyState(
+                    setTransferConcurrency(Number(e.target.value)),
+                  )
+                }
+                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                {Array.from({ length: MAX_TRANSFER_CONCURRENCY }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </Select2>
             </div>
             <SettingRow
               label={t("newUi.sidebar.userProfile.commandPalette")}
@@ -2011,6 +2157,20 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.showPinAppRailButton")}
+              description={t(
+                "newUi.sidebar.userProfile.showPinAppRailButtonDesc",
+              )}
+            >
+              <FakeSwitch
+                checked={showPinAppRailButton}
+                onChange={(v) => {
+                  setShowPinAppRailButton(v);
+                  setRailPreference("showPinAppRailButton", v);
+                }}
+              />
+            </SettingRow>
           </div>
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
@@ -2110,14 +2270,25 @@ export function UserProfilePanel({
                 </span>
               </div>
               {totpEnabled ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 ml-3 text-[10px] h-7 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setShowDisableTotp((o) => !o)}
-                >
-                  {t("newUi.sidebar.userProfile.disable")}
-                </Button>
+                <div className="ml-3 flex shrink-0 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                    onClick={() => setShowAddTotp((open) => !open)}
+                    disabled={totpLoading || totpStep !== "idle"}
+                  >
+                    {t("newUi.sidebar.userProfile.totpAddAuthenticator")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[10px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setShowDisableTotp((o) => !o)}
+                  >
+                    {t("newUi.sidebar.userProfile.disable")}
+                  </Button>
+                </div>
               ) : (
                 <Button
                   variant="outline"
@@ -2130,6 +2301,50 @@ export function UserProfilePanel({
                 </Button>
               )}
             </div>
+
+            {totpEnabled && showAddTotp && (
+              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpAddTitle")}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.totpAddDescription")}
+                </span>
+                <Input
+                  placeholder={t(
+                    "newUi.sidebar.userProfile.totpDisablePlaceholder",
+                  )}
+                  value={addTotpInput}
+                  onChange={(e) => setAddTotpInput(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleAddTotpAuthenticator()
+                  }
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setShowAddTotp(false);
+                      setAddTotpInput("");
+                    }}
+                  >
+                    {t("newUi.sidebar.userProfile.cancel")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                    onClick={handleAddTotpAuthenticator}
+                    disabled={totpLoading}
+                  >
+                    {t("common.continue")}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Disable TOTP form */}
             {totpEnabled && showDisableTotp && (
@@ -2171,14 +2386,17 @@ export function UserProfilePanel({
             )}
 
             {/* TOTP setup: scan QR */}
-            {!totpEnabled && totpStep === "setup" && (
+            {totpStep === "setup" && (
               <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     {t("newUi.sidebar.userProfile.setupTotp")}
                   </span>
                   <button
-                    onClick={() => setTotpStep("idle")}
+                    onClick={() => {
+                      setTotpStep("idle");
+                      setAddingTotpAuthenticator(false);
+                    }}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-3.5" />
@@ -2214,15 +2432,33 @@ export function UserProfilePanel({
                   </button>
                 </div>
                 <span className="text-[10px] text-muted-foreground text-center">
-                  {t("newUi.sidebar.userProfile.totpInstructions")}
+                  {t(
+                    addingTotpAuthenticator
+                      ? "newUi.sidebar.userProfile.totpAddScanInstructions"
+                      : "newUi.sidebar.userProfile.totpInstructions",
+                  )}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  onClick={() => setTotpStep("verify")}
+                  onClick={() => {
+                    if (addingTotpAuthenticator) {
+                      setAddingTotpAuthenticator(false);
+                      setTotpStep("idle");
+                      toast.success(
+                        t("newUi.sidebar.userProfile.totpAddSuccess"),
+                      );
+                    } else {
+                      setTotpStep("verify");
+                    }
+                  }}
                 >
-                  {t("newUi.sidebar.userProfile.totpContinueVerify")}
+                  {t(
+                    addingTotpAuthenticator
+                      ? "newUi.sidebar.userProfile.done"
+                      : "newUi.sidebar.userProfile.totpContinueVerify",
+                  )}
                 </Button>
               </div>
             )}
@@ -2332,7 +2568,7 @@ export function UserProfilePanel({
                 className="h-8 text-xs"
                 disabled={passkeyLoading}
               />
-              <select
+              <Select2
                 value={passkeyUserVerification}
                 onChange={(e) =>
                   setPasskeyUserVerification(
@@ -2351,7 +2587,7 @@ export function UserProfilePanel({
                 <option value="discouraged">
                   {t("newUi.sidebar.userProfile.passkeyUvDiscouraged")}
                 </option>
-              </select>
+              </Select2>
             </div>
             <Button
               variant="outline"

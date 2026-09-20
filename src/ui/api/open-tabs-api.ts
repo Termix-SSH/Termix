@@ -49,6 +49,11 @@ export interface ActiveSessionInfo {
   shareId: string | null;
 }
 
+// Negative IDs identify remote-only shared hosts, absent from the local DB.
+function hasPersistableHostId(tab: { hostId?: number | null }): boolean {
+  return tab.hostId == null || (Number.isInteger(tab.hostId) && tab.hostId > 0);
+}
+
 const activeSessionsCache = createTtlRequestCache<ActiveSessionInfo[]>(2_000);
 
 export async function getOpenTabs(): Promise<OpenTabRecord[]> {
@@ -57,7 +62,7 @@ export async function getOpenTabs(): Promise<OpenTabRecord[]> {
 }
 
 export async function syncOpenTabs(tabs: OpenTabSyncPayload[]): Promise<void> {
-  await authApi.put("/open-tabs", { tabs });
+  await authApi.put("/open-tabs", { tabs: tabs.filter(hasPersistableHostId) });
 }
 
 export async function deleteOpenTab(instanceId: string): Promise<void> {
@@ -70,10 +75,12 @@ export async function patchOpenTab(
     Pick<OpenTabRecord, "hostId" | "label" | "tabOrder" | "backendSessionId">
   >,
 ): Promise<void> {
+  if (!hasPersistableHostId(updates)) return;
   await authApi.patch(`/open-tabs/${instanceId}`, updates);
 }
 
 export async function addOpenTab(tab: OpenTabUpsertPayload): Promise<void> {
+  if (!hasPersistableHostId(tab)) return;
   await authApi.post("/open-tabs", tab);
 }
 
@@ -107,6 +114,7 @@ export interface UserPreferences {
   hostTrayOnClick?: boolean | null;
   pinAppRail?: boolean | null;
   expandAppRailOnHover?: boolean | null;
+  showPinAppRailButton?: boolean | null;
   foldersCollapsed?: boolean | null;
   confirmSnippetExecution?: boolean | null;
   disableUpdateCheck?: boolean | null;

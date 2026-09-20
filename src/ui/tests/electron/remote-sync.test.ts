@@ -8,7 +8,7 @@ const { SYNCED_ENTITY_TYPES } =
   };
 
 describe("desktop remote sync entities", () => {
-  it("includes user preferences", () => {
+  it("retains user preferences in the current sync protocol", () => {
     expect(SYNCED_ENTITY_TYPES).toContain("userPreferences");
   });
 });

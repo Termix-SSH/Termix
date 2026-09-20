@@ -40,6 +40,15 @@ describe("rail-preferences", () => {
       expect(readRailPreference("pinAppRail")).toBe(true);
       expect(readRailPreference("expandAppRailOnHover")).toBe(false);
     });
+
+    it("defaults showPinAppRailButton to false when unset", () => {
+      expect(readRailPreference("showPinAppRailButton")).toBe(false);
+    });
+
+    it("reads a stored showPinAppRailButton value back", () => {
+      localStorage.setItem("showPinAppRailButton", "true");
+      expect(readRailPreference("showPinAppRailButton")).toBe(true);
+    });
   });
 
   describe("setRailPreference", () => {
@@ -99,6 +108,18 @@ describe("rail-preferences", () => {
       expect(() => setRailPreference("pinAppRail", true)).not.toThrow();
       expect(localStorage.getItem("pinAppRail")).toBe("true");
       await vi.waitFor(() => expect(api.getUserPreferences).toHaveBeenCalled());
+    });
+
+    it("persists and dispatches a change event for showPinAppRailButton", () => {
+      const listener = vi.fn();
+      window.addEventListener("showPinAppRailButtonChanged", listener);
+
+      setRailPreference("showPinAppRailButton", true);
+      expect(localStorage.getItem("showPinAppRailButton")).toBe("true");
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(readRailPreference("showPinAppRailButton")).toBe(true);
+
+      window.removeEventListener("showPinAppRailButtonChanged", listener);
     });
   });
 });

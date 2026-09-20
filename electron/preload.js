@@ -1,8 +1,36 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+const ALLOWED_INVOKE_CHANNELS = new Set([
+  "check-electron-update",
+  "clear-remote-sync-config",
+  "get-desktop-settings",
+  "get-legacy-server-config",
+  "get-remote-sync-config",
+  "get-remote-sync-jwt",
+  "get-remote-sync-status",
+  "get-remote-sync-user-info",
+  "notify-local-login",
+  "remote-sync-now",
+  "save-desktop-settings",
+  "save-remote-sync-config",
+  "save-remote-sync-jwt",
+  "test-server-connection",
+  "allow-invalid-certificate-for-origin",
+  "open-isolated-web-endpoint",
+]);
+
+function invokeAllowed(channel, ...args) {
+  if (!ALLOWED_INVOKE_CHANNELS.has(channel)) {
+    return Promise.reject(new Error(`IPC channel is not allowed: ${channel}`));
+  }
+  return ipcRenderer.invoke(channel, ...args);
+}
+
 contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
   getPlatform: () => ipcRenderer.invoke("get-platform"),
+  getEmbeddedServerStatus: () =>
+    ipcRenderer.invoke("get-embedded-server-status"),
   openNativeRdp: (options) => ipcRenderer.invoke("open-native-rdp", options),
 
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
@@ -18,10 +46,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("check-local-port-available", host, port),
   getC2STunnelPresetDefaultName: () =>
     ipcRenderer.invoke("get-c2s-tunnel-preset-default-name"),
-  startC2STunnel: (tunnel, index) =>
-    ipcRenderer.invoke("start-c2s-tunnel", tunnel, index),
-  testC2STunnel: (tunnel, index) =>
-    ipcRenderer.invoke("test-c2s-tunnel", tunnel, index),
+  startC2STunnel: (tunnel, index, authToken) =>
+    ipcRenderer.invoke("start-c2s-tunnel", tunnel, index, authToken),
+  testC2STunnel: (tunnel, index, authToken) =>
+    ipcRenderer.invoke("test-c2s-tunnel", tunnel, index, authToken),
   stopC2STunnel: (tunnelName) =>
     ipcRenderer.invoke("stop-c2s-tunnel", tunnelName),
   getC2STunnelStatuses: () => ipcRenderer.invoke("get-c2s-tunnel-statuses"),
@@ -72,6 +100,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   showSaveDialog: (options) => ipcRenderer.invoke("show-save-dialog", options),
   showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
+  getLocalHomeDirectory: () => ipcRenderer.invoke("get-local-home-directory"),
+  listLocalDirectory: (dirPath) =>
+    ipcRenderer.invoke("list-local-directory", dirPath),
+  statLocalPaths: (paths) => ipcRenderer.invoke("stat-local-paths", paths),
+  collectLocalFiles: (paths) =>
+    ipcRenderer.invoke("collect-local-files", paths),
+  createLocalFolder: (parentPath, folderName) =>
+    ipcRenderer.invoke("create-local-folder", parentPath, folderName),
+  renameLocalPath: (entryPath, newName) =>
+    ipcRenderer.invoke("rename-local-path", entryPath, newName),
+  trashLocalPath: (entryPath) =>
+    ipcRenderer.invoke("trash-local-path", entryPath),
+  chmodLocalPath: (entryPath, permissions) =>
+    ipcRenderer.invoke("chmod-local-path", entryPath, permissions),
   createTempFile: (fileData) =>
     ipcRenderer.invoke("create-temp-file", fileData),
   createTempFolder: (folderData) =>
@@ -103,7 +145,39 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener(channel, listener);
   },
 
-  invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+  // Dual-pane file manager: local disk browsing and streamed transfers.
+  localFs: {
+    home: () => ipcRenderer.invoke("local-fs:home"),
+    list: (dirPath) => ipcRenderer.invoke("local-fs:list", dirPath),
+    mkdir: (parentPath, name) =>
+      ipcRenderer.invoke("local-fs:mkdir", parentPath, name),
+    createFile: (parentPath, name) =>
+      ipcRenderer.invoke("local-fs:create-file", parentPath, name),
+    rename: (oldPath, newName) =>
+      ipcRenderer.invoke("local-fs:rename", oldPath, newName),
+    trash: (paths) => ipcRenderer.invoke("local-fs:trash", paths),
+    ensureDir: (dirPath, rootPath) =>
+      ipcRenderer.invoke("local-fs:ensure-dir", dirPath, rootPath),
+    exists: (paths) => ipcRenderer.invoke("local-fs:exists", paths),
+    walk: (paths) => ipcRenderer.invoke("local-fs:walk", paths),
+    reveal: (targetPath) => ipcRenderer.invoke("local-fs:reveal", targetPath),
+    open: (targetPath) => ipcRenderer.invoke("local-fs:open", targetPath),
+  },
+  localTransfer: {
+    upload: (options) => ipcRenderer.invoke("local-transfer:upload", options),
+    download: (options) =>
+      ipcRenderer.invoke("local-transfer:download", options),
+    cancel: (transferId) =>
+      ipcRenderer.invoke("local-transfer:cancel", transferId),
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("local-transfer:progress", listener);
+      return () =>
+        ipcRenderer.removeListener("local-transfer:progress", listener);
+    },
+  },
+
+  invoke: invokeAllowed,
 });
 
 contextBridge.exposeInMainWorld("electronClipboard", {

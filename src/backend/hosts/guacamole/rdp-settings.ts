@@ -34,3 +34,31 @@ export function resolveRdpDomain(
     ? promptedDomain
     : storedDomain;
 }
+
+type SharedRdpAuthResolution =
+  | { source: "personal-override" }
+  | { source: "owner-shared"; authType: string }
+  | { source: "secretless" }
+  | { source: "required" }
+  | null;
+
+export function resolveRdpAuthTypeForConnect({
+  storedAuthType,
+  credentialId,
+  sharedResolution,
+}: {
+  storedAuthType?: string | null;
+  credentialId?: number | null;
+  sharedResolution?: SharedRdpAuthResolution;
+}): string {
+  if (sharedResolution === undefined) {
+    return storedAuthType || (credentialId ? "credential" : "direct");
+  }
+  if (sharedResolution?.source === "personal-override") return "credential";
+  if (sharedResolution?.source === "owner-shared") {
+    return sharedResolution.authType;
+  }
+  return sharedResolution?.source === "secretless" && storedAuthType === "none"
+    ? "none"
+    : "direct";
+}

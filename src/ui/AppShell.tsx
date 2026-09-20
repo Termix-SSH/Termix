@@ -19,6 +19,7 @@ import {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   createRef,
   lazy,
   Suspense,
@@ -40,6 +41,13 @@ import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { defaultSizes, SplitView, type RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
+import { dispatchCtrlW, isShiftKey } from "@/lib/app-keyboard-shortcuts";
+import { parseCustomKeybindings } from "@/api/open-tabs-api";
+import { findMatchingKeybinding } from "@/lib/keybinding-match";
+import type {
+  CustomKeybinding,
+  KeybindingActionType,
+} from "@/types/keybindings";
 
 // Shell surfaces that are not needed for first paint.
 const CommandPalette = lazy(() =>
@@ -72,6 +80,9 @@ const AlertManager = lazy(() =>
 // Secondary rail panels — load on first open, not with the shell critical path.
 const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
+);
+const CollabPanel = lazy(() =>
+  import("@/sidebar/CollabPanel").then((m) => ({ default: m.CollabPanel })),
 );
 const SnippetsPanel = lazy(() =>
   import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
@@ -123,6 +134,11 @@ const CredentialsPanel = lazy(() =>
     default: m.CredentialsPanel,
   })),
 );
+const PortForwardingPanel = lazy(() =>
+  import("@/sidebar/PortForwardingPanel").then((m) => ({
+    default: m.PortForwardingPanel,
+  })),
+);
 const TermixIdPanel = lazy(() =>
   import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
 );
@@ -153,6 +169,7 @@ import type {
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
+import { getTabJumpDigit } from "@/lib/tab-jump-hotkey";
 import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
@@ -206,12 +223,35 @@ export { tabIcon, renderTabContent } from "@/shell/tabUtils";
 
 // ─── AppShell ────────────────────────────────────────────────────────────────
 
+/**
+ * Tab types whose open/close is mirrored to the backend's open-tabs record, so
+ * they survive a reload or reopen on another device.
+ *
+ * "web-endpoint" is deliberately ABSENT. The backend closes an idle tunnel
+ * after ten minutes and re-binds a fresh kernel-assigned port on the next
+ * open, so a restored web-endpoint tab could never hold a valid URL -- and the
+ * endpoint may have been edited or deleted meanwhile besides. Restoring one
+ * would mean re-opening the tunnel on restore, which is a feature, not
+ * symmetry. A web-endpoint tab is session-only and simply closes on reload,
+ * the same as "local-terminal" already does.
+ */
+export const PERSISTENT_TAB_TYPES: TabType[] = [
+  "terminal",
+  "rdp",
+  "vnc",
+  "telnet",
+  "files",
+  "docker",
+  "host-metrics",
+  "tunnel",
+];
+
 export function AppShell({
   username,
   onLogout,
 }: {
   username: string;
-  onLogout: () => void;
+  onLogout: (options?: { manual?: boolean }) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { setTheme } = useTheme();
@@ -323,6 +363,8 @@ export function AppShell({
   const [remoteSyncInitialServerUrl, setRemoteSyncInitialServerUrl] = useState<
     string | undefined
   >(undefined);
+  const [remoteSyncReconnectRequested, setRemoteSyncReconnectRequested] =
+    useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
@@ -453,6 +495,7 @@ export function AppShell({
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const closeActiveTabRef = useRef<() => void>(() => {});
+  const globalKeybindingsRef = useRef<CustomKeybinding[]>([]);
   const splitModeRef = useRef(splitMode);
   const focusedPaneIndexRef = useRef<number | null>(null);
   const paneContentElsRef = useRef<(HTMLDivElement | null)[]>(
@@ -462,17 +505,89 @@ export function AppShell({
   useEffect(() => {
     tabsRef.current = tabs;
   }, [tabs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      getUserPreferences()
+        .then((prefs) => {
+          if (cancelled) return;
+          globalKeybindingsRef.current = parseCustomKeybindings(
+            prefs.customKeybindings,
+          ).filter(
+            (binding) =>
+              binding.enabled &&
+              ["nextTab", "previousTab", "openCommandPalette"].includes(
+                binding.action.type,
+              ),
+          );
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("customKeybindingsChanged", load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("customKeybindingsChanged", load);
+    };
+  }, []);
+
+  useEffect(() => {
+    const runAction = (type: KeybindingActionType) => {
+      if (type === "openCommandPalette") {
+        setCommandPaletteOpen(true);
+        return;
+      }
+      const currentTabs = tabsRef.current;
+      if (currentTabs.length < 2) return;
+      const index = currentTabs.findIndex(
+        (tab) => tab.id === activeTabIdRef.current,
+      );
+      const offset = type === "nextTab" ? 1 : -1;
+      const next = (index + offset + currentTabs.length) % currentTabs.length;
+      setActiveTabId(currentTabs[next].id);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-keybinding-recorder]")
+      )
+        return;
+      const binding = findMatchingKeybinding(
+        event,
+        globalKeybindingsRef.current,
+      );
+      if (!binding) return;
+      event.preventDefault();
+      event.stopPropagation();
+      runAction(binding.action.type);
+    };
+    const handleAction = (event: Event) =>
+      runAction(
+        (event as CustomEvent<{ type: KeybindingActionType }>).detail.type,
+      );
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("termix:global-keybinding", handleAction);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("termix:global-keybinding", handleAction);
+    };
+  }, []);
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
   useEffect(() => {
-    return window.electronAPI?.onCloseActiveTab?.(() =>
-      closeActiveTabRef.current(),
-    );
+    return window.electronAPI?.onCloseActiveTab?.(() => {
+      if (dispatchCtrlW(document.activeElement)) return;
+      closeActiveTabRef.current();
+    });
   }, []);
   const skipSplitSyncRef = useRef(false);
+  const activeTabAvailable = tabs.some((tab) => tab.id === activeTabId);
   useEffect(() => {
-    const active = tabsRef.current.find((tab) => tab.id === activeTabId);
+    const active = tabs.find((tab) => tab.id === activeTabId);
     const config = active?.type === "split-screen" ? active.splitConfig : null;
     skipSplitSyncRef.current = true;
     if (!config) {
@@ -486,7 +601,7 @@ export function AppShell({
     setRowSizes(config.rowSizes);
     setRowColSizes(config.rowColSizes);
     setFocusedPaneIndex(0);
-  }, [activeTabId]);
+  }, [activeTabId, activeTabAvailable]);
 
   useEffect(() => {
     if (skipSplitSyncRef.current) {
@@ -542,6 +657,10 @@ export function AppShell({
   // target never changes (changing the target causes a remount).
   const tabNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const normalViewRef = useRef<HTMLDivElement>(null);
+  // Tab id the enter animation has already played for, so a re-render while
+  // the tab stays active (there can be several right after a switch) doesn't
+  // replay it — only a genuine switch to a different tab should.
+  const lastAnimatedTabIdRef = useRef<string | null>(null);
 
   const getTabNode = useCallback((tabId: string, isTerminal: boolean) => {
     if (!tabNodesRef.current.has(tabId)) {
@@ -554,6 +673,30 @@ export function AppShell({
     }
     return tabNodesRef.current.get(tabId)!;
   }, []);
+
+  // Portal render order for tab content, kept independent of the tab bar's
+  // visual order. Reordering tabs in the bar reorders `tabs`, and mapping
+  // that array directly to portals reshuffles the Suspense-wrapped portal
+  // children's sibling order in the fiber tree — React then runs its
+  // Offscreen disconnect/reconnect pass on the ones that moved, which tears
+  // down and rebuilds every passive effect underneath (including
+  // react-xtermjs's terminal-creation effect), dropping the live terminal
+  // and its WebSocket. Portal position doesn't need to track tab order at
+  // all, so we only ever append new ids and drop closed ones here.
+  const portalOrderRef = useRef<string[]>([]);
+  {
+    const liveIds = new Set(tabs.map((t) => t.id));
+    portalOrderRef.current = portalOrderRef.current.filter((id) =>
+      liveIds.has(id),
+    );
+    const known = new Set(portalOrderRef.current);
+    for (const tab of tabs) {
+      if (!known.has(tab.id)) portalOrderRef.current.push(tab.id);
+    }
+  }
+  const tabsByPortalOrder = portalOrderRef.current
+    .map((id) => tabs.find((t) => t.id === id))
+    .filter((t): t is Tab => t !== undefined);
 
   const onPaneContentRef = useCallback(
     (paneIndex: number, el: HTMLDivElement | null) => {
@@ -575,7 +718,7 @@ export function AppShell({
   // hard to discover.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "ShiftLeft" && !e.repeat) {
+      if (isShiftKey(e) && !e.repeat) {
         const now = Date.now();
         if (now - lastShiftTime.current < 300 && commandPaletteShortcutEnabled)
           setCommandPaletteOpen((prev) => !prev);
@@ -735,18 +878,18 @@ export function AppShell({
           }
           return;
         }
+      }
 
-        // Alt+1..9 — jump directly to the tab at that position
-        const digitMatch = /^Digit([1-9])$/.exec(e.code);
-        if (digitMatch) {
-          const currentTabs = tabsRef.current;
-          const index = Number(digitMatch[1]) - 1;
-          if (index < currentTabs.length) {
-            e.preventDefault();
-            setActiveTabId(currentTabs[index].id);
-          }
-          return;
+      // Cmd+1..9 on macOS, Alt+1..9 elsewhere — jump directly to the tab at that position
+      const tabDigit = getTabJumpDigit(e);
+      if (tabDigit !== null) {
+        const currentTabs = tabsRef.current;
+        const index = tabDigit - 1;
+        if (index < currentTabs.length) {
+          e.preventDefault();
+          setActiveTabId(currentTabs[index].id);
         }
+        return;
       }
 
       // Ctrl+Shift+] / Ctrl+Shift+[ — cycle through open tabs (] = next, [ = previous)
@@ -789,7 +932,12 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    const handle = () => onLogout();
+    const handle = (event: Event) => {
+      const manual =
+        event instanceof CustomEvent &&
+        (event.detail as { manual?: boolean } | undefined)?.manual === true;
+      onLogout(manual ? { manual: true } : undefined);
+    };
     window.addEventListener("termix:logout", handle);
     return () => window.removeEventListener("termix:logout", handle);
   }, [onLogout]);
@@ -859,6 +1007,7 @@ export function AppShell({
             const SNAPSHOT_KEYS = [
               "termix-accent",
               "termix-font-size",
+              "termix-ui-font",
               "i18nextLng",
               "commandAutocomplete",
               "commandPaletteShortcutEnabled",
@@ -1078,17 +1227,6 @@ export function AppShell({
     window.addEventListener("termix:open-tab", handle);
     return () => window.removeEventListener("termix:open-tab", handle);
   }, [allHosts]);
-
-  const PERSISTENT_TAB_TYPES: TabType[] = [
-    "terminal",
-    "rdp",
-    "vnc",
-    "telnet",
-    "files",
-    "docker",
-    "host-metrics",
-    "tunnel",
-  ];
 
   function buildWorkspacePayload(): WorkspacePayload {
     return buildWorkspacePayloadUtil({
@@ -1491,7 +1629,9 @@ export function AppShell({
       serialConfig?: SerialConfig;
       joinSharedSessionId?: string | null;
       joinShareId?: string | null;
+      collabRoomId?: string;
     },
+    options?: { endpointId?: string; label?: string },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
     const instanceId =
@@ -1536,6 +1676,7 @@ export function AppShell({
             initialFilePath,
             initialPath,
             serialConfig,
+            collabRoomId: restore?.collabRoomId,
           },
         ];
       }
@@ -1544,8 +1685,11 @@ export function AppShell({
         (t) =>
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
       );
-      finalLabel =
-        same.length === 0 ? host.name : `${host.name} (${same.length + 1})`;
+      finalLabel = options?.label
+        ? options.label
+        : same.length === 0
+          ? host.name
+          : `${host.name} (${same.length + 1})`;
 
       // Retrofit the first duplicate's label to "(1)" if needed
       const next =
@@ -1571,6 +1715,8 @@ export function AppShell({
           initialFilePath,
           initialPath,
           serialConfig,
+          collabRoomId: restore?.collabRoomId,
+          endpointId: options?.endpointId,
         },
       ];
     });
@@ -1589,14 +1735,18 @@ export function AppShell({
     return tabId;
   }, []);
 
-  function connectHost(host: Host, preferredType?: TabType) {
+  function connectHost(
+    host: Host,
+    preferredType?: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) {
     const type = resolveHostTabType(host, preferredType);
     // --- tmux-monitor --- singleton tab, not a per-host tab
     if (type === "tmux_monitor") {
       openSingletonTab(type, undefined, host);
       return;
     }
-    openTab(host, type);
+    openTab(host, type, undefined, options);
   }
 
   const saveQuickConnectHost = useCallback(
@@ -1638,6 +1788,7 @@ export function AppShell({
       enableProxmoxStats: false,
       enableTmuxMonitor: false,
       enableTerminalToolbar: false,
+      enableAiAssistant: false,
       enableSsh: false,
       enableRdp: false,
       enableVnc: false,
@@ -1687,6 +1838,52 @@ export function AppShell({
     setActiveTabId(id);
     return id;
   }
+
+  // Invite awareness: rooms are discovered by polling, so a room that has
+  // never been shown to this browser gets one toast with an Open action.
+  useEffect(() => {
+    const SEEN_KEY = "termix:collab-rooms-seen";
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const { listCollabRooms } = await import("@/api/collab-api");
+        const { rooms = [] } = await listCollabRooms();
+        if (cancelled) return;
+        let seen: string[] = [];
+        try {
+          seen = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]");
+        } catch {
+          seen = [];
+        }
+        const seenSet = new Set(seen);
+        const fresh = rooms.filter((room) => !seenSet.has(room.id));
+        if (fresh.length === 0) return;
+        localStorage.setItem(
+          SEEN_KEY,
+          JSON.stringify([...seenSet, ...fresh.map((room) => room.id)]),
+        );
+        // The first poll after login only records what already exists.
+        if (seen.length === 0) return;
+        for (const room of fresh) {
+          if (room.ownerUserId === userId) continue;
+          toast(t("collab.invitedTo", { name: room.name }), {
+            action: {
+              label: t("collab.openRoom"),
+              onClick: () => setRailView("collab"),
+            },
+          });
+        }
+      } catch {
+        /* next poll */
+      }
+    };
+    void check();
+    const timer = setInterval(() => void check(), 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
 
   const openSingletonTab = useCallback(
     // --- tmux-monitor --- (added optional `host` so tmux_monitor can open
@@ -1741,6 +1938,7 @@ export function AppShell({
         "host-manager": t("nav.hostManager"),
         docker: t("nav.docker"),
         tunnel: t("nav.tunnels"),
+        sftp: t("nav.sftp"),
         network_graph: t("nav.networkGraph"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
         homepage: t("nav.homepage"),
@@ -2085,6 +2283,12 @@ export function AppShell({
   }
 
   function handleRailClick(view: RailView) {
+    if (view === "sftp") {
+      openSingletonTab("sftp");
+      if (isMobile) setSidebarOpen(false);
+      return;
+    }
+
     if (railView === view && sidebarOpen) {
       setSidebarOpen(false);
     } else {
@@ -2177,7 +2381,10 @@ export function AppShell({
   // Move each tab's stable DOM node to the right container (pane or normal-view).
   // This is vanilla DOM so React's portal target never changes — changing the portal
   // target causes a remount which is exactly what we're trying to avoid.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so visibility/display are corrected before
+  // the browser paints — otherwise the previous tab's node can flash on screen
+  // for a frame while still visible.
+  useLayoutEffect(() => {
     const normalView = normalViewRef.current;
     if (!normalView) return;
 
@@ -2206,6 +2413,7 @@ export function AppShell({
         node.style.pointerEvents = "auto";
         node.style.display = "";
         node.style.zIndex = "";
+        node.style.contentVisibility = "";
       } else {
         if (node.parentElement !== normalView) normalView.appendChild(node);
         if (isTerminal) {
@@ -2213,7 +2421,37 @@ export function AppShell({
           node.style.visibility = activeInline ? "visible" : "hidden";
           node.style.pointerEvents = activeInline ? "auto" : "none";
           node.style.zIndex = activeInline ? "1" : "0";
+          // xterm renders to a <canvas>; visibility:hidden alone can still let
+          // a stale composited frame flash through for a tick when switching
+          // to/from a non-terminal tab. content-visibility:hidden fully skips
+          // painting the subtree while keeping its layout box intact, so
+          // fitAddon.fit() still sees correct dimensions once it's shown again.
+          node.style.contentVisibility = activeInline ? "" : "hidden";
         } else {
+          // Plays a quick opacity fade-in on the tab that just became active.
+          // Only play it on an actual switch into this tab -- gating on the
+          // class alone replayed the animation on every unrelated re-render
+          // that happened while the tab was still active (any render after
+          // animationend had stripped the class), which looked like the
+          // panel kept growing for up to a second after switching.
+          if (activeInline && lastAnimatedTabIdRef.current !== tab.id) {
+            lastAnimatedTabIdRef.current = tab.id;
+            node.classList.remove("motion-workspace-enter");
+            // Force a reflow so re-adding the class restarts the animation
+            // instead of no-oping because it was already removed this tick.
+            void node.offsetWidth;
+            node.classList.add("motion-workspace-enter");
+            node.addEventListener(
+              "animationend",
+              () => node.classList.remove("motion-workspace-enter"),
+              { once: true },
+            );
+          } else if (!activeInline) {
+            node.classList.remove("motion-workspace-enter");
+            if (lastAnimatedTabIdRef.current === tab.id) {
+              lastAnimatedTabIdRef.current = null;
+            }
+          }
           node.style.visibility = "";
           node.style.pointerEvents = "";
           node.style.zIndex = activeInline ? "2" : "";
@@ -2261,8 +2499,8 @@ export function AppShell({
               className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
             >
               <HostsPanel
-                onOpenTab={(host, type) => {
-                  connectHost(host, type);
+                onOpenTab={(host, type, options) => {
+                  connectHost(host, type, options);
                   if (isMobile) setSidebarOpen(false);
                 }}
                 onEditHost={editHostInManager}
@@ -2282,6 +2520,12 @@ export function AppShell({
               />
             </div>
           </>
+        )}
+
+        {railView === "port-forwarding" && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <PortForwardingPanel />
+          </div>
         )}
 
         {railView === "termix-id" && (
@@ -2483,6 +2727,7 @@ export function AppShell({
                   enableProxmoxStats: false,
                   enableTmuxMonitor: false,
                   enableTerminalToolbar: false,
+                  enableAiAssistant: false,
                   enableSsh: false,
                   enableRdp: false,
                   enableVnc: false,
@@ -2513,6 +2758,58 @@ export function AppShell({
           </div>
         )}
 
+        {railView === "collab" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <CollabPanel
+              onOpenRoom={(room) => {
+                const roomHost: Host = {
+                  id: `collab-${room.id}`,
+                  name: room.name,
+                  username: "",
+                  ip: "",
+                  port: 0,
+                  folder: "",
+                  online: false,
+                  cpu: null,
+                  ram: null,
+                  lastAccess: new Date().toISOString(),
+                  authType: "none",
+                  enableTerminal: false,
+                  enableCommandHistory: false,
+                  enableTunnel: false,
+                  enableFileManager: false,
+                  enableDocker: false,
+                  enableProxmox: false,
+                  enableProxmoxStats: false,
+                  enableTmuxMonitor: false,
+                  enableTerminalToolbar: false,
+                  enableAiAssistant: false,
+                  enableSsh: false,
+                  enableRdp: false,
+                  enableVnc: false,
+                  enableTelnet: false,
+                  sshPort: 22,
+                  rdpPort: 3389,
+                  vncPort: 5900,
+                  telnetPort: 23,
+                  serverTunnels: [],
+                  quickActions: [],
+                };
+                openTab(roomHost, "collab", {
+                  instanceId:
+                    typeof crypto.randomUUID === "function"
+                      ? crypto.randomUUID()
+                      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                  restoredSessionId: null,
+                  savedLabel: room.name,
+                  collabRoomId: room.id,
+                });
+                if (isMobile) setSidebarOpen(false);
+              }}
+            />
+          </div>
+        )}
+
         {railView === "session-logs" && (
           <div className="relative flex-1 min-h-0 flex flex-col">
             <SessionLogsPanel />
@@ -2529,6 +2826,10 @@ export function AppShell({
                 setUserPrefs((current) => ({ ...current, ...updates }))
               }
               remoteSyncInitialServerUrl={remoteSyncInitialServerUrl}
+              remoteSyncReconnectRequested={remoteSyncReconnectRequested}
+              onRemoteSyncReconnectHandled={() =>
+                setRemoteSyncReconnectRequested(false)
+              }
             />
           </div>
         )}
@@ -2638,6 +2939,7 @@ export function AppShell({
         variant="ghost"
         size="icon"
         className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+        title="Collapse sidebar"
         onClick={() => {
           setSettingsFullscreen(false);
           setSidebarOpen(false);
@@ -2669,6 +2971,7 @@ export function AppShell({
               onReconnect={() => {
                 setRailView("user-profile");
                 if (!sidebarOpen) setSidebarOpen(true);
+                setRemoteSyncReconnectRequested(true);
               }}
             />
             <MigrationNoticeDialog
@@ -2743,7 +3046,7 @@ export function AppShell({
           <div
             inert={settingsFullscreen ? true : undefined}
             aria-hidden={settingsFullscreen || undefined}
-            className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
+            className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-[padding] duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
           >
             {!isMobile && !sidebarOpen && (
               <button
@@ -2783,7 +3086,7 @@ export function AppShell({
                 {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
                 {!isMobile && (
                   <div
-                    className="absolute inset-0"
+                    className="motion-workspace-layout absolute inset-0"
                     style={{
                       display: isSplit ? "flex" : "none",
                       flexDirection: "column",
@@ -2818,7 +3121,7 @@ export function AppShell({
                     display: isSplit && !isMobile ? "none" : undefined,
                   }}
                 >
-                  {tabs.map((tab) => {
+                  {tabsByPortalOrder.map((tab) => {
                     const tabNode = getTabNode(
                       tab.id,
                       tab.type === "terminal" || tab.type === "local-terminal",

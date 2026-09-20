@@ -111,7 +111,7 @@ SFTP로 파일을 살펴보고 편집하고 올리고 내려받고 이름을 바
 <td width="50%" valign="top">
 
 **호스트 지표:**
-대부분의 리눅스 서버에서 CPU, 메모리, 디스크, 네트워크, 온도, 가동 시간, 프로세스, 포트, 로그인, 시스템 정보를 기록 그래프와 함께 볼 수 있습니다. 관리 카드로 서비스와 cron 작업, 패키지, 사용자, 방화벽 규칙, WireGuard, Tailscale, SSL 인증서, 로그, 상태 확인을 Termix 안에서 처리할 수 있습니다.
+대부분의 리눅스 서버에서 CPU, 메모리, 디스크, 네트워크, 온도, NVIDIA GPU, 가동 시간, 프로세스, 포트, 로그인, 시스템 정보를 기록 그래프와 함께 볼 수 있습니다. 관리 카드로 서비스와 cron 작업, 패키지, 사용자, 방화벽 규칙, WireGuard, Tailscale, SSL 인증서, 로그, 상태 확인을 Termix 안에서 처리할 수 있습니다.
 
 </td>
 <td width="50%" valign="top">
@@ -214,20 +214,6 @@ Proxmox 인스턴스에서 호스트를 바로 가져오고, 노드와 게스트
 </td>
 <td width="50%" valign="top">
 
-**설치 안내:**
-짧은 설정 과정이 화면 프리셋과 테마, 쓰고 싶은 기능, 첫 호스트를 고르도록 안내합니다. 간단 모드는 쓰지 않는 것을 숨겨 주고, 설정은 언제든 다시 하거나 프리셋을 바꿀 수 있습니다.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**데스크톱 단독 실행과 동기화:**
-데스크톱 앱은 자체 백엔드와 데이터베이스로 서버 없이 혼자 돌아갑니다. Termix 서버에 연결하면 호스트와 자격 증명, 스니펫 등을 양방향으로 동기화할 수 있고, 연결을 로컬에서 시작할지 서버를 거칠지도 고를 수 있습니다.
-
-</td>
-<td width="50%" valign="top">
-
 **명령줄 도구:**
 셸과 스크립트에서 쓰는 `termix` CLI입니다. 터미널을 열고, 호스트 하나나 플릿 전체에서 명령을 실행하고, SFTP로 파일을 옮기고, 호스트와 스니펫, 자격 증명을 관리할 수 있습니다. `npm install -g @termix-cli/cli`로 설치하거나 단독 실행 파일을 받으면 됩니다. [CLI 문서](https://docs.termix.site/cli)를 참고하세요.
 
@@ -237,7 +223,7 @@ Proxmox 인스턴스에서 호스트를 바로 가져오고, 노드와 게스트
 <td width="50%" valign="top">
 
 **보안:**
-비밀번호와 키를 비롯한 비밀 정보는 사용자별로 암호화되고, 데이터베이스 파일 자체도 디스크에서 암호화할 수 있습니다. 어떻게 동작하는지는 [문서](https://docs.termix.site/security)에서 볼 수 있습니다.
+비밀번호와 키를 비롯한 비밀 정보는 사용자별로 암호화되고, 데이터베이스 파일 자체도 디스크에서 암호화할 수 있습니다. 어떻게 동작하는지는 [문서](https://docs.termix.site/features/authentication/security/)에서 볼 수 있습니다.
 
 </td>
 <td width="50%" valign="top">
@@ -267,8 +253,13 @@ Proxmox 인스턴스에서 호스트를 바로 가져오고, 노드와 게스트
 - **키보드 단축키** - 탭 이동과 닫기 등, 모두 다시 지정할 수 있습니다
 - **Wake-on-LAN** - Termix에서도, 자동화 단계에서도 컴퓨터를 켜기
 - **신뢰할 수 있는 프록시 인증** - 리버스 프록시가 로그인을 처리하고 사용자 정보를 넘겨주기
-- **풍부한 SSH 기능** - 점프 호스트, Warpgate, TOTP 입력, SOCKS5, 호스트 키 확인, 비밀번호 자동 입력, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, 포트 노킹, 터미널 로그, 에이전트 포워딩, Bitwarden SSH 에이전트, HashiCorp Vault SSH 서명 등
+- **화이트 라벨** - 관리자가 인스턴스를 자기 이름과 로고, 색으로 다시 꾸밀 수 있습니다
+- **웹 엔드포인트** - 라우터 관리 페이지 같은 호스트의 웹 UI를 별도 탭이 아니라 Termix 안에 그대로 띄우기
+- **협업 룸** - 발표자 화면과 초대 기능을 갖춘, 여러 명이 함께 세션을 오가는 상시 룸
+- **풍부한 SSH 기능** - 점프 호스트, Warpgate, TOTP 입력, SOCKS5, 호스트 키 확인, 비밀번호 자동 입력, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, 포트 노킹, 터미널 로그, 에이전트 포워딩, Bitwarden SSH 에이전트, HashiCorp Vault SSH 서명, Step CA, 1Password Connect 등
 - **Termix ID** - sshid.io 같은 기능을 내장했습니다. 핸들을 등록하고 리졸버 URL에 공개 키를 올리고 내장 CA에서 SSH 인증서를 발급할 수 있습니다
+- **명령 기록 자동 완성** - 입력하는 동안 명령 기록을 바탕으로 터미널에 인라인 제안을 보여줍니다
+- **데스크톱 단독 실행과 동기화** - 데스크톱 앱은 자체 백엔드와 데이터베이스로 서버 없이 혼자 돌아가며, Termix 서버와 선택적으로 동기화할 수 있습니다
 
 </details>
 
@@ -312,6 +303,8 @@ Proxmox 인스턴스에서 호스트를 바로 가져오고, 노드와 게스트
 ## 설치
 
 모든 플랫폼의 자세한 설치 방법은 [Termix 문서](https://docs.termix.site/install)를 참고하세요.
+
+쿠버네티스에 배포하시나요? Helm 차트는 `charts/termix`에 있고, Ingress와 Traefik, Argo CD, GitHub Actions, GitLab CI를 다루는 설정 안내는 [docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes)에 있습니다.
 
 Docker Compose 예시입니다(원격 데스크톱 기능을 쓰지 않는다면 `guacd`와 네트워크 부분은 빼도 됩니다):
 

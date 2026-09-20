@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
-import { AlertCircle, Eye } from "lucide-react";
+import { AlertCircle, Eye, Users } from "lucide-react";
 import {
   resolveShareLink,
   type ResolvedShareLink,
@@ -44,6 +44,41 @@ async function resolveTerminalWsBaseUrl(): Promise<string> {
   return `${wsProtocol}://${window.location.host}${getBasePath()}/ssh/websocket/`;
 }
 
+export interface SessionParticipantInfo {
+  isOwner: boolean;
+  permissionLevel: "read-write" | "read-only";
+  label: string | null;
+}
+
+function ParticipantsBadge({
+  participants,
+  ownerLabel,
+}: {
+  participants: SessionParticipantInfo[];
+  ownerLabel: string;
+}) {
+  if (participants.length < 2) return null;
+  const names = participants
+    .map((participant) =>
+      participant.isOwner ? ownerLabel : (participant.label ?? "?"),
+    )
+    .join(", ");
+  return (
+    <div
+      className="absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium"
+      style={{
+        backgroundColor: "var(--bg-elevated, rgba(0,0,0,0.6))",
+        color: "var(--foreground)",
+        border: "1px solid var(--border-base)",
+      }}
+      title={names}
+    >
+      <Users className="size-3.5" />
+      {participants.length}
+    </div>
+  );
+}
+
 function ReadOnlyBadge({ label }: { label: string }) {
   return (
     <div
@@ -83,18 +118,28 @@ function CenteredMessage({
   );
 }
 
-function GuestTerminalView({
+export function GuestTerminalView({
   share,
-  linkToken,
+  wsQuery,
+  hideBadges = false,
+  onParticipantsChange,
 }: {
-  share: ResolvedShareLink;
-  linkToken: string;
+  share: Pick<ResolvedShareLink, "permissionLevel">;
+  wsQuery: string;
+  /** Suppress the built-in overlay badges when the host page renders its own. */
+  hideBadges?: boolean;
+  onParticipantsChange?: (participants: SessionParticipantInfo[]) => void;
 }) {
   const { t } = useTranslation();
   const { instance: terminal, ref: xtermRef } = useXTerm();
   const [ended, setEnded] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<SessionParticipantInfo[]>(
+    [],
+  );
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onParticipantsChangeRef = useRef(onParticipantsChange);
+  onParticipantsChangeRef.current = onParticipantsChange;
 
   useEffect(() => {
     if (!terminal || !xtermRef.current) return;
@@ -115,9 +160,7 @@ function GuestTerminalView({
     resolveTerminalWsBaseUrl().then((baseWsUrl) => {
       if (cancelled) return;
       const separator = baseWsUrl.includes("?") ? "&" : "?";
-      ws = new WebSocket(
-        `${baseWsUrl}${separator}shareToken=${encodeURIComponent(linkToken)}`,
-      );
+      ws = new WebSocket(`${baseWsUrl}${separator}${wsQuery}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -139,6 +182,13 @@ function GuestTerminalView({
         switch (msg.type) {
           case "data":
             if (typeof msg.data === "string") terminal.write(msg.data);
+            break;
+          case "participants":
+            if (Array.isArray(msg.participants)) {
+              const next = msg.participants as SessionParticipantInfo[];
+              setParticipants(next);
+              onParticipantsChangeRef.current?.(next);
+            }
             break;
           case "sessionExpired":
           case "sessionTerminatedByOwner":
@@ -172,12 +222,22 @@ function GuestTerminalView({
     };
     // Deliberately runs once terminal mounts - share/token/permission are stable for the view's lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [terminal, linkToken]);
+  }, [terminal, wsQuery]);
 
   return (
     <div className="relative w-full h-full">
-      {share.permissionLevel === "read-only" && (
-        <ReadOnlyBadge label={t("sessionSharing.guestView.readOnlyBadge")} />
+      {!hideBadges && (
+        <>
+          <ParticipantsBadge
+            participants={participants}
+            ownerLabel={t("sessionSharing.guestView.ownerLabel")}
+          />
+          {share.permissionLevel === "read-only" && (
+            <ReadOnlyBadge
+              label={t("sessionSharing.guestView.readOnlyBadge")}
+            />
+          )}
+        </>
       )}
       {ended && (
         <div
@@ -310,7 +370,10 @@ export default function SharedSessionView() {
           share &&
           linkToken &&
           (share.protocol === "ssh" ? (
-            <GuestTerminalView share={share} linkToken={linkToken} />
+            <GuestTerminalView
+              share={share}
+              wsQuery={`shareToken=${encodeURIComponent(linkToken)}`}
+            />
           ) : (
             <GuestGuacamoleView share={share} />
           ))}

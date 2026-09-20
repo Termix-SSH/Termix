@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
@@ -39,5 +39,32 @@ describe("HostStatusCard", () => {
     expect(ip.getAttribute("title")).toBe(host.ip);
     expect(identity?.className).toContain("min-w-0");
     expect(metrics?.className).toContain("shrink-0");
+  });
+});
+
+describe("dashboard protocol routing", () => {
+  it.each([
+    [{ enableRdp: true }, "rdp"],
+    [{ enableVnc: true }, "vnc"],
+    [{ enableTelnet: true }, "telnet"],
+    [{ enableSsh: true, enableRdp: true }, "host-metrics"],
+  ] as const)("opens the enabled protocol for %j", (protocols, expected) => {
+    const host = {
+      id: "1",
+      name: "Remote host",
+      ip: "192.0.2.1",
+      enableSsh: false,
+      ...protocols,
+    } as Host;
+    const onOpenTab = vi.fn();
+    render(
+      <HostStatusCard
+        hosts={[host]}
+        hostMetrics={new Map()}
+        onOpenTab={onOpenTab}
+      />,
+    );
+    fireEvent.click(screen.getByText("Remote host"));
+    expect(onOpenTab).toHaveBeenCalledWith(host, expected);
   });
 });

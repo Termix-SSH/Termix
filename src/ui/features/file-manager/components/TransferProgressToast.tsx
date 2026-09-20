@@ -5,6 +5,15 @@ import {
   type TransferProgressResponse,
 } from "@/main-axios.ts";
 import { useTranslation } from "react-i18next";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowRight,
+  Gauge,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
+import { TransferProgressBar } from "./TransferProgressBar";
 
 interface TransferProgressToastProps {
   status: TransferProgressResponse;
@@ -13,26 +22,6 @@ interface TransferProgressToastProps {
   formatSize: (bytes?: number) => string;
   onCancel?: () => void;
   cancelling?: boolean;
-}
-
-function IndeterminateProgressBar() {
-  return (
-    <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
-      <div className="bg-primary/60 absolute inset-y-0 left-0 w-1/3 animate-pulse rounded-full" />
-    </div>
-  );
-}
-
-function DeterminateProgressBar({ value }: { value: number }) {
-  const clamped = Math.min(100, Math.max(0, value));
-  return (
-    <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
-      <div
-        className="bg-primary h-full rounded-full transition-[width]"
-        style={{ width: `${clamped}%` }}
-      />
-    </div>
-  );
 }
 
 export function TransferProgressToast({
@@ -103,11 +92,29 @@ export function TransferProgressToast({
 
   const showIndeterminate =
     status.phase === "reconnecting" || percent === undefined;
+  const PhaseIcon =
+    status.phase === "compressing"
+      ? Archive
+      : status.phase === "benchmarking"
+        ? Gauge
+        : status.phase === "verifying"
+          ? ShieldCheck
+          : status.phase === "extracting"
+            ? ArchiveRestore
+            : status.phase === "reconnecting"
+              ? RefreshCw
+              : ArrowRight;
 
   return (
     <div className="flex w-[min(calc(100vw-5rem),288px)] max-w-full flex-col gap-2 pr-2">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium leading-tight">{title}</p>
+        <p
+          key={status.phase}
+          className="motion-transfer-phase flex min-w-0 items-center gap-2 text-sm font-medium leading-tight"
+        >
+          <PhaseIcon className="size-3.5 shrink-0 text-accent-brand" />
+          <span className="truncate">{title}</span>
+        </p>
         {onCancel && status.status === "running" && status.transferId && (
           <Button
             type="button"
@@ -123,11 +130,11 @@ export function TransferProgressToast({
           </Button>
         )}
       </div>
-      {showIndeterminate ? (
-        <IndeterminateProgressBar />
-      ) : (
-        <DeterminateProgressBar value={percent} />
-      )}
+      <TransferProgressBar
+        value={showIndeterminate ? undefined : percent}
+        label={title}
+        stalled={stalled}
+      />
       <div className="flex items-center justify-between gap-3 pr-1 text-xs text-muted-foreground">
         <span className="min-w-0 truncate">{detailLeft ?? ""}</span>
         <span

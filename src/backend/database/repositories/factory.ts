@@ -32,12 +32,21 @@ import { UiPreferenceRepository } from "./ui-preference-repository.js";
 import { NetworkTopologyRepository } from "./network-topology-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
 import { OpksshTokenRepository } from "./opkssh-token-repository.js";
+import { PluginRepository } from "./plugin-repository.js";
+import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
+import { PluginRegistryRepository } from "./plugin-registry-repository.js";
+import { PluginInstallCountRepository } from "./plugin-install-count-repository.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
 import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
 import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { SessionShareRepository } from "./session-share-repository.js";
+import { CollabRoomRepository } from "./collab-room-repository.js";
+import { SecretSourceRepository } from "./secret-source-repository.js";
+import { CredentialAccessRepository } from "./credential-access-repository.js";
+import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
+import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
@@ -360,6 +369,38 @@ export function createCurrentOpksshTokenRepository(): OpksshTokenRepository {
   );
 }
 
+export function createCurrentPluginRepository(): PluginRepository {
+  return new PluginRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("plugin_repository_write"),
+  );
+}
+
+export function createCurrentPluginPermissionGrantRepository(): PluginPermissionGrantRepository {
+  return new PluginPermissionGrantRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "plugin_permission_grant_repository_write",
+    ),
+  );
+}
+
+export function createCurrentPluginRegistryRepository(): PluginRegistryRepository {
+  return new PluginRegistryRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("plugin_registry_repository_write"),
+  );
+}
+
+export function createCurrentPluginInstallCountRepository(): PluginInstallCountRepository {
+  return new PluginInstallCountRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryLazyWriteHook(
+      "plugin_install_count_repository_write",
+    ),
+  );
+}
+
 export function createCurrentRbacAccessRepository(): RbacAccessRepository {
   return new RbacAccessRepository(
     createCurrentRepositoryContext(),
@@ -392,6 +433,13 @@ export function createCurrentSessionRepository(): SessionRepository {
   return new SessionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("session_repository_write"),
+  );
+}
+
+export function createCurrentCollabRoomRepository(): CollabRoomRepository {
+  return new CollabRoomRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("collab_room_repository_write"),
   );
 }
 
@@ -496,6 +544,36 @@ export function createCurrentUserRepository(): UserRepository {
   return new UserRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("user_repository_write"),
+  );
+}
+
+export function createCurrentFolderAccessRepository(): FolderAccessRepository {
+  return new FolderAccessRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("folder_access_repository_write"),
+  );
+}
+
+export function createCurrentCredentialAccessRepository(): CredentialAccessRepository {
+  return new CredentialAccessRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("credential_access_repository_write"),
+  );
+}
+
+export function createCurrentSharedCredentialSecretsRepository(): SharedCredentialSecretsRepository {
+  return new SharedCredentialSecretsRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "shared_credential_secrets_repository_write",
+    ),
+  );
+}
+
+export function createCurrentSecretSourceRepository(): SecretSourceRepository {
+  return new SecretSourceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("secret_source_repository_write"),
   );
 }
 

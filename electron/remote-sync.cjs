@@ -14,7 +14,11 @@
 const { app, safeStorage } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { orderSyncWrites } = require("./sync-write-order.cjs");
 const { SYNCED_ENTITY_TYPES } = require("./remote-sync-entities.cjs");
+
+const { createRemoteSyncFetch } = require("./remote-sync-fetch.cjs");
+const fetchRemoteSync = createRemoteSyncFetch(getRemoteSyncConfig);
 
 const SYNC_INTERVAL_MS = 90 * 1000;
 const EMBEDDED_BASE_URL = "http://127.0.0.1:30001";
@@ -37,7 +41,20 @@ function writeJson(filePath, value) {
   if (!fs.existsSync(userDataPath)) {
     fs.mkdirSync(userDataPath, { recursive: true });
   }
-  fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
+  const temporaryPath = `${filePath}.${process.pid}-${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, JSON.stringify(value, null, 2), {
+      mode: 0o600,
+    });
+    fs.renameSync(temporaryPath, filePath);
+  } catch (error) {
+    try {
+      fs.unlinkSync(temporaryPath);
+    } catch {
+      // already absent
+    }
+    throw error;
+  }
 }
 
 function getDesktopSettingsPath() {
@@ -141,13 +158,13 @@ async function getRemoteSyncUserInfo() {
   }
 
   const baseUrl = config.serverUrl.replace(/\/$/, "");
-  const userResponse = await fetch(`${baseUrl}/users/me`, {
+  const userResponse = await fetchRemoteSync(`${baseUrl}/users/me`, {
     headers: { Authorization: `Bearer ${token}`, "X-Electron-App": "true" },
   });
   if (!userResponse.ok) return null;
 
   const user = await userResponse.json();
-  const rolesResponse = await fetch(
+  const rolesResponse = await fetchRemoteSync(
     `${baseUrl}/rbac/users/${encodeURIComponent(user.userId)}/roles`,
     {
       headers: { Authorization: `Bearer ${token}`, "X-Electron-App": "true" },
@@ -191,6 +208,7 @@ class RemoteSyncEngine {
     this.getMainWindow = getMainWindow;
     this.localJwt = null;
     this.timer = null;
+    this.startupTimer = null;
     this.syncing = false;
     this.status = {
       connected: false,
@@ -220,11 +238,15 @@ class RemoteSyncEngine {
     const config = getRemoteSyncConfig();
     this.status.connected = !!config?.serverUrl;
     if (this.timer) clearInterval(this.timer);
+    if (this.startupTimer) clearTimeout(this.startupTimer);
     this.timer = setInterval(() => this.syncNow(), SYNC_INTERVAL_MS);
     if (config?.serverUrl) {
       // Fire an initial sync shortly after startup rather than waiting a
       // full interval, but don't block app boot on it.
-      setTimeout(() => this.syncNow(), 5000);
+      this.startupTimer = setTimeout(() => {
+        this.startupTimer = null;
+        this.syncNow();
+      }, 5000);
     }
   }
 
@@ -232,6 +254,10 @@ class RemoteSyncEngine {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
+    }
+    if (this.startupTimer) {
+      clearTimeout(this.startupTimer);
+      this.startupTimer = null;
     }
   }
 
@@ -349,7 +375,7 @@ class RemoteSyncEngine {
   }
 
   async fetchJson(url, token, options = {}) {
-    const res = await fetch(url, {
+    const res = await fetchRemoteSync(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -467,35 +493,32 @@ class RemoteSyncEngine {
         ...remoteBySyncId.keys(),
       ]);
 
+      const writes = [];
       for (const syncId of allSyncIds) {
         if (tombstonedSyncIds.has(syncId)) continue;
-
         const localRow = localBySyncId.get(syncId);
         const remoteRow = remoteBySyncId.get(syncId);
-
-        if (localRow && !remoteRow) {
-          await this.pushRow(remoteBaseUrl, remoteJwt, entityType, localRow);
-        } else if (remoteRow && !localRow) {
-          await this.pushRow(
-            EMBEDDED_BASE_URL,
-            this.localJwt,
-            entityType,
-            remoteRow,
-          );
-        } else if (localRow && remoteRow) {
-          const localUpdatedAt = new Date(localRow.updatedAt || 0).getTime();
-          const remoteUpdatedAt = new Date(remoteRow.updatedAt || 0).getTime();
-          if (localUpdatedAt > remoteUpdatedAt) {
-            await this.pushRow(remoteBaseUrl, remoteJwt, entityType, localRow);
-          } else if (remoteUpdatedAt > localUpdatedAt) {
-            await this.pushRow(
-              EMBEDDED_BASE_URL,
-              this.localJwt,
-              entityType,
-              remoteRow,
-            );
-          }
+        const localTime = new Date(localRow?.updatedAt || 0).getTime();
+        const remoteTime = new Date(remoteRow?.updatedAt || 0).getTime();
+        if (localRow && (!remoteRow || localTime > remoteTime)) {
+          writes.push({
+            baseUrl: remoteBaseUrl,
+            token: remoteJwt,
+            row: localRow,
+          });
+        } else if (remoteRow && (!localRow || remoteTime > localTime)) {
+          writes.push({
+            baseUrl: EMBEDDED_BASE_URL,
+            token: this.localJwt,
+            row: remoteRow,
+          });
         }
+      }
+      for (const { baseUrl, token, row } of orderSyncWrites(
+        entityType,
+        writes,
+      )) {
+        await this.pushRow(baseUrl, token, entityType, row);
       }
 
       // Apply tombstones to whichever side hasn't already deleted the row.

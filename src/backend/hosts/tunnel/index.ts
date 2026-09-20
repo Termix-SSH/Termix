@@ -21,11 +21,14 @@ import {
 } from "./c2s-relay.js";
 
 import { registerTunnelRoutes } from "./routes.js";
+import { registerWebEndpointRoutes } from "./web-endpoint-routes.js";
 import { initializeAutoStartTunnels } from "./manager.js";
+import { attachServicePortConflictHandler } from "../../utils/service-listen.js";
 
 const authManager = AuthManager.getInstance();
 
 const app = express();
+app.set("trust proxy", "loopback");
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
@@ -36,6 +39,7 @@ app.use((_req, res, next) => {
 });
 
 registerTunnelRoutes(app);
+registerWebEndpointRoutes(app);
 
 const PORT = 30003;
 const server = createServer(app);
@@ -99,7 +103,9 @@ c2sRelayWss.on("connection", (ws, req) => {
   });
 });
 
-server.listen(PORT, () => {
+attachServicePortConflictHandler(server, PORT, tunnelLogger, "tunnel");
+
+server.listen(PORT, "127.0.0.1", () => {
   setTimeout(() => {
     initializeAutoStartTunnels();
   }, 2000);

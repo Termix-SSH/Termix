@@ -29,6 +29,11 @@ import { useTranslation } from "react-i18next";
 import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
+import { LocalFilePane } from "./LocalFilePane.tsx";
+import { useLocalTransfers } from "./hooks/useLocalTransfers.ts";
+import { usePaneWidth } from "./hooks/usePaneWidth.ts";
+import { PaneResizeHandle } from "./components/PaneResizeHandle.tsx";
+import { isLocalFileBrowserAvailable } from "@/lib/local-files.ts";
 import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
 import { FileManagerTrashDialog } from "./FileManagerTrashDialog.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
@@ -93,7 +98,7 @@ import type {
   PendingSudoOperation,
   SSHConnectionError,
 } from "./file-manager-types.ts";
-import { formatFileSize } from "./file-manager-utils.ts";
+import { formatFileSize, runWithConcurrency } from "./file-manager-utils.ts";
 import {
   invalidateCachedFileList,
   peekCachedFileList,
@@ -106,6 +111,15 @@ import {
   renameOptimisticItem,
   restoreItems,
 } from "./optimistic-file-list";
+
+const LOCAL_PANE_OPEN_STORAGE_KEY = "termix:file-manager:local-pane:open";
+const SIDEBAR_OPEN_STORAGE_KEY = "termix:file-manager:sidebar:open";
+const LOCAL_PANE_WIDTH_STORAGE_KEY = "termix:file-manager:local-pane:width";
+const LOCAL_PANE_MIN_WIDTH = 300;
+const LOCAL_PANE_DEFAULT_WIDTH = 440;
+const SIDEBAR_WIDTH_STORAGE_KEY = "termix:file-manager:sidebar:width";
+const SIDEBAR_MIN_WIDTH = 160;
+const SIDEBAR_DEFAULT_WIDTH = 224; // matches the previous fixed w-56
 
 const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
 
@@ -154,6 +168,11 @@ function FileManagerContent({
     const saved = localStorage.getItem("fileManagerViewMode");
     return saved === "grid" || saved === "list" ? saved : "grid";
   });
+  const [density, setDensity] = useState<"comfortable" | "compact">(() =>
+    localStorage.getItem("fileManagerDensity") === "compact"
+      ? "compact"
+      : "comfortable",
+  );
   // Picking an interface preset seeds this key from another part of the app.
   useEffect(() => {
     const handler = () => {
@@ -190,6 +209,61 @@ function FileManagerContent({
   const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  // Desktop-only Local | Remote split view (Termius-style dual pane).
+  const localPaneAvailable = isLocalFileBrowserAvailable();
+  const [localPaneOpen, setLocalPaneOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(LOCAL_PANE_OPEN_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [localPaneRefreshToken, setLocalPaneRefreshToken] = useState(0);
+  // Desktop directories sidebar visibility (mobile uses the overlay state).
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY) !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, String(next));
+      } catch {
+        // storage unavailable
+      }
+      return next;
+    });
+  }, []);
+  const panesRowRef = useRef<HTMLDivElement>(null);
+  const localPaneSize = usePaneWidth({
+    storageKey: LOCAL_PANE_WIDTH_STORAGE_KEY,
+    defaultWidth: LOCAL_PANE_DEFAULT_WIDTH,
+    minWidth: LOCAL_PANE_MIN_WIDTH,
+    maxFraction: 0.65,
+    containerRef: panesRowRef,
+  });
+  const sidebarSize = usePaneWidth({
+    storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+    minWidth: SIDEBAR_MIN_WIDTH,
+    maxFraction: 0.4,
+    containerRef: panesRowRef,
+  });
+  const toggleLocalPane = useCallback(() => {
+    setLocalPaneOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(LOCAL_PANE_OPEN_STORAGE_KEY, String(next));
+      } catch {
+        // storage unavailable
+      }
+      return next;
+    });
+  }, []);
   const [trashOpen, setTrashOpen] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -884,6 +958,25 @@ function FileManagerContent({
     }
   }, [navIndex, navHistory, sshSessionId]);
 
+  useEffect(() => {
+    const handleMouseNavigation = (event: MouseEvent) => {
+      if (event.button !== 3 && event.button !== 4) return;
+      event.preventDefault();
+      if (event.button === 3) goBack();
+      else goForward();
+    };
+    const preventBrowserMouseNavigation = (event: MouseEvent) => {
+      if (event.button === 3 || event.button === 4) event.preventDefault();
+    };
+
+    window.addEventListener("mouseup", handleMouseNavigation);
+    window.addEventListener("auxclick", preventBrowserMouseNavigation);
+    return () => {
+      window.removeEventListener("mouseup", handleMouseNavigation);
+      window.removeEventListener("auxclick", preventBrowserMouseNavigation);
+    };
+  }, [goBack, goForward]);
+
   const goUp = useCallback(() => {
     if (currentPath === "/") return;
     const parent =
@@ -937,6 +1030,46 @@ function FileManagerContent({
     window.addEventListener("file-manager:refresh", handler);
     return () => window.removeEventListener("file-manager:refresh", handler);
   }, [currentHost?.id, handleRefreshDirectory]);
+
+  const localTransfers = useLocalTransfers({
+    sshSessionId,
+    hostId: currentHost?.id,
+    ensureSSHConnection,
+    onRemoteChanged: (remoteDir) => {
+      if (sshSessionId) invalidateCachedFileList(sshSessionId, remoteDir);
+      handleRefreshDirectory();
+      setSidebarRefreshTrigger((prev) => prev + 1);
+    },
+    onLocalChanged: () => setLocalPaneRefreshToken((prev) => prev + 1),
+  });
+
+  // Entries dragged from the local pane onto the remote grid (or onto one of
+  // its folders) upload into that folder, preserving directory structure.
+  const handleLocalFilesDrop = useCallback(
+    (localPaths: string[], targetDir?: FileItem) => {
+      const remoteDir = targetDir?.path ?? currentPathRef.current;
+      void localTransfers.uploadLocalPaths(localPaths, remoteDir);
+    },
+    [localTransfers],
+  );
+
+  // Remote rows dragged onto the local pane download into the folder shown
+  // there (or the folder row they were dropped on).
+  const handleRemoteItemsDroppedToLocal = useCallback(
+    (remotePaths: string[], localDir: string) => {
+      const known = new Map(files.map((f) => [f.path, f]));
+      const items: FileItem[] = remotePaths.map(
+        (p) =>
+          known.get(p) ?? {
+            name: p.split("/").filter(Boolean).pop() || p,
+            path: p,
+            type: "file",
+          },
+      );
+      void localTransfers.downloadRemoteItems(items, localDir);
+    },
+    [files, localTransfers],
+  );
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -1066,16 +1199,12 @@ function FileManagerContent({
         const parentDir = dir.split("/").slice(0, -1).join("/");
         const targetPath = parentDir ? `${base}${parentDir}/` : base;
         const folderName = dir.split("/").pop()!;
-        try {
-          await createSSHFolder(
-            sshSessionId,
-            targetPath,
-            folderName,
-            currentHost?.id,
-          );
-        } catch {
-          // directory may already exist
-        }
+        await createSSHFolder(
+          sshSessionId,
+          targetPath,
+          folderName,
+          currentHost?.id,
+        );
       }
 
       for (const { file, relativePath } of files) {
@@ -1121,15 +1250,13 @@ function FileManagerContent({
     }
   }
 
-  function handleFilesDropped(fileList: FileList) {
+  async function handleFilesDropped(fileList: FileList) {
     if (!sshSessionId) {
       toast.error(t("fileManager.noSSHConnection"));
       return;
     }
 
-    Array.from(fileList).forEach((file) => {
-      handleUploadFile(file);
-    });
+    await runWithConcurrency(Array.from(fileList), 3, handleUploadFile);
   }
 
   async function handleUploadFile(file: File) {
@@ -1246,7 +1373,7 @@ function FileManagerContent({
 
       toast.success(
         t("fileManager.fileDownloadedSuccessfully", { name: file.name }),
-        { id: toastId },
+        { id: toastId, duration: undefined },
       );
     } catch (error: unknown) {
       const err = error instanceof Error ? error : null;
@@ -1260,10 +1387,13 @@ function FileManagerContent({
             ip: currentHost?.ip,
             port: currentHost?.port,
           }),
-          { id: toastId },
+          { id: toastId, duration: undefined },
         );
       } else {
-        toast.error(t("fileManager.failedToDownloadFile"), { id: toastId });
+        toast.error(t("fileManager.failedToDownloadFile"), {
+          id: toastId,
+          duration: undefined,
+        });
       }
       console.error("Download failed:", error);
     }
@@ -3146,6 +3276,10 @@ function FileManagerContent({
   }, [viewMode]);
 
   useEffect(() => {
+    localStorage.setItem("fileManagerDensity", density);
+  }, [density]);
+
+  useEffect(() => {
     localStorage.setItem("fileManagerSortBy", sortBy);
     localStorage.setItem("fileManagerSortOrder", sortOrder);
   }, [sortBy, sortOrder]);
@@ -3223,6 +3357,8 @@ function FileManagerContent({
           setSearchQuery={setSearchQuery}
           viewMode={viewMode}
           setViewMode={setViewMode}
+          density={density}
+          setDensity={setDensity}
           sortBy={sortBy}
           setSortBy={setSortBy}
           sortOrder={sortOrder}
@@ -3238,9 +3374,15 @@ function FileManagerContent({
           handleFilesDropped={handleFilesDropped}
           handleCreateNewFolder={handleCreateNewFolder}
           handleCreateNewFile={handleCreateNewFile}
+          showLocalPaneToggle={localPaneAvailable}
+          localPaneOpen={localPaneAvailable && localPaneOpen}
+          onToggleLocalPane={toggleLocalPane}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
         />
 
         <div
+          ref={panesRowRef}
           className="flex-1 flex px-3 pb-3 pt-2 gap-3 min-h-0 relative"
           {...dragHandlers}
         >
@@ -3255,12 +3397,18 @@ function FileManagerContent({
           {/* Sidebar — fixed overlay on mobile, static on desktop */}
           <div
             className={cn(
-              "w-56 flex-shrink-0 h-full flex flex-col",
-              "md:flex",
+              "flex-shrink-0 h-full flex flex-col",
               mobileSidebarOpen
                 ? "fixed left-0 top-0 bottom-0 w-64 z-30 flex"
-                : "hidden md:flex",
+                : sidebarOpen
+                  ? "hidden md:flex"
+                  : "hidden",
             )}
+            style={
+              mobileSidebarOpen
+                ? undefined
+                : { width: sidebarSize.width, minWidth: SIDEBAR_MIN_WIDTH }
+            }
           >
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 border border-border bg-card">
               <FileManagerSidebar
@@ -3276,8 +3424,42 @@ function FileManagerContent({
               />
             </div>
           </div>
+          {sidebarOpen && !mobileSidebarOpen && (
+            <PaneResizeHandle
+              label={t("fileManager.resizeSidebar")}
+              onMouseDown={sidebarSize.startResize}
+              onDoubleClick={sidebarSize.resetWidth}
+              active={sidebarSize.isResizing}
+            />
+          )}
 
-          <div className="flex-1 relative overflow-hidden min-h-0 flex flex-col border border-border bg-card">
+          {localPaneAvailable && localPaneOpen && (
+            <>
+              <div
+                className="hidden md:flex flex-shrink-0 relative overflow-hidden min-h-0 flex-col border border-border bg-card"
+                style={{
+                  width: localPaneSize.width,
+                  minWidth: LOCAL_PANE_MIN_WIDTH,
+                  maxWidth: "65%",
+                }}
+              >
+                <LocalFilePane
+                  refreshToken={localPaneRefreshToken}
+                  onClose={toggleLocalPane}
+                  onRemoteItemsDropped={handleRemoteItemsDroppedToLocal}
+                  onUploadToRemote={handleLocalFilesDrop}
+                />
+              </div>
+              <PaneResizeHandle
+                label={t("fileManager.resizeLocalPane")}
+                onMouseDown={localPaneSize.startResize}
+                onDoubleClick={localPaneSize.resetWidth}
+                active={localPaneSize.isResizing}
+              />
+            </>
+          )}
+
+          <div className="flex-1 basis-0 relative overflow-hidden min-h-0 flex flex-col border border-border bg-card">
             <div className="flex-1 relative min-h-0 h-full">
               <FileManagerGrid
                 files={filteredFiles}
@@ -3287,6 +3469,17 @@ function FileManagerContent({
                 onSelectionChange={setSelection}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}
+                onUploadItems={handleItemsDropped}
+                onLocalFilesDrop={
+                  localPaneAvailable ? handleLocalFilesDrop : undefined
+                }
+                parentPath={
+                  currentPath === "/"
+                    ? null
+                    : currentPath.substring(0, currentPath.lastIndexOf("/")) ||
+                      "/"
+                }
+                onNavigateUp={goUp}
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onSortChange={(field) => {
@@ -3304,6 +3497,7 @@ function FileManagerContent({
                 }
                 onContextMenu={handleContextMenu}
                 viewMode={viewMode}
+                density={density}
                 onRename={handleRenameConfirm}
                 editingFile={editingFile}
                 onStartEdit={handleStartEdit}

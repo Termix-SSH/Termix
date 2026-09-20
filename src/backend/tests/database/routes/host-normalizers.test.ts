@@ -1,15 +1,35 @@
 import { describe, it, expect } from "vitest";
 import {
+  applyHostKeyTypeUpdate,
   containsOwnerPrivateAuthUpdate,
   isNonEmptyString,
   isOptionalBoolean,
   isValidPort,
   normalizeImportedHost,
+  normalizeProtocolEnableFields,
   renameFolderPath,
   sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
 } from "../../../database/routes/host-normalizers.js";
+
+describe("applyHostKeyTypeUpdate", () => {
+  it("clears an existing key type when auto-detect sends null", () => {
+    const update: Record<string, unknown> = { keyType: "ssh-ed25519" };
+
+    applyHostKeyTypeUpdate(update, null);
+
+    expect(update.keyType).toBeNull();
+  });
+
+  it("does not change the key type when the field is omitted", () => {
+    const update: Record<string, unknown> = { keyType: "ssh-ed25519" };
+
+    applyHostKeyTypeUpdate(update, undefined);
+
+    expect(update.keyType).toBe("ssh-ed25519");
+  });
+});
 
 describe("containsOwnerPrivateAuthUpdate", () => {
   it("detects owner-only SSH auth fields, including explicit clears", () => {
@@ -77,6 +97,23 @@ describe("isOptionalBoolean", () => {
     expect(isOptionalBoolean("0")).toBe(false);
     expect(isOptionalBoolean(1)).toBe(false);
     expect(isOptionalBoolean(null)).toBe(false);
+  });
+});
+
+describe("normalizeProtocolEnableFields", () => {
+  it("omits unspecified protocol fields so database defaults are preserved", () => {
+    expect(normalizeProtocolEnableFields({ name: "server" })).toEqual({});
+  });
+
+  it("converts explicitly provided protocol booleans to database integers", () => {
+    expect(
+      normalizeProtocolEnableFields({
+        enableSsh: true,
+        enableRdp: false,
+        enableVnc: undefined,
+        enableTelnet: true,
+      }),
+    ).toEqual({ enableSsh: 1, enableRdp: 0, enableTelnet: 1 });
   });
 });
 
@@ -394,6 +431,7 @@ describe("sanitizeHostForRecipient", () => {
       {
         ...sharedHost,
         permissionLevel: "connect",
+        rdpAuthType: "none",
         authOverrides: {
           ssh: {
             credentialId: 9,
@@ -408,6 +446,7 @@ describe("sanitizeHostForRecipient", () => {
     expect(result.ip).toBe("10.0.0.42");
     expect(result.enableRdp).toBe(true);
     expect(result.rdpPort).toBe(3389);
+    expect(result.rdpAuthType).toBe("none");
     expect(result.permissionLevel).toBe("connect");
     expect(result.shareSshAuth).toBe(true);
     expect(result.authOverrides).toEqual({

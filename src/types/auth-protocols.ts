@@ -2,11 +2,8 @@ export const AUTH_OVERRIDE_PROTOCOLS = ["ssh", "rdp", "vnc", "telnet"] as const;
 
 export type AuthOverrideProtocol = (typeof AUTH_OVERRIDE_PROTOCOLS)[number];
 
-// Storage and API contracts are protocol-aware, but SSH is intentionally the
-// only protocol whose recipient override flow is enabled today.
-export const SUPPORTED_AUTH_OVERRIDE_PROTOCOLS = [
-  "ssh",
-] as const satisfies readonly AuthOverrideProtocol[];
+export const SUPPORTED_AUTH_OVERRIDE_PROTOCOLS =
+  AUTH_OVERRIDE_PROTOCOLS satisfies readonly AuthOverrideProtocol[];
 
 export const AUTH_PROTOCOL_METADATA = {
   ssh: {

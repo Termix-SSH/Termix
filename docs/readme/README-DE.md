@@ -111,7 +111,7 @@ Hosts mit Tags und verschachtelten Ordnern ordnen, die du benennen und einfärbe
 <td width="50%" valign="top">
 
 **Host-Metriken:**
-CPU, Speicher, Festplatte, Netzwerk, Temperatur, Laufzeit, Prozesse, Ports, Anmeldungen und Systeminfos auf den meisten Linux-Servern, mit Verlaufsgrafiken. Über Verwaltungskarten kümmerst du dich um Dienste, Cronjobs, Pakete, Benutzer, Firewallregeln, WireGuard, Tailscale, SSL-Zertifikate, Logs und Statusprüfungen, ohne Termix zu verlassen.
+CPU, Speicher, Festplatte, Netzwerk, Temperatur, NVIDIA-GPU, Laufzeit, Prozesse, Ports, Anmeldungen und Systeminfos auf den meisten Linux-Servern, mit Verlaufsgrafiken. Über Verwaltungskarten kümmerst du dich um Dienste, Cronjobs, Pakete, Benutzer, Firewallregeln, WireGuard, Tailscale, SSL-Zertifikate, Logs und Statusprüfungen, ohne Termix zu verlassen.
 
 </td>
 <td width="50%" valign="top">
@@ -214,20 +214,6 @@ Speichere eine Reihe von Tabs samt Aufteilung und öffne alles mit einem Klick w
 </td>
 <td width="50%" valign="top">
 
-**Geführte Einrichtung:**
-Eine kurze Einrichtung führt dich durch die Wahl einer Oberflächenvorlage, deines Themas, der gewünschten Funktionen und deines ersten Hosts. Der einfache Modus blendet aus, was du nicht nutzt, und du kannst die Einrichtung jederzeit erneut starten oder die Vorlage wechseln.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Desktop eigenständig und Synchronisierung:**
-Die Desktop-App läuft eigenständig mit lokalem Backend und eigener Datenbank, ganz ohne Server. Du kannst sie auch mit einem Termix-Server verbinden, um Hosts, Zugangsdaten, Snippets und mehr in beide Richtungen abzugleichen, und wählen, ob Verbindungen lokal oder über den Server aufgebaut werden.
-
-</td>
-<td width="50%" valign="top">
-
 **Kommandozeile:**
 Ein `termix`-CLI für deine Shell und deine Skripte. Terminals öffnen, einen Befehl auf einem Host oder einer ganzen Flotte ausführen, Dateien per SFTP verschieben und Hosts, Snippets und Zugangsdaten verwalten. Installiere es mit `npm install -g @termix-cli/cli` oder nimm eine eigenständige Binärdatei. Siehe die [CLI-Dokumentation](https://docs.termix.site/cli).
 
@@ -237,7 +223,7 @@ Ein `termix`-CLI für deine Shell und deine Skripte. Terminals öffnen, einen Be
 <td width="50%" valign="top">
 
 **Sicherheit:**
-Passwörter, Schlüssel und andere Geheimnisse werden pro Benutzer verschlüsselt, und die Datenbankdateien selbst lassen sich auf der Festplatte verschlüsseln. Wie das funktioniert, steht in der [Dokumentation](https://docs.termix.site/security).
+Passwörter, Schlüssel und andere Geheimnisse werden pro Benutzer verschlüsselt, und die Datenbankdateien selbst lassen sich auf der Festplatte verschlüsseln. Wie das funktioniert, steht in der [Dokumentation](https://docs.termix.site/features/authentication/security/).
 
 </td>
 <td width="50%" valign="top">
@@ -267,8 +253,13 @@ Rund 30 Sprachen sind eingebaut, verwaltet über [Crowdin](https://docs.termix.s
 - **Tastenkürzel** - Zwischen Tabs wechseln, Tabs schließen und mehr, alles neu belegbar
 - **Wake-on-LAN** - Einen Rechner aus Termix heraus oder aus einem Automatisierungsschritt aufwecken
 - **Vertrauenswürdiger Proxy** - Einen Reverse Proxy die Anmeldung erledigen und den Benutzer durchreichen lassen
-- **Viele SSH-Funktionen** - Sprunghosts, Warpgate, TOTP-Abfragen, SOCKS5, Prüfung von Hostschlüsseln, automatisches Ausfüllen von Passwörtern, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, Port Knocking, Terminalprotokolle, Agent-Weiterleitung, Bitwarden SSH-Agent, SSH-Signierung über HashiCorp Vault und mehr
+- **White Label** - Administratoren können die Instanz mit eigenem Namen, Logo und Farben versehen
+- **Web-Endpunkte** - Öffne die eigene Weboberfläche eines Hosts, etwa die Verwaltungsseite eines Routers, eingebettet in Termix statt in einem eigenen Tab
+- **Kollaborationsräume** - Feste Räume, in denen eine Gruppe gemeinsam zwischen Sitzungen wechselt, mit Präsentationsbühne und Einladungen
+- **Viele SSH-Funktionen** - Sprunghosts, Warpgate, TOTP-Abfragen, SOCKS5, Prüfung von Hostschlüsseln, automatisches Ausfüllen von Passwörtern, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, Port Knocking, Terminalprotokolle, Agent-Weiterleitung, Bitwarden SSH-Agent, SSH-Signierung über HashiCorp Vault, Step CA, 1Password Connect und mehr
 - **Termix ID** - Eine eingebaute Variante von sshid.io. Sichere dir einen Namen, veröffentliche deine öffentlichen Schlüssel unter einer Resolver-URL und stelle SSH-Zertifikate über die eingebaute CA aus
+- **Autovervollständigung im Befehlsverlauf** - Vorschläge direkt im Terminal beim Tippen, basierend auf deinem Befehlsverlauf
+- **Desktop eigenständig und Synchronisierung** - Die Desktop-App läuft eigenständig mit lokalem Backend und eigener Datenbank und kann sich optional mit einem Termix-Server synchronisieren
 
 </details>
 
@@ -312,6 +303,10 @@ Rund 30 Sprachen sind eingebaut, verwaltet über [Crowdin](https://docs.termix.s
 ## Installation
 
 In der [Termix-Dokumentation](https://docs.termix.site/install) findest du die vollständigen Installationsanleitungen für alle Plattformen.
+
+Willst du auf Kubernetes bereitstellen? Das Helm-Chart liegt in `charts/termix`, und die Einrichtung
+für Ingress, Traefik, Argo CD, GitHub Actions und GitLab CI steht unter
+[docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes).
 
 Beispiel für eine Docker-Compose-Datei (`guacd` und das Netzwerk kannst du weglassen, wenn du keinen Remotedesktop brauchst):
 

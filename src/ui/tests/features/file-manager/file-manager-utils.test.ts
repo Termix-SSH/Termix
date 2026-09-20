@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { formatFileSize } from "../../../features/file-manager/file-manager-utils.js";
+import {
+  formatFileSize,
+  runWithConcurrency,
+} from "../../../features/file-manager/file-manager-utils.js";
 
 describe("formatFileSize", () => {
   it("returns a dash for undefined or null", () => {
@@ -29,5 +32,22 @@ describe("formatFileSize", () => {
   it("scales up to larger units", () => {
     expect(formatFileSize(1024 * 1024 * 1024)).toBe("1.0 GB");
     expect(formatFileSize(1024 * 1024 * 1024 * 1024)).toBe("1.0 TB");
+  });
+
+  it("limits concurrent work", async () => {
+    let active = 0;
+    let maxActive = 0;
+    const completed: number[] = [];
+
+    await runWithConcurrency([1, 2, 3, 4, 5], 2, async (item) => {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      completed.push(item);
+      active -= 1;
+    });
+
+    expect(maxActive).toBe(2);
+    expect(completed.sort()).toEqual([1, 2, 3, 4, 5]);
   });
 });

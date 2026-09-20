@@ -3,6 +3,7 @@ import {
   createHostEditorForm,
   buildHostEditorPayload,
   omitOwnerSshAuthFromSharedEdit,
+  connectionOriginAppliesTo,
   type HostProtocols,
 } from "../../sidebar/HostEditorData";
 import type { Host } from "@/types/ui-types";
@@ -625,5 +626,63 @@ describe("createHostEditorForm credentialId", () => {
 
   it("falls back to an empty string when there is no credential", () => {
     expect(createHostEditorForm(null).credentialId).toBe("");
+  });
+});
+
+describe("createHostEditorForm auto-tmux", () => {
+  it("inherits the admin default for a new host but keeps an existing host's own choice", () => {
+    expect(createHostEditorForm(null, { autoTmux: true }).autoTmux).toBe(true);
+    expect(createHostEditorForm(null, {}).autoTmux).toBe(false);
+
+    const host = {
+      id: "1",
+      name: "box",
+      terminalConfig: { autoTmux: false },
+    } as unknown as Host;
+    expect(createHostEditorForm(host, { autoTmux: true }).autoTmux).toBe(false);
+  });
+});
+
+// Support#1240: RDP/VNC/Telnet can now originate from the desktop, so the
+// control has to appear for hosts that enable only those protocols -- it used
+// to be gated on SSH alone.
+describe("connectionOriginAppliesTo", () => {
+  const none = {
+    enableSsh: false,
+    enableRdp: false,
+    enableVnc: false,
+    enableTelnet: false,
+  };
+
+  it("applies to an SSH host", () => {
+    expect(connectionOriginAppliesTo({ ...none, enableSsh: true })).toBe(true);
+  });
+
+  it.each(["enableRdp", "enableVnc", "enableTelnet"] as const)(
+    "applies to a host that only enables %s",
+    (protocol) => {
+      expect(connectionOriginAppliesTo({ ...none, [protocol]: true })).toBe(
+        true,
+      );
+    },
+  );
+
+  it("does not apply when no supported protocol is enabled", () => {
+    expect(connectionOriginAppliesTo(none)).toBe(false);
+  });
+});
+
+describe("macOS Option character defaults", () => {
+  it("leaves Option available for keyboard-layout characters by default", () => {
+    const form = createHostEditorForm(null);
+    expect(form.macOptionIsMeta).toBe(false);
+    expect(
+      buildHostEditorPayload(form, sshOnly).terminalConfig?.macOptionIsMeta,
+    ).toBe(false);
+  });
+
+  it("preserves an explicitly saved Meta preference", () => {
+    const host = { terminalConfig: { macOptionIsMeta: true } } as Host;
+    expect(createHostEditorForm(host).macOptionIsMeta).toBe(true);
   });
 });

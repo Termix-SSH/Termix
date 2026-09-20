@@ -111,7 +111,7 @@ Rangez vos hôtes avec des étiquettes et des dossiers imbriqués que vous pouve
 <td width="50%" valign="top">
 
 **Métriques des hôtes:**
-CPU, mémoire, disque, réseau, température, temps de fonctionnement, processus, ports, connexions et informations système sur la plupart des serveurs Linux, avec des graphiques d'historique. Les cartes de gestion vous permettent de gérer les services, les tâches cron, les paquets, les utilisateurs, les règles de pare-feu, WireGuard, Tailscale, les certificats SSL, les journaux et les vérifications d'état sans quitter Termix.
+CPU, mémoire, disque, réseau, température, GPU NVIDIA, temps de fonctionnement, processus, ports, connexions et informations système sur la plupart des serveurs Linux, avec des graphiques d'historique. Les cartes de gestion vous permettent de gérer les services, les tâches cron, les paquets, les utilisateurs, les règles de pare-feu, WireGuard, Tailscale, les certificats SSL, les journaux et les vérifications d'état sans quitter Termix.
 
 </td>
 <td width="50%" valign="top">
@@ -214,20 +214,6 @@ Enregistrez un ensemble d'onglets avec leur disposition en écran divisé et rou
 </td>
 <td width="50%" valign="top">
 
-**Configuration guidée:**
-Une courte configuration vous aide à choisir un préréglage d'interface, votre thème, les fonctionnalités que vous voulez et votre premier hôte. Le mode simple masque ce que vous n'utilisez pas, et vous pouvez relancer la configuration ou changer de préréglage quand vous voulez.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Application de bureau autonome et synchronisation:**
-L'application de bureau fonctionne toute seule, avec son propre backend et sa base de données, sans serveur. Vous pouvez aussi la relier à un serveur Termix pour synchroniser dans les deux sens les hôtes, les identifiants, les extraits et le reste, et choisir si les connexions partent de votre machine ou passent par le serveur.
-
-</td>
-<td width="50%" valign="top">
-
 **Ligne de commande:**
 Un CLI `termix` pour votre shell et vos scripts. Ouvrez des terminaux, lancez une commande sur un hôte ou une flotte entière, déplacez des fichiers en SFTP et gérez hôtes, extraits et identifiants. Installez-le avec `npm install -g @termix-cli/cli` ou récupérez un binaire autonome. Voir la [documentation du CLI](https://docs.termix.site/cli).
 
@@ -237,7 +223,7 @@ Un CLI `termix` pour votre shell et vos scripts. Ouvrez des terminaux, lancez un
 <td width="50%" valign="top">
 
 **Sécurité:**
-Les mots de passe, les clés et les autres secrets sont chiffrés par utilisateur, et les fichiers de base de données eux-mêmes peuvent être chiffrés sur le disque. Voir la [documentation](https://docs.termix.site/security) pour le détail.
+Les mots de passe, les clés et les autres secrets sont chiffrés par utilisateur, et les fichiers de base de données eux-mêmes peuvent être chiffrés sur le disque. Voir la [documentation](https://docs.termix.site/features/authentication/security/) pour le détail.
 
 </td>
 <td width="50%" valign="top">
@@ -267,8 +253,13 @@ Une trentaine de langues intégrées, gérées via [Crowdin](https://docs.termix
 - **Raccourcis clavier** - Naviguer entre les onglets, les fermer et plus encore, tout est reconfigurable
 - **Wake-on-LAN** - Réveillez une machine depuis Termix ou depuis une étape d'automatisation
 - **Authentification par proxy de confiance** - Laissez un reverse proxy gérer la connexion et transmettre l'utilisateur
-- **SSH complet** - Hôtes de rebond, Warpgate, demandes TOTP, SOCKS5, vérification des clés d'hôte, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, journalisation du terminal, transfert d'agent, agent SSH Bitwarden, signature SSH HashiCorp Vault et plus encore
+- **Marque blanche** - Les administrateurs peuvent personnaliser l'instance avec leur propre nom, logo et couleurs
+- **Points d'accès web** - Ouvrez l'interface web d'un hôte, comme la page d'administration d'un routeur, directement dans Termix plutôt que dans un onglet séparé
+- **Salles de collaboration** - Des salles persistantes où un groupe peut passer d'une session à l'autre ensemble, avec une scène pour le présentateur et des invitations
+- **SSH complet** - Hôtes de rebond, Warpgate, demandes TOTP, SOCKS5, vérification des clés d'hôte, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, journalisation du terminal, transfert d'agent, agent SSH Bitwarden, signature SSH HashiCorp Vault, Step CA, 1Password Connect et plus encore
 - **Termix ID** - Une version intégrée de sshid.io. Réservez un identifiant, publiez vos clés publiques sur une URL de résolution et émettez des certificats SSH depuis l'autorité intégrée
+- **Suggestions automatiques d'historique de commandes** - Des suggestions en ligne dans le terminal pendant que vous tapez, basées sur votre historique de commandes
+- **Application de bureau autonome et synchronisation** - L'application de bureau fonctionne toute seule, avec son propre backend et sa base de données, et peut en option se synchroniser avec un serveur Termix
 
 </details>
 
@@ -312,6 +303,8 @@ Une trentaine de langues intégrées, gérées via [Crowdin](https://docs.termix
 ## Installation
 
 Consultez la [documentation Termix](https://docs.termix.site/install) pour les instructions d'installation complètes sur toutes les plateformes.
+
+Vous déployez sur Kubernetes ? Le chart Helm se trouve dans `charts/termix`, et les instructions de configuration couvrant Ingress, Traefik, Argo CD, GitHub Actions et GitLab CI sont sur [docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes).
 
 Exemple de fichier Docker Compose (vous pouvez retirer `guacd` et le réseau si vous ne comptez pas utiliser le bureau à distance) :
 

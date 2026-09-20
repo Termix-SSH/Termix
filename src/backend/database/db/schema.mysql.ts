@@ -16,6 +16,7 @@ import {
   double,
   index,
   uniqueIndex,
+  foreignKey,
   type AnyMySqlColumn,
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
@@ -150,7 +151,7 @@ export const hosts = mysqlTable(
     ip: text("ip").notNull(),
     port: int("port").notNull(),
     username: text("username").notNull(),
-    folder: text("folder"),
+    folder: varchar("folder", { length: 255 }),
     // Sub-host nesting: a host acting as an organizational parent for other
     // hosts, mutually exclusive with folder (see host route validation).
     parentHostId: int("parent_host_id").references(
@@ -212,12 +213,18 @@ export const hosts = mysqlTable(
     enableDocker: boolean("enable_docker")
       .notNull()
       .default(false),
+    enableWebUi: boolean("enable_web_ui")
+      .notNull()
+      .default(false),
     enableTmuxMonitor: boolean("enable_tmux_monitor")
       .notNull()
       .default(false),
     enableTerminalToolbar: boolean("enable_terminal_toolbar")
       .notNull()
       .default(true),
+    enableAiAssistant: boolean("enable_ai_assistant")
+      .notNull()
+      .default(false),
     showTerminalInSidebar: boolean("show_terminal_in_sidebar")
       .notNull()
       .default(true),
@@ -236,6 +243,7 @@ export const hosts = mysqlTable(
     defaultPath: text("default_path"),
     statsConfig: text("stats_config"),
     dockerConfig: text("docker_config"),
+    webUiConfig: text("web_ui_config"),
     enableProxmox: boolean("enable_proxmox")
       .notNull()
       .default(false),
@@ -439,7 +447,7 @@ export const sshCredentials = mysqlTable(
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  folder: text("folder"),
+  folder: varchar("folder", { length: 255 }),
   tags: text("tags"),
   pin: boolean("pin").notNull().default(false),
   // Manual drag-to-reorder position within a folder. Null means the
@@ -505,7 +513,7 @@ export const snippets = mysqlTable(
     name: varchar("name", { length: 255 }).notNull(),
     content: text("content").notNull(),
     description: text("description"),
-    folder: text("folder"),
+    folder: varchar("folder", { length: 255 }),
     order: int("order").notNull().default(0),
     syncId: varchar("sync_id", { length: 255 }).unique(),
     createdAt: varchar("created_at", { length: 255 })
@@ -1022,7 +1030,7 @@ export const vaultProfiles = mysqlTable("vault_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  folder: text("folder"),
+  folder: varchar("folder", { length: 255 }),
   tags: text("tags"),
   // Vault server connection (non-secret)
   vaultAddr: text("vault_addr").notNull(),
@@ -1136,6 +1144,7 @@ export const userPreferences = mysqlTable("user_preferences", {
   hostTrayOnClick: boolean("host_tray_on_click"),
   pinAppRail: boolean("pin_app_rail"),
   expandAppRailOnHover: boolean("expand_app_rail_on_hover"),
+  showPinAppRailButton: boolean("show_pin_app_rail_button"),
   foldersCollapsed: boolean("folders_collapsed"),
   confirmSnippetExecution: boolean("confirm_snippet_execution"),
   disableUpdateCheck: boolean("disable_update_check"),
@@ -1939,3 +1948,335 @@ export const aiProposals = mysqlTable(
   ],
 );
 // --- ai end ---
+
+// --- collab rooms ---
+
+/**
+ * A collaboration room: a group of users watching one "stage" - the live
+ * session the current presenter is showing. The stage points at a
+ * shareType="room" row in session_shares, so transport, gating, recording and
+ * expiry all reuse the session-sharing machinery.
+ */
+export const collabRooms = mysqlTable(
+  "collab_rooms",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    ownerUserId: varchar("owner_user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // Persistent rooms survive being emptied and can be re-used; one-off
+    // rooms are ended explicitly and never listed again.
+    persistent: boolean("persistent")
+      .notNull()
+      .default(false),
+
+    presenterUserId: varchar("presenter_user_id", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    stageProtocol: text("stage_protocol"),
+    stageHostId: int("stage_host_id").references(() => hosts.id, {
+      onDelete: "set null",
+    }),
+    stageShareId: varchar("stage_share_id", { length: 255 }).references(() => sessionShares.id, {
+      onDelete: "set null",
+    }),
+
+    // Set = anonymous guests may watch the stage through this token.
+    guestLinkToken: varchar("guest_link_token", { length: 255 }),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    endedAt: text("ended_at"),
+  },
+  (table) => [
+    index("idx_collab_rooms_owner").on(table.ownerUserId),
+    uniqueIndex("idx_collab_rooms_guest_token").on(table.guestLinkToken),
+  ],
+);
+
+export const collabRoomMembers = mysqlTable(
+  "collab_room_members",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    roomId: varchar("room_id", { length: 255 })
+      .notNull()
+      .references(() => collabRooms.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // "host" runs the room: invites, force-switches the presenter, ends it.
+    roomRole: text("room_role").notNull().default("member"),
+    addedBy: varchar("added_by", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_collab_room_members_room_user").on(
+      table.roomId,
+      table.userId,
+    ),
+    index("idx_collab_room_members_user").on(table.userId),
+  ],
+);
+
+// --- secret sources ---
+
+/**
+ * An external password manager Termix pulls secrets from at connect time,
+ * instead of storing them. Only the access token is secret; it is encrypted
+ * with the owner's data key under the row id. Hosts and credentials refer to
+ * entries by reference ("op://vault/item/field") in their secret fields.
+ */
+export const secretSources = mysqlTable(
+  "secret_sources",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    // "onepassword-connect" for now; the reference syntax is per kind.
+    kind: text("kind").notNull().default("onepassword-connect"),
+    baseUrl: text("base_url").notNull(),
+    token: text("token").notNull(),
+    // Visible to every user; secrets still decrypt with the owner's key.
+    shared: boolean("shared").notNull().default(false),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [index("idx_secret_sources_user").on(table.userId)],
+);
+
+// --- credential sharing ---
+
+/**
+ * Who may use or manage someone else's credential. Same shape as
+ * snippet_access; "use" attaches it to hosts and connects, "manage" also
+ * edits and re-shares it.
+ */
+export const credentialAccess = mysqlTable(
+  "credential_access",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    credentialId: int("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    roleId: int("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
+
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    permissionLevel: text("permission_level").notNull().default("use"),
+
+    expiresAt: varchar("expires_at", { length: 255 }),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_credential_access_user_id").on(table.userId),
+    index("idx_credential_access_role_id").on(table.roleId),
+    index("idx_credential_access_credential_id").on(table.credentialId),
+  ],
+);
+
+/**
+ * A recipient's copy of a shared credential's secrets, re-encrypted under
+ * the recipient's data key (the owner's key cannot be used by anyone else).
+ * Rebuilt whenever the owner edits the credential; one row per grant and
+ * recipient, like shared_host_secrets.
+ */
+export const sharedCredentialSecrets = mysqlTable(
+  "shared_credential_secrets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    credentialAccessId: int("credential_access_id").notNull(),
+    targetUserId: varchar("target_user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialId: int("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    encryptedUsername: text("encrypted_username"),
+    authType: text("auth_type").notNull().default("password"),
+    encryptedPassword: text("encrypted_password"),
+    encryptedKey: text("encrypted_key"),
+    encryptedKeyPassword: text("encrypted_key_password"),
+    keyType: text("key_type"),
+    publicKey: text("public_key"),
+    certPublicKey: text("cert_public_key"),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.credentialAccessId],
+      foreignColumns: [credentialAccess.id],
+      name: "shared_cred_secrets_access_id_fk",
+    }).onDelete("cascade"),
+    uniqueIndex("idx_shared_credential_secrets_scope").on(
+      table.credentialAccessId,
+      table.targetUserId,
+    ),
+    index("idx_shared_credential_secrets_target").on(
+      table.targetUserId,
+      table.credentialId,
+    ),
+  ],
+);
+
+// --- folder access rules ---
+
+/**
+ * A standing share on a host folder. Sharing a folder fans out host_access
+ * grants to the hosts in it today; this row is what makes hosts created in
+ * or moved into the folder later inherit the same access.
+ */
+export const folderAccess = mysqlTable(
+  "folder_access",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerUserId: varchar("owner_user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The folder path as stored on hosts ("Parent / Child"); subfolders inherit.
+    folder: varchar("folder", { length: 255 }).notNull(),
+
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    roleId: int("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
+
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permissionLevel: text("permission_level").notNull().default("connect"),
+    expiresAt: varchar("expires_at", { length: 255 }),
+
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_folder_access_owner_folder").on(table.ownerUserId, table.folder),
+  ],
+);
+
+// --- plugins begin ---
+
+/**
+ * An installed plugin. id matches the manifest's own id (not autoincrement),
+ * so a plugin can be looked up the same way the manifest and registry refer
+ * to it. manifest_json is the full manifest as it was at install time, kept
+ * for audit/rollback even after a registry updates or removes the entry.
+ */
+export const plugins = mysqlTable(
+  "plugins",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    version: text("version").notNull(),
+    tier: text("tier").notNull().default("available"),
+    source: text("source").notNull().default("community"),
+    registryId: varchar("registry_id", { length: 255 }),
+    state: text("state").notNull().default("disabled"),
+    installedAt: text("installed_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    autoUpdate: boolean("auto_update")
+      .notNull()
+      .default(false),
+    manifestJson: text("manifest_json").notNull(),
+  },
+  (table) => [index("idx_plugins_registry_id").on(table.registryId)],
+);
+
+export const pluginPermissionGrants = mysqlTable(
+  "plugin_permission_grants",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pluginId: varchar("plugin_id", { length: 255 })
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    capability: varchar("capability", { length: 255 }).notNull(),
+    grantedAt: text("granted_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  // A plugin's grants are always read together, and re-granting the same
+  // capability should update the existing row rather than duplicate it.
+  (table) => [
+    uniqueIndex("idx_plugin_permission_grants_plugin_capability").on(
+      table.pluginId,
+      table.capability,
+    ),
+  ],
+);
+
+export const pluginRegistries = mysqlTable("plugin_registries", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: text("url").notNull(),
+  kind: text("kind").notNull().default("community"),
+  enabled: boolean("enabled").notNull().default(true),
+  signingKey: text("signing_key"),
+  lastCheckedAt: text("last_checked_at"),
+  lastIndexHash: text("last_index_hash"),
+});
+
+/**
+ * Install counts populated by a background job (GitHub release download
+ * counts, aggregated telemetry, or a manual override) rather than by the
+ * install/uninstall actions themselves — kept separate from `plugins` so
+ * that job can overwrite counts without touching install state.
+ */
+export const pluginInstallCounts = mysqlTable(
+  "plugin_install_counts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pluginId: varchar("plugin_id", { length: 255 }).notNull(),
+    registryId: varchar("registry_id", { length: 255 }).notNull(),
+    count: int("count").notNull().default(0),
+    source: text("source").notNull().default("aggregate-telemetry"),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_install_counts_plugin_registry").on(
+      table.pluginId,
+      table.registryId,
+    ),
+  ],
+);
+
+// --- plugins end ---

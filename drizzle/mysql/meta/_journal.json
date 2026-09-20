@@ -106,6 +106,69 @@
       "when": 1786757023790,
       "tag": "0014_bitter_nextwave",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1787576997080,
+      "tag": "0015_red_cobalt_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1787581983770,
+      "tag": "0016_unusual_tyrannus",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1787596414390,
+      "tag": "0017_spicy_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1787600445146,
+      "tag": "0018_fancy_barracuda",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1787602480861,
+      "tag": "0019_certain_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1788856825810,
+      "tag": "0020_wise_green_goblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1789677308051,
+      "tag": "0021_thick_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1789744021971,
+      "tag": "0022_secret_blacklash",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1789751455875,
+      "tag": "0023_even_beast",
+      "breakpoints": true
     }
   ]
 }

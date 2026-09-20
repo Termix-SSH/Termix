@@ -89,7 +89,7 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 <td width="50%" valign="top">
 
 **文件管理器:**
-通过 SFTP 浏览、编辑、上传、下载、重命名、移动和删除文件，支持 sudo。可以查看和编辑代码、图片、音频和视频。文件可以直接从一台服务器复制到另一台，系统会自动选择最快的路径并校验传输完整性。
+通过 SFTP 浏览、编辑、上传、下载、重命名、移动和删除文件，支持 sudo。可以查看和编辑代码、图片、音频和视频。在专属的传输标签页里把文件直接从一台服务器复制到另一台，系统会自动选择最快的路径并校验传输完整性。桌面端还提供本地和远程并排显示的视图。
 
 </td>
 </tr>
@@ -111,7 +111,7 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 <td width="50%" valign="top">
 
 **主机指标:**
-在大多数 Linux 服务器上查看 CPU、内存、磁盘、网络、温度、运行时间、进程、端口、登录记录和系统信息，并附带历史曲线图。管理卡片让你无需离开 Termix 就能处理服务、定时任务、软件包、用户、防火墙规则、WireGuard、Tailscale、SSL 证书、日志和健康检查。
+在大多数 Linux 服务器上查看 CPU、内存、磁盘、网络、温度、NVIDIA GPU、运行时间、进程、端口、登录记录和系统信息，并附带历史曲线图。管理卡片让你无需离开 Termix 就能处理服务、定时任务、软件包、用户、防火墙规则、WireGuard、Tailscale、SSL 证书、日志和健康检查。
 
 </td>
 <td width="50%" valign="top">
@@ -214,20 +214,6 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 </td>
 <td width="50%" valign="top">
 
-**引导设置:**
-一个简短的引导流程会带你选择界面预设、主题、需要的功能，以及第一台主机。简洁模式会隐藏你用不到的东西，你随时可以重新运行引导或切换预设。
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**桌面独立运行与同步:**
-桌面应用可以完全独立运行，自带本地后端和数据库，不需要服务器。你也可以把它连到 Termix 服务器，双向同步主机、凭据、代码片段等内容，并选择连接是在本地发起还是通过服务器发起。
-
-</td>
-<td width="50%" valign="top">
-
 **命令行工具:**
 `termix` 命令行工具，可用于你的终端和脚本。打开终端、在单台主机或整个机群上执行命令、通过 SFTP 传输文件，以及管理主机、代码片段和凭据。用 `npm install -g @termix-cli/cli` 安装，或者直接下载独立的可执行文件。详见 [CLI 文档](https://docs.termix.site/cli)。
 
@@ -237,7 +223,7 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 <td width="50%" valign="top">
 
 **安全:**
-密码、密钥和其他机密按用户加密，数据库文件本身也可以在磁盘上加密。具体原理请查看[文档](https://docs.termix.site/security)。
+密码、密钥和其他机密按用户加密，数据库文件本身也可以在磁盘上加密。具体原理请查看[文档](https://docs.termix.site/features/authentication/security/)。
 
 </td>
 <td width="50%" valign="top">
@@ -267,8 +253,13 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 - **键盘快捷键** - 在标签页之间切换、关闭标签页等，全部可以重新绑定
 - **网络唤醒** - 从 Termix 或自动化步骤中唤醒一台机器
 - **受信任代理认证** - 由反向代理完成登录，并把用户信息传递进来
-- **丰富的 SSH 功能** - 跳板机、Warpgate、TOTP 验证、SOCKS5、主机密钥验证、密码自动填充、[OPKSSH](https://github.com/openpubkey/opkssh)、tmux、端口敲门、终端日志、代理转发、Bitwarden SSH 代理、HashiCorp Vault SSH 签名等等
+- **白标定制** - 管理员可以用自己的名称、图标和配色为实例重新品牌化
+- **Web 端点** - 在 Termix 内嵌打开主机自己的网页界面，比如路由器的管理页面，而不是另开一个标签页
+- **协作房间** - 持久化的房间，一群人可以一起在会话之间跳转，有主持人舞台和邀请功能
+- **丰富的 SSH 功能** - 跳板机、Warpgate、TOTP 验证、SOCKS5、主机密钥验证、密码自动填充、[OPKSSH](https://github.com/openpubkey/opkssh)、tmux、端口敲门、终端日志、代理转发、Bitwarden SSH 代理、HashiCorp Vault SSH 签名、Step CA、1Password Connect 等等
 - **Termix ID** - 内置的 sshid.io 式功能。认领一个用户名，在解析地址上发布你的公钥，并用内置 CA 签发 SSH 证书
+- **命令历史自动建议** - 在终端中输入时，根据你的命令历史给出行内建议
+- **桌面独立运行与同步** - 桌面应用自带本地后端和数据库可以独立运行，也可以选择和 Termix 服务器同步
 
 </details>
 
@@ -313,6 +304,9 @@ Termix 是一个免费、开源、自托管的服务器管理平台。它把 SSH
 
 访问 [Termix 文档](https://docs.termix.site/install) 查看所有平台的完整安装说明。
 
+要部署到 Kubernetes？Helm chart 在 `charts/termix` 目录下，涵盖 Ingress、Traefik、Argo CD、GitHub Actions 和 GitLab CI 的完整搭建说明见
+[docs.termix.site/install/server/kubernetes](https://docs.termix.site/install/server/kubernetes)。
+
 Docker Compose 示例（如果你不打算使用远程桌面功能，可以省略 `guacd` 和相关网络配置）：
 
 ```yaml
@@ -352,7 +346,7 @@ networks:
 
 ### 命令行工具
 
-Termix 还提供命令行工具，你可以在终端里管理服务器，也可以把 Termix 用在自己的脚本中。
+Termix 还提供命令行工具，让你可以在终端里管理服务器，也可以把 Termix 用在自己的脚本中。
 
 ```bash
 npm install -g @termix-cli/cli
@@ -374,7 +368,7 @@ termix ssh 1
 
 Termix 每天会发送一次匿名的小型统计信息，让我了解有多少实例在运行、哪些功能被用到。内容包括一个随机的实例 ID、你有多少用户和主机、应用版本，以及过去 24 小时内使用了哪些功能（终端、文件管理器、隧道、Docker 等）。它绝不包含用户名、主机名、IP 地址、凭据，或任何能识别你和你服务器的信息。
 
-该功能默认开启。你可以在管理设置的“通用”中关闭它，或者在启动 Termix 之前设置 `ENABLE_TELEMETRY=false`。
+该功能默认开启。你可以在管理设置的"通用"中关闭它，或者在启动 Termix 之前设置 `ENABLE_TELEMETRY=false`。
 
 <br />
 
@@ -507,3 +501,4 @@ Termix 免费且开源，没有订阅也没有付费方案。如果你觉得它�
 ## 许可证
 
 基于 Apache License 2.0 发布。详见 `LICENSE`。
+</content>

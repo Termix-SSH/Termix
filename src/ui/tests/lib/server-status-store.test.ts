@@ -74,6 +74,32 @@ describe("ServerStatusStore", () => {
     expect(store.getStatus(7)).toBe("reachable");
   });
 
+  it("notifies when a status reason changes without a status change", () => {
+    const store = new ServerStatusStore();
+    store.setEnabledHostIds(new Set([7]));
+    store.applyStatuses(
+      new Map([[7, { status: "reachable", lastChecked: "t1" }]]),
+    );
+    const listener = vi.fn();
+    store.subscribeHost(7, listener);
+
+    store.applyStatuses(
+      new Map([
+        [
+          7,
+          {
+            status: "reachable",
+            reason: "host_key_changed",
+            lastChecked: "t2",
+          },
+        ],
+      ]),
+    );
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(store.getHostSnapshot(7)).toBe("reachable:host_key_changed");
+  });
+
   it("emits meta listeners when initial load completes", () => {
     const store = new ServerStatusStore();
     const onMeta = vi.fn();

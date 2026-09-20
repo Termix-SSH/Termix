@@ -5,6 +5,7 @@ import {
   real,
   index,
   uniqueIndex,
+  foreignKey,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
@@ -205,12 +206,18 @@ export const hosts = sqliteTable(
     enableDocker: integer("enable_docker", { mode: "boolean" })
       .notNull()
       .default(false),
+    enableWebUi: integer("enable_web_ui", { mode: "boolean" })
+      .notNull()
+      .default(false),
     enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
       .notNull()
       .default(false),
     enableTerminalToolbar: integer("enable_terminal_toolbar", { mode: "boolean" })
       .notNull()
       .default(true),
+    enableAiAssistant: integer("enable_ai_assistant", { mode: "boolean" })
+      .notNull()
+      .default(false),
     showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
       .notNull()
       .default(true),
@@ -229,6 +236,7 @@ export const hosts = sqliteTable(
     defaultPath: text("default_path"),
     statsConfig: text("stats_config"),
     dockerConfig: text("docker_config"),
+    webUiConfig: text("web_ui_config"),
     enableProxmox: integer("enable_proxmox", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -1133,6 +1141,9 @@ export const userPreferences = sqliteTable("user_preferences", {
   expandAppRailOnHover: integer("expand_app_rail_on_hover", {
     mode: "boolean",
   }),
+  showPinAppRailButton: integer("show_pin_app_rail_button", {
+    mode: "boolean",
+  }),
   foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
   confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
@@ -1936,3 +1947,335 @@ export const aiProposals = sqliteTable(
   ],
 );
 // --- ai end ---
+
+// --- collab rooms ---
+
+/**
+ * A collaboration room: a group of users watching one "stage" - the live
+ * session the current presenter is showing. The stage points at a
+ * shareType="room" row in session_shares, so transport, gating, recording and
+ * expiry all reuse the session-sharing machinery.
+ */
+export const collabRooms = sqliteTable(
+  "collab_rooms",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // Persistent rooms survive being emptied and can be re-used; one-off
+    // rooms are ended explicitly and never listed again.
+    persistent: integer("persistent", { mode: "boolean" })
+      .notNull()
+      .default(false),
+
+    presenterUserId: text("presenter_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    stageProtocol: text("stage_protocol"),
+    stageHostId: integer("stage_host_id").references(() => hosts.id, {
+      onDelete: "set null",
+    }),
+    stageShareId: text("stage_share_id").references(() => sessionShares.id, {
+      onDelete: "set null",
+    }),
+
+    // Set = anonymous guests may watch the stage through this token.
+    guestLinkToken: text("guest_link_token"),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    endedAt: text("ended_at"),
+  },
+  (table) => [
+    index("idx_collab_rooms_owner").on(table.ownerUserId),
+    uniqueIndex("idx_collab_rooms_guest_token").on(table.guestLinkToken),
+  ],
+);
+
+export const collabRoomMembers = sqliteTable(
+  "collab_room_members",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    roomId: text("room_id")
+      .notNull()
+      .references(() => collabRooms.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // "host" runs the room: invites, force-switches the presenter, ends it.
+    roomRole: text("room_role").notNull().default("member"),
+    addedBy: text("added_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_collab_room_members_room_user").on(
+      table.roomId,
+      table.userId,
+    ),
+    index("idx_collab_room_members_user").on(table.userId),
+  ],
+);
+
+// --- secret sources ---
+
+/**
+ * An external password manager Termix pulls secrets from at connect time,
+ * instead of storing them. Only the access token is secret; it is encrypted
+ * with the owner's data key under the row id. Hosts and credentials refer to
+ * entries by reference ("op://vault/item/field") in their secret fields.
+ */
+export const secretSources = sqliteTable(
+  "secret_sources",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    // "onepassword-connect" for now; the reference syntax is per kind.
+    kind: text("kind").notNull().default("onepassword-connect"),
+    baseUrl: text("base_url").notNull(),
+    token: text("token").notNull(),
+    // Visible to every user; secrets still decrypt with the owner's key.
+    shared: integer("shared", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_secret_sources_user").on(table.userId)],
+);
+
+// --- credential sharing ---
+
+/**
+ * Who may use or manage someone else's credential. Same shape as
+ * snippet_access; "use" attaches it to hosts and connects, "manage" also
+ * edits and re-shares it.
+ */
+export const credentialAccess = sqliteTable(
+  "credential_access",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
+
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    permissionLevel: text("permission_level").notNull().default("use"),
+
+    expiresAt: text("expires_at"),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_credential_access_user_id").on(table.userId),
+    index("idx_credential_access_role_id").on(table.roleId),
+    index("idx_credential_access_credential_id").on(table.credentialId),
+  ],
+);
+
+/**
+ * A recipient's copy of a shared credential's secrets, re-encrypted under
+ * the recipient's data key (the owner's key cannot be used by anyone else).
+ * Rebuilt whenever the owner edits the credential; one row per grant and
+ * recipient, like shared_host_secrets.
+ */
+export const sharedCredentialSecrets = sqliteTable(
+  "shared_credential_secrets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    credentialAccessId: integer("credential_access_id").notNull(),
+    targetUserId: text("target_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+
+    encryptedUsername: text("encrypted_username"),
+    authType: text("auth_type").notNull().default("password"),
+    encryptedPassword: text("encrypted_password"),
+    encryptedKey: text("encrypted_key", { length: 16384 }),
+    encryptedKeyPassword: text("encrypted_key_password"),
+    keyType: text("key_type"),
+    publicKey: text("public_key", { length: 4096 }),
+    certPublicKey: text("cert_public_key", { length: 8192 }),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.credentialAccessId],
+      foreignColumns: [credentialAccess.id],
+      name: "shared_cred_secrets_access_id_fk",
+    }).onDelete("cascade"),
+    uniqueIndex("idx_shared_credential_secrets_scope").on(
+      table.credentialAccessId,
+      table.targetUserId,
+    ),
+    index("idx_shared_credential_secrets_target").on(
+      table.targetUserId,
+      table.credentialId,
+    ),
+  ],
+);
+
+// --- folder access rules ---
+
+/**
+ * A standing share on a host folder. Sharing a folder fans out host_access
+ * grants to the hosts in it today; this row is what makes hosts created in
+ * or moved into the folder later inherit the same access.
+ */
+export const folderAccess = sqliteTable(
+  "folder_access",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The folder path as stored on hosts ("Parent / Child"); subfolders inherit.
+    folder: text("folder").notNull(),
+
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
+
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permissionLevel: text("permission_level").notNull().default("connect"),
+    expiresAt: text("expires_at"),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_folder_access_owner_folder").on(table.ownerUserId, table.folder),
+  ],
+);
+
+// --- plugins begin ---
+
+/**
+ * An installed plugin. id matches the manifest's own id (not autoincrement),
+ * so a plugin can be looked up the same way the manifest and registry refer
+ * to it. manifest_json is the full manifest as it was at install time, kept
+ * for audit/rollback even after a registry updates or removes the entry.
+ */
+export const plugins = sqliteTable(
+  "plugins",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    version: text("version").notNull(),
+    tier: text("tier").notNull().default("available"),
+    source: text("source").notNull().default("community"),
+    registryId: text("registry_id"),
+    state: text("state").notNull().default("disabled"),
+    installedAt: text("installed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    autoUpdate: integer("auto_update", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    manifestJson: text("manifest_json").notNull(),
+  },
+  (table) => [index("idx_plugins_registry_id").on(table.registryId)],
+);
+
+export const pluginPermissionGrants = sqliteTable(
+  "plugin_permission_grants",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id")
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    capability: text("capability").notNull(),
+    grantedAt: text("granted_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  // A plugin's grants are always read together, and re-granting the same
+  // capability should update the existing row rather than duplicate it.
+  (table) => [
+    uniqueIndex("idx_plugin_permission_grants_plugin_capability").on(
+      table.pluginId,
+      table.capability,
+    ),
+  ],
+);
+
+export const pluginRegistries = sqliteTable("plugin_registries", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  kind: text("kind").notNull().default("community"),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  signingKey: text("signing_key"),
+  lastCheckedAt: text("last_checked_at"),
+  lastIndexHash: text("last_index_hash"),
+});
+
+/**
+ * Install counts populated by a background job (GitHub release download
+ * counts, aggregated telemetry, or a manual override) rather than by the
+ * install/uninstall actions themselves — kept separate from `plugins` so
+ * that job can overwrite counts without touching install state.
+ */
+export const pluginInstallCounts = sqliteTable(
+  "plugin_install_counts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id").notNull(),
+    registryId: text("registry_id").notNull(),
+    count: integer("count").notNull().default(0),
+    source: text("source").notNull().default("aggregate-telemetry"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_install_counts_plugin_registry").on(
+      table.pluginId,
+      table.registryId,
+    ),
+  ],
+);
+
+// --- plugins end ---

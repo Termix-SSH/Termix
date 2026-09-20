@@ -244,23 +244,27 @@ function ProxmoxStatsInner({
         retry.markFailed();
       }
     },
-    enabled: isActuallyVisible && !notEnabled && !!currentHostConfig?.id,
+    enabled: isPageVisible && !notEnabled && !!currentHostConfig?.id,
     autoStart: false,
   });
 
   const retryRef = React.useRef(retry);
   retryRef.current = retry;
 
+  // Connects once per host and stays connected while this tab exists, even
+  // when the user switches to another tab and back. Only the browser tab
+  // going into the background (isPageVisible) pauses/resumes it -- switching
+  // between Termix tabs must not tear down and reconnect the session.
   React.useEffect(() => {
     if (notEnabled || !currentHostConfig?.id) return;
 
     let cancelled = false;
     const debounce = setTimeout(() => {
-      if (isActuallyVisible && !cancelled) {
+      if (isPageVisible && !cancelled) {
         clearLogs();
         retryRef.current.reset();
         retryRef.current.retryNow();
-      } else if (!isActuallyVisible) {
+      } else if (!isPageVisible) {
         stopPollingRef.current?.();
         stopPollingRef.current = null;
         if (currentHostConfig?.id) {
@@ -280,7 +284,7 @@ function ProxmoxStatsInner({
         stopProxmoxStatsPolling(currentHostConfig.id).catch(() => {});
       }
     };
-  }, [currentHostConfig?.id, notEnabled, isActuallyVisible]);
+  }, [currentHostConfig?.id, notEnabled, isPageVisible]);
 
   const wrapperStyle: React.CSSProperties = embedded
     ? { opacity: isVisible ? 1 : 0, height: "100%", width: "100%" }

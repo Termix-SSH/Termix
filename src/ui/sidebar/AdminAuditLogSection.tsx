@@ -13,10 +13,14 @@ import { AccordionSection } from "./AdminSettingsShared";
 import {
   getAuditLogs,
   getAuditLogActions,
+  getAuditForwarding,
+  updateAuditForwarding,
   type AuditLog,
   type AuditLogFilters,
 } from "@/api/audit-log-api";
+import { toast } from "sonner";
 import type { AdminUser } from "./AdminManagementSections";
+import { Select2 } from "@/components/select2";
 
 const RESOURCE_TYPES = [
   "user",
@@ -43,6 +47,39 @@ export function AdminAuditLogSection({
   const { t } = useTranslation();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [forwardUrl, setForwardUrl] = useState("");
+  const [forwardToken, setForwardToken] = useState("");
+  const [forwardHasToken, setForwardHasToken] = useState(false);
+  const [forwardEnvConfigured, setForwardEnvConfigured] = useState(false);
+  const [forwardSaving, setForwardSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    getAuditForwarding()
+      .then((settings) => {
+        setForwardUrl(settings.url);
+        setForwardHasToken(settings.hasToken);
+        setForwardEnvConfigured(settings.envConfigured);
+      })
+      .catch(() => {});
+  }, [open]);
+
+  async function handleSaveForwarding() {
+    setForwardSaving(true);
+    try {
+      const result = await updateAuditForwarding(
+        forwardUrl,
+        forwardToken || undefined,
+      );
+      setForwardHasToken(result.hasToken || (!!result.url && forwardHasToken));
+      setForwardToken("");
+      toast.success(t("admin.auditForwardingSaved"));
+    } catch {
+      toast.error(t("admin.auditForwardingSaveError"));
+    } finally {
+      setForwardSaving(false);
+    }
+  }
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -170,13 +207,52 @@ export function AdminAuditLogSection({
       onToggle={onToggle}
     >
       <div className="flex flex-col pt-2 gap-2">
+        {/* SIEM forwarding */}
+        <div className="flex flex-col gap-1.5 pb-2 border-b border-border">
+          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {t("admin.auditForwardingTitle")}
+          </span>
+          <p className="text-[10px] text-muted-foreground">
+            {t("admin.auditForwardingDesc")}
+            {forwardEnvConfigured && (
+              <> {t("admin.auditForwardingEnvNotice")}</>
+            )}
+          </p>
+          <Input
+            placeholder="https://siem.example.com/ingest"
+            value={forwardUrl}
+            onChange={(e) => setForwardUrl(e.target.value)}
+            className="text-[10px] h-7"
+          />
+          <Input
+            type="password"
+            placeholder={
+              forwardHasToken
+                ? t("admin.auditForwardingTokenStored")
+                : t("admin.auditForwardingToken")
+            }
+            value={forwardToken}
+            onChange={(e) => setForwardToken(e.target.value)}
+            className="text-[10px] h-7"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] self-start"
+            onClick={handleSaveForwarding}
+            disabled={forwardSaving}
+          >
+            {t("common.save")}
+          </Button>
+        </div>
+
         {/* Filters */}
         <div className="grid grid-cols-2 gap-1.5">
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterUser")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterUserId}
               onChange={(e) => setFilterUserId(e.target.value)}
@@ -187,14 +263,14 @@ export function AdminAuditLogSection({
                   {u.username}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterAction")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterAction}
               onChange={(e) => setFilterAction(e.target.value)}
@@ -205,14 +281,14 @@ export function AdminAuditLogSection({
                   {a.replace(/_/g, " ")}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterResourceType")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterResourceType}
               onChange={(e) => setFilterResourceType(e.target.value)}
@@ -223,14 +299,14 @@ export function AdminAuditLogSection({
                   {r}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("admin.auditLogFilterStatus")}
             </label>
-            <select
+            <Select2
               className="px-2 py-1 text-[10px] bg-background border border-border text-foreground outline-none"
               value={filterSuccess}
               onChange={(e) =>
@@ -240,7 +316,7 @@ export function AdminAuditLogSection({
               <option value="">{t("admin.auditLogFilterAll")}</option>
               <option value="true">{t("admin.auditLogSuccess")}</option>
               <option value="false">{t("admin.auditLogFailed")}</option>
-            </select>
+            </Select2>
           </div>
 
           <div className="flex flex-col gap-0.5">

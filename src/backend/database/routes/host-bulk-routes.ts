@@ -1,3 +1,7 @@
+import {
+  prepareHostImports,
+  remapImportedJumpHosts,
+} from "./host-import-order.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
@@ -8,6 +12,7 @@ import {
   createCurrentHostResolutionRepository,
 } from "../repositories/factory.js";
 import { validateParentHostId } from "./host-parent-validation.js";
+import { serializeWebUiConfig } from "./host-web-endpoints.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -105,9 +110,22 @@ export function parseSSHConfig(content: string): SSHConfigHost[] {
   return results;
 }
 
+export function importedHostUsername(
+  connectionType: string,
+  authType: unknown,
+  username: unknown,
+): string | null {
+  if (isNonEmptyString(username)) return username;
+  if (connectionType !== "ssh" || authType === "credential") return "";
+  return null;
+}
+
 export function registerHostBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
+  requireCreatePermission: RequestHandler,
+  requireEditPermission: RequestHandler,
+  requireDataAccess: RequestHandler,
 ): void {
   /**
    * @openapi
@@ -172,6 +190,8 @@ export function registerHostBulkRoutes(
   router.patch(
     "/bulk-update",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { hostIds, updates } = req.body;
@@ -265,10 +285,16 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableFileManager = updates.enableFileManager;
         if (typeof updates.enableDocker === "boolean")
           simpleUpdates.enableDocker = updates.enableDocker;
+        if (typeof updates.enableWebUi === "boolean") {
+          simpleUpdates.enableWebUi = updates.enableWebUi;
+          if (!updates.enableWebUi) simpleUpdates.webUiConfig = null;
+        }
         if (typeof updates.enableTmuxMonitor === "boolean")
           simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
         if (typeof updates.enableTerminalToolbar === "boolean")
           simpleUpdates.enableTerminalToolbar = updates.enableTerminalToolbar;
+        if (typeof updates.enableAiAssistant === "boolean")
+          simpleUpdates.enableAiAssistant = updates.enableAiAssistant;
         // Disabling Proxmox is a plain flag flip; enabling is handled per-host
         // below so each host can default to its own stored credential.
         if (updates.enableProxmox === false)
@@ -376,6 +402,8 @@ export function registerHostBulkRoutes(
   router.put(
     "/reorder",
     authenticateJWT,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { positions } = req.body as {
@@ -422,6 +450,9 @@ export function registerHostBulkRoutes(
   router.post(
     "/bulk-import",
     authenticateJWT,
+    requireCreatePermission,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const {
@@ -441,6 +472,14 @@ export function registerHostBulkRoutes(
           .status(400)
           .json({ error: "Maximum 100 hosts allowed per import" });
       }
+
+      let orderedHosts: ReturnType<typeof prepareHostImports>;
+      try {
+        orderedHosts = prepareHostImports(hostsToImport);
+      } catch (error) {
+        return res.status(400).json({ error: getErrorMessage(error) });
+      }
+      const importedIds = new Map<unknown, number>();
 
       const results = {
         success: 0,
@@ -533,9 +572,7 @@ export function registerHostBulkRoutes(
         }
       }
 
-      for (let i = 0; i < hostsToImport.length; i++) {
-        const hostData = normalizeImportedHost(hostsToImport[i]);
-
+      for (const { host: hostData, index: i, exportId } of orderedHosts) {
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
 
@@ -558,10 +595,12 @@ export function registerHostBulkRoutes(
             continue;
           }
 
-          if (
-            effectiveConnectionType === "ssh" &&
-            !isNonEmptyString(hostData.username)
-          ) {
+          const username = importedHostUsername(
+            effectiveConnectionType,
+            hostData.authType,
+            hostData.username,
+          );
+          if (username === null) {
             results.failed++;
             results.errors.push(
               `Host ${i + 1}: Username required for SSH connections`,
@@ -578,13 +617,14 @@ export function registerHostBulkRoutes(
               "credential",
               "none",
               "opkssh",
+              "stepca",
               "tailscale",
               "vault",
             ].includes(hostData.authType)
           ) {
             results.failed++;
             results.errors.push(
-              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', 'tailscale', or 'vault'`,
+              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', 'stepca', 'tailscale', or 'vault'`,
             );
             continue;
           }
@@ -657,23 +697,30 @@ export function registerHostBulkRoutes(
             }
           }
 
+          const jumpHosts = remapImportedJumpHosts(
+            hostData.jumpHosts,
+            importedIds,
+          );
           const sshDataObj: Record<string, unknown> = {
             userId: userId,
             connectionType: effectiveConnectionType,
-            name: hostData.name || `${hostData.username || ""}@${hostData.ip}`,
+            name: hostData.name || `${username}@${hostData.ip}`,
             folder: hostData.folder || "Default",
             tags: Array.isArray(hostData.tags) ? hostData.tags.join(",") : "",
             ip: hostData.ip,
             port: hostData.port,
-            username: hostData.username || null,
+            username,
             pin: hostData.pin || false,
             enableTerminal: hostData.enableTerminal !== false,
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
             enableDocker: hostData.enableDocker || false,
+            enableWebUi: hostData.enableWebUi || false,
             enableProxmox: hostData.enableProxmox || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
+            enableAiAssistant: hostData.enableAiAssistant || false,
+            enableCommandHistory: hostData.enableCommandHistory !== false,
             showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
             showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
             showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,
@@ -684,9 +731,7 @@ export function registerHostBulkRoutes(
             tunnelConnections: hostData.tunnelConnections
               ? JSON.stringify(hostData.tunnelConnections)
               : "[]",
-            jumpHosts: hostData.jumpHosts
-              ? JSON.stringify(hostData.jumpHosts)
-              : null,
+            jumpHosts: jumpHosts ? JSON.stringify(jumpHosts) : null,
             quickActions: hostData.quickActions
               ? JSON.stringify(hostData.quickActions)
               : null,
@@ -695,6 +740,9 @@ export function registerHostBulkRoutes(
               : null,
             dockerConfig: hostData.dockerConfig
               ? JSON.stringify(hostData.dockerConfig)
+              : null,
+            webUiConfig: hostData.enableWebUi
+              ? serializeWebUiConfig(hostData.webUiConfig)
               : null,
             proxmoxConfig: hostData.proxmoxConfig
               ? JSON.stringify(hostData.proxmoxConfig)
@@ -773,15 +821,21 @@ export function registerHostBulkRoutes(
           const existing = existingHostMap?.get(lookupKey);
 
           if (existing) {
-            await hostRepository.updateEncryptedForUser(
+            const saved = await hostRepository.updateEncryptedForUser(
               userId,
               existing.id,
               sshDataObj,
             );
+            if (!saved) throw new Error("Host no longer exists");
+            if (exportId !== undefined) importedIds.set(exportId, existing.id);
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
-            await hostRepository.createEncryptedForUser(userId, sshDataObj);
+            const saved = await hostRepository.createEncryptedForUser(
+              userId,
+              sshDataObj,
+            );
+            if (exportId !== undefined) importedIds.set(exportId, saved.id);
             results.success++;
           }
         } catch (error) {
@@ -832,6 +886,9 @@ export function registerHostBulkRoutes(
   router.post(
     "/ssh-config-import",
     authenticateJWT,
+    requireCreatePermission,
+    requireEditPermission,
+    requireDataAccess,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const { content, overwrite } = req.body;
@@ -938,9 +995,11 @@ export function registerHostBulkRoutes(
             enableTunnel: true,
             enableFileManager: true,
             enableDocker: false,
+            enableWebUi: false,
             enableProxmox: false,
             enableTmuxMonitor: false,
             enableTerminalToolbar: true,
+            enableAiAssistant: false,
             showTerminalInSidebar: 0,
             showFileManagerInSidebar: 0,
             showTunnelInSidebar: 0,
@@ -955,6 +1014,7 @@ export function registerHostBulkRoutes(
             quickActions: null,
             statsConfig: null,
             dockerConfig: null,
+            webUiConfig: null,
             proxmoxConfig: null,
             terminalConfig: null,
             forceKeyboardInteractive: "false",

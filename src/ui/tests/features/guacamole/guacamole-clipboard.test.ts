@@ -1,25 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  isFirefoxBrowser,
   isPasteShortcut,
   pasteTextToRemote,
   type GuacamoleClipboardClient,
 } from "../../../features/guacamole/guacamole-clipboard.js";
 
-describe("Guacamole Firefox clipboard fallback", () => {
-  it("only enables the native paste path for Firefox", () => {
-    expect(
-      isFirefoxBrowser(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0",
-      ),
-    ).toBe(true);
-    expect(
-      isFirefoxBrowser(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0",
-      ),
-    ).toBe(false);
-  });
-
+describe("Guacamole clipboard paste", () => {
   it("recognizes Ctrl+V and Command+V without intercepting Alt+V", () => {
     expect(
       isPasteShortcut({

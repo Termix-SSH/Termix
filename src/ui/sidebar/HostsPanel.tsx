@@ -189,7 +189,11 @@ export function HostsPanel({
   onEditingChange,
   active = true,
 }: {
-  onOpenTab: (host: Host, type: TabType) => void;
+  onOpenTab: (
+    host: Host,
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
   loading?: boolean;
@@ -766,7 +770,14 @@ export function HostsPanel({
                     {t("hosts.filterAuthGroup")}
                   </DropdownMenuLabel>
                   {(
-                    ["password", "key", "credential", "none", "opkssh"] as const
+                    [
+                      "password",
+                      "key",
+                      "credential",
+                      "none",
+                      "opkssh",
+                      "stepca",
+                    ] as const
                   ).map((val) => (
                     <DropdownMenuCheckboxItem
                       key={val}
@@ -1026,48 +1037,48 @@ export function HostsPanel({
         update={updateSidebarPrefs}
       />
 
-      <div
-        className={`flex flex-col flex-1 min-h-0 ${managerEditing ? "hidden" : ""}`}
-      >
-        <SidebarTree
-          children={
-            hostTree
-              ? groupHosts(
-                  applyFilters(
-                    sortHostTree(hostTree, sortKey, pinnedFirst),
-                    filterState,
-                  ),
-                  groupKey,
-                  groupLabel,
-                ).children
-              : []
-          }
-          onOpenTab={onOpenTab}
-          onEditHost={onEditHost}
-          onShareHost={(host) => setShareModalHost(host)}
-          onProxmoxDiscover={(host) => {
-            const cfg = host.proxmoxConfig;
-            setProxmoxHostId(Number(host.id));
-            setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
-            setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
-            setProxmoxDefaultUsername(undefined);
-            setProxmoxDialogOpen(true);
-          }}
-          query={hostSearch.trim().toLowerCase()}
-          selectionMode={selectionMode}
-          onToggleSelectionMode={toggleSelectionMode}
-          loading={loading}
-          onExportSelected={(ids) => {
-            setExportPreselection(new Set(ids));
-            setExportDialogOpen(true);
-          }}
-          arrangeLocked={arrangeLocked}
-          density={sidebarPrefs.display.density}
-          trayTrigger={sidebarPrefs.display.trayTrigger}
-          showTags={sidebarPrefs.display.showTags}
-          openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
-        />
-      </div>
+      {active && !managerEditing && (
+        <div className="flex flex-col flex-1 min-h-0">
+          <SidebarTree
+            children={
+              hostTree
+                ? groupHosts(
+                    applyFilters(
+                      sortHostTree(hostTree, sortKey, pinnedFirst),
+                      filterState,
+                    ),
+                    groupKey,
+                    groupLabel,
+                  ).children
+                : []
+            }
+            onOpenTab={onOpenTab}
+            onEditHost={onEditHost}
+            onShareHost={(host) => setShareModalHost(host)}
+            onProxmoxDiscover={(host) => {
+              const cfg = host.proxmoxConfig;
+              setProxmoxHostId(Number(host.id));
+              setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
+              setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
+              setProxmoxDefaultUsername(undefined);
+              setProxmoxDialogOpen(true);
+            }}
+            query={hostSearch.trim().toLowerCase()}
+            selectionMode={selectionMode}
+            onToggleSelectionMode={toggleSelectionMode}
+            loading={loading}
+            onExportSelected={(ids) => {
+              setExportPreselection(new Set(ids));
+              setExportDialogOpen(true);
+            }}
+            arrangeLocked={arrangeLocked}
+            density={sidebarPrefs.display.density}
+            trayTrigger={sidebarPrefs.display.trayTrigger}
+            showTags={sidebarPrefs.display.showTags}
+            openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
+          />
+        </div>
+      )}
 
       <div
         className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}

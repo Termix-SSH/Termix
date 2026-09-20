@@ -1,5 +1,5 @@
 import type { GuacamoleConfig } from "./guacamole-config.js";
-import type { TerminalConfig } from "./index.js";
+import type { TerminalConfig, WebUiConfig } from "./index.js";
 import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
@@ -31,6 +31,7 @@ export type Host = {
     | "credential"
     | "none"
     | "opkssh"
+    | "stepca"
     | "tailscale"
     | "vault"
     | "agent";
@@ -86,6 +87,8 @@ export type Host = {
   enableTunnel: boolean;
   serverTunnels: {
     mode: "local" | "remote" | "dynamic";
+    localAddress?: string;
+    remoteAddress?: string;
     bindHost?: string;
     targetHost?: string;
     sourcePort: number;
@@ -104,9 +107,12 @@ export type Host = {
   dockerConfig?: {
     runtime?: "docker" | "podman";
   } | null;
+  enableWebUi?: boolean;
+  webUiConfig?: WebUiConfig | null;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
+  enableAiAssistant: boolean;
   proxmoxConfig?: {
     source?: {
       source: "proxmox";
@@ -205,6 +211,10 @@ export type Credential = {
   pin?: boolean;
   sortOrder?: number | null;
   certPublicKey?: string;
+  /** Set when someone else owns this credential and shared it with you. */
+  isShared?: boolean;
+  ownerUsername?: string | null;
+  permissionLevel?: "use" | "manage";
 };
 
 // HashiCorp Vault SSH signer profile — shareable connection settings only
@@ -237,7 +247,7 @@ export type HostFolder = {
   sortOrder?: number | null;
 };
 
-export type TabType =
+export type KnownTabType =
   | "dashboard"
   | "terminal"
   | "local-terminal"
@@ -252,6 +262,8 @@ export type TabType =
   | "admin-settings"
   | "docker"
   | "tunnel"
+  | "sftp"
+  | "web-endpoint"
   | "network_graph"
   | "tmux_monitor" // --- tmux-monitor ---
   | "serial"
@@ -267,7 +279,18 @@ export type TabType =
   | "ssh-tools"
   | "automations"
   | "ai"
+  | "collab"
   | "split-screen";
+
+/**
+ * TabType covers every built-in tab plus any plugin-contributed tab id.
+ * `string & {}` (rather than plain `string`) keeps IDE autocomplete
+ * suggesting the known members while still accepting an arbitrary id, since
+ * a bare `string` would widen every literal and kill autocomplete entirely.
+ * Plugin tab ids are resolved at render time via the tab-component registry
+ * in tabUtils.tsx, not through this type.
+ */
+export type TabType = KnownTabType | (string & {});
 
 export type SerialConfig = {
   path: string;
@@ -294,6 +317,10 @@ export type Tab = {
   initialPath?: string;
   /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
   fleetId?: number;
+  /** Which web endpoint this tab shows. Only set when type is "web-endpoint". */
+  endpointId?: string;
+  /** Which collab room a collab tab is showing. */
+  collabRoomId?: string;
   serialConfig?: SerialConfig;
   /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
   splitConfig?: SplitTabConfig;
@@ -340,6 +367,7 @@ export type AdminSection =
   | "roles"
   | "host-defaults"
   | "image-storage"
+  | "branding"
   | "database"
   | "api-keys"
   | "audit-log"
@@ -357,6 +385,12 @@ export type ThemeId =
   | "one-dark"
   | "gruvbox";
 export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
+export type UiFontId =
+  | "jetbrains-mono"
+  | "system-sans"
+  | "fira-code"
+  | "source-code-pro"
+  | "caskaydia-cove";
 
 export type ToolsTab =
   "ssh-tools" | "snippets" | "macros" | "history" | "split-screen";

@@ -21,6 +21,7 @@ import {
 } from "../../utils/data-dir-guard.js";
 import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
 import { resolveDatabaseDialect, type DatabaseDialect } from "./dialect.js";
+import { SYSTEM_ROLE_DEFAULTS } from "../../utils/permission-catalog.js";
 import { connectRemoteDatabase } from "./connect.js";
 import { runRemoteMigrations } from "./migrate.js";
 import type { PortableDatabase } from "../repositories/database-context.js";
@@ -305,6 +306,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         tunnel_connections TEXT,
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
         enable_docker INTEGER NOT NULL DEFAULT 0,
+        enable_web_ui INTEGER NOT NULL DEFAULT 0,
         default_path TEXT,
         autostart_password TEXT,
         autostart_key TEXT,
@@ -312,6 +314,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         force_keyboard_interactive TEXT,
         stats_config TEXT,
         docker_config TEXT,
+        web_ui_config TEXT,
         terminal_config TEXT,
         notes TEXT,
         use_socks5 INTEGER,
@@ -575,6 +578,154 @@ async function initializeCompleteDatabase(): Promise<void> {
         left_at TEXT,
         FOREIGN KEY (share_id) REFERENCES session_shares (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS collab_rooms (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        owner_user_id TEXT NOT NULL,
+        persistent INTEGER NOT NULL DEFAULT 0,
+        presenter_user_id TEXT,
+        stage_protocol TEXT,
+        stage_host_id INTEGER,
+        stage_share_id TEXT,
+        guest_link_token TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ended_at TEXT,
+        FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (presenter_user_id) REFERENCES users (id) ON DELETE SET NULL,
+        FOREIGN KEY (stage_host_id) REFERENCES ssh_data (id) ON DELETE SET NULL,
+        FOREIGN KEY (stage_share_id) REFERENCES session_shares (id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS collab_room_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        room_role TEXT NOT NULL DEFAULT 'member',
+        added_by TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (room_id, user_id),
+        FOREIGN KEY (room_id) REFERENCES collab_rooms (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (added_by) REFERENCES users (id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS secret_sources (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'onepassword-connect',
+        base_url TEXT NOT NULL,
+        token TEXT NOT NULL,
+        shared INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS credential_access (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        credential_id INTEGER NOT NULL,
+        user_id TEXT,
+        role_id INTEGER,
+        granted_by TEXT NOT NULL,
+        permission_level TEXT NOT NULL DEFAULT 'use',
+        expires_at TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+        FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_credential_access_user_id ON credential_access (user_id);
+    CREATE INDEX IF NOT EXISTS idx_credential_access_role_id ON credential_access (role_id);
+    CREATE INDEX IF NOT EXISTS idx_credential_access_credential_id ON credential_access (credential_id);
+
+    CREATE TABLE IF NOT EXISTS shared_credential_secrets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        credential_access_id INTEGER NOT NULL,
+        target_user_id TEXT NOT NULL,
+        credential_id INTEGER NOT NULL,
+        encrypted_username TEXT,
+        auth_type TEXT NOT NULL DEFAULT 'password',
+        encrypted_password TEXT,
+        encrypted_key TEXT,
+        encrypted_key_password TEXT,
+        key_type TEXT,
+        public_key TEXT,
+        cert_public_key TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (credential_access_id, target_user_id),
+        FOREIGN KEY (credential_access_id) REFERENCES credential_access (id) ON DELETE CASCADE,
+        FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_shared_credential_secrets_target ON shared_credential_secrets (target_user_id, credential_id);
+
+    CREATE TABLE IF NOT EXISTS folder_access (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        owner_user_id TEXT NOT NULL,
+        folder TEXT NOT NULL,
+        user_id TEXT,
+        role_id INTEGER,
+        granted_by TEXT NOT NULL,
+        permission_level TEXT NOT NULL DEFAULT 'connect',
+        expires_at TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+        FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_folder_access_owner_folder ON folder_access (owner_user_id, folder);
+
+    CREATE TABLE IF NOT EXISTS plugins (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        version TEXT NOT NULL,
+        tier TEXT NOT NULL DEFAULT 'available',
+        source TEXT NOT NULL DEFAULT 'community',
+        registry_id TEXT,
+        state TEXT NOT NULL DEFAULT 'disabled',
+        installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        auto_update INTEGER NOT NULL DEFAULT 0,
+        manifest_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_plugins_registry_id ON plugins (registry_id);
+
+    CREATE TABLE IF NOT EXISTS plugin_permission_grants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        capability TEXT NOT NULL,
+        granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        granted_by TEXT NOT NULL,
+        UNIQUE (plugin_id, capability),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE,
+        FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS plugin_registries (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'community',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        signing_key TEXT,
+        last_checked_at TEXT,
+        last_index_hash TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS plugin_install_counts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        registry_id TEXT NOT NULL,
+        count INTEGER NOT NULL DEFAULT 0,
+        source TEXT NOT NULL DEFAULT 'aggregate-telemetry',
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, registry_id)
     );
 
     CREATE TABLE IF NOT EXISTS api_keys (
@@ -853,6 +1004,11 @@ const migrateSchema = () => {
     "expand_app_rail_on_hover",
     "INTEGER",
   );
+  addColumnIfNotExists(
+    "user_preferences",
+    "show_pin_app_rail_button",
+    "INTEGER",
+  );
   addColumnIfNotExists("user_preferences", "folders_collapsed", "INTEGER");
   addColumnIfNotExists("user_preferences", "confirm_snippet_execution", "INTEGER");
   addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");
@@ -1059,6 +1215,12 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
+    "enable_web_ui",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_data", "web_ui_config", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
     "enable_proxmox",
     "INTEGER NOT NULL DEFAULT 0",
   );
@@ -1078,6 +1240,11 @@ const migrateSchema = () => {
     "ssh_data",
     "enable_terminal_toolbar",
     "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_ai_assistant",
+    "INTEGER NOT NULL DEFAULT 0",
   );
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
@@ -1953,20 +2120,24 @@ const migrateSchema = () => {
       });
     }
 
-    const systemRoles = [
-      {
-        name: "admin",
-        displayName: "rbac.roles.admin",
-        description: "Administrator with full access",
-        permissions: null,
-      },
-      {
-        name: "user",
-        displayName: "rbac.roles.user",
-        description: "Regular user",
-        permissions: null,
-      },
-    ];
+    const systemRoles = Object.entries(SYSTEM_ROLE_DEFAULTS).map(
+      ([name, defaults]) => ({
+        name,
+        displayName: `rbac.roles.${name}`,
+        description: defaults.description,
+        permissions: JSON.stringify(defaults.permissions),
+      }),
+    );
+
+    // Route-level RBAC needs the permission lists to exist; roles seeded by
+    // earlier versions carried NULL there. Backfill only NULL so an admin's
+    // edits to these roles are never overwritten.
+    const backfillPermissions = sqlite.prepare(
+      "UPDATE roles SET permissions = ? WHERE name = ? AND is_system = 1 AND permissions IS NULL",
+    );
+    for (const role of systemRoles) {
+      backfillPermissions.run(role.permissions, role.name);
+    }
 
     for (const role of systemRoles) {
       const existingRole = sqlite.prepare("SELECT id FROM roles WHERE name = ?").get(role.name);
@@ -2035,6 +2206,10 @@ const migrateSchema = () => {
   }
 
   addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
+  addColumnIfNotExists("collab_rooms", "guest_link_token", "TEXT");
+  sqlite.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_collab_rooms_guest_token ON collab_rooms (guest_link_token)",
+  );
 
   try {
     const usersTableInfo = sqlite.prepare("PRAGMA table_info(users)").all() as Array<{
@@ -2985,6 +3160,12 @@ async function initializeRemoteDatabase(
   );
   await primeCurrentSettingsCache();
   startSettingsCacheRefresh();
+
+  // The SQLite bootstrap seeds system roles inline below; migrations for the
+  // remote dialects never did, and route-level RBAC denies a user with no
+  // usable role, so they are seeded (and backfilled) here.
+  const { ensureSystemRoles } = await import("../../utils/system-roles.js");
+  await ensureSystemRoles();
 
   databaseLogger.info(`${dialect} database ready`, {
     operation: "db_init_complete",

@@ -10,6 +10,7 @@ import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type { SSHHost } from "@/types/index";
+import type { GpuMetrics } from "@/types/stats-widgets";
 
 // ============================================================================
 // RBAC TYPE DEFINITIONS
@@ -67,6 +68,7 @@ import { getDeviceId } from "@/lib/device-id";
 export type ServerStatus = {
   status: "online" | "reachable" | "offline";
   lastChecked: string;
+  reason?: "host_key_changed";
 };
 
 export type SSHHostWithStatus = SSHHost & {
@@ -203,6 +205,7 @@ export type ServerMetrics = {
       celsius: number;
     }>;
   };
+  gpu?: GpuMetrics;
   lastChecked: string;
 };
 
@@ -291,7 +294,7 @@ if (isElectron()) {
       const electronAPI = (window as ElectronWindow).electronAPI;
 
       if (electronAPI?.getSetting) {
-        const settingsToLoad = ["rightClickCopyPaste"];
+        const settingsToLoad = ["rightClickCopyPaste", "copyOnSelect"];
         for (const key of settingsToLoad) {
           const value = await electronAPI.getSetting(key);
           if (value !== null && value !== undefined) {
@@ -377,11 +380,37 @@ export function getCookie(name: string): string | undefined {
 
 let userWasAuthenticated = false;
 let latestAuthSuccessAt = 0;
+let authInvalidationHandled = false;
 
 export function markUserAuthenticated(): void {
   userWasAuthenticated = true;
+  authInvalidationHandled = false;
   latestAuthSuccessAt =
     typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+function clearClientAuthState(): void {
+  clearTermixSessionStorage();
+  try {
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("termix_auth");
+  } catch {
+    // localStorage may be unavailable in restricted contexts.
+  }
+
+  if (isElectron()) {
+    const electronAPI = (
+      window as unknown as {
+        electronAPI?: { clearSessionCookies?: () => Promise<void> };
+      }
+    ).electronAPI;
+    electronAPI?.clearSessionCookies?.().catch(() => {});
+  } else if (typeof window !== "undefined") {
+    const isSecure = window.location.protocol === "https:";
+    document.cookie = isSecure
+      ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
+      : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
+  }
 }
 
 export function isCurrentAuthInvalidationError(error: unknown): boolean {
@@ -629,26 +658,18 @@ function createApiInstance(
             return Promise.reject(error);
           }
 
-          if (isElectron()) {
-            const electronAPI = (
-              window as unknown as {
-                electronAPI?: { clearSessionCookies?: () => Promise<void> };
-              }
-            ).electronAPI;
-            electronAPI?.clearSessionCookies?.().catch(() => {});
-          }
+          if (!authInvalidationHandled) {
+            authInvalidationHandled = true;
+            clearClientAuthState();
 
-          if (typeof window !== "undefined") {
-            document.cookie =
-              "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-          }
+            if (typeof window !== "undefined") {
+              console.warn("Session expired - please log in again");
+              toast.warning("Session expired. Please log in again.");
+              window.dispatchEvent(new Event("termix:logout"));
+            }
 
-          if (isSessionExpired && typeof window !== "undefined") {
-            console.warn("Session expired - please log in again");
-            toast.warning("Session expired. Please log in again.");
+            dbHealthMonitor.reportSessionExpired();
           }
-
-          dbHealthMonitor.reportSessionExpired();
 
           userWasAuthenticated = false;
         }
@@ -863,6 +884,11 @@ export function getFileManagerApiForSession(sessionId: string): AxiosInstance {
   return sessionOrigins.get(sessionId) === "remote"
     ? getRemoteFileManagerApi()
     : fileManagerApi;
+}
+
+/** Which backend currently holds a live SSH session (see setSessionOrigin). */
+export function getSessionOrigin(sessionId: string): "local" | "remote" {
+  return sessionOrigins.get(sessionId) === "remote" ? "remote" : "local";
 }
 
 export function getTunnelApiForOrigin(
@@ -1589,6 +1615,15 @@ export {
   removeFolderShortcut,
 } from "@/api/file-manager-data-api";
 
+// Desktop-only local disk <-> remote transfers (dual-pane file manager).
+export {
+  uploadLocalFileToSession,
+  downloadSessionFileToLocal,
+  cancelLocalTransfer,
+  createLocalTransferId,
+  type LocalTransferProgressEvent,
+} from "@/api/local-transfer-api";
+
 export {
   getAllServerStatuses,
   getServerStatusById,
@@ -1736,42 +1771,14 @@ export async function logoutUser(): Promise<{
 }> {
   try {
     const response = await authApi.post("/users/logout");
-
-    clearTermixSessionStorage();
-
-    if (isElectron()) {
-      const electronAPI = (
-        window as unknown as {
-          electronAPI?: { clearSessionCookies?: () => Promise<void> };
-        }
-      ).electronAPI;
-      electronAPI?.clearSessionCookies?.().catch(() => {});
-    } else {
-      const isSecure = window.location.protocol === "https:";
-      const cookieString = isSecure
-        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
-        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
-      document.cookie = cookieString;
-    }
-
+    clearClientAuthState();
+    userWasAuthenticated = false;
+    authInvalidationHandled = false;
     return response.data;
   } catch (error) {
-    clearTermixSessionStorage();
-
-    if (isElectron()) {
-      const electronAPI = (
-        window as unknown as {
-          electronAPI?: { clearSessionCookies?: () => Promise<void> };
-        }
-      ).electronAPI;
-      electronAPI?.clearSessionCookies?.().catch(() => {});
-    } else {
-      const isSecure = window.location.protocol === "https:";
-      const cookieString = isSecure
-        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
-        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
-      document.cookie = cookieString;
-    }
+    clearClientAuthState();
+    userWasAuthenticated = false;
+    authInvalidationHandled = false;
     handleApiError(error, "logout user");
   }
 }
@@ -1900,10 +1907,10 @@ export type DesktopAutoSessionOutcome =
 
 /**
  * Electron-only, non-iframed local login: exchanges the embedded backend's
- * single auto-provisioned local user for a session without ever showing a
- * login form. Only succeeds when exactly one user exists locally (a synced
- * or otherwise multi-user install never satisfies this, and falls through
- * to a normal login screen instead).
+ * auto-provisioned local user for a session without ever showing a login
+ * form. If the local database contains multiple users, the backend
+ * deterministically chooses the admin account, or the earliest registered
+ * account if no admin exists.
  */
 export async function requestDesktopAutoSession(): Promise<DesktopAutoSessionOutcome> {
   if (desktopAutoSessionRequest) return desktopAutoSessionRequest;

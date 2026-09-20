@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import express from "express";
 import {
   logAudit,
@@ -9,7 +10,7 @@ import { createCorsMiddleware } from "../../utils/cors-config.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
-import ssh2Pkg, { Client as SSHClient } from "ssh2";
+import ssh2Pkg, { Client as SSHClient, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { fileLogger } from "../../utils/logger.js";
@@ -28,7 +29,7 @@ import type {
   ConnectionStage,
 } from "../../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
-import { resolveHostById } from "../host-resolver.js";
+import { resolveHostById, resolveHostBySyncId } from "../host-resolver.js";
 import {
   startHostTransfer,
   getTransferStatus,
@@ -62,11 +63,13 @@ import {
   hostAddressMismatch,
   HostAddressMismatchError,
   HostNotOnThisServerError,
-} from "../terminal/host-identity.js";
+  resolveServerHostId,
+} from "../host-identity.js";
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
 import { applyAgentAuth } from "../terminal-auth-helpers.js";
 import { applyCACertIfPresent } from "./ca-cert-auth.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 /**
  * The host id came from whichever database the client is displaying. If this
@@ -117,20 +120,32 @@ function assertResolvedHost(
 }
 
 const app = express();
+app.set("trust proxy", "loopback");
 
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
-app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
+// uploadFileChunk streams its octet-stream body straight into SFTP; the raw
+// body parser would otherwise buffer the whole chunk in memory first and,
+// worse, drain the request so nothing is left for the route to pipe (the
+// remote file ended up empty and the request never completed).
+const rawBodyParser = express.raw({
+  limit: "5gb",
+  type: "application/octet-stream",
+});
+const STREAMED_BODY_ROUTES = new Set(["/ssh/file_manager/ssh/uploadFileChunk"]);
+app.use((req, res, next) => {
+  if (STREAMED_BODY_ROUTES.has(req.path)) return next();
+  rawBodyParser(req, res, next);
+});
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
-
-const authManager = AuthManager.getInstance();
-app.use(authManager.createAuthMiddleware());
 
 const sshSessions: Record<string, SSHSession> = {};
 const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
@@ -289,7 +304,7 @@ async function buildDedicatedTransferConnectConfig(
       throw new Error("Password required for transfer connection");
     }
     config.password = host.password;
-  } else if (authType === "opkssh") {
+  } else if (usesIssuedCertificate(authType)) {
     const { getOPKSSHToken } = await import("../opkssh-auth.js");
     const token = await getOPKSSHToken(userId, host.id);
     if (!token) {
@@ -828,6 +843,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedSocks5Username = socks5Username;
   let resolvedSocks5Password = socks5Password;
   let resolvedSocks5ProxyChain = socks5ProxyChain;
+  let resolvedVaultProfileId: number | null = null;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById, resolveHostBySyncId } =
@@ -854,6 +870,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
+        resolvedVaultProfileId =
+          (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
+          null;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -923,6 +942,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
+        resolvedVaultProfileId =
+          (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
+          null;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -968,7 +990,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
   }
 
-  const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(hostId);
+  let serverHostId = hostId;
+  if (hostSyncId && userId) {
+    const resolvedHost = await resolveHostBySyncId(hostSyncId, userId);
+    assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
+    serverHostId = resolveServerHostId(hostId, resolvedHost) ?? hostId;
+  }
+
+  const preloadedHostData =
+    await SSHHostKeyVerifier.preloadHostData(serverHostId);
   const keepalive = resolveSshKeepalive(
     hostKeepaliveInterval,
     hostKeepaliveCountMax,
@@ -985,7 +1015,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
     hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-      hostId,
+      serverHostId,
       resolvedIp,
       resolvedPort,
       null,
@@ -1120,10 +1150,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     connectionLogs.push(
       createConnectionLog("info", "sftp_auth", "Using password authentication"),
     );
-  } else if (resolvedCredentials.authType === "opkssh") {
+  } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
     try {
       const { getOPKSSHToken } = await import("../opkssh-auth.js");
-      const token = await getOPKSSHToken(userId, hostId);
+      const token = await getOPKSSHToken(userId, serverHostId);
 
       if (!token) {
         connectionLogs.push(
@@ -1171,6 +1201,38 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       );
       return res.status(500).json({
         error: "OPKSSH authentication failed",
+        connectionLogs,
+      });
+    }
+  } else if (resolvedCredentials.authType === "vault") {
+    try {
+      const { setupVaultSshSignerAuth } =
+        await import("../vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config as ConnectConfig, client, {
+        id: serverHostId,
+        username: resolvedUsername,
+        userId,
+        vaultProfile: { id: resolvedVaultProfileId },
+      });
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "sftp_auth",
+          "Using cached Vault-signed certificate",
+        ),
+      );
+    } catch (vaultError) {
+      const message = getErrorMessage(vaultError);
+      fileLogger.warn("Vault authentication unavailable for file manager", {
+        operation: "file_connect_vault_auth",
+        sessionId,
+        hostId,
+        error: message,
+      });
+      connectionLogs.push(createConnectionLog("error", "sftp_auth", message));
+      return res.status(401).json({
+        error: message,
+        requiresVaultAuth: true,
         connectionLogs,
       });
     }
@@ -1255,7 +1317,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       operation: "file_ssh_connected",
       sessionId,
       userId,
-      hostId,
+      hostId: serverHostId,
       ip,
       port,
       username,
@@ -1283,7 +1345,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       userId,
       ip,
       port,
-      hostId,
+      hostId: serverHostId,
       username,
       sudoPassword: resolvedCredentials.sudoPassword,
       scpLegacy: resolvedScpLegacy,
@@ -1298,7 +1360,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           username: await getAuditUsername(userId),
           action: "file_manager_connect",
           resourceType: "host",
-          resourceId: hostId ? String(hostId) : undefined,
+          resourceId: serverHostId ? String(serverHostId) : undefined,
           resourceName: `${username}@${ip}:${port}`,
           ipAddress,
           userAgent,
@@ -3128,15 +3190,26 @@ process.on("SIGTERM", () => {
 const PORT = 30004;
 
 try {
-  const server = app.listen(PORT, async () => {
-    try {
-      await authManager.initialize();
-    } catch (err) {
-      fileLogger.error("Failed to initialize AuthManager", err, {
-        operation: "auth_init_error",
-      });
-    }
+  const server = listenOnServicePort({
+    app,
+    port: PORT,
+    logger: fileLogger,
+    serviceName: "file-manager",
+    onListening: async () => {
+      try {
+        await authManager.initialize();
+      } catch (err) {
+        fileLogger.error("Failed to initialize AuthManager", err, {
+          operation: "auth_init_error",
+        });
+      }
+    },
   });
+
+  // Uploads are streamed and may legitimately take longer than Node's default
+  // five-minute request deadline. Connection liveness is handled by the proxy
+  // and socket-level timeouts instead of a total request duration cap.
+  server.requestTimeout = 0;
 
   server.on("error", (err) => {
     fileLogger.error("File Manager server error", err, {

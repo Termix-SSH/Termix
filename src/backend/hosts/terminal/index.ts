@@ -1,4 +1,9 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { getAuditUsername } from "../../utils/audit-logger.js";
+import { usesIssuedCertificate } from "../issued-certificate-auth.js";
+import { collabRoomHub } from "../collab/room-hub.js";
+import type { SessionShareRecord } from "../../database/repositories/session-share-repository.js";
+import { createCurrentCollabRoomRepository } from "../../database/repositories/factory.js";
 import {
   parseWsMessage,
   asObject,
@@ -60,8 +65,15 @@ import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
+  resolveServerHostId,
   resolveServerJumpHosts,
-} from "./host-identity.js";
+} from "../host-identity.js";
+import { extractWebSocketToken } from "../../utils/ws-auth.js";
+import {
+  createWebSocketDuplex,
+  waitForWebSocketOpen,
+} from "../cloudflare-websocket.js";
+import { hostSessionStatus } from "../host-session-status.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -128,6 +140,7 @@ const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
 const userConnections = new Map<string, Set<WebSocket>>();
 
 const wss = new WebSocketServer({
+  host: "127.0.0.1",
   port: 30002,
 });
 
@@ -147,12 +160,52 @@ async function handleShareTokenConnection(
   req: import("http").IncomingMessage,
   shareToken: string,
 ): Promise<void> {
-  const shareRepo = createCurrentSessionShareRepository();
-  const share = await shareRepo.findByLinkToken(shareToken);
+  const share =
+    await createCurrentSessionShareRepository().findByLinkToken(shareToken);
   if (!share) {
     ws.close(1008, "Invalid or expired share link");
     return;
   }
+  return attachShareGuest(ws, req, share);
+}
+
+/**
+ * Auth path for anonymous collab-room guests (?roomGuestToken=<token>): the
+ * room's guest link resolves to whatever share is on stage right now.
+ */
+async function handleRoomGuestConnection(
+  ws: WebSocket,
+  req: import("http").IncomingMessage,
+  roomGuestToken: string,
+): Promise<void> {
+  const { isCollabGuestRateLimited } =
+    await import("../collab/guest-rate-limit.js");
+  const ip = req.socket.remoteAddress ?? "unknown";
+  if (isCollabGuestRateLimited(ip)) {
+    ws.close(1008, "Too many requests");
+    return;
+  }
+  const room =
+    await createCurrentCollabRoomRepository().findByGuestToken(roomGuestToken);
+  const share = room?.stageShareId
+    ? await createCurrentSessionShareRepository().findActiveById(
+        room.stageShareId,
+      )
+    : null;
+  if (!share) {
+    ws.close(1008, "Nothing is being presented");
+    return;
+  }
+  return attachShareGuest(ws, req, share);
+}
+
+/** Joins an anonymous guest socket to a live shared SSH session, read-only or not per the share. */
+async function attachShareGuest(
+  ws: WebSocket,
+  req: import("http").IncomingMessage,
+  share: SessionShareRecord,
+): Promise<void> {
+  const shareRepo = createCurrentSessionShareRepository();
   if (share.protocol !== "ssh") {
     ws.close(1008, "Unsupported share protocol");
     return;
@@ -297,27 +350,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
     await handleShareTokenConnection(ws, req, shareToken);
     return;
   }
+  const roomGuestToken = urlObj.searchParams.get("roomGuestToken");
+  if (roomGuestToken) {
+    await handleRoomGuestConnection(ws, req, roomGuestToken);
+    return;
+  }
 
   try {
-    let token: string | undefined;
-
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-      const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
-    }
-
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        token = authHeader.slice("Bearer ".length);
-      }
-    }
-
-    if (!token) {
-      const qp = urlObj.searchParams.get("token");
-      if (qp) token = qp;
-    }
+    const token = extractWebSocketToken(req);
 
     if (!token) {
       ws.close(1008, "Authentication required");
@@ -414,6 +454,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   ws.on("close", () => {
     clearInterval(wsPingInterval);
+    collabRoomHub.unsubscribe(ws);
     sshLogger.info("Terminal WebSocket disconnected", {
       operation: "terminal_ws_disconnect",
       sessionId,
@@ -1054,6 +1095,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }
             const hostname = host.name || host.ip;
             const requestOrigin = getRequestOrigin(req);
+            if (host.authType === "stepca") {
+              const { startStepCaAuth } = await import("../step-ca-auth.js");
+              await startStepCaAuth(
+                userId,
+                opksshData.hostId,
+                host.username,
+                ws,
+                requestOrigin,
+              );
+              break;
+            }
             await startOPKSSHAuth(
               userId,
               opksshData.hostId,
@@ -1079,6 +1131,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
 
         case "opkssh_cancel": {
+          {
+            const { cancelStepCaAuth } = await import("../step-ca-auth.js");
+            cancelStepCaAuth(
+              String((data as { requestId?: string })?.requestId ?? ""),
+            );
+          }
           const cancelData = data as { requestId: string };
           try {
             const { cancelAuthSession } = await import("../opkssh-auth.js");
@@ -1246,17 +1304,72 @@ wss.on("connection", async (ws: WebSocket, req) => {
           break;
         }
 
+        case "collab_subscribe": {
+          const { roomId } = (data ?? {}) as { roomId?: string };
+          if (typeof roomId !== "string" || !roomId) break;
+          try {
+            const repository = createCurrentCollabRoomRepository();
+            const room = await repository.findById(roomId);
+            const member =
+              room && !room.endedAt
+                ? await repository.findMember(roomId, userId)
+                : null;
+            if (!member) {
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: "Room not found",
+                }),
+              );
+              break;
+            }
+            collabRoomHub.subscribe(roomId, {
+              ws,
+              userId,
+              username: await getAuditUsername(userId),
+            });
+          } catch (error) {
+            sshLogger.error("Failed to subscribe to collab room", error, {
+              operation: "collab_subscribe_error",
+              userId,
+            });
+          }
+          break;
+        }
+
+        case "collab_unsubscribe": {
+          const { roomId } = (data ?? {}) as { roomId?: string };
+          collabRoomHub.unsubscribe(
+            ws,
+            typeof roomId === "string" ? roomId : undefined,
+          );
+          break;
+        }
+
         case "joinSharedSession": {
           const joinData = data as { shareId: string; tabInstanceId?: string };
           try {
             const shareRepo = createCurrentSessionShareRepository();
             const share = await shareRepo.findActiveById(joinData.shareId);
+            // Room-stage shares are joinable by any member of the live
+            // room whose stage points at them; user shares only by their
+            // target.
+            let eligible =
+              !!share &&
+              share.protocol === "ssh" &&
+              share.shareType === "user" &&
+              share.targetUserId === userId;
             if (
-              !share ||
-              share.shareType !== "user" ||
-              share.targetUserId !== userId ||
-              share.protocol !== "ssh"
+              !eligible &&
+              share &&
+              share.protocol === "ssh" &&
+              share.shareType === "room"
             ) {
+              const { canJoinRoomStageShare } =
+                await import("../collab/room-share-access.js");
+              eligible = await canJoinRoomStageShare(share.id, userId);
+            }
+            if (!eligible || !share) {
               ws.send(
                 JSON.stringify({
                   type: "error",
@@ -1266,13 +1379,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
               break;
             }
 
+            // Room membership is the authorization for a room stage; the
+            // read-only share never exposes host credentials or config.
             const { PermissionManager } =
               await import("../../utils/permission-manager.js");
-            const access = await PermissionManager.getInstance().canAccessHost(
-              userId,
-              share.hostId,
-              "connect",
-            );
+            const access =
+              share.shareType === "room"
+                ? { hasAccess: true }
+                : await PermissionManager.getInstance().canAccessHost(
+                    userId,
+                    share.hostId,
+                    "connect",
+                  );
             if (!access.hasAccess) {
               ws.send(
                 JSON.stringify({
@@ -1290,6 +1408,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 userId,
                 permissionLevel: share.permissionLevel as
                   "read-write" | "read-only",
+                displayName: await getAuditUsername(userId),
                 tabInstanceId: joinData.tabInstanceId,
                 shareId: share.id,
               },
@@ -1498,9 +1617,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
     let tailscaleCheckPending = false;
     let tailscaleForcePasswordAttempted = false;
     let isTailscaleRetrying = false;
+    let clearOnlineStatus: (() => void) | null = null;
 
     let resolvedHostData:
       | (Record<string, unknown> & {
+          id?: number;
           ip?: string;
           port?: number;
           username?: string;
@@ -1634,6 +1755,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         });
       }
     }
+
+    const serverHostId = resolveServerHostId(id, resolvedHostData);
 
     // Resolve credentials server-side when frontend doesn't provide them
     let resolvedCredentials = {
@@ -1804,6 +1927,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     });
 
     sshConn.on("ready", () => {
+      clearOnlineStatus ??= hostSessionStatus.register(serverHostId);
       clearTimeout(connectionTimeout);
       isTailscaleRetrying = false;
       if (tailscaleCheckPending) {
@@ -2362,7 +2486,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       });
 
       if (
-        resolvedCredentials.authType === "opkssh" &&
+        usesIssuedCertificate(resolvedCredentials.authType) &&
         err.message.includes("All configured authentication methods failed")
       ) {
         sshLogger.warn("OPKSSH authentication failed - invalidating token", {
@@ -2700,6 +2824,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
+      clearOnlineStatus?.();
+      clearOnlineStatus = null;
+
       clearTimeout(connectionTimeout);
       sshLogger.info("SSH connection closed", {
         operation: "terminal_ssh_disconnected",
@@ -2821,7 +2948,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     // Pre-fetch the stored host key before connect so the verifier callback
     // runs synchronously during SSH key exchange, avoiding LoginGraceTime
     // expiry on slow connections (especially through jump host tunnels).
-    const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(id);
+    const preloadedHostData =
+      await SSHHostKeyVerifier.preloadHostData(serverHostId);
 
     const connectConfig: Record<string, unknown> = {
       host: connectHost,
@@ -2841,7 +2969,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ? TAILSCALE_CHECK_TIMEOUT_MS
           : 120000,
       hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-        id,
+        serverHostId,
         ip,
         port,
         ws,
@@ -2969,8 +3097,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }),
       );
       return;
-    } else if (resolvedCredentials.authType === "opkssh") {
-      sendLog("auth", "info", "Using OPKSSH certificate authentication");
+    } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
+      sendLog("auth", "info", "Using issued SSH certificate authentication");
       try {
         const { getOPKSSHToken } = await import("../opkssh-auth.js");
         const token = await getOPKSSHToken(userId, id);
@@ -2979,7 +3107,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           sendLog(
             "auth",
             "info",
-            "No valid OPKSSH token found, requesting authentication",
+            "No valid certificate found, requesting sign-in",
           );
           ws.send(
             JSON.stringify({
@@ -2990,7 +3118,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           return;
         }
 
-        sendLog("auth", "info", "Using cached OPKSSH certificate");
+        sendLog("auth", "info", "Using cached SSH certificate");
 
         const { setupOPKSSHCertAuth } = await import("../opkssh-cert-auth.js");
         await setupOPKSSHCertAuth(connectConfig, sshConn, token, username);
@@ -3172,24 +3300,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
           },
         });
 
-        await new Promise<void>((resolve, reject) => {
-          cfWs.on("open", () => resolve());
-          cfWs.on("error", (err) => reject(err));
-          setTimeout(
-            () => reject(new Error("Cloudflare tunnel timeout")),
-            30000,
-          );
-        });
+        await waitForWebSocketOpen(cfWs, 30000);
 
-        const { Duplex } = await import("stream");
-        const duplexStream = new Duplex({
-          read() {},
-          write(chunk, _encoding, callback) {
-            cfWs.send(chunk, callback);
-          },
-        });
-        cfWs.on("message", (data) => duplexStream.push(data));
-        cfWs.on("close", () => duplexStream.push(null));
+        const duplexStream = createWebSocketDuplex(cfWs);
 
         connectConfig.sock =
           duplexStream as unknown as typeof connectConfig.sock;

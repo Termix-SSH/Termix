@@ -1,4 +1,5 @@
 import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
+import { parseWebUiConfig } from "./host-web-endpoints.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -12,6 +13,34 @@ export function isOptionalBoolean(
   value: unknown,
 ): value is boolean | undefined {
   return value === undefined || typeof value === "boolean";
+}
+
+export function applyHostKeyTypeUpdate(
+  target: Record<string, unknown>,
+  keyType: unknown,
+): void {
+  if (keyType !== undefined) {
+    target.keyType = keyType || null;
+  }
+}
+
+const PROTOCOL_ENABLE_FIELDS = [
+  "enableSsh",
+  "enableRdp",
+  "enableVnc",
+  "enableTelnet",
+] as const;
+
+export function normalizeProtocolEnableFields(
+  values: Record<string, unknown>,
+): Partial<Record<(typeof PROTOCOL_ENABLE_FIELDS)[number], 0 | 1>> {
+  return Object.fromEntries(
+    PROTOCOL_ENABLE_FIELDS.flatMap((field) =>
+      typeof values[field] === "boolean"
+        ? [[field, values[field] ? 1 : 0]]
+        : [],
+    ),
+  );
 }
 
 export const OWNER_PRIVATE_AUTH_FIELDS = {
@@ -152,9 +181,12 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableTunnel?: unknown;
   enableFileManager?: unknown;
   enableDocker?: unknown;
+  enableWebUi?: unknown;
   enableProxmox?: unknown;
   enableTmuxMonitor?: unknown;
   enableTerminalToolbar?: unknown;
+  enableAiAssistant?: unknown;
+  enableCommandHistory?: unknown;
   showTerminalInSidebar?: unknown;
   showFileManagerInSidebar?: unknown;
   showTunnelInSidebar?: unknown;
@@ -167,6 +199,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   quickActions?: unknown;
   statsConfig?: unknown;
   dockerConfig?: unknown;
+  webUiConfig?: unknown;
   proxmoxConfig?: unknown;
   enableProxmoxStats?: unknown;
   proxmoxStatsConfig?: unknown;
@@ -331,10 +364,13 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableTunnel",
   "enableFileManager",
   "enableDocker",
+  "enableWebUi",
+  "webUiConfig",
   "enableProxmox",
   "enableProxmoxStats",
   "enableTmuxMonitor",
   "enableTerminalToolbar",
+  "enableAiAssistant",
   "showTerminalInSidebar",
   "showFileManagerInSidebar",
   "showTunnelInSidebar",
@@ -346,6 +382,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableTelnet",
   "sshPort",
   "rdpPort",
+  "rdpAuthType",
   "vncPort",
   "telnetPort",
   "defaultPath",
@@ -432,10 +469,12 @@ export function transformHostResponse(
     enableTunnel: !!host.enableTunnel,
     enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
+    enableWebUi: !!host.enableWebUi,
     enableProxmox: !!host.enableProxmox,
     enableProxmoxStats: !!host.enableProxmoxStats,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
     enableTerminalToolbar: host.enableTerminalToolbar !== false,
+    enableAiAssistant: !!host.enableAiAssistant,
     showTerminalInSidebar: !!host.showTerminalInSidebar,
     showFileManagerInSidebar: !!host.showFileManagerInSidebar,
     showTunnelInSidebar: !!host.showTunnelInSidebar,
@@ -484,6 +523,9 @@ export function transformHostResponse(
     dockerConfig: host.dockerConfig
       ? JSON.parse(host.dockerConfig as string)
       : undefined,
+    // Guarded, unlike dockerConfig directly above: parseWebUiConfig never
+    // throws, so a half-written config cannot take out the whole host listing.
+    webUiConfig: parseWebUiConfig(host.webUiConfig),
     proxmoxConfig: host.proxmoxConfig
       ? JSON.parse(host.proxmoxConfig as string)
       : undefined,

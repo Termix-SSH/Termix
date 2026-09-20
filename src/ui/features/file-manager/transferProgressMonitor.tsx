@@ -89,6 +89,7 @@ export interface BeginTransferMonitoringOptions {
     finalStatus: TransferProgressResponse,
     toastId: string | number,
   ) => void;
+  onProgress?: (status: TransferProgressResponse) => void;
   formatTransferMetrics?: (timings?: TransferTimings) => string;
 }
 
@@ -226,6 +227,7 @@ function showDefaultCompletionToast(
         id: toastId,
         description: metrics || undefined,
         className: TOAST_CLASS,
+        duration: undefined,
       },
     );
     return;
@@ -236,6 +238,7 @@ function showDefaultCompletionToast(
     id: toastId,
     description: metrics || undefined,
     className: TOAST_CLASS,
+    duration: undefined,
   });
 }
 
@@ -288,6 +291,7 @@ export function beginTransferProgressMonitoring(
   const waitForCompletion = pollTransferUntilComplete(
     transferId,
     (status) => {
+      options.onProgress?.(status);
       const { rate, stalled } = progressTracker.update(status);
       renderTransferProgressToast(
         progressToast,
@@ -319,6 +323,7 @@ export function beginTransferProgressMonitoring(
       toast.error(`${t("transfer.transferError")}: ${message}`, {
         id: progressToast,
         className: TOAST_CLASS,
+        duration: undefined,
       });
       markTransferNotified(transferId);
       throw error;

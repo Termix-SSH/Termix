@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 interface VersionBadgeProps {
-  status: "up_to_date" | "requires_update" | "beta";
+  status: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl?: string;
   className?: string;
 }
@@ -12,6 +12,7 @@ export function VersionBadge({
   className = "",
 }: VersionBadgeProps) {
   const { t } = useTranslation();
+  if (status === "unknown") return null;
 
   const badgeClassName = `text-[10px] px-1.5 py-0.5 font-semibold leading-none ${
     status === "beta"

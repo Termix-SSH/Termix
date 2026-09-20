@@ -1,5 +1,12 @@
-import { useRef, useEffect, useState } from "react";
+import {
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from "react";
 import { useTranslation } from "react-i18next";
+import { useReducedMotion } from "motion/react";
 import { Button } from "@/components/button";
 import { Separator } from "@/components/separator";
 import {
@@ -77,6 +84,7 @@ export function TabBar({
   onToggleRightDock?: () => void;
 }) {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(true);
   const [dragTabId, setDragTabId] = useState<string | null>(null);
   const [dragTargetIndex, setDragTargetIndex] = useState<number | null>(null);
@@ -105,9 +113,52 @@ export function TabBar({
   } | null>(null);
   const dragTargetRef = useRef<number | null>(null);
   const didDrag = useRef(false);
+  // Hand-rolled instead of a Framer layoutId: a shared layoutId matched
+  // multiple tabs sharing the same indicator element across re-renders, and
+  // reordering tabs (which doesn't change which tab is active) could make it
+  // measure the wrong tab's rect or animate a spurious slide. Measuring the
+  // active tab's own DOM node directly is always correct.
+  const [indicatorRect, setIndicatorRect] = useState<{
+    left: number;
+    width: number;
+  } | null>(null);
+  const skipIndicatorAnimRef = useRef(false);
 
   const isSplit = splitMode !== "none";
   const paneCount = PANE_COUNTS[splitMode];
+
+  const measureIndicator = useCallback(() => {
+    const el = activeTabId ? tabEls.current.get(activeTabId) : null;
+    if (!el) {
+      setIndicatorRect(null);
+      return;
+    }
+    setIndicatorRect({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [activeTabId]);
+
+  // useLayoutEffect so the indicator is measured for the new tab order before
+  // paint -- with useEffect there was a frame right after a drag-drop reorder
+  // where the indicator (which stays hidden during the drag) reappeared at
+  // its pre-reorder position before this caught up, flashing at the old spot.
+  useLayoutEffect(() => {
+    measureIndicator();
+  }, [measureIndicator, tabs, splitMode, dragTargetIndex]);
+
+  useEffect(() => {
+    const el = tabBarRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measureIndicator);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [measureIndicator]);
+
+  useEffect(() => {
+    if (!skipIndicatorAnimRef.current) return;
+    const id = requestAnimationFrame(() => {
+      skipIndicatorAnimRef.current = false;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [indicatorRect]);
 
   useEffect(() => {
     const el = tabBarRef.current;
@@ -156,13 +207,14 @@ export function TabBar({
       setDragTargetIndex(newTarget);
     }
 
-    function onPointerUp() {
+    function endDrag(commit: boolean) {
       if (!dragData.current) return;
       const { id, index } = dragData.current;
       const to = dragTargetRef.current ?? index;
-      if (to !== index) {
+      if (commit && to !== index) {
         const next = [...tabs];
         if (next[0].id !== id) next.splice(to, 0, next.splice(index, 1)[0]);
+        skipIndicatorAnimRef.current = true;
         onReorderTabs(next);
       }
       dragData.current = null;
@@ -175,11 +227,29 @@ export function TabBar({
       }, 0);
     }
 
+    function onPointerUp() {
+      endDrag(true);
+    }
+
+    // The browser can abort a pointer gesture without ever firing pointerup
+    // (OS/browser cancels it, focus leaves the window, capture is lost some
+    // other way). Without this, dragTabId stays stuck non-null forever and
+    // every tab keeps rendering with a stale translateX from the aborted
+    // drag, which can visually butt two tabs together with no seam between
+    // them until something else forces a re-render.
+    function onPointerCancel() {
+      endDrag(false);
+    }
+
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
+    window.addEventListener("lostpointercapture", onPointerCancel);
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
+      window.removeEventListener("lostpointercapture", onPointerCancel);
     };
   }, [dragTabId, tabs, onReorderTabs]);
 
@@ -214,12 +284,26 @@ export function TabBar({
   return (
     <div className="flex flex-col shrink-0 min-w-0">
       <div
-        className={`flex items-end bg-sidebar min-w-0 transition-all duration-200 ${open ? "h-12.5 border-b border-border" : "h-0 overflow-hidden"}`}
+        className={`flex items-end bg-sidebar min-w-0 transition-[height,border-color] duration-200 ${open ? "h-12.5 border-b border-border" : "h-0 overflow-hidden"}`}
       >
         <div
           ref={tabBarRef}
-          className="flex h-full flex-1 min-w-0 overflow-x-auto scrollbar-none pl-px"
+          className="relative flex h-full flex-1 min-w-0 overflow-x-auto scrollbar-none pl-px"
         >
+          {indicatorRect && !dragTabId && (
+            <span
+              data-tab-indicator={activeTabId}
+              className="pointer-events-none absolute bottom-0 h-0.5 bg-accent-brand z-10"
+              style={{
+                left: indicatorRect.left,
+                width: indicatorRect.width,
+                transition:
+                  reduceMotion || skipIndicatorAnimRef.current
+                    ? "none"
+                    : "left 200ms ease, width 200ms ease",
+              }}
+            />
+          )}
           {tabs.map((tab, index) => {
             const active = tab.id === activeTabId;
             const isDragging = dragTabId === tab.id;
@@ -300,9 +384,17 @@ export function TabBar({
                   );
                 }}
                 style={{
-                  transform: isDragging
-                    ? "none"
-                    : `translateX(${translateX}px)`,
+                  // Only set a transform while a drag is actually shifting
+                  // tabs around. Leaving a permanent translateX(0) on every
+                  // tab gives each one its own transform node, which opts it
+                  // out of the pixel snapping a plain box gets when painted.
+                  // The 1px seam then lands on a fractional device pixel at
+                  // non-100% zoom and anti-aliases down to nothing, so two
+                  // tabs look merged into one.
+                  transform:
+                    dragTabId && !isDragging
+                      ? `translateX(${translateX}px)`
+                      : undefined,
                   transition:
                     dragTabId && !isDragging ? "transform 200ms ease" : "none",
                   opacity: isDragging ? 0 : 1,
@@ -318,8 +410,8 @@ export function TabBar({
                 ${index === 0 && tab.type !== "dashboard" ? "border-l border-border" : ""}
                 ${
                   tab.type === "dashboard"
-                    ? `px-2.5 md:px-3.5 ${active ? "border-b-2 border-b-accent-brand bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
-                    : `px-2.5 md:px-4 font-medium ${active ? "border-b-2 border-b-accent-brand bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
+                    ? `px-2.5 md:px-3.5 ${active ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
+                    : `px-2.5 md:px-4 font-medium ${active ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface"}`
                 }`}
               >
                 {/* Focused-pane indicator: brand accent bottom border overlay */}
@@ -400,19 +492,25 @@ export function TabBar({
             (() => {
               const tab = tabs.find((t) => t.id === dragTabId)!;
               const active = tab.id === activeTabId;
+              const dragTabWidth = tabEls.current.get(dragTabId)?.offsetWidth;
+              const dragTabHeight = tabEls.current.get(dragTabId)?.offsetHeight;
               return (
                 <div
                   style={{
                     position: "fixed",
                     left: dragPos.x,
                     top: dragPos.y,
-                    width: tabEls.current.get(dragTabId)?.offsetWidth,
-                    height: tabEls.current.get(dragTabId)?.offsetHeight,
+                    width:
+                      dragTabWidth !== undefined ? dragTabWidth + 2 : undefined,
+                    height:
+                      dragTabHeight !== undefined
+                        ? dragTabHeight + 1
+                        : undefined,
                     pointerEvents: "none",
                     zIndex: 9999,
                     opacity: 0.85,
                   }}
-                  className={`flex items-center gap-2 shrink-0 border border-border text-sm shadow-lg
+                  className={`flex items-center gap-2 shrink-0 border-x border-b border-border text-sm shadow-lg
                 ${
                   tab.type === "dashboard"
                     ? `px-3.5 ${active ? "border-b-2 border-b-accent-brand bg-surface text-foreground" : "bg-sidebar text-muted-foreground"}`

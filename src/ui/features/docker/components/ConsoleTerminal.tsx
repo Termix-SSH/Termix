@@ -7,13 +7,7 @@ import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Button } from "@/components/button.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/select.tsx";
+import { Select2 } from "@/components/select2";
 import { Card, CardContent } from "@/components/card.tsx";
 import { getBasePath } from "@/lib/base-path";
 import {
@@ -313,6 +307,7 @@ function ConsoleTerminalInner({
           window.location.port === "");
 
       let baseWsUrl: string;
+      let wsProtocols: string[] = [];
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30009`;
       } else if (isElectronApp) {
@@ -331,12 +326,13 @@ function ConsoleTerminalInner({
           toast.error(t("errors.remoteServerRequired"));
           return;
         }
-        baseWsUrl = resolvedUrl;
+        baseWsUrl = resolvedUrl.url;
+        wsProtocols = resolvedUrl.protocols;
       } else {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/docker/console/`;
       }
 
-      const ws = new WebSocket(baseWsUrl);
+      const ws = new WebSocket(baseWsUrl, wsProtocols);
 
       ws.onopen = () => {
         const cols = terminal.cols || 80;
@@ -543,20 +539,17 @@ function ConsoleTerminalInner({
                 {t("docker.console")}
               </span>
             </div>
-            <Select
+            <Select2
               value={selectedShell}
-              onValueChange={setSelectedShell}
+              onChange={(event) => setSelectedShell(event.target.value)}
               disabled={isConnected}
+              placeholder={t("docker.selectShell")}
+              className="w-[120px]"
             >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder={t("docker.selectShell")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bash">{t("docker.bash")}</SelectItem>
-                <SelectItem value="sh">{t("docker.sh")}</SelectItem>
-                <SelectItem value="ash">{t("docker.ash")}</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="bash">{t("docker.bash")}</option>
+              <option value="sh">{t("docker.sh")}</option>
+              <option value="ash">{t("docker.ash")}</option>
+            </Select2>
             <div className="flex gap-2 sm:gap-2">
               {!isConnected ? (
                 <Button

@@ -39,6 +39,7 @@ import {
   type TermixIdentityKey,
   type TermixIdCa,
 } from "@/main-axios";
+import { Select2 } from "@/components/select2";
 
 const accentBtn =
   "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/20 hover:text-accent-brand";
@@ -425,7 +426,7 @@ function CredentialImportRow({
 
   return (
     <div className="flex items-center gap-2">
-      <select
+      <Select2
         value={selected}
         onChange={(e) => setSelected(e.target.value)}
         disabled={submitting}
@@ -439,7 +440,7 @@ function CredentialImportRow({
             {linkedCredentialIds.has(c.id) ? `✓ ${c.name}` : c.name}
           </option>
         ))}
-      </select>
+      </Select2>
       <Button
         variant="outline"
         size="default"
@@ -629,7 +630,9 @@ function KeyList({
 }) {
   const { t } = useTranslation();
   const [issuingId, setIssuingId] = useState<number | null>(null);
-
+  const [principalsByKey, setPrincipalsByKey] = useState<
+    Record<number, string>
+  >({});
   async function toggle(k: TermixIdentityKey) {
     try {
       await setTermixIdKeyEnabled(k.id, !k.enabled);
@@ -652,7 +655,12 @@ function KeyList({
   async function issueCert(k: TermixIdentityKey) {
     setIssuingId(k.id);
     try {
-      const res = await issueCertificate(k.id);
+      const res = await issueCertificate(k.id, {
+        principals: (principalsByKey[k.id] ?? "")
+          .split(",")
+          .map((principal) => principal.trim())
+          .filter(Boolean),
+      });
       downloadText(`termix-${handle}-${k.id}-cert.pub`, res.certificate + "\n");
       toast.success(t("termixId.certIssued"));
     } catch (e) {
@@ -706,19 +714,37 @@ function KeyList({
               <div className="flex items-center gap-1 pt-0.5">
                 <FakeSwitch checked={k.enabled} onChange={() => toggle(k)} />
                 {canCert && (
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={() => issueCert(k)}
-                    disabled={issuingId === k.id}
-                    title={t("termixId.issueCertTooltip")}
-                  >
-                    {issuingId === k.id ? (
-                      <Loader2 className="animate-spin size-3.5" />
-                    ) : (
-                      <ScrollText className="size-3.5" />
-                    )}
-                  </Button>
+                  <>
+                    <Input
+                      value={principalsByKey[k.id] ?? ""}
+                      onChange={(e) =>
+                        setPrincipalsByKey((current) => ({
+                          ...current,
+                          [k.id]: e.target.value,
+                        }))
+                      }
+                      placeholder="SSH principal(s), e.g. root"
+                      aria-label="SSH principal(s)"
+                      className="h-7 min-w-0 flex-1 text-xs"
+                      spellCheck={false}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() => issueCert(k)}
+                      disabled={
+                        issuingId === k.id ||
+                        !(principalsByKey[k.id] ?? "").trim()
+                      }
+                      title={t("termixId.issueCertTooltip")}
+                    >
+                      {issuingId === k.id ? (
+                        <Loader2 className="animate-spin size-3.5" />
+                      ) : (
+                        <ScrollText className="size-3.5" />
+                      )}
+                    </Button>
+                  </>
                 )}
                 <Button
                   variant="ghost"

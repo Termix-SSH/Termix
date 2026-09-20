@@ -3,7 +3,11 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  getRequestMeta,
+  getAuditUsername,
+  logAudit,
+} from "../../utils/audit-logger.js";
 import { isAuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import {
   SharedHostAuthOverrideService,
@@ -15,11 +19,14 @@ import {
   type SharePermissionLevel,
 } from "../../utils/permission-manager.js";
 import {
-  PERMISSION_CATALOG,
+  getPermissionCatalog,
   isValidPermission,
 } from "../../utils/permission-catalog.js";
 import {
   createCurrentHostFolderRepository,
+  createCurrentFolderAccessRepository,
+  createCurrentCredentialRepository,
+  createCurrentCredentialAccessRepository,
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
@@ -154,6 +161,7 @@ export function parseShareTargets(
 router.post(
   "/host/:id/share",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const hostId = parseInt(id, 10);
@@ -365,6 +373,7 @@ router.post(
 router.post(
   "/folder/share",
   authenticateJWT,
+  permissionManager.requirePermission("hosts.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId!;
     const { folder } = req.body ?? {};
@@ -422,6 +431,22 @@ router.post(
         );
 
       const expiresAt = expiryFromDuration(durationHours);
+
+      // Remember the share on the folder itself so hosts added later inherit it.
+      const folderAccessRepository = createCurrentFolderAccessRepository();
+      for (const target of targets) {
+        await folderAccessRepository.upsert({
+          ownerUserId: userId,
+          folder,
+          grantedBy: userId,
+          permissionLevel,
+          expiresAt,
+          target:
+            target.type === "user"
+              ? { targetType: "user", targetUserId: target.id as string }
+              : { targetType: "role", targetRoleId: target.id as number },
+        });
+      }
       const rbacAccessRepository = createCurrentRbacAccessRepository();
       const { SharedHostSecretsManager } =
         await import("../../utils/shared-host-secrets-manager.js");
@@ -575,6 +600,78 @@ router.post(
  *       500:
  *         description: Failed to update grant.
  */
+/**
+ * @openapi
+ * /rbac/folder/access:
+ *   get:
+ *     summary: Standing shares on one of your folders (inherited by hosts added later)
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: query
+ *         name: folder
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.get(
+  "/folder/access",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const folder = String(req.query.folder ?? "");
+    if (!isNonEmptyString(folder)) {
+      return res.status(400).json({ error: "folder is required" });
+    }
+    try {
+      res.json({
+        rules: await createCurrentFolderAccessRepository().listForFolder(
+          req.userId!,
+          folder,
+        ),
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to list folder access rules", error, {
+        operation: "list_folder_access",
+      });
+      res.status(500).json({ error: "Failed to list folder access" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/folder/access/{id}:
+ *   delete:
+ *     summary: Stop a folder share from applying to hosts added later
+ *     description: Grants already fanned out to hosts stay; revoke those per host.
+ *     tags:
+ *       - RBAC
+ */
+router.delete(
+  "/folder/access/:id",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const ruleId = parseInt(String(req.params.id), 10);
+    if (isNaN(ruleId)) {
+      return res.status(400).json({ error: "Invalid rule ID" });
+    }
+    try {
+      const repository = createCurrentFolderAccessRepository();
+      if (!(await repository.findById(ruleId, req.userId!))) {
+        return res.status(404).json({ error: "Rule not found" });
+      }
+      await repository.deleteById(ruleId, req.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      databaseLogger.error("Failed to delete folder access rule", error, {
+        operation: "delete_folder_access",
+        ruleId,
+      });
+      res.status(500).json({ error: "Failed to delete folder access" });
+    }
+  },
+);
+
 router.patch(
   "/host/:id/access/:accessId",
   authenticateJWT,
@@ -939,7 +1036,7 @@ router.get(
 router.post(
   "/roles",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const { name, displayName, description } = req.body;
 
@@ -1031,7 +1128,7 @@ router.post(
 router.put(
   "/roles/:id",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
@@ -1141,7 +1238,7 @@ router.get(
   "/permissions/catalog",
   authenticateJWT,
   async (_req: AuthenticatedRequest, res: Response) => {
-    res.json({ catalog: PERMISSION_CATALOG });
+    res.json({ catalog: getPermissionCatalog() });
   },
 );
 
@@ -1174,7 +1271,7 @@ router.get(
 router.delete(
   "/roles/:id",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
@@ -1219,6 +1316,53 @@ router.delete(
 
 /**
  * @openapi
+ * /rbac/roles/{id}/members:
+ *   get:
+ *     summary: List the users holding a role
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Role members.
+ *       404:
+ *         description: Role not found.
+ */
+router.get(
+  "/roles/:id/members",
+  authenticateJWT,
+  permissionManager.requirePermission("admin.roles.manage"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const roleId = parseInt(id, 10);
+
+    if (isNaN(roleId)) {
+      return res.status(400).json({ error: "Invalid role ID" });
+    }
+
+    try {
+      const roleRepository = createCurrentRoleRepository();
+      if (!(await roleRepository.findRoleById(roleId))) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      res.json({ members: await roleRepository.listRoleMembers(roleId) });
+    } catch (error) {
+      databaseLogger.error("Failed to list role members", error, {
+        operation: "list_role_members",
+        roleId,
+      });
+      res.status(500).json({ error: "Failed to list role members" });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /rbac/users/{userId}/roles:
  *   post:
  *     summary: Assign a role to a user
@@ -1257,7 +1401,7 @@ router.delete(
 router.post(
   "/users/:userId/roles",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const targetUserId = Array.isArray(req.params.userId)
       ? req.params.userId[0]
@@ -1310,6 +1454,12 @@ router.post(
         const { SharedHostSecretsManager } =
           await import("../../utils/shared-host-secrets-manager.js");
         await SharedHostSecretsManager.getInstance().snapshotForRoleMember(
+          roleId,
+          targetUserId,
+        );
+        const { SharedCredentialSecretsManager } =
+          await import("../../utils/shared-credential-secrets-manager.js");
+        await SharedCredentialSecretsManager.getInstance().snapshotForRoleMember(
           roleId,
           targetUserId,
         );
@@ -1382,7 +1532,7 @@ router.post(
 router.delete(
   "/users/:userId/roles/:roleId",
   authenticateJWT,
-  permissionManager.requireAdmin(),
+  permissionManager.requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const targetUserId = Array.isArray(req.params.userId)
       ? req.params.userId[0]
@@ -1419,6 +1569,12 @@ router.delete(
         const { createCurrentSharedHostSecretsRepository } =
           await import("../repositories/factory.js");
         await createCurrentSharedHostSecretsRepository().deleteForRoleMember(
+          roleId,
+          targetUserId,
+        );
+        const { createCurrentSharedCredentialSecretsRepository } =
+          await import("../repositories/factory.js");
+        await createCurrentSharedCredentialSecretsRepository().deleteForRoleMember(
           roleId,
           targetUserId,
         );
@@ -1510,6 +1666,239 @@ router.get(
   },
 );
 
+// CREDENTIAL SHARING
+
+const CREDENTIAL_LEVELS = ["use", "manage"] as const;
+type CredentialLevel = (typeof CREDENTIAL_LEVELS)[number];
+
+/** Owner, or a recipient holding "manage". */
+async function canManageCredentialSharing(
+  userId: string,
+  credentialId: number,
+): Promise<{ allowed: boolean; ownerId: string | null }> {
+  const row = await createCurrentCredentialRepository().findById(credentialId);
+  if (!row) return { allowed: false, ownerId: null };
+  if (row.userId === userId) return { allowed: true, ownerId: row.userId };
+  const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
+  const grant = await createCurrentCredentialAccessRepository().findActiveGrant(
+    credentialId,
+    userId,
+    roleIds,
+  );
+  return { allowed: grant?.permissionLevel === "manage", ownerId: row.userId };
+}
+
+/**
+ * @openapi
+ * /rbac/credential/{id}/share:
+ *   post:
+ *     summary: Share a credential with users or roles
+ *     description: Recipients get a copy of the secrets re-encrypted under their own key. "use" lets them attach it to hosts and connect; "manage" also lets them edit and re-share. Owner or a "manage" recipient only.
+ *     tags:
+ *       - RBAC
+ */
+router.post(
+  "/credential/:id/share",
+  authenticateJWT,
+  permissionManager.requirePermission("credentials.share"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const credentialId = parseInt(id, 10);
+    const userId = req.userId!;
+    if (isNaN(credentialId)) {
+      return res.status(400).json({ error: "Invalid credential ID" });
+    }
+    const targets = parseShareTargets(req.body ?? {});
+    if (!targets) {
+      return res.status(400).json({
+        error:
+          "targets must be a non-empty array of { type: 'user'|'role', id } entries",
+      });
+    }
+    const { durationHours, permissionLevel = "use" } = req.body ?? {};
+    if (!CREDENTIAL_LEVELS.includes(permissionLevel)) {
+      return res.status(400).json({
+        error: "Invalid permission level",
+        validLevels: CREDENTIAL_LEVELS,
+      });
+    }
+
+    try {
+      const sharing = await canManageCredentialSharing(userId, credentialId);
+      if (!sharing.allowed || !sharing.ownerId) {
+        return res
+          .status(403)
+          .json({ error: "Not allowed to share this credential" });
+      }
+      const ownerId = sharing.ownerId;
+
+      const userRepository = createCurrentUserRepository();
+      const roleRepository = createCurrentRoleRepository();
+      for (const target of targets) {
+        const found =
+          target.type === "user"
+            ? await userRepository.findById(target.id as string)
+            : await roleRepository.findRoleById(target.id as number);
+        if (!found) {
+          return res.status(404).json({
+            error: `Target ${target.type} not found`,
+            targetId: target.id,
+          });
+        }
+      }
+
+      const expiresAt = expiryFromDuration(durationHours);
+      const accessRepository = createCurrentCredentialAccessRepository();
+      const { SharedCredentialSecretsManager } =
+        await import("../../utils/shared-credential-secrets-manager.js");
+      const manager = SharedCredentialSecretsManager.getInstance();
+
+      for (const target of targets) {
+        if (target.type === "user" && target.id === ownerId) continue;
+        const grant = await accessRepository.upsert({
+          credentialId,
+          grantedBy: userId,
+          permissionLevel: permissionLevel as CredentialLevel,
+          expiresAt,
+          target:
+            target.type === "user"
+              ? { targetType: "user", targetUserId: target.id as string }
+              : { targetType: "role", targetRoleId: target.id as number },
+        });
+        try {
+          if (target.type === "user") {
+            await manager.snapshotForUser(
+              grant.id,
+              credentialId,
+              target.id as string,
+              ownerId,
+            );
+          } else {
+            await manager.snapshotForRole(
+              grant.id,
+              credentialId,
+              target.id as number,
+              ownerId,
+            );
+          }
+        } catch (snapshotError) {
+          databaseLogger.warn("Credential shared but secret snapshot failed", {
+            operation: "rbac_credential_share_snapshot_failed",
+            credentialId,
+            accessId: grant.id,
+            error: getErrorMessage(snapshotError),
+          });
+        }
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "credential_share",
+        resourceType: "credential",
+        resourceId: String(credentialId),
+        details: JSON.stringify({ targets, permissionLevel, expiresAt }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ success: true, permissionLevel, expiresAt });
+    } catch (error) {
+      databaseLogger.error("Failed to share credential", error, {
+        operation: "share_credential",
+        credentialId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to share credential" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/credential/{id}/access:
+ *   get:
+ *     summary: List who a credential is shared with
+ *     tags:
+ *       - RBAC
+ */
+router.get(
+  "/credential/:id/access",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const credentialId = parseInt(id, 10);
+    if (isNaN(credentialId)) {
+      return res.status(400).json({ error: "Invalid credential ID" });
+    }
+    try {
+      const sharing = await canManageCredentialSharing(
+        req.userId!,
+        credentialId,
+      );
+      if (!sharing.allowed) {
+        return res.status(403).json({ error: "Not allowed" });
+      }
+      res.json({
+        access:
+          await createCurrentCredentialAccessRepository().listForCredential(
+            credentialId,
+          ),
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to list credential access", error, {
+        operation: "list_credential_access",
+        credentialId,
+      });
+      res.status(500).json({ error: "Failed to list credential access" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/credential/{id}/access/{accessId}:
+ *   delete:
+ *     summary: Revoke a credential share (recipients' copies are removed with it)
+ *     tags:
+ *       - RBAC
+ */
+router.delete(
+  "/credential/:id/access/:accessId",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const credentialId = parseInt(String(req.params.id), 10);
+    const accessId = parseInt(String(req.params.accessId), 10);
+    if (isNaN(credentialId) || isNaN(accessId)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+    try {
+      const sharing = await canManageCredentialSharing(
+        req.userId!,
+        credentialId,
+      );
+      if (!sharing.allowed) {
+        return res.status(403).json({ error: "Not allowed" });
+      }
+      const repository = createCurrentCredentialAccessRepository();
+      if (!(await repository.findById(accessId, credentialId))) {
+        return res.status(404).json({ error: "Access grant not found" });
+      }
+      await repository.revoke(accessId, credentialId);
+      res.json({ success: true });
+    } catch (error) {
+      databaseLogger.error("Failed to revoke credential access", error, {
+        operation: "revoke_credential_access",
+        credentialId,
+        accessId,
+      });
+      res.status(500).json({ error: "Failed to revoke credential access" });
+    }
+  },
+);
+
 // SNIPPET SHARING
 
 /**
@@ -1524,6 +1913,7 @@ router.get(
 router.post(
   "/snippet/:id/share",
   authenticateJWT,
+  permissionManager.requirePermission("snippets.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const snippetId = parseInt(id, 10);
@@ -1639,6 +2029,131 @@ router.post(
  *     tags:
  *       - RBAC
  */
+/**
+ * @openapi
+ * /rbac/snippet-folder/share:
+ *   post:
+ *     summary: Share every snippet in a folder
+ *     description: Grants view access to each owned snippet in the folder (and its subfolders) to the given users or roles.
+ *     tags:
+ *       - RBAC
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               folder:
+ *                 type: string
+ *               targets:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [user, role]
+ *                     id:
+ *                       oneOf:
+ *                         - type: string
+ *                         - type: integer
+ *               durationHours:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Folder shared.
+ *       404:
+ *         description: A target was not found.
+ */
+router.post(
+  "/snippet-folder/share",
+  authenticateJWT,
+  permissionManager.requirePermission("snippets.share"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId!;
+    const { folder, durationHours } = req.body ?? {};
+
+    if (!isNonEmptyString(folder)) {
+      return res.status(400).json({ error: "Folder name is required" });
+    }
+
+    const targets = parseShareTargets(req.body ?? {});
+    if (!targets) {
+      return res.status(400).json({
+        error:
+          "targets must be a non-empty array of { type: 'user'|'role', id } entries",
+      });
+    }
+
+    try {
+      const userRepository = createCurrentUserRepository();
+      const roleRepository = createCurrentRoleRepository();
+      for (const target of targets) {
+        const found =
+          target.type === "user"
+            ? await userRepository.findById(target.id as string)
+            : await roleRepository.findRoleById(target.id as number);
+        if (!found) {
+          return res.status(404).json({
+            error: `Target ${target.type} not found`,
+            targetId: target.id,
+          });
+        }
+      }
+
+      const snippetsInFolder =
+        await createCurrentSnippetRepository().listOwnedSnippetsInFolder(
+          userId,
+          folder,
+        );
+      const expiresAt = expiryFromDuration(durationHours);
+      const rbacAccessRepository = createCurrentRbacAccessRepository();
+
+      for (const snippet of snippetsInFolder) {
+        for (const target of targets) {
+          if (target.type === "user" && target.id === userId) continue;
+          await rbacAccessRepository.upsertSnippetAccess({
+            snippetId: snippet.id,
+            grantedBy: userId,
+            expiresAt,
+            ...(target.type === "user"
+              ? {
+                  targetType: "user" as const,
+                  targetUserId: target.id as string,
+                }
+              : {
+                  targetType: "role" as const,
+                  targetRoleId: target.id as number,
+                }),
+          });
+        }
+      }
+
+      databaseLogger.success("Snippet folder shared successfully", {
+        operation: "rbac_snippet_folder_share",
+        userId,
+        folder,
+        snippetsShared: snippetsInFolder.length,
+        targets: targets.length,
+      });
+
+      res.json({
+        success: true,
+        expiresAt,
+        snippetsShared: snippetsInFolder.length,
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to share snippet folder", error, {
+        operation: "share_snippet_folder",
+        folder,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to share snippet folder" });
+    }
+  },
+);
+
 router.delete(
   "/snippet/:id/access/:accessId",
   authenticateJWT,

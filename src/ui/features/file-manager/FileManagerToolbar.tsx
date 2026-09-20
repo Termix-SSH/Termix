@@ -8,10 +8,12 @@ import {
   Folder,
   FolderPlus,
   Grid3X3,
+  Laptop,
   Layout,
   List,
   Plus,
   RefreshCw,
+  Rows3,
   Search,
   Trash2,
   Upload,
@@ -33,6 +35,7 @@ import type { FileItem } from "@/types/index";
 type SortBy = "name" | "modified" | "size";
 type SortOrder = "asc" | "desc";
 type ViewMode = "grid" | "list";
+type Density = "comfortable" | "compact";
 
 type FileManagerToolbarProps = {
   t: (key: string) => string;
@@ -46,6 +49,8 @@ type FileManagerToolbarProps = {
   setSearchQuery: (query: string) => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  density: Density;
+  setDensity: (density: Density) => void;
   sortBy: SortBy;
   setSortBy: (sortBy: SortBy) => void;
   sortOrder: SortOrder;
@@ -61,6 +66,13 @@ type FileManagerToolbarProps = {
   handleFilesDropped: (fileList: FileList) => void;
   handleCreateNewFolder: () => void;
   handleCreateNewFile: () => void;
+  /** Desktop app only: show the Local | Remote split-view toggle. */
+  showLocalPaneToggle?: boolean;
+  localPaneOpen?: boolean;
+  onToggleLocalPane?: () => void;
+  /** Desktop directories sidebar (mobile uses the overlay instead). */
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 };
 
 function Breadcrumb({
@@ -197,6 +209,8 @@ export function FileManagerToolbar({
   setSearchQuery,
   viewMode,
   setViewMode,
+  density,
+  setDensity,
   sortBy,
   setSortBy,
   sortOrder,
@@ -212,6 +226,11 @@ export function FileManagerToolbar({
   handleFilesDropped,
   handleCreateNewFolder,
   handleCreateNewFile,
+  showLocalPaneToggle = false,
+  localPaneOpen = false,
+  onToggleLocalPane,
+  sidebarOpen = true,
+  onToggleSidebar,
 }: FileManagerToolbarProps) {
   return (
     <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
@@ -220,9 +239,18 @@ export function FileManagerToolbar({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setMobileSidebarOpen((open) => !open)}
-            className="md:hidden size-8 rounded-none"
+            onClick={() => {
+              // Below md the sidebar is an overlay; above it, a persisted
+              // show/hide of the directories panel.
+              const isDesktop =
+                typeof window !== "undefined" &&
+                window.matchMedia("(min-width: 768px)").matches;
+              if (isDesktop && onToggleSidebar) onToggleSidebar();
+              else setMobileSidebarOpen((open) => !open);
+            }}
+            className={`size-8 rounded-none ${sidebarOpen ? "" : "md:bg-accent-brand/10 md:text-accent-brand"}`}
             title={t("fileManager.toggleSidebar")}
+            aria-pressed={!sidebarOpen}
           >
             <Layout className="size-4" />
           </Button>
@@ -304,12 +332,29 @@ export function FileManagerToolbar({
             />
           </div>
 
+          {showLocalPaneToggle && (
+            <Button
+              variant={localPaneOpen ? "secondary" : "ghost"}
+              size="icon"
+              onClick={onToggleLocalPane}
+              title={
+                localPaneOpen
+                  ? t("fileManager.hideLocalFiles")
+                  : t("fileManager.showLocalFiles")
+              }
+              aria-pressed={localPaneOpen}
+              className={`hidden md:inline-flex size-8 rounded-none border border-border ${localPaneOpen ? "bg-accent-brand/10 text-accent-brand border-accent-brand/40" : ""}`}
+            >
+              <Laptop className="size-4" />
+            </Button>
+          )}
+
           <div className="flex items-center border border-border rounded-none overflow-hidden">
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="icon"
               onClick={() => setViewMode("grid")}
-              className={`size-8 rounded-none border-y-0 border-l-0 border-r border-border ${viewMode === "grid" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+              className={`size-8 rounded-none ${viewMode === "grid" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
             >
               <Grid3X3 className="size-4" />
             </Button>
@@ -317,9 +362,24 @@ export function FileManagerToolbar({
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="icon"
               onClick={() => setViewMode("list")}
-              className={`size-8 rounded-none border-y-0 border-r-0 border-border ${viewMode === "list" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+              className={`size-8 rounded-none border-l border-border ${viewMode === "list" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
             >
               <List className="size-4" />
+            </Button>
+            <Button
+              variant={density === "compact" ? "secondary" : "ghost"}
+              size="icon"
+              onClick={() =>
+                setDensity(density === "compact" ? "comfortable" : "compact")
+              }
+              className={`size-8 rounded-none border-l border-border ${density === "compact" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
+              title={t(
+                density === "compact"
+                  ? "fileManager.comfortableLayout"
+                  : "fileManager.compactLayout",
+              )}
+            >
+              <Rows3 className="size-4" />
             </Button>
           </div>
 

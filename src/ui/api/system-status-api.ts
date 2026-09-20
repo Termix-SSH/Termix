@@ -10,12 +10,13 @@ import {
 // ALERTS
 // ============================================================================
 
-export async function setupTOTP(): Promise<{
+export async function setupTOTP(credential?: string): Promise<{
   secret: string;
   qr_code: string;
+  additional?: boolean;
 }> {
   try {
-    const response = await authApi.post("/users/totp/setup");
+    const response = await authApi.post("/users/totp/setup", { credential });
     return response.data;
   } catch (error) {
     handleApiError(error as AxiosError, "setup TOTP");
@@ -155,7 +156,7 @@ export async function getReleasesRSS(
 }
 
 export interface VersionInfo {
-  status?: "up_to_date" | "requires_update" | "beta";
+  status?: "up_to_date" | "requires_update" | "beta" | "unknown";
   /** Same value as remoteVersion; the endpoint sends both. */
   version?: string;
   localVersion?: string;

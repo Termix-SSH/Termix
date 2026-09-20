@@ -214,20 +214,6 @@ Salva um conjunto de abas com a divisão da tela e reabre tudo com um clique. O 
 </td>
 <td width="50%" valign="top">
 
-**Configuração guiada:**
-Uma configuração curta te leva por escolher uma predefinição de interface, o tema, as funcionalidades que queres e o teu primeiro host. O modo simples esconde o que não usas, e dá para refazer a configuração ou trocar de predefinição quando quiseres.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Desktop independente e sincronização:**
-O aplicativo de desktop roda sozinho, com backend e banco de dados locais, sem servidor. Também dá para ligar num servidor Termix e sincronizar nos dois sentidos hosts, credenciais, trechos e mais, e escolher se as conexões saem da tua máquina ou passam pelo servidor.
-
-</td>
-<td width="50%" valign="top">
-
 **Linha de comando:**
 Um CLI `termix` para o teu shell e os teus scripts. Abre terminais, roda um comando num host ou numa frota inteira, move arquivos por SFTP e gerencia hosts, trechos e credenciais. Instala com `npm install -g @termix-cli/cli` ou pega um binário independente. Vê a [documentação do CLI](https://docs.termix.site/cli).
 
@@ -237,7 +223,7 @@ Um CLI `termix` para o teu shell e os teus scripts. Abre terminais, roda um coma
 <td width="50%" valign="top">
 
 **Segurança:**
-Senhas, chaves e outros segredos são criptografados por usuário, e os próprios arquivos do banco de dados podem ser criptografados em disco. Vê a [documentação](https://docs.termix.site/security) para entender como funciona.
+Senhas, chaves e outros segredos são criptografados por usuário, e os próprios arquivos do banco de dados podem ser criptografados em disco. Vê a [documentação](https://docs.termix.site/features/authentication/security/) para entender como funciona.
 
 </td>
 <td width="50%" valign="top">
@@ -267,8 +253,13 @@ Cerca de 30 idiomas incluídos, gerenciados pelo [Crowdin](https://docs.termix.s
 - **Atalhos de teclado** - Trocar de aba, fechar abas e mais, tudo remapeável
 - **Wake-on-LAN** - Liga uma máquina pelo Termix ou por um passo de automação
 - **Autenticação por proxy confiável** - Deixa um proxy reverso cuidar do login e repassar o usuário
-- **SSH bem completo** - Hosts de salto, Warpgate, pedidos de TOTP, SOCKS5, verificação de chave de host, preenchimento automático de senha, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, registro do terminal, encaminhamento de agente, agente SSH do Bitwarden, assinatura SSH com HashiCorp Vault e mais
+- **Marca própria** - Os administradores podem rebatizar a instância com nome, logo e cores próprios
+- **Endpoints web** - Abre a interface web do próprio host, como a página de administração de um roteador, embutida no Termix em vez de numa aba separada
+- **Salas de colaboração** - Salas persistentes onde um grupo pode passar de uma sessão para outra junto, com um palco de apresentação e convites
+- **SSH bem completo** - Hosts de salto, Warpgate, pedidos de TOTP, SOCKS5, verificação de chave de host, preenchimento automático de senha, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, registro do terminal, encaminhamento de agente, agente SSH do Bitwarden, assinatura SSH com HashiCorp Vault, Step CA, 1Password Connect e mais
 - **Termix ID** - Uma versão embutida do sshid.io. Registra um identificador, publica as tuas chaves públicas numa URL de resolução e emite certificados SSH pela CA embutida
+- **Sugestões automáticas de histórico de comandos** - Sugestões dentro do terminal enquanto tu digitas, baseadas no teu histórico de comandos
+- **Desktop independente e sincronização** - O aplicativo de desktop roda sozinho, com backend e banco de dados locais, e pode opcionalmente sincronizar com um servidor Termix
 
 </details>
 

@@ -214,20 +214,6 @@ Lưu một bộ thẻ cùng cách chia màn hình rồi mở lại toàn bộ ch
 </td>
 <td width="50%" valign="top">
 
-**Cài đặt có hướng dẫn:**
-Một phần cài đặt ngắn sẽ hướng bạn chọn kiểu giao diện, chủ đề, những tính năng bạn muốn và máy chủ đầu tiên. Chế độ đơn giản ẩn bớt những gì bạn không dùng, và bạn có thể chạy lại phần cài đặt hoặc đổi kiểu bất cứ lúc nào.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Ứng dụng máy tính độc lập và đồng bộ:**
-Ứng dụng máy tính chạy độc lập với backend và cơ sở dữ liệu riêng, không cần máy chủ. Bạn cũng có thể nối nó với một máy chủ Termix để đồng bộ hai chiều máy chủ, thông tin đăng nhập, đoạn lệnh và nhiều thứ khác, và chọn kết nối xuất phát từ máy của bạn hay đi qua máy chủ.
-
-</td>
-<td width="50%" valign="top">
-
 **Dòng lệnh:**
 Công cụ `termix` cho shell và các script của bạn. Mở terminal, chạy một lệnh trên một máy chủ hoặc cả một nhóm, chuyển tệp qua SFTP, và quản lý máy chủ, đoạn lệnh và thông tin đăng nhập. Cài bằng `npm install -g @termix-cli/cli` hoặc tải bản chạy độc lập. Xem [tài liệu CLI](https://docs.termix.site/cli).
 
@@ -237,7 +223,7 @@ Công cụ `termix` cho shell và các script của bạn. Mở terminal, chạy
 <td width="50%" valign="top">
 
 **Bảo mật:**
-Mật khẩu, khoá và các thông tin bí mật khác được mã hoá theo từng người dùng, và bản thân các tệp cơ sở dữ liệu cũng có thể mã hoá trên ổ đĩa. Xem [tài liệu](https://docs.termix.site/security) để biết cách hoạt động.
+Mật khẩu, khoá và các thông tin bí mật khác được mã hoá theo từng người dùng, và bản thân các tệp cơ sở dữ liệu cũng có thể mã hoá trên ổ đĩa. Xem [tài liệu](https://docs.termix.site/features/authentication/security/) để biết cách hoạt động.
 
 </td>
 <td width="50%" valign="top">
@@ -267,8 +253,13 @@ Có sẵn khoảng 30 ngôn ngữ, quản lý qua [Crowdin](https://docs.termix.
 - **Phím tắt** - Chuyển giữa các thẻ, đóng thẻ và nhiều thao tác khác, đều gán lại được
 - **Wake-on-LAN** - Đánh thức một máy từ Termix hoặc từ một bước tự động hoá
 - **Xác thực qua proxy tin cậy** - Để reverse proxy lo phần đăng nhập rồi chuyển thông tin người dùng vào
-- **SSH nhiều tính năng** - Máy chủ trung gian, Warpgate, hỏi mã TOTP, SOCKS5, kiểm tra khoá máy chủ, tự điền mật khẩu, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, ghi nhật ký terminal, chuyển tiếp agent, SSH agent của Bitwarden, ký SSH bằng HashiCorp Vault và nhiều thứ khác
+- **Nhãn trắng** - Quản trị viên có thể đổi thương hiệu hệ thống với tên, logo và màu sắc riêng
+- **Điểm cuối web** - Mở giao diện web riêng của một máy chủ, chẳng hạn trang quản trị router, ngay trong Termix thay vì mở một thẻ riêng
+- **Phòng cộng tác** - Phòng lâu dài để cả nhóm cùng chuyển qua lại giữa các phiên, có sân khấu người trình bày và lời mời
+- **SSH nhiều tính năng** - Máy chủ trung gian, Warpgate, hỏi mã TOTP, SOCKS5, kiểm tra khoá máy chủ, tự điền mật khẩu, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, ghi nhật ký terminal, chuyển tiếp agent, SSH agent của Bitwarden, ký SSH bằng HashiCorp Vault, Step CA, 1Password Connect và nhiều thứ khác
 - **Termix ID** - Bản dựng sẵn theo kiểu sshid.io. Đăng ký một tên, công bố khoá công khai của bạn tại một địa chỉ phân giải, và cấp chứng chỉ SSH từ CA tích hợp
+- **Gợi ý lịch sử lệnh** - Gợi ý ngay trong terminal khi bạn gõ, dựa trên lịch sử lệnh của bạn
+- **Ứng dụng máy tính độc lập và đồng bộ** - Ứng dụng máy tính chạy độc lập với backend và cơ sở dữ liệu riêng, có thể đồng bộ tuỳ chọn với một máy chủ Termix
 
 </details>
 
