@@ -123,6 +123,16 @@ export class SSHAuthManager {
       return;
     }
 
+    // FortiToken-style prompt: asks the user to type a code OR the literal
+    // word "push" (e.g. "Enter your Token or type 'push' to receive a push
+    // notification:"). Unlike JumpCloud/DUO's confirm-only push, this needs a
+    // text field, so it must not fall into the empty-answerable push pattern
+    // below. Checked first since its text also contains "push notification".
+    const fortiTokenPattern = /type\s+['"]?push['"]?/i;
+    const isFortiTokenPrompt = promptTexts.some((p) =>
+      fortiTokenPattern.test(p),
+    );
+
     // JumpCloud Protect / DUO-style push MFA: a menu choice ("Choose [1] Push,
     // or [2] TOTP:") followed by an empty-answerable confirm ("Press enter to
     // send Push request:"). Checked before the TOTP regex because the menu
@@ -130,7 +140,8 @@ export class SSHAuthManager {
     // misrouted into the numeric-code flow.
     const pushPromptPattern =
       /choose.*push.*totp|press enter.*(push|send)|push notification|authentication by phone/i;
-    const isPushPrompt = promptTexts.some((p) => pushPromptPattern.test(p));
+    const isPushPrompt =
+      !isFortiTokenPrompt && promptTexts.some((p) => pushPromptPattern.test(p));
 
     if (isPushPrompt) {
       sshLogger.info("Push/menu MFA prompt detected", {

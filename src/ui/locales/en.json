@@ -2182,6 +2182,7 @@
     "mfaPromptRequired": "Authentication Required",
     "mfaPushRequired": "Push Authentication Required",
     "mfaMenuPlaceholder": "Enter your response",
+    "mfaCodeOrPushPlaceholder": "Code or \"push\"",
     "mfaWaitingApproval": "Waiting for approval on your device...",
     "mfaSendRequest": "Send Request",
     "warpgateAuthRequired": "Warpgate Authentication Required",

@@ -170,6 +170,46 @@ describe("SSHAuthManager.handleKeyboardInteractive", () => {
     }
   });
 
+  it("routes a FortiToken prompt to the totp flow instead of the push-confirm flow", () => {
+    const { manager, sent } = createManager();
+    const finish = vi.fn();
+
+    manager.handleKeyboardInteractive(
+      "",
+      "",
+      "",
+      [
+        {
+          prompt:
+            "Enter your Token or type 'push' to receive a push notification: ",
+          echo: true,
+        },
+      ],
+      finish,
+      { username: "root", authType: "none" },
+    );
+
+    expect(sent).toEqual([
+      {
+        type: "connection_log",
+        data: {
+          stage: "auth",
+          level: "info",
+          message: "TOTP verification required",
+        },
+      },
+      {
+        type: "totp_required",
+        prompt:
+          "Enter your Token or type 'push' to receive a push notification: ",
+      },
+    ]);
+
+    manager.context.keyboardInteractiveFinish?.(["push"]);
+
+    expect(finish).toHaveBeenCalledWith(["push"]);
+  });
+
   it("routes Warpgate prompts to the warpgate flow, not the generic path", () => {
     const { manager, sent } = createManager();
     const finish = vi.fn();
