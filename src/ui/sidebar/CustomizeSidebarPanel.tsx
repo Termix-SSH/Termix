@@ -97,6 +97,20 @@ export function CustomizeSidebarPanel({
                 }
               />
             </SettingRow>
+            <SettingRow
+              label={t("hosts.showFolderPaths")}
+              description={t("hosts.showFolderPathsDesc")}
+            >
+              <FakeSwitch
+                checked={preferences.display.showFolderPaths}
+                onChange={(v) =>
+                  update((prev) => ({
+                    ...prev,
+                    display: { ...prev.display, showFolderPaths: v },
+                  }))
+                }
+              />
+            </SettingRow>
             <div className="flex flex-col gap-1.5 py-3 border-b border-border last:border-0">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium leading-snug">

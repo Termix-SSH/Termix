@@ -49,6 +49,8 @@ export interface HostSidebarDisplayPreferences {
   statusColorScheme: StatusColorScheme;
   /** When true, a host row needs a double click to launch its session. */
   openOnDoubleClick: boolean;
+  /** When false, nested folders hide the parent-path breadcrumb before their name. */
+  showFolderPaths: boolean;
 }
 
 export interface HostSidebarPreferences {
@@ -130,6 +132,7 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       trayTrigger: "always",
       statusColorScheme: "accent",
       openOnDoubleClick: false,
+      showFolderPaths: true,
     },
   };
 }
@@ -203,6 +206,10 @@ export function sanitizeHostSidebarPreferences(
       typeof displayObj.openOnDoubleClick === "boolean"
         ? displayObj.openOnDoubleClick
         : defaults.display.openOnDoubleClick,
+    showFolderPaths:
+      typeof displayObj.showFolderPaths === "boolean"
+        ? displayObj.showFolderPaths
+        : defaults.display.showFolderPaths,
   };
 
   return {

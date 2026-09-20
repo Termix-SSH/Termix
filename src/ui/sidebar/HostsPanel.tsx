@@ -1076,6 +1076,7 @@ export function HostsPanel({
             trayTrigger={sidebarPrefs.display.trayTrigger}
             showTags={sidebarPrefs.display.showTags}
             openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
+            showFolderPaths={sidebarPrefs.display.showFolderPaths}
           />
         </div>
       )}

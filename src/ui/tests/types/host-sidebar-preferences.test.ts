@@ -26,6 +26,7 @@ describe("defaultHostSidebarPreferences", () => {
         trayTrigger: "always",
         statusColorScheme: "accent",
         openOnDoubleClick: false,
+        showFolderPaths: true,
       },
     });
   });
@@ -63,6 +64,7 @@ describe("sanitizeHostSidebarPreferences", () => {
         trayTrigger: "click",
         statusColorScheme: "status",
         openOnDoubleClick: true,
+        showFolderPaths: false,
       },
     };
     expect(sanitizeHostSidebarPreferences(valid)).toEqual(valid);
@@ -76,6 +78,16 @@ describe("sanitizeHostSidebarPreferences", () => {
       sanitizeHostSidebarPreferences({ display: { openOnDoubleClick: "yes" } })
         .display.openOnDoubleClick,
     ).toBe(false);
+  });
+
+  it("defaults showFolderPaths to true when missing or not a boolean", () => {
+    expect(
+      sanitizeHostSidebarPreferences({ display: {} }).display.showFolderPaths,
+    ).toBe(true);
+    expect(
+      sanitizeHostSidebarPreferences({ display: { showFolderPaths: "no" } })
+        .display.showFolderPaths,
+    ).toBe(true);
   });
 
   it("falls back to defaults for invalid enum values", () => {

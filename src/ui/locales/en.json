@@ -1404,6 +1404,8 @@
     "actionsClick": "Click to expand/collapse",
     "openOnDoubleClick": "Open on double click",
     "openOnDoubleClickDesc": "Require a double click to open a host session instead of a single click",
+    "showFolderPaths": "Show folder paths",
+    "showFolderPathsDesc": "Show the parent folder path above nested subfolder names. Subfolders stay indented either way.",
     "deletedHost": "Deleted {{name}}",
     "copiedToClipboard": "Copied to clipboard",
     "terminalUrlCopied": "Terminal URL copied",

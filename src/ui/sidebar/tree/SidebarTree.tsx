@@ -87,6 +87,7 @@ export function SidebarTree({
   trayTrigger = "hover",
   showTags = true,
   openOnDoubleClick = false,
+  showFolderPaths = true,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (
@@ -108,6 +109,8 @@ export function SidebarTree({
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
   openOnDoubleClick?: boolean;
+  /** When false, nested folders hide the parent-path breadcrumb before their name. */
+  showFolderPaths?: boolean;
 }) {
   const { t } = useTranslation();
   // Knobs with no other owner come straight from the interface preset; the
@@ -996,6 +999,7 @@ export function SidebarTree({
                       trayTrigger={trayTrigger}
                       showTags={showTags}
                       openOnDoubleClick={openOnDoubleClick}
+                      showFolderPaths={showFolderPaths}
                       arrangeMode={arrangeMode}
                       isDragging={
                         draggedReorderKey === `folder:${item.path ?? item.name}`

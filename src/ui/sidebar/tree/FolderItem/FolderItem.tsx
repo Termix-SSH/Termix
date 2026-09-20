@@ -68,6 +68,7 @@ export function FolderItem({
   trayTrigger = "hover",
   showTags = true,
   openOnDoubleClick = false,
+  showFolderPaths = true,
   arrangeMode = false,
   isDragging = false,
   onReorderDrop,
@@ -115,6 +116,8 @@ export function FolderItem({
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
   openOnDoubleClick?: boolean;
+  /** When false, nested folders hide the parent-path breadcrumb before their name. */
+  showFolderPaths?: boolean;
   /** When true (rearranging unlocked), the header can be dragged and its
    * top/bottom edges become reorder drop zones. The middle still accepts
    * hosts dropped into the folder. */
@@ -152,7 +155,8 @@ export function FolderItem({
   // Nested folders show their parent path as a muted breadcrumb so depth stays
   // legible even when a folder is reached via search auto-expand rather than
   // by manually opening every ancestor.
-  const pathSegments = isGroup ? [] : folderPath.split(" / ");
+  const pathSegments =
+    isGroup || !showFolderPaths ? [] : folderPath.split(" / ");
   const breadcrumb =
     pathSegments.length > 1 ? pathSegments.slice(0, -1).join(" / ") : null;
   const folderHosts = collectAllHosts(folder.children);
@@ -337,6 +341,7 @@ export function FolderItem({
                 trayTrigger={trayTrigger}
                 showTags={showTags}
                 openOnDoubleClick={openOnDoubleClick}
+                showFolderPaths={showFolderPaths}
                 arrangeMode={arrangeMode}
                 onReorderDrop={onReorderDrop}
                 onFolderDragStart={onFolderDragStart}
