@@ -62,6 +62,7 @@ export function TabBar({
   onToggleAppFullscreen,
   rightDockOpen,
   onToggleRightDock,
+  showTabNumbers,
 }: {
   tabs: Tab[];
   activeTabId: string;
@@ -82,6 +83,7 @@ export function TabBar({
   onToggleAppFullscreen: () => void;
   rightDockOpen?: boolean;
   onToggleRightDock?: () => void;
+  showTabNumbers?: boolean;
 }) {
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
@@ -422,6 +424,12 @@ export function TabBar({
                 {showInPaneIndicator && (
                   <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 size-1 rounded-full bg-muted-foreground/40 z-10" />
                 )}
+                {showTabNumbers && tab.type !== "dashboard" && (
+                  <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/70">
+                    {tabs.slice(0, index).filter((t) => t.type !== "dashboard")
+                      .length + 1}
+                  </span>
+                )}
                 {tabIcon(tab.type)}
                 {tab.type !== "dashboard" && renamingTabId === tab.id ? (
                   <input
@@ -543,13 +551,20 @@ export function TabBar({
               sideOffset={1}
               className="w-56 border-t-0 [clip-path:inset(0px_-4px_-4px_-4px)] p-0"
             >
-              {tabs.map((tab) => (
+              {tabs.map((tab, index) => (
                 <div
                   key={tab.id}
                   onClick={() => onSetActiveTab(tab.id)}
                   className={`flex items-center justify-between px-2 py-2 text-xs cursor-default hover:bg-accent hover:text-accent-foreground ${tab.id === activeTabId ? "text-foreground" : "text-muted-foreground"}`}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {showTabNumbers && tab.type !== "dashboard" && (
+                      <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/70">
+                        {tabs
+                          .slice(0, index)
+                          .filter((t) => t.type !== "dashboard").length + 1}
+                      </span>
+                    )}
                     {tabIcon(tab.type)}
                     <span className="truncate">
                       {tab.type === "dashboard"

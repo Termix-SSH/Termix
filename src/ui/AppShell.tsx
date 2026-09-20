@@ -641,6 +641,9 @@ export function AppShell({
       const v = localStorage.getItem("commandPaletteShortcutEnabled");
       return v !== null ? v === "true" : true;
     });
+  const [showTabNumbers, setShowTabNumbers] = useState<boolean>(
+    () => localStorage.getItem("showTabNumbers") === "true",
+  );
   const terminalRefs = useRef<Map<string, ReturnType<typeof createRef>>>(
     new Map(),
   );
@@ -929,6 +932,14 @@ export function AppShell({
         "commandPaletteShortcutEnabledChanged",
         handler,
       );
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      setShowTabNumbers(localStorage.getItem("showTabNumbers") === "true");
+    };
+    window.addEventListener("showTabNumbersChanged", handler);
+    return () => window.removeEventListener("showTabNumbersChanged", handler);
   }, []);
 
   useEffect(() => {
@@ -3081,6 +3092,7 @@ export function AppShell({
                 onToggleAppFullscreen={toggleAppFullscreen}
                 rightDockOpen={rightRailView !== null}
                 onToggleRightDock={isMobile ? undefined : toggleRightDock}
+                showTabNumbers={showTabNumbers}
               />
               <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}

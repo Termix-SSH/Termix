@@ -768,6 +768,9 @@ export function UserProfilePanel({
   const [confirmTabClose, setConfirmTabClose] = useState(
     () => localStorage.getItem("confirmTabClose") === "true",
   );
+  const [showTabNumbers, setShowTabNumbers] = useState(
+    () => localStorage.getItem("showTabNumbers") === "true",
+  );
   const [hiddenRailTabs, setHiddenRailTabs] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("hiddenRailTabs");
@@ -2119,6 +2122,19 @@ export function UserProfilePanel({
                   localStorage.setItem("confirmTabClose", v.toString());
                   if (storageMode === "cloud")
                     saveToCloud({ confirmTabClose: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.showTabNumbers")}
+              description={t("newUi.sidebar.userProfile.showTabNumbersDesc")}
+            >
+              <FakeSwitch
+                checked={showTabNumbers}
+                onChange={(v) => {
+                  setShowTabNumbers(v);
+                  localStorage.setItem("showTabNumbers", v.toString());
+                  window.dispatchEvent(new Event("showTabNumbersChanged"));
                 }}
               />
             </SettingRow>
