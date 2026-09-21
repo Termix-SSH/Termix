@@ -11,6 +11,7 @@
  * runtime, for the same reason. If you change the schema, change both.
  */
 
+import semver from "semver";
 import { isFirstParty, TRANSPORT_OWNER_CAPABILITY } from "./first-party.js";
 
 export const PLUGIN_PERMISSIONS = [
@@ -69,6 +70,8 @@ const ID_PATTERN = /^[a-z0-9-]+$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/;
 const API_VERSION_PATTERN = /^[0-9]+$/;
 const API_PREFIX_PATTERN = /^[a-z0-9-]+$/;
+/** Service names are dotted, e.g. "ssh.transport" or "host-metrics.stream". */
+const SERVICE_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 
 /**
  * The plugin SDK major version this build implements. A manifest asking for a
@@ -113,7 +116,29 @@ export interface PluginManifest {
     apiPrefix?: string;
   };
   dependencies?: { plugins?: Record<string, string> };
+  /**
+   * Named services this plugin exposes to other plugins. Each one is gated by
+   * its own RBAC permission, which the plugin's own permissionGroup must
+   * declare -- see parseManifest.
+   */
+  provides?: PluginServiceProvide[];
+  /** Named services this plugin needs another active plugin to provide. */
+  requires?: PluginServiceRequire[];
   sidecars: Array<{ id: string; binary: string }>;
+}
+
+export interface PluginServiceProvide {
+  service: string;
+  version: string;
+  /** The role permission a calling user needs to reach this service. */
+  permission: string;
+}
+
+export interface PluginServiceRequire {
+  service: string;
+  versionRange: string;
+  /** When true, an unsatisfied requirement is skipped instead of failing activation. */
+  optional?: boolean;
 }
 
 export function validateManifest(manifest: unknown): string[] {
@@ -209,11 +234,93 @@ export function validateManifest(manifest: unknown): string[] {
     errors.push('Field "sidecars" must be an array');
   }
 
+  errors.push(...validateProvides(m.provides));
+  errors.push(...validateRequires(m.requires));
+
   if (m.contributes && typeof m.contributes === "object") {
     errors.push(
       ...validateContributes(m.contributes as Record<string, unknown>),
     );
   }
+
+  return errors;
+}
+
+function validateProvides(provides: unknown): string[] {
+  if (provides === undefined) return [];
+  if (!Array.isArray(provides)) return ['Field "provides" must be an array'];
+
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  provides.forEach((entry: unknown, index: number) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`provides[${index}] must be an object`);
+      return;
+    }
+    const e = entry as Record<string, unknown>;
+
+    if (typeof e.service !== "string" || !SERVICE_PATTERN.test(e.service)) {
+      errors.push(
+        `provides[${index}].service must match ${SERVICE_PATTERN}, got: "${String(e.service)}"`,
+      );
+    } else if (seen.has(e.service)) {
+      errors.push(`provides[${index}].service is a duplicate: "${e.service}"`);
+    } else {
+      seen.add(e.service);
+    }
+
+    if (typeof e.version !== "string" || !SEMVER_PATTERN.test(e.version)) {
+      errors.push(
+        `provides[${index}].version must be valid semver, got: "${String(e.version)}"`,
+      );
+    }
+
+    if (typeof e.permission !== "string" || e.permission.length === 0) {
+      errors.push(`provides[${index}].permission is required`);
+    }
+  });
+
+  return errors;
+}
+
+function validateRequires(requires: unknown): string[] {
+  if (requires === undefined) return [];
+  if (!Array.isArray(requires)) return ['Field "requires" must be an array'];
+
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  requires.forEach((entry: unknown, index: number) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`requires[${index}] must be an object`);
+      return;
+    }
+    const e = entry as Record<string, unknown>;
+
+    if (typeof e.service !== "string" || !SERVICE_PATTERN.test(e.service)) {
+      errors.push(
+        `requires[${index}].service must match ${SERVICE_PATTERN}, got: "${String(e.service)}"`,
+      );
+    } else if (seen.has(e.service)) {
+      errors.push(`requires[${index}].service is a duplicate: "${e.service}"`);
+    } else {
+      seen.add(e.service);
+    }
+
+    if (
+      typeof e.versionRange !== "string" ||
+      semver.validRange(e.versionRange) === null
+    ) {
+      errors.push(
+        `requires[${index}].versionRange must be a valid semver range, got: "${String(e.versionRange)}"`,
+      );
+    }
+
+    if ("optional" in e && typeof e.optional !== "boolean") {
+      errors.push(`requires[${index}].optional must be a boolean`);
+    }
+  });
 
   return errors;
 }
@@ -329,6 +436,21 @@ export function parseManifest(raw: unknown): {
         `Plugin targets SDK api version "${manifest.engine.api}", this Termix build implements "${SUPPORTED_PLUGIN_API_VERSION}"`,
       ],
     };
+  }
+
+  // A service permission has to be one the plugin's own permissionGroup
+  // declares, or it would never reach the catalog and every call through it
+  // would deny against a permission no admin can grant.
+  const declaredPermissions =
+    manifest.contributes?.permissionGroup?.permissions ?? [];
+  for (const entry of manifest.provides ?? []) {
+    if (!declaredPermissions.includes(entry.permission)) {
+      return {
+        errors: [
+          `Service "${entry.service}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        ],
+      };
+    }
   }
 
   // Refused outright rather than ignored: a plugin that asked to run in-process

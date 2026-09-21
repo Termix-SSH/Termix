@@ -224,6 +224,56 @@
         }
       }
     },
+    "provides": {
+      "type": "array",
+      "description": "Named services this plugin exposes to other plugins.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service", "version", "permission"],
+        "properties": {
+          "service": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$",
+            "description": "Dotted service name, e.g. \"ssh.transport\"."
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$",
+            "description": "Semver version of this service contract."
+          },
+          "permission": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Role permission a calling user needs. Must also appear in contributes.permissionGroup.permissions."
+          }
+        }
+      }
+    },
+    "requires": {
+      "type": "array",
+      "description": "Named services this plugin needs another active plugin to provide.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service", "versionRange"],
+        "properties": {
+          "service": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+          },
+          "versionRange": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Semver range, e.g. \"^1.2.0\"."
+          },
+          "optional": {
+            "type": "boolean",
+            "description": "When true, an unsatisfied requirement is skipped instead of failing activation."
+          }
+        }
+      }
+    },
     "sidecars": {
       "type": "array",
       "items": {

@@ -24,7 +24,19 @@
         "icon": "Sparkles",
         "openFrom": ["rail", "palette"]
       }
-    ]
+    ],
+    "permissionGroup": {
+      "group": "ai",
+      "permissions": [
+        "ai.use",
+        "ai.manage_providers",
+        "ai.apply_proposals",
+        "ai.services.use"
+      ],
+      "defaultForRole": {
+        "admin": ["ai.services.use"]
+      }
+    }
   },
   "sidecars": []
 }

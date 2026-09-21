@@ -1,0 +1,36 @@
+{
+  "id": "sample-provider",
+  "name": "Sample Provider",
+  "version": "1.0.0",
+  "description": "Gates a service behind a permission its own group never declares.",
+  "author": {
+    "name": "Jane Doe"
+  },
+  "license": "MIT",
+  "category": "Productivity",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": {
+    "backend": true,
+    "frontend": false,
+    "electron": false,
+    "platforms": ["linux"]
+  },
+  "permissions": ["hosts.read"],
+  "contributes": {
+    "permissionGroup": {
+      "group": "sampleprovider",
+      "permissions": ["sampleprovider.greet.use"]
+    }
+  },
+  "provides": [
+    {
+      "service": "sampleprovider.greet",
+      "version": "1.2.0",
+      "permission": "sampleprovider.undeclared"
+    }
+  ],
+  "sidecars": []
+}

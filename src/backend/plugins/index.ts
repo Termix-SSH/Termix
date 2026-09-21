@@ -254,11 +254,118 @@ export async function initializePlugins(): Promise<LoadedPlugin[]> {
   return loaded;
 }
 
+/**
+ * Puts a plugin's declared permissions into the role catalog.
+ *
+ * Until this ran, contributes.permissionGroup was validated but never
+ * consumed, so a plugin permission could not be granted: PUT /rbac/roles/:id
+ * rejects any string isValidPermission does not know. Registering here is what
+ * makes a plugin permission appear in the admin role editor exactly like
+ * hosts.view does.
+ */
+async function registerPluginPermissions(plugin: LoadedPlugin): Promise<void> {
+  const group = plugin.manifest.contributes?.permissionGroup;
+  if (!group) return;
+
+  const { registerPermissionGroup } =
+    await import("../utils/permission-catalog.js");
+  registerPermissionGroup({
+    group: group.group,
+    permissions: group.permissions,
+  });
+
+  if (group.defaultForRole) {
+    await applyRoleDefaults(plugin.id, group.defaultForRole);
+  }
+}
+
+/**
+ * Applies the plugin's declared role suggestion.
+ *
+ * Additive only, and only for a permission the role does not already list.
+ * An admin's later revoke must never be re-granted on the next restart, which
+ * is the same rule ensureSystemRoles follows for the built-in roles.
+ */
+async function applyRoleDefaults(
+  pluginId: string,
+  defaults: Record<string, string[]>,
+): Promise<void> {
+  const { createCurrentRoleRepository } =
+    await import("../database/repositories/factory.js");
+  const { PermissionManager } = await import("../utils/permission-manager.js");
+  const repository = createCurrentRoleRepository();
+
+  for (const [roleName, wanted] of Object.entries(defaults)) {
+    try {
+      const role = await repository.findRoleByName(roleName);
+      if (!role) continue;
+
+      let current: unknown;
+      try {
+        current = role.permissions ? JSON.parse(role.permissions) : [];
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(current)) continue;
+
+      // A wildcard the role already holds covers these, so adding them would
+      // only be noise in the editor.
+      const missing = wanted.filter(
+        (permission) => !coveredBy(current as string[], permission),
+      );
+      if (missing.length === 0) continue;
+
+      await repository.updateRole(role.id, {
+        permissions: JSON.stringify([...(current as string[]), ...missing]),
+      });
+
+      const memberIds = await repository.listRoleUserIds(role.id);
+      for (const memberId of memberIds) {
+        PermissionManager.getInstance().invalidateUserPermissionCache(memberId);
+      }
+    } catch (error) {
+      pluginLogger.warn(
+        `Could not apply ${pluginId} role defaults for ${roleName}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        { operation: "plugin_permissions" },
+      );
+    }
+  }
+}
+
+function coveredBy(permissions: string[], permission: string): boolean {
+  if (permissions.includes("*") || permissions.includes(permission)) {
+    return true;
+  }
+  const parts = permission.split(".");
+  for (let i = parts.length; i > 0; i--) {
+    if (permissions.includes(`${parts.slice(0, i).join(".")}.*`)) return true;
+  }
+  return false;
+}
+
 export async function activatePlugin(
   pluginId: string,
   ownerUserId?: string,
 ): Promise<void> {
   const { loader: pluginLoader, broker: pluginBroker } = getPluginRuntime();
+
+  // Before activate: a plugin's own activate() may already want to check one
+  // of its permissions.
+  const plugin = pluginLoader.get(pluginId);
+  if (plugin) {
+    try {
+      await registerPluginPermissions(plugin);
+    } catch (error) {
+      pluginLogger.error(
+        `Failed to register permissions for ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_permissions" },
+      );
+    }
+  }
+
   await pluginLoader.activate(pluginId, ownerUserId);
 
   const runtime = pluginBroker.get(pluginId);
@@ -267,8 +374,17 @@ export async function activatePlugin(
 
 export async function deactivatePlugin(pluginId: string): Promise<void> {
   const { loader: pluginLoader } = getPluginRuntime();
+  const plugin = pluginLoader.get(pluginId);
+
   await pluginLoader.deactivate(pluginId);
   unregisterPluginRouter(pluginId);
+
+  const group = plugin?.manifest.contributes?.permissionGroup;
+  if (group) {
+    const { unregisterPermissionGroup } =
+      await import("../utils/permission-catalog.js");
+    unregisterPermissionGroup(group.group);
+  }
 }
 
 export async function shutdownPlugins(): Promise<void> {

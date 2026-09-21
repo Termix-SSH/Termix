@@ -771,7 +771,7 @@ function storageKey(raw: unknown): string {
   return key;
 }
 
-function safeDetails(method: string, args: unknown[]): string {
+export function safeDetails(method: string, args: unknown[]): string {
   const summary = args.map((arg) => {
     if (typeof arg === "number" || typeof arg === "boolean") return arg;
     if (typeof arg === "string") {

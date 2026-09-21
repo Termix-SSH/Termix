@@ -1,0 +1,43 @@
+{
+  "id": "sample-provider",
+  "name": "Sample Provider",
+  "version": "1.0.0",
+  "description": "A plugin that both provides and requires a named service.",
+  "author": {
+    "name": "Jane Doe"
+  },
+  "license": "MIT",
+  "category": "Productivity",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": {
+    "backend": true,
+    "frontend": false,
+    "electron": false,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["hosts.read"],
+  "contributes": {
+    "permissionGroup": {
+      "group": "sampleprovider",
+      "permissions": ["sampleprovider.greet.use"]
+    }
+  },
+  "provides": [
+    {
+      "service": "sampleprovider.greet",
+      "version": "1.2.0",
+      "permission": "sampleprovider.greet.use"
+    }
+  ],
+  "requires": [
+    {
+      "service": "other.thing",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
+  ],
+  "sidecars": []
+}

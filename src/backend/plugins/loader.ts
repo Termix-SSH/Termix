@@ -54,6 +54,7 @@ import {
   type InProcessHandle,
   type PluginModule,
 } from "./host-ctx.js";
+import { resolveRequirements } from "./service-registry.js";
 
 export type PluginState =
   | "loaded"
@@ -346,10 +347,25 @@ export class PluginLoader {
         );
       }
 
+      // Structural only: is the service present at a satisfying version. A
+      // user's permission is checked per call instead, because activation is
+      // per-instance and permissions are per-user.
+      const resolution = resolveRequirements(plugin.manifest);
+      if (!resolution.satisfied) {
+        throw new Error(`Plugin ${plugin.id} ${resolution.errors.join("; ")}`);
+      }
+      for (const service of resolution.missingOptional) {
+        pluginLogger.info(
+          `Plugin ${plugin.id} optional service "${service}" is not available`,
+          { operation: "plugin_activate" },
+        );
+      }
+
       const handle: InProcessHandle = {
         module: { activate, deactivate },
         unsubscribers: [],
         providedKeys: [],
+        providedServices: [],
       };
 
       const ctx = createInProcessContext(plugin.manifest, handle);

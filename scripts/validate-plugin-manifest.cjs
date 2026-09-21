@@ -10,12 +10,14 @@
 
 const fs = require("fs");
 const path = require("path");
+const semver = require("semver");
 
 const SCHEMA_PATH = path.join(__dirname, "plugin-manifest.schema.json");
 
 const ID_PATTERN = /^[a-z0-9-]+$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/;
 const API_VERSION_PATTERN = /^[0-9]+$/;
+const SERVICE_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 const OPEN_FROM_VALUES = ["rail", "host-context-menu", "palette"];
 
 function loadSchema() {
@@ -123,9 +125,115 @@ function validateManifest(manifest, schema) {
     errors.push('Field "sidecars" must be an array');
   }
 
+  errors.push(...validateProvides(manifest.provides));
+  errors.push(...validateRequires(manifest.requires));
+
   if (manifest.contributes && typeof manifest.contributes === "object") {
     errors.push(...validateContributes(manifest.contributes));
   }
+
+  // A service permission has to be one the plugin's own permissionGroup
+  // declares, or no admin could ever grant it.
+  const declared = manifest.contributes?.permissionGroup?.permissions;
+  if (Array.isArray(manifest.provides) && Array.isArray(declared)) {
+    for (const entry of manifest.provides) {
+      if (entry && entry.permission && !declared.includes(entry.permission)) {
+        errors.push(
+          `Service "${entry.service}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
+function validateProvides(provides) {
+  if (provides === undefined) return [];
+  if (!Array.isArray(provides)) return ['Field "provides" must be an array'];
+
+  const errors = [];
+  const seen = new Set();
+
+  provides.forEach((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`provides[${index}] must be an object`);
+      return;
+    }
+
+    if (
+      typeof entry.service !== "string" ||
+      !SERVICE_PATTERN.test(entry.service)
+    ) {
+      errors.push(
+        `provides[${index}].service must match ${SERVICE_PATTERN}, got: "${entry.service}"`,
+      );
+    } else if (seen.has(entry.service)) {
+      errors.push(
+        `provides[${index}].service is a duplicate: "${entry.service}"`,
+      );
+    } else {
+      seen.add(entry.service);
+    }
+
+    if (
+      typeof entry.version !== "string" ||
+      !SEMVER_PATTERN.test(entry.version)
+    ) {
+      errors.push(
+        `provides[${index}].version must be valid semver, got: "${entry.version}"`,
+      );
+    }
+
+    if (typeof entry.permission !== "string" || entry.permission.length === 0) {
+      errors.push(`provides[${index}].permission is required`);
+    }
+  });
+
+  return errors;
+}
+
+function validateRequires(requires) {
+  if (requires === undefined) return [];
+  if (!Array.isArray(requires)) return ['Field "requires" must be an array'];
+
+  const errors = [];
+  const seen = new Set();
+
+  requires.forEach((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`requires[${index}] must be an object`);
+      return;
+    }
+
+    if (
+      typeof entry.service !== "string" ||
+      !SERVICE_PATTERN.test(entry.service)
+    ) {
+      errors.push(
+        `requires[${index}].service must match ${SERVICE_PATTERN}, got: "${entry.service}"`,
+      );
+    } else if (seen.has(entry.service)) {
+      errors.push(
+        `requires[${index}].service is a duplicate: "${entry.service}"`,
+      );
+    } else {
+      seen.add(entry.service);
+    }
+
+    if (
+      typeof entry.versionRange !== "string" ||
+      semver.validRange(entry.versionRange) === null
+    ) {
+      errors.push(
+        `requires[${index}].versionRange must be a valid semver range, got: "${entry.versionRange}"`,
+      );
+    }
+
+    if ("optional" in entry && typeof entry.optional !== "boolean") {
+      errors.push(`requires[${index}].optional must be a boolean`);
+    }
+  });
 
   return errors;
 }

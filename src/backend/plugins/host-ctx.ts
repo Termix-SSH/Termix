@@ -17,6 +17,9 @@
 import { pluginLogger } from "../utils/logger.js";
 import { pluginEvents } from "./events.js";
 import * as registry from "./registry.js";
+import * as serviceRegistry from "./service-registry.js";
+import type { ServiceRegistration } from "./service-registry.js";
+import { safeDetails } from "./broker.js";
 import type { PluginManifest } from "./manifest.js";
 
 export interface InProcessPluginContext {
@@ -43,6 +46,18 @@ export interface InProcessPluginContext {
     consume: <T>(key: string) => T | undefined;
     revoke: (key: string, value?: unknown) => boolean;
   };
+  /**
+   * Declared service contracts between plugins. Unlike `registry` above, a
+   * service must be declared in the manifest and every call through a handle
+   * is checked against the acting user's role permissions.
+   */
+  services: {
+    provide: <T extends object>(service: string, implementation: T) => void;
+    get: <T extends object>(
+      service: string,
+      options?: { userId?: string },
+    ) => T;
+  };
 }
 
 /**
@@ -56,6 +71,8 @@ export interface InProcessHandle {
   unsubscribers: Array<() => void>;
   /** Registry keys this plugin provided, revoked on deactivate. */
   providedKeys: Array<{ key: string; value: unknown }>;
+  /** Declared services this plugin provided, revoked on deactivate. */
+  providedServices: ServiceRegistration[];
 }
 
 export interface PluginModule {
@@ -135,7 +152,74 @@ export function createInProcessContext(
       consume: (key) => registry.consume(key),
       revoke: (key, value) => registry.revoke(key, value),
     },
+
+    services: {
+      provide: (service, implementation) => {
+        // Declared AND provided, the same shape the capability gate uses: a
+        // plugin cannot publish a service its manifest never mentioned.
+        const declared = manifest.provides?.find(
+          (entry) => entry.service === service,
+        );
+        if (!declared) {
+          throw new Error(
+            `Plugin ${pluginId} cannot provide service "${service}": it is not declared in the manifest's provides array`,
+          );
+        }
+
+        const registration = serviceRegistry.provideService({
+          service,
+          version: declared.version,
+          permission: declared.permission,
+          pluginId,
+          pluginName: manifest.name,
+          implementation: implementation as Record<string, unknown>,
+        });
+        handle.providedServices.push(registration);
+      },
+
+      get: (service, options) =>
+        serviceRegistry.createServiceHandle(service, pluginId, {
+          resolveUserId: () => options?.userId,
+          hasPermission: async (userId, permission) => {
+            const { PermissionManager } =
+              await import("../utils/permission-manager.js");
+            return PermissionManager.getInstance().hasPermission(
+              userId,
+              permission,
+            );
+          },
+          audit: (entry) => writeServiceAudit(entry),
+        }),
+    },
   };
+}
+
+/**
+ * Mirrors PluginBroker.audit: attribution comes from the runtime, never from
+ * the plugin, and the details only ever record the shape of a call.
+ */
+async function writeServiceAudit(
+  entry: serviceRegistry.ServiceAuditEntry,
+): Promise<void> {
+  try {
+    const { logAudit } = await import("../utils/audit-logger.js");
+    await logAudit({
+      userId: entry.userId,
+      username: `plugin:${entry.consumerPluginId}`,
+      action: `plugin_service_${entry.registration.service.replace(/\./g, "_")}_${entry.method}`,
+      resourceType: "plugin",
+      resourceId: entry.registration.pluginId,
+      resourceName: entry.registration.pluginName,
+      details: safeDetails(
+        `${entry.registration.service}.${entry.method}`,
+        entry.args,
+      ),
+      success: entry.success,
+      errorMessage: entry.errorMessage,
+    });
+  } catch {
+    // Auditing must never break the caller.
+  }
 }
 
 /** Undoes everything the ctx handed out. Safe to call more than once. */
@@ -147,6 +231,13 @@ export async function disposeInProcessHandle(
     registry.revoke(key, value);
   }
   handle.providedKeys = [];
+
+  // Taking the services with it is what makes a consumer's held handle start
+  // throwing PluginServiceUnavailableError rather than calling a dead provider.
+  for (const registration of handle.providedServices) {
+    serviceRegistry.revokeService(registration.service, registration);
+  }
+  handle.providedServices = [];
 
   for (const unsubscribe of handle.unsubscribers) {
     try {

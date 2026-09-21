@@ -53,6 +53,103 @@ describe("plugin manifest validation", () => {
     );
   });
 
+  describe("provides / requires", () => {
+    const permissionGroup = {
+      group: "testplugin",
+      permissions: ["testplugin.greet.use"],
+    };
+
+    it("accepts a declared service and requirement", () => {
+      const errors = validateManifest(
+        validManifest({
+          provides: [
+            {
+              service: "testplugin.greet",
+              version: "1.0.0",
+              permission: "testplugin.greet.use",
+            },
+          ],
+          requires: [
+            { service: "other.thing", versionRange: "^1.0.0", optional: true },
+          ],
+          contributes: { permissionGroup },
+        }),
+      );
+      expect(errors).toEqual([]);
+    });
+
+    it("rejects a service name that is not dotted", () => {
+      const errors = validateManifest(
+        validManifest({
+          provides: [{ service: "greet", version: "1.0.0", permission: "x.y" }],
+        }),
+      );
+      expect(errors.some((e) => e.includes("provides[0].service"))).toBe(true);
+    });
+
+    it("rejects a non-semver service version", () => {
+      const errors = validateManifest(
+        validManifest({
+          provides: [{ service: "a.b", version: "1.0", permission: "x.y" }],
+        }),
+      );
+      expect(errors.some((e) => e.includes("provides[0].version"))).toBe(true);
+    });
+
+    it("rejects a duplicate provided service", () => {
+      const errors = validateManifest(
+        validManifest({
+          provides: [
+            { service: "a.b", version: "1.0.0", permission: "x.y" },
+            { service: "a.b", version: "2.0.0", permission: "x.y" },
+          ],
+        }),
+      );
+      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
+    });
+
+    it("rejects an invalid semver range", () => {
+      const errors = validateManifest(
+        validManifest({
+          requires: [{ service: "a.b", versionRange: "not a range" }],
+        }),
+      );
+      expect(errors.some((e) => e.includes("versionRange"))).toBe(true);
+    });
+
+    it("rejects a non-boolean optional", () => {
+      const errors = validateManifest(
+        validManifest({
+          requires: [
+            { service: "a.b", versionRange: "^1.0.0", optional: "yes" },
+          ],
+        }),
+      );
+      expect(errors.some((e) => e.includes("optional"))).toBe(true);
+    });
+
+    it("refuses a service gated by a permission the group never declares", () => {
+      // Otherwise every call through it would deny against a permission no
+      // admin could ever grant.
+      const { manifest, errors } = parseManifest(
+        validManifest({
+          provides: [
+            {
+              service: "testplugin.greet",
+              version: "1.0.0",
+              permission: "testplugin.undeclared",
+            },
+          ],
+          contributes: { permissionGroup },
+        }),
+      );
+
+      expect(manifest).toBeUndefined();
+      expect(errors[0]).toContain("testplugin.undeclared");
+      expect(errors[0]).toContain("permissionGroup");
+    });
+  });
+
   it("rejects an unknown permission", () => {
     const errors = validateManifest(
       validManifest({ permissions: ["credentials.read"] }),

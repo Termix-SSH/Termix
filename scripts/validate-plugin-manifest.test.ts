@@ -38,6 +38,18 @@ describe("validate-plugin-manifest.cjs", () => {
     expect(output).toMatch(/Field "id" must match/);
   });
 
+  it("accepts a manifest declaring provides and requires", () => {
+    const { status, output } = runValidator("valid-services.json");
+    expect(status).toBe(0);
+    expect(output).toContain("Valid plugin manifest");
+  });
+
+  it("rejects a service gated by an undeclared permission", () => {
+    const { status, output } = runValidator("invalid-service-permission.json");
+    expect(status).not.toBe(0);
+    expect(output).toContain("sampleprovider.undeclared");
+  });
+
   it("rejects a manifest with an unknown permission", () => {
     const { status, output } = runValidator("invalid-unknown-permission.json");
     expect(status).not.toBe(0);
