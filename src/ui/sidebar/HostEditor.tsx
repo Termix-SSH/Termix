@@ -95,6 +95,7 @@ import {
 } from "./HostEditorGuacamoleTabs";
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { VaultProfileManager } from "./VaultProfileManager";
+import { getRegisteredHostEditorTab } from "./HostManagerTabs";
 import {
   SecretReferenceHint,
   SecretSourceManager,
@@ -2661,6 +2662,13 @@ export function HostEditor({
               credentials={availableCredentials}
             />
           )}
+
+          {(() => {
+            const registeredTab = getRegisteredHostEditorTab(activeTab);
+            if (!registeredTab) return null;
+            const RegisteredTabComponent = registeredTab.component;
+            return <RegisteredTabComponent form={form} setField={setField} />;
+          })()}
         </div>
       </fieldset>
 

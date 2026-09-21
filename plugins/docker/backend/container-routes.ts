@@ -1,6 +1,9 @@
-import { getErrorMessage } from "../../utils/error-message.js";
+// Core imports below point at TypeScript source so tsc can type-check them.
+// scripts/copy-bundled-plugins.cjs rewrites the prefix to the compiled
+// output path after tsc -p tsconfig.plugins.json runs -- see that script.
+import { getErrorMessage } from "../../../src/backend/utils/error-message.js";
 import type express from "express";
-import { logger } from "../../utils/logger.js";
+import { logger } from "../../../src/backend/utils/logger.js";
 import {
   containerCommand,
   type ContainerRuntime,

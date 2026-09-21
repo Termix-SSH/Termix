@@ -295,13 +295,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
 
     const { serverReady } = await import("./database/database.js");
     await serverReady;
-    // Terminal is deliberately absent: the ssh-terminal plugin starts it, so
-    // disabling that plugin stops the WS server. See plugins/ssh-terminal.
+    // Terminal and docker are deliberately absent: the ssh-terminal and
+    // docker plugins start their own servers, so disabling either plugin
+    // stops its WS/HTTP server. See plugins/ssh-terminal and plugins/docker.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/metrics/index.js");
-    await import("./hosts/docker/index.js");
-    await import("./hosts/docker/console.js");
     await import("./hosts/tmux/index.js");
     await import("./hosts/serial.js");
     await import("./services/dashboard.js");

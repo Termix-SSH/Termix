@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import React from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";

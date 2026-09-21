@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import React from "react";
 import { Box, List, Play, RefreshCw, Square, Terminal } from "lucide-react";
 import { toast } from "sonner";

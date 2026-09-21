@@ -82,3 +82,57 @@ describe("bundled ssh-terminal plugin", () => {
     expect(source).toMatch(/export async function deactivate/);
   });
 });
+
+describe("bundled docker plugin", () => {
+  it("ships a directory with a manifest and both entry points", () => {
+    const dir = path.join(getBundledPluginsDir(), "docker");
+
+    expect(fs.existsSync(path.join(dir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "backend", "index.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "frontend", "index.mjs"))).toBe(true);
+  });
+
+  it("has a manifest that passes the real validator", () => {
+    const { manifest, errors } = parseManifest(readBundledManifest("docker"));
+
+    expect(errors).toEqual([]);
+    expect(manifest?.id).toBe("docker");
+    expect(manifest?.category).toBe("Infrastructure");
+  });
+
+  it("declares the transport-owner capability and qualifies for the tier", () => {
+    const { manifest } = parseManifest(readBundledManifest("docker"));
+
+    expect(manifest?.permissions).toContain(TRANSPORT_OWNER_CAPABILITY);
+    expect(isFirstParty("docker")).toBe(true);
+    expect(runsInProcess("docker", manifest!.permissions)).toBe(true);
+  });
+
+  it("contributes the docker tab the shell registers", () => {
+    const { manifest } = parseManifest(readBundledManifest("docker"));
+    const tab = manifest?.contributes?.tabs?.[0];
+
+    // The shell keys tab content off this id, so it has to stay "docker".
+    expect(tab?.id).toBe("docker");
+    expect(tab?.openFrom).toContain("host-context-menu");
+  });
+
+  it("declares the enableDocker host capability", () => {
+    const { manifest } = parseManifest(readBundledManifest("docker"));
+
+    expect(manifest?.contributes?.hostCapability?.key).toBe("enableDocker");
+  });
+
+  it("exports activate and deactivate from its backend entry", () => {
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "docker",
+      "backend",
+      "index.mjs",
+    );
+    const source = fs.readFileSync(entry, "utf8");
+
+    expect(source).toMatch(/export async function activate/);
+    expect(source).toMatch(/export async function deactivate/);
+  });
+});

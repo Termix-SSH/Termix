@@ -1,42 +1,45 @@
-import { getErrorMessage } from "../../utils/error-message.js";
-import { usesIssuedCertificate } from "../issued-certificate-auth.js";
+// Core imports below point at TypeScript source so tsc can type-check them.
+// scripts/copy-bundled-plugins.cjs rewrites the prefix to the compiled
+// output path after tsc -p tsconfig.plugins.json runs -- see that script.
+import { getErrorMessage } from "../../../src/backend/utils/error-message.js";
+import { usesIssuedCertificate } from "../../../src/backend/hosts/issued-certificate-auth.js";
 import express from "express";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
-import { logger } from "../../utils/logger.js";
+import { logger } from "../../../src/backend/utils/logger.js";
 import {
   logAudit,
   getAuditUsername,
   getRequestMeta,
-} from "../../utils/audit-logger.js";
-import { createCurrentHostRepository } from "../../database/repositories/factory.js";
-import { createJumpHostChain } from "../jump-host-chain.js";
-import { resolveHostById } from "../host-resolver.js";
-import { createConnectionLog } from "../connection-log.js";
-import { DataCrypto } from "../../utils/data-crypto.js";
-import { AuthManager } from "../../utils/auth-manager.js";
-import {
-  type AuthenticatedRequest,
-  type ProxyNode,
-  type SSHHost,
-} from "../../../types/index.js";
+} from "../../../src/backend/utils/audit-logger.js";
+import { createCurrentHostRepository } from "../../../src/backend/database/repositories/factory.js";
+import { createJumpHostChain } from "../../../src/backend/hosts/jump-host-chain.js";
+import { resolveHostById } from "../../../src/backend/hosts/host-resolver.js";
+import { createConnectionLog } from "../../../src/backend/hosts/connection-log.js";
+import { DataCrypto } from "../../../src/backend/utils/data-crypto.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import type {
+  AuthenticatedRequest,
+  ProxyNode,
+  SSHHost,
+} from "../../../src/types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
-} from "../../utils/socks5-helper.js";
+} from "../../../src/backend/utils/socks5-helper.js";
 import type {
   LogEntry,
   ConnectionStage,
-} from "../../../types/connection-log.js";
-import { SSHHostKeyVerifier } from "../host-key-verifier.js";
-import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
-import { applyAgentAuth } from "../terminal-auth-helpers.js";
+} from "../../../src/types/connection-log.js";
+import { SSHHostKeyVerifier } from "../../../src/backend/hosts/host-key-verifier.js";
+import { preparePrivateKeyForSSH2 } from "../../../src/backend/utils/ssh-key-utils.js";
+import { applyAgentAuth } from "../../../src/backend/hosts/terminal-auth-helpers.js";
 import {
   containerCommand,
   getContainerRuntimeConfig,
   getRuntimeLabel,
 } from "./container-runtime.js";
-import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import { resolveSshConnectConfigHost } from "../../../src/backend/hosts/ssh-dns.js";
 import {
   type SSHSession,
   sshSessions,
@@ -303,7 +306,8 @@ export function registerDockerSshRoutes(app: express.Express): void {
         }
       } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
         try {
-          const { getOPKSSHToken } = await import("../opkssh-auth.js");
+          const { getOPKSSHToken } =
+            await import("../../../src/backend/hosts/opkssh-auth.js");
           const token = await getOPKSSHToken(userId, hostId);
 
           if (!token) {
@@ -323,7 +327,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
           }
 
           const { setupOPKSSHCertAuth } =
-            await import("../opkssh-cert-auth.js");
+            await import("../../../src/backend/hosts/opkssh-cert-auth.js");
           await setupOPKSSHCertAuth(
             config as import("ssh2").ConnectConfig,
             client,

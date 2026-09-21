@@ -54,7 +54,9 @@ const ProxmoxStatsApp = lazy(() =>
   })),
 );
 const DockerApp = lazy(() =>
-  import("@/features/docker/DockerApp").then((m) => ({ default: m.default })),
+  import("../plugins/docker/frontend/DockerApp").then((m) => ({
+    default: m.default,
+  })),
 );
 const GuacamoleApp = lazy(() =>
   import("@/features/guacamole/GuacamoleApp").then((m) => ({

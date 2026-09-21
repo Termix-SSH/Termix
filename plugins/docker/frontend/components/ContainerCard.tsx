@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import React from "react";
 import { Card } from "@/components/card.tsx";
 import { Button } from "@/components/button.tsx";

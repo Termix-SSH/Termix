@@ -1,10 +1,24 @@
 /**
- * Copies plugins/ into dist/plugins so bundled first-party plugins ship with a
- * built server.
+ * Compiles plugin backend TypeScript, then copies plugins/ into dist/plugins
+ * so bundled first-party plugins ship with a built server.
  *
- * tsc only emits .ts, and a plugin's backend entry is a hand-written .mjs plus
- * a manifest.json, so without this step the plugins directory simply would not
- * exist in dist and the loader would find nothing.
+ * Most plugin backend entries are hand-written .mjs plus a manifest.json --
+ * tsc only emits .ts, so without a copy step the plugins directory simply
+ * would not exist in dist and the loader would find nothing.
+ *
+ * The docker plugin is the exception: its backend is real TypeScript,
+ * physically relocated from src/backend/hosts/docker/ rather than kept as
+ * hand-written JS, because it is ~4000 lines of typed SSH/session logic that
+ * is not worth hand-transpiling. tsconfig.plugins.json compiles the plugin
+ * backend TypeScript to a sibling .js next to its source. Its imports
+ * into core (e.g. "../../../src/backend/utils/logger.js") are written
+ * relative to the TypeScript SOURCE tree so tsc can type-check them, since
+ * plugins/ is not under tsconfig.node.json's rootDir and cannot be added to
+ * it without changing every existing dist/backend/backend/... path in the
+ * codebase. That means the emitted .js still points at src/backend/, which
+ * does not exist in a built server -- only its compiled counterpart at
+ * dist/backend/backend/ does. rewriteCoreImports() below corrects that one
+ * prefix after compilation, before the directory is copied into dist/.
  *
  * getBundledPluginsDir() in src/backend/plugins/paths.ts resolves
  * dist/backend/backend/plugins -> dist/plugins, which is where this writes.
@@ -12,6 +26,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { execSync } = require("node:child_process");
 
 const root = path.resolve(__dirname, "..");
 const source = path.join(root, "plugins");
@@ -21,6 +36,84 @@ if (!fs.existsSync(source)) {
   console.log("No plugins/ directory, nothing to bundle.");
   process.exit(0);
 }
+
+const SRC_BACKEND_PREFIX = "../../../src/backend/";
+const COMPILED_BACKEND_PREFIX = "../../../backend/backend/";
+
+function compilePluginBackends() {
+  execSync("npx tsc -p tsconfig.plugins.json", {
+    cwd: root,
+    stdio: "inherit",
+  });
+}
+
+/**
+ * Rewrites the compiled plugin JS's imports into core from the source-tree
+ * path tsc needed to resolve them, to the compiled-output path they need to
+ * resolve at runtime. See the module comment above for why this exists.
+ */
+function rewriteCoreImports(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      rewriteCoreImports(entryPath);
+      continue;
+    }
+    if (!entry.name.endsWith(".js")) continue;
+
+    const original = fs.readFileSync(entryPath, "utf8");
+    if (!original.includes(SRC_BACKEND_PREFIX)) continue;
+
+    const rewritten = original.split(SRC_BACKEND_PREFIX).join(COMPILED_BACKEND_PREFIX);
+    fs.writeFileSync(entryPath, rewritten);
+  }
+}
+
+/**
+ * tsconfig.plugins.json has rootDir/outDir "." so the docker plugin's .js
+ * lands beside its own .ts, but tsc also pulls every file the plugin
+ * imports into the same program for type-checking -- core utils, repository
+ * factories, src/types -- and stray-emits a sibling .js next to each of
+ * those .ts files too, even though none of that code is actually compiled
+ * by this pass (only referenced for types/signatures). Those stray files
+ * are not part of the normal build and must not leak into dist/ or the
+ * working tree, so anything under src/ that is a .js with no git history
+ * and a same-named .ts sibling gets removed after every compile.
+ */
+function isGitTracked(filePath) {
+  try {
+    execSync(`git ls-files --error-unmatch "${filePath}"`, {
+      cwd: root,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function removeStrayEmits(dir) {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      removeStrayEmits(entryPath);
+      continue;
+    }
+    if (!entry.name.endsWith(".js")) continue;
+    const tsSibling = entryPath.slice(0, -".js".length) + ".ts";
+    // Never touch a tracked file, even if some future .ts/.js pair
+    // legitimately coexists -- only remove what is both untracked and has a
+    // .ts sibling, which is what a stray tsc emit always looks like.
+    if (fs.existsSync(tsSibling) && !isGitTracked(entryPath)) {
+      fs.rmSync(entryPath);
+    }
+  }
+}
+
+compilePluginBackends();
+rewriteCoreImports(path.join(source, "docker", "backend"));
+removeStrayEmits(path.join(root, "src"));
 
 fs.rmSync(destination, { recursive: true, force: true });
 fs.cpSync(source, destination, { recursive: true });

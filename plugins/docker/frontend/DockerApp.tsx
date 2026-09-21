@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { DockerManager } from "@/features/docker/DockerManager.tsx";
+import { DockerManager } from "./DockerManager.tsx";
 import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 

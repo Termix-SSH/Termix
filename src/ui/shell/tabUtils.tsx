@@ -85,7 +85,7 @@ const loadFileManager = () =>
   }));
 const FileManager = lazy(loadFileManager);
 const loadDockerManager = () =>
-  import("@/features/docker/DockerManager").then((m) => ({
+  import("../../../plugins/docker/frontend/DockerManager").then((m) => ({
     default: m.DockerManager,
   }));
 const DockerManager = lazy(loadDockerManager);

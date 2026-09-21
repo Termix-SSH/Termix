@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import React from "react";
 import {
   Activity,

@@ -1,0 +1,35 @@
+{
+  "id": "docker",
+  "name": "Docker",
+  "version": "1.0.0",
+  "description": "Container management over SSH: list, inspect, start, stop and view logs for Docker or Podman containers, plus an interactive container console.",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Infrastructure",
+  "icon": "Box",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": true,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["process:transport-owner"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "docker",
+        "titleKey": "nav.docker",
+        "icon": "Box",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ],
+    "hostCapability": {
+      "key": "enableDocker",
+      "labelKey": "hosts.dockerIntegration",
+      "editorTab": "docker"
+    }
+  },
+  "sidecars": []
+}

@@ -32,9 +32,16 @@
  * ssh-terminal is here because it IS the SSH transport rather than a consumer
  * of it: it owns a WebSocket server and long-lived ssh2 clients, neither of
  * which can cross a postMessage boundary.
+ *
+ * docker is here for the same reason: its container console owns a
+ * WebSocket server with long-lived ssh2 clients and PTY streams, its
+ * session manager reuses a live ssh2.Client across many REST calls, and its
+ * SSH connect flow implements TOTP/Warpgate as a stateful multi-request
+ * handshake the worker ctx.ssh API has no hook for.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
+  "docker",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

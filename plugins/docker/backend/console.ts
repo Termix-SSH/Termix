@@ -1,32 +1,35 @@
-import { getErrorMessage } from "../../utils/error-message.js";
+// Core imports below point at TypeScript source so tsc can type-check them.
+// scripts/copy-bundled-plugins.cjs rewrites the prefix to the compiled
+// output path after tsc -p tsconfig.plugins.json runs -- see that script.
+import { getErrorMessage } from "../../../src/backend/utils/error-message.js";
 import { StringDecoder } from "string_decoder";
 import { Client as SSHClient } from "ssh2";
-import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
+import { SSH_ALGORITHMS } from "../../../src/backend/utils/ssh-algorithms.js";
 import { WebSocketServer, WebSocket } from "ws";
-import { AuthManager } from "../../utils/auth-manager.js";
-import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
-import { systemLogger } from "../../utils/logger.js";
-import type { SSHHost } from "../../../types/index.js";
-import { applyAgentAuth } from "../terminal-auth-helpers.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import { createCurrentHostResolutionRepository } from "../../../src/backend/database/repositories/factory.js";
+import { systemLogger } from "../../../src/backend/utils/logger.js";
+import type { SSHHost } from "../../../src/types/index.js";
+import { applyAgentAuth } from "../../../src/backend/hosts/terminal-auth-helpers.js";
 import {
   containerCommand,
   getContainerRuntimeConfig,
   type ContainerRuntime,
 } from "./container-runtime.js";
-import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import { resolveSshConnectConfigHost } from "../../../src/backend/hosts/ssh-dns.js";
 import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
   HOST_NOT_ON_THIS_SERVER_MESSAGE,
-} from "../host-identity.js";
-import { extractWebSocketToken } from "../../utils/ws-auth.js";
+} from "../../../src/backend/hosts/host-identity.js";
+import { extractWebSocketToken } from "../../../src/backend/utils/ws-auth.js";
 import {
   asObject,
   asString,
   MAX_WS_MESSAGE_BYTES,
   parseWsMessage,
   toTerminalDimension,
-} from "../../utils/ws-message.js";
+} from "../../../src/backend/utils/ws-message.js";
 
 const sshLogger = systemLogger;
 
@@ -404,7 +407,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           try {
             // Resolve host with credentials server-side
             const { resolveHostById, resolveHostBySyncId } =
-              await import("../host-resolver.js");
+              await import("../../../src/backend/hosts/host-resolver.js");
             // syncId names the host on both sides of a sync pair; the numeric
             // id only names it in the database the client is displaying.
             const hostSyncId = hostConfig?.syncId;
@@ -823,7 +826,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 });
 
-process.on("SIGTERM", () => {
+/**
+ * Closes every live console session and the WebSocket server. Called by the
+ * plugin's deactivate() as well as SIGTERM, since disabling the docker
+ * plugin has to free port 30009 the same way process shutdown does.
+ */
+export function closeConsoleServer(): Promise<void> {
   activeSessions.forEach((session) => {
     if (session.stream) {
       session.stream.end();
@@ -833,7 +841,9 @@ process.on("SIGTERM", () => {
 
   activeSessions.clear();
 
-  wss.close(() => {
-    process.exit(0);
-  });
+  return new Promise((resolve) => wss.close(() => resolve()));
+}
+
+process.on("SIGTERM", () => {
+  void closeConsoleServer().then(() => process.exit(0));
 });

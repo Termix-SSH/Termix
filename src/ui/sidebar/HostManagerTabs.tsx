@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
 import {
   Activity,
   Box,
@@ -51,6 +51,50 @@ export const SSH_GROUP_TABS = new Set<HostTabId>([
   "files",
   "host-metrics",
 ]);
+
+/**
+ * A plugin-contributed host editor tab. `component` receives the same
+ * {form, setField} pair every built-in tab body gets (see HostDockerTab in
+ * HostEditorFeatureTabs.tsx for the shape a plugin's own tab component
+ * should match).
+ */
+export type HostEditorTabComponent = ComponentType<{
+  form: unknown;
+  setField: (key: string, value: unknown) => void;
+}>;
+
+interface RegisteredHostEditorTab {
+  id: string;
+  labelKey: string;
+  icon: ReactNode;
+  component: HostEditorTabComponent;
+}
+
+/**
+ * Runtime registry for host editor tabs that don't exist in the built-in
+ * HostTabId union. A plugin's frontend registers into this from its own
+ * register() (see plugins/*\/frontend/index.mjs), the same pattern
+ * rail-items.ts and tabUtils.tsx already use for their seams.
+ */
+const registeredHostEditorTabs = new Map<string, RegisteredHostEditorTab>();
+
+export function registerHostEditorTab(def: RegisteredHostEditorTab): void {
+  registeredHostEditorTabs.set(def.id, def);
+}
+
+export function unregisterHostEditorTab(id: string): void {
+  registeredHostEditorTabs.delete(id);
+}
+
+export function getRegisteredHostEditorTab(
+  id: string,
+): RegisteredHostEditorTab | undefined {
+  return registeredHostEditorTabs.get(id);
+}
+
+export function registeredHostEditorTabList(): RegisteredHostEditorTab[] {
+  return [...registeredHostEditorTabs.values()];
+}
 
 export function makeHostTabs(t: (key: string) => string): HostTab[] {
   return [
@@ -124,6 +168,11 @@ export function makeHostSshSubTabs(t: (key: string) => string): HostTab[] {
       label: t("hosts.tabHostMetrics"),
       icon: <Activity className="size-3" />,
     },
+    ...registeredHostEditorTabList().map((tab) => ({
+      id: tab.id as HostTabId,
+      label: t(tab.labelKey),
+      icon: tab.icon,
+    })),
   ];
 }
 

@@ -39,12 +39,16 @@ function manifest(overrides: Record<string, unknown> = {}) {
 }
 
 describe("first-party allowlist", () => {
-  it("contains only ssh-terminal", () => {
-    expect([...FIRST_PARTY_PLUGIN_IDS]).toEqual(["ssh-terminal"]);
+  it("contains only ssh-terminal and docker", () => {
+    expect([...FIRST_PARTY_PLUGIN_IDS].sort()).toEqual([
+      "docker",
+      "ssh-terminal",
+    ]);
   });
 
-  it("recognises ssh-terminal and nothing else", () => {
+  it("recognises ssh-terminal and docker and nothing else", () => {
     expect(isFirstParty("ssh-terminal")).toBe(true);
+    expect(isFirstParty("docker")).toBe(true);
     expect(isFirstParty("ssh-terminal-pro")).toBe(false);
     expect(isFirstParty("community-plugin")).toBe(false);
     expect(isFirstParty("")).toBe(false);
@@ -56,10 +60,12 @@ describe("runsInProcess", () => {
     expect(runsInProcess("ssh-terminal", [TRANSPORT_OWNER_CAPABILITY])).toBe(
       true,
     );
+    expect(runsInProcess("docker", [TRANSPORT_OWNER_CAPABILITY])).toBe(true);
 
     // On the list but not asking for it: stays in a worker, so the manifest
     // remains an honest description of what the plugin does.
     expect(runsInProcess("ssh-terminal", ["hosts.read"])).toBe(false);
+    expect(runsInProcess("docker", ["hosts.read"])).toBe(false);
 
     // Asking for it but not on the list.
     expect(
@@ -101,6 +107,18 @@ describe("manifest gate on the reserved capability", () => {
 
     expect(errors).toEqual([]);
     expect(parsed?.id).toBe("ssh-terminal");
+  });
+
+  it("allows it for docker", () => {
+    const { manifest: parsed, errors } = parseManifest(
+      manifest({
+        id: "docker",
+        permissions: [TRANSPORT_OWNER_CAPABILITY],
+      }),
+    );
+
+    expect(errors).toEqual([]);
+    expect(parsed?.id).toBe("docker");
   });
 
   it("still accepts an ordinary manifest that never mentions it", () => {
