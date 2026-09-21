@@ -41,11 +41,19 @@ import { Worker } from "node:worker_threads";
 import { pluginLogger } from "../utils/logger.js";
 import { parseManifest, type PluginManifest } from "./manifest.js";
 import {
+  getBundledPluginsDir,
   getPluginBackendEntry,
   getPluginManifestPath,
   getPluginsDir,
 } from "./paths.js";
 import type { PluginBootstrapData } from "./protocol.js";
+import { runsInProcess } from "./first-party.js";
+import {
+  createInProcessContext,
+  disposeInProcessHandle,
+  type InProcessHandle,
+  type PluginModule,
+} from "./host-ctx.js";
 
 export type PluginState =
   | "loaded"
@@ -68,10 +76,19 @@ export interface LoadedPlugin {
   manifest: PluginManifest;
   state: PluginState;
   worker: Worker | null;
+  /**
+   * Set instead of `worker` for first-party plugins that run on the main
+   * thread. Exactly one of the two is ever non-null.
+   */
+  inProcess: InProcessHandle | null;
   /** Consecutive crashes since the last successful activation. */
   restartAttempts: number;
   lastError: string | null;
-  /** The user whose authority this plugin acts under. Set at activate time. */
+  /**
+   * The user whose authority this plugin acts under. Set at activate time.
+   * Null for in-process plugins, which do not use the gated ctx and so have no
+   * owner to act as.
+   */
   ownerUserId: string | null;
 }
 
@@ -83,6 +100,11 @@ export interface PluginLoaderOptions {
    */
   onWorkerReady?: (plugin: LoadedPlugin, worker: Worker) => void;
   onWorkerGone?: (plugin: LoadedPlugin) => void;
+  /**
+   * Gives a worker plugin a chance to run its deactivate() before it is
+   * terminated. A hook rather than a broker import, same as the two above.
+   */
+  onBeforeTerminate?: (plugin: LoadedPlugin) => Promise<void>;
   /** Overridable so tests do not have to wait out the real backoff. */
   restartBackoffMs?: number[];
   /** How long a plugin must stay up before its crash counter resets. */
@@ -172,6 +194,7 @@ export class PluginLoader {
       manifest,
       state: "loaded",
       worker: null,
+      inProcess: null,
       restartAttempts: 0,
       lastError: null,
       ownerUserId: null,
@@ -184,31 +207,56 @@ export class PluginLoader {
     return plugin;
   }
 
-  /** Scans the plugins directory, loading every valid plugin it finds. */
+  /**
+   * Scans for plugins, loading every valid one it finds.
+   *
+   * Bundled first-party plugins are scanned first and a user-installed
+   * directory can never shadow one: dropping an "ssh-terminal" folder into the
+   * data directory must not replace the real transport owner.
+   */
   async loadAll(): Promise<LoadedPlugin[]> {
-    const root = getPluginsDir();
-    if (!fs.existsSync(root)) return [];
-
-    const entries = await fs.promises.readdir(root, { withFileTypes: true });
     const loaded: LoadedPlugin[] = [];
+    const seen = new Set<string>();
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      try {
-        loaded.push(await this.load(path.join(root, entry.name)));
-      } catch (error) {
-        pluginLogger.error(
-          `Skipping plugin directory ${entry.name}`,
-          error instanceof Error ? error : new Error(String(error)),
-          { operation: "plugin_load" },
-        );
+    for (const root of [getBundledPluginsDir(), getPluginsDir()]) {
+      if (!fs.existsSync(root)) continue;
+
+      const entries = await fs.promises.readdir(root, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+
+        if (seen.has(entry.name)) {
+          pluginLogger.warn(
+            `Ignoring plugin directory ${entry.name} in ${root}: a bundled plugin already uses that id`,
+            { operation: "plugin_load" },
+          );
+          continue;
+        }
+
+        try {
+          const plugin = await this.load(path.join(root, entry.name));
+          seen.add(plugin.id);
+          loaded.push(plugin);
+        } catch (error) {
+          pluginLogger.error(
+            `Skipping plugin directory ${entry.name}`,
+            error instanceof Error ? error : new Error(String(error)),
+            { operation: "plugin_load" },
+          );
+        }
       }
     }
 
     return loaded;
   }
 
-  async activate(pluginId: string, ownerUserId: string): Promise<void> {
+  /**
+   * `ownerUserId` is optional only for in-process first-party plugins, which
+   * do not use the gated ctx and so never act as a user. A worker plugin
+   * without one cannot reach any user data (see broker.requireOwner).
+   */
+  async activate(pluginId: string, ownerUserId?: string): Promise<void> {
     const plugin = this.requirePlugin(pluginId);
 
     if (plugin.state === "active" || plugin.state === "activating") return;
@@ -216,13 +264,18 @@ export class PluginLoader {
       throw new Error(`Plugin ${pluginId} has no backend to activate`);
     }
 
-    plugin.ownerUserId = ownerUserId;
+    plugin.ownerUserId = ownerUserId ?? null;
     await this.spawn(plugin);
   }
 
   private async spawn(plugin: LoadedPlugin): Promise<void> {
     plugin.state = "activating";
     plugin.lastError = null;
+
+    if (runsInProcess(plugin.id, plugin.manifest.permissions)) {
+      await this.spawnInProcess(plugin);
+      return;
+    }
 
     const bootstrap: PluginBootstrapData = {
       pluginId: plugin.id,
@@ -261,6 +314,61 @@ export class PluginLoader {
     });
 
     await this.awaitActivation(plugin, worker);
+  }
+
+  /**
+   * Starts a first-party plugin on the main thread.
+   *
+   * There is no worker, so there is no crash isolation: an exception thrown
+   * later by this plugin's own callbacks lands wherever it was thrown, exactly
+   * as it would from any other backend module. The restart accounting below
+   * therefore only covers activation failure, which is the one thing we can
+   * still observe from here. See first-party.ts.
+   */
+  private async spawnInProcess(plugin: LoadedPlugin): Promise<void> {
+    const entry = pathToFileUrlString(getPluginBackendEntry(plugin.dir));
+
+    try {
+      const imported = (await import(entry)) as {
+        activate?: PluginModule["activate"];
+        deactivate?: PluginModule["deactivate"];
+        default?: PluginModule;
+      };
+
+      const activate = imported.activate ?? imported.default?.activate;
+      const deactivate = imported.deactivate ?? imported.default?.deactivate;
+
+      if (typeof activate !== "function") {
+        throw new Error(
+          `Plugin ${plugin.id} backend entry does not export an activate(ctx) function`,
+        );
+      }
+
+      const handle: InProcessHandle = {
+        module: { activate, deactivate },
+        unsubscribers: [],
+        providedKeys: [],
+      };
+
+      const ctx = createInProcessContext(plugin.manifest, handle);
+      await withTimeout(
+        Promise.resolve(activate(ctx)),
+        ACTIVATION_TIMEOUT_MS,
+        `Plugin ${plugin.id} did not activate within ${ACTIVATION_TIMEOUT_MS}ms`,
+      );
+
+      plugin.inProcess = handle;
+      plugin.state = "active";
+      this.scheduleStabilityReset(plugin);
+      pluginLogger.success(`Activated plugin ${plugin.id} (in-process)`, {
+        operation: "plugin_activate",
+      });
+    } catch (error) {
+      plugin.lastError = error instanceof Error ? error.message : String(error);
+      plugin.inProcess = null;
+      plugin.state = "crashed";
+      throw error instanceof Error ? error : new Error(plugin.lastError);
+    }
   }
 
   private awaitActivation(plugin: LoadedPlugin, worker: Worker): Promise<void> {
@@ -401,7 +509,12 @@ export class PluginLoader {
     plugin.state = "loaded";
     plugin.lastError = null;
 
-    if (!plugin.ownerUserId) {
+    // In-process plugins legitimately have no owner, so only worker plugins
+    // are held to this.
+    if (
+      !plugin.ownerUserId &&
+      !runsInProcess(plugin.id, plugin.manifest.permissions)
+    ) {
       throw new Error(
         `Plugin ${pluginId} has never been activated, so there is nothing to retry`,
       );
@@ -423,7 +536,7 @@ export class PluginLoader {
       this.stabilityTimers.delete(pluginId);
     }
 
-    if (!plugin.worker) {
+    if (!plugin.worker && !plugin.inProcess) {
       plugin.state = "stopped";
       return;
     }
@@ -434,8 +547,29 @@ export class PluginLoader {
   }
 
   private async terminate(plugin: LoadedPlugin): Promise<void> {
+    // An in-process plugin owns real resources -- a listening port, live SSH
+    // sessions -- and there is no thread to kill, so its own cleanup is the
+    // only thing that releases them.
+    if (plugin.inProcess) {
+      const handle = plugin.inProcess;
+      plugin.inProcess = null;
+      this.options.onWorkerGone?.(plugin);
+      await disposeInProcessHandle(handle, plugin.id);
+      return;
+    }
+
     const worker = plugin.worker;
     if (!worker) return;
+
+    // Only on a deliberate stop. A crashed worker has nothing left to ask.
+    if (plugin.state === "stopping" && this.options.onBeforeTerminate) {
+      try {
+        await this.options.onBeforeTerminate(plugin);
+      } catch {
+        // Cleanup is best-effort; the worker is going away regardless.
+      }
+    }
+
     plugin.worker = null;
     try {
       await worker.terminate();
@@ -474,6 +608,26 @@ function pickTempEnv(): Record<string, string> {
     if (value) env[key] = value;
   }
   return env;
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 function pathToFileUrlString(filePath: string): string {

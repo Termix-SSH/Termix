@@ -295,7 +295,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
 
     const { serverReady } = await import("./database/database.js");
     await serverReady;
-    await import("./hosts/terminal/index.js");
+    // Terminal is deliberately absent: the ssh-terminal plugin starts it, so
+    // disabling that plugin stops the WS server. See plugins/ssh-terminal.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/metrics/index.js");

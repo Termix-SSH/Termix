@@ -3977,7 +3977,14 @@
     "notificationPrivateEndpointsDesc": "Exact private hosts that notification channels may contact. Separate them with commas.",
     "updateNotificationEndpointsFailed": "Failed to update notification endpoint allowlist",
     "updateAiEnabledFailed": "Could not update the AI setting",
-    "updateAiEndpointsFailed": "Could not update the allowed hosts"
+    "updateAiEndpointsFailed": "Could not update the allowed hosts",
+    "plugins": "Plugins",
+    "pluginsNone": "No plugins installed.",
+    "pluginsLoadFailed": "Failed to load plugins",
+    "pluginToggleFailed": "Failed to change the plugin",
+    "pluginBuiltIn": "BUILT IN",
+    "pluginEnabled": "{{name}} enabled",
+    "pluginDisabled": "{{name}} disabled"
   },
   "newUi": {
     "sidebar": {

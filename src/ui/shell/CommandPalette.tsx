@@ -46,6 +46,7 @@ import { canEditHost } from "@/sidebar/host-permissions";
 import { RAIL_ITEMS, RAIL_UTILITY_ITEMS } from "@/sidebar/rail-items";
 import { useAiAvailability } from "@/hooks/use-ai-availability";
 import { useSnippetRunner } from "@/hooks/use-snippet-runner.tsx";
+import { isTabTypeAvailable } from "@/shell/pluginLoader";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -87,11 +88,12 @@ function getSshActions(host: Host): {
 }[] {
   const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
   return [
-    host.enableTerminal !== false && {
-      type: "terminal",
-      icon: Terminal,
-      label: "Terminal",
-    },
+    host.enableTerminal !== false &&
+      isTabTypeAvailable("terminal") && {
+        type: "terminal",
+        icon: Terminal,
+        label: "Terminal",
+      },
     host.enableFileManager && {
       type: "files",
       icon: FolderSearch,

@@ -36,6 +36,7 @@ import aiRoutes from "../ai/index.js";
 import automationsRoutes from "./routes/automations.js";
 import syncRoutes from "./routes/sync.js";
 import pluginApiRoutes from "./routes/plugin-api-routes.js";
+import pluginRoutes from "./routes/plugins.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
@@ -1779,6 +1780,7 @@ app.use("/automations", automationsRoutes);
 app.use("/ai", aiRoutes);
 app.use("/", alertRulesRoutes);
 app.use("/sync", syncRoutes);
+app.use("/plugins", pluginRoutes);
 app.use("/plugin-api", pluginApiRoutes);
 
 const frontendDistPaths = [

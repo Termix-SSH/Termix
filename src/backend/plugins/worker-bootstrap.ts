@@ -60,6 +60,21 @@ function handleResponse(message: PluginResponse): void {
 }
 
 async function handlePush(push: PluginPush): Promise<void> {
+  if (push.kind === "deactivate") {
+    // Always acknowledge, even when the plugin has no hook or its hook threw:
+    // the main thread is waiting before it terminates us, and a missing reply
+    // would just stall that until its timeout.
+    try {
+      if (pluginDeactivate) await pluginDeactivate();
+    } catch {
+      // Nothing useful to do here; the worker is about to be terminated.
+    }
+    if (push.replyTo !== undefined) {
+      port!.postMessage({ id: push.replyTo, ok: true, value: null });
+    }
+    return;
+  }
+
   if (push.kind === "event") {
     const listeners = eventListeners.get(push.key);
     if (!listeners) return;
@@ -218,15 +233,24 @@ const ctx = {
   fetch: notImplemented("fetch"),
 };
 
+/**
+ * Held so a deactivate push can call it. A worker plugin is still terminated
+ * afterwards either way -- this only gives it a chance to close things
+ * cleanly first, which matters for anything holding a remote resource.
+ */
+let pluginDeactivate: (() => void | Promise<void>) | null = null;
+
 async function start(): Promise<void> {
   const module = await import(boot.entryPath);
   const activate = module.activate ?? module.default?.activate;
+  const deactivate = module.deactivate ?? module.default?.deactivate;
 
   if (typeof activate !== "function") {
     throw new Error(
       `Plugin ${boot.pluginId} backend entry does not export an activate(ctx) function`,
     );
   }
+  if (typeof deactivate === "function") pluginDeactivate = deactivate;
 
   await activate(ctx);
   port!.postMessage({ id: 0, ok: true, value: "activated" });

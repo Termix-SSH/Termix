@@ -139,16 +139,81 @@ const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
-const wss = new WebSocketServer({
-  host: "127.0.0.1",
-  port: 30002,
-});
+export const TERMINAL_WS_PORT = 30002;
+
+// Re-exported so the ssh-terminal plugin can publish it on the service
+// registry. session-manager itself stays in core: six modules outside the
+// terminal import it directly.
+export { sessionManager };
+
+/**
+ * The server is created but not listening until startTerminalServer() runs.
+ * The ssh-terminal plugin owns that lifecycle, so disabling the plugin has to
+ * actually free the port rather than just stop routing to it.
+ *
+ * `noServer` avoids binding at import time; listen() below is what opens the
+ * port. Handlers are attached at module scope as before, so none of the
+ * connection logic below had to change.
+ */
+const wss = new WebSocketServer({ noServer: true });
+
+let httpServer: import("http").Server | null = null;
 
 wss.on("error", (error) => {
   sshLogger.error("WebSocket server error", error, {
     operation: "wss_error",
   });
 });
+
+export async function startTerminalServer(
+  port: number = TERMINAL_WS_PORT,
+): Promise<void> {
+  if (httpServer) return;
+
+  const { createServer } = await import("http");
+  const server = createServer();
+
+  server.on("upgrade", (req, socket, head) => {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
+    });
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, "127.0.0.1", () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
+
+  httpServer = server;
+  sshLogger.info(`Terminal WebSocket server listening on ${port}`, {
+    operation: "terminal_ws_start",
+  });
+}
+
+export async function stopTerminalServer(): Promise<void> {
+  if (!httpServer) return;
+
+  const server = httpServer;
+  httpServer = null;
+
+  // Close live sockets first: server.close() waits for connections to drain,
+  // and a terminal session would otherwise hold the port open indefinitely.
+  for (const ws of wss.clients) {
+    try {
+      ws.close(1001, "Terminal plugin disabled");
+    } catch {
+      // Already gone.
+    }
+  }
+
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  sshLogger.info("Terminal WebSocket server stopped", {
+    operation: "terminal_ws_stop",
+  });
+}
 
 /**
  * Auth path for anonymous share-link guests (?shareToken=<linkToken>).

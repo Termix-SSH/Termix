@@ -11,6 +11,8 @@
  * runtime, for the same reason. If you change the schema, change both.
  */
 
+import { isFirstParty, TRANSPORT_OWNER_CAPABILITY } from "./first-party.js";
+
 export const PLUGIN_PERMISSIONS = [
   "hosts.read",
   "hosts.write",
@@ -24,6 +26,10 @@ export const PLUGIN_PERMISSIONS = [
   "notify.send",
   "users.read",
   "process.sidecar",
+  // Reserved for first-party plugins. parseManifest refuses it for any id not
+  // on the hardcoded allowlist in first-party.ts, so declaring it does not
+  // grant it.
+  "process:transport-owner",
   "ui.tab",
   "ui.rail",
   "ui.card",
@@ -321,6 +327,20 @@ export function parseManifest(raw: unknown): {
     return {
       errors: [
         `Plugin targets SDK api version "${manifest.engine.api}", this Termix build implements "${SUPPORTED_PLUGIN_API_VERSION}"`,
+      ],
+    };
+  }
+
+  // Refused outright rather than ignored: a plugin that asked to run in-process
+  // and was quietly downgraded to a worker would fail later in a confusing way,
+  // and the manifest would still claim reach it does not have.
+  if (
+    manifest.permissions.includes(TRANSPORT_OWNER_CAPABILITY) &&
+    !isFirstParty(manifest.id)
+  ) {
+    return {
+      errors: [
+        `Permission "${TRANSPORT_OWNER_CAPABILITY}" is reserved for first-party plugins and cannot be declared by "${manifest.id}"`,
       ],
     };
   }

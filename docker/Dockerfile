@@ -103,6 +103,9 @@ COPY --chown=node:node --from=frontend-builder /app/dist /app/html
 
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
+# Bundled first-party plugins (ssh-terminal). Resolved as dist/plugins by
+# getBundledPluginsDir(); without this the terminal never starts.
+COPY --chown=node:node --from=backend-builder /app/dist/plugins ./dist/plugins
 COPY --chown=node:node --from=opkssh-downloader /opkssh /app/opkssh-bundled
 COPY --chown=node:node package.json ./
 # Schema for Postgres and MySQL. Unused by the default SQLite deployment, which

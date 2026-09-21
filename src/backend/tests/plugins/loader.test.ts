@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PluginLoader, MAX_RESTART_ATTEMPTS } from "../../plugins/loader.js";
 import { createFixturePlugin, type Fixture } from "./fixture-plugin.js";
 
@@ -280,6 +280,24 @@ describe("PluginLoader", () => {
   });
 
   describe("loadAll", () => {
+    // loadAll scans bundled plugins as well as user-installed ones, and the
+    // repo really does ship one now. These tests are about the user directory,
+    // so they point the bundled dir somewhere empty.
+    let previousBundled: string | undefined;
+
+    beforeEach(() => {
+      previousBundled = process.env.TERMIX_BUNDLED_PLUGINS_DIR;
+      process.env.TERMIX_BUNDLED_PLUGINS_DIR = "/nonexistent/bundled-plugins";
+    });
+
+    afterEach(() => {
+      if (previousBundled === undefined) {
+        delete process.env.TERMIX_BUNDLED_PLUGINS_DIR;
+      } else {
+        process.env.TERMIX_BUNDLED_PLUGINS_DIR = previousBundled;
+      }
+    });
+
     it("returns an empty list when the plugins dir does not exist", async () => {
       const previous = process.env.DATA_DIR;
       process.env.DATA_DIR = "/nonexistent/data-dir";

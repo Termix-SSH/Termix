@@ -88,6 +88,7 @@ import {
 } from "@/lib/local-adaptive-preferences";
 import type { WebEndpoint } from "@/types/index";
 import { openWebEndpointExternally } from "@/api/web-endpoint-api";
+import { isTabTypeAvailable } from "@/shell/pluginLoader";
 
 export function statusCheckEnabled(host: Host): boolean {
   return host.statsConfig?.statusCheckEnabled !== false;
@@ -149,7 +150,8 @@ export function getSshActions(host: Host): {
 
   const connectionActions = [
     host.enableSsh &&
-      host.enableTerminal && {
+      host.enableTerminal &&
+      isTabTypeAvailable("terminal") && {
         type: "terminal" as TabType,
         icon: Terminal,
         label: "Terminal",

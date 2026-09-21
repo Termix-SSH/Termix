@@ -94,6 +94,7 @@ import {
   type UserRole,
 } from "@/main-axios";
 import { type AdminSection, type Host } from "@/types/ui-types";
+import { AdminPluginsSection } from "./AdminPluginsSection";
 import {
   AdminRolesSection,
   AdminSessionsSection,
@@ -1494,6 +1495,11 @@ export function AdminSettingsPanel({
         open={openSections.has("audit-log")}
         onToggle={() => toggle("audit-log")}
         users={users}
+      />
+
+      <AdminPluginsSection
+        open={openSections.has("plugins")}
+        onToggle={() => toggle("plugins")}
       />
 
       <AdminTouchInputSection

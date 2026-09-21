@@ -17,6 +17,7 @@ import {
 import { PluginBroker, type PluginRuntime } from "./broker.js";
 import { buildPluginRouter } from "./http-bridge.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
+import { isFirstParty, runsInProcess } from "./first-party.js";
 
 let loader: PluginLoader | null = null;
 let broker: PluginBroker | null = null;
@@ -129,9 +130,58 @@ export function getPluginRuntime(): {
         broker!.detach(plugin.id);
         unregisterPluginRouter(plugin.id);
       },
+      onBeforeTerminate: async (plugin) => {
+        const runtime = broker!.get(plugin.id);
+        if (runtime) await broker!.requestDeactivate(runtime);
+      },
     });
   }
   return { loader, broker };
+}
+
+/**
+ * Makes sure a bundled first-party plugin has a row so it can be enabled and
+ * disabled like any other.
+ *
+ * Only the insert sets state: once the row exists, whatever the user chose
+ * wins. Re-enabling a plugin they disabled on every restart would be a bug,
+ * not a default.
+ */
+async function seedBundledPlugins(loaded: LoadedPlugin[]): Promise<void> {
+  const { createCurrentPluginRepository } =
+    await import("../database/repositories/factory.js");
+  const repository = createCurrentPluginRepository();
+
+  for (const plugin of loaded) {
+    if (!isFirstParty(plugin.id)) continue;
+
+    const existing = await repository.findById(plugin.id);
+    if (existing) {
+      // Keep metadata fresh across upgrades, but never touch `state`.
+      if (existing.version !== plugin.manifest.version) {
+        await repository.update(plugin.id, {
+          version: plugin.manifest.version,
+          name: plugin.manifest.name,
+          manifestJson: JSON.stringify(plugin.manifest),
+        });
+      }
+      continue;
+    }
+
+    await repository.create({
+      id: plugin.id,
+      name: plugin.manifest.name,
+      version: plugin.manifest.version,
+      tier: "first-party",
+      source: "bundled",
+      state: "enabled",
+      manifestJson: JSON.stringify(plugin.manifest),
+    });
+
+    pluginLogger.info(`Registered bundled plugin ${plugin.id}`, {
+      operation: "plugin_seed",
+    });
+  }
 }
 
 /**
@@ -144,6 +194,8 @@ export async function initializePlugins(): Promise<LoadedPlugin[]> {
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
+  await seedBundledPlugins(loaded);
+
   const {
     createCurrentPluginRepository,
     createCurrentPluginPermissionGrantRepository,
@@ -155,6 +207,21 @@ export async function initializePlugins(): Promise<LoadedPlugin[]> {
   for (const plugin of loaded) {
     const record = byId.get(plugin.id);
     if (!record || record.state !== "enabled") continue;
+
+    // An in-process first-party plugin never uses the gated ctx, so it has no
+    // owner to act as and must not be held to the grant requirement below.
+    if (runsInProcess(plugin.id, plugin.manifest.permissions)) {
+      try {
+        await activatePlugin(plugin.id);
+      } catch (error) {
+        pluginLogger.error(
+          `Failed to activate plugin ${plugin.id}`,
+          error instanceof Error ? error : new Error(String(error)),
+          { operation: "plugin_activate" },
+        );
+      }
+      continue;
+    }
 
     // The plugins table records no installer, so the plugin acts under the
     // authority of whoever granted its capabilities. Without a grant there is
@@ -189,7 +256,7 @@ export async function initializePlugins(): Promise<LoadedPlugin[]> {
 
 export async function activatePlugin(
   pluginId: string,
-  ownerUserId: string,
+  ownerUserId?: string,
 ): Promise<void> {
   const { loader: pluginLoader, broker: pluginBroker } = getPluginRuntime();
   await pluginLoader.activate(pluginId, ownerUserId);

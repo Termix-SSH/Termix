@@ -119,6 +119,7 @@
           "notify.send",
           "users.read",
           "process.sidecar",
+          "process:transport-owner",
           "ui.tab",
           "ui.rail",
           "ui.card",

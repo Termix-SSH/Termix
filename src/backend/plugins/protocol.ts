@@ -31,7 +31,7 @@ export type PluginResponse = PluginResponseOk | PluginResponseErr;
 
 /** Main thread -> worker, pushed rather than requested. */
 export interface PluginPush {
-  kind: "event" | "http" | "timer";
+  kind: "event" | "http" | "timer" | "deactivate";
   /** Event topic, route key, or timer id depending on kind. */
   key: string;
   payload: unknown;

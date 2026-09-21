@@ -372,6 +372,7 @@ export type AdminSection =
   | "api-keys"
   | "audit-log"
   | "ssl"
+  | "plugins"
   | "touch-input";
 export type ThemeId =
   | "dark"

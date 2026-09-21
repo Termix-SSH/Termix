@@ -8,6 +8,7 @@
   "asar": true,
   "asarUnpack": [
     "dist/backend/**/*",
+    "dist/plugins/**/*",
     "node_modules/**/*",
     "public/icons/**/*",
     "public/icon.*"

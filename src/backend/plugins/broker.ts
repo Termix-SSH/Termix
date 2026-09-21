@@ -79,6 +79,8 @@ const MAX_STORAGE_KEY_LENGTH = 128;
 const MAX_STORAGE_VALUE_BYTES = 256 * 1024;
 const MIN_SCHEDULE_INTERVAL_MS = 1000;
 const HTTP_HANDLER_TIMEOUT_MS = 30_000;
+/** Short: a disable should feel immediate even when a plugin is unresponsive. */
+const DEACTIVATE_TIMEOUT_MS = 5_000;
 const MAX_SSH_HANDLES = 8;
 const DEFAULT_SSH_EXEC_TIMEOUT_MS = 30_000;
 const MAX_SSH_EXEC_TIMEOUT_MS = 120_000;
@@ -602,6 +604,40 @@ export class PluginBroker {
       });
 
       this.push(runtime, { kind: "http", key, payload, replyTo });
+    });
+  }
+
+  /**
+   * Gives a worker plugin a chance to close things down before it is killed.
+   * Resolves either way: a plugin that does not answer must not block the
+   * disable, it just loses its cleanup.
+   */
+  requestDeactivate(
+    runtime: PluginRuntime,
+    timeoutMs = DEACTIVATE_TIMEOUT_MS,
+  ): Promise<void> {
+    if (runtime.disposed) return Promise.resolve();
+
+    const replyTo = this.nextPushId++;
+
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        this.httpWaiters.delete(replyTo);
+        resolve();
+      }, timeoutMs);
+
+      const settle = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+
+      this.httpWaiters.set(replyTo, { resolve: settle, reject: settle });
+      this.push(runtime, {
+        kind: "deactivate",
+        key: "deactivate",
+        payload: null,
+        replyTo,
+      });
     });
   }
 

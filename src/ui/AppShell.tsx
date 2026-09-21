@@ -217,6 +217,7 @@ import {
   serializeSplitTabs,
   type PersistedSplitTab,
 } from "@/shell/splitTabUtils";
+import { isTabTypeAvailable, refreshPluginState } from "@/shell/pluginLoader";
 
 export { buildHostTree } from "@/sidebar/build-host-tree";
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
@@ -456,6 +457,12 @@ export function AppShell({
         setShowDonationModal(!!info.show_donation_modal);
       })
       .catch(() => setIsAdmin(false));
+  }, []);
+
+  // Plugin state gates which tab types can be opened, so it has to land before
+  // a saved session is restored. A failure leaves everything enabled.
+  useEffect(() => {
+    refreshPluginState().catch(() => {});
   }, []);
 
   const handleDismissDonationModal = useCallback(() => {
@@ -1657,6 +1664,11 @@ export function AppShell({
     },
     options?: { endpointId?: string; label?: string; forceNewTab?: boolean },
   ) {
+    // A tab type owned by a disabled plugin cannot be opened, including from a
+    // restored session. Guarded here rather than at each call site because
+    // every path into a tab goes through this one.
+    if (!isTabTypeAvailable(type)) return null;
+
     if (!restore && !options?.forceNewTab) {
       const existing = tabsRef.current.find(
         (t) =>
