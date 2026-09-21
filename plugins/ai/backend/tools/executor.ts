@@ -4,15 +4,15 @@ import {
   createCurrentFleetRepository,
   createCurrentHostRepository,
   createCurrentSnippetRepository,
-} from "../../database/repositories/factory.js";
-import { validateDefinition } from "../../database/routes/automations.js";
-import { resolveHostById } from "../../hosts/host-resolver.js";
-import { execCommand } from "../../hosts/metrics-shared/common-utils.js";
+} from "../../../../src/backend/database/repositories/factory.js";
+import { validateDefinition } from "../../../../src/backend/database/routes/automations.js";
+import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
+import { execCommand } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import {
   createFleetSshFactory,
   getFleetPoolKey,
-} from "../../hosts/ssh-client-factory.js";
-import { withConnection } from "../../hosts/ssh-connection-pool.js";
+} from "../../../../src/backend/hosts/ssh-client-factory.js";
+import { withConnection } from "../../../../src/backend/hosts/ssh-connection-pool.js";
 import { getTool } from "./catalog.js";
 
 /** Approved commands get a bounded window rather than hanging the request. */

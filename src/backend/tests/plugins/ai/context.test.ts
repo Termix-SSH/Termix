@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSystemPrompt } from "../../ai/context.js";
+import { buildSystemPrompt } from "../../../../../plugins/ai/backend/context.js";
 
 const BASE = { hostCount: 3, allowReadOnlyCommands: false };
 

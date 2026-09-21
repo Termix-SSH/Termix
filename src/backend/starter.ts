@@ -299,6 +299,9 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // ssh-terminal, docker and host-metrics plugins start their own servers,
     // so disabling any of them stops its WS/HTTP server. See
     // plugins/ssh-terminal, plugins/docker and plugins/host-metrics.
+    // AI is also absent: the ai plugin registers its router with the /ai
+    // dispatcher in database.ts on activate, so disabling it makes /ai/* 404
+    // instead of leaving a dead import here. See plugins/ai.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/tmux/index.js");

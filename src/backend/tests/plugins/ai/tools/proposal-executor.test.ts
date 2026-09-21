@@ -16,7 +16,7 @@ const fleetRepository = { create: vi.fn(), addMember: vi.fn() };
 const alertRepository = { createAlertRule: vi.fn() };
 const automationRepository = { create: vi.fn() };
 
-vi.mock("../../database/repositories/factory.js", () => ({
+vi.mock("../../../../database/repositories/factory.js", () => ({
   createCurrentHostRepository: () => hostRepository,
   createCurrentSnippetRepository: () => snippetRepository,
   createCurrentFleetRepository: () => fleetRepository,
@@ -25,19 +25,19 @@ vi.mock("../../database/repositories/factory.js", () => ({
 }));
 
 const resolveHostById = vi.fn();
-vi.mock("../../hosts/host-resolver.js", () => ({
+vi.mock("../../../../hosts/host-resolver.js", () => ({
   resolveHostById: (...args: unknown[]) => resolveHostById(...args),
 }));
 
 const execCommand = vi.fn();
-vi.mock("../../hosts/metrics-shared/common-utils.js", () => ({
+vi.mock("../../../../hosts/metrics-shared/common-utils.js", () => ({
   execCommand: (...args: unknown[]) => execCommand(...args),
 }));
-vi.mock("../../hosts/ssh-client-factory.js", () => ({
+vi.mock("../../../../hosts/ssh-client-factory.js", () => ({
   createFleetSshFactory: () => () => ({}),
   getFleetPoolKey: () => "pool",
 }));
-vi.mock("../../hosts/ssh-connection-pool.js", () => ({
+vi.mock("../../../../hosts/ssh-connection-pool.js", () => ({
   withConnection: async (
     _key: string,
     _factory: unknown,
@@ -45,7 +45,8 @@ vi.mock("../../hosts/ssh-connection-pool.js", () => ({
   ) => run({}),
 }));
 
-const { applyProposal } = await import("../../ai/tools/executor.js");
+const { applyProposal } =
+  await import("../../../../../../plugins/ai/backend/tools/executor.js");
 
 describe("applyProposal", () => {
   beforeEach(() => {

@@ -32,7 +32,7 @@ import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
 import secretSourceRoutes from "./routes/secret-sources.js";
 import alertRulesRoutes from "./routes/alert-rules-routes.js";
-import aiRoutes from "../ai/index.js";
+import aiDispatch from "./routes/ai-dispatch.js";
 import automationsRoutes from "./routes/automations.js";
 import syncRoutes from "./routes/sync.js";
 import pluginApiRoutes from "./routes/plugin-api-routes.js";
@@ -1777,7 +1777,7 @@ app.use("/secret-sources", secretSourceRoutes);
 // Before the alert routes, which are mounted at the root and would otherwise
 // have first claim on the path.
 app.use("/automations", automationsRoutes);
-app.use("/ai", aiRoutes);
+app.use("/ai", aiDispatch);
 app.use("/", alertRulesRoutes);
 app.use("/sync", syncRoutes);
 app.use("/plugins", pluginRoutes);

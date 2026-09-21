@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { REDACTED, redact, redactString } from "../../ai/redaction.js";
+import {
+  REDACTED,
+  redact,
+  redactString,
+} from "../../../../../plugins/ai/backend/redaction.js";
 
 describe("redact", () => {
   it("drops secret-named fields at any depth", () => {

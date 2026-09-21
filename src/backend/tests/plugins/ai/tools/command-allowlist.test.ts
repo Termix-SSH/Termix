@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isReadOnlyCommand } from "../../ai/tools/command-allowlist.js";
+import { isReadOnlyCommand } from "../../../../../../plugins/ai/backend/tools/command-allowlist.js";
 
 /**
  * These commands can run without a per-command approval click, so the parser

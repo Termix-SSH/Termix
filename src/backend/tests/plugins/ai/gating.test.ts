@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const settingsRepository = { getBoolean: vi.fn() };
 const userPreferenceRepository = { findByUserId: vi.fn() };
 
-vi.mock("../../database/repositories/factory.js", () => ({
+vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => settingsRepository,
   createCurrentUserPreferenceRepository: () => userPreferenceRepository,
 }));
 
 const { isAiGloballyEnabled, resolveAiAccess } =
-  await import("../../ai/gating.js");
+  await import("../../../../../plugins/ai/backend/gating.js");
 
 describe("AI gating", () => {
   beforeEach(() => {

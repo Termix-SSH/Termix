@@ -45,11 +45,21 @@
  * implements the same jump-host/SOCKS5/TOTP/Warpgate/OPKSSH/Vault
  * keyboard-interactive handshakes the terminal does -- none of which the
  * worker ctx.ssh API (connect + single exec-and-collect) has a hook for.
+ *
+ * ai is here for a different reason: it does not own a transport at all, but
+ * it writes directly across hosts, snippets, fleets, alert rules and
+ * automations through their repositories, runs approved commands over the
+ * shared SSH pool via resolveHostById and withConnection, and streams its
+ * chat replies as server-sent events. ctx.hosts is a 13-field read-only view
+ * with no write methods and no snippets/fleets/alerts/automations surface at
+ * all, and ctx.http.route replies with one postMessage value rather than a
+ * stream, so none of that fits the worker ctx either.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
   "docker",
   "host-metrics",
+  "ai",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

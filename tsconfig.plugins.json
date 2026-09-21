@@ -28,7 +28,8 @@
   },
   "include": [
     "plugins/docker/backend/**/*.ts",
-    "plugins/host-metrics/backend/**/*.ts"
+    "plugins/host-metrics/backend/**/*.ts",
+    "plugins/ai/backend/**/*.ts"
   ],
   "exclude": ["src/**/*.test.ts"]
 }

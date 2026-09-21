@@ -205,7 +205,7 @@ export async function markAiProposalRunInTerminal(
 
 export async function getAiGloballyEnabled(): Promise<boolean> {
   try {
-    return (await authApi.get("/users/ai-enabled")).data.enabled;
+    return (await authApi.get("/ai/enabled")).data.enabled;
   } catch (error) {
     throw handleApiError(error, "get AI enabled setting");
   }
@@ -213,7 +213,7 @@ export async function getAiGloballyEnabled(): Promise<boolean> {
 
 export async function setAiGloballyEnabled(enabled: boolean): Promise<boolean> {
   try {
-    return (await authApi.patch("/users/ai-enabled", { enabled })).data.enabled;
+    return (await authApi.patch("/ai/enabled", { enabled })).data.enabled;
   } catch (error) {
     throw handleApiError(error, "update AI enabled setting");
   }
@@ -221,7 +221,7 @@ export async function setAiGloballyEnabled(enabled: boolean): Promise<boolean> {
 
 export async function getAiPrivateEndpoints(): Promise<string[]> {
   try {
-    return (await authApi.get("/users/ai-private-endpoints")).data.hosts;
+    return (await authApi.get("/ai/private-endpoints")).data.hosts;
   } catch (error) {
     throw handleApiError(error, "get AI endpoint allowlist");
   }
@@ -231,8 +231,7 @@ export async function setAiPrivateEndpoints(
   hosts: string[],
 ): Promise<string[]> {
   try {
-    return (await authApi.patch("/users/ai-private-endpoints", { hosts })).data
-      .hosts;
+    return (await authApi.patch("/ai/private-endpoints", { hosts })).data.hosts;
   } catch (error) {
     throw handleApiError(error, "update AI endpoint allowlist");
   }

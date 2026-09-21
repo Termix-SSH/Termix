@@ -4,7 +4,7 @@ import {
   evaluateEgress,
   isPrivateDestination,
   parseAllowlist,
-} from "../../ai/egress.js";
+} from "../../../../../plugins/ai/backend/egress.js";
 
 /**
  * The rule that lets a self-hosted Ollama work without turning the backend

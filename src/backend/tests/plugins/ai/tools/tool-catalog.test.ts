@@ -5,7 +5,7 @@ import {
   getTool,
   listToolNames,
   toolDefinitions,
-} from "../../ai/tools/catalog.js";
+} from "../../../../../../plugins/ai/backend/tools/catalog.js";
 
 /**
  * The security regression test for the whole feature.

@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../utils/error-message.js";
+import { getErrorMessage } from "../../../src/backend/utils/error-message.js";
 import { getAdapter } from "./providers/registry.js";
 import type {
   ChatMessage,

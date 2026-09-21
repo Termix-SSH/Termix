@@ -1,9 +1,9 @@
 import type { NextFunction, Response } from "express";
-import type { AuthenticatedRequest } from "../../types/index.js";
+import type { AuthenticatedRequest } from "../../../src/types/index.js";
 import {
   createCurrentSettingsRepository,
   createCurrentUserPreferenceRepository,
-} from "../database/repositories/factory.js";
+} from "../../../src/backend/database/repositories/factory.js";
 
 /**
  * Three gates, all checked on the server.

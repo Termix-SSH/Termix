@@ -5,7 +5,7 @@ import {
   mentionLabel,
   toolLabel,
 } from "@/features/ai/labels";
-import { AI_TOOLS } from "../../../../backend/ai/tools/catalog";
+import { AI_TOOLS } from "../../../../../plugins/ai/backend/tools/catalog";
 
 describe("humanize", () => {
   it("splits camelCase into words", () => {

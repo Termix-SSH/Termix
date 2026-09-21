@@ -1,6 +1,6 @@
 import { isIP } from "net";
-import { isBlockedAddress } from "../utils/safe-outbound-fetch.js";
-import { createCurrentSettingsRepository } from "../database/repositories/factory.js";
+import { isBlockedAddress } from "../../../src/backend/utils/safe-outbound-fetch.js";
+import { createCurrentSettingsRepository } from "../../../src/backend/database/repositories/factory.js";
 
 /**
  * Where the assistant is allowed to send requests.

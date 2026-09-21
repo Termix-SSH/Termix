@@ -7,17 +7,20 @@ const readPrivateAllowlist = vi.fn();
 const evaluateEgress = vi.fn();
 const globalFetch = vi.fn();
 
-vi.mock("../../utils/proxy-agent.js", () => ({
+vi.mock("../../../../utils/proxy-agent.js", () => ({
   fetchWithProxy,
   getFetchDispatcher,
 }));
-vi.mock("../../utils/safe-outbound-fetch.js", () => ({ safeOutboundFetch }));
-vi.mock("../../ai/egress.js", () => ({
+vi.mock("../../../../utils/safe-outbound-fetch.js", () => ({
+  safeOutboundFetch,
+}));
+vi.mock("../../../../../../plugins/ai/backend/egress.js", () => ({
   readPrivateAllowlist,
   evaluateEgress,
 }));
 
-const { providerFetch } = await import("../../ai/providers/http.js");
+const { providerFetch } =
+  await import("../../../../../../plugins/ai/backend/providers/http.js");
 
 describe("providerFetch", () => {
   beforeEach(() => {

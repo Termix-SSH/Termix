@@ -1,21 +1,30 @@
-import { getErrorMessage } from "../utils/error-message.js";
+import { getErrorMessage } from "../../../src/backend/utils/error-message.js";
 import express from "express";
-import type { AuthenticatedRequest } from "../../types/index.js";
-import { PermissionManager } from "../utils/permission-manager.js";
-import { AuthManager } from "../utils/auth-manager.js";
-import { databaseLogger } from "../utils/logger.js";
+import {
+  registerAiRouter,
+  unregisterAiRouter,
+} from "../../../src/backend/database/routes/ai-dispatch.js";
+import type { AuthenticatedRequest } from "../../../src/types/index.js";
+import { PermissionManager } from "../../../src/backend/utils/permission-manager.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import { databaseLogger } from "../../../src/backend/utils/logger.js";
 import {
   getAuditUsername,
   getRequestMeta,
   logAudit,
-} from "../utils/audit-logger.js";
+} from "../../../src/backend/utils/audit-logger.js";
 import {
   createCurrentAiRepository,
   createCurrentHostRepository,
-} from "../database/repositories/factory.js";
+  createCurrentSettingsRepository,
+  createCurrentUserRepository,
+} from "../../../src/backend/database/repositories/factory.js";
+import type { UserRecord } from "../../../src/backend/database/repositories/user-repository.js";
 import { buildSystemPrompt } from "./context.js";
+import { AI_PRIVATE_ALLOWLIST_KEY, parseAllowlist } from "./egress.js";
 import { runAgent } from "./engine.js";
 import {
+  AI_GLOBAL_ENABLED_KEY,
   createAiGate,
   isAiGloballyEnabled,
   resolveAiAccess,
@@ -46,6 +55,226 @@ function parseId(raw: unknown): number | null {
   const id = typeof raw === "string" ? parseInt(raw, 10) : Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
 }
+
+async function getAdminActor(
+  userId: string | undefined,
+): Promise<UserRecord | null> {
+  if (!userId) return null;
+  const user = await createCurrentUserRepository().findById(userId);
+  return user?.isAdmin ? user : null;
+}
+
+/**
+ * @openapi
+ * /ai/enabled:
+ *   get:
+ *     summary: Get whether the AI assistant is enabled instance-wide
+ *     tags:
+ *       - AI
+ *     responses:
+ *       200:
+ *         description: AI enabled status.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 enabled:
+ *                   type: boolean
+ */
+router.get("/enabled", authenticateJWT, async (_req, res) => {
+  try {
+    res.json({
+      // Defaults to false so upgrading an install never turns the assistant
+      // on without an admin deciding to.
+      enabled: await createCurrentSettingsRepository().getBoolean(
+        AI_GLOBAL_ENABLED_KEY,
+        false,
+      ),
+    });
+  } catch (err) {
+    databaseLogger.error("Failed to get AI enabled setting", err, {
+      operation: "ai_enabled_get_failed",
+    });
+    res.status(500).json({ error: "Failed to get AI enabled setting" });
+  }
+});
+
+/**
+ * @openapi
+ * /ai/enabled:
+ *   patch:
+ *     summary: Update the instance-wide AI assistant setting (admin only)
+ *     description: Turning this off hides and blocks the assistant for every user, whatever their own preference says.
+ *     tags:
+ *       - AI
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Setting updated.
+ *       403:
+ *         description: Not authorized.
+ */
+router.patch("/enabled", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const actor = await getAdminActor(userId);
+    if (!actor) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const { enabled } = req.body ?? {};
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "enabled must be a boolean" });
+    }
+    await createCurrentSettingsRepository().set(
+      AI_GLOBAL_ENABLED_KEY,
+      enabled ? "true" : "false",
+    );
+
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    await logAudit({
+      userId: userId as string,
+      username: actor.username ?? (userId as string),
+      action: "update_ai_enabled",
+      resourceType: "setting",
+      details: JSON.stringify({ enabled }),
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
+    res.json({ enabled });
+  } catch (err) {
+    databaseLogger.error("Failed to update AI enabled setting", err, {
+      operation: "ai_enabled_update_failed",
+    });
+    res.status(500).json({ error: "Failed to update AI enabled setting" });
+  }
+});
+
+/**
+ * @openapi
+ * /ai/private-endpoints:
+ *   get:
+ *     summary: Get the allowlist of private AI endpoint hosts
+ *     tags:
+ *       - AI
+ *     responses:
+ *       200:
+ *         description: Allowed hosts.
+ */
+router.get("/private-endpoints", authenticateJWT, async (_req, res) => {
+  try {
+    const raw = await createCurrentSettingsRepository().get(
+      AI_PRIVATE_ALLOWLIST_KEY,
+    );
+    res.json({ hosts: parseAllowlist(raw) });
+  } catch (err) {
+    databaseLogger.error("Failed to get AI private endpoint allowlist", err, {
+      operation: "ai_private_endpoints_get_failed",
+    });
+    res.status(500).json({ error: "Failed to get the allowlist" });
+  }
+});
+
+/**
+ * @openapi
+ * /ai/private-endpoints:
+ *   patch:
+ *     summary: Replace the allowlist of private AI endpoint hosts (admin only)
+ *     description: >
+ *       Providers on private or loopback addresses, such as a self-hosted
+ *       Ollama, are refused unless their host appears here. Without this an
+ *       ordinary user could point a provider at an internal service and use
+ *       the server as a probe of its own network.
+ *     tags:
+ *       - AI
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hosts:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Allowlist updated.
+ *       403:
+ *         description: Not authorized.
+ */
+router.patch("/private-endpoints", authenticateJWT, async (req, res) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  try {
+    const actor = await getAdminActor(userId);
+    if (!actor) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const { hosts } = req.body ?? {};
+    if (!Array.isArray(hosts)) {
+      return res.status(400).json({ error: "hosts must be an array" });
+    }
+    if (hosts.length > 50) {
+      return res.status(400).json({ error: "At most 50 hosts are allowed" });
+    }
+
+    const cleaned: string[] = [];
+    for (const entry of hosts) {
+      if (typeof entry !== "string") {
+        return res.status(400).json({ error: "Each host must be a string" });
+      }
+      const host = entry.trim().toLowerCase();
+      if (!host) continue;
+      // A bare host, not a URL: no scheme, path, port or whitespace.
+      if (!/^[a-z0-9._:-]+$/.test(host)) {
+        return res
+          .status(400)
+          .json({ error: `${entry} is not a valid hostname` });
+      }
+      if (!cleaned.includes(host)) cleaned.push(host);
+    }
+
+    await createCurrentSettingsRepository().set(
+      AI_PRIVATE_ALLOWLIST_KEY,
+      JSON.stringify(cleaned),
+    );
+
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    await logAudit({
+      userId: userId as string,
+      username: actor.username ?? (userId as string),
+      action: "update_ai_private_endpoints",
+      resourceType: "setting",
+      details: JSON.stringify({ hosts: cleaned }),
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
+    res.json({ hosts: cleaned });
+  } catch (err) {
+    databaseLogger.error(
+      "Failed to update AI private endpoint allowlist",
+      err,
+      {
+        operation: "ai_private_endpoints_update_failed",
+      },
+    );
+    res.status(500).json({ error: "Failed to update the allowlist" });
+  }
+});
 
 /**
  * @openapi
@@ -1110,4 +1339,12 @@ router.post(
   },
 );
 
-export default router;
+/** Called from activate(). Mounts this router at /ai via the shared dispatcher. */
+export function startAiService(): void {
+  registerAiRouter(router);
+}
+
+/** Called from deactivate(). /ai/* falls back to 404 until reactivated. */
+export function stopAiService(): void {
+  unregisterAiRouter();
+}

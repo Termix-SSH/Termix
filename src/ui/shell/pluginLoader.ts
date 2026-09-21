@@ -22,9 +22,17 @@ import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 /**
  * Built-in tab types owned by a plugin, keyed by plugin id. The terminal has
  * no rail item: it opens from a host, the command palette or quick connect.
+ *
+ * ai is a rail-view/right-dock panel rather than a tab opened via
+ * registerTabComponent (AiPanel is rendered directly by AppShell.tsx and
+ * tabUtils.tsx, the same way TerminalTabContent is for the terminal), so it
+ * belongs here for the same reason: a built-in surface gated by whether its
+ * owning plugin is installed and enabled, not something registered at
+ * runtime.
  */
 const BUILT_IN_TABS_BY_PLUGIN: Record<string, string[]> = {
   "ssh-terminal": ["terminal"],
+  ai: ["ai"],
 };
 
 let pluginEnabled = new Map<string, boolean>();

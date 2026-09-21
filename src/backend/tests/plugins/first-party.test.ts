@@ -39,18 +39,20 @@ function manifest(overrides: Record<string, unknown> = {}) {
 }
 
 describe("first-party allowlist", () => {
-  it("contains only ssh-terminal, docker and host-metrics", () => {
+  it("contains only ssh-terminal, docker, host-metrics and ai", () => {
     expect([...FIRST_PARTY_PLUGIN_IDS].sort()).toEqual([
+      "ai",
       "docker",
       "host-metrics",
       "ssh-terminal",
     ]);
   });
 
-  it("recognises ssh-terminal, docker and host-metrics and nothing else", () => {
+  it("recognises ssh-terminal, docker, host-metrics and ai and nothing else", () => {
     expect(isFirstParty("ssh-terminal")).toBe(true);
     expect(isFirstParty("docker")).toBe(true);
     expect(isFirstParty("host-metrics")).toBe(true);
+    expect(isFirstParty("ai")).toBe(true);
     expect(isFirstParty("ssh-terminal-pro")).toBe(false);
     expect(isFirstParty("community-plugin")).toBe(false);
     expect(isFirstParty("")).toBe(false);
@@ -66,12 +68,14 @@ describe("runsInProcess", () => {
     expect(runsInProcess("host-metrics", [TRANSPORT_OWNER_CAPABILITY])).toBe(
       true,
     );
+    expect(runsInProcess("ai", [TRANSPORT_OWNER_CAPABILITY])).toBe(true);
 
     // On the list but not asking for it: stays in a worker, so the manifest
     // remains an honest description of what the plugin does.
     expect(runsInProcess("ssh-terminal", ["hosts.read"])).toBe(false);
     expect(runsInProcess("docker", ["hosts.read"])).toBe(false);
     expect(runsInProcess("host-metrics", ["hosts.read"])).toBe(false);
+    expect(runsInProcess("ai", ["hosts.read"])).toBe(false);
 
     // Asking for it but not on the list.
     expect(
@@ -137,6 +141,18 @@ describe("manifest gate on the reserved capability", () => {
 
     expect(errors).toEqual([]);
     expect(parsed?.id).toBe("host-metrics");
+  });
+
+  it("allows it for ai", () => {
+    const { manifest: parsed, errors } = parseManifest(
+      manifest({
+        id: "ai",
+        permissions: [TRANSPORT_OWNER_CAPABILITY],
+      }),
+    );
+
+    expect(errors).toEqual([]);
+    expect(parsed?.id).toBe("ai");
   });
 
   it("still accepts an ordinary manifest that never mentions it", () => {

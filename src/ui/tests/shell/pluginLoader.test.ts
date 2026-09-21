@@ -49,6 +49,24 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
   };
 }
 
+function aiPlugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
+  return plugin({
+    id: "ai",
+    name: "AI Assistant",
+    contributes: {
+      tabs: [
+        {
+          id: "ai",
+          titleKey: "nav.ai",
+          icon: "Sparkles",
+          openFrom: ["rail", "palette"],
+        },
+      ],
+    },
+    ...overrides,
+  });
+}
+
 describe("plugin state applied to the shell", () => {
   afterEach(() => {
     resetPluginState();
@@ -137,6 +155,30 @@ describe("plugin state applied to the shell", () => {
     expect(visibleRailItems().map((i) => i.id)).not.toContain(
       "other-plugin-tab",
     );
+  });
+
+  it("allows the ai tab while the plugin is enabled", () => {
+    applyPluginState([aiPlugin({ enabled: true })]);
+    expect(isTabTypeAvailable("ai")).toBe(true);
+  });
+
+  it("blocks the ai tab when the plugin is disabled", () => {
+    applyPluginState([aiPlugin({ enabled: false })]);
+    expect(isTabTypeAvailable("ai")).toBe(false);
+  });
+
+  it("allows the ai tab again when the plugin is re-enabled", () => {
+    applyPluginState([aiPlugin({ enabled: false })]);
+    expect(isTabTypeAvailable("ai")).toBe(false);
+
+    applyPluginState([aiPlugin({ enabled: true })]);
+    expect(isTabTypeAvailable("ai")).toBe(true);
+  });
+
+  it("disabling ai does not affect the terminal, and vice versa", () => {
+    applyPluginState([aiPlugin({ enabled: false }), plugin({ enabled: true })]);
+    expect(isTabTypeAvailable("ai")).toBe(false);
+    expect(isTabTypeAvailable("terminal")).toBe(true);
   });
 
   it("reports enablement, defaulting to true before the first load", () => {

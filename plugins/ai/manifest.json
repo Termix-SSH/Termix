@@ -1,0 +1,30 @@
+{
+  "id": "ai",
+  "name": "AI Assistant",
+  "version": "1.0.0",
+  "description": "An AI assistant that can read your hosts, snippets, fleets, alerts and automations, and propose changes for you to approve.",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Productivity",
+  "icon": "Sparkles",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": true,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["process:transport-owner"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "ai",
+        "titleKey": "nav.ai",
+        "icon": "Sparkles",
+        "openFrom": ["rail", "palette"]
+      }
+    ]
+  },
+  "sidecars": []
+}

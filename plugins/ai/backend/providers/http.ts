@@ -1,5 +1,5 @@
-import { fetchWithProxy } from "../../utils/proxy-agent.js";
-import { safeOutboundFetch } from "../../utils/safe-outbound-fetch.js";
+import { fetchWithProxy } from "../../../../src/backend/utils/proxy-agent.js";
+import { safeOutboundFetch } from "../../../../src/backend/utils/safe-outbound-fetch.js";
 import { evaluateEgress, readPrivateAllowlist } from "../egress.js";
 import { AiProviderError } from "./types.js";
 

@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChatChunk } from "../../ai/providers/types.js";
+import type { ChatChunk } from "../../../../../plugins/ai/backend/providers/types.js";
 
 const streamChat = vi.fn();
 const handler = vi.fn();
 
-vi.mock("../../ai/providers/registry.js", () => ({
+vi.mock("../../../../../plugins/ai/backend/providers/registry.js", () => ({
   getAdapter: () => ({ streamChat, listModels: async () => [] }),
 }));
 
-vi.mock("../../ai/tools/catalog.js", () => ({
+vi.mock("../../../../../plugins/ai/backend/tools/catalog.js", () => ({
   getTool: (name: string) =>
     name === "list_hosts"
       ? {
@@ -24,7 +24,8 @@ vi.mock("../../ai/tools/catalog.js", () => ({
   ],
 }));
 
-const { runAgent } = await import("../../ai/engine.js");
+const { runAgent } =
+  await import("../../../../../plugins/ai/backend/engine.js");
 
 function chunks(...values: ChatChunk[]) {
   return (async function* () {

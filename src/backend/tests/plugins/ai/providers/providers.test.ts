@@ -1,18 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChatChunk } from "../../ai/providers/types.js";
+import type { ChatChunk } from "../../../../../../plugins/ai/backend/providers/types.js";
 
 const providerFetch = vi.fn();
 
-vi.mock("../../ai/providers/http.js", async () => {
+vi.mock("../../../../../../plugins/ai/backend/providers/http.js", async () => {
   const actual = await vi.importActual<
-    typeof import("../../ai/providers/http.js")
-  >("../../ai/providers/http.js");
+    typeof import("../../../../../../plugins/ai/backend/providers/http.js")
+  >("../../../../../../plugins/ai/backend/providers/http.js");
   return { ...actual, providerFetch };
 });
 
-const { openAiAdapter } = await import("../../ai/providers/openai.js");
-const { ollamaAdapter } = await import("../../ai/providers/ollama.js");
-const { geminiAdapter } = await import("../../ai/providers/gemini.js");
+const { openAiAdapter } =
+  await import("../../../../../../plugins/ai/backend/providers/openai.js");
+const { ollamaAdapter } =
+  await import("../../../../../../plugins/ai/backend/providers/ollama.js");
+const { geminiAdapter } =
+  await import("../../../../../../plugins/ai/backend/providers/gemini.js");
 
 /** Builds a Response whose body streams the given text chunks. */
 function streamingResponse(lines: string[]): Response {
