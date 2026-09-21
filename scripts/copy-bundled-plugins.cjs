@@ -133,14 +133,43 @@ function compiledPluginBackendDirs() {
     );
 }
 
+/**
+ * Deletes every .js file tsc just emitted directly under a plugin's own
+ * backend/ directory (recursively), leaving its .ts siblings untouched.
+ *
+ * Without this, the compiled .js sits next to the .ts in plugins/ after every
+ * build, shadowing the source when vitest/tsx resolve an import -- and since
+ * those .js files were rewritten for the dist/ layout (see rewriteCoreImports),
+ * their relative paths are wrong at the plugins/ depth, so anything importing
+ * them from a test fails with "Cannot find module". .gitignore already
+ * expects plugins/*\/backend/**\/*.js to never be tracked; this is what keeps
+ * the working tree matching that after a local build, the same way dist/ is
+ * expected to hold the only copy of compiled plugin output.
+ */
+function removeCompiledPluginEmits(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      removeCompiledPluginEmits(entryPath);
+      continue;
+    }
+    if (entry.name.endsWith(".js")) fs.rmSync(entryPath);
+  }
+}
+
 compilePluginBackends();
-for (const dir of compiledPluginBackendDirs()) {
+const compiledDirs = compiledPluginBackendDirs();
+for (const dir of compiledDirs) {
   rewriteCoreImports(dir);
 }
 removeStrayEmits(path.join(root, "src"));
 
 fs.rmSync(destination, { recursive: true, force: true });
 fs.cpSync(source, destination, { recursive: true });
+
+for (const dir of compiledDirs) {
+  removeCompiledPluginEmits(dir);
+}
 
 const bundled = fs
   .readdirSync(destination, { withFileTypes: true })
