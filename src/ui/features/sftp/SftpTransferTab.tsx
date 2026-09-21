@@ -717,13 +717,27 @@ export function SftpTransferTab() {
       return;
     }
 
+    let destTarget = destDir;
+    if (paths.length === 1) {
+      const sourceEntries =
+        sourcePane.sessionId === sourceSessionId
+          ? sourcePane.entries
+          : destPane.sessionId === sourceSessionId
+            ? destPane.entries
+            : [];
+      const entry = sourceEntries.find((e) => e.path === paths[0]);
+      if (entry && entry.type === "file") {
+        destTarget = joinRemotePath(destDir, entry.name);
+      }
+    }
+
     setTransferring(true);
     try {
       const { transferId } = await transferToHost(
         sourceSessionId,
         paths,
         destinationSessionId,
-        destDir,
+        destTarget,
         moveFiles,
         "auto",
       );

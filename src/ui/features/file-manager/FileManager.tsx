@@ -1921,13 +1921,20 @@ function FileManagerContent({
     if (!sourceSessionId) return;
 
     const sourcePaths = files.map((f) => f.path);
+    const isSingleFile = files.length === 1 && files[0].type === "file";
+    const base = currentPath.replace(/\/+$/, "") || "/";
+    const destPath = isSingleFile
+      ? base.endsWith("/")
+        ? `${base}${files[0].name}`
+        : `${base}/${files[0].name}`
+      : base;
 
     try {
       const { transferId } = await transferToHost(
         sourceSessionId,
         sourcePaths,
         sshSessionId,
-        currentPath,
+        destPath,
         operation === "cut",
         "auto",
         2,
