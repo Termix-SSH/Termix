@@ -11,6 +11,7 @@ import {
 import { createCurrentAutomationRepository } from "../database/repositories/factory.js";
 import { statsLogger } from "../utils/logger.js";
 import { resolveHostById } from "../hosts/host-resolver.js";
+import { notifyAutomationInternalEvent } from "../hosts/automation-events.js";
 import { executeStep } from "./actions/index.js";
 import type { StepExecutionContext, StepResult } from "./actions/types.js";
 import { compare } from "./conditions.js";
@@ -267,21 +268,20 @@ export class AutomationEngine {
       // its own failure, so the event is not emitted for runs that this event
       // already started.
       if (request.triggerType !== "internal_event") {
-        import("../hosts/automation-events.js")
-          .then(({ notifyAutomationInternalEvent }) =>
-            notifyAutomationInternalEvent(
-              "automation_failed",
-              automation.userId,
-              undefined,
-              {
-                automationId: automation.id,
-                automationName: automation.name,
-                runId: run.id,
-                error: error ?? null,
-              },
-            ),
-          )
-          .catch(() => undefined);
+        // Emitted onto the bus rather than imported from hosts/: the bus is
+        // fire-and-forget, so this no longer needs the lazy-import dance that
+        // was working around the repositories cycle.
+        notifyAutomationInternalEvent(
+          "automation_failed",
+          automation.userId,
+          undefined,
+          {
+            automationId: automation.id,
+            automationName: automation.name,
+            runId: run.id,
+            error: error ?? null,
+          },
+        );
       }
     }
 

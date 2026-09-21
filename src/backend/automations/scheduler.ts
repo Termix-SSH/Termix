@@ -7,6 +7,10 @@ import { hasDwelled, isCoolingDown } from "./conditions.js";
 import { pollDockerEvents } from "./docker-watcher.js";
 import { AutomationEngine } from "./engine.js";
 import { reconcileHeadlessViewers } from "./headless-viewer.js";
+import {
+  subscribeAutomationTriggers,
+  unsubscribeAutomationTriggers,
+} from "./triggers.js";
 
 /**
  * The one timer the automations feature owns.
@@ -32,6 +36,10 @@ let ticking = false;
 export function startAutomationScheduler(): void {
   if (tickTimer) return;
 
+  // Event-driven triggers come through the bus; the interval below only drives
+  // the schedule-based ones.
+  subscribeAutomationTriggers();
+
   startupTimer = setTimeout(() => {
     void tick();
   }, STARTUP_DELAY_MS);
@@ -48,6 +56,7 @@ export function stopAutomationScheduler(): void {
   if (startupTimer) clearTimeout(startupTimer);
   tickTimer = null;
   startupTimer = null;
+  unsubscribeAutomationTriggers();
 }
 
 /** Exposed for tests; the interval calls this. */

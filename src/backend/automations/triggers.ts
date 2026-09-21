@@ -16,6 +16,7 @@ import {
   type MetricsSnapshot,
 } from "./conditions.js";
 import { AutomationEngine } from "./engine.js";
+import { pluginEvents, TOPICS } from "../plugins/events.js";
 
 /**
  * Matches events against automation triggers and decides what fires.
@@ -344,6 +345,43 @@ export async function onInternalEvent(event: InternalEvent): Promise<void> {
       event.hostId,
     );
   }
+}
+
+let unsubscribers: Array<() => void> = [];
+
+/**
+ * Subscribes the engine to the event bus.
+ *
+ * The hosts modules publish onto the bus and know nothing about automations;
+ * this is the other half of that arrangement, and it is what keeps the edge
+ * one-directional (automations may import repositories, hosts modules must not
+ * import automations).
+ *
+ * Handlers are async and the bus is fire-and-forget, so a rejection here is
+ * logged by the bus rather than surfacing to whichever host feature emitted.
+ */
+export function subscribeAutomationTriggers(): void {
+  if (unsubscribers.length > 0) return;
+
+  unsubscribers = [
+    pluginEvents.on(TOPICS.hostMetrics, (payload) =>
+      onMetrics(payload as MetricEvent),
+    ),
+    pluginEvents.on(TOPICS.hostStatus, (payload) =>
+      onStatus(payload as StatusEvent),
+    ),
+    pluginEvents.on(TOPICS.hostHealthCheck, (payload) =>
+      onHealthCheck(payload as HealthEvent),
+    ),
+    pluginEvents.on(TOPICS.internalEvent, (payload) =>
+      onInternalEvent(payload as InternalEvent),
+    ),
+  ];
+}
+
+export function unsubscribeAutomationTriggers(): void {
+  for (const unsubscribe of unsubscribers) unsubscribe();
+  unsubscribers = [];
 }
 
 /**

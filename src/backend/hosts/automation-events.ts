@@ -1,16 +1,23 @@
 /**
- * One-line hand-off from any hosts feature to the automations engine for a
- * generic named event (not tied to metrics polling).
+ * One-line hand-off from any hosts feature to anything listening for a generic
+ * named event (not tied to metrics polling).
  *
- * Fire-and-forget and imported lazily: a failure in the automations layer
- * must never disturb the caller, and a static import would create a cycle
- * (automations reads repositories, which several hosts modules also pull in).
- *
- * PLUGIN-EVENT: this whole module is the "publish an internal event" half of
- * the phase-2 ctx.events bus. Once that exists, callers should emit onto
- * ctx.events instead of calling this directly, and the automations engine
- * subscribes there rather than being imported ad hoc.
+ * This now publishes onto the ctx.events bus rather than reaching into the
+ * automations engine directly. The two properties callers relied on are
+ * unchanged: it is fire-and-forget, and it creates no static edge to the
+ * automations layer (which reads repositories that several hosts modules also
+ * pull in, so a static import would close a cycle). The automations engine
+ * subscribes to the bus at start-up instead -- see automations/triggers.ts.
  */
+
+import { pluginEvents, TOPICS } from "../plugins/events.js";
+
+export interface InternalEventPayload {
+  event: string;
+  userId: string;
+  hostId?: number;
+  details?: Record<string, unknown>;
+}
 
 export function notifyAutomationInternalEvent(
   event: string,
@@ -19,9 +26,10 @@ export function notifyAutomationInternalEvent(
   details?: Record<string, unknown>,
 ): void {
   if (!userId) return;
-  import("../automations/triggers.js")
-    .then((triggers) =>
-      triggers.onInternalEvent({ event, userId, hostId, details }),
-    )
-    .catch(() => {});
+  pluginEvents.emit(TOPICS.internalEvent, {
+    event,
+    userId,
+    hostId,
+    details,
+  } satisfies InternalEventPayload);
 }

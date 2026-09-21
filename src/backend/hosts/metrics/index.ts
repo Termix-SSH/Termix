@@ -61,8 +61,8 @@ import { registerHostMetricsHistoryRoutes } from "./history-routes.js";
 import { registerProxmoxStatsRoutes } from "./proxmox-stats-routes.js";
 import { registerProxmoxStatsHistoryRoutes } from "./proxmox-stats-history-routes.js";
 import { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
-// PLUGIN-EVENT: terminal session online/offline -> phase-2 ctx.events "host.session.status" topic
-import { hostSessionStatus } from "../host-session-status.js";
+import type { HostSessionStatusPayload } from "../host-session-status.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import { AlertEngine } from "./alert-engine.js";
 import {
   notifyAutomationMetrics,
@@ -225,10 +225,12 @@ class PollingManager {
   private unsubscribeHostSessionStatus: () => void;
 
   constructor() {
-    // PLUGIN-EVENT: subscribe to ctx.events.on("host.session.status", ...) once the
-    // phase-2 event bus exists, instead of the hostSessionStatus singleton directly.
-    this.unsubscribeHostSessionStatus = hostSessionStatus.subscribe(
-      (hostId, online) => this.setTerminalSessionOnline(hostId, online),
+    this.unsubscribeHostSessionStatus = pluginEvents.on(
+      TOPICS.hostSessionStatus,
+      (payload) => {
+        const { hostId, online } = payload as HostSessionStatusPayload;
+        this.setTerminalSessionOnline(hostId, online);
+      },
     );
     this.viewerCleanupInterval = setInterval(() => {
       this.cleanupInactiveViewers();
