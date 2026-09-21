@@ -2279,4 +2279,27 @@ export const pluginInstallCounts = mysqlTable(
   ],
 );
 
+/**
+ * Per-plugin key/value state, written through ctx.storage. Rows are always
+ * scoped to the calling plugin by the broker, so a plugin cannot name another
+ * plugin's scope. Cascades with the plugin so uninstalling leaves nothing.
+ */
+export const pluginStorage = mysqlTable(
+  "plugin_storage",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pluginId: varchar("plugin_id", { length: 255 })
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    key: varchar("key", { length: 255 }).notNull(),
+    value: text("value").notNull(),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_storage_plugin_key").on(table.pluginId, table.key),
+  ],
+);
+
 // --- plugins end ---

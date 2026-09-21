@@ -33,6 +33,7 @@ import { NetworkTopologyRepository } from "./network-topology-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
 import { OpksshTokenRepository } from "./opkssh-token-repository.js";
 import { PluginRepository } from "./plugin-repository.js";
+import { PluginStorageRepository } from "./plugin-storage-repository.js";
 import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
 import { PluginRegistryRepository } from "./plugin-registry-repository.js";
 import { PluginInstallCountRepository } from "./plugin-install-count-repository.js";
@@ -382,6 +383,13 @@ export function createCurrentPluginPermissionGrantRepository(): PluginPermission
     createCurrentRepositoryWriteHook(
       "plugin_permission_grant_repository_write",
     ),
+  );
+}
+
+export function createCurrentPluginStorageRepository(): PluginStorageRepository {
+  return new PluginStorageRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("plugin_storage_repository_write"),
   );
 }
 

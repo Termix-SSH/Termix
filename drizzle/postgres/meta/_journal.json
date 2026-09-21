@@ -176,6 +176,13 @@
       "when": 1789751455415,
       "tag": "0024_flimsy_forge",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789991403847,
+      "tag": "0025_purple_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

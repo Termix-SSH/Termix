@@ -728,6 +728,16 @@ async function initializeCompleteDatabase(): Promise<void> {
         UNIQUE (plugin_id, registry_id)
     );
 
+    CREATE TABLE IF NOT EXISTS plugin_storage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, key),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,

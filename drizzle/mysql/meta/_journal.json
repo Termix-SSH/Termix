@@ -169,6 +169,13 @@
       "when": 1789751455875,
       "tag": "0023_even_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1789991404402,
+      "tag": "0024_thin_colleen_wing",
+      "breakpoints": true
     }
   ]
 }
