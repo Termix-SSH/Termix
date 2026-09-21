@@ -121,11 +121,14 @@ describe("SftpTransferTab", () => {
     await userEvent.click(screen.getByText("sftpTransfer.copyToTarget"));
 
     await waitFor(() => {
+      // A single file transfer sends the full destination path, filename
+      // included, rather than just the directory. See #1304: sending a file on
+      // its own used to drop it.
       expect(api.transferToHost).toHaveBeenCalledWith(
         "1",
         ["/srv/remote-1.txt"],
         "2",
-        "/srv",
+        "/srv/remote-1.txt",
         false,
         "auto",
       );
