@@ -2689,7 +2689,7 @@
     "editPermissions": "Berechtigungen bearbeiten",
     "createNewFolder": "Neuen Ordner erstellen",
     "deleteSelectedItems": "Ausgewählte Elemente löschen",
-    "deleteConfirm": "Delete {{count}} selected item?",
+    "deleteConfirm": "{{count}} ausgewähltes Element löschen?",
     "deleteConfirm_other": "{{count}} ausgewählte Elemente löschen?",
     "cancel": "Stornieren",
     "save": "Speichern",
