@@ -15,9 +15,17 @@
  * bigger regression risk to a working terminal than gating the entry points.
  */
 
+import { Bot } from "lucide-react";
 import { unregisterRailItem } from "@/sidebar/rail-items";
 import { unregisterTabComponent } from "@/shell/tabUtils";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
+import {
+  declareActionSlot,
+  registerAction,
+  registerSlotContribution,
+  unregisterAction,
+  unregisterSlotContribution,
+} from "@/shell/action-registry";
 
 /**
  * Built-in tab types owned by a plugin, keyed by plugin id. The terminal has
@@ -37,6 +45,50 @@ const BUILT_IN_TABS_BY_PLUGIN: Record<string, string[]> = {
 
 let pluginEnabled = new Map<string, boolean>();
 let disabledTabTypes = new Set<string>();
+
+const TERMINAL_TOOLBAR_SLOT = "terminal.toolbar";
+const AI_OPEN_WITH_CONTEXT = "ai.openWithContext";
+
+/**
+ * Applies the UI action contributions the first-party plugins declare.
+ *
+ * These live in plugins/*_/frontend/index.mjs, but nothing imports those yet:
+ * there is no frontend plugin loader. Until there is, the registration is
+ * mirrored here so the contributed UI is actually reachable in the running
+ * app rather than only in tests. The two must be kept in step, and this block
+ * goes away when a real loader lands.
+ */
+function applyFirstPartyActions(enabled: Map<string, boolean>): void {
+  if (enabled.get("ssh-terminal") !== false) {
+    declareActionSlot({ id: TERMINAL_TOOLBAR_SLOT, accepts: ["button"] });
+  }
+
+  if (enabled.get("ai") === false) {
+    unregisterSlotContribution(TERMINAL_TOOLBAR_SLOT, AI_OPEN_WITH_CONTEXT);
+    unregisterAction(AI_OPEN_WITH_CONTEXT);
+    return;
+  }
+
+  registerAction(
+    AI_OPEN_WITH_CONTEXT,
+    (context: unknown) => {
+      window.dispatchEvent(
+        new CustomEvent("termix:ai:openWithContext", {
+          detail: { context: typeof context === "string" ? context : "" },
+        }),
+      );
+    },
+    { permission: "ai.services.use", pluginId: "ai" },
+  );
+
+  registerSlotContribution(TERMINAL_TOOLBAR_SLOT, {
+    actionId: AI_OPEN_WITH_CONTEXT,
+    titleKey: "ai.assistant",
+    icon: Bot,
+    kind: "button",
+    pluginId: "ai",
+  });
+}
 
 export function applyPluginState(plugins: PluginSummary[]): void {
   const nextEnabled = new Map<string, boolean>();
@@ -65,6 +117,7 @@ export function applyPluginState(plugins: PluginSummary[]): void {
 
   pluginEnabled = nextEnabled;
   disabledTabTypes = nextDisabledTabs;
+  applyFirstPartyActions(nextEnabled);
 }
 
 export async function refreshPluginState(): Promise<PluginSummary[]> {
@@ -92,4 +145,6 @@ export function isPluginEnabled(pluginId: string): boolean {
 export function resetPluginState(): void {
   pluginEnabled = new Map();
   disabledTabTypes = new Set();
+  unregisterSlotContribution(TERMINAL_TOOLBAR_SLOT, AI_OPEN_WITH_CONTEXT);
+  unregisterAction(AI_OPEN_WITH_CONTEXT);
 }

@@ -43,6 +43,8 @@ interface TerminalAiPanelProps {
   hostLabel: string;
   hostId: number;
   activeTab?: string | null;
+  /** Terminal output to open with, from a contributed action. */
+  initialContext?: string;
   onClose: () => void;
   onRunInTerminal: (command: string) => void;
 }
@@ -57,6 +59,7 @@ export function TerminalAiPanel({
   hostLabel,
   hostId,
   activeTab,
+  initialContext,
   onClose,
   onRunInTerminal,
 }: TerminalAiPanelProps) {
@@ -73,6 +76,17 @@ export function TerminalAiPanel({
   >({});
   const conversationIdRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Prefilled rather than sent: the user sees exactly what the terminal is
+  // about to hand the model, and can trim it or add a question first.
+  useEffect(() => {
+    if (!initialContext) return;
+    setInput((current) =>
+      current
+        ? current
+        : t("ai.terminalContextPrefill", { output: initialContext }),
+    );
+  }, [initialContext, t]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [position, setPosition] = useState<ToolbarPosition>(

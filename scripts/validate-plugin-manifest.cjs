@@ -18,7 +18,12 @@ const ID_PATTERN = /^[a-z0-9-]+$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/;
 const API_VERSION_PATTERN = /^[0-9]+$/;
 const SERVICE_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+// Dotted like a service name, but segments may be camelCase: these name a
+// frontend function ("ai.openWithContext"), not a lowercase service contract.
+const ACTION_ID_PATTERN = /^[a-z0-9-]+(\.[a-zA-Z0-9-]+)+$/;
+const HANDLER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const OPEN_FROM_VALUES = ["rail", "host-context-menu", "palette"];
+const ACTION_CONTRIBUTION_KINDS = ["button"];
 
 function loadSchema() {
   const raw = fs.readFileSync(SCHEMA_PATH, "utf8");
@@ -140,6 +145,20 @@ function validateManifest(manifest, schema) {
       if (entry && entry.permission && !declared.includes(entry.permission)) {
         errors.push(
           `Service "${entry.service}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        );
+      }
+    }
+  }
+
+  // Same rule for UI actions: a permission the catalog never sees is one no
+  // admin can grant, so the action would be invisible rather than denied.
+  const actions = manifest.contributes?.actions;
+  if (Array.isArray(actions)) {
+    for (const action of actions) {
+      if (!action || !action.permission) continue;
+      if (!Array.isArray(declared) || !declared.includes(action.permission)) {
+        errors.push(
+          `Action "${action.id}" is gated by "${action.permission}", which is not declared in contributes.permissionGroup.permissions`,
         );
       }
     }
@@ -304,6 +323,130 @@ function validateContributes(contributes) {
       });
     }
   }
+
+  if ("actions" in contributes) {
+    errors.push(...validateActions(contributes.actions));
+  }
+
+  if ("actionSlots" in contributes) {
+    errors.push(...validateActionSlots(contributes.actionSlots));
+  }
+
+  return errors;
+}
+
+function validateActions(actions) {
+  if (!Array.isArray(actions)) {
+    return ['Field "contributes.actions" must be an array'];
+  }
+
+  const errors = [];
+  const seen = new Set();
+
+  actions.forEach((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`contributes.actions[${index}] must be an object`);
+      return;
+    }
+
+    if (typeof entry.id !== "string" || !ACTION_ID_PATTERN.test(entry.id)) {
+      errors.push(
+        `contributes.actions[${index}].id must match ${ACTION_ID_PATTERN}, got: "${entry.id}"`,
+      );
+    } else if (seen.has(entry.id)) {
+      errors.push(
+        `contributes.actions[${index}].id is a duplicate: "${entry.id}"`,
+      );
+    } else {
+      seen.add(entry.id);
+    }
+
+    if (typeof entry.titleKey !== "string" || entry.titleKey.length === 0) {
+      errors.push(`contributes.actions[${index}].titleKey is required`);
+    }
+
+    if (
+      typeof entry.handler !== "string" ||
+      !HANDLER_PATTERN.test(entry.handler)
+    ) {
+      errors.push(
+        `contributes.actions[${index}].handler must match ${HANDLER_PATTERN}, got: "${entry.handler}"`,
+      );
+    }
+
+    if ("icon" in entry && typeof entry.icon !== "string") {
+      errors.push(`contributes.actions[${index}].icon must be a string`);
+    }
+
+    if ("permission" in entry && typeof entry.permission !== "string") {
+      errors.push(`contributes.actions[${index}].permission must be a string`);
+    }
+
+    if (
+      "slot" in entry &&
+      (typeof entry.slot !== "string" || !ACTION_ID_PATTERN.test(entry.slot))
+    ) {
+      errors.push(
+        `contributes.actions[${index}].slot must match ${ACTION_ID_PATTERN}, got: "${entry.slot}"`,
+      );
+    }
+
+    if ("kind" in entry && !ACTION_CONTRIBUTION_KINDS.includes(entry.kind)) {
+      errors.push(
+        `contributes.actions[${index}].kind must be one of: ${ACTION_CONTRIBUTION_KINDS.join(", ")}, got: "${entry.kind}"`,
+      );
+    }
+  });
+
+  return errors;
+}
+
+function validateActionSlots(slots) {
+  if (!Array.isArray(slots)) {
+    return ['Field "contributes.actionSlots" must be an array'];
+  }
+
+  const errors = [];
+  const seen = new Set();
+
+  slots.forEach((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`contributes.actionSlots[${index}] must be an object`);
+      return;
+    }
+
+    if (typeof entry.id !== "string" || !ACTION_ID_PATTERN.test(entry.id)) {
+      errors.push(
+        `contributes.actionSlots[${index}].id must match ${ACTION_ID_PATTERN}, got: "${entry.id}"`,
+      );
+    } else if (seen.has(entry.id)) {
+      errors.push(
+        `contributes.actionSlots[${index}].id is a duplicate: "${entry.id}"`,
+      );
+    } else {
+      seen.add(entry.id);
+    }
+
+    if (!Array.isArray(entry.accepts) || entry.accepts.length === 0) {
+      errors.push(
+        `contributes.actionSlots[${index}].accepts must be a non-empty array`,
+      );
+    } else {
+      for (const kind of entry.accepts) {
+        if (!ACTION_CONTRIBUTION_KINDS.includes(kind)) {
+          errors.push(
+            `contributes.actionSlots[${index}].accepts has unknown value: "${kind}". Known values: ${ACTION_CONTRIBUTION_KINDS.join(", ")}`,
+          );
+        }
+      }
+    }
+
+    if ("descriptionKey" in entry && typeof entry.descriptionKey !== "string") {
+      errors.push(
+        `contributes.actionSlots[${index}].descriptionKey must be a string`,
+      );
+    }
+  });
 
   return errors;
 }

@@ -1,0 +1,52 @@
+{
+  "id": "sample-actions",
+  "name": "Sample Actions",
+  "version": "1.0.0",
+  "description": "A plugin that contributes a UI action and offers a slot of its own.",
+  "author": {
+    "name": "Jane Doe"
+  },
+  "license": "MIT",
+  "category": "Productivity",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": {
+    "backend": false,
+    "frontend": true,
+    "electron": false,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["ui.tab"],
+  "contributes": {
+    "permissionGroup": {
+      "group": "sampleactions",
+      "permissions": ["sampleactions.use"]
+    },
+    "actions": [
+      {
+        "id": "sampleactions.openWithContext",
+        "titleKey": "sampleActions.open",
+        "handler": "openWithContext",
+        "icon": "Sparkles",
+        "permission": "sampleactions.use",
+        "slot": "terminal.toolbar",
+        "kind": "button"
+      },
+      {
+        "id": "sampleactions.ungated",
+        "titleKey": "sampleActions.ungated",
+        "handler": "ungated"
+      }
+    ],
+    "actionSlots": [
+      {
+        "id": "sampleactions.panel",
+        "accepts": ["button"],
+        "descriptionKey": "sampleActions.panelDescription"
+      }
+    ]
+  },
+  "sidecars": []
+}

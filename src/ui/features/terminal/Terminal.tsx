@@ -55,6 +55,7 @@ import {
   resolveTerminalFontFamily,
 } from "@/lib/terminal-themes.ts";
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
+import { getTerminalBufferText } from "./terminal-buffer-text.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { getMacLineNavigationSequence } from "@/lib/mac-line-navigation";
@@ -463,6 +464,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [autosuggestionStyle, setAutosuggestionStyle] =
       useState<React.CSSProperties>({});
     const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+    const [aiAssistantContext, setAiAssistantContext] = useState("");
     const { userEnabled: aiAssistantEnabledForUser } = useAiAvailability();
     const isAiAssistantAvailable =
       aiAssistantEnabledForUser && host?.enableAiAssistant === true;
@@ -732,6 +734,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const toggleAiAssistant = useCallback(() => {
       setAiAssistantOpen((open) => !open);
     }, []);
+
+    // A plugin-contributed action (the toolbar's AI button) asks for the panel
+    // this way, so the contribution needs no reference into the terminal.
+    useEffect(() => {
+      if (!isFocusedPane) return;
+      const open = (event: Event) => {
+        const detail = (event as CustomEvent<{ context?: string }>).detail;
+        setAiAssistantContext(detail?.context ?? "");
+        setAiAssistantOpen(true);
+      };
+      window.addEventListener("termix:ai:openWithContext", open);
+      return () =>
+        window.removeEventListener("termix:ai:openWithContext", open);
+    }, [isFocusedPane]);
 
     const closeAiAssistant = useCallback(() => {
       setAiAssistantOpen(false);
@@ -3844,8 +3860,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }}
             isFocused={isFocusedPane}
-            showAiAssistant={isAiAssistantAvailable}
-            onToggleAiAssistant={toggleAiAssistant}
+            actionsEnabled={isAiAssistantAvailable}
+            getBufferText={() => getTerminalBufferText(terminal)}
           />
         )}
 
@@ -3854,6 +3870,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             hostLabel={`${hostConfig.username}@${hostConfig.name || hostConfig.ip}`}
             hostId={hostConfig.id}
             activeTab={`terminal:${hostConfig.name || hostConfig.ip}`}
+            initialContext={aiAssistantContext}
             onClose={closeAiAssistant}
             onRunInTerminal={handleRunCommandInTerminal}
           />

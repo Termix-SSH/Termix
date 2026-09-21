@@ -54,6 +54,13 @@ export async function updateRole(
 ): Promise<{ role: Role }> {
   try {
     const response = await rbacApi.put(`/rbac/roles/${roleId}`, roleData);
+    if (roleData.permissions) {
+      // The editing admin may hold this role, so re-read our own grants
+      // rather than leaving gated UI stale until the next reload.
+      const { notifyPermissionsChanged } =
+        await import("@/hooks/use-permissions");
+      notifyPermissionsChanged();
+    }
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update role");
@@ -274,6 +281,21 @@ export async function getPermissionsCatalog(): Promise<{
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch permissions catalog");
+  }
+}
+
+export interface MyPermissions {
+  permissions: string[];
+  isAdmin: boolean;
+}
+
+/** The current user's own grants, for hiding UI they could not use. */
+export async function getMyPermissions(): Promise<MyPermissions> {
+  try {
+    const response = await rbacApi.get("/rbac/permissions/me");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch permissions");
   }
 }
 

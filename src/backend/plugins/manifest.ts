@@ -52,6 +52,15 @@ export const PLUGIN_CATEGORIES = [
 
 const OPEN_FROM_VALUES = ["rail", "host-context-menu", "palette"];
 
+/**
+ * Contribution kinds a UI action slot can accept. Closed on purpose: a
+ * free-form list would validate nothing. Adding a kind is a one-line edit
+ * here and in the two other validators.
+ */
+export const ACTION_CONTRIBUTION_KINDS = ["button"] as const;
+
+export type ActionContributionKind = (typeof ACTION_CONTRIBUTION_KINDS)[number];
+
 const REQUIRED_TOP_LEVEL = [
   "id",
   "name",
@@ -72,6 +81,14 @@ const API_VERSION_PATTERN = /^[0-9]+$/;
 const API_PREFIX_PATTERN = /^[a-z0-9-]+$/;
 /** Service names are dotted, e.g. "ssh.transport" or "host-metrics.stream". */
 const SERVICE_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+/**
+ * Action and slot ids are dotted like service names, but each segment may be
+ * camelCase: these name a frontend function ("ai.openWithContext"), not a
+ * lowercase service contract, so SERVICE_PATTERN is too strict to reuse.
+ */
+const ACTION_ID_PATTERN = /^[a-z0-9-]+(\.[a-zA-Z0-9-]+)+$/;
+/** A handler names a JS export, so it follows identifier rules, not dotted ones. */
+const HANDLER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 /**
  * The plugin SDK major version this build implements. A manifest asking for a
@@ -114,6 +131,10 @@ export interface PluginManifest {
     settingsPanel?: { titleKey: string };
     dashboardCards?: Array<{ id: string; titleKey: string }>;
     apiPrefix?: string;
+    /** Named frontend actions this plugin exposes for other plugins to invoke. */
+    actions?: PluginActionContribution[];
+    /** Places this plugin offers other plugins to contribute a UI element. */
+    actionSlots?: PluginActionSlot[];
   };
   dependencies?: { plugins?: Record<string, string> };
   /**
@@ -139,6 +160,49 @@ export interface PluginServiceRequire {
   versionRange: string;
   /** When true, an unsatisfied requirement is skipped instead of failing activation. */
   optional?: boolean;
+}
+
+/**
+ * A named frontend action, declared here and bound at runtime.
+ *
+ * The split matters: this manifest entry is inert JSON the server can read and
+ * audit without running any plugin code, while the function itself is supplied
+ * in the browser by registerAction(id, fn). `handler` records which frontend
+ * export is meant to end up under `id`, so the contract is readable from the
+ * manifest alone and a future frontend loader can wire module[handler]
+ * automatically. Today nothing reads `handler` at runtime.
+ */
+export interface PluginActionContribution {
+  /** Dotted and globally unique, e.g. "ai.openWithContext". */
+  id: string;
+  titleKey: string;
+  /** Name of the frontend export implementing this action. */
+  handler: string;
+  /** Lucide icon name, same convention as contributes.tabs[].icon. */
+  icon?: string;
+  /**
+   * Role permission the acting user needs before the action is offered.
+   * Optional: an ungated action renders for everyone. When set, parseManifest
+   * requires it to be declared in this plugin's own permissionGroup.
+   */
+  permission?: string;
+  /** Slot this action is intended for. Advisory; binding happens at runtime. */
+  slot?: string;
+  kind?: ActionContributionKind;
+}
+
+/**
+ * A place this plugin offers other plugins to contribute a UI element.
+ *
+ * A contribution's `kind` is checked against `accepts` in the frontend at
+ * registration time, not here: the slot is usually declared by a different
+ * plugin, and a manifest is validated on its own.
+ */
+export interface PluginActionSlot {
+  /** Dotted, e.g. "terminal.toolbar". */
+  id: string;
+  accepts: ActionContributionKind[];
+  descriptionKey?: string;
 }
 
 export function validateManifest(manifest: unknown): string[] {
@@ -414,6 +478,133 @@ function validateContributes(contributes: Record<string, unknown>): string[] {
     }
   }
 
+  if ("actions" in contributes) {
+    errors.push(...validateActions(contributes.actions));
+  }
+
+  if ("actionSlots" in contributes) {
+    errors.push(...validateActionSlots(contributes.actionSlots));
+  }
+
+  return errors;
+}
+
+function validateActions(actions: unknown): string[] {
+  if (!Array.isArray(actions)) {
+    return ['Field "contributes.actions" must be an array'];
+  }
+
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  actions.forEach((entry: unknown, index: number) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`contributes.actions[${index}] must be an object`);
+      return;
+    }
+    const e = entry as Record<string, unknown>;
+
+    if (typeof e.id !== "string" || !ACTION_ID_PATTERN.test(e.id)) {
+      errors.push(
+        `contributes.actions[${index}].id must match ${ACTION_ID_PATTERN}, got: "${String(e.id)}"`,
+      );
+    } else if (seen.has(e.id)) {
+      errors.push(`contributes.actions[${index}].id is a duplicate: "${e.id}"`);
+    } else {
+      seen.add(e.id);
+    }
+
+    if (typeof e.titleKey !== "string" || e.titleKey.length === 0) {
+      errors.push(`contributes.actions[${index}].titleKey is required`);
+    }
+
+    if (typeof e.handler !== "string" || !HANDLER_PATTERN.test(e.handler)) {
+      errors.push(
+        `contributes.actions[${index}].handler must match ${HANDLER_PATTERN}, got: "${String(e.handler)}"`,
+      );
+    }
+
+    if ("icon" in e && (typeof e.icon !== "string" || e.icon.length === 0)) {
+      errors.push(`contributes.actions[${index}].icon must be a string`);
+    }
+
+    if (
+      "permission" in e &&
+      (typeof e.permission !== "string" || e.permission.length === 0)
+    ) {
+      errors.push(`contributes.actions[${index}].permission must be a string`);
+    }
+
+    if (
+      "slot" in e &&
+      (typeof e.slot !== "string" || !ACTION_ID_PATTERN.test(e.slot))
+    ) {
+      errors.push(
+        `contributes.actions[${index}].slot must match ${ACTION_ID_PATTERN}, got: "${String(e.slot)}"`,
+      );
+    }
+
+    if ("kind" in e && !ACTION_CONTRIBUTION_KINDS.includes(e.kind as never)) {
+      errors.push(
+        `contributes.actions[${index}].kind must be one of: ${ACTION_CONTRIBUTION_KINDS.join(", ")}, got: "${String(e.kind)}"`,
+      );
+    }
+  });
+
+  return errors;
+}
+
+function validateActionSlots(slots: unknown): string[] {
+  if (!Array.isArray(slots)) {
+    return ['Field "contributes.actionSlots" must be an array'];
+  }
+
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  slots.forEach((entry: unknown, index: number) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`contributes.actionSlots[${index}] must be an object`);
+      return;
+    }
+    const e = entry as Record<string, unknown>;
+
+    if (typeof e.id !== "string" || !ACTION_ID_PATTERN.test(e.id)) {
+      errors.push(
+        `contributes.actionSlots[${index}].id must match ${ACTION_ID_PATTERN}, got: "${String(e.id)}"`,
+      );
+    } else if (seen.has(e.id)) {
+      errors.push(
+        `contributes.actionSlots[${index}].id is a duplicate: "${e.id}"`,
+      );
+    } else {
+      seen.add(e.id);
+    }
+
+    if (!Array.isArray(e.accepts) || e.accepts.length === 0) {
+      errors.push(
+        `contributes.actionSlots[${index}].accepts must be a non-empty array`,
+      );
+    } else {
+      for (const kind of e.accepts) {
+        if (!ACTION_CONTRIBUTION_KINDS.includes(kind as never)) {
+          errors.push(
+            `contributes.actionSlots[${index}].accepts has unknown value: "${String(kind)}". Known values: ${ACTION_CONTRIBUTION_KINDS.join(", ")}`,
+          );
+        }
+      }
+    }
+
+    if (
+      "descriptionKey" in e &&
+      (typeof e.descriptionKey !== "string" || e.descriptionKey.length === 0)
+    ) {
+      errors.push(
+        `contributes.actionSlots[${index}].descriptionKey must be a string`,
+      );
+    }
+  });
+
   return errors;
 }
 
@@ -448,6 +639,19 @@ export function parseManifest(raw: unknown): {
       return {
         errors: [
           `Service "${entry.service}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        ],
+      };
+    }
+  }
+
+  // Same rule for UI actions, for the same reason: a permission the catalog
+  // never sees is one no admin can grant, so the action would be invisible
+  // forever rather than merely denied.
+  for (const action of manifest.contributes?.actions ?? []) {
+    if (action.permission && !declaredPermissions.includes(action.permission)) {
+      return {
+        errors: [
+          `Action "${action.id}" is gated by "${action.permission}", which is not declared in contributes.permissionGroup.permissions`,
         ],
       };
     }

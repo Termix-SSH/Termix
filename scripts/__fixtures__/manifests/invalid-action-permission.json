@@ -1,0 +1,37 @@
+{
+  "id": "sample-bad-action",
+  "name": "Sample Bad Action",
+  "version": "1.0.0",
+  "description": "An action gated by a permission the plugin never declares.",
+  "author": {
+    "name": "Jane Doe"
+  },
+  "license": "MIT",
+  "category": "Productivity",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": {
+    "backend": false,
+    "frontend": true,
+    "electron": false,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["ui.tab"],
+  "contributes": {
+    "permissionGroup": {
+      "group": "samplebadaction",
+      "permissions": ["samplebadaction.use"]
+    },
+    "actions": [
+      {
+        "id": "samplebadaction.open",
+        "titleKey": "sampleBadAction.open",
+        "handler": "open",
+        "permission": "samplebadaction.never_declared"
+      }
+    ]
+  },
+  "sidecars": []
+}

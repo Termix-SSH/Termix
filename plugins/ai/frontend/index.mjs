@@ -13,26 +13,56 @@
  * tabUtils.tsx (railView === "ai", case "ai"), the same way the terminal's
  * tab is baked into Terminal.tsx rather than going through the generic tab
  * registry. What gates it is isTabTypeAvailable("ai") in
- * src/ui/shell/pluginLoader.ts's BUILT_IN_TABS_BY_PLUGIN map, which is
- * consulted directly by AppShell.tsx, CommandPalette.tsx and HostItem.tsx --
- * the same live mechanism ssh-terminal's "terminal" entry already uses.
+ * src/ui/shell/pluginLoader.ts's BUILT_IN_TABS_BY_PLUGIN map.
  *
- * register()/unregister() exist for parity with the other first-party
- * plugins' frontend halves. Nothing invokes them yet: there is no frontend
- * plugin loader (see src/ui/tests/sidebar/plugin-extension-seam.test.tsx),
- * and the "ai" surface does not need registerRailItem/registerTabComponent
- * in the first place, since it is gated through BUILT_IN_TABS_BY_PLUGIN
- * instead.
+ * What this file DOES contribute is the terminal toolbar's AI button, through
+ * the action registry: ai.openWithContext, declared in manifest.json and
+ * gated on ai.services.use. The button used to be hardwired into
+ * TerminalToolbar.tsx behind a showAiAssistant prop.
+ *
+ * There is still no frontend plugin loader, so nothing imports this file yet
+ * (see src/ui/tests/sidebar/plugin-extension-seam.test.tsx). Until one exists,
+ * pluginLoader.ts performs the same registration itself when the ai plugin is
+ * enabled. This file is the version that runs once a loader lands, and the two
+ * must be kept in step.
  */
 
 export const id = "ai";
 export const tabId = "ai";
+export const actionId = "ai.openWithContext";
 
-export async function register() {
-  // Nothing to register: "ai" is a built-in rail-view/tab gated through
-  // isTabTypeAvailable, not a runtime-registered surface. See the header.
+/** Asks the focused terminal to open its AI panel seeded with `context`. */
+export function openWithContext(context) {
+  window.dispatchEvent(
+    new CustomEvent("termix:ai:openWithContext", {
+      detail: { context: typeof context === "string" ? context : "" },
+    }),
+  );
 }
 
-export async function unregister() {
-  // Nothing to unregister; see register().
+export async function register({
+  registerAction,
+  registerSlotContribution,
+  icons,
+}) {
+  registerAction(actionId, openWithContext, {
+    permission: "ai.services.use",
+    pluginId: id,
+  });
+
+  registerSlotContribution("terminal.toolbar", {
+    actionId,
+    titleKey: "ai.assistant",
+    icon: icons.Bot,
+    kind: "button",
+    pluginId: id,
+  });
+}
+
+export async function unregister({
+  unregisterAction,
+  unregisterSlotContribution,
+}) {
+  unregisterSlotContribution("terminal.toolbar", actionId);
+  unregisterAction(actionId);
 }

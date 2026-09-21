@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Bot,
   ChevronDown,
   ClipboardPaste,
   GripVertical,
@@ -26,6 +25,8 @@ import {
 } from "@/components/select";
 
 import { cn } from "@/lib/utils";
+import { ActionSlot } from "@/shell/ActionSlot";
+import { useActionSlot } from "@/hooks/use-action-slot";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getSshActions } from "@/sidebar/tree/HostItem/HostItem";
 import {
@@ -49,6 +50,9 @@ import {
 type SelectedToolbarDensity = ToolbarDensity;
 
 const DENSITY_STORAGE_KEY = "termix-terminal-toolbar-density";
+
+/** Plugins contribute toolbar buttons here. Declared by the ssh-terminal plugin. */
+const TOOLBAR_SLOT_ID = "terminal.toolbar";
 
 const DENSITY_OPTIONS: { value: ToolbarDensity }[] = [
   { value: "icon" },
@@ -120,8 +124,14 @@ interface TerminalToolbarProps {
   onOpenTab?: (type: TabType) => void;
   onOpenFiles?: () => void;
   isFocused: boolean;
-  showAiAssistant?: boolean;
-  onToggleAiAssistant?: () => void;
+  /**
+   * Whether this host offers the toolbar's contributed actions at all. The
+   * slot itself is generic; the host-level AI flag is not something a
+   * contributing plugin can know about.
+   */
+  actionsEnabled?: boolean;
+  /** Read at click time by contributions that want the visible scrollback. */
+  getBufferText?: () => string;
 }
 
 export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
@@ -136,10 +146,13 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   onOpenTab,
   onOpenFiles,
   isFocused,
-  showAiAssistant,
-  onToggleAiAssistant,
+  actionsEnabled = true,
+  getBufferText,
 }) => {
   const { t } = useTranslation();
+  // Drives both the measurement copy and the separator, so the toolbar sizes
+  // itself correctly whether or not anything contributed.
+  const slotContributions = useActionSlot(TOOLBAR_SLOT_ID);
   const [density, setDensity] =
     useState<SelectedToolbarDensity>(readStoredDensity);
   const [responsiveDensity, setResponsiveDensity] =
@@ -261,7 +274,8 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     isConnected,
     isMobile,
     isTmuxAttached,
-    showAiAssistant,
+    actionsEnabled,
+    slotContributions,
     t,
   ]);
 
@@ -745,12 +759,13 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
             <ClipboardPaste className="size-4" />
             {density !== "icon" && t("terminalToolbar.paste")}
           </span>
-          {showAiAssistant && (
-            <span className={CONTROL}>
-              <Bot className="size-4" />
-              {density !== "icon" && t("ai.assistant")}
-            </span>
-          )}
+          {actionsEnabled &&
+            slotContributions.map((contribution) => (
+              <span key={contribution.actionId} className={CONTROL}>
+                {contribution.icon && <contribution.icon className="size-4" />}
+                {density !== "icon" && t(contribution.titleKey)}
+              </span>
+            ))}
           <span className={cn(CONTROL, "h-8 px-2")}>
             <LayoutGrid className="size-4" />
             <ChevronDown className="size-4" />
@@ -832,19 +847,16 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                 >
                   {imageButtons}
                 </div>
-                {showAiAssistant && (
+                {actionsEnabled && slotContributions.length > 0 && (
                   <>
                     <div className={SEPARATOR} />
-                    <button
-                      type="button"
+                    <ActionSlot
+                      slotId={TOOLBAR_SLOT_ID}
                       className={CONTROL}
-                      aria-label={t("ai.assistant")}
-                      title={t("ai.assistant")}
-                      onClick={onToggleAiAssistant}
-                    >
-                      <Bot className="size-4 shrink-0" />
-                      {effectiveDensity !== "icon" && t("ai.assistant")}
-                    </button>
+                      enabled={actionsEnabled}
+                      hideLabels={effectiveDensity === "icon"}
+                      context={() => [getBufferText?.() ?? ""]}
+                    />
                   </>
                 )}
                 <div className={SEPARATOR} />

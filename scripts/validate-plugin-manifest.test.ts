@@ -50,6 +50,18 @@ describe("validate-plugin-manifest.cjs", () => {
     expect(output).toContain("sampleprovider.undeclared");
   });
 
+  it("accepts a manifest declaring actions and actionSlots", () => {
+    const { status, output } = runValidator("valid-actions.json");
+    expect(status).toBe(0);
+    expect(output).toContain("Valid plugin manifest");
+  });
+
+  it("rejects an action gated by an undeclared permission", () => {
+    const { status, output } = runValidator("invalid-action-permission.json");
+    expect(status).not.toBe(0);
+    expect(output).toContain("samplebadaction.never_declared");
+  });
+
   it("rejects a manifest with an unknown permission", () => {
     const { status, output } = runValidator("invalid-unknown-permission.json");
     expect(status).not.toBe(0);

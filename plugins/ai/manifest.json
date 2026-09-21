@@ -36,7 +36,18 @@
       "defaultForRole": {
         "admin": ["ai.services.use"]
       }
-    }
+    },
+    "actions": [
+      {
+        "id": "ai.openWithContext",
+        "titleKey": "ai.assistant",
+        "handler": "openWithContext",
+        "icon": "Bot",
+        "permission": "ai.services.use",
+        "slot": "terminal.toolbar",
+        "kind": "button"
+      }
+    ]
   },
   "sidecars": []
 }

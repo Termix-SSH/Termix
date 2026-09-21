@@ -12,10 +12,12 @@
 
 export const id = "ssh-terminal";
 export const tabId = "terminal";
+export const toolbarSlotId = "terminal.toolbar";
 
 export async function register({
   registerRailItem,
   registerTabComponent,
+  declareActionSlot,
   icons,
 }) {
   registerTabComponent(tabId, () =>
@@ -30,12 +32,18 @@ export async function register({
     labelKey: "nav.terminal",
     kind: "tab",
   });
+
+  // Offers other plugins a place in the terminal toolbar. The terminal does
+  // not know or care who fills it.
+  declareActionSlot({ id: toolbarSlotId, accepts: ["button"] });
 }
 
 export async function unregister({
   unregisterRailItem,
   unregisterTabComponent,
+  undeclareActionSlot,
 }) {
   unregisterRailItem(tabId);
   unregisterTabComponent(tabId);
+  undeclareActionSlot(toolbarSlotId);
 }

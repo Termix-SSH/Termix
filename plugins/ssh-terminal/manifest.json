@@ -24,6 +24,12 @@
         "icon": "SquareTerminal",
         "openFrom": ["rail", "host-context-menu", "palette"]
       }
+    ],
+    "actionSlots": [
+      {
+        "id": "terminal.toolbar",
+        "accepts": ["button"]
+      }
     ]
   },
   "sidecars": []

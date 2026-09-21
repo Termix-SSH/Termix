@@ -29,6 +29,16 @@ vi.mock("@/sidebar/tree/HostItem/HostItem", () => hostActionsApi);
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => mobileApi.isMobile,
 }));
+const perms = vi.hoisted(() => ({ granted: [] as string[] }));
+vi.mock("@/hooks/use-permissions", () => ({
+  usePermissions: () => ({
+    permissions: perms.granted,
+    isAdmin: false,
+    loaded: true,
+    has: (permission: string) => perms.granted.includes(permission),
+  }),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) =>
@@ -54,11 +64,18 @@ vi.mock("react-i18next", () => ({
         "terminalToolbar.imageActionFailed": "Image action failed",
         "terminalToolbar.retry": "Retry",
         "terminalToolbar.dismissError": "Dismiss image error",
+        "ai.assistant": "AI Assistant",
       })[key] ?? key,
   }),
 }));
 
 import { TerminalToolbar } from "@/features/terminal/TerminalToolbar";
+import {
+  declareActionSlot,
+  registerAction,
+  registerSlotContribution,
+  resetActionRegistry,
+} from "@/shell/action-registry";
 import {
   clampToolbarPosition,
   getResponsiveToolbarDensity,
@@ -96,6 +113,8 @@ beforeEach(() => {
     value: 1024,
   });
   localStorage.clear();
+  perms.granted = [];
+  resetActionRegistry();
   hostActionsApi.getSshActions.mockReturnValue([]);
   api.startMetricsPolling.mockResolvedValue({ viewerSessionId: "viewer" });
   api.getServerMetricsById.mockResolvedValue(null);
@@ -890,5 +909,68 @@ describe("TerminalToolbar Phase 1", () => {
     await waitFor(() =>
       expect(api.stopMetricsPolling).toHaveBeenCalledWith(7, "late-viewer"),
     );
+  });
+
+  describe("contributed toolbar actions", () => {
+    const ACTION = "ai.openWithContext";
+
+    function contribute() {
+      const handler = vi.fn();
+      declareActionSlot({ id: "terminal.toolbar", accepts: ["button"] });
+      registerAction(ACTION, handler, { permission: "ai.services.use" });
+      registerSlotContribution("terminal.toolbar", {
+        actionId: ACTION,
+        titleKey: "ai.assistant",
+      });
+      return handler;
+    }
+
+    it("shows no contributed button and no stray separator when nothing contributed", () => {
+      declareActionSlot({ id: "terminal.toolbar", accepts: ["button"] });
+      const { container } = renderToolbar();
+
+      expect(screen.queryByRole("button", { name: "AI Assistant" })).toBeNull();
+      const separatorsWithout = container.querySelectorAll(".w-px").length;
+
+      cleanup();
+      contribute();
+      perms.granted = ["ai.services.use"];
+      const withButton = renderToolbar().container;
+
+      expect(withButton.querySelectorAll(".w-px").length).toBe(
+        separatorsWithout + 1,
+      );
+    });
+
+    it("hides the contributed button when the user lacks the permission", () => {
+      contribute();
+      renderToolbar();
+
+      expect(screen.queryByRole("button", { name: "AI Assistant" })).toBeNull();
+    });
+
+    it("invokes the action with the terminal buffer text when permitted", async () => {
+      const handler = contribute();
+      perms.granted = ["ai.services.use"];
+      const getBufferText = vi.fn(() => "$ whoami\nroot");
+
+      renderToolbar({ getBufferText });
+
+      expect(getBufferText).not.toHaveBeenCalled();
+      await userEvent.click(
+        screen.getByRole("button", { name: "AI Assistant" }),
+      );
+
+      expect(handler).toHaveBeenCalledWith("$ whoami\nroot");
+    });
+
+    it("hides the slot when the host has contributed actions disabled", () => {
+      contribute();
+      perms.granted = ["ai.services.use"];
+
+      renderToolbar({ actionsEnabled: false });
+
+      expect(screen.queryByRole("button", { name: "AI Assistant" })).toBeNull();
+    });
   });
 });

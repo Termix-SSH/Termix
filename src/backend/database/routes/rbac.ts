@@ -1244,6 +1244,48 @@ router.get(
 
 /**
  * @openapi
+ * /rbac/permissions/me:
+ *   get:
+ *     summary: Get the current user's effective role permissions
+ *     description: >
+ *       Returns the permission strings granted to the authenticated user
+ *       through their roles, plus whether they are an admin. The frontend uses
+ *       this to hide UI a user could not use. It is not a security boundary:
+ *       every protected route checks again server side.
+ *     tags:
+ *       - RBAC
+ *     responses:
+ *       200:
+ *         description: The current user's permissions.
+ *       401:
+ *         description: Not authenticated.
+ */
+router.get(
+  "/permissions/me",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId!;
+    try {
+      // isAdmin travels with the list because hasPermission() falls back to it
+      // on the deny path. Without it the UI would hide things from an admin
+      // that the server would allow.
+      const [permissions, isAdmin] = await Promise.all([
+        permissionManager.getUserPermissions(userId),
+        permissionManager.isAdmin(userId),
+      ]);
+      res.json({ permissions, isAdmin });
+    } catch (error) {
+      databaseLogger.error("Failed to get current user permissions", error, {
+        operation: "get_my_permissions",
+        userId,
+      });
+      res.status(500).json({ error: "Failed to get permissions" });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /rbac/roles/{id}:
  *   delete:
  *     summary: Delete a role

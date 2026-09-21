@@ -188,7 +188,173 @@ describe("plugin manifest validation", () => {
     ).toBe(true);
   });
 
+  describe("actions / actionSlots", () => {
+    function withActions(contributes: Record<string, unknown>) {
+      return validateManifest(validManifest({ contributes }));
+    }
+
+    it("accepts a valid actions and actionSlots pair", () => {
+      const errors = withActions({
+        actions: [
+          {
+            id: "ai.openWithContext",
+            titleKey: "ai.assistant",
+            handler: "openWithContext",
+            icon: "Bot",
+            slot: "terminal.toolbar",
+            kind: "button",
+          },
+        ],
+        actionSlots: [{ id: "terminal.toolbar", accepts: ["button"] }],
+      });
+      expect(errors).toEqual([]);
+    });
+
+    it("allows a camelCase segment in an action id", () => {
+      const errors = withActions({
+        actions: [
+          {
+            id: "ai.openWithContext",
+            titleKey: "k",
+            handler: "openWithContext",
+          },
+        ],
+      });
+      expect(errors).toEqual([]);
+    });
+
+    it("rejects an action id that is not dotted", () => {
+      const errors = withActions({
+        actions: [{ id: "notdotted", titleKey: "k", handler: "h" }],
+      });
+      expect(errors.some((e) => e.includes("actions[0].id must match"))).toBe(
+        true,
+      );
+    });
+
+    it("rejects a duplicate action id", () => {
+      const errors = withActions({
+        actions: [
+          { id: "a.one", titleKey: "k", handler: "h" },
+          { id: "a.one", titleKey: "k", handler: "h" },
+        ],
+      });
+      expect(
+        errors.some((e) => e.includes('actions[1].id is a duplicate: "a.one"')),
+      ).toBe(true);
+    });
+
+    it("requires titleKey and a valid handler", () => {
+      const errors = withActions({
+        actions: [{ id: "a.one", handler: "not a identifier" }],
+      });
+      expect(errors.some((e) => e.includes("actions[0].titleKey"))).toBe(true);
+      expect(errors.some((e) => e.includes("actions[0].handler"))).toBe(true);
+    });
+
+    it("rejects an unknown contribution kind", () => {
+      const errors = withActions({
+        actions: [
+          { id: "a.one", titleKey: "k", handler: "h", kind: "dropdown" },
+        ],
+      });
+      expect(
+        errors.some((e) => e.includes("actions[0].kind must be one of")),
+      ).toBe(true);
+    });
+
+    it("rejects an unknown value in a slot's accepts", () => {
+      const errors = withActions({
+        actionSlots: [{ id: "terminal.toolbar", accepts: ["menu"] }],
+      });
+      expect(
+        errors.some((e) =>
+          e.includes('actionSlots[0].accepts has unknown value: "menu"'),
+        ),
+      ).toBe(true);
+    });
+
+    it("rejects an empty accepts array", () => {
+      const errors = withActions({
+        actionSlots: [{ id: "terminal.toolbar", accepts: [] }],
+      });
+      expect(
+        errors.some((e) =>
+          e.includes("actionSlots[0].accepts must be a non-empty array"),
+        ),
+      ).toBe(true);
+    });
+
+    it("rejects a duplicate slot id", () => {
+      const errors = withActions({
+        actionSlots: [
+          { id: "terminal.toolbar", accepts: ["button"] },
+          { id: "terminal.toolbar", accepts: ["button"] },
+        ],
+      });
+      expect(
+        errors.some((e) => e.includes("actionSlots[1].id is a duplicate")),
+      ).toBe(true);
+    });
+  });
+
   describe("parseManifest", () => {
+    it("refuses an action gated by an undeclared permission", () => {
+      const { manifest, errors } = parseManifest(
+        validManifest({
+          contributes: {
+            permissionGroup: { group: "ai", permissions: ["ai.use"] },
+            actions: [
+              {
+                id: "ai.openWithContext",
+                titleKey: "k",
+                handler: "h",
+                permission: "ai.services.use",
+              },
+            ],
+          },
+        }),
+      );
+      expect(manifest).toBeUndefined();
+      expect(errors[0]).toContain(
+        'Action "ai.openWithContext" is gated by "ai.services.use"',
+      );
+    });
+
+    it("allows an action gated by a declared permission", () => {
+      const { manifest, errors } = parseManifest(
+        validManifest({
+          contributes: {
+            permissionGroup: {
+              group: "ai",
+              permissions: ["ai.services.use"],
+            },
+            actions: [
+              {
+                id: "ai.openWithContext",
+                titleKey: "k",
+                handler: "h",
+                permission: "ai.services.use",
+              },
+            ],
+          },
+        }),
+      );
+      expect(errors).toEqual([]);
+      expect(manifest?.contributes?.actions?.[0].id).toBe("ai.openWithContext");
+    });
+
+    it("allows an ungated action with no permissionGroup at all", () => {
+      const { errors } = parseManifest(
+        validManifest({
+          contributes: {
+            actions: [{ id: "a.one", titleKey: "k", handler: "h" }],
+          },
+        }),
+      );
+      expect(errors).toEqual([]);
+    });
+
     it("narrows a valid manifest", () => {
       const { manifest, errors } = parseManifest(validManifest());
       expect(errors).toEqual([]);

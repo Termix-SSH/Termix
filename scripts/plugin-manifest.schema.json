@@ -207,6 +207,63 @@
           "type": "string",
           "pattern": "^[a-z0-9-]+$",
           "description": "Mounted at /plugin-api/<id>/<apiPrefix>/*."
+        },
+        "actions": {
+          "type": "array",
+          "description": "Named frontend actions this plugin exposes for other plugins to invoke.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey", "handler"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-zA-Z0-9-]+)+$",
+                "description": "Dotted, globally unique action name, e.g. \"ai.openWithContext\"."
+              },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "handler": {
+                "type": "string",
+                "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$",
+                "description": "Name of the frontend export implementing this action. The runtime binding is registerAction(id, fn)."
+              },
+              "icon": { "type": "string", "minLength": 1 },
+              "permission": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Role permission a user needs. Must also appear in contributes.permissionGroup.permissions."
+              },
+              "slot": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-zA-Z0-9-]+)+$",
+                "description": "Slot this action is intended for. Advisory; binding happens at runtime."
+              },
+              "kind": { "type": "string", "enum": ["button"] }
+            }
+          }
+        },
+        "actionSlots": {
+          "type": "array",
+          "description": "Places this plugin offers other plugins to contribute a UI element.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "accepts"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-zA-Z0-9-]+)+$",
+                "description": "Dotted slot name, e.g. \"terminal.toolbar\"."
+              },
+              "accepts": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "enum": ["button"] },
+                "description": "Contribution kinds this slot will render. Checked in the frontend at registration time."
+              },
+              "descriptionKey": { "type": "string", "minLength": 1 }
+            }
+          }
         }
       }
     },

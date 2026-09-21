@@ -27,6 +27,7 @@ import {
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAiAvailability } from "@/hooks/use-ai-availability";
+import { resetPermissionsCache } from "@/hooks/use-permissions";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { AppRail, type RailView } from "@/sidebar/AppRail";
 import {
@@ -967,6 +968,8 @@ export function AppShell({
       const manual =
         event instanceof CustomEvent &&
         (event.detail as { manual?: boolean } | undefined)?.manual === true;
+      // Drop the cached grants so the next user never inherits them.
+      resetPermissionsCache();
       onLogout(manual ? { manual: true } : undefined);
     };
     window.addEventListener("termix:logout", handle);
