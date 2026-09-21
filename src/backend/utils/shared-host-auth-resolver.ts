@@ -4,6 +4,8 @@ import {
 } from "../../types/auth-protocols.js";
 import {
   createCurrentHostResolutionRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
   createCurrentSharedHostAuthOverrideRepository,
 } from "../database/repositories/factory.js";
 import type {
@@ -107,12 +109,36 @@ export async function resolveRecipientSharedHostAuthentication(
     }
 
     try {
-      const secret =
-        await SharedHostSecretsManager.getInstance().getSecretForUser(
-          hostId,
-          userId,
-          protocol,
-        );
+      const secretsManager = SharedHostSecretsManager.getInstance();
+      let secret = await secretsManager.getSecretForUser(
+        hostId,
+        userId,
+        protocol,
+      );
+
+      if (!secret) {
+        // No snapshot yet -- most often the grant was created while this
+        // recipient's data key was unavailable (snapshotForUser silently
+        // skips in that case). Mirrors the self-heal in findUsableCredential.
+        const hostAccessId = await findActiveHostAccessId(hostId, userId);
+        if (hostAccessId !== null) {
+          const ownerId = await repository.findHostOwnerId(hostId);
+          if (ownerId) {
+            await secretsManager.snapshotForUser(
+              hostAccessId,
+              hostId,
+              userId,
+              ownerId,
+            );
+            secret = await secretsManager.getSecretForUser(
+              hostId,
+              userId,
+              protocol,
+            );
+          }
+        }
+      }
+
       if (secret) {
         return {
           source: "owner-shared",
@@ -128,4 +154,18 @@ export async function resolveRecipientSharedHostAuthentication(
   return requiresPersonalHostAuthentication(host, protocol)
     ? { source: "required" }
     : { source: "secretless" };
+}
+
+/** The grant id for this user's access to the host, direct or via a role. */
+async function findActiveHostAccessId(
+  hostId: number,
+  userId: string,
+): Promise<number | null> {
+  const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
+  const access = await createCurrentRbacAccessRepository().findActiveHostAccess(
+    hostId,
+    userId,
+    roleIds,
+  );
+  return access?.id ?? null;
 }

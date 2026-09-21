@@ -10,6 +10,9 @@ const state = vi.hoisted(() => ({
   auditCalls: [] as Record<string, unknown>[],
   folderCredentialId: null as number | null,
   sharedSecret: null as Record<string, unknown> | null,
+  activeHostAccessId: null as number | null,
+  snapshotForUserCalls: [] as Record<string, unknown>[],
+  snapshotHeals: false,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -28,6 +31,15 @@ vi.mock("../../database/repositories/factory.js", () => ({
   }),
   createCurrentUserRepository: () => ({
     findById: async (userId: string) => ({ id: userId, username: userId }),
+  }),
+  createCurrentRoleRepository: () => ({
+    listUserRoleIds: async () => [],
+  }),
+  createCurrentRbacAccessRepository: () => ({
+    findActiveHostAccess: async () =>
+      state.activeHostAccessId !== null
+        ? { id: state.activeHostAccessId }
+        : null,
   }),
 }));
 
@@ -52,6 +64,26 @@ vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
   SharedHostSecretsManager: {
     getInstance: () => ({
       getSecretForUser: async () => state.sharedSecret,
+      snapshotForUser: async (
+        hostAccessId: number,
+        hostId: number,
+        targetUserId: string,
+        ownerId: string,
+      ) => {
+        state.snapshotForUserCalls.push({
+          hostAccessId,
+          hostId,
+          targetUserId,
+          ownerId,
+        });
+        if (state.snapshotHeals) {
+          state.sharedSecret = {
+            username: "shared-user",
+            authType: "key",
+            key: "HEALED-KEY",
+          };
+        }
+      },
     }),
   },
 }));
@@ -109,6 +141,9 @@ beforeEach(() => {
   state.auditCalls = [];
   state.folderCredentialId = null;
   state.sharedSecret = null;
+  state.activeHostAccessId = null;
+  state.snapshotForUserCalls = [];
+  state.snapshotHeals = false;
 });
 
 describe("resolveHostById", () => {
@@ -224,9 +259,32 @@ describe("resolveHostById", () => {
     expect(host.authType).toBe("password");
   });
 
-  it("denies shared secret-backed auth when the opted-in snapshot is missing", async () => {
+  it("denies shared secret-backed auth when the opted-in snapshot is missing and cannot be healed", async () => {
     state.host = baseHost({ shareSshAuth: true });
     expect(await resolveHostById(42, "recipient")).toBeNull();
+  });
+
+  it("lazily re-snapshots and resolves shared auth when the grant exists but its snapshot was never created", async () => {
+    // e.g. the owner shared the host while the recipient's data key was
+    // unavailable, so snapshotForUser silently skipped at share time.
+    state.host = baseHost({ shareSshAuth: true, username: "host-user" });
+    state.activeHostAccessId = 77;
+    state.snapshotHeals = true;
+
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(state.snapshotForUserCalls).toEqual([
+      {
+        hostAccessId: 77,
+        hostId: 42,
+        targetUserId: "recipient",
+        ownerId: "owner",
+      },
+    ]);
+    expect(host.key).toBe("HEALED-KEY");
+    expect(host.authType).toBe("key");
   });
 
   it("keeps SSH agent authentication private unless the owner opts in", async () => {
