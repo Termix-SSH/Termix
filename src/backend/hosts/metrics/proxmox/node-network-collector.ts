@@ -1,5 +1,5 @@
 import type { Client } from "ssh2";
-import { execCommand } from "../widgets/common-utils.js";
+import { execCommand } from "../../metrics-shared/common-utils.js";
 import { isSafeNodeName } from "../../proxmox-shared.js";
 
 export interface ProxmoxNodeNetworkInterface {

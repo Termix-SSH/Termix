@@ -137,7 +137,7 @@ describe("hosts publishers route through the bus", () => {
 
   it("notifyAutomationStatus and notifyAutomationMetrics emit their topics", async () => {
     const { notifyAutomationStatus, notifyAutomationMetrics } =
-      await import("../../hosts/metrics/automation-bridge.js");
+      await import("../../../../plugins/host-metrics/backend/automation-bridge.js");
 
     const status = vi.fn();
     const metrics = vi.fn();

@@ -3,7 +3,7 @@ import {
   createCurrentProxmoxNodeHistoryRepository,
   getCurrentSettingValue,
 } from "../../database/repositories/factory.js";
-import { ConcurrentLimiter } from "./state.js";
+import { ConcurrentLimiter } from "../metrics-shared/state.js";
 import {
   collectProxmoxStats,
   type ProxmoxStatsSnapshot,

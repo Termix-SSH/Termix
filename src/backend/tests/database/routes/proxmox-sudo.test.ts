@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Client } from "ssh2";
 
 const execElevated = vi.fn();
-vi.mock("../../../hosts/metrics/managers/exec-elevated.js", () => ({
+vi.mock("../../../hosts/metrics-shared/exec-elevated.js", () => ({
   execElevated: (...args: unknown[]) => execElevated(...args),
 }));
 

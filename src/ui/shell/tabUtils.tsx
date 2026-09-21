@@ -95,7 +95,7 @@ const loadWebEndpointTab = () =>
   }));
 const WebEndpointTab = lazy(loadWebEndpointTab);
 const loadHostMetricsTab = () =>
-  import("@/features/host-metrics/HostMetricsTab").then((m) => ({
+  import("../../../plugins/host-metrics/frontend/HostMetricsTab").then((m) => ({
     default: m.HostMetricsTab,
   }));
 const HostMetricsTab = lazy(loadHostMetricsTab);

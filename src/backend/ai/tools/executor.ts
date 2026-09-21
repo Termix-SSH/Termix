@@ -7,7 +7,7 @@ import {
 } from "../../database/repositories/factory.js";
 import { validateDefinition } from "../../database/routes/automations.js";
 import { resolveHostById } from "../../hosts/host-resolver.js";
-import { execCommand } from "../../hosts/metrics/widgets/common-utils.js";
+import { execCommand } from "../../hosts/metrics-shared/common-utils.js";
 import {
   createFleetSshFactory,
   getFleetPoolKey,

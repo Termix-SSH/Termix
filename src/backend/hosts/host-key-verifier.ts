@@ -1,4 +1,4 @@
-import { authFailureTracker } from "./metrics/state.js";
+import { authFailureTracker } from "./metrics-shared/state.js";
 import type { WebSocket } from "ws";
 import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { sshLogger } from "../utils/logger.js";

@@ -18,7 +18,7 @@ coverage
 # imports for type-checking (src/types, src/backend/utils, repositories...);
 # scripts/copy-bundled-plugins.cjs removes those after every compile, this
 # is a safety net for running tsc -p tsconfig.plugins.json directly.
-/plugins/*/backend/*.js
+/plugins/*/backend/**/*.js
 /src/**/*.js
 
 .vscode/*

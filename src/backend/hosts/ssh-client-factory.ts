@@ -14,7 +14,8 @@ import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 /**
  * Non-interactive SSH connection helpers shared by fleet execution.
  *
- * Mirrors buildSshConfig/createSshFactory/getPoolKey in hosts/metrics/index.ts,
+ * Mirrors buildSshConfig/createSshFactory/getPoolKey in
+ * plugins/host-metrics/backend/routes.ts,
  * minus the keyboard-interactive TOTP prompt handling (metrics/terminal-only)
  * and OPKSSH/Vault cert setup (not supported as fleet auth for v1 - those flows
  * need an interactive browser step that has no place in a batch fleet run).

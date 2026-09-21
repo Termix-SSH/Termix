@@ -6,19 +6,21 @@
  * tsc only emits .ts, so without a copy step the plugins directory simply
  * would not exist in dist and the loader would find nothing.
  *
- * The docker plugin is the exception: its backend is real TypeScript,
- * physically relocated from src/backend/hosts/docker/ rather than kept as
- * hand-written JS, because it is ~4000 lines of typed SSH/session logic that
- * is not worth hand-transpiling. tsconfig.plugins.json compiles the plugin
- * backend TypeScript to a sibling .js next to its source. Its imports
- * into core (e.g. "../../../src/backend/utils/logger.js") are written
- * relative to the TypeScript SOURCE tree so tsc can type-check them, since
- * plugins/ is not under tsconfig.node.json's rootDir and cannot be added to
- * it without changing every existing dist/backend/backend/... path in the
- * codebase. That means the emitted .js still points at src/backend/, which
- * does not exist in a built server -- only its compiled counterpart at
+ * docker and host-metrics are the exception: their backends are real
+ * TypeScript, physically relocated from src/backend/hosts/docker/ and
+ * src/backend/hosts/metrics/ rather than kept as hand-written JS, because
+ * each is thousands of lines of typed SSH/session logic that is not worth
+ * hand-transpiling. tsconfig.plugins.json compiles each plugin backend's
+ * TypeScript to a sibling .js next to its source. Their imports into core
+ * (e.g. "../../../src/backend/utils/logger.js") are written relative to the
+ * TypeScript SOURCE tree so tsc can type-check them, since plugins/ is not
+ * under tsconfig.node.json's rootDir and cannot be added to it without
+ * changing every existing dist/backend/backend/... path in the codebase.
+ * That means the emitted .js still points at src/backend/, which does not
+ * exist in a built server -- only its compiled counterpart at
  * dist/backend/backend/ does. rewriteCoreImports() below corrects that one
- * prefix after compilation, before the directory is copied into dist/.
+ * prefix after compilation, for every plugins/*\/backend directory tsc
+ * compiled, before the directory is copied into dist/.
  *
  * getBundledPluginsDir() in src/backend/plugins/paths.ts resolves
  * dist/backend/backend/plugins -> dist/plugins, which is where this writes.
@@ -64,7 +66,9 @@ function rewriteCoreImports(dir) {
     const original = fs.readFileSync(entryPath, "utf8");
     if (!original.includes(SRC_BACKEND_PREFIX)) continue;
 
-    const rewritten = original.split(SRC_BACKEND_PREFIX).join(COMPILED_BACKEND_PREFIX);
+    const rewritten = original
+      .split(SRC_BACKEND_PREFIX)
+      .join(COMPILED_BACKEND_PREFIX);
     fs.writeFileSync(entryPath, rewritten);
   }
 }
@@ -111,8 +115,28 @@ function removeStrayEmits(dir) {
   }
 }
 
+/**
+ * Every plugin directory with a backend/ that tsc actually compiled (i.e. it
+ * has a .ts file in it, not just a hand-written index.mjs). Scanned rather
+ * than hardcoded so a future plugin only needs a tsconfig.plugins.json entry,
+ * not a second call site here.
+ */
+function compiledPluginBackendDirs() {
+  return fs
+    .readdirSync(source, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(source, entry.name, "backend"))
+    .filter(
+      (dir) =>
+        fs.existsSync(dir) &&
+        fs.readdirSync(dir).some((name) => name.endsWith(".ts")),
+    );
+}
+
 compilePluginBackends();
-rewriteCoreImports(path.join(source, "docker", "backend"));
+for (const dir of compiledPluginBackendDirs()) {
+  rewriteCoreImports(dir);
+}
 removeStrayEmits(path.join(root, "src"));
 
 fs.rmSync(destination, { recursive: true, force: true });

@@ -1,5 +1,5 @@
 import type { Client } from "ssh2";
-import { execCommand, toFixedNum } from "../widgets/common-utils.js";
+import { execCommand, toFixedNum } from "../../metrics-shared/common-utils.js";
 import { isSafeNodeName } from "../../proxmox-shared.js";
 
 export interface ProxmoxStoragePoolEntry {

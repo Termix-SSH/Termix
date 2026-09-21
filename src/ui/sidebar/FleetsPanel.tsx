@@ -39,7 +39,11 @@ import {
 import { FOLDER_COLORS } from "@/lib/theme";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import { getUserList } from "@/api/user-management-api";
-import { getRoles, type SharePermissionLevel, type ShareTarget } from "@/api/rbac-api";
+import {
+  getRoles,
+  type SharePermissionLevel,
+  type ShareTarget,
+} from "@/api/rbac-api";
 import { Select2 } from "@/components/select2";
 import {
   DropdownMenu,
@@ -685,9 +689,7 @@ function FleetShareDialog({
                   <Select2
                     value={permissionLevel}
                     onChange={(e) =>
-                      setPermissionLevel(
-                        e.target.value as SharePermissionLevel,
-                      )
+                      setPermissionLevel(e.target.value as SharePermissionLevel)
                     }
                     className="h-8 w-full px-2.5 text-xs border border-border bg-background hover:bg-muted/40 transition-colors"
                   >
@@ -1304,11 +1306,7 @@ function FleetDetail({
           <Share2 className="size-3.5 mr-1.5" />
           {t("newUi.sidebar.fleets.shareFleet")}
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPickerOpen(true)}
-        >
+        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
           <Settings2 className="size-3.5 mr-1.5" />
           {t("newUi.sidebar.fleets.manageMembers")}
         </Button>

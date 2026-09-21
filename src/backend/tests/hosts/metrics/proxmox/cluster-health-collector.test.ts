@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const execCommand = vi.fn();
-vi.mock("../../../../hosts/metrics/widgets/common-utils.js", () => ({
+vi.mock("../../../../hosts/metrics-shared/common-utils.js", () => ({
   execCommand: (...args: unknown[]) => execCommand(...args),
 }));
 

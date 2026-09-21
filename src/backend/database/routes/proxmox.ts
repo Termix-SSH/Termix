@@ -18,7 +18,7 @@ import {
   serializeProxmoxJumpHosts,
 } from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "../../hosts/proxmox-shared.js";
-import { execElevated } from "../../hosts/metrics/managers/exec-elevated.js";
+import { execElevated } from "../../hosts/metrics-shared/exec-elevated.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;

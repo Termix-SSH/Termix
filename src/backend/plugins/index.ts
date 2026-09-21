@@ -86,7 +86,7 @@ function createBroker(): PluginBroker {
           import("../hosts/host-resolver.js"),
           import("../hosts/ssh-connection-pool.js"),
           import("../hosts/ssh-client-factory.js"),
-          import("../hosts/metrics/widgets/common-utils.js"),
+          import("../hosts/metrics-shared/common-utils.js"),
         ]);
 
         // resolveHostById performs the RBAC check (canAccessHost) and returns

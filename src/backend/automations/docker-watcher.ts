@@ -2,7 +2,7 @@ import type { AutomationDefinition } from "../../types/automations.js";
 import { createCurrentAutomationRepository } from "../database/repositories/factory.js";
 import { resolveHostById } from "../hosts/host-resolver.js";
 import { DataCrypto } from "../utils/data-crypto.js";
-import { execCommand } from "../hosts/metrics/widgets/common-utils.js";
+import { execCommand } from "../hosts/metrics-shared/common-utils.js";
 import {
   createFleetSshFactory,
   getFleetPoolKey,

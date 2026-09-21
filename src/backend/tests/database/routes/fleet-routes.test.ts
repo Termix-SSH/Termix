@@ -73,15 +73,15 @@ vi.mock("../../../hosts/ssh-connection-pool.js", () => ({
   ) => fn({}),
 }));
 
-vi.mock("../../../hosts/metrics/widgets/common-utils.js", () => ({
+vi.mock("../../../hosts/metrics-shared/common-utils.js", () => ({
   execCommand: vi.fn(async () => ({ stdout: "ok", stderr: "", code: 0 })),
 }));
 
-vi.mock("../../../hosts/metrics/managers/platform.js", () => ({
+vi.mock("../../../hosts/metrics-shared/platform.js", () => ({
   detectPlatform: vi.fn(async () => ({ pkg: "apt", osPrettyName: "Debian" })),
 }));
 
-vi.mock("../../../hosts/metrics/managers/exec-elevated.js", async () => {
+vi.mock("../../../hosts/metrics-shared/exec-elevated.js", async () => {
   class ElevationError extends Error {
     code: string;
     constructor(code: string, message: string) {
@@ -95,11 +95,11 @@ vi.mock("../../../hosts/metrics/managers/exec-elevated.js", async () => {
   };
 });
 
-vi.mock("../../../hosts/metrics/managers/packages.js", () => ({
+vi.mock("../../../hosts/metrics-shared/package-commands.js", () => ({
   buildPackageActionCommand: vi.fn(() => "apt-get install -y foo"),
 }));
 
-vi.mock("../../../hosts/metrics/managers/validation.js", () => ({
+vi.mock("../../../hosts/metrics-shared/validation.js", () => ({
   isValidPackageName: (v: unknown) => typeof v === "string" && v.length > 0,
 }));
 
@@ -320,7 +320,7 @@ describe("POST /:id/packages", () => {
 
   it("surfaces an ElevationError as a per-host error, not a request failure", async () => {
     const { execElevated, ElevationError } =
-      await import("../../../hosts/metrics/managers/exec-elevated.js");
+      await import("../../../hosts/metrics-shared/exec-elevated.js");
     (execElevated as ReturnType<typeof vi.fn>).mockRejectedValue(
       new ElevationError("SUDO_REQUIRED", "sudo password required"),
     );
@@ -347,7 +347,7 @@ describe("POST /:id/packages", () => {
     });
 
     const { execElevated } =
-      await import("../../../hosts/metrics/managers/exec-elevated.js");
+      await import("../../../hosts/metrics-shared/exec-elevated.js");
     (execElevated as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: 0,
       stdout: "done",

@@ -1,7 +1,7 @@
 import { Database } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ProxmoxStatsSnapshot } from "@/types/proxmox";
-import { MetricCard } from "@/features/host-metrics/cards/MetricCard";
+import { MetricCard } from "@/components/metric-card";
 
 export function StoragePoolsCard({
   snapshot,

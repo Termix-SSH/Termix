@@ -30,7 +30,7 @@ vi.mock("../../hosts/host-resolver.js", () => ({
 }));
 
 const execCommand = vi.fn();
-vi.mock("../../hosts/metrics/widgets/common-utils.js", () => ({
+vi.mock("../../hosts/metrics-shared/common-utils.js", () => ({
   execCommand: (...args: unknown[]) => execCommand(...args),
 }));
 vi.mock("../../hosts/ssh-client-factory.js", () => ({

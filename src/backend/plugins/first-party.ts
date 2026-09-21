@@ -38,10 +38,18 @@
  * session manager reuses a live ssh2.Client across many REST calls, and its
  * SSH connect flow implements TOTP/Warpgate as a stateful multi-request
  * handshake the worker ctx.ssh API has no hook for.
+ *
+ * host-metrics is here for the same reason: its polling manager holds
+ * long-lived ssh2 clients across a whole fleet of hosts, reused between
+ * polling ticks rather than opened per request, and its connect flow
+ * implements the same jump-host/SOCKS5/TOTP/Warpgate/OPKSSH/Vault
+ * keyboard-interactive handshakes the terminal does -- none of which the
+ * worker ctx.ssh API (connect + single exec-and-collect) has a hook for.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
   "docker",
+  "host-metrics",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

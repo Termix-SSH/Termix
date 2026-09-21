@@ -120,11 +120,27 @@ export async function runAutomationsMigration(): Promise<AutomationsMigrationRes
 /**
  * Imported lazily: this migration runs before the metrics subsystem is loaded,
  * and pulling that module in early would drag its timers in with it.
+ *
+ * alert-engine now lives in the host-metrics plugin rather than core, so it is
+ * resolved through getBundledPluginsDir() the same way the plugin loader finds
+ * any other bundled plugin file, instead of a relative import into a module
+ * this file no longer sits next to.
  */
 async function standDownAlertEngine(): Promise<void> {
   try {
-    const { markAlertEngineSuperseded } =
-      await import("../../hosts/metrics/alert-engine.js");
+    const { getBundledPluginsDir } = await import("../../plugins/paths.js");
+    const path = await import("node:path");
+    const { pathToFileURL } = await import("node:url");
+
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "host-metrics",
+      "backend",
+      "alert-engine.js",
+    );
+    const { markAlertEngineSuperseded } = await import(
+      pathToFileURL(entry).href
+    );
     markAlertEngineSuperseded();
   } catch {
     // If it cannot be loaded there is nothing running to stand down.

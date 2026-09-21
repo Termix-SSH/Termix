@@ -26,6 +26,9 @@
     "allowUnusedLabels": true,
     "allowUnreachableCode": true
   },
-  "include": ["plugins/docker/backend/**/*.ts"],
+  "include": [
+    "plugins/docker/backend/**/*.ts",
+    "plugins/host-metrics/backend/**/*.ts"
+  ],
   "exclude": ["src/**/*.test.ts"]
 }

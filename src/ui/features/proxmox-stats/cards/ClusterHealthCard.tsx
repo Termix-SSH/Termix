@@ -2,7 +2,7 @@ import { Network } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ProxmoxStatsSnapshot } from "@/types/proxmox";
 import { cn } from "@/lib/utils";
-import { MetricCard } from "@/features/host-metrics/cards/MetricCard";
+import { MetricCard } from "@/components/metric-card";
 
 export function ClusterHealthCard({
   snapshot,

@@ -44,7 +44,7 @@ const TunnelApp = lazy(() =>
   import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
 );
 const HostMetricsApp = lazy(() =>
-  import("@/features/host-metrics/HostMetricsApp").then((m) => ({
+  import("../plugins/host-metrics/frontend/HostMetricsApp").then((m) => ({
     default: m.default,
   })),
 );

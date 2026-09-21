@@ -136,3 +136,53 @@ describe("bundled docker plugin", () => {
     expect(source).toMatch(/export async function deactivate/);
   });
 });
+
+describe("bundled host-metrics plugin", () => {
+  it("ships a directory with a manifest and both entry points", () => {
+    const dir = path.join(getBundledPluginsDir(), "host-metrics");
+
+    expect(fs.existsSync(path.join(dir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "backend", "index.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "frontend", "index.mjs"))).toBe(true);
+  });
+
+  it("has a manifest that passes the real validator", () => {
+    const { manifest, errors } = parseManifest(
+      readBundledManifest("host-metrics"),
+    );
+
+    expect(errors).toEqual([]);
+    expect(manifest?.id).toBe("host-metrics");
+    expect(manifest?.category).toBe("Monitoring");
+  });
+
+  it("declares the transport-owner capability and qualifies for the tier", () => {
+    const { manifest } = parseManifest(readBundledManifest("host-metrics"));
+
+    expect(manifest?.permissions).toContain(TRANSPORT_OWNER_CAPABILITY);
+    expect(isFirstParty("host-metrics")).toBe(true);
+    expect(runsInProcess("host-metrics", manifest!.permissions)).toBe(true);
+  });
+
+  it("contributes the host-metrics tab the shell registers", () => {
+    const { manifest } = parseManifest(readBundledManifest("host-metrics"));
+    const tab = manifest?.contributes?.tabs?.[0];
+
+    // The shell keys tab content off this id, so it has to stay "host-metrics".
+    expect(tab?.id).toBe("host-metrics");
+    expect(tab?.openFrom).toContain("host-context-menu");
+  });
+
+  it("exports activate and deactivate from its backend entry", () => {
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "host-metrics",
+      "backend",
+      "index.mjs",
+    );
+    const source = fs.readFileSync(entry, "utf8");
+
+    expect(source).toMatch(/export async function activate/);
+    expect(source).toMatch(/export async function deactivate/);
+  });
+});

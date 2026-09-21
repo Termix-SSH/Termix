@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import type { WebSocket } from "ws";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
-import { authFailureTracker } from "../../hosts/metrics/state.js";
+import { authFailureTracker } from "../../hosts/metrics-shared/state.js";
 
 const { updateHostKey } = vi.hoisted(() => ({ updateHostKey: vi.fn() }));
 vi.mock("../../database/repositories/factory.js", () => ({

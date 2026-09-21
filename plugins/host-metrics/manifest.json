@@ -1,0 +1,30 @@
+{
+  "id": "host-metrics",
+  "name": "Host Metrics",
+  "version": "1.0.0",
+  "description": "Live CPU, memory, disk, network and process metrics, plus host management (services, packages, firewall, cron, users, SSL, logs, WireGuard, Tailscale).",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Monitoring",
+  "icon": "Activity",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": true,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["process:transport-owner"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "host-metrics",
+        "titleKey": "nav.hostMetrics",
+        "icon": "Activity",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ]
+  },
+  "sidecars": []
+}

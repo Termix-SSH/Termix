@@ -28,14 +28,14 @@ import {
   createFleetSshFactory,
 } from "../../hosts/ssh-client-factory.js";
 import { withConnection } from "../../hosts/ssh-connection-pool.js";
-import { execCommand } from "../../hosts/metrics/widgets/common-utils.js";
-import { detectPlatform } from "../../hosts/metrics/managers/platform.js";
+import { execCommand } from "../../hosts/metrics-shared/common-utils.js";
+import { detectPlatform } from "../../hosts/metrics-shared/platform.js";
 import {
   execElevated,
   ElevationError,
-} from "../../hosts/metrics/managers/exec-elevated.js";
-import { buildPackageActionCommand } from "../../hosts/metrics/managers/packages.js";
-import { isValidPackageName } from "../../hosts/metrics/managers/validation.js";
+} from "../../hosts/metrics-shared/exec-elevated.js";
+import { buildPackageActionCommand } from "../../hosts/metrics-shared/package-commands.js";
+import { isValidPackageName } from "../../hosts/metrics-shared/validation.js";
 import { resolveSnippetCommand } from "./snippets-execution.js";
 
 const router = express.Router();
