@@ -309,5 +309,6 @@ export const versionLogger = new Logger("VERSION", "📦", "#8b5cf6");
 export const dashboardLogger = new Logger("DASHBOARD", "📊", "#ec4899");
 export const guacLogger = new Logger("GUACAMOLE", "🖼️", "#ff6b6b");
 export const homepageLogger = new Logger("HOMEPAGE", "🏠", "#f97316");
+export const pluginLogger = new Logger("PLUGIN", "🧩", "#84cc16");
 
 export const logger = systemLogger;
