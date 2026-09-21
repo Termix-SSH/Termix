@@ -150,6 +150,116 @@ describe("plugin manifest validation", () => {
     });
   });
 
+  describe("providesSecret / requiresSecret", () => {
+    const permissionGroup = {
+      group: "testplugin",
+      permissions: ["testplugin.secrets.share"],
+    };
+
+    it("accepts a well-formed pair", () => {
+      expect(
+        validateManifest(
+          validManifest({
+            providesSecret: [
+              { key: "api-key", permission: "testplugin.secrets.share" },
+            ],
+            requiresSecret: [
+              { plugin: "ai-assistant", key: "api-key", optional: true },
+            ],
+            contributes: { permissionGroup },
+          }),
+        ),
+      ).toEqual([]);
+    });
+
+    it("rejects a dotted secret key", () => {
+      // The owning plugin is already its own field, so a dotted key would only
+      // encode the owner twice and invite the two disagreeing.
+      const errors = validateManifest(
+        validManifest({
+          providesSecret: [
+            { key: "ai.api-key", permission: "testplugin.secrets.share" },
+          ],
+        }),
+      );
+      expect(errors.some((e) => e.includes("providesSecret[0].key"))).toBe(
+        true,
+      );
+    });
+
+    it("rejects a duplicate offer of the same key", () => {
+      const errors = validateManifest(
+        validManifest({
+          providesSecret: [
+            { key: "api-key", permission: "testplugin.secrets.share" },
+            { key: "api-key", permission: "testplugin.secrets.share" },
+          ],
+        }),
+      );
+      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
+    });
+
+    it("requires a permission on an offer", () => {
+      const errors = validateManifest(
+        validManifest({ providesSecret: [{ key: "api-key" }] }),
+      );
+      expect(
+        errors.some((e) => e.includes("providesSecret[0].permission")),
+      ).toBe(true);
+    });
+
+    it("rejects a reference with a bad plugin id", () => {
+      const errors = validateManifest(
+        validManifest({
+          requiresSecret: [{ plugin: "Bad_Id", key: "api-key" }],
+        }),
+      );
+      expect(errors.some((e) => e.includes("requiresSecret[0].plugin"))).toBe(
+        true,
+      );
+    });
+
+    it("rejects a duplicate reference to the same plugin and key", () => {
+      const errors = validateManifest(
+        validManifest({
+          requiresSecret: [
+            { plugin: "ai-assistant", key: "api-key" },
+            { plugin: "ai-assistant", key: "api-key" },
+          ],
+        }),
+      );
+      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
+    });
+
+    it("refuses a shared secret gated by a permission the group never declares", () => {
+      // Same rule as a service: sharing rides on an ordinary role permission,
+      // so it has to be one an admin can actually grant.
+      const { manifest, errors } = parseManifest(
+        validManifest({
+          providesSecret: [
+            { key: "api-key", permission: "testplugin.undeclared" },
+          ],
+          contributes: { permissionGroup },
+        }),
+      );
+
+      expect(manifest).toBeUndefined();
+      expect(errors[0]).toContain("testplugin.undeclared");
+      expect(errors[0]).toContain("permissionGroup");
+    });
+
+    it("refuses a plugin borrowing from itself", () => {
+      const { manifest, errors } = parseManifest(
+        validManifest({
+          requiresSecret: [{ plugin: "sample-plugin", key: "api-key" }],
+        }),
+      );
+
+      expect(manifest).toBeUndefined();
+      expect(errors[0]).toContain("names this plugin itself");
+    });
+  });
+
   it("rejects an unknown permission", () => {
     const errors = validateManifest(
       validManifest({ permissions: ["credentials.read"] }),

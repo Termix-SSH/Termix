@@ -82,6 +82,12 @@ const API_PREFIX_PATTERN = /^[a-z0-9-]+$/;
 /** Service names are dotted, e.g. "ssh.transport" or "host-metrics.stream". */
 const SERVICE_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
 /**
+ * A shared secret key is a flat slug, e.g. "api-key". Not dotted: the plugin
+ * id is already a separate field, so a dotted key would only invite encoding
+ * the owner twice and disagreeing with itself.
+ */
+const SECRET_KEY_PATTERN = /^[a-z0-9-]+$/;
+/**
  * Action and slot ids are dotted like service names, but each segment may be
  * camelCase: these name a frontend function ("ai.openWithContext"), not a
  * lowercase service contract, so SERVICE_PATTERN is too strict to reuse.
@@ -145,6 +151,13 @@ export interface PluginManifest {
   provides?: PluginServiceProvide[];
   /** Named services this plugin needs another active plugin to provide. */
   requires?: PluginServiceRequire[];
+  /**
+   * Secrets this plugin offers other plugins by reference. Gated by one of
+   * this plugin's own permissionGroup permissions -- see parseManifest.
+   */
+  providesSecret?: PluginSecretProvide[];
+  /** Secrets this plugin wants to borrow from another plugin, by reference. */
+  requiresSecret?: PluginSecretRequire[];
   sidecars: Array<{ id: string; binary: string }>;
 }
 
@@ -159,6 +172,28 @@ export interface PluginServiceRequire {
   service: string;
   versionRange: string;
   /** When true, an unsatisfied requirement is skipped instead of failing activation. */
+  optional?: boolean;
+}
+
+export interface PluginSecretProvide {
+  /** The secret's name within this plugin, e.g. "api-key". */
+  key: string;
+  /** The role permission a borrowing user needs. */
+  permission: string;
+  /** Shown in the admin UI so the sharing is legible without reading code. */
+  descriptionKey?: string;
+}
+
+export interface PluginSecretRequire {
+  /** The plugin id that offers the secret. */
+  plugin: string;
+  /** The secret's name within that plugin. */
+  key: string;
+  /**
+   * When true, the provider being absent is normal and activation proceeds.
+   * A non-optional reference still activates -- the read just returns null --
+   * but resolveSecretRequirements reports it as an error for install feedback.
+   */
   optional?: boolean;
 }
 
@@ -300,6 +335,8 @@ export function validateManifest(manifest: unknown): string[] {
 
   errors.push(...validateProvides(m.provides));
   errors.push(...validateRequires(m.requires));
+  errors.push(...validateProvidesSecret(m.providesSecret));
+  errors.push(...validateRequiresSecret(m.requiresSecret));
 
   if (m.contributes && typeof m.contributes === "object") {
     errors.push(
@@ -383,6 +420,92 @@ function validateRequires(requires: unknown): string[] {
 
     if ("optional" in e && typeof e.optional !== "boolean") {
       errors.push(`requires[${index}].optional must be a boolean`);
+    }
+  });
+
+  return errors;
+}
+
+function validateProvidesSecret(providesSecret: unknown): string[] {
+  if (providesSecret === undefined) return [];
+  if (!Array.isArray(providesSecret)) {
+    return ['Field "providesSecret" must be an array'];
+  }
+
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  providesSecret.forEach((entry: unknown, index: number) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`providesSecret[${index}] must be an object`);
+      return;
+    }
+    const e = entry as Record<string, unknown>;
+
+    if (typeof e.key !== "string" || !SECRET_KEY_PATTERN.test(e.key)) {
+      errors.push(
+        `providesSecret[${index}].key must match ${SECRET_KEY_PATTERN}, got: "${String(e.key)}"`,
+      );
+    } else if (seen.has(e.key)) {
+      errors.push(`providesSecret[${index}].key is a duplicate: "${e.key}"`);
+    } else {
+      seen.add(e.key);
+    }
+
+    if (typeof e.permission !== "string" || e.permission.length === 0) {
+      errors.push(`providesSecret[${index}].permission is required`);
+    }
+
+    if (
+      "descriptionKey" in e &&
+      (typeof e.descriptionKey !== "string" || e.descriptionKey.length === 0)
+    ) {
+      errors.push(`providesSecret[${index}].descriptionKey must be a string`);
+    }
+  });
+
+  return errors;
+}
+
+function validateRequiresSecret(requiresSecret: unknown): string[] {
+  if (requiresSecret === undefined) return [];
+  if (!Array.isArray(requiresSecret)) {
+    return ['Field "requiresSecret" must be an array'];
+  }
+
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  requiresSecret.forEach((entry: unknown, index: number) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`requiresSecret[${index}] must be an object`);
+      return;
+    }
+    const e = entry as Record<string, unknown>;
+
+    if (typeof e.plugin !== "string" || !ID_PATTERN.test(e.plugin)) {
+      errors.push(
+        `requiresSecret[${index}].plugin must match ${ID_PATTERN}, got: "${String(e.plugin)}"`,
+      );
+    }
+
+    if (typeof e.key !== "string" || !SECRET_KEY_PATTERN.test(e.key)) {
+      errors.push(
+        `requiresSecret[${index}].key must match ${SECRET_KEY_PATTERN}, got: "${String(e.key)}"`,
+      );
+    }
+
+    if (typeof e.plugin === "string" && typeof e.key === "string") {
+      const id = `${e.plugin}:${e.key}`;
+      if (seen.has(id)) {
+        errors.push(`requiresSecret[${index}] is a duplicate: "${id}"`);
+      } else {
+        seen.add(id);
+      }
+    }
+
+    if ("optional" in e && typeof e.optional !== "boolean") {
+      errors.push(`requiresSecret[${index}].optional must be a boolean`);
     }
   });
 
@@ -639,6 +762,32 @@ export function parseManifest(raw: unknown): {
       return {
         errors: [
           `Service "${entry.service}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        ],
+      };
+    }
+  }
+
+  // Same rule for a shared secret. This is what keeps sharing on the existing
+  // RBAC grant path instead of becoming a separate mechanism: the permission
+  // gating a borrowed secret is an ordinary role permission in the provider's
+  // own group, editable per role or per user like any other.
+  for (const entry of manifest.providesSecret ?? []) {
+    if (!declaredPermissions.includes(entry.permission)) {
+      return {
+        errors: [
+          `Secret "${entry.key}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        ],
+      };
+    }
+  }
+
+  // A plugin borrowing from itself would bypass nothing, but it is always a
+  // mistake: its own secrets are reachable through ctx.secrets directly.
+  for (const entry of manifest.requiresSecret ?? []) {
+    if (entry.plugin === manifest.id) {
+      return {
+        errors: [
+          `requiresSecret entry for "${entry.key}" names this plugin itself; use ctx.secrets.get instead`,
         ],
       };
     }

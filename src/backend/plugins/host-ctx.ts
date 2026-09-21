@@ -19,6 +19,8 @@ import { pluginEvents } from "./events.js";
 import * as registry from "./registry.js";
 import * as serviceRegistry from "./service-registry.js";
 import type { ServiceRegistration } from "./service-registry.js";
+import * as secretRegistry from "./secret-registry.js";
+import type { SecretRegistration } from "./secret-registry.js";
 import { safeDetails } from "./broker.js";
 import type { PluginManifest } from "./manifest.js";
 
@@ -58,6 +60,26 @@ export interface InProcessPluginContext {
       options?: { userId?: string },
     ) => T;
   };
+  /**
+   * Secrets shared between plugins by reference.
+   *
+   * `offer` publishes a resolver, never a value, so the provider keeps the
+   * ability to rotate or clear it at any time. `getShared` reads another
+   * plugin's offered secret for one call, gated by that provider's own role
+   * permission. See secret-registry.ts.
+   */
+  secrets: {
+    offer: (
+      key: string,
+      resolve: (userId: string) => Promise<string | null> | string | null,
+    ) => void;
+    withdraw: (key: string) => boolean;
+    getShared: (
+      pluginId: string,
+      key: string,
+      options?: { userId?: string },
+    ) => Promise<string | null>;
+  };
 }
 
 /**
@@ -73,6 +95,8 @@ export interface InProcessHandle {
   providedKeys: Array<{ key: string; value: unknown }>;
   /** Declared services this plugin provided, revoked on deactivate. */
   providedServices: ServiceRegistration[];
+  /** Shared secrets this plugin offered, withdrawn on deactivate. */
+  offeredSecrets: SecretRegistration[];
 }
 
 export interface PluginModule {
@@ -180,18 +204,59 @@ export function createInProcessContext(
       get: (service, options) =>
         serviceRegistry.createServiceHandle(service, pluginId, {
           resolveUserId: () => options?.userId,
-          hasPermission: async (userId, permission) => {
-            const { PermissionManager } =
-              await import("../utils/permission-manager.js");
-            return PermissionManager.getInstance().hasPermission(
-              userId,
-              permission,
-            );
-          },
+          hasPermission: checkPermission,
           audit: (entry) => writeServiceAudit(entry),
         }),
     },
+
+    secrets: {
+      offer: (key, resolve) => {
+        // Declared AND offered, the same rule services.provide enforces.
+        const declared = manifest.providesSecret?.find(
+          (entry) => entry.key === key,
+        );
+        if (!declared) {
+          throw new Error(
+            `Plugin ${pluginId} cannot offer secret "${key}": it is not declared in the manifest's providesSecret array`,
+          );
+        }
+
+        const registration = secretRegistry.offerSecret({
+          pluginId,
+          pluginName: manifest.name,
+          key,
+          permission: declared.permission,
+          resolve,
+        });
+        handle.offeredSecrets.push(registration);
+      },
+
+      withdraw: (key) => {
+        const registration = handle.offeredSecrets.find(
+          (entry) => entry.key === key,
+        );
+        handle.offeredSecrets = handle.offeredSecrets.filter(
+          (entry) => entry !== registration,
+        );
+        return secretRegistry.withdrawSecret(pluginId, key, registration);
+      },
+
+      getShared: (providerPluginId, key, options) =>
+        secretRegistry.readSharedSecret(manifest, providerPluginId, key, {
+          resolveUserId: () => options?.userId,
+          hasPermission: checkPermission,
+          audit: (entry) => writeSecretAudit(entry),
+        }),
+    },
   };
+}
+
+async function checkPermission(
+  userId: string,
+  permission: string,
+): Promise<boolean> {
+  const { PermissionManager } = await import("../utils/permission-manager.js");
+  return PermissionManager.getInstance().hasPermission(userId, permission);
 }
 
 /**
@@ -222,6 +287,35 @@ async function writeServiceAudit(
   }
 }
 
+/**
+ * Records that a secret was borrowed, never what it was.
+ *
+ * `resolved` is the only thing said about the value: whether one came back at
+ * all. That is what makes the trail useful (you can see a consumer running on
+ * someone else's key) without the trail itself becoming a place the secret
+ * leaks to.
+ */
+async function writeSecretAudit(
+  entry: secretRegistry.SecretAuditEntry,
+): Promise<void> {
+  try {
+    const { logAudit } = await import("../utils/audit-logger.js");
+    await logAudit({
+      userId: entry.userId,
+      username: `plugin:${entry.consumerPluginId}`,
+      action: "plugin_secret_shared_read",
+      resourceType: "plugin",
+      resourceId: entry.providerPluginId,
+      resourceName: entry.providerPluginName,
+      details: `${entry.consumerPluginId} read shared secret "${entry.providerPluginId}:${entry.key}" (resolved: ${entry.resolved})`,
+      success: entry.success,
+      errorMessage: entry.errorMessage,
+    });
+  } catch {
+    // Auditing must never break the caller.
+  }
+}
+
 /** Undoes everything the ctx handed out. Safe to call more than once. */
 export async function disposeInProcessHandle(
   handle: InProcessHandle,
@@ -238,6 +332,21 @@ export async function disposeInProcessHandle(
     serviceRegistry.revokeService(registration.service, registration);
   }
   handle.providedServices = [];
+
+  // Withdrawing the offers is what turns a borrower's getShared into a plain
+  // null instead of a handle pointing at a resolver whose plugin is gone. The
+  // sweep afterwards is belt and braces: an offer made outside the ctx, or one
+  // whose push was lost to a crash mid-activate, would otherwise outlive the
+  // plugin that backs it.
+  for (const registration of handle.offeredSecrets) {
+    secretRegistry.withdrawSecret(
+      registration.pluginId,
+      registration.key,
+      registration,
+    );
+  }
+  handle.offeredSecrets = [];
+  secretRegistry.withdrawAllForPlugin(pluginId);
 
   for (const unsubscribe of handle.unsubscribers) {
     try {

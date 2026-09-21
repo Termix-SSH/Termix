@@ -31,7 +31,8 @@
         "ai.use",
         "ai.manage_providers",
         "ai.apply_proposals",
-        "ai.services.use"
+        "ai.services.use",
+        "ai.secrets.share"
       ],
       "defaultForRole": {
         "admin": ["ai.services.use"]
@@ -49,5 +50,12 @@
       }
     ]
   },
+  "providesSecret": [
+    {
+      "key": "api-key",
+      "permission": "ai.secrets.share",
+      "descriptionKey": "ai.secrets.shareApiKey"
+    }
+  ],
   "sidecars": []
 }

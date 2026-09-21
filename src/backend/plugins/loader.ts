@@ -55,6 +55,10 @@ import {
   type PluginModule,
 } from "./host-ctx.js";
 import { resolveRequirements } from "./service-registry.js";
+import {
+  resolveSecretRequirements,
+  withdrawAllForPlugin,
+} from "./secret-registry.js";
 
 export type PluginState =
   | "loaded"
@@ -361,11 +365,25 @@ export class PluginLoader {
         );
       }
 
+      // Secret references never block activation, even when not optional. A
+      // borrowed secret is resolved per call and returns null when absent, so
+      // a provider installed later starts working with no restart -- refusing
+      // to start here would turn a recoverable gap into a hard ordering
+      // dependency between two installs.
+      const secretResolution = resolveSecretRequirements(plugin.manifest);
+      for (const reference of secretResolution.unavailable) {
+        pluginLogger.info(
+          `Plugin ${plugin.id} shared secret "${reference}" is not currently offered; reads will resolve to null`,
+          { operation: "plugin_activate" },
+        );
+      }
+
       const handle: InProcessHandle = {
         module: { activate, deactivate },
         unsubscribers: [],
         providedKeys: [],
         providedServices: [],
+        offeredSecrets: [],
       };
 
       const ctx = createInProcessContext(plugin.manifest, handle);
@@ -575,6 +593,11 @@ export class PluginLoader {
       await disposeInProcessHandle(handle, plugin.id);
       return;
     }
+
+    // A worker plugin cannot offer a shared secret today, but terminate() is
+    // the one path every tier goes through, so the sweep belongs here rather
+    // than only in the in-process branch above.
+    withdrawAllForPlugin(plugin.id);
 
     const worker = plugin.worker;
     if (!worker) return;

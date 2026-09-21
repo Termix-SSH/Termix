@@ -5049,7 +5049,10 @@
     "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
     "runsInOpenTerminal": "Runs in your open terminal session.",
     "runInTerminal": "Run",
-    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n"
+    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Let other plugins use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+    }
   },
   "macros": {
     "title": "Macros",

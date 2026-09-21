@@ -256,6 +256,12 @@ const ctx = {
   secrets: {
     get: notImplemented("secrets.get"),
     set: notImplemented("secrets.set"),
+    // Cross-plugin sharing is in-process only for now. Named here rather than
+    // left undefined so a worker plugin that tries it gets the same explicit
+    // error as any other unimplemented ctx call.
+    offer: notImplemented("secrets.offer"),
+    withdraw: notImplemented("secrets.withdraw"),
+    getShared: notImplemented("secrets.getShared"),
   },
   notify: notImplemented("notify"),
   fetch: notImplemented("fetch"),

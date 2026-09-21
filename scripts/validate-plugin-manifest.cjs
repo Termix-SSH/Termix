@@ -18,6 +18,7 @@ const ID_PATTERN = /^[a-z0-9-]+$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/;
 const API_VERSION_PATTERN = /^[0-9]+$/;
 const SERVICE_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+const SECRET_KEY_PATTERN = /^[a-z0-9-]+$/;
 // Dotted like a service name, but segments may be camelCase: these name a
 // frontend function ("ai.openWithContext"), not a lowercase service contract.
 const ACTION_ID_PATTERN = /^[a-z0-9-]+(\.[a-zA-Z0-9-]+)+$/;
@@ -132,6 +133,8 @@ function validateManifest(manifest, schema) {
 
   errors.push(...validateProvides(manifest.provides));
   errors.push(...validateRequires(manifest.requires));
+  errors.push(...validateProvidesSecret(manifest.providesSecret));
+  errors.push(...validateRequiresSecret(manifest.requiresSecret));
 
   if (manifest.contributes && typeof manifest.contributes === "object") {
     errors.push(...validateContributes(manifest.contributes));
@@ -145,6 +148,28 @@ function validateManifest(manifest, schema) {
       if (entry && entry.permission && !declared.includes(entry.permission)) {
         errors.push(
           `Service "${entry.service}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        );
+      }
+    }
+  }
+
+  // Same rule for a shared secret: sharing rides on the provider's own RBAC
+  // permission rather than a separate grant mechanism.
+  if (Array.isArray(manifest.providesSecret) && Array.isArray(declared)) {
+    for (const entry of manifest.providesSecret) {
+      if (entry && entry.permission && !declared.includes(entry.permission)) {
+        errors.push(
+          `Secret "${entry.key}" is gated by "${entry.permission}", which is not declared in contributes.permissionGroup.permissions`,
+        );
+      }
+    }
+  }
+
+  if (Array.isArray(manifest.requiresSecret)) {
+    for (const entry of manifest.requiresSecret) {
+      if (entry && entry.plugin && entry.plugin === manifest.id) {
+        errors.push(
+          `requiresSecret entry for "${entry.key}" names this plugin itself; use ctx.secrets.get instead`,
         );
       }
     }
@@ -251,6 +276,93 @@ function validateRequires(requires) {
 
     if ("optional" in entry && typeof entry.optional !== "boolean") {
       errors.push(`requires[${index}].optional must be a boolean`);
+    }
+  });
+
+  return errors;
+}
+
+function validateProvidesSecret(providesSecret) {
+  if (providesSecret === undefined) return [];
+  if (!Array.isArray(providesSecret)) {
+    return ['Field "providesSecret" must be an array'];
+  }
+
+  const errors = [];
+  const seen = new Set();
+
+  providesSecret.forEach((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`providesSecret[${index}] must be an object`);
+      return;
+    }
+
+    if (typeof entry.key !== "string" || !SECRET_KEY_PATTERN.test(entry.key)) {
+      errors.push(
+        `providesSecret[${index}].key must match ${SECRET_KEY_PATTERN}, got: "${entry.key}"`,
+      );
+    } else if (seen.has(entry.key)) {
+      errors.push(
+        `providesSecret[${index}].key is a duplicate: "${entry.key}"`,
+      );
+    } else {
+      seen.add(entry.key);
+    }
+
+    if (typeof entry.permission !== "string" || entry.permission.length === 0) {
+      errors.push(`providesSecret[${index}].permission is required`);
+    }
+
+    if (
+      "descriptionKey" in entry &&
+      (typeof entry.descriptionKey !== "string" ||
+        entry.descriptionKey.length === 0)
+    ) {
+      errors.push(`providesSecret[${index}].descriptionKey must be a string`);
+    }
+  });
+
+  return errors;
+}
+
+function validateRequiresSecret(requiresSecret) {
+  if (requiresSecret === undefined) return [];
+  if (!Array.isArray(requiresSecret)) {
+    return ['Field "requiresSecret" must be an array'];
+  }
+
+  const errors = [];
+  const seen = new Set();
+
+  requiresSecret.forEach((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`requiresSecret[${index}] must be an object`);
+      return;
+    }
+
+    if (typeof entry.plugin !== "string" || !ID_PATTERN.test(entry.plugin)) {
+      errors.push(
+        `requiresSecret[${index}].plugin must match ${ID_PATTERN}, got: "${entry.plugin}"`,
+      );
+    }
+
+    if (typeof entry.key !== "string" || !SECRET_KEY_PATTERN.test(entry.key)) {
+      errors.push(
+        `requiresSecret[${index}].key must match ${SECRET_KEY_PATTERN}, got: "${entry.key}"`,
+      );
+    }
+
+    if (typeof entry.plugin === "string" && typeof entry.key === "string") {
+      const id = `${entry.plugin}:${entry.key}`;
+      if (seen.has(id)) {
+        errors.push(`requiresSecret[${index}] is a duplicate: "${id}"`);
+      } else {
+        seen.add(id);
+      }
+    }
+
+    if ("optional" in entry && typeof entry.optional !== "boolean") {
+      errors.push(`requiresSecret[${index}].optional must be a boolean`);
     }
   });
 

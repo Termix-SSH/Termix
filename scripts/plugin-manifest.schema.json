@@ -331,6 +331,56 @@
         }
       }
     },
+    "providesSecret": {
+      "type": "array",
+      "description": "Secrets this plugin offers other plugins by reference. The value is never copied; a borrower re-reads it per call.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "permission"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Secret name within this plugin, e.g. \"api-key\"."
+          },
+          "permission": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Role permission a borrowing user needs. Must also appear in contributes.permissionGroup.permissions."
+          },
+          "descriptionKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "i18n key describing the sharing, shown in the admin UI."
+          }
+        }
+      }
+    },
+    "requiresSecret": {
+      "type": "array",
+      "description": "Secrets this plugin borrows from another plugin. Reads resolve to null when the provider is absent or has nothing set.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["plugin", "key"],
+        "properties": {
+          "plugin": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Plugin id that offers the secret."
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "optional": {
+            "type": "boolean",
+            "description": "When true, an absent provider is normal rather than reported as an unmet requirement."
+          }
+        }
+      }
+    },
     "sidecars": {
       "type": "array",
       "items": {
