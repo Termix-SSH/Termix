@@ -216,7 +216,7 @@ export class PluginBroker {
     runtime: PluginRuntime,
     request: PluginRequest,
   ): Promise<void> {
-    const { method, args } = request;
+    const { method, args, callerUserId } = request;
     let failure: Error | null = null;
 
     try {
@@ -229,7 +229,7 @@ export class PluginBroker {
         );
       }
 
-      const value = await this.invoke(runtime, method, args);
+      const value = await this.invoke(runtime, method, args, callerUserId);
       this.reply(runtime, { id: request.id, ok: true, value });
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
@@ -246,7 +246,7 @@ export class PluginBroker {
     }
 
     if (AUDITED.has(method)) {
-      void this.audit(runtime, method, args, failure);
+      void this.audit(runtime, method, args, failure, callerUserId);
     }
   }
 
@@ -263,6 +263,7 @@ export class PluginBroker {
     runtime: PluginRuntime,
     method: string,
     args: unknown[],
+    callerUserId?: string,
   ): Promise<unknown> {
     switch (method) {
       case "log.debug":
@@ -277,10 +278,10 @@ export class PluginBroker {
         return null;
 
       case "hosts.list":
-        return this.handleHostsList(runtime);
+        return this.handleHostsList(runtime, callerUserId);
 
       case "hosts.get":
-        return this.handleHostsGet(runtime, Number(args[0]));
+        return this.handleHostsGet(runtime, Number(args[0]), callerUserId);
 
       case "storage.get":
         return this.handleStorageGet(runtime, storageKey(args[0]));
@@ -304,7 +305,7 @@ export class PluginBroker {
         return this.handleHttpRoute(runtime, String(args[0]), String(args[1]));
 
       case "ssh.connect":
-        return this.handleSshConnect(runtime, Number(args[0]));
+        return this.handleSshConnect(runtime, Number(args[0]), callerUserId);
 
       case "ssh.exec":
         return this.handleSshExec(
@@ -349,8 +350,9 @@ export class PluginBroker {
 
   private async handleHostsList(
     runtime: PluginRuntime,
+    callerUserId?: string,
   ): Promise<PluginHostView[]> {
-    const userId = this.requireOwner(runtime);
+    const userId = this.requireActor(runtime, callerUserId);
     const hosts = await this.deps.listHosts(userId);
     return hosts.map(toPluginHostView);
   }
@@ -358,8 +360,9 @@ export class PluginBroker {
   private async handleHostsGet(
     runtime: PluginRuntime,
     hostId: number,
+    callerUserId?: string,
   ): Promise<PluginHostView | null> {
-    const userId = this.requireOwner(runtime);
+    const userId = this.requireActor(runtime, callerUserId);
     if (!Number.isFinite(hostId)) {
       throw new PluginFacingError("hosts.get requires a numeric host id");
     }
@@ -453,8 +456,9 @@ export class PluginBroker {
   private async handleSshConnect(
     runtime: PluginRuntime,
     hostId: number,
+    callerUserId?: string,
   ): Promise<string> {
-    const userId = this.requireOwner(runtime);
+    const userId = this.requireActor(runtime, callerUserId);
     if (!Number.isFinite(hostId)) {
       throw new PluginFacingError("ssh.connect requires a numeric host id");
     }
@@ -651,8 +655,30 @@ export class PluginBroker {
     }
   }
 
-  private requireOwner(runtime: PluginRuntime): string {
-    const userId = runtime.plugin.ownerUserId;
+  /**
+   * Resolves the user a privileged ctx call acts as. This is where the two
+   * identity models that coexist in one plugin meet:
+   *
+   *   - Inside an HTTP handler, `callerUserId` is set -- the worker attached
+   *     it from the AsyncLocalStorage context it entered around that specific
+   *     ctx.http.route invocation (see worker-bootstrap.ts). The call acts as
+   *     whichever user's request is currently being served, so
+   *     ctx.hosts.list() returns THEIR hosts, not the plugin installer's.
+   *     Grants stay install-wide (an admin unlocks the capability for the
+   *     plugin as a whole); this is only about whose DATA the call touches.
+   *
+   *   - From a schedule.every timer or an events.on listener, there is no
+   *     inbound request and so no AsyncLocalStorage context to read from --
+   *     `callerUserId` is undefined. These fall back to ownerUserId, the user
+   *     who last enabled the plugin, which is what background work has
+   *     always run as.
+   *
+   * A plugin cannot influence which branch it gets: no ctx method takes a
+   * userId argument, so `callerUserId` only ever reflects a real inbound
+   * request the server's own auth middleware verified.
+   */
+  private requireActor(runtime: PluginRuntime, callerUserId?: string): string {
+    const userId = callerUserId ?? runtime.plugin.ownerUserId;
     if (!userId) {
       throw new PluginFacingError(
         `Plugin ${runtime.plugin.id} has no owning user, so it cannot act on user data`,
@@ -666,13 +692,17 @@ export class PluginBroker {
     method: string,
     args: unknown[],
     failure: Error | null,
+    callerUserId?: string,
   ): Promise<void> {
-    const userId = runtime.plugin.ownerUserId;
+    const userId = callerUserId ?? runtime.plugin.ownerUserId;
     if (!userId) return;
 
     // Attribution comes from the broker, never from the plugin: username is
     // the plugin id, not the user's, so a plugin action is never mistaken for
-    // something the person did themselves.
+    // something the person did themselves. The userId this is logged against
+    // is whichever identity requireActor would have used for the same call
+    // (see its comment), so a request-triggered action is attributed to the
+    // requester, not always to whoever installed the plugin.
     await logAudit({
       userId,
       username: `plugin:${runtime.plugin.id}`,

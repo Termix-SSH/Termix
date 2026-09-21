@@ -254,7 +254,9 @@ export class PluginLoader {
   /**
    * `ownerUserId` is optional only for in-process first-party plugins, which
    * do not use the gated ctx and so never act as a user. A worker plugin
-   * without one cannot reach any user data (see broker.requireOwner).
+   * without one cannot reach any user data outside of a per-request caller
+   * identity (see broker.requireActor), which only exists inside an HTTP
+   * handler invocation and is never a substitute for having an owner at all.
    */
   async activate(pluginId: string, ownerUserId?: string): Promise<void> {
     const plugin = this.requirePlugin(pluginId);

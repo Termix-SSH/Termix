@@ -7,20 +7,36 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { createCurrentPluginRepository } from "../repositories/factory.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
+import {
+  createCurrentPluginPermissionGrantRepository,
+  createCurrentPluginRepository,
+} from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
+import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 
 const router = express.Router();
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
+const permissionManager = PermissionManager.getInstance();
+const requireManagePlugins = permissionManager.requirePermission(
+  "admin.plugins.manage",
+);
 
 /**
  * @openapi
  * /plugins:
  *   get:
  *     summary: List installed plugins and their runtime state
- *     description: Returns every plugin known to the database, merged with the loader's live state so the UI can tell "enabled but crashed" from "disabled".
+ *     description: >
+ *       Returns every plugin known to the database, merged with the loader's
+ *       live state so the UI can tell "enabled but crashed" from "disabled".
+ *       Open to any authenticated user, not just admins: the app shell calls
+ *       this on every session to decide which plugin-contributed tabs and
+ *       rail items to register, so gating it behind admin.plugins.manage
+ *       would break the shell for non-admin users. Only the mutating routes
+ *       below (enable/disable, grant/revoke) require that permission.
  *     tags:
  *       - Plugins
  *     responses:
@@ -32,28 +48,43 @@ router.get("/", authenticateJWT, async (_req: Request, res: Response) => {
     const records = await createCurrentPluginRepository().listAll();
     const { loader } = getPluginRuntime();
     const live = new Map(loader.list().map((p) => [p.id, p]));
+    const grantRepository = createCurrentPluginPermissionGrantRepository();
 
-    const plugins = records.map((record) => {
-      const loaded = live.get(record.id);
-      let contributes: unknown = null;
-      try {
-        contributes = JSON.parse(record.manifestJson)?.contributes ?? null;
-      } catch {
-        contributes = null;
-      }
+    const plugins = await Promise.all(
+      records.map(async (record) => {
+        const loaded = live.get(record.id);
+        let contributes: unknown = null;
+        let permissions: string[] = [];
+        try {
+          const manifest = JSON.parse(record.manifestJson) as {
+            contributes?: unknown;
+            permissions?: unknown;
+          };
+          contributes = manifest?.contributes ?? null;
+          permissions = Array.isArray(manifest?.permissions)
+            ? (manifest.permissions as string[])
+            : [];
+        } catch {
+          contributes = null;
+        }
 
-      return {
-        id: record.id,
-        name: record.name,
-        version: record.version,
-        tier: record.tier,
-        source: record.source,
-        enabled: record.state === "enabled",
-        runtimeState: loaded?.state ?? "stopped",
-        lastError: loaded?.lastError ?? null,
-        contributes,
-      };
-    });
+        const grants = await grantRepository.listByPlugin(record.id);
+
+        return {
+          id: record.id,
+          name: record.name,
+          version: record.version,
+          tier: record.tier,
+          source: record.source,
+          enabled: record.state === "enabled",
+          runtimeState: loaded?.state ?? "stopped",
+          lastError: loaded?.lastError ?? null,
+          contributes,
+          permissions,
+          grantedCapabilities: grants.map((grant) => grant.capability),
+        };
+      }),
+    );
 
     res.json(plugins);
   } catch (error) {
@@ -94,12 +125,15 @@ router.get("/", authenticateJWT, async (_req: Request, res: Response) => {
  *         description: The plugin's new state.
  *       400:
  *         description: Invalid request body.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
  *       404:
  *         description: No such plugin.
  */
 router.patch(
   "/:id/state",
   authenticateJWT,
+  requireManagePlugins,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const pluginId = String(req.params.id);
@@ -144,6 +178,175 @@ router.patch(
         { operation: "plugin_state_change" },
       );
       res.status(500).json({ error: "Failed to change plugin state" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/grants:
+ *   post:
+ *     summary: Grant a plugin one of its manifest-declared capabilities
+ *     description: >
+ *       The grant is install-wide, not per-user: it unlocks the capability for
+ *       the plugin as a whole. What each call then does with the capability
+ *       (e.g. whose hosts ctx.hosts.list() returns) is still scoped to
+ *       whichever user's request triggered it.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               capability:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: The capability is now granted.
+ *       400:
+ *         description: The capability is not declared in the plugin's manifest.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin.
+ */
+router.post(
+  "/:id/grants",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId as string;
+    const pluginId = String(req.params.id);
+    const { capability } = req.body ?? {};
+
+    if (typeof capability !== "string" || !capability) {
+      res.status(400).json({ error: "capability is required" });
+      return;
+    }
+
+    try {
+      const repository = createCurrentPluginRepository();
+      const record = await repository.findById(pluginId);
+      if (!record) {
+        res.status(404).json({ error: "Plugin not found" });
+        return;
+      }
+
+      let declared: string[] = [];
+      try {
+        const manifest = JSON.parse(record.manifestJson) as {
+          permissions?: unknown;
+        };
+        declared = Array.isArray(manifest?.permissions)
+          ? (manifest.permissions as string[])
+          : [];
+      } catch {
+        declared = [];
+      }
+
+      if (!declared.includes(capability)) {
+        res.status(400).json({
+          error: "This capability is not declared in the plugin's manifest",
+        });
+        return;
+      }
+
+      const grantRepository = createCurrentPluginPermissionGrantRepository();
+      const existing = await grantRepository.findGrant(pluginId, capability);
+      if (!existing) {
+        await grantRepository.grant({
+          pluginId,
+          capability,
+          grantedBy: userId,
+        });
+        invalidatePluginPermissionCache(pluginId);
+      }
+
+      databaseLogger.info(`Granted ${capability} to plugin ${pluginId}`, {
+        operation: "plugin_grant",
+        pluginId,
+      });
+
+      res.json({ id: pluginId, capability, granted: true });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to grant ${capability} to plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_grant" },
+      );
+      res.status(500).json({ error: "Failed to grant the capability" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/grants/{capability}:
+ *   delete:
+ *     summary: Revoke a previously granted plugin capability
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: capability
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The capability is no longer granted.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin, or the capability was not granted.
+ */
+router.delete(
+  "/:id/grants/:capability",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const capability = String(req.params.capability);
+
+    try {
+      const revoked =
+        await createCurrentPluginPermissionGrantRepository().revoke(
+          pluginId,
+          capability,
+        );
+      if (!revoked) {
+        res.status(404).json({ error: "That capability was not granted" });
+        return;
+      }
+      invalidatePluginPermissionCache(pluginId);
+
+      databaseLogger.info(`Revoked ${capability} from plugin ${pluginId}`, {
+        operation: "plugin_grant_revoke",
+        pluginId,
+      });
+
+      res.json({ id: pluginId, capability, granted: false });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to revoke ${capability} from plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_grant_revoke" },
+      );
+      res.status(500).json({ error: "Failed to revoke the capability" });
     }
   },
 );

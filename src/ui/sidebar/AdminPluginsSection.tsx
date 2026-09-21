@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Puzzle } from "lucide-react";
+import { Puzzle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { SettingRow } from "@/components/section-card";
+import { Button } from "@/components/button";
 import {
   getPlugins,
   setPluginEnabled,
@@ -10,6 +11,7 @@ import {
 } from "@/api/plugins-api";
 import { refreshPluginState } from "@/shell/pluginLoader";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
+import { PluginPermissionsDialog } from "./PluginPermissionsDialog";
 
 export function AdminPluginsSection({
   open,
@@ -22,6 +24,11 @@ export function AdminPluginsSection({
   const [plugins, setPlugins] = useState<PluginSummary[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [permissionsTargetId, setPermissionsTargetId] = useState<string | null>(
+    null,
+  );
+  const permissionsTarget =
+    plugins.find((plugin) => plugin.id === permissionsTargetId) ?? null;
 
   const load = useCallback(async () => {
     try {
@@ -57,40 +64,64 @@ export function AdminPluginsSection({
   };
 
   return (
-    <AccordionSection
-      label={t("admin.plugins")}
-      icon={<Puzzle className="size-3.5" />}
-      open={open}
-      onToggle={onToggle}
-    >
-      {plugins.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-3">
-          {loaded ? t("admin.pluginsNone") : t("common.loading")}
-        </p>
-      ) : (
-        plugins.map((plugin) => (
-          <SettingRow
-            key={plugin.id}
-            label={plugin.name}
-            badge={
-              plugin.tier === "first-party"
-                ? t("admin.pluginBuiltIn")
-                : undefined
-            }
-            description={
-              plugin.lastError
-                ? plugin.lastError
-                : `v${plugin.version} · ${plugin.runtimeState}`
-            }
-          >
-            <AdminToggle
-              on={plugin.enabled}
-              onToggle={() => void toggle(plugin)}
-              disabled={busy === plugin.id}
-            />
-          </SettingRow>
-        ))
-      )}
-    </AccordionSection>
+    <>
+      <AccordionSection
+        label={t("admin.plugins")}
+        icon={<Puzzle className="size-3.5" />}
+        open={open}
+        onToggle={onToggle}
+      >
+        {plugins.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-3">
+            {loaded ? t("admin.pluginsNone") : t("common.loading")}
+          </p>
+        ) : (
+          plugins.map((plugin) => (
+            <SettingRow
+              key={plugin.id}
+              label={plugin.name}
+              badge={
+                plugin.tier === "first-party"
+                  ? t("admin.pluginBuiltIn")
+                  : undefined
+              }
+              description={
+                plugin.lastError
+                  ? plugin.lastError
+                  : `v${plugin.version} · ${plugin.runtimeState}`
+              }
+            >
+              <div className="flex items-center gap-2">
+                {plugin.permissions.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-none h-7 px-2 text-[10px] font-bold uppercase tracking-widest"
+                    onClick={() => setPermissionsTargetId(plugin.id)}
+                  >
+                    <ShieldCheck className="size-3" />
+                    {t("admin.pluginPermissions")}
+                  </Button>
+                )}
+                <AdminToggle
+                  on={plugin.enabled}
+                  onToggle={() => void toggle(plugin)}
+                  disabled={busy === plugin.id}
+                />
+              </div>
+            </SettingRow>
+          ))
+        )}
+      </AccordionSection>
+
+      <PluginPermissionsDialog
+        plugin={permissionsTarget}
+        open={permissionsTargetId !== null}
+        onOpenChange={(next) => {
+          if (!next) setPermissionsTargetId(null);
+        }}
+        onChanged={() => void load()}
+      />
+    </>
   );
 }

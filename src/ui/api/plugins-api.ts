@@ -21,6 +21,10 @@ export interface PluginSummary {
   runtimeState: string;
   lastError: string | null;
   contributes: PluginContributions | null;
+  /** Capabilities this plugin's manifest declares it may ask for. */
+  permissions: string[];
+  /** The subset of `permissions` an admin has actually granted. */
+  grantedCapabilities: string[];
 }
 
 export async function getPlugins(): Promise<PluginSummary[]> {
@@ -35,4 +39,22 @@ export async function setPluginEnabled(
   await rbacApi.patch(`/plugins/${encodeURIComponent(pluginId)}/state`, {
     enabled,
   });
+}
+
+export async function grantPluginCapability(
+  pluginId: string,
+  capability: string,
+): Promise<void> {
+  await rbacApi.post(`/plugins/${encodeURIComponent(pluginId)}/grants`, {
+    capability,
+  });
+}
+
+export async function revokePluginCapability(
+  pluginId: string,
+  capability: string,
+): Promise<void> {
+  await rbacApi.delete(
+    `/plugins/${encodeURIComponent(pluginId)}/grants/${encodeURIComponent(capability)}`,
+  );
 }

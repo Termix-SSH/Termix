@@ -13,6 +13,15 @@ export interface PluginRequest {
   /** Dotted ctx path, e.g. "hosts.get" or "storage.set". */
   method: string;
   args: unknown[];
+  /**
+   * The user whose HTTP request is currently executing inside the worker, if
+   * any. Set by the worker's own call() from its AsyncLocalStorage context,
+   * never by plugin code -- no ctx method accepts a userId argument, so a
+   * plugin has no way to set or forge this itself. Absent for a ctx call made
+   * from a timer or event listener, which has no inbound request to derive an
+   * actor from; the broker falls back to the plugin's ownerUserId then.
+   */
+  callerUserId?: string;
 }
 
 export interface PluginResponseOk {

@@ -41,6 +41,8 @@ const { PluginBroker } = await import("../../plugins/broker.js");
 const { PluginLoader } = await import("../../plugins/loader.js");
 const { buildPluginRouter } = await import("../../plugins/http-bridge.js");
 const pluginApi = await import("../../database/routes/plugin-api-routes.js");
+const { invalidatePluginPermissionCache } =
+  await import("../../plugins/permissions.js");
 
 const WORKER_TIMEOUT = 30_000;
 
@@ -314,4 +316,165 @@ describe("plugin HTTP bridge", () => {
     },
     WORKER_TIMEOUT,
   );
+
+  describe("per-request actor identity", () => {
+    /**
+     * Exercises the real worker end to end: the fixture's activate() calls
+     * ctx.hosts.list() from inside a genuine ctx.http.route handler, so the
+     * AsyncLocalStorage context worker-bootstrap.ts enters around that
+     * invocation is the thing under test, not a mock of it. Two concurrent
+     * requests as two different users must each see only their own hosts,
+     * even though both are in flight on the very same worker at once.
+     */
+    async function activateWithHostsRoute() {
+      const fixture = createFixturePlugin({
+        backendSource: `
+          export async function activate(ctx) {
+            await ctx.http.route("GET", "/my-hosts", async () => {
+              const hosts = await ctx.hosts.list();
+              return { hosts };
+            });
+          }
+        `,
+      });
+      fixtures.push(fixture);
+
+      const hostsByUser: Record<string, { id: number; name: string }[]> = {
+        alice: [{ id: 1, name: "alice-host" }],
+        bob: [{ id: 2, name: "bob-host" }],
+      };
+
+      broker = new PluginBroker({
+        listHosts: async (userId) => hostsByUser[userId] ?? [],
+        resolveHost: async () => null,
+        onRoutesChanged: (runtime) => {
+          pluginApi.registerPluginRouter(
+            runtime.plugin.id,
+            buildPluginRouter(broker!, runtime),
+          );
+        },
+      });
+
+      loader = new PluginLoader({
+        onWorkerReady: (plugin, worker) => broker!.attach(plugin, worker),
+        onWorkerGone: (plugin) => {
+          broker!.detach(plugin.id);
+          pluginApi.unregisterPluginRouter(plugin.id);
+        },
+      });
+
+      state.grants.push({
+        pluginId: "sample-plugin",
+        capability: "hosts.read",
+      });
+      invalidatePluginPermissionCache("sample-plugin");
+
+      await loader.load(fixture.dir);
+      // Activated under "install-owner", a third identity distinct from
+      // alice and bob, so a test that accidentally fell back to ownerUserId
+      // instead of the per-request actor would show up as a clear mismatch
+      // rather than an accidental pass.
+      await loader.activate("sample-plugin", "install-owner");
+    }
+
+    /**
+     * Mimics authenticateJWT setting req.userId ahead of the dispatcher, the
+     * way database.ts really wires it (see plugin-api-routes-auth.test.ts for
+     * that wiring itself). This file's own app has no auth in front of
+     * pluginApi.default on purpose, to test the dispatcher in isolation, so
+     * the per-user identity is injected the same minimal way here.
+     */
+    function fetchAsUser(path: string, userId: string) {
+      return fetch(`${baseUrl}${path}`, {
+        headers: { "x-test-user-id": userId },
+      });
+    }
+
+    it(
+      "two concurrent requests as different users each see only their own hosts",
+      async () => {
+        await activateWithHostsRoute();
+
+        // Reopen the server with a stand-in auth middleware that reads the
+        // test header, since the beforeEach server has none.
+        await new Promise<void>((resolve) => server?.close(() => resolve()));
+        const app = express();
+        app.use((req, _res, next) => {
+          const userId = req.headers["x-test-user-id"];
+          if (typeof userId === "string") {
+            (req as typeof req & { userId?: string }).userId = userId;
+          }
+          next();
+        });
+        app.use("/plugin-api", pluginApi.default);
+        server = await new Promise((resolve) => {
+          const created = app.listen(0, "127.0.0.1", () => resolve(created));
+        });
+        baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+
+        const [aliceRes, bobRes] = await Promise.all([
+          fetchAsUser("/plugin-api/sample-plugin/my-hosts", "alice"),
+          fetchAsUser("/plugin-api/sample-plugin/my-hosts", "bob"),
+        ]);
+
+        expect(await aliceRes.json()).toMatchObject({
+          hosts: [{ id: 1, name: "alice-host" }],
+        });
+        expect(await bobRes.json()).toMatchObject({
+          hosts: [{ id: 2, name: "bob-host" }],
+        });
+      },
+      WORKER_TIMEOUT,
+    );
+
+    it(
+      "falls back to the install owner when a call has no inbound request",
+      async () => {
+        const fixture = createFixturePlugin({
+          backendSource: `
+            export async function activate(ctx) {
+              const hosts = await ctx.hosts.list();
+              await ctx.log.info(JSON.stringify({ hosts }));
+            }
+          `,
+        });
+        fixtures.push(fixture);
+
+        const hostsByUser: Record<string, { id: number; name: string }[]> = {
+          "install-owner": [{ id: 9, name: "owner-host" }],
+        };
+
+        broker = new PluginBroker({
+          listHosts: async (userId) => hostsByUser[userId] ?? [],
+          resolveHost: async () => null,
+        });
+
+        const logged: string[] = [];
+        const { pluginLogger } = await import("../../utils/logger.js");
+        vi.mocked(pluginLogger.info).mockImplementation((message: string) => {
+          logged.push(message);
+        });
+
+        loader = new PluginLoader({
+          onWorkerReady: (plugin, worker) => broker!.attach(plugin, worker),
+          onWorkerGone: (plugin) => broker!.detach(plugin.id),
+        });
+
+        state.grants.push({
+          pluginId: "sample-plugin",
+          capability: "hosts.read",
+        });
+        invalidatePluginPermissionCache("sample-plugin");
+
+        await loader.load(fixture.dir);
+        await loader.activate("sample-plugin", "install-owner");
+
+        const line = logged.find((entry) => entry.startsWith("{"));
+        expect(line && JSON.parse(line)).toMatchObject({
+          hosts: [{ id: 9, name: "owner-host" }],
+        });
+      },
+      WORKER_TIMEOUT,
+    );
+  });
 });

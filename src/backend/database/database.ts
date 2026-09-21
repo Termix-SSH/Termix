@@ -1781,7 +1781,7 @@ app.use("/ai", aiRoutes);
 app.use("/", alertRulesRoutes);
 app.use("/sync", syncRoutes);
 app.use("/plugins", pluginRoutes);
-app.use("/plugin-api", pluginApiRoutes);
+app.use("/plugin-api", authenticateJWT, pluginApiRoutes);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),

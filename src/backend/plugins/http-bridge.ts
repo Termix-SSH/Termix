@@ -39,8 +39,8 @@ export function buildPluginRouter(
           query: req.query,
           body: req.body ?? null,
           headers: pickHeaders(req),
-          // The acting user, resolved by the server's own auth middleware.
-          // A plugin cannot set or spoof this.
+          // The acting user, verified by authenticateJWT ahead of the
+          // /plugin-api mount in database.ts. A plugin cannot set or spoof this.
           userId: (req as Request & { userId?: string }).userId ?? null,
         });
 

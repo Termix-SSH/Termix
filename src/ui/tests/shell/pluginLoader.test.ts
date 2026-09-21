@@ -43,6 +43,8 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
         },
       ],
     },
+    permissions: [],
+    grantedCapabilities: [],
     ...overrides,
   };
 }

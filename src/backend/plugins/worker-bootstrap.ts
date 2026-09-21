@@ -7,6 +7,7 @@
  * account of what that does and does not guarantee.
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { parentPort, workerData } from "node:worker_threads";
 import type {
   PluginBootstrapData,
@@ -33,11 +34,30 @@ const httpRoutes = new Map<string, (req: unknown) => unknown>();
 const eventListeners = new Map<string, Set<(payload: unknown) => void>>();
 const timers = new Map<string, () => void>();
 
+/**
+ * Tracks which user's HTTP request is currently executing, so a ctx call made
+ * anywhere in that request's call stack -- including deep inside plugin code
+ * that has no idea this exists -- can be attributed to them without adding a
+ * userId parameter to every ctx method.
+ *
+ * Only entered around an ctx.http.route handler invocation (see handlePush
+ * below). A ctx call made from a schedule.every timer or an events.on
+ * listener runs outside any run() call, so getStore() correctly returns
+ * undefined for those and the broker falls back to the plugin's owner.
+ */
+const requestActor = new AsyncLocalStorage<{ userId: string }>();
+
 function call(method: string, ...args: unknown[]): Promise<unknown> {
   const id = nextRequestId++;
+  const callerUserId = requestActor.getStore()?.userId;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    port!.postMessage({ id, method, args });
+    port!.postMessage({
+      id,
+      method,
+      args,
+      ...(callerUserId && { callerUserId }),
+    });
   });
 }
 
@@ -113,8 +133,16 @@ async function handlePush(push: PluginPush): Promise<void> {
       return;
     }
 
+    const requestUserId =
+      (push.payload as { userId?: string | null } | undefined)?.userId ??
+      undefined;
+
     try {
-      const value = await handler(push.payload);
+      const value = await (requestUserId
+        ? requestActor.run({ userId: requestUserId }, () =>
+            handler(push.payload),
+          )
+        : handler(push.payload));
       port!.postMessage({ id: push.replyTo, ok: true, value });
     } catch (error) {
       port!.postMessage({
