@@ -6,6 +6,24 @@ import {
   type HostPlatform,
 } from "./common-utils.js";
 
+/**
+ * CPU percent is derived from the delta against the previous poll's
+ * /proc/stat sample rather than a same-poll double-read, so a poll no longer
+ * has to block for a fixed settle window. Keyed by host.
+ */
+const previousStat = new Map<
+  number,
+  { total: number; idle: number; timestamp: number }
+>();
+
+export function clearCpuSampleCache(hostId?: number): void {
+  if (hostId === undefined) {
+    previousStat.clear();
+    return;
+  }
+  previousStat.delete(hostId);
+}
+
 export function parseCpuLine(
   cpuLine: string,
 ): { total: number; idle: number } | undefined {
@@ -130,6 +148,7 @@ async function collectWindowsCpuMetrics(client: Client): Promise<{
 export async function collectCpuMetrics(
   client: Client,
   platform?: HostPlatform,
+  hostId?: number,
 ): Promise<{
   percent: number | null;
   cores: number | null;
@@ -147,7 +166,8 @@ export async function collectCpuMetrics(
   let loadTriplet: [number, number, number] | null = null;
 
   try {
-    const [stat1, loadAvgOut, coresOut] = await Promise.race([
+    const readAt = Date.now();
+    const [statOut, loadAvgOut, coresOut] = await Promise.race([
       Promise.all([
         execCommand(client, "cat /proc/stat"),
         execCommand(client, "cat /proc/loadavg"),
@@ -164,23 +184,21 @@ export async function collectCpuMetrics(
       ),
     ]);
 
-    await new Promise((r) => setTimeout(r, 500));
-    const stat2 = await execCommand(client, "cat /proc/stat");
-
-    const cpuLine1 = (
-      stat1.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
+    const cpuLine = (
+      statOut.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
     ).trim();
-    const cpuLine2 = (
-      stat2.stdout.split("\n").find((l) => l.startsWith("cpu ")) || ""
-    ).trim();
-    const a = parseCpuLine(cpuLine1);
-    const b = parseCpuLine(cpuLine2);
-    if (a && b) {
-      const totalDiff = b.total - a.total;
-      const idleDiff = b.idle - a.idle;
+    const current = parseCpuLine(cpuLine);
+    const previous =
+      hostId !== undefined ? previousStat.get(hostId) : undefined;
+    if (current && previous) {
+      const totalDiff = current.total - previous.total;
+      const idleDiff = current.idle - previous.idle;
       const used = totalDiff - idleDiff;
       if (totalDiff > 0)
         cpuPercent = Math.max(0, Math.min(100, (used / totalDiff) * 100));
+    }
+    if (current && hostId !== undefined) {
+      previousStat.set(hostId, { ...current, timestamp: readAt });
     }
 
     const laParts = loadAvgOut.stdout.trim().split(/\s+/);

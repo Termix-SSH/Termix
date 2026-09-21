@@ -44,6 +44,31 @@ export function counterRate(
   return Math.round((second - first) / elapsedSeconds);
 }
 
+/**
+ * Rate is derived from the previous poll's counters rather than a same-poll
+ * double-sample, so a poll no longer has to block for a fixed settle window.
+ * Keyed by host, since counters from one host are meaningless against another.
+ */
+const previousSamples = new Map<
+  number,
+  { counters: Map<string, NetworkCounters>; timestamp: number }
+>();
+
+const previousWindowsSamples = new Map<
+  number,
+  { rows: WindowsAdapterRow[]; timestamp: number }
+>();
+
+export function clearNetworkSampleCache(hostId?: number): void {
+  if (hostId === undefined) {
+    previousSamples.clear();
+    previousWindowsSamples.clear();
+    return;
+  }
+  previousSamples.delete(hostId);
+  previousWindowsSamples.delete(hostId);
+}
+
 export function parseDarwinIfconfig(
   output: string,
 ): Map<string, { ip: string; state: string }> {
@@ -85,7 +110,10 @@ export function parseDarwinNetstat(
   return counters;
 }
 
-async function collectDarwinNetworkMetrics(client: Client): Promise<{
+async function collectDarwinNetworkMetrics(
+  client: Client,
+  hostId?: number,
+): Promise<{
   interfaces: Array<{
     name: string;
     ip: string;
@@ -111,30 +139,34 @@ async function collectDarwinNetworkMetrics(client: Client): Promise<{
     const ifMap = parseDarwinIfconfig(ifconfigOut.stdout);
 
     try {
-      const firstReadAt = Date.now();
-      const netstat1 = await execCommand(client, "netstat -ib 2>/dev/null");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const netstat2 = await execCommand(client, "netstat -ib 2>/dev/null");
-      const elapsedSeconds = (Date.now() - firstReadAt) / 1000;
-      const before = parseDarwinNetstat(netstat1.stdout);
-      const after = parseDarwinNetstat(netstat2.stdout);
+      const readAt = Date.now();
+      const netstatOut = await execCommand(client, "netstat -ib 2>/dev/null");
+      const current = parseDarwinNetstat(netstatOut.stdout);
+      const previous =
+        hostId !== undefined ? previousSamples.get(hostId) : undefined;
+      const elapsedSeconds = previous
+        ? (readAt - previous.timestamp) / 1000
+        : 0;
       if (ifMap.size === 0) {
-        for (const name of before.keys()) {
+        for (const name of current.keys()) {
           ifMap.set(name, { ip: "", state: "UNKNOWN" });
         }
       }
       for (const [name, data] of ifMap.entries()) {
-        const b = before.get(name);
-        const a = after.get(name);
+        const c = current.get(name);
+        const p = previous?.counters.get(name);
         interfaces.push({
           name,
           ip: data.ip,
           state: data.state,
-          rxBytes: b?.rx ?? null,
-          txBytes: b?.tx ?? null,
-          rxRateBps: counterRate(b?.rx, a?.rx, elapsedSeconds),
-          txRateBps: counterRate(b?.tx, a?.tx, elapsedSeconds),
+          rxBytes: c?.rx ?? null,
+          txBytes: c?.tx ?? null,
+          rxRateBps: p ? counterRate(p.rx, c?.rx, elapsedSeconds) : null,
+          txRateBps: p ? counterRate(p.tx, c?.tx, elapsedSeconds) : null,
         });
+      }
+      if (hostId !== undefined) {
+        previousSamples.set(hostId, { counters: current, timestamp: readAt });
       }
     } catch {
       for (const [name, data] of ifMap.entries()) {
@@ -191,7 +223,10 @@ export function parseWindowsAdapterJson(output: string): WindowsAdapterRow[] {
   }
 }
 
-async function collectWindowsNetworkMetrics(client: Client): Promise<{
+async function collectWindowsNetworkMetrics(
+  client: Client,
+  hostId?: number,
+): Promise<{
   interfaces: Array<{
     name: string;
     ip: string;
@@ -213,27 +248,37 @@ async function collectWindowsNetworkMetrics(client: Client): Promise<{
   }> = [];
 
   try {
-    const firstReadAt = Date.now();
-    const before = await execPowerShell(client, WINDOWS_ADAPTER_SCRIPT);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const after = await execPowerShell(client, WINDOWS_ADAPTER_SCRIPT);
-    const elapsedSeconds = (Date.now() - firstReadAt) / 1000;
-
-    const beforeRows = parseWindowsAdapterJson(before.stdout);
-    const afterMap = new Map(
-      parseWindowsAdapterJson(after.stdout).map((row) => [row.name, row]),
+    const readAt = Date.now();
+    const result = await execPowerShell(client, WINDOWS_ADAPTER_SCRIPT);
+    const currentRows = parseWindowsAdapterJson(result.stdout);
+    const previous =
+      hostId !== undefined ? previousWindowsSamples.get(hostId) : undefined;
+    const elapsedSeconds = previous ? (readAt - previous.timestamp) / 1000 : 0;
+    const previousMap = new Map(
+      (previous?.rows ?? []).map((row) => [row.name, row]),
     );
 
-    for (const row of beforeRows) {
-      const afterRow = afterMap.get(row.name);
+    for (const row of currentRows) {
+      const previousRow = previousMap.get(row.name);
       interfaces.push({
         name: row.name,
         ip: row.ip,
         state: row.state,
         rxBytes: row.rx || null,
         txBytes: row.tx || null,
-        rxRateBps: counterRate(row.rx, afterRow?.rx, elapsedSeconds),
-        txRateBps: counterRate(row.tx, afterRow?.tx, elapsedSeconds),
+        rxRateBps: previousRow
+          ? counterRate(previousRow.rx, row.rx, elapsedSeconds)
+          : null,
+        txRateBps: previousRow
+          ? counterRate(previousRow.tx, row.tx, elapsedSeconds)
+          : null,
+      });
+    }
+
+    if (hostId !== undefined) {
+      previousWindowsSamples.set(hostId, {
+        rows: currentRows,
+        timestamp: readAt,
       });
     }
   } catch {
@@ -246,6 +291,7 @@ async function collectWindowsNetworkMetrics(client: Client): Promise<{
 export async function collectNetworkMetrics(
   client: Client,
   platform?: HostPlatform,
+  hostId?: number,
 ): Promise<{
   interfaces: Array<{
     name: string;
@@ -258,10 +304,10 @@ export async function collectNetworkMetrics(
   }>;
 }> {
   if (platform === "darwin") {
-    return collectDarwinNetworkMetrics(client);
+    return collectDarwinNetworkMetrics(client, hostId);
   }
   if (platform === "windows") {
-    return collectWindowsNetworkMetrics(client);
+    return collectWindowsNetworkMetrics(client, hostId);
   }
 
   const interfaces: Array<{
@@ -318,13 +364,14 @@ export async function collectNetworkMetrics(
     }
 
     try {
-      const firstReadAt = Date.now();
+      const readAt = Date.now();
       const procNet = await execCommand(client, "cat /proc/net/dev");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const procNetAfter = await execCommand(client, "cat /proc/net/dev");
-      const elapsedSeconds = (Date.now() - firstReadAt) / 1000;
       const rxTxMap = parseNetworkCounters(procNet.stdout);
-      const afterMap = parseNetworkCounters(procNetAfter.stdout);
+      const previous =
+        hostId !== undefined ? previousSamples.get(hostId) : undefined;
+      const elapsedSeconds = previous
+        ? (readAt - previous.timestamp) / 1000
+        : 0;
       if (ifMap.size === 0) {
         for (const name of rxTxMap.keys()) {
           if (name !== "lo") ifMap.set(name, { ip: "", state: "UNKNOWN" });
@@ -332,15 +379,25 @@ export async function collectNetworkMetrics(
       }
       for (const [name, data] of ifMap.entries()) {
         const rxTx = rxTxMap.get(name);
-        const after = afterMap.get(name);
+        const previousCounters = previous?.counters.get(name);
         interfaces.push({
           name,
           ip: data.ip,
           state: data.state,
           rxBytes: rxTx?.rx ?? null,
           txBytes: rxTx?.tx ?? null,
-          rxRateBps: counterRate(rxTx?.rx, after?.rx, elapsedSeconds),
-          txRateBps: counterRate(rxTx?.tx, after?.tx, elapsedSeconds),
+          rxRateBps: previousCounters
+            ? counterRate(previousCounters.rx, rxTx?.rx, elapsedSeconds)
+            : null,
+          txRateBps: previousCounters
+            ? counterRate(previousCounters.tx, rxTx?.tx, elapsedSeconds)
+            : null,
+        });
+      }
+      if (hostId !== undefined) {
+        previousSamples.set(hostId, {
+          counters: rxTxMap,
+          timestamp: readAt,
         });
       }
     } catch {

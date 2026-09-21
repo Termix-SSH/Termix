@@ -25,13 +25,19 @@ import type {
   LogEntry,
   ConnectionStage,
 } from "../../../types/connection-log.js";
-import { collectCpuMetrics } from "./widgets/cpu-collector.js";
+import {
+  collectCpuMetrics,
+  clearCpuSampleCache,
+} from "./widgets/cpu-collector.js";
 import { collectMemoryMetrics } from "./widgets/memory-collector.js";
 import {
   collectDiskMetrics,
   type DiskFilesystem,
 } from "./widgets/disk-collector.js";
-import { collectNetworkMetrics } from "./widgets/network-collector.js";
+import {
+  collectNetworkMetrics,
+  clearNetworkSampleCache,
+} from "./widgets/network-collector.js";
 import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
 import { collectSystemMetrics } from "./widgets/system-collector.js";
@@ -515,6 +521,8 @@ class PollingManager {
       this.syncPollConcurrency();
       this.statusStore.delete(host.id);
       this.metricsStore.delete(host.id);
+      clearCpuSampleCache(host.id);
+      clearNetworkSampleCache(host.id);
       return;
     }
 
@@ -848,6 +856,8 @@ class PollingManager {
       if (clearData) {
         this.statusStore.delete(hostId);
         this.metricsStore.delete(hostId);
+        clearCpuSampleCache(hostId);
+        clearNetworkSampleCache(hostId);
       }
     }
     hostPollCache.invalidate(hostId);
@@ -917,6 +927,8 @@ class PollingManager {
       if (!currentHostIds.has(hostId)) {
         this.statusStore.delete(hostId);
         this.metricsStore.delete(hostId);
+        clearCpuSampleCache(hostId);
+        clearNetworkSampleCache(hostId);
       }
     }
 
@@ -1771,7 +1783,7 @@ async function collectMetrics(
       const collectFn = async (client: Client) => {
         onAuthenticated?.();
         const platform = await detectPlatform(client);
-        const cpu = await collectCpuMetrics(client, platform);
+        const cpu = await collectCpuMetrics(client, platform, host.id);
         const memory = await collectMemoryMetrics(client, platform);
         const disk = await collectDiskMetrics(
           client,
@@ -1779,7 +1791,7 @@ async function collectMetrics(
           monitoredMounts,
           platform,
         );
-        const network = await collectNetworkMetrics(client, platform);
+        const network = await collectNetworkMetrics(client, platform, host.id);
         const uptime = await collectUptimeMetrics(client, platform);
         const processes = await collectProcessesMetrics(client);
         const system = await collectSystemMetrics(client, platform);
