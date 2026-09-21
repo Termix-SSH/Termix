@@ -343,6 +343,23 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./automations/scheduler.js");
     startAutomationScheduler();
 
+    // Last, so a plugin's activate() sees a fully wired server. A plugin that
+    // fails to load must not stop the backend, so this never rejects.
+    try {
+      const { initializePlugins } = await import("./plugins/index.js");
+      const loaded = await initializePlugins();
+      if (loaded.length > 0) {
+        systemLogger.info(`Loaded ${loaded.length} plugin(s)`, {
+          operation: "plugin_init",
+        });
+      }
+    } catch (error) {
+      systemLogger.warn("Plugin runtime failed to initialize", {
+        operation: "plugin_init",
+        error: getErrorMessage(error),
+      });
+    }
+
     const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
     startAnalyticsHeartbeat();
 
@@ -357,6 +374,16 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       systemLogger.info(`Received ${signal}, initiating graceful shutdown...`, {
         operation: "shutdown",
       });
+
+      // Terminate plugin workers before the database goes away, so a plugin
+      // mid-write cannot outlive it.
+      try {
+        const { shutdownPlugins } = await import("./plugins/index.js");
+        await shutdownPlugins();
+      } catch {
+        // Nothing to stop.
+      }
+
       // Only SQLite has anything to flush. On a client-server engine the writes
       // committed as they happened, so there is no file to save and claiming
       // otherwise in the log would be untrue.
