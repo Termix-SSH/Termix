@@ -1197,6 +1197,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         /(?:\[sudo\][^\n\r]*:\s*$|sudo:[^\n\r]*password[^\n\r]*required|password for [^\n\r]*:\s*$|Password:\s*$|password:\s*$)/im;
       if (!passwordPromptPattern.test(buffered)) return;
 
+      const isSudoPrompt = /(?:\[sudo\]|sudo:)/i.test(buffered);
+
+      // Sudo autofill is opt-in: the saved sudo password must not be sent
+      // to a privilege-escalation prompt unless the host explicitly enables it.
+      if (isSudoPrompt && !hostConfig.terminalConfig?.sudoPasswordAutoFill) {
+        return;
+      }
+
       const hasStoredPassword =
         hostConfig.terminalConfig?.sudoPassword ||
         hostConfig.password ||
@@ -1206,7 +1214,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       passwordPromptShownRef.current = true;
       passwordPromptBufferRef.current = "";
-      const isSudoPrompt = /(?:\[sudo\]|sudo:)/i.test(buffered);
 
       confirmWithToast(
         t("terminal.passwordPromptFillTitle"),
