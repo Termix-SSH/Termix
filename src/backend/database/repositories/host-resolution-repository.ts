@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -326,6 +326,7 @@ export class HostResolutionRepository {
         hostKeyAlgorithm: algorithm,
         hostKeyFirstSeen: now,
         hostKeyLastVerified: now,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(hosts.id, hostId));
     await this.afterWrite();
@@ -347,6 +348,7 @@ export class HostResolutionRepository {
         hostKeyAlgorithm: algorithm,
         hostKeyLastVerified: now,
         hostKeyChangedCount: currentChangeCount + 1,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(hosts.id, hostId));
     await this.afterWrite();
@@ -358,7 +360,7 @@ export class HostResolutionRepository {
   ): Promise<void> {
     await this.context.drizzle
       .update(hosts)
-      .set({ hostKeyLastVerified: now })
+      .set({ hostKeyLastVerified: now, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(eq(hosts.id, hostId));
     await (this.onLazyWrite?.() ?? this.afterWrite());
   }

@@ -373,7 +373,15 @@ function HostMetricsInner({
       if (result.viewerSessionId) setViewerSessionId(result.viewerSessionId);
     }
 
-    const data = await getServerMetricsById(currentHostConfig.id);
+    // The connect above only opens the SSH session; the first real sample is
+    // collected asynchronously on the backend (status check, then metrics
+    // exec), so it isn't ready the instant the connection succeeds. Give it
+    // a few short retries before treating the initial fetch as a failure.
+    let data = await getServerMetricsById(currentHostConfig.id);
+    for (let i = 0; !data && i < 5; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      data = await getServerMetricsById(currentHostConfig.id);
+    }
     if (!data) {
       throw new Error(t("hostMetrics.connectionFailed"));
     }
