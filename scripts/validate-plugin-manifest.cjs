@@ -27,6 +27,10 @@ function knownPermissions(schema) {
   return schema.properties.permissions.items.enum;
 }
 
+function knownCategories(schema) {
+  return schema.properties.category.enum;
+}
+
 function validateManifest(manifest, schema) {
   const errors = [];
 
@@ -54,6 +58,21 @@ function validateManifest(manifest, schema) {
     if (!manifest.author.name) {
       errors.push('Field "author.name" is required');
     }
+  }
+
+  if (typeof manifest.category === "string") {
+    const categories = knownCategories(schema);
+    if (!categories.includes(manifest.category)) {
+      errors.push(
+        `Field "category" must be one of: ${categories.join(", ")}, got: "${manifest.category}"`,
+      );
+    }
+  } else if ("category" in manifest) {
+    errors.push('Field "category" must be a string');
+  }
+
+  if ("icon" in manifest && typeof manifest.icon !== "string") {
+    errors.push('Field "icon" must be a string');
   }
 
   if (manifest.engine && typeof manifest.engine === "object") {

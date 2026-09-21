@@ -43,4 +43,10 @@ describe("validate-plugin-manifest.cjs", () => {
     expect(status).not.toBe(0);
     expect(output).toContain('Unknown permission: "credentials.read"');
   });
+
+  it("rejects a manifest with an unknown category", () => {
+    const { status, output } = runValidator("invalid-unknown-category.json");
+    expect(status).not.toBe(0);
+    expect(output).toMatch(/Field "category" must be one of/);
+  });
 });

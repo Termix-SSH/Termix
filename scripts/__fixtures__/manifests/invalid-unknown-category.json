@@ -2,12 +2,12 @@
   "id": "sample-plugin",
   "name": "Sample Plugin",
   "version": "1.0.0",
-  "description": "Requests a permission that is not in the known capability list.",
+  "description": "Has a category that is not in the known category list.",
   "author": {
     "name": "Jane Doe"
   },
   "license": "MIT",
-  "category": "Productivity",
+  "category": "Miscellaneous",
   "engine": {
     "termix": ">=2.9.0",
     "api": "1"
@@ -18,6 +18,6 @@
     "electron": false,
     "platforms": ["linux"]
   },
-  "permissions": ["credentials.read"],
+  "permissions": [],
   "sidecars": []
 }

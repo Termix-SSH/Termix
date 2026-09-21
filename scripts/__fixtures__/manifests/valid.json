@@ -9,6 +9,8 @@
   },
   "license": "MIT",
   "repository": "https://github.com/example/sample-plugin",
+  "category": "Productivity",
+  "icon": "Box",
   "engine": {
     "termix": ">=2.9.0",
     "api": "1"

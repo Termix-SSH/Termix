@@ -12,6 +12,7 @@
     "author",
     "license",
     "engine",
+    "category",
     "capabilities",
     "permissions",
     "sidecars"
@@ -51,6 +52,24 @@
     "repository": {
       "type": "string",
       "format": "uri"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Terminal",
+        "Files & Transfer",
+        "Infrastructure",
+        "Monitoring",
+        "Networking",
+        "Access & Security",
+        "Productivity"
+      ],
+      "description": "Store category used for browsing/filtering. Must match one of the categories the store UI filters by."
+    },
+    "icon": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Either a Lucide icon name (same convention as contributes.tabs[].icon) or a relative path to an icon.svg shipped in the plugin package root. If both a Lucide name and an icon.svg are present, the registry-index build should prefer icon.svg."
     },
     "engine": {
       "type": "object",
