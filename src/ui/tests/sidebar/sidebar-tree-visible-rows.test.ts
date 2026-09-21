@@ -133,6 +133,34 @@ describe("collectVisibleRows with sub-host nesting", () => {
   });
 });
 
+describe("collectVisibleRows with group-by views", () => {
+  it("gives each occurrence of a multi-tag host a distinct parentPath", () => {
+    // Group-by-tags puts the same host under one synthetic folder per tag,
+    // so a host with two tags shows up twice in the tree with the same id.
+    const multiTagHost = host("9", "shared-box");
+    const tree: (Host | HostFolder)[] = [
+      {
+        name: "prod",
+        path: "__group__:tag:prod",
+        children: [multiTagHost],
+      },
+      {
+        name: "web",
+        path: "__group__:tag:web",
+        children: [multiTagHost],
+      },
+    ];
+    const rows = collectVisibleRows(
+      tree,
+      "",
+      new Set(["__group__:tag:prod", "__group__:tag:web"]),
+    );
+    const hostRows = rows.filter((r) => !isFolder(r.item));
+    expect(hostRows).toHaveLength(2);
+    expect(hostRows[0].parentPath).not.toBe(hostRows[1].parentPath);
+  });
+});
+
 describe("buildReorderRows", () => {
   it("keys folders by path and hosts by id", () => {
     const folder: HostFolder = {

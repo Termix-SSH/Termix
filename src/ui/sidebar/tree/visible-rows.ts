@@ -34,7 +34,18 @@ export function folderHasMatch(folder: HostFolder, query: string): boolean {
   return false;
 }
 
-export type VirtualRow = { item: Host | HostFolder; depth: number };
+/** Sentinel parent for rows sitting at the tree root (no folder). */
+export const ROOT_PARENT = "__root__";
+
+// parentPath identifies which folder/group a row was collected under. Group-by
+// views (e.g. group by tags) can list the same host under several synthetic
+// group folders, so the host id alone isn't a unique row identity -- the
+// virtualizer needs parentPath+id to tell those rows apart.
+export type VirtualRow = {
+  item: Host | HostFolder;
+  depth: number;
+  parentPath: string;
+};
 
 function collectVisibleHostRows(
   host: Host,
@@ -42,9 +53,10 @@ function collectVisibleHostRows(
   closedHostParents: Set<string>,
   out: VirtualRow[],
   depth: number,
+  parentPath: string,
 ): void {
   if (!query || hostMatchesQuery(host, query) || hostHasMatch(host, query)) {
-    out.push({ item: host, depth });
+    out.push({ item: host, depth, parentPath });
   } else {
     return;
   }
@@ -57,7 +69,14 @@ function collectVisibleHostRows(
   const isOpen = query ? true : !closedHostParents.has(hostExpandKey(host));
   if (!isOpen) return;
   for (const child of childHosts) {
-    collectVisibleHostRows(child, query, closedHostParents, out, depth + 1);
+    collectVisibleHostRows(
+      child,
+      query,
+      closedHostParents,
+      out,
+      depth + 1,
+      `${parentPath}>host:${host.id}`,
+    );
   }
 }
 
@@ -68,13 +87,15 @@ export function collectVisibleRows(
   out: VirtualRow[] = [],
   depth = 0,
   closedHostParents: Set<string> = new Set(),
+  parentPath: string = ROOT_PARENT,
 ): VirtualRow[] {
   for (const child of children) {
     if (isFolder(child)) {
       const visible = query ? folderHasMatch(child, query) : true;
       if (!visible) continue;
-      out.push({ item: child, depth });
-      const childOpen = query ? true : openSet.has(child.path ?? child.name);
+      const path = child.path ?? child.name;
+      out.push({ item: child, depth, parentPath });
+      const childOpen = query ? true : openSet.has(path);
       if (childOpen)
         collectVisibleRows(
           child.children,
@@ -83,9 +104,17 @@ export function collectVisibleRows(
           out,
           depth + 1,
           closedHostParents,
+          path,
         );
     } else {
-      collectVisibleHostRows(child, query, closedHostParents, out, depth);
+      collectVisibleHostRows(
+        child,
+        query,
+        closedHostParents,
+        out,
+        depth,
+        parentPath,
+      );
     }
   }
   return out;
@@ -122,9 +151,6 @@ export function collectAllFolderPaths(
   }
   return Array.from(paths).sort((a, b) => a.localeCompare(b));
 }
-
-/** Sentinel parent for rows sitting at the tree root (no folder). */
-export const ROOT_PARENT = "__root__";
 
 export function rowKey(item: Host | HostFolder): string {
   return isFolder(item)

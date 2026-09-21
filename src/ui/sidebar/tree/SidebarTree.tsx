@@ -820,9 +820,13 @@ export function SidebarTree({
     getItemKey: (index) => {
       const row = visibleRows[index];
       if (!row) return index;
+      // Group-by views (e.g. by tags) can list the same host under several
+      // group folders, so parentPath is folded in to keep each occurrence's
+      // key unique -- a shared key across rows made the virtualizer collide
+      // their measured positions and render them stacked on top of each other.
       return isFolder(row.item)
         ? `folder:${row.item.path ?? row.item.name}`
-        : `host:${row.item.id}`;
+        : `${row.parentPath}>host:${row.item.id}`;
     },
   });
 
