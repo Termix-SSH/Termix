@@ -1,5 +1,5 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
-import express from "express";
+import express, { type Router } from "express";
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../../../src/backend/utils/logger.js";
 import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
@@ -19,10 +19,6 @@ import {
 } from "./proxmox-jump-hosts.js";
 import { isSafeNodeName } from "../../../../src/backend/hosts/proxmox-shared.js";
 import { execElevated } from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import {
-  registerProxmoxRouter,
-  unregisterProxmoxRouter,
-} from "../../../../src/backend/database/routes/proxmox-dispatch.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -1139,8 +1135,8 @@ router.post(
  * dispatcher, and starts the background auto-sync scan (a 60s interval plus
  * a one-off 30s-delayed startup run, both unref'd so they never keep the
  * process alive on their own). */
-export function startProxmoxService(): void {
-  registerProxmoxRouter(router);
+export function startProxmoxService(mountOn: Router): void {
+  mountOn.use(router);
   proxmoxAutoSyncTimer = setInterval(runDueProxmoxAutoSyncs, 60 * 1000);
   proxmoxAutoSyncTimer.unref?.();
   proxmoxAutoSyncStartupTimer = setTimeout(runDueProxmoxAutoSyncs, 30 * 1000);
@@ -1150,7 +1146,7 @@ export function startProxmoxService(): void {
 /** Called from deactivate(). /proxmox/* falls back to 404 until reactivated,
  * and the auto-sync timers are cleared so a disabled plugin stops syncing. */
 export function stopProxmoxService(): void {
-  unregisterProxmoxRouter();
+  // Unmounted by the runtime when the plugin deactivates.
   if (proxmoxAutoSyncTimer) clearInterval(proxmoxAutoSyncTimer);
   if (proxmoxAutoSyncStartupTimer) clearTimeout(proxmoxAutoSyncStartupTimer);
   proxmoxAutoSyncTimer = undefined;

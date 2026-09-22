@@ -75,7 +75,7 @@ export interface AutomationInput {
 
 export async function listAutomations(): Promise<AutomationRow[]> {
   try {
-    return (await authApi.get("/automations")).data;
+    return (await authApi.get("/plugin-api/automations")).data;
   } catch (error) {
     throw handleApiError(error, "fetch automations");
   }
@@ -85,7 +85,7 @@ export async function createAutomation(
   input: AutomationInput,
 ): Promise<AutomationRow> {
   try {
-    return (await authApi.post("/automations", input)).data;
+    return (await authApi.post("/plugin-api/automations", input)).data;
   } catch (error) {
     throw handleApiError(error, "create automation");
   }
@@ -96,7 +96,7 @@ export async function updateAutomation(
   input: Partial<AutomationInput>,
 ): Promise<AutomationRow> {
   try {
-    return (await authApi.put(`/automations/${id}`, input)).data;
+    return (await authApi.put(`/plugin-api/automations/${id}`, input)).data;
   } catch (error) {
     throw handleApiError(error, "update automation");
   }
@@ -104,7 +104,7 @@ export async function updateAutomation(
 
 export async function deleteAutomation(id: number): Promise<void> {
   try {
-    await authApi.delete(`/automations/${id}`);
+    await authApi.delete(`/plugin-api/automations/${id}`);
   } catch (error) {
     throw handleApiError(error, "delete automation");
   }
@@ -115,7 +115,8 @@ export async function runAutomation(
   options: { dryRun?: boolean } = {},
 ): Promise<AutomationRunOutcome> {
   try {
-    return (await authApi.post(`/automations/${id}/run`, options)).data;
+    return (await authApi.post(`/plugin-api/automations/${id}/run`, options))
+      .data;
   } catch (error) {
     throw handleApiError(error, "run automation");
   }
@@ -125,8 +126,11 @@ export async function listAutomationRuns(
   options: { automationId?: number; limit?: number; offset?: number } = {},
 ): Promise<AutomationRunRow[]> {
   try {
-    return (await authApi.get("/automations/runs/history", { params: options }))
-      .data;
+    return (
+      await authApi.get("/plugin-api/automations/runs/history", {
+        params: options,
+      })
+    ).data;
   } catch (error) {
     throw handleApiError(error, "fetch automation runs");
   }
@@ -136,7 +140,8 @@ export async function listAutomationRunSteps(
   runId: number,
 ): Promise<AutomationRunStepRow[]> {
   try {
-    return (await authApi.get(`/automations/runs/${runId}/steps`)).data;
+    return (await authApi.get(`/plugin-api/automations/runs/${runId}/steps`))
+      .data;
   } catch (error) {
     throw handleApiError(error, "fetch run steps");
   }

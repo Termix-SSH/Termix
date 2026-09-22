@@ -151,6 +151,130 @@ export interface PluginSecrets {
 }
 
 /**
+ * Express types, structurally. The SDK does not depend on express: a plugin
+ * brings its own copy, and a nominal type from core's would not match it.
+ */
+export interface PluginRequestLike {
+  method: string;
+  url: string;
+  path: string;
+  headers: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface PluginResponseLike {
+  status: (code: number) => PluginResponseLike;
+  json: (body: unknown) => unknown;
+  [key: string]: unknown;
+}
+
+export type PluginNextFunction = (error?: unknown) => void;
+
+export type PluginMiddleware = (
+  req: PluginRequestLike,
+  res: PluginResponseLike,
+  next: PluginNextFunction,
+) => void;
+
+export interface PluginRouterOptions {
+  /**
+   * Paths served without authentication, relative to the plugin's mount point
+   * and matched exactly ("/callback", not "/plugin-api/<id>/callback").
+   *
+   * For the handful of routes an unauthenticated third party has to reach: an
+   * OIDC callback, an inbound webhook. Every entry is audited when the router
+   * is registered and every request that uses one is logged, because "this
+   * plugin opened a hole in auth" is exactly the thing an operator should be
+   * able to find later.
+   */
+  public?: readonly string[];
+  /** Body size limit for JSON and urlencoded bodies. Defaults to "1mb". */
+  bodyLimit?: string;
+  /**
+   * Skips the built-in body parsers entirely, for a router that parses its own
+   * (multer, a raw body for signature checking, a proxied stream).
+   */
+  rawBody?: boolean;
+}
+
+/**
+ * HTTP routes, served at /plugin-api/<id>/ by the main backend server.
+ *
+ * No plugin gets its own port or nginx block. Core runs auth, the actor, the
+ * enabled check, body limits and an error wrapper in front of every route, so
+ * a plugin's router only has to handle its own paths.
+ */
+export interface PluginHttp {
+  /**
+   * Returns an Express Router mounted at /plugin-api/<id>/. Call it once in
+   * activate and register routes on the result; it is unmounted automatically
+   * on deactivate.
+   */
+  router: <T = unknown>(options?: PluginRouterOptions) => T;
+}
+
+/** RBAC middleware for a plugin's own routes. */
+export interface PluginRbac {
+  /**
+   * Middleware that rejects a request whose user lacks `permission`.
+   *
+   * A plugin may only require a permission it declares in
+   * contributes.permissionGroup, so a route cannot gate on admin.users.manage
+   * and borrow someone else's authority.
+   */
+  require: (permission: string) => PluginMiddleware;
+}
+
+export interface PluginWebSocketConnection {
+  /** The authenticated user for this socket. */
+  readonly userId: string;
+  /** The upgrade request, for query parameters and headers. */
+  readonly request: unknown;
+  /** The ws WebSocket. Binary frames and backpressure work as usual. */
+  readonly socket: unknown;
+}
+
+export type PluginWebSocketHandler = (
+  connection: PluginWebSocketConnection,
+) => void | Promise<void>;
+
+export interface PluginWebSocketOptions {
+  /**
+   * Serves the upgrade without core authentication. The handler gets an empty
+   * userId and must authenticate the socket itself, which is what a share-link
+   * guest or a token-in-query protocol needs.
+   */
+  public?: boolean;
+}
+
+/**
+ * WebSocket routes, served at /plugin-ws/<id>/<path> through the main server's
+ * upgrade event. Every socket a plugin opened is closed on deactivate.
+ */
+export interface PluginWebSockets {
+  route: (
+    path: string,
+    handler: PluginWebSocketHandler,
+    options?: PluginWebSocketOptions,
+  ) => void;
+  /**
+   * Hands the raw upgrade to the plugin, for a library that insists on owning
+   * its own WebSocket server (guacamole-lite attaches this way). Auth and the
+   * actor still run first.
+   */
+  upgrade: (
+    path: string,
+    handler: (
+      request: unknown,
+      socket: unknown,
+      head: unknown,
+      userId: string,
+    ) => void,
+    options?: PluginWebSocketOptions,
+  ) => void;
+}
+
+/**
  * Anything the runtime should undo when the plugin deactivates. Everything
  * registered through ctx is tracked automatically; this is for resources a
  * plugin creates itself, such as a server or an interval.
@@ -170,6 +294,9 @@ export interface PluginContext {
   readonly registry: PluginRegistry;
   readonly services: PluginServices;
   readonly secrets: PluginSecrets;
+  readonly http: PluginHttp;
+  readonly ws: PluginWebSockets;
+  readonly rbac: PluginRbac;
   readonly disposables: PluginDisposables;
 
   /**

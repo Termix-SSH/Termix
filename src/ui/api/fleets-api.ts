@@ -60,7 +60,7 @@ export type FleetPackageAction = "install" | "remove" | "upgrade-all";
 
 export async function listFleets(): Promise<FleetRow[]> {
   try {
-    const response = await authApi.get("/fleets");
+    const response = await authApi.get("/plugin-api/fleets");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch fleets");
@@ -75,7 +75,7 @@ export async function createFleet(fleetData: {
   tagRules?: string[];
 }): Promise<FleetRow> {
   try {
-    const response = await authApi.post("/fleets", fleetData);
+    const response = await authApi.post("/plugin-api/fleets", fleetData);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "create fleet");
@@ -93,7 +93,10 @@ export async function updateFleet(
   },
 ): Promise<FleetRow> {
   try {
-    const response = await authApi.patch(`/fleets/${fleetId}`, fleetData);
+    const response = await authApi.patch(
+      `/plugin-api/fleets/${fleetId}`,
+      fleetData,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update fleet");
@@ -104,7 +107,7 @@ export async function deleteFleet(
   fleetId: number,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await authApi.delete(`/fleets/${fleetId}`);
+    const response = await authApi.delete(`/plugin-api/fleets/${fleetId}`);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "delete fleet");
@@ -115,7 +118,7 @@ export async function getFleetMembers(
   fleetId: number,
 ): Promise<FleetMemberRow[]> {
   try {
-    const response = await authApi.get(`/fleets/${fleetId}/members`);
+    const response = await authApi.get(`/plugin-api/fleets/${fleetId}/members`);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch fleet members");
@@ -127,9 +130,12 @@ export async function addFleetMember(
   hostId: number,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await authApi.post(`/fleets/${fleetId}/members`, {
-      hostId,
-    });
+    const response = await authApi.post(
+      `/plugin-api/fleets/${fleetId}/members`,
+      {
+        hostId,
+      },
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "add fleet member");
@@ -142,7 +148,7 @@ export async function removeFleetMember(
 ): Promise<{ success: boolean }> {
   try {
     const response = await authApi.delete(
-      `/fleets/${fleetId}/members/${hostId}`,
+      `/plugin-api/fleets/${fleetId}/members/${hostId}`,
     );
     return response.data;
   } catch (error) {
@@ -156,10 +162,13 @@ export async function runFleetCommand(
   inputValues?: Record<string, string>,
 ): Promise<{ results: FleetHostResult[] }> {
   try {
-    const response = await authApi.post(`/fleets/${fleetId}/execute`, {
-      command,
-      ...(inputValues ? { inputValues } : {}),
-    });
+    const response = await authApi.post(
+      `/plugin-api/fleets/${fleetId}/execute`,
+      {
+        command,
+        ...(inputValues ? { inputValues } : {}),
+      },
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "run fleet command");
@@ -176,7 +185,7 @@ export async function pushFleetFile(
     form.append("file", file);
     form.append("remotePath", remotePath);
     const response = await authApi.post(
-      `/fleets/${fleetId}/transfer/push`,
+      `/plugin-api/fleets/${fleetId}/transfer/push`,
       form,
       { headers: { "Content-Type": "multipart/form-data" } },
     );
@@ -192,7 +201,7 @@ export async function pullFleetFile(
 ): Promise<{ results: FleetHostResult[]; blob: Blob; fileName: string }> {
   try {
     const response = await authApi.post(
-      `/fleets/${fleetId}/transfer/pull`,
+      `/plugin-api/fleets/${fleetId}/transfer/pull`,
       { remotePath },
       { responseType: "blob" },
     );
@@ -217,7 +226,9 @@ export async function getFleetInventory(
   fleetId: number,
 ): Promise<FleetInventoryEntry[]> {
   try {
-    const response = await authApi.get(`/fleets/${fleetId}/inventory`);
+    const response = await authApi.get(
+      `/plugin-api/fleets/${fleetId}/inventory`,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch fleet inventory");
@@ -228,7 +239,9 @@ export async function refreshFleetInventory(
   fleetId: number,
 ): Promise<{ results: FleetHostResult[] }> {
   try {
-    const response = await authApi.post(`/fleets/${fleetId}/inventory`);
+    const response = await authApi.post(
+      `/plugin-api/fleets/${fleetId}/inventory`,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "refresh fleet inventory");
@@ -241,10 +254,13 @@ export async function runFleetPackageAction(
   packageName?: string,
 ): Promise<{ results: FleetHostResult[] }> {
   try {
-    const response = await authApi.post(`/fleets/${fleetId}/packages`, {
-      action,
-      ...(packageName ? { package: packageName } : {}),
-    });
+    const response = await authApi.post(
+      `/plugin-api/fleets/${fleetId}/packages`,
+      {
+        action,
+        ...(packageName ? { package: packageName } : {}),
+      },
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "run fleet package action");
@@ -273,7 +289,10 @@ export async function shareFleet(
   hostResults: FleetShareHostResult[];
 }> {
   try {
-    const response = await authApi.post(`/fleets/${fleetId}/share`, shareData);
+    const response = await authApi.post(
+      `/plugin-api/fleets/${fleetId}/share`,
+      shareData,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "share fleet");

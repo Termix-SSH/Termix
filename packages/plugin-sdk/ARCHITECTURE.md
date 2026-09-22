@@ -126,13 +126,51 @@ frozen array for a server that predates the endpoint.
 ### 6. HTTP and WebSockets
 
 Plugin routes live under `/plugin-api/<id>/` and sockets under
-`/plugin-ws/<id>/`, served by the main backend with core auth. No plugin gets
-its own port or nginx block.
+`/plugin-ws/<id>/<path>`, served by the main backend with core auth. No plugin
+gets its own port or nginx block.
 
-**A4** delivers this. In A1 `/plugin-api` is mounted and auth-gated but has no
-routes registered, so it returns 404. The bundled plugins still keep their
-original URLs through the dispatchers in `src/backend/database/routes/*-dispatch.ts`,
-and four still own ports of their own.
+**A4 delivered this.** A plugin calls `ctx.http.router(options)` and gets an
+Express Router core mounts at `/plugin-api/<id>/`, or `ctx.ws.route(path,
+handler)` for a socket. Core runs the same middleware in front of every plugin:
+
+1. **Auth**, unless the path is listed in `options.public`. A public path is
+   audited when the router is registered and logged on every request, because
+   "this plugin opened a hole in auth" should be findable later. It matches the
+   full path, with `:param` segments allowed, so declaring `/webhook/:token`
+   public cannot open `/webhook/:token/anything`.
+2. **The actor**, from the user core authenticated, never from the request body.
+3. **An enabled check** returning 503 while the plugin is disabled. That is a
+   different fact from 404 ("no such plugin") and a caller can act on it.
+4. **Body limits**, defaulting to the 2mb core itself accepts. `database.ts`
+   skips its own global parser for `/plugin-api` so a plugin's `bodyLimit`
+   actually applies; `rawBody` turns the parsers off for a router that parses
+   its own (multer, a raw body for signature checks).
+5. **An error wrapper** that logs against the plugin, never leaks a stack, and
+   feeds the error budget.
+
+`ctx.rbac.require(permission)` adds a per-route RBAC gate, and a plugin may only
+require a permission it declares itself.
+
+Both surfaces need `network:serve`. The declaration is checked when the router
+or route is created; the **grant** is checked per request and per upgrade,
+because it lives in the database and `router()` has to be synchronous. A revoked
+grant therefore takes effect on the next request without a restart: HTTP answers
+403, an upgrade is refused 403.
+
+Sockets are served from the main server's `upgrade` event, on both the HTTP
+server and the direct HTTPS one. Auth is the same `utils/ws-auth.ts` path every
+other Termix socket uses, and a token still awaiting TOTP is refused exactly as
+it is for HTTP. Binary frames and backpressure are untouched. Everything a
+plugin registered is disposed on deactivate, and live sockets are **closed**,
+not merely unrouted: a terminal session must not outlive the plugin that owns it.
+
+`ctx.ws.upgrade(path, handler)` hands over the raw upgrade, after core has
+authenticated it, for a library that insists on owning its own WebSocketServer.
+guacamole-lite is why it exists. Three routes are public because they
+authenticate themselves in a way core cannot: the terminal (a share-link guest
+arrives with a share token), the Docker console (per-message auth), and the
+Guacamole display (a single-use encrypted connection token in the query, minted
+by an authenticated route).
 
 ### 7. Settings
 
@@ -407,13 +445,14 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.currentActor()`                             | none                             | **A1** |
 | `ctx.db.define` / `.client` / `.refs`            | `db:own`                         | **A3** |
 | `ctx.sync.registerEntity`                        | none                             | **A3** |
-| `ctx.http.route` / `ctx.ws`                      | `network:serve`                  | A4     |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`     | A4     |
-| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use` | A4     |
+| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                  | **A4** |
+| `ctx.rbac.require`                               | own permissions only             | **A4** |
+| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`     | B      |
+| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use` | B      |
 | `ctx.settings.*`                                 | `settings:read-core`             | A6     |
 | `ctx.notify.*`                                   | `notify:send`                    | A6     |
 | `ctx.auth.*`                                     | `auth:provide`                   | A8     |
-| `ctx.fetch`                                      | `network:outbound`               | A4     |
+| `ctx.fetch`                                      | `network:outbound`               | B      |
 
 ### The actor
 
@@ -581,7 +620,7 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin components            | Warning   | 16 files  | A7         |
-| A plugin importing core by relative path         | Warning   | 71 files  | D1         |
+| A plugin importing core by relative path         | Warning   | 70 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
 A warning does not fail a build, so the counts are held by
@@ -610,11 +649,9 @@ Known specifics:
   degrade silently when automations is absent, so host-metrics declares it as
   an `optionalDependency` (added in A2; it previously declared nothing, and
   the loader had no reason to order the two).
-- Eight plugins keep their original core URLs through the dispatchers in
-  `src/backend/database/routes/*-dispatch.ts` rather than `/plugin-api`. A4
-  moves them.
-- Four plugins own ports directly (ssh-terminal 30002, host-metrics 30005,
-  docker 30007 and 30009, remote-desktop 30008). A4 moves them onto the main
-  server.
+- Core feature servers that are not plugins yet still own ports: tunnel 30003,
+  file-manager 30004, dashboard 30006, tmux 30010, serial 30011 and homepage
+  30012. Each keeps its nginx block until its own Phase B step. No plugin owns
+  a port any more (A4).
 - `src/ui/shell/pluginLoader.ts` still hardcodes plugin ids in
   `BUILT_IN_TABS_BY_PLUGIN` and `applyFirstPartyActions`. A7 removes both.

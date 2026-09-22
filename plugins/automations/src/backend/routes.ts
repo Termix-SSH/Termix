@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import express, { type Request, type Response } from "express";
+import express, { type Request, type Response, type Router } from "express";
 import type { AuthenticatedRequest } from "../../../../src/types/index.js";
 import type {
   AutomationDefinition,
@@ -19,10 +19,6 @@ import { createCurrentAutomationRepository } from "../../../../src/backend/datab
 import type { AutomationRow } from "../../../../src/backend/database/repositories/automation-repository.js";
 import { AutomationEngine } from "./engine.js";
 import { computeNextDueAt, isValidCron, isValidTimezone } from "./cron.js";
-import {
-  registerAutomationsRouter,
-  unregisterAutomationsRouter,
-} from "../../../../src/backend/database/routes/automation-dispatch.js";
 
 export const router = express.Router();
 
@@ -821,12 +817,12 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 /** Called from activate(). Mounts this router at /automations via the shared
  * dispatcher. */
-export function startAutomationsService(): void {
-  registerAutomationsRouter(router);
+export function startAutomationsService(mountOn: Router): void {
+  mountOn.use(router);
 }
 
 /** Called from deactivate(). /automations/* falls back to 404 until
  * reactivated. */
 export function stopAutomationsService(): void {
-  unregisterAutomationsRouter();
+  // Unmounted by the runtime when the plugin deactivates.
 }

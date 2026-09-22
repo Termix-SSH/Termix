@@ -14,7 +14,12 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": ["settings:read-core", "network:outbound", "ui:surface"],
+  "capabilities": [
+    "settings:read-core",
+    "network:outbound",
+    "network:serve",
+    "ui:surface"
+  ],
   "contributes": {
     "permissionGroup": {
       "group": "tailscale",

@@ -6,7 +6,7 @@ import { sessionManager } from "../terminal/session-manager.js";
 // src/backend/database/routes/guacamole-dispatch.ts and that plugin's
 // README -- this is an accepted, temporary coupling until collab/
 // session-sharing themselves become plugins.
-import { getGuacamoleSessionInfo as getGuacSessionInfo } from "../../database/routes/guacamole-dispatch.js";
+import { getGuacamoleSessionInfo as getGuacSessionInfo } from "../guacamole-sessions.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,

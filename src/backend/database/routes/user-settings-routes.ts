@@ -6,7 +6,7 @@ import type { RequestHandler, Router } from "express";
 // importing the plugin's TypeScript directly, since plugins/ is compiled
 // separately from src/backend/ and core cannot statically import across that
 // boundary. See guacamole-dispatch.ts and that plugin's README.
-import { restartGuacamoleService as restartGuacServer } from "./guacamole-dispatch.js";
+import { restartGuacamoleService as restartGuacServer } from "../../hosts/guacamole-sessions.js";
 import {
   authLogger,
   getGlobalLogLevel,

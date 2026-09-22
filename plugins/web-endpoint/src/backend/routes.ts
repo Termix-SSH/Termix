@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Router } from "express";
 import { Client } from "ssh2";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import { tunnelLogger } from "../../../../src/backend/utils/logger.js";
@@ -12,10 +12,6 @@ import {
 } from "../../../../src/backend/hosts/tunnel/manager.js";
 import { forwardOut } from "../../../../src/backend/hosts/tunnel/ssh-primitives.js";
 import { buildWebEndpointTunnelName } from "../../../../src/backend/hosts/tunnel/utils.js";
-import {
-  registerWebEndpointRouter,
-  unregisterWebEndpointRouter,
-} from "../../../../src/backend/hosts/tunnel/web-endpoint-dispatch.js";
 import type { TunnelConfig, WebEndpoint } from "../../../../src/types/index.js";
 
 /** Matches the spec's ten minutes. */
@@ -302,7 +298,7 @@ export const router = express.Router();
 
 let started = false;
 
-export function startWebEndpointService(): void {
+export function startWebEndpointService(mountOn: Router): void {
   if (!started) {
     // Built on first start rather than at module scope so importing this
     // module for a handler unit test does not construct the auth singleton.
@@ -315,9 +311,9 @@ export function startWebEndpointService(): void {
     router.post("/open", authenticateJWT, handleWebEndpointOpen);
     started = true;
   }
-  registerWebEndpointRouter(router);
+  mountOn.use(router);
 }
 
 export function stopWebEndpointService(): void {
-  unregisterWebEndpointRouter();
+  // Unmounted by the runtime when the plugin deactivates.
 }

@@ -15,7 +15,7 @@ import {
 // src/backend/database/routes/guacamole-dispatch.ts and that plugin's
 // README -- this is an accepted, temporary coupling until collab becomes a
 // plugin of its own.
-import { createGuacamoleJoinToken } from "../../database/routes/guacamole-dispatch.js";
+import { createGuacamoleJoinToken } from "../guacamole-sessions.js";
 import { collabRoomHub } from "./room-hub.js";
 import { getStageController, setStageController } from "./stage-control.js";
 import { isCollabGuestRateLimited } from "./guest-rate-limit.js";
@@ -1091,7 +1091,7 @@ router.get("/guest/:token", async (req: Request, res: Response) => {
             shareId: share.id,
             ...(protocol === "ssh"
               ? {
-                  wsPath: `/terminal/ws?roomGuestToken=${encodeURIComponent(token)}`,
+                  wsPath: `/plugin-ws/ssh-terminal/terminal?roomGuestToken=${encodeURIComponent(token)}`,
                 }
               : {
                   connectParams: {

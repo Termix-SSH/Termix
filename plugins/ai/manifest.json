@@ -23,6 +23,7 @@
     "secrets:own",
     "network:outbound",
     "audit:read",
+    "network:serve",
     "ui:surface"
   ],
   "dependencies": {

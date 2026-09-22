@@ -3,7 +3,7 @@ import { startAiService, stopAiService } from "./routes.js";
 import { createCurrentAiRepository } from "../../../../src/backend/database/repositories/factory.js";
 
 export async function activate(ctx: PluginContext) {
-  startAiService();
+  startAiService(ctx.http.router());
 
   // Offered by reference, not copied: this hands over a resolver, so the key
   // stays ours. Rotating or deleting the provider takes effect on the next
@@ -24,7 +24,7 @@ export async function activate(ctx: PluginContext) {
     return withSecret?.apiKey ?? null;
   });
 
-  ctx.log.info("AI assistant router registered at /ai");
+  ctx.log.info("AI assistant routes mounted at /plugin-api/ai");
 }
 
 export async function deactivate() {

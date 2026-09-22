@@ -305,33 +305,28 @@ describe("POST /tunnel/web-endpoint/open", () => {
 });
 
 /**
- * The client resolves "/tunnel/web-endpoint/open" against a baseURL that
- * already ends in /ssh, and nginx proxies /ssh through with the path intact --
- * so the server must serve the FULL "/ssh/tunnel/web-endpoint/open" path.
- * Serving the unprefixed form 404s every call, and no handler unit test
- * notices because they call the handler directly.
+ * The client path and the server path have to agree.
  *
- * This was caught only by opening a real tunnel against a deployed build.
+ * This guards a real bug: the route once served the unprefixed form while the
+ * client called the full one, so every call 404d and no handler unit test
+ * noticed, because those call the handler directly. It was caught only by
+ * opening a tunnel against a deployed build.
  *
- * Since the plugin migration that path is composed of two halves: the mount
- * point in src/backend/hosts/tunnel/index.ts and the route on the plugin's own
- * router. Either half drifting breaks the URL, so both are asserted here.
+ * The shape changed with A4. The route used to be composed of a mount point in
+ * the tunnel service (/ssh/tunnel/web-endpoint, port 30003) plus "/open" on
+ * this router. Now core mounts every plugin at /plugin-api/<id>, so the client
+ * calls /plugin-api/web-endpoint/open and the only half this plugin owns is
+ * "/open". Asserting that keeps the guard meaningful without re-encoding a
+ * prefix the plugin no longer controls.
  */
 describe("route registration", () => {
-  it("registers /open on the router the dispatcher forwards to", async () => {
+  it("registers /open on the router core hands it", async () => {
     const routes = await import("../../src/backend/routes.js");
-    const dispatch =
-      await import("../../../../src/backend/hosts/tunnel/web-endpoint-dispatch.js");
-    const registered: unknown[] = [];
-    vi.spyOn(dispatch, "registerWebEndpointRouter").mockImplementation(
-      (router) => {
-        registered.push(router);
-      },
-    );
+    const express = (await import("express")).default;
+    const mountOn = express.Router();
 
-    routes.startWebEndpointService();
+    routes.startWebEndpointService(mountOn);
 
-    expect(registered).toHaveLength(1);
     const paths = (
       routes.router as unknown as {
         stack: Array<{ route?: { path: string; methods: { post?: boolean } } }>;
@@ -339,15 +334,17 @@ describe("route registration", () => {
     ).stack
       .filter((layer) => layer.route?.methods.post)
       .map((layer) => layer.route?.path);
+
     expect(paths).toContain("/open");
   });
 
-  it("is mounted so the full client path resolves", async () => {
+  it("is reached through the plugin mount rather than a port of its own", async () => {
     const source = await readFile(
-      new URL("../../../../src/backend/hosts/tunnel/index.ts", import.meta.url),
+      new URL("../../src/backend/index.ts", import.meta.url),
       "utf8",
     );
 
-    expect(source).toContain('app.use("/ssh/tunnel/web-endpoint"');
+    // ctx.http.router() is what puts this plugin at /plugin-api/web-endpoint.
+    expect(source).toContain("ctx.http.router()");
   });
 });

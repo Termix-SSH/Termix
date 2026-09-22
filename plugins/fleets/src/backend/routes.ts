@@ -1,6 +1,6 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../../src/types/index.js";
-import express, { type Request, type Response } from "express";
+import express, { type Request, type Response, type Router } from "express";
 import multer from "multer";
 import JSZip from "jszip";
 import type { Client, SFTPWrapper } from "ssh2";
@@ -40,10 +40,6 @@ import {
 import { buildPackageActionCommand } from "../../../../src/backend/hosts/metrics-shared/package-commands.js";
 import { isValidPackageName } from "../../../../src/backend/hosts/metrics-shared/validation.js";
 import { resolveSnippetCommand } from "../../../../src/backend/database/routes/snippets-execution.js";
-import {
-  registerFleetsRouter,
-  unregisterFleetsRouter,
-} from "../../../../src/backend/database/routes/fleet-dispatch.js";
 
 export const router = express.Router();
 
@@ -1505,11 +1501,11 @@ export function buildRemoveCommand(
 
 /** Called from activate(). Mounts this router at /fleets via the shared
  * dispatcher. */
-export function startFleetsService(): void {
-  registerFleetsRouter(router);
+export function startFleetsService(mountOn: Router): void {
+  mountOn.use(router);
 }
 
 /** Called from deactivate(). /fleets/* falls back to 404 until reactivated. */
 export function stopFleetsService(): void {
-  unregisterFleetsRouter();
+  // Unmounted by the runtime when the plugin deactivates.
 }

@@ -188,7 +188,7 @@ export async function discoverProxmoxGuests(
 ): Promise<ProxmoxDiscoverResult> {
   try {
     const response = await authApi.post(
-      "/proxmox/discover",
+      "/plugin-api/proxmox/discover",
       { hostId },
       { timeout: 120000 },
     );
@@ -208,7 +208,7 @@ export function discoverProxmoxGuestsStream(
 ): () => void {
   const baseURL = (authApi.defaults.baseURL || "").replace(/\/$/, "");
   const source = new EventSource(
-    `${baseURL}/proxmox/discover/stream?hostId=${encodeURIComponent(
+    `${baseURL}/plugin-api/proxmox/discover/stream?hostId=${encodeURIComponent(
       String(hostId),
     )}`,
     { withCredentials: true },
@@ -257,7 +257,7 @@ export async function syncProxmoxGuests(
 ): Promise<ProxmoxSyncResult> {
   try {
     const response = await authApi.post(
-      "/proxmox/sync",
+      "/plugin-api/proxmox/sync",
       { hostId },
       { timeout: 120000 },
     );

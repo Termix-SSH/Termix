@@ -1,12 +1,8 @@
-import express from "express";
+import express, { type Router } from "express";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../../src/types/index.js";
 import { databaseLogger } from "../../../../src/backend/utils/logger.js";
 import { createCurrentNetworkTopologyRepository } from "../../../../src/backend/database/repositories/factory.js";
-import {
-  registerNetworkTopologyRouter,
-  unregisterNetworkTopologyRouter,
-} from "../../../../src/backend/database/routes/network-topology-dispatch.js";
 
 export const router = express.Router();
 
@@ -179,10 +175,10 @@ router.post(
   },
 );
 
-export function startNetworkTopologyService(): void {
-  registerNetworkTopologyRouter(router);
+export function startNetworkTopologyService(mountOn: Router): void {
+  mountOn.use(router);
 }
 
 export function stopNetworkTopologyService(): void {
-  unregisterNetworkTopologyRouter();
+  // Unmounted by the runtime when the plugin deactivates.
 }

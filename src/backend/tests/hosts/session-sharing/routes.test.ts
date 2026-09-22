@@ -63,7 +63,7 @@ vi.mock("../../../hosts/terminal/session-manager.js", () => ({
   },
 }));
 
-vi.mock("../../../database/routes/guacamole-dispatch.js", () => ({
+vi.mock("../../../hosts/guacamole-sessions.js", () => ({
   getGuacamoleSessionInfo: (guacamoleConnectionId: string) =>
     state.guacSessions.get(guacamoleConnectionId) ?? null,
   createGuacamoleJoinToken: (
@@ -364,7 +364,7 @@ describe("GET /session-sharing/resolve/:linkToken", () => {
     expect(res.jsonBody).toEqual({
       protocol: "ssh",
       permissionLevel: "read-only",
-      wsPath: `/terminal/ws?shareToken=${encodeURIComponent(share.linkToken)}`,
+      wsPath: `/plugin-ws/ssh-terminal/terminal?shareToken=${encodeURIComponent(share.linkToken)}`,
     });
   });
 

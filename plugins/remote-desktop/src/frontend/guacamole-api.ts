@@ -174,17 +174,20 @@ export async function getGuacamoleToken(
   try {
     const guacParams = toGuacamoleParams(request.guacamoleConfig);
 
-    const response = await guacamoleApi(origin).post("/guacamole/token", {
-      type: request.protocol,
-      hostname: request.hostname,
-      port: request.port,
-      username: request.username,
-      password: request.password,
-      domain: request.domain,
-      security: request.security,
-      "ignore-cert": request.ignoreCert,
-      ...guacParams,
-    });
+    const response = await guacamoleApi(origin).post(
+      "/plugin-api/remote-desktop/token",
+      {
+        type: request.protocol,
+        hostname: request.hostname,
+        port: request.port,
+        username: request.username,
+        password: request.password,
+        domain: request.domain,
+        security: request.security,
+        "ignore-cert": request.ignoreCert,
+        ...guacParams,
+      },
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "get guacamole token");
@@ -214,7 +217,7 @@ export async function getGuacamoleTokenFromHost(
     }
     const targetHostId = remoteHostId ?? hostId;
     const response = await guacamoleApi(origin).post(
-      `/guacamole/connect-host/${targetHostId}`,
+      `/plugin-api/remote-desktop/connect-host/${targetHostId}`,
       {
         ...(protocol ? { protocol } : {}),
         ...(promptedCredentials?.username
@@ -237,7 +240,9 @@ export async function getGuacamoleTokenFromHost(
 export async function getGuacdStatus(origin: ConnectionOrigin): Promise<{
   guacd: { status: string };
 }> {
-  const response = await guacamoleApi(origin).get("/guacamole/status");
+  const response = await guacamoleApi(origin).get(
+    "/plugin-api/remote-desktop/status",
+  );
   return response.data;
 }
 
@@ -247,7 +252,7 @@ export async function getGuacamoleConnectionId(
   signal?: AbortSignal,
 ): Promise<string | null> {
   const response = await guacamoleApi(origin).get(
-    `/guacamole/connection/${encodeURIComponent(connectId)}`,
+    `/plugin-api/remote-desktop/connection/${encodeURIComponent(connectId)}`,
     { signal },
   );
   return response.data.guacamoleConnectionId ?? null;

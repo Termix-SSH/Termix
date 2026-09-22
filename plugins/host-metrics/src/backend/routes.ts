@@ -1,10 +1,7 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
 import { usesIssuedCertificate } from "../../../../src/backend/hosts/issued-certificate-auth.js";
-import express from "express";
+import express, { type Router } from "express";
 import net from "net";
-import { createCorsMiddleware } from "../../../../src/backend/utils/cors-config.js";
-import { createCompressionMiddleware } from "../../../../src/backend/utils/compression-config.js";
-import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../../../../src/backend/utils/ssh-algorithms.js";
 import {
@@ -116,7 +113,6 @@ import {
   requestQueue,
   statusPollLimiter,
 } from "../../../../src/backend/hosts/metrics-shared/state.js";
-import { listenOnServicePort } from "../../../../src/backend/utils/service-listen.js";
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -1075,52 +1071,18 @@ function validateHostId(
   next();
 }
 
+// Mounted onto the router core hands this plugin at /plugin-api/host-metrics,
+// rather than listening on a port of its own. Compression, CORS, cookies and
+// body parsing all run in core's stack in front of this, so only the
+// cache header and the routes themselves stay here.
 export const app = express();
 app.set("trust proxy", "loopback");
-app.use(createCompressionMiddleware());
-app.use(createCorsMiddleware());
-app.use(cookieParser());
-app.use(express.json({ limit: "1mb" }));
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
 
-// Internal endpoint — only accepts calls from localhost. Registered before
-// the auth middleware since it's a service-to-service call authenticated by
-// IP + shared secret, not a user JWT.
-// Used by the main backend to notify the metrics service of SSH login events.
-app.post("/internal/login-alert", async (req, res) => {
-  const remoteIp = req.socket.remoteAddress;
-  if (
-    remoteIp !== "127.0.0.1" &&
-    remoteIp !== "::1" &&
-    remoteIp !== "::ffff:127.0.0.1"
-  ) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  const systemCrypto = (
-    await import("../../../../src/backend/utils/system-crypto.js")
-  ).SystemCrypto;
-  const expectedToken = await systemCrypto.getInstance().getInternalAuthToken();
-  const token = req.headers["x-internal-auth"];
-  if (!token || token !== expectedToken) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  const { hostId, userId, sshUser, fromIp } = req.body as {
-    hostId: number;
-    userId: string;
-    sshUser: string;
-    fromIp: string;
-  };
-  notifyAutomationInternalEvent("user_login", userId, hostId, {
-    sshUser,
-    fromIp,
-  });
-  res.json({ ok: true });
-});
-
-app.use(authManager.createAuthMiddleware());
+// Core authenticates every /plugin-api request before it reaches this app.
 const requireAdmin = authManager.createAdminMiddleware();
 
 async function fetchAllHosts(
@@ -2163,124 +2125,68 @@ app.post("/refresh", async (req, res) => {
 });
 
 /**
- * @openapi
- * /host-updated:
- *   post:
- *     summary: Start polling for updated host
- *     description: Starts polling for a specific host after it has been updated.
- *     tags:
- *       - Host Metrics
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               hostId:
- *                 type: integer
- *     responses:
- *       200:
- *         description: Host polling started.
- *       400:
- *         description: Invalid hostId.
- *       401:
- *         description: Session expired - please log in again.
- *       404:
- *         description: Host not found.
- *       500:
- *         description: Failed to start polling.
+ * Reacts to a host being created or updated somewhere in core.
+ *
+ * Used to be POST /host-updated on this plugin's own port. An event now, so
+ * there is no service-to-service HTTP call and no port. The acting user comes
+ * with the event because re-reading a host needs their data key.
  */
-app.post("/host-updated", async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { hostId } = req.body;
+export async function onHostUpdated(payload: {
+  hostId: number;
+  userId: string;
+}): Promise<void> {
+  const { hostId, userId } = payload;
+  if (!hostId || !userId) return;
 
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  if (!hostId || typeof hostId !== "number") {
-    return res.status(400).json({ error: "Invalid hostId" });
-  }
+  // No data key means that user is not unlocked on this process, so there is
+  // nothing to decrypt the host with. Polling resumes when they next log in.
+  if (DataCrypto.getUserDataKey(userId) === null) return;
 
   try {
     hostPollCache.invalidate(hostId);
     const host = await fetchHostById(hostId, userId);
-    if (host) {
-      connectionPool.clearKeyConnections(getPoolKey(host));
+    if (!host) return;
 
-      await pollingManager.startPollingForHost(host);
-      res.json({ message: "Host polling started" });
-    } else {
-      res.status(404).json({ error: "Host not found" });
-    }
+    connectionPool.clearKeyConnections(getPoolKey(host));
+    await pollingManager.startPollingForHost(host);
   } catch (error) {
     statsLogger.error("Failed to start polling for host", error, {
       operation: "host_updated",
       hostId,
       userId,
     });
-    res.status(500).json({ error: "Failed to start polling" });
   }
-});
+}
 
-/**
- * @openapi
- * /host-deleted:
- *   post:
- *     summary: Stop polling for deleted host
- *     description: Stops polling for a specific host after it has been deleted.
- *     tags:
- *       - Host Metrics
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               hostId:
- *                 type: integer
- *     responses:
- *       200:
- *         description: Host polling stopped.
- *       400:
- *         description: Invalid hostId.
- *       401:
- *         description: Session expired - please log in again.
- *       500:
- *         description: Failed to stop polling.
- */
-app.post("/host-deleted", async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { hostId } = req.body;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  if (!hostId || typeof hostId !== "number") {
-    return res.status(400).json({ error: "Invalid hostId" });
-  }
+/** Reacts to a host being deleted. Was POST /host-deleted. */
+export function onHostDeleted(payload: { hostId: number }): void {
+  const { hostId } = payload;
+  if (!hostId) return;
 
   try {
     pollingManager.stopPollingForHost(hostId, true);
-    res.json({ message: "Host polling stopped" });
   } catch (error) {
     statsLogger.error("Failed to stop polling for host", error, {
       operation: "host_deleted",
       hostId,
-      userId,
     });
-    res.status(500).json({ error: "Failed to stop polling" });
   }
-});
+}
+
+/** Reacts to an SSH login. Was the internal POST /internal/login-alert. */
+export function onHostLogin(payload: {
+  hostId: number;
+  userId: string;
+  sshUser: string;
+  fromIp: string;
+}): void {
+  const { hostId, userId, sshUser, fromIp } = payload;
+  if (!hostId || !userId) return;
+  notifyAutomationInternalEvent("user_login", userId, hostId, {
+    sshUser,
+    fromIp,
+  });
+}
 
 /**
  * @openapi
@@ -3147,41 +3053,30 @@ registerManagerRoutes(app, {
   },
 });
 
-export const PORT = 30005;
-
 let cleanupInterval: NodeJS.Timeout | undefined;
 
 /**
- * Starts the Host Metrics HTTP service. Called from the plugin's activate()
- * instead of running at module scope, so enabling/disabling the plugin
- * actually starts and stops the listener.
+ * Mounts the Host Metrics routes on the router core provides. Called from the
+ * plugin's activate(); there is no port to bind any more.
  */
-export function startHostMetricsService(): ReturnType<
-  typeof listenOnServicePort
-> {
-  return listenOnServicePort({
-    app,
-    port: PORT,
-    logger: statsLogger,
-    serviceName: "metrics",
-    onListening: async () => {
-      try {
-        await authManager.initialize();
-      } catch (err) {
-        statsLogger.error("Failed to initialize AuthManager", err, {
-          operation: "auth_init_error",
-        });
-      }
+export async function startHostMetricsService(mountOn: Router): Promise<void> {
+  mountOn.use(app);
 
-      cleanupInterval = setInterval(
-        () => {
-          authFailureTracker.cleanup();
-          pollingBackoff.cleanup();
-        },
-        10 * 60 * 1000,
-      );
+  try {
+    await authManager.initialize();
+  } catch (err) {
+    statsLogger.error("Failed to initialize AuthManager", err, {
+      operation: "auth_init_error",
+    });
+  }
+
+  cleanupInterval = setInterval(
+    () => {
+      authFailureTracker.cleanup();
+      pollingBackoff.cleanup();
     },
-  });
+    10 * 60 * 1000,
+  );
 }
 
 /**

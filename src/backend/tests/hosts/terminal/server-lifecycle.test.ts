@@ -1,14 +1,18 @@
 /**
- * The terminal WS server's start/stop lifecycle, which the ssh-terminal plugin
- * drives. The point of this test is the observable consequence of disabling
- * the plugin: the port actually stops listening.
+ * The terminal WS server's lifecycle, which the ssh-terminal plugin drives.
+ *
+ * There is no terminal port any more: core serves the socket at
+ * /plugin-ws/ssh-terminal/terminal and the plugin hands each upgrade to the
+ * WebSocketServer this module owns. So the thing worth asserting changed with
+ * it. It used to be "the port stops listening"; it is now "the module binds
+ * nothing on import, and disabling the plugin closes the live sessions", which
+ * is what disabling a transport owner has to mean when core owns the socket.
  *
  * The terminal module is heavy (it pulls in the whole SSH stack), so this
- * exercises only the lifecycle functions, on a non-default port.
+ * exercises only the lifecycle surface.
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import net from "node:net";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentHostResolutionRepository: () => ({}),
@@ -18,65 +22,29 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentSessionRecordingRepository: () => ({}),
 }));
 
-const TEST_PORT = 39002;
-
-function isListening(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = net.connect({ port, host: "127.0.0.1" });
-    socket.once("connect", () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once("error", () => resolve(false));
-  });
-}
-
 describe("terminal server lifecycle", () => {
-  afterEach(async () => {
+  it("binds no port of its own", async () => {
+    const terminal = await import("../../../hosts/terminal/index.js");
+
+    // The old module exported a port and a listen() call. Both are gone, and
+    // their absence is the contract: a plugin that binds its own port is
+    // exactly what A4 removed.
+    expect("TERMINAL_WS_PORT" in terminal).toBe(false);
+    expect("startTerminalServer" in terminal).toBe(false);
+  });
+
+  it("exposes an upgrade handler for core to route to", async () => {
+    const { handleTerminalUpgrade } =
+      await import("../../../hosts/terminal/index.js");
+
+    expect(typeof handleTerminalUpgrade).toBe("function");
+  });
+
+  it("is idempotent on stop, so a double deactivate is safe", async () => {
     const { stopTerminalServer } =
       await import("../../../hosts/terminal/index.js");
-    await stopTerminalServer();
-  });
 
-  it("does not listen until it is started", async () => {
-    await import("../../../hosts/terminal/index.js");
-    // Importing the module must not bind the port: the plugin decides that.
-    expect(await isListening(TEST_PORT)).toBe(false);
-  });
-
-  it("listens after start and frees the port after stop", async () => {
-    const { startTerminalServer, stopTerminalServer } =
-      await import("../../../hosts/terminal/index.js");
-
-    await startTerminalServer(TEST_PORT);
-    expect(await isListening(TEST_PORT)).toBe(true);
-
-    await stopTerminalServer();
-    // This is what "disabling the plugin" has to mean for a transport owner.
-    expect(await isListening(TEST_PORT)).toBe(false);
-  });
-
-  it("is idempotent on both ends", async () => {
-    const { startTerminalServer, stopTerminalServer } =
-      await import("../../../hosts/terminal/index.js");
-
-    await startTerminalServer(TEST_PORT);
-    await startTerminalServer(TEST_PORT);
-    expect(await isListening(TEST_PORT)).toBe(true);
-
-    await stopTerminalServer();
-    await stopTerminalServer();
-    expect(await isListening(TEST_PORT)).toBe(false);
-  });
-
-  it("can be restarted, so re-enabling the plugin works", async () => {
-    const { startTerminalServer, stopTerminalServer } =
-      await import("../../../hosts/terminal/index.js");
-
-    await startTerminalServer(TEST_PORT);
-    await stopTerminalServer();
-    await startTerminalServer(TEST_PORT);
-
-    expect(await isListening(TEST_PORT)).toBe(true);
+    await expect(stopTerminalServer()).resolves.toBeUndefined();
+    await expect(stopTerminalServer()).resolves.toBeUndefined();
   });
 });

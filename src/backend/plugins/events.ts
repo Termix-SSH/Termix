@@ -34,6 +34,12 @@ export const TOPICS = {
   hostStatus: "host.status",
   /** A health check result. */
   hostHealthCheck: "host.health_check",
+  /** A host's connection details changed and pollers should re-read them. */
+  hostUpdated: "host.updated",
+  /** A host was deleted and any poller holding it should drop it. */
+  hostDeleted: "host.deleted",
+  /** Someone logged in over SSH to a host. */
+  hostLogin: "host.login",
 } as const;
 
 export type EventListener = (payload: unknown) => void;

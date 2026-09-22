@@ -1,49 +1,24 @@
-// Mounted at /plugin-api. Every installed plugin that exposes backend routes
-// registers a sub-router here under its own plugin id, and this dispatcher
-// forwards matching requests to it. The plugin runtime populates the map via
-// registerPluginRouter when a plugin activates, and clears it on deactivate,
-// so an inactive plugin falls back to the 404 below.
+// Mounted at /plugin-api. Every plugin that serves HTTP registers a router
+// through ctx.http.router(), and this dispatcher forwards requests to it by
+// plugin id. The routers themselves live in src/backend/plugins/http.ts, which
+// also owns the middleware stack in front of them: auth, the actor, the
+// enabled check, body limits and the error wrapper.
 //
-// WebSocket note: plugin WS traffic does NOT get its own port from the
-// 30001-30006 range. It rides the existing WS servers (e.g. the terminal or
-// tunnel WS servers) using a named-channel envelope, the same way other
-// features multiplex over a shared connection. This is a settled decision,
-// not a placeholder, so it should not need revisiting when plugin WS support
-// is implemented.
+// The dispatcher stays deliberately thin. It resolves a plugin id to a router
+// and nothing else, so there is no place here for a check keyed on a
+// particular plugin.
+//
+// WebSocket note: plugin sockets do NOT ride this router, and they do not get
+// their own port either. They are served at /plugin-ws/<id>/<path> from the
+// main server's upgrade event by src/backend/plugins/ws.ts. (An earlier
+// comment here described a named-channel envelope multiplexed over the
+// existing WS servers; A4 replaced that with the /plugin-ws prefix.)
 
-import express, { type Request, type Response, type Router } from "express";
+import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
+import { getPluginRouter } from "../../plugins/http.js";
 
 const router = express.Router();
-
-const activePluginRouters = new Map<string, Router>();
-
-/**
- * Called by the plugin runtime when a plugin activates. Replacing an existing
- * entry is normal: a crash-restart re-registers under the same id.
- */
-export function registerPluginRouter(
-  pluginId: string,
-  pluginRouter: Router,
-): void {
-  activePluginRouters.set(pluginId, pluginRouter);
-  databaseLogger.info("Registered plugin API router", {
-    operation: "plugin_api_register",
-    pluginId,
-  });
-}
-
-export function unregisterPluginRouter(pluginId: string): void {
-  if (!activePluginRouters.delete(pluginId)) return;
-  databaseLogger.info("Unregistered plugin API router", {
-    operation: "plugin_api_register",
-    pluginId,
-  });
-}
-
-export function getRegisteredPluginIds(): string[] {
-  return [...activePluginRouters.keys()];
-}
 
 /**
  * @openapi
@@ -51,8 +26,9 @@ export function getRegisteredPluginIds(): string[] {
  *   get:
  *     summary: Dispatch a request to an installed plugin's backend router
  *     description: >
- *       Forwards the request to the sub-router registered by the plugin with
- *       the given id. Returns 404 if the plugin is not installed or not
+ *       Forwards the request to the router the plugin with the given id
+ *       registered through ctx.http.router(). Returns 404 if the plugin is not
+ *       installed or serves no routes, and 503 if it is installed but not
  *       currently running. All HTTP methods are dispatched the same way.
  *     tags:
  *       - Plugins
@@ -62,15 +38,24 @@ export function getRegisteredPluginIds(): string[] {
  *         required: true
  *         schema:
  *           type: string
+ *       - in: path
+ *         name: path
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: Response from the plugin's router.
+ *       401:
+ *         description: Authentication required.
  *       404:
- *         description: Plugin not installed or not running.
+ *         description: Plugin not installed or serves no routes.
+ *       503:
+ *         description: Plugin is installed but not running.
  */
 router.use("/:pluginId", (req: Request, res: Response, next) => {
   const pluginId = String(req.params.pluginId);
-  const pluginRouter = activePluginRouters.get(pluginId);
+  const pluginRouter = getPluginRouter(pluginId);
 
   if (!pluginRouter) {
     databaseLogger.warn("Plugin API request for unregistered plugin", {

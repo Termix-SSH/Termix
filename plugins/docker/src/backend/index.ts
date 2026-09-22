@@ -1,9 +1,5 @@
-import { createServer, type Server } from "node:http";
-import express from "express";
-import cookieParser from "cookie-parser";
+import express, { type Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
-import { createCorsMiddleware } from "../../../../src/backend/utils/cors-config.js";
-import { createCompressionMiddleware } from "../../../../src/backend/utils/compression-config.js";
 import { logger } from "../../../../src/backend/utils/logger.js";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import { registerDockerContainerRoutes } from "./container-routes.js";
@@ -17,25 +13,21 @@ import {
   getRequestUserId,
   registerDockerSshRoutes,
 } from "./routes.js";
-import { startConsoleServer, closeConsoleServer } from "./console.js";
+import {
+  closeConsoleServer,
+  handleConsoleUpgrade,
+  startConsoleServer,
+} from "./console.js";
 
-const PORT = 30007;
-
-let httpServer: Server | null = null;
 let authManagerInstance: ReturnType<typeof AuthManager.getInstance> | null =
   null;
 
 export async function activate(ctx: PluginContext) {
+  // An express app rather than the router directly, so the existing
+  // register*Routes helpers keep the Application they expect. Core mounts it
+  // at /plugin-api/docker and runs compression, CORS, cookies, auth and body
+  // parsing in front of it.
   const app = express();
-  app.set("trust proxy", "loopback");
-  app.use(createCompressionMiddleware());
-  app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
-  app.use(cookieParser());
-
-  authManagerInstance = AuthManager.getInstance();
-  app.use(authManagerInstance.createAuthMiddleware());
-  app.use(express.json({ limit: "100mb" }));
-  app.use(express.urlencoded({ limit: "100mb", extended: true }));
   app.use((_req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
     next();
@@ -50,16 +42,9 @@ export async function activate(ctx: PluginContext) {
     dockerTimestampPattern: DOCKER_TIMESTAMP_RE,
   });
 
-  const server = createServer(app);
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(PORT, "127.0.0.1", () => {
-      server.off("error", reject);
-      resolve();
-    });
-  });
-  httpServer = server;
+  ctx.http.router<Router>({ bodyLimit: "100mb" }).use(app);
 
+  authManagerInstance = AuthManager.getInstance();
   try {
     await authManagerInstance.initialize();
   } catch (err) {
@@ -68,21 +53,27 @@ export async function activate(ctx: PluginContext) {
     });
   }
 
-  // The console server is started here rather than on import so disabling the
-  // plugin frees port 30009 and re-enabling can take it again.
   await startConsoleServer();
 
-  ctx.log.info(`Docker plugin listening on ${PORT} (console on 30009)`);
+  // Public because the console authenticates each session over the socket
+  // itself, where the container and host checks also live.
+  ctx.ws.upgrade(
+    "/console",
+    (request, socket, head) =>
+      handleConsoleUpgrade(
+        request as Parameters<typeof handleConsoleUpgrade>[0],
+        socket as Parameters<typeof handleConsoleUpgrade>[1],
+        head as Buffer,
+      ),
+    { public: true },
+  );
+
+  ctx.log.info(
+    "Docker mounted at /plugin-api/docker and /plugin-ws/docker/console",
+  );
 }
 
 export async function deactivate() {
   await closeConsoleServer();
-
-  if (httpServer) {
-    const server = httpServer;
-    httpServer = null;
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-  }
-
   authManagerInstance = null;
 }

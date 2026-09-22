@@ -5,7 +5,7 @@ const isElectron = vi.hoisted(() => vi.fn());
 const remoteApi = vi.hoisted(() => ({ get: vi.fn() }));
 
 vi.mock("@/lib/electron", () => ({ isElectron }));
-vi.mock("@/main-axios", () => ({ getRemoteStatsApi: () => remoteApi }));
+vi.mock("@/main-axios", () => ({ getRemoteCoreApi: () => remoteApi }));
 
 import {
   getConnectedRemoteApi,

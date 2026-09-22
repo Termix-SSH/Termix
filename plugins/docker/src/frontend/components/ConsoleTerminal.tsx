@@ -9,11 +9,8 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Button } from "@/components/button.tsx";
 import { Select2 } from "@/components/select2";
 import { Card, CardContent } from "@/components/card.tsx";
-import { getBasePath } from "@/lib/base-path";
-import {
-  resolveConnectionOrigin,
-  buildOriginWsUrl,
-} from "@/lib/connection-origin.ts";
+import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
+import { pluginWsUrl } from "@/lib/plugin-transport";
 import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import type { SSHHost } from "@/types";
@@ -299,40 +296,21 @@ function ConsoleTerminalInner({
 
       const isElectronApp = isElectron();
 
-      const isDev =
-        !isElectronApp &&
-        process.env.NODE_ENV === "development" &&
-        (window.location.port === "3000" ||
-          window.location.port === "5173" ||
-          window.location.port === "");
+      const origin = isElectronApp
+        ? await resolveConnectionOrigin({
+            connectionType: "ssh",
+            connectionOrigin: hostConfig.connectionOrigin,
+          })
+        : "local";
 
-      let baseWsUrl: string;
-      let wsProtocols: string[] = [];
-      if (isDev) {
-        baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30009`;
-      } else if (isElectronApp) {
-        const origin = await resolveConnectionOrigin({
-          connectionType: "ssh",
-          connectionOrigin: hostConfig.connectionOrigin,
-        });
-        const resolvedUrl = await buildOriginWsUrl({
-          origin,
-          localPort: 30009,
-          localPath: "/docker/console/",
-          remotePath: "/docker/console/",
-        });
-        if (!resolvedUrl) {
-          setIsConnecting(false);
-          toast.error(t("errors.remoteServerRequired"));
-          return;
-        }
-        baseWsUrl = resolvedUrl.url;
-        wsProtocols = resolvedUrl.protocols;
-      } else {
-        baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/docker/console/`;
+      const resolvedUrl = await pluginWsUrl("docker", "/console", { origin });
+      if (!resolvedUrl) {
+        setIsConnecting(false);
+        toast.error(t("errors.remoteServerRequired"));
+        return;
       }
 
-      const ws = new WebSocket(baseWsUrl, wsProtocols);
+      const ws = new WebSocket(resolvedUrl.url, resolvedUrl.protocols);
 
       ws.onopen = () => {
         const cols = terminal.cols || 80;

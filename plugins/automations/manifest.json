@@ -23,6 +23,7 @@
     "events:core",
     "notify:send",
     "network:outbound",
+    "network:serve",
     "ui:surface"
   ],
   "locales": "locales",

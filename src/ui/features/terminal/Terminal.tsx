@@ -27,11 +27,8 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
 import { useTranslation } from "react-i18next";
-import { getBasePath } from "@/lib/base-path";
-import {
-  resolveConnectionOrigin,
-  buildOriginWsUrl,
-} from "@/lib/connection-origin.ts";
+import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
+import { pluginWsUrl } from "@/lib/plugin-transport";
 import {
   getCookie,
   isElectron,
@@ -1536,30 +1533,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         shouldNotReconnectRef.current = false;
       }
 
-      const isDev =
-        !isElectron() &&
-        process.env.NODE_ENV === "development" &&
-        (window.location.port === "3000" ||
-          window.location.port === "5173" ||
-          window.location.port === "");
-
       let baseWsUrl: string;
       let wsProtocols: string[] = [];
       let outboundHostConfig = hostConfig;
 
-      if (isDev) {
-        baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
-      } else if (isElectron()) {
-        const origin = await resolveConnectionOrigin({
-          connectionType: "ssh",
-          connectionOrigin: hostConfig.connectionOrigin as
-            "local" | "remote" | null | undefined,
-        });
-        const resolvedUrl = await buildOriginWsUrl({
+      {
+        const origin = isElectron()
+          ? await resolveConnectionOrigin({
+              connectionType: "ssh",
+              connectionOrigin: hostConfig.connectionOrigin as
+                "local" | "remote" | null | undefined,
+            })
+          : "local";
+        const resolvedUrl = await pluginWsUrl("ssh-terminal", "/terminal", {
           origin,
-          localPort: 30002,
-          localPath: "",
-          remotePath: "/ssh/websocket/",
         });
         if (!resolvedUrl) {
           setIsConnected(false);
@@ -1568,7 +1555,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           isConnectingRef.current = false;
           return;
         }
-        if (origin === "local") {
+        if (isElectron() && origin === "local") {
           try {
             outboundHostConfig = await hydrateLocalSharedHostAuth(hostConfig);
           } catch (error) {
@@ -1586,8 +1573,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         baseWsUrl = resolvedUrl.url;
         wsProtocols = resolvedUrl.protocols;
-      } else {
-        baseWsUrl = `${getBasePath()}/ssh/websocket/`;
       }
 
       if (

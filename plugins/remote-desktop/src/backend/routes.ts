@@ -1,10 +1,9 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
-import express from "express";
+import express, { type Router } from "express";
 import { GuacamoleTokenService } from "./token-service.js";
 import { withRecordingSettings } from "./recording-settings.js";
 import { withDriveSettings } from "./drive-settings.js";
 import { guacLogger } from "../../../../src/backend/utils/logger.js";
-import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import { PermissionManager } from "../../../../src/backend/utils/permission-manager.js";
 import {
   resolveRecipientSharedHostAuthentication,
@@ -37,10 +36,10 @@ import { createMacosVncCompatibilityProxy } from "./macos-vnc-proxy.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
-const authManager = AuthManager.getInstance();
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 
-router.use(authManager.createAuthMiddleware());
+// Core authenticates every /plugin-api route before it reaches here, so the
+// router no longer applies its own middleware.
 
 router.get("/connection/:connectId", (req: AuthenticatedRequest, res) => {
   if (!req.userId)
@@ -816,7 +815,7 @@ router.get("/status", async (req, res) => {
         status: isConnected ? "connected" : "disconnected",
       },
       websocket: {
-        port: 30008,
+        path: "/plugin-ws/remote-desktop/display",
         status: "running",
       },
     });
@@ -829,3 +828,7 @@ router.get("/status", async (req, res) => {
 });
 
 export { router };
+
+export function startRemoteDesktopService(mountOn: Router): void {
+  mountOn.use(router);
+}

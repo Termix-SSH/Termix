@@ -29,8 +29,18 @@ import type { SecretRegistration } from "./secret-registry.js";
 import { assertCapability } from "./permissions.js";
 import { getActor, runAsActor } from "./actor.js";
 import { DisposableBag } from "./disposables.js";
+import {
+  createPluginRouter,
+  createRbacMiddleware,
+  unregisterPluginHttp,
+} from "./http.js";
+import { registerPluginWsRoute, registerPluginWsUpgrade } from "./ws.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
-import type { PluginContext, PluginModule } from "@termix/plugin-sdk/backend";
+import {
+  PluginCapabilityError,
+  type PluginContext,
+  type PluginModule,
+} from "@termix/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
 
@@ -410,6 +420,63 @@ export function createPluginContext(
         }),
     },
 
+    http: {
+      router: (options) => {
+        // Declared here, granted per request: the grant lives in the database
+        // and router() has to be synchronous so a plugin can register routes
+        // inline in activate. http.ts re-checks on every request.
+        if (!declared.includes("network:serve")) {
+          throw new PluginCapabilityError(pluginId, "network:serve");
+        }
+
+        const router = createPluginRouter({
+          manifest,
+          options,
+          reportError: (error) => void reportRuntimeError(pluginId, error),
+        });
+
+        handle.bag.add(
+          () => unregisterPluginHttp(pluginId),
+          `HTTP router for ${pluginId}`,
+        );
+        return router as never;
+      },
+    },
+
+    ws: {
+      route: (path, wsHandler, options) => {
+        if (!declared.includes("network:serve")) {
+          throw new PluginCapabilityError(pluginId, "network:serve");
+        }
+        const dispose = registerPluginWsRoute(
+          pluginId,
+          path,
+          wsHandler,
+          declared,
+          options,
+        );
+        handle.bag.add(dispose, `WebSocket route "${path}"`);
+      },
+
+      upgrade: (path, upgradeHandler, options) => {
+        if (!declared.includes("network:serve")) {
+          throw new PluginCapabilityError(pluginId, "network:serve");
+        }
+        const dispose = registerPluginWsUpgrade(
+          pluginId,
+          path,
+          upgradeHandler as never,
+          declared,
+          options,
+        );
+        handle.bag.add(dispose, `WebSocket upgrade "${path}"`);
+      },
+    },
+
+    rbac: {
+      require: (permission) => createRbacMiddleware(manifest, permission),
+    },
+
     disposables: {
       add: (dispose) => handle.bag.add(dispose, "plugin resource"),
     },
@@ -437,6 +504,24 @@ export function createPluginContext(
 
     currentActor: () => getActor(),
   };
+}
+
+/**
+ * Feeds a route or socket error into the loader's error budget.
+ *
+ * Lazily imported: index.ts owns the loader and imports this module, so a
+ * static import here would close the cycle.
+ */
+async function reportRuntimeError(
+  pluginId: string,
+  error: unknown,
+): Promise<void> {
+  try {
+    const { getPluginRuntime } = await import("./index.js");
+    await getPluginRuntime().loader.reportError(pluginId, error);
+  } catch {
+    // The budget is a safety net, not a dependency of serving a request.
+  }
 }
 
 function assertKvKey(key: string): void {

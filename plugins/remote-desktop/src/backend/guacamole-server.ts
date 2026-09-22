@@ -24,7 +24,6 @@ function readGuacdOptions(): { host: string; port: number } {
   return resolveGuacdOptions(dbUrl);
 }
 
-export const GUAC_WS_PORT = 30008;
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 const GUACAMOLE_RECORDINGS_DIR =
   process.env.GUACD_RECORDING_BACKEND_PATH ||
@@ -121,9 +120,12 @@ async function persistGuacamoleRecording(
   });
 }
 
+// noServer: core owns the listening socket. guacamole-lite passes this object
+// straight to ws, and exposes the WebSocketServer it builds, so the plugin can
+// hand it an upgrade from /plugin-ws/remote-desktop/display. There is no
+// guacamole port any more.
 const websocketOptions = {
-  host: "127.0.0.1",
-  port: GUAC_WS_PORT,
+  noServer: true,
 };
 
 const clientOptions = {
@@ -253,11 +255,46 @@ function createGuacServer(): GuacamoleLite {
 let guacServer: GuacamoleLite | null = null;
 
 /**
- * Starts the guacamole-lite WebSocket server. Called from this plugin's
- * activate() -- see plugins/remote-desktop/backend/index.mjs.
+ * Builds the guacamole-lite server. Called from this plugin's activate().
+ * Nothing binds a port: handleGuacamoleUpgrade below feeds it connections.
  */
 export async function startGuacamoleService(): Promise<void> {
   guacServer = createGuacServer();
+}
+
+/**
+ * Hands one upgrade to guacamole-lite's own WebSocketServer.
+ *
+ * guacamole-lite constructs that server internally and has no "attach to this
+ * http server" option, so giving it the upgrade is the only way in. Core has
+ * already authenticated the request by the time this runs.
+ */
+export function handleGuacamoleUpgrade(
+  request: import("http").IncomingMessage,
+  socket: import("stream").Duplex,
+  head: Buffer,
+): void {
+  const server = guacServer as unknown as {
+    webSocketServer?: {
+      handleUpgrade: (
+        request: import("http").IncomingMessage,
+        socket: import("stream").Duplex,
+        head: Buffer,
+        done: (ws: unknown) => void,
+      ) => void;
+      emit: (event: string, ...args: unknown[]) => void;
+    };
+  } | null;
+
+  const wss = server?.webSocketServer;
+  if (!wss) {
+    socket.destroy();
+    return;
+  }
+
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit("connection", ws, request);
+  });
 }
 
 /**

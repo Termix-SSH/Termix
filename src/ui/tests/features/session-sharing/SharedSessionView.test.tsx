@@ -114,7 +114,7 @@ describe("SharedSessionView", () => {
     api.resolveShareLink.mockResolvedValue({
       protocol: "rdp",
       permissionLevel: "read-only",
-      wsPath: "/guacamole/websocket/",
+      wsPath: "/plugin-ws/remote-desktop/display",
       connectParams: { token: "guac-join-token" },
     });
 

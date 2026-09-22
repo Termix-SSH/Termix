@@ -1,6 +1,7 @@
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import {
   createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
@@ -23,7 +24,6 @@ type HostFolderRoutesDeps = {
   requireDeletePermission: RequestHandler;
   requireCredentialEditPermission: RequestHandler;
   requireDataAccess: RequestHandler;
-  statsServerUrl: string;
 };
 
 export function registerHostFolderRoutes(
@@ -35,7 +35,6 @@ export function registerHostFolderRoutes(
     requireDeletePermission,
     requireCredentialEditPermission,
     requireDataAccess,
-    statsServerUrl,
   }: HostFolderRoutesDeps,
 ): void {
   /**
@@ -444,30 +443,11 @@ export function registerHostFolderRoutes(
         );
 
         try {
-          const axios = (await import("axios")).default;
           for (const host of hostsToDelete) {
-            try {
-              await axios.post(
-                `${statsServerUrl}/host-deleted`,
-                { hostId: host.id },
-                {
-                  headers: {
-                    Authorization: req.headers.authorization || "",
-                    Cookie: req.headers.cookie || "",
-                  },
-                  timeout: 5000,
-                },
-              );
-            } catch (err) {
-              sshLogger.warn("Failed to notify stats server of host deletion", {
-                operation: "folder_hosts_delete",
-                hostId: host.id,
-                error: err instanceof Error ? err.message : String(err),
-              });
-            }
+            pluginEvents.emit(TOPICS.hostDeleted, { hostId: host.id, userId });
           }
         } catch (err) {
-          sshLogger.warn("Failed to notify stats server of folder deletion", {
+          sshLogger.warn("Failed to publish host deletion events", {
             operation: "folder_hosts_delete",
             folderName,
             error: err instanceof Error ? err.message : String(err),

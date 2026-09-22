@@ -1,13 +1,9 @@
 import type { AuthenticatedRequest } from "../../../../src/types/index.js";
-import express, { type Request, type Response } from "express";
+import express, { type Request, type Response, type Router } from "express";
 import { databaseLogger } from "../../../../src/backend/utils/logger.js";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import { createCurrentWorkspaceRepository } from "../../../../src/backend/database/repositories/factory.js";
 import type { WorkspaceRecord } from "../../../../src/backend/database/repositories/workspace-repository.js";
-import {
-  registerWorkspacesRouter,
-  unregisterWorkspacesRouter,
-} from "../../../../src/backend/database/routes/workspace-dispatch.js";
 
 export const router = express.Router();
 
@@ -639,10 +635,10 @@ router.delete(
   },
 );
 
-export function startWorkspacesService(): void {
-  registerWorkspacesRouter(router);
+export function startWorkspacesService(mountOn: Router): void {
+  mountOn.use(router);
 }
 
 export function stopWorkspacesService(): void {
-  unregisterWorkspacesRouter();
+  // Unmounted by the runtime when the plugin deactivates.
 }

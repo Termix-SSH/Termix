@@ -1,5 +1,5 @@
 import type { AxiosInstance } from "axios";
-import { getRemoteStatsApi } from "@/main-axios";
+import { getRemoteCoreApi } from "@/main-axios";
 import { isElectron } from "@/lib/electron";
 import type { SSHHost } from "@/types/index";
 
@@ -77,7 +77,7 @@ export async function getConnectedRemoteApi(): Promise<AxiosInstance | null> {
     const config = (await window.electronAPI?.invoke?.(
       "get-remote-sync-config",
     )) as { serverUrl?: string } | null;
-    return config?.serverUrl ? getRemoteStatsApi() : null;
+    return config?.serverUrl ? getRemoteCoreApi() : null;
   } catch {
     return null;
   }

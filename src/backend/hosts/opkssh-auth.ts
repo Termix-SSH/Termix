@@ -544,10 +544,13 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
 
     session.localPort = actualPort;
 
-    const baseUrl = session.remoteRedirectUri
-      .replace(/\/host\/opkssh-callback$/, "")
-      // In direct dev mode the WS server (30002) is separate from the HTTP API (30001)
-      .replace(/:30002\b/, ":30001");
+    // No port rewrite any more: the terminal socket used to live on 30002,
+    // separate from the HTTP API, so a redirect URI derived from it pointed at
+    // the wrong server in direct dev mode. The terminal rides 30001 now.
+    const baseUrl = session.remoteRedirectUri.replace(
+      /\/host\/opkssh-callback$/,
+      "",
+    );
     const proxiedChooserUrl = `${baseUrl}/host/opkssh-chooser/${requestId}`;
 
     session.status = "waiting_for_auth";

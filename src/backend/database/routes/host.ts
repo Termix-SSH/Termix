@@ -3,9 +3,9 @@ import { applyFolderAccessRules } from "../../utils/folder-access-inheritance.js
 import { findUsableCredential } from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
-import axios from "axios";
 import multer from "multer";
 import { sshLogger, databaseLogger } from "../../utils/logger.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -82,32 +82,29 @@ const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const STATS_SERVER_URL = "http://localhost:30005";
-
+/**
+ * Tells whoever is polling this host that its details changed.
+ *
+ * An event rather than the HTTP POST to localhost:30005 this used to be: host
+ * metrics is a plugin now and has no port of its own. Fire and forget, so a
+ * subscriber that throws cannot fail the host update that caused it.
+ */
 function notifyStatsHostUpdated(
   hostId: number,
-  headers: Pick<Request["headers"], "authorization" | "cookie">,
+  userId: string,
   operation: string,
 ): void {
-  axios
-    .post(
-      `${STATS_SERVER_URL}/host-updated`,
-      { hostId },
-      {
-        headers: {
-          Authorization: headers.authorization || "",
-          Cookie: headers.cookie || "",
-        },
-        timeout: 5000,
-      },
-    )
-    .catch((err) => {
-      sshLogger.warn("Failed to notify stats server of host update", {
-        operation,
-        hostId,
-        error: err instanceof Error ? err.message : String(err),
-      });
+  try {
+    // The user travels with the event: a subscriber re-reading the host needs
+    // a data key, and the bus carries no session of its own.
+    pluginEvents.emit(TOPICS.hostUpdated, { hostId, userId });
+  } catch (err) {
+    sshLogger.warn("Failed to publish host update event", {
+      operation,
+      hostId,
+      error: err instanceof Error ? err.message : String(err),
     });
+  }
 }
 
 const authManager = AuthManager.getInstance();
@@ -566,11 +563,7 @@ router.post(
       );
 
       res.json(stripSensitiveFields(resolvedHost));
-      notifyStatsHostUpdated(
-        createdHost.id as number,
-        req.headers,
-        "host_create",
-      );
+      notifyStatsHostUpdated(createdHost.id as number, userId, "host_create");
     } catch (err) {
       sshLogger.error("Failed to save SSH host to database", err, {
         operation: "host_create",
@@ -1483,7 +1476,7 @@ router.put(
       });
 
       res.json(stripSensitiveFields(resolvedHost));
-      notifyStatsHostUpdated(parseInt(hostId), req.headers, "host_update");
+      notifyStatsHostUpdated(parseInt(hostId), userId, "host_update");
     } catch (err) {
       sshLogger.error("Failed to update SSH host in database", err, {
         operation: "host_update",
@@ -2551,20 +2544,12 @@ router.delete(
       });
 
       try {
-        const axios = (await import("axios")).default;
-        await axios.post(
-          `${STATS_SERVER_URL}/host-deleted`,
-          { hostId: numericHostId },
-          {
-            headers: {
-              Authorization: req.headers.authorization || "",
-              Cookie: req.headers.cookie || "",
-            },
-            timeout: 5000,
-          },
-        );
+        pluginEvents.emit(TOPICS.hostDeleted, {
+          hostId: numericHostId,
+          userId,
+        });
       } catch (err) {
-        sshLogger.warn("Failed to notify stats server of host deletion", {
+        sshLogger.warn("Failed to publish host deletion event", {
           operation: "host_delete",
           hostId: numericHostId,
           error: err instanceof Error ? err.message : String(err),
@@ -2871,7 +2856,6 @@ registerHostFolderRoutes(router, {
   requireCredentialEditPermission:
     permissionManager.requirePermission("credentials.edit"),
   requireDataAccess,
-  statsServerUrl: STATS_SERVER_URL,
 });
 
 registerHostBulkRoutes(

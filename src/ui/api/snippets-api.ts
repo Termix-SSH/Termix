@@ -102,7 +102,7 @@ export async function executeSnippet(
 
 export async function getNetworkTopology(): Promise<NetworkTopologyData | null> {
   try {
-    const response = await authApi.get("/network-topology/");
+    const response = await authApi.get("/plugin-api/network-topology/");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch network topology");
@@ -113,7 +113,9 @@ export async function saveNetworkTopology(
   topology: NetworkTopologyData,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await authApi.post("/network-topology/", { topology });
+    const response = await authApi.post("/plugin-api/network-topology/", {
+      topology,
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "save network topology");

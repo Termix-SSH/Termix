@@ -3,7 +3,7 @@ import type { Workspace, WorkspacePayload } from "@/types/ui-types";
 
 export async function listWorkspaces(): Promise<Workspace[]> {
   try {
-    const response = await authApi.get("/workspaces");
+    const response = await authApi.get("/plugin-api/workspaces");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch workspaces");
@@ -17,7 +17,7 @@ export async function createWorkspace(data: {
   payload: WorkspacePayload;
 }): Promise<Workspace> {
   try {
-    const response = await authApi.post("/workspaces", data);
+    const response = await authApi.post("/plugin-api/workspaces", data);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "create workspace");
@@ -29,7 +29,7 @@ export async function renameWorkspace(
   data: { name?: string; color?: string | null; icon?: string | null },
 ): Promise<Workspace> {
   try {
-    const response = await authApi.patch(`/workspaces/${id}`, data);
+    const response = await authApi.patch(`/plugin-api/workspaces/${id}`, data);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update workspace");
@@ -41,7 +41,7 @@ export async function updateWorkspaceContent(
   payload: WorkspacePayload,
 ): Promise<Workspace> {
   try {
-    const response = await authApi.put(`/workspaces/${id}/content`, {
+    const response = await authApi.put(`/plugin-api/workspaces/${id}/content`, {
       payload,
     });
     return response.data;
@@ -54,7 +54,7 @@ export async function deleteWorkspace(
   id: number,
 ): Promise<{ success: boolean }> {
   try {
-    const response = await authApi.delete(`/workspaces/${id}`);
+    const response = await authApi.delete(`/plugin-api/workspaces/${id}`);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "delete workspace");
@@ -66,9 +66,12 @@ export async function duplicateWorkspace(
   name: string,
 ): Promise<Workspace> {
   try {
-    const response = await authApi.post(`/workspaces/${id}/duplicate`, {
-      name,
-    });
+    const response = await authApi.post(
+      `/plugin-api/workspaces/${id}/duplicate`,
+      {
+        name,
+      },
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "duplicate workspace");
@@ -77,7 +80,9 @@ export async function duplicateWorkspace(
 
 export async function setDefaultWorkspace(id: number): Promise<Workspace> {
   try {
-    const response = await authApi.post(`/workspaces/${id}/set-default`);
+    const response = await authApi.post(
+      `/plugin-api/workspaces/${id}/set-default`,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "set default workspace");
@@ -86,7 +91,9 @@ export async function setDefaultWorkspace(id: number): Promise<Workspace> {
 
 export async function unsetDefaultWorkspace(id: number): Promise<Workspace> {
   try {
-    const response = await authApi.post(`/workspaces/${id}/unset-default`);
+    const response = await authApi.post(
+      `/plugin-api/workspaces/${id}/unset-default`,
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "unset default workspace");
@@ -95,7 +102,7 @@ export async function unsetDefaultWorkspace(id: number): Promise<Workspace> {
 
 export async function applyWorkspaceServer(id: number): Promise<Workspace> {
   try {
-    const response = await authApi.post(`/workspaces/${id}/apply`);
+    const response = await authApi.post(`/plugin-api/workspaces/${id}/apply`);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "apply workspace");
@@ -104,7 +111,7 @@ export async function applyWorkspaceServer(id: number): Promise<Workspace> {
 
 export async function getLastSessionWorkspace(): Promise<Workspace | null> {
   try {
-    const response = await authApi.get("/workspaces/last-session");
+    const response = await authApi.get("/plugin-api/workspaces/last-session");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch last session workspace");
@@ -115,7 +122,7 @@ export async function saveLastSessionWorkspace(
   payload: WorkspacePayload,
 ): Promise<Workspace> {
   try {
-    const response = await authApi.put("/workspaces/last-session", {
+    const response = await authApi.put("/plugin-api/workspaces/last-session", {
       payload,
     });
     return response.data;

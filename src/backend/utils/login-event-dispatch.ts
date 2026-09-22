@@ -1,8 +1,14 @@
-import { SystemCrypto } from "./system-crypto.js";
+import { pluginEvents, TOPICS } from "../plugins/events.js";
 import { sshLogger } from "./logger.js";
 
-const METRICS_SERVICE_URL = "http://localhost:30005";
-
+/**
+ * Announces an SSH login so anything watching can react to it.
+ *
+ * Was an HTTP POST to the metrics service on localhost:30005. Host metrics is
+ * a plugin now and has no port, so this publishes on the plugin event bus and
+ * the plugin subscribes. Fire and forget: a subscriber that throws must never
+ * fail the login that caused it.
+ */
 export async function dispatchLoginEvent(
   hostId: number,
   userId: string,
@@ -10,24 +16,7 @@ export async function dispatchLoginEvent(
   fromIp: string,
 ): Promise<void> {
   try {
-    const token = await SystemCrypto.getInstance().getInternalAuthToken();
-    const response = await fetch(
-      `${METRICS_SERVICE_URL}/internal/login-alert`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-internal-auth": token,
-        },
-        body: JSON.stringify({ hostId, userId, sshUser, fromIp }),
-      },
-    );
-    if (!response.ok) {
-      const details = await response.text();
-      throw new Error(
-        `Metrics service returned ${response.status}${details ? `: ${details}` : ""}`,
-      );
-    }
+    pluginEvents.emit(TOPICS.hostLogin, { hostId, userId, sshUser, fromIp });
   } catch (err) {
     sshLogger.warn("Failed to dispatch login event", {
       operation: "login_event_dispatch_error",

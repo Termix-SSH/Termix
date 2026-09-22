@@ -9,10 +9,6 @@ import { PermissionManager } from "../../../../src/backend/utils/permission-mana
 import { apiLogger } from "../../../../src/backend/utils/logger.js";
 import { fetchWithProxy } from "../../../../src/backend/utils/proxy-agent.js";
 import { createCurrentSettingsRepository } from "../../../../src/backend/database/repositories/factory.js";
-import {
-  registerTailscaleRouter,
-  unregisterTailscaleRouter,
-} from "../../../../src/backend/database/routes/tailscale-dispatch.js";
 
 interface TailscaleDevice {
   id: string;
@@ -152,12 +148,12 @@ router.get(
 
 /** Called from activate(). Mounts this router at /tailscale via the shared
  * dispatcher. */
-export function startTailscaleService(): void {
-  registerTailscaleRouter(router);
+export function startTailscaleService(mountOn: Router): void {
+  mountOn.use(router);
 }
 
 /** Called from deactivate(). /tailscale/* falls back to 404 until
  * reactivated. */
 export function stopTailscaleService(): void {
-  unregisterTailscaleRouter();
+  // Unmounted by the runtime when the plugin deactivates.
 }

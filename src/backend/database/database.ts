@@ -10,32 +10,25 @@ import hostRoutes from "./routes/host.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
-import fleetsDispatch from "./routes/fleet-dispatch.js";
-import workspaceDispatch from "./routes/workspace-dispatch.js";
 import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
 import terminalRoutes from "./routes/terminal.js";
 import sessionLogRoutes from "./routes/session-log-routes.js";
-import guacamoleDispatch from "./routes/guacamole-dispatch.js";
 import sessionSharingRoutes from "../hosts/session-sharing/routes.js";
 import collabRoutes from "../hosts/collab/routes.js";
-import networkTopologyDispatch from "./routes/network-topology-dispatch.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
 import userPreferencesRoutes from "./routes/user-preferences.js";
 import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
 import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
 import uiPreferencesRoutes from "./routes/ui-preferences.js";
-import proxmoxDispatch from "./routes/proxmox-dispatch.js";
 import termixIdRoutes from "./routes/termix-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
-import tailscaleDispatch from "./routes/tailscale-dispatch.js";
 import vaultRoutes from "./routes/vault.js";
 import secretSourceRoutes from "./routes/secret-sources.js";
 import notificationChannelsRoutes from "./routes/notification-channels-routes.js";
-import aiDispatch from "./routes/ai-dispatch.js";
-import automationsDispatch from "./routes/automation-dispatch.js";
 import syncRoutes from "./routes/sync.js";
 import pluginApiRoutes from "./routes/plugin-api-routes.js";
+import { attachPluginWebSockets } from "../plugins/ws.js";
 import pluginRoutes from "./routes/plugins.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
@@ -263,8 +256,23 @@ async function fetchGitHubAPI<T>(
   }
 }
 
-app.use(bodyParser.json({ limit: "2mb" }));
-app.use(bodyParser.urlencoded({ limit: "2mb", extended: true }));
+// Skipped for /plugin-api: a plugin router brings its own parsers with its own
+// limit (see plugins/http.ts), and parsing here first would consume the body
+// and silently cap every plugin at this limit instead.
+const coreJsonParser = bodyParser.json({ limit: "2mb" });
+const coreUrlencodedParser = bodyParser.urlencoded({
+  limit: "2mb",
+  extended: true,
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/plugin-api/")) return next();
+  coreJsonParser(req, res, next);
+});
+app.use((req, res, next) => {
+  if (req.path.startsWith("/plugin-api/")) return next();
+  coreUrlencodedParser(req, res, next);
+});
 app.use(cookieParser());
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
@@ -1753,29 +1761,21 @@ app.use("/host", hostRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
-app.use("/fleets", fleetsDispatch);
-app.use("/workspaces", workspaceDispatch);
 app.use("/c2s-tunnel-presets", c2sTunnelPresetRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/session_logs", sessionLogRoutes);
-app.use("/guacamole", guacamoleDispatch);
 app.use("/session-sharing", sessionSharingRoutes);
 app.use("/collab", collabRoutes);
-app.use("/network-topology", networkTopologyDispatch);
 app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
 app.use("/user-preferences", userPreferencesRoutes);
 app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
 app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
-app.use("/proxmox", proxmoxDispatch);
 app.use("/termix-id", termixIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
-app.use("/tailscale", tailscaleDispatch);
 app.use("/vault", vaultRoutes);
 app.use("/secret-sources", secretSourceRoutes);
-app.use("/automations", automationsDispatch);
-app.use("/ai", aiDispatch);
 app.use("/", notificationChannelsRoutes);
 app.use("/sync", syncRoutes);
 app.use("/plugins", pluginRoutes);
@@ -2028,6 +2028,10 @@ app.get(
 
 const httpServer = http.createServer(app);
 
+// Plugin sockets ride this server at /plugin-ws/<id>/<path>. Anything else is
+// left alone, so core's own upgrade handling is unaffected.
+attachPluginWebSockets(httpServer);
+
 httpServer.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EADDRINUSE") {
     databaseLogger.error(
@@ -2075,6 +2079,8 @@ if (
       },
       app,
     );
+
+    attachPluginWebSockets(httpsServer);
 
     httpsServer.on("error", (err: NodeJS.ErrnoException) => {
       if (err.code === "EADDRINUSE") {

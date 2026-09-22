@@ -47,7 +47,7 @@ export async function getTailscaleDevices(): Promise<{
   error?: string;
 }> {
   try {
-    const response = await authApi.get("/tailscale/devices");
+    const response = await authApi.get("/plugin-api/tailscale/devices");
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {

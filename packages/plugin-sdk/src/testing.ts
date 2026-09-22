@@ -17,6 +17,7 @@ import type {
 import type { TermixApp } from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
+import type { PluginMiddleware, PluginRouterOptions } from "./backend.js";
 import type { SyncEntityRegistration } from "./backend.js";
 
 export interface FakeContextOptions {
@@ -38,6 +39,10 @@ export interface FakePluginContext {
   tables: PluginTableDefinition[];
   /** Sync entities registered through ctx.sync.registerEntity, in order. */
   syncEntities: SyncEntityRegistration[];
+  /** WebSocket routes registered through ctx.ws, in order. */
+  wsRoutes: Array<{ path: string; raw: boolean }>;
+  /** Router options passed to ctx.http.router, in order. */
+  httpRouters: Array<PluginRouterOptions | undefined>;
 }
 
 function noopLogger(): PluginLogger {
@@ -63,6 +68,8 @@ export function createFakeContext(
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
+  const wsRoutes: Array<{ path: string; raw: boolean }> = [];
+  const httpRouters: Array<PluginRouterOptions | undefined> = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   let actor = options.actor;
 
@@ -153,6 +160,30 @@ export function createFakeContext(
       getShared: async () => null,
     },
 
+    http: {
+      // No express here: a test that needs a real router should mount the
+      // plugin's own route module against its own express app.
+      router: (routerOptions) => {
+        httpRouters.push(routerOptions);
+        return undefined as never;
+      },
+    },
+
+    ws: {
+      route: (path) => {
+        wsRoutes.push({ path, raw: false });
+      },
+      upgrade: (path) => {
+        wsRoutes.push({ path, raw: true });
+      },
+    },
+
+    rbac: {
+      // Passes everything through: a test asserting a permission gate should
+      // drive PermissionManager, not this double.
+      require: () => ((_req, _res, next) => next()) as PluginMiddleware,
+    },
+
     disposables,
 
     asUser: async (userId, fn) => {
@@ -168,7 +199,16 @@ export function createFakeContext(
     currentActor: () => actor,
   };
 
-  return { ctx, disposals, emitted, kv, tables, syncEntities };
+  return {
+    ctx,
+    disposals,
+    emitted,
+    kv,
+    tables,
+    syncEntities,
+    wsRoutes,
+    httpRouters,
+  };
 }
 
 export interface MockContextOptions {
@@ -284,6 +324,24 @@ export function createMockCtx(
         ctx.events.emit(topic, payload);
       },
       on: (topic, listener) => ctx.events.on(topic, listener),
+    },
+
+    http: {
+      router: (routerOptions) => {
+        require("network:serve");
+        return ctx.http.router(routerOptions);
+      },
+    },
+
+    ws: {
+      route: (path, handler, wsOptions) => {
+        require("network:serve");
+        ctx.ws.route(path, handler, wsOptions);
+      },
+      upgrade: (path, handler, wsOptions) => {
+        require("network:serve");
+        ctx.ws.upgrade(path, handler, wsOptions);
+      },
     },
   };
 

@@ -14,7 +14,7 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": ["db:own", "ui:surface"],
+  "capabilities": ["db:own", "network:serve", "ui:surface"],
   "contributes": {
     "tabs": [
       {

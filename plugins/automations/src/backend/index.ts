@@ -6,10 +6,14 @@ import {
 } from "./scheduler.js";
 
 export async function activate(ctx: PluginContext) {
-  startAutomationsService();
+  startAutomationsService(
+    // The webhook route authenticates on its own per-automation token rather
+    // than a session, which is the point of an inbound webhook.
+    ctx.http.router({ public: ["/webhook/:token"] }),
+  );
   startAutomationScheduler();
   ctx.log.info(
-    "Automations router registered at /automations; scheduler started",
+    "Automations routes mounted at /plugin-api/automations; scheduler started",
   );
 }
 

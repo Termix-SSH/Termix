@@ -17,7 +17,7 @@ import {
 // src/backend/database/routes/guacamole-dispatch.ts and that plugin's
 // README -- this is an accepted, temporary coupling until session-sharing
 // becomes a plugin of its own.
-import { createGuacamoleJoinToken } from "../../database/routes/guacamole-dispatch.js";
+import { createGuacamoleJoinToken } from "../guacamole-sessions.js";
 import { createCurrentSessionShareRepository } from "../../database/repositories/factory.js";
 
 const router = express.Router();
@@ -405,10 +405,13 @@ router.get("/resolve/:linkToken", async (req: Request, res: Response) => {
     } = {
       protocol,
       permissionLevel: share.permissionLevel as PermissionLevel,
+      // Advisory only: the client builds its own socket URL per deployment
+      // (see pluginWsUrl). Kept accurate rather than left pointing at the
+      // ports these two moved off in A4.
       wsPath:
         protocol === "ssh"
-          ? `/terminal/ws?shareToken=${encodeURIComponent(linkToken)}`
-          : "/guacamole/websocket/",
+          ? `/plugin-ws/ssh-terminal/terminal?shareToken=${encodeURIComponent(linkToken)}`
+          : "/plugin-ws/remote-desktop/display",
     };
 
     if (protocol !== "ssh") {

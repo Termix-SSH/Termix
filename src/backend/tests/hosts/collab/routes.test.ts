@@ -56,7 +56,7 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   getAuditUsername: vi.fn(async (id: string) => id.toUpperCase()),
   getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
 }));
-vi.mock("../../../database/routes/guacamole-dispatch.js", () => ({
+vi.mock("../../../hosts/guacamole-sessions.js", () => ({
   createGuacamoleJoinToken: (id: string, readOnly: boolean) =>
     `join:${id}:${readOnly}`,
 }));
@@ -646,7 +646,7 @@ describe("collab room routes", () => {
     await present(roomId, "s1");
     expect((await resolve(guestLinkToken!)).jsonBody!.stage).toMatchObject({
       protocol: "ssh",
-      wsPath: `/terminal/ws?roomGuestToken=${encodeURIComponent(guestLinkToken!)}`,
+      wsPath: `/plugin-ws/ssh-terminal/terminal?roomGuestToken=${encodeURIComponent(guestLinkToken!)}`,
     });
     state.liveOwned.set("g1", "host-1");
     await present(roomId, "g1", "vnc");

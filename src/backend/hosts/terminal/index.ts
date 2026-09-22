@@ -139,25 +139,20 @@ const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
-export const TERMINAL_WS_PORT = 30002;
-
 // Re-exported so the ssh-terminal plugin can publish it on the service
 // registry. session-manager itself stays in core: six modules outside the
 // terminal import it directly.
 export { sessionManager };
 
 /**
- * The server is created but not listening until startTerminalServer() runs.
- * The ssh-terminal plugin owns that lifecycle, so disabling the plugin has to
- * actually free the port rather than just stop routing to it.
+ * Serves /plugin-ws/ssh-terminal/terminal through the main backend server.
  *
- * `noServer` avoids binding at import time; listen() below is what opens the
- * port. Handlers are attached at module scope as before, so none of the
+ * `noServer` because core owns the listening socket now: the ssh-terminal
+ * plugin registers handleTerminalUpgrade below through ctx.ws and there is no
+ * terminal port any more. Handlers stay at module scope, so none of the
  * connection logic below had to change.
  */
 const wss = new WebSocketServer({ noServer: true });
-
-let httpServer: import("http").Server | null = null;
 
 wss.on("error", (error) => {
   sshLogger.error("WebSocket server error", error, {
@@ -165,42 +160,28 @@ wss.on("error", (error) => {
   });
 });
 
-export async function startTerminalServer(
-  port: number = TERMINAL_WS_PORT,
-): Promise<void> {
-  if (httpServer) return;
-
-  const { createServer } = await import("http");
-  const server = createServer();
-
-  server.on("upgrade", (req, socket, head) => {
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      wss.emit("connection", ws, req);
-    });
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, "127.0.0.1", () => {
-      server.off("error", reject);
-      resolve();
-    });
-  });
-
-  httpServer = server;
-  sshLogger.info(`Terminal WebSocket server listening on ${port}`, {
-    operation: "terminal_ws_start",
+/**
+ * Hands one upgrade to the terminal's own WebSocketServer.
+ *
+ * The connection handler below authenticates each socket itself, because a
+ * share-link guest arrives with a share token rather than a session. So this
+ * is registered as a public ctx.ws route and the auth stays where it already
+ * is, rather than being split across two places.
+ */
+export function handleTerminalUpgrade(
+  req: import("http").IncomingMessage,
+  socket: import("stream").Duplex,
+  head: Buffer,
+): void {
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit("connection", ws, req);
   });
 }
 
 export async function stopTerminalServer(): Promise<void> {
-  if (!httpServer) return;
-
-  const server = httpServer;
-  httpServer = null;
-
-  // Close live sockets first: server.close() waits for connections to drain,
-  // and a terminal session would otherwise hold the port open indefinitely.
+  // No port to free any more: the route is unmounted by the runtime. The live
+  // sockets still have to be closed, because a terminal session would
+  // otherwise outlive the plugin that owns it.
   for (const ws of wss.clients) {
     try {
       ws.close(1001, "Terminal plugin disabled");
@@ -209,8 +190,7 @@ export async function stopTerminalServer(): Promise<void> {
     }
   }
 
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  sshLogger.info("Terminal WebSocket server stopped", {
+  sshLogger.info("Terminal WebSocket sessions closed", {
     operation: "terminal_ws_stop",
   });
 }

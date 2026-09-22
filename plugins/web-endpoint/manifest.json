@@ -18,6 +18,7 @@
     "hosts:read",
     "credentials:use",
     "ssh:connect",
+    "network:serve",
     "ui:surface"
   ],
   "contributes": {

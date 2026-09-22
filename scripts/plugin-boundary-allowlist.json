@@ -82,7 +82,6 @@
     "plugins/network-topology/src/backend/routes.ts",
     "plugins/proxmox/src/backend/routes.ts",
     "plugins/remote-desktop/src/backend/guacamole-server.ts",
-    "plugins/remote-desktop/src/backend/index.ts",
     "plugins/remote-desktop/src/backend/routes.ts",
     "plugins/remote-desktop/src/backend/token-service.ts",
     "plugins/ssh-terminal/src/backend/index.ts",

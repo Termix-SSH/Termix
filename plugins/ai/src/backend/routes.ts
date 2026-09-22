@@ -1,9 +1,5 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
-import express from "express";
-import {
-  registerAiRouter,
-  unregisterAiRouter,
-} from "../../../../src/backend/database/routes/ai-dispatch.js";
+import express, { type Router } from "express";
 import type { AuthenticatedRequest } from "../../../../src/types/index.js";
 import { PermissionManager } from "../../../../src/backend/utils/permission-manager.js";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
@@ -1339,12 +1335,12 @@ router.post(
   },
 );
 
-/** Called from activate(). Mounts this router at /ai via the shared dispatcher. */
-export function startAiService(): void {
-  registerAiRouter(router);
+/** Called from activate(). Mounts this router at /plugin-api/ai. */
+export function startAiService(mountOn: Router): void {
+  mountOn.use(router);
 }
 
 /** Called from deactivate(). /ai/* falls back to 404 until reactivated. */
 export function stopAiService(): void {
-  unregisterAiRouter();
+  // Unmounted by the runtime when the plugin deactivates.
 }

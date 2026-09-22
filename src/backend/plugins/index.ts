@@ -10,7 +10,7 @@
  */
 
 import { pluginLogger } from "../utils/logger.js";
-import { unregisterPluginRouter } from "../database/routes/plugin-api-routes.js";
+import { setPluginEnabledCheck, unregisterPluginHttp } from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 
@@ -19,6 +19,12 @@ let loader: PluginLoader | null = null;
 export function getPluginRuntime(): { loader: PluginLoader } {
   if (!loader) {
     loader = new PluginLoader();
+    // The 503-while-disabled answer comes from here rather than from the
+    // router being torn down, so a request that arrives mid-disable gets a
+    // truthful status instead of a 404.
+    setPluginEnabledCheck(
+      (pluginId) => loader?.get(pluginId)?.state === "active",
+    );
   }
   return { loader };
 }
@@ -336,7 +342,7 @@ export async function deactivatePlugin(pluginId: string): Promise<void> {
   const plugin = pluginLoader.get(pluginId);
 
   await pluginLoader.deactivate(pluginId);
-  unregisterPluginRouter(pluginId);
+  unregisterPluginHttp(pluginId);
 
   const group = plugin?.manifest.contributes?.permissionGroup;
   if (group) {
@@ -348,7 +354,7 @@ export async function deactivatePlugin(pluginId: string): Promise<void> {
 
 export async function shutdownPlugins(): Promise<void> {
   if (!loader) return;
-  for (const plugin of loader.list()) unregisterPluginRouter(plugin.id);
+  for (const plugin of loader.list()) unregisterPluginHttp(plugin.id);
   await loader.shutdown();
 }
 

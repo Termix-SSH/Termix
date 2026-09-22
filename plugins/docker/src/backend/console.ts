@@ -45,14 +45,14 @@ interface SSHSession {
 
 const activeSessions = new Map<string, SSHSession>();
 
-const CONSOLE_PORT = 30009;
-
 /**
  * Created by startConsoleServer(), not at module load.
  *
- * Importing this file used to bind the port as a side effect, which meant the
+ * Importing this file used to bind a port as a side effect, which meant the
  * plugin could not be disabled and re-enabled: the module stays in the ESM
  * cache, so the second activate() got a server that had already been closed.
+ * There is no port now -- core routes /plugin-ws/docker/console here -- but
+ * the same lifecycle applies to the server object itself.
  */
 let wss: WebSocketServer | null = null;
 
@@ -60,40 +60,46 @@ function handleConnection(ws: WebSocket, req: import("http").IncomingMessage) {
   void onConsoleConnection(ws, req);
 }
 
-/** Starts the console WebSocket server. Call from the plugin's activate(). */
+/** Builds the console WebSocket server. Call from the plugin's activate(). */
 export function startConsoleServer(): Promise<void> {
   if (wss) return Promise.resolve();
 
-  return new Promise((resolve, reject) => {
-    const server = new WebSocketServer({
-      host: "127.0.0.1",
-      port: CONSOLE_PORT,
-      maxPayload: MAX_WS_MESSAGE_BYTES,
+  const server = new WebSocketServer({
+    noServer: true,
+    maxPayload: MAX_WS_MESSAGE_BYTES,
+  });
+
+  // One bad socket must not take the server down.
+  server.on("error", (error) => {
+    sshLogger.error("Docker console WebSocket server error", error, {
+      operation: "wss_error",
     });
+  });
+  server.on("connection", handleConnection);
 
-    const onStartupError = (error: Error) => {
-      server.off("listening", onListening);
-      wss = null;
-      reject(error);
-    };
+  wss = server;
+  return Promise.resolve();
+}
 
-    const onListening = () => {
-      server.off("error", onStartupError);
-      // Past startup an error is logged rather than fatal: one bad socket
-      // must not take the server down.
-      server.on("error", (error) => {
-        sshLogger.error("Docker console WebSocket server error", error, {
-          operation: "wss_error",
-        });
-      });
-      resolve();
-    };
-
-    server.once("error", onStartupError);
-    server.once("listening", onListening);
-    server.on("connection", handleConnection);
-
-    wss = server;
+/**
+ * Hands one upgrade to the console server.
+ *
+ * Registered as a public ctx.ws route because onConsoleConnection does its own
+ * per-message authentication, which is where the container and host checks
+ * live too.
+ */
+export function handleConsoleUpgrade(
+  request: import("http").IncomingMessage,
+  socket: import("stream").Duplex,
+  head: Buffer,
+): void {
+  const server = wss;
+  if (!server) {
+    socket.destroy();
+    return;
+  }
+  server.handleUpgrade(request, socket, head, (ws) => {
+    server.emit("connection", ws, request);
   });
 }
 
@@ -870,8 +876,8 @@ async function onConsoleConnection(
 }
 
 /**
- * Closes every live console session and the WebSocket server, freeing port
- * 30009. Called from the plugin's deactivate().
+ * Closes every live console session and the WebSocket server. Called from the
+ * plugin's deactivate().
  *
  * There is deliberately no process signal handler here. Core owns shutdown:
  * gracefulShutdown in src/backend/starter.ts calls shutdownPlugins(), which
@@ -894,5 +900,12 @@ export function closeConsoleServer(): Promise<void> {
   if (!server) return Promise.resolve();
 
   server.off("connection", handleConnection);
+  for (const client of server.clients) {
+    try {
+      client.close(1001, "Docker plugin disabled");
+    } catch {
+      // Already gone.
+    }
+  }
   return new Promise((resolve) => server.close(() => resolve()));
 }

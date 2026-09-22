@@ -285,11 +285,13 @@ export const GuacamoleDisplay = forwardRef<
 
         let wsBase: string | null;
         if (isElectron()) {
+          // includeJwt stays off: a display authenticates with the encrypted
+          // connection token in the query, not a session.
           const target = await buildOriginWsUrl({
             origin,
-            localPort: 30008,
-            localPath: "/guacamole/websocket/",
-            remotePath: "/guacamole/websocket/",
+            localPort: 30001,
+            localPath: "/plugin-ws/remote-desktop/display",
+            remotePath: "/plugin-ws/remote-desktop/display",
             includeJwt: false,
           });
           if (!target) {
@@ -299,7 +301,6 @@ export const GuacamoleDisplay = forwardRef<
           wsBase = target.url;
         } else {
           wsBase = buildGuacamoleWebSocketBaseUrl({
-            isDev,
             isElectronApp: false,
             isEmbeddedApp: false,
             basePath: getBasePath(),

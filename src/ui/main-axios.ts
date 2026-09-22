@@ -833,6 +833,7 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
 let remoteFileManagerApi: AxiosInstance | null = null;
 let remoteTunnelApi: AxiosInstance | null = null;
 let remoteStatsApi: AxiosInstance | null = null;
+let remoteCoreApi: AxiosInstance | null = null;
 let remoteGuacamoleApi: AxiosInstance | null = null;
 
 export function getRemoteFileManagerApi(): AxiosInstance {
@@ -851,9 +852,23 @@ export function getRemoteTunnelApi(): AxiosInstance {
 
 export function getRemoteStatsApi(): AxiosInstance {
   if (!remoteStatsApi) {
-    remoteStatsApi = createRemoteOriginApiInstance("");
+    remoteStatsApi = createRemoteOriginApiInstance("/plugin-api/host-metrics");
   }
   return remoteStatsApi;
+}
+
+/**
+ * The remote server's core routes, unprefixed.
+ *
+ * Separate from getRemoteStatsApi because that one is rooted at the
+ * host-metrics plugin's mount point, and callers reaching core routes such as
+ * /sync/hosts must not inherit it.
+ */
+export function getRemoteCoreApi(): AxiosInstance {
+  if (!remoteCoreApi) {
+    remoteCoreApi = createRemoteOriginApiInstance("");
+  }
+  return remoteCoreApi;
 }
 
 export function getRemoteGuacamoleApi(): AxiosInstance {
@@ -917,8 +932,13 @@ function initializeApiInstances() {
     "FILE_MANAGER",
   );
 
-  // Server Statistics API (port 30005)
-  statsApi = createApiInstance(getApiUrl("", 30005), "STATS");
+  // Host Metrics API - the host-metrics plugin, mounted on the main backend.
+  // Every existing /status, /metrics/*, /host-metrics/* and /proxmox-stats/*
+  // path still resolves, because the base carries the plugin mount point.
+  statsApi = createApiInstance(
+    getApiUrl("/plugin-api/host-metrics", 30001),
+    "STATS",
+  );
 
   // Authentication API (port 30001)
   authApi = createApiInstance(getApiUrl("", 30001), "AUTH");
@@ -929,8 +949,11 @@ function initializeApiInstances() {
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
 
-  // Docker Management API (port 30007)
-  dockerApi = createApiInstance(getApiUrl("/docker", 30007), "DOCKER");
+  // Docker Management API - the docker plugin, mounted on the main backend.
+  dockerApi = createApiInstance(
+    getApiUrl("/plugin-api/docker/docker", 30001),
+    "DOCKER",
+  );
 
   // Tmux Monitor API (port 30010) --- tmux-monitor ---
   tmuxMonitorApi = createApiInstance(
@@ -953,7 +976,7 @@ export let tunnelApi: AxiosInstance;
 // File Manager Operations API (port 30004)
 export let fileManagerApi: AxiosInstance;
 
-// Server Statistics API (port 30005)
+// Host Metrics API (host-metrics plugin)
 export let statsApi: AxiosInstance;
 
 // Authentication API (port 30001)
@@ -965,7 +988,7 @@ export let dashboardApi: AxiosInstance;
 // RBAC API (port 30001)
 export let rbacApi: AxiosInstance;
 
-// Docker Management API (port 30007)
+// Docker Management API (docker plugin)
 export let dockerApi: AxiosInstance;
 
 // Tmux Monitor API (port 30010) --- tmux-monitor ---

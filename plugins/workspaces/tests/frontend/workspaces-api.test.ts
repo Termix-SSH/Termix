@@ -46,73 +46,88 @@ const samplePayload: WorkspacePayload = {
 };
 
 describe("workspaces-api", () => {
-  it("listWorkspaces GETs /workspaces", async () => {
+  it("listWorkspaces GETs /plugin-api/workspaces", async () => {
     authApiMock.get.mockResolvedValueOnce({ data: [{ id: 1 }] });
     const result = await listWorkspaces();
-    expect(authApiMock.get).toHaveBeenCalledWith("/workspaces");
+    expect(authApiMock.get).toHaveBeenCalledWith("/plugin-api/workspaces");
     expect(result).toEqual([{ id: 1 }]);
   });
 
-  it("createWorkspace POSTs /workspaces with the payload", async () => {
+  it("createWorkspace POSTs /plugin-api/workspaces with the payload", async () => {
     await createWorkspace({
       name: "Test A",
       color: "#fff",
       payload: samplePayload,
     });
-    expect(authApiMock.post).toHaveBeenCalledWith("/workspaces", {
+    expect(authApiMock.post).toHaveBeenCalledWith("/plugin-api/workspaces", {
       name: "Test A",
       color: "#fff",
       payload: samplePayload,
     });
   });
 
-  it("renameWorkspace PATCHes /workspaces/:id", async () => {
+  it("renameWorkspace PATCHes /plugin-api/workspaces/:id", async () => {
     await renameWorkspace(5, { name: "New Name" });
-    expect(authApiMock.patch).toHaveBeenCalledWith("/workspaces/5", {
+    expect(authApiMock.patch).toHaveBeenCalledWith("/plugin-api/workspaces/5", {
       name: "New Name",
     });
   });
 
-  it("updateWorkspaceContent PUTs /workspaces/:id/content", async () => {
+  it("updateWorkspaceContent PUTs /plugin-api/workspaces/:id/content", async () => {
     await updateWorkspaceContent(5, samplePayload);
-    expect(authApiMock.put).toHaveBeenCalledWith("/workspaces/5/content", {
-      payload: samplePayload,
-    });
+    expect(authApiMock.put).toHaveBeenCalledWith(
+      "/plugin-api/workspaces/5/content",
+      {
+        payload: samplePayload,
+      },
+    );
   });
 
-  it("deleteWorkspace DELETEs /workspaces/:id", async () => {
+  it("deleteWorkspace DELETEs /plugin-api/workspaces/:id", async () => {
     await deleteWorkspace(5);
-    expect(authApiMock.delete).toHaveBeenCalledWith("/workspaces/5");
+    expect(authApiMock.delete).toHaveBeenCalledWith("/plugin-api/workspaces/5");
   });
 
-  it("duplicateWorkspace POSTs /workspaces/:id/duplicate with a name", async () => {
+  it("duplicateWorkspace POSTs /plugin-api/workspaces/:id/duplicate with a name", async () => {
     await duplicateWorkspace(5, "Test A (copy)");
-    expect(authApiMock.post).toHaveBeenCalledWith("/workspaces/5/duplicate", {
-      name: "Test A (copy)",
-    });
+    expect(authApiMock.post).toHaveBeenCalledWith(
+      "/plugin-api/workspaces/5/duplicate",
+      {
+        name: "Test A (copy)",
+      },
+    );
   });
 
-  it("setDefaultWorkspace POSTs /workspaces/:id/set-default", async () => {
+  it("setDefaultWorkspace POSTs /plugin-api/workspaces/:id/set-default", async () => {
     await setDefaultWorkspace(5);
-    expect(authApiMock.post).toHaveBeenCalledWith("/workspaces/5/set-default");
+    expect(authApiMock.post).toHaveBeenCalledWith(
+      "/plugin-api/workspaces/5/set-default",
+    );
   });
 
-  it("applyWorkspaceServer POSTs /workspaces/:id/apply", async () => {
+  it("applyWorkspaceServer POSTs /plugin-api/workspaces/:id/apply", async () => {
     await applyWorkspaceServer(5);
-    expect(authApiMock.post).toHaveBeenCalledWith("/workspaces/5/apply");
+    expect(authApiMock.post).toHaveBeenCalledWith(
+      "/plugin-api/workspaces/5/apply",
+    );
   });
 
-  it("getLastSessionWorkspace GETs /workspaces/last-session", async () => {
+  it("getLastSessionWorkspace GETs /plugin-api/workspaces/last-session", async () => {
     authApiMock.get.mockResolvedValueOnce({ data: null });
     const result = await getLastSessionWorkspace();
-    expect(authApiMock.get).toHaveBeenCalledWith("/workspaces/last-session");
+    expect(authApiMock.get).toHaveBeenCalledWith(
+      "/plugin-api/workspaces/last-session",
+    );
     expect(result).toBeNull();
   });
 
-  it("saveLastSessionWorkspace PUTs /workspaces/last-session", async () => {
+  it("saveLastSessionWorkspace PUTs /plugin-api/workspaces/last-session", async () => {
     await saveLastSessionWorkspace(samplePayload);
-    expect(authApiMock.put).toHaveBeenCalledWith("/workspaces/last-session", {
-      payload: samplePayload,
-    });
+    expect(authApiMock.put).toHaveBeenCalledWith(
+      "/plugin-api/workspaces/last-session",
+      {
+        payload: samplePayload,
+      },
+    );
   });
 });

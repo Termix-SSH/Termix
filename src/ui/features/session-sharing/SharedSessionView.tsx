@@ -9,8 +9,7 @@ import {
   type ShareLinkErrorKind,
 } from "@/api/session-sharing-api";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
-import { getBasePath } from "@/lib/base-path";
-import { isElectron } from "@/lib/electron";
+import { pluginWsUrl } from "@/lib/plugin-transport";
 import { GuacamoleDisplay } from "../../../../plugins/remote-desktop/src/frontend/GuacamoleDisplay.tsx";
 
 const PING_INTERVAL_MS = 30000;
@@ -27,21 +26,9 @@ interface TerminalWsMessage {
 // embedded local backend -- joining a session hosted on someone else's
 // remote server isn't supported from the desktop app today.
 async function resolveTerminalWsBaseUrl(): Promise<string> {
-  const isDev =
-    !isElectron() &&
-    process.env.NODE_ENV === "development" &&
-    (window.location.port === "3000" ||
-      window.location.port === "5173" ||
-      window.location.port === "");
-
-  if (isDev) {
-    return `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
-  }
-  if (isElectron()) {
-    return "ws://127.0.0.1:30002";
-  }
-  const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${wsProtocol}://${window.location.host}${getBasePath()}/ssh/websocket/`;
+  const target = await pluginWsUrl("ssh-terminal", "/terminal");
+  if (!target) throw new Error("No terminal endpoint is available");
+  return target.url;
 }
 
 export interface SessionParticipantInfo {

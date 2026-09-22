@@ -19,6 +19,7 @@
     "credentials:use",
     "ssh:connect",
     "db:own",
+    "network:serve",
     "ui:surface"
   ],
   "locales": "locales",

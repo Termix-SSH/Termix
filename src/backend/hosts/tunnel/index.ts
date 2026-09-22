@@ -21,7 +21,6 @@ import {
 } from "./c2s-relay.js";
 
 import { registerTunnelRoutes } from "./routes.js";
-import webEndpointDispatch from "./web-endpoint-dispatch.js";
 import { initializeAutoStartTunnels } from "./manager.js";
 import { attachServicePortConflictHandler } from "../../utils/service-listen.js";
 
@@ -39,9 +38,6 @@ app.use((_req, res, next) => {
 });
 
 registerTunnelRoutes(app);
-// Always mounted; the Web Endpoint plugin registers its router behind this on
-// activate and clears it on deactivate. See web-endpoint-dispatch.ts.
-app.use("/ssh/tunnel/web-endpoint", webEndpointDispatch);
 
 const PORT = 30003;
 const server = createServer(app);

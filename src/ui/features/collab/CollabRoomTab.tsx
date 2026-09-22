@@ -38,8 +38,7 @@ import { getGuacamoleTokenFromHost } from "../../../../plugins/remote-desktop/sr
 import { getSSHHosts, getUserList, type SSHHostWithStatus } from "@/main-axios";
 import { getRoles } from "@/api/rbac-api";
 import type { Role } from "@/main-axios";
-import { getBasePath } from "@/lib/base-path";
-import { isElectron } from "@/lib/electron";
+import { pluginWsUrl } from "@/lib/plugin-transport";
 import { getErrorMessage } from "@/lib/error-message";
 import {
   deleteCollabRoom,
@@ -62,23 +61,11 @@ import { resolveConnectionOrigin } from "@/lib/connection-origin";
 const PING_INTERVAL_MS = 30000;
 const POLL_FALLBACK_MS = 15000;
 
-// Mirrors SharedSessionView's construction (dev/electron/prod); authentication
-// rides on the jwt cookie the way every terminal WS connection does.
-function roomEventsWsUrl(): string {
-  const isDev =
-    !isElectron() &&
-    process.env.NODE_ENV === "development" &&
-    (window.location.port === "3000" ||
-      window.location.port === "5173" ||
-      window.location.port === "");
-  if (isDev) {
-    return `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
-  }
-  if (isElectron()) {
-    return "ws://127.0.0.1:30002";
-  }
-  const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${wsProtocol}://${window.location.host}${getBasePath()}/ssh/websocket/`;
+// The terminal socket the ssh-terminal plugin serves. Authentication rides on
+// the jwt cookie the way every terminal WS connection does.
+async function roomEventsWsUrl(): Promise<string | null> {
+  const target = await pluginWsUrl("ssh-terminal", "/terminal");
+  return target?.url ?? null;
 }
 
 type PresentDraft =
@@ -194,13 +181,16 @@ export function CollabRoomTab({
       if (pollTimer) clearInterval(pollTimer);
       pollTimer = null;
     };
-    const connect = () => {
+    const connect = async () => {
       if (cancelled) return;
       try {
-        ws = new WebSocket(roomEventsWsUrl());
+        const url = await roomEventsWsUrl();
+        if (cancelled) return;
+        if (!url) throw new Error("No terminal endpoint is available");
+        ws = new WebSocket(url);
       } catch {
         startPolling();
-        reconnectTimer = setTimeout(connect, 5000);
+        reconnectTimer = setTimeout(() => void connect(), 5000);
         return;
       }
       ws.onopen = () => {
@@ -246,12 +236,12 @@ export function CollabRoomTab({
         pingTimer = null;
         startPolling();
         const delay = Math.min(1000 * 2 ** reconnectAttempt++, 15000);
-        reconnectTimer = setTimeout(connect, delay);
+        reconnectTimer = setTimeout(() => void connect(), delay);
       };
       ws.onerror = () => ws?.close();
     };
 
-    connect();
+    void connect();
     return () => {
       cancelled = true;
       if (pingTimer) clearInterval(pingTimer);
