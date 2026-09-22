@@ -33,7 +33,8 @@
     "plugins/proxmox/backend/**/*.ts",
     "plugins/remote-desktop/backend/**/*.ts",
     "plugins/fleets/backend/**/*.ts",
-    "plugins/automations/backend/**/*.ts"
+    "plugins/automations/backend/**/*.ts",
+    "plugins/network-topology/backend/**/*.ts"
   ],
   "exclude": ["src/**/*.test.ts"]
 }

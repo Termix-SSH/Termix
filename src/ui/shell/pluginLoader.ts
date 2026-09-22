@@ -43,6 +43,7 @@ const BUILT_IN_TABS_BY_PLUGIN: Record<string, string[]> = {
   "remote-desktop": ["rdp", "vnc", "telnet"],
   ai: ["ai"],
   fleets: ["fleet-inventory"],
+  "network-topology": ["network_graph"],
 };
 
 let pluginEnabled = new Map<string, boolean>();

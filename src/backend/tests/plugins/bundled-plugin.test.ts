@@ -324,3 +324,53 @@ describe("bundled automations plugin", () => {
     expect(source).toMatch(/export async function deactivate/);
   });
 });
+
+describe("bundled network-topology plugin", () => {
+  it("ships a directory with a manifest and both entry points", () => {
+    const dir = path.join(getBundledPluginsDir(), "network-topology");
+
+    expect(fs.existsSync(path.join(dir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "backend", "index.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "frontend", "index.mjs"))).toBe(true);
+  });
+
+  it("has a manifest that passes the real validator", () => {
+    const { manifest, errors } = parseManifest(
+      readBundledManifest("network-topology"),
+    );
+
+    expect(errors).toEqual([]);
+    expect(manifest?.id).toBe("network-topology");
+    expect(manifest?.category).toBe("Infrastructure");
+  });
+
+  it("declares the transport-owner capability and qualifies for the tier", () => {
+    const { manifest } = parseManifest(readBundledManifest("network-topology"));
+
+    expect(manifest?.permissions).toContain(TRANSPORT_OWNER_CAPABILITY);
+    expect(isFirstParty("network-topology")).toBe(true);
+    expect(runsInProcess("network-topology", manifest!.permissions)).toBe(true);
+  });
+
+  it("contributes the network_graph tab the shell registers", () => {
+    const { manifest } = parseManifest(readBundledManifest("network-topology"));
+    const tab = manifest?.contributes?.tabs?.[0];
+
+    // The shell keys tab content off this id, so it has to stay "network_graph".
+    expect(tab?.id).toBe("network_graph");
+    expect(tab?.openFrom).toContain("rail");
+  });
+
+  it("exports activate and deactivate from its backend entry", () => {
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "network-topology",
+      "backend",
+      "index.mjs",
+    );
+    const source = fs.readFileSync(entry, "utf8");
+
+    expect(source).toMatch(/export async function activate/);
+    expect(source).toMatch(/export async function deactivate/);
+  });
+});

@@ -134,9 +134,11 @@ const SftpTransferTab = lazy(() =>
   })),
 );
 const NetworkGraphCard = lazy(() =>
-  import("@/dashboard/cards/NetworkGraphCard").then((m) => ({
-    default: m.NetworkGraphCard,
-  })),
+  import("../../../plugins/network-topology/frontend/NetworkGraphCard").then(
+    (m) => ({
+      default: m.NetworkGraphCard,
+    }),
+  ),
 );
 const Serial = lazy(() =>
   import("@/features/serial/Serial").then((m) => ({

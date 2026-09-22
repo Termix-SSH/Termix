@@ -1,10 +1,15 @@
 import express from "express";
-import { AuthManager } from "../../utils/auth-manager.js";
-import type { AuthenticatedRequest } from "../../../types/index.js";
-import { databaseLogger } from "../../utils/logger.js";
-import { createCurrentNetworkTopologyRepository } from "../repositories/factory.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../../src/types/index.js";
+import { databaseLogger } from "../../../src/backend/utils/logger.js";
+import { createCurrentNetworkTopologyRepository } from "../../../src/backend/database/repositories/factory.js";
+import {
+  registerNetworkTopologyRouter,
+  unregisterNetworkTopologyRouter,
+} from "../../../src/backend/database/routes/network-topology-dispatch.js";
 
-const router = express.Router();
+export const router = express.Router();
+
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 
@@ -174,4 +179,10 @@ router.post(
   },
 );
 
-export default router;
+export function startNetworkTopologyService(): void {
+  registerNetworkTopologyRouter(router);
+}
+
+export function stopNetworkTopologyService(): void {
+  unregisterNetworkTopologyRouter();
+}

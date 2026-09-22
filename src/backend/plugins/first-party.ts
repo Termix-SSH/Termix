@@ -83,6 +83,15 @@
  * direct repository access plus subscription to the cross-plugin event bus
  * (host metrics, status and health-check events) that the worker's read-only
  * ctx.hosts and single-postMessage-reply ctx.http.route cannot support.
+ *
+ * network-topology is here for a different reason than the rest of this
+ * list: its two routes are plain per-user JSON CRUD against a single
+ * repository, and would fit the worker ctx fine on their own. It stays
+ * in-process to keep its existing /network-topology URL and its existing
+ * dedicated table (network_topology, keyed by userId) rather than moving
+ * onto /plugin-api/network-topology/* and the generic key-value
+ * ctx.storage the worker tier would require -- a URL and storage-model
+ * change, not a capability gap.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
@@ -93,6 +102,7 @@ export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "remote-desktop",
   "fleets",
   "automations",
+  "network-topology",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";
