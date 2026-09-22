@@ -30,6 +30,7 @@ import { pluginLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { runAsActor } from "./actor.js";
 import { hasCapability } from "./permissions.js";
+import { declaredPermissions, resolvePermission } from "./rbac.js";
 
 /** Matches what core's own routes accept, so moving a route changes nothing. */
 const DEFAULT_BODY_LIMIT = "2mb";
@@ -272,18 +273,20 @@ async function writePublicRouteAudit(
  * route could require admin.users.manage and borrow someone else's authority,
  * which is the escalation shape the manifest validator already blocks for
  * role defaults.
+ *
+ * The 401/403 bodies match requirePermission(), so a plugin route denies the
+ * same way a core route does and a client needs one code path.
  */
 export function createRbacMiddleware(
   manifest: PluginManifest,
   permission: string,
 ): PluginMiddleware {
-  const declared = new Set(
-    manifest.contributes?.permissionGroup?.permissions ?? [],
-  );
+  const required = resolvePermission(manifest, permission);
+  const declared = declaredPermissions(manifest);
 
-  if (!declared.has(permission)) {
+  if (!declared.has(required)) {
     throw new Error(
-      `Plugin ${manifest.id} cannot require permission "${permission}": it is not declared in contributes.permissionGroup.permissions`,
+      `Plugin ${manifest.id} cannot require permission "${permission}": it is not declared in contributes.permissions`,
     );
   }
 
@@ -291,7 +294,7 @@ export function createRbacMiddleware(
     void (async () => {
       const userId = (req as Request & { userId?: string }).userId;
       if (!userId) {
-        res.status(401).json({ error: "Authentication required" });
+        res.status(401).json({ error: "Not authenticated" });
         return;
       }
 
@@ -300,10 +303,10 @@ export function createRbacMiddleware(
           await import("../utils/permission-manager.js");
         const allowed = await PermissionManager.getInstance().hasPermission(
           userId,
-          permission,
+          required,
         );
         if (!allowed) {
-          res.status(403).json({ error: "Permission denied", permission });
+          res.status(403).json({ error: "Insufficient permissions", required });
           return;
         }
         next();

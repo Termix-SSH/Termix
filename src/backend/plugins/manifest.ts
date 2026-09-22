@@ -17,6 +17,9 @@ export {
   DEFAULT_BACKEND_ENTRY,
   DEFAULT_FRONTEND_ENTRY,
   DEFAULT_LOCALES_DIR,
+  SYSTEM_ROLE_NAMES,
+  RESERVED_PERMISSION_PREFIXES,
+  qualifyPermission,
 } from "@termix/plugin-sdk/manifest";
 
 export type {
@@ -27,7 +30,8 @@ export type {
   PluginTabContribution,
   PluginActionContribution,
   PluginActionSlot,
-  PluginPermissionGroup,
+  PluginPermissionContribution,
+  SystemRoleName,
   PluginServiceProvide,
   PluginServiceRequire,
   PluginSecretProvide,

@@ -268,9 +268,25 @@ export async function getHostAccess(
   }
 }
 
+export interface PermissionCatalogItem {
+  permission: string;
+  /** Plugin-relative keys; resolve them with pluginKey(). */
+  titleKey: string;
+  descriptionKey: string;
+}
+
 export interface PermissionCatalogEntry {
   group: string;
   permissions: string[];
+  /** Set for a group a plugin contributed. */
+  pluginId?: string;
+  /** Core groups carry an i18n key, plugin groups their display name. */
+  labelKey?: string;
+  label?: string;
+  icon?: string;
+  /** False once the owning plugin is disabled or gone. */
+  enabled?: boolean;
+  items?: PermissionCatalogItem[];
 }
 
 export async function getPermissionsCatalog(): Promise<{

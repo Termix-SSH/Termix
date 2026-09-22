@@ -213,14 +213,28 @@ export interface PluginHttp {
   router: <T = unknown>(options?: PluginRouterOptions) => T;
 }
 
-/** RBAC middleware for a plugin's own routes. */
+/**
+ * Core RBAC, as a plugin sees it.
+ *
+ * Every method takes either a short name this plugin declares
+ * ("services.use"), which is prefixed with the plugin id, or a full id
+ * belonging to another plugin or a core group, which is used as given. That is
+ * what makes a cross-plugin check expressible without letting a plugin gate its
+ * own routes on someone else's authority.
+ */
 export interface PluginRbac {
+  /** Whether the user this call is running as holds `permission`. */
+  has: (permission: string) => Promise<boolean>;
+
+  /** Whether `userId` holds `permission`. */
+  hasFor: (userId: string, permission: string) => Promise<boolean>;
+
   /**
    * Middleware that rejects a request whose user lacks `permission`.
    *
    * A plugin may only require a permission it declares in
-   * contributes.permissionGroup, so a route cannot gate on admin.users.manage
-   * and borrow someone else's authority.
+   * contributes.permissions, so a route cannot gate on admin.users.manage and
+   * borrow someone else's authority.
    */
   require: (permission: string) => PluginMiddleware;
 }

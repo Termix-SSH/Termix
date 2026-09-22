@@ -170,10 +170,13 @@ describe("unknown field rejection", () => {
           },
         ],
         contributes: {
-          permissionGroup: {
-            group: "sample-plugin",
-            permissions: ["sample-plugin.use"],
-          },
+          permissions: [
+            {
+              name: "use",
+              titleKey: "permissions.use.title",
+              descriptionKey: "permissions.use.description",
+            },
+          ],
         },
       }),
     );
@@ -217,53 +220,156 @@ describe("dependencies", () => {
   });
 });
 
-describe("permission groups", () => {
-  it("accepts a group and its declared permissions", () => {
+describe("plugin permissions", () => {
+  it("accepts declared permissions", () => {
     expect(
       validateManifest(
         base({
           contributes: {
-            permissionGroup: {
-              group: "sample-plugin",
-              permissions: ["sample-plugin.use"],
-            },
+            permissions: [
+              {
+                name: "use",
+                titleKey: "permissions.use.title",
+                descriptionKey: "permissions.use.description",
+              },
+            ],
           },
         }),
       ),
     ).toEqual([]);
   });
 
-  // Without this a manifest could hand any role admin.* at boot.
-  it("refuses a role default outside the plugin's own permissions", () => {
+  it("accepts a dotted name and a system role default", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: {
+            permissions: [
+              {
+                name: "services.use",
+                titleKey: "permissions.services.use.title",
+                descriptionKey: "permissions.services.use.description",
+                defaultRoles: ["admin"],
+              },
+            ],
+          },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  // Without this a manifest could name a core group and then gate a route on
+  // authority it was never given.
+  it("refuses a name starting with a core group", () => {
     const errors = validateManifest(
       base({
         contributes: {
-          permissionGroup: {
-            group: "sample-plugin",
-            permissions: ["sample-plugin.use"],
-            defaultForRole: { user: ["admin.users.manage"] },
-          },
+          permissions: [
+            {
+              name: "admin.users.manage",
+              titleKey: "k",
+              descriptionKey: "d",
+            },
+          ],
         },
       }),
     );
 
-    expect(errors.join()).toMatch(/does not declare/);
+    expect(errors.join()).toMatch(/reserved core group/);
   });
 
-  it("accepts a role default the plugin does declare", () => {
-    expect(
-      validateManifest(
-        base({
-          contributes: {
-            permissionGroup: {
-              group: "sample-plugin",
-              permissions: ["sample-plugin.use"],
-              defaultForRole: { admin: ["sample-plugin.use"] },
+  it("refuses a name starting with hosts", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          permissions: [
+            { name: "hosts.view", titleKey: "k", descriptionKey: "d" },
+          ],
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/reserved core group/);
+  });
+
+  // "sample-plugin" + "sample-plugin.use" would register as
+  // sample-plugin.sample-plugin.use, which is never the intent.
+  it("refuses a name that repeats the plugin id", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          permissions: [
+            { name: "sample-plugin.use", titleKey: "k", descriptionKey: "d" },
+          ],
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/already starts with this plugin/);
+  });
+
+  it("refuses a default for a role core does not seed", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          permissions: [
+            {
+              name: "use",
+              titleKey: "k",
+              descriptionKey: "d",
+              defaultRoles: ["superuser"],
             },
+          ],
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/defaultRoles\[0\]/);
+  });
+
+  it("refuses a duplicate name", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          permissions: [
+            { name: "use", titleKey: "k", descriptionKey: "d" },
+            { name: "use", titleKey: "k2", descriptionKey: "d2" },
+          ],
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/declared more than once/);
+  });
+
+  it("requires both i18n keys", () => {
+    const errors = validateManifest(
+      base({ contributes: { permissions: [{ name: "use" }] } }),
+    );
+
+    expect(errors.join()).toMatch(/titleKey/);
+    expect(errors.join()).toMatch(/descriptionKey/);
+  });
+
+  // The id an admin grants is <pluginId>.<name>, so cross-field checks compare
+  // against the qualified form rather than the short name.
+  it("matches a service permission against the qualified id", () => {
+    const { errors } = parseManifest(
+      base({
+        provides: [
+          {
+            service: "sample.thing",
+            version: "1.0.0",
+            permission: "sample-plugin.use",
           },
-        }),
-      ),
-    ).toEqual([]);
+        ],
+        contributes: {
+          permissions: [{ name: "use", titleKey: "k", descriptionKey: "d" }],
+        },
+      }),
+    );
+
+    expect(errors).toEqual([]);
   });
 });
 
@@ -279,10 +385,13 @@ describe("services, secrets and actions", () => {
           },
         ],
         contributes: {
-          permissionGroup: {
-            group: "sample-plugin",
-            permissions: ["sample-plugin.use"],
-          },
+          permissions: [
+            {
+              name: "use",
+              titleKey: "permissions.use.title",
+              descriptionKey: "permissions.use.description",
+            },
+          ],
         },
       }),
     );
@@ -297,10 +406,13 @@ describe("services, secrets and actions", () => {
           { key: "api-key", permission: "sample-plugin.missing" },
         ],
         contributes: {
-          permissionGroup: {
-            group: "sample-plugin",
-            permissions: ["sample-plugin.use"],
-          },
+          permissions: [
+            {
+              name: "use",
+              titleKey: "permissions.use.title",
+              descriptionKey: "permissions.use.description",
+            },
+          ],
         },
       }),
     );
@@ -320,10 +432,13 @@ describe("services, secrets and actions", () => {
     const { errors } = parseManifest(
       base({
         contributes: {
-          permissionGroup: {
-            group: "sample-plugin",
-            permissions: ["sample-plugin.use"],
-          },
+          permissions: [
+            {
+              name: "use",
+              titleKey: "permissions.use.title",
+              descriptionKey: "permissions.use.description",
+            },
+          ],
           actions: [
             {
               id: "sample.open",

@@ -3953,7 +3953,14 @@
       "saved": "Role permissions saved",
       "saveError": "Failed to save role permissions",
       "save": "Save",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "pluginDisabled": "Plugin disabled",
+      "groups": {
+        "hosts": "Hosts",
+        "snippets": "Snippets",
+        "credentials": "Credentials",
+        "admin": "Administration"
+      }
     },
     "aiGloballyEnabled": "AI assistant",
     "aiGloballyEnabledDesc": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone.",
@@ -5198,6 +5205,62 @@
       "ui:surface": {
         "title": "Add its own screens",
         "consequence": "Tabs, panels and settings you can hide later."
+      }
+    },
+    "ai": {
+      "permissions": {
+        "use": {
+          "title": "Use the assistant",
+          "description": "Open the assistant and ask it things."
+        },
+        "manage_providers": {
+          "title": "Manage providers",
+          "description": "Add, edit and remove the AI providers and their API keys."
+        },
+        "apply_proposals": {
+          "title": "Apply proposals",
+          "description": "Let the assistant carry out the changes it suggests."
+        },
+        "services.use": {
+          "title": "Use AI from other plugins",
+          "description": "Other plugins may call the assistant on your behalf."
+        },
+        "secrets.share": {
+          "title": "Share the API key",
+          "description": "Other plugins may use the stored AI API key without seeing it."
+        }
+      }
+    },
+    "automations": {
+      "permissions": {
+        "view": {
+          "title": "View automations",
+          "description": "See the automations and their history."
+        },
+        "create": {
+          "title": "Create automations",
+          "description": "Add new automations."
+        },
+        "edit": {
+          "title": "Edit automations",
+          "description": "Change existing automations."
+        },
+        "delete": {
+          "title": "Delete automations",
+          "description": "Remove automations."
+        },
+        "run": {
+          "title": "Run automations",
+          "description": "Trigger an automation by hand."
+        }
+      }
+    },
+    "tailscale": {
+      "permissions": {
+        "devices.view": {
+          "title": "View tailnet devices",
+          "description": "See the devices on the connected tailnet."
+        }
       }
     }
   }

@@ -2283,3 +2283,57 @@ export const pluginMigrations = pgTable(
 );
 
 // --- plugins end ---
+
+// --- rbac plugin permissions begin ---
+
+/**
+ * Every role permission core has ever registered.
+ *
+ * Deliberately has no foreign key to `plugins`: the whole point is that a role
+ * keeps working when the plugin that contributed a permission is disabled or
+ * uninstalled. Without this, unregistering a group made PUT /rbac/roles/:id
+ * reject the entire role.
+ */
+export const rbacKnownPermissions = pgTable(
+  "rbac_known_permissions",
+  {
+    id: serial("id").primaryKey(),
+    permission: varchar("permission", { length: 255 }).notNull(),
+    /** Which plugin contributed it, or null for a core permission. */
+    pluginId: varchar("plugin_id", { length: 255 }),
+    firstSeenAt: text("first_seen_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_rbac_known_permissions_permission").on(table.permission),
+  ],
+);
+
+/**
+ * Which plugin role defaults have already been applied.
+ *
+ * Applying a default is a one-time suggestion, so an admin who revokes it does
+ * not get it handed back on the next restart. This lived in `plugin_storage`,
+ * which cascades with the plugin, so uninstall-then-reinstall silently re-added
+ * a permission that had been deliberately removed.
+ */
+export const rbacAppliedDefaults = pgTable(
+  "rbac_applied_defaults",
+  {
+    id: serial("id").primaryKey(),
+    roleName: varchar("role_name", { length: 255 }).notNull(),
+    permission: varchar("permission", { length: 255 }).notNull(),
+    appliedAt: text("applied_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_rbac_applied_defaults_role_permission").on(
+      table.roleName,
+      table.permission,
+    ),
+  ],
+);
+
+// --- rbac plugin permissions end ---

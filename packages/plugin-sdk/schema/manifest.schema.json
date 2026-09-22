@@ -244,26 +244,25 @@
             }
           }
         },
-        "permissionGroup": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["group", "permissions"],
-          "properties": {
-            "group": { "type": "string", "minLength": 1 },
-            "permissions": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
+        "permissions": {
+          "type": "array",
+          "description": "Role permissions this plugin contributes. Core registers each as <pluginId>.<name>.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "titleKey", "descriptionKey"],
+            "properties": {
+              "name": {
                 "type": "string",
-                "pattern": "^[a-z0-9-]+(\\.[a-z0-9_-]+)+$"
-              }
-            },
-            "defaultForRole": {
-              "type": "object",
-              "description": "Role name -> permissions. Only permissions this plugin declares above are allowed.",
-              "additionalProperties": {
+                "description": "Plugin-relative name. May contain dots. Must not start with a core group or this plugin's id.",
+                "pattern": "^[a-z0-9_-]+(\\.[a-z0-9_-]+)*$"
+              },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "descriptionKey": { "type": "string", "minLength": 1 },
+              "defaultRoles": {
                 "type": "array",
-                "items": { "type": "string", "minLength": 1 }
+                "description": "System roles that hold this the first time it is seen.",
+                "items": { "type": "string", "enum": ["admin", "user"] }
               }
             }
           }

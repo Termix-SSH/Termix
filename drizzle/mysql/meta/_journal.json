@@ -197,6 +197,13 @@
       "when": 1790109037476,
       "tag": "0027_watery_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "5",
+      "when": 1790114765594,
+      "tag": "0028_fair_tusk",
+      "breakpoints": true
     }
   ]
 }

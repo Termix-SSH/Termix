@@ -16,7 +16,11 @@
 export const id = "network-topology";
 export const tabId = "network_graph";
 
-export async function register({ registerRailItem, registerTabComponent, icons }) {
+export async function register({
+  registerRailItem,
+  registerTabComponent,
+  icons,
+}) {
   registerTabComponent?.(tabId, () =>
     import("./NetworkGraphCard.tsx").then((m) => ({
       default: m.NetworkGraphCard,
@@ -31,7 +35,10 @@ export async function register({ registerRailItem, registerTabComponent, icons }
   });
 }
 
-export async function unregister({ unregisterRailItem, unregisterTabComponent }) {
+export async function unregister({
+  unregisterRailItem,
+  unregisterTabComponent,
+}) {
   unregisterRailItem?.(tabId);
   unregisterTabComponent?.(tabId);
 }

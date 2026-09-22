@@ -120,11 +120,13 @@ describe("PermissionManager.hasPermission wildcard matching", () => {
   });
 
   it("resolves wildcards for a runtime-registered permission group", async () => {
-    const { registerPermissionGroup, unregisterPermissionGroup } =
+    const { registerPluginPermissions, resetPermissionCatalog } =
       await import("../../utils/permission-catalog.js");
 
-    registerPermissionGroup({
+    registerPluginPermissions({
       group: "testplugin",
+      pluginId: "testplugin",
+      label: "Test Plugin",
       permissions: ["testplugin.view", "testplugin.manage"],
     });
 
@@ -136,7 +138,7 @@ describe("PermissionManager.hasPermission wildcard matching", () => {
       withPermissions(["*"]);
       expect(await manager.hasPermission("u1", "testplugin.view")).toBe(true);
     } finally {
-      unregisterPermissionGroup("testplugin");
+      resetPermissionCatalog();
     }
   });
 });

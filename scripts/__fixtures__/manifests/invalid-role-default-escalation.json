@@ -14,12 +14,12 @@
   },
   "capabilities": ["kv:own", "ui:surface"],
   "contributes": {
-    "permissionGroup": {
-      "group": "sample-plugin",
-      "permissions": ["sample-plugin.use"],
-      "defaultForRole": {
-        "user": ["admin.users.manage"]
+    "permissions": [
+      {
+        "name": "admin.users.manage",
+        "titleKey": "permissions.admin.users.manage.title",
+        "descriptionKey": "permissions.admin.users.manage.description"
       }
-    }
+    ]
   }
 }

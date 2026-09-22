@@ -12,6 +12,7 @@
 import { pluginLogger } from "../utils/logger.js";
 import { setPluginEnabledCheck, unregisterPluginHttp } from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
+import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 
 let loader: PluginLoader | null = null;
@@ -187,26 +188,91 @@ async function persistRuntimeState(loaded: LoadedPlugin[]): Promise<void> {
 /**
  * Puts a plugin's declared permissions into the role catalog.
  *
- * Until this runs a plugin permission cannot be granted at all, because
- * PUT /rbac/roles/:id rejects any string isValidPermission does not know.
- * Registering here is what makes one appear in the admin role editor exactly
- * like hosts.view does.
+ * Each name is registered as `<pluginId>.<name>`, so a plugin cannot claim a
+ * core group or another plugin's namespace. Until this runs a plugin permission
+ * cannot be granted at all, because PUT /rbac/roles/:id rejects any string
+ * isValidPermission does not know.
+ *
+ * The qualified ids are also written to rbac_known_permissions, which is what
+ * keeps a role holding one valid after the plugin is disabled or removed.
  */
 async function registerPluginPermissions(plugin: LoadedPlugin): Promise<void> {
-  const group = plugin.manifest.contributes?.permissionGroup;
-  if (!group) return;
+  const declared = plugin.manifest.contributes?.permissions;
+  if (!declared || declared.length === 0) return;
 
   try {
-    const { registerPermissionGroup } =
-      await import("../utils/permission-catalog.js");
-    registerPermissionGroup({
-      group: group.group,
-      permissions: group.permissions,
+    const {
+      registerPluginPermissions: register,
+      PERMISSION_CATALOG,
+      getPermissionCatalog,
+      rememberPermissions,
+    } = await import("../utils/permission-catalog.js");
+    const { qualifyPermission, RESERVED_PERMISSION_PREFIXES } =
+      await import("./manifest.js");
+
+    // The manifest validator blocks core groups and the plugin's own id, but
+    // it cannot know which other plugins exist. Re-checked here because the
+    // stored manifest is data.
+    const coreGroups = new Set<string>([
+      ...RESERVED_PERMISSION_PREFIXES,
+      ...PERMISSION_CATALOG.map((entry) => entry.group),
+    ]);
+    // Both the loaded plugins and any namespace already in the catalog: a
+    // disabled plugin still owns its permissions, so claiming them while it is
+    // off would let the namespace change hands.
+    const otherPluginIds = new Set(
+      [
+        ...getPluginRuntime()
+          .loader.list()
+          .map((candidate) => candidate.id),
+        ...getPermissionCatalog()
+          .filter((entry) => entry.pluginId !== undefined)
+          .map((entry) => entry.group),
+      ].filter((id) => id !== plugin.id),
+    );
+
+    const accepted = declared.filter((permission) => {
+      const head = permission.name.split(".")[0];
+      if (coreGroups.has(head) || otherPluginIds.has(head)) {
+        pluginLogger.warn(
+          `Ignoring ${plugin.id} permission "${permission.name}": it starts with "${head}", which belongs to someone else`,
+          { operation: "plugin_permissions" },
+        );
+        return false;
+      }
+      return true;
     });
 
-    if (group.defaultForRole) {
-      await applyRoleDefaults(plugin.id, group);
-    }
+    if (accepted.length === 0) return;
+
+    const items = accepted.map((permission) => ({
+      permission: qualifyPermission(plugin.id, permission.name),
+      titleKey: permission.titleKey,
+      descriptionKey: permission.descriptionKey,
+    }));
+
+    register({
+      group: plugin.id,
+      pluginId: plugin.id,
+      label: plugin.manifest.name,
+      icon: plugin.manifest.icon,
+      enabled: true,
+      permissions: items.map((item) => item.permission),
+      items,
+    });
+
+    rememberPermissions(items.map((item) => item.permission));
+
+    const { createCurrentRbacPermissionRepository } =
+      await import("../database/repositories/factory.js");
+    await createCurrentRbacPermissionRepository().recordKnown(
+      items.map((item) => ({
+        permission: item.permission,
+        pluginId: plugin.id,
+      })),
+    );
+
+    await applyRoleDefaults(plugin.id, accepted);
   } catch (error) {
     pluginLogger.error(
       `Failed to register permissions for ${plugin.id}`,
@@ -219,44 +285,49 @@ async function registerPluginPermissions(plugin: LoadedPlugin): Promise<void> {
 /**
  * Applies a plugin's declared role suggestion, once.
  *
- * Only permissions the plugin declares itself are eligible; the manifest
- * validator enforces that, and this re-checks it because the stored manifest
- * is data. Without it a manifest could add admin.* to any role at boot.
- *
- * Each default is applied at most once and the fact is recorded, so an admin
- * who later revokes it does not get it handed back on the next restart. The
- * old code claimed that behaviour in a comment but re-added the permission
- * every time.
+ * Only the seeded system roles are eligible, and only permissions the plugin
+ * declares itself. Each default is applied at most once and the fact is
+ * recorded in rbac_applied_defaults, so an admin who later revokes it does not
+ * get it handed back on the next restart. That ledger lives in core rather than
+ * in plugin_storage, which cascades with the plugin: uninstall-then-reinstall
+ * used to silently re-add a permission that had been deliberately removed.
  */
 async function applyRoleDefaults(
   pluginId: string,
-  group: {
-    group: string;
-    permissions: string[];
-    defaultForRole?: Record<string, string[]>;
-  },
+  declared: PluginPermissionContribution[],
 ): Promise<void> {
-  const { createCurrentRoleRepository, createCurrentPluginStorageRepository } =
+  const wanted = declared.filter(
+    (permission) => (permission.defaultRoles ?? []).length > 0,
+  );
+  if (wanted.length === 0) return;
+
+  const { createCurrentRoleRepository, createCurrentRbacPermissionRepository } =
     await import("../database/repositories/factory.js");
   const { PermissionManager } = await import("../utils/permission-manager.js");
+  const { qualifyPermission, SYSTEM_ROLE_NAMES } =
+    await import("./manifest.js");
 
   const roleRepository = createCurrentRoleRepository();
-  const storage = createCurrentPluginStorageRepository();
+  const rbacRepository = createCurrentRbacPermissionRepository();
 
-  const APPLIED_KEY = "__role_defaults_applied";
-  let applied: string[] = [];
-  try {
-    const raw = await storage.get(pluginId, APPLIED_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    if (Array.isArray(parsed)) applied = parsed;
-  } catch {
-    applied = [];
+  const alreadyApplied = new Set(
+    (await rbacRepository.listAppliedDefaults()).map(
+      (row) => `${row.roleName}:${row.permission}`,
+    ),
+  );
+
+  const byRole = new Map<string, string[]>();
+  for (const permission of wanted) {
+    for (const role of permission.defaultRoles ?? []) {
+      if (!(SYSTEM_ROLE_NAMES as readonly string[]).includes(role)) continue;
+      const id = qualifyPermission(pluginId, permission.name);
+      byRole.set(role, [...(byRole.get(role) ?? []), id]);
+    }
   }
 
-  const declared = new Set(group.permissions);
-  const appliedSet = new Set(applied);
+  const recorded: { roleName: string; permission: string }[] = [];
 
-  for (const [roleName, wanted] of Object.entries(group.defaultForRole ?? {})) {
+  for (const [roleName, permissions] of byRole) {
     try {
       const role = await roleRepository.findRoleByName(roleName);
       if (!role) continue;
@@ -269,24 +340,15 @@ async function applyRoleDefaults(
       }
       if (!Array.isArray(current)) continue;
 
-      const missing = wanted.filter((permission) => {
-        if (!declared.has(permission)) {
-          pluginLogger.warn(
-            `Ignoring ${pluginId} role default "${permission}" for ${roleName}: the plugin does not declare it`,
-            { operation: "plugin_permissions" },
-          );
-          return false;
-        }
+      const missing = permissions.filter((permission) => {
         // Applied before means the admin has had the chance to remove it, so
         // its absence now is a decision rather than a gap.
-        if (appliedSet.has(`${roleName}:${permission}`)) return false;
+        if (alreadyApplied.has(`${roleName}:${permission}`)) return false;
         return !coveredBy(current as string[], permission);
       });
 
-      for (const permission of wanted) {
-        if (declared.has(permission)) {
-          appliedSet.add(`${roleName}:${permission}`);
-        }
+      for (const permission of permissions) {
+        recorded.push({ roleName, permission });
       }
 
       if (missing.length === 0) continue;
@@ -309,7 +371,7 @@ async function applyRoleDefaults(
   }
 
   try {
-    await storage.set(pluginId, APPLIED_KEY, JSON.stringify([...appliedSet]));
+    await rbacRepository.recordAppliedDefaults(recorded);
   } catch {
     // Losing the record only means a default may be re-offered once.
   }
@@ -344,11 +406,13 @@ export async function deactivatePlugin(pluginId: string): Promise<void> {
   await pluginLoader.deactivate(pluginId);
   unregisterPluginHttp(pluginId);
 
-  const group = plugin?.manifest.contributes?.permissionGroup;
-  if (group) {
-    const { unregisterPermissionGroup } =
+  // The group stays in the catalog, greyed: a role holding one of these is not
+  // wrong just because the plugin is off, and removing them made every role
+  // that held one unsaveable.
+  if (plugin?.manifest.contributes?.permissions?.length) {
+    const { markPluginPermissionsDisabled } =
       await import("../utils/permission-catalog.js");
-    unregisterPermissionGroup(group.group);
+    markPluginPermissionsDisabled(pluginId);
   }
 }
 

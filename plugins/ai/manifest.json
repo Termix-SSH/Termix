@@ -56,19 +56,38 @@
         "kind": "button"
       }
     ],
-    "permissionGroup": {
-      "group": "ai",
-      "permissions": [
-        "ai.use",
-        "ai.manage_providers",
-        "ai.apply_proposals",
-        "ai.services.use",
-        "ai.secrets.share"
-      ],
-      "defaultForRole": {
-        "admin": ["ai.services.use"]
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "manage_providers",
+        "titleKey": "permissions.manage_providers.title",
+        "descriptionKey": "permissions.manage_providers.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "apply_proposals",
+        "titleKey": "permissions.apply_proposals.title",
+        "descriptionKey": "permissions.apply_proposals.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "services.use",
+        "titleKey": "permissions.services.use.title",
+        "descriptionKey": "permissions.services.use.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "secrets.share",
+        "titleKey": "permissions.secrets.share.title",
+        "descriptionKey": "permissions.secrets.share.description",
+        "defaultRoles": ["user"]
       }
-    }
+    ]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

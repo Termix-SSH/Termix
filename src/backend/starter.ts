@@ -291,6 +291,13 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
 
     const { serverReady } = await import("./database/database.js");
     await serverReady;
+
+    // Before any role is edited: a role may hold a plugin permission whose
+    // plugin is disabled or gone, and PUT /rbac/roles/:id has to keep
+    // accepting it.
+    const { primeKnownPermissions } =
+      await import("./utils/known-permissions.js");
+    await primeKnownPermissions();
     // Terminal, docker and host-metrics are deliberately absent: the
     // ssh-terminal, docker and host-metrics plugins start their own servers,
     // so disabling any of them stops its WS/HTTP server. See

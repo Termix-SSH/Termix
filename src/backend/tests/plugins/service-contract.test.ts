@@ -58,7 +58,8 @@ const { pluginEvents } = await import("../../plugins/events.js");
 const { createFixturePlugin } = await import("./fixture-plugin.js");
 
 const SERVICE = "testplugin.greet";
-const PERMISSION = "testplugin.greet.use";
+// Registered as <pluginId>.<name>, so it carries the provider fixture id.
+const PERMISSION = "ssh-terminal.greet.use";
 
 /**
  * The provider publishes a greet service and records every delegated call to
@@ -101,7 +102,13 @@ function providerFixture(): Fixture {
         { service: SERVICE, version: "1.2.0", permission: PERMISSION },
       ],
       contributes: {
-        permissionGroup: { group: "testplugin", permissions: [PERMISSION] },
+        permissions: [
+          {
+            name: "greet.use",
+            titleKey: "permissions.greet.use.title",
+            descriptionKey: "permissions.greet.use.description",
+          },
+        ],
       },
     },
   });

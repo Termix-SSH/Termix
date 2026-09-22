@@ -39,6 +39,7 @@ import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repos
 import { PluginRegistryRepository } from "./plugin-registry-repository.js";
 import { PluginInstallCountRepository } from "./plugin-install-count-repository.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
+import { RbacPermissionRepository } from "./rbac-permission-repository.js";
 import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
 import { SessionRecordingRepository } from "./session-recording-repository.js";
@@ -398,6 +399,13 @@ export function createCurrentPluginMigrationRepository(): PluginMigrationReposit
   return new PluginMigrationRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("plugin_migration_repository_write"),
+  );
+}
+
+export function createCurrentRbacPermissionRepository(): RbacPermissionRepository {
+  return new RbacPermissionRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("rbac_permission_repository_write"),
   );
 }
 

@@ -26,6 +26,40 @@
     "network:serve",
     "ui:surface"
   ],
+  "contributes": {
+    "permissions": [
+      {
+        "name": "view",
+        "titleKey": "permissions.view.title",
+        "descriptionKey": "permissions.view.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "create",
+        "titleKey": "permissions.create.title",
+        "descriptionKey": "permissions.create.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "edit",
+        "titleKey": "permissions.edit.title",
+        "descriptionKey": "permissions.edit.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "delete",
+        "titleKey": "permissions.delete.title",
+        "descriptionKey": "permissions.delete.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "run",
+        "titleKey": "permissions.run.title",
+        "descriptionKey": "permissions.run.description",
+        "defaultRoles": ["user"]
+      }
+    ]
+  },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]
 }

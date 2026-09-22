@@ -181,6 +181,8 @@ export function createFakeContext(
     rbac: {
       // Passes everything through: a test asserting a permission gate should
       // drive PermissionManager, not this double.
+      has: async () => true,
+      hasFor: async () => true,
       require: () => ((_req, _res, next) => next()) as PluginMiddleware,
     },
 

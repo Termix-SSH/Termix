@@ -21,10 +21,13 @@
     "ui:surface"
   ],
   "contributes": {
-    "permissionGroup": {
-      "group": "tailscale",
-      "permissions": ["tailscale.devices.view"]
-    }
+    "permissions": [
+      {
+        "name": "devices.view",
+        "titleKey": "permissions.devices.view.title",
+        "descriptionKey": "permissions.devices.view.description"
+      }
+    ]
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

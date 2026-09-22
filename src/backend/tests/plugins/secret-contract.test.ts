@@ -63,7 +63,8 @@ const { createFixturePlugin } = await import("./fixture-plugin.js");
 const PROVIDER_ID = "ssh-terminal";
 const CONSUMER_ID = "docker";
 const KEY = "api-key";
-const PERMISSION = "testplugin.secrets.share";
+// Registered as <pluginId>.<name>, so it carries the provider fixture id.
+const PERMISSION = "ssh-terminal.secrets.share";
 const SECRET = "sk-fixture-value";
 
 /**
@@ -108,7 +109,13 @@ function providerFixture(): Fixture {
       category: "Terminal",
       providesSecret: [{ key: KEY, permission: PERMISSION }],
       contributes: {
-        permissionGroup: { group: "testplugin", permissions: [PERMISSION] },
+        permissions: [
+          {
+            name: "secrets.share",
+            titleKey: "permissions.secrets.share.title",
+            descriptionKey: "permissions.secrets.share.description",
+          },
+        ],
       },
     },
   });
@@ -292,7 +299,13 @@ export async function activate(ctx) {
         category: "Terminal",
         providesSecret: [{ key: KEY, permission: PERMISSION }],
         contributes: {
-          permissionGroup: { group: "testplugin", permissions: [PERMISSION] },
+          permissions: [
+            {
+              name: "secrets.share",
+              titleKey: "permissions.secrets.share.title",
+              descriptionKey: "permissions.secrets.share.description",
+            },
+          ],
         },
       },
     });

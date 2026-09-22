@@ -46,6 +46,31 @@ const SECRET_KEY_PATTERN = /^[a-z0-9-]+$/;
 const ACTION_ID_PATTERN = /^[a-z0-9-]+(\.[a-zA-Z0-9-]+)+$/;
 const HANDLER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const PERMISSION_PATTERN = /^[a-z0-9-]+(\.[a-z0-9_-]+)+$/;
+/**
+ * A plugin-relative permission name. Unlike a full id one segment is fine,
+ * and underscores are allowed in the first segment too ("manage_providers").
+ */
+const PERMISSION_NAME_PATTERN = /^[a-z0-9_-]+(\.[a-z0-9_-]+)*$/;
+
+/** The roles core seeds. A plugin may only set defaults for these. */
+export const SYSTEM_ROLE_NAMES = ["admin", "user"] as const;
+export type SystemRoleName = (typeof SYSTEM_ROLE_NAMES)[number];
+
+/**
+ * Core permission groups. A plugin permission may not start with one of these,
+ * or a manifest could declare admin.users.manage and gate a route on it.
+ */
+export const RESERVED_PERMISSION_PREFIXES = [
+  "hosts",
+  "snippets",
+  "credentials",
+  "admin",
+] as const;
+
+/** The id a plugin-relative permission name is registered under. */
+export function qualifyPermission(pluginId: string, name: string): string {
+  return `${pluginId}.${name}`;
+}
 
 export interface PluginAuthor {
   name: string;
@@ -72,11 +97,19 @@ export interface PluginTabContribution {
   openFrom: string[];
 }
 
-export interface PluginPermissionGroup {
-  group: string;
-  permissions: string[];
-  /** Role name -> permissions. Only this plugin's own permissions are allowed. */
-  defaultForRole?: Record<string, string[]>;
+/**
+ * One role permission a plugin contributes.
+ *
+ * `name` is short and plugin-relative; core registers it as
+ * `<pluginId>.<name>`, so a plugin can never name a core group or another
+ * plugin's namespace. The i18n keys are plugin-relative too.
+ */
+export interface PluginPermissionContribution {
+  name: string;
+  titleKey: string;
+  descriptionKey: string;
+  /** System roles that should hold this the first time it is seen. */
+  defaultRoles?: SystemRoleName[];
 }
 
 export interface PluginActionContribution {
@@ -125,7 +158,7 @@ export interface PluginContributions {
   tabs?: PluginTabContribution[];
   actions?: PluginActionContribution[];
   actionSlots?: PluginActionSlot[];
-  permissionGroup?: PluginPermissionGroup;
+  permissions?: PluginPermissionContribution[];
   /**
    * A host-editor checkbox backed by a boolean column on the host record.
    * A5/A6/A7 reshape this; it stays in v2 because remote-desktop, docker,
@@ -202,7 +235,7 @@ const ALLOWED_CONTRIBUTES = new Set([
   "tabs",
   "actions",
   "actionSlots",
-  "permissionGroup",
+  "permissions",
   "hostCapability",
 ]);
 
@@ -288,7 +321,11 @@ export function validateManifest(manifest: unknown): string[] {
   validateRequires(m.requires, errors);
   validateProvidesSecret(m.providesSecret, errors);
   validateRequiresSecret(m.requiresSecret, errors);
-  validateContributes(m.contributes, errors);
+  validateContributes(
+    m.contributes,
+    typeof m.id === "string" ? m.id : undefined,
+    errors,
+  );
 
   return errors;
 }
@@ -511,7 +548,11 @@ function validateRequiresSecret(value: unknown, errors: string[]): void {
   });
 }
 
-function validateContributes(contributes: unknown, errors: string[]): void {
+function validateContributes(
+  contributes: unknown,
+  pluginId: string | undefined,
+  errors: string[],
+): void {
   if (contributes === undefined) return;
   if (!isPlainObject(contributes)) {
     errors.push('Field "contributes" must be an object');
@@ -520,7 +561,7 @@ function validateContributes(contributes: unknown, errors: string[]): void {
   rejectUnknown(contributes, ALLOWED_CONTRIBUTES, '"contributes"', errors);
 
   validateTabs(contributes.tabs, errors);
-  validatePermissionGroup(contributes.permissionGroup, errors);
+  validatePermissions(contributes.permissions, pluginId, errors);
   validateActions(contributes.actions, errors);
   validateActionSlots(contributes.actionSlots, errors);
   validateHostCapability(contributes.hostCapability, errors);
@@ -562,74 +603,78 @@ function validateTabs(tabs: unknown, errors: string[]): void {
   });
 }
 
-function validatePermissionGroup(group: unknown, errors: string[]): void {
-  if (group === undefined) return;
-  const where = "contributes.permissionGroup";
-  if (!isPlainObject(group)) {
-    errors.push(`${where} must be an object`);
+function validatePermissions(
+  permissions: unknown,
+  pluginId: string | undefined,
+  errors: string[],
+): void {
+  if (permissions === undefined) return;
+  const where = "contributes.permissions";
+  if (!Array.isArray(permissions)) {
+    errors.push(`${where} must be an array`);
     return;
   }
-  rejectUnknown(
-    group,
-    ["group", "permissions", "defaultForRole"],
-    where,
-    errors,
-  );
 
-  requireString(group.group, `${where}.group`, errors);
+  const seen = new Set<string>();
 
-  if (!Array.isArray(group.permissions) || group.permissions.length === 0) {
-    errors.push(`${where}.permissions must be a non-empty array`);
-  } else {
-    group.permissions.forEach((permission: unknown, index: number) => {
+  permissions.forEach((entry: unknown, index: number) => {
+    const at = `${where}[${index}]`;
+    if (!isPlainObject(entry)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(
+      entry,
+      ["name", "titleKey", "descriptionKey", "defaultRoles"],
+      at,
+      errors,
+    );
+
+    const name = entry.name;
+    if (typeof name !== "string" || !PERMISSION_NAME_PATTERN.test(name)) {
+      errors.push(`${at}.name must be a lowercase, dotted permission name`);
+    } else {
+      if (seen.has(name)) {
+        errors.push(`${at}.name "${name}" is declared more than once`);
+      }
+      seen.add(name);
+
+      // Core groups first: a plugin naming one could gate a route on core
+      // authority it was never given.
+      const head = name.split(".")[0];
+      if ((RESERVED_PERMISSION_PREFIXES as readonly string[]).includes(head)) {
+        errors.push(
+          `${at}.name "${name}" starts with the reserved core group "${head}". Permissions are registered as <pluginId>.<name>, so drop the prefix.`,
+        );
+      }
+      // "ai" declaring "ai.use" would register as ai.ai.use, which is always
+      // a mistake rather than an intent.
+      if (pluginId && (name === pluginId || head === pluginId)) {
+        errors.push(
+          `${at}.name "${name}" already starts with this plugin's id. Permissions are registered as <pluginId>.<name>, so drop the prefix.`,
+        );
+      }
+    }
+
+    requireString(entry.titleKey, `${at}.titleKey`, errors);
+    requireString(entry.descriptionKey, `${at}.descriptionKey`, errors);
+
+    if (entry.defaultRoles === undefined) return;
+    if (!Array.isArray(entry.defaultRoles)) {
+      errors.push(`${at}.defaultRoles must be an array`);
+      return;
+    }
+    entry.defaultRoles.forEach((role: unknown, roleIndex: number) => {
       if (
-        typeof permission !== "string" ||
-        !PERMISSION_PATTERN.test(permission)
+        typeof role !== "string" ||
+        !(SYSTEM_ROLE_NAMES as readonly string[]).includes(role)
       ) {
         errors.push(
-          `${where}.permissions[${index}] must be a dotted permission name`,
+          `${at}.defaultRoles[${roleIndex}] must be one of: ${SYSTEM_ROLE_NAMES.join(", ")}`,
         );
       }
     });
-  }
-
-  if (group.defaultForRole === undefined) return;
-  if (!isPlainObject(group.defaultForRole)) {
-    errors.push(
-      `${where}.defaultForRole must be an object of role -> permissions`,
-    );
-    return;
-  }
-
-  const declared = new Set(
-    Array.isArray(group.permissions)
-      ? (group.permissions as unknown[]).filter(
-          (value): value is string => typeof value === "string",
-        )
-      : [],
-  );
-
-  for (const [role, wanted] of Object.entries(group.defaultForRole)) {
-    if (!Array.isArray(wanted)) {
-      errors.push(`${where}.defaultForRole["${role}"] must be an array`);
-      continue;
-    }
-    wanted.forEach((permission: unknown, index: number) => {
-      if (typeof permission !== "string") {
-        errors.push(
-          `${where}.defaultForRole["${role}"][${index}] must be a string`,
-        );
-        return;
-      }
-      // A plugin may only suggest defaults for permissions it declares itself.
-      // Without this a manifest could add admin.* to any role at boot.
-      if (!declared.has(permission)) {
-        errors.push(
-          `${where}.defaultForRole["${role}"][${index}] is "${permission}", which this plugin does not declare in contributes.permissionGroup.permissions`,
-        );
-      }
-    });
-  }
+  });
 }
 
 function validateActions(actions: unknown, errors: string[]): void {
@@ -774,8 +819,12 @@ export function parseManifest(raw: unknown): ParsedManifest {
     };
   }
 
+  // Full ids: provides, providesSecret and actions all name permissions the
+  // way an admin sees them, so they are compared against the qualified form.
   const declared = new Set(
-    manifest.contributes?.permissionGroup?.permissions ?? [],
+    (manifest.contributes?.permissions ?? []).map((permission) =>
+      qualifyPermission(manifest.id, permission.name),
+    ),
   );
 
   // A permission the catalog never sees is one no admin can grant, so the
@@ -783,21 +832,21 @@ export function parseManifest(raw: unknown): ParsedManifest {
   for (const provide of manifest.provides ?? []) {
     if (!declared.has(provide.permission)) {
       errors.push(
-        `provides["${provide.service}"].permission "${provide.permission}" is not declared in contributes.permissionGroup.permissions`,
+        `provides["${provide.service}"].permission "${provide.permission}" is not declared in contributes.permissions`,
       );
     }
   }
   for (const secret of manifest.providesSecret ?? []) {
     if (!declared.has(secret.permission)) {
       errors.push(
-        `providesSecret["${secret.key}"].permission "${secret.permission}" is not declared in contributes.permissionGroup.permissions`,
+        `providesSecret["${secret.key}"].permission "${secret.permission}" is not declared in contributes.permissions`,
       );
     }
   }
   for (const action of manifest.contributes?.actions ?? []) {
     if (action.permission && !declared.has(action.permission)) {
       errors.push(
-        `contributes.actions["${action.id}"].permission "${action.permission}" is not declared in contributes.permissionGroup.permissions`,
+        `contributes.actions["${action.id}"].permission "${action.permission}" is not declared in contributes.permissions`,
       );
     }
   }

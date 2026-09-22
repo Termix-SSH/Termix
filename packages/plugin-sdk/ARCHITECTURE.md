@@ -67,14 +67,44 @@ text) plus the SDK method that checks it.
 These stay in core RBAC and keep their dotted spelling (`hosts.view`), so they
 can never be confused with colon-separated capabilities.
 
-A plugin declares short names in `contributes.permissionGroup`. Core registers
-them, groups them under the plugin in the role editor, and only lets a plugin
-set defaults for its own namespace: a `defaultForRole` entry naming a
-permission the plugin does not declare is a validation error, not a silent
-escalation. Permissions stored in a role survive the plugin being disabled.
+**A5 delivered this.** A plugin declares short names in
+`contributes.permissions`, and core registers each as `<pluginId>.<name>`. The
+plugin never writes the prefix, so it cannot claim a core group or another
+plugin's namespace: `parseManifest` refuses a name starting with `hosts`,
+`snippets`, `credentials`, `admin` or the plugin's own id, and the runtime
+re-checks against every namespace already in the catalog, because the validator
+cannot know which other plugins exist.
 
-Role defaults are applied once and the fact is recorded, so an admin who
-revokes one does not get it handed back on the next restart.
+The ids are unchanged by the move. `ai` + `use` is `ai.use`, which is exactly
+what the core catalog held before, so no role had to be migrated when `ai.*` and
+`automations.*` left `PERMISSION_CATALOG` and `SYSTEM_ROLE_DEFAULTS`.
+
+**A permission outlives its plugin.** Core records every id it has ever
+registered in `rbac_known_permissions`, loaded at boot before any request is
+served and backfilled from what roles already hold. Disabling a plugin now only
+marks its group `enabled: false`: the group stays in the catalog so the role
+editor can grey it, and `PUT /rbac/roles/:id` keeps accepting it. Previously the
+group was unregistered outright, so an admin could not save _any_ change to a
+role that still held one of these while the plugin was off. A permission nobody
+has ever registered is still rejected.
+
+**Defaults apply once.** `defaultRoles` names the seeded system roles (`admin`,
+`user`) and nothing else. Each application is recorded in
+`rbac_applied_defaults`, a core table with no foreign key to `plugins`, so an
+admin who revokes a default does not get it handed back on the next boot or by
+reinstalling the plugin. That ledger used to live in `plugin_storage`, which
+cascades with the plugin row.
+
+Both tables are deliberately unlinked from `plugins`: the whole point is
+surviving the plugin being gone.
+
+`ctx.rbac` is the plugin-side view: `has(permission)` for the current actor,
+`hasFor(userId, permission)`, and `require(permission)` as route middleware. All
+three resolve a bare short name against this plugin's prefix and take a full id
+belonging to a core group or another plugin as given, which is what makes a
+cross-plugin check expressible. `require` additionally refuses anything the
+plugin does not declare itself, at registration time, and denies with the same
+`401`/`403` bodies `requirePermission()` sends.
 
 ### 5. Data
 
@@ -332,11 +362,14 @@ not do.
       },
     ],
     "actionSlots": [{ "id": "example.toolbar", "accepts": ["button"] }],
-    "permissionGroup": {
-      "group": "example",
-      "permissions": ["example.use"],
-      "defaultForRole": { "admin": ["example.use"] }, // own namespace only
-    },
+    "permissions": [
+      {
+        "name": "use", // registered as "example.use"
+        "titleKey": "permissions.use.title", // plugin-relative
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["user"], // system roles only, applied once
+      },
+    ],
     "hostCapability": {
       "key": "enableExample",
       "labelKey": "k",
@@ -361,17 +394,22 @@ Cross-field rules the JSON schema cannot express, checked by `parseManifest`:
 - `engine.api` must match the SDK major version this build implements.
 - Every `provides[].permission`, `providesSecret[].permission` and
   `contributes.actions[].permission` must appear in the plugin's own
-  `contributes.permissionGroup.permissions`. A permission the catalog never
-  sees is one no admin can grant, so the surface would be invisible rather
-  than denied.
+  `contributes.permissions`, compared against the qualified `<pluginId>.<name>`
+  form. A permission the catalog never sees is one no admin can grant, so the
+  surface would be invisible rather than denied.
 - `requiresSecret[].plugin` and both dependency maps must not name the plugin
   itself, and a plugin cannot be in both `dependencies` and
   `optionalDependencies`.
-- Every `defaultForRole` entry must be a permission the plugin declares.
+- Every `contributes.permissions[].name` must be unique, must not start with a
+  core group (`hosts`, `snippets`, `credentials`, `admin`) or with the plugin's
+  own id, and every `defaultRoles` entry must be `admin` or `user`.
 
 `contributes.hostCapability`, `provides`, `requires`, `providesSecret` and
 `requiresSecret` are carried forward from v1 unchanged because the service and
-secret registries read them at activation. A5, A6 and A7 reshape them.
+secret registries read them at activation. A6 and A7 reshape them.
+
+Removed in A5: `contributes.permissionGroup` and its `defaultForRole`, replaced
+by `contributes.permissions`. A plugin no longer picks its own group name.
 
 Removed in v2: `permissions` (replaced by `capabilities`), `sidecars`, the
 `capabilities.{backend,frontend,electron,platforms}` object (replaced by the
@@ -446,7 +484,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.db.define` / `.client` / `.refs`            | `db:own`                         | **A3** |
 | `ctx.sync.registerEntity`                        | none                             | **A3** |
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                  | **A4** |
-| `ctx.rbac.require`                               | own permissions only             | **A4** |
+| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only             | **A5** |
 | `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`     | B      |
 | `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use` | B      |
 | `ctx.settings.*`                                 | `settings:read-core`             | A6     |
@@ -650,8 +688,7 @@ Known specifics:
   an `optionalDependency` (added in A2; it previously declared nothing, and
   the loader had no reason to order the two).
 - Core feature servers that are not plugins yet still own ports: tunnel 30003,
-  file-manager 30004, dashboard 30006, tmux 30010, serial 30011 and homepage
-  30012. Each keeps its nginx block until its own Phase B step. No plugin owns
+  file-manager 30004, dashboard 30006, tmux 30010, serial 30011 and homepage 30012. Each keeps its nginx block until its own Phase B step. No plugin owns
   a port any more (A4).
 - `src/ui/shell/pluginLoader.ts` still hardcodes plugin ids in
   `BUILT_IN_TABS_BY_PLUGIN` and `applyFirstPartyActions`. A7 removes both.

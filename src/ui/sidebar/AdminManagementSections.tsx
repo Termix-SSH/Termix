@@ -9,6 +9,8 @@ import {
   updateRole,
 } from "@/main-axios";
 import type { PermissionCatalogEntry, Role } from "@/main-axios";
+import { pluginKey } from "@/lib/plugin-i18n";
+import { PluginIcon } from "@/lib/plugin-icon";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import {
@@ -671,8 +673,23 @@ export function AdminRolesSection({
                   {catalog.map((entry) => {
                     const wildcard = `${entry.group}.*`;
                     const wildcardOn = editingPermissions.has(wildcard);
+                    // A plugin group with enabled === false is still granted,
+                    // it just cannot be reached right now.
+                    const offline = entry.enabled === false;
+                    const titleFor = (permission: string) => {
+                      const item = entry.items?.find(
+                        (candidate) => candidate.permission === permission,
+                      );
+                      if (!item) return null;
+                      return entry.pluginId
+                        ? t(pluginKey(entry.pluginId, item.titleKey))
+                        : t(item.titleKey);
+                    };
                     return (
-                      <div key={entry.group} className="flex flex-col gap-1">
+                      <div
+                        key={entry.group}
+                        className={`flex flex-col gap-1 ${offline ? "opacity-50" : ""}`}
+                      >
                         <button
                           onClick={() => togglePermission(wildcard)}
                           className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-left"
@@ -684,6 +701,12 @@ export function AdminRolesSection({
                               <Check className="size-2 text-background" />
                             )}
                           </span>
+                          {entry.pluginId && (
+                            <PluginIcon
+                              name={entry.icon}
+                              className="size-3 shrink-0 text-muted-foreground"
+                            />
+                          )}
                           <span
                             className={
                               wildcardOn
@@ -691,13 +714,22 @@ export function AdminRolesSection({
                                 : "text-muted-foreground"
                             }
                           >
-                            {entry.group}.*
+                            {entry.label ??
+                              (entry.labelKey
+                                ? t(entry.labelKey)
+                                : entry.group)}
                           </span>
+                          {offline && (
+                            <span className="px-1 border border-border text-[9px] font-normal normal-case tracking-normal text-muted-foreground">
+                              {t("admin.rolePermissions.pluginDisabled")}
+                            </span>
+                          )}
                         </button>
                         <div className="flex flex-col gap-0.5 pl-4">
                           {entry.permissions.map((permission) => {
                             const checked =
                               wildcardOn || editingPermissions.has(permission);
+                            const title = titleFor(permission);
                             return (
                               <button
                                 key={permission}
@@ -712,6 +744,11 @@ export function AdminRolesSection({
                                     <Check className="size-2 text-background" />
                                   )}
                                 </span>
+                                {title && (
+                                  <span className="text-foreground">
+                                    {title}
+                                  </span>
+                                )}
                                 <span className="font-mono text-muted-foreground">
                                   {permission}
                                 </span>

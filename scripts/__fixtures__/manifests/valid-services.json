@@ -21,9 +21,12 @@
     }
   ],
   "contributes": {
-    "permissionGroup": {
-      "group": "sample-plugin",
-      "permissions": ["sample-plugin.use"]
-    }
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description"
+      }
+    ]
   }
 }

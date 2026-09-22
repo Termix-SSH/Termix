@@ -2252,6 +2252,7 @@ export type {
   SharePermissionLevel,
   ShareTarget,
   PermissionCatalogEntry,
+  PermissionCatalogItem,
 } from "@/api/rbac-api";
 
 // ============================================================================

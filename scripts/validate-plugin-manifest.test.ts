@@ -79,9 +79,9 @@ describe("validate-plugin-manifest.cjs", () => {
     expect(output).toContain("extra");
   });
 
-  // A manifest must not be able to hand a role a permission the plugin does
-  // not own, which is how a plugin could otherwise grant itself admin rights.
-  it("rejects a role default outside the plugin's own namespace", () => {
+  // A manifest must not be able to name a core namespace, which is how a
+  // plugin could otherwise gate a route on admin authority it never had.
+  it("rejects a permission name outside the plugin's own namespace", () => {
     const { status, output } = runValidator(
       "invalid-role-default-escalation.json",
     );

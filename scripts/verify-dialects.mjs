@@ -135,12 +135,10 @@ check("host really deleted", await hosts.findById(host.id), null);
 // A plugin's own tables. The DDL is emitted from a table definition rather
 // than written by hand, so this is what proves the emitter's output is valid
 // on a real engine - the unit tests can only snapshot the string.
-const { defineTable, id, varchar, text, refUser, timestamp } = await import(
-  "../packages/plugin-sdk/dist/db.js"
-);
-const { createTableSql, dropTableSql } = await import(
-  "../packages/plugin-sdk/dist/ddl.js"
-);
+const { defineTable, id, varchar, text, refUser, timestamp } =
+  await import("../packages/plugin-sdk/dist/db.js");
+const { createTableSql, dropTableSql } =
+  await import("../packages/plugin-sdk/dist/ddl.js");
 const { sql: raw } = await import("drizzle-orm");
 
 const pluginTable = defineTable(

@@ -35,6 +35,7 @@ import {
   unregisterPluginHttp,
 } from "./http.js";
 import { registerPluginWsRoute, registerPluginWsUpgrade } from "./ws.js";
+import { resolvePermission } from "./rbac.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import {
   PluginCapabilityError,
@@ -474,6 +475,20 @@ export function createPluginContext(
     },
 
     rbac: {
+      // A short name takes this plugin's prefix; another plugin's id or a core
+      // group is used as given, which is what makes a cross-plugin check
+      // expressible without letting a plugin gate its own routes on it.
+      has: async (permission) => {
+        const actor = getActor();
+        if (!actor) return false;
+        return checkPermission(actor, resolvePermission(manifest, permission));
+      },
+
+      hasFor: async (userId, permission) => {
+        if (typeof userId !== "string" || userId.length === 0) return false;
+        return checkPermission(userId, resolvePermission(manifest, permission));
+      },
+
       require: (permission) => createRbacMiddleware(manifest, permission),
     },
 
