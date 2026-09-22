@@ -4,6 +4,9 @@
   "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "termix-plugin": "./cli/index.mjs"
+  },
   "exports": {
     "./backend": {
       "types": "./dist/backend.d.ts",
@@ -25,17 +28,30 @@
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
     },
+    "./testing/setup": {
+      "types": "./dist/testing/setup.d.ts",
+      "default": "./dist/testing/setup.js"
+    },
+    "./vitest-preset": {
+      "types": "./dist/vitest-preset.d.ts",
+      "default": "./dist/vitest-preset.js"
+    },
+    "./tsconfig.plugin.json": "./tsconfig.plugin.json",
     "./schema/manifest.schema.json": "./schema/manifest.schema.json"
   },
   "files": [
     "dist",
+    "cli",
     "schema",
+    "tsconfig.plugin.json",
     "ARCHITECTURE.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "semver": "^7.6.3"
+    "esbuild": "^0.28.1",
+    "semver": "^7.6.3",
+    "tar": "^7.5.22"
   }
 }

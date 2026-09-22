@@ -51,20 +51,11 @@ export function getPluginDir(pluginId: string): string {
   return path.join(getPluginsDir(), pluginId);
 }
 
-/**
- * The backend entry, from the manifest's own `backend` field.
- *
- * Bundled plugins still ship a hand-written backend/index.mjs, so that stays
- * the fallback until A2 gives every plugin a real build.
- */
+/** The backend entry, from the manifest's own `backend` field. */
 export function getPluginBackendEntry(
   pluginDir: string,
   manifest?: Pick<PluginManifest, "backend">,
 ): string {
-  const legacy = path.join(pluginDir, "backend", "index.mjs");
-  if (!manifest?.backend || manifest.backend === DEFAULT_BACKEND_ENTRY) {
-    if (fs.existsSync(legacy)) return legacy;
-  }
   return path.join(pluginDir, manifest?.backend ?? DEFAULT_BACKEND_ENTRY);
 }
 

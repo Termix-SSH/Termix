@@ -23,6 +23,9 @@
     "events:core",
     "ui:surface"
   ],
+  "optionalDependencies": {
+    "automations": "^1.0.0"
+  },
   "contributes": {
     "tabs": [
       {
@@ -33,8 +36,6 @@
       }
     ]
   },
-  "backend": "backend/index.mjs",
-  "frontend": "frontend/index.mjs",
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]
 }

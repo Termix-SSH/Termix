@@ -50,7 +50,7 @@ import {
 } from "@/main-axios";
 import type { RecentActivityItem, ServiceLink } from "@/main-axios";
 import { useTranslation } from "react-i18next";
-import { NetworkGraphCard } from "../../../plugins/network-topology/frontend/NetworkGraphCard";
+import { NetworkGraphCard } from "../../../plugins/network-topology/src/frontend/NetworkGraphCard";
 import { HomepagePreviewCard } from "@/dashboard/cards/HomepagePreviewCard";
 import { HomepageCanvas } from "@/features/homepage/HomepageCanvas";
 

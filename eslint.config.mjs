@@ -119,7 +119,7 @@ export default tseslint.config([
         {
           patterns: [
             {
-              group: ["**/plugins/*/backend/**"],
+              group: ["**/plugins/*/src/backend/**"],
               message:
                 "Core must not import a plugin backend. Register a dispatcher or an SDK service instead, so disabling the plugin degrades cleanly.",
             },
@@ -141,7 +141,7 @@ export default tseslint.config([
         {
           patterns: [
             {
-              group: ["**/plugins/*/frontend/**"],
+              group: ["**/plugins/*/src/frontend/**"],
               message:
                 "The shell should not import plugin components directly. A7 replaces these with registrations through the app object.",
             },
@@ -164,7 +164,7 @@ export default tseslint.config([
     //
     // What it already catches: a plugin backend importing the frontend tree,
     // which is not debt in any direction, just a mistake.
-    files: ["plugins/**/backend/**/*.{ts,mjs}"],
+    files: ["plugins/*/src/backend/**/*.{ts,mjs}"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -174,6 +174,26 @@ export default tseslint.config([
               group: ["@/*", "**/src/ui/**"],
               message:
                 "A plugin backend cannot import frontend code. Import from @termix/plugin-sdk, or use a relative path within the plugin.",
+            },
+          ],
+        },
+      ],
+      // A second rule name rather than a second pattern, because flat config
+      // replaces a rule's options rather than merging them: one rule cannot
+      // carry both severities, and folding this into the error above would
+      // fail the build on debt that has nowhere to go yet.
+      //
+      // scripts/plugin-boundary-allowlist.json holds today's offenders and
+      // scripts/check-plugin-boundaries.cjs fails on a new one. D1 empties
+      // the list and this becomes an error.
+      "@typescript-eslint/no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["**/src/backend/**", "**/src/types/**"],
+              message:
+                "A plugin should reach core through @termix/plugin-sdk. This relative import is legacy debt tracked in scripts/plugin-boundary-allowlist.json.",
             },
           ],
         },

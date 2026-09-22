@@ -13,12 +13,9 @@ dist-ssr
 coverage
 *.local
 
-# tsc -p tsconfig.plugins.json emits plugin backend .js next to its .ts
-# source. It also stray-emits sibling .js next to every core .ts the plugin
-# imports for type-checking (src/types, src/backend/utils, repositories...);
-# scripts/copy-bundled-plugins.cjs removes those after every compile, this
-# is a safety net for running tsc -p tsconfig.plugins.json directly.
-/plugins/*/backend/**/*.js
+# Plugin build output. termix-plugin build writes it, the packaged server
+# gets its copy under dist/plugins.
+/plugins/*/dist/
 /src/**/*.js
 
 .vscode/*

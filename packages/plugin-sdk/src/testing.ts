@@ -1,16 +1,20 @@
 /**
  * Test helpers for plugin authors.
  *
- * A2 adds the shared vitest preset each plugin's config extends. For now this
- * exposes the one thing a plugin test needs before that lands: a context
- * double that satisfies the PluginContext contract without a running server.
+ * createMockCtx is the one to reach for: it enforces capabilities the way the
+ * real runtime does. createFakeContext stays for tests that only need a
+ * context-shaped object and do not care about the gates.
+ *
+ * The vitest config these run under comes from @termix/plugin-sdk/vitest-preset.
  */
 
+import { PluginCapabilityError } from "./backend.js";
 import type {
   PluginContext,
   PluginDisposables,
   PluginLogger,
 } from "./backend.js";
+import type { TermixApp } from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
 
 export interface FakeContextOptions {
@@ -136,4 +140,149 @@ export function createFakeContext(
   };
 
   return { ctx, disposals, emitted, kv };
+}
+
+export interface MockContextOptions {
+  pluginId?: string;
+  manifest?: Partial<PluginManifest>;
+  /** Capabilities the plugin is granted. Anything else throws. */
+  capabilities?: string[];
+  /** Seed for ctx.kv. */
+  kv?: Record<string, unknown>;
+  /** Plugin settings, readable through settings.get. A5 wires the real one. */
+  settings?: Record<string, unknown>;
+  /** Acting user returned by currentActor and used by asUser. */
+  actor?: string;
+}
+
+export interface MockPluginContext extends FakePluginContext {
+  /** Settings backing store, so a test can assert what a plugin wrote. */
+  settings: Map<string, unknown>;
+  /** Capability ids checked during the test, in order, denied ones included. */
+  checked: string[];
+}
+
+/**
+ * A context double that gates on capabilities the way src/backend/plugins/ctx.ts
+ * does, so a test can prove a plugin fails closed without a running server.
+ *
+ * Two gates exist on today's ctx surface: kv:own on every ctx.kv call, and
+ * events:core on emitting a topic outside the plugin's own namespace. As the
+ * SDK grows a member, add its gate here in the same shape.
+ */
+export function createMockCtx(
+  options: MockContextOptions = {},
+): MockPluginContext {
+  const granted = new Set(options.capabilities ?? []);
+  const checked: string[] = [];
+  const settings = new Map<string, unknown>(
+    Object.entries(options.settings ?? {}),
+  );
+
+  const base = createFakeContext({
+    pluginId: options.pluginId,
+    actor: options.actor,
+    manifest: {
+      capabilities: options.capabilities ?? [],
+      ...options.manifest,
+    },
+  });
+
+  const { ctx, kv } = base;
+  const pluginId = ctx.pluginId;
+
+  for (const [key, value] of Object.entries(options.kv ?? {})) {
+    kv.set(key, value);
+  }
+
+  const require = (capability: string) => {
+    checked.push(capability);
+    if (!granted.has(capability)) {
+      throw new PluginCapabilityError(pluginId, capability);
+    }
+  };
+
+  const guardedKv = ctx.kv;
+  const gatedCtx: PluginContext = {
+    ...ctx,
+
+    kv: {
+      get: async (key) => {
+        require("kv:own");
+        return guardedKv.get(key);
+      },
+      set: async (key, value) => {
+        require("kv:own");
+        return guardedKv.set(key, value);
+      },
+      delete: async (key) => {
+        require("kv:own");
+        return guardedKv.delete(key);
+      },
+      list: async () => {
+        require("kv:own");
+        return guardedKv.list();
+      },
+    },
+
+    events: {
+      emit: (topic, payload) => {
+        if (
+          !topic.startsWith(`plugin.${pluginId}.`) &&
+          !granted.has("events:core")
+        ) {
+          throw new Error(
+            `Plugin ${pluginId} may only emit topics under "plugin.${pluginId}.". ` +
+              `Declare the events:core capability to emit core topics.`,
+          );
+        }
+        ctx.events.emit(topic, payload);
+      },
+      on: (topic, listener) => ctx.events.on(topic, listener),
+    },
+  };
+
+  return { ...base, ctx: gatedCtx, settings, checked };
+}
+
+/**
+ * A TermixApp double for frontend tests.
+ *
+ * A7 builds the real registration surface; until then this records what a
+ * plugin's frontend entry registered, which is all a test can assert about a
+ * loader that does not exist yet. Deliberately free of any render library so
+ * a plugin only needs testing-library if its own tests render something.
+ */
+export interface FakeTermixApp {
+  app: TermixApp;
+  /** Cleanups the plugin handed to app.onDispose. */
+  disposals: Array<() => void>;
+}
+
+export function renderWithApp(
+  options: { pluginId?: string; manifest?: Partial<PluginManifest> } = {},
+): FakeTermixApp {
+  const pluginId = options.pluginId ?? "test-plugin";
+  const disposals: Array<() => void> = [];
+
+  const manifest = {
+    id: pluginId,
+    name: pluginId,
+    version: "1.0.0",
+    description: "",
+    author: { name: "test" },
+    license: "MIT",
+    category: "Productivity",
+    engine: { termix: ">=2.9.0", api: "1" },
+    capabilities: [],
+    ...options.manifest,
+  } as PluginManifest;
+
+  const app: TermixApp = {
+    pluginId,
+    manifest,
+    onDispose: (dispose) => disposals.push(dispose),
+  };
+
+  return { app, disposals };
 }

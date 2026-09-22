@@ -146,7 +146,7 @@ function normalizeEndpoint(raw: unknown): WebEndpoint | null {
  * Drops any endpoint it refuses rather than rejecting the whole host -- one
  * bad row must not make a host unsaveable or unlistable. The editor is
  * responsible for telling the user before that happens
- * (plugins/web-endpoint/frontend/web-endpoint-validation.ts).
+ * (plugins/web-endpoint/src/frontend/web-endpoint-validation.ts).
  */
 export function normalizeWebEndpoints(raw: unknown): WebEndpoint[] {
   if (!Array.isArray(raw)) return [];

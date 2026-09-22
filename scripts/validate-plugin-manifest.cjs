@@ -14,7 +14,13 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const root = path.resolve(__dirname, "..");
-const sdkEntry = path.join(root, "packages", "plugin-sdk", "dist", "manifest.js");
+const sdkEntry = path.join(
+  root,
+  "packages",
+  "plugin-sdk",
+  "dist",
+  "manifest.js",
+);
 
 async function loadValidator() {
   if (!fs.existsSync(sdkEntry)) {

@@ -38,7 +38,7 @@ import type {
   TerminalHandle,
   TerminalHostConfig,
 } from "@/features/terminal/Terminal";
-import type { GuacamoleAppHandle } from "../../../plugins/remote-desktop/frontend/GuacamoleApp";
+import type { GuacamoleAppHandle } from "../../../plugins/remote-desktop/src/frontend/GuacamoleApp";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import {
@@ -84,19 +84,23 @@ const loadFileManager = () =>
   }));
 const FileManager = lazy(loadFileManager);
 const loadDockerManager = () =>
-  import("../../../plugins/docker/frontend/DockerManager").then((m) => ({
+  import("../../../plugins/docker/src/frontend/DockerManager").then((m) => ({
     default: m.DockerManager,
   }));
 const DockerManager = lazy(loadDockerManager);
 const loadWebEndpointTab = () =>
-  import("../../../plugins/web-endpoint/frontend/WebEndpointTab").then((m) => ({
-    default: m.WebEndpointTab,
-  }));
+  import("../../../plugins/web-endpoint/src/frontend/WebEndpointTab").then(
+    (m) => ({
+      default: m.WebEndpointTab,
+    }),
+  );
 const WebEndpointTab = lazy(loadWebEndpointTab);
 const loadHostMetricsTab = () =>
-  import("../../../plugins/host-metrics/frontend/HostMetricsTab").then((m) => ({
-    default: m.HostMetricsTab,
-  }));
+  import("../../../plugins/host-metrics/src/frontend/HostMetricsTab").then(
+    (m) => ({
+      default: m.HostMetricsTab,
+    }),
+  );
 const HostMetricsTab = lazy(loadHostMetricsTab);
 const loadProxmoxStatsTab = () =>
   import("@/features/proxmox-stats/ProxmoxStatsTab").then((m) => ({
@@ -109,9 +113,11 @@ const loadTmuxMonitor = () =>
   }));
 const TmuxMonitor = lazy(loadTmuxMonitor);
 const loadGuacamoleApp = () =>
-  import("../../../plugins/remote-desktop/frontend/GuacamoleApp").then((m) => ({
-    default: m.default,
-  }));
+  import("../../../plugins/remote-desktop/src/frontend/GuacamoleApp").then(
+    (m) => ({
+      default: m.default,
+    }),
+  );
 const GuacamoleApp = lazy(loadGuacamoleApp);
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
@@ -134,7 +140,7 @@ const SftpTransferTab = lazy(() =>
   })),
 );
 const NetworkGraphCard = lazy(() =>
-  import("../../../plugins/network-topology/frontend/NetworkGraphCard").then(
+  import("../../../plugins/network-topology/src/frontend/NetworkGraphCard").then(
     (m) => ({
       default: m.NetworkGraphCard,
     }),
@@ -146,9 +152,11 @@ const Serial = lazy(() =>
   })),
 );
 const FleetInventoryTab = lazy(() =>
-  import("../../../plugins/fleets/frontend/FleetInventoryTab").then((m) => ({
-    default: m.FleetInventoryTab,
-  })),
+  import("../../../plugins/fleets/src/frontend/FleetInventoryTab").then(
+    (m) => ({
+      default: m.FleetInventoryTab,
+    }),
+  ),
 );
 
 // Rail panels promoted to full tabs.
@@ -173,7 +181,7 @@ const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
 );
 const AutomationsPanel = lazy(() =>
-  import("../../../plugins/automations/frontend/AutomationsPanel").then(
+  import("../../../plugins/automations/src/frontend/AutomationsPanel").then(
     (m) => ({
       default: m.AutomationsPanel,
     }),

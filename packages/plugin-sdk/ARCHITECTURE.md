@@ -126,12 +126,30 @@ is disposed automatically on deactivate. See [Lifecycle rules](#lifecycle-rules)
 
 ### 11. Tests
 
-Each plugin has `plugins/<id>/tests/backend` and `plugins/<id>/tests/frontend`,
-run by its own vitest config built on the SDK preset (**A2**). Core tests
-(`src/backend/tests`, `src/ui/tests`) never test plugin code; they may test the
-plugin runtime with fixture plugins.
+Each plugin has `plugins/<id>/tests/backend` (node) and
+`plugins/<id>/tests/frontend` (jsdom), run by its own vitest config:
 
-Until A2, plugin tests still live under `src/*/tests/plugins/`.
+```ts
+// plugins/<id>/vitest.config.ts
+import { pluginVitestConfig } from "@termix/plugin-sdk/vitest-preset";
+
+export default pluginVitestConfig(import.meta.url);
+```
+
+The preset supplies both projects, the shared setup file
+(`@termix/plugin-sdk/testing/setup`, which core's `vitest.setup.ts` re-exports
+so there is one copy) and the `@/` alias the frontends still use.
+
+`npm run test` runs core only, `npm run test:plugins` runs every plugin and
+`npm run test:all` runs both. Core tests (`src/backend/tests`, `src/ui/tests`)
+never test plugin code; they may test the plugin runtime with fixture plugins,
+which is why `src/backend/tests/plugins/` still holds the loader, manifest,
+capability, registry, service, secret and shutdown suites.
+
+`@termix/plugin-sdk/testing` provides `createMockCtx()`, which enforces
+capabilities the way the runtime does, `createFakeContext()` for tests that do
+not care about the gates, and `renderWithApp()` for frontend tests (**A7**
+finishes it).
 
 ### 12. Auth
 
@@ -145,6 +163,24 @@ SSH auth method is a plugin through `ctx.auth`. **A8.**
 Official plugins live in `plugins/<id>/` as npm workspace packages in this
 monorepo for all of 2.9.0, and get split into their own repos later. Every
 plugin is enabled by default in 2.9.0; there is no install UI until 3.0.0.
+
+The layout is fixed, and the directory name must equal the manifest `id`:
+
+```
+plugins/<id>/
+  manifest.json            id, capabilities, contributions
+  package.json             @termix-plugin/<id>, private, scripts call the CLI
+  tsconfig.json            extends @termix/plugin-sdk/tsconfig.plugin.json
+  vitest.config.ts         one line, the SDK preset
+  src/backend/index.ts     exports activate(ctx) and deactivate()
+  src/frontend/index.tsx   exports activate(app) and deactivate() (A7)
+  locales/en.json          English strings; Crowdin translates the rest
+  migrations/{sqlite,pg,mysql}/   owned tables (A3)
+  tests/backend/           vitest, node
+  tests/frontend/          vitest, jsdom
+  README.md  CHANGELOG.md
+  dist/                    build output, gitignored
+```
 
 ### 14. Upgrades must be lossless
 
@@ -431,35 +467,99 @@ until one is, this document does not pretend otherwise.
 
 ---
 
+## Building a plugin
+
+`termix-plugin`, the CLI the SDK ships, is the only build a plugin needs. It
+runs from the plugin's own directory, so a plugin that moves to its own repo
+keeps working unchanged.
+
+| Command                  | What it does                                                                                                                                                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `termix-plugin build`    | esbuild bundles `src/backend/index.ts` to `dist/backend.js` (ESM, node22) and `src/frontend/index.tsx` to `dist/frontend.js` (ESM, browser), then copies `locales/` and `migrations/` into `dist/`. Imported CSS lands in `dist/frontend.css`. |
+| `termix-plugin validate` | Runs the SDK's `parseManifest` and checks the files the manifest names exist.                                                                                                                                                                  |
+| `termix-plugin test`     | Runs the plugin's vitest suite.                                                                                                                                                                                                                |
+| `termix-plugin pack`     | Writes a `.tgz` of the manifest, `dist/`, locales, migrations and README. **D3** adds signing.                                                                                                                                                 |
+
+`npm run build:plugins` builds every plugin and stages the result in
+`dist/plugins/<id>/`, which is what `getBundledPluginsDir()` resolves to and
+what Docker and electron-builder package. `npm run build`, `build:backend` and
+`dev:backend` all call it.
+
+TypeScript only type-checks (`tsconfig.plugins.json`, `noEmit`); esbuild does
+every emit. Nothing is written next to a source file.
+
+### Host-provided packages
+
+These ship with the Termix server and are never bundled into a plugin, because
+a second copy of express or React is a bug, and a second `ssh2` means a second
+set of native bindings. A plugin may depend on anything outside these lists,
+and that is bundled into its output.
+
+**Backend** (plus every node builtin): `@termix/plugin-sdk`, `express`, `ssh2`,
+`ws`, `multer`, `cookie-parser`, `axios`, `jszip`, `guacamole-lite`,
+`@anthropic-ai/sdk`, `drizzle-orm`.
+
+**Frontend**: `react`, `react-dom`, `react/jsx-runtime`, `@termix/plugin-sdk`,
+`i18next`, `react-i18next`, and the UI libraries core provides today
+(`lucide-react`, `sonner`, `axios`, `cytoscape`, `react-cytoscapejs`,
+`guacamole-common-js`, `react-xtermjs`, `@xterm/*`). **A7** serves these
+through the SDK `ui` entry.
+
+The lists live in `packages/plugin-sdk/cli/lib/externals.mjs`.
+
+---
+
 ## Legacy core imports: the debt D1 removes
 
 The twelve bundled plugins predate the SDK. They still reach core by relative
-path (`../../../src/backend/...`), which a build-time string rewrite in
-`scripts/copy-bundled-plugins.cjs` patches to the compiled output path.
+path (`../../../../src/backend/...`), which an esbuild plugin,
+`packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
+and rewrites to the compiled output path (`../../../backend/backend/...`, or
+`../../../backend/types/...` for shared types). The rewrite is output-relative,
+so a source file at any nesting collapses to the same prefix. D1 deletes that
+file.
 
 This is expected and temporary. The SDK does not yet expose what they need:
 the SSH connection pool, host resolution, the repository layer, the shared
 component library. D1 removes the debt once A3 through A8 have given them
 supported APIs to move onto.
 
-What the lint fence enforces today:
+What the lint fence enforces today, in `eslint.config.mjs`:
 
-- Core must not import a plugin backend. **Error**, no offenders.
-- A plugin backend must not import frontend code or use the `@/` alias.
-  **Error**, no offenders.
-- The shell must not import plugin components. **Warning** with 21 offenders,
-  which is exactly the work A7 does. It becomes an error then.
-- Plugin backends importing core by relative path is not yet flagged, because
-  there is nowhere for them to go.
+| Direction                                        | Severity  | Offenders | Emptied by |
+| ------------------------------------------------ | --------- | --------- | ---------- |
+| Core importing a plugin backend                  | **Error** | 0         | -          |
+| A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
+| The shell importing plugin components            | Warning   | 16 files  | A7         |
+| A plugin importing core by relative path         | Warning   | 71 files  | D1         |
+| A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
+
+A warning does not fail a build, so the counts are held by
+`scripts/check-plugin-boundaries.cjs`, run by `npm run lint`. Every offender is
+listed in `scripts/plugin-boundary-allowlist.json`: a new one fails, and so
+does an entry that stopped being an offender, so the list shrinks as each step
+lands rather than rotting. `--write` regenerates it. D1 empties it and the two
+plugin-side warnings become errors.
+
+The two plugin-backend directions use different rule names
+(`no-restricted-imports` and `@typescript-eslint/no-restricted-imports`)
+because flat config replaces a rule's options rather than merging them, so one
+rule cannot carry both severities on the same files.
 
 Known specifics:
 
-- **TODO(B18):** `plugins/ai/backend/tools/executor.ts` imports
-  `../../../automations/backend/routes.js` directly. It is declared as a hard
-  `dependencies` entry so the loader starts automations first and marks `ai`
-  blocked if automations is disabled. In B18 `ai` calls automations through an
+- **TODO(B18):** `plugins/ai/src/backend/tools/executor.ts` imports
+  `automations`' `routes.js` directly. It is declared as a hard `dependencies`
+  entry so the loader starts automations first and marks `ai` blocked if
+  automations is disabled. In B18 `ai` calls automations through an
   `automations` service as an `optionalDependency` and the direct import goes
-  away. This is the only cross-plugin import in the repo.
+  away.
+- **TODO(B18):** `plugins/host-metrics/src/backend/` reaches `automations`
+  twice, for a `MetricsSnapshot` type and a fire-and-forget
+  `import("...headless-viewer.js")` that registers a viewer bridge. Both
+  degrade silently when automations is absent, so host-metrics declares it as
+  an `optionalDependency` (added in A2; it previously declared nothing, and
+  the loader had no reason to order the two).
 - Eight plugins keep their original core URLs through the dispatchers in
   `src/backend/database/routes/*-dispatch.ts` rather than `/plugin-api`. A4
   moves them.

@@ -128,7 +128,7 @@ export async function updateSessionTimeout(
 }
 
 // Tailscale settings/device API wrappers moved to
-// plugins/tailscale/frontend/tailscale-api.ts.
+// plugins/tailscale/src/frontend/tailscale-api.ts.
 
 // ============================================================================
 // GUACAMOLE SETTINGS

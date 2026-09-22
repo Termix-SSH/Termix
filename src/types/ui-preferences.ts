@@ -181,7 +181,7 @@ const BALANCED_DASHBOARD_CARDS = [
 // the edge of the screen. They stay available in the Add card tray.
 const ADVANCED_DASHBOARD_CARDS = [...BALANCED_DASHBOARD_CARDS, "service_links"];
 
-/** Host metrics card ids, mirroring CARD_DEFINITIONS in plugins/host-metrics/frontend/cards. */
+/** Host metrics card ids, mirroring CARD_DEFINITIONS in plugins/host-metrics/src/frontend/cards. */
 const SIMPLE_HOST_METRICS_CARDS = ["cpu", "memory", "disk"];
 const BALANCED_HOST_METRICS_CARDS = [
   "cpu",

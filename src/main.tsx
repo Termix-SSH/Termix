@@ -44,7 +44,7 @@ const TunnelApp = lazy(() =>
   import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
 );
 const HostMetricsApp = lazy(() =>
-  import("../plugins/host-metrics/frontend/HostMetricsApp").then((m) => ({
+  import("../plugins/host-metrics/src/frontend/HostMetricsApp").then((m) => ({
     default: m.default,
   })),
 );
@@ -54,12 +54,12 @@ const ProxmoxStatsApp = lazy(() =>
   })),
 );
 const DockerApp = lazy(() =>
-  import("../plugins/docker/frontend/DockerApp").then((m) => ({
+  import("../plugins/docker/src/frontend/DockerApp").then((m) => ({
     default: m.default,
   })),
 );
 const GuacamoleApp = lazy(() =>
-  import("../plugins/remote-desktop/frontend/GuacamoleApp").then((m) => ({
+  import("../plugins/remote-desktop/src/frontend/GuacamoleApp").then((m) => ({
     default: m.default,
   })),
 );

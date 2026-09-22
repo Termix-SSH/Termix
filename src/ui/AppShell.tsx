@@ -92,24 +92,26 @@ const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 const FleetsPanel = lazy(() =>
-  import("../../plugins/fleets/frontend/FleetsPanel").then((m) => ({
+  import("../../plugins/fleets/src/frontend/FleetsPanel").then((m) => ({
     default: m.FleetsPanel,
   })),
 );
 const TailscaleDevicesPanel = lazy(() =>
-  import("../../plugins/tailscale/frontend/TailscaleDevicesPanel").then(
+  import("../../plugins/tailscale/src/frontend/TailscaleDevicesPanel").then(
     (m) => ({ default: m.TailscaleDevicesPanel }),
   ),
 );
 const WorkspacesPanel = lazy(() =>
-  import("../../plugins/workspaces/frontend/WorkspacesPanel").then((m) => ({
+  import("../../plugins/workspaces/src/frontend/WorkspacesPanel").then((m) => ({
     default: m.WorkspacesPanel,
   })),
 );
 const AutomationsPanel = lazy(() =>
-  import("../../plugins/automations/frontend/AutomationsPanel").then((m) => ({
-    default: m.AutomationsPanel,
-  })),
+  import("../../plugins/automations/src/frontend/AutomationsPanel").then(
+    (m) => ({
+      default: m.AutomationsPanel,
+    }),
+  ),
 );
 const AiPanel = lazy(() =>
   import("@/features/ai/AiPanel").then((m) => ({
@@ -197,12 +199,12 @@ import {
   listWorkspaces,
   applyWorkspaceServer,
   saveLastSessionWorkspace,
-} from "../../plugins/workspaces/frontend/workspaces-api";
+} from "../../plugins/workspaces/src/frontend/workspaces-api";
 import {
   buildWorkspacePayload as buildWorkspacePayloadUtil,
   remapSlotIds,
   resolveWorkspaceTabTarget,
-} from "../../plugins/workspaces/frontend/workspaceUtils";
+} from "../../plugins/workspaces/src/frontend/workspaceUtils";
 import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
 import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";

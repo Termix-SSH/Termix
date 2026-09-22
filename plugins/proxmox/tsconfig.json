@@ -1,0 +1,10 @@
+{
+  "extends": "@termix/plugin-sdk/tsconfig.plugin.json",
+  "compilerOptions": {
+    "paths": {
+      "@/types/*": ["../../src/types/*"],
+      "@/*": ["../../src/ui/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
+}

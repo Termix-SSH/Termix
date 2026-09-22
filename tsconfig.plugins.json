@@ -4,14 +4,12 @@
     "target": "ES2023",
     "lib": ["ES2023"],
     "module": "nodenext",
-    "skipLibCheck": true,
     "moduleResolution": "nodenext",
+    "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "esModuleInterop": true,
-    "noEmit": false,
-    "rootDir": ".",
-    "outDir": ".",
+    "noEmit": true,
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -26,18 +24,5 @@
     "allowUnusedLabels": true,
     "allowUnreachableCode": true
   },
-  "include": [
-    "plugins/docker/backend/**/*.ts",
-    "plugins/host-metrics/backend/**/*.ts",
-    "plugins/ai/backend/**/*.ts",
-    "plugins/proxmox/backend/**/*.ts",
-    "plugins/remote-desktop/backend/**/*.ts",
-    "plugins/fleets/backend/**/*.ts",
-    "plugins/automations/backend/**/*.ts",
-    "plugins/network-topology/backend/**/*.ts",
-    "plugins/workspaces/backend/**/*.ts",
-    "plugins/web-endpoint/backend/**/*.ts",
-    "plugins/tailscale/backend/**/*.ts"
-  ],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["plugins/*/src/backend/**/*.ts"]
 }

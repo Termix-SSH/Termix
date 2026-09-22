@@ -37,8 +37,6 @@
       "editorTab": "docker"
     }
   },
-  "backend": "backend/index.mjs",
-  "frontend": "frontend/index.mjs",
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]
 }

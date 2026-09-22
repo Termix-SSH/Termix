@@ -39,7 +39,7 @@ vi.mock("@xterm/addon-fit", () => ({
 }));
 
 vi.mock(
-  "../../../../../plugins/remote-desktop/frontend/GuacamoleDisplay.tsx",
+  "../../../../../plugins/remote-desktop/src/frontend/GuacamoleDisplay.tsx",
   () => ({
     GuacamoleDisplay: () => <div data-testid="guacamole-display" />,
   }),

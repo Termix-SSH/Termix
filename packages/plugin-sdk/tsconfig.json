@@ -2,7 +2,8 @@
   "compilerOptions": {
     "tsBuildInfoFile": "../../node_modules/.tmp/tsconfig.plugin-sdk.tsbuildinfo",
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "skipLibCheck": true,

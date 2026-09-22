@@ -1,0 +1,15 @@
+{
+  "name": "@termix-plugin/docker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "termix-plugin validate"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*"
+  }
+}

@@ -9,7 +9,7 @@ import type {
 import { GRID_SIZE } from "@/types/homepage-types";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import type { SSHHostWithStatus } from "@/main-axios";
-import { DockerManager } from "../../../../../plugins/docker/frontend/DockerManager";
+import { DockerManager } from "../../../../../plugins/docker/src/frontend/DockerManager";
 import type { SSHHost } from "@/types/index";
 import { WidgetTitle } from "./WidgetTitle";
 

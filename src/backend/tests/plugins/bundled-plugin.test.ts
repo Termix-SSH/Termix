@@ -90,7 +90,7 @@ describe("declared dependencies", () => {
     }
   });
 
-  // plugins/ai/backend/tools/executor.ts imports automations' routes
+  // plugins/ai/src/backend/tools/executor.ts imports automations' routes
   // directly, so the loader has to start automations first. B18 replaces the
   // import with a service call and this becomes optional.
   it("records ai's dependency on automations", () => {
@@ -111,7 +111,7 @@ describe("plugins that own a port", () => {
     (id) => {
       if (!ids.includes(id)) return;
 
-      const entry = path.join(BUNDLED_DIR, id, "backend", "index.mjs");
+      const entry = path.join(BUNDLED_DIR, id, "src", "backend", "index.ts");
       const source = fs.readFileSync(entry, "utf8");
       const moduleScope = source.slice(
         0,
@@ -129,8 +129,14 @@ describe("plugins that own a port", () => {
     // Core owns shutdown: gracefulShutdown calls shutdownPlugins, which runs
     // every plugin's deactivate. A plugin calling process.exit() itself
     // skipped the rest of that sequence.
-    for (const file of ["index.mjs", "console.ts"]) {
-      const candidate = path.join(BUNDLED_DIR, "docker", "backend", file);
+    for (const file of ["index.ts", "console.ts"]) {
+      const candidate = path.join(
+        BUNDLED_DIR,
+        "docker",
+        "src",
+        "backend",
+        file,
+      );
       if (!fs.existsSync(candidate)) continue;
 
       // Comments are stripped first: the rule is worth explaining in prose

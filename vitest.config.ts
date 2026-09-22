@@ -47,10 +47,7 @@ export default defineConfig({
         test: {
           name: "frontend",
           environment: "jsdom",
-          include: [
-            "src/ui/**/*.test.{ts,tsx}",
-            "plugins/**/frontend/**/*.test.{ts,tsx}",
-          ],
+          include: ["src/ui/**/*.test.{ts,tsx}"],
         },
       },
       {

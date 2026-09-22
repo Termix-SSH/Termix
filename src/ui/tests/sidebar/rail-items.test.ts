@@ -8,7 +8,7 @@ import {
   railItemLabel,
   visibleRailItems,
 } from "@/sidebar/rail-items";
-import { WORKSPACE_CAPTURABLE_TYPES } from "../../../../plugins/workspaces/frontend/workspaceUtils";
+import { WORKSPACE_CAPTURABLE_TYPES } from "../../../../plugins/workspaces/src/frontend/workspaceUtils";
 import type { TabType } from "@/types/ui-types";
 import en from "@/locales/en.json";
 

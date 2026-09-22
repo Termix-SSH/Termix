@@ -4,3 +4,5 @@ api_token: "env:CROWDIN_API_TOKEN"
 files:
   - source: /src/ui/locales/en.json
     translation: /src/ui/locales/translated/%locale_with_underscore%.json
+  - source: /plugins/*/locales/en.json
+    translation: /plugins/**/locales/translated/%locale_with_underscore%.json

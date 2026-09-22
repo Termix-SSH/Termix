@@ -6,8 +6,8 @@
 // It also brokers the small surface collab, session-sharing and the admin
 // settings route need from the plugin (join tokens, live-session lookups, a
 // server restart hook). Those core modules cannot import the plugin's
-// TypeScript directly -- plugins/ is compiled by tsconfig.plugins.json as a
-// one-directional read of src/backend/ (see copy-bundled-plugins.cjs), and a
+// TypeScript directly -- plugins/ is type-checked by tsconfig.plugins.json as
+// a one-directional read of src/backend/, and a
 // core file under tsconfig.node.json's rootDir cannot statically import
 // something outside it. So the plugin registers this bridge once on
 // activate, and clears it on deactivate; a disabled/uninstalled plugin falls

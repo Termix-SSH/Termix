@@ -67,8 +67,8 @@ import {
 import {
   getTailscaleSettings,
   updateTailscaleSettings,
-} from "../../../plugins/tailscale/frontend/tailscale-api";
-import { AdminTailscaleSection } from "../../../plugins/tailscale/frontend/AdminTailscaleSection";
+} from "../../../plugins/tailscale/src/frontend/tailscale-api";
+import { AdminTailscaleSection } from "../../../plugins/tailscale/src/frontend/AdminTailscaleSection";
 import {
   getSessionSharingGloballyEnabled,
   updateSessionSharingGloballyEnabled,
