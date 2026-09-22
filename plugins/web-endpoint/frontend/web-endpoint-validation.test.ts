@@ -5,8 +5,8 @@ import {
   isWebEndpointPortValid,
   webEndpointErrorKey,
   webEndpointRowError,
-} from "@/lib/web-endpoint-validation";
-import { normalizeWebEndpoints } from "../../../backend/database/routes/host-web-endpoints.js";
+} from "./web-endpoint-validation";
+import { normalizeWebEndpoints } from "../../../src/backend/database/routes/host-web-endpoints.js";
 import type { WebEndpoint } from "@/types/index";
 
 function endpoint(overrides: Partial<WebEndpoint> = {}): WebEndpoint {

@@ -1,0 +1,35 @@
+{
+  "id": "web-endpoint",
+  "name": "Web Endpoint",
+  "version": "1.0.0",
+  "description": "Open a host's web UI in a tab or an isolated desktop window, directly or over an SSH tunnel.",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Plugin-WebEndpoint",
+  "category": "Networking",
+  "icon": "Globe",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": true,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["process:transport-owner"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "web-endpoint",
+        "titleKey": "hosts.tabWebUi",
+        "icon": "Globe",
+        "openFrom": ["host-context-menu"]
+      }
+    ],
+    "hostCapability": {
+      "key": "enableWebUi",
+      "labelKey": "hosts.tabWebUi",
+      "editorTab": "general"
+    }
+  },
+  "sidecars": []
+}

@@ -300,11 +300,15 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // its router with its own dispatcher in database.ts on activate (/ai,
     // /proxmox, /guacamole, /fleets, /automations, /network-topology,
     // /workspaces), so disabling any of them makes its routes 404 instead of
-    // leaving a dead import here. Automations' scheduler (due schedules,
+    // leaving a dead import here. Web Endpoint works the same way, except its
+    // dispatcher is mounted by the tunnel service below rather than by
+    // database.ts, since its route is served on port 30003. Automations'
+    // scheduler (due schedules,
     // dwell rechecks, docker-event polling, history pruning) also starts
     // from its own activate() rather than here. See plugins/ai,
     // plugins/proxmox, plugins/remote-desktop, plugins/fleets,
-    // plugins/automations, plugins/network-topology and plugins/workspaces.
+    // plugins/automations, plugins/network-topology, plugins/workspaces and
+    // plugins/web-endpoint.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/tmux/index.js");

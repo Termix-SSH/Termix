@@ -1,7 +1,4 @@
-import {
-  currentTunnelHost,
-  resolveWebEndpointUrl,
-} from "@/lib/web-endpoint-url";
+import { currentTunnelHost, resolveWebEndpointUrl } from "./web-endpoint-url";
 import axios from "axios";
 import { handleApiError, tunnelApi } from "@/main-axios";
 import { isElectron } from "@/lib/electron";

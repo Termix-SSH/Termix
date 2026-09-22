@@ -13,12 +13,11 @@ import type { Host } from "@/types/ui-types";
 const openWebEndpointTunnel = vi.hoisted(() => vi.fn());
 const allowInvalidCertificateForOrigin = vi.hoisted(() => vi.fn());
 
-vi.mock("@/api/web-endpoint-api", async (importOriginal) => {
+vi.mock("./web-endpoint-api", async (importOriginal) => {
   // requireNumericHostId is left as the real implementation -- the "no saved
   // host" case exercises the actual validation, not a re-implementation of it
   // that could drift.
-  const actual =
-    await importOriginal<typeof import("@/api/web-endpoint-api")>();
+  const actual = await importOriginal<typeof import("./web-endpoint-api")>();
   return {
     ...actual,
     openWebEndpointTunnel: (...args: unknown[]) =>
@@ -95,8 +94,7 @@ describe("WebEndpointTab", () => {
   it("refuses unsupported environments before creating a tunnel or iframe", async () => {
     delete (HTMLIFrameElement.prototype as { credentialless?: boolean })
       .credentialless;
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel" })])}
@@ -108,8 +106,7 @@ describe("WebEndpointTab", () => {
     expect(document.querySelector("iframe")).toBeNull();
   });
   it("isolates cookie state and denies parent access, popups and top navigation", async () => {
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(<WebEndpointTab host={host({}, [endpoint()])} endpointId="e1" />);
     const frame = (await screen.findByTitle("Proxmox")) as HTMLIFrameElement;
     expect(
@@ -121,8 +118,7 @@ describe("WebEndpointTab", () => {
   });
 
   it("renders an iframe at the direct URL", async () => {
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(<WebEndpointTab host={host({}, [endpoint()])} endpointId="e1" />);
     await waitFor(() =>
       expect(screen.getByTitle("Proxmox")).toHaveAttribute(
@@ -134,8 +130,7 @@ describe("WebEndpointTab", () => {
 
   it("opens the tunnel through the numeric host id and frames the loopback URL", async () => {
     openWebEndpointTunnel.mockResolvedValue(41234);
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel" })])}
@@ -152,8 +147,7 @@ describe("WebEndpointTab", () => {
   });
 
   it("registers the certificate allowance for a direct endpoint with ignoreCert", async () => {
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ ignoreCert: true })])}
@@ -171,8 +165,7 @@ describe("WebEndpointTab", () => {
     openWebEndpointTunnel
       .mockResolvedValueOnce(41234)
       .mockResolvedValueOnce(51234);
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel" })])}
@@ -208,8 +201,7 @@ describe("WebEndpointTab", () => {
    */
   it("remounts the frame on reload even when the resolved URL is unchanged", async () => {
     openWebEndpointTunnel.mockResolvedValue(41234);
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel" })])}
@@ -234,8 +226,7 @@ describe("WebEndpointTab", () => {
     openWebEndpointTunnel.mockRejectedValue(
       new Error("Timed out reaching the endpoint port"),
     );
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel" })])}
@@ -250,8 +241,7 @@ describe("WebEndpointTab", () => {
   });
 
   it("shows a plain message when the endpoint id matches nothing on the host", async () => {
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(<WebEndpointTab host={host({}, [])} endpointId="deleted" />);
     await waitFor(() =>
       expect(screen.getByText("webEndpoint.notFound")).toBeInTheDocument(),
@@ -261,8 +251,7 @@ describe("WebEndpointTab", () => {
   });
 
   it("explains that a tunnel needs a saved host, instead of calling the route", async () => {
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({ id: "quick-connect-1" }, [endpoint({ access: "tunnel" })])}
@@ -278,8 +267,7 @@ describe("WebEndpointTab", () => {
   it("resolves a direct endpoint normally on the same quick-connect host", async () => {
     // The positive case: requireNumericHostId must be consulted only on the
     // tunnel branch, or direct endpoints would break on unsaved hosts too.
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({ id: "quick-connect-1" }, [endpoint({ access: "direct" })])}
@@ -302,8 +290,7 @@ describe("WebEndpointTab", () => {
     // session cookie.
     electron.isElectron.mockReturnValue(false);
     openWebEndpointTunnel.mockResolvedValue(41234);
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel", bindHost: "0.0.0.0" })])}
@@ -327,8 +314,7 @@ describe("WebEndpointTab", () => {
 
   it("refuses a loopback-bound tunnel in a browser instead of framing a dead port", async () => {
     electron.isElectron.mockReturnValue(false);
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel" })])}
@@ -347,8 +333,7 @@ describe("WebEndpointTab", () => {
   it("refuses when the page host has no separate loopback spelling", async () => {
     electron.isElectron.mockReturnValue(false);
     pageHostname = "termix.example.com";
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({}, [endpoint({ access: "tunnel", bindHost: "0.0.0.0" })])}
@@ -375,8 +360,7 @@ describe("WebEndpointTab", () => {
   it("refuses a direct endpoint on the same host that serves Termix", async () => {
     electron.isElectron.mockReturnValue(false);
     pageHostname = "termix.example";
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({ ip: "termix.example" }, [
@@ -397,8 +381,7 @@ describe("WebEndpointTab", () => {
   it("refuses a direct endpoint on a sub domain of the page host", async () => {
     electron.isElectron.mockReturnValue(false);
     pageHostname = "termix.example.com";
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({ ip: "ui.termix.example.com" }, [
@@ -418,8 +401,7 @@ describe("WebEndpointTab", () => {
   it("still frames a direct same-host endpoint on the desktop, whose jar has no jwt", async () => {
     electron.isElectron.mockReturnValue(true);
     pageHostname = "termix.example";
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(
       <WebEndpointTab
         host={host({ ip: "termix.example" }, [
@@ -439,8 +421,7 @@ describe("WebEndpointTab", () => {
   it("still frames a DIRECT endpoint on a hostname that refuses tunnels", async () => {
     electron.isElectron.mockReturnValue(false);
     pageHostname = "termix.example.com";
-    const { WebEndpointTab } =
-      await import("@/features/web-endpoint/WebEndpointTab");
+    const { WebEndpointTab } = await import("./WebEndpointTab");
     render(<WebEndpointTab host={host({}, [endpoint()])} endpointId="e1" />);
     await waitFor(() =>
       expect(screen.getByTitle("Proxmox")).toHaveAttribute(

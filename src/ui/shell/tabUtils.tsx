@@ -89,7 +89,7 @@ const loadDockerManager = () =>
   }));
 const DockerManager = lazy(loadDockerManager);
 const loadWebEndpointTab = () =>
-  import("@/features/web-endpoint/WebEndpointTab").then((m) => ({
+  import("../../../plugins/web-endpoint/frontend/WebEndpointTab").then((m) => ({
     default: m.WebEndpointTab,
   }));
 const WebEndpointTab = lazy(loadWebEndpointTab);

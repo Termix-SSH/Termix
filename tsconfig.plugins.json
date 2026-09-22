@@ -35,7 +35,8 @@
     "plugins/fleets/backend/**/*.ts",
     "plugins/automations/backend/**/*.ts",
     "plugins/network-topology/backend/**/*.ts",
-    "plugins/workspaces/backend/**/*.ts"
+    "plugins/workspaces/backend/**/*.ts",
+    "plugins/web-endpoint/backend/**/*.ts"
   ],
   "exclude": ["src/**/*.test.ts"]
 }

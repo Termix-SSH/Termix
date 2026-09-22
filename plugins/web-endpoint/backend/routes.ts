@@ -1,18 +1,22 @@
-import type express from "express";
+import express from "express";
 import { Client } from "ssh2";
-import { AuthManager } from "../../utils/auth-manager.js";
-import { tunnelLogger } from "../../utils/logger.js";
-import { parseWebUiConfig } from "../../database/routes/host-web-endpoints.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import { tunnelLogger } from "../../../src/backend/utils/logger.js";
+import { parseWebUiConfig } from "../../../src/backend/database/routes/host-web-endpoints.js";
 import {
   activeTunnelRuntimes,
   cleanupTunnelResources,
   connectSSHTunnel,
   connectionStatus,
   tunnelConnecting,
-} from "./manager.js";
-import { forwardOut } from "./ssh-primitives.js";
-import { buildWebEndpointTunnelName } from "./utils.js";
-import type { TunnelConfig, WebEndpoint } from "../../../types/index.js";
+} from "../../../src/backend/hosts/tunnel/manager.js";
+import { forwardOut } from "../../../src/backend/hosts/tunnel/ssh-primitives.js";
+import { buildWebEndpointTunnelName } from "../../../src/backend/hosts/tunnel/utils.js";
+import {
+  registerWebEndpointRouter,
+  unregisterWebEndpointRouter,
+} from "../../../src/backend/hosts/tunnel/web-endpoint-dispatch.js";
+import type { TunnelConfig, WebEndpoint } from "../../../src/types/index.js";
 
 /** Matches the spec's ten minutes. */
 const WEB_ENDPOINT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -146,7 +150,8 @@ export async function handleWebEndpointOpen(
   // browser -- loopback for the desktop, an address the server answers on for
   // a web deployment.
 
-  const { resolveHostById } = await import("../host-resolver.js");
+  const { resolveHostById } =
+    await import("../../../src/backend/hosts/host-resolver.js");
   const host = await resolveHostById(hostId, userId);
   if (!host) {
     return res.status(403).json({ error: "Host not found or access denied" });
@@ -293,18 +298,26 @@ export async function handleWebEndpointOpen(
   }
 }
 
-export function registerWebEndpointRoutes(app: express.Express): void {
-  // Constructed here rather than at module scope so importing this module for
-  // a handler unit test does not construct the auth singleton.
-  const authenticateJWT = AuthManager.getInstance().createAuthMiddleware();
-  // The "/ssh" prefix is part of the path this service serves, exactly as
-  // every route in routes.ts carries it -- nginx proxies /ssh through with the
-  // path intact. Registering "/tunnel/..." here 404s every call, since the
-  // client resolves "/tunnel/web-endpoint/open" against a baseURL that already
-  // ends in /ssh.
-  app.post(
-    "/ssh/tunnel/web-endpoint/open",
-    authenticateJWT,
-    handleWebEndpointOpen,
-  );
+export const router = express.Router();
+
+let started = false;
+
+export function startWebEndpointService(): void {
+  if (!started) {
+    // Built on first start rather than at module scope so importing this
+    // module for a handler unit test does not construct the auth singleton.
+    const authenticateJWT = AuthManager.getInstance().createAuthMiddleware();
+    // Only "/open" here: the dispatcher this router is registered with is
+    // mounted at /ssh/tunnel/web-endpoint, so the full path stays
+    // /ssh/tunnel/web-endpoint/open exactly as before. The "/ssh" prefix is
+    // part of the path the tunnel service serves -- nginx proxies /ssh/tunnel/
+    // through with the path intact.
+    router.post("/open", authenticateJWT, handleWebEndpointOpen);
+    started = true;
+  }
+  registerWebEndpointRouter(router);
+}
+
+export function stopWebEndpointService(): void {
+  unregisterWebEndpointRouter();
 }

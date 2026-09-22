@@ -4,7 +4,7 @@ import { isElectron } from "@/lib/electron";
 import {
   webEndpointRefusalReason,
   type WebEndpointRefusalReason,
-} from "@/lib/web-endpoint-url";
+} from "../../../plugins/web-endpoint/frontend/web-endpoint-url";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Checkbox } from "@/components/checkbox";
@@ -28,7 +28,7 @@ import {
   isWebEndpointPortValid,
   webEndpointErrorKey,
   webEndpointRowError,
-} from "@/lib/web-endpoint-validation";
+} from "../../../plugins/web-endpoint/frontend/web-endpoint-validation";
 
 /**
  * crypto.randomUUID is undefined outside a secure context, so a plain-http web

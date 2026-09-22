@@ -415,3 +415,54 @@ describe("bundled workspaces plugin", () => {
     expect(source).toMatch(/export async function deactivate/);
   });
 });
+
+describe("bundled web-endpoint plugin", () => {
+  it("ships a directory with a manifest and both entry points", () => {
+    const dir = path.join(getBundledPluginsDir(), "web-endpoint");
+
+    expect(fs.existsSync(path.join(dir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "backend", "index.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "frontend", "index.mjs"))).toBe(true);
+  });
+
+  it("has a manifest that passes the real validator", () => {
+    const { manifest, errors } = parseManifest(
+      readBundledManifest("web-endpoint"),
+    );
+
+    expect(errors).toEqual([]);
+    expect(manifest?.id).toBe("web-endpoint");
+    expect(manifest?.category).toBe("Networking");
+  });
+
+  it("declares the transport-owner capability and qualifies for the tier", () => {
+    const { manifest } = parseManifest(readBundledManifest("web-endpoint"));
+
+    expect(manifest?.permissions).toContain(TRANSPORT_OWNER_CAPABILITY);
+    expect(isFirstParty("web-endpoint")).toBe(true);
+    expect(runsInProcess("web-endpoint", manifest!.permissions)).toBe(true);
+  });
+
+  // The column this points at stays on core's ssh_data table, so a typo here
+  // would silently detach the host-editor checkbox from its storage.
+  it("contributes the enableWebUi host capability", () => {
+    const { manifest } = parseManifest(readBundledManifest("web-endpoint"));
+
+    expect(manifest?.contributes?.hostCapability).toMatchObject({
+      key: "enableWebUi",
+    });
+  });
+
+  it("exports activate and deactivate from its backend entry", () => {
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "web-endpoint",
+      "backend",
+      "index.mjs",
+    );
+    const source = fs.readFileSync(entry, "utf8");
+
+    expect(source).toMatch(/export async function activate/);
+    expect(source).toMatch(/export async function deactivate/);
+  });
+});

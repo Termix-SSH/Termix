@@ -7,13 +7,13 @@ import {
   resolveWebEndpointUrl,
   webEndpointRefusalReason,
   type WebEndpointRefusalReason,
-} from "@/lib/web-endpoint-url";
+} from "./web-endpoint-url";
 import {
   allowInvalidCertificateForOrigin,
   openWebEndpointExternally,
   openWebEndpointTunnel,
   requireNumericHostId,
-} from "@/api/web-endpoint-api";
+} from "./web-endpoint-api";
 import { copyToClipboard } from "@/lib/clipboard";
 import { isElectron } from "@/lib/electron";
 import { Button } from "@/components/button";

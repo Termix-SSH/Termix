@@ -44,6 +44,7 @@ const BUILT_IN_TABS_BY_PLUGIN: Record<string, string[]> = {
   ai: ["ai"],
   fleets: ["fleet-inventory"],
   "network-topology": ["network_graph"],
+  "web-endpoint": ["web-endpoint"],
 };
 
 let pluginEnabled = new Map<string, boolean>();

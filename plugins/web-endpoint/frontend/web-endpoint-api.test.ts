@@ -59,7 +59,7 @@ describe("openWebEndpointTunnel", () => {
     // resolve to /ssh/ssh/... and 404 on every call. Asserted on the captured
     // runtime argument rather than by scanning source, so quoting style and
     // indirection cannot fool it.
-    const { openWebEndpointTunnel } = await import("@/api/web-endpoint-api");
+    const { openWebEndpointTunnel } = await import("./web-endpoint-api");
     await openWebEndpointTunnel(7, "e1");
 
     expect(tunnelPost.mock.calls[0][0]).not.toMatch(/^\/ssh\//);
@@ -70,7 +70,7 @@ describe("openWebEndpointTunnel", () => {
   });
 
   it("returns the port", async () => {
-    const { openWebEndpointTunnel } = await import("@/api/web-endpoint-api");
+    const { openWebEndpointTunnel } = await import("./web-endpoint-api");
     await expect(openWebEndpointTunnel(7, "e1")).resolves.toBe(41234);
   });
 
@@ -87,7 +87,7 @@ describe("openWebEndpointTunnel", () => {
     });
     tunnelPost.mockRejectedValue(axiosError);
     const { openWebEndpointTunnel, WebEndpointTunnelError } =
-      await import("@/api/web-endpoint-api");
+      await import("./web-endpoint-api");
 
     await expect(openWebEndpointTunnel(7, "e1")).rejects.toThrow(
       /Timed out reaching the endpoint port/,
@@ -106,20 +106,20 @@ describe("openWebEndpointTunnel", () => {
         response: { status: 500, data: { error: { nested: true } } },
       }),
     );
-    const { openWebEndpointTunnel } = await import("@/api/web-endpoint-api");
+    const { openWebEndpointTunnel } = await import("./web-endpoint-api");
     await expect(openWebEndpointTunnel(7, "e1")).rejects.toThrow(/generic:/);
   });
 
   it("treats a missing port as a failure rather than returning undefined", async () => {
     tunnelPost.mockResolvedValue({ data: {} });
-    const { openWebEndpointTunnel } = await import("@/api/web-endpoint-api");
+    const { openWebEndpointTunnel } = await import("./web-endpoint-api");
     await expect(openWebEndpointTunnel(7, "e1")).rejects.toThrow(/no port/);
   });
 });
 
 describe("requireNumericHostId", () => {
   it("accepts a saved host id and rejects a quick-connect one", async () => {
-    const { requireNumericHostId } = await import("@/api/web-endpoint-api");
+    const { requireNumericHostId } = await import("./web-endpoint-api");
     expect(requireNumericHostId("7")).toBe(7);
     for (const bad of ["quick-connect-1", "", "0", "-3", "abc"]) {
       expect(() => requireNumericHostId(bad)).toThrow(/saved host/);
@@ -134,8 +134,7 @@ describe("requireNumericHostId", () => {
  */
 describe("openWebEndpointExternally", () => {
   it("refuses shared-cookie browser windows before opening a tunnel", async () => {
-    const { openWebEndpointExternally } =
-      await import("@/api/web-endpoint-api");
+    const { openWebEndpointExternally } = await import("./web-endpoint-api");
     await expect(openWebEndpointExternally(host, endpoint())).rejects.toThrow(
       /desktop app/,
     );
@@ -149,8 +148,7 @@ describe("openWebEndpointExternally", () => {
       configurable: true,
       value: { invoke },
     });
-    const { openWebEndpointExternally } =
-      await import("@/api/web-endpoint-api");
+    const { openWebEndpointExternally } = await import("./web-endpoint-api");
     await openWebEndpointExternally(host, endpoint({ ignoreCert: true }));
     expect(invoke).toHaveBeenCalledWith("open-isolated-web-endpoint", {
       url: "https://127.0.0.1:41234/",

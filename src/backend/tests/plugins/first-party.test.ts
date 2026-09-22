@@ -39,7 +39,7 @@ function manifest(overrides: Record<string, unknown> = {}) {
 }
 
 describe("first-party allowlist", () => {
-  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations, network-topology, tailscale and workspaces", () => {
+  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations, network-topology, tailscale, workspaces and web-endpoint", () => {
     expect([...FIRST_PARTY_PLUGIN_IDS].sort()).toEqual([
       "ai",
       "automations",
@@ -51,11 +51,12 @@ describe("first-party allowlist", () => {
       "remote-desktop",
       "ssh-terminal",
       "tailscale",
+      "web-endpoint",
       "workspaces",
     ]);
   });
 
-  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations, network-topology, tailscale and workspaces and nothing else", () => {
+  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations, network-topology, tailscale, workspaces and web-endpoint and nothing else", () => {
     expect(isFirstParty("ssh-terminal")).toBe(true);
     expect(isFirstParty("docker")).toBe(true);
     expect(isFirstParty("host-metrics")).toBe(true);
@@ -67,6 +68,7 @@ describe("first-party allowlist", () => {
     expect(isFirstParty("network-topology")).toBe(true);
     expect(isFirstParty("tailscale")).toBe(true);
     expect(isFirstParty("workspaces")).toBe(true);
+    expect(isFirstParty("web-endpoint")).toBe(true);
     expect(isFirstParty("ssh-terminal-pro")).toBe(false);
     expect(isFirstParty("community-plugin")).toBe(false);
     expect(isFirstParty("")).toBe(false);
@@ -98,6 +100,9 @@ describe("runsInProcess", () => {
     expect(runsInProcess("workspaces", [TRANSPORT_OWNER_CAPABILITY])).toBe(
       true,
     );
+    expect(runsInProcess("web-endpoint", [TRANSPORT_OWNER_CAPABILITY])).toBe(
+      true,
+    );
 
     // On the list but not asking for it: stays in a worker, so the manifest
     // remains an honest description of what the plugin does.
@@ -112,6 +117,7 @@ describe("runsInProcess", () => {
     expect(runsInProcess("network-topology", ["hosts.read"])).toBe(false);
     expect(runsInProcess("tailscale", ["hosts.read"])).toBe(false);
     expect(runsInProcess("workspaces", ["hosts.read"])).toBe(false);
+    expect(runsInProcess("web-endpoint", ["hosts.read"])).toBe(false);
 
     // Asking for it but not on the list.
     expect(
@@ -249,6 +255,18 @@ describe("manifest gate on the reserved capability", () => {
 
     expect(errors).toEqual([]);
     expect(parsed?.id).toBe("workspaces");
+  });
+
+  it("allows it for web-endpoint", () => {
+    const { manifest: parsed, errors } = parseManifest(
+      manifest({
+        id: "web-endpoint",
+        permissions: [TRANSPORT_OWNER_CAPABILITY],
+      }),
+    );
+
+    expect(errors).toEqual([]);
+    expect(parsed?.id).toBe("web-endpoint");
   });
 
   it("still accepts an ordinary manifest that never mentions it", () => {

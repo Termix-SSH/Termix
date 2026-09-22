@@ -1,8 +1,9 @@
 import type express from "express";
+import { readFile } from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const resolveHostById = vi.hoisted(() => vi.fn());
-vi.mock("../../hosts/host-resolver.js", () => ({ resolveHostById }));
+vi.mock("../../../hosts/host-resolver.js", () => ({ resolveHostById }));
 
 const manager = vi.hoisted(() => ({
   activeTunnelRuntimes: new Map<string, unknown>(),
@@ -11,12 +12,12 @@ const manager = vi.hoisted(() => ({
   connectSSHTunnel: vi.fn(),
   cleanupTunnelResources: vi.fn(async () => undefined),
 }));
-vi.mock("../../hosts/tunnel/manager.js", () => manager);
+vi.mock("../../../hosts/tunnel/manager.js", () => manager);
 
 const forwardOut = vi.hoisted(() => vi.fn(async () => ({ end: vi.fn() })));
-vi.mock("../../hosts/tunnel/ssh-primitives.js", () => ({ forwardOut }));
+vi.mock("../../../hosts/tunnel/ssh-primitives.js", () => ({ forwardOut }));
 
-vi.mock("../../utils/auth-manager.js", () => ({
+vi.mock("../../../utils/auth-manager.js", () => ({
   AuthManager: { getInstance: () => ({ createAuthMiddleware: () => vi.fn() }) },
 }));
 
@@ -102,7 +103,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
   it("refuses a host the user cannot resolve, without opening anything", async () => {
     resolveHostById.mockResolvedValue(null);
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     const res = response();
     await handleWebEndpointOpen(request({ hostId: 7, endpointId: "e1" }), res);
 
@@ -115,7 +116,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
     // stored enable_web_ui is still 0. The UI reads as off in that state.
     resolveHostById.mockResolvedValue(host({ enableWebUi: false }));
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     const res = response();
     await handleWebEndpointOpen(request({ hostId: 7, endpointId: "e1" }), res);
 
@@ -125,7 +126,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
 
   it("refuses an endpoint id that matches nothing", async () => {
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     const res = response();
     await handleWebEndpointOpen(
       request({ hostId: 7, endpointId: "nope" }),
@@ -137,7 +138,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
   it("returns the real bound port", async () => {
     tunnelConnectsOn(41234);
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     const res = response();
     await handleWebEndpointOpen(request({ hostId: 7, endpointId: "e1" }), res);
 
@@ -151,7 +152,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
     // select a different strategy and the forward would never bind locally.
     tunnelConnectsOn(41234);
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     await handleWebEndpointOpen(
       request({ hostId: 7, endpointId: "e1" }),
       response(),
@@ -170,7 +171,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
   it("binds loopback by default and the endpoint's choice when given", async () => {
     tunnelConnectsOn(41234);
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     await handleWebEndpointOpen(
       request({ hostId: 7, endpointId: "e1" }),
       response(),
@@ -199,7 +200,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
   it("reuses a live tunnel instead of opening a second one", async () => {
     tunnelConnectsOn(41234);
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     const first = response();
     await handleWebEndpointOpen(
       request({ hostId: 7, endpointId: "e1" }),
@@ -218,7 +219,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
   it("reopens when the endpoint's target changed under a live tunnel", async () => {
     tunnelConnectsOn(41234);
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     await handleWebEndpointOpen(
       request({ hostId: 7, endpointId: "e1" }),
       response(),
@@ -250,7 +251,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
       new Error("Channel open failure: connect failed"),
     );
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     const res = response();
     await handleWebEndpointOpen(request({ hostId: 7, endpointId: "e1" }), res);
 
@@ -275,7 +276,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
       },
     );
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     const res = response();
     await handleWebEndpointOpen(request({ hostId: 7, endpointId: "e1" }), res);
 
@@ -285,7 +286,7 @@ describe("POST /tunnel/web-endpoint/open", () => {
 
   it("rejects a malformed request before touching the database", async () => {
     const { handleWebEndpointOpen } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
     for (const body of [
       {},
       { hostId: "7", endpointId: "e1" },
@@ -302,25 +303,48 @@ describe("POST /tunnel/web-endpoint/open", () => {
 /**
  * The client resolves "/tunnel/web-endpoint/open" against a baseURL that
  * already ends in /ssh, and nginx proxies /ssh through with the path intact --
- * so the server must register the FULL "/ssh/tunnel/..." path, as every route
- * in routes.ts does. Registering the unprefixed form 404s every call, and no
- * handler unit test notices because they call the handler directly.
+ * so the server must serve the FULL "/ssh/tunnel/web-endpoint/open" path.
+ * Serving the unprefixed form 404s every call, and no handler unit test
+ * notices because they call the handler directly.
  *
  * This was caught only by opening a real tunnel against a deployed build.
+ *
+ * Since the plugin migration that path is composed of two halves: the mount
+ * point in src/backend/hosts/tunnel/index.ts and the route on the plugin's own
+ * router. Either half drifting breaks the URL, so both are asserted here.
  */
 describe("route registration", () => {
-  it("registers the /ssh-prefixed path the client actually calls", async () => {
-    const posts: string[] = [];
-    const app = {
-      post: (path: string) => {
-        posts.push(path);
+  it("registers /open on the router the dispatcher forwards to", async () => {
+    const routes =
+      await import("../../../../../plugins/web-endpoint/backend/routes.js");
+    const dispatch =
+      await import("../../../hosts/tunnel/web-endpoint-dispatch.js");
+    const registered: unknown[] = [];
+    vi.spyOn(dispatch, "registerWebEndpointRouter").mockImplementation(
+      (router) => {
+        registered.push(router);
       },
-    } as unknown as express.Express;
+    );
 
-    const { registerWebEndpointRoutes } =
-      await import("../../hosts/tunnel/web-endpoint-routes.js");
-    registerWebEndpointRoutes(app);
+    routes.startWebEndpointService();
 
-    expect(posts).toContain("/ssh/tunnel/web-endpoint/open");
+    expect(registered).toHaveLength(1);
+    const paths = (
+      routes.router as unknown as {
+        stack: Array<{ route?: { path: string; methods: { post?: boolean } } }>;
+      }
+    ).stack
+      .filter((layer) => layer.route?.methods.post)
+      .map((layer) => layer.route?.path);
+    expect(paths).toContain("/open");
+  });
+
+  it("is mounted so the full client path resolves", async () => {
+    const source = await readFile(
+      new URL("../../../hosts/tunnel/index.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain('app.use("/ssh/tunnel/web-endpoint"');
   });
 });

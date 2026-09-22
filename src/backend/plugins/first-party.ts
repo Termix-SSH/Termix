@@ -99,6 +99,15 @@
  * in SDK v1, see worker-bootstrap.ts), so there is currently no way for a
  * worker-tier plugin to make an outbound HTTP request.
  *
+ * web-endpoint is here for the same reason ssh-terminal is, on a smaller
+ * scale: its open route polls the tunnel manager's live maps
+ * (activeTunnelRuntimes, connectionStatus, tunnelConnecting), builds a
+ * TunnelConfig from plaintext host credentials that ctx.hosts deliberately
+ * withholds, and hands the resulting live ssh2.Client to forwardOut to probe
+ * the target before reporting success. A structured-clone boundary can carry
+ * none of those three, so this is a genuine transport dependency rather than
+ * the URL-stability concession network-topology and workspaces make.
+ *
  * workspaces is here for the same reason network-topology is: its routes are
  * plain per-user JSON CRUD against a single repository, and would fit the
  * worker ctx fine on their own. It stays in-process to keep its existing
@@ -119,6 +128,7 @@ export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "network-topology",
   "tailscale",
   "workspaces",
+  "web-endpoint",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

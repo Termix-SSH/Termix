@@ -87,7 +87,7 @@ import {
   recordHostActionPreference,
 } from "@/lib/local-adaptive-preferences";
 import type { WebEndpoint } from "@/types/index";
-import { openWebEndpointExternally } from "@/api/web-endpoint-api";
+import { openWebEndpointExternally } from "../../../../../plugins/web-endpoint/frontend/web-endpoint-api";
 import { isTabTypeAvailable } from "@/shell/pluginLoader";
 
 export function statusCheckEnabled(host: Host): boolean {
