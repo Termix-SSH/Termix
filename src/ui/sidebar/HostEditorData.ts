@@ -342,6 +342,13 @@ export function createHostEditorForm(
       excludedMounts: [] as string[],
       monitoredMounts: [] as Array<{ path: string; label?: string }>,
     },
+
+    // Host-scope plugin settings, keyed by plugin id. Loaded with the host and
+    // saved through the plugin's own scoped route, not in the host payload.
+    pluginSettings: (host?.pluginSettings ?? {}) as Record<
+      string,
+      Record<string, unknown>
+    >,
   };
 }
 

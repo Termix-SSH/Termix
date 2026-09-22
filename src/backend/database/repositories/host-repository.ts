@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { hostAccess, hosts } from "../db/schema.js";
+import { hostAccess, hosts, pluginSettings } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { rowsAffected } from "./mutation-result.js";
@@ -338,6 +338,25 @@ export class HostRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
+    // Bulk path, so it never passes through deleteAccessForHost: clear the
+    // host-scope plugin settings for these hosts before the rows go.
+    const owned = await this.context.drizzle
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(eq(hosts.userId, userId));
+
+    if (owned.length > 0) {
+      await this.context.drizzle.delete(pluginSettings).where(
+        and(
+          eq(pluginSettings.scope, "host"),
+          inArray(
+            pluginSettings.scopeId,
+            owned.map((row) => String(row.id)),
+          ),
+        ),
+      );
+    }
+
     const result = await this.context.drizzle
       .delete(hosts)
       .where(eq(hosts.userId, userId));
@@ -350,6 +369,18 @@ export class HostRepository {
   }
 
   async deleteAccessForHost(hostId: number): Promise<number> {
+    // plugin_settings.scope_id is polymorphic, so it has no foreign key to
+    // ssh_data and the engine will not cascade it. Cleared alongside the
+    // access rows, which every host delete path already goes through.
+    await this.context.drizzle
+      .delete(pluginSettings)
+      .where(
+        and(
+          eq(pluginSettings.scope, "host"),
+          eq(pluginSettings.scopeId, String(hostId)),
+        ),
+      );
+
     const result = await this.context.drizzle
       .delete(hostAccess)
       .where(eq(hostAccess.hostId, hostId));

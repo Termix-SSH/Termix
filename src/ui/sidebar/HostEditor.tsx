@@ -67,6 +67,7 @@ import {
 import type { Host, VaultProfile } from "@/types/ui-types";
 import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
+import { updatePluginHostSettings } from "@/api/plugins-api";
 import {
   buildHostEditorPayload,
   createHostEditorForm,
@@ -333,6 +334,29 @@ export function HostEditor({
       .finally(() => setTailscaleLoading(false));
   }, [form.authType]);
 
+  /**
+   * Writes each plugin's host-scope values through its own route.
+   *
+   * One request per plugin rather than one per field, and a plugin that
+   * rejects a value is reported without failing the host save that already
+   * succeeded.
+   */
+  const savePluginHostSettings = async (
+    hostId: number,
+    values: Record<string, Record<string, unknown>> | undefined,
+  ) => {
+    if (!values || !Number.isInteger(hostId)) return;
+
+    for (const [pluginId, fields] of Object.entries(values)) {
+      if (!fields || Object.keys(fields).length === 0) continue;
+      try {
+        await updatePluginHostSettings(pluginId, hostId, fields);
+      } catch {
+        toast.error(t("settings.pluginSettingsSaveFailed"));
+      }
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -350,6 +374,10 @@ export function HostEditor({
           ? await updateSSHHost(Number(host.id), data)
           : await createSSHHost(data);
       }
+      // After the host: a new one has no id to scope settings to until it
+      // exists. A failure here must not claim the host itself failed to save.
+      await savePluginHostSettings(Number(saved.id), form.pluginSettings);
+
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
       setPreviewTerminalTheme(null);
       onSave(saved);

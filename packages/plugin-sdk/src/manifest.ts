@@ -154,11 +154,80 @@ export interface PluginSecretRequire {
   optional?: boolean;
 }
 
+export const SETTINGS_FIELD_TYPES = [
+  "boolean",
+  "string",
+  "number",
+  "select",
+  "multiselect",
+  "secret",
+  "textarea",
+  "json",
+  "custom",
+] as const;
+export type PluginSettingsFieldType = (typeof SETTINGS_FIELD_TYPES)[number];
+
+export const SETTINGS_SCOPES = ["admin", "user", "host"] as const;
+export type PluginSettingsScope = (typeof SETTINGS_SCOPES)[number];
+
+export interface PluginSettingsOption {
+  value: string;
+  labelKey: string;
+}
+
+/**
+ * One field on a plugin's settings page.
+ *
+ * Core renders these; a plugin supplies data only, so it cannot ship its own
+ * form styling and drift from the rest of the app. `type: "custom"` is the
+ * escape hatch for UI a schema cannot express, and names a component the
+ * frontend registered rather than carrying markup.
+ */
+export interface PluginSettingsField {
+  key: string;
+  type: PluginSettingsFieldType;
+  /** Required except for "custom", which draws its own label. */
+  labelKey?: string;
+  descriptionKey?: string;
+  placeholderKey?: string;
+  default?: unknown;
+  /** select and multiselect only. */
+  options?: PluginSettingsOption[];
+  /** number only. */
+  min?: number;
+  max?: number;
+  /** Key of a boolean field in the same scope that must be on. */
+  requires?: string;
+  /**
+   * Who may write it. Admin fields default to admin.plugins.manage; a short
+   * name resolves against this plugin's own permissions.
+   */
+  permission?: string;
+  /** Section heading this field sits under. */
+  group?: string;
+  /** Registered component id. Required when type is "custom". */
+  component?: string;
+}
+
+export interface PluginHostSettingsContribution {
+  /** Boolean field rendered first, gating the rest of the section. */
+  enableKey?: string;
+  enableLabelKey?: string;
+  fields: PluginSettingsField[];
+}
+
+export interface PluginSettingsContribution {
+  admin?: PluginSettingsField[];
+  user?: PluginSettingsField[];
+  host?: PluginHostSettingsContribution;
+}
+
 export interface PluginContributions {
   tabs?: PluginTabContribution[];
   actions?: PluginActionContribution[];
   actionSlots?: PluginActionSlot[];
   permissions?: PluginPermissionContribution[];
+  settings?: PluginSettingsContribution;
   /**
    * A host-editor checkbox backed by a boolean column on the host record.
    * A5/A6/A7 reshape this; it stays in v2 because remote-desktop, docker,
@@ -236,8 +305,28 @@ const ALLOWED_CONTRIBUTES = new Set([
   "actions",
   "actionSlots",
   "permissions",
+  "settings",
   "hostCapability",
 ]);
+
+const ALLOWED_SETTINGS_FIELD = [
+  "key",
+  "type",
+  "labelKey",
+  "descriptionKey",
+  "placeholderKey",
+  "default",
+  "options",
+  "min",
+  "max",
+  "requires",
+  "permission",
+  "group",
+  "component",
+];
+
+/** Settings keys are stored as-is, so they stay short and index-safe. */
+const SETTINGS_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -564,7 +653,199 @@ function validateContributes(
   validatePermissions(contributes.permissions, pluginId, errors);
   validateActions(contributes.actions, errors);
   validateActionSlots(contributes.actionSlots, errors);
+  validateSettings(contributes.settings, errors);
   validateHostCapability(contributes.hostCapability, errors);
+}
+
+function validateSettings(settings: unknown, errors: string[]): void {
+  if (settings === undefined) return;
+  const where = "contributes.settings";
+  if (!isPlainObject(settings)) {
+    errors.push(`${where} must be an object`);
+    return;
+  }
+  rejectUnknown(settings, ["admin", "user", "host"], `"${where}"`, errors);
+
+  for (const scope of ["admin", "user"] as const) {
+    const value = settings[scope];
+    if (value === undefined) continue;
+    if (!Array.isArray(value)) {
+      errors.push(`${where}.${scope} must be an array of fields`);
+      continue;
+    }
+    validateSettingsFields(value, `${where}.${scope}`, errors);
+  }
+
+  if (settings.host !== undefined) {
+    const host = settings.host;
+    const at = `${where}.host`;
+    if (!isPlainObject(host)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(
+      host,
+      ["enableKey", "enableLabelKey", "fields"],
+      `"${at}"`,
+      errors,
+    );
+
+    if ("enableKey" in host) {
+      if (
+        typeof host.enableKey !== "string" ||
+        !SETTINGS_KEY_PATTERN.test(host.enableKey)
+      ) {
+        errors.push(`${at}.enableKey must be a short alphanumeric key`);
+      }
+      // An enable switch with no label is a blank row in the host editor.
+      requireString(host.enableLabelKey, `${at}.enableLabelKey`, errors);
+    }
+
+    if (!Array.isArray(host.fields)) {
+      errors.push(`${at}.fields must be an array`);
+      return;
+    }
+    validateSettingsFields(
+      host.fields,
+      `${at}.fields`,
+      errors,
+      typeof host.enableKey === "string" ? host.enableKey : undefined,
+    );
+  }
+}
+
+/**
+ * Validates one scope's fields.
+ *
+ * `requires` is checked against the keys declared in the same scope, plus the
+ * host scope's enableKey, because a field pointing at a key that does not
+ * exist would simply never render.
+ */
+function validateSettingsFields(
+  fields: unknown[],
+  where: string,
+  errors: string[],
+  enableKey?: string,
+): void {
+  const seen = new Set<string>();
+  const booleanKeys = new Set<string>();
+  if (enableKey) booleanKeys.add(enableKey);
+
+  fields.forEach((raw, index) => {
+    const at = `${where}[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(raw, ALLOWED_SETTINGS_FIELD, at, errors);
+
+    if (typeof raw.key !== "string" || !SETTINGS_KEY_PATTERN.test(raw.key)) {
+      errors.push(`${at}.key must be a short alphanumeric key`);
+    } else {
+      if (seen.has(raw.key)) {
+        errors.push(`${at}.key duplicates "${raw.key}"`);
+      }
+      seen.add(raw.key);
+      if (raw.type === "boolean") booleanKeys.add(raw.key);
+      if (enableKey && raw.key === enableKey) {
+        errors.push(
+          `${at}.key "${raw.key}" is already the section's enableKey`,
+        );
+      }
+    }
+
+    if (
+      typeof raw.type !== "string" ||
+      !(SETTINGS_FIELD_TYPES as readonly string[]).includes(raw.type)
+    ) {
+      errors.push(
+        `${at}.type must be one of: ${SETTINGS_FIELD_TYPES.join(", ")}`,
+      );
+      return;
+    }
+
+    // A custom field draws its own label, so it needs a component instead.
+    if (raw.type === "custom") {
+      requireString(raw.component, `${at}.component`, errors);
+    } else {
+      requireString(raw.labelKey, `${at}.labelKey`, errors);
+      if ("component" in raw) {
+        errors.push(`${at}.component is only valid when type is "custom"`);
+      }
+    }
+
+    for (const key of ["descriptionKey", "placeholderKey", "group"] as const) {
+      if (key in raw) requireString(raw[key], `${at}.${key}`, errors);
+    }
+    if ("permission" in raw) {
+      requireString(raw.permission, `${at}.permission`, errors);
+    }
+
+    if (raw.type === "select" || raw.type === "multiselect") {
+      validateSettingsOptions(raw.options, at, errors);
+    } else if ("options" in raw) {
+      errors.push(`${at}.options is only valid for select and multiselect`);
+    }
+
+    if (raw.type === "number") {
+      for (const bound of ["min", "max"] as const) {
+        if (bound in raw && typeof raw[bound] !== "number") {
+          errors.push(`${at}.${bound} must be a number`);
+        }
+      }
+      if (
+        typeof raw.min === "number" &&
+        typeof raw.max === "number" &&
+        raw.min > raw.max
+      ) {
+        errors.push(`${at}.min must not be greater than ${at}.max`);
+      }
+    } else if ("min" in raw || "max" in raw) {
+      errors.push(`${at}.min and ${at}.max are only valid for number fields`);
+    }
+  });
+
+  // Second pass: every key is known by now, so forward references are fine.
+  fields.forEach((raw, index) => {
+    if (!isPlainObject(raw) || !("requires" in raw)) return;
+    const at = `${where}[${index}]`;
+    if (typeof raw.requires !== "string") {
+      errors.push(`${at}.requires must be a string`);
+      return;
+    }
+    if (!booleanKeys.has(raw.requires)) {
+      errors.push(
+        `${at}.requires "${raw.requires}" must name a boolean field in the same scope`,
+      );
+    }
+  });
+}
+
+function validateSettingsOptions(
+  options: unknown,
+  where: string,
+  errors: string[],
+): void {
+  if (!Array.isArray(options) || options.length === 0) {
+    errors.push(`${where}.options must be a non-empty array`);
+    return;
+  }
+  const seen = new Set<string>();
+  options.forEach((raw, index) => {
+    const at = `${where}.options[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(raw, ["value", "labelKey"], at, errors);
+    if (requireString(raw.value, `${at}.value`, errors)) {
+      if (seen.has(raw.value)) {
+        errors.push(`${at}.value duplicates "${raw.value}"`);
+      }
+      seen.add(raw.value);
+    }
+    requireString(raw.labelKey, `${at}.labelKey`, errors);
+  });
 }
 
 function validateTabs(tabs: unknown, errors: string[]): void {
@@ -850,6 +1131,27 @@ export function parseManifest(raw: unknown): ParsedManifest {
       );
     }
   }
+  // A settings field may gate on one of this plugin's own permissions, or on
+  // a core/other-plugin id used as given. Only the first form is checkable
+  // here, and an undeclared one would hide the field from every admin.
+  const settings = manifest.contributes?.settings;
+  const settingsScopes: [string, PluginSettingsField[]][] = [
+    ["admin", settings?.admin ?? []],
+    ["user", settings?.user ?? []],
+    ["host", settings?.host?.fields ?? []],
+  ];
+  for (const [scope, fields] of settingsScopes) {
+    for (const field of fields) {
+      if (!field.permission) continue;
+      if (field.permission.includes(".")) continue;
+      if (!declared.has(qualifyPermission(manifest.id, field.permission))) {
+        errors.push(
+          `contributes.settings.${scope} field "${field.key}" requires permission "${field.permission}", which is not declared in contributes.permissions`,
+        );
+      }
+    }
+  }
+
   for (const secret of manifest.requiresSecret ?? []) {
     if (secret.plugin === manifest.id) {
       errors.push(

@@ -185,6 +185,8 @@ export type Host = {
   hasTelnetPassword?: boolean;
 
   guacamoleConfig?: GuacamoleConfig;
+  /** Host-scope plugin settings, keyed by plugin id. Secrets are redacted. */
+  pluginSettings?: Record<string, Record<string, unknown>>;
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;
@@ -372,8 +374,7 @@ export type AdminSection =
   | "audit-log"
   | "ssl"
   | "plugins"
-  | "touch-input"
-  | "tailscale";
+  | "touch-input";
 export type ThemeId =
   | "dark"
   | "light"

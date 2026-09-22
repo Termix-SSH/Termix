@@ -2,7 +2,7 @@ import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { startTailscaleService, stopTailscaleService } from "./routes.js";
 
 export async function activate(ctx: PluginContext) {
-  startTailscaleService(ctx.http.router());
+  startTailscaleService(ctx.http.router(), ctx);
   ctx.log.info("Tailscale routes mounted at /plugin-api/tailscale");
 }
 

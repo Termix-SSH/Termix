@@ -344,6 +344,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
           operation: "plugin_init",
         });
       }
+
+      // After seeding: plugin_settings has a foreign key to plugins, so there
+      // is nothing to migrate into until the plugin row exists.
+      const { runTailscaleSettingsMigration } =
+        await import("./utils/crypto-migration/tailscale-settings-migration.js");
+      await runTailscaleSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

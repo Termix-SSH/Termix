@@ -65,11 +65,6 @@ import {
   type BrandingSettings,
 } from "@/api/settings-api";
 import {
-  getTailscaleSettings,
-  updateTailscaleSettings,
-} from "../../../plugins/tailscale/src/frontend/tailscale-api";
-import { AdminTailscaleSection } from "../../../plugins/tailscale/src/frontend/AdminTailscaleSection";
-import {
   getSessionSharingGloballyEnabled,
   updateSessionSharingGloballyEnabled,
 } from "@/api/session-sharing-api";
@@ -185,8 +180,6 @@ export function AdminSettingsPanel({
   const [guacEnabled, setGuacEnabled] = useState(false);
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
-  const [tailscaleApiKey, setTailscaleApiKey] = useState("");
-  const [tailscaleApiBaseUrl, setTailscaleApiBaseUrl] = useState("");
   const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
@@ -413,7 +406,6 @@ export function AdminSettingsPanel({
         guac,
         oidcProv,
         oidcSilent,
-        tailscale,
         cmdHistory,
         analytics,
         sessionSharingEnabled,
@@ -435,7 +427,6 @@ export function AdminSettingsPanel({
         getGuacamoleSettings(),
         getOidcAutoProvision(),
         getOidcSilentLoginDefault(),
-        getTailscaleSettings(),
         getCommandHistoryEnabled(),
         getAnalyticsEnabled(),
         getSessionSharingGloballyEnabled(),
@@ -473,10 +464,6 @@ export function AdminSettingsPanel({
       if (guac.status === "fulfilled") {
         setGuacEnabled(guac.value.enabled);
         setGuacUrl(guac.value.url || "guacd:4822");
-      }
-      if (tailscale.status === "fulfilled") {
-        setTailscaleApiKey(tailscale.value.apiKey ?? "");
-        setTailscaleApiBaseUrl(tailscale.value.apiBaseUrl ?? "");
       }
       if (cmdHistory.status === "fulfilled") {
         setCommandHistoryEnabled(cmdHistory.value.enabled);
@@ -883,15 +870,6 @@ export function AdminSettingsPanel({
     } catch {
       setGuacEnabled(!newVal);
       toast.error(t("admin.remoteDesktopUpdateFailed"));
-    }
-  }
-
-  async function handleSaveTailscaleApiKey() {
-    try {
-      await updateTailscaleSettings(tailscaleApiKey, tailscaleApiBaseUrl);
-      toast.success(t("admin.tailscaleSettingsSaved"));
-    } catch {
-      toast.error(t("admin.tailscaleSettingsSaveFailed"));
     }
   }
 
@@ -1339,16 +1317,6 @@ export function AdminSettingsPanel({
         handleSaveGuacamole={handleSaveGuacamole}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}
-      />
-
-      <AdminTailscaleSection
-        open={openSections.has("tailscale")}
-        onToggle={() => toggle("tailscale")}
-        tailscaleApiKey={tailscaleApiKey}
-        setTailscaleApiKey={setTailscaleApiKey}
-        tailscaleApiBaseUrl={tailscaleApiBaseUrl}
-        setTailscaleApiBaseUrl={setTailscaleApiBaseUrl}
-        handleSaveTailscaleApiKey={handleSaveTailscaleApiKey}
       />
 
       <AdminSSOSection

@@ -19,6 +19,7 @@ import { Bot } from "lucide-react";
 import { unregisterRailItem } from "@/sidebar/rail-items";
 import { unregisterTabComponent } from "@/shell/tabUtils";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
+import { syncHostPluginsTab } from "@/settings/host-plugins-tab";
 import {
   declareActionSlot,
   registerAction,
@@ -122,6 +123,10 @@ export function applyPluginState(plugins: PluginSummary[]): void {
   pluginEnabled = nextEnabled;
   disabledTabTypes = nextDisabledTabs;
   applyFirstPartyActions(nextEnabled);
+
+  // The host editor's Plugins tab exists only while something fills it, so it
+  // is re-synced whenever the plugin list changes rather than declared once.
+  syncHostPluginsTab(plugins);
 }
 
 export async function refreshPluginState(): Promise<PluginSummary[]> {

@@ -36,6 +36,7 @@ import {
 } from "./http.js";
 import { registerPluginWsRoute, registerPluginWsUpgrade } from "./ws.js";
 import { resolvePermission } from "./rbac.js";
+import * as pluginSettings from "./settings.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import {
   PluginCapabilityError,
@@ -257,6 +258,18 @@ export function createPluginContext(
     { action: "db_client" },
   );
 
+  // The one settings call that leaves the plugin's own namespace, so the one
+  // that needs a capability and an audit line.
+  const settingsReadCore = guarded(
+    manifest,
+    "settings:read-core",
+    async (key: string) => pluginSettings.readCoreSetting(key),
+    {
+      action: "settings_read_core",
+      details: () => "read a core server setting",
+    },
+  );
+
   const dbRefs = guarded(
     manifest,
     "db:own",
@@ -474,6 +487,66 @@ export function createPluginContext(
       },
     },
 
+    settings: {
+      // Reading and writing a plugin's OWN settings is ungated. The manifest
+      // already declares every field, and a plugin that had to ask permission
+      // to read its own configuration would be useless. Only readCore, which
+      // reaches outside the plugin's namespace, is a capability.
+      get: (key) =>
+        pluginSettings.getSetting(manifest, "admin", null, key) as never,
+      set: async (key, value) => {
+        const error = await pluginSettings.setSetting(
+          manifest,
+          "admin",
+          null,
+          key,
+          value,
+        );
+        if (error) throw new Error(error);
+      },
+
+      getUser: (userId, key) =>
+        pluginSettings.getSetting(manifest, "user", userId, key) as never,
+      setUser: async (userId, key, value) => {
+        const error = await pluginSettings.setSetting(
+          manifest,
+          "user",
+          userId,
+          key,
+          value,
+        );
+        if (error) throw new Error(error);
+      },
+
+      getHost: (hostId, key) =>
+        pluginSettings.getSetting(manifest, "host", hostId, key) as never,
+      setHost: async (hostId, key, value) => {
+        const error = await pluginSettings.setSetting(
+          manifest,
+          "host",
+          hostId,
+          key,
+          value,
+        );
+        if (error) throw new Error(error);
+      },
+
+      getAll: (scope, scopeId) =>
+        pluginSettings.getAllSettings(manifest, scope, scopeId ?? null),
+
+      onChange: (key, listener) => {
+        const unsubscribe = pluginSettings.onSettingsChange(
+          pluginId,
+          key,
+          listener,
+        );
+        handle.bag.add(unsubscribe, `settings listener for "${key}"`);
+        return unsubscribe;
+      },
+
+      readCore: (key) => settingsReadCore(key),
+    },
+
     rbac: {
       // A short name takes this plugin's prefix; another plugin's id or a core
       // group is used as given, which is what makes a cross-plugin check
@@ -623,6 +696,7 @@ export async function disposePluginHandle(
   // Belt and braces: an offer made outside ctx, or one whose registration was
   // lost to a throw mid-activate, would otherwise outlive the plugin.
   secretRegistry.withdrawAllForPlugin(pluginId);
+  pluginSettings.clearSettingsListeners(pluginId);
 
   // Skipped when activate() never finished: a plugin's deactivate expects the
   // state activate builds, and calling it on a half-built plugin tends to

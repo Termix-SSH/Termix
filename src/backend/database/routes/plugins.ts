@@ -14,8 +14,28 @@ import {
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
+import {
+  findField,
+  getAllSettings,
+  setSetting,
+  type PluginSettingsScope,
+} from "../../plugins/settings.js";
+import {
+  getAuditUsername,
+  getRequestMeta,
+  logAudit,
+} from "../../utils/audit-logger.js";
+import type {
+  PluginManifest,
+  PluginSettingsField,
+} from "@termix/plugin-sdk/manifest";
 
 const router = express.Router();
+
+/** A settings body is a flat object; an array or null is a client bug. */
+function isPlainBody(body: unknown): body is Record<string, unknown> {
+  return typeof body === "object" && body !== null && !Array.isArray(body);
+}
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -79,15 +99,18 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
 
       let contributes: unknown = null;
       let capabilities: string[] = [];
+      let icon: string | undefined;
       try {
         const manifest = JSON.parse(record.manifestJson) as {
           contributes?: unknown;
           capabilities?: unknown;
+          icon?: unknown;
         };
         contributes = manifest?.contributes ?? null;
         capabilities = Array.isArray(manifest?.capabilities)
           ? (manifest.capabilities as string[])
           : [];
+        icon = typeof manifest?.icon === "string" ? manifest.icon : undefined;
       } catch {
         contributes = null;
       }
@@ -99,6 +122,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         enabled: record.state === "enabled",
         state: loaded?.state ?? record.state,
         contributes,
+        icon,
       };
 
       if (!canManage) return summary;
@@ -524,6 +548,537 @@ router.delete(
         { operation: "plugin_remove_data" },
       );
       res.status(500).json({ error: "Failed to remove the plugin's data" });
+    }
+  },
+);
+
+/**
+ * Loads a plugin's manifest for the settings routes.
+ *
+ * Read from the loader rather than the database row so the fields a request is
+ * validated against are the ones the running build declares.
+ */
+async function loadManifestForSettings(
+  pluginId: string,
+): Promise<PluginManifest | null> {
+  const { loader } = getPluginRuntime();
+  const live = loader.get(pluginId);
+  if (live?.manifest) return live.manifest;
+
+  const record = await createCurrentPluginRepository().findById(pluginId);
+  if (!record) return null;
+  try {
+    return JSON.parse(record.manifestJson) as PluginManifest;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether the caller may write a given field.
+ *
+ * Admin fields fall back to admin.plugins.manage, so a plugin that declares no
+ * permission of its own still cannot have its install-wide settings changed by
+ * an ordinary user. A field naming its own permission uses that instead.
+ */
+async function canWriteField(
+  userId: string,
+  manifest: PluginManifest,
+  scope: PluginSettingsScope,
+  field: PluginSettingsField,
+): Promise<boolean> {
+  // Admin scope always needs admin.plugins.manage. A field-level permission
+  // narrows who may write it; it never widens the scope's own gate, so a
+  // plugin cannot hand an ordinary user install-wide configuration by naming
+  // a permission that user happens to hold.
+  if (
+    scope === "admin" &&
+    !(await permissionManager.hasPermission(userId, "admin.plugins.manage"))
+  ) {
+    return false;
+  }
+
+  if (field.permission) {
+    const { resolvePermission } = await import("../../plugins/rbac.js");
+    return permissionManager.hasPermission(
+      userId,
+      resolvePermission(manifest, field.permission),
+    );
+  }
+
+  return true;
+}
+
+/** Applies a body of values to one scope, collecting per-field errors. */
+async function applySettings(
+  userId: string,
+  manifest: PluginManifest,
+  scope: PluginSettingsScope,
+  scopeId: string | null,
+  body: Record<string, unknown>,
+): Promise<Record<string, string>> {
+  const errors: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(body)) {
+    const field = findField(manifest, scope, key);
+    if (!field) {
+      errors[key] = "Not a settings field this plugin declares";
+      continue;
+    }
+    if (!(await canWriteField(userId, manifest, scope, field))) {
+      errors[key] = "You do not have permission to change this setting";
+      continue;
+    }
+
+    const error = await setSetting(manifest, scope, scopeId, key, value);
+    if (error) errors[key] = error;
+  }
+
+  return errors;
+}
+
+/**
+ * @openapi
+ * /plugins/{id}/settings/admin:
+ *   get:
+ *     summary: Read a plugin's install-wide settings
+ *     description: >
+ *       Returns every admin-scope field the plugin declares, with stored values
+ *       over declared defaults. Secret fields come back as { set: boolean } and
+ *       never carry their value, so a browser can render "configured" without
+ *       ever holding the secret.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The plugin's admin settings.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin.
+ */
+router.get(
+  "/:id/settings/admin",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    try {
+      const manifest = await loadManifestForSettings(pluginId);
+      if (!manifest) {
+        res.status(404).json({ error: "No such plugin" });
+        return;
+      }
+      const values = await getAllSettings(manifest, "admin", null, {
+        redactSecrets: true,
+      });
+      res.json({ id: pluginId, values });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to read admin settings for plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_settings_read" },
+      );
+      res.status(500).json({ error: "Failed to read the plugin's settings" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/settings/admin:
+ *   put:
+ *     summary: Update a plugin's install-wide settings
+ *     description: >
+ *       Writes the given keys. Every value is validated against the field the
+ *       manifest declares, and a key the manifest never declared is rejected
+ *       rather than stored. Validation failures come back per field so a form
+ *       can show every problem at once. Sending a secret field back as
+ *       { set: true } leaves the stored value alone, so saving a form does not
+ *       clear a key it was never shown.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: The updated settings.
+ *       400:
+ *         description: One or more fields were rejected.
+ *       403:
+ *         description: The caller lacks admin.plugins.manage.
+ *       404:
+ *         description: No such plugin.
+ */
+router.put(
+  "/:id/settings/admin",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId as string;
+
+    if (!isPlainBody(req.body)) {
+      res.status(400).json({ error: "Body must be an object of settings" });
+      return;
+    }
+
+    try {
+      const manifest = await loadManifestForSettings(pluginId);
+      if (!manifest) {
+        res.status(404).json({ error: "No such plugin" });
+        return;
+      }
+
+      const errors = await applySettings(
+        userId,
+        manifest,
+        "admin",
+        null,
+        req.body,
+      );
+      if (Object.keys(errors).length > 0) {
+        res.status(400).json({ error: "Some settings were rejected", errors });
+        return;
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "update_plugin_settings",
+        resourceType: "setting",
+        resourceId: pluginId,
+        resourceName: manifest.name,
+        // Keys only: a value here could be the secret we just encrypted.
+        details: JSON.stringify({
+          scope: "admin",
+          keys: Object.keys(req.body),
+        }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      const values = await getAllSettings(manifest, "admin", null, {
+        redactSecrets: true,
+      });
+      res.json({ id: pluginId, values });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to update admin settings for plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_settings_write" },
+      );
+      res.status(500).json({ error: "Failed to update the plugin's settings" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/settings/user:
+ *   get:
+ *     summary: Read the caller's own settings for a plugin
+ *     description: Returns every user-scope field the plugin declares for the authenticated user. The scope is always the caller, never a user id from the request.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: The caller's settings for this plugin.
+ *       404:
+ *         description: No such plugin.
+ */
+router.get(
+  "/:id/settings/user",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId as string;
+
+    try {
+      const manifest = await loadManifestForSettings(pluginId);
+      if (!manifest) {
+        res.status(404).json({ error: "No such plugin" });
+        return;
+      }
+      const values = await getAllSettings(manifest, "user", userId, {
+        redactSecrets: true,
+      });
+      res.json({ id: pluginId, values });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to read user settings for plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_settings_read" },
+      );
+      res.status(500).json({ error: "Failed to read the plugin's settings" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/settings/user:
+ *   put:
+ *     summary: Update the caller's own settings for a plugin
+ *     description: Writes user-scope values for the authenticated user. The scope is always the caller, so one user can never write another's settings.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: The updated settings.
+ *       400:
+ *         description: One or more fields were rejected.
+ *       404:
+ *         description: No such plugin.
+ */
+router.put(
+  "/:id/settings/user",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId as string;
+
+    if (!isPlainBody(req.body)) {
+      res.status(400).json({ error: "Body must be an object of settings" });
+      return;
+    }
+
+    try {
+      const manifest = await loadManifestForSettings(pluginId);
+      if (!manifest) {
+        res.status(404).json({ error: "No such plugin" });
+        return;
+      }
+
+      const errors = await applySettings(
+        userId,
+        manifest,
+        "user",
+        userId,
+        req.body,
+      );
+      if (Object.keys(errors).length > 0) {
+        res.status(400).json({ error: "Some settings were rejected", errors });
+        return;
+      }
+
+      const values = await getAllSettings(manifest, "user", userId, {
+        redactSecrets: true,
+      });
+      res.json({ id: pluginId, values });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to update user settings for plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_settings_write" },
+      );
+      res.status(500).json({ error: "Failed to update the plugin's settings" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/settings/host/{hostId}:
+ *   get:
+ *     summary: Read a plugin's settings for one host
+ *     description: Returns every host-scope field the plugin declares for that host. Requires edit access to the host, the same check the host editor itself uses.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The plugin's settings for that host.
+ *       400:
+ *         description: Invalid host id.
+ *       403:
+ *         description: No edit access to that host.
+ *       404:
+ *         description: No such plugin.
+ */
+router.get(
+  "/:id/settings/host/:hostId",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId as string;
+    const hostId = Number(req.params.hostId);
+
+    if (!Number.isInteger(hostId) || hostId <= 0) {
+      res.status(400).json({ error: "Invalid host ID" });
+      return;
+    }
+
+    try {
+      const manifest = await loadManifestForSettings(pluginId);
+      if (!manifest) {
+        res.status(404).json({ error: "No such plugin" });
+        return;
+      }
+
+      const access = await permissionManager.canAccessHost(
+        userId,
+        hostId,
+        "edit",
+      );
+      if (!access.hasAccess) {
+        res.status(403).json({ error: "Access denied to host" });
+        return;
+      }
+
+      const values = await getAllSettings(manifest, "host", hostId, {
+        redactSecrets: true,
+      });
+      res.json({ id: pluginId, hostId, values });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to read host settings for plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_settings_read" },
+      );
+      res.status(500).json({ error: "Failed to read the plugin's settings" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /plugins/{id}/settings/host/{hostId}:
+ *   put:
+ *     summary: Update a plugin's settings for one host
+ *     description: Writes host-scope values. Requires edit access to the host, so a user who may only connect to a shared host cannot change how a plugin treats it.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: The updated settings.
+ *       400:
+ *         description: Invalid host id, or one or more fields were rejected.
+ *       403:
+ *         description: No edit access to that host.
+ *       404:
+ *         description: No such plugin.
+ */
+router.put(
+  "/:id/settings/host/:hostId",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId as string;
+    const hostId = Number(req.params.hostId);
+
+    if (!Number.isInteger(hostId) || hostId <= 0) {
+      res.status(400).json({ error: "Invalid host ID" });
+      return;
+    }
+    if (!isPlainBody(req.body)) {
+      res.status(400).json({ error: "Body must be an object of settings" });
+      return;
+    }
+
+    try {
+      const manifest = await loadManifestForSettings(pluginId);
+      if (!manifest) {
+        res.status(404).json({ error: "No such plugin" });
+        return;
+      }
+
+      const access = await permissionManager.canAccessHost(
+        userId,
+        hostId,
+        "edit",
+      );
+      if (!access.hasAccess) {
+        res.status(403).json({ error: "Access denied to host" });
+        return;
+      }
+
+      const errors = await applySettings(
+        userId,
+        manifest,
+        "host",
+        String(hostId),
+        req.body,
+      );
+      if (Object.keys(errors).length > 0) {
+        res.status(400).json({ error: "Some settings were rejected", errors });
+        return;
+      }
+
+      const values = await getAllSettings(manifest, "host", hostId, {
+        redactSecrets: true,
+      });
+      res.json({ id: pluginId, hostId, values });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to update host settings for plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_settings_write" },
+      );
+      res.status(500).json({ error: "Failed to update the plugin's settings" });
     }
   },
 );

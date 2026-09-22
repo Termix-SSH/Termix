@@ -8,7 +8,7 @@ import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import { PermissionManager } from "../../../../src/backend/utils/permission-manager.js";
 import { apiLogger } from "../../../../src/backend/utils/logger.js";
 import { fetchWithProxy } from "../../../../src/backend/utils/proxy-agent.js";
-import { createCurrentSettingsRepository } from "../../../../src/backend/database/repositories/factory.js";
+import type { PluginContext } from "@termix/plugin-sdk/backend";
 
 interface TailscaleDevice {
   id: string;
@@ -32,6 +32,12 @@ interface TailscaleAPIDevice {
 const DEFAULT_TAILSCALE_API_BASE = "https://api.tailscale.com/api/v2";
 
 export const router = Router();
+
+/**
+ * Set by activate(). The API key and base URL are this plugin's own settings
+ * now, read through ctx rather than out of the core settings table.
+ */
+let context: PluginContext | null = null;
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -85,13 +91,17 @@ router.get(
   requireDeviceAccess,
   async (_req, res) => {
     try {
-      const settingsRepo = createCurrentSettingsRepository();
-      const apiKey = (await settingsRepo.get("tailscale_api_key")) ?? "";
+      if (!context) {
+        return res
+          .status(503)
+          .json({ error: "Plugin is not running", devices: [] });
+      }
+      const apiKey = (await context.settings.get<string>("apiKey")) ?? "";
       if (!apiKey) {
         return res.json({ devices: [], hasApiKey: false });
       }
       const apiBase = normalizeApiBase(
-        await settingsRepo.get("tailscale_api_base_url"),
+        (await context.settings.get<string>("apiBaseUrl")) ?? null,
       );
 
       const url = `${apiBase}/tailnet/-/devices?fields=all`;
@@ -148,12 +158,18 @@ router.get(
 
 /** Called from activate(). Mounts this router at /tailscale via the shared
  * dispatcher. */
-export function startTailscaleService(mountOn: Router): void {
+export function startTailscaleService(
+  mountOn: Router,
+  ctx: PluginContext,
+): void {
+  context = ctx;
   mountOn.use(router);
 }
 
 /** Called from deactivate(). /tailscale/* falls back to 404 until
  * reactivated. */
 export function stopTailscaleService(): void {
-  // Unmounted by the runtime when the plugin deactivates.
+  // Dropped so a request arriving mid-teardown cannot read settings through a
+  // context the runtime has already torn down.
+  context = null;
 }

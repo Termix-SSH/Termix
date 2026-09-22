@@ -27,7 +27,34 @@
         "titleKey": "permissions.devices.view.title",
         "descriptionKey": "permissions.devices.view.description"
       }
-    ]
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "labelKey": "settings.apiKey.label",
+          "descriptionKey": "settings.apiKey.description",
+          "placeholderKey": "settings.apiKey.placeholder",
+          "group": "settings.group.api"
+        },
+        {
+          "key": "apiBaseUrl",
+          "type": "string",
+          "labelKey": "settings.apiBaseUrl.label",
+          "descriptionKey": "settings.apiBaseUrl.description",
+          "placeholderKey": "settings.apiBaseUrl.placeholder",
+          "default": "",
+          "group": "settings.group.api"
+        },
+        {
+          "key": "devices",
+          "type": "custom",
+          "component": "devices",
+          "group": "settings.group.devices"
+        }
+      ]
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

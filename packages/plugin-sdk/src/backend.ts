@@ -297,6 +297,58 @@ export interface PluginDisposables {
   add: (dispose: () => void | Promise<void>) => void;
 }
 
+/**
+ * The plugin's own settings, as declared in contributes.settings.
+ *
+ * Reading and writing a plugin's own settings needs no capability: the
+ * manifest already says which fields exist, and a plugin that could not read
+ * its own configuration would be useless. Only readCore, which reaches outside
+ * the plugin's namespace, is gated on settings:read-core.
+ *
+ * Values are validated against the declared field on every write, so a key the
+ * manifest never declared is rejected rather than stored. Secret fields are
+ * encrypted at rest and returned decrypted here; the HTTP surface never sends
+ * them to a browser.
+ */
+export interface PluginSettings {
+  /** Install-wide admin settings. */
+  get: <T = unknown>(key: string) => Promise<T | undefined>;
+  set: (key: string, value: unknown) => Promise<void>;
+
+  /** Per-user settings. */
+  getUser: <T = unknown>(userId: string, key: string) => Promise<T | undefined>;
+  setUser: (userId: string, key: string, value: unknown) => Promise<void>;
+
+  /** Per-host settings. */
+  getHost: <T = unknown>(
+    hostId: number | string,
+    key: string,
+  ) => Promise<T | undefined>;
+  setHost: (
+    hostId: number | string,
+    key: string,
+    value: unknown,
+  ) => Promise<void>;
+
+  /** Every value in one scope, with declared defaults merged in. */
+  getAll: (
+    scope: "admin" | "user" | "host",
+    scopeId?: string | number,
+  ) => Promise<Record<string, unknown>>;
+
+  /**
+   * Fires when a key in this plugin's settings changes, from either the ctx
+   * API or the HTTP routes. Disposed automatically on deactivate.
+   */
+  onChange: (key: string, listener: (value: unknown) => void) => () => void;
+
+  /**
+   * Reads a core server setting from a small documented allowlist.
+   * Requires the settings:read-core capability.
+   */
+  readCore: (key: string) => Promise<string | null>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -311,6 +363,7 @@ export interface PluginContext {
   readonly http: PluginHttp;
   readonly ws: PluginWebSockets;
   readonly rbac: PluginRbac;
+  readonly settings: PluginSettings;
   readonly disposables: PluginDisposables;
 
   /**
@@ -347,3 +400,8 @@ export function definePlugin(plugin: PluginModule): PluginModule {
 
 export type { PluginManifest } from "./manifest.js";
 export type { PluginTableDefinition } from "./db.js";
+export type {
+  PluginSettingsField,
+  PluginSettingsContribution,
+  PluginSettingsScope,
+} from "./manifest.js";

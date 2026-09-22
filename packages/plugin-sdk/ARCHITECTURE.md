@@ -32,6 +32,7 @@ dependencies. Entry points:
 | `@termix/plugin-sdk/frontend`     | The `app` object types (stubs until A7)                    |
 | `@termix/plugin-sdk/manifest`     | Manifest types, validation, the JSON schema                |
 | `@termix/plugin-sdk/capabilities` | The capability catalog                                     |
+| `@termix/plugin-sdk/settings`     | Settings field types and the shared value validator        |
 | `@termix/plugin-sdk/testing`      | Test helpers, incl. `createFakeContext()`                  |
 
 Plugins never import from `src/` or `@/`, and core never imports from
@@ -205,10 +206,68 @@ by an authenticated route).
 ### 7. Settings
 
 Plugins declare settings fields in the manifest with scope `admin`, `user` or
-`host`. Core renders them from the schema (with an optional custom component),
-stores values in `plugin_settings`, and encrypts secret fields. One Settings
-screen has a Plugins section with a page per plugin; host settings render in
-the host editor. **A6.**
+`host`. Core renders them from the schema, stores values in `plugin_settings`,
+and encrypts secret fields.
+
+**A6 delivered this.** A field is `{ key, type, labelKey, ... }`, with types
+`boolean`, `string`, `number`, `select`, `multiselect`, `secret`, `textarea`,
+`json` and `custom`. `requires` names a boolean in the same scope that gates
+it, `group` is a section heading, and `permission` is who may write it: admin
+fields fall back to `admin.plugins.manage`, and a short name resolves against
+the plugin's own permissions exactly as `ctx.rbac` does.
+
+`type: "custom"` names a component the frontend registered, for the few things
+a schema cannot express (a device browser, a provider list). It is deliberately
+narrow: a plugin supplies data everywhere else, so it cannot ship its own form
+styling and drift from the rest of the app, and a page disappears cleanly when
+its plugin does.
+
+**One service, two callers.** `src/backend/plugins/settings.ts` is behind both
+`ctx.settings` and the HTTP routes, so validation, encryption and redaction are
+decided once. Two implementations would drift, and the one that drifted would
+be the one writing to the database.
+
+**The manifest is the schema.** A read is driven by the declared fields, not by
+the stored rows: an unwritten field comes back with its `default`, and a row
+for a field the plugin has since dropped is ignored rather than handed to the
+UI. A write to a key the manifest never declared is refused, which is what
+stops a PUT from filling a plugin's namespace with arbitrary keys.
+
+**Secrets never leave the server.** A `secret` field is encrypted with
+`encryptSystemSecret` (the installation key, not a user DEK: these have to be
+readable before any user is unlocked) and every HTTP read replaces it with
+`{ set: boolean }`. Sending that marker back is a no-op, so saving a form
+cannot clear a key it was never shown. Clearing one writes null rather than an
+encrypted empty string, so it reads back as unset.
+
+**Storage.** `plugin_settings(plugin_id, scope, scope_id, key, value,
+encrypted, updated_at)`, unique on the first four. `scope_id` is null for
+admin, a user id for user and a host id as text for host. It is polymorphic, so
+it carries no foreign key and the engine cannot cascade it: `UserRepository`
+and `HostRepository` delete these rows explicitly, with tests that fail if
+those calls ever go. The foreign key to `plugins` is real, so uninstalling
+leaves nothing.
+
+**Routes**, all with core auth: `GET|PUT /plugins/:id/settings/admin`
+(`admin.plugins.manage`, or the field's own permission), `/settings/user`
+(always the caller, never a user id from the body) and
+`/settings/host/:hostId` (needs edit access to that host). A rejected PUT
+returns `400 { errors: { <key>: message } }` per field, so a form shows every
+problem at once.
+
+**Host payloads carry them.** Host list and get responses include a
+`pluginSettings` map, enabled plugins only and secrets redacted, built in one
+query for the whole list rather than one request per plugin per host. It is
+attached after the sanitizers, because the connect-level projection of a shared
+host reduces it to an allowlist.
+
+`ctx.settings` is `get/set`, `getUser/setUser`, `getHost/setHost`, `getAll`,
+`onChange` (disposed with the plugin) and `readCore`. **Reading and writing a
+plugin's own settings needs no capability**: the manifest already declares
+every field, and a plugin that had to ask permission to read its own
+configuration would be useless. Only `readCore`, which reaches outside the
+plugin's namespace, is gated on `settings:read-core`, and it serves a short
+allowlist (`CORE_SETTINGS_ALLOWLIST`) rather than the whole settings table.
 
 ### 8. UI
 
@@ -296,6 +355,32 @@ plugins/<id>/
 Every move of data, settings or host columns into a plugin comes with a
 migration for all three dialects and a test proving existing data survives.
 
+#### Moving a host column into a plugin
+
+A6 built the host-scope settings path but moved no columns; each Phase B step
+moves its own. `ssh_data` still holds `enable_docker`, `stats_config`,
+`web_ui_config`, `enable_proxmox`, `enable_rdp`, `mac_address` and the rest,
+and the hardcoded host editor tabs still read them. The order matters, because
+dropping a column before its data has moved loses it:
+
+1. Declare the fields in the plugin's `contributes.settings.host`, keeping the
+   key names the form already uses so the editor tab can be deleted rather than
+   rewritten.
+2. Write a boot migration that copies each row's column into host-scope
+   `plugin_settings` for that plugin, keyed by the host id as text. Make it
+   idempotent by checking for an existing row first, the way
+   `tailscale-settings-migration.ts` does, and cover it with a test that runs
+   it twice.
+3. Switch the plugin's backend to `ctx.settings.getHost` and delete the
+   hardcoded editor tab; the schema-driven Plugins group replaces it.
+4. Only then drop the column, in lockstep across all four artifacts: the
+   `schema.ts` declaration, the `db/index.ts` bootstrap DDL, a drizzle
+   migration per dialect, and `npm run schema:generate` for the pg and mysql
+   variants. The two bootstrap guard tests fail if these disagree.
+
+A column that is still read anywhere in core is not ready to be dropped. Ship
+the copy and the switch first, and drop it in a later step if that is safer.
+
 ---
 
 ## Manifest v2 reference
@@ -370,6 +455,52 @@ not do.
         "defaultRoles": ["user"], // system roles only, applied once
       },
     ],
+    "settings": {
+      "admin": [
+        {
+          "key": "apiKey",
+          "type": "secret", // encrypted at rest, never sent to a browser
+          "labelKey": "settings.apiKey.label",
+          "descriptionKey": "settings.apiKey.description",
+          "placeholderKey": "settings.apiKey.placeholder",
+          "group": "settings.group.api", // section heading
+        },
+        {
+          "key": "retries",
+          "type": "number",
+          "labelKey": "k",
+          "min": 0,
+          "max": 5,
+          "default": 3,
+        },
+        {
+          "key": "browser",
+          "type": "custom", // a registered component, for what a schema cannot express
+          "component": "devices",
+        },
+      ],
+      "user": [
+        {
+          "key": "advanced",
+          "type": "boolean",
+          "labelKey": "k",
+          "permission": "tweak", // one of this plugin's own permissions
+        },
+      ],
+      "host": {
+        "enableKey": "enableExample", // boolean rendered first, gating the rest
+        "enableLabelKey": "k",
+        "fields": [
+          {
+            "key": "port",
+            "type": "number",
+            "labelKey": "k",
+            "requires": "enableExample",
+          },
+        ],
+      },
+    },
+
     "hostCapability": {
       "key": "enableExample",
       "labelKey": "k",
@@ -389,6 +520,13 @@ Networking, Access & Security, Productivity.
 
 `openFrom` is one of: rail, host-context-menu, palette.
 
+Field types are `boolean`, `string`, `number`, `select`, `multiselect`,
+`secret`, `textarea`, `json` and `custom`. `labelKey` is required for every
+type but `custom`, which needs `component` instead; `options` is required and
+non-empty for `select` and `multiselect` and rejected elsewhere; `min`/`max`
+belong to `number` alone; and `requires` must name a boolean field in the same
+scope, which includes the host section's `enableKey`.
+
 Cross-field rules the JSON schema cannot express, checked by `parseManifest`:
 
 - `engine.api` must match the SDK major version this build implements.
@@ -403,6 +541,9 @@ Cross-field rules the JSON schema cannot express, checked by `parseManifest`:
 - Every `contributes.permissions[].name` must be unique, must not start with a
   core group (`hosts`, `snippets`, `credentials`, `admin`) or with the plugin's
   own id, and every `defaultRoles` entry must be `admin` or `user`.
+- A `contributes.settings` field `permission` written as a bare short name must
+  appear in the plugin's own `contributes.permissions`. A dotted id is taken as
+  given, because the validator cannot know which other plugins exist.
 
 `contributes.hostCapability`, `provides`, `requires`, `providesSecret` and
 `requiresSecret` are carried forward from v1 unchanged because the service and
@@ -469,28 +610,28 @@ deciding, not the mechanism.
 
 Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 
-| Member                                           | Capability                       | Status |
-| ------------------------------------------------ | -------------------------------- | ------ |
-| `ctx.pluginId`, `ctx.manifest`                   | none                             | **A1** |
-| `ctx.log.*`                                      | none                             | **A1** |
-| `ctx.events.emit` / `.on`                        | `events:core` for core topics    | **A1** |
-| `ctx.kv.get/set/delete/list`                     | `kv:own`                         | **A1** |
-| `ctx.registry.*`                                 | none                             | **A1** |
-| `ctx.services.provide` / `.get`                  | per-service RBAC                 | **A1** |
-| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                  | **A1** |
-| `ctx.disposables.add`                            | none                             | **A1** |
-| `ctx.asUser(userId, fn)`                         | none, always audited             | **A1** |
-| `ctx.currentActor()`                             | none                             | **A1** |
-| `ctx.db.define` / `.client` / `.refs`            | `db:own`                         | **A3** |
-| `ctx.sync.registerEntity`                        | none                             | **A3** |
-| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                  | **A4** |
-| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only             | **A5** |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`     | B      |
-| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use` | B      |
-| `ctx.settings.*`                                 | `settings:read-core`             | A6     |
-| `ctx.notify.*`                                   | `notify:send`                    | A6     |
-| `ctx.auth.*`                                     | `auth:provide`                   | A8     |
-| `ctx.fetch`                                      | `network:outbound`               | B      |
+| Member                                           | Capability                           | Status |
+| ------------------------------------------------ | ------------------------------------ | ------ |
+| `ctx.pluginId`, `ctx.manifest`                   | none                                 | **A1** |
+| `ctx.log.*`                                      | none                                 | **A1** |
+| `ctx.events.emit` / `.on`                        | `events:core` for core topics        | **A1** |
+| `ctx.kv.get/set/delete/list`                     | `kv:own`                             | **A1** |
+| `ctx.registry.*`                                 | none                                 | **A1** |
+| `ctx.services.provide` / `.get`                  | per-service RBAC                     | **A1** |
+| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1** |
+| `ctx.disposables.add`                            | none                                 | **A1** |
+| `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1** |
+| `ctx.currentActor()`                             | none                                 | **A1** |
+| `ctx.db.define` / `.client` / `.refs`            | `db:own`                             | **A3** |
+| `ctx.sync.registerEntity`                        | none                                 | **A3** |
+| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4** |
+| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5** |
+| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | B      |
+| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | B      |
+| `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6** |
+| `ctx.notify.*`                                   | `notify:send`                        | A6     |
+| `ctx.auth.*`                                     | `auth:provide`                       | A8     |
+| `ctx.fetch`                                      | `network:outbound`                   | B      |
 
 ### The actor
 

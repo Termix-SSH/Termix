@@ -751,6 +751,21 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS plugin_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        scope TEXT NOT NULL,
+        scope_id TEXT,
+        key TEXT NOT NULL,
+        value TEXT,
+        encrypted INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, scope, scope_id, key),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_plugin_settings_plugin_scope ON plugin_settings (plugin_id, scope);
+
     CREATE TABLE IF NOT EXISTS rbac_known_permissions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         permission TEXT NOT NULL,

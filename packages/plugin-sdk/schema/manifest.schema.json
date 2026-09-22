@@ -21,24 +21,42 @@
       "pattern": "^[a-z][a-z0-9-]{1,39}$",
       "description": "Unique plugin id. Lowercase, starts with a letter, 2-40 characters. Must equal the plugin's directory name."
     },
-    "name": { "type": "string", "minLength": 1 },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
     "version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$",
       "description": "Semver version string."
     },
-    "description": { "type": "string", "minLength": 1 },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
     "author": {
       "type": "object",
       "additionalProperties": false,
       "required": ["name"],
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
-        "url": { "type": "string", "minLength": 1 }
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
-    "license": { "type": "string", "minLength": 1 },
-    "repository": { "type": "string", "minLength": 1 },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "minLength": 1
+    },
     "category": {
       "type": "string",
       "enum": [
@@ -106,14 +124,24 @@
     "dependencies": {
       "type": "object",
       "description": "Plugin ids this plugin cannot run without, mapped to a semver range.",
-      "additionalProperties": { "type": "string", "minLength": 1 },
-      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,39}$" }
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]{1,39}$"
+      }
     },
     "optionalDependencies": {
       "type": "object",
       "description": "Plugin ids this plugin uses when present. It must keep working without them.",
-      "additionalProperties": { "type": "string", "minLength": 1 },
-      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,39}$" }
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]{1,39}$"
+      }
     },
     "provides": {
       "type": "array",
@@ -130,7 +158,10 @@
             "type": "string",
             "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$"
           },
-          "permission": { "type": "string", "minLength": 1 }
+          "permission": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -145,8 +176,13 @@
             "type": "string",
             "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
           },
-          "versionRange": { "type": "string", "minLength": 1 },
-          "optional": { "type": "boolean" }
+          "versionRange": {
+            "type": "string",
+            "minLength": 1
+          },
+          "optional": {
+            "type": "boolean"
+          }
         }
       }
     },
@@ -157,9 +193,18 @@
         "additionalProperties": false,
         "required": ["key", "permission"],
         "properties": {
-          "key": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "permission": { "type": "string", "minLength": 1 },
-          "descriptionKey": { "type": "string", "minLength": 1 }
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "permission": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descriptionKey": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -170,9 +215,17 @@
         "additionalProperties": false,
         "required": ["plugin", "key"],
         "properties": {
-          "plugin": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,39}$" },
-          "key": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "optional": { "type": "boolean" }
+          "plugin": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,39}$"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "optional": {
+            "type": "boolean"
+          }
         }
       }
     },
@@ -187,9 +240,18 @@
             "additionalProperties": false,
             "required": ["id", "titleKey", "icon", "openFrom"],
             "properties": {
-              "id": { "type": "string", "minLength": 1 },
-              "titleKey": { "type": "string", "minLength": 1 },
-              "icon": { "type": "string", "minLength": 1 },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "titleKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "icon": {
+                "type": "string",
+                "minLength": 1
+              },
               "openFrom": {
                 "type": "array",
                 "minItems": 1,
@@ -212,15 +274,30 @@
                 "type": "string",
                 "pattern": "^[a-z0-9-]+(\\.[a-zA-Z0-9-]+)+$"
               },
-              "titleKey": { "type": "string", "minLength": 1 },
+              "titleKey": {
+                "type": "string",
+                "minLength": 1
+              },
               "handler": {
                 "type": "string",
                 "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
               },
-              "icon": { "type": "string", "minLength": 1 },
-              "permission": { "type": "string", "minLength": 1 },
-              "slot": { "type": "string", "minLength": 1 },
-              "kind": { "type": "string", "enum": ["button"] }
+              "icon": {
+                "type": "string",
+                "minLength": 1
+              },
+              "permission": {
+                "type": "string",
+                "minLength": 1
+              },
+              "slot": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": ["button"]
+              }
             }
           }
         },
@@ -238,9 +315,15 @@
               "accepts": {
                 "type": "array",
                 "minItems": 1,
-                "items": { "type": "string", "enum": ["button"] }
+                "items": {
+                  "type": "string",
+                  "enum": ["button"]
+                }
               },
-              "descriptionKey": { "type": "string", "minLength": 1 }
+              "descriptionKey": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         },
@@ -257,12 +340,320 @@
                 "description": "Plugin-relative name. May contain dots. Must not start with a core group or this plugin's id.",
                 "pattern": "^[a-z0-9_-]+(\\.[a-z0-9_-]+)*$"
               },
-              "titleKey": { "type": "string", "minLength": 1 },
-              "descriptionKey": { "type": "string", "minLength": 1 },
+              "titleKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "descriptionKey": {
+                "type": "string",
+                "minLength": 1
+              },
               "defaultRoles": {
                 "type": "array",
                 "description": "System roles that hold this the first time it is seen.",
-                "items": { "type": "string", "enum": ["admin", "user"] }
+                "items": {
+                  "type": "string",
+                  "enum": ["admin", "user"]
+                }
+              }
+            }
+          }
+        },
+        "settings": {
+          "type": "object",
+          "description": "Settings fields core renders on the plugin's settings page and in the host editor.",
+          "additionalProperties": false,
+          "properties": {
+            "admin": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key", "type"],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Storage key, unique within its scope.",
+                    "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "boolean",
+                      "string",
+                      "number",
+                      "select",
+                      "multiselect",
+                      "secret",
+                      "textarea",
+                      "json",
+                      "custom"
+                    ]
+                  },
+                  "labelKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Required for every type except \"custom\"."
+                  },
+                  "descriptionKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "placeholderKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "default": {
+                    "description": "Value used until one is written."
+                  },
+                  "options": {
+                    "type": "array",
+                    "description": "select and multiselect only.",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["value", "labelKey"],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "labelKey": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "type": "number",
+                    "description": "number fields only."
+                  },
+                  "max": {
+                    "type": "number",
+                    "description": "number fields only."
+                  },
+                  "requires": {
+                    "type": "string",
+                    "description": "Key of a boolean field in the same scope that must be on."
+                  },
+                  "permission": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Permission needed to write it. Admin fields default to admin.plugins.manage."
+                  },
+                  "group": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Section heading this field sits under."
+                  },
+                  "component": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Registered component id. Required when type is \"custom\"."
+                  }
+                }
+              }
+            },
+            "user": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key", "type"],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Storage key, unique within its scope.",
+                    "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "boolean",
+                      "string",
+                      "number",
+                      "select",
+                      "multiselect",
+                      "secret",
+                      "textarea",
+                      "json",
+                      "custom"
+                    ]
+                  },
+                  "labelKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Required for every type except \"custom\"."
+                  },
+                  "descriptionKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "placeholderKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "default": {
+                    "description": "Value used until one is written."
+                  },
+                  "options": {
+                    "type": "array",
+                    "description": "select and multiselect only.",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["value", "labelKey"],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "labelKey": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "min": {
+                    "type": "number",
+                    "description": "number fields only."
+                  },
+                  "max": {
+                    "type": "number",
+                    "description": "number fields only."
+                  },
+                  "requires": {
+                    "type": "string",
+                    "description": "Key of a boolean field in the same scope that must be on."
+                  },
+                  "permission": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Permission needed to write it. Admin fields default to admin.plugins.manage."
+                  },
+                  "group": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Section heading this field sits under."
+                  },
+                  "component": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Registered component id. Required when type is \"custom\"."
+                  }
+                }
+              }
+            },
+            "host": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["fields"],
+              "properties": {
+                "enableKey": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$",
+                  "description": "Boolean rendered first, gating the rest of the section."
+                },
+                "enableLabelKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["key", "type"],
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "description": "Storage key, unique within its scope.",
+                        "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "boolean",
+                          "string",
+                          "number",
+                          "select",
+                          "multiselect",
+                          "secret",
+                          "textarea",
+                          "json",
+                          "custom"
+                        ]
+                      },
+                      "labelKey": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Required for every type except \"custom\"."
+                      },
+                      "descriptionKey": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "placeholderKey": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "default": {
+                        "description": "Value used until one is written."
+                      },
+                      "options": {
+                        "type": "array",
+                        "description": "select and multiselect only.",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["value", "labelKey"],
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "labelKey": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        }
+                      },
+                      "min": {
+                        "type": "number",
+                        "description": "number fields only."
+                      },
+                      "max": {
+                        "type": "number",
+                        "description": "number fields only."
+                      },
+                      "requires": {
+                        "type": "string",
+                        "description": "Key of a boolean field in the same scope that must be on."
+                      },
+                      "permission": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Permission needed to write it. Admin fields default to admin.plugins.manage."
+                      },
+                      "group": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Section heading this field sits under."
+                      },
+                      "component": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Registered component id. Required when type is \"custom\"."
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -270,11 +661,15 @@
         "hostCapability": {
           "description": "A host-editor checkbox backed by a boolean column on the host record. Reshaped by a later step.",
           "oneOf": [
-            { "$ref": "#/$defs/hostCapability" },
+            {
+              "$ref": "#/$defs/hostCapability"
+            },
             {
               "type": "array",
               "minItems": 1,
-              "items": { "$ref": "#/$defs/hostCapability" }
+              "items": {
+                "$ref": "#/$defs/hostCapability"
+              }
             }
           ]
         }
@@ -298,7 +693,10 @@
     "platforms": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "enum": ["linux", "win32", "darwin"] }
+      "items": {
+        "type": "string",
+        "enum": ["linux", "win32", "darwin"]
+      }
     }
   },
   "$defs": {
@@ -307,9 +705,18 @@
       "additionalProperties": false,
       "required": ["key", "labelKey", "editorTab"],
       "properties": {
-        "key": { "type": "string", "minLength": 1 },
-        "labelKey": { "type": "string", "minLength": 1 },
-        "editorTab": { "type": "string", "minLength": 1 }
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "labelKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "editorTab": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   }

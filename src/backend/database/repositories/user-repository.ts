@@ -1,5 +1,5 @@
-import { asc, eq, inArray, like, sql } from "drizzle-orm";
-import { users } from "../db/schema.js";
+import { and, asc, eq, inArray, like, sql } from "drizzle-orm";
+import { pluginSettings, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import {
   countValue,
@@ -199,6 +199,15 @@ export class UserRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    // plugin_settings.scope_id is polymorphic, so it carries no foreign key to
+    // users and the engine will not cascade it. Removed here rather than in a
+    // route so every caller that deletes a user is covered.
+    await this.context.drizzle
+      .delete(pluginSettings)
+      .where(
+        and(eq(pluginSettings.scope, "user"), eq(pluginSettings.scopeId, id)),
+      );
+
     const result = await this.context.drizzle
       .delete(users)
       .where(eq(users.id, id));

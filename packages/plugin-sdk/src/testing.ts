@@ -25,6 +25,10 @@ export interface FakeContextOptions {
   manifest?: Partial<PluginManifest>;
   /** Acting user returned by currentActor and used by asUser. */
   actor?: string;
+  /** Seed for admin-scope ctx.settings. */
+  settings?: Record<string, unknown>;
+  /** Seed for the core settings ctx.settings.readCore can reach. */
+  coreSettings?: Record<string, string>;
 }
 
 export interface FakePluginContext {
@@ -43,6 +47,19 @@ export interface FakePluginContext {
   wsRoutes: Array<{ path: string; raw: boolean }>;
   /** Router options passed to ctx.http.router, in order. */
   httpRouters: Array<PluginRouterOptions | undefined>;
+  /** Backing store behind ctx.settings, keyed "<scope>:<scopeId>:<key>". */
+  settings: Map<string, unknown>;
+  /** Core settings readable through ctx.settings.readCore. */
+  coreSettings: Map<string, string>;
+}
+
+/** How a settings row is keyed in the doubles. Mirrors the real unique index. */
+function settingsKey(
+  scope: string,
+  scopeId: string | number | undefined,
+  key: string,
+): string {
+  return `${scope}:${scopeId ?? ""}:${key}`;
 }
 
 function noopLogger(): PluginLogger {
@@ -71,7 +88,26 @@ export function createFakeContext(
   const wsRoutes: Array<{ path: string; raw: boolean }> = [];
   const httpRouters: Array<PluginRouterOptions | undefined> = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
+  const settings = new Map<string, unknown>();
+  const coreSettings = new Map<string, string>(
+    Object.entries(options.coreSettings ?? {}),
+  );
+  const settingsListeners = new Map<string, Set<(value: unknown) => void>>();
   let actor = options.actor;
+
+  for (const [key, value] of Object.entries(options.settings ?? {})) {
+    settings.set(settingsKey("admin", undefined, key), value);
+  }
+
+  const writeSetting = (
+    scope: string,
+    scopeId: string | number | undefined,
+    key: string,
+    value: unknown,
+  ) => {
+    settings.set(settingsKey(scope, scopeId, key), value);
+    for (const listener of settingsListeners.get(key) ?? []) listener(value);
+  };
 
   const manifest = {
     id: pluginId,
@@ -186,6 +222,49 @@ export function createFakeContext(
       require: () => ((_req, _res, next) => next()) as PluginMiddleware,
     },
 
+    settings: {
+      get: async (key) =>
+        settings.get(settingsKey("admin", undefined, key)) as never,
+      set: async (key, value) => writeSetting("admin", undefined, key, value),
+
+      getUser: async (userId, key) =>
+        settings.get(settingsKey("user", userId, key)) as never,
+      setUser: async (userId, key, value) =>
+        writeSetting("user", userId, key, value),
+
+      getHost: async (hostId, key) =>
+        settings.get(settingsKey("host", String(hostId), key)) as never,
+      setHost: async (hostId, key, value) =>
+        writeSetting("host", String(hostId), key, value),
+
+      getAll: async (scope, scopeId) => {
+        const prefix = `${scope}:${scopeId ?? ""}:`;
+        const all: Record<string, unknown> = {};
+        for (const [storedKey, value] of settings) {
+          if (storedKey.startsWith(prefix)) {
+            all[storedKey.slice(prefix.length)] = value;
+          }
+        }
+        return all;
+      },
+
+      onChange: (key, listener) => {
+        let set = settingsListeners.get(key);
+        if (!set) {
+          set = new Set();
+          settingsListeners.set(key, set);
+        }
+        set.add(listener);
+        const unsubscribe = () => {
+          set!.delete(listener);
+        };
+        disposals.push(unsubscribe);
+        return unsubscribe;
+      },
+
+      readCore: async (key) => coreSettings.get(key) ?? null,
+    },
+
     disposables,
 
     asUser: async (userId, fn) => {
@@ -210,6 +289,8 @@ export function createFakeContext(
     syncEntities,
     wsRoutes,
     httpRouters,
+    settings,
+    coreSettings,
   };
 }
 
@@ -220,15 +301,15 @@ export interface MockContextOptions {
   capabilities?: string[];
   /** Seed for ctx.kv. */
   kv?: Record<string, unknown>;
-  /** Plugin settings, readable through settings.get. A5 wires the real one. */
+  /** Seed for this plugin's own admin-scope settings. */
   settings?: Record<string, unknown>;
+  /** Seed for the core settings readCore can reach. */
+  coreSettings?: Record<string, string>;
   /** Acting user returned by currentActor and used by asUser. */
   actor?: string;
 }
 
 export interface MockPluginContext extends FakePluginContext {
-  /** Settings backing store, so a test can assert what a plugin wrote. */
-  settings: Map<string, unknown>;
   /** Capability ids checked during the test, in order, denied ones included. */
   checked: string[];
 }
@@ -237,22 +318,23 @@ export interface MockPluginContext extends FakePluginContext {
  * A context double that gates on capabilities the way src/backend/plugins/ctx.ts
  * does, so a test can prove a plugin fails closed without a running server.
  *
- * Two gates exist on today's ctx surface: kv:own on every ctx.kv call, and
- * events:core on emitting a topic outside the plugin's own namespace. As the
- * SDK grows a member, add its gate here in the same shape.
+ * The gates on today's ctx surface: kv:own on every ctx.kv call, db:own on
+ * ctx.db, network:serve on ctx.http and ctx.ws, events:core on emitting a
+ * topic outside the plugin's own namespace, and settings:read-core on
+ * ctx.settings.readCore. Reading a plugin's own settings is deliberately
+ * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
 export function createMockCtx(
   options: MockContextOptions = {},
 ): MockPluginContext {
   const granted = new Set(options.capabilities ?? []);
   const checked: string[] = [];
-  const settings = new Map<string, unknown>(
-    Object.entries(options.settings ?? {}),
-  );
 
   const base = createFakeContext({
     pluginId: options.pluginId,
     actor: options.actor,
+    settings: options.settings,
+    coreSettings: options.coreSettings,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -345,9 +427,19 @@ export function createMockCtx(
         ctx.ws.upgrade(path, handler, wsOptions);
       },
     },
+
+    settings: {
+      // Reading and writing a plugin's OWN settings is ungated, exactly as in
+      // the real runtime. Only readCore reaches outside the plugin.
+      ...ctx.settings,
+      readCore: async (key) => {
+        require("settings:read-core");
+        return ctx.settings.readCore(key);
+      },
+    },
   };
 
-  return { ...base, ctx: gatedCtx, settings, checked };
+  return { ...base, ctx: gatedCtx, checked };
 }
 
 /**

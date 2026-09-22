@@ -2252,6 +2252,49 @@ export const pluginStorage = sqliteTable(
 );
 
 /**
+ * Values for the settings fields a plugin declares in contributes.settings.
+ *
+ * scope_id is polymorphic: null for admin scope, a user id for user scope, a
+ * host id rendered as text for host scope. That is why it carries no foreign
+ * key - one column cannot point at two tables - so the user and host delete
+ * paths remove these rows explicitly. Cascading with the plugin is a real FK,
+ * because uninstalling should leave nothing behind.
+ *
+ * Secret fields are encrypted with the system key before they land here, and
+ * `encrypted` records which rows that applies to so a read knows to decrypt.
+ */
+export const pluginSettings = sqliteTable(
+  "plugin_settings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id")
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    /** admin | user | host */
+    scope: text("scope").notNull(),
+    scopeId: text("scope_id"),
+    key: text("key").notNull(),
+    /** JSON-encoded, so a field keeps its declared type across a round trip. */
+    value: text("value"),
+    encrypted: integer("encrypted", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_settings_scope_key").on(
+      table.pluginId,
+      table.scope,
+      table.scopeId,
+      table.key,
+    ),
+    index("idx_plugin_settings_plugin_scope").on(table.pluginId, table.scope),
+  ],
+);
+
+/**
  * Which of a plugin's migrations have been applied.
  *
  * The checksum is what makes an already-applied migration immutable: editing

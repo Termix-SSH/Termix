@@ -3508,7 +3508,6 @@
     "sectionApiKeys": "API Keys",
     "sectionAuditLog": "Audit Log",
     "sectionSsl": "SSL / Let's Encrypt",
-    "sectionTailscale": "Tailscale",
     "sectionTouchInput": "Touch Input",
     "touchEnabled": "Enable Touch Input",
     "touchEnabledDesc": "Allow one-finger touch scrolling in terminals",
@@ -3667,11 +3666,6 @@
     "enableRemoteDesktopDesc": "RDP/VNC remote desktop",
     "enableRemoteDesktopDocsLink": "View docs",
     "guacdUrl": "guacd URL",
-    "tailscaleApiKey": "Tailscale API Key",
-    "tailscaleApiKeyDescription": "Used for device discovery in the host editor. Supports Tailscale (tskey-) and Headscale (hskey-) keys. Generate a key at tailscale.com/admin/settings/keys or from your Headscale instance.",
-    "tailscaleApiKeyDocsLink": "View docs",
-    "tailscaleApiBaseUrl": "API Base URL",
-    "tailscaleApiBaseUrlDescription": "Optional. Point to a self-hosted Headscale instance instead of api.tailscale.com. Leave empty to use the Tailscale default.",
     "oidcDescription": "Configure OpenID Connect for SSO. Fields marked * are required.",
     "oidcDocsLink": "View docs",
     "oidcClientId": "Client ID",
@@ -3822,8 +3816,6 @@
     "remoteDesktopSaved": "Remote Desktop settings saved",
     "remoteDesktopSaveFailed": "Failed to save Remote Desktop settings",
     "remoteDesktopUpdateFailed": "Failed to update Remote Desktop setting",
-    "tailscaleSettingsSaved": "Tailscale settings saved",
-    "tailscaleSettingsSaveFailed": "Failed to save Tailscale settings",
     "logLevelUpdateFailed": "Failed to update log level",
     "oidcSaved": "OIDC configuration saved",
     "oidcSaveFailed": "Failed to save OIDC config",
@@ -5261,7 +5253,52 @@
           "title": "View tailnet devices",
           "description": "See the devices on the connected tailnet."
         }
+      },
+      "settings": {
+        "group": {
+          "api": "Tailscale API",
+          "devices": "Tailnet"
+        },
+        "apiKey": {
+          "label": "API key",
+          "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+          "placeholder": "tskey-api-... / hskey-api-..."
+        },
+        "apiBaseUrl": {
+          "label": "API base URL",
+          "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+          "placeholder": "https://api.tailscale.com/api/v2"
+        },
+        "devices": {
+          "label": "Device list",
+          "checking": "Checking the tailnet...",
+          "noKey": "No API key set yet.",
+          "error": "Could not reach the tailnet. Check the API key.",
+          "count": "{{count}} device reachable",
+          "count_other": "{{count}} devices reachable",
+          "refresh": "Check"
+        }
       }
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "bandYou": "You",
+    "bandPlugins": "Plugins",
+    "bandInstance": "Instance",
+    "account": "Account",
+    "secretSet": "Set",
+    "secretNotSet": "Not set",
+    "secretReplace": "Replace",
+    "pluginGroupAdmin": "Server settings",
+    "pluginGroupUser": "Your settings",
+    "pluginNoSettings": "{{name}} has no settings you can change.",
+    "pluginStoppedNotice": "{{name}} is installed but not running. These settings are saved but will not take effect.",
+    "pluginSettingsSaved": "Settings saved",
+    "pluginSettingsInvalid": "Some settings could not be saved. Check the highlighted fields.",
+    "pluginSettingsSaveFailed": "Failed to save settings",
+    "pluginSettingsLoadFailed": "Failed to load settings",
+    "pluginsGroupLabel": "Plugins",
+    "hostPluginNotRunning": "{{name}} is installed but not running. These settings are saved but will not take effect."
   }
 }

@@ -126,14 +126,11 @@ const SessionLogsPanel = lazy(() =>
     default: m.SessionLogsPanel,
   })),
 );
-const UserProfilePanel = lazy(() =>
-  import("@/sidebar/UserProfilePanel").then((m) => ({
-    default: m.UserProfilePanel,
-  })),
-);
-const AdminSettingsPanel = lazy(() =>
-  import("@/sidebar/AdminSettingsPanel").then((m) => ({
-    default: m.AdminSettingsPanel,
+// One screen behind both rail entries. It lazy-loads the profile and admin
+// panels itself, so the shell no longer imports either directly.
+const SettingsScreen = lazy(() =>
+  import("@/settings/SettingsScreen").then((m) => ({
+    default: m.SettingsScreen,
   })),
 );
 const CredentialsPanel = lazy(() =>
@@ -2882,9 +2879,14 @@ export function AppShell({
           </div>
         )}
 
-        {railView === "user-profile" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <UserProfilePanel
+        {(railView === "user-profile" ||
+          (railView === "admin-settings" && showAdminUI)) && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <SettingsScreen
+              initialSection={
+                railView === "admin-settings" ? "admin" : "profile"
+              }
+              isAdmin={showAdminUI}
               username={username}
               onLogout={onLogout}
               userPrefs={userPrefs}
@@ -2896,13 +2898,6 @@ export function AppShell({
               onRemoteSyncReconnectHandled={() =>
                 setRemoteSyncReconnectRequested(false)
               }
-            />
-          </div>
-        )}
-
-        {railView === "admin-settings" && showAdminUI && (
-          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-            <AdminSettingsPanel
               onEditingChange={setSidebarEditing}
               onOpenHostTab={(host) => {
                 connectHost(host);

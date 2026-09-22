@@ -32,6 +32,10 @@
       "types": "./dist/capabilities.d.ts",
       "default": "./dist/capabilities.js"
     },
+    "./settings": {
+      "types": "./dist/settings.d.ts",
+      "default": "./dist/settings.js"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"

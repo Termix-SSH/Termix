@@ -45,6 +45,11 @@ import {
   stripSensitiveFields,
   transformHostResponse,
 } from "./host-normalizers.js";
+import {
+  attachHostPluginSettings,
+  loadHostPluginSettings,
+  withHostPluginSettings,
+} from "./host-plugin-settings.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
 import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
@@ -1701,6 +1706,18 @@ router.get(
             )
           : stripSensitiveFields(host),
       );
+
+      // After sanitizing: the connect-level projection reduces a shared host
+      // to an allowlist, which would drop this again. One query for the list.
+      attachHostPluginSettings(
+        sanitized,
+        await loadHostPluginSettings(
+          sanitized
+            .map((host) => Number(host.id))
+            .filter((id) => Number.isInteger(id)),
+        ),
+      );
+
       res.json(sanitized);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH hosts from database", err, {
@@ -1767,7 +1784,9 @@ router.get(
         const resolved =
           (await resolveHostCredentials(result, userId)) || result;
 
-        return res.json(stripSensitiveFields(resolved));
+        return res.json(
+          await withHostPluginSettings(stripSensitiveFields(resolved)),
+        );
       }
 
       // Not the owner: shared recipients get a sanitized view of the host.
@@ -1818,9 +1837,11 @@ router.get(
         (await resolveHostCredentials(sharedResult, userId)) || sharedResult;
 
       res.json(
-        sanitizeHostForRecipient(
-          resolvedSharedResult,
-          accessInfo.permissionLevel,
+        await withHostPluginSettings(
+          sanitizeHostForRecipient(
+            resolvedSharedResult,
+            accessInfo.permissionLevel,
+          ),
         ),
       );
     } catch (err) {
