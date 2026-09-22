@@ -1,17 +1,18 @@
 /**
- * The central promise of shipping the terminal as a plugin: disabling it
- * releases what it owns, and nothing else notices.
+ * Disabling a plugin releases what it owns.
  *
- * The SSH connection pool deliberately stayed in core, so a worker plugin's
- * ctx.ssh keeps working with the terminal disabled. If the pool had moved into
- * the terminal plugin, these tests would fail, which is the point of them.
+ * A plugin that keeps a port after deactivate makes "disabled" a lie and
+ * makes re-enabling fail on a port that is still held, which is exactly the
+ * bug the docker console had: its WebSocket server was created at module
+ * scope, so it survived deactivate and the second activate got nothing.
+ *
+ * These use a real listening socket rather than a mock, because the thing
+ * under test is whether the OS still has the port.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import net from "node:net";
 import { PluginLoader } from "../../plugins/loader.js";
-import { PluginBroker } from "../../plugins/broker.js";
-import { TRANSPORT_OWNER_CAPABILITY } from "../../plugins/first-party.js";
 import { clearRegistry } from "../../plugins/registry.js";
 import { createFixturePlugin, type Fixture } from "./fixture-plugin.js";
 
@@ -28,7 +29,7 @@ vi.mock("../../utils/logger.js", () => ({
 vi.mock("../../plugins/permissions.js", () => ({
   assertCapability: vi.fn().mockResolvedValue(undefined),
   hasCapability: vi.fn().mockResolvedValue(true),
-  PluginPermissionError: class extends Error {},
+  PluginCapabilityError: class extends Error {},
   invalidatePluginPermissionCache: vi.fn(),
 }));
 
@@ -45,136 +46,83 @@ function isListening(port: number): Promise<boolean> {
   });
 }
 
-/** Stands in for the terminal: a first-party plugin that owns a real port. */
-function terminalLikeSource(port: number): string {
+/**
+ * A plugin that owns a real port, the way ssh-terminal and docker do.
+ *
+ * The server is created inside activate and closed through a disposable, not
+ * at module scope, which is the rule the runtime documents.
+ */
+function portOwningSource(port: number): string {
   return `
-import net from "node:net";
-let server = null;
-export async function activate(ctx) {
-  server = net.createServer();
-  await new Promise((resolve) => server.listen(${port}, "127.0.0.1", resolve));
-  ctx.registry.provide("terminal.sessions", { live: true });
-}
-export async function deactivate() {
-  if (!server) return;
-  await new Promise((resolve) => server.close(resolve));
-  server = null;
-}
-`;
+    import net from "node:net";
+
+    export async function activate(ctx) {
+      const server = net.createServer();
+      await new Promise((resolve) => server.listen(${port}, "127.0.0.1", resolve));
+      ctx.disposables.add(
+        () => new Promise((resolve) => server.close(() => resolve())),
+      );
+    }
+  `;
 }
 
-describe("disabling the terminal plugin", () => {
-  const fixtures: Fixture[] = [];
-  let loader: PluginLoader | null = null;
+let fixture: Fixture | null = null;
+let loader: PluginLoader | null = null;
 
-  afterEach(async () => {
-    await loader?.shutdown();
-    loader = null;
-    for (const fixture of fixtures.splice(0)) fixture.cleanup();
-    clearRegistry();
-  });
+afterEach(async () => {
+  await loader?.shutdown();
+  loader = null;
+  fixture?.cleanup();
+  fixture = null;
+  clearRegistry();
+  delete process.env.TERMIX_BUNDLED_PLUGINS_DIR;
+  delete process.env.DATA_DIR;
+});
 
-  it("frees its port and leaves another plugin's ctx.ssh working", async () => {
-    const terminal = createFixturePlugin({
-      id: "ssh-terminal",
-      permissions: [TRANSPORT_OWNER_CAPABILITY],
-      manifestOverrides: { category: "Terminal" },
-      backendSource: terminalLikeSource(TEST_PORT),
+describe("disabling a plugin releases its resources", () => {
+  async function start(): Promise<PluginLoader> {
+    fixture = createFixturePlugin({
+      backendSource: portOwningSource(TEST_PORT),
     });
-    fixtures.push(terminal);
+    process.env.TERMIX_BUNDLED_PLUGINS_DIR = fixture.root;
+    process.env.DATA_DIR = fixture.root;
 
-    const other = createFixturePlugin({
-      id: "other-plugin",
-      permissions: ["ssh.exec"],
-      // Exposes an HTTP route the test invokes after the terminal is
-      // disabled, so the ctx.ssh round trip genuinely happens afterwards and
-      // travels the real worker boundary.
-      backendSource: `
-export async function activate(ctx) {
-  await ctx.http.route("GET", "/run", async () => {
-    const handle = await ctx.ssh.connect(1);
-    const result = await ctx.ssh.exec(handle, "uptime");
-    await ctx.ssh.close(handle);
-    return result;
-  });
-}
-`,
-    });
-    fixtures.push(other);
+    const instance = new PluginLoader();
+    await instance.loadAll();
+    await instance.activate(fixture.id);
+    loader = instance;
+    return instance;
+  }
 
-    // Stands in for the core pool. The terminal plugin does not provide it,
-    // so disabling the terminal must not affect it.
-    const open = vi.fn().mockResolvedValue({
-      release: vi.fn(),
-      exec: vi
-        .fn()
-        .mockResolvedValue({ stdout: "up 3 days", stderr: "", code: 0 }),
-    });
-
-    const broker = new PluginBroker({
-      listHosts: async () => [],
-      resolveHost: async () => null,
-      ssh: { open },
-    });
-
-    loader = new PluginLoader({
-      onWorkerReady: (plugin, worker) => broker.attach(plugin, worker),
-      onWorkerGone: (plugin) => broker.detach(plugin.id),
-    });
-
-    await loader.load(terminal.dir);
-    await loader.load(other.dir);
-    await loader.activate("ssh-terminal");
-    await loader.activate("other-plugin", "user-1");
-
+  it("frees the port the plugin was listening on", async () => {
+    const instance = await start();
     expect(await isListening(TEST_PORT)).toBe(true);
 
-    await loader.deactivate("ssh-terminal");
+    await instance.deactivate(fixture!.id);
 
-    // What the user sees: the terminal's port is gone.
     expect(await isListening(TEST_PORT)).toBe(false);
-    expect(loader.get("ssh-terminal")?.state).toBe("stopped");
-
-    // And the other plugin is untouched, still running off the core pool.
-    const otherPlugin = loader.get("other-plugin");
-    expect(otherPlugin?.state).toBe("active");
-
-    // The real test: a ctx.ssh round trip completed AFTER the terminal was
-    // disabled, off the core pool, across the worker boundary.
-    const runtime = broker.get("other-plugin")!;
-    const result = (await broker.invokeRoute(runtime, "GET /run", {
-      method: "GET",
-      path: "/run",
-      params: {},
-      query: {},
-      body: null,
-      headers: {},
-      userId: "user-1",
-    })) as { stdout: string };
-
-    expect(open).toHaveBeenCalled();
-    expect(result.stdout).toBe("up 3 days");
   });
 
-  it("can be re-enabled after being disabled", async () => {
-    const terminal = createFixturePlugin({
-      id: "ssh-terminal",
-      permissions: [TRANSPORT_OWNER_CAPABILITY],
-      manifestOverrides: { category: "Terminal" },
-      backendSource: terminalLikeSource(TEST_PORT + 1),
-    });
-    fixtures.push(terminal);
+  // The regression the docker console hit: the module stays in the ESM cache,
+  // so the second activate runs against it and has to be able to bind again.
+  it("can take the port again after being re-enabled", async () => {
+    const instance = await start();
 
-    loader = new PluginLoader();
-    await loader.load(terminal.dir);
+    await instance.deactivate(fixture!.id);
+    expect(await isListening(TEST_PORT)).toBe(false);
 
-    await loader.activate("ssh-terminal");
-    expect(await isListening(TEST_PORT + 1)).toBe(true);
+    await instance.activate(fixture!.id);
 
-    await loader.deactivate("ssh-terminal");
-    expect(await isListening(TEST_PORT + 1)).toBe(false);
+    expect(await isListening(TEST_PORT)).toBe(true);
+    expect(instance.get(fixture!.id)?.state).toBe("active");
+  });
 
-    await loader.activate("ssh-terminal");
-    expect(await isListening(TEST_PORT + 1)).toBe(true);
+  it("frees the port on shutdown too", async () => {
+    const instance = await start();
+
+    await instance.shutdown();
+    loader = null;
+
+    expect(await isListening(TEST_PORT)).toBe(false);
   });
 });

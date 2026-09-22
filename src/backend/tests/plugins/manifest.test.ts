@@ -1,3 +1,11 @@
+/**
+ * Manifest v2 validation.
+ *
+ * The rules live in the SDK so the server, the authoring script and plugin
+ * authors share one implementation; these tests drive it through the server's
+ * re-export, which is the path the loader actually takes.
+ */
+
 import { describe, expect, it } from "vitest";
 import {
   parseManifest,
@@ -5,484 +13,432 @@ import {
   SUPPORTED_PLUGIN_API_VERSION,
 } from "../../plugins/manifest.js";
 
-function validManifest(overrides: Record<string, unknown> = {}) {
+function base(overrides: Record<string, unknown> = {}) {
   return {
     id: "sample-plugin",
     name: "Sample Plugin",
     version: "1.0.0",
-    description: "A sample plugin.",
-    author: { name: "Jane Doe" },
+    description: "A fixture.",
+    author: { name: "Termix Tests" },
     license: "MIT",
     category: "Productivity",
     engine: { termix: ">=2.9.0", api: SUPPORTED_PLUGIN_API_VERSION },
-    capabilities: {
-      backend: true,
-      frontend: false,
-      electron: false,
-      platforms: ["linux"],
-    },
-    permissions: ["hosts.read", "storage.own"],
-    sidecars: [],
+    capabilities: ["kv:own"],
     ...overrides,
   };
 }
 
-describe("plugin manifest validation", () => {
-  it("accepts a valid manifest", () => {
-    expect(validateManifest(validManifest())).toEqual([]);
+describe("manifest v2 validation", () => {
+  it("accepts a minimal valid manifest", () => {
+    expect(validateManifest(base())).toEqual([]);
   });
 
-  it("reports every missing required field", () => {
-    const errors = validateManifest({ id: "x" });
-    expect(errors).toContain('Missing required field: "description"');
-    expect(errors).toContain('Missing required field: "engine"');
-    expect(errors).toContain('Missing required field: "sidecars"');
+  it("reports every missing required field at once", () => {
+    const errors = validateManifest({ id: "sample-plugin" });
+
+    expect(errors.some((e) => e.includes('"name"'))).toBe(true);
+    expect(errors.some((e) => e.includes('"version"'))).toBe(true);
+    expect(errors.some((e) => e.includes('"capabilities"'))).toBe(true);
   });
 
-  it("rejects a bad id pattern", () => {
-    const errors = validateManifest(validManifest({ id: "Bad_Id" }));
-    expect(errors.some((e) => e.startsWith('Field "id" must match'))).toBe(
-      true,
+  it("rejects an id that is not a lowercase slug", () => {
+    expect(validateManifest(base({ id: "Sample_Plugin" })).join()).toMatch(
+      /"id" must match/,
+    );
+  });
+
+  it("rejects an id that starts with a digit", () => {
+    expect(validateManifest(base({ id: "1plugin" })).join()).toMatch(
+      /"id" must match/,
     );
   });
 
   it("rejects a non-semver version", () => {
-    const errors = validateManifest(validManifest({ version: "1.0" }));
-    expect(errors).toContain(
-      'Field "version" must be valid semver, got: "1.0"',
+    expect(validateManifest(base({ version: "1.0" })).join()).toMatch(
+      /valid semver/,
     );
-  });
-
-  describe("provides / requires", () => {
-    const permissionGroup = {
-      group: "testplugin",
-      permissions: ["testplugin.greet.use"],
-    };
-
-    it("accepts a declared service and requirement", () => {
-      const errors = validateManifest(
-        validManifest({
-          provides: [
-            {
-              service: "testplugin.greet",
-              version: "1.0.0",
-              permission: "testplugin.greet.use",
-            },
-          ],
-          requires: [
-            { service: "other.thing", versionRange: "^1.0.0", optional: true },
-          ],
-          contributes: { permissionGroup },
-        }),
-      );
-      expect(errors).toEqual([]);
-    });
-
-    it("rejects a service name that is not dotted", () => {
-      const errors = validateManifest(
-        validManifest({
-          provides: [{ service: "greet", version: "1.0.0", permission: "x.y" }],
-        }),
-      );
-      expect(errors.some((e) => e.includes("provides[0].service"))).toBe(true);
-    });
-
-    it("rejects a non-semver service version", () => {
-      const errors = validateManifest(
-        validManifest({
-          provides: [{ service: "a.b", version: "1.0", permission: "x.y" }],
-        }),
-      );
-      expect(errors.some((e) => e.includes("provides[0].version"))).toBe(true);
-    });
-
-    it("rejects a duplicate provided service", () => {
-      const errors = validateManifest(
-        validManifest({
-          provides: [
-            { service: "a.b", version: "1.0.0", permission: "x.y" },
-            { service: "a.b", version: "2.0.0", permission: "x.y" },
-          ],
-        }),
-      );
-      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
-    });
-
-    it("rejects an invalid semver range", () => {
-      const errors = validateManifest(
-        validManifest({
-          requires: [{ service: "a.b", versionRange: "not a range" }],
-        }),
-      );
-      expect(errors.some((e) => e.includes("versionRange"))).toBe(true);
-    });
-
-    it("rejects a non-boolean optional", () => {
-      const errors = validateManifest(
-        validManifest({
-          requires: [
-            { service: "a.b", versionRange: "^1.0.0", optional: "yes" },
-          ],
-        }),
-      );
-      expect(errors.some((e) => e.includes("optional"))).toBe(true);
-    });
-
-    it("refuses a service gated by a permission the group never declares", () => {
-      // Otherwise every call through it would deny against a permission no
-      // admin could ever grant.
-      const { manifest, errors } = parseManifest(
-        validManifest({
-          provides: [
-            {
-              service: "testplugin.greet",
-              version: "1.0.0",
-              permission: "testplugin.undeclared",
-            },
-          ],
-          contributes: { permissionGroup },
-        }),
-      );
-
-      expect(manifest).toBeUndefined();
-      expect(errors[0]).toContain("testplugin.undeclared");
-      expect(errors[0]).toContain("permissionGroup");
-    });
-  });
-
-  describe("providesSecret / requiresSecret", () => {
-    const permissionGroup = {
-      group: "testplugin",
-      permissions: ["testplugin.secrets.share"],
-    };
-
-    it("accepts a well-formed pair", () => {
-      expect(
-        validateManifest(
-          validManifest({
-            providesSecret: [
-              { key: "api-key", permission: "testplugin.secrets.share" },
-            ],
-            requiresSecret: [
-              { plugin: "ai-assistant", key: "api-key", optional: true },
-            ],
-            contributes: { permissionGroup },
-          }),
-        ),
-      ).toEqual([]);
-    });
-
-    it("rejects a dotted secret key", () => {
-      // The owning plugin is already its own field, so a dotted key would only
-      // encode the owner twice and invite the two disagreeing.
-      const errors = validateManifest(
-        validManifest({
-          providesSecret: [
-            { key: "ai.api-key", permission: "testplugin.secrets.share" },
-          ],
-        }),
-      );
-      expect(errors.some((e) => e.includes("providesSecret[0].key"))).toBe(
-        true,
-      );
-    });
-
-    it("rejects a duplicate offer of the same key", () => {
-      const errors = validateManifest(
-        validManifest({
-          providesSecret: [
-            { key: "api-key", permission: "testplugin.secrets.share" },
-            { key: "api-key", permission: "testplugin.secrets.share" },
-          ],
-        }),
-      );
-      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
-    });
-
-    it("requires a permission on an offer", () => {
-      const errors = validateManifest(
-        validManifest({ providesSecret: [{ key: "api-key" }] }),
-      );
-      expect(
-        errors.some((e) => e.includes("providesSecret[0].permission")),
-      ).toBe(true);
-    });
-
-    it("rejects a reference with a bad plugin id", () => {
-      const errors = validateManifest(
-        validManifest({
-          requiresSecret: [{ plugin: "Bad_Id", key: "api-key" }],
-        }),
-      );
-      expect(errors.some((e) => e.includes("requiresSecret[0].plugin"))).toBe(
-        true,
-      );
-    });
-
-    it("rejects a duplicate reference to the same plugin and key", () => {
-      const errors = validateManifest(
-        validManifest({
-          requiresSecret: [
-            { plugin: "ai-assistant", key: "api-key" },
-            { plugin: "ai-assistant", key: "api-key" },
-          ],
-        }),
-      );
-      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
-    });
-
-    it("refuses a shared secret gated by a permission the group never declares", () => {
-      // Same rule as a service: sharing rides on an ordinary role permission,
-      // so it has to be one an admin can actually grant.
-      const { manifest, errors } = parseManifest(
-        validManifest({
-          providesSecret: [
-            { key: "api-key", permission: "testplugin.undeclared" },
-          ],
-          contributes: { permissionGroup },
-        }),
-      );
-
-      expect(manifest).toBeUndefined();
-      expect(errors[0]).toContain("testplugin.undeclared");
-      expect(errors[0]).toContain("permissionGroup");
-    });
-
-    it("refuses a plugin borrowing from itself", () => {
-      const { manifest, errors } = parseManifest(
-        validManifest({
-          requiresSecret: [{ plugin: "sample-plugin", key: "api-key" }],
-        }),
-      );
-
-      expect(manifest).toBeUndefined();
-      expect(errors[0]).toContain("names this plugin itself");
-    });
-  });
-
-  it("rejects an unknown permission", () => {
-    const errors = validateManifest(
-      validManifest({ permissions: ["credentials.read"] }),
-    );
-    expect(
-      errors.some((e) => e.includes('Unknown permission: "credentials.read"')),
-    ).toBe(true);
   });
 
   it("rejects an unknown category", () => {
-    const errors = validateManifest(validManifest({ category: "Games" }));
+    expect(validateManifest(base({ category: "Nonsense" })).join()).toMatch(
+      /must be one of/,
+    );
+  });
+
+  // Capabilities were dotted in v1. They are colon-separated now so they can
+  // never be confused with the dotted RBAC permissions.
+  it("rejects a dotted capability name", () => {
     expect(
-      errors.some((e) => e.startsWith('Field "category" must be one of')),
-    ).toBe(true);
+      validateManifest(base({ capabilities: ["hosts.read"] })).join(),
+    ).toMatch(/not a known capability/);
   });
 
-  it("rejects a non-object manifest", () => {
-    expect(validateManifest(null)).toEqual(["Manifest must be a JSON object"]);
-    expect(validateManifest([])).toEqual(["Manifest must be a JSON object"]);
+  it("rejects a capability outside the catalog", () => {
+    expect(
+      validateManifest(base({ capabilities: ["hosts:obliterate"] })).join(),
+    ).toMatch(/not a known capability/);
   });
 
-  it("validates contributes sub-shapes", () => {
+  it("rejects a duplicated capability", () => {
+    expect(
+      validateManifest(base({ capabilities: ["kv:own", "kv:own"] })).join(),
+    ).toMatch(/duplicates/);
+  });
+
+  it("refuses a manifest targeting another SDK api version", () => {
+    const { manifest, errors } = parseManifest(
+      base({ engine: { termix: ">=2.9.0", api: "2" } }),
+    );
+
+    expect(manifest).toBeUndefined();
+    expect(errors.join()).toMatch(/SDK API version/);
+  });
+
+  it("fills in the entry point defaults", () => {
+    const { manifest } = parseManifest(base());
+
+    expect(manifest?.backend).toBe("dist/backend.js");
+    expect(manifest?.frontend).toBe("dist/frontend.js");
+    expect(manifest?.locales).toBe("locales");
+  });
+});
+
+// v1 accepted unknown fields silently, so a typo'd "contribute" validated
+// clean and was then dropped. A manifest has to mean what it says.
+describe("unknown field rejection", () => {
+  it("rejects an unknown top-level field", () => {
+    expect(validateManifest(base({ sudoEverything: true })).join()).toMatch(
+      /Unknown field "sudoEverything"/,
+    );
+  });
+
+  it("rejects a near-miss of a real field name", () => {
+    expect(validateManifest(base({ contribute: {} })).join()).toMatch(
+      /Unknown field "contribute"/,
+    );
+  });
+
+  it("rejects an unknown field inside contributes", () => {
     const errors = validateManifest(
-      validManifest({
+      base({ contributes: { dashboardCards: [] } }),
+    );
+
+    expect(errors.join()).toMatch(/Unknown field "dashboardCards"/);
+  });
+
+  it("rejects an unknown field inside a tab", () => {
+    const errors = validateManifest(
+      base({
         contributes: {
-          tabs: [{ id: "t", titleKey: "k", icon: "Box", openFrom: ["nope"] }],
-          apiPrefix: "Bad Prefix",
+          tabs: [
+            {
+              id: "t",
+              titleKey: "k",
+              icon: "i",
+              openFrom: ["rail"],
+              surprise: 1,
+            },
+          ],
         },
       }),
     );
-    expect(
-      errors.some((e) => e.includes('openFrom has unknown value: "nope"')),
-    ).toBe(true);
-    expect(
-      errors.some((e) => e.includes('"contributes.apiPrefix" must match')),
-    ).toBe(true);
+
+    expect(errors.join()).toMatch(/Unknown field "surprise"/);
   });
 
-  describe("actions / actionSlots", () => {
-    function withActions(contributes: Record<string, unknown>) {
-      return validateManifest(validManifest({ contributes }));
-    }
+  it("rejects an unknown field inside author and engine", () => {
+    expect(
+      validateManifest(base({ author: { name: "x", role: "admin" } })).join(),
+    ).toMatch(/Unknown field "role"/);
 
-    it("accepts a valid actions and actionSlots pair", () => {
-      const errors = withActions({
-        actions: [
-          {
-            id: "ai.openWithContext",
-            titleKey: "ai.assistant",
-            handler: "openWithContext",
-            icon: "Bot",
-            slot: "terminal.toolbar",
-            kind: "button",
-          },
-        ],
-        actionSlots: [{ id: "terminal.toolbar", accepts: ["button"] }],
-      });
-      expect(errors).toEqual([]);
-    });
-
-    it("allows a camelCase segment in an action id", () => {
-      const errors = withActions({
-        actions: [
-          {
-            id: "ai.openWithContext",
-            titleKey: "k",
-            handler: "openWithContext",
-          },
-        ],
-      });
-      expect(errors).toEqual([]);
-    });
-
-    it("rejects an action id that is not dotted", () => {
-      const errors = withActions({
-        actions: [{ id: "notdotted", titleKey: "k", handler: "h" }],
-      });
-      expect(errors.some((e) => e.includes("actions[0].id must match"))).toBe(
-        true,
-      );
-    });
-
-    it("rejects a duplicate action id", () => {
-      const errors = withActions({
-        actions: [
-          { id: "a.one", titleKey: "k", handler: "h" },
-          { id: "a.one", titleKey: "k", handler: "h" },
-        ],
-      });
-      expect(
-        errors.some((e) => e.includes('actions[1].id is a duplicate: "a.one"')),
-      ).toBe(true);
-    });
-
-    it("requires titleKey and a valid handler", () => {
-      const errors = withActions({
-        actions: [{ id: "a.one", handler: "not a identifier" }],
-      });
-      expect(errors.some((e) => e.includes("actions[0].titleKey"))).toBe(true);
-      expect(errors.some((e) => e.includes("actions[0].handler"))).toBe(true);
-    });
-
-    it("rejects an unknown contribution kind", () => {
-      const errors = withActions({
-        actions: [
-          { id: "a.one", titleKey: "k", handler: "h", kind: "dropdown" },
-        ],
-      });
-      expect(
-        errors.some((e) => e.includes("actions[0].kind must be one of")),
-      ).toBe(true);
-    });
-
-    it("rejects an unknown value in a slot's accepts", () => {
-      const errors = withActions({
-        actionSlots: [{ id: "terminal.toolbar", accepts: ["menu"] }],
-      });
-      expect(
-        errors.some((e) =>
-          e.includes('actionSlots[0].accepts has unknown value: "menu"'),
-        ),
-      ).toBe(true);
-    });
-
-    it("rejects an empty accepts array", () => {
-      const errors = withActions({
-        actionSlots: [{ id: "terminal.toolbar", accepts: [] }],
-      });
-      expect(
-        errors.some((e) =>
-          e.includes("actionSlots[0].accepts must be a non-empty array"),
-        ),
-      ).toBe(true);
-    });
-
-    it("rejects a duplicate slot id", () => {
-      const errors = withActions({
-        actionSlots: [
-          { id: "terminal.toolbar", accepts: ["button"] },
-          { id: "terminal.toolbar", accepts: ["button"] },
-        ],
-      });
-      expect(
-        errors.some((e) => e.includes("actionSlots[1].id is a duplicate")),
-      ).toBe(true);
-    });
+    expect(
+      validateManifest(
+        base({ engine: { termix: ">=2.9.0", api: "1", unsafe: true } }),
+      ).join(),
+    ).toMatch(/Unknown field "unsafe"/);
   });
 
-  describe("parseManifest", () => {
-    it("refuses an action gated by an undeclared permission", () => {
-      const { manifest, errors } = parseManifest(
-        validManifest({
-          contributes: {
-            permissionGroup: { group: "ai", permissions: ["ai.use"] },
-            actions: [
-              {
-                id: "ai.openWithContext",
-                titleKey: "k",
-                handler: "h",
-                permission: "ai.services.use",
-              },
-            ],
+  it("rejects an unknown field inside a provides entry", () => {
+    const errors = validateManifest(
+      base({
+        provides: [
+          {
+            service: "sample.thing",
+            version: "1.0.0",
+            permission: "sample-plugin.use",
+            elevated: true,
           },
-        }),
-      );
-      expect(manifest).toBeUndefined();
-      expect(errors[0]).toContain(
-        'Action "ai.openWithContext" is gated by "ai.services.use"',
-      );
-    });
+        ],
+        contributes: {
+          permissionGroup: {
+            group: "sample-plugin",
+            permissions: ["sample-plugin.use"],
+          },
+        },
+      }),
+    );
 
-    it("allows an action gated by a declared permission", () => {
-      const { manifest, errors } = parseManifest(
-        validManifest({
+    expect(errors.join()).toMatch(/Unknown field "elevated"/);
+  });
+});
+
+describe("dependencies", () => {
+  it("accepts a well-formed dependency map", () => {
+    expect(
+      validateManifest(base({ dependencies: { automations: "^1.0.0" } })),
+    ).toEqual([]);
+  });
+
+  it("rejects a range that is not valid semver", () => {
+    expect(
+      validateManifest(
+        base({ dependencies: { automations: "latest!" } }),
+      ).join(),
+    ).toMatch(/valid semver range/);
+  });
+
+  it("refuses a plugin depending on itself", () => {
+    const { errors } = parseManifest(
+      base({ dependencies: { "sample-plugin": "^1.0.0" } }),
+    );
+
+    expect(errors.join()).toMatch(/points at this plugin/);
+  });
+
+  it("refuses the same plugin in both dependency maps", () => {
+    const { errors } = parseManifest(
+      base({
+        dependencies: { automations: "^1.0.0" },
+        optionalDependencies: { automations: "^1.0.0" },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/both dependencies and optionalDependencies/);
+  });
+});
+
+describe("permission groups", () => {
+  it("accepts a group and its declared permissions", () => {
+    expect(
+      validateManifest(
+        base({
           contributes: {
             permissionGroup: {
-              group: "ai",
-              permissions: ["ai.services.use"],
+              group: "sample-plugin",
+              permissions: ["sample-plugin.use"],
             },
+          },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  // Without this a manifest could hand any role admin.* at boot.
+  it("refuses a role default outside the plugin's own permissions", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          permissionGroup: {
+            group: "sample-plugin",
+            permissions: ["sample-plugin.use"],
+            defaultForRole: { user: ["admin.users.manage"] },
+          },
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/does not declare/);
+  });
+
+  it("accepts a role default the plugin does declare", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: {
+            permissionGroup: {
+              group: "sample-plugin",
+              permissions: ["sample-plugin.use"],
+              defaultForRole: { admin: ["sample-plugin.use"] },
+            },
+          },
+        }),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("services, secrets and actions", () => {
+  it("refuses a service gated by a permission the group never declares", () => {
+    const { errors } = parseManifest(
+      base({
+        provides: [
+          {
+            service: "sample.thing",
+            version: "1.0.0",
+            permission: "sample-plugin.missing",
+          },
+        ],
+        contributes: {
+          permissionGroup: {
+            group: "sample-plugin",
+            permissions: ["sample-plugin.use"],
+          },
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/not declared in contributes/);
+  });
+
+  it("refuses a shared secret gated by an undeclared permission", () => {
+    const { errors } = parseManifest(
+      base({
+        providesSecret: [
+          { key: "api-key", permission: "sample-plugin.missing" },
+        ],
+        contributes: {
+          permissionGroup: {
+            group: "sample-plugin",
+            permissions: ["sample-plugin.use"],
+          },
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/not declared in contributes/);
+  });
+
+  it("refuses a plugin borrowing a secret from itself", () => {
+    const { errors } = parseManifest(
+      base({ requiresSecret: [{ plugin: "sample-plugin", key: "api-key" }] }),
+    );
+
+    expect(errors.join()).toMatch(/points at this plugin/);
+  });
+
+  it("refuses an action gated by an undeclared permission", () => {
+    const { errors } = parseManifest(
+      base({
+        contributes: {
+          permissionGroup: {
+            group: "sample-plugin",
+            permissions: ["sample-plugin.use"],
+          },
+          actions: [
+            {
+              id: "sample.open",
+              titleKey: "k",
+              handler: "open",
+              permission: "sample-plugin.missing",
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(errors.join()).toMatch(/not declared in contributes/);
+  });
+
+  it("allows a camelCase segment in an action id", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: {
             actions: [
-              {
-                id: "ai.openWithContext",
-                titleKey: "k",
-                handler: "h",
-                permission: "ai.services.use",
-              },
+              { id: "ai.openWithContext", titleKey: "k", handler: "open" },
             ],
           },
         }),
-      );
-      expect(errors).toEqual([]);
-      expect(manifest?.contributes?.actions?.[0].id).toBe("ai.openWithContext");
-    });
+      ),
+    ).toEqual([]);
+  });
 
-    it("allows an ungated action with no permissionGroup at all", () => {
-      const { errors } = parseManifest(
-        validManifest({
+  it("rejects an action id that is not dotted", () => {
+    expect(
+      validateManifest(
+        base({
           contributes: {
-            actions: [{ id: "a.one", titleKey: "k", handler: "h" }],
+            actions: [{ id: "open", titleKey: "k", handler: "open" }],
           },
         }),
-      );
-      expect(errors).toEqual([]);
-    });
+      ).join(),
+    ).toMatch(/dotted action id/);
+  });
 
-    it("narrows a valid manifest", () => {
-      const { manifest, errors } = parseManifest(validManifest());
-      expect(errors).toEqual([]);
-      expect(manifest?.id).toBe("sample-plugin");
-    });
+  it("rejects a handler that is not an identifier", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: {
+            actions: [
+              { id: "sample.open", titleKey: "k", handler: "not valid!" },
+            ],
+          },
+        }),
+      ).join(),
+    ).toMatch(/JavaScript identifier/);
+  });
+});
 
-    it("refuses a manifest targeting a different SDK major", () => {
-      const { manifest, errors } = parseManifest(
-        validManifest({ engine: { termix: ">=2.9.0", api: "99" } }),
-      );
-      expect(manifest).toBeUndefined();
-      expect(errors[0]).toContain('targets SDK api version "99"');
-    });
+describe("tabs and host capabilities", () => {
+  it("rejects an unknown openFrom value", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: {
+            tabs: [
+              { id: "t", titleKey: "k", icon: "i", openFrom: ["telepathy"] },
+            ],
+          },
+        }),
+      ).join(),
+    ).toMatch(/openFrom\[0\] must be one of/);
+  });
 
-    it("does not narrow when validation failed", () => {
-      const { manifest, errors } = parseManifest({ id: "x" });
-      expect(manifest).toBeUndefined();
-      expect(errors.length).toBeGreaterThan(0);
-    });
+  it("rejects duplicate tab ids", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: {
+            tabs: [
+              { id: "t", titleKey: "k", icon: "i", openFrom: ["rail"] },
+              { id: "t", titleKey: "k2", icon: "i", openFrom: ["rail"] },
+            ],
+          },
+        }),
+      ).join(),
+    ).toMatch(/duplicates/);
+  });
+
+  it("accepts hostCapability as a single object or an array", () => {
+    const one = {
+      key: "enableThing",
+      labelKey: "k",
+      editorTab: "general",
+    };
+
+    expect(
+      validateManifest(base({ contributes: { hostCapability: one } })),
+    ).toEqual([]);
+
+    expect(
+      validateManifest(
+        base({
+          contributes: {
+            hostCapability: [one, { ...one, key: "enableOther" }],
+          },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects duplicate hostCapability keys", () => {
+    const one = { key: "enableThing", labelKey: "k", editorTab: "general" };
+
+    expect(
+      validateManifest(
+        base({ contributes: { hostCapability: [one, one] } }),
+      ).join(),
+    ).toMatch(/duplicates/);
   });
 });

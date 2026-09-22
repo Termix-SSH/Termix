@@ -162,6 +162,13 @@
       "when": 1790083818524,
       "tag": "0022_steady_the_hood",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1790102858837,
+      "tag": "0023_talented_shooting_star",
+      "breakpoints": true
     }
   ]
 }

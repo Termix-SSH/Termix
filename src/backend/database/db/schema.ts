@@ -2141,7 +2141,10 @@ export const plugins = sqliteTable(
     tier: text("tier").notNull().default("available"),
     source: text("source").notNull().default("community"),
     registryId: text("registry_id"),
+    /** enabled | disabled | blocked | failed */
     state: text("state").notNull().default("disabled"),
+    /** Why the plugin is blocked or failed, for the admin UI. */
+    lastError: text("last_error"),
     installedAt: text("installed_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -2167,9 +2170,16 @@ export const pluginPermissionGrants = sqliteTable(
     grantedAt: text("granted_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    grantedBy: text("granted_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * Who granted it. Null for a bundled grant, which no user made: shipping
+     * in the install is the consent. Nullable also stops a user deletion from
+     * cascading a bundled plugin's capabilities away.
+     */
+    grantedBy: text("granted_by").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    /** admin | bundled */
+    source: text("source").notNull().default("admin"),
   },
   // A plugin's grants are always read together, and re-granting the same
   // capability should update the existing row rather than duplicate it.

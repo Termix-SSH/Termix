@@ -1,0 +1,41 @@
+{
+  "name": "@termix/plugin-sdk",
+  "version": "1.0.0",
+  "description": "The contract between Termix core and a plugin: types, the capability catalog and the manifest schema.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./backend": {
+      "types": "./dist/backend.d.ts",
+      "default": "./dist/backend.js"
+    },
+    "./frontend": {
+      "types": "./dist/frontend.d.ts",
+      "default": "./dist/frontend.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "default": "./dist/manifest.js"
+    },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.ts",
+      "default": "./dist/capabilities.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./schema/manifest.schema.json": "./schema/manifest.schema.json"
+  },
+  "files": [
+    "dist",
+    "schema",
+    "ARCHITECTURE.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "semver": "^7.6.3"
+  }
+}

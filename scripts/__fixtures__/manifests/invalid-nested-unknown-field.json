@@ -1,0 +1,27 @@
+{
+  "id": "sample-plugin",
+  "name": "Sample",
+  "version": "1.0.0",
+  "description": "A sample.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "category": "Productivity",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["kv:own", "ui:surface"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "t",
+        "titleKey": "k",
+        "icon": "i",
+        "openFrom": ["rail"],
+        "extra": 1
+      }
+    ]
+  }
+}

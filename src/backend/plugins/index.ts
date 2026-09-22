@@ -1,170 +1,58 @@
 /**
- * Composition root for the plugin runtime: wires the loader, the broker and the
- * /plugin-api dispatcher together and exposes the handful of calls the rest of
- * the server needs.
+ * Composition root for the plugin runtime.
  *
- * The heavy dependencies (host resolution, the SSH pool, the repositories) are
- * imported lazily inside the dep functions rather than at module scope. Several
- * of them pull in the repository layer, and a static import here would create
- * the same cycle hosts/automation-events.ts documents.
+ * Owns the loader, seeds the plugins table, keeps capability grants in step
+ * with each manifest, and registers the RBAC permissions a plugin contributes.
+ *
+ * The heavy dependencies are imported lazily inside each function rather than
+ * at module scope: several pull in the repository layer, and a static import
+ * here would close the cycle hosts/automation-events.ts documents.
  */
 
 import { pluginLogger } from "../utils/logger.js";
-import {
-  registerPluginRouter,
-  unregisterPluginRouter,
-} from "../database/routes/plugin-api-routes.js";
-import { PluginBroker, type PluginRuntime } from "./broker.js";
-import { buildPluginRouter } from "./http-bridge.js";
+import { unregisterPluginRouter } from "../database/routes/plugin-api-routes.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
-import { isFirstParty, runsInProcess } from "./first-party.js";
+import { invalidatePluginPermissionCache } from "./permissions.js";
 
 let loader: PluginLoader | null = null;
-let broker: PluginBroker | null = null;
 
-function createBroker(): PluginBroker {
-  return new PluginBroker({
-    listHosts: async (userId) => {
-      const { createCurrentHostRepository } =
-        await import("../database/repositories/factory.js");
-      // listByUserId, not listDecryptedByUserId: a plugin only ever gets host
-      // metadata, so there is no reason to decrypt secrets just to drop them.
-      const hosts = await createCurrentHostRepository().listByUserId(userId);
-      return hosts as unknown as Record<string, unknown>[];
-    },
-
-    resolveHost: async (hostId, userId) => {
-      // resolveHostById is the access gate and the decryption step in one. The
-      // object it returns carries plaintext secrets, so it must never leave
-      // this closure -- the broker maps it through toPluginHostView first.
-      const { resolveHostById } = await import("../hosts/host-resolver.js");
-      const host = await resolveHostById(hostId, userId);
-      return host as unknown as Record<string, unknown> | null;
-    },
-
-    storage: {
-      get: async (pluginId, key) => {
-        const { createCurrentPluginStorageRepository } =
-          await import("../database/repositories/factory.js");
-        return createCurrentPluginStorageRepository().get(pluginId, key);
-      },
-      set: async (pluginId, key, value) => {
-        const { createCurrentPluginStorageRepository } =
-          await import("../database/repositories/factory.js");
-        await createCurrentPluginStorageRepository().set(pluginId, key, value);
-      },
-      delete: async (pluginId, key) => {
-        const { createCurrentPluginStorageRepository } =
-          await import("../database/repositories/factory.js");
-        return createCurrentPluginStorageRepository().delete(pluginId, key);
-      },
-      listKeys: async (pluginId) => {
-        const { createCurrentPluginStorageRepository } =
-          await import("../database/repositories/factory.js");
-        return createCurrentPluginStorageRepository().listKeys(pluginId);
-      },
-    },
-
-    ssh: {
-      /**
-       * The single most security-sensitive function in the plugin runtime.
-       *
-       * `host` below is the object resolveHostById returns: it carries the
-       * plaintext password, private key and key passphrase. It is a local
-       * inside this closure and is referenced only by createFleetSshFactory.
-       * Nothing derived from it is returned. The caller gets two closures --
-       * release and exec -- and exec resolves to stdout/stderr/code strings
-       * only, so there is no path from the worker back to the credential.
-       */
-      open: async (hostId, userId) => {
-        const [
-          { resolveHostById },
-          { connectionPool },
-          { createFleetSshFactory, getFleetPoolKey },
-          { execCommand },
-        ] = await Promise.all([
-          import("../hosts/host-resolver.js"),
-          import("../hosts/ssh-connection-pool.js"),
-          import("../hosts/ssh-client-factory.js"),
-          import("../hosts/metrics-shared/common-utils.js"),
-        ]);
-
-        // resolveHostById performs the RBAC check (canAccessHost) and returns
-        // null for both "missing" and "forbidden".
-        const host = await resolveHostById(hostId, userId);
-        if (!host) {
-          throw new Error(`Host ${hostId} not found or not accessible`);
-        }
-
-        const poolKey = getFleetPoolKey(host);
-        const client = await connectionPool.getConnection(
-          poolKey,
-          createFleetSshFactory(host),
-        );
-
-        return {
-          release: () => connectionPool.releaseConnection(poolKey, client),
-          exec: (command, timeoutMs) => execCommand(client, command, timeoutMs),
-        };
-      },
-    },
-
-    onRoutesChanged: (runtime) => remountRoutes(runtime),
-  });
-}
-
-function remountRoutes(runtime: PluginRuntime): void {
-  if (runtime.routes.length === 0) return;
-  registerPluginRouter(runtime.plugin.id, buildPluginRouter(broker!, runtime));
-}
-
-export function getPluginRuntime(): {
-  loader: PluginLoader;
-  broker: PluginBroker;
-} {
-  if (!loader || !broker) {
-    broker = createBroker();
-    loader = new PluginLoader({
-      onWorkerReady: (plugin, worker) => broker!.attach(plugin, worker),
-      onWorkerGone: (plugin) => {
-        broker!.detach(plugin.id);
-        unregisterPluginRouter(plugin.id);
-      },
-      onBeforeTerminate: async (plugin) => {
-        const runtime = broker!.get(plugin.id);
-        if (runtime) await broker!.requestDeactivate(runtime);
-      },
-    });
+export function getPluginRuntime(): { loader: PluginLoader } {
+  if (!loader) {
+    loader = new PluginLoader();
   }
-  return { loader, broker };
+  return { loader };
 }
 
 /**
- * Makes sure a bundled first-party plugin has a row so it can be enabled and
- * disabled like any other.
+ * Gives every discovered plugin a row, and refreshes the stored manifest.
  *
- * Only the insert sets state: once the row exists, whatever the user chose
- * wins. Re-enabling a plugin they disabled on every restart would be a bug,
- * not a default.
+ * Bundled plugins start enabled because they are part of the install; a
+ * plugin dropped into the data directory starts disabled, so arriving on disk
+ * is never the same as being allowed to run.
+ *
+ * `state` is only ever set on insert. Once the row exists whatever the user
+ * chose wins, because re-enabling a plugin they disabled on every restart
+ * would be a bug rather than a default.
  */
-async function seedBundledPlugins(loaded: LoadedPlugin[]): Promise<void> {
+async function seedPlugins(loaded: LoadedPlugin[]): Promise<void> {
   const { createCurrentPluginRepository } =
     await import("../database/repositories/factory.js");
   const repository = createCurrentPluginRepository();
 
   for (const plugin of loaded) {
-    if (!isFirstParty(plugin.id)) continue;
-
+    const manifestJson = JSON.stringify(plugin.manifest);
     const existing = await repository.findById(plugin.id);
+
     if (existing) {
-      // Keep metadata fresh across upgrades, but never touch `state`.
-      if (existing.version !== plugin.manifest.version) {
-        await repository.update(plugin.id, {
-          version: plugin.manifest.version,
-          name: plugin.manifest.name,
-          manifestJson: JSON.stringify(plugin.manifest),
-        });
-      }
+      // Unconditionally, not just on a version change: a manifest edited
+      // without a version bump used to leave the stored copy stale forever,
+      // and the API and the grant check both read the stored copy.
+      await repository.update(plugin.id, {
+        name: plugin.manifest.name,
+        version: plugin.manifest.version,
+        source: plugin.source,
+        manifestJson,
+      });
       continue;
     }
 
@@ -172,21 +60,64 @@ async function seedBundledPlugins(loaded: LoadedPlugin[]): Promise<void> {
       id: plugin.id,
       name: plugin.manifest.name,
       version: plugin.manifest.version,
-      tier: "first-party",
-      source: "bundled",
-      state: "enabled",
-      manifestJson: JSON.stringify(plugin.manifest),
+      tier: plugin.source === "bundled" ? "bundled" : "community",
+      source: plugin.source,
+      state: plugin.source === "bundled" ? "enabled" : "disabled",
+      manifestJson,
     });
 
-    pluginLogger.info(`Registered bundled plugin ${plugin.id}`, {
+    pluginLogger.info(`Registered ${plugin.source} plugin ${plugin.id}`, {
       operation: "plugin_seed",
     });
   }
 }
 
 /**
- * Loads every plugin on disk and activates the ones marked enabled in the
- * database. Called once from the backend start-up sequence.
+ * Brings plugin_permission_grants in line with the manifests on disk.
+ *
+ * A capability the manifest no longer declares is revoked: leaving it granted
+ * would mean an upgrade silently kept a permission the new version never
+ * asked for. Bundled plugins have every declared capability granted
+ * automatically, since shipping in the install is the consent.
+ */
+async function syncCapabilityGrants(loaded: LoadedPlugin[]): Promise<void> {
+  const { createCurrentPluginPermissionGrantRepository } =
+    await import("../database/repositories/factory.js");
+  const repository = createCurrentPluginPermissionGrantRepository();
+
+  for (const plugin of loaded) {
+    const declared = new Set(plugin.manifest.capabilities);
+    const existing = await repository.listByPlugin(plugin.id);
+
+    for (const grant of existing) {
+      if (declared.has(grant.capability)) continue;
+      await repository.revoke(plugin.id, grant.capability);
+      pluginLogger.info(
+        `Revoked ${plugin.id} capability "${grant.capability}": the manifest no longer declares it`,
+        { operation: "plugin_grants" },
+      );
+    }
+
+    if (plugin.source !== "bundled") continue;
+
+    const granted = new Set(existing.map((grant) => grant.capability));
+    for (const capability of declared) {
+      if (granted.has(capability)) continue;
+      await repository.grant({
+        pluginId: plugin.id,
+        capability,
+        grantedBy: null,
+        source: "bundled",
+      });
+    }
+
+    invalidatePluginPermissionCache(plugin.id);
+  }
+}
+
+/**
+ * Loads every plugin on disk and activates the ones marked enabled, in
+ * dependency order. Called once from the backend start-up sequence.
  */
 export async function initializePlugins(): Promise<LoadedPlugin[]> {
   const { loader: pluginLoader } = getPluginRuntime();
@@ -194,110 +125,134 @@ export async function initializePlugins(): Promise<LoadedPlugin[]> {
   const loaded = await pluginLoader.loadAll();
   if (loaded.length === 0) return [];
 
-  await seedBundledPlugins(loaded);
+  await seedPlugins(loaded);
+  await syncCapabilityGrants(loaded);
 
-  const {
-    createCurrentPluginRepository,
-    createCurrentPluginPermissionGrantRepository,
-  } = await import("../database/repositories/factory.js");
-
+  const { createCurrentPluginRepository } =
+    await import("../database/repositories/factory.js");
   const records = await createCurrentPluginRepository().listAll();
-  const byId = new Map(records.map((record) => [record.id, record]));
+  const enabled = new Set(
+    records
+      .filter((record) => record.state === "enabled")
+      .map((record) => record.id),
+  );
 
-  for (const plugin of loaded) {
-    const record = byId.get(plugin.id);
-    if (!record || record.state !== "enabled") continue;
+  const candidates = loaded
+    .filter((plugin) => enabled.has(plugin.id))
+    .map((plugin) => plugin.id);
 
-    // An in-process first-party plugin never uses the gated ctx, so it has no
-    // owner to act as and must not be held to the grant requirement below.
-    if (runsInProcess(plugin.id, plugin.manifest.permissions)) {
-      try {
-        await activatePlugin(plugin.id);
-      } catch (error) {
-        pluginLogger.error(
-          `Failed to activate plugin ${plugin.id}`,
-          error instanceof Error ? error : new Error(String(error)),
-          { operation: "plugin_activate" },
-        );
-      }
-      continue;
-    }
+  for (const pluginId of candidates) {
+    const plugin = pluginLoader.get(pluginId);
+    if (plugin) await registerPluginPermissions(plugin);
+  }
 
-    // The plugins table records no installer, so the plugin acts under the
-    // authority of whoever granted its capabilities. Without a grant there is
-    // no owner and nothing the plugin could do with one, so it stays stopped.
-    const grants =
-      await createCurrentPluginPermissionGrantRepository().listByPlugin(
-        plugin.id,
-      );
-    const ownerUserId = grants[0]?.grantedBy;
+  const result = await pluginLoader.activateAll(candidates);
+  await persistRuntimeState(loaded);
 
-    if (!ownerUserId) {
-      pluginLogger.warn(
-        `Plugin ${plugin.id} is enabled but has no capability grants, leaving it stopped`,
-        { operation: "plugin_activate" },
-      );
-      continue;
-    }
-
-    try {
-      await activatePlugin(plugin.id, ownerUserId);
-    } catch (error) {
-      pluginLogger.error(
-        `Failed to activate plugin ${plugin.id}`,
-        error instanceof Error ? error : new Error(String(error)),
-        { operation: "plugin_activate" },
-      );
-    }
+  if (result.blocked.size > 0 || result.failed.size > 0) {
+    pluginLogger.warn(
+      `${result.blocked.size} plugin(s) blocked, ${result.failed.size} failed to activate`,
+      { operation: "plugin_init" },
+    );
   }
 
   return loaded;
 }
 
+/** Mirrors loader state into the database so the admin API can report it. */
+async function persistRuntimeState(loaded: LoadedPlugin[]): Promise<void> {
+  const { createCurrentPluginRepository } =
+    await import("../database/repositories/factory.js");
+  const repository = createCurrentPluginRepository();
+
+  for (const plugin of loaded) {
+    if (plugin.state !== "blocked" && plugin.state !== "failed") continue;
+    try {
+      await repository.update(plugin.id, {
+        state: plugin.state,
+        lastError: plugin.lastError,
+      });
+    } catch {
+      // Reporting state must never stop the boot.
+    }
+  }
+}
+
 /**
  * Puts a plugin's declared permissions into the role catalog.
  *
- * Until this ran, contributes.permissionGroup was validated but never
- * consumed, so a plugin permission could not be granted: PUT /rbac/roles/:id
- * rejects any string isValidPermission does not know. Registering here is what
- * makes a plugin permission appear in the admin role editor exactly like
- * hosts.view does.
+ * Until this runs a plugin permission cannot be granted at all, because
+ * PUT /rbac/roles/:id rejects any string isValidPermission does not know.
+ * Registering here is what makes one appear in the admin role editor exactly
+ * like hosts.view does.
  */
 async function registerPluginPermissions(plugin: LoadedPlugin): Promise<void> {
   const group = plugin.manifest.contributes?.permissionGroup;
   if (!group) return;
 
-  const { registerPermissionGroup } =
-    await import("../utils/permission-catalog.js");
-  registerPermissionGroup({
-    group: group.group,
-    permissions: group.permissions,
-  });
+  try {
+    const { registerPermissionGroup } =
+      await import("../utils/permission-catalog.js");
+    registerPermissionGroup({
+      group: group.group,
+      permissions: group.permissions,
+    });
 
-  if (group.defaultForRole) {
-    await applyRoleDefaults(plugin.id, group.defaultForRole);
+    if (group.defaultForRole) {
+      await applyRoleDefaults(plugin.id, group);
+    }
+  } catch (error) {
+    pluginLogger.error(
+      `Failed to register permissions for ${plugin.id}`,
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "plugin_permissions" },
+    );
   }
 }
 
 /**
- * Applies the plugin's declared role suggestion.
+ * Applies a plugin's declared role suggestion, once.
  *
- * Additive only, and only for a permission the role does not already list.
- * An admin's later revoke must never be re-granted on the next restart, which
- * is the same rule ensureSystemRoles follows for the built-in roles.
+ * Only permissions the plugin declares itself are eligible; the manifest
+ * validator enforces that, and this re-checks it because the stored manifest
+ * is data. Without it a manifest could add admin.* to any role at boot.
+ *
+ * Each default is applied at most once and the fact is recorded, so an admin
+ * who later revokes it does not get it handed back on the next restart. The
+ * old code claimed that behaviour in a comment but re-added the permission
+ * every time.
  */
 async function applyRoleDefaults(
   pluginId: string,
-  defaults: Record<string, string[]>,
+  group: {
+    group: string;
+    permissions: string[];
+    defaultForRole?: Record<string, string[]>;
+  },
 ): Promise<void> {
-  const { createCurrentRoleRepository } =
+  const { createCurrentRoleRepository, createCurrentPluginStorageRepository } =
     await import("../database/repositories/factory.js");
   const { PermissionManager } = await import("../utils/permission-manager.js");
-  const repository = createCurrentRoleRepository();
 
-  for (const [roleName, wanted] of Object.entries(defaults)) {
+  const roleRepository = createCurrentRoleRepository();
+  const storage = createCurrentPluginStorageRepository();
+
+  const APPLIED_KEY = "__role_defaults_applied";
+  let applied: string[] = [];
+  try {
+    const raw = await storage.get(pluginId, APPLIED_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) applied = parsed;
+  } catch {
+    applied = [];
+  }
+
+  const declared = new Set(group.permissions);
+  const appliedSet = new Set(applied);
+
+  for (const [roleName, wanted] of Object.entries(group.defaultForRole ?? {})) {
     try {
-      const role = await repository.findRoleByName(roleName);
+      const role = await roleRepository.findRoleByName(roleName);
       if (!role) continue;
 
       let current: unknown;
@@ -308,19 +263,33 @@ async function applyRoleDefaults(
       }
       if (!Array.isArray(current)) continue;
 
-      // A wildcard the role already holds covers these, so adding them would
-      // only be noise in the editor.
-      const missing = wanted.filter(
-        (permission) => !coveredBy(current as string[], permission),
-      );
+      const missing = wanted.filter((permission) => {
+        if (!declared.has(permission)) {
+          pluginLogger.warn(
+            `Ignoring ${pluginId} role default "${permission}" for ${roleName}: the plugin does not declare it`,
+            { operation: "plugin_permissions" },
+          );
+          return false;
+        }
+        // Applied before means the admin has had the chance to remove it, so
+        // its absence now is a decision rather than a gap.
+        if (appliedSet.has(`${roleName}:${permission}`)) return false;
+        return !coveredBy(current as string[], permission);
+      });
+
+      for (const permission of wanted) {
+        if (declared.has(permission)) {
+          appliedSet.add(`${roleName}:${permission}`);
+        }
+      }
+
       if (missing.length === 0) continue;
 
-      await repository.updateRole(role.id, {
+      await roleRepository.updateRole(role.id, {
         permissions: JSON.stringify([...(current as string[]), ...missing]),
       });
 
-      const memberIds = await repository.listRoleUserIds(role.id);
-      for (const memberId of memberIds) {
+      for (const memberId of await roleRepository.listRoleUserIds(role.id)) {
         PermissionManager.getInstance().invalidateUserPermissionCache(memberId);
       }
     } catch (error) {
@@ -331,6 +300,12 @@ async function applyRoleDefaults(
         { operation: "plugin_permissions" },
       );
     }
+  }
+
+  try {
+    await storage.set(pluginId, APPLIED_KEY, JSON.stringify([...appliedSet]));
+  } catch {
+    // Losing the record only means a default may be re-offered once.
   }
 }
 
@@ -345,31 +320,15 @@ function coveredBy(permissions: string[], permission: string): boolean {
   return false;
 }
 
-export async function activatePlugin(
-  pluginId: string,
-  ownerUserId?: string,
-): Promise<void> {
-  const { loader: pluginLoader, broker: pluginBroker } = getPluginRuntime();
+export async function activatePlugin(pluginId: string): Promise<void> {
+  const { loader: pluginLoader } = getPluginRuntime();
 
   // Before activate: a plugin's own activate() may already want to check one
   // of its permissions.
   const plugin = pluginLoader.get(pluginId);
-  if (plugin) {
-    try {
-      await registerPluginPermissions(plugin);
-    } catch (error) {
-      pluginLogger.error(
-        `Failed to register permissions for ${pluginId}`,
-        error instanceof Error ? error : new Error(String(error)),
-        { operation: "plugin_permissions" },
-      );
-    }
-  }
+  if (plugin) await registerPluginPermissions(plugin);
 
-  await pluginLoader.activate(pluginId, ownerUserId);
-
-  const runtime = pluginBroker.get(pluginId);
-  if (runtime) remountRoutes(runtime);
+  await pluginLoader.activate(pluginId);
 }
 
 export async function deactivatePlugin(pluginId: string): Promise<void> {
@@ -391,4 +350,9 @@ export async function shutdownPlugins(): Promise<void> {
   if (!loader) return;
   for (const plugin of loader.list()) unregisterPluginRouter(plugin.id);
   await loader.shutdown();
+}
+
+/** Test seam. */
+export function resetPluginRuntime(): void {
+  loader = null;
 }

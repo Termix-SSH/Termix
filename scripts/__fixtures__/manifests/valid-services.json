@@ -1,10 +1,10 @@
 {
-  "id": "sample-provider",
-  "name": "Sample Provider",
+  "id": "sample-plugin",
+  "name": "Sample",
   "version": "1.0.0",
-  "description": "A plugin that both provides and requires a named service.",
+  "description": "A sample.",
   "author": {
-    "name": "Jane Doe"
+    "name": "Termix"
   },
   "license": "MIT",
   "category": "Productivity",
@@ -12,32 +12,18 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": {
-    "backend": true,
-    "frontend": false,
-    "electron": false,
-    "platforms": ["linux", "win32", "darwin"]
-  },
-  "permissions": ["hosts.read"],
-  "contributes": {
-    "permissionGroup": {
-      "group": "sampleprovider",
-      "permissions": ["sampleprovider.greet.use"]
-    }
-  },
+  "capabilities": ["kv:own", "ui:surface"],
   "provides": [
     {
-      "service": "sampleprovider.greet",
-      "version": "1.2.0",
-      "permission": "sampleprovider.greet.use"
+      "service": "sample.thing",
+      "version": "1.0.0",
+      "permission": "sample-plugin.use"
     }
   ],
-  "requires": [
-    {
-      "service": "other.thing",
-      "versionRange": "^1.0.0",
-      "optional": true
+  "contributes": {
+    "permissionGroup": {
+      "group": "sample-plugin",
+      "permissions": ["sample-plugin.use"]
     }
-  ],
-  "sidecars": []
+  }
 }

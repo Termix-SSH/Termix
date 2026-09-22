@@ -81,18 +81,16 @@ export function AdminPluginsSection({
               key={plugin.id}
               label={plugin.name}
               badge={
-                plugin.tier === "first-party"
-                  ? t("admin.pluginBuiltIn")
-                  : undefined
+                plugin.tier === "bundled" ? t("admin.pluginBuiltIn") : undefined
               }
               description={
                 plugin.lastError
                   ? plugin.lastError
-                  : `v${plugin.version} · ${plugin.runtimeState}`
+                  : `v${plugin.version} · ${plugin.state}`
               }
             >
               <div className="flex items-center gap-2">
-                {plugin.permissions.length > 0 && (
+                {(plugin.capabilities?.length ?? 0) > 0 && (
                   <Button
                     variant="outline"
                     size="sm"

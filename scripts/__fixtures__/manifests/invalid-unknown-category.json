@@ -1,23 +1,16 @@
 {
   "id": "sample-plugin",
-  "name": "Sample Plugin",
+  "name": "Sample",
   "version": "1.0.0",
-  "description": "Has a category that is not in the known category list.",
+  "description": "A sample.",
   "author": {
-    "name": "Jane Doe"
+    "name": "Termix"
   },
   "license": "MIT",
-  "category": "Miscellaneous",
+  "category": "Nonsense",
   "engine": {
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": {
-    "backend": true,
-    "frontend": true,
-    "electron": false,
-    "platforms": ["linux"]
-  },
-  "permissions": [],
-  "sidecars": []
+  "capabilities": ["kv:own", "ui:surface"]
 }

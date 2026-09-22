@@ -17,12 +17,18 @@ interface PluginRow {
   tier: string;
   source: string;
   state: string;
+  lastError?: string | null;
   manifestJson: string;
 }
 
 const state = vi.hoisted(() => ({
   plugins: new Map<string, PluginRow>(),
-  grants: [] as { pluginId: string; capability: string; grantedBy: string }[],
+  grants: [] as {
+    pluginId: string;
+    capability: string;
+    grantedBy: string | null;
+    source?: string;
+  }[],
   // Which users have admin.plugins.manage, keyed by userId.
   managers: new Set<string>(["admin-1"]),
 }));
@@ -62,6 +68,9 @@ vi.mock("../../../utils/auth-manager.js", () => ({
 vi.mock("../../../utils/permission-manager.js", () => ({
   PermissionManager: {
     getInstance: () => ({
+      // The list route asks directly rather than gating the whole mount, so
+      // it can return a narrower shape to a non-admin instead of a 403.
+      hasPermission: async (userId: string) => state.managers.has(userId),
       requirePermission:
         (_permission: string) =>
         (
@@ -113,7 +122,8 @@ vi.mock("../../../database/repositories/factory.js", () => ({
     grant: async (input: {
       pluginId: string;
       capability: string;
-      grantedBy: string;
+      grantedBy: string | null;
+      source?: string;
     }) => {
       state.grants.push(input);
       return input;
@@ -140,7 +150,7 @@ function makePlugin(overrides: Partial<PluginRow> = {}): PluginRow {
     source: "community",
     state: "enabled",
     manifestJson: JSON.stringify({
-      permissions: ["hosts.read", "storage.own"],
+      capabilities: ["hosts:read", "kv:own"],
     }),
     ...overrides,
   };
@@ -170,11 +180,11 @@ describe("plugins route", () => {
     server = null;
   });
 
-  it("lists a plugin's declared permissions and granted capabilities", async () => {
+  it("lists a plugin's declared and granted capabilities", async () => {
     state.plugins.set("sample-plugin", makePlugin());
     state.grants.push({
       pluginId: "sample-plugin",
-      capability: "hosts.read",
+      capability: "hosts:read",
       grantedBy: "admin-1",
     });
 
@@ -184,8 +194,8 @@ describe("plugins route", () => {
     expect(body).toEqual([
       expect.objectContaining({
         id: "sample-plugin",
-        permissions: ["hosts.read", "storage.own"],
-        grantedCapabilities: ["hosts.read"],
+        capabilities: ["hosts:read", "kv:own"],
+        grantedCapabilities: ["hosts:read"],
       }),
     ]);
   });
@@ -196,19 +206,19 @@ describe("plugins route", () => {
     const res = await fetch(`${baseUrl}/plugins/sample-plugin/grants`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ capability: "hosts.read" }),
+      body: JSON.stringify({ capability: "hosts:read" }),
     });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       id: "sample-plugin",
-      capability: "hosts.read",
+      capability: "hosts:read",
       granted: true,
     });
     expect(state.grants).toEqual([
       {
         pluginId: "sample-plugin",
-        capability: "hosts.read",
+        capability: "hosts:read",
         grantedBy: "admin-1",
       },
     ]);
@@ -231,7 +241,7 @@ describe("plugins route", () => {
     const res = await fetch(`${baseUrl}/plugins/ghost/grants`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ capability: "hosts.read" }),
+      body: JSON.stringify({ capability: "hosts:read" }),
     });
 
     expect(res.status).toBe(404);
@@ -243,12 +253,12 @@ describe("plugins route", () => {
     await fetch(`${baseUrl}/plugins/sample-plugin/grants`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ capability: "hosts.read" }),
+      body: JSON.stringify({ capability: "hosts:read" }),
     });
     await fetch(`${baseUrl}/plugins/sample-plugin/grants`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ capability: "hosts.read" }),
+      body: JSON.stringify({ capability: "hosts:read" }),
     });
 
     expect(state.grants).toHaveLength(1);
@@ -258,19 +268,19 @@ describe("plugins route", () => {
     state.plugins.set("sample-plugin", makePlugin());
     state.grants.push({
       pluginId: "sample-plugin",
-      capability: "hosts.read",
+      capability: "hosts:read",
       grantedBy: "admin-1",
     });
 
     const res = await fetch(
-      `${baseUrl}/plugins/sample-plugin/grants/hosts.read`,
+      `${baseUrl}/plugins/sample-plugin/grants/${encodeURIComponent("hosts:read")}`,
       { method: "DELETE" },
     );
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       id: "sample-plugin",
-      capability: "hosts.read",
+      capability: "hosts:read",
       granted: false,
     });
     expect(state.grants).toEqual([]);
@@ -280,7 +290,7 @@ describe("plugins route", () => {
     state.plugins.set("sample-plugin", makePlugin());
 
     const res = await fetch(
-      `${baseUrl}/plugins/sample-plugin/grants/hosts.read`,
+      `${baseUrl}/plugins/sample-plugin/grants/${encodeURIComponent("hosts:read")}`,
       { method: "DELETE" },
     );
 
@@ -288,7 +298,7 @@ describe("plugins route", () => {
   });
 
   describe("admin.plugins.manage gate", () => {
-    it("a non-admin authenticated user cannot list plugins", async () => {
+    it("lets a non-admin list plugins", async () => {
       // GET stays open to any authenticated user on purpose: the app shell
       // calls it for every session to know which plugin tabs to register.
       state.plugins.set("sample-plugin", makePlugin());
@@ -298,6 +308,58 @@ describe("plugins route", () => {
       });
 
       expect(res.status).toBe(200);
+    });
+
+    // What a plugin may do, what it has been granted and why it failed are
+    // operational details. The shell needs none of them to render a tab.
+    it("hides capabilities, grants and lastError from a non-admin", async () => {
+      state.plugins.set(
+        "sample-plugin",
+        makePlugin({ lastError: "port already in use" }),
+      );
+      state.grants.push({
+        pluginId: "sample-plugin",
+        capability: "hosts:read",
+        grantedBy: "admin-1",
+      });
+
+      const res = await fetch(`${baseUrl}/plugins`, {
+        headers: { "x-test-user-id": "regular-user" },
+      });
+      const [plugin] = await res.json();
+
+      expect(plugin).toEqual({
+        id: "sample-plugin",
+        name: "Sample Plugin",
+        version: "1.0.0",
+        enabled: true,
+        state: "enabled",
+        contributes: null,
+      });
+    });
+
+    it("shows the full record to a holder of admin.plugins.manage", async () => {
+      state.plugins.set(
+        "sample-plugin",
+        makePlugin({ lastError: "port already in use" }),
+      );
+      state.grants.push({
+        pluginId: "sample-plugin",
+        capability: "hosts:read",
+        grantedBy: "admin-1",
+      });
+
+      const res = await fetch(`${baseUrl}/plugins`, {
+        headers: { "x-test-user-id": "admin-1" },
+      });
+      const [plugin] = await res.json();
+
+      expect(plugin).toMatchObject({
+        id: "sample-plugin",
+        capabilities: ["hosts:read", "kv:own"],
+        grantedCapabilities: ["hosts:read"],
+        lastError: "port already in use",
+      });
     });
 
     it("403s a non-admin enabling or disabling a plugin", async () => {
@@ -325,7 +387,7 @@ describe("plugins route", () => {
           "content-type": "application/json",
           "x-test-user-id": "regular-user",
         },
-        body: JSON.stringify({ capability: "hosts.read" }),
+        body: JSON.stringify({ capability: "hosts:read" }),
       });
 
       expect(res.status).toBe(403);
@@ -336,12 +398,12 @@ describe("plugins route", () => {
       state.plugins.set("sample-plugin", makePlugin());
       state.grants.push({
         pluginId: "sample-plugin",
-        capability: "hosts.read",
+        capability: "hosts:read",
         grantedBy: "admin-1",
       });
 
       const res = await fetch(
-        `${baseUrl}/plugins/sample-plugin/grants/hosts.read`,
+        `${baseUrl}/plugins/sample-plugin/grants/${encodeURIComponent("hosts:read")}`,
         {
           method: "DELETE",
           headers: { "x-test-user-id": "regular-user" },

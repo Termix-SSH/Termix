@@ -3988,31 +3988,7 @@
     "pluginPermissionGranted": "Granted",
     "pluginPermissionNotGranted": "Not granted",
     "pluginGrantFailed": "Failed to grant the capability",
-    "pluginRevokeFailed": "Failed to revoke the capability",
-    "pluginPermissionHostsRead": "Read hosts",
-    "pluginPermissionHostsReadDesc": "See the list of your hosts and their non-secret details.",
-    "pluginPermissionHostsWrite": "Modify hosts",
-    "pluginPermissionHostsWriteDesc": "Create, edit or delete hosts on your behalf.",
-    "pluginPermissionCredentialsUse": "Use stored credentials",
-    "pluginPermissionCredentialsUseDesc": "Connect using a saved credential without you retyping it.",
-    "pluginPermissionSshExec": "Run commands over SSH",
-    "pluginPermissionSshExecDesc": "Open a connection to a host and run commands on it.",
-    "pluginPermissionSshSftp": "Transfer files over SFTP",
-    "pluginPermissionSshSftpDesc": "Read or write files on a host over SFTP.",
-    "pluginPermissionStorageOwn": "Store its own data",
-    "pluginPermissionStorageOwnDesc": "Save and read back its own settings and data.",
-    "pluginPermissionStorageSecrets": "Store secrets",
-    "pluginPermissionStorageSecretsDesc": "Save and read back sensitive values it manages itself.",
-    "pluginPermissionNetworkOutbound": "Make outbound network requests",
-    "pluginPermissionNetworkOutboundDesc": "Contact services outside this server.",
-    "pluginPermissionEventsRead": "Subscribe to server events",
-    "pluginPermissionEventsReadDesc": "React to things happening elsewhere in Termix.",
-    "pluginPermissionNotifySend": "Send notifications",
-    "pluginPermissionNotifySendDesc": "Deliver a notification through your configured channels.",
-    "pluginPermissionUsersRead": "Read user accounts",
-    "pluginPermissionUsersReadDesc": "See basic details about accounts on this server.",
-    "pluginPermissionProcessSidecar": "Run a background process",
-    "pluginPermissionProcessSidecarDesc": "Start and manage its own helper process."
+    "pluginRevokeFailed": "Failed to revoke the capability"
   },
   "newUi": {
     "sidebar": {
@@ -5136,5 +5112,93 @@
     "isolationUnavailable": "This browser cannot isolate web endpoints from your Termix session. Use a browser with credentialless iframe support.",
     "isolationNotice": "Embedded pages use an isolated session. For pages requiring storage or popup sign-in, use an isolated window in the desktop app.",
     "openIsolatedWindow": "Open isolated window"
+  },
+  "plugins": {
+    "capabilities": {
+      "credentials:read": {
+        "title": "See your passwords and keys",
+        "consequence": "It can read the stored secret for any host you can reach."
+      },
+      "ssh:connect": {
+        "title": "Run commands on your servers",
+        "consequence": "Any command, on hosts you connect it to, with your access."
+      },
+      "process:spawn": {
+        "title": "Run programs on this machine",
+        "consequence": "Programs run on the Termix server itself, not on your hosts."
+      },
+      "users:write": {
+        "title": "Create and change user accounts",
+        "consequence": "It can add users and change their roles."
+      },
+      "auth:provide": {
+        "title": "Handle sign in",
+        "consequence": "It can add a login method or a second factor."
+      },
+      "system:tls": {
+        "title": "Manage certificates",
+        "consequence": "It can request and replace the server certificate."
+      },
+      "hosts:write": {
+        "title": "Create and change hosts",
+        "consequence": "It can add hosts and edit the ones you already have."
+      },
+      "credentials:use": {
+        "title": "Connect to your servers",
+        "consequence": "It cannot see your passwords or keys."
+      },
+      "network:outbound": {
+        "title": "Reach the internet",
+        "consequence": "It can send requests to outside services."
+      },
+      "network:serve": {
+        "title": "Accept connections",
+        "consequence": "It opens a port on the Termix server."
+      },
+      "users:read": {
+        "title": "See usernames and roles",
+        "consequence": "Never password hashes, never two factor state."
+      },
+      "events:core": {
+        "title": "Watch everything happening",
+        "consequence": "Including activity from other users, not just yours."
+      },
+      "notify:send": {
+        "title": "Send notifications",
+        "consequence": "Through the channels you have already set up."
+      },
+      "audit:read": {
+        "title": "Read the audit log",
+        "consequence": "It can see who did what and when."
+      },
+      "desktop:window": {
+        "title": "Open desktop windows",
+        "consequence": "Only in the Termix desktop app."
+      },
+      "hosts:read": {
+        "title": "See your host list",
+        "consequence": "Names and addresses for hosts you can already see."
+      },
+      "db:own": {
+        "title": "Store its own data",
+        "consequence": "Kept in its own tables, separate from other plugins."
+      },
+      "kv:own": {
+        "title": "Remember small settings",
+        "consequence": "Kept separate from other plugins."
+      },
+      "secrets:own": {
+        "title": "Store its own secrets",
+        "consequence": "Encrypted by Termix. The plugin never holds the key."
+      },
+      "settings:read-core": {
+        "title": "Read Termix settings",
+        "consequence": "Server settings, not your hosts or credentials."
+      },
+      "ui:surface": {
+        "title": "Add its own screens",
+        "consequence": "Tabs, panels and settings you can hide later."
+      }
+    }
   }
 }

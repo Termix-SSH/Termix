@@ -28,10 +28,10 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
     id: "ssh-terminal",
     name: "SSH Terminal",
     version: "1.0.0",
-    tier: "first-party",
+    tier: "bundled",
     source: "bundled",
     enabled: true,
-    runtimeState: "active",
+    state: "active",
     lastError: null,
     contributes: {
       tabs: [
@@ -43,7 +43,7 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
         },
       ],
     },
-    permissions: [],
+    capabilities: [],
     grantedCapabilities: [],
     ...overrides,
   };

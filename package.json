@@ -1,6 +1,9 @@
 {
   "name": "termix",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "version": "2.9.0",
   "description": "Self-hosted SSH and remote desktop management.",
   "author": "Karmaa",
@@ -15,7 +18,7 @@
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-guacamole-common-js.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-xterm-android-ime.cjs && node scripts/patch-ssh2-agent.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
-    "lint": "node scripts/generate-dialect-schema.cjs --check && eslint .",
+    "lint": "node scripts/generate-dialect-schema.cjs --check && npm run plugin:validate-manifest && eslint .",
     "lint:fix": "eslint --fix .",
     "type-check": "tsc -b --force",
     "test": "vitest run",
@@ -24,9 +27,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node scripts/copy-bundled-plugins.cjs",
-    "build:backend": "tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node scripts/copy-bundled-plugins.cjs",
-    "dev:backend": "tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node scripts/copy-bundled-plugins.cjs && node ./dist/backend/backend/starter.js",
+    "build": "npm run build:sdk && vite build && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node scripts/copy-bundled-plugins.cjs",
+    "build:backend": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node scripts/copy-bundled-plugins.cjs",
+    "dev:backend": "npm run build:sdk && tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node scripts/copy-bundled-plugins.cjs && node ./dist/backend/backend/starter.js",
     "dev:docker": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker build -f docker/Dockerfile -t termix:dev --no-cache . && docker run -d --name termix-dev -p 3000:3000 -p 8080:8080 -p 30001-30006:30001-30006 -v \"%cd%\\db\\data:/app/data\" termix:dev",
     "dev:docker:restart": "docker stop termix-dev 2>nul & docker rm termix-dev 2>nul & docker run -d --name termix-dev -p 8080:8080 -p 30001-30006:30001-30006 -v \"%cd%\\db\\data:/app/data\" termix:dev",
     "generate:openapi": "tsc -p tsconfig.node.json && node -e \"require('fs').copyFileSync('src/backend/package.json','dist/backend/package.json')\" && node ./dist/backend/backend/utils/swagger.js",
@@ -44,7 +47,8 @@
     "schema:generate": "node scripts/generate-dialect-schema.cjs",
     "schema:check": "node scripts/generate-dialect-schema.cjs --check",
     "schema:migrations": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts",
-    "plugin:validate-manifest": "node scripts/validate-plugin-manifest.cjs"
+    "plugin:validate-manifest": "node scripts/validate-plugin-manifest.cjs",
+    "build:sdk": "npm run build --workspace @termix/plugin-sdk"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

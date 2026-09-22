@@ -190,6 +190,13 @@
       "when": 1790083819084,
       "tag": "0026_perfect_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1790102859387,
+      "tag": "0027_sharp_guardian",
+      "breakpoints": true
     }
   ]
 }

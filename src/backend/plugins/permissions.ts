@@ -1,40 +1,23 @@
 /**
- * The grant check every privileged ctx call goes through.
+ * The grant check every guarded ctx call goes through.
  *
- * Capability strings are the manifest's own permission enum, stored verbatim in
- * plugin_permission_grants.capability -- no translation layer, so the manifest
- * stays the single source of truth for what is grantable.
+ * Two things have to be true for a capability to count as granted: the
+ * manifest declares it (the plugin asked for it up front) and it is granted in
+ * plugin_permission_grants (someone, or the bundling process, said yes). A
+ * grant for something the manifest never declared is ignored rather than
+ * honoured, so widening a plugin's reach always requires a new manifest the
+ * user can see.
  *
- * Two separate things have to be true for a capability to count as granted:
- * the manifest must declare it (the plugin asked for it up front) and an admin
- * must have granted it (someone said yes). A grant for something the manifest
- * never declared is ignored rather than honoured, so widening a plugin's reach
- * always requires a new manifest the user can see.
+ * The cache is invalidated explicitly on every grant change rather than by
+ * TTL: a revoke that takes effect a minute later is not a revoke.
  */
 
 import { createCurrentPluginPermissionGrantRepository } from "../database/repositories/factory.js";
-import type { PluginPermission } from "./manifest.js";
+import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 
-const CACHE_TTL_MS = 60_000;
+export { PluginCapabilityError };
 
-interface CacheEntry {
-  capabilities: Set<string>;
-  expiresAt: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-
-export class PluginPermissionError extends Error {
-  readonly code = "EPLUGINPERM";
-
-  constructor(pluginId: string, capability: string) {
-    super(
-      `Plugin "${pluginId}" is not granted the "${capability}" capability. ` +
-        `Declare it in the manifest's permissions array and grant it in the plugin's settings.`,
-    );
-    this.name = "PluginPermissionError";
-  }
-}
+const cache = new Map<string, Set<string>>();
 
 export function invalidatePluginPermissionCache(pluginId?: string): void {
   if (pluginId) cache.delete(pluginId);
@@ -43,19 +26,19 @@ export function invalidatePluginPermissionCache(pluginId?: string): void {
 
 async function loadGrants(pluginId: string): Promise<Set<string>> {
   const cached = cache.get(pluginId);
-  if (cached && cached.expiresAt > Date.now()) return cached.capabilities;
+  if (cached) return cached;
 
   const rows =
     await createCurrentPluginPermissionGrantRepository().listByPlugin(pluginId);
   const capabilities = new Set(rows.map((row) => row.capability));
 
-  cache.set(pluginId, { capabilities, expiresAt: Date.now() + CACHE_TTL_MS });
+  cache.set(pluginId, capabilities);
   return capabilities;
 }
 
 export async function hasCapability(
   pluginId: string,
-  capability: PluginPermission | string,
+  capability: string,
   declared: readonly string[],
 ): Promise<boolean> {
   if (!declared.includes(capability)) return false;
@@ -64,10 +47,10 @@ export async function hasCapability(
 
 export async function assertCapability(
   pluginId: string,
-  capability: PluginPermission | string,
+  capability: string,
   declared: readonly string[],
 ): Promise<void> {
   if (!(await hasCapability(pluginId, capability, declared))) {
-    throw new PluginPermissionError(pluginId, capability);
+    throw new PluginCapabilityError(pluginId, capability);
   }
 }

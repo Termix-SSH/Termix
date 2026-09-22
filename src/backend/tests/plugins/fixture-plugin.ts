@@ -1,7 +1,7 @@
 /**
- * Builds a real unpacked plugin on disk for the loader/broker tests.
+ * Builds a real unpacked plugin on disk for the runtime tests.
  *
- * The backend entry has to be a genuine .mjs file the worker can import, and
+ * The backend entry has to be a genuine .mjs file the loader can import, and
  * tsc only emits .ts, so these are written at test time rather than committed.
  * Same mkdtemp convention the other disk-touching backend tests use.
  */
@@ -13,12 +13,15 @@ import { SUPPORTED_PLUGIN_API_VERSION } from "../../plugins/manifest.js";
 
 export interface FixtureOptions {
   id?: string;
-  permissions?: string[];
+  /** Catalog capability ids the manifest declares. */
+  capabilities?: string[];
   /** Body of backend/index.mjs. Must export activate(ctx). */
   backendSource?: string;
   /** Omit the backend entry file even though the manifest declares one. */
   omitBackendEntry?: boolean;
   manifestOverrides?: Record<string, unknown>;
+  /** Write into this root instead of a fresh temp dir. */
+  root?: string;
 }
 
 export interface Fixture {
@@ -30,13 +33,14 @@ export interface Fixture {
 
 const DEFAULT_BACKEND = `
 export async function activate(ctx) {
-  ctx.__ready = true;
+  ctx.log.info("fixture activated");
 }
 `;
 
 export function createFixturePlugin(options: FixtureOptions = {}): Fixture {
   const id = options.id ?? "sample-plugin";
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "termix-plugins-"));
+  const root =
+    options.root ?? fs.mkdtempSync(path.join(os.tmpdir(), "termix-plugins-"));
   const dir = path.join(root, id);
 
   fs.mkdirSync(path.join(dir, "backend"), { recursive: true });
@@ -50,14 +54,8 @@ export function createFixturePlugin(options: FixtureOptions = {}): Fixture {
     license: "MIT",
     category: "Productivity",
     engine: { termix: ">=2.9.0", api: SUPPORTED_PLUGIN_API_VERSION },
-    capabilities: {
-      backend: true,
-      frontend: false,
-      electron: false,
-      platforms: ["linux", "win32", "darwin"],
-    },
-    permissions: options.permissions ?? ["hosts.read", "storage.own"],
-    sidecars: [],
+    capabilities: options.capabilities ?? ["hosts:read", "kv:own"],
+    backend: "backend/index.mjs",
     ...options.manifestOverrides,
   };
 

@@ -118,10 +118,11 @@ export async function activate(ctx) {
     });
   }
 
-  // Importing console.js binds its WebSocket server on port 30009 as a
-  // module-scope side effect -- unchanged from before the move, see that
-  // file's own header.
+  // Importing console.js no longer binds anything: the server is started
+  // here so disabling the plugin frees port 30009 and re-enabling can take
+  // it again, even though the module stays in the ESM cache.
   consoleModule = await loadRelative("console");
+  await consoleModule.startConsoleServer();
 
   ctx.log.info(`Docker plugin listening on ${port} (console on 30009)`);
 }

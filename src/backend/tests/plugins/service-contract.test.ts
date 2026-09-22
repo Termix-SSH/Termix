@@ -2,12 +2,9 @@
  * Two real plugins on disk, one providing a service and one requiring it,
  * driven through the actual PluginLoader.
  *
- * The ids are the real first-party ones because the in-process allowlist is
- * hardcoded and deliberately unfakeable -- the same thing in-process-loader
- * does. The service ("testplugin.greet") and the permission gating it
+ * The service ("testplugin.greet") and the permission gating it
  * ("testplugin.greet.use") are fixture-owned, so nothing about the shipped
- * ssh-terminal or docker plugins is under test here; only their ids are
- * borrowed to reach the in-process tier.
+ * plugins is under test here even though the fixtures borrow their ids.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -51,8 +48,6 @@ vi.mock("../../utils/permission-manager.js", () => ({
 }));
 
 const { PluginLoader } = await import("../../plugins/loader.js");
-const { TRANSPORT_OWNER_CAPABILITY } =
-  await import("../../plugins/first-party.js");
 const {
   clearServiceRegistry,
   getRegistration,
@@ -99,7 +94,7 @@ export async function activate(ctx) {
 function providerFixture(): Fixture {
   return createFixturePlugin({
     id: "ssh-terminal",
-    permissions: [TRANSPORT_OWNER_CAPABILITY],
+    capabilities: ["kv:own"],
     manifestOverrides: {
       category: "Terminal",
       provides: [
@@ -119,7 +114,7 @@ function consumerFixture(
 ): Fixture {
   return createFixturePlugin({
     id: "docker",
-    permissions: [TRANSPORT_OWNER_CAPABILITY],
+    capabilities: ["kv:own"],
     backendSource: CONSUMER_SOURCE,
     manifestOverrides: { category: "Infrastructure", requires },
   });
@@ -212,7 +207,7 @@ describe("plugin service contracts", () => {
     await expect(loader.activate(plugin.id)).rejects.toThrow(
       /no active plugin provides|provides 1\.2\.0/,
     );
-    expect(plugin.state).toBe("crashed");
+    expect(plugin.state).toBe("failed");
   });
 
   it("activates anyway when an unsatisfied requirement is optional", async () => {
@@ -323,7 +318,7 @@ describe("plugin service contracts", () => {
   it("refuses to provide a service the manifest never declared", async () => {
     provider = createFixturePlugin({
       id: "ssh-terminal",
-      permissions: [TRANSPORT_OWNER_CAPABILITY],
+      capabilities: ["kv:own"],
       backendSource: `
 export async function activate(ctx) {
   ctx.services.provide("testplugin.undeclared", { hello: async () => "hi" });

@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://termix.site/schemas/plugin-manifest.schema.json",
+  "title": "Termix Plugin Manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "version",
+    "description",
+    "author",
+    "license",
+    "engine",
+    "category",
+    "capabilities"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,39}$",
+      "description": "Unique plugin id. Lowercase, starts with a letter, 2-40 characters. Must equal the plugin's directory name."
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$",
+      "description": "Semver version string."
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "minLength": 1 }
+      }
+    },
+    "license": { "type": "string", "minLength": 1 },
+    "repository": { "type": "string", "minLength": 1 },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Terminal",
+        "Files & Transfer",
+        "Infrastructure",
+        "Monitoring",
+        "Networking",
+        "Access & Security",
+        "Productivity"
+      ]
+    },
+    "icon": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A Lucide icon name, or a relative path to an icon.svg in the plugin root."
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["termix", "api"],
+      "properties": {
+        "termix": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display string only. Never enforced."
+        },
+        "api": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Plugin SDK major version. The real compatibility gate."
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Catalog capability ids this plugin's code needs. See the SDK capability catalog.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "credentials:read",
+          "ssh:connect",
+          "process:spawn",
+          "users:write",
+          "auth:provide",
+          "system:tls",
+          "hosts:write",
+          "credentials:use",
+          "network:outbound",
+          "network:serve",
+          "users:read",
+          "events:core",
+          "notify:send",
+          "audit:read",
+          "desktop:window",
+          "hosts:read",
+          "db:own",
+          "kv:own",
+          "secrets:own",
+          "settings:read-core",
+          "ui:surface"
+        ]
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Plugin ids this plugin cannot run without, mapped to a semver range.",
+      "additionalProperties": { "type": "string", "minLength": 1 },
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,39}$" }
+    },
+    "optionalDependencies": {
+      "type": "object",
+      "description": "Plugin ids this plugin uses when present. It must keep working without them.",
+      "additionalProperties": { "type": "string", "minLength": 1 },
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,39}$" }
+    },
+    "provides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service", "version", "permission"],
+        "properties": {
+          "service": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$"
+          },
+          "permission": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service", "versionRange"],
+        "properties": {
+          "service": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+          },
+          "versionRange": { "type": "string", "minLength": 1 },
+          "optional": { "type": "boolean" }
+        }
+      }
+    },
+    "providesSecret": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "permission"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "permission": { "type": "string", "minLength": 1 },
+          "descriptionKey": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "requiresSecret": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["plugin", "key"],
+        "properties": {
+          "plugin": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,39}$" },
+          "key": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "optional": { "type": "boolean" }
+        }
+      }
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey", "icon", "openFrom"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "icon": { "type": "string", "minLength": 1 },
+              "openFrom": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "enum": ["rail", "host-context-menu", "palette"]
+                }
+              }
+            }
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey", "handler"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-zA-Z0-9-]+)+$"
+              },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "handler": {
+                "type": "string",
+                "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
+              },
+              "icon": { "type": "string", "minLength": 1 },
+              "permission": { "type": "string", "minLength": 1 },
+              "slot": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string", "enum": ["button"] }
+            }
+          }
+        },
+        "actionSlots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "accepts"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-zA-Z0-9-]+)+$"
+              },
+              "accepts": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "enum": ["button"] }
+              },
+              "descriptionKey": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "permissionGroup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["group", "permissions"],
+          "properties": {
+            "group": { "type": "string", "minLength": 1 },
+            "permissions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-z0-9_-]+)+$"
+              }
+            },
+            "defaultForRole": {
+              "type": "object",
+              "description": "Role name -> permissions. Only permissions this plugin declares above are allowed.",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        "hostCapability": {
+          "description": "A host-editor checkbox backed by a boolean column on the host record. Reshaped by a later step.",
+          "oneOf": [
+            { "$ref": "#/$defs/hostCapability" },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/hostCapability" }
+            }
+          ]
+        }
+      }
+    },
+    "backend": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Built backend entry, relative to the plugin root. Defaults to dist/backend.js."
+    },
+    "frontend": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Built frontend entry, relative to the plugin root. Defaults to dist/frontend.js."
+    },
+    "locales": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Locales directory, relative to the plugin root. Defaults to locales."
+    },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "enum": ["linux", "win32", "darwin"] }
+    }
+  },
+  "$defs": {
+    "hostCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "labelKey", "editorTab"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "labelKey": { "type": "string", "minLength": 1 },
+        "editorTab": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

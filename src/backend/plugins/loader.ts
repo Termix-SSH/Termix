@@ -1,64 +1,38 @@
 /**
- * Loads unpacked plugins and owns their worker lifecycle.
+ * Discovers plugins, resolves their dependency order, and owns their
+ * lifecycle.
  *
- * ## What the worker boundary actually buys you
+ * One tier. Every plugin, bundled or installed, is imported into the server
+ * process and handed a ctx built by ctx.ts. There is no worker boundary and
+ * no allowlist, because the worker tier had no users and the allowlist was a
+ * hardcoded set of twelve ids that every real plugin was already on.
  *
- * Be precise about this, because it is easy to overclaim.
- *
- * ENFORCED:
- *   - The plugin is handed a `ctx` object and nothing else. It gets no db
- *     handle, no fs module, no socket, and no credential. Everything it can do
- *     goes through a postMessage round trip to the broker, which checks the
- *     plugin's grants first and writes an audit line after.
- *   - Only structured-cloneable values cross the boundary, so a live object
- *     cannot leak by reference even by mistake.
- *   - The worker does not inherit process.env, so it cannot read secrets that
- *     were passed to the server that way. Only TMPDIR/TMP/TEMP are forwarded.
- *   - resourceLimits caps the worker heap, so a runaway allocation kills the
- *     worker instead of the server.
- *
- * NOT ENFORCED, and not claimed:
- *   - A worker_threads worker is NOT a security sandbox. It shares the process.
- *     A plugin that wants to can `import("node:fs")` and read whatever the
- *     server user can read. It can burn CPU. It can crash the process through
- *     native addons.
- *   - Node's permission model (--permission) is the only thing that would
- *     actually restrict builtins, and it is process-wide, not per-worker, so it
- *     cannot be turned on for plugin workers alone. execArgv on a Worker does
- *     not accept it.
- *
- * So the honest boundary is: plugins are code you chose to install, and this
- * design guarantees they cannot QUIETLY reach data they were not granted --
- * every privileged path is gated and audited. It does not guarantee
- * containment. If containment is ever required, the answer is a child process
- * with --permission, or a WASM/vm isolate, not worker_threads.
+ * What that means honestly: a plugin has the same reach as core. The
+ * capability gate on ctx makes privileged calls declared and auditable, not
+ * impossible. See ARCHITECTURE.md.
  */
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { Worker } from "node:worker_threads";
+import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
-import { parseManifest, type PluginManifest } from "./manifest.js";
+import { parseManifest } from "./manifest.js";
+import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import {
   getBundledPluginsDir,
   getPluginBackendEntry,
   getPluginManifestPath,
   getPluginsDir,
 } from "./paths.js";
-import type { PluginBootstrapData } from "./protocol.js";
-import { runsInProcess } from "./first-party.js";
 import {
-  createInProcessContext,
-  disposeInProcessHandle,
-  type InProcessHandle,
+  createPluginContext,
+  createPluginHandle,
+  disposePluginHandle,
+  type PluginHandle,
   type PluginModule,
-} from "./host-ctx.js";
+} from "./ctx.js";
 import { resolveRequirements } from "./service-registry.js";
-import {
-  resolveSecretRequirements,
-  withdrawAllForPlugin,
-} from "./secret-registry.js";
+import { resolveSecretRequirements } from "./secret-registry.js";
 
 export type PluginState =
   | "loaded"
@@ -66,83 +40,40 @@ export type PluginState =
   | "active"
   | "stopping"
   | "stopped"
-  | "crashed"
-  | "disabled";
+  | "blocked"
+  | "failed";
 
-export const MAX_RESTART_ATTEMPTS = 3;
-const RESTART_BACKOFF_MS = [1000, 5000, 15000];
+export type PluginSource = "bundled" | "user";
+
 const ACTIVATION_TIMEOUT_MS = 30_000;
-const STABILITY_WINDOW_MS = 60_000;
-const WORKER_MAX_OLD_HEAP_MB = 256;
+
+/** Defaults for the runtime error budget. Both are configurable. */
+export const DEFAULT_ERROR_THRESHOLD = 5;
+export const DEFAULT_ERROR_WINDOW_MS = 60_000;
 
 export interface LoadedPlugin {
   id: string;
   dir: string;
+  source: PluginSource;
   manifest: PluginManifest;
   state: PluginState;
-  worker: Worker | null;
-  /**
-   * Set instead of `worker` for first-party plugins that run on the main
-   * thread. Exactly one of the two is ever non-null.
-   */
-  inProcess: InProcessHandle | null;
-  /** Consecutive crashes since the last successful activation. */
-  restartAttempts: number;
+  handle: PluginHandle | null;
   lastError: string | null;
-  /**
-   * The user whose authority this plugin acts under. Set at activate time.
-   * Null for in-process plugins, which do not use the gated ctx and so have no
-   * owner to act as.
-   */
-  ownerUserId: string | null;
+  /** Timestamps of recent runtime errors, trimmed to the window. */
+  errorTimestamps: number[];
 }
 
 export interface PluginLoaderOptions {
-  /**
-   * Called with each worker's port right after spawn so the broker can attach.
-   * Kept as a hook rather than a hard import so the loader stays testable on
-   * its own, before the broker exists.
-   */
-  onWorkerReady?: (plugin: LoadedPlugin, worker: Worker) => void;
-  onWorkerGone?: (plugin: LoadedPlugin) => void;
-  /**
-   * Gives a worker plugin a chance to run its deactivate() before it is
-   * terminated. A hook rather than a broker import, same as the two above.
-   */
-  onBeforeTerminate?: (plugin: LoadedPlugin) => Promise<void>;
-  /** Overridable so tests do not have to wait out the real backoff. */
-  restartBackoffMs?: number[];
-  /** How long a plugin must stay up before its crash counter resets. */
-  stabilityWindowMs?: number;
-}
-
-/**
- * Resolved from this module's own location, never from process.cwd(): the build
- * emits to dist/backend/backend/, and cwd is wherever the server was started
- * from.
- *
- * Under vitest this module is the .ts source, so the sibling is
- * worker-bootstrap.ts and the worker needs the tsx loader to run it. In a built
- * server both are plain .js and no loader is involved.
- */
-function resolveWorkerBootstrap(): { entry: string; execArgv?: string[] } {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-
-  const compiled = path.join(here, "worker-bootstrap.js");
-  if (fs.existsSync(compiled)) return { entry: compiled };
-
-  const source = path.join(here, "worker-bootstrap.ts");
-  if (fs.existsSync(source)) {
-    return { entry: source, execArgv: ["--import", "tsx"] };
-  }
-
-  throw new Error(`Could not locate the plugin worker bootstrap near ${here}`);
+  errorThreshold?: number;
+  errorWindowMs?: number;
+  /** Called when a plugin trips the error budget and is torn down. */
+  onFailed?: (plugin: LoadedPlugin) => void;
 }
 
 export class PluginLoader {
   private readonly plugins = new Map<string, LoadedPlugin>();
-  private readonly restartTimers = new Map<string, NodeJS.Timeout>();
-  private readonly stabilityTimers = new Map<string, NodeJS.Timeout>();
+  /** Activation order, so shutdown can run it backwards. */
+  private activationOrder: string[] = [];
 
   constructor(private readonly options: PluginLoaderOptions = {}) {}
 
@@ -154,10 +85,8 @@ export class PluginLoader {
     return this.plugins.get(pluginId);
   }
 
-  /**
-   * Reads and validates a plugin directory. Does not start anything.
-   */
-  async load(dir: string): Promise<LoadedPlugin> {
+  /** Reads and validates one plugin directory. Starts nothing. */
+  async load(dir: string, source: PluginSource): Promise<LoadedPlugin> {
     const manifestPath = getPluginManifestPath(dir);
 
     let raw: unknown;
@@ -184,25 +113,22 @@ export class PluginLoader {
       );
     }
 
-    if (manifest.capabilities.backend) {
-      const entry = getPluginBackendEntry(dir);
-      if (!fs.existsSync(entry)) {
-        throw new Error(
-          `Plugin ${manifest.id} declares a backend but ${entry} is missing`,
-        );
-      }
+    const entry = getPluginBackendEntry(dir, manifest);
+    if (!fs.existsSync(entry)) {
+      throw new Error(
+        `Plugin ${manifest.id} backend entry ${entry} is missing`,
+      );
     }
 
     const plugin: LoadedPlugin = {
       id: manifest.id,
       dir,
+      source,
       manifest,
       state: "loaded",
-      worker: null,
-      inProcess: null,
-      restartAttempts: 0,
+      handle: null,
       lastError: null,
-      ownerUserId: null,
+      errorTimestamps: [],
     };
 
     this.plugins.set(manifest.id, plugin);
@@ -213,17 +139,24 @@ export class PluginLoader {
   }
 
   /**
-   * Scans for plugins, loading every valid one it finds.
+   * Scans both roots. A user-installed plugin can never shadow a bundled one:
+   * the collision is rejected with an error rather than silently skipped, so
+   * dropping an "ssh-terminal" folder into the data directory is visibly
+   * refused instead of quietly ignored.
    *
-   * Bundled first-party plugins are scanned first and a user-installed
-   * directory can never shadow one: dropping an "ssh-terminal" folder into the
-   * data directory must not replace the real transport owner.
+   * The check is on the parsed manifest id, not the directory name, because a
+   * directory can be named anything.
    */
   async loadAll(): Promise<LoadedPlugin[]> {
+    this.plugins.clear();
     const loaded: LoadedPlugin[] = [];
-    const seen = new Set<string>();
 
-    for (const root of [getBundledPluginsDir(), getPluginsDir()]) {
+    const roots: Array<{ root: string; source: PluginSource }> = [
+      { root: getBundledPluginsDir(), source: "bundled" },
+      { root: getPluginsDir(), source: "user" },
+    ];
+
+    for (const { root, source } of roots) {
       if (!fs.existsSync(root)) continue;
 
       const entries = await fs.promises.readdir(root, { withFileTypes: true });
@@ -231,21 +164,20 @@ export class PluginLoader {
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
 
-        if (seen.has(entry.name)) {
-          pluginLogger.warn(
-            `Ignoring plugin directory ${entry.name} in ${root}: a bundled plugin already uses that id`,
-            { operation: "plugin_load" },
-          );
-          continue;
-        }
-
+        const dir = path.join(root, entry.name);
         try {
-          const plugin = await this.load(path.join(root, entry.name));
-          seen.add(plugin.id);
+          const existing = this.plugins.get(entry.name);
+          if (existing && source === "user") {
+            throw new Error(
+              `a bundled plugin already uses the id "${entry.name}"; a plugin in the data directory cannot replace it`,
+            );
+          }
+
+          const plugin = await this.load(dir, source);
           loaded.push(plugin);
         } catch (error) {
           pluginLogger.error(
-            `Skipping plugin directory ${entry.name}`,
+            `Skipping plugin directory ${entry.name} in ${root}`,
             error instanceof Error ? error : new Error(String(error)),
             { operation: "plugin_load" },
           );
@@ -257,83 +189,113 @@ export class PluginLoader {
   }
 
   /**
-   * `ownerUserId` is optional only for in-process first-party plugins, which
-   * do not use the gated ctx and so never act as a user. A worker plugin
-   * without one cannot reach any user data outside of a per-request caller
-   * identity (see broker.requireActor), which only exists inside an HTTP
-   * handler invocation and is never a substitute for having an owner at all.
+   * Orders plugins so a dependency always activates before its dependents.
+   *
+   * Returns the order plus the plugins that cannot run: one with a missing
+   * hard dependency is blocked (recoverable, the dependency may be installed
+   * later), one in a cycle is failed (nothing to wait for).
    */
-  async activate(pluginId: string, ownerUserId?: string): Promise<void> {
+  resolveOrder(candidates: string[]): {
+    order: string[];
+    blocked: Map<string, string>;
+    cycles: Map<string, string>;
+  } {
+    const wanted = new Set(candidates);
+    const blocked = new Map<string, string>();
+    const cycles = new Map<string, string>();
+    const order: string[] = [];
+
+    const state = new Map<string, "visiting" | "done">();
+
+    const visit = (id: string, trail: string[]): boolean => {
+      if (state.get(id) === "done") return true;
+
+      if (state.get(id) === "visiting") {
+        const cycle = [...trail.slice(trail.indexOf(id)), id].join(" -> ");
+        for (const member of trail.slice(trail.indexOf(id))) {
+          cycles.set(member, `dependency cycle: ${cycle}`);
+        }
+        return false;
+      }
+
+      const plugin = this.plugins.get(id);
+      if (!plugin) return false;
+
+      state.set(id, "visiting");
+
+      for (const [dependencyId, range] of Object.entries(
+        plugin.manifest.dependencies ?? {},
+      )) {
+        const dependency = this.plugins.get(dependencyId);
+
+        if (!dependency) {
+          blocked.set(
+            id,
+            `requires plugin "${dependencyId}", which is not installed`,
+          );
+          state.set(id, "done");
+          return false;
+        }
+        if (!semver.satisfies(dependency.manifest.version, range)) {
+          blocked.set(
+            id,
+            `requires "${dependencyId}" ${range}, but ${dependency.manifest.version} is installed`,
+          );
+          state.set(id, "done");
+          return false;
+        }
+        if (!wanted.has(dependencyId)) {
+          blocked.set(
+            id,
+            `requires plugin "${dependencyId}", which is not enabled`,
+          );
+          state.set(id, "done");
+          return false;
+        }
+
+        if (!visit(dependencyId, [...trail, id])) {
+          if (!cycles.has(id)) {
+            blocked.set(
+              id,
+              `requires plugin "${dependencyId}", which could not start`,
+            );
+          }
+          state.set(id, "done");
+          return false;
+        }
+      }
+
+      // Optional dependencies only affect ordering. A missing one is normal,
+      // and the plugin must keep working without it.
+      for (const dependencyId of Object.keys(
+        plugin.manifest.optionalDependencies ?? {},
+      )) {
+        if (wanted.has(dependencyId) && this.plugins.has(dependencyId)) {
+          visit(dependencyId, [...trail, id]);
+        }
+      }
+
+      state.set(id, "done");
+      if (!blocked.has(id) && !cycles.has(id)) order.push(id);
+      return !blocked.has(id) && !cycles.has(id);
+    };
+
+    for (const id of candidates) visit(id, []);
+
+    return { order, blocked, cycles };
+  }
+
+  async activate(pluginId: string): Promise<void> {
     const plugin = this.requirePlugin(pluginId);
 
     if (plugin.state === "active" || plugin.state === "activating") return;
-    if (!plugin.manifest.capabilities.backend) {
-      throw new Error(`Plugin ${pluginId} has no backend to activate`);
-    }
 
-    plugin.ownerUserId = ownerUserId ?? null;
-    await this.spawn(plugin);
-  }
-
-  private async spawn(plugin: LoadedPlugin): Promise<void> {
     plugin.state = "activating";
     plugin.lastError = null;
 
-    if (runsInProcess(plugin.id, plugin.manifest.permissions)) {
-      await this.spawnInProcess(plugin);
-      return;
-    }
-
-    const bootstrap: PluginBootstrapData = {
-      pluginId: plugin.id,
-      pluginDir: plugin.dir,
-      // file:// so the worker's dynamic import works on Windows too.
-      entryPath: pathToFileUrlString(getPluginBackendEntry(plugin.dir)),
-      manifest: plugin.manifest,
-    };
-
-    const { entry, execArgv } = resolveWorkerBootstrap();
-    const worker = new Worker(entry, {
-      workerData: bootstrap,
-      // Deliberately not process.env: the worker must not inherit secrets
-      // passed to the server that way. Only the temp-dir vars are forwarded,
-      // because tooling that writes a cache falls back to the literal string
-      // "undefined" without them.
-      env: pickTempEnv(),
-      resourceLimits: { maxOldGenerationSizeMb: WORKER_MAX_OLD_HEAP_MB },
-      stdout: true,
-      stderr: true,
-      ...(execArgv ? { execArgv } : {}),
-    });
-
-    plugin.worker = worker;
-    this.options.onWorkerReady?.(plugin, worker);
-
-    worker.on("error", (error: Error) => {
-      plugin.lastError = error.message;
-      pluginLogger.error(`Plugin ${plugin.id} worker error`, error, {
-        operation: "plugin_worker",
-      });
-    });
-
-    worker.on("exit", (code: number) => {
-      this.handleExit(plugin, code);
-    });
-
-    await this.awaitActivation(plugin, worker);
-  }
-
-  /**
-   * Starts a first-party plugin on the main thread.
-   *
-   * There is no worker, so there is no crash isolation: an exception thrown
-   * later by this plugin's own callbacks lands wherever it was thrown, exactly
-   * as it would from any other backend module. The restart accounting below
-   * therefore only covers activation failure, which is the one thing we can
-   * still observe from here. See first-party.ts.
-   */
-  private async spawnInProcess(plugin: LoadedPlugin): Promise<void> {
-    const entry = pathToFileUrlString(getPluginBackendEntry(plugin.dir));
+    const entry = pathToFileUrlString(
+      getPluginBackendEntry(plugin.dir, plugin.manifest),
+    );
 
     try {
       const imported = (await import(entry)) as {
@@ -365,274 +327,210 @@ export class PluginLoader {
         );
       }
 
-      // Secret references never block activation, even when not optional. A
-      // borrowed secret is resolved per call and returns null when absent, so
-      // a provider installed later starts working with no restart -- refusing
-      // to start here would turn a recoverable gap into a hard ordering
-      // dependency between two installs.
-      const secretResolution = resolveSecretRequirements(plugin.manifest);
-      for (const reference of secretResolution.unavailable) {
+      // A borrowed secret resolves per call and returns null when absent, so a
+      // provider installed later starts working with no restart. Refusing to
+      // start here would turn a recoverable gap into an install ordering rule.
+      for (const reference of resolveSecretRequirements(plugin.manifest)
+        .unavailable) {
         pluginLogger.info(
           `Plugin ${plugin.id} shared secret "${reference}" is not currently offered; reads will resolve to null`,
           { operation: "plugin_activate" },
         );
       }
 
-      const handle: InProcessHandle = {
-        module: { activate, deactivate },
-        unsubscribers: [],
-        providedKeys: [],
-        providedServices: [],
-        offeredSecrets: [],
-      };
+      const handle = createPluginHandle(plugin.id, { activate, deactivate });
+      const ctx = createPluginContext(plugin.manifest, handle);
 
-      const ctx = createInProcessContext(plugin.manifest, handle);
+      // Attached before activate runs, not after: a plugin that registers a
+      // few things and then throws still has to be cleaned up, and the catch
+      // below can only do that if it can reach the handle.
+      plugin.handle = handle;
+
       await withTimeout(
         Promise.resolve(activate(ctx)),
         ACTIVATION_TIMEOUT_MS,
         `Plugin ${plugin.id} did not activate within ${ACTIVATION_TIMEOUT_MS}ms`,
       );
 
-      plugin.inProcess = handle;
       plugin.state = "active";
-      this.scheduleStabilityReset(plugin);
-      pluginLogger.success(`Activated plugin ${plugin.id} (in-process)`, {
+      plugin.errorTimestamps = [];
+      if (!this.activationOrder.includes(plugin.id)) {
+        this.activationOrder.push(plugin.id);
+      }
+
+      pluginLogger.success(`Activated plugin ${plugin.id}`, {
         operation: "plugin_activate",
       });
     } catch (error) {
       plugin.lastError = error instanceof Error ? error.message : String(error);
-      plugin.inProcess = null;
-      plugin.state = "crashed";
+      plugin.state = "failed";
+
+      // Activation may have registered things before it threw. Dispose them
+      // rather than leaving a half-started plugin holding resources, but do
+      // not call the plugin's own deactivate: it never finished starting.
+      if (plugin.handle) {
+        await disposePluginHandle(plugin.handle, plugin.id, {
+          runDeactivate: false,
+        });
+        plugin.handle = null;
+      }
       throw error instanceof Error ? error : new Error(plugin.lastError);
     }
   }
 
-  private awaitActivation(plugin: LoadedPlugin, worker: Worker): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        cleanup();
-        void this.terminate(plugin);
-        reject(
-          new Error(
-            `Plugin ${plugin.id} did not activate within ${ACTIVATION_TIMEOUT_MS}ms`,
-          ),
-        );
-      }, ACTIVATION_TIMEOUT_MS);
+  /** Activates a set of plugins in dependency order. */
+  async activateAll(pluginIds: string[]): Promise<{
+    activated: string[];
+    blocked: Map<string, string>;
+    failed: Map<string, string>;
+  }> {
+    const { order, blocked, cycles } = this.resolveOrder(pluginIds);
+    const activated: string[] = [];
+    const failed = new Map<string, string>(cycles);
 
-      const onMessage = (message: unknown) => {
-        const m = message as {
-          id?: number;
-          ok?: boolean;
-          error?: { message: string };
-        };
-        // id 0 is reserved for the bootstrap's activation result.
-        if (!m || m.id !== 0) return;
-        cleanup();
-
-        if (m.ok) {
-          plugin.state = "active";
-          this.scheduleStabilityReset(plugin);
-          pluginLogger.success(`Activated plugin ${plugin.id}`, {
-            operation: "plugin_activate",
-          });
-          resolve();
-        } else {
-          plugin.lastError = m.error?.message ?? "activation failed";
-          void this.terminate(plugin);
-          reject(new Error(plugin.lastError));
-        }
-      };
-
-      const onExit = () => {
-        cleanup();
-        reject(
-          new Error(
-            `Plugin ${plugin.id} worker exited before activating${
-              plugin.lastError ? `: ${plugin.lastError}` : ""
-            }`,
-          ),
-        );
-      };
-
-      function cleanup() {
-        clearTimeout(timer);
-        worker.off("message", onMessage);
-        worker.off("exit", onExit);
+    for (const [id, reason] of blocked) {
+      const plugin = this.plugins.get(id);
+      if (plugin) {
+        plugin.state = "blocked";
+        plugin.lastError = reason;
       }
-
-      worker.on("message", onMessage);
-      worker.on("exit", onExit);
-    });
-  }
-
-  /**
-   * Clears the crash counter only once a plugin has stayed up for a while.
-   * Resetting it on activation alone would let a plugin that activates cleanly
-   * and then dies restart forever, because each attempt would look like the
-   * first one.
-   */
-  private scheduleStabilityReset(plugin: LoadedPlugin): void {
-    const existing = this.stabilityTimers.get(plugin.id);
-    if (existing) clearTimeout(existing);
-
-    const timer = setTimeout(() => {
-      this.stabilityTimers.delete(plugin.id);
-      if (plugin.state === "active") plugin.restartAttempts = 0;
-    }, this.options.stabilityWindowMs ?? STABILITY_WINDOW_MS);
-
-    timer.unref?.();
-    this.stabilityTimers.set(plugin.id, timer);
-  }
-
-  private handleExit(plugin: LoadedPlugin, code: number): void {
-    const stabilityTimer = this.stabilityTimers.get(plugin.id);
-    if (stabilityTimer) {
-      clearTimeout(stabilityTimer);
-      this.stabilityTimers.delete(plugin.id);
-    }
-
-    plugin.worker = null;
-    this.options.onWorkerGone?.(plugin);
-
-    // A deliberate stop is not a crash.
-    if (plugin.state === "stopping" || plugin.state === "stopped") {
-      plugin.state = "stopped";
-      return;
-    }
-    if (plugin.state === "disabled") return;
-
-    plugin.state = "crashed";
-    plugin.restartAttempts += 1;
-
-    if (plugin.restartAttempts > MAX_RESTART_ATTEMPTS) {
-      plugin.state = "disabled";
-      pluginLogger.error(
-        `Plugin ${plugin.id} crashed ${MAX_RESTART_ATTEMPTS} times and has been disabled`,
-        new Error(plugin.lastError ?? `worker exited with code ${code}`),
-        { operation: "plugin_crash" },
-      );
-      return;
-    }
-
-    const backoff = this.options.restartBackoffMs ?? RESTART_BACKOFF_MS;
-    const delay =
-      backoff[plugin.restartAttempts - 1] ?? backoff[backoff.length - 1];
-
-    pluginLogger.warn(
-      `Plugin ${plugin.id} crashed, restarting in ${delay}ms (attempt ${plugin.restartAttempts}/${MAX_RESTART_ATTEMPTS})`,
-      { operation: "plugin_crash" },
-    );
-
-    const timer = setTimeout(() => {
-      this.restartTimers.delete(plugin.id);
-      if (plugin.state !== "crashed") return;
-      this.spawn(plugin).catch((error) => {
-        plugin.lastError =
-          error instanceof Error ? error.message : String(error);
+      pluginLogger.warn(`Plugin ${id} is blocked: ${reason}`, {
+        operation: "plugin_activate",
       });
-    }, delay);
-
-    this.restartTimers.set(plugin.id, timer);
-  }
-
-  /**
-   * Clears the crash counter and starts the plugin again. This is what the
-   * Retry button calls once a plugin has been auto-disabled.
-   */
-  async retry(pluginId: string): Promise<void> {
-    const plugin = this.requirePlugin(pluginId);
-    plugin.restartAttempts = 0;
-    plugin.state = "loaded";
-    plugin.lastError = null;
-
-    // In-process plugins legitimately have no owner, so only worker plugins
-    // are held to this.
-    if (
-      !plugin.ownerUserId &&
-      !runsInProcess(plugin.id, plugin.manifest.permissions)
-    ) {
-      throw new Error(
-        `Plugin ${pluginId} has never been activated, so there is nothing to retry`,
-      );
     }
-    await this.spawn(plugin);
+
+    for (const [id, reason] of cycles) {
+      const plugin = this.plugins.get(id);
+      if (plugin) {
+        plugin.state = "failed";
+        plugin.lastError = reason;
+      }
+      pluginLogger.error(`Plugin ${id} cannot start`, new Error(reason), {
+        operation: "plugin_activate",
+      });
+    }
+
+    for (const id of order) {
+      try {
+        await this.activate(id);
+        activated.push(id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        failed.set(id, message);
+        pluginLogger.error(
+          `Failed to activate plugin ${id}`,
+          error instanceof Error ? error : new Error(message),
+          { operation: "plugin_activate" },
+        );
+      }
+    }
+
+    return { activated, blocked, failed };
   }
 
   async deactivate(pluginId: string): Promise<void> {
     const plugin = this.requirePlugin(pluginId);
 
-    const timer = this.restartTimers.get(pluginId);
-    if (timer) {
-      clearTimeout(timer);
-      this.restartTimers.delete(pluginId);
-    }
-    const stabilityTimer = this.stabilityTimers.get(pluginId);
-    if (stabilityTimer) {
-      clearTimeout(stabilityTimer);
-      this.stabilityTimers.delete(pluginId);
-    }
+    this.activationOrder = this.activationOrder.filter((id) => id !== pluginId);
 
-    if (!plugin.worker && !plugin.inProcess) {
+    if (!plugin.handle) {
       plugin.state = "stopped";
       return;
     }
 
     plugin.state = "stopping";
-    await this.terminate(plugin);
+    const handle = plugin.handle;
+    plugin.handle = null;
+
+    // Disposal never throws, so a plugin whose deactivate() misbehaves still
+    // ends up stopped rather than stuck in "stopping" forever.
+    await disposePluginHandle(handle, plugin.id);
     plugin.state = "stopped";
   }
 
-  private async terminate(plugin: LoadedPlugin): Promise<void> {
-    // An in-process plugin owns real resources -- a listening port, live SSH
-    // sessions -- and there is no thread to kill, so its own cleanup is the
-    // only thing that releases them.
-    if (plugin.inProcess) {
-      const handle = plugin.inProcess;
-      plugin.inProcess = null;
-      this.options.onWorkerGone?.(plugin);
-      await disposeInProcessHandle(handle, plugin.id);
-      return;
-    }
+  /**
+   * Records a runtime error against a plugin. Past the threshold inside the
+   * window the plugin is marked failed and torn down, because a plugin
+   * throwing on every call is worse than one that is off.
+   */
+  async reportError(pluginId: string, error: unknown): Promise<void> {
+    const plugin = this.plugins.get(pluginId);
+    if (!plugin) return;
 
-    // A worker plugin cannot offer a shared secret today, but terminate() is
-    // the one path every tier goes through, so the sweep belongs here rather
-    // than only in the in-process branch above.
-    withdrawAllForPlugin(plugin.id);
+    const message = error instanceof Error ? error.message : String(error);
+    plugin.lastError = message;
 
-    const worker = plugin.worker;
-    if (!worker) return;
+    pluginLogger.error(
+      `Plugin ${pluginId} threw at runtime`,
+      error instanceof Error ? error : new Error(message),
+      { operation: "plugin_runtime" },
+    );
 
-    // Only on a deliberate stop. A crashed worker has nothing left to ask.
-    if (plugin.state === "stopping" && this.options.onBeforeTerminate) {
-      try {
-        await this.options.onBeforeTerminate(plugin);
-      } catch {
-        // Cleanup is best-effort; the worker is going away regardless.
-      }
-    }
+    const windowMs = this.options.errorWindowMs ?? DEFAULT_ERROR_WINDOW_MS;
+    const threshold = this.options.errorThreshold ?? DEFAULT_ERROR_THRESHOLD;
+    const now = Date.now();
 
-    plugin.worker = null;
-    try {
-      await worker.terminate();
-    } catch {
-      // Already gone.
-    }
+    plugin.errorTimestamps = [
+      ...plugin.errorTimestamps.filter((at) => now - at < windowMs),
+      now,
+    ];
+
+    if (plugin.errorTimestamps.length < threshold) return;
+
+    pluginLogger.error(
+      `Plugin ${pluginId} failed ${plugin.errorTimestamps.length} times in ${windowMs}ms and has been stopped`,
+      new Error(message),
+      { operation: "plugin_runtime" },
+    );
+
+    await this.deactivate(pluginId);
+    plugin.state = "failed";
+    plugin.lastError = message;
+    plugin.errorTimestamps = [];
+    this.options.onFailed?.(plugin);
   }
 
-  /** Stops everything. Called on shutdown and by tests. */
-  async shutdown(): Promise<void> {
-    for (const timer of this.restartTimers.values()) clearTimeout(timer);
-    this.restartTimers.clear();
-    for (const timer of this.stabilityTimers.values()) clearTimeout(timer);
-    this.stabilityTimers.clear();
+  /**
+   * Wraps a plugin callback so a throw is counted rather than escaping into
+   * whichever core call site invoked it.
+   */
+  wrap<Args extends unknown[], Result>(
+    pluginId: string,
+    fn: (...args: Args) => Result | Promise<Result>,
+  ): (...args: Args) => Promise<Result | undefined> {
+    return async (...args: Args) => {
+      try {
+        return await fn(...args);
+      } catch (error) {
+        await this.reportError(pluginId, error);
+        return undefined;
+      }
+    };
+  }
 
-    await Promise.all(
-      [...this.plugins.values()].map(async (plugin) => {
-        plugin.state = "stopping";
-        await this.terminate(plugin);
-        plugin.state = "stopped";
-      }),
-    );
+  /** Clears the error budget and starts the plugin again. */
+  async retry(pluginId: string): Promise<void> {
+    const plugin = this.requirePlugin(pluginId);
+    plugin.errorTimestamps = [];
+    plugin.lastError = null;
+    plugin.state = "loaded";
+    await this.activate(pluginId);
+  }
+
+  /** Stops everything, reverse activation order. */
+  async shutdown(): Promise<void> {
+    for (const id of [...this.activationOrder].reverse()) {
+      try {
+        await this.deactivate(id);
+      } catch (error) {
+        pluginLogger.error(
+          `Failed to deactivate plugin ${id} during shutdown`,
+          error instanceof Error ? error : new Error(String(error)),
+          { operation: "plugin_shutdown" },
+        );
+      }
+    }
+    this.activationOrder = [];
   }
 
   private requirePlugin(pluginId: string): LoadedPlugin {
@@ -640,15 +538,6 @@ export class PluginLoader {
     if (!plugin) throw new Error(`Plugin ${pluginId} is not loaded`);
     return plugin;
   }
-}
-
-function pickTempEnv(): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const key of ["TMPDIR", "TMP", "TEMP"]) {
-    const value = process.env[key];
-    if (value) env[key] = value;
-  }
-  return env;
 }
 
 function withTimeout<T>(

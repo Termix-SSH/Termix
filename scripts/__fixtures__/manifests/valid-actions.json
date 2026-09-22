@@ -1,10 +1,10 @@
 {
-  "id": "sample-actions",
-  "name": "Sample Actions",
+  "id": "sample-plugin",
+  "name": "Sample",
   "version": "1.0.0",
-  "description": "A plugin that contributes a UI action and offers a slot of its own.",
+  "description": "A sample.",
   "author": {
-    "name": "Jane Doe"
+    "name": "Termix"
   },
   "license": "MIT",
   "category": "Productivity",
@@ -12,41 +12,19 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": {
-    "backend": false,
-    "frontend": true,
-    "electron": false,
-    "platforms": ["linux", "win32", "darwin"]
-  },
-  "permissions": ["ui.tab"],
+  "capabilities": ["kv:own", "ui:surface"],
   "contributes": {
     "permissionGroup": {
-      "group": "sampleactions",
-      "permissions": ["sampleactions.use"]
+      "group": "sample-plugin",
+      "permissions": ["sample-plugin.use"]
     },
     "actions": [
       {
-        "id": "sampleactions.openWithContext",
-        "titleKey": "sampleActions.open",
-        "handler": "openWithContext",
-        "icon": "Sparkles",
-        "permission": "sampleactions.use",
-        "slot": "terminal.toolbar",
-        "kind": "button"
-      },
-      {
-        "id": "sampleactions.ungated",
-        "titleKey": "sampleActions.ungated",
-        "handler": "ungated"
-      }
-    ],
-    "actionSlots": [
-      {
-        "id": "sampleactions.panel",
-        "accepts": ["button"],
-        "descriptionKey": "sampleActions.panelDescription"
+        "id": "sample.open",
+        "titleKey": "sample.open",
+        "handler": "open",
+        "permission": "sample-plugin.use"
       }
     ]
-  },
-  "sidecars": []
+  }
 }

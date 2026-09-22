@@ -2,11 +2,9 @@
  * Two real plugins on disk, one offering a secret and one borrowing it, driven
  * through the actual PluginLoader.
  *
- * Same borrowed-id trick as service-contract.test.ts: the in-process allowlist
- * is hardcoded and deliberately unfakeable, so the fixtures use real
- * first-party ids to reach that tier. The secret ("api-key") and the
- * permission gating it ("testplugin.secrets.share") are fixture-owned, so
- * nothing about the shipped ssh-terminal or docker plugins is under test.
+ * The secret ("api-key") and the permission gating it
+ * ("testplugin.secrets.share") are fixture-owned, so nothing about the
+ * shipped plugins is under test even though the fixtures borrow their ids.
  *
  * What the unit test cannot show, and this does: that the manifest declaration
  * is enforced by the real ctx, and that a genuine uninstall through
@@ -53,8 +51,6 @@ vi.mock("../../utils/permission-manager.js", () => ({
 }));
 
 const { PluginLoader } = await import("../../plugins/loader.js");
-const { TRANSPORT_OWNER_CAPABILITY } =
-  await import("../../plugins/first-party.js");
 const {
   clearSecretRegistry,
   getSecretRegistration,
@@ -107,7 +103,7 @@ export async function activate(ctx) {
 function providerFixture(): Fixture {
   return createFixturePlugin({
     id: PROVIDER_ID,
-    permissions: [TRANSPORT_OWNER_CAPABILITY],
+    capabilities: ["kv:own"],
     manifestOverrides: {
       category: "Terminal",
       providesSecret: [{ key: KEY, permission: PERMISSION }],
@@ -125,7 +121,7 @@ function consumerFixture(
 ): Fixture {
   return createFixturePlugin({
     id: CONSUMER_ID,
-    permissions: [TRANSPORT_OWNER_CAPABILITY],
+    capabilities: ["kv:own"],
     backendSource: CONSUMER_SOURCE,
     manifestOverrides: { category: "Infrastructure", requiresSecret },
   });
@@ -286,7 +282,7 @@ describe("cross-plugin secret references", () => {
   it("refuses to offer a secret the provider's manifest never declared", async () => {
     provider = createFixturePlugin({
       id: PROVIDER_ID,
-      permissions: [TRANSPORT_OWNER_CAPABILITY],
+      capabilities: ["kv:own"],
       backendSource: `
 export async function activate(ctx) {
   ctx.secrets.offer("undeclared-key", () => "nope");

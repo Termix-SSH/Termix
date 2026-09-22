@@ -15,83 +15,18 @@ import {
   type PluginSummary,
 } from "@/api/plugins-api";
 import { AdminToggle } from "./AdminSettingsShared";
+import { CAPABILITY_CATALOG } from "@termix/plugin-sdk/capabilities";
 
 /**
- * Every permission a plugin's manifest can declare, with the label and
- * one-line description shown here. process:transport-owner is left out on
- * purpose: it is reserved for first-party plugins and enforced by a hardcoded
- * allowlist, not something an admin grants, so showing a toggle for it would
- * be misleading. ui.* permissions describe what a plugin contributes to the
- * shell rather than a capability the broker gates, but they are still shown
- * here since the manifest can declare them and a plugin's grant list should
- * not silently hide part of what it asked for.
+ * The catalog is the list. It is ordered worst first, so the riskiest thing a
+ * plugin asked for is the first row an admin reads rather than something they
+ * have to scroll for.
  */
-const LABELED_PERMISSIONS: Array<{
-  capability: string;
-  labelKey: string;
-  descriptionKey: string;
-}> = [
-  {
-    capability: "hosts.read",
-    labelKey: "admin.pluginPermissionHostsRead",
-    descriptionKey: "admin.pluginPermissionHostsReadDesc",
-  },
-  {
-    capability: "hosts.write",
-    labelKey: "admin.pluginPermissionHostsWrite",
-    descriptionKey: "admin.pluginPermissionHostsWriteDesc",
-  },
-  {
-    capability: "credentials.use",
-    labelKey: "admin.pluginPermissionCredentialsUse",
-    descriptionKey: "admin.pluginPermissionCredentialsUseDesc",
-  },
-  {
-    capability: "ssh.exec",
-    labelKey: "admin.pluginPermissionSshExec",
-    descriptionKey: "admin.pluginPermissionSshExecDesc",
-  },
-  {
-    capability: "ssh.sftp",
-    labelKey: "admin.pluginPermissionSshSftp",
-    descriptionKey: "admin.pluginPermissionSshSftpDesc",
-  },
-  {
-    capability: "storage.own",
-    labelKey: "admin.pluginPermissionStorageOwn",
-    descriptionKey: "admin.pluginPermissionStorageOwnDesc",
-  },
-  {
-    capability: "storage.secrets",
-    labelKey: "admin.pluginPermissionStorageSecrets",
-    descriptionKey: "admin.pluginPermissionStorageSecretsDesc",
-  },
-  {
-    capability: "network.outbound",
-    labelKey: "admin.pluginPermissionNetworkOutbound",
-    descriptionKey: "admin.pluginPermissionNetworkOutboundDesc",
-  },
-  {
-    capability: "events.read",
-    labelKey: "admin.pluginPermissionEventsRead",
-    descriptionKey: "admin.pluginPermissionEventsReadDesc",
-  },
-  {
-    capability: "notify.send",
-    labelKey: "admin.pluginPermissionNotifySend",
-    descriptionKey: "admin.pluginPermissionNotifySendDesc",
-  },
-  {
-    capability: "users.read",
-    labelKey: "admin.pluginPermissionUsersRead",
-    descriptionKey: "admin.pluginPermissionUsersReadDesc",
-  },
-  {
-    capability: "process.sidecar",
-    labelKey: "admin.pluginPermissionProcessSidecar",
-    descriptionKey: "admin.pluginPermissionProcessSidecarDesc",
-  },
-];
+const LABELED_PERMISSIONS = CAPABILITY_CATALOG.map((capability) => ({
+  capability: capability.id,
+  labelKey: capability.titleKey,
+  descriptionKey: capability.consequenceKey,
+}));
 
 export function PluginPermissionsDialog({
   plugin,
@@ -109,10 +44,11 @@ export function PluginPermissionsDialog({
 
   if (!plugin) return null;
 
+  const declared = plugin.capabilities ?? [];
   const rows = LABELED_PERMISSIONS.filter((row) =>
-    plugin.permissions.includes(row.capability),
+    declared.includes(row.capability),
   );
-  const granted = new Set(plugin.grantedCapabilities);
+  const granted = new Set(plugin.grantedCapabilities ?? []);
 
   const toggle = async (capability: string, isGranted: boolean) => {
     setBusy(capability);

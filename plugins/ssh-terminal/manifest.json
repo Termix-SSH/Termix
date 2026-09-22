@@ -3,19 +3,24 @@
   "name": "SSH Terminal",
   "version": "1.0.0",
   "description": "Interactive SSH terminal sessions, with jump hosts, host key verification and session sharing.",
-  "author": { "name": "Termix" },
+  "author": {
+    "name": "Termix"
+  },
   "license": "MIT",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Terminal",
   "icon": "SquareTerminal",
-  "engine": { "termix": ">=2.9.0", "api": "1" },
-  "capabilities": {
-    "backend": true,
-    "frontend": true,
-    "electron": true,
-    "platforms": ["linux", "win32", "darwin"]
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
   },
-  "permissions": ["process:transport-owner"],
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "ssh:connect",
+    "network:serve",
+    "ui:surface"
+  ],
   "contributes": {
     "tabs": [
       {
@@ -32,5 +37,8 @@
       }
     ]
   },
-  "sidecars": []
+  "backend": "backend/index.mjs",
+  "frontend": "frontend/index.mjs",
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
 }

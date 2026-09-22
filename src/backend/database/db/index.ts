@@ -689,6 +689,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         source TEXT NOT NULL DEFAULT 'community',
         registry_id TEXT,
         state TEXT NOT NULL DEFAULT 'disabled',
+        last_error TEXT,
         installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         auto_update INTEGER NOT NULL DEFAULT 0,
@@ -701,7 +702,9 @@ async function initializeCompleteDatabase(): Promise<void> {
         plugin_id TEXT NOT NULL,
         capability TEXT NOT NULL,
         granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        granted_by TEXT NOT NULL,
+        -- Nullable: a bundled grant is made by the install, not by a user.
+        granted_by TEXT,
+        source TEXT NOT NULL DEFAULT 'admin',
         UNIQUE (plugin_id, capability),
         FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE,
         FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
@@ -984,6 +987,63 @@ const addColumnIfNotExists = (
         },
       );
     }
+  }
+};
+
+/**
+ * Drops the NOT NULL on plugin_permission_grants.granted_by.
+ *
+ * A bundled grant is made by the install rather than by a person, so there is
+ * no user id to record. SQLite cannot relax a constraint in place, so the
+ * table is rebuilt; it only ever holds a handful of rows.
+ */
+const relaxPluginGrantGrantedBy = () => {
+  try {
+    const sql = sqlite
+      .prepare(
+        `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'plugin_permission_grants'`,
+      )
+      .get() as { sql?: string } | undefined;
+
+    if (!sql?.sql || !/granted_by\s+TEXT\s+NOT\s+NULL/i.test(sql.sql)) {
+      return;
+    }
+
+    sqlite.exec(`
+      PRAGMA foreign_keys=OFF;
+      BEGIN;
+      CREATE TABLE plugin_permission_grants_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          plugin_id TEXT NOT NULL,
+          capability TEXT NOT NULL,
+          granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          granted_by TEXT,
+          source TEXT NOT NULL DEFAULT 'admin',
+          UNIQUE (plugin_id, capability),
+          FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE,
+          FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
+      );
+      INSERT INTO plugin_permission_grants_new
+          (id, plugin_id, capability, granted_at, granted_by, source)
+          SELECT id, plugin_id, capability, granted_at, granted_by, 'admin'
+          FROM plugin_permission_grants;
+      DROP TABLE plugin_permission_grants;
+      ALTER TABLE plugin_permission_grants_new RENAME TO plugin_permission_grants;
+      COMMIT;
+      PRAGMA foreign_keys=ON;
+    `);
+
+    databaseLogger.info(
+      "Relaxed plugin_permission_grants.granted_by to allow bundled grants",
+      { operation: "schema_migration" },
+    );
+  } catch (error) {
+    databaseLogger.warn(
+      `Failed to relax plugin_permission_grants.granted_by: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      { operation: "schema_migration" },
+    );
   }
 };
 
@@ -2835,6 +2895,16 @@ const migrateSchema = () => {
     );
   }
   addColumnIfNotExists("homepage_items", "sync_id", "TEXT");
+
+  // Plugin runtime: lastError reports why a plugin is blocked or failed, and
+  // grants record whether a capability came from an admin or from bundling.
+  addColumnIfNotExists("plugins", "last_error", "TEXT");
+  addColumnIfNotExists(
+    "plugin_permission_grants",
+    "source",
+    "TEXT NOT NULL DEFAULT 'admin'",
+  );
+  relaxPluginGrantGrantedBy();
 
   const syncIdTables = [
     "ssh_data",

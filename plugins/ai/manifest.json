@@ -3,19 +3,38 @@
   "name": "AI Assistant",
   "version": "1.0.0",
   "description": "An AI assistant that can read your hosts, snippets, fleets, alerts and automations, and propose changes for you to approve.",
-  "author": { "name": "Termix" },
+  "author": {
+    "name": "Termix"
+  },
   "license": "MIT",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Productivity",
   "icon": "Sparkles",
-  "engine": { "termix": ">=2.9.0", "api": "1" },
-  "capabilities": {
-    "backend": true,
-    "frontend": true,
-    "electron": true,
-    "platforms": ["linux", "win32", "darwin"]
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
   },
-  "permissions": ["process:transport-owner"],
+  "capabilities": [
+    "hosts:read",
+    "hosts:write",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "secrets:own",
+    "network:outbound",
+    "audit:read",
+    "ui:surface"
+  ],
+  "dependencies": {
+    "automations": "^1.0.0"
+  },
+  "providesSecret": [
+    {
+      "key": "api-key",
+      "permission": "ai.secrets.share",
+      "descriptionKey": "ai.secrets.shareApiKey"
+    }
+  ],
   "contributes": {
     "tabs": [
       {
@@ -23,6 +42,17 @@
         "titleKey": "nav.ai",
         "icon": "Sparkles",
         "openFrom": ["rail", "palette"]
+      }
+    ],
+    "actions": [
+      {
+        "id": "ai.openWithContext",
+        "titleKey": "ai.assistant",
+        "handler": "openWithContext",
+        "icon": "Bot",
+        "permission": "ai.services.use",
+        "slot": "terminal.toolbar",
+        "kind": "button"
       }
     ],
     "permissionGroup": {
@@ -37,25 +67,10 @@
       "defaultForRole": {
         "admin": ["ai.services.use"]
       }
-    },
-    "actions": [
-      {
-        "id": "ai.openWithContext",
-        "titleKey": "ai.assistant",
-        "handler": "openWithContext",
-        "icon": "Bot",
-        "permission": "ai.services.use",
-        "slot": "terminal.toolbar",
-        "kind": "button"
-      }
-    ]
-  },
-  "providesSecret": [
-    {
-      "key": "api-key",
-      "permission": "ai.secrets.share",
-      "descriptionKey": "ai.secrets.shareApiKey"
     }
-  ],
-  "sidecars": []
+  },
+  "backend": "backend/index.mjs",
+  "frontend": "frontend/index.mjs",
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
 }

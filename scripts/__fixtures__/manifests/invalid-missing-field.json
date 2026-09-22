@@ -1,9 +1,9 @@
 {
-  "id": "sample-plugin",
-  "name": "Sample Plugin",
+  "name": "Sample",
   "version": "1.0.0",
+  "description": "A sample.",
   "author": {
-    "name": "Jane Doe"
+    "name": "Termix"
   },
   "license": "MIT",
   "category": "Productivity",
@@ -11,12 +11,5 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": {
-    "backend": true,
-    "frontend": true,
-    "electron": false,
-    "platforms": ["linux"]
-  },
-  "permissions": [],
-  "sidecars": []
+  "capabilities": ["kv:own", "ui:surface"]
 }

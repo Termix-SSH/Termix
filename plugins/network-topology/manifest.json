@@ -3,19 +3,18 @@
   "name": "Network Topology",
   "version": "1.0.0",
   "description": "Visualize hosts and their connections as an interactive graph, saved per user.",
-  "author": { "name": "Termix" },
+  "author": {
+    "name": "Termix"
+  },
   "license": "MIT",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Infrastructure",
   "icon": "Network",
-  "engine": { "termix": ">=2.9.0", "api": "1" },
-  "capabilities": {
-    "backend": true,
-    "frontend": true,
-    "electron": true,
-    "platforms": ["linux", "win32", "darwin"]
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
   },
-  "permissions": ["process:transport-owner"],
+  "capabilities": ["db:own", "ui:surface"],
   "contributes": {
     "tabs": [
       {
@@ -24,10 +23,10 @@
         "icon": "Network",
         "openFrom": ["rail", "palette"]
       }
-    ],
-    "dashboardCards": [
-      { "id": "network_graph", "titleKey": "dashboard.networkGraph" }
     ]
   },
-  "sidecars": []
+  "backend": "backend/index.mjs",
+  "frontend": "frontend/index.mjs",
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
 }

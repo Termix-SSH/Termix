@@ -3,19 +3,25 @@
   "name": "Proxmox",
   "version": "1.0.0",
   "description": "Discover Proxmox VE guests over an existing SSH host, import them as Termix hosts, and keep them in sync.",
-  "author": { "name": "Termix" },
+  "author": {
+    "name": "Termix"
+  },
   "license": "MIT",
   "repository": "https://github.com/Termix-SSH/Termix",
   "category": "Infrastructure",
   "icon": "Server",
-  "engine": { "termix": ">=2.9.0", "api": "1" },
-  "capabilities": {
-    "backend": true,
-    "frontend": true,
-    "electron": true,
-    "platforms": ["linux", "win32", "darwin"]
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
   },
-  "permissions": ["process:transport-owner"],
+  "capabilities": [
+    "hosts:read",
+    "hosts:write",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "ui:surface"
+  ],
   "contributes": {
     "hostCapability": {
       "key": "enableProxmox",
@@ -23,5 +29,8 @@
       "editorTab": "proxmox"
     }
   },
-  "sidecars": []
+  "backend": "backend/index.mjs",
+  "frontend": "frontend/index.mjs",
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
 }

@@ -99,4 +99,85 @@ export default tseslint.config([
       ],
     },
   },
+  {
+    // Core must not reach into a plugin. A plugin can be disabled, upgraded
+    // or removed, so an import from core turns "disabled" into a broken
+    // build rather than a missing feature. Core talks to plugins through the
+    // runtime in src/backend/plugins/ and the dispatchers in
+    // database/routes/*-dispatch.ts, both of which handle absence.
+    //
+    // Tests are exempt: they import a plugin's modules on purpose to test
+    // them, and until A2 gives each plugin its own suite they live under
+    // src/*/tests/plugins/.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/**/tests/**"],
+    rules: {
+      // An error for the backend, which has dispatchers to register through
+      // and no remaining offenders.
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/plugins/*/backend/**"],
+              message:
+                "Core must not import a plugin backend. Register a dispatcher or an SDK service instead, so disabling the plugin degrades cleanly.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The shell still imports plugin components directly (the terminal tab,
+    // the Guacamole app, the Proxmox dialog). There is no frontend plugin
+    // loader yet, so there is nothing to move them to: A7 builds the app
+    // object that registers these surfaces and this becomes an error.
+    files: ["src/ui/**/*.{ts,tsx}"],
+    ignores: ["src/ui/tests/**"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["**/plugins/*/frontend/**"],
+              message:
+                "The shell should not import plugin components directly. A7 replaces these with registrations through the app object.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The other direction. A plugin is supposed to talk to core only through
+    // @termix/plugin-sdk, which is the contract D1 finishes enforcing.
+    //
+    // Only the backend is fenced today. Plugin backends reach core by
+    // relative path (../../../src/backend/...) and plugin frontends use the
+    // "@/" alias for shared UI, both of which are the "legacy core imports"
+    // debt recorded in packages/plugin-sdk/ARCHITECTURE.md: the SDK does not
+    // yet expose the SSH pool, host resolution, repositories or the
+    // component library. A7 moves the frontends onto the app object and D1
+    // moves the backends onto SDK APIs, and this rule tightens to match.
+    //
+    // What it already catches: a plugin backend importing the frontend tree,
+    // which is not debt in any direction, just a mistake.
+    files: ["plugins/**/backend/**/*.{ts,mjs}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/*", "**/src/ui/**"],
+              message:
+                "A plugin backend cannot import frontend code. Import from @termix/plugin-sdk, or use a relative path within the plugin.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

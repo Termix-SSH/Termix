@@ -11,20 +11,30 @@ export interface PluginContributions {
   tabs?: PluginTabContribution[];
 }
 
+/**
+ * What GET /plugins returns.
+ *
+ * The admin-only fields are absent for a caller without
+ * admin.plugins.manage: what a plugin may do, what it has been granted and
+ * why it failed are operational details the shell does not need.
+ */
 export interface PluginSummary {
   id: string;
   name: string;
   version: string;
-  tier: string;
-  source: string;
   enabled: boolean;
-  runtimeState: string;
-  lastError: string | null;
+  /** enabled | disabled | blocked | failed, or the loader's live state. */
+  state: string;
   contributes: PluginContributions | null;
-  /** Capabilities this plugin's manifest declares it may ask for. */
-  permissions: string[];
-  /** The subset of `permissions` an admin has actually granted. */
-  grantedCapabilities: string[];
+
+  tier?: string;
+  source?: string;
+  /** Capabilities this plugin's manifest declares. Admins only. */
+  capabilities?: string[];
+  /** The subset of `capabilities` actually granted. Admins only. */
+  grantedCapabilities?: string[];
+  /** Why the plugin is blocked or failed. Admins only. */
+  lastError?: string | null;
 }
 
 export async function getPlugins(): Promise<PluginSummary[]> {
