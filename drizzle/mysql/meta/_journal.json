@@ -176,6 +176,13 @@
       "when": 1789991404402,
       "tag": "0024_thin_colleen_wing",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1790083819606,
+      "tag": "0025_wet_master_mold",
+      "breakpoints": true
     }
   ]
 }

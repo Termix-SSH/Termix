@@ -129,9 +129,6 @@ const AdminSettingsPanel = lazy(() =>
     default: m.AdminSettingsPanel,
   })),
 );
-const AlertsPanel = lazy(() =>
-  import("@/sidebar/AlertsPanel").then((m) => ({ default: m.AlertsPanel })),
-);
 const CredentialsPanel = lazy(() =>
   import("@/sidebar/CredentialsPanel").then((m) => ({
     default: m.CredentialsPanel,
@@ -2896,12 +2893,6 @@ export function AppShell({
                 if (isMobile) setSidebarOpen(false);
               }}
             />
-          </div>
-        )}
-
-        {railView === "alerts" && (
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            <AlertsPanel />
           </div>
         )}
       </div>

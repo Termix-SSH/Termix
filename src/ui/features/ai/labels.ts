@@ -1,7 +1,7 @@
 /**
  * Turns the internal identifiers the assistant works in into text a user can
  * read. Tool names, proposal kinds and payload keys all surface in the panel,
- * and raw ids like "propose_create_alert_rule" or "thresholddurationseconds"
+ * and raw ids like "propose_create_automation" or "thresholddurationseconds"
  * are not something to show anyone.
  */
 
@@ -14,9 +14,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_automations: "Reading automations",
   get_automation: "Reading automation",
   list_workspaces: "Reading workspaces",
-  list_alert_rules: "Reading alert rules",
   list_notification_channels: "Reading notification channels",
-  get_alert_firings: "Reading recent alerts",
   list_homepage_items: "Reading homepage items",
   get_command_history: "Reading command history",
   get_network_topology: "Reading network topology",
@@ -28,7 +26,6 @@ const TOOL_LABELS: Record<string, string> = {
   propose_delete_snippet: "Delete snippet",
   propose_create_automation: "Create automation",
   propose_create_fleet: "Create fleet",
-  propose_create_alert_rule: "Create alert rule",
   propose_run_command: "Run command",
 };
 

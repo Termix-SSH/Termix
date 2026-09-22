@@ -207,18 +207,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "user_id",
   },
 
-  // Alerting.
-  {
-    name: "idx_alert_firings_rule",
-    table: "alert_firings",
-    columns: "rule_id, fired_at",
-  },
-  {
-    name: "idx_alert_firings_host",
-    table: "alert_firings",
-    columns: "host_id",
-  },
-
   // Automations.
   {
     name: "idx_automations_user",

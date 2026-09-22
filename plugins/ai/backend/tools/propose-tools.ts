@@ -217,40 +217,6 @@ export const proposeTools: AiTool[] = [
       }),
   },
   {
-    name: "propose_create_alert_rule",
-    description:
-      "Propose a new alert rule that fires when a host metric crosses a threshold.",
-    category: "propose",
-    parameters: objectSchema(
-      {
-        name: str("Rule name"),
-        hostId: num("Host id to watch, or omit to watch all hosts"),
-        triggerType: str(
-          "What to watch, for example cpu, memory, disk or host_status",
-        ),
-        thresholdValue: num("Threshold to compare against"),
-        thresholdDurationSeconds: num(
-          "How long the breach must persist before firing",
-        ),
-        cooldownMinutes: num("Minimum minutes between repeat firings"),
-      },
-      ["name", "triggerType"],
-    ),
-    handler: async (args) =>
-      proposal(
-        "propose_create_alert_rule",
-        `Create alert rule ${String(args.name)}`,
-        {
-          name: args.name,
-          hostId: args.hostId ?? null,
-          triggerType: args.triggerType,
-          thresholdValue: args.thresholdValue ?? null,
-          thresholdDurationSeconds: args.thresholdDurationSeconds ?? null,
-          cooldownMinutes: args.cooldownMinutes ?? 15,
-        },
-      ),
-  },
-  {
     name: "propose_run_command",
     description:
       "Propose running a command on a host. The user reviews and approves it before it runs. Use this for anything that changes state; read-only diagnostics may run directly if the user has enabled that.",

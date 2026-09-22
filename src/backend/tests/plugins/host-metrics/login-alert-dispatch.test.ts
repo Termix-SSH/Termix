@@ -26,7 +26,6 @@ const route = ast.statements.find(
 );
 if (!route) throw new Error("Login event route is missing");
 const notify = vi.fn();
-const legacy = vi.fn().mockResolvedValue(undefined);
 let handler: (req: unknown, res: unknown) => Promise<void>;
 runInNewContext(
   ts.transpileModule(route.getText(ast), {
@@ -49,7 +48,6 @@ runInNewContext(
       },
     }),
     notifyAutomationInternalEvent: notify,
-    AlertEngine: { getInstance: () => ({ evaluateUserLogin: legacy }) },
   },
 );
 const body = {
@@ -61,7 +59,7 @@ const body = {
 const response = () => ({ status: vi.fn().mockReturnThis(), json: vi.fn() });
 beforeEach(() => vi.clearAllMocks());
 
-it("delivers successful SSH login details to automations while retaining the legacy hook", async () => {
+it("delivers successful SSH login details to automations", async () => {
   const res = response();
   await handler(
     {
@@ -75,12 +73,6 @@ it("delivers successful SSH login details to automations while retaining the leg
     sshUser: "alice",
     fromIp: "192.0.2.4",
   });
-  expect(legacy).toHaveBeenCalledExactlyOnceWith(
-    42,
-    "owner",
-    "alice",
-    "192.0.2.4",
-  );
   expect(res.json).toHaveBeenCalledWith({ ok: true });
 });
 
@@ -101,6 +93,5 @@ it.each([
     );
     expect(res.status).toHaveBeenCalledWith(403);
     expect(notify).not.toHaveBeenCalled();
-    expect(legacy).not.toHaveBeenCalled();
   },
 );

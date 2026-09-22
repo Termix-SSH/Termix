@@ -265,10 +265,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./utils/crypto-migration/channel-config-encryption.js");
     await runChannelConfigEncryptionMigration();
 
-    const { runAutomationsMigration } =
-      await import("./utils/crypto-migration/automations-migration.js");
-    await runAutomationsMigration();
-
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();
     }

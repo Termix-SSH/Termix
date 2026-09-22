@@ -1440,26 +1440,6 @@ export const proxmoxNodeHistory = mysqlTable("proxmox_node_history", {
 // --- proxmox-node-history end ---
 
 // --- alerts begin ---
-export const alertRules = mysqlTable("alert_rules", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id").references(() => hosts.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  enabled: boolean("enabled").notNull().default(true),
-  triggerType: text("trigger_type").notNull(),
-  thresholdValue: double("threshold_value"),
-  thresholdDurationSeconds: int("threshold_duration_seconds"),
-  cooldownMinutes: int("cooldown_minutes").notNull().default(15),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-
 export const notificationChannels = mysqlTable("notification_channels", {
   id: int("id").autoincrement().primaryKey(),
   userId: varchar("user_id", { length: 255 })
@@ -1473,46 +1453,6 @@ export const notificationChannels = mysqlTable("notification_channels", {
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
-
-export const alertRuleChannels = mysqlTable("alert_rule_channels", {
-  id: int("id").autoincrement().primaryKey(),
-  ruleId: int("rule_id")
-    .notNull()
-    .references(() => alertRules.id, { onDelete: "cascade" }),
-  channelId: int("channel_id")
-    .notNull()
-    .references(() => notificationChannels.id, { onDelete: "cascade" }),
-});
-
-export const alertFirings = mysqlTable(
-  "alert_firings",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    ruleId: int("rule_id")
-      .notNull()
-      .references(() => alertRules.id, { onDelete: "cascade" }),
-    hostId: int("host_id").notNull(),
-    hostName: text("host_name").notNull(),
-    firedAt: varchar("fired_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-    resolvedAt: text("resolved_at"),
-    value: double("value"),
-    message: text("message").notNull(),
-    severity: text("severity").notNull().default("warning"),
-    acknowledged: boolean("acknowledged")
-      .notNull()
-      .default(false),
-  },
-  // A rule's history is read newest-first; host_id is filtered on its own.
-  (table) => [
-    index("idx_alert_firings_rule").on(table.ruleId, table.firedAt),
-    index("idx_alert_firings_host").on(table.hostId),
-  ],
-);
 // --- alerts end ---
 
 // --- automations begin ---

@@ -1,5 +1,4 @@
 import {
-  createCurrentAlertRepository,
   createCurrentAutomationRepository,
   createCurrentFleetRepository,
   createCurrentHostRepository,
@@ -214,35 +213,6 @@ export async function applyProposal(
       return {
         ok: true,
         summary: `Created fleet ${(fleet as any).name} with ${added} host${added === 1 ? "" : "s"}`,
-      };
-    }
-
-    case "propose_create_alert_rule": {
-      const created = await createCurrentAlertRepository().createAlertRule({
-        userId,
-        name: requireString(payload.name, "name"),
-        hostId:
-          payload.hostId === null || payload.hostId === undefined
-            ? null
-            : requireNumber(payload.hostId, "hostId"),
-        enabled: true,
-        triggerType: requireString(payload.triggerType, "triggerType"),
-        thresholdValue:
-          payload.thresholdValue === null ||
-          payload.thresholdValue === undefined
-            ? null
-            : Number(payload.thresholdValue),
-        thresholdDurationSeconds:
-          payload.thresholdDurationSeconds === null ||
-          payload.thresholdDurationSeconds === undefined
-            ? null
-            : Number(payload.thresholdDurationSeconds),
-        cooldownMinutes: Number(payload.cooldownMinutes) || 15,
-        channelIds: [],
-      } as any);
-      return {
-        ok: true,
-        summary: `Created alert rule ${(created as any)?.name ?? ""}`.trim(),
       };
     }
 

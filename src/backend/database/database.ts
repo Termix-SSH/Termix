@@ -31,7 +31,7 @@ import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
 import secretSourceRoutes from "./routes/secret-sources.js";
-import alertRulesRoutes from "./routes/alert-rules-routes.js";
+import notificationChannelsRoutes from "./routes/notification-channels-routes.js";
 import aiDispatch from "./routes/ai-dispatch.js";
 import automationsDispatch from "./routes/automation-dispatch.js";
 import syncRoutes from "./routes/sync.js";
@@ -1774,11 +1774,9 @@ registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
 app.use("/vault", vaultRoutes);
 app.use("/secret-sources", secretSourceRoutes);
-// Before the alert routes, which are mounted at the root and would otherwise
-// have first claim on the path.
 app.use("/automations", automationsDispatch);
 app.use("/ai", aiDispatch);
-app.use("/", alertRulesRoutes);
+app.use("/", notificationChannelsRoutes);
 app.use("/sync", syncRoutes);
 app.use("/plugins", pluginRoutes);
 app.use("/plugin-api", authenticateJWT, pluginApiRoutes);

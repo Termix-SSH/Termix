@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { triggerLoginAlert } from "../../utils/alert-trigger.js";
+import { dispatchLoginEvent } from "../../utils/login-event-dispatch.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { sshLogger } from "../../utils/logger.js";
 
-describe("triggerLoginAlert", () => {
+describe("dispatchLoginEvent", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -19,12 +19,12 @@ describe("triggerLoginAlert", () => {
     );
     const warn = vi.spyOn(sshLogger, "warn").mockImplementation(() => {});
 
-    await triggerLoginAlert(7, "user-1", "root", "192.0.2.1");
+    await dispatchLoginEvent(7, "user-1", "root", "192.0.2.1");
 
     expect(warn).toHaveBeenCalledWith(
-      "Failed to trigger login alert",
+      "Failed to dispatch login event",
       expect.objectContaining({
-        operation: "login_alert_trigger_error",
+        operation: "login_event_dispatch_error",
         hostId: 7,
         error:
           'Metrics service returned 401: {"error":"Missing authentication token"}',
@@ -41,7 +41,7 @@ describe("triggerLoginAlert", () => {
     );
     const warn = vi.spyOn(sshLogger, "warn").mockImplementation(() => {});
 
-    await triggerLoginAlert(7, "user-1", "root", "192.0.2.1");
+    await dispatchLoginEvent(7, "user-1", "root", "192.0.2.1");
 
     expect(warn).not.toHaveBeenCalled();
   });
@@ -54,7 +54,7 @@ describe("triggerLoginAlert", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response('{"ok":true}', { status: 200 }));
 
-    await triggerLoginAlert(42, "user-1", "root", "10.0.0.5");
+    await dispatchLoginEvent(42, "user-1", "root", "10.0.0.5");
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:30005/internal/login-alert",
@@ -83,11 +83,11 @@ describe("triggerLoginAlert", () => {
     const warn = vi.spyOn(sshLogger, "warn").mockImplementation(() => {});
 
     await expect(
-      triggerLoginAlert(1, "user-1", "root", "127.0.0.1"),
+      dispatchLoginEvent(1, "user-1", "root", "127.0.0.1"),
     ).resolves.toBeUndefined();
 
     expect(warn).toHaveBeenCalledWith(
-      "Failed to trigger login alert",
+      "Failed to dispatch login event",
       expect.objectContaining({ hostId: 1 }),
     );
   });

@@ -1,5 +1,5 @@
 import {
-  createCurrentAlertRepository,
+  createCurrentNotificationChannelRepository,
   createCurrentAutomationRepository,
   createCurrentCommandHistoryRepository,
   createCurrentFleetRepository,
@@ -191,30 +191,6 @@ export const readTools: AiTool[] = [
     },
   },
   {
-    name: "list_alert_rules",
-    description:
-      "List the user's alert rules with their thresholds and enabled state.",
-    category: "read",
-    parameters: objectSchema({}),
-    handler: async (_args, context) => {
-      const rules = await createCurrentAlertRepository().listAlertRules(
-        context.userId,
-      );
-      return {
-        rules: rules.map((rule) => ({
-          id: rule.id,
-          name: rule.name,
-          hostId: rule.host_id,
-          enabled: rule.enabled === 1,
-          triggerType: rule.trigger_type,
-          thresholdValue: rule.threshold_value,
-          thresholdDurationSeconds: rule.threshold_duration_seconds,
-          cooldownMinutes: rule.cooldown_minutes,
-        })),
-      };
-    },
-  },
-  {
     name: "list_notification_channels",
     description:
       "List the user's notification channels by id, name and type. Channel configuration is never returned because it holds tokens.",
@@ -222,7 +198,7 @@ export const readTools: AiTool[] = [
     parameters: objectSchema({}),
     handler: async (_args, context) => {
       const channels =
-        await createCurrentAlertRepository().listNotificationChannels(
+        await createCurrentNotificationChannelRepository().listNotificationChannels(
           context.userId,
         );
       return {
@@ -231,35 +207,6 @@ export const readTools: AiTool[] = [
           name: channel.name,
           type: channel.type,
           enabled: channel.enabled === 1,
-        })),
-      };
-    },
-  },
-  {
-    name: "get_alert_firings",
-    description:
-      "Recent alert firings, newest first. Use this to answer questions about what has been alerting.",
-    category: "read",
-    parameters: objectSchema({
-      limit: num("How many firings to return (default 25, max 100)"),
-    }),
-    handler: async (args, context) => {
-      const limit = Math.min(Math.max(Number(args.limit) || 25, 1), 100);
-      const result = await createCurrentAlertRepository().listAlertFirings({
-        userId: context.userId,
-        limit,
-        offset: 0,
-      });
-      return {
-        firings: (result.firings ?? []).map((firing) => ({
-          id: firing.id,
-          ruleName: firing.rule_name,
-          hostName: firing.host_name,
-          firedAt: firing.fired_at,
-          resolvedAt: firing.resolved_at,
-          severity: firing.severity,
-          message: firing.message,
-          acknowledged: firing.acknowledged === 1,
         })),
       };
     },

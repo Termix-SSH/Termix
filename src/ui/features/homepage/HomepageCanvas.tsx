@@ -39,7 +39,6 @@ import "./widgets/IframeWidget";
 import "./widgets/RssFeedWidget";
 import "./widgets/MetricsChartWidget";
 import "./widgets/HostGridWidget";
-import "./widgets/AlertFeedWidget";
 import "./widgets/PingStatusWidget";
 import "./widgets/RecentActivityWidget";
 import "./widgets/TermixUptimeWidget";

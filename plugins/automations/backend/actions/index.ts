@@ -14,7 +14,7 @@ import {
 import { withConnection } from "../../../../src/backend/hosts/ssh-connection-pool.js";
 import { resolveSnippetCommand } from "../../../../src/backend/database/routes/snippets-execution.js";
 import {
-  createCurrentAlertRepository,
+  createCurrentNotificationChannelRepository,
   createCurrentSnippetRepository,
 } from "../../../../src/backend/database/repositories/factory.js";
 import { sendAutomationNotification } from "../notify.js";
@@ -86,7 +86,7 @@ async function runNotify(
     );
   }
 
-  const repository = createCurrentAlertRepository();
+  const repository = createCurrentNotificationChannelRepository();
   const channels = await repository.listNotificationChannels(context.userId);
   const selected = channels.filter((channel) =>
     step.channelIds.includes(channel.id),

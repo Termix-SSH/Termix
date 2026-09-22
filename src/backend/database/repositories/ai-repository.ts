@@ -47,7 +47,7 @@ export class AiRepository {
    * Provider API keys are field-encrypted like any other credential. The key is
    * derived from the row id, which does not exist until after the insert, so a
    * new provider is written once and then re-encrypted in place with its real
-   * id -- the same approach AlertRepository uses for channel configs.
+   * id -- the same approach NotificationChannelRepository uses for channel configs.
    */
   private userDataKey(userId: string): Buffer | null {
     try {

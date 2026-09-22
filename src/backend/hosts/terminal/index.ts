@@ -57,7 +57,7 @@ import {
 } from "../terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
-import { triggerLoginAlert } from "../../utils/alert-trigger.js";
+import { dispatchLoginEvent } from "../../utils/login-event-dispatch.js";
 import { getClientIp } from "../../utils/request-origin.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
 import { resolveSshKeepalive } from "../ssh-keepalive.js";
@@ -2483,7 +2483,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
 
           if (id && hostConfig.userId) {
-            triggerLoginAlert(
+            dispatchLoginEvent(
               id,
               hostConfig.userId,
               username,

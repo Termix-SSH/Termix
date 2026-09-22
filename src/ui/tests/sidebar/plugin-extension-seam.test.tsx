@@ -29,10 +29,6 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("@/api/alerts-api", () => ({
-  getAlertFirings: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock("@/hooks/use-ai-availability", () => ({
   useAiAvailability: () => ({ userEnabled: false }),
 }));

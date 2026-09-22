@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Bell,
   Check,
   LogOut,
   PanelRight,
@@ -12,7 +11,6 @@ import {
   User,
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
-import { getAlertFirings } from "@/api/alerts-api";
 import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { visibleRailItems } from "./rail-items";
@@ -31,7 +29,6 @@ export type RailView =
   | "session-logs"
   | "user-profile"
   | "admin-settings"
-  | "alerts"
   | "automations"
   | "ai"
   | "fleets"
@@ -148,49 +145,6 @@ export function AppRail({
     promotable?: boolean;
     rightDockable?: boolean;
   } | null>(null);
-  const [unreadAlerts, setUnreadAlerts] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    const poll = () => {
-      if (document.visibilityState === "hidden") return;
-      getAlertFirings({ acknowledged: false, limit: 50 })
-        .then((firings) => {
-          if (!cancelled) setUnreadAlerts(firings.length);
-        })
-        .catch(() => {});
-    };
-
-    const start = () => {
-      if (intervalId !== null) return;
-      intervalId = setInterval(poll, 30000);
-    };
-    const stop = () => {
-      if (intervalId === null) return;
-      clearInterval(intervalId);
-      intervalId = null;
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        stop();
-        return;
-      }
-      poll();
-      start();
-    };
-
-    poll();
-    if (document.visibilityState !== "hidden") start();
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      cancelled = true;
-      stop();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, []);
   const [hiddenTabs, setHiddenTabs] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("hiddenRailTabs");
@@ -457,28 +411,29 @@ export function AppRail({
             style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
           />
         )}
-        {[
-          {
-            view: "alerts" as RailView,
-            icon: <Bell size={16} />,
-            title: t("nav.alerts"),
-            promotable: true,
-          },
-          {
-            view: "user-profile" as RailView,
-            icon: <User size={16} />,
-            title: t("nav.userProfile"),
-          },
-          ...(isAdmin
-            ? [
-                {
-                  view: "admin-settings" as RailView,
-                  icon: <Settings size={16} />,
-                  title: t("nav.admin"),
-                },
-              ]
-            : []),
-        ].map((item) => (
+        {(
+          [
+            {
+              view: "user-profile" as RailView,
+              icon: <User size={16} />,
+              title: t("nav.userProfile"),
+            },
+            ...(isAdmin
+              ? [
+                  {
+                    view: "admin-settings" as RailView,
+                    icon: <Settings size={16} />,
+                    title: t("nav.admin"),
+                  },
+                ]
+              : []),
+          ] as {
+            view: RailView;
+            icon: ReactElement;
+            title: string;
+            promotable?: boolean;
+          }[]
+        ).map((item) => (
           <button
             key={item.view}
             onClick={(e) => {
@@ -520,11 +475,6 @@ export function AppRail({
               style={{ width: 16, height: 16 }}
             >
               {item.icon}
-              {item.view === "alerts" && unreadAlerts > 0 && (
-                <span className="absolute -top-1 -right-1 flex size-3 items-center justify-center rounded-full bg-destructive text-[8px] font-bold text-white leading-none">
-                  {unreadAlerts > 9 ? "9+" : unreadAlerts}
-                </span>
-              )}
             </span>
             <span
               className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"}`}

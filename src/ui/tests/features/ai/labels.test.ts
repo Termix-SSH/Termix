@@ -16,8 +16,8 @@ describe("humanize", () => {
   });
 
   it("splits snake_case into words", () => {
-    expect(humanize("propose_create_alert_rule")).toBe(
-      "Propose create alert rule",
+    expect(humanize("propose_create_automation")).toBe(
+      "Propose create automation",
     );
   });
 
@@ -51,7 +51,7 @@ describe("fieldLabel", () => {
 describe("toolLabel", () => {
   it("phrases tools as actions rather than function names", () => {
     expect(toolLabel("list_hosts")).toBe("Reading hosts");
-    expect(toolLabel("propose_create_alert_rule")).toBe("Create alert rule");
+    expect(toolLabel("propose_create_fleet")).toBe("Create fleet");
   });
 
   it("covers every tool in the catalog", () => {

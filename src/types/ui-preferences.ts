@@ -157,7 +157,6 @@ const ALL_HIDEABLE_RAIL_VIEWS = [
   "split-screen",
   "connections",
   "session-logs",
-  "alerts",
   "fleets",
   "workspaces",
   "network_graph",

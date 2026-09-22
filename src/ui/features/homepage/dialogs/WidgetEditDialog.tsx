@@ -22,7 +22,6 @@ import type {
   RssFeedConfig,
   MetricsChartConfig,
   HostGridConfig,
-  AlertFeedConfig,
   PingStatusConfig,
   RecentActivityConfig,
   TermixUptimeConfig,
@@ -55,7 +54,6 @@ import { IframeEditForm } from "./IframeEditForm";
 import { RssFeedEditForm } from "./RssFeedEditForm";
 import { MetricsChartEditForm } from "./MetricsChartEditForm";
 import { HostGridEditForm } from "./HostGridEditForm";
-import { AlertFeedEditForm } from "./AlertFeedEditForm";
 import { PingStatusEditForm } from "./PingStatusEditForm";
 import { RecentActivityEditForm } from "./RecentActivityEditForm";
 import { TermixUptimeEditForm } from "./TermixUptimeEditForm";
@@ -194,13 +192,6 @@ export function WidgetEditDialog({
         return (
           <HostGridEditForm
             config={config as unknown as HostGridConfig}
-            onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
-          />
-        );
-      case "alert_feed":
-        return (
-          <AlertFeedEditForm
-            config={config as unknown as AlertFeedConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );

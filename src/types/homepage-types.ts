@@ -15,7 +15,6 @@ export type WidgetTypeId =
   | "rss_feed"
   | "metrics_chart"
   | "host_grid"
-  | "alert_feed"
   | "ping_status"
   | "recent_activity"
   | "termix_uptime"
@@ -165,11 +164,6 @@ export interface HostGridConfig {
   hostIds: number[];
   showIp: boolean;
   columns: 2 | 3 | 4;
-}
-
-export interface AlertFeedConfig {
-  maxItems: number;
-  showAcknowledged: boolean;
 }
 
 export interface PingUrl {

@@ -92,7 +92,6 @@ describe("RAIL_ITEMS", () => {
       "ai",
       "history",
       "session-logs",
-      "alerts",
     ]);
   });
 
@@ -138,7 +137,6 @@ describe("RAIL_ITEMS", () => {
       "ai",
       "history",
       "session-logs",
-      "alerts",
     ]);
   });
 });

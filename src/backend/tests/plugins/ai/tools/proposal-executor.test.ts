@@ -13,14 +13,12 @@ const snippetRepository = {
   deleteSnippet: vi.fn(),
 };
 const fleetRepository = { create: vi.fn(), addMember: vi.fn() };
-const alertRepository = { createAlertRule: vi.fn() };
 const automationRepository = { create: vi.fn() };
 
 vi.mock("../../../../database/repositories/factory.js", () => ({
   createCurrentHostRepository: () => hostRepository,
   createCurrentSnippetRepository: () => snippetRepository,
   createCurrentFleetRepository: () => fleetRepository,
-  createCurrentAlertRepository: () => alertRepository,
   createCurrentAutomationRepository: () => automationRepository,
 }));
 

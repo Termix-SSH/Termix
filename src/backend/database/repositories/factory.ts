@@ -5,7 +5,7 @@ import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
 import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
 import { AiRepository } from "./ai-repository.js";
-import { AlertRepository } from "./alert-repository.js";
+import { NotificationChannelRepository } from "./notification-channel-repository.js";
 import { AutomationRepository } from "./automation-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
@@ -161,10 +161,10 @@ export function createCurrentAiRepository(): AiRepository {
   );
 }
 
-export function createCurrentAlertRepository(): AlertRepository {
-  return new AlertRepository(
+export function createCurrentNotificationChannelRepository(): NotificationChannelRepository {
+  return new NotificationChannelRepository(
     createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("alert_repository_write"),
+    createCurrentRepositoryWriteHook("notification_channel_repository_write"),
   );
 }
 

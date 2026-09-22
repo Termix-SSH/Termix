@@ -6,12 +6,12 @@ const BASE = { hostCount: 3, allowReadOnlyCommands: false };
 describe("buildSystemPrompt", () => {
   it("tells the assistant to stay inside what was asked", () => {
     // Without these the assistant answered "what is running on this server"
-    // by also proposing a monitoring script and an alert rule nobody wanted.
+    // by also proposing a monitoring script and an automation nobody wanted.
     const prompt = buildSystemPrompt(BASE);
 
     expect(prompt).toContain("nothing beyond it");
     expect(prompt).toMatch(/Read, then report\. Do not propose anything\./);
-    expect(prompt).toMatch(/no monitoring, no alert rules, no scripts/);
+    expect(prompt).toMatch(/no monitoring automations, no scripts/);
     expect(prompt).toMatch(/One request means one proposal at most/);
   });
 

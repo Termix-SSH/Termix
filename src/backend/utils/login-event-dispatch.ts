@@ -3,7 +3,7 @@ import { sshLogger } from "./logger.js";
 
 const METRICS_SERVICE_URL = "http://localhost:30005";
 
-export async function triggerLoginAlert(
+export async function dispatchLoginEvent(
   hostId: number,
   userId: string,
   sshUser: string,
@@ -29,8 +29,8 @@ export async function triggerLoginAlert(
       );
     }
   } catch (err) {
-    sshLogger.warn("Failed to trigger login alert", {
-      operation: "login_alert_trigger_error",
+    sshLogger.warn("Failed to dispatch login event", {
+      operation: "login_event_dispatch_error",
       hostId,
       error: err instanceof Error ? err.message : String(err),
     });

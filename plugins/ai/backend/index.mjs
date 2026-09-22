@@ -4,11 +4,11 @@
  * This plugin runs on the main thread rather than in a worker for the same
  * reason ssh-terminal, docker and host-metrics do (see
  * src/backend/plugins/first-party.ts): it writes directly across hosts,
- * snippets, fleets, alert rules and automations through their repositories,
+ * snippets, fleets and automations through their repositories,
  * runs approved commands over the shared SSH pool via resolveHostById and
  * withConnection, and streams its chat replies as server-sent events. None
  * of that fits the worker ctx -- ctx.hosts is a 13-field read-only view with
- * no write methods and no snippets/fleets/alerts/automations surface at all,
+ * no write methods and no snippets/fleets/automations surface at all,
  * and ctx.http.route replies with a single postMessage value rather than a
  * stream.
  *

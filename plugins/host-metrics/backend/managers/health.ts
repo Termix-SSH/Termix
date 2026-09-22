@@ -7,7 +7,6 @@ import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import { shellSingleQuote } from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
 import { isValidPort } from "../../../../src/backend/hosts/metrics-shared/validation.js";
 import type { ManagerRoutesDeps } from "./types.js";
-import { AlertEngine } from "../alert-engine.js";
 import { notifyAutomationHealthCheck } from "../automation-bridge.js";
 
 export interface HealthCheck {
@@ -157,15 +156,6 @@ export function registerHealthRoutes(
         if (results.length) {
           await recordHistory(userId, host.id, results);
           for (const r of results) {
-            AlertEngine.getInstance()
-              .evaluateHealthCheck(
-                host.id,
-                userId,
-                r.checkId,
-                r.ok,
-                r.detail ?? undefined,
-              )
-              .catch(() => {});
             notifyAutomationHealthCheck(
               host.id,
               userId,
@@ -243,15 +233,6 @@ export function registerHealthRoutes(
         if (results.length) {
           await recordHistory(userId, host.id, results);
           for (const r of results) {
-            AlertEngine.getInstance()
-              .evaluateHealthCheck(
-                host.id,
-                userId,
-                r.checkId,
-                r.ok,
-                r.detail ?? undefined,
-              )
-              .catch(() => {});
             notifyAutomationHealthCheck(
               host.id,
               userId,

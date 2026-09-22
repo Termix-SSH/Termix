@@ -235,13 +235,6 @@ export function visibleRailItems(): RailItemDef[] {
  * title and a mobile entry.
  */
 export const RAIL_UTILITY_ITEMS: RailItemDef[] = [
-  {
-    id: "alerts",
-    icon: Plug,
-    labelKey: "nav.alerts",
-    promotable: true,
-    rightDockable: true,
-  },
   { id: "user-profile", icon: User, labelKey: "nav.userProfile" },
   { id: "admin-settings", icon: Settings, labelKey: "nav.admin" },
 ];

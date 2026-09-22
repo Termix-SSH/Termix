@@ -25,7 +25,6 @@ import {
   Fingerprint,
   Hammer,
   Play,
-  Plug,
   ScrollText,
   Sparkles,
   Presentation,
@@ -153,9 +152,6 @@ const FleetInventoryTab = lazy(() =>
 // Rail panels promoted to full tabs.
 const TermixIdPanel = lazy(() =>
   import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
-);
-const AlertsPanel = lazy(() =>
-  import("@/sidebar/AlertsPanel").then((m) => ({ default: m.AlertsPanel })),
 );
 const SessionLogsPanel = lazy(() =>
   import("@/sidebar/SessionLogsPanel").then((m) => ({
@@ -391,8 +387,6 @@ export function tabIcon(type: TabType) {
       return <Presentation className="size-3.5" />;
     case "termix-id":
       return <Fingerprint className="size-3.5" />;
-    case "alerts":
-      return <Plug className="size-3.5" />;
     case "session-logs":
       return <ScrollText className="size-3.5" />;
     case "snippets":
@@ -718,13 +712,6 @@ export function renderTabContent(
       return withTabSuspense(
         <PanelTabFrame>
           <TermixIdPanel />
-        </PanelTabFrame>,
-      );
-
-    case "alerts":
-      return withTabSuspense(
-        <PanelTabFrame>
-          <AlertsPanel />
         </PanelTabFrame>,
       );
 

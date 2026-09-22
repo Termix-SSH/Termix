@@ -1439,26 +1439,6 @@ export const proxmoxNodeHistory = sqliteTable("proxmox_node_history", {
 // --- proxmox-node-history end ---
 
 // --- alerts begin ---
-export const alertRules = sqliteTable("alert_rules", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id").references(() => hosts.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-  triggerType: text("trigger_type").notNull(),
-  thresholdValue: real("threshold_value"),
-  thresholdDurationSeconds: integer("threshold_duration_seconds"),
-  cooldownMinutes: integer("cooldown_minutes").notNull().default(15),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const notificationChannels = sqliteTable("notification_channels", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -1472,46 +1452,6 @@ export const notificationChannels = sqliteTable("notification_channels", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
-
-export const alertRuleChannels = sqliteTable("alert_rule_channels", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  ruleId: integer("rule_id")
-    .notNull()
-    .references(() => alertRules.id, { onDelete: "cascade" }),
-  channelId: integer("channel_id")
-    .notNull()
-    .references(() => notificationChannels.id, { onDelete: "cascade" }),
-});
-
-export const alertFirings = sqliteTable(
-  "alert_firings",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    ruleId: integer("rule_id")
-      .notNull()
-      .references(() => alertRules.id, { onDelete: "cascade" }),
-    hostId: integer("host_id").notNull(),
-    hostName: text("host_name").notNull(),
-    firedAt: text("fired_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    resolvedAt: text("resolved_at"),
-    value: real("value"),
-    message: text("message").notNull(),
-    severity: text("severity").notNull().default("warning"),
-    acknowledged: integer("acknowledged", { mode: "boolean" })
-      .notNull()
-      .default(false),
-  },
-  // A rule's history is read newest-first; host_id is filtered on its own.
-  (table) => [
-    index("idx_alert_firings_rule").on(table.ruleId, table.firedAt),
-    index("idx_alert_firings_host").on(table.hostId),
-  ],
-);
 // --- alerts end ---
 
 // --- automations begin ---

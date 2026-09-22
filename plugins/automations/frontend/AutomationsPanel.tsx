@@ -31,7 +31,7 @@ import {
   getNotificationChannels,
   testNotificationChannel,
   type NotificationChannel,
-} from "@/api/alerts-api";
+} from "@/api/notification-channels-api";
 import { NotificationChannelDialog } from "@/sidebar/NotificationChannelDialog";
 import { getSnippets } from "@/api/snippets-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";

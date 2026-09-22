@@ -14,7 +14,7 @@ import {
   createNotificationChannel,
   updateNotificationChannel,
   type NotificationChannel,
-} from "@/api/alerts-api";
+} from "@/api/notification-channels-api";
 
 interface NotificationChannelDialogProps {
   open: boolean;

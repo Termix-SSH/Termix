@@ -69,7 +69,6 @@ import { registerProxmoxStatsHistoryRoutes } from "../../../src/backend/hosts/me
 import { ProxmoxPollingManager } from "../../../src/backend/hosts/metrics/proxmox-stats-polling.js";
 import type { HostSessionStatusPayload } from "../../../src/backend/hosts/host-session-status.js";
 import { pluginEvents, TOPICS } from "../../../src/backend/plugins/events.js";
-import { AlertEngine } from "./alert-engine.js";
 import {
   notifyAutomationMetrics,
   notifyAutomationStatus,
@@ -662,9 +661,6 @@ class PollingManager {
           this.scheduleInitialMetricsPoll(config.host, config.viewerUserId);
         }
       }
-      AlertEngine.getInstance()
-        .evaluateStatus(refreshedHost.id, isOnline)
-        .catch(() => {});
       notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, isOnline);
     } catch {
       const statusEntry: StatusEntry = {
@@ -672,9 +668,6 @@ class PollingManager {
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
-      AlertEngine.getInstance()
-        .evaluateStatus(refreshedHost.id, false)
-        .catch(() => {});
       notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, false);
     }
   }
@@ -730,9 +723,6 @@ class PollingManager {
         timestamp: Date.now(),
       });
       await this.insertMetricsHistory(refreshedHost.id, metrics);
-      AlertEngine.getInstance()
-        .evaluateMetrics(refreshedHost.id, metrics)
-        .catch(() => {});
       notifyAutomationMetrics(refreshedHost.id, refreshedHost.userId, metrics);
       pollingBackoff.reset(refreshedHost.id);
       authFailureTracker.reset(refreshedHost.id);
@@ -1124,9 +1114,6 @@ app.post("/internal/login-alert", async (req, res) => {
     sshUser,
     fromIp,
   });
-  AlertEngine.getInstance()
-    .evaluateUserLogin(hostId, userId, sshUser, fromIp)
-    .catch(() => {});
   res.json({ ok: true });
 });
 
