@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -33,7 +33,7 @@ import {
   duplicateWorkspace,
   setDefaultWorkspace,
   unsetDefaultWorkspace,
-} from "@/api/workspaces-api";
+} from "./workspaces-api";
 import type { Workspace, WorkspacePayload } from "@/types/ui-types";
 
 function timeAgo(isoStr: string): string {

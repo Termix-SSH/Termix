@@ -374,3 +374,44 @@ describe("bundled network-topology plugin", () => {
     expect(source).toMatch(/export async function deactivate/);
   });
 });
+
+describe("bundled workspaces plugin", () => {
+  it("ships a directory with a manifest and both entry points", () => {
+    const dir = path.join(getBundledPluginsDir(), "workspaces");
+
+    expect(fs.existsSync(path.join(dir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "backend", "index.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "frontend", "index.mjs"))).toBe(true);
+  });
+
+  it("has a manifest that passes the real validator", () => {
+    const { manifest, errors } = parseManifest(
+      readBundledManifest("workspaces"),
+    );
+
+    expect(errors).toEqual([]);
+    expect(manifest?.id).toBe("workspaces");
+    expect(manifest?.category).toBe("Productivity");
+  });
+
+  it("declares the transport-owner capability and qualifies for the tier", () => {
+    const { manifest } = parseManifest(readBundledManifest("workspaces"));
+
+    expect(manifest?.permissions).toContain(TRANSPORT_OWNER_CAPABILITY);
+    expect(isFirstParty("workspaces")).toBe(true);
+    expect(runsInProcess("workspaces", manifest!.permissions)).toBe(true);
+  });
+
+  it("exports activate and deactivate from its backend entry", () => {
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "workspaces",
+      "backend",
+      "index.mjs",
+    );
+    const source = fs.readFileSync(entry, "utf8");
+
+    expect(source).toMatch(/export async function activate/);
+    expect(source).toMatch(/export async function deactivate/);
+  });
+});

@@ -4,7 +4,7 @@ import {
   buildWorkspaceTabSnapshots,
   remapSlotIds,
   resolveWorkspaceTabTarget,
-} from "../../shell/workspaceUtils";
+} from "../../../../../plugins/workspaces/frontend/workspaceUtils";
 import type { Host, Tab, WorkspaceTabSnapshot } from "@/types/ui-types";
 
 afterEach(() => vi.unstubAllGlobals());

@@ -98,6 +98,14 @@
  * The worker ctx has no fetch primitive at all (ctx.fetch is notImplemented
  * in SDK v1, see worker-bootstrap.ts), so there is currently no way for a
  * worker-tier plugin to make an outbound HTTP request.
+ *
+ * workspaces is here for the same reason network-topology is: its routes are
+ * plain per-user JSON CRUD against a single repository, and would fit the
+ * worker ctx fine on their own. It stays in-process to keep its existing
+ * /workspaces URL and its existing dedicated table (user_workspaces, keyed
+ * by userId) rather than moving onto /plugin-api/workspaces/* and the
+ * generic key-value ctx.storage the worker tier would require -- a URL and
+ * storage-model change, not a capability gap.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
@@ -110,6 +118,7 @@ export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "automations",
   "network-topology",
   "tailscale",
+  "workspaces",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

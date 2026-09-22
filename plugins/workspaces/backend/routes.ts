@@ -1,11 +1,15 @@
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import type { AuthenticatedRequest } from "../../../src/types/index.js";
 import express, { type Request, type Response } from "express";
-import { databaseLogger } from "../../utils/logger.js";
-import { AuthManager } from "../../utils/auth-manager.js";
-import { createCurrentWorkspaceRepository } from "../repositories/factory.js";
-import type { WorkspaceRecord } from "../repositories/workspace-repository.js";
+import { databaseLogger } from "../../../src/backend/utils/logger.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import { createCurrentWorkspaceRepository } from "../../../src/backend/database/repositories/factory.js";
+import type { WorkspaceRecord } from "../../../src/backend/database/repositories/workspace-repository.js";
+import {
+  registerWorkspacesRouter,
+  unregisterWorkspacesRouter,
+} from "../../../src/backend/database/routes/workspace-dispatch.js";
 
-const router = express.Router();
+export const router = express.Router();
 
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -635,4 +639,10 @@ router.delete(
   },
 );
 
-export default router;
+export function startWorkspacesService(): void {
+  registerWorkspacesRouter(router);
+}
+
+export function stopWorkspacesService(): void {
+  unregisterWorkspacesRouter();
+}

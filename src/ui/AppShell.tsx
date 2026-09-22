@@ -102,7 +102,7 @@ const TailscaleDevicesPanel = lazy(() =>
   ),
 );
 const WorkspacesPanel = lazy(() =>
-  import("@/sidebar/WorkspacesPanel").then((m) => ({
+  import("../../plugins/workspaces/frontend/WorkspacesPanel").then((m) => ({
     default: m.WorkspacesPanel,
   })),
 );
@@ -197,12 +197,12 @@ import {
   listWorkspaces,
   applyWorkspaceServer,
   saveLastSessionWorkspace,
-} from "@/api/workspaces-api";
+} from "../../plugins/workspaces/frontend/workspaces-api";
 import {
   buildWorkspacePayload as buildWorkspacePayloadUtil,
   remapSlotIds,
   resolveWorkspaceTabTarget,
-} from "@/shell/workspaceUtils";
+} from "../../plugins/workspaces/frontend/workspaceUtils";
 import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
 import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";

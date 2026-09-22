@@ -24,7 +24,7 @@ import {
   applyWorkspaceServer,
   getLastSessionWorkspace,
   saveLastSessionWorkspace,
-} from "../../api/workspaces-api";
+} from "../../../../../plugins/workspaces/frontend/workspaces-api";
 import type { WorkspacePayload } from "@/types/ui-types";
 
 beforeEach(() => {

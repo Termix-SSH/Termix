@@ -161,8 +161,13 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
 }));
 
-const { default: router } =
-  await import("../../../database/routes/workspaces.js");
+vi.mock("../../../database/routes/workspace-dispatch.js", () => ({
+  registerWorkspacesRouter: vi.fn(),
+  unregisterWorkspacesRouter: vi.fn(),
+}));
+
+const { router } =
+  await import("../../../../../plugins/workspaces/backend/routes.js");
 
 function findLayer(method: string, path: string) {
   const stack = (router as unknown as Router).stack as Array<{
