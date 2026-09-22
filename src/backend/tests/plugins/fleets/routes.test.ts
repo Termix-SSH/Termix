@@ -135,11 +135,13 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({}),
 }));
 
-const {
-  default: router,
-  parseInventoryProbe,
-  buildRemoveCommand,
-} = await import("../../../database/routes/fleet-routes.js");
+vi.mock("../../../database/routes/fleet-dispatch.js", () => ({
+  registerFleetsRouter: vi.fn(),
+  unregisterFleetsRouter: vi.fn(),
+}));
+
+const { router, parseInventoryProbe, buildRemoveCommand } =
+  await import("../../../../../plugins/fleets/backend/routes.js");
 
 function findLayer(method: string, path: string) {
   const stack = (router as unknown as Router).stack as Array<{

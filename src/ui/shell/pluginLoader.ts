@@ -42,6 +42,7 @@ const BUILT_IN_TABS_BY_PLUGIN: Record<string, string[]> = {
   "ssh-terminal": ["terminal"],
   "remote-desktop": ["rdp", "vnc", "telnet"],
   ai: ["ai"],
+  fleets: ["fleet-inventory"],
 };
 
 let pluginEnabled = new Map<string, boolean>();

@@ -92,7 +92,9 @@ const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 const FleetsPanel = lazy(() =>
-  import("@/sidebar/FleetsPanel").then((m) => ({ default: m.FleetsPanel })),
+  import("../../plugins/fleets/frontend/FleetsPanel").then((m) => ({
+    default: m.FleetsPanel,
+  })),
 );
 const WorkspacesPanel = lazy(() =>
   import("@/sidebar/WorkspacesPanel").then((m) => ({

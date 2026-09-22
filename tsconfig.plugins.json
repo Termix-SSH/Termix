@@ -31,7 +31,8 @@
     "plugins/host-metrics/backend/**/*.ts",
     "plugins/ai/backend/**/*.ts",
     "plugins/proxmox/backend/**/*.ts",
-    "plugins/remote-desktop/backend/**/*.ts"
+    "plugins/remote-desktop/backend/**/*.ts",
+    "plugins/fleets/backend/**/*.ts"
   ],
   "exclude": ["src/**/*.test.ts"]
 }

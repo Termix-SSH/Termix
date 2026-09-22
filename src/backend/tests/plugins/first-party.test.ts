@@ -39,10 +39,11 @@ function manifest(overrides: Record<string, unknown> = {}) {
 }
 
 describe("first-party allowlist", () => {
-  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox and remote-desktop", () => {
+  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop and fleets", () => {
     expect([...FIRST_PARTY_PLUGIN_IDS].sort()).toEqual([
       "ai",
       "docker",
+      "fleets",
       "host-metrics",
       "proxmox",
       "remote-desktop",
@@ -50,13 +51,14 @@ describe("first-party allowlist", () => {
     ]);
   });
 
-  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox and remote-desktop and nothing else", () => {
+  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop and fleets and nothing else", () => {
     expect(isFirstParty("ssh-terminal")).toBe(true);
     expect(isFirstParty("docker")).toBe(true);
     expect(isFirstParty("host-metrics")).toBe(true);
     expect(isFirstParty("ai")).toBe(true);
     expect(isFirstParty("proxmox")).toBe(true);
     expect(isFirstParty("remote-desktop")).toBe(true);
+    expect(isFirstParty("fleets")).toBe(true);
     expect(isFirstParty("ssh-terminal-pro")).toBe(false);
     expect(isFirstParty("community-plugin")).toBe(false);
     expect(isFirstParty("")).toBe(false);

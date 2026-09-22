@@ -145,7 +145,7 @@ const Serial = lazy(() =>
   })),
 );
 const FleetInventoryTab = lazy(() =>
-  import("@/sidebar/FleetInventoryTab").then((m) => ({
+  import("../../../plugins/fleets/frontend/FleetInventoryTab").then((m) => ({
     default: m.FleetInventoryTab,
   })),
 );

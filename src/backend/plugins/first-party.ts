@@ -68,6 +68,13 @@
  * /connect-host/:hostId route does multi-step credential/tunnel resolution
  * (SSH jump-host tunnels, a macOS VNC compatibility proxy) using raw
  * net.Socket plumbing that cannot cross a structured-clone boundary.
+ *
+ * fleets is here for the same reason as ai and proxmox: it does not own a
+ * transport, but its execute/transfer routes resolve and connect to many
+ * hosts concurrently via resolveHostById and the shared SSH pool, stream SFTP
+ * reads/writes and a zip archive for its push/pull routes, and buffer
+ * multipart file uploads. None of that fits the worker's single-exec
+ * ctx.ssh or single-postMessage-reply ctx.http.route.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
@@ -76,6 +83,7 @@ export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ai",
   "proxmox",
   "remote-desktop",
+  "fleets",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

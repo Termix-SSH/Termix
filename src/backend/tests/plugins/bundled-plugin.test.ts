@@ -244,3 +244,42 @@ describe("bundled remote-desktop plugin", () => {
     expect(source).toMatch(/export async function deactivate/);
   });
 });
+
+describe("bundled fleets plugin", () => {
+  it("ships a directory with a manifest and both entry points", () => {
+    const dir = path.join(getBundledPluginsDir(), "fleets");
+
+    expect(fs.existsSync(path.join(dir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "backend", "index.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "frontend", "index.mjs"))).toBe(true);
+  });
+
+  it("has a manifest that passes the real validator", () => {
+    const { manifest, errors } = parseManifest(readBundledManifest("fleets"));
+
+    expect(errors).toEqual([]);
+    expect(manifest?.id).toBe("fleets");
+    expect(manifest?.category).toBe("Infrastructure");
+  });
+
+  it("declares the transport-owner capability and qualifies for the tier", () => {
+    const { manifest } = parseManifest(readBundledManifest("fleets"));
+
+    expect(manifest?.permissions).toContain(TRANSPORT_OWNER_CAPABILITY);
+    expect(isFirstParty("fleets")).toBe(true);
+    expect(runsInProcess("fleets", manifest!.permissions)).toBe(true);
+  });
+
+  it("exports activate and deactivate from its backend entry", () => {
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "fleets",
+      "backend",
+      "index.mjs",
+    );
+    const source = fs.readFileSync(entry, "utf8");
+
+    expect(source).toMatch(/export async function activate/);
+    expect(source).toMatch(/export async function deactivate/);
+  });
+});

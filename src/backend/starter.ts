@@ -299,11 +299,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // ssh-terminal, docker and host-metrics plugins start their own servers,
     // so disabling any of them stops its WS/HTTP server. See
     // plugins/ssh-terminal, plugins/docker and plugins/host-metrics.
-    // AI, Proxmox and Remote Desktop are also absent for the same reason:
-    // each plugin registers its router with its own dispatcher in
-    // database.ts on activate (/ai, /proxmox, /guacamole), so disabling any
-    // of them makes its routes 404 instead of leaving a dead import here.
-    // See plugins/ai, plugins/proxmox and plugins/remote-desktop.
+    // AI, Proxmox, Remote Desktop and Fleets are also absent for the same
+    // reason: each plugin registers its router with its own dispatcher in
+    // database.ts on activate (/ai, /proxmox, /guacamole, /fleets), so
+    // disabling any of them makes its routes 404 instead of leaving a dead
+    // import here. See plugins/ai, plugins/proxmox, plugins/remote-desktop
+    // and plugins/fleets.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/tmux/index.js");
