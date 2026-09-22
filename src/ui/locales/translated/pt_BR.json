@@ -2312,7 +2312,7 @@
     "localUploadPartial": "Uploaded {{done}} file(s), {{failed}} failed",
     "localDownloadComplete": "Arquivo(s) baixado(s) {{count}}",
     "localDownloadFailed": "Falha no download",
-    "localDownloadPartial": "Downloaded {{done}} file(s), {{failed}} failed",
+    "localDownloadPartial": "O download de {{done}} arquivo(s) falhou. {{failed}}",
     "localReplaceExistingPrompt": "{{count}} Já existem itens nesta pasta. Deseja substituí-los?",
     "localReplace": "Substituir",
     "localSkipExisting": "Pular",
