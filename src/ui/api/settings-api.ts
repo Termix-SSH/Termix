@@ -1,4 +1,3 @@
-import axios from "axios";
 import { authApi, handleApiError, statsApi } from "@/main-axios";
 
 // GLOBAL MONITORING SETTINGS
@@ -128,73 +127,8 @@ export async function updateSessionTimeout(
   }
 }
 
-// ============================================================================
-// TAILSCALE SETTINGS
-// ============================================================================
-
-export async function getTailscaleSettings(): Promise<{
-  apiKey: string;
-  hasApiKey: boolean;
-  apiBaseUrl: string;
-}> {
-  try {
-    const response = await authApi.get("/users/tailscale-settings");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch Tailscale settings");
-  }
-}
-
-export async function updateTailscaleSettings(
-  apiKey: string,
-  apiBaseUrl?: string,
-): Promise<{ hasApiKey: boolean }> {
-  try {
-    const response = await authApi.patch("/users/tailscale-settings", {
-      apiKey,
-      apiBaseUrl,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "update Tailscale settings");
-  }
-}
-
-export async function getTailscaleDevices(): Promise<{
-  devices: Array<{
-    id: string;
-    name: string;
-    hostname: string;
-    addresses: string[];
-    os: string;
-    lastSeen: string;
-  }>;
-  hasApiKey: boolean;
-  error?: string;
-}> {
-  try {
-    const response = await authApi.get("/tailscale/devices");
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const data = error.response?.data;
-      if (
-        data &&
-        typeof data === "object" &&
-        "hasApiKey" in data &&
-        typeof data.hasApiKey === "boolean"
-      ) {
-        return data as {
-          devices: [];
-          hasApiKey: boolean;
-          error?: string;
-        };
-      }
-    }
-    handleApiError(error, "fetch Tailscale devices");
-    throw error;
-  }
-}
+// Tailscale settings/device API wrappers moved to
+// plugins/tailscale/frontend/tailscale-api.ts.
 
 // ============================================================================
 // GUACAMOLE SETTINGS

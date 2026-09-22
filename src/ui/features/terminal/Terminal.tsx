@@ -46,7 +46,7 @@ import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog.tsx";
-import { TailscaleCheckDialog } from "@/ssh/dialogs/TailscaleCheckDialog.tsx";
+import { TailscaleCheckDialog } from "../../../../plugins/tailscale/frontend/TailscaleCheckDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog.tsx";
 import { TmuxSessionPicker } from "@/ssh/dialogs/TmuxSessionPicker.tsx";
 import {

@@ -57,6 +57,7 @@ describe("RAIL_ITEMS", () => {
       "snippets",
       "macros",
       "fleets",
+      "tailscale",
       "automations",
       "ai",
       "history",

@@ -56,7 +56,8 @@ import {
   createCredential,
   adminCreateUserCredential,
 } from "@/main-axios";
-import { getTailscaleDevices, getHostDefaults } from "@/api/settings-api";
+import { getHostDefaults } from "@/api/settings-api";
+import { getTailscaleDevices } from "../../../plugins/tailscale/frontend/tailscale-api";
 import {
   getUserPreferences,
   saveUserPreferences,

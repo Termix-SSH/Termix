@@ -9,7 +9,7 @@ vi.mock("@/main-axios", () => ({
   handleApiError: handleApiErrorMock,
 }));
 
-import { getTailscaleDevices } from "../../api/settings-api";
+import { getTailscaleDevices } from "../../../../../plugins/tailscale/frontend/tailscale-api";
 
 beforeEach(() => {
   vi.clearAllMocks();

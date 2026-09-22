@@ -39,7 +39,7 @@ function manifest(overrides: Record<string, unknown> = {}) {
 }
 
 describe("first-party allowlist", () => {
-  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations and network-topology", () => {
+  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations, network-topology and tailscale", () => {
     expect([...FIRST_PARTY_PLUGIN_IDS].sort()).toEqual([
       "ai",
       "automations",
@@ -50,10 +50,11 @@ describe("first-party allowlist", () => {
       "proxmox",
       "remote-desktop",
       "ssh-terminal",
+      "tailscale",
     ]);
   });
 
-  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations and network-topology and nothing else", () => {
+  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets, automations, network-topology and tailscale and nothing else", () => {
     expect(isFirstParty("ssh-terminal")).toBe(true);
     expect(isFirstParty("docker")).toBe(true);
     expect(isFirstParty("host-metrics")).toBe(true);
@@ -63,6 +64,7 @@ describe("first-party allowlist", () => {
     expect(isFirstParty("fleets")).toBe(true);
     expect(isFirstParty("automations")).toBe(true);
     expect(isFirstParty("network-topology")).toBe(true);
+    expect(isFirstParty("tailscale")).toBe(true);
     expect(isFirstParty("ssh-terminal-pro")).toBe(false);
     expect(isFirstParty("community-plugin")).toBe(false);
     expect(isFirstParty("")).toBe(false);
@@ -90,6 +92,7 @@ describe("runsInProcess", () => {
     expect(
       runsInProcess("network-topology", [TRANSPORT_OWNER_CAPABILITY]),
     ).toBe(true);
+    expect(runsInProcess("tailscale", [TRANSPORT_OWNER_CAPABILITY])).toBe(true);
 
     // On the list but not asking for it: stays in a worker, so the manifest
     // remains an honest description of what the plugin does.
@@ -102,6 +105,7 @@ describe("runsInProcess", () => {
     expect(runsInProcess("fleets", ["hosts.read"])).toBe(false);
     expect(runsInProcess("automations", ["hosts.read"])).toBe(false);
     expect(runsInProcess("network-topology", ["hosts.read"])).toBe(false);
+    expect(runsInProcess("tailscale", ["hosts.read"])).toBe(false);
 
     // Asking for it but not on the list.
     expect(
@@ -215,6 +219,18 @@ describe("manifest gate on the reserved capability", () => {
 
     expect(errors).toEqual([]);
     expect(parsed?.id).toBe("network-topology");
+  });
+
+  it("allows it for tailscale", () => {
+    const { manifest: parsed, errors } = parseManifest(
+      manifest({
+        id: "tailscale",
+        permissions: [TRANSPORT_OWNER_CAPABILITY],
+      }),
+    );
+
+    expect(errors).toEqual([]);
+    expect(parsed?.id).toBe("tailscale");
   });
 
   it("still accepts an ordinary manifest that never mentions it", () => {

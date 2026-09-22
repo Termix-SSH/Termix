@@ -96,6 +96,11 @@ const FleetsPanel = lazy(() =>
     default: m.FleetsPanel,
   })),
 );
+const TailscaleDevicesPanel = lazy(() =>
+  import("../../plugins/tailscale/frontend/TailscaleDevicesPanel").then(
+    (m) => ({ default: m.TailscaleDevicesPanel }),
+  ),
+);
 const WorkspacesPanel = lazy(() =>
   import("@/sidebar/WorkspacesPanel").then((m) => ({
     default: m.WorkspacesPanel,
@@ -2595,6 +2600,15 @@ export function AppShell({
 
         {railView === "quick-connect" && (
           <QuickConnectPanel
+            onConnect={(host, type) => {
+              openTab(host, type);
+              if (isMobile) setSidebarOpen(false);
+            }}
+          />
+        )}
+
+        {railView === "tailscale" && (
+          <TailscaleDevicesPanel
             onConnect={(host, type) => {
               openTab(host, type);
               if (isMobile) setSidebarOpen(false);

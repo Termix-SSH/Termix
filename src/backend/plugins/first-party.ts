@@ -92,6 +92,12 @@
  * onto /plugin-api/network-topology/* and the generic key-value
  * ctx.storage the worker tier would require -- a URL and storage-model
  * change, not a capability gap.
+ *
+ * tailscale is here because its /devices route makes an outbound HTTP call
+ * to the Tailscale (or Headscale) Admin API using a settings-repo API key.
+ * The worker ctx has no fetch primitive at all (ctx.fetch is notImplemented
+ * in SDK v1, see worker-bootstrap.ts), so there is currently no way for a
+ * worker-tier plugin to make an outbound HTTP request.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
@@ -103,6 +109,7 @@ export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "fleets",
   "automations",
   "network-topology",
+  "tailscale",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

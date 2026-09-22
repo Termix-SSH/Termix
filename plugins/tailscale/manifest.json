@@ -1,0 +1,20 @@
+{
+  "id": "tailscale",
+  "name": "Tailscale",
+  "version": "1.0.0",
+  "description": "Browse and connect to tailnet devices, manage the Tailscale API key, and show the Tailscale SSH re-authentication dialog.",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Networking",
+  "icon": "Network",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": true,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["process:transport-owner"],
+  "sidecars": []
+}

@@ -77,11 +77,6 @@ type GeneralSettingsSectionProps = {
   handleSaveGuacamole: () => void;
   logLevel: string;
   handleSaveLogLevel: (level: string) => void;
-  tailscaleApiKey: string;
-  setTailscaleApiKey: Dispatch<SetStateAction<string>>;
-  tailscaleApiBaseUrl: string;
-  setTailscaleApiBaseUrl: Dispatch<SetStateAction<string>>;
-  handleSaveTailscaleApiKey: () => void;
 };
 
 export function AdminGeneralSettingsSection({
@@ -138,11 +133,6 @@ export function AdminGeneralSettingsSection({
   handleSaveGuacamole,
   logLevel,
   handleSaveLogLevel,
-  tailscaleApiKey,
-  setTailscaleApiKey,
-  tailscaleApiBaseUrl,
-  setTailscaleApiBaseUrl,
-  handleSaveTailscaleApiKey,
 }: GeneralSettingsSectionProps) {
   const { t } = useTranslation();
 
@@ -560,56 +550,6 @@ export function AdminGeneralSettingsSection({
               </div>
             </div>
           )}
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("admin.tailscaleApiKey")}
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {t("admin.tailscaleApiKeyDescription")}{" "}
-              <a
-                href="https://docs.termix.site/features/networking/tailscale"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent-brand hover:underline"
-              >
-                {t("admin.tailscaleApiKeyDocsLink")}
-              </a>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              type="password"
-              value={tailscaleApiKey}
-              onChange={(e) => setTailscaleApiKey(e.target.value)}
-              placeholder="tskey-api-... / hskey-api-..."
-              className="text-sm"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7 shrink-0"
-              onClick={handleSaveTailscaleApiKey}
-            >
-              {t("common.save")}
-            </Button>
-          </div>
-          <div className="flex flex-col gap-1.5 mt-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              {t("admin.tailscaleApiBaseUrl")}
-            </label>
-            <span className="text-[10px] text-muted-foreground">
-              {t("admin.tailscaleApiBaseUrlDescription")}
-            </span>
-            <Input
-              value={tailscaleApiBaseUrl}
-              onChange={(e) => setTailscaleApiBaseUrl(e.target.value)}
-              placeholder="https://api.tailscale.com/api/v2"
-              className="text-sm"
-            />
-          </div>
         </div>
 
         <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">

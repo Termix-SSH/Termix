@@ -50,8 +50,6 @@ import {
   getUserRoles,
 } from "@/main-axios";
 import {
-  getTailscaleSettings,
-  updateTailscaleSettings,
   getHostDefaults,
   updateHostDefaults,
   getAnalyticsEnabled,
@@ -66,6 +64,11 @@ import {
   type TerminalImageStorageTestResult,
   type BrandingSettings,
 } from "@/api/settings-api";
+import {
+  getTailscaleSettings,
+  updateTailscaleSettings,
+} from "../../../plugins/tailscale/frontend/tailscale-api";
+import { AdminTailscaleSection } from "../../../plugins/tailscale/frontend/AdminTailscaleSection";
 import {
   getSessionSharingGloballyEnabled,
   updateSessionSharingGloballyEnabled,
@@ -1336,6 +1339,11 @@ export function AdminSettingsPanel({
         handleSaveGuacamole={handleSaveGuacamole}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}
+      />
+
+      <AdminTailscaleSection
+        open={openSections.has("tailscale")}
+        onToggle={() => toggle("tailscale")}
         tailscaleApiKey={tailscaleApiKey}
         setTailscaleApiKey={setTailscaleApiKey}
         tailscaleApiBaseUrl={tailscaleApiBaseUrl}

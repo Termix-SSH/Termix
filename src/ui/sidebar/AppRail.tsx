@@ -32,6 +32,7 @@ export type RailView =
   | "automations"
   | "ai"
   | "fleets"
+  | "tailscale"
   | "workspaces"
   | "collab";
 

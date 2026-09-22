@@ -11,6 +11,7 @@ import {
   Network,
   Play,
   Plug,
+  Radar,
   ScrollText,
   Server,
   Settings,
@@ -139,6 +140,12 @@ export const RAIL_ITEMS: RailItemDef[] = [
     rightDockable: true,
   },
   { id: "fleets", icon: Boxes, labelKey: "nav.fleets", separatorAfter: true },
+  {
+    id: "tailscale",
+    icon: Radar,
+    labelKey: "nav.tailscale",
+    separatorAfter: true,
+  },
   {
     id: "automations",
     icon: Workflow,
