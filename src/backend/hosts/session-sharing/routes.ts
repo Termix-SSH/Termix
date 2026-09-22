@@ -10,14 +10,20 @@ import {
   isLiveSessionOwnedBy,
   isSharingEnabledForHost,
 } from "./live-sessions.js";
-import { GuacamoleTokenService } from "../guacamole/token-service.js";
+// Remote Desktop is a first-party plugin (plugins/remote-desktop); this goes
+// through the same in-core bridge its router is mounted behind, since
+// plugins/ is compiled separately from src/backend/ and core cannot
+// statically import across that boundary. See
+// src/backend/database/routes/guacamole-dispatch.ts and that plugin's
+// README -- this is an accepted, temporary coupling until session-sharing
+// becomes a plugin of its own.
+import { createGuacamoleJoinToken } from "../../database/routes/guacamole-dispatch.js";
 import { createCurrentSessionShareRepository } from "../../database/repositories/factory.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const permissionManager = PermissionManager.getInstance();
-const tokenService = GuacamoleTokenService.getInstance();
 
 const DEFAULT_EXPIRY_HOURS = 24;
 const MAX_EXPIRY_HOURS = 24 * 30;
@@ -406,7 +412,7 @@ router.get("/resolve/:linkToken", async (req: Request, res: Response) => {
     };
 
     if (protocol !== "ssh") {
-      const joinToken = tokenService.createJoinToken(
+      const joinToken = createGuacamoleJoinToken(
         share.sessionId,
         share.permissionLevel === "read-only",
       );

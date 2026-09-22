@@ -6,11 +6,12 @@
  * tsc only emits .ts, so without a copy step the plugins directory simply
  * would not exist in dist and the loader would find nothing.
  *
- * docker and host-metrics are the exception: their backends are real
- * TypeScript, physically relocated from src/backend/hosts/docker/ and
- * src/backend/hosts/metrics/ rather than kept as hand-written JS, because
- * each is thousands of lines of typed SSH/session logic that is not worth
- * hand-transpiling. tsconfig.plugins.json compiles each plugin backend's
+ * docker, host-metrics and remote-desktop are the exception: their backends
+ * are real TypeScript, physically relocated from src/backend/hosts/docker/,
+ * src/backend/hosts/metrics/ and src/backend/hosts/guacamole/ rather than
+ * kept as hand-written JS, because each is thousands of lines of typed
+ * SSH/session (or, for remote-desktop, guacd protocol) logic that is not
+ * worth hand-transpiling. tsconfig.plugins.json compiles each plugin backend's
  * TypeScript to a sibling .js next to its source. Their imports into core
  * (e.g. "../../../src/backend/utils/logger.js") are written relative to the
  * TypeScript SOURCE tree so tsc can type-check them, since plugins/ is not

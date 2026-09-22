@@ -1,5 +1,12 @@
 import { sessionManager } from "../terminal/session-manager.js";
-import { getGuacSessionInfo } from "../guacamole/guacamole-server.js";
+// Remote Desktop is a first-party plugin (plugins/remote-desktop); this goes
+// through the same in-core bridge its router is mounted behind, since
+// plugins/ is compiled separately from src/backend/ and core cannot
+// statically import across that boundary. See
+// src/backend/database/routes/guacamole-dispatch.ts and that plugin's
+// README -- this is an accepted, temporary coupling until collab/
+// session-sharing themselves become plugins.
+import { getGuacamoleSessionInfo as getGuacSessionInfo } from "../../database/routes/guacamole-dispatch.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,

@@ -59,7 +59,7 @@ const DockerApp = lazy(() =>
   })),
 );
 const GuacamoleApp = lazy(() =>
-  import("@/features/guacamole/GuacamoleApp").then((m) => ({
+  import("../plugins/remote-desktop/frontend/GuacamoleApp").then((m) => ({
     default: m.default,
   })),
 );

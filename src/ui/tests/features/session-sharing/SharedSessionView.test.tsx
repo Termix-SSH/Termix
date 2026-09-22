@@ -38,9 +38,12 @@ vi.mock("@xterm/addon-fit", () => ({
   },
 }));
 
-vi.mock("@/features/guacamole/GuacamoleDisplay.tsx", () => ({
-  GuacamoleDisplay: () => <div data-testid="guacamole-display" />,
-}));
+vi.mock(
+  "../../../../../plugins/remote-desktop/frontend/GuacamoleDisplay.tsx",
+  () => ({
+    GuacamoleDisplay: () => <div data-testid="guacamole-display" />,
+  }),
+);
 
 import SharedSessionView from "../../../features/session-sharing/SharedSessionView";
 

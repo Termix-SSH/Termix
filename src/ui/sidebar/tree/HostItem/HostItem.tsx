@@ -493,17 +493,19 @@ export function HostItem({
   const sshActions = getSshActions(host);
   const availableActions: TabType[] = [
     ...sshActions.map(({ type }) => type),
-    ...(host.enableRdp ? (["rdp"] as const) : []),
-    ...(host.enableVnc ? (["vnc"] as const) : []),
-    ...(host.enableTelnet ? (["telnet"] as const) : []),
+    ...(host.enableRdp && isTabTypeAvailable("rdp") ? (["rdp"] as const) : []),
+    ...(host.enableVnc && isTabTypeAvailable("vnc") ? (["vnc"] as const) : []),
+    ...(host.enableTelnet && isTabTypeAvailable("telnet")
+      ? (["telnet"] as const)
+      : []),
   ];
   const defaultAction: TabType = host.enableSsh
     ? "terminal"
-    : host.enableRdp
+    : host.enableRdp && isTabTypeAvailable("rdp")
       ? "rdp"
-      : host.enableVnc
+      : host.enableVnc && isTabTypeAvailable("vnc")
         ? "vnc"
-        : host.enableTelnet
+        : host.enableTelnet && isTabTypeAvailable("telnet")
           ? "telnet"
           : "terminal";
   const openHostTab = (
@@ -604,11 +606,13 @@ export function HostItem({
         ),
       )}
       {host.enableSsh &&
-        (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+        ((host.enableRdp && isTabTypeAvailable("rdp")) ||
+          (host.enableVnc && isTabTypeAvailable("vnc")) ||
+          (host.enableTelnet && isTabTypeAvailable("telnet"))) &&
         sshActions.length > 0 && (
           <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
         )}
-      {host.enableRdp && (
+      {host.enableRdp && isTabTypeAvailable("rdp") && (
         <button
           title={t("hosts.connectRdp")}
           onPointerEnter={() => preloadTabSurface("rdp")}
@@ -631,7 +635,7 @@ export function HostItem({
           <MonitorUp className="size-3.5" />
         </button>
       )}
-      {host.enableVnc && (
+      {host.enableVnc && isTabTypeAvailable("vnc") && (
         <button
           title={t("hosts.connectVnc")}
           onPointerEnter={() => preloadTabSurface("vnc")}
@@ -645,7 +649,7 @@ export function HostItem({
           <MousePointerClick className="size-3.5" />
         </button>
       )}
-      {host.enableTelnet && (
+      {host.enableTelnet && isTabTypeAvailable("telnet") && (
         <button
           title={t("hosts.connectTelnet")}
           onPointerEnter={() => preloadTabSurface("telnet")}
@@ -822,7 +826,7 @@ export function HostItem({
                   </DropdownMenuItem>
                 ),
               )}
-              {host.enableRdp && (
+              {host.enableRdp && isTabTypeAvailable("rdp") && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
@@ -833,7 +837,7 @@ export function HostItem({
                   {t("hosts.connectRdp")}
                 </DropdownMenuItem>
               )}
-              {host.enableVnc && (
+              {host.enableVnc && isTabTypeAvailable("vnc") && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
@@ -844,7 +848,7 @@ export function HostItem({
                   {t("hosts.connectVnc")}
                 </DropdownMenuItem>
               )}
-              {host.enableTelnet && (
+              {host.enableTelnet && isTabTypeAvailable("telnet") && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1055,7 +1059,7 @@ export function HostItem({
                     {t("hosts.copyTmuxMonitorUrlAction")}
                   </DropdownMenuItem>
                 )}
-              {host.enableRdp && (
+              {host.enableRdp && isTabTypeAvailable("rdp") && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1069,7 +1073,7 @@ export function HostItem({
                   {t("hosts.copyRdpUrlAction")}
                 </DropdownMenuItem>
               )}
-              {host.enableVnc && (
+              {host.enableVnc && isTabTypeAvailable("vnc") && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1083,7 +1087,7 @@ export function HostItem({
                   {t("hosts.copyVncUrlAction")}
                 </DropdownMenuItem>
               )}
-              {host.enableTelnet && (
+              {host.enableTelnet && isTabTypeAvailable("telnet") && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();

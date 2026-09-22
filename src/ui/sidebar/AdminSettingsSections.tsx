@@ -520,17 +520,17 @@ export function AdminGeneralSettingsSection({
 
         <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
           <SettingRow
-            label={t("admin.enableGuacamole")}
+            label={t("admin.enableRemoteDesktop")}
             description={
               <>
-                {t("admin.enableGuacamoleDesc")}{" "}
+                {t("admin.enableRemoteDesktopDesc")}{" "}
                 <a
                   href="https://docs.termix.site/setup/remote-desktop"
                   target="_blank"
                   rel="noreferrer"
                   className="text-accent-brand hover:underline"
                 >
-                  {t("admin.enableGuacamoleDocsLink")}
+                  {t("admin.enableRemoteDesktopDocsLink")}
                 </a>
               </>
             }

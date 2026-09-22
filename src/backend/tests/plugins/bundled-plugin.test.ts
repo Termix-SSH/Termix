@@ -186,3 +186,61 @@ describe("bundled host-metrics plugin", () => {
     expect(source).toMatch(/export async function deactivate/);
   });
 });
+
+describe("bundled remote-desktop plugin", () => {
+  it("ships a directory with a manifest and both entry points", () => {
+    const dir = path.join(getBundledPluginsDir(), "remote-desktop");
+
+    expect(fs.existsSync(path.join(dir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "backend", "index.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "frontend", "index.mjs"))).toBe(true);
+  });
+
+  it("has a manifest that passes the real validator", () => {
+    const { manifest, errors } = parseManifest(
+      readBundledManifest("remote-desktop"),
+    );
+
+    expect(errors).toEqual([]);
+    expect(manifest?.id).toBe("remote-desktop");
+    expect(manifest?.category).toBe("Terminal");
+  });
+
+  it("declares the transport-owner capability and qualifies for the tier", () => {
+    const { manifest } = parseManifest(readBundledManifest("remote-desktop"));
+
+    expect(manifest?.permissions).toContain(TRANSPORT_OWNER_CAPABILITY);
+    expect(isFirstParty("remote-desktop")).toBe(true);
+    expect(runsInProcess("remote-desktop", manifest!.permissions)).toBe(true);
+  });
+
+  it("contributes the rdp/vnc/telnet tabs the shell registers", () => {
+    const { manifest } = parseManifest(readBundledManifest("remote-desktop"));
+    const tabIds = manifest?.contributes?.tabs?.map((tab) => tab.id);
+
+    expect(tabIds).toEqual(["rdp", "vnc", "telnet"]);
+  });
+
+  it("declares three host capabilities as an array", () => {
+    const { manifest } = parseManifest(readBundledManifest("remote-desktop"));
+    const hostCapability = manifest?.contributes?.hostCapability;
+
+    expect(Array.isArray(hostCapability)).toBe(true);
+    expect(
+      (hostCapability as Array<{ key: string }>).map((entry) => entry.key),
+    ).toEqual(["enableRdp", "enableVnc", "enableTelnet"]);
+  });
+
+  it("exports activate and deactivate from its backend entry", () => {
+    const entry = path.join(
+      getBundledPluginsDir(),
+      "remote-desktop",
+      "backend",
+      "index.mjs",
+    );
+    const source = fs.readFileSync(entry, "utf8");
+
+    expect(source).toMatch(/export async function activate/);
+    expect(source).toMatch(/export async function deactivate/);
+  });
+});

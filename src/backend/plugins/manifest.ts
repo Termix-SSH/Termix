@@ -128,7 +128,7 @@ export interface PluginManifest {
       icon: string;
       openFrom: string[];
     }>;
-    hostCapability?: { key: string; labelKey: string; editorTab: string };
+    hostCapability?: HostCapabilityContribution | HostCapabilityContribution[];
     permissionGroup?: {
       group: string;
       permissions: string[];
@@ -159,6 +159,19 @@ export interface PluginManifest {
   /** Secrets this plugin wants to borrow from another plugin, by reference. */
   requiresSecret?: PluginSecretRequire[];
   sidecars: Array<{ id: string; binary: string }>;
+}
+
+/**
+ * A host-level checkbox this plugin contributes to the host editor (e.g.
+ * "Enable RDP"), backed by an existing boolean column on the host record.
+ * Most plugins declare one; a plugin covering several independent protocols
+ * on the same host (rdp/vnc/telnet) declares several -- see
+ * contributes.hostCapability, which accepts either shape.
+ */
+export interface HostCapabilityContribution {
+  key: string;
+  labelKey: string;
+  editorTab: string;
 }
 
 export interface PluginServiceProvide {
@@ -540,15 +553,26 @@ function validateContributes(contributes: Record<string, unknown>): string[] {
   }
 
   if ("hostCapability" in contributes) {
-    const hostCapability = (contributes.hostCapability ?? {}) as Record<
-      string,
-      unknown
-    >;
-    for (const field of ["key", "labelKey", "editorTab"]) {
-      if (!(field in hostCapability)) {
-        errors.push(`contributes.hostCapability.${field} is required`);
+    const raw = contributes.hostCapability;
+    const entries = Array.isArray(raw) ? raw : [raw];
+    const seenKeys = new Set<string>();
+    entries.forEach((entry, index) => {
+      const hc = (entry ?? {}) as Record<string, unknown>;
+      const prefix = Array.isArray(raw)
+        ? `contributes.hostCapability[${index}]`
+        : "contributes.hostCapability";
+      for (const field of ["key", "labelKey", "editorTab"]) {
+        if (!(field in hc)) {
+          errors.push(`${prefix}.${field} is required`);
+        }
       }
-    }
+      if (typeof hc.key === "string") {
+        if (seenKeys.has(hc.key)) {
+          errors.push(`${prefix}.key is a duplicate: "${hc.key}"`);
+        }
+        seenKeys.add(hc.key);
+      }
+    });
   }
 
   if ("permissionGroup" in contributes) {

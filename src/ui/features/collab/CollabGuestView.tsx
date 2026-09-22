@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, Eye, Presentation, Users } from "lucide-react";
-import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
+import { GuacamoleDisplay } from "../../../../plugins/remote-desktop/frontend/GuacamoleDisplay.tsx";
 import {
   GuestTerminalView,
   type SessionParticipantInfo,

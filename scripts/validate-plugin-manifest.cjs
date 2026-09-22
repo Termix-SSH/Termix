@@ -396,11 +396,26 @@ function validateContributes(contributes) {
   }
 
   if ("hostCapability" in contributes) {
-    for (const field of ["key", "labelKey", "editorTab"]) {
-      if (!(field in (contributes.hostCapability || {}))) {
-        errors.push(`contributes.hostCapability.${field} is required`);
+    const raw = contributes.hostCapability;
+    const entries = Array.isArray(raw) ? raw : [raw];
+    const seenKeys = new Set();
+    entries.forEach((entry, index) => {
+      const hc = entry || {};
+      const prefix = Array.isArray(raw)
+        ? `contributes.hostCapability[${index}]`
+        : "contributes.hostCapability";
+      for (const field of ["key", "labelKey", "editorTab"]) {
+        if (!(field in hc)) {
+          errors.push(`${prefix}.${field} is required`);
+        }
       }
-    }
+      if (typeof hc.key === "string") {
+        if (seenKeys.has(hc.key)) {
+          errors.push(`${prefix}.key is a duplicate: "${hc.key}"`);
+        }
+        seenKeys.add(hc.key);
+      }
+    });
   }
 
   if ("permissionGroup" in contributes) {

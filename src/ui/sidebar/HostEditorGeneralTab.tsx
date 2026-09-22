@@ -773,7 +773,7 @@ export function HostEditorGeneralTab({
                 protocols.enableRdp ||
                 protocols.enableVnc ||
                 protocols.enableTelnet
-                  ? `${t("hosts.connectionOriginDesc")} ${t("hosts.connectionOriginGuacamoleNote")}`
+                  ? `${t("hosts.connectionOriginDesc")} ${t("hosts.connectionOriginRemoteDesktopNote")}`
                   : t("hosts.connectionOriginDesc")
               }
             >

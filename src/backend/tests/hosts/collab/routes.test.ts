@@ -56,13 +56,9 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   getAuditUsername: vi.fn(async (id: string) => id.toUpperCase()),
   getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
 }));
-vi.mock("../../../hosts/guacamole/token-service.js", () => ({
-  GuacamoleTokenService: {
-    getInstance: () => ({
-      createJoinToken: (id: string, readOnly: boolean) =>
-        `join:${id}:${readOnly}`,
-    }),
-  },
+vi.mock("../../../database/routes/guacamole-dispatch.js", () => ({
+  createGuacamoleJoinToken: (id: string, readOnly: boolean) =>
+    `join:${id}:${readOnly}`,
 }));
 vi.mock("../../../hosts/collab/room-hub.js", () => ({
   collabRoomHub: {

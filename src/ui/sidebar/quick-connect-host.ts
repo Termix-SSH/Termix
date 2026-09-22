@@ -1,6 +1,6 @@
 import type { SSHHostData } from "@/types";
 import type { Host } from "@/types/ui-types";
-import type { GuacamoleQuickHost } from "@/features/guacamole/GuacamoleApp";
+import type { GuacamoleQuickHost } from "../../../plugins/remote-desktop/frontend/GuacamoleApp";
 
 export type QuickConnectProtocol = "ssh" | "rdp" | "vnc";
 

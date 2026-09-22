@@ -1,7 +1,12 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { RequestHandler, Router } from "express";
-import { restartGuacServer } from "../../hosts/guacamole/guacamole-server.js";
+// Remote Desktop is a first-party plugin (plugins/remote-desktop); this goes
+// through the same in-core bridge its router is mounted behind, rather than
+// importing the plugin's TypeScript directly, since plugins/ is compiled
+// separately from src/backend/ and core cannot statically import across that
+// boundary. See guacamole-dispatch.ts and that plugin's README.
+import { restartGuacamoleService as restartGuacServer } from "./guacamole-dispatch.js";
 import {
   authLogger,
   getGlobalLogLevel,

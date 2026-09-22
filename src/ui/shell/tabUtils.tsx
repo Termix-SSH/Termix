@@ -39,7 +39,7 @@ import type {
   TerminalHandle,
   TerminalHostConfig,
 } from "@/features/terminal/Terminal";
-import type { GuacamoleAppHandle } from "@/features/guacamole/GuacamoleApp";
+import type { GuacamoleAppHandle } from "../../../plugins/remote-desktop/frontend/GuacamoleApp";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import {
@@ -110,7 +110,7 @@ const loadTmuxMonitor = () =>
   }));
 const TmuxMonitor = lazy(loadTmuxMonitor);
 const loadGuacamoleApp = () =>
-  import("@/features/guacamole/GuacamoleApp").then((m) => ({
+  import("../../../plugins/remote-desktop/frontend/GuacamoleApp").then((m) => ({
     default: m.default,
   }));
 const GuacamoleApp = lazy(loadGuacamoleApp);
@@ -655,7 +655,10 @@ export function renderTabContent(
     case "telnet":
       if (!host)
         return (
-          <EmptyState icon={Monitor} messageKey="guacamole.noHostSelected" />
+          <EmptyState
+            icon={Monitor}
+            messageKey="remoteDesktop.noHostSelected"
+          />
         );
       return withTabSuspense(
         <GuacamoleApp

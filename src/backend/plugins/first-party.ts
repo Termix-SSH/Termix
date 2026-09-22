@@ -62,6 +62,12 @@
  * do, verifies host keys via SSHHostKeyVerifier, and streams its discovery
  * progress as server-sent events. Neither the worker's 13-field read-only
  * ctx.hosts nor its single-postMessage-reply ctx.http.route can support that.
+ *
+ * remote-desktop is here for the same reason ssh-terminal is: it owns a
+ * WebSocket server (guacamole-lite, port 30008) and its
+ * /connect-host/:hostId route does multi-step credential/tunnel resolution
+ * (SSH jump-host tunnels, a macOS VNC compatibility proxy) using raw
+ * net.Socket plumbing that cannot cross a structured-clone boundary.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
@@ -69,6 +75,7 @@ export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "host-metrics",
   "ai",
   "proxmox",
+  "remote-desktop",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

@@ -2191,13 +2191,13 @@ export {
 export type {
   GuacamoleTokenRequest,
   GuacamoleTokenResponse,
-} from "@/api/guacamole-api";
+} from "../../plugins/remote-desktop/frontend/guacamole-api";
 export {
   getGuacamoleDpi,
   getGuacamoleToken,
   getGuacamoleTokenFromHost,
   getGuacdStatus,
-} from "@/api/guacamole-api";
+} from "../../plugins/remote-desktop/frontend/guacamole-api";
 
 // ============================================================================
 // RBAC MANAGEMENT

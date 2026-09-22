@@ -11,7 +11,7 @@ import {
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
-import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
+import { GuacamoleDisplay } from "../../../../plugins/remote-desktop/frontend/GuacamoleDisplay.tsx";
 
 const PING_INTERVAL_MS = 30000;
 

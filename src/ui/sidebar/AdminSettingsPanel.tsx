@@ -866,9 +866,9 @@ export function AdminSettingsPanel({
   async function handleSaveGuacamole() {
     try {
       await updateGuacamoleSettings({ enabled: guacEnabled, url: guacUrl });
-      toast.success(t("admin.guacamoleSaved"));
+      toast.success(t("admin.remoteDesktopSaved"));
     } catch {
-      toast.error(t("admin.guacamoleSaveFailed"));
+      toast.error(t("admin.remoteDesktopSaveFailed"));
     }
   }
 
@@ -879,7 +879,7 @@ export function AdminSettingsPanel({
       await updateGuacamoleSettings({ enabled: newVal, url: guacUrl });
     } catch {
       setGuacEnabled(!newVal);
-      toast.error(t("admin.guacamoleUpdateFailed"));
+      toast.error(t("admin.remoteDesktopUpdateFailed"));
     }
   }
 

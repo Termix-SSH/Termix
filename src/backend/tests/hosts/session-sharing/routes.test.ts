@@ -63,18 +63,13 @@ vi.mock("../../../hosts/terminal/session-manager.js", () => ({
   },
 }));
 
-vi.mock("../../../hosts/guacamole/guacamole-server.js", () => ({
-  getGuacSessionInfo: (guacamoleConnectionId: string) =>
+vi.mock("../../../database/routes/guacamole-dispatch.js", () => ({
+  getGuacamoleSessionInfo: (guacamoleConnectionId: string) =>
     state.guacSessions.get(guacamoleConnectionId) ?? null,
-}));
-
-vi.mock("../../../hosts/guacamole/token-service.js", () => ({
-  GuacamoleTokenService: {
-    getInstance: () => ({
-      createJoinToken: (guacamoleConnectionId: string, readOnly: boolean) =>
-        `join-token:${guacamoleConnectionId}:${readOnly}`,
-    }),
-  },
+  createGuacamoleJoinToken: (
+    guacamoleConnectionId: string,
+    readOnly: boolean,
+  ) => `join-token:${guacamoleConnectionId}:${readOnly}`,
 }));
 
 vi.mock("../../../database/repositories/factory.js", () => ({

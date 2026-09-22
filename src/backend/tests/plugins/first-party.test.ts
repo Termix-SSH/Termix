@@ -39,22 +39,24 @@ function manifest(overrides: Record<string, unknown> = {}) {
 }
 
 describe("first-party allowlist", () => {
-  it("contains only ssh-terminal, docker, host-metrics, ai and proxmox", () => {
+  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox and remote-desktop", () => {
     expect([...FIRST_PARTY_PLUGIN_IDS].sort()).toEqual([
       "ai",
       "docker",
       "host-metrics",
       "proxmox",
+      "remote-desktop",
       "ssh-terminal",
     ]);
   });
 
-  it("recognises ssh-terminal, docker, host-metrics, ai and proxmox and nothing else", () => {
+  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox and remote-desktop and nothing else", () => {
     expect(isFirstParty("ssh-terminal")).toBe(true);
     expect(isFirstParty("docker")).toBe(true);
     expect(isFirstParty("host-metrics")).toBe(true);
     expect(isFirstParty("ai")).toBe(true);
     expect(isFirstParty("proxmox")).toBe(true);
+    expect(isFirstParty("remote-desktop")).toBe(true);
     expect(isFirstParty("ssh-terminal-pro")).toBe(false);
     expect(isFirstParty("community-plugin")).toBe(false);
     expect(isFirstParty("")).toBe(false);
@@ -72,6 +74,9 @@ describe("runsInProcess", () => {
     );
     expect(runsInProcess("ai", [TRANSPORT_OWNER_CAPABILITY])).toBe(true);
     expect(runsInProcess("proxmox", [TRANSPORT_OWNER_CAPABILITY])).toBe(true);
+    expect(runsInProcess("remote-desktop", [TRANSPORT_OWNER_CAPABILITY])).toBe(
+      true,
+    );
 
     // On the list but not asking for it: stays in a worker, so the manifest
     // remains an honest description of what the plugin does.
@@ -80,6 +85,7 @@ describe("runsInProcess", () => {
     expect(runsInProcess("host-metrics", ["hosts.read"])).toBe(false);
     expect(runsInProcess("ai", ["hosts.read"])).toBe(false);
     expect(runsInProcess("proxmox", ["hosts.read"])).toBe(false);
+    expect(runsInProcess("remote-desktop", ["hosts.read"])).toBe(false);
 
     // Asking for it but not on the list.
     expect(

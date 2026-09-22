@@ -299,11 +299,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // ssh-terminal, docker and host-metrics plugins start their own servers,
     // so disabling any of them stops its WS/HTTP server. See
     // plugins/ssh-terminal, plugins/docker and plugins/host-metrics.
-    // AI and Proxmox are also absent for the same reason: each plugin
-    // registers its router with its own dispatcher in database.ts on
-    // activate (/ai, /proxmox), so disabling either makes its routes 404
-    // instead of leaving a dead import here. See plugins/ai and
-    // plugins/proxmox.
+    // AI, Proxmox and Remote Desktop are also absent for the same reason:
+    // each plugin registers its router with its own dispatcher in
+    // database.ts on activate (/ai, /proxmox, /guacamole), so disabling any
+    // of them makes its routes 404 instead of leaving a dead import here.
+    // See plugins/ai, plugins/proxmox and plugins/remote-desktop.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/tmux/index.js");
@@ -320,27 +320,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       systemLogger.info(`Log level set to: ${logLevel}`, {
         operation: "log_level_init",
       });
-    }
-
-    // Initialize Guacamole server for RDP/VNC/Telnet support
-    const guacEnabled = getCurrentSettingValue("guac_enabled") !== "false";
-
-    if (process.env.ENABLE_GUACAMOLE !== "false" && guacEnabled) {
-      import("./hosts/guacamole/guacamole-server.js")
-        .then(() => {
-          systemLogger.info("Guacamole server initialized", {
-            operation: "guac_init",
-          });
-        })
-        .catch((error) => {
-          systemLogger.warn(
-            "Failed to initialize Guacamole server (guacd may not be available)",
-            {
-              operation: "guac_init_skip",
-              error: getErrorMessage(error),
-            },
-          );
-        });
     }
 
     // After metrics, which the automation triggers and headless polling hook into.

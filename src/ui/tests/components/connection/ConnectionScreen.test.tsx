@@ -29,12 +29,12 @@ describe("ConnectionScreen", () => {
       render(
         <ConnectionScreen
           status="disconnected"
-          message="guacamole.hostNotFound"
+          message="remoteDesktop.hostNotFound"
         />,
       ),
     ).not.toThrow();
 
-    expect(screen.getByText("guacamole.hostNotFound")).toBeTruthy();
+    expect(screen.getByText("remoteDesktop.hostNotFound")).toBeTruthy();
     expect(screen.getByRole("status").getAttribute("data-status")).toBe(
       "disconnected",
     );

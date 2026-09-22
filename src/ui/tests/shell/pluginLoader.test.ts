@@ -67,6 +67,38 @@ function aiPlugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
   });
 }
 
+function remoteDesktopPlugin(
+  overrides: Partial<PluginSummary> = {},
+): PluginSummary {
+  return plugin({
+    id: "remote-desktop",
+    name: "Remote Desktop",
+    contributes: {
+      tabs: [
+        {
+          id: "rdp",
+          titleKey: "hosts.tabRdp",
+          icon: "Monitor",
+          openFrom: ["host-context-menu", "palette"],
+        },
+        {
+          id: "vnc",
+          titleKey: "hosts.tabVnc",
+          icon: "MousePointerClick",
+          openFrom: ["host-context-menu", "palette"],
+        },
+        {
+          id: "telnet",
+          titleKey: "hosts.tabTelnet",
+          icon: "Terminal",
+          openFrom: ["host-context-menu", "palette"],
+        },
+      ],
+    },
+    ...overrides,
+  });
+}
+
 describe("plugin state applied to the shell", () => {
   afterEach(() => {
     resetPluginState();
@@ -178,6 +210,39 @@ describe("plugin state applied to the shell", () => {
   it("disabling ai does not affect the terminal, and vice versa", () => {
     applyPluginState([aiPlugin({ enabled: false }), plugin({ enabled: true })]);
     expect(isTabTypeAvailable("ai")).toBe(false);
+    expect(isTabTypeAvailable("terminal")).toBe(true);
+  });
+
+  it("allows rdp/vnc/telnet tabs while remote-desktop is enabled", () => {
+    applyPluginState([remoteDesktopPlugin({ enabled: true })]);
+    expect(isTabTypeAvailable("rdp")).toBe(true);
+    expect(isTabTypeAvailable("vnc")).toBe(true);
+    expect(isTabTypeAvailable("telnet")).toBe(true);
+  });
+
+  it("blocks rdp/vnc/telnet tabs when remote-desktop is disabled", () => {
+    applyPluginState([remoteDesktopPlugin({ enabled: false })]);
+    expect(isTabTypeAvailable("rdp")).toBe(false);
+    expect(isTabTypeAvailable("vnc")).toBe(false);
+    expect(isTabTypeAvailable("telnet")).toBe(false);
+  });
+
+  it("allows rdp/vnc/telnet tabs again when remote-desktop is re-enabled", () => {
+    applyPluginState([remoteDesktopPlugin({ enabled: false })]);
+    expect(isTabTypeAvailable("rdp")).toBe(false);
+
+    applyPluginState([remoteDesktopPlugin({ enabled: true })]);
+    expect(isTabTypeAvailable("rdp")).toBe(true);
+    expect(isTabTypeAvailable("vnc")).toBe(true);
+    expect(isTabTypeAvailable("telnet")).toBe(true);
+  });
+
+  it("disabling remote-desktop does not affect the terminal, and vice versa", () => {
+    applyPluginState([
+      remoteDesktopPlugin({ enabled: false }),
+      plugin({ enabled: true }),
+    ]);
+    expect(isTabTypeAvailable("rdp")).toBe(false);
     expect(isTabTypeAvailable("terminal")).toBe(true);
   });
 

@@ -8,7 +8,14 @@ import {
   getAuditUsername,
   getRequestMeta,
 } from "../../utils/audit-logger.js";
-import { GuacamoleTokenService } from "../guacamole/token-service.js";
+// Remote Desktop is a first-party plugin (plugins/remote-desktop); this goes
+// through the same in-core bridge its router is mounted behind, since
+// plugins/ is compiled separately from src/backend/ and core cannot
+// statically import across that boundary. See
+// src/backend/database/routes/guacamole-dispatch.ts and that plugin's
+// README -- this is an accepted, temporary coupling until collab becomes a
+// plugin of its own.
+import { createGuacamoleJoinToken } from "../../database/routes/guacamole-dispatch.js";
 import { collabRoomHub } from "./room-hub.js";
 import { getStageController, setStageController } from "./stage-control.js";
 import { isCollabGuestRateLimited } from "./guest-rate-limit.js";
@@ -41,7 +48,6 @@ import type { CollabRoomRecord } from "../../database/repositories/collab-room-r
 const router = express.Router();
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
-const tokenService = GuacamoleTokenService.getInstance();
 
 const STAGE_SHARE_EXPIRY_HOURS = 12;
 const MAX_INVITE_TARGETS = 200;
@@ -657,7 +663,7 @@ router.get(
       };
       if (protocol !== "ssh") {
         stage.connectParams = {
-          token: tokenService.createJoinToken(share.sessionId, true),
+          token: createGuacamoleJoinToken(share.sessionId, true),
         };
       }
       res.json({ stage });
@@ -1089,7 +1095,7 @@ router.get("/guest/:token", async (req: Request, res: Response) => {
                 }
               : {
                   connectParams: {
-                    token: tokenService.createJoinToken(share.sessionId, true),
+                    token: createGuacamoleJoinToken(share.sessionId, true),
                   },
                 }),
           };

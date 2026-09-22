@@ -154,14 +154,32 @@
           }
         },
         "hostCapability": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["key", "labelKey", "editorTab"],
-          "properties": {
-            "key": { "type": "string", "minLength": 1 },
-            "labelKey": { "type": "string", "minLength": 1 },
-            "editorTab": { "type": "string", "minLength": 1 }
-          }
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "labelKey", "editorTab"],
+              "properties": {
+                "key": { "type": "string", "minLength": 1 },
+                "labelKey": { "type": "string", "minLength": 1 },
+                "editorTab": { "type": "string", "minLength": 1 }
+              }
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key", "labelKey", "editorTab"],
+                "properties": {
+                  "key": { "type": "string", "minLength": 1 },
+                  "labelKey": { "type": "string", "minLength": 1 },
+                  "editorTab": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          ]
         },
         "permissionGroup": {
           "type": "object",
