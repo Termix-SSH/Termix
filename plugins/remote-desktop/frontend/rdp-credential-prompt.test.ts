@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { needsRdpCredentialPrompt } from "@/features/guacamole/rdp-credential-prompt";
+import { needsRdpCredentialPrompt } from "./rdp-credential-prompt";
 
 describe("needsRdpCredentialPrompt", () => {
   it("prompts recipients when RDP has no saved authentication", () => {

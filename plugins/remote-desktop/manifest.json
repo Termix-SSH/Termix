@@ -1,0 +1,51 @@
+{
+  "id": "remote-desktop",
+  "name": "Remote Desktop",
+  "version": "1.0.0",
+  "description": "RDP, VNC and Telnet remote desktop sessions, with clipboard, drive redirection, session recording and session sharing.",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Plugin-RemoteDesktop",
+  "category": "Terminal",
+  "icon": "Monitor",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": true,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["process:transport-owner"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "rdp",
+        "titleKey": "hosts.tabRdp",
+        "icon": "Monitor",
+        "openFrom": ["host-context-menu", "palette"]
+      },
+      {
+        "id": "vnc",
+        "titleKey": "hosts.tabVnc",
+        "icon": "MousePointerClick",
+        "openFrom": ["host-context-menu", "palette"]
+      },
+      {
+        "id": "telnet",
+        "titleKey": "hosts.tabTelnet",
+        "icon": "Terminal",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ],
+    "hostCapability": [
+      { "key": "enableRdp", "labelKey": "hosts.tabRdp", "editorTab": "rdp" },
+      { "key": "enableVnc", "labelKey": "hosts.tabVnc", "editorTab": "vnc" },
+      {
+        "key": "enableTelnet",
+        "labelKey": "hosts.tabTelnet",
+        "editorTab": "telnet"
+      }
+    ]
+  },
+  "sidecars": []
+}

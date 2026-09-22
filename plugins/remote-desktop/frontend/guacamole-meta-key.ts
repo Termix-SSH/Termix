@@ -56,9 +56,9 @@ export function metaKeyLabels(family: MetaKeyFamily): MetaKeyLabels {
       family,
       short: "Cmd",
       lock: "Cmd+L",
-      stickyKey: "guacamole.toolbar.cmd",
-      keyTooltip: "guacamole.toolbar.cmdKey",
-      lockTooltip: "guacamole.toolbar.cmdL",
+      stickyKey: "remoteDesktop.toolbar.cmd",
+      keyTooltip: "remoteDesktop.toolbar.cmdKey",
+      lockTooltip: "remoteDesktop.toolbar.cmdL",
     };
   }
   if (family === "super") {
@@ -66,17 +66,17 @@ export function metaKeyLabels(family: MetaKeyFamily): MetaKeyLabels {
       family,
       short: "Super",
       lock: "Super+L",
-      stickyKey: "guacamole.toolbar.super",
-      keyTooltip: "guacamole.toolbar.superKey",
-      lockTooltip: "guacamole.toolbar.superL",
+      stickyKey: "remoteDesktop.toolbar.super",
+      keyTooltip: "remoteDesktop.toolbar.superKey",
+      lockTooltip: "remoteDesktop.toolbar.superL",
     };
   }
   return {
     family,
     short: "Win",
     lock: "Win+L",
-    stickyKey: "guacamole.toolbar.win",
-    keyTooltip: "guacamole.toolbar.winKey",
-    lockTooltip: "guacamole.toolbar.winL",
+    stickyKey: "remoteDesktop.toolbar.win",
+    keyTooltip: "remoteDesktop.toolbar.winKey",
+    lockTooltip: "remoteDesktop.toolbar.winL",
   };
 }

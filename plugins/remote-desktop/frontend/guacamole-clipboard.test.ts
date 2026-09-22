@@ -3,7 +3,7 @@ import {
   isPasteShortcut,
   pasteTextToRemote,
   type GuacamoleClipboardClient,
-} from "../../../features/guacamole/guacamole-clipboard.js";
+} from "./guacamole-clipboard.js";
 
 describe("Guacamole clipboard paste", () => {
   it("recognizes Ctrl+V and Command+V without intercepting Alt+V", () => {

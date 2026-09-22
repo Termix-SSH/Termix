@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import type React from "react";
 import {
   useEffect,
@@ -613,7 +613,7 @@ export const GuacamoleDisplay = forwardRef<
           setHasError(true);
           hasKeyboardFocusRef.current = false;
           refreshKeyboardHandlers();
-          onError?.(t("guacamole.connectionError"));
+          onError?.(t("remoteDesktop.connectionError"));
           onDisconnect?.();
           break;
       }
@@ -621,7 +621,7 @@ export const GuacamoleDisplay = forwardRef<
 
     client.onerror = (error: Guacamole.Status) => {
       if (!isMountedRef.current || clientRef.current !== client) return;
-      const errorMessage = error.message || t("guacamole.connectionError");
+      const errorMessage = error.message || t("remoteDesktop.connectionError");
       setIsReady(false);
       setHasError(true);
       isConnectingRef.current = false;
@@ -696,7 +696,7 @@ export const GuacamoleDisplay = forwardRef<
       if (!isMountedRef.current) return;
       setIsReady(false);
       setHasError(true);
-      onError?.(getErrorMessage(error, t("guacamole.connectionError")));
+      onError?.(getErrorMessage(error, t("remoteDesktop.connectionError")));
     }
   }, [
     getWebSocketConnection,
@@ -958,7 +958,7 @@ export const GuacamoleDisplay = forwardRef<
         <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none bg-background/70 backdrop-blur-sm">
           <div className="flex items-center gap-2 rounded-sm border-2 border-dashed border-border px-4 py-3 text-sm font-semibold">
             <Upload className="size-4" />
-            {t("guacamole.files.dropToUpload")}
+            {t("remoteDesktop.files.dropToUpload")}
           </div>
         </div>
       )}

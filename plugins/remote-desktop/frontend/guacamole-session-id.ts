@@ -1,4 +1,4 @@
-import { getGuacamoleConnectionId } from "@/api/guacamole-api";
+import { getGuacamoleConnectionId } from "./guacamole-api";
 import type { ConnectionOrigin } from "@/lib/connection-origin";
 
 export function watchGuacamoleConnectionId(

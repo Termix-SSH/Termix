@@ -30,14 +30,14 @@ import {
 import type {
   GuacamoleDisplayHandle,
   GuacamoleTouchMode,
-} from "@/features/guacamole/GuacamoleDisplay.tsx";
+} from "./GuacamoleDisplay.tsx";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import {
   detectRuntimeMetaKeyFamily,
   metaKeyLabels,
   type MetaKeyFamily,
-} from "@/features/guacamole/guacamole-meta-key.ts";
+} from "./guacamole-meta-key.ts";
 
 interface GuacamoleToolbarProps {
   displayRef: React.RefObject<GuacamoleDisplayHandle>;
@@ -302,7 +302,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
               </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={6}>
-              {t("guacamole.toolbar.expand")}
+              {t("remoteDesktop.toolbar.expand")}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -319,7 +319,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={6}>
-                {t("guacamole.toolbar.dragHandle")}
+                {t("remoteDesktop.toolbar.dragHandle")}
               </TooltipContent>
             </Tooltip>
 
@@ -349,8 +349,8 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                   </TooltipTrigger>
                   <TooltipContent side="bottom" sideOffset={6}>
                     {touchMode === "touchscreen"
-                      ? t("guacamole.toolbar.switchToTrackpad")
-                      : t("guacamole.toolbar.switchToTouch")}
+                      ? t("remoteDesktop.toolbar.switchToTrackpad")
+                      : t("remoteDesktop.toolbar.switchToTouch")}
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -361,7 +361,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
               <>
                 <div className={SEP} />
                 <TipIconBtn
-                  tooltip={t("guacamole.files.title")}
+                  tooltip={t("remoteDesktop.files.title")}
                   onClick={onToggleFileBrowser}
                   className={cn(fileBrowserOpen && "bg-muted text-foreground")}
                 >
@@ -374,26 +374,26 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
               <>
                 <div className={SEP} />
                 <TipIconBtn
-                  tooltip={t("guacamole.toolbar.zoomOut")}
+                  tooltip={t("remoteDesktop.toolbar.zoomOut")}
                   onClick={() => displayRef.current?.zoomOut()}
                 >
                   <ZoomOut className="size-3.5" />
                 </TipIconBtn>
                 <TipBtn
-                  tooltip={t("guacamole.toolbar.resetZoom")}
+                  tooltip={t("remoteDesktop.toolbar.resetZoom")}
                   onClick={() => displayRef.current?.resetZoom()}
                   className="min-w-12 tabular-nums"
                 >
                   {Math.round(zoom * 100)}%
                 </TipBtn>
                 <TipIconBtn
-                  tooltip={t("guacamole.toolbar.zoomIn")}
+                  tooltip={t("remoteDesktop.toolbar.zoomIn")}
                   onClick={() => displayRef.current?.zoomIn()}
                 >
                   <ZoomIn className="size-3.5" />
                 </TipIconBtn>
                 <TipIconBtn
-                  tooltip={t("guacamole.toolbar.fitToScreen")}
+                  tooltip={t("remoteDesktop.toolbar.fitToScreen")}
                   onClick={() => displayRef.current?.resetZoom()}
                 >
                   <Scan className="size-3.5" />
@@ -406,7 +406,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
               <>
                 <div className={SEP} />
                 <TipBtn
-                  tooltip={t("guacamole.toolbar.ctrlAltDel")}
+                  tooltip={t("remoteDesktop.toolbar.ctrlAltDel")}
                   onClick={() => sendCombo(0xffe3, 0xffe9, 0xffff)}
                 >
                   CAD
@@ -435,13 +435,17 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                     [
                       "ctrl",
                       MODIFIER_KEYSYMS.ctrl,
-                      t("guacamole.toolbar.ctrl"),
+                      t("remoteDesktop.toolbar.ctrl"),
                     ],
-                    ["alt", MODIFIER_KEYSYMS.alt, t("guacamole.toolbar.alt")],
+                    [
+                      "alt",
+                      MODIFIER_KEYSYMS.alt,
+                      t("remoteDesktop.toolbar.alt"),
+                    ],
                     [
                       "shift",
                       MODIFIER_KEYSYMS.shift,
-                      t("guacamole.toolbar.shift"),
+                      t("remoteDesktop.toolbar.shift"),
                     ],
                     ["win", MODIFIER_KEYSYMS.win, t(meta.stickyKey)],
                   ] as [string, number, string][]
@@ -462,8 +466,12 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={6}>
                       {stickyKeys[ks]
-                        ? t("guacamole.toolbar.stickyActive", { key: label })
-                        : t("guacamole.toolbar.stickyInactive", { key: label })}
+                        ? t("remoteDesktop.toolbar.stickyActive", {
+                            key: label,
+                          })
+                        : t("remoteDesktop.toolbar.stickyInactive", {
+                            key: label,
+                          })}
                     </TooltipContent>
                   </Tooltip>
                 ))}
@@ -473,7 +481,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
             {/* Function key toggle */}
             <div className={SEP} />
             <TipBtn
-              tooltip={t("guacamole.toolbar.fnToggle")}
+              tooltip={t("remoteDesktop.toolbar.fnToggle")}
               onClick={() => setShowFKeys((v) => !v)}
               className={cn(
                 showFKeys &&
@@ -498,37 +506,37 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
             {/* Navigation */}
             <div className={SEP} />
             <TipBtn
-              tooltip={t("guacamole.toolbar.esc")}
+              tooltip={t("remoteDesktop.toolbar.esc")}
               onClick={() => sendCombo(0xff1b)}
             >
               Esc
             </TipBtn>
             <TipBtn
-              tooltip={t("guacamole.toolbar.tab")}
+              tooltip={t("remoteDesktop.toolbar.tab")}
               onClick={() => sendCombo(0xff09)}
             >
               Tab
             </TipBtn>
             <TipBtn
-              tooltip={t("guacamole.toolbar.home")}
+              tooltip={t("remoteDesktop.toolbar.home")}
               onClick={() => sendCombo(0xff50)}
             >
               Home
             </TipBtn>
             <TipBtn
-              tooltip={t("guacamole.toolbar.end")}
+              tooltip={t("remoteDesktop.toolbar.end")}
               onClick={() => sendCombo(0xff57)}
             >
               End
             </TipBtn>
             <TipBtn
-              tooltip={t("guacamole.toolbar.pageUp")}
+              tooltip={t("remoteDesktop.toolbar.pageUp")}
               onClick={() => sendCombo(0xff55)}
             >
               PgUp
             </TipBtn>
             <TipBtn
-              tooltip={t("guacamole.toolbar.pageDown")}
+              tooltip={t("remoteDesktop.toolbar.pageDown")}
               onClick={() => sendCombo(0xff56)}
             >
               PgDn
@@ -538,7 +546,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
             <div className="flex flex-col ml-0.5">
               <div className="flex justify-center">
                 <TipIconBtn
-                  tooltip={t("guacamole.toolbar.arrowUp")}
+                  tooltip={t("remoteDesktop.toolbar.arrowUp")}
                   onClick={() => sendCombo(0xff52)}
                 >
                   <ChevronUp className="size-3" />
@@ -546,19 +554,19 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
               </div>
               <div className="flex">
                 <TipIconBtn
-                  tooltip={t("guacamole.toolbar.arrowLeft")}
+                  tooltip={t("remoteDesktop.toolbar.arrowLeft")}
                   onClick={() => sendCombo(0xff51)}
                 >
                   <ChevronLeft className="size-3" />
                 </TipIconBtn>
                 <TipIconBtn
-                  tooltip={t("guacamole.toolbar.arrowDown")}
+                  tooltip={t("remoteDesktop.toolbar.arrowDown")}
                   onClick={() => sendCombo(0xff54)}
                 >
                   <ChevronDown className="size-3" />
                 </TipIconBtn>
                 <TipIconBtn
-                  tooltip={t("guacamole.toolbar.arrowRight")}
+                  tooltip={t("remoteDesktop.toolbar.arrowRight")}
                   onClick={() => sendCombo(0xff53)}
                 >
                   <ChevronRight className="size-3" />
@@ -579,12 +587,12 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={6}>
-                {t("guacamole.toolbar.collapse")}
+                {t("remoteDesktop.toolbar.collapse")}
               </TooltipContent>
             </Tooltip>
             {onHide && (
               <TipIconBtn
-                tooltip={t("guacamole.toolbar.hide")}
+                tooltip={t("remoteDesktop.toolbar.hide")}
                 onClick={onHide}
               >
                 <X className="size-3.5" />

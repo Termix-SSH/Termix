@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  detectMetaKeyFamily,
-  metaKeyLabels,
-} from "../../../features/guacamole/guacamole-meta-key.js";
+import { detectMetaKeyFamily, metaKeyLabels } from "./guacamole-meta-key.js";
 
 describe("guacamole toolbar meta key labels", () => {
   it("keeps Windows labels for RDP regardless of the local device", () => {

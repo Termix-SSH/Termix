@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
@@ -56,7 +56,7 @@ export function GuacamoleFileBrowser({
         setEntries(await listDirectory(filesystem, target));
       } catch (err) {
         setEntries([]);
-        setError(getErrorMessage(err, t("guacamole.files.listFailed")));
+        setError(getErrorMessage(err, t("remoteDesktop.files.listFailed")));
       } finally {
         setLoading(false);
       }
@@ -74,11 +74,11 @@ export function GuacamoleFileBrowser({
         setBusyName(file.name);
         try {
           await uploadFile(filesystem, path, file);
-          toast.success(t("guacamole.files.uploaded", { name: file.name }));
+          toast.success(t("remoteDesktop.files.uploaded", { name: file.name }));
         } catch (err) {
           toast.error(
             describeUploadError(err, (key) =>
-              t(`guacamole.files.${key}`, { name: file.name }),
+              t(`remoteDesktop.files.${key}`, { name: file.name }),
             ),
           );
         } finally {
@@ -96,7 +96,7 @@ export function GuacamoleFileBrowser({
     if (pendingUploads.length === 0) return;
     onPendingUploadsHandled();
     if (!allowUpload) {
-      toast.error(t("guacamole.files.uploadDisabled"));
+      toast.error(t("remoteDesktop.files.uploadDisabled"));
       return;
     }
     void upload(pendingUploads);
@@ -112,7 +112,7 @@ export function GuacamoleFileBrowser({
         toast.error(
           err instanceof Error
             ? err.message
-            : t("guacamole.files.downloadFailed", { name: entry.name }),
+            : t("remoteDesktop.files.downloadFailed", { name: entry.name }),
         );
       } finally {
         setBusyName(null);
@@ -125,7 +125,7 @@ export function GuacamoleFileBrowser({
     <div className="absolute right-2 top-2 bottom-2 z-30 flex w-80 flex-col rounded-sm border border-border bg-background/95 shadow-lg backdrop-blur-sm">
       <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
         <span className="flex-1 truncate text-xs font-semibold">
-          {t("guacamole.files.title")}
+          {t("remoteDesktop.files.title")}
         </span>
         <Button
           variant="ghost"
@@ -145,7 +145,7 @@ export function GuacamoleFileBrowser({
           className="size-6"
           disabled={path === "/"}
           onClick={() => setPath(parentPath(path))}
-          aria-label={t("guacamole.files.parent")}
+          aria-label={t("remoteDesktop.files.parent")}
         >
           <ArrowUp className="size-3.5" />
         </Button>
@@ -157,7 +157,7 @@ export function GuacamoleFileBrowser({
           size="icon"
           className="size-6"
           onClick={() => void refresh(path)}
-          aria-label={t("guacamole.files.refresh")}
+          aria-label={t("remoteDesktop.files.refresh")}
         >
           <RefreshCw className="size-3.5" />
         </Button>
@@ -174,7 +174,7 @@ export function GuacamoleFileBrowser({
         )}
         {!loading && !error && entries.length === 0 && (
           <p className="px-2 py-3 text-[11px] text-muted-foreground">
-            {t("guacamole.files.empty")}
+            {t("remoteDesktop.files.empty")}
           </p>
         )}
         {!loading &&
@@ -204,7 +204,7 @@ export function GuacamoleFileBrowser({
                   className="size-5 shrink-0"
                   disabled={busyName === entry.name}
                   onClick={() => void download(entry)}
-                  aria-label={t("guacamole.files.download")}
+                  aria-label={t("remoteDesktop.files.download")}
                 >
                   <Download className="size-3" />
                 </Button>
@@ -235,8 +235,8 @@ export function GuacamoleFileBrowser({
           >
             <Upload className="mr-1 size-3" />
             {busyName !== null
-              ? t("guacamole.files.uploading", { name: busyName })
-              : t("guacamole.files.upload")}
+              ? t("remoteDesktop.files.uploading", { name: busyName })
+              : t("remoteDesktop.files.upload")}
           </Button>
         </div>
       )}

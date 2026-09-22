@@ -1,32 +1,32 @@
-import { getErrorMessage } from "../../utils/error-message.js";
+import { getErrorMessage } from "../../../src/backend/utils/error-message.js";
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
 import { withRecordingSettings } from "./recording-settings.js";
 import { withDriveSettings } from "./drive-settings.js";
-import { guacLogger } from "../../utils/logger.js";
-import { AuthManager } from "../../utils/auth-manager.js";
-import { PermissionManager } from "../../utils/permission-manager.js";
+import { guacLogger } from "../../../src/backend/utils/logger.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import { PermissionManager } from "../../../src/backend/utils/permission-manager.js";
 import {
   resolveRecipientSharedHostAuthentication,
   type RecipientSharedHostAuthResolution,
-} from "../../utils/shared-host-auth-resolver.js";
-import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
+} from "../../../src/backend/utils/shared-host-auth-resolver.js";
+import type { AuthOverrideProtocol } from "../../../src/types/auth-protocols.js";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import type { AuthenticatedRequest } from "../../../src/types/index.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,
-} from "../../database/repositories/factory.js";
-import { resolveGuacdOptions } from "../../utils/guacd-config.js";
-import { createJumpHostChain } from "../jump-host-chain.js";
+} from "../../../src/backend/database/repositories/factory.js";
+import { resolveGuacdOptions } from "../../../src/backend/utils/guacd-config.js";
+import { createJumpHostChain } from "../../../src/backend/hosts/jump-host-chain.js";
 import { getGuacSessionByConnectId } from "./guacamole-server.js";
 import {
   logAudit,
   getAuditUsername,
   getRequestMeta,
-} from "../../utils/audit-logger.js";
+} from "../../../src/backend/utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
 import {
   buildRdpSettings,
@@ -828,4 +828,4 @@ router.get("/status", async (req, res) => {
   }
 });
 
-export default router;
+export { router };

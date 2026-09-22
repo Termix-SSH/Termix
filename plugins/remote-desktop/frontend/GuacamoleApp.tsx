@@ -1,5 +1,5 @@
 import { watchGuacamoleConnectionId } from "./guacamole-session-id";
-import { getErrorMessage } from "../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import React, {
   useState,
   useEffect,
@@ -13,7 +13,7 @@ import {
   GuacamoleDisplay,
   type GuacamoleDisplayHandle,
   type GuacamoleTouchMode,
-} from "@/features/guacamole/GuacamoleDisplay.tsx";
+} from "./GuacamoleDisplay.tsx";
 import {
   getGuacamoleTokenFromHost,
   getGuacdStatus,
@@ -21,17 +21,17 @@ import {
   logActivity,
   isElectron,
 } from "@/main-axios.ts";
-import { readConfiguredDimension } from "@/features/guacamole/guacamole-display-size.ts";
-import { getGuacamoleToken, parseGuacamoleConfig } from "@/api/guacamole-api";
+import { readConfiguredDimension } from "./guacamole-display-size.ts";
+import { getGuacamoleToken, parseGuacamoleConfig } from "./guacamole-api";
 import {
   resolveConnectionOrigin,
   type ConnectionOrigin,
 } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
-import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
-import { GuacamoleFileBrowser } from "@/features/guacamole/GuacamoleFileBrowser.tsx";
-import { describeUploadError } from "@/features/guacamole/guacamole-filesystem.ts";
-import { canUploadToRdpDrive } from "@/features/guacamole/guacamole-file-drop.ts";
+import { GuacamoleToolbar } from "./GuacamoleToolbar.tsx";
+import { GuacamoleFileBrowser } from "./GuacamoleFileBrowser.tsx";
+import { describeUploadError } from "./guacamole-filesystem.ts";
+import { canUploadToRdpDrive } from "./guacamole-file-drop.ts";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { PasswordInput } from "@/components/password-input.tsx";
@@ -52,7 +52,7 @@ import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.
 import type { SSHHost } from "@/types";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import { resolveConnectionDefaults } from "@/lib/connection-defaults";
-import { needsRdpCredentialPrompt } from "@/features/guacamole/rdp-credential-prompt";
+import { needsRdpCredentialPrompt } from "./rdp-credential-prompt";
 
 interface GuacamoleAppProps {
   hostId?: string;
@@ -139,7 +139,7 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
         <div className="relative w-full h-full">
           <ConnectionScreen
             status="disconnected"
-            message={t("guacamole.hostNotFound")}
+            message={t("remoteDesktop.hostNotFound")}
           />
         </div>
       );
@@ -249,11 +249,13 @@ const GuacamoleAppInner = React.forwardRef<
             const display = displayRef.current;
             if (!display) throw new Error("RDP session is not ready");
             await display.uploadFile(file);
-            toast.success(t("guacamole.files.uploaded", { name: file.name }));
+            toast.success(
+              t("remoteDesktop.files.uploaded", { name: file.name }),
+            );
           } catch (error) {
             toast.error(
               describeUploadError(error, (key) =>
-                t(`guacamole.files.${key}`, { name: file.name }),
+                t(`remoteDesktop.files.${key}`, { name: file.name }),
               ),
             );
           }
@@ -267,8 +269,8 @@ const GuacamoleAppInner = React.forwardRef<
     toast.error(
       t(
         allowUpload
-          ? "guacamole.files.driveUnavailable"
-          : "guacamole.files.uploadDisabled",
+          ? "remoteDesktop.files.driveUnavailable"
+          : "remoteDesktop.files.uploadDisabled",
       ),
     );
   }, [allowUpload, t]);
@@ -329,17 +331,17 @@ const GuacamoleAppInner = React.forwardRef<
     addLog({
       type: "info",
       stage: "guac_guacd",
-      message: t("guacamole.checkingGuacd"),
+      message: t("remoteDesktop.checkingGuacd"),
     });
     const status = await getGuacdStatus(resolvedOrigin);
     if (status.guacd.status !== "connected") {
-      throw new Error(t("guacamole.guacdUnavailable"));
+      throw new Error(t("remoteDesktop.guacdUnavailable"));
     }
 
     addLog({
       type: "info",
       stage: "guac_token",
-      message: t("guacamole.requestingToken", {
+      message: t("remoteDesktop.requestingToken", {
         type: resolvedProtocolForConnect.toUpperCase(),
       }),
     });
@@ -408,8 +410,11 @@ const GuacamoleAppInner = React.forwardRef<
         await fetchToken();
         tokenRetryRef.current.markConnected();
       } catch (err: unknown) {
-        const message = getErrorMessage(err, t("guacamole.failedToConnect"));
-        setError(message || t("guacamole.failedToConnect"));
+        const message = getErrorMessage(
+          err,
+          t("remoteDesktop.failedToConnect"),
+        );
+        setError(message || t("remoteDesktop.failedToConnect"));
         addLog({ type: "error", stage: "error", message });
         tokenRetryRef.current.markFailed();
       }
@@ -471,10 +476,10 @@ const GuacamoleAppInner = React.forwardRef<
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">
-              {t("guacamole.credentialPromptTitle")}
+              {t("remoteDesktop.credentialPromptTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              {t("guacamole.credentialPromptDescription")}
+              {t("remoteDesktop.credentialPromptDescription")}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -523,7 +528,7 @@ const GuacamoleAppInner = React.forwardRef<
             </div>
             <div className="flex items-center justify-end gap-2 mt-2">
               <Button type="submit" variant="outline">
-                {t("guacamole.connect")}
+                {t("remoteDesktop.connect")}
               </Button>
             </div>
           </form>
@@ -537,7 +542,7 @@ const GuacamoleAppInner = React.forwardRef<
       <div className="relative w-full h-full">
         <ConnectionScreen
           status={error ? tokenRetry.status : "connecting"}
-          message={t("guacamole.connecting", {
+          message={t("remoteDesktop.connecting", {
             type: (
               protocol ||
               hostConfig.connectionType ||
@@ -548,7 +553,7 @@ const GuacamoleAppInner = React.forwardRef<
           maxAttempts={tokenRetry.maxAttempts}
           nextRetryInMs={tokenRetry.nextRetryInMs}
           onManualRetry={handleReconnect}
-          retryLabel={t("guacamole.retry")}
+          retryLabel={t("remoteDesktop.retry")}
         />
       </div>
     );
@@ -564,11 +569,11 @@ const GuacamoleAppInner = React.forwardRef<
       {(!isDisplayReady || connectionError) && (
         <ConnectionScreen
           status={connectionError ? "disconnected" : "connecting"}
-          message={t("guacamole.connecting", {
+          message={t("remoteDesktop.connecting", {
             type: resolvedProtocol.toUpperCase(),
           })}
           onManualRetry={handleReconnect}
-          retryLabel={t("guacamole.reconnect")}
+          retryLabel={t("remoteDesktop.reconnect")}
           className="z-50"
         />
       )}
@@ -603,21 +608,21 @@ const GuacamoleAppInner = React.forwardRef<
               addLog({
                 type: "info",
                 stage,
-                message: t("guacamole.openingSession", { type }),
+                message: t("remoteDesktop.openingSession", { type }),
               });
               break;
             case "guac_handshake":
               addLog({
                 type: "info",
                 stage,
-                message: t("guacamole.negotiating", { type }),
+                message: t("remoteDesktop.negotiating", { type }),
               });
               break;
             case "guac_ready":
               addLog({
                 type: "success",
                 stage,
-                message: t("guacamole.sessionReady", { type }),
+                message: t("remoteDesktop.sessionReady", { type }),
               });
               break;
             default:

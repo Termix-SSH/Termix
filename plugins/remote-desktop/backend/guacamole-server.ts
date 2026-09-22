@@ -1,5 +1,5 @@
 import GuacamoleLite from "guacamole-lite";
-import { guacLogger } from "../../utils/logger.js";
+import { guacLogger } from "../../../src/backend/utils/logger.js";
 import {
   GuacamoleTokenService,
   type GuacamoleRecordingMetadata,
@@ -7,8 +7,8 @@ import {
 import {
   createCurrentSessionRecordingRepository,
   getCurrentSettingValue,
-} from "../../database/repositories/factory.js";
-import { resolveGuacdOptions } from "../../utils/guacd-config.js";
+} from "../../../src/backend/database/repositories/factory.js";
+import { resolveGuacdOptions } from "../../../src/backend/utils/guacd-config.js";
 import fs from "fs";
 import path from "path";
 
@@ -24,7 +24,7 @@ function readGuacdOptions(): { host: string; port: number } {
   return resolveGuacdOptions(dbUrl);
 }
 
-const GUAC_WS_PORT = 30008;
+export const GUAC_WS_PORT = 30008;
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 const GUACAMOLE_RECORDINGS_DIR =
   process.env.GUACD_RECORDING_BACKEND_PATH ||
@@ -250,9 +250,34 @@ function createGuacServer(): GuacamoleLite {
   return server;
 }
 
-let guacServer = createGuacServer();
+let guacServer: GuacamoleLite | null = null;
+
+/**
+ * Starts the guacamole-lite WebSocket server. Called from this plugin's
+ * activate() -- see plugins/remote-desktop/backend/index.mjs.
+ */
+export async function startGuacamoleService(): Promise<void> {
+  guacServer = createGuacServer();
+}
+
+/**
+ * Stops the guacamole-lite WebSocket server. Called from this plugin's
+ * deactivate().
+ */
+export async function stopGuacamoleService(): Promise<void> {
+  if (!guacServer) return;
+  try {
+    guacServer.close();
+  } catch (err) {
+    guacLogger.error("Error closing guac server during shutdown", err as Error);
+  }
+  guacServer = null;
+}
 
 export async function restartGuacServer(): Promise<void> {
+  // A no-op while the plugin is disabled: creating a new server here would
+  // silently resurrect the WS server behind deactivate()'s back.
+  if (!guacServer) return;
   try {
     guacServer.close();
   } catch (err) {

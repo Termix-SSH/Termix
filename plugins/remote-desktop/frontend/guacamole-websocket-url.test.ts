@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGuacamoleWebSocketBaseUrl } from "../../../features/guacamole/guacamole-websocket-url.js";
+import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.js";
 
 const httpsLocation = {
   protocol: "https:",

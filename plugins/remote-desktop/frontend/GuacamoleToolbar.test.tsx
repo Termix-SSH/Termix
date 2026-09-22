@@ -1,8 +1,8 @@
 import React from "react";
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { GuacamoleToolbar } from "../../../features/guacamole/GuacamoleToolbar.js";
-import type { GuacamoleDisplayHandle } from "../../../features/guacamole/GuacamoleDisplay.js";
+import { GuacamoleToolbar } from "./GuacamoleToolbar.js";
+import type { GuacamoleDisplayHandle } from "./GuacamoleDisplay.js";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -49,7 +49,7 @@ describe("GuacamoleToolbar Windows key", () => {
     ]);
 
     sendKey.mockClear();
-    fireEvent.click(getByText("guacamole.toolbar.win"));
+    fireEvent.click(getByText("remoteDesktop.toolbar.win"));
     expect(sendKey).toHaveBeenCalledWith(0xffeb, true);
   });
 
@@ -75,8 +75,8 @@ describe("GuacamoleToolbar Windows key", () => {
       <GuacamoleToolbar displayRef={displayRef} protocol="vnc" zoom={1.25} />,
     );
 
-    fireEvent.click(getByLabelText("guacamole.toolbar.zoomOut"));
-    fireEvent.click(getByLabelText("guacamole.toolbar.zoomIn"));
+    fireEvent.click(getByLabelText("remoteDesktop.toolbar.zoomOut"));
+    fireEvent.click(getByLabelText("remoteDesktop.toolbar.zoomIn"));
     fireEvent.click(getByText("125%"));
     expect(zoomOut).toHaveBeenCalledOnce();
     expect(zoomIn).toHaveBeenCalledOnce();
@@ -108,7 +108,7 @@ describe("GuacamoleToolbar Windows key", () => {
       />,
     );
 
-    fireEvent.click(getByLabelText("guacamole.toolbar.hide"));
+    fireEvent.click(getByLabelText("remoteDesktop.toolbar.hide"));
     expect(onHide).toHaveBeenCalledOnce();
   });
 

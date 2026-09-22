@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getGuacamoleDisplaySize,
   readConfiguredDimension,
-} from "../../../features/guacamole/guacamole-display-size";
+} from "./guacamole-display-size";
 
 describe("getGuacamoleDisplaySize", () => {
   it("requests native pixels and matching DPI for HiDPI RDP", () => {
