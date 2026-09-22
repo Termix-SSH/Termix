@@ -5,7 +5,7 @@ import {
   createCurrentHostRepository,
   createCurrentSnippetRepository,
 } from "../../../../src/backend/database/repositories/factory.js";
-import { validateDefinition } from "../../../../src/backend/database/routes/automations.js";
+import { validateDefinition } from "../../../automations/backend/routes.js";
 import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
 import { execCommand } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import {

@@ -1,0 +1,20 @@
+{
+  "id": "automations",
+  "name": "Automations",
+  "version": "1.0.0",
+  "description": "Trigger-and-action automation engine: schedules, metric/status/docker-event triggers, and multi-step actions across managed hosts.",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Infrastructure",
+  "icon": "Workflow",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": {
+    "backend": true,
+    "frontend": true,
+    "electron": true,
+    "platforms": ["linux", "win32", "darwin"]
+  },
+  "permissions": ["process:transport-owner"],
+  "sidecars": []
+}

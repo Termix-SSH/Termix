@@ -1,7 +1,7 @@
-import type { HostSelector } from "../../../types/automations.js";
-import { resolveHostById } from "../../hosts/host-resolver.js";
-import { createCurrentFleetRepository } from "../../database/repositories/factory.js";
-import { PermissionManager } from "../../utils/permission-manager.js";
+import type { HostSelector } from "../../../../src/types/automations.js";
+import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
+import { createCurrentFleetRepository } from "../../../../src/backend/database/repositories/factory.js";
+import { PermissionManager } from "../../../../src/backend/utils/permission-manager.js";
 import type { StepExecutionContext } from "./types.js";
 
 /** A host the caller is allowed to act on. `host` is always resolved. */
@@ -75,7 +75,7 @@ async function fleetHostIds(
 async function allAccessibleHostIds(userId: string): Promise<number[]> {
   try {
     const { createCurrentHostRepository } =
-      await import("../../database/repositories/factory.js");
+      await import("../../../../src/backend/database/repositories/factory.js");
     const hosts = await createCurrentHostRepository().listByUserId(userId);
     const ids = hosts.map((host) => host.id);
     const allowed =

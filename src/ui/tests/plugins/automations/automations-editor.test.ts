@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { defaultTrigger } from "@/sidebar/automations/TriggerCard";
-import { emptyDraft } from "@/sidebar/automations/AutomationEditor";
-import { newStepId } from "@/sidebar/automations/editor-types";
+import { defaultTrigger } from "../../../../../plugins/automations/frontend/automations/TriggerCard";
+import { emptyDraft } from "../../../../../plugins/automations/frontend/automations/AutomationEditor";
+import { newStepId } from "../../../../../plugins/automations/frontend/automations/editor-types";
 import { AUTOMATION_DEFINITION_VERSION } from "@/types/automations";
 
 describe("emptyDraft", () => {

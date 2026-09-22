@@ -39,9 +39,10 @@ function manifest(overrides: Record<string, unknown> = {}) {
 }
 
 describe("first-party allowlist", () => {
-  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop and fleets", () => {
+  it("contains only ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets and automations", () => {
     expect([...FIRST_PARTY_PLUGIN_IDS].sort()).toEqual([
       "ai",
+      "automations",
       "docker",
       "fleets",
       "host-metrics",
@@ -51,7 +52,7 @@ describe("first-party allowlist", () => {
     ]);
   });
 
-  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop and fleets and nothing else", () => {
+  it("recognises ssh-terminal, docker, host-metrics, ai, proxmox, remote-desktop, fleets and automations and nothing else", () => {
     expect(isFirstParty("ssh-terminal")).toBe(true);
     expect(isFirstParty("docker")).toBe(true);
     expect(isFirstParty("host-metrics")).toBe(true);
@@ -59,6 +60,7 @@ describe("first-party allowlist", () => {
     expect(isFirstParty("proxmox")).toBe(true);
     expect(isFirstParty("remote-desktop")).toBe(true);
     expect(isFirstParty("fleets")).toBe(true);
+    expect(isFirstParty("automations")).toBe(true);
     expect(isFirstParty("ssh-terminal-pro")).toBe(false);
     expect(isFirstParty("community-plugin")).toBe(false);
     expect(isFirstParty("")).toBe(false);
@@ -79,6 +81,10 @@ describe("runsInProcess", () => {
     expect(runsInProcess("remote-desktop", [TRANSPORT_OWNER_CAPABILITY])).toBe(
       true,
     );
+    expect(runsInProcess("fleets", [TRANSPORT_OWNER_CAPABILITY])).toBe(true);
+    expect(runsInProcess("automations", [TRANSPORT_OWNER_CAPABILITY])).toBe(
+      true,
+    );
 
     // On the list but not asking for it: stays in a worker, so the manifest
     // remains an honest description of what the plugin does.
@@ -88,6 +94,8 @@ describe("runsInProcess", () => {
     expect(runsInProcess("ai", ["hosts.read"])).toBe(false);
     expect(runsInProcess("proxmox", ["hosts.read"])).toBe(false);
     expect(runsInProcess("remote-desktop", ["hosts.read"])).toBe(false);
+    expect(runsInProcess("fleets", ["hosts.read"])).toBe(false);
+    expect(runsInProcess("automations", ["hosts.read"])).toBe(false);
 
     // Asking for it but not on the list.
     expect(
@@ -177,6 +185,18 @@ describe("manifest gate on the reserved capability", () => {
 
     expect(errors).toEqual([]);
     expect(parsed?.id).toBe("proxmox");
+  });
+
+  it("allows it for automations", () => {
+    const { manifest: parsed, errors } = parseManifest(
+      manifest({
+        id: "automations",
+        permissions: [TRANSPORT_OWNER_CAPABILITY],
+      }),
+    );
+
+    expect(errors).toEqual([]);
+    expect(parsed?.id).toBe("automations");
   });
 
   it("still accepts an ordinary manifest that never mentions it", () => {

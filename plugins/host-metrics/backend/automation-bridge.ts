@@ -12,7 +12,7 @@
  */
 
 import { pluginEvents, TOPICS } from "../../../src/backend/plugins/events.js";
-import type { MetricsSnapshot } from "../../../src/backend/automations/conditions.js";
+import type { MetricsSnapshot } from "../../automations/backend/conditions.js";
 
 export interface HostMetricsPayload {
   hostId: number;

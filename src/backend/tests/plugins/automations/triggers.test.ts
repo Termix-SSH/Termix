@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AutomationDefinition,
   Trigger,
-} from "../../../types/automations.js";
+} from "../../../../types/automations.js";
 
 /**
  * Trigger matching, dwell windows and cooldowns. The repository and the engine
@@ -42,16 +42,17 @@ const repository = {
   }),
 };
 
-vi.mock("../../database/repositories/factory.js", () => ({
+vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentAutomationRepository: () => repository,
 }));
 
 const run = vi.fn(async () => ({ runId: 1, status: "success" as const }));
-vi.mock("../../automations/engine.js", () => ({
+vi.mock("../../../../../plugins/automations/backend/engine.js", () => ({
   AutomationEngine: { getInstance: () => ({ run }) },
 }));
 
-const triggers = await import("../../automations/triggers.js");
+const triggers =
+  await import("../../../../../plugins/automations/backend/triggers.js");
 
 function addAutomation(trigger: Trigger, overrides: Partial<FakeRow> = {}) {
   const definition: AutomationDefinition = { version: 1, trigger, steps: [] };

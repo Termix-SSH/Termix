@@ -1,7 +1,7 @@
-import type { AutomationDefinition } from "../../types/automations.js";
-import { createCurrentAutomationRepository } from "../database/repositories/factory.js";
-import { DataCrypto } from "../utils/data-crypto.js";
-import { statsLogger } from "../utils/logger.js";
+import type { AutomationDefinition } from "../../../src/types/automations.js";
+import { createCurrentAutomationRepository } from "../../../src/backend/database/repositories/factory.js";
+import { DataCrypto } from "../../../src/backend/utils/data-crypto.js";
+import { statsLogger } from "../../../src/backend/utils/logger.js";
 import { computeNextDueAt } from "./cron.js";
 import { hasDwelled, isCoolingDown } from "./conditions.js";
 import { pollDockerEvents } from "./docker-watcher.js";

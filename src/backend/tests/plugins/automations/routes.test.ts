@@ -44,8 +44,13 @@ vi.mock("../../../database/repositories/factory.js", () => ({
 }));
 
 const run = vi.hoisted(() => vi.fn());
-vi.mock("../../../automations/engine.js", () => ({
+vi.mock("../../../../../plugins/automations/backend/engine.js", () => ({
   AutomationEngine: { getInstance: () => ({ run }) },
+}));
+
+vi.mock("../../../database/routes/automation-dispatch.js", () => ({
+  registerAutomationsRouter: vi.fn(),
+  unregisterAutomationsRouter: vi.fn(),
 }));
 
 vi.mock("../../../utils/permission-manager.js", () => ({
@@ -80,23 +85,8 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
 }));
 
-const { default: router } =
-  await import("../../../database/routes/automations.js");
-
-function findHandler(method: string, path: string) {
-  const stack = (router as unknown as Router).stack as Array<{
-    route?: {
-      path: string;
-      methods: Record<string, boolean>;
-      stack: Array<{ handle: (req: Request, res: Response) => unknown }>;
-    };
-  }>;
-  const layer = stack.find(
-    (l) => l.route?.path === path && l.route?.methods[method],
-  );
-  if (!layer?.route) throw new Error(`No route for ${method} ${path}`);
-  return layer.route.stack[layer.route.stack.length - 1].handle;
-}
+const { router } =
+  await import("../../../../../plugins/automations/backend/routes.js");
 
 /** Runs the whole middleware chain for the route, not just its handler. */
 async function invoke(

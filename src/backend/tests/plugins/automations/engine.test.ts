@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AutomationDefinition, Step } from "../../../types/automations.js";
+import type {
+  AutomationDefinition,
+  Step,
+} from "../../../../types/automations.js";
 
 /**
  * The engine reaches the database through the repository factory and the
@@ -49,20 +52,21 @@ const repository = {
 
 const resolveHostById = vi.fn();
 
-vi.mock("../../hosts/host-resolver.js", () => ({
+vi.mock("../../../hosts/host-resolver.js", () => ({
   resolveHostById: (...args: unknown[]) => resolveHostById(...args),
 }));
 
-vi.mock("../../database/repositories/factory.js", () => ({
+vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentAutomationRepository: () => repository,
 }));
 
 const executeStep = vi.fn();
-vi.mock("../../automations/actions/index.js", () => ({
+vi.mock("../../../../../plugins/automations/backend/actions/index.js", () => ({
   executeStep: (...args: unknown[]) => executeStep(...args),
 }));
 
-const { AutomationEngine } = await import("../../automations/engine.js");
+const { AutomationEngine } =
+  await import("../../../../../plugins/automations/backend/engine.js");
 
 function defineAutomation(
   steps: Step[],

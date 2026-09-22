@@ -1,30 +1,30 @@
 import crypto from "node:crypto";
 import express, { type Request, type Response } from "express";
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import type { AuthenticatedRequest } from "../../../src/types/index.js";
 import type {
   AutomationDefinition,
   Step,
   Trigger,
-} from "../../../types/automations.js";
-import { AUTOMATION_DEFINITION_VERSION } from "../../../types/automations.js";
-import { PermissionManager } from "../../utils/permission-manager.js";
-import { AuthManager } from "../../utils/auth-manager.js";
-import { databaseLogger } from "../../utils/logger.js";
+} from "../../../src/types/automations.js";
+import { AUTOMATION_DEFINITION_VERSION } from "../../../src/types/automations.js";
+import { PermissionManager } from "../../../src/backend/utils/permission-manager.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
+import { databaseLogger } from "../../../src/backend/utils/logger.js";
 import {
   getAuditUsername,
   getRequestMeta,
   logAudit,
-} from "../../utils/audit-logger.js";
-import { createCurrentAutomationRepository } from "../repositories/factory.js";
-import type { AutomationRow } from "../repositories/automation-repository.js";
-import { AutomationEngine } from "../../automations/engine.js";
+} from "../../../src/backend/utils/audit-logger.js";
+import { createCurrentAutomationRepository } from "../../../src/backend/database/repositories/factory.js";
+import type { AutomationRow } from "../../../src/backend/database/repositories/automation-repository.js";
+import { AutomationEngine } from "./engine.js";
+import { computeNextDueAt, isValidCron, isValidTimezone } from "./cron.js";
 import {
-  computeNextDueAt,
-  isValidCron,
-  isValidTimezone,
-} from "../../automations/cron.js";
+  registerAutomationsRouter,
+  unregisterAutomationsRouter,
+} from "../../../src/backend/database/routes/automation-dispatch.js";
 
-const router = express.Router();
+export const router = express.Router();
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -819,4 +819,14 @@ function timingSafeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(left, right);
 }
 
-export default router;
+/** Called from activate(). Mounts this router at /automations via the shared
+ * dispatcher. */
+export function startAutomationsService(): void {
+  registerAutomationsRouter(router);
+}
+
+/** Called from deactivate(). /automations/* falls back to 404 until
+ * reactivated. */
+export function stopAutomationsService(): void {
+  unregisterAutomationsRouter();
+}

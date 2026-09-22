@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listAutomationWatchedHosts = vi.fn();
-vi.mock("../../automations/triggers.js", () => ({
+vi.mock("../../../../../plugins/automations/backend/triggers.js", () => ({
   listAutomationWatchedHosts: () => listAutomationWatchedHosts(),
 }));
 
@@ -10,7 +10,8 @@ const {
   reconcileHeadlessViewers,
   releaseHeadlessViewers,
   setViewerRegistry,
-} = await import("../../automations/headless-viewer.js");
+} =
+  await import("../../../../../plugins/automations/backend/headless-viewer.js");
 
 const registry = {
   registerViewer: vi.fn(),

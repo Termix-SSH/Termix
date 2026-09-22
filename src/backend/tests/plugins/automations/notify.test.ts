@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const automationFetch = vi.fn();
 
-vi.mock("../../automations/http.js", () => ({
+vi.mock("../../../../../plugins/automations/backend/http.js", () => ({
   automationFetch: (...args: unknown[]) => automationFetch(...args),
 }));
 
 const { sendAutomationNotification } =
-  await import("../../automations/notify.js");
+  await import("../../../../../plugins/automations/backend/notify.js");
 
 beforeEach(() => {
   automationFetch.mockReset();

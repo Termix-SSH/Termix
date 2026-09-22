@@ -75,6 +75,14 @@
  * reads/writes and a zip archive for its push/pull routes, and buffer
  * multipart file uploads. None of that fits the worker's single-exec
  * ctx.ssh or single-postMessage-reply ctx.http.route.
+ *
+ * automations is here for the same reason as ai, proxmox and fleets: it does
+ * not own a transport, but its engine and scheduler write across hosts,
+ * snippets, fleets and notification-channel repositories through the shared
+ * SSH pool via resolveHostById and withConnection, and its scheduler needs
+ * direct repository access plus subscription to the cross-plugin event bus
+ * (host metrics, status and health-check events) that the worker's read-only
+ * ctx.hosts and single-postMessage-reply ctx.http.route cannot support.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
@@ -84,6 +92,7 @@ export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "proxmox",
   "remote-desktop",
   "fleets",
+  "automations",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

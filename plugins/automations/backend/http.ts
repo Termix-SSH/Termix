@@ -1,5 +1,5 @@
-import { safeOutboundFetch } from "../utils/safe-outbound-fetch.js";
-import { readNotificationPrivateAllowlist } from "../utils/notification-egress.js";
+import { safeOutboundFetch } from "../../../src/backend/utils/safe-outbound-fetch.js";
+import { readNotificationPrivateAllowlist } from "../../../src/backend/utils/notification-egress.js";
 
 /**
  * Outbound HTTP for automation steps and notification channels.

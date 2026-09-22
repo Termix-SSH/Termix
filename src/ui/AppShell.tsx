@@ -102,7 +102,7 @@ const WorkspacesPanel = lazy(() =>
   })),
 );
 const AutomationsPanel = lazy(() =>
-  import("@/sidebar/AutomationsPanel").then((m) => ({
+  import("../../plugins/automations/frontend/AutomationsPanel").then((m) => ({
     default: m.AutomationsPanel,
   })),
 );

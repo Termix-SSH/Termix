@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import { getSnippets } from "@/api/snippets-api";
-import { listAutomations } from "@/api/automations-api";
+import { listAutomations } from "../../../../plugins/automations/frontend/automations-api";
 
 /**
  * Backs the @-mention picker in the composer.

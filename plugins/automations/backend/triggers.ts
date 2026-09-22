@@ -2,10 +2,10 @@ import type {
   AutomationDefinition,
   HostSelector,
   Trigger,
-} from "../../types/automations.js";
-import { createCurrentAutomationRepository } from "../database/repositories/factory.js";
-import type { AutomationEngineRow } from "../database/repositories/automation-repository.js";
-import { statsLogger } from "../utils/logger.js";
+} from "../../../src/types/automations.js";
+import { createCurrentAutomationRepository } from "../../../src/backend/database/repositories/factory.js";
+import type { AutomationEngineRow } from "../../../src/backend/database/repositories/automation-repository.js";
+import { statsLogger } from "../../../src/backend/utils/logger.js";
 import {
   compare,
   extractMetricValue,
@@ -16,7 +16,7 @@ import {
   type MetricsSnapshot,
 } from "./conditions.js";
 import { AutomationEngine } from "./engine.js";
-import { pluginEvents, TOPICS } from "../plugins/events.js";
+import { pluginEvents, TOPICS } from "../../../src/backend/plugins/events.js";
 
 /**
  * Matches events against automation triggers and decides what fires.

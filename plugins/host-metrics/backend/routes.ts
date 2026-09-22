@@ -3046,7 +3046,7 @@ app.post("/metrics/connect-totp", async (req, res) => {
 
 // Lets automations keep metrics flowing for hosts they watch, through the same
 // viewer refcount the UI uses rather than around it.
-import("../../../src/backend/automations/headless-viewer.js")
+import("../../automations/backend/headless-viewer.js")
   .then(({ setViewerRegistry }) => {
     setViewerRegistry({
       registerViewer: (hostId, sessionId, userId) =>

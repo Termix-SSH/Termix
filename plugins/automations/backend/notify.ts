@@ -1,4 +1,4 @@
-import { statsLogger } from "../utils/logger.js";
+import { statsLogger } from "../../../src/backend/utils/logger.js";
 import { automationFetch } from "./http.js";
 import type { TemplateContext } from "./template.js";
 

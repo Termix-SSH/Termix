@@ -299,12 +299,15 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // ssh-terminal, docker and host-metrics plugins start their own servers,
     // so disabling any of them stops its WS/HTTP server. See
     // plugins/ssh-terminal, plugins/docker and plugins/host-metrics.
-    // AI, Proxmox, Remote Desktop and Fleets are also absent for the same
-    // reason: each plugin registers its router with its own dispatcher in
-    // database.ts on activate (/ai, /proxmox, /guacamole, /fleets), so
-    // disabling any of them makes its routes 404 instead of leaving a dead
-    // import here. See plugins/ai, plugins/proxmox, plugins/remote-desktop
-    // and plugins/fleets.
+    // AI, Proxmox, Remote Desktop, Fleets and Automations are also absent for
+    // the same reason: each plugin registers its router with its own
+    // dispatcher in database.ts on activate (/ai, /proxmox, /guacamole,
+    // /fleets, /automations), so disabling any of them makes its routes 404
+    // instead of leaving a dead import here. Automations' scheduler (due
+    // schedules, dwell rechecks, docker-event polling, history pruning) also
+    // starts from its own activate() rather than here. See plugins/ai,
+    // plugins/proxmox, plugins/remote-desktop, plugins/fleets and
+    // plugins/automations.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/tmux/index.js");
@@ -322,11 +325,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         operation: "log_level_init",
       });
     }
-
-    // After metrics, which the automation triggers and headless polling hook into.
-    const { startAutomationScheduler } =
-      await import("./automations/scheduler.js");
-    startAutomationScheduler();
 
     // Last, so a plugin's activate() sees a fully wired server. A plugin that
     // fails to load must not stop the backend, so this never rejects.

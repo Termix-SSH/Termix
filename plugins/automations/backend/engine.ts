@@ -2,16 +2,16 @@ import type {
   AutomationDefinition,
   RunStatus,
   Step,
-} from "../../types/automations.js";
+} from "../../../src/types/automations.js";
 import {
   DEFAULT_MAX_RUN_SECONDS,
   MAX_AUTOMATION_DEPTH,
   MAX_STEP_OUTPUT_BYTES,
-} from "../../types/automations.js";
-import { createCurrentAutomationRepository } from "../database/repositories/factory.js";
-import { statsLogger } from "../utils/logger.js";
-import { resolveHostById } from "../hosts/host-resolver.js";
-import { notifyAutomationInternalEvent } from "../hosts/automation-events.js";
+} from "../../../src/types/automations.js";
+import { createCurrentAutomationRepository } from "../../../src/backend/database/repositories/factory.js";
+import { statsLogger } from "../../../src/backend/utils/logger.js";
+import { resolveHostById } from "../../../src/backend/hosts/host-resolver.js";
+import { notifyAutomationInternalEvent } from "../../../src/backend/hosts/automation-events.js";
 import { executeStep } from "./actions/index.js";
 import type { StepExecutionContext, StepResult } from "./actions/types.js";
 import { compare } from "./conditions.js";

@@ -5,7 +5,7 @@ import {
   isValidTimezone,
   nextCronRun,
   parseCron,
-} from "../../automations/cron.js";
+} from "../../../../../plugins/automations/backend/cron.js";
 
 describe("parseCron", () => {
   it("rejects anything that is not five fields", () => {

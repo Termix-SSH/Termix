@@ -1,22 +1,22 @@
 import {
   DEFAULT_STEP_TIMEOUT_MS,
   type Step,
-} from "../../../types/automations.js";
-import { execCommand } from "../../hosts/metrics-shared/common-utils.js";
+} from "../../../../src/types/automations.js";
+import { execCommand } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import {
   execElevated,
   shellSingleQuote,
-} from "../../hosts/metrics-shared/exec-elevated.js";
+} from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
 import {
   createFleetSshFactory,
   getFleetPoolKey,
-} from "../../hosts/ssh-client-factory.js";
-import { withConnection } from "../../hosts/ssh-connection-pool.js";
-import { resolveSnippetCommand } from "../../database/routes/snippets-execution.js";
+} from "../../../../src/backend/hosts/ssh-client-factory.js";
+import { withConnection } from "../../../../src/backend/hosts/ssh-connection-pool.js";
+import { resolveSnippetCommand } from "../../../../src/backend/database/routes/snippets-execution.js";
 import {
   createCurrentAlertRepository,
   createCurrentSnippetRepository,
-} from "../../database/repositories/factory.js";
+} from "../../../../src/backend/database/repositories/factory.js";
 import { sendAutomationNotification } from "../notify.js";
 import { automationFetch } from "../http.js";
 import { renderRecord, renderTemplate } from "../template.js";
@@ -247,7 +247,8 @@ async function runTunnel(
   if (context.dryRun) return ok(`Would ${step.action} tunnel ${name}`);
 
   try {
-    const manager = await import("../../hosts/tunnel/manager.js");
+    const manager =
+      await import("../../../../src/backend/hosts/tunnel/manager.js");
     const config = manager.tunnelConfigs?.get(name);
     if (!config) return fail(`Tunnel "${name}" is not configured`);
 
@@ -283,7 +284,7 @@ async function runWol(
 
   try {
     const { sendWakeOnLan, isValidMac } =
-      await import("../../utils/wake-on-lan.js");
+      await import("../../../../src/backend/utils/wake-on-lan.js");
     if (!isValidMac(mac)) return fail(`Invalid MAC address: ${mac}`);
     await sendWakeOnLan(mac);
     return ok(`Sent magic packet to ${target.name}`);

@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -25,14 +25,14 @@ import {
   type AutomationRow,
   type AutomationRunRow,
   type AutomationRunStepRow,
-} from "@/api/automations-api";
+} from "./automations-api";
 import {
   deleteNotificationChannel,
   getNotificationChannels,
   testNotificationChannel,
   type NotificationChannel,
 } from "@/api/alerts-api";
-import { NotificationChannelDialog } from "./NotificationChannelDialog";
+import { NotificationChannelDialog } from "@/sidebar/NotificationChannelDialog";
 import { getSnippets } from "@/api/snippets-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import { listFleets } from "@/api/fleets-api";

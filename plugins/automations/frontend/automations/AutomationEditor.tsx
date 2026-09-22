@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../lib/error-message.js";
+import { getErrorMessage } from "@/lib/error-message.js";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";

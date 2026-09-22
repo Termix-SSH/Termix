@@ -4,7 +4,7 @@ import {
   redactSecrets,
   renderRecord,
   renderTemplate,
-} from "../../automations/template.js";
+} from "../../../../../plugins/automations/backend/template.js";
 
 const context = {
   host: { id: 7, name: "Zeus", ip: "10.0.0.5", username: "root", port: 22 },

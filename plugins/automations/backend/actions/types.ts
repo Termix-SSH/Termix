@@ -1,4 +1,4 @@
-import type { Step } from "../../../types/automations.js";
+import type { Step } from "../../../../src/types/automations.js";
 import type { TemplateContext } from "../template.js";
 
 /** What every executor returns. `output` is what later steps can read. */

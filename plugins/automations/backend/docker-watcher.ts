@@ -1,14 +1,14 @@
-import type { AutomationDefinition } from "../../types/automations.js";
-import { createCurrentAutomationRepository } from "../database/repositories/factory.js";
-import { resolveHostById } from "../hosts/host-resolver.js";
-import { DataCrypto } from "../utils/data-crypto.js";
-import { execCommand } from "../hosts/metrics-shared/common-utils.js";
+import type { AutomationDefinition } from "../../../src/types/automations.js";
+import { createCurrentAutomationRepository } from "../../../src/backend/database/repositories/factory.js";
+import { resolveHostById } from "../../../src/backend/hosts/host-resolver.js";
+import { DataCrypto } from "../../../src/backend/utils/data-crypto.js";
+import { execCommand } from "../../../src/backend/hosts/metrics-shared/common-utils.js";
 import {
   createFleetSshFactory,
   getFleetPoolKey,
-} from "../hosts/ssh-client-factory.js";
-import { withConnection } from "../hosts/ssh-connection-pool.js";
-import { statsLogger } from "../utils/logger.js";
+} from "../../../src/backend/hosts/ssh-client-factory.js";
+import { withConnection } from "../../../src/backend/hosts/ssh-connection-pool.js";
+import { statsLogger } from "../../../src/backend/utils/logger.js";
 import { onDockerEvent } from "./triggers.js";
 
 /**

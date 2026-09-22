@@ -7,7 +7,7 @@ import {
   metricStateKey,
   severityForValue,
   type MetricsSnapshot,
-} from "../../automations/conditions.js";
+} from "../../../../../plugins/automations/backend/conditions.js";
 
 const metrics: MetricsSnapshot = {
   cpu: { percent: 42.5, load: [1.5, 1.2, 0.9] },

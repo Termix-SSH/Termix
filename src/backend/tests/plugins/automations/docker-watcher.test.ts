@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   diffContainerStates,
   parseContainerStates,
-} from "../../automations/docker-watcher.js";
+} from "../../../../../plugins/automations/backend/docker-watcher.js";
 
 /**
  * The polling side needs SSH, so what is tested here is the pure part: turning

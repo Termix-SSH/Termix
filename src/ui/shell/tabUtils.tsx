@@ -175,9 +175,11 @@ const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
 );
 const AutomationsPanel = lazy(() =>
-  import("@/sidebar/AutomationsPanel").then((m) => ({
-    default: m.AutomationsPanel,
-  })),
+  import("../../../plugins/automations/frontend/AutomationsPanel").then(
+    (m) => ({
+      default: m.AutomationsPanel,
+    }),
+  ),
 );
 
 const AiPanel = lazy(() =>
