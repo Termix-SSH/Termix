@@ -84,6 +84,7 @@ import {
   HostDockerTab,
   HostWebUiTab,
   HostProxmoxTab,
+  HostProxmoxStatsTab,
   HostFilesTab,
 } from "./HostEditorFeatureTabs";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
@@ -2597,7 +2598,10 @@ export function HostEditor({
           )}
 
           {activeTab === "proxmox" && (
-            <HostProxmoxTab form={form} setField={setField} />
+            <>
+              <HostProxmoxTab form={form} setField={setField} />
+              <HostProxmoxStatsTab form={form} setField={setField} />
+            </>
           )}
 
           {activeTab === "files" && (

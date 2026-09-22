@@ -1,24 +1,28 @@
-import { getErrorMessage } from "../../utils/error-message.js";
+import { getErrorMessage } from "../../../src/backend/utils/error-message.js";
 import express from "express";
 import { Client as SSHClient } from "ssh2";
-import { logger } from "../../utils/logger.js";
-import { DataCrypto } from "../../utils/data-crypto.js";
-import { createCurrentHostRepository } from "../repositories/factory.js";
-import { AuthManager } from "../../utils/auth-manager.js";
+import { logger } from "../../../src/backend/utils/logger.js";
+import { DataCrypto } from "../../../src/backend/utils/data-crypto.js";
+import { createCurrentHostRepository } from "../../../src/backend/database/repositories/factory.js";
+import { AuthManager } from "../../../src/backend/utils/auth-manager.js";
 import {
   type AuthenticatedRequest,
   type SSHHost,
-} from "../../../types/index.js";
-import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
-import { resolveHostById } from "../../hosts/host-resolver.js";
-import { createJumpHostChain } from "../../hosts/jump-host-chain.js";
+} from "../../../src/types/index.js";
+import { SSHHostKeyVerifier } from "../../../src/backend/hosts/host-key-verifier.js";
+import { resolveHostById } from "../../../src/backend/hosts/host-resolver.js";
+import { createJumpHostChain } from "../../../src/backend/hosts/jump-host-chain.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
 import {
   parseProxmoxJumpHosts,
   serializeProxmoxJumpHosts,
 } from "./proxmox-jump-hosts.js";
-import { isSafeNodeName } from "../../hosts/proxmox-shared.js";
-import { execElevated } from "../../hosts/metrics-shared/exec-elevated.js";
+import { isSafeNodeName } from "../../../src/backend/hosts/proxmox-shared.js";
+import { execElevated } from "../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+import {
+  registerProxmoxRouter,
+  unregisterProxmoxRouter,
+} from "../../../src/backend/database/routes/proxmox-dispatch.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -346,7 +350,7 @@ async function discoverProxmoxGuestsForHost(
       sshConfig.passphrase = resolvedCredentials.keyPassword;
   } else if (authType === "agent") {
     const { applyAgentAuth } =
-      await import("../../hosts/terminal-auth-helpers.js");
+      await import("../../../src/backend/hosts/terminal-auth-helpers.js");
     const result = await applyAgentAuth(
       sshConfig,
       host.terminalConfig as unknown as Record<string, unknown> | undefined,
@@ -931,13 +935,8 @@ async function runDueProxmoxAutoSyncs(): Promise<void> {
   }
 }
 
-const proxmoxAutoSyncTimer = setInterval(runDueProxmoxAutoSyncs, 60 * 1000);
-proxmoxAutoSyncTimer.unref?.();
-const proxmoxAutoSyncStartupTimer = setTimeout(
-  runDueProxmoxAutoSyncs,
-  30 * 1000,
-);
-proxmoxAutoSyncStartupTimer.unref?.();
+let proxmoxAutoSyncTimer: NodeJS.Timeout | undefined;
+let proxmoxAutoSyncStartupTimer: NodeJS.Timeout | undefined;
 
 /**
  * @openapi
@@ -1136,4 +1135,24 @@ router.post(
   },
 );
 
-export default router;
+/** Called from activate(). Mounts this router at /proxmox via the shared
+ * dispatcher, and starts the background auto-sync scan (a 60s interval plus
+ * a one-off 30s-delayed startup run, both unref'd so they never keep the
+ * process alive on their own). */
+export function startProxmoxService(): void {
+  registerProxmoxRouter(router);
+  proxmoxAutoSyncTimer = setInterval(runDueProxmoxAutoSyncs, 60 * 1000);
+  proxmoxAutoSyncTimer.unref?.();
+  proxmoxAutoSyncStartupTimer = setTimeout(runDueProxmoxAutoSyncs, 30 * 1000);
+  proxmoxAutoSyncStartupTimer.unref?.();
+}
+
+/** Called from deactivate(). /proxmox/* falls back to 404 until reactivated,
+ * and the auto-sync timers are cleared so a disabled plugin stops syncing. */
+export function stopProxmoxService(): void {
+  unregisterProxmoxRouter();
+  if (proxmoxAutoSyncTimer) clearInterval(proxmoxAutoSyncTimer);
+  if (proxmoxAutoSyncStartupTimer) clearTimeout(proxmoxAutoSyncStartupTimer);
+  proxmoxAutoSyncTimer = undefined;
+  proxmoxAutoSyncStartupTimer = undefined;
+}

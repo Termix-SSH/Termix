@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseProxmoxJumpHosts,
   serializeProxmoxJumpHosts,
-} from "../../../database/routes/proxmox-jump-hosts.js";
+} from "../../../../../plugins/proxmox/backend/proxmox-jump-hosts.js";
 
 describe("Proxmox jump-host persistence", () => {
   const jumpHosts = [{ hostId: 7 }, { hostId: 9 }];

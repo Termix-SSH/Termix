@@ -317,6 +317,26 @@ export function HostProxmoxTab({
             </SettingRow>
           </>
         )}
+      </div>
+    </SectionCard>
+  );
+}
+
+export function HostProxmoxStatsTab({
+  form,
+  setField,
+}: {
+  form: HostEditorForm;
+  setField: SetHostField;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <SectionCard
+      title={t("hosts.enableProxmoxStats")}
+      icon={<Server className="size-3.5" />}
+    >
+      <div className="flex flex-col gap-0 py-1">
         <SettingRow
           label={t("hosts.enableProxmoxStats")}
           description={t("hosts.enableProxmoxStatsDesc")}

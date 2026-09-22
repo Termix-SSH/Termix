@@ -29,7 +29,8 @@
   "include": [
     "plugins/docker/backend/**/*.ts",
     "plugins/host-metrics/backend/**/*.ts",
-    "plugins/ai/backend/**/*.ts"
+    "plugins/ai/backend/**/*.ts",
+    "plugins/proxmox/backend/**/*.ts"
   ],
   "exclude": ["src/**/*.test.ts"]
 }

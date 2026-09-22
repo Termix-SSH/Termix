@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveProxmoxImportAuth } from "../../../components/proxmox/proxmox-import-auth";
+import { resolveProxmoxImportAuth } from "../../../../../plugins/proxmox/frontend/proxmox-import-auth";
 
 describe("resolveProxmoxImportAuth", () => {
   it("inherits an available credential even with the default 'password' authType", () => {

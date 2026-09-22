@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveProxmoxImportAuth } from "../../../database/routes/proxmox-import-auth.js";
+import { resolveProxmoxImportAuth } from "../../../../../plugins/proxmox/backend/proxmox-import-auth.js";
 
 // The frontend carries its own copy of this decision in
-// src/ui/components/proxmox/proxmox-import-auth.ts. The two drifting apart is
+// plugins/proxmox/frontend/proxmox-import-auth.ts. The two drifting apart is
 // what produced the reported bug, so both are held to the same matrix.
 describe("resolveProxmoxImportAuth", () => {
   it("uses the default credential for key auth when one is configured", () => {

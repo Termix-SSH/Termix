@@ -1,7 +1,7 @@
 // Pure decision: which auth settings an imported Proxmox guest inherits.
 //
 // The frontend carries a parallel copy in
-// src/ui/components/proxmox/proxmox-import-auth.ts. The two drifting apart is
+// plugins/proxmox/frontend/proxmox-import-auth.ts. The two drifting apart is
 // what produced the reported import bug, so both are kept behaviourally
 // identical and each is unit-tested against the same matrix.
 export function resolveProxmoxImportAuth(

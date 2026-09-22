@@ -54,12 +54,21 @@
  * with no write methods and no snippets/fleets/alerts/automations surface at
  * all, and ctx.http.route replies with one postMessage value rather than a
  * stream, so none of that fits the worker ctx either.
+ *
+ * proxmox is here for the same reason as ai: it does not own a transport,
+ * but it writes directly across hosts through the host repository during
+ * discovery and sync, resolves and connects to hosts via resolveHostById and
+ * createJumpHostChain the same way the terminal and ai's command executor
+ * do, verifies host keys via SSHHostKeyVerifier, and streams its discovery
+ * progress as server-sent events. Neither the worker's 13-field read-only
+ * ctx.hosts nor its single-postMessage-reply ctx.http.route can support that.
  */
 export const FIRST_PARTY_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "ssh-terminal",
   "docker",
   "host-metrics",
   "ai",
+  "proxmox",
 ]);
 
 export const TRANSPORT_OWNER_CAPABILITY = "process:transport-owner";

@@ -28,7 +28,7 @@ import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
 import { HostExportDialog } from "@/sidebar/HostExportDialog";
 import { CustomizeSidebarPanel } from "@/sidebar/CustomizeSidebarPanel";
-import { ProxmoxDiscoverDialog } from "@/components/proxmox/ProxmoxDiscoverDialog";
+import { ProxmoxDiscoverDialog } from "../../../plugins/proxmox/frontend/ProxmoxDiscoverDialog";
 import { Button } from "@/components/button";
 import {
   DropdownMenu,

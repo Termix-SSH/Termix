@@ -6,7 +6,8 @@ vi.mock("../../../hosts/metrics-shared/exec-elevated.js", () => ({
   execElevated: (...args: unknown[]) => execElevated(...args),
 }));
 
-import { execPveshCommand } from "../../../database/routes/proxmox.js";
+const { execPveshCommand } =
+  await import("../../../../../plugins/proxmox/backend/routes.js");
 
 const client = {} as Client;
 
