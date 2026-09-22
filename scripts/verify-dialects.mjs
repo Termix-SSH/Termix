@@ -132,6 +132,56 @@ check(
 await hosts.deleteForUser(userId, host.id);
 check("host really deleted", await hosts.findById(host.id), null);
 
+// A plugin's own tables. The DDL is emitted from a table definition rather
+// than written by hand, so this is what proves the emitter's output is valid
+// on a real engine - the unit tests can only snapshot the string.
+const { defineTable, id, varchar, text, refUser, timestamp } = await import(
+  "../packages/plugin-sdk/dist/db.js"
+);
+const { createTableSql, dropTableSql } = await import(
+  "../packages/plugin-sdk/dist/ddl.js"
+);
+const { sql: raw } = await import("drizzle-orm");
+
+const pluginTable = defineTable(
+  "verify_note",
+  {
+    id: id(),
+    userId: refUser(),
+    title: varchar(200).notNull(),
+    body: text(),
+    createdAt: timestamp().notNull().defaultNow(),
+  },
+  { indexes: [{ name: "idx_verify_note_user", columns: ["userId"] }] },
+);
+
+const pluginId = "verify";
+try {
+  for (const statement of createTableSql(dialect, pluginId, pluginTable)) {
+    await db.execute(raw.raw(statement));
+  }
+  check("plugin table DDL is accepted", true, true);
+
+  await db.execute(
+    raw.raw(
+      `INSERT INTO p_verify_verify_note (user_id, title) VALUES ('${userId}', 'from verify')`,
+    ),
+  );
+  const rows = await db.execute(
+    raw.raw("SELECT title FROM p_verify_verify_note"),
+  );
+  const list = Array.isArray(rows) ? rows : (rows?.rows ?? []);
+  check("plugin table round-trips a row", list.length > 0, true);
+} catch (error) {
+  check(`plugin table DDL is accepted (${error.message})`, false, true);
+} finally {
+  try {
+    await db.execute(raw.raw(dropTableSql(dialect, pluginId, pluginTable)));
+  } catch {
+    // Best effort: the scratch database is the caller's to clean.
+  }
+}
+
 console.log(
   failures === 0
     ? `\n${dialect}: all checks passed\n`

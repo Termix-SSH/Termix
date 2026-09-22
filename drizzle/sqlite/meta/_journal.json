@@ -169,6 +169,13 @@
       "when": 1790102858837,
       "tag": "0023_talented_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1790109036510,
+      "tag": "0024_public_hemingway",
+      "breakpoints": true
     }
   ]
 }

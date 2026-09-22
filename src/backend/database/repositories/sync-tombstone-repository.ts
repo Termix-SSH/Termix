@@ -5,17 +5,16 @@ import type { DatabaseContext } from "./database-context.js";
 
 export type SyncTombstoneRecord = typeof syncTombstones.$inferSelect;
 
-export type SyncEntityType =
-  | "hosts"
-  | "sshCredentials"
-  | "sshFolders"
-  | "snippets"
-  | "snippetFolders"
-  | "vaultProfiles"
-  | "dashboardServiceLinks"
-  | "homepageItems"
-  | "userPreferences"
-  | "networkTopology";
+/**
+ * The wire name of a synced entity.
+ *
+ * A string rather than a union: the set is whatever core and the installed
+ * plugins have registered, so it cannot be known at compile time. The column
+ * was already free-form text with no enum constraint, so nothing in the
+ * database changes. sync.ts validates a name through the registry before it
+ * reaches a query.
+ */
+export type SyncEntityType = string;
 
 export class SyncTombstoneRepository {
   constructor(

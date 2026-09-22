@@ -2253,4 +2253,33 @@ export const pluginStorage = pgTable(
   ],
 );
 
+/**
+ * Which of a plugin's migrations have been applied.
+ *
+ * The checksum is what makes an already-applied migration immutable: editing
+ * one that has run blocks that plugin rather than silently leaving two
+ * databases with different shapes. Cascades with the plugin so removing its
+ * data leaves no ledger behind.
+ */
+export const pluginMigrations = pgTable(
+  "plugin_migrations",
+  {
+    id: serial("id").primaryKey(),
+    pluginId: varchar("plugin_id", { length: 255 })
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    migrationId: varchar("migration_id", { length: 255 }).notNull(),
+    checksum: text("checksum").notNull(),
+    appliedAt: text("applied_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_migrations_plugin_migration").on(
+      table.pluginId,
+      table.migrationId,
+    ),
+  ],
+);
+
 // --- plugins end ---

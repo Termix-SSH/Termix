@@ -338,6 +338,13 @@ export class PluginLoader {
         );
       }
 
+      // Before activate, not inside it: a plugin's first line may query its
+      // own tables, and a migration that fails should stop it starting rather
+      // than leave it half-running against a schema that is not there. A
+      // throw here lands in the catch below, which fails this plugin only.
+      const { migratePlugin } = await import("./data.js");
+      await migratePlugin(plugin.id, plugin.dir);
+
       const handle = createPluginHandle(plugin.id, { activate, deactivate });
       const ctx = createPluginContext(plugin.manifest, handle);
 

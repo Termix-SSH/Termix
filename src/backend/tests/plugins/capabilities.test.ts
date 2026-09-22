@@ -30,6 +30,9 @@ vi.mock("../../database/repositories/factory.js", () => ({
     delete: async (pluginId: string, key: string) =>
       kvStore.delete(`${pluginId}:${key}`),
     listKeys: async () => [...kvStore.keys()],
+    countKeys: async (pluginId: string) =>
+      [...kvStore.keys()].filter((key) => key.startsWith(`${pluginId}:`))
+        .length,
   }),
 }));
 

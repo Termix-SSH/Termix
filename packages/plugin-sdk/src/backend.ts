@@ -11,6 +11,7 @@
  */
 
 import type { PluginManifest } from "./manifest.js";
+import type { PluginTableDefinition } from "./db.js";
 
 /**
  * Thrown when a plugin calls a guarded member without the capability.
@@ -56,6 +57,75 @@ export interface PluginKeyValue {
   list: () => Promise<string[]>;
 }
 
+/**
+ * The plugin's own tables.
+ *
+ * `define` registers a table definition and returns the Drizzle table object
+ * to query through `db`. Both require db:own.
+ *
+ * Scoped by name: every table carries the p_<id>_ prefix, and `refs` exposes
+ * users and ssh_data read-only so a plugin can join against them without being
+ * able to write them. In-process code could reach around all of this - see
+ * "What this protects, and what it does not" in ARCHITECTURE.md. The
+ * capability, the prefix, lint and review are the contract, not a sandbox.
+ */
+export interface PluginDatabase {
+  /** Registers a definition and returns its queryable table object. */
+  define: <T = unknown>(definition: PluginTableDefinition) => Promise<T>;
+  /** Drizzle handle, scoped to this plugin's tables. */
+  client: <T = unknown>() => Promise<T>;
+  /** Read-only references to the core tables a plugin may point at. */
+  refs: <T = unknown>() => Promise<T>;
+}
+
+/** A row's shape on the wire, before it is written to a table. */
+export type SyncRow = Record<string, unknown>;
+
+export interface SyncEntityReference {
+  /** Stored column holding a local numeric id, e.g. "credentialId". */
+  field: string;
+  /** Wire field holding the portable id, e.g. "credentialSyncId". */
+  syncField: string;
+  /** The entity the id points at. */
+  entityType: string;
+}
+
+export interface SyncEntityRegistration {
+  /** Stable wire name. Never change it: tombstones and remote rows match on it. */
+  type: string;
+  /** The table, as returned by ctx.db.define. */
+  table: unknown;
+  /** Column holding the owning user id. Defaults to "userId". */
+  userColumn?: string;
+  /** Fields DataCrypto translates between plaintext wire and encrypted row. */
+  encryptedFields?: readonly string[];
+  /** Local-id to sync-id translations applied on the way out and back. */
+  references?: readonly SyncEntityReference[];
+  /** Lower sorts first. Reference targets must sort before their referrers. */
+  order?: number;
+  /** Fields that must never be overwritten by an inbound payload. */
+  readOnlyFields?: readonly string[];
+  /** One row per user rather than many, keyed on the owner. */
+  singleton?: boolean;
+  /**
+   * Escape hatch for a row whose references are not plain columns, such as ids
+   * embedded in a JSON blob. Runs instead of `references`, not alongside it.
+   */
+  serialize?: (
+    row: SyncRow,
+    resolveSyncId: (entityType: string, id: number) => Promise<string | null>,
+  ) => Promise<SyncRow>;
+  deserialize?: (
+    row: SyncRow,
+    resolveId: (entityType: string, syncId: string) => Promise<number | null>,
+  ) => Promise<SyncRow>;
+}
+
+/** Adds an entity to remote sync between a desktop backend and a server. */
+export interface PluginSync {
+  registerEntity: (entity: SyncEntityRegistration) => void;
+}
+
 export interface PluginRegistry {
   provide: <T>(key: string, value: T) => void;
   consume: <T>(key: string) => T | undefined;
@@ -95,6 +165,8 @@ export interface PluginContext {
   readonly log: PluginLogger;
   readonly events: PluginEvents;
   readonly kv: PluginKeyValue;
+  readonly db: PluginDatabase;
+  readonly sync: PluginSync;
   readonly registry: PluginRegistry;
   readonly services: PluginServices;
   readonly secrets: PluginSecrets;
@@ -133,3 +205,4 @@ export function definePlugin(plugin: PluginModule): PluginModule {
 }
 
 export type { PluginManifest } from "./manifest.js";
+export type { PluginTableDefinition } from "./db.js";

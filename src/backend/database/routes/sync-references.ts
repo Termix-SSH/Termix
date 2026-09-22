@@ -1,6 +1,16 @@
 import type { SyncEntityType } from "../repositories/sync-tombstone-repository.js";
+import { getEntity } from "../../plugins/sync-registry.js";
 
-export type SyncReferenceEntity = "hosts" | "sshCredentials" | "vaultProfiles";
+/**
+ * An entity another entity's rows may point at.
+ *
+ * A plain string rather than a union: the set is whatever is registered, and a
+ * plugin can both register an entity and reference one. sync.ts resolves the
+ * name through the registry, so an unknown one is an error there rather than a
+ * silent fallthrough - which is what the old three-way if/else did, routing
+ * anything that was not hosts or sshCredentials to vaultProfiles.
+ */
+export type SyncReferenceEntity = string;
 
 interface TopologyNode {
   data?: { id?: string; [key: string]: unknown };
@@ -25,7 +35,7 @@ interface Topology {
  * leave group ids untouched. Nodes/edges that fail to resolve (host deleted,
  * or not synced to this side yet) are dropped rather than left dangling.
  */
-async function mapTopologyHostIds(
+export async function mapTopologyHostIds(
   topologyJson: string | null | undefined,
   mapId: (id: string) => Promise<string | null>,
 ): Promise<string | null> {
@@ -81,46 +91,16 @@ interface SyncReference {
   entityType: SyncReferenceEntity;
 }
 
-const CREDENTIAL_REFERENCE: SyncReference = {
-  field: "credentialId",
-  syncField: "credentialSyncId",
-  entityType: "sshCredentials",
-};
-
-const HOST_REFERENCES: SyncReference[] = [
-  CREDENTIAL_REFERENCE,
-  {
-    field: "rdpCredentialId",
-    syncField: "rdpCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
-    field: "vncCredentialId",
-    syncField: "vncCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
-    field: "telnetCredentialId",
-    syncField: "telnetCredentialSyncId",
-    entityType: "sshCredentials",
-  },
-  {
-    field: "vaultProfileId",
-    syncField: "vaultProfileSyncId",
-    entityType: "vaultProfiles",
-  },
-  {
-    field: "parentHostId",
-    syncField: "parentHostSyncId",
-    entityType: "hosts",
-  },
-];
-
 export function orderSyncRows(
   entityType: SyncEntityType,
   rows: Record<string, unknown>[],
 ): Record<string, unknown>[] {
-  if (entityType !== "hosts") return rows;
+  // Only an entity that references itself needs its rows ordered among
+  // themselves. Today that is hosts, through parentHostId.
+  const selfReference = referencesFor(entityType).find(
+    (reference) => reference.entityType === entityType,
+  );
+  if (!selfReference) return rows;
 
   const bySyncId = new Map(
     rows
@@ -136,7 +116,7 @@ export function orderSyncRows(
     if (visiting.has(row)) return;
     visiting.add(row);
 
-    const parentSyncId = row.parentHostSyncId;
+    const parentSyncId = row[selfReference.syncField];
     if (typeof parentSyncId === "string") {
       const parent = bySyncId.get(parentSyncId);
       if (parent) visit(parent);
@@ -151,10 +131,9 @@ export function orderSyncRows(
   return ordered;
 }
 
-const REFERENCES: Partial<Record<SyncEntityType, SyncReference[]>> = {
-  hosts: HOST_REFERENCES,
-  sshFolders: [CREDENTIAL_REFERENCE],
-};
+function referencesFor(entityType: SyncEntityType): readonly SyncReference[] {
+  return (getEntity(entityType)?.references ?? []) as readonly SyncReference[];
+}
 
 export async function serializeSyncReferences(
   entityType: SyncEntityType,
@@ -166,19 +145,10 @@ export async function serializeSyncReferences(
 ): Promise<Record<string, unknown>> {
   const serialized = { ...row };
 
-  if (entityType === "networkTopology") {
-    serialized.topology = await mapTopologyHostIds(
-      serialized.topology as string | null | undefined,
-      async (id) => {
-        const numericId = Number(id);
-        if (!Number.isInteger(numericId)) return null;
-        return resolveSyncId("hosts", numericId);
-      },
-    );
-    return serialized;
-  }
+  const custom = getEntity(entityType)?.serialize;
+  if (custom) return custom(serialized, resolveSyncId);
 
-  for (const reference of REFERENCES[entityType] ?? []) {
+  for (const reference of referencesFor(entityType)) {
     const id = serialized[reference.field];
     serialized[reference.syncField] =
       typeof id === "number"
@@ -199,18 +169,10 @@ export async function deserializeSyncReferences(
 ): Promise<Record<string, unknown>> {
   const deserialized = { ...row };
 
-  if (entityType === "networkTopology") {
-    deserialized.topology = await mapTopologyHostIds(
-      deserialized.topology as string | null | undefined,
-      async (syncId) => {
-        const id = await resolveId("hosts", syncId);
-        return id === null ? null : String(id);
-      },
-    );
-    return deserialized;
-  }
+  const custom = getEntity(entityType)?.deserialize;
+  if (custom) return custom(deserialized, resolveId);
 
-  for (const reference of REFERENCES[entityType] ?? []) {
+  for (const reference of referencesFor(entityType)) {
     const syncId = deserialized[reference.syncField];
     delete deserialized[reference.syncField];
     delete deserialized[reference.field];

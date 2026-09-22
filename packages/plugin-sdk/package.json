@@ -12,6 +12,14 @@
       "types": "./dist/backend.d.ts",
       "default": "./dist/backend.js"
     },
+    "./db": {
+      "types": "./dist/db.d.ts",
+      "default": "./dist/db.js"
+    },
+    "./ddl": {
+      "types": "./dist/ddl.d.ts",
+      "default": "./dist/ddl.js"
+    },
     "./frontend": {
       "types": "./dist/frontend.d.ts",
       "default": "./dist/frontend.js"

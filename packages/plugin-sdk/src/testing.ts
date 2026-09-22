@@ -16,6 +16,8 @@ import type {
 } from "./backend.js";
 import type { TermixApp } from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
+import type { PluginTableDefinition } from "./db.js";
+import type { SyncEntityRegistration } from "./backend.js";
 
 export interface FakeContextOptions {
   pluginId?: string;
@@ -32,6 +34,10 @@ export interface FakePluginContext {
   emitted: Array<{ topic: string; payload: unknown }>;
   /** Backing store behind ctx.kv. */
   kv: Map<string, unknown>;
+  /** Table definitions registered through ctx.db.define, in order. */
+  tables: PluginTableDefinition[];
+  /** Sync entities registered through ctx.sync.registerEntity, in order. */
+  syncEntities: SyncEntityRegistration[];
 }
 
 function noopLogger(): PluginLogger {
@@ -55,6 +61,8 @@ export function createFakeContext(
   const disposals: Array<() => void | Promise<void>> = [];
   const emitted: Array<{ topic: string; payload: unknown }> = [];
   const kv = new Map<string, unknown>();
+  const tables: PluginTableDefinition[] = [];
+  const syncEntities: SyncEntityRegistration[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   let actor = options.actor;
 
@@ -105,6 +113,27 @@ export function createFakeContext(
       list: async () => [...kv.keys()],
     },
 
+    db: {
+      // No engine behind this one. A test that needs real SQL should drive the
+      // runtime rather than the double.
+      define: async (definition) => {
+        tables.push(definition);
+        return undefined as never;
+      },
+      client: async () => {
+        throw new Error("createFakeContext does not implement db.client");
+      },
+      refs: async () => {
+        throw new Error("createFakeContext does not implement db.refs");
+      },
+    },
+
+    sync: {
+      registerEntity: (entity) => {
+        syncEntities.push(entity);
+      },
+    },
+
     registry: {
       provide: () => {},
       consume: () => undefined,
@@ -139,7 +168,7 @@ export function createFakeContext(
     currentActor: () => actor,
   };
 
-  return { ctx, disposals, emitted, kv };
+  return { ctx, disposals, emitted, kv, tables, syncEntities };
 }
 
 export interface MockContextOptions {
@@ -203,8 +232,24 @@ export function createMockCtx(
   };
 
   const guardedKv = ctx.kv;
+  const guardedDb = ctx.db;
   const gatedCtx: PluginContext = {
     ...ctx,
+
+    db: {
+      define: async (definition) => {
+        require("db:own");
+        return guardedDb.define(definition);
+      },
+      client: async () => {
+        require("db:own");
+        return guardedDb.client();
+      },
+      refs: async () => {
+        require("db:own");
+        return guardedDb.refs();
+      },
+    },
 
     kv: {
       get: async (key) => {

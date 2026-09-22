@@ -1,17 +1,6 @@
 import express, { type Request, type Response } from "express";
 import { and, eq, type SQL } from "drizzle-orm";
-import {
-  hosts,
-  sshCredentials,
-  sshFolders,
-  snippets,
-  snippetFolders,
-  vaultProfiles,
-  dashboardServiceLinks,
-  homepageItems,
-  userPreferences,
-  networkTopology,
-} from "../db/schema.js";
+import { hosts } from "../db/schema.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { databaseLogger } from "../../utils/logger.js";
@@ -23,6 +12,15 @@ import {
 } from "../repositories/factory.js";
 import type { SyncEntityType } from "../repositories/sync-tombstone-repository.js";
 import {
+  getEntity,
+  hasEntity,
+  listEntities,
+} from "../../plugins/sync-registry.js";
+import {
+  ENCRYPTED_ENTITY_TABLES,
+  registerCoreSyncEntities,
+} from "./sync-entities.js";
+import {
   deserializeSyncReferences,
   orderSyncRows,
   serializeSyncReferences,
@@ -31,66 +29,44 @@ import {
 import { timestampAtOrAfter } from "../sync-timestamp.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 
+// Primed at import so every consumer of this module - the routes below, the
+// reference resolvers, the Electron entity-types endpoint - sees the same
+// registry regardless of which one runs first.
+registerCoreSyncEntities();
+
 const router = express.Router();
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 
-// Encrypted tables need DataCrypto to translate between the wire payload
-// (plaintext) and the stored row (encrypted). Everything else is stored
-// and synced as-is.
-const ENCRYPTED_ENTITY_TABLES: Partial<Record<SyncEntityType, string>> = {
-  hosts: "ssh_data",
-  sshCredentials: "ssh_credentials",
-};
+/**
+ * What a sync entity looks like once it is registered.
+ *
+ * The table was a hand-maintained union of ten concrete drizzle types, which a
+ * plugin-provided table could never join. It is the same deliberate
+ * approximation repositories/database-context.ts documents: the query-builder
+ * surface used here is identical across the engines and across tables, and
+ * every use already casts to reach .syncId and .updatedAt.
+ */
+type SyncTable = typeof hosts;
 
-interface EntityConfig {
-  table:
-    | typeof hosts
-    | typeof sshCredentials
-    | typeof sshFolders
-    | typeof snippets
-    | typeof snippetFolders
-    | typeof vaultProfiles
-    | typeof dashboardServiceLinks
-    | typeof homepageItems
-    | typeof userPreferences
-    | typeof networkTopology;
-  // Fields that only make sense on the device that created the row, or
-  // that are managed elsewhere and must never be overwritten by a sync
-  // payload from the other side.
-  readOnlyFields: string[];
-  singleton?: boolean;
+function entityConfig(entityType: SyncEntityType) {
+  const entity = getEntity(entityType);
+  if (!entity) {
+    throw new Error(`Unknown sync entity "${entityType}"`);
+  }
+  return {
+    table: entity.table as SyncTable,
+    readOnlyFields: entity.readOnlyFields,
+    singleton: entity.singleton === true,
+  };
 }
 
-const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
-  hosts: {
-    table: hosts,
-    readOnlyFields: ["connectionOrigin"],
-  },
-  sshCredentials: { table: sshCredentials, readOnlyFields: [] },
-  sshFolders: { table: sshFolders, readOnlyFields: [] },
-  snippets: { table: snippets, readOnlyFields: [] },
-  snippetFolders: { table: snippetFolders, readOnlyFields: [] },
-  vaultProfiles: { table: vaultProfiles, readOnlyFields: [] },
-  dashboardServiceLinks: { table: dashboardServiceLinks, readOnlyFields: [] },
-  homepageItems: { table: homepageItems, readOnlyFields: [] },
-  userPreferences: {
-    table: userPreferences,
-    readOnlyFields: ["storageMode"],
-    singleton: true,
-  },
-  networkTopology: {
-    table: networkTopology,
-    readOnlyFields: [],
-    singleton: true,
-  },
-};
-
-const VALID_ENTITY_TYPES = new Set(Object.keys(ENTITY_CONFIG));
 type RepositoryContext = ReturnType<typeof createCurrentRepositoryContext>;
 
 export function isValidEntityType(value: unknown): value is SyncEntityType {
-  return typeof value === "string" && VALID_ENTITY_TYPES.has(value);
+  if (typeof value !== "string") return false;
+  registerCoreSyncEntities();
+  return hasEntity(value);
 }
 
 /**
@@ -106,7 +82,7 @@ export function locateSyncRow(
   userId: string,
   syncId: string,
 ): SQL {
-  const { table, singleton } = ENTITY_CONFIG[entityType];
+  const { table, singleton } = entityConfig(entityType);
 
   if (singleton) {
     return eq(table.userId, userId);
@@ -118,34 +94,25 @@ export function locateSyncRow(
   )!;
 }
 
+/**
+ * The syncId of a referenced row.
+ *
+ * Generic over the registry rather than an if/else over three known entities.
+ * The old chain ended in an unguarded else that returned vaultProfiles, so a
+ * fourth reference target would have silently resolved against the wrong
+ * table; an unregistered entity is an error here instead.
+ */
 async function findReferenceSyncId(
   context: RepositoryContext,
   entityType: SyncReferenceEntity,
   id: number,
   userId: string,
 ): Promise<string | null> {
-  if (entityType === "hosts") {
-    const [row] = await context.drizzle
-      .select({ syncId: hosts.syncId })
-      .from(hosts)
-      .where(and(eq(hosts.id, id), eq(hosts.userId, userId)))
-      .limit(1);
-    return row?.syncId ?? null;
-  }
-
-  if (entityType === "sshCredentials") {
-    const [row] = await context.drizzle
-      .select({ syncId: sshCredentials.syncId })
-      .from(sshCredentials)
-      .where(and(eq(sshCredentials.id, id), eq(sshCredentials.userId, userId)))
-      .limit(1);
-    return row?.syncId ?? null;
-  }
-
+  const { table } = entityConfig(entityType as SyncEntityType);
   const [row] = await context.drizzle
-    .select({ syncId: vaultProfiles.syncId })
-    .from(vaultProfiles)
-    .where(and(eq(vaultProfiles.id, id), eq(vaultProfiles.userId, userId)))
+    .select({ syncId: table.syncId })
+    .from(table)
+    .where(and(eq(table.id, id), eq(table.userId, userId)))
     .limit(1);
   return row?.syncId ?? null;
 }
@@ -156,35 +123,11 @@ async function findReferenceId(
   syncId: string,
   userId: string,
 ): Promise<number | null> {
-  if (entityType === "hosts") {
-    const [row] = await context.drizzle
-      .select({ id: hosts.id })
-      .from(hosts)
-      .where(and(eq(hosts.syncId, syncId), eq(hosts.userId, userId)))
-      .limit(1);
-    return row?.id ?? null;
-  }
-
-  if (entityType === "sshCredentials") {
-    const [row] = await context.drizzle
-      .select({ id: sshCredentials.id })
-      .from(sshCredentials)
-      .where(
-        and(
-          eq(sshCredentials.syncId, syncId),
-          eq(sshCredentials.userId, userId),
-        ),
-      )
-      .limit(1);
-    return row?.id ?? null;
-  }
-
+  const { table } = entityConfig(entityType as SyncEntityType);
   const [row] = await context.drizzle
-    .select({ id: vaultProfiles.id })
-    .from(vaultProfiles)
-    .where(
-      and(eq(vaultProfiles.syncId, syncId), eq(vaultProfiles.userId, userId)),
-    )
+    .select({ id: table.id })
+    .from(table)
+    .where(and(eq(table.syncId, syncId), eq(table.userId, userId)))
     .limit(1);
   return row?.id ?? null;
 }
@@ -230,7 +173,7 @@ export function stripWritePayload(
   entityType: SyncEntityType,
   payload: Record<string, unknown>,
 ): Record<string, unknown> {
-  const { readOnlyFields } = ENTITY_CONFIG[entityType];
+  const { readOnlyFields } = entityConfig(entityType);
   const clean = { ...payload };
   delete clean.id;
   delete clean.userId;
@@ -238,6 +181,42 @@ export function stripWritePayload(
   for (const field of readOnlyFields) delete clean[field];
   return clean;
 }
+
+/**
+ * @openapi
+ * /sync/entity-types:
+ *   get:
+ *     summary: List the entity types this server syncs, in dependency order
+ *     description: The desktop app syncs the entities in the order returned here, because an entity referenced by another has to exist on the far side first. A server that predates this endpoint returns 404 and the client falls back to its built-in list.
+ *     tags:
+ *       - Sync
+ *     responses:
+ *       200:
+ *         description: The ordered entity types.
+ *       500:
+ *         description: Failed to list entity types.
+ */
+router.get(
+  "/entity-types",
+  authenticateJWT,
+  async (_req: Request, res: Response) => {
+    try {
+      registerCoreSyncEntities();
+      return res.json({
+        entityTypes: listEntities().map((entity) => ({
+          type: entity.type,
+          order: entity.order,
+          singleton: entity.singleton === true,
+        })),
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to list sync entity types", error, {
+        operation: "sync_entity_types",
+      });
+      return res.status(500).json({ error: "Failed to list entity types" });
+    }
+  },
+);
 
 /**
  * @openapi
@@ -280,7 +259,7 @@ router.get(
         : null;
 
     try {
-      const { table, singleton } = ENTITY_CONFIG[entityType];
+      const { table, singleton } = entityConfig(entityType);
       const context = createCurrentRepositoryContext();
       const conditions = [eq(table.userId, userId)];
       if (since && "updatedAt" in table) {
@@ -352,7 +331,7 @@ router.post(
     }
 
     try {
-      const { table } = ENTITY_CONFIG[entityType];
+      const { table } = entityConfig(entityType);
       const context = createCurrentRepositoryContext();
 
       await context.drizzle
@@ -418,7 +397,7 @@ router.post(
     try {
       // singleton is still needed below: those tables have no sync_id column
       // for the insert to populate.
-      const { table, singleton } = ENTITY_CONFIG[entityType];
+      const { table, singleton } = entityConfig(entityType);
       const context = createCurrentRepositoryContext();
 
       const locateRow = locateSyncRow(entityType, userId, syncId);

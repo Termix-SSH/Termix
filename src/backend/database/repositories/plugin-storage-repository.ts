@@ -33,6 +33,16 @@ export class PluginStorageRepository {
     return rows.map((row) => row.key);
   }
 
+  /** How many keys this plugin holds, for the per-plugin key cap. */
+  async countKeys(pluginId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(pluginStorage)
+      .where(eq(pluginStorage.pluginId, pluginId));
+
+    return rows.length;
+  }
+
   async set(
     pluginId: string,
     key: string,

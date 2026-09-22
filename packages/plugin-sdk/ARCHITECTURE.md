@@ -27,6 +27,8 @@ dependencies. Entry points:
 | Entry                             | Contents                                                   |
 | --------------------------------- | ---------------------------------------------------------- |
 | `@termix/plugin-sdk/backend`      | `PluginContext`, `definePlugin()`, `PluginCapabilityError` |
+| `@termix/plugin-sdk/db`           | `defineTable()`, the column builders, the legacy-table map |
+| `@termix/plugin-sdk/ddl`          | The per-dialect DDL emitter, shared with the CLI           |
 | `@termix/plugin-sdk/frontend`     | The `app` object types (stubs until A7)                    |
 | `@termix/plugin-sdk/manifest`     | Manifest types, validation, the JSON schema                |
 | `@termix/plugin-sdk/capabilities` | The capability catalog                                     |
@@ -76,13 +78,50 @@ revokes one does not get it handed back on the next restart.
 
 ### 5. Data
 
-Plugins own their tables through SDK table definitions and ship migrations for
-sqlite, pg and mysql. Table names are prefixed `p_<id with - as _>_`. Legacy
-core tables are adopted by rename in the plugin's first migration. `ctx.kv` is
-for small key/value state. Core `schema.ts` ends up holding only core tables.
+Plugins own their tables. A plugin declares them with `defineTable()` from
+`@termix/plugin-sdk/db` and ships migrations for `sqlite`, `postgres` and
+`mysql` under `migrations/<dialect>/NNNN_name.sql`. Table names are prefixed
+`p_<id with - as _>_`, which `defineTable` adds. `ctx.kv` is for small
+key/value state. Core `schema.ts` ends up holding only core tables.
 
-**A3** delivers the table definitions and migration runner. A1 ships `ctx.kv`
-only.
+**One table object, three DDL emitters.** The sqlite-core definitions already
+encode correctly on every engine at query time, which is why core's own 44
+repositories use `schema.ts` on all three. Only DDL genuinely differs, and
+that mapping lives in `@termix/plugin-sdk/ddl` so `termix-plugin migrations`
+and the server's runner cannot drift into disagreeing.
+
+**MySQL cannot index TEXT.** Any column carrying a key becomes
+`varchar(255)`, and `defineTable` refuses an index on `text()` or `json()`
+outright rather than silently truncating it.
+
+**Migrations are applied at activation**, before `activate()` runs, so a
+plugin's first query never meets a missing table. Applied migrations are
+recorded in `plugin_migrations` with a checksum, which makes them immutable:
+editing one that already ran blocks that plugin rather than leaving two
+installs with quietly different schemas. A migration that throws marks its
+plugin failed and core keeps booting.
+
+**Adoption** is how a feature keeps its rows when it moves out of core. The
+legacy table is renamed into the plugin's namespace
+(`fleets` -> `p_fleets_fleets`) rather than copied, so nothing is duplicated
+and no row is migrated one at a time. `LEGACY_TABLE_OWNERS` maps each legacy
+table to the one plugin allowed to adopt it, enforced by the CLI at build time
+and by the runner at activation, because a plugin installed from a tarball
+never ran the CLI.
+
+**Anything DDL-only in `db/index.ts` is SQLite-only.** `alert_rules`,
+`alert_rule_channels` and `alert_firings` were created only there and never
+declared in `schema.ts`, so they never existed on Postgres or MySQL at all.
+Automations replaced them and A3 drops them. A core table needs all three
+artifacts in lockstep: the `schema.ts` declaration, the `index.ts` DDL, and the
+regenerated `schema.pg.ts`/`schema.mysql.ts` plus drizzle migrations.
+
+**Sync entities are registered, not hardcoded.** `ctx.sync.registerEntity`
+adds an entity to remote sync; core registers its own ten the same way in
+`database/routes/sync-entities.ts`. The wire names are unchanged, because
+existing tombstones and rows on the far side match on those strings. The
+Electron client asks the server for the ordered list and falls back to its
+frozen array for a server that predates the endpoint.
 
 ### 6. HTTP and WebSockets
 
@@ -175,7 +214,9 @@ plugins/<id>/
   src/backend/index.ts     exports activate(ctx) and deactivate()
   src/frontend/index.tsx   exports activate(app) and deactivate() (A7)
   locales/en.json          English strings; Crowdin translates the rest
-  migrations/{sqlite,pg,mysql}/   owned tables (A3)
+  migrations/{sqlite,postgres,mysql}/  owned tables, one .sql per dialect
+  migrations/snapshot.json        diff basis for the generator
+  src/backend/tables.ts           defineTable() definitions
   tests/backend/           vitest, node
   tests/frontend/          vitest, jsdom
   README.md  CHANGELOG.md
@@ -364,7 +405,8 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.disposables.add`                            | none                             | **A1** |
 | `ctx.asUser(userId, fn)`                         | none, always audited             | **A1** |
 | `ctx.currentActor()`                             | none                             | **A1** |
-| `ctx.db`                                         | `db:own`                         | A3     |
+| `ctx.db.define` / `.client` / `.refs`            | `db:own`                         | **A3** |
+| `ctx.sync.registerEntity`                        | none                             | **A3** |
 | `ctx.http.route` / `ctx.ws`                      | `network:serve`                  | A4     |
 | `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`     | A4     |
 | `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use` | A4     |
@@ -454,6 +496,13 @@ architecture did.
 - **Protection from malicious code.** A plugin that wants to bypass the gate
   can. Nothing here stops it.
 
+`ctx.db` is a clear example. It hands back a handle scoped to the plugin's own
+tables, and the `p_<id>_` prefix, the CLI check and the runner's check all say
+a plugin may only touch its own. None of that is enforced by the engine: a
+plugin holding that handle can write any table in the database, and `ctx.db.refs`
+hands it `users` and `ssh_data` outright. The prefix, the capability, the audit
+line, lint and review are the contract. The engine is not.
+
 So the honest boundary is: capabilities stop accidental and casual overreach,
 and make every privileged call auditable. What stops malicious code is
 **signing, review and the kill list** - the same trust model as any other
@@ -473,12 +522,13 @@ until one is, this document does not pretend otherwise.
 runs from the plugin's own directory, so a plugin that moves to its own repo
 keeps working unchanged.
 
-| Command                  | What it does                                                                                                                                                                                                                                   |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `termix-plugin build`    | esbuild bundles `src/backend/index.ts` to `dist/backend.js` (ESM, node22) and `src/frontend/index.tsx` to `dist/frontend.js` (ESM, browser), then copies `locales/` and `migrations/` into `dist/`. Imported CSS lands in `dist/frontend.css`. |
-| `termix-plugin validate` | Runs the SDK's `parseManifest` and checks the files the manifest names exist.                                                                                                                                                                  |
-| `termix-plugin test`     | Runs the plugin's vitest suite.                                                                                                                                                                                                                |
-| `termix-plugin pack`     | Writes a `.tgz` of the manifest, `dist/`, locales, migrations and README. **D3** adds signing.                                                                                                                                                 |
+| Command                    | What it does                                                                                                                                                                                                                                                     |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `termix-plugin build`      | esbuild bundles `src/backend/index.ts` to `dist/backend.js` (ESM, node22) and `src/frontend/index.tsx` to `dist/frontend.js` (ESM, browser), then copies `locales/` and `migrations/` into `dist/`. Imported CSS lands in `dist/frontend.css`.                   |
+| `termix-plugin validate`   | Runs the SDK's `parseManifest`, checks the files the manifest names exist, and checks that migrations only touch this plugin's tables and exist for every dialect.                                                                                               |
+| `termix-plugin migrations` | Diffs `src/backend/tables.ts` against `migrations/snapshot.json` and writes one `.sql` per dialect. `--check` fails when a definition changed without a migration. A rename or a type change is refused rather than guessed at, because that is a data decision. |
+| `termix-plugin test`       | Runs the plugin's vitest suite.                                                                                                                                                                                                                                  |
+| `termix-plugin pack`       | Writes a `.tgz` of the manifest, `dist/`, locales, migrations and README. **D3** adds signing.                                                                                                                                                                   |
 
 `npm run build:plugins` builds every plugin and stages the result in
 `dist/plugins/<id>/`, which is what `getBundledPluginsDir()` resolves to and

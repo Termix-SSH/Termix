@@ -10,8 +10,9 @@ import { build } from "./commands/build.mjs";
 import { validate } from "./commands/validate.mjs";
 import { test } from "./commands/test.mjs";
 import { pack } from "./commands/pack.mjs";
+import { migrations } from "./commands/migrations.mjs";
 
-const COMMANDS = { build, validate, test, pack };
+const COMMANDS = { build, validate, test, pack, migrations };
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -24,6 +25,7 @@ if (!command || command === "--help" || command === "-h") {
       "  validate   Check manifest.json and the files it names",
       "  test       Run the plugin's vitest suite",
       "  pack       Write a .tgz of the built plugin",
+      "  migrations Generate migrations from the plugin's table definitions",
     ].join("\n"),
   );
   process.exit(command ? 0 : 1);

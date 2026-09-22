@@ -31,12 +31,28 @@ import { getActor, runAsActor } from "./actor.js";
 import { DisposableBag } from "./disposables.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import type { PluginContext, PluginModule } from "@termix/plugin-sdk/backend";
+import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
+import * as syncRegistry from "./sync-registry.js";
 
 export type { PluginModule };
 
 /** Caps mirroring what the old worker boundary enforced. */
 const MAX_KV_KEY_LENGTH = 128;
 const MAX_KV_VALUE_BYTES = 256 * 1024;
+
+/**
+ * How many keys one plugin may hold.
+ *
+ * The value cap alone bounds a single row, not the table: a plugin writing
+ * unique keys in a loop could still fill the database. Configurable because
+ * the right ceiling depends on the install, not on the plugin.
+ */
+const DEFAULT_MAX_KV_KEYS = 10_000;
+
+function maxKvKeys(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = Number(env.PLUGIN_MAX_KV_KEYS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX_KV_KEYS;
+}
 
 export interface PluginHandle {
   module: PluginModule;
@@ -169,11 +185,21 @@ export function createPluginContext(
       }
       const { createCurrentPluginStorageRepository } =
         await import("../database/repositories/factory.js");
-      await createCurrentPluginStorageRepository().set(
-        pluginId,
-        key,
-        serialized,
-      );
+      const repository = createCurrentPluginStorageRepository();
+
+      // Only a new key can grow the table, so an overwrite is never blocked
+      // by a full one. Checked before the write, not after.
+      const existing = await repository.get(pluginId, key);
+      if (existing === null) {
+        const limit = maxKvKeys();
+        if ((await repository.countKeys(pluginId)) >= limit) {
+          throw new Error(
+            `Plugin "${pluginId}" has reached the ${limit} key limit for ctx.kv`,
+          );
+        }
+      }
+
+      await repository.set(pluginId, key, serialized);
     },
     { action: "kv_set" },
   );
@@ -198,6 +224,39 @@ export function createPluginContext(
       return createCurrentPluginStorageRepository().listKeys(pluginId);
     },
     { action: "kv_list" },
+  );
+
+  const dbDefine = guarded(
+    manifest,
+    "db:own",
+    async (definition: PluginTableDefinition) => {
+      const { registerTable } = await import("./data.js");
+      return registerTable(pluginId, definition);
+    },
+    { action: "db_define", details: () => "table definition registered" },
+  );
+
+  const dbClient = guarded(
+    manifest,
+    "db:own",
+    async () => {
+      const { getDb } = await import("../database/db/index.js");
+      return getDb();
+    },
+    { action: "db_client" },
+  );
+
+  const dbRefs = guarded(
+    manifest,
+    "db:own",
+    async () => {
+      // Read-only by convention, not by engine: a plugin holding these can
+      // write through them. The capability and the audit line are the record
+      // that it did. See the header of this file.
+      const schema = await import("../database/db/schema.js");
+      return { users: schema.users, hosts: schema.hosts };
+    },
+    { action: "db_refs" },
   );
 
   return {
@@ -234,6 +293,19 @@ export function createPluginContext(
         const unsubscribe = pluginEvents.on(topic, listener);
         handle.bag.add(unsubscribe, `event listener for "${topic}"`);
         return unsubscribe;
+      },
+    },
+
+    db: {
+      define: (definition) => dbDefine(definition) as never,
+      client: () => dbClient() as never,
+      refs: () => dbRefs() as never,
+    },
+
+    sync: {
+      registerEntity: (entity) => {
+        const dispose = syncRegistry.registerEntity(pluginId, entity);
+        handle.bag.add(dispose, `sync entity ${entity.type}`);
       },
     },
 

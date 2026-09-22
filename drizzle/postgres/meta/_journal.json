@@ -197,6 +197,13 @@
       "when": 1790102859387,
       "tag": "0027_sharp_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790109036999,
+      "tag": "0028_whole_zemo",
+      "breakpoints": true
     }
   ]
 }

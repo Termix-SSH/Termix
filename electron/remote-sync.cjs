@@ -311,7 +311,10 @@ class RemoteSyncEngine {
       const state = readJson(getRemoteSyncStatePath(), { entities: {} });
       let sawAuthFailure = false;
 
-      for (const entityType of SYNCED_ENTITY_TYPES) {
+      const remoteBase = config.serverUrl.replace(/\/$/, "");
+      const entityTypes = await this.resolveEntityTypes(remoteBase, remoteJwt);
+
+      for (const entityType of entityTypes) {
         const entityState = state.entities[entityType] || {
           lastPulledAt: null,
           lastPushedAt: null,
@@ -319,7 +322,7 @@ class RemoteSyncEngine {
 
         const result = await this.syncEntity({
           entityType,
-          remoteBaseUrl: config.serverUrl.replace(/\/$/, ""),
+          remoteBaseUrl: remoteBase,
           remoteJwt,
           since: entityState.lastPulledAt,
         });
@@ -372,6 +375,43 @@ class RemoteSyncEngine {
     }
 
     return this.status;
+  }
+
+  /**
+   * Which entities to sync, and in what order.
+   *
+   * Asked of the remote server, because a plugin installed there can add one
+   * and this process has no way to know. Intersected with what the embedded
+   * backend supports: the two sides may have different plugins installed, and
+   * pushing an entity the local backend has never heard of just 400s.
+   *
+   * A server older than this endpoint 404s, and the frozen list is what it
+   * would have synced anyway.
+   */
+  async resolveEntityTypes(remoteBaseUrl, remoteJwt) {
+    const fetchTypes = async (base, token) => {
+      try {
+        const body = await this.fetchJson(`${base}/sync/entity-types`, token);
+        const types = (body?.entityTypes || [])
+          .slice()
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .map((entity) => entity.type)
+          .filter((type) => typeof type === "string" && type);
+        return types.length > 0 ? types : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const remote = await fetchTypes(remoteBaseUrl, remoteJwt);
+    if (!remote) return SYNCED_ENTITY_TYPES;
+
+    const local = await fetchTypes(EMBEDDED_BASE_URL, this.localJwt);
+    if (!local) return remote;
+
+    const supported = new Set(local);
+    const shared = remote.filter((type) => supported.has(type));
+    return shared.length > 0 ? shared : SYNCED_ENTITY_TYPES;
   }
 
   async fetchJson(url, token, options = {}) {

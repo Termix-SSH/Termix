@@ -741,6 +741,16 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS plugin_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plugin_id TEXT NOT NULL,
+        migration_id TEXT NOT NULL,
+        checksum TEXT NOT NULL,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (plugin_id, migration_id),
+        FOREIGN KEY (plugin_id) REFERENCES plugins (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -2440,29 +2450,20 @@ const migrateSchema = () => {
   // --- proxmox-node-history end ---
 
   // --- alerts begin ---
-  try {
-    sqlite.prepare("SELECT id FROM alert_rules LIMIT 1").get();
-  } catch {
+  // alert_rules, alert_rule_channels and alert_firings were only ever created
+  // here, never declared in schema.ts, so they never existed on Postgres or
+  // MySQL at all. Automations replaced them; drop the SQLite leftovers.
+  for (const table of [
+    "alert_firings",
+    "alert_rule_channels",
+    "alert_rules",
+  ]) {
     try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS alert_rules (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          host_id INTEGER REFERENCES ssh_data(id) ON DELETE CASCADE,
-          name TEXT NOT NULL,
-          enabled INTEGER NOT NULL DEFAULT 1,
-          trigger_type TEXT NOT NULL,
-          threshold_value REAL,
-          threshold_duration_seconds INTEGER,
-          cooldown_minutes INTEGER NOT NULL DEFAULT 15,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create alert_rules table", {
+      sqlite.exec(`DROP TABLE IF EXISTS ${table};`);
+    } catch (dropError) {
+      databaseLogger.warn(`Failed to drop legacy ${table} table`, {
         operation: "schema_migration",
-        error: createError,
+        error: dropError,
       });
     }
   }
@@ -2484,54 +2485,6 @@ const migrateSchema = () => {
       `);
     } catch (createError) {
       databaseLogger.warn("Failed to create notification_channels table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM alert_rule_channels LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS alert_rule_channels (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          rule_id INTEGER NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
-          channel_id INTEGER NOT NULL REFERENCES notification_channels(id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create alert_rule_channels table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM alert_firings LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS alert_firings (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          rule_id INTEGER NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
-          host_id INTEGER NOT NULL,
-          host_name TEXT NOT NULL,
-          fired_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          resolved_at TEXT,
-          value REAL,
-          message TEXT NOT NULL,
-          severity TEXT NOT NULL DEFAULT 'warning',
-          acknowledged INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE INDEX IF NOT EXISTS idx_alert_firings_user_fired
-          ON alert_firings (user_id, fired_at DESC);
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create alert_firings table", {
         operation: "schema_migration",
         error: createError,
       });

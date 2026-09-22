@@ -2251,4 +2251,33 @@ export const pluginStorage = sqliteTable(
   ],
 );
 
+/**
+ * Which of a plugin's migrations have been applied.
+ *
+ * The checksum is what makes an already-applied migration immutable: editing
+ * one that has run blocks that plugin rather than silently leaving two
+ * databases with different shapes. Cascades with the plugin so removing its
+ * data leaves no ledger behind.
+ */
+export const pluginMigrations = sqliteTable(
+  "plugin_migrations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pluginId: text("plugin_id")
+      .notNull()
+      .references(() => plugins.id, { onDelete: "cascade" }),
+    migrationId: text("migration_id").notNull(),
+    checksum: text("checksum").notNull(),
+    appliedAt: text("applied_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_plugin_migrations_plugin_migration").on(
+      table.pluginId,
+      table.migrationId,
+    ),
+  ],
+);
+
 // --- plugins end ---

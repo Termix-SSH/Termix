@@ -461,4 +461,71 @@ router.delete(
   },
 );
 
+/**
+ * @openapi
+ * /plugins/{id}/data:
+ *   delete:
+ *     summary: Delete everything a plugin stores
+ *     description: Drops the plugin's own tables and clears its key/value state, capability grants and migration ledger. Disabling a plugin never touches its data; this is the explicit uninstall path, and it cannot be undone. The plugin is deactivated first so nothing is writing while its tables go.
+ *     tags:
+ *       - Plugins
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: What was removed.
+ *       404:
+ *         description: No such plugin.
+ *       500:
+ *         description: Failed to remove the plugin's data.
+ */
+router.delete(
+  "/:id/data",
+  authenticateJWT,
+  requireManagePlugins,
+  async (req: Request, res: Response) => {
+    const pluginId = String(req.params.id);
+    const userId = (req as AuthenticatedRequest).userId;
+
+    try {
+      const record = await createCurrentPluginRepository().findById(pluginId);
+      if (!record) {
+        res.status(404).json({ error: "No such plugin" });
+        return;
+      }
+
+      // Stopped first: dropping a table out from under a running plugin turns
+      // its next query into an error rather than a clean shutdown.
+      const { loader } = getPluginRuntime();
+      if (loader.get(pluginId)?.state === "active") {
+        await loader.deactivate(pluginId);
+      }
+
+      const { removePluginData } = await import("../../plugins/data.js");
+      const removed = await removePluginData(pluginId);
+
+      databaseLogger.warn(`Removed all data for plugin ${pluginId}`, {
+        operation: "plugin_remove_data",
+        pluginId,
+        userId,
+        tables: removed.tables.length,
+        kvKeys: removed.kvKeys,
+      });
+
+      res.json({ id: pluginId, removed });
+    } catch (error) {
+      databaseLogger.error(
+        `Failed to remove data for plugin ${pluginId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "plugin_remove_data" },
+      );
+      res.status(500).json({ error: "Failed to remove the plugin's data" });
+    }
+  },
+);
+
 export default router;

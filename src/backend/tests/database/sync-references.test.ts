@@ -1,11 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   deserializeSyncReferences,
   orderSyncRows,
   serializeSyncReferences,
 } from "../../database/routes/sync-references.js";
+import { registerCoreSyncEntities } from "../../database/routes/sync-entities.js";
 
 describe("sync references", () => {
+  // References come from the registry now, not a hardcoded map, so the core
+  // entities have to be registered before any of this resolves. sync.ts does
+  // this at import in production.
+  beforeAll(() => {
+    registerCoreSyncEntities();
+  });
+
   it("serializes database-local host IDs as stable sync IDs", async () => {
     const row = await serializeSyncReferences(
       "hosts",
