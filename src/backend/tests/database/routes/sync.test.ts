@@ -33,8 +33,6 @@ describe("isValidEntityType", () => {
       "hosts",
       "sshCredentials",
       "sshFolders",
-      "snippets",
-      "snippetFolders",
       "vaultProfiles",
       "dashboardServiceLinks",
       "homepageItems",
@@ -88,7 +86,7 @@ describe("stripWritePayload", () => {
 
   it("does not mutate the original payload object", () => {
     const payload = { id: 1, userId: "user-1", syncId: "abc", name: "x" };
-    stripWritePayload("snippets", payload);
+    stripWritePayload("sshFolders", payload);
     expect(payload).toEqual({
       id: 1,
       userId: "user-1",

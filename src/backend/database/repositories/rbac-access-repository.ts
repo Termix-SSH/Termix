@@ -4,8 +4,6 @@ import {
   hosts,
   roles,
   sharedHostSecrets,
-  snippetAccess,
-  snippets,
   users,
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
@@ -43,29 +41,6 @@ export interface RbacSharedHost {
   ownerUsername: string;
 }
 
-export interface RbacSharedSnippet {
-  id: number;
-  name: string;
-  content: string;
-  description: string | null;
-  folder: string | null;
-  ownerUsername: string;
-  permissionLevel: string;
-  expiresAt: string | null;
-}
-
-export interface RbacVisibleSharedSnippet extends RbacSharedSnippet {
-  userId: string;
-  order: number;
-  createdAt: string;
-  updatedAt: string;
-  isNote: boolean;
-}
-
-export interface RbacAccessibleSnippet extends RbacVisibleSharedSnippet {
-  hostFilter: string | null;
-}
-
 export interface RbacRoleHostAccessCredentialSource {
   hostAccessId: number;
   credentialId: number | null;
@@ -90,12 +65,6 @@ export type UpsertHostAccessInput = RbacAccessTarget & {
   hostId: number;
   grantedBy: string;
   permissionLevel: string;
-  expiresAt: string | null;
-};
-
-export type UpsertSnippetAccessInput = RbacAccessTarget & {
-  snippetId: number;
-  grantedBy: string;
   expiresAt: string | null;
 };
 
@@ -249,76 +218,6 @@ export class RbacAccessRepository {
     return rows[0] ?? null;
   }
 
-  async listSnippetAccess(snippetId: number): Promise<RbacAccessListItem[]> {
-    const rows = await this.context.drizzle
-      .select({
-        id: snippetAccess.id,
-        userId: snippetAccess.userId,
-        roleId: snippetAccess.roleId,
-        username: users.username,
-        roleName: roles.name,
-        roleDisplayName: roles.displayName,
-        grantedBy: snippetAccess.grantedBy,
-        grantedByUsername: sql<
-          string | null
-        >`(SELECT username FROM users WHERE id = ${snippetAccess.grantedBy})`,
-        permissionLevel: snippetAccess.permissionLevel,
-        expiresAt: snippetAccess.expiresAt,
-        createdAt: snippetAccess.createdAt,
-      })
-      .from(snippetAccess)
-      .leftJoin(users, eq(snippetAccess.userId, users.id))
-      .leftJoin(roles, eq(snippetAccess.roleId, roles.id))
-      .where(eq(snippetAccess.snippetId, snippetId))
-      .orderBy(desc(snippetAccess.createdAt));
-
-    return rows.map(toAccessListItem);
-  }
-
-  async upsertSnippetAccess(input: UpsertSnippetAccessInput): Promise<{
-    id: number;
-    created: boolean;
-  }> {
-    const existing = await this.findSnippetAccess(input.snippetId, input);
-
-    if (existing) {
-      await this.context.drizzle
-        .update(snippetAccess)
-        .set({ expiresAt: input.expiresAt })
-        .where(eq(snippetAccess.id, existing.id));
-
-      await this.afterWrite();
-      return { id: existing.id, created: false };
-    }
-
-    const [created] = await insertReturning(this.context, snippetAccess, {
-      snippetId: input.snippetId,
-      userId: input.targetType === "user" ? input.targetUserId : null,
-      roleId: input.targetType === "role" ? input.targetRoleId : null,
-      grantedBy: input.grantedBy,
-      permissionLevel: "view",
-      expiresAt: input.expiresAt,
-    });
-
-    await this.afterWrite();
-    return { id: created.id, created: true };
-  }
-
-  async revokeSnippetAccess(
-    accessId: number,
-    snippetId: number,
-  ): Promise<void> {
-    await this.context.drizzle
-      .delete(snippetAccess)
-      .where(
-        and(
-          eq(snippetAccess.id, accessId),
-          eq(snippetAccess.snippetId, snippetId),
-        ),
-      );
-    await this.afterWrite();
-  }
-
   async listSharedHosts(
     userId: string,
     roleIds: number[],
@@ -369,146 +268,6 @@ export class RbacAccessRepository {
         ),
       )
       .orderBy(desc(hostAccess.createdAt));
-  }
-
-  async listSharedSnippets(
-    userId: string,
-    roleIds: number[],
-    now = new Date().toISOString(),
-  ): Promise<RbacSharedSnippet[]> {
-    const directShared = await this.context.drizzle
-      .select({
-        id: snippets.id,
-        name: snippets.name,
-        content: snippets.content,
-        description: snippets.description,
-        folder: snippets.folder,
-        ownerUsername: users.username,
-        permissionLevel: snippetAccess.permissionLevel,
-        expiresAt: snippetAccess.expiresAt,
-      })
-      .from(snippetAccess)
-      .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-      .innerJoin(users, eq(snippets.userId, users.id))
-      .where(
-        and(
-          eq(snippetAccess.userId, userId),
-          or(
-            isNull(snippetAccess.expiresAt),
-            gte(snippetAccess.expiresAt, now),
-          ),
-        ),
-      );
-
-    if (roleIds.length === 0) {
-      return directShared;
-    }
-
-    const directIds = new Set(directShared.map((snippet) => snippet.id));
-    const roleShared = await this.context.drizzle
-      .select({
-        id: snippets.id,
-        name: snippets.name,
-        content: snippets.content,
-        description: snippets.description,
-        folder: snippets.folder,
-        ownerUsername: users.username,
-        permissionLevel: snippetAccess.permissionLevel,
-        expiresAt: snippetAccess.expiresAt,
-      })
-      .from(snippetAccess)
-      .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-      .innerJoin(users, eq(snippets.userId, users.id))
-      .where(
-        and(
-          or(
-            isNull(snippetAccess.expiresAt),
-            gte(snippetAccess.expiresAt, now),
-          ),
-          inArray(snippetAccess.roleId, roleIds),
-        ),
-      );
-
-    return [
-      ...directShared,
-      ...roleShared.filter((snippet) => !directIds.has(snippet.id)),
-    ];
-  }
-
-  async listVisibleSharedSnippets(
-    userId: string,
-    roleIds: number[],
-    now = new Date().toISOString(),
-  ): Promise<RbacVisibleSharedSnippet[]> {
-    return this.context.drizzle
-      .select({
-        id: snippets.id,
-        userId: snippets.userId,
-        name: snippets.name,
-        content: snippets.content,
-        description: snippets.description,
-        folder: snippets.folder,
-        order: snippets.order,
-        createdAt: snippets.createdAt,
-        updatedAt: snippets.updatedAt,
-        isNote: snippets.isNote,
-        ownerUsername: users.username,
-        permissionLevel: snippetAccess.permissionLevel,
-        expiresAt: snippetAccess.expiresAt,
-      })
-      .from(snippetAccess)
-      .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-      .innerJoin(users, eq(snippets.userId, users.id))
-      .where(
-        and(
-          this.userOrRoleSnippetAccessFilter(userId, roleIds),
-          or(
-            isNull(snippetAccess.expiresAt),
-            gte(snippetAccess.expiresAt, now),
-          ),
-        ),
-      );
-  }
-
-  async findAccessibleSharedSnippet(
-    snippetId: number,
-    userId: string,
-    roleIds: number[],
-    now = new Date().toISOString(),
-  ): Promise<RbacAccessibleSnippet | null> {
-    const rows = await this.context.drizzle
-      .select({
-        id: snippets.id,
-        userId: snippets.userId,
-        name: snippets.name,
-        content: snippets.content,
-        description: snippets.description,
-        folder: snippets.folder,
-        order: snippets.order,
-        createdAt: snippets.createdAt,
-        updatedAt: snippets.updatedAt,
-        hostFilter: snippets.hostFilter,
-        isNote: snippets.isNote,
-        ownerUsername: users.username,
-        permissionLevel: snippetAccess.permissionLevel,
-        expiresAt: snippetAccess.expiresAt,
-      })
-      .from(snippetAccess)
-      .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-      .innerJoin(users, eq(snippets.userId, users.id))
-      .where(
-        and(
-          eq(snippetAccess.snippetId, snippetId),
-          this.userOrRoleSnippetAccessFilter(userId, roleIds),
-          or(
-            isNull(snippetAccess.expiresAt),
-            gte(snippetAccess.expiresAt, now),
-          ),
-        ),
-      )
-      .limit(1);
-
-    return rows[0] ?? null;
   }
 
   async deleteExpiredHostAccess(
@@ -670,17 +429,6 @@ export class RbacAccessRepository {
     );
   }
 
-  private userOrRoleSnippetAccessFilter(userId: string, roleIds: number[]) {
-    if (roleIds.length === 0) {
-      return eq(snippetAccess.userId, userId);
-    }
-
-    return or(
-      eq(snippetAccess.userId, userId),
-      inArray(snippetAccess.roleId, roleIds),
-    );
-  }
-
   private async findHostAccess(hostId: number, target: RbacAccessTarget) {
     const rows = await this.context.drizzle
       .select()
@@ -691,23 +439,6 @@ export class RbacAccessRepository {
           target.targetType === "user"
             ? eq(hostAccess.userId, target.targetUserId)
             : eq(hostAccess.roleId, target.targetRoleId),
-        ),
-      )
-      .limit(1);
-
-    return rows[0] ?? null;
-  }
-
-  private async findSnippetAccess(snippetId: number, target: RbacAccessTarget) {
-    const rows = await this.context.drizzle
-      .select()
-      .from(snippetAccess)
-      .where(
-        and(
-          eq(snippetAccess.snippetId, snippetId),
-          target.targetType === "user"
-            ? eq(snippetAccess.userId, target.targetUserId)
-            : eq(snippetAccess.roleId, target.targetRoleId),
         ),
       )
       .limit(1);

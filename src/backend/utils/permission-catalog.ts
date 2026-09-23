@@ -35,17 +35,6 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
     ],
   },
   {
-    group: "snippets",
-    labelKey: "admin.rolePermissions.groups.snippets",
-    permissions: [
-      "snippets.view",
-      "snippets.create",
-      "snippets.edit",
-      "snippets.delete",
-      "snippets.share",
-    ],
-  },
-  {
     group: "credentials",
     labelKey: "admin.rolePermissions.groups.credentials",
     permissions: [
@@ -183,6 +172,6 @@ export const SYSTEM_ROLE_DEFAULTS = {
   },
   user: {
     description: "Regular user",
-    permissions: ["hosts.*", "snippets.*", "credentials.*"],
+    permissions: ["hosts.*", "credentials.*"],
   },
 } as const;

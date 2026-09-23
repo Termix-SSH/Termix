@@ -288,7 +288,12 @@ export function createPluginContext(
       // write through them. The capability and the audit line are the record
       // that it did. See the header of this file.
       const schema = await import("../database/db/schema.js");
-      return { users: schema.users, hosts: schema.hosts };
+      return {
+        users: schema.users,
+        hosts: schema.hosts,
+        roles: schema.roles,
+        userRoles: schema.userRoles,
+      };
     },
     { action: "db_refs" },
   );
@@ -352,6 +357,16 @@ export function createPluginContext(
       registerEntity: (entity) => {
         const dispose = syncRegistry.registerEntity(pluginId, entity);
         handle.bag.add(dispose, `sync entity ${entity.type}`);
+      },
+      recordTombstone: async (userId, entityType, syncId) => {
+        if (!syncId) return;
+        const { createCurrentSyncTombstoneRepository } =
+          await import("../database/repositories/factory.js");
+        await createCurrentSyncTombstoneRepository().record(
+          userId,
+          entityType,
+          syncId,
+        );
       },
     },
 

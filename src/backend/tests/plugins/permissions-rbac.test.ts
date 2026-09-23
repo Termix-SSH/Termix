@@ -384,8 +384,18 @@ describe("shipped manifests keep their permission ids", () => {
     expect(idsFor("tailscale")).toEqual(["tailscale.devices.view"]);
   });
 
+  it("snippets", () => {
+    expect(idsFor("snippets")).toEqual([
+      "snippets.view",
+      "snippets.create",
+      "snippets.edit",
+      "snippets.delete",
+      "snippets.share",
+    ]);
+  });
+
   it("a role holding the old ids still validates once registered", () => {
-    for (const pluginId of ["ai", "automations", "tailscale"]) {
+    for (const pluginId of ["ai", "automations", "tailscale", "snippets"]) {
       const ids = idsFor(pluginId);
       registerPluginPermissions({
         group: pluginId,
@@ -402,6 +412,8 @@ describe("shipped manifests keep their permission ids", () => {
       "automations.run",
       "automations.view",
       "tailscale.devices.view",
+      "snippets.view",
+      "snippets.share",
     ];
 
     expect(stored.filter((entry) => !isValidPermission(entry))).toEqual([]);

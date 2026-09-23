@@ -75,7 +75,7 @@ const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
 const IMPERSONATION_PATH_ALLOWLIST = [
   /^\/host\/db\//,
   /^\/credentials(\/|$)/,
-  /^\/snippets(\/|$)/,
+  /^\/plugin-api\/snippets(\/|$)/,
 ];
 
 class AuthManager {

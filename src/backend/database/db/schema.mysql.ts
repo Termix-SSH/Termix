@@ -557,48 +557,6 @@ export const sshCredentialUsage = mysqlTable(
   ],
 );
 
-export const snippets = mysqlTable(
-  "snippets",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 255 }).notNull(),
-    content: text("content").notNull(),
-    description: text("description"),
-    folder: varchar("folder", { length: 255 }),
-    order: int("order").notNull().default(0),
-    syncId: varchar("sync_id", { length: 255 }).unique(),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-    hostFilter: text("host_filter"),
-    isNote: boolean("is_note").notNull().default(false),
-  },
-  (table) => [index("idx_snippets_user_id").on(table.userId)],
-);
-
-export const snippetFolders = mysqlTable("snippet_folders", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-
 export const c2sTunnelPresets = mysqlTable("c2s_tunnel_presets", {
   id: int("id").autoincrement().primaryKey(),
   userId: varchar("user_id", { length: 255 })
@@ -615,39 +573,6 @@ export const c2sTunnelPresets = mysqlTable("c2s_tunnel_presets", {
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
-
-export const snippetAccess = mysqlTable(
-  "snippet_access",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    snippetId: int("snippet_id")
-      .notNull()
-      .references(() => snippets.id, { onDelete: "cascade" }),
-
-    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
-    roleId: int("role_id").references(() => roles.id, {
-      onDelete: "cascade",
-    }),
-
-    grantedBy: varchar("granted_by", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    permissionLevel: text("permission_level").notNull().default("view"),
-
-    expiresAt: varchar("expires_at", { length: 255 }),
-
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  // Same three lookup shapes as host_access: by grantee, by role, by snippet.
-  (table) => [
-    index("idx_snippet_access_user_id").on(table.userId),
-    index("idx_snippet_access_snippet_id").on(table.snippetId),
-    index("idx_snippet_access_role_id").on(table.roleId),
-  ],
-);
 
 export const sshFolders = mysqlTable(
   "ssh_folders",

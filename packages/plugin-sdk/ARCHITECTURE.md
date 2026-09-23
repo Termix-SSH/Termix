@@ -190,6 +190,14 @@ a push, update or tombstone aimed at one is refused with 400. It exists for
 state that belongs to one install, such as the workspaces plugin's "Last
 Session" row, which would otherwise leave a user with one from each side.
 
+**Deletes need a tombstone.** Registering an entity does not make a delete
+propagate on its own: a pull reads `sync_tombstones` for the entity's wire
+name, so a plugin route that deletes a synced row calls
+`ctx.sync.recordTombstone(userId, entityType, syncId)` right after, the way
+core's own delete routes call `SyncTombstoneRepository.record`. **B2** added
+this method to the SDK; the snippets plugin's folder and snippet deletes are
+its first callers.
+
 ### 6. HTTP and WebSockets
 
 Plugin routes live under `/plugin-api/<id>/` and sockets under
@@ -418,6 +426,14 @@ Slots core owns: `terminal.toolbar`, `terminal.dock`, `terminal.overlay`
 and `session.remoteDisplay`. Cross-plugin frontend calls go through actions:
 `automations.list`, `fleets.list`, `session.remoteDisplay.token`.
 
+**B2** added a live-terminal-session surface, for a plugin that needs to push
+resolved text into an open SSH session rather than just fill a slot with a
+button: ssh-terminal registers `terminal.listSessions()` (open sessions with
+their host info), `terminal.sendToActive(text, { run })` and
+`terminal.sendToSession(sessionId, text, { run })`, backed by a small registry
+its terminal tab wrapper populates from the core terminal ref it already
+holds. The snippets plugin's run/paste flow is the first caller.
+
 #### View ownership
 
 Who owns a tab, panel or card comes from manifests, so it is known even for a
@@ -507,9 +523,14 @@ not care about the gates, `createTestDb(pluginDir)` for a real database, and
 `renderWithApp(plugin, options)` for frontend tests.
 
 `createTestDb(pluginDir, { before })` opens an in-memory SQLite with stub
-`users` and `ssh_data` tables and foreign keys on, runs `before` (seed a legacy
-table there to test an adoption), then applies the plugin's own
-`migrations/sqlite` with the runner's splitter. Pass its `database` to
+`users`, `ssh_data`, `roles` and `user_roles` tables and foreign keys on, runs
+`before` (seed a legacy table there to test an adoption), then applies the
+plugin's own `migrations/sqlite` with the runner's splitter. `ctx.db.refs()`
+against this database returns the same four, built by `buildRefTable`, which
+maps each declared property to its real snake_case column (`displayName` to
+`display_name`) the same way `buildTable` does, so a repository written
+against the real schema's property names works unchanged in a test. Pass its
+`database` to
 `createMockCtx({ db })`: `define` builds the real table, `client` is Drizzle, and
 `persisted` counts `persist()` calls. The mock also takes `router` (for example
 `() => express.Router()`, so routes are served for real), `permissions`
@@ -1017,10 +1038,15 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 `ctx.ssh` was pulled forward from B so plugin transports go through core's
 connect pipeline instead of importing ssh2 helpers from core:
 
-- `connect(hostOrId, { purpose, pool? })` returns `{ client, dispose }`.
+- `connect(hostOrId, { purpose, pool? })` returns `{ client, host, dispose }`.
+  `host` is the host core resolved (ip, port, username, name and the rest),
+  for a plugin that only had a numeric id and needs the details, such as
+  substituting them into a command. **B2** added this field.
 - `withConnection(host, { pool, purpose }, fn)` borrows a pooled connection.
 - `jumpChain(jumpHosts, { forHost? })` returns a client at the end of a jump
-  chain, for forwarding to something that is not SSH.
+  chain, for forwarding to something that is not SSH. `host` on the result is
+  `forHost` when given, else a placeholder built from the last hop's id, since
+  a chain has no single resolved host of its own.
 - `prepare(host, { client, purpose })`, `openTransport`,
   `classifyKeyboardInteractive` and `autoResponses` are the lower level for a
   transport with its own prompt flow (docker's console, host metrics).
@@ -1115,8 +1141,11 @@ architecture did.
 tables, and the `p_<id>_` prefix, the CLI check and the runner's check all say
 a plugin may only touch its own. None of that is enforced by the engine: a
 plugin holding that handle can write any table in the database, and `ctx.db.refs`
-hands it `users` and `ssh_data` outright. The prefix, the capability, the audit
-line, lint and review are the contract. The engine is not.
+hands it `users`, `ssh_data`, `roles` and `user_roles` outright (the last two
+added in **B2**, for a plugin that shares its own rows with a role and needs
+to resolve a caller's role membership and display names). The prefix, the
+capability, the audit line, lint and review are the contract. The engine is
+not.
 
 So the honest boundary is: capabilities stop accidental and casual overreach,
 and make every privileged call auditable. What stops malicious code is
@@ -1482,8 +1511,8 @@ Then, with the app running:
 
 ## Legacy core imports: the debt D1 removes
 
-The bundled plugins predate the SDK, apart from workspaces, which A9 rebuilt
-as the reference conversion and which imports nothing from core. They still reach core by relative
+The bundled plugins predate the SDK, apart from workspaces (A9) and snippets
+(B2), which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
 and rewrites to the compiled output path (`../../../backend/backend/...`, or
@@ -1510,7 +1539,7 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 105 files | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 107 files | D1         |
 | A plugin importing core by relative path         | Warning   | 67 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 

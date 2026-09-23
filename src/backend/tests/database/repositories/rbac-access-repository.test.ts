@@ -38,10 +38,6 @@ describe("RbacAccessRepository", () => {
       INSERT INTO ssh_data (
         id, user_id, name, ip, port, username, credential_id, rdp_credential_id, vnc_credential_id, telnet_credential_id, folder, tags, auth_type)
       VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124, 125, 126, 'servers', 'linux', 'password');
-      INSERT INTO snippets (id, user_id, name, content)
-      VALUES
-        (99, 'owner-1', 'deploy', 'echo deploy'),
-        (100, 'owner-1', 'rollback', 'echo rollback');
       INSERT INTO host_access (
         id, host_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
       )
@@ -49,12 +45,6 @@ describe("RbacAccessRepository", () => {
         (1, 42, 'user-1', NULL, 'admin', 'view', NULL, '2026-06-26T00:00:00.000Z'),
         (2, 42, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z'),
         (5, 44, 'user-1', NULL, 'admin', 'view', '2026-06-25T00:00:00.000Z', '2026-06-24T00:00:00.000Z');
-      INSERT INTO snippet_access (
-        id, snippet_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
-      )
-      VALUES
-        (3, 99, 'user-1', NULL, 'admin', 'view', NULL, '2026-06-26T00:00:00.000Z'),
-        (4, 99, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z');
       INSERT INTO shared_host_secrets (
         id, host_access_id, target_user_id, protocol, source_type, original_credential_id, encrypted_username, encrypted_auth_type
       )
@@ -93,29 +83,6 @@ describe("RbacAccessRepository", () => {
         grantedByUsername: "admin",
       },
     ]);
-  });
-
-  it("lists snippet access with user and role target metadata", async () => {
-    const repo = await createRepository();
-
-    const accessList = await repo.listSnippetAccess(99);
-
-    expect(accessList.map((access) => access.targetType)).toEqual([
-      "role",
-      "user",
-    ]);
-    expect(accessList[0]).toMatchObject({
-      id: 4,
-      roleId: 7,
-      roleName: "ops",
-      grantedByUsername: "admin",
-    });
-    expect(accessList[1]).toMatchObject({
-      id: 3,
-      userId: "user-1",
-      username: "alice",
-      grantedByUsername: "admin",
-    });
   });
 
   it("lists shared hosts for direct and role access", async () => {
@@ -253,67 +220,6 @@ describe("RbacAccessRepository", () => {
     expect(writeCount).toBe(1);
   });
 
-  it("lists shared snippets and preserves route-level direct-over-role behavior", async () => {
-    const repo = await createRepository();
-
-    const sharedSnippets = await repo.listSharedSnippets(
-      "user-1",
-      [7],
-      activeAccessTime,
-    );
-
-    expect(sharedSnippets).toHaveLength(1);
-    expect(sharedSnippets[0]).toMatchObject({
-      id: 99,
-      name: "deploy",
-      ownerUsername: "owner",
-      permissionLevel: "view",
-    });
-  });
-
-  it("lists visible shared snippets for the main snippets route", async () => {
-    const repo = await createRepository();
-
-    const sharedSnippets = await repo.listVisibleSharedSnippets(
-      "user-1",
-      [7],
-      activeAccessTime,
-    );
-
-    expect(sharedSnippets.map((snippet) => snippet.id)).toEqual([99, 99]);
-    expect(sharedSnippets[0]).toMatchObject({
-      userId: "owner-1",
-      name: "deploy",
-      content: "echo deploy",
-      ownerUsername: "owner",
-    });
-  });
-
-  it("finds an accessible shared snippet for direct or role access", async () => {
-    const repo = await createRepository();
-
-    await expect(
-      repo.findAccessibleSharedSnippet(99, "user-2", [7], activeAccessTime),
-    ).resolves.toMatchObject({
-      id: 99,
-      userId: "owner-1",
-      name: "deploy",
-      content: "echo deploy",
-      ownerUsername: "owner",
-      permissionLevel: "view",
-      hostFilter: null,
-    });
-
-    await expect(
-      repo.findAccessibleSharedSnippet(
-        99,
-        "user-2",
-        [7],
-        "2026-06-28T00:00:00.000Z",
-      ),
-    ).resolves.toBeNull();
-  });
-
   it("upserts host access and updates overrides", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {
@@ -431,40 +337,5 @@ describe("RbacAccessRepository", () => {
 
     expect(await repo.deleteHostAccessForUserReferences("admin")).toBe(0);
     expect(writeCount).toBe(1);
-  });
-
-  it("upserts and revokes snippet access", async () => {
-    let writeCount = 0;
-    const repo = await createRepository(() => {
-      writeCount += 1;
-    });
-
-    const updated = await repo.upsertSnippetAccess({
-      snippetId: 99,
-      targetType: "user",
-      targetUserId: "user-1",
-      grantedBy: "admin",
-      expiresAt: "2026-06-28T00:00:00.000Z",
-    });
-
-    expect(updated).toEqual({ id: 3, created: false });
-    expect(
-      (await repo.listSnippetAccess(99)).find((row) => row.id === 3),
-    ).toMatchObject({ expiresAt: "2026-06-28T00:00:00.000Z" });
-
-    const created = await repo.upsertSnippetAccess({
-      snippetId: 100,
-      targetType: "role",
-      targetRoleId: 7,
-      grantedBy: "admin",
-      expiresAt: null,
-    });
-    expect(created.created).toBe(true);
-
-    await repo.revokeSnippetAccess(3, 99);
-    expect((await repo.listSnippetAccess(99)).map((row) => row.id)).toEqual([
-      4,
-    ]);
-    expect(writeCount).toBe(3);
   });
 });

@@ -98,23 +98,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "user_id",
   },
 
-  // Snippets.
-  { name: "idx_snippets_user_id", table: "snippets", columns: "user_id" },
-  {
-    name: "idx_snippet_access_user_id",
-    table: "snippet_access",
-    columns: "user_id",
-  },
-  {
-    name: "idx_snippet_access_snippet_id",
-    table: "snippet_access",
-    columns: "snippet_id",
-  },
-  {
-    name: "idx_snippet_access_role_id",
-    table: "snippet_access",
-    columns: "role_id",
-  },
 
   // Per-user history and file manager surfaces.
   {

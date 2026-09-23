@@ -15,8 +15,6 @@ import {
   hosts,
   sshCredentials,
   sshFolders,
-  snippets,
-  snippetFolders,
   vaultProfiles,
   dashboardServiceLinks,
   homepageItems,
@@ -96,12 +94,6 @@ export function registerCoreSyncEntities(): void {
   });
 
   registerEntity(CORE_OWNER, {
-    type: "snippetFolders",
-    table: snippetFolders,
-    order: 40,
-  });
-
-  registerEntity(CORE_OWNER, {
     type: "hosts",
     table: hosts,
     order: 50,
@@ -110,12 +102,6 @@ export function registerCoreSyncEntities(): void {
     readOnlyFields: ["connectionOrigin"],
     references: HOST_REFERENCES,
     encryptedFields: ["ssh_data"],
-  });
-
-  registerEntity(CORE_OWNER, {
-    type: "snippets",
-    table: snippets,
-    order: 60,
   });
 
   registerEntity(CORE_OWNER, {

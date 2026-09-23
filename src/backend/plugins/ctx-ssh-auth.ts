@@ -135,7 +135,11 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       };
       open.add(dispose);
       connection.client.once("close", () => open.delete(dispose));
-      return { ...connection, dispose };
+      return {
+        ...connection,
+        host: connection.host as unknown as PluginSshHost,
+        dispose,
+      };
     } catch (error) {
       await audit("ssh_connect", describeHost(host), {
         success: false,
@@ -156,6 +160,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       return {
         client: connection.client as never,
         jumpClient: connection.jumpClient as never,
+        host: connection.host,
         dispose: connection.dispose,
       };
     },
@@ -201,7 +206,15 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       };
       open.add(dispose);
       client.once("close", () => open.delete(dispose));
-      return { client: client as never, jumpClient: null, dispose };
+      // A jump chain ends at a forwarding client, not a single resolved SSH
+      // host: report the caller's own host if it gave one, else the last hop.
+      const host: PluginSshHost = chainOptions?.forHost ?? {
+        id: jumpHosts[jumpHosts.length - 1]?.hostId ?? 0,
+        ip: "",
+        port: 22,
+        username: "",
+      };
+      return { client: client as never, jumpClient: null, host, dispose };
     },
 
     poolKey,

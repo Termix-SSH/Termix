@@ -81,10 +81,11 @@ export interface PluginKeyValue {
  * to query through `db`. Both require db:own.
  *
  * Scoped by name: every table carries the p_<id>_ prefix, and `refs` exposes
- * users and ssh_data read-only so a plugin can join against them without being
- * able to write them. In-process code could reach around all of this - see
- * "What this protects, and what it does not" in ARCHITECTURE.md. The
- * capability, the prefix, lint and review are the contract, not a sandbox.
+ * users, ssh_data, roles and user_roles read-only so a plugin can join against
+ * them without being able to write them. In-process code could reach around
+ * all of this - see "What this protects, and what it does not" in
+ * ARCHITECTURE.md. The capability, the prefix, lint and review are the
+ * contract, not a sandbox.
  */
 export interface PluginDatabase {
   /** Registers a definition and returns its queryable table object. */
@@ -158,6 +159,17 @@ export interface SyncEntityRegistration {
 /** Adds an entity to remote sync between a desktop backend and a server. */
 export interface PluginSync {
   registerEntity: (entity: SyncEntityRegistration) => void;
+  /**
+   * Records that a row was deleted, so a pull on the other side of remote
+   * sync removes it too. Call it with the row's syncId right after deleting
+   * it, for a registered entity whose rows can be deleted (a no-op silently
+   * loses deletes across devices otherwise). A falsy syncId is ignored.
+   */
+  recordTombstone: (
+    userId: string,
+    entityType: string,
+    syncId: string | null | undefined,
+  ) => Promise<void>;
 }
 
 export interface PluginRegistry {
@@ -481,6 +493,8 @@ export interface PluginSshConnection<Client = unknown> {
   /** An ssh2 Client, already "ready". */
   client: Client;
   jumpClient: Client | null;
+  /** The host as core resolved it: ip, port, username, name and the rest. */
+  host: PluginSshHost;
   /** Ends the connection and its jump chain. Also runs on deactivate. */
   dispose: () => void;
 }

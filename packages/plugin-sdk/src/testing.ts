@@ -70,6 +70,8 @@ export interface FakePluginContext {
   tables: PluginTableDefinition[];
   /** Sync entities registered through ctx.sync.registerEntity, in order. */
   syncEntities: SyncEntityRegistration[];
+  /** Tombstones recorded through ctx.sync.recordTombstone, in order. */
+  tombstones: Array<{ userId: string; entityType: string; syncId: string }>;
   /** WebSocket routes registered through ctx.ws, in order. */
   wsRoutes: Array<{ path: string; raw: boolean }>;
   /** Router options passed to ctx.http.router, in order. */
@@ -137,6 +139,11 @@ export function createFakeContext(
   const kv = new Map<string, unknown>();
   const tables: PluginTableDefinition[] = [];
   const syncEntities: SyncEntityRegistration[] = [];
+  const tombstones: Array<{
+    userId: string;
+    entityType: string;
+    syncId: string;
+  }> = [];
   const wsRoutes: Array<{ path: string; raw: boolean }> = [];
   const httpRouters: Array<PluginRouterOptions | undefined> = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
@@ -263,6 +270,10 @@ export function createFakeContext(
       registerEntity: (entity) => {
         syncEntities.push(entity);
       },
+      recordTombstone: async (userId, entityType, syncId) => {
+        if (!syncId) return;
+        tombstones.push({ userId, entityType, syncId });
+      },
     },
 
     registry: {
@@ -380,6 +391,9 @@ export function createFakeContext(
         return {
           client: sshClient as never,
           jumpClient: null,
+          host: (typeof host === "number"
+            ? { id: host, ip: "", port: 22, username: "" }
+            : host) as never,
           dispose: () => {},
         };
       },
@@ -390,6 +404,7 @@ export function createFakeContext(
       jumpChain: async () => ({
         client: sshClient as never,
         jumpClient: null,
+        host: { id: 0, ip: "", port: 22, username: "" } as never,
         dispose: () => {},
       }),
       poolKey: (pool, host) =>
@@ -452,6 +467,7 @@ export function createFakeContext(
     kv,
     tables,
     syncEntities,
+    tombstones,
     wsRoutes,
     httpRouters,
     settings,
@@ -722,10 +738,11 @@ export interface TestDb {
 /**
  * An in-memory SQLite database with a plugin's own migrations applied.
  *
- * Core's users and ssh_data exist as minimal stubs with foreign keys on, so a
- * refUser or refHost column cascades exactly as it does on the server. The
- * migrations are read from <pluginDir>/migrations/sqlite and split with the
- * same splitter the server's runner uses.
+ * Core's users, ssh_data, roles and user_roles exist as minimal stubs with
+ * foreign keys on, so a refUser or refHost column cascades exactly as it
+ * does on the server, and ctx.db.refs() has something real to join against.
+ * The migrations are read from <pluginDir>/migrations/sqlite and split with
+ * the same splitter the server's runner uses.
  */
 export async function createTestDb(
   pluginDir: string,
@@ -747,6 +764,12 @@ export async function createTestDb(
     "CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL DEFAULT '')",
   );
   sqlite.exec("CREATE TABLE ssh_data (id INTEGER PRIMARY KEY AUTOINCREMENT)");
+  sqlite.exec(
+    "CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, display_name TEXT NOT NULL DEFAULT '')",
+  );
+  sqlite.exec(
+    "CREATE TABLE user_roles (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE)",
+  );
 
   const handle = drizzle(sqlite);
   const pluginId = path.basename(pluginDir);
@@ -781,6 +804,16 @@ export async function createTestDb(
   const refs = {
     users: builder.buildRefTable("users", { id: "text", username: "text" }),
     hosts: builder.buildRefTable("ssh_data", { id: "integer" }),
+    roles: builder.buildRefTable("roles", {
+      id: "integer",
+      name: "text",
+      displayName: "text",
+    }),
+    userRoles: builder.buildRefTable("user_roles", {
+      id: "integer",
+      userId: "text",
+      roleId: "integer",
+    }),
   };
 
   const database: PluginDatabase = {

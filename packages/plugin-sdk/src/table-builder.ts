@@ -92,8 +92,11 @@ export function buildTable(
 }
 
 /**
- * A minimal stand-in for a core table, for tests that join against users or
- * ssh_data without core's schema. Only what createTestDb's stubs declare.
+ * A minimal stand-in for a core table, for tests that join against users,
+ * ssh_data, roles or user_roles without core's schema. Only what
+ * createTestDb's stubs declare. The property name is camelCased and mapped
+ * to its snake_case column the same way buildTable does, so e.g. a stub's
+ * "displayName" property reads the real "display_name" SQL column.
  */
 export function buildRefTable(
   name: string,
@@ -101,8 +104,11 @@ export function buildRefTable(
 ): unknown {
   const built: Record<string, unknown> = {};
   for (const [property, type] of Object.entries(columns)) {
+    const columnSqlName = columnName(property);
     built[property] =
-      type === "integer" ? sqliteInteger(property) : sqliteText(property);
+      type === "integer"
+        ? sqliteInteger(columnSqlName)
+        : sqliteText(columnSqlName);
   }
   return sqliteTable(name, built as never);
 }

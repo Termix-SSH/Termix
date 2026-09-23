@@ -550,48 +550,6 @@ export const sshCredentialUsage = sqliteTable(
   ],
 );
 
-export const snippets = sqliteTable(
-  "snippets",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    content: text("content").notNull(),
-    description: text("description"),
-    folder: text("folder"),
-    order: integer("order").notNull().default(0),
-    syncId: text("sync_id").unique(),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    hostFilter: text("host_filter"),
-    isNote: integer("is_note", { mode: "boolean" }).notNull().default(false),
-  },
-  (table) => [index("idx_snippets_user_id").on(table.userId)],
-);
-
-export const snippetFolders = sqliteTable("snippet_folders", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const c2sTunnelPresets = sqliteTable("c2s_tunnel_presets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -608,39 +566,6 @@ export const c2sTunnelPresets = sqliteTable("c2s_tunnel_presets", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
-
-export const snippetAccess = sqliteTable(
-  "snippet_access",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    snippetId: integer("snippet_id")
-      .notNull()
-      .references(() => snippets.id, { onDelete: "cascade" }),
-
-    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
-    roleId: integer("role_id").references(() => roles.id, {
-      onDelete: "cascade",
-    }),
-
-    grantedBy: text("granted_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    permissionLevel: text("permission_level").notNull().default("view"),
-
-    expiresAt: text("expires_at"),
-
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Same three lookup shapes as host_access: by grantee, by role, by snippet.
-  (table) => [
-    index("idx_snippet_access_user_id").on(table.userId),
-    index("idx_snippet_access_snippet_id").on(table.snippetId),
-    index("idx_snippet_access_role_id").on(table.roleId),
-  ],
-);
 
 export const sshFolders = sqliteTable(
   "ssh_folders",

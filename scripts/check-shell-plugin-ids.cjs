@@ -111,7 +111,9 @@ function main() {
   }
 
   if (problems.length > 0) {
-    console.error("The shell names plugins it should reach through a registry:");
+    console.error(
+      "The shell names plugins it should reach through a registry:",
+    );
     for (const problem of problems) console.error(`  ${problem}`);
     process.exit(1);
   }

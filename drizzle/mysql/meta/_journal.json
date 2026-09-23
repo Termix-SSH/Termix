@@ -232,6 +232,13 @@
       "when": 1790166644943,
       "tag": "0032_lethal_marrow",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1790169398523,
+      "tag": "0033_clear_anthem",
+      "breakpoints": true
     }
   ]
 }

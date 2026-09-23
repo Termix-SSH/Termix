@@ -6,6 +6,7 @@ const calls = vi.hoisted(() => ({
   deletedFor: [] as string[],
   rotatedFor: [] as string[],
   legacyWrapsDeletedFor: [] as string[],
+  dataWipedEvents: [] as Array<{ userId: string }>,
 }));
 
 function deletingRepo(label: string) {
@@ -29,9 +30,17 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentFileManagerBookmarkRepository: deletingRepo("bookmarks"),
   createCurrentRecentActivityRepository: deletingRepo("activity"),
   createCurrentDismissedAlertRepository: deletingRepo("alerts"),
-  createCurrentSnippetRepository: deletingRepo("snippets"),
   createCurrentHostRepository: deletingRepo("hosts"),
   createCurrentCredentialRepository: deletingRepo("credentials"),
+}));
+
+vi.mock("../../../plugins/events.js", () => ({
+  pluginEvents: {
+    emit: (_topic: string, payload: { userId: string }) => {
+      calls.dataWipedEvents.push(payload);
+    },
+  },
+  TOPICS: { userDataWiped: "user.data_wiped" },
 }));
 
 vi.mock("../../../utils/user-keys.js", () => ({
@@ -65,6 +74,7 @@ beforeEach(() => {
   calls.deletedFor = [];
   calls.rotatedFor = [];
   calls.legacyWrapsDeletedFor = [];
+  calls.dataWipedEvents = [];
 });
 
 describe("resetUserPassword", () => {
@@ -110,10 +120,10 @@ describe("resetUserPassword", () => {
       "bookmarks:user-1",
       "activity:user-1",
       "alerts:user-1",
-      "snippets:user-1",
       "hosts:user-1",
       "credentials:user-1",
     ]);
+    expect(calls.dataWipedEvents).toEqual([{ userId: "user-1" }]);
     expect(calls.rotatedFor).toEqual(["user-1"]);
     expect(calls.legacyWrapsDeletedFor).toEqual(["user-1"]);
     expect(

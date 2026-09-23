@@ -60,6 +60,8 @@ vi.mock("../../utils/database-save-trigger.js", () => ({
 vi.mock("../../database/db/schema.js", () => ({
   users: { marker: "users" },
   hosts: { marker: "hosts" },
+  roles: { marker: "roles" },
+  userRoles: { marker: "userRoles" },
 }));
 
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
@@ -195,7 +197,12 @@ describe("ctx.db capability", () => {
 
     const refs = (await ctx.db.refs()) as Record<string, unknown>;
 
-    expect(Object.keys(refs).sort()).toEqual(["hosts", "users"]);
+    expect(Object.keys(refs).sort()).toEqual([
+      "hosts",
+      "roles",
+      "userRoles",
+      "users",
+    ]);
   });
 });
 

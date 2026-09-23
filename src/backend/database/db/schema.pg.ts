@@ -558,48 +558,6 @@ export const sshCredentialUsage = pgTable(
   ],
 );
 
-export const snippets = pgTable(
-  "snippets",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 255 }).notNull(),
-    content: text("content").notNull(),
-    description: text("description"),
-    folder: varchar("folder", { length: 255 }),
-    order: integer("order").notNull().default(0),
-    syncId: varchar("sync_id", { length: 255 }).unique(),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    hostFilter: text("host_filter"),
-    isNote: boolean("is_note").notNull().default(false),
-  },
-  (table) => [index("idx_snippets_user_id").on(table.userId)],
-);
-
-export const snippetFolders = pgTable("snippet_folders", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const c2sTunnelPresets = pgTable("c2s_tunnel_presets", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 })
@@ -616,39 +574,6 @@ export const c2sTunnelPresets = pgTable("c2s_tunnel_presets", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
-
-export const snippetAccess = pgTable(
-  "snippet_access",
-  {
-    id: serial("id").primaryKey(),
-    snippetId: integer("snippet_id")
-      .notNull()
-      .references(() => snippets.id, { onDelete: "cascade" }),
-
-    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
-    roleId: integer("role_id").references(() => roles.id, {
-      onDelete: "cascade",
-    }),
-
-    grantedBy: varchar("granted_by", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    permissionLevel: text("permission_level").notNull().default("view"),
-
-    expiresAt: varchar("expires_at", { length: 255 }),
-
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  // Same three lookup shapes as host_access: by grantee, by role, by snippet.
-  (table) => [
-    index("idx_snippet_access_user_id").on(table.userId),
-    index("idx_snippet_access_snippet_id").on(table.snippetId),
-    index("idx_snippet_access_role_id").on(table.roleId),
-  ],
-);
 
 export const sshFolders = pgTable(
   "ssh_folders",

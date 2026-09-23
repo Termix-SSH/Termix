@@ -74,7 +74,10 @@ export function scanLegacyCoreModules(repoRoot) {
   }
   for (const plugin of plugins) {
     if (!plugin.isDirectory()) continue;
-    const files = walk(path.join(pluginsDir, plugin.name, "src", "frontend"), []);
+    const files = walk(
+      path.join(pluginsDir, plugin.name, "src", "frontend"),
+      [],
+    );
     for (const file of files) {
       for (const specifier of findLegacyCoreImports(
         fs.readFileSync(file, "utf8"),

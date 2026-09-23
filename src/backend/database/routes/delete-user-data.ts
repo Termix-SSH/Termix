@@ -28,7 +28,6 @@ import {
   createCurrentSessionRecordingRepository,
   createCurrentSettingsRepository,
   createCurrentSharedHostSecretsRepository,
-  createCurrentSnippetRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentTermixIdentityCaRepository,
   createCurrentTermixIdentityRepository,
@@ -93,7 +92,8 @@ export async function deleteUserAndRelatedData(
     await createCurrentRecentActivityRepository().deleteByUserId(userId);
     await createCurrentDismissedAlertRepository().deleteByUserId(userId);
 
-    await createCurrentSnippetRepository().deleteByUserId(userId);
+    // snippets, snippet_folders and snippet_access cascade on the user's
+    // refUser() foreign key, as the snippets plugin's adopted tables.
 
     await createCurrentHostFolderRepository().deleteByUserId(userId);
 

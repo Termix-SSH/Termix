@@ -52,7 +52,8 @@ export { default } from ${target};`
   }
   const require = createRequire(path.join(repoRoot, "package.json"));
   const names = Object.keys(require(specifier)).filter(
-    (name) => name !== "default" && name !== "__esModule" && IDENTIFIER.test(name),
+    (name) =>
+      name !== "default" && name !== "__esModule" && IDENTIFIER.test(name),
   );
   const lines = [`import * as m from ${JSON.stringify(specifier)};`];
   lines.push("const d = m.default ?? m;");
@@ -140,7 +141,7 @@ export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
           "}",
           "for (const [file, load] of Object.entries(locales)) {",
           '  const parts = file.split("/");',
-          '  const id = parts[2];',
+          "  const id = parts[2];",
           '  const name = parts[parts.length - 1].replace(/\\.json$/, "");',
           "  (workspaceLocales[id] ??= {})[name] = load;",
           "}",

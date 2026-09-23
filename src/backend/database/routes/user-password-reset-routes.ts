@@ -12,10 +12,10 @@ import {
   createCurrentHostRepository,
   createCurrentRecentActivityRepository,
   createCurrentSettingsRepository,
-  createCurrentSnippetRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 
 interface UserPasswordResetRoutesDeps {
   authManager: AuthManager;
@@ -73,9 +73,11 @@ export async function resetUserPassword(
   await createCurrentFileManagerBookmarkRepository().deleteByUserId(userId);
   await createCurrentRecentActivityRepository().deleteByUserId(userId);
   await createCurrentDismissedAlertRepository().deleteByUserId(userId);
-  await createCurrentSnippetRepository().deleteByUserId(userId);
   await createCurrentHostRepository().deleteByUserId(userId);
   await createCurrentCredentialRepository().deleteByUserId(userId);
+  // A plugin holding this user's data (snippets and anything else keyed by
+  // refUser()) wipes it on this topic, since the user row itself survives.
+  pluginEvents.emit(TOPICS.userDataWiped, { userId });
 
   const { UserKeyManager } = await import("../../utils/user-keys.js");
   await UserKeyManager.getInstance().rotateUserDEK(userId);

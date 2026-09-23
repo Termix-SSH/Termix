@@ -96,19 +96,26 @@ describe("core sync entities", () => {
     registerCoreSyncEntities();
   });
 
+  // The frozen array also lists networkTopology and snippets/snippetFolders,
+  // now registered by the network-topology and snippets plugins rather than
+  // core.
+  const PLUGIN_OWNED_TYPES = new Set([
+    "networkTopology",
+    "snippets",
+    "snippetFolders",
+  ]);
+
   it("registers every core-owned entity the Electron client knows about", () => {
-    // The frozen array also lists networkTopology, which is now registered
-    // by the network-topology plugin rather than core.
     const coreTypes = new Set(listEntityTypes());
     for (const type of SYNCED_ENTITY_TYPES) {
-      if (type === "networkTopology") continue;
+      if (PLUGIN_OWNED_TYPES.has(type)) continue;
       expect(coreTypes.has(type), type).toBe(true);
     }
   });
 
   it("keeps the dependency order the frozen Electron array encodes", () => {
     expect(listEntityTypes()).toEqual(
-      [...SYNCED_ENTITY_TYPES].filter((type) => type !== "networkTopology"),
+      [...SYNCED_ENTITY_TYPES].filter((type) => !PLUGIN_OWNED_TYPES.has(type)),
     );
   });
 

@@ -54,7 +54,6 @@ import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
-import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
 import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
 import { SsoProviderRepository } from "./sso-provider-repository.js";
@@ -501,13 +500,6 @@ export function createCurrentSharedHostAuthOverrideRepository(): SharedHostAuthO
     createCurrentRepositoryWriteHook(
       "shared_host_auth_override_repository_write",
     ),
-  );
-}
-
-export function createCurrentSnippetRepository(): SnippetRepository {
-  return new SnippetRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("snippet_repository_write"),
   );
 }
 

@@ -40,6 +40,13 @@ export const TOPICS = {
   hostDeleted: "host.deleted",
   /** Someone logged in over SSH to a host. */
   hostLogin: "host.login",
+  /**
+   * A user's encrypted data was wiped because their DEK could not be
+   * recovered on password reset. The user row itself survives, unlike
+   * user.deleted, so a plugin with a refUser() cascade still needs this:
+   * the row is not gone, only unrecoverable, and should go with it.
+   */
+  userDataWiped: "user.data_wiped",
 } as const;
 
 export type EventListener = (payload: unknown) => void;
