@@ -246,6 +246,13 @@
       "when": 1790176259240,
       "tag": "0034_green_vector",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1790185584715,
+      "tag": "0035_clumsy_leech",
+      "breakpoints": true
     }
   ]
 }

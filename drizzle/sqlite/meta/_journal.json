@@ -225,6 +225,13 @@
       "when": 1790176258239,
       "tag": "0031_smooth_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1790185583660,
+      "tag": "0032_square_jack_power",
+      "breakpoints": true
     }
   ]
 }
