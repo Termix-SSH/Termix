@@ -33,12 +33,6 @@
         "titleKey": "nav.hostMetrics",
         "icon": "Activity",
         "openFrom": ["host-context-menu", "palette"]
-      },
-      {
-        "id": "proxmox-stats",
-        "titleKey": "nav.proxmoxStats",
-        "icon": "HardDrive",
-        "openFrom": ["host-context-menu", "palette"]
       }
     ],
     "settings": {

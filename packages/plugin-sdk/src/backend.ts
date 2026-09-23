@@ -409,6 +409,56 @@ export interface PluginHostSummary {
   authType: string;
 }
 
+/**
+ * A host record wide enough for a plugin that creates or updates hosts on the
+ * user's behalf (import, discovery, sync), decrypted for that user. Unlike
+ * PluginHostSummary this carries the fields a plugin needs to set up a
+ * connectable host, not just what a list view shows. Still no secret auth
+ * material (password, key, vault tokens): a plugin that creates a host picks
+ * an authType and, for "credential", a credentialId it does not need to see
+ * the contents of.
+ */
+export interface PluginHostRecord {
+  id: number;
+  userId: string;
+  name: string | null;
+  ip: string;
+  port: number;
+  username: string;
+  authType: string;
+  credentialId?: number | null;
+  overrideCredentialUsername?: boolean | null;
+  connectionType?: string | null;
+  tags: string | null;
+  folder: string | null;
+  jumpHosts?: unknown;
+  enableSsh?: boolean | null;
+  enableRdp?: boolean | null;
+  enableTerminal?: boolean | null;
+  enableFileManager?: boolean | null;
+  enableTunnel?: boolean | null;
+  enableDocker?: boolean | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  [key: string]: unknown;
+}
+
+/** Fields a plugin may set when creating a host it will own or manage. */
+export type PluginHostCreateInput = Partial<
+  Omit<PluginHostRecord, "id" | "userId">
+> & {
+  name: string;
+  ip: string;
+  port: number;
+  username: string;
+  authType: string;
+};
+
+/** Fields a plugin may change on a host it already created or was granted access to. */
+export type PluginHostUpdateInput = Partial<
+  Omit<PluginHostRecord, "id" | "userId">
+>;
+
 /** The same shape canAccessHost returns internally, without secrets. */
 export interface PluginHostAccess {
   hasAccess: boolean;
@@ -462,6 +512,30 @@ export interface PluginHosts {
     hostId: number,
     level: PluginHostShareLevel,
   ) => Promise<PluginHostAccess>;
+  /**
+   * Creates a host owned by the acting user, encrypted the same way the host
+   * editor's own create route does it. Needs hosts:write. For a plugin that
+   * imports or discovers hosts on the user's behalf (B5's proxmox discovery).
+   */
+  create: (host: PluginHostCreateInput) => Promise<PluginHostRecord>;
+  /**
+   * Updates a host the acting user owns. Refuses a host it does not own
+   * (sharing a write onto someone else's host goes through share(), not
+   * update()). Needs hosts:write.
+   */
+  update: (
+    hostId: number,
+    patch: PluginHostUpdateInput,
+  ) => Promise<PluginHostRecord | null>;
+  /**
+   * Every host the acting user owns, decrypted and wide (PluginHostRecord,
+   * not the narrow list() summary). For a plugin that scans its own hosts in
+   * the background (auto-sync) and needs fields list() does not carry, such
+   * as credentialId or jumpHosts. Needs hosts:write, matching create/update:
+   * this is the same "full host detail" surface a create/update caller needs
+   * to read back, not a wider read grant than hosts:read gives via list/get.
+   */
+  listOwned: () => Promise<PluginHostRecord[]>;
   /**
    * Grants access to a host the caller manages, snapshotting shared secrets
    * for each target the same way the host editor's own share action does.

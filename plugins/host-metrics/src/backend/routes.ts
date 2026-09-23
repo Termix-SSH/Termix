@@ -46,9 +46,6 @@ import { registerHostMetricsSettingsRoutes } from "./settings-routes.js";
 import { registerHostMetricsViewerRoutes } from "./viewer-routes.js";
 import { registerHostMetricsPreferencesRoutes } from "./preferences-routes.js";
 import { registerHostMetricsHistoryRoutes } from "./history-routes.js";
-import { registerProxmoxStatsRoutes } from "../../../../src/backend/hosts/metrics/proxmox-stats-routes.js";
-import { registerProxmoxStatsHistoryRoutes } from "../../../../src/backend/hosts/metrics/proxmox-stats-history-routes.js";
-import { ProxmoxPollingManager } from "../../../../src/backend/hosts/metrics/proxmox-stats-polling.js";
 import type { HostSessionStatusPayload } from "../../../../src/backend/hosts/host-session-status.js";
 import {
   pluginEvents,
@@ -125,8 +122,6 @@ interface SSHHostWithCredentials {
   tunnelConnections: unknown[];
   jumpHosts?: Array<{ hostId: number }>;
   statsConfig?: string | StatsConfig;
-  enableProxmoxStats?: boolean;
-  proxmoxStatsConfig?: unknown;
   createdAt: string;
   updatedAt: string;
   userId: string;
@@ -1185,13 +1180,6 @@ async function withSshConnection<T>(
     fn,
   );
 }
-
-const proxmoxPollingManager = new ProxmoxPollingManager<SSHHostWithCredentials>(
-  {
-    fetchHostById,
-    withSshConnection,
-  },
-);
 
 async function collectMetrics(
   host: SSHHostWithCredentials,
@@ -2453,40 +2441,6 @@ registerHostMetricsHistoryRoutes(app, {
     (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
 });
 
-registerHostMetricsViewerRoutes<
-  SSHHostWithCredentials,
-  { metricsEnabled: boolean }
->(app, {
-  fetchHostById,
-  // Proxmox Stats viewers are gated by enableProxmoxStats + host-type support,
-  // not the Host Metrics statsConfig - fold both checks in here since
-  // supportsMetrics receives the full host, unlike parseStatsConfig below.
-  supportsMetrics: (host: SSHHostWithCredentials) =>
-    supportsMetrics(host) && host.enableProxmoxStats === true,
-  parseStatsConfig: () => ({ metricsEnabled: true }),
-  updateHeartbeat: (viewerSessionId) =>
-    proxmoxPollingManager.updateHeartbeat(viewerSessionId),
-  registerViewer: (hostId, viewerSessionId, userId) =>
-    proxmoxPollingManager.registerViewer(hostId, viewerSessionId, userId),
-  unregisterViewer: (hostId, viewerSessionId) =>
-    proxmoxPollingManager.unregisterViewer(hostId, viewerSessionId),
-  pathPrefix: "proxmox-stats",
-});
-
-registerProxmoxStatsRoutes(app, {
-  validateHostId,
-  fetchHostById,
-  canAccessHost: async (userId, hostId, level) =>
-    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
-  pollingManager: proxmoxPollingManager,
-});
-
-registerProxmoxStatsHistoryRoutes(app, {
-  validateHostId,
-  canAccessHost: async (userId, hostId, level) =>
-    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
-});
-
 registerManagerRoutes(app, {
   validateHostId,
   runOnHost: async (hostId, userId, level, fn) => {
@@ -2554,7 +2508,6 @@ export function shutdown(): void {
     cleanupInterval = undefined;
   }
   pollingManager.destroy();
-  proxmoxPollingManager.destroy();
   // The pool is core's and shared with tmux and the fleet tools; destroying it
   // here broke them until a restart. ctx.ssh drops this plugin's pooled
   // connections on deactivate instead.

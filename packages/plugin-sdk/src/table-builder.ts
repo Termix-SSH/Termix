@@ -12,6 +12,7 @@ import {
   sqliteTable,
   text as sqliteText,
   integer as sqliteInteger,
+  real as sqliteReal,
   index as sqliteIndex,
   uniqueIndex as sqliteUniqueIndex,
   type AnySQLiteColumn,
@@ -54,6 +55,9 @@ export function buildTable(
       case "bigint":
       case "refHost":
         built = sqliteInteger(name);
+        break;
+      case "real":
+        built = sqliteReal(name);
         break;
       case "boolean":
         built = sqliteInteger(name, { mode: "boolean" });

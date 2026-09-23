@@ -23,3 +23,20 @@ it's done.
   is the SDK copy fleets now uses; core's copy was left in place rather than
   turned into a re-export, since host-metrics's own conversion step is where
   its imports should move wholesale. Owner: host-metrics's Phase B step.
+- **B5 (proxmox):** `useConnectionRetry`, `runAdaptivePolling` and `cn` are
+  duplicated in `plugins/proxmox/src/frontend/stats/` rather than shared with
+  core's `src/ui/lib/` originals, matching the same "add to the SDK once a
+  second plugin needs it" call B3 made for `ManagerCardShell`. host-metrics's
+  own conversion needs the same two hooks for its stats tab, so promote both
+  into `@termix/plugin-sdk/frontend` (and `cn` into `@termix/plugin-sdk/ui`)
+  the next time either is touched. Owner: D1, or host-metrics's Phase B step
+  if it lands first.
+- **B5 (proxmox):** `runDueProxmoxAutoSyncs` in
+  `plugins/proxmox/src/backend/routes.ts` still reaches
+  `createCurrentPluginSettingsRepository`/`createCurrentHostRepository` by
+  relative import instead of `ctx`, because it needs to scan every host's
+  Proxmox settings across every user before it knows which actor to run each
+  sync as, and neither `ctx.settings` nor `ctx.hosts` expose a cross-user
+  bulk read today. A `ctx.settings.listHostsWithKey` or similar SDK addition
+  would close this, if a second plugin's background scan ever needs the same
+  shape. Owner: D1.

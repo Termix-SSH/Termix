@@ -62,6 +62,9 @@ function columnType(
       return dialect === "mysql" ? "int" : "integer";
     case "bigint":
       return dialect === "sqlite" ? "integer" : "bigint";
+    case "real":
+      if (dialect === "sqlite") return "real";
+      return dialect === "mysql" ? "double" : "double precision";
     case "boolean":
       return dialect === "sqlite" ? "integer" : "boolean";
     case "varchar":

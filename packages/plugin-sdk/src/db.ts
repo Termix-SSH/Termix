@@ -20,6 +20,7 @@ export type PluginColumnType =
   | "varchar"
   | "integer"
   | "bigint"
+  | "real"
   | "boolean"
   | "timestamp"
   | "json"
@@ -77,6 +78,8 @@ export const varchar = (length: number = KEY_LENGTH) =>
 
 export const integer = () => builder({ type: "integer" });
 export const bigint = () => builder({ type: "bigint" });
+/** Floating point. A plain number on every engine. Never indexable. */
+export const real = () => builder({ type: "real" });
 export const boolean = () => builder({ type: "boolean" });
 
 /** Stored as text on every engine. See src/backend/database/repositories/sql-timestamp.ts. */

@@ -1029,29 +1029,29 @@ deciding, not the mechanism.
 
 Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 
-| Member                                           | Capability                           | Status |
-| ------------------------------------------------ | ------------------------------------ | ------ |
-| `ctx.pluginId`, `ctx.manifest`                   | none                                 | **A1** |
-| `ctx.log.*`                                      | none                                 | **A1** |
-| `ctx.events.emit` / `.on`                        | `events:core` for core topics        | **A1** |
-| `ctx.kv.get/set/delete/list`                     | `kv:own`                             | **A1** |
-| `ctx.registry.*`                                 | none                                 | **A1** |
-| `ctx.services.provide` / `.get`                  | per-service RBAC                     | **A1** |
-| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1** |
-| `ctx.disposables.add`                            | none                                 | **A1** |
-| `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1** |
-| `ctx.currentActor()`                             | none                                 | **A1** |
-| `ctx.db.define` / `.client` / `.refs`            | `db:own`                             | **A3** |
-| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)              | **A9** |
-| `ctx.sync.registerEntity`                        | none                                 | **A3** |
-| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4** |
-| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5** |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4** |
-| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8** |
-| `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6** |
-| `ctx.notify.*`                                   | `notify:send`                        | A6     |
-| `ctx.auth.*`                                     | `auth:provide`                       | **A8** |
-| `ctx.fetch`                                      | `network:outbound`                   | B      |
+| Member                                           | Capability                           | Status                  |
+| ------------------------------------------------ | ------------------------------------ | ----------------------- |
+| `ctx.pluginId`, `ctx.manifest`                   | none                                 | **A1**                  |
+| `ctx.log.*`                                      | none                                 | **A1**                  |
+| `ctx.events.emit` / `.on`                        | `events:core` for core topics        | **A1**                  |
+| `ctx.kv.get/set/delete/list`                     | `kv:own`                             | **A1**                  |
+| `ctx.registry.*`                                 | none                                 | **A1**                  |
+| `ctx.services.provide` / `.get`                  | per-service RBAC                     | **A1**                  |
+| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1**                  |
+| `ctx.disposables.add`                            | none                                 | **A1**                  |
+| `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1**                  |
+| `ctx.currentActor()`                             | none                                 | **A1**                  |
+| `ctx.db.define` / `.client` / `.refs`            | `db:own`                             | **A3**                  |
+| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)              | **A9**                  |
+| `ctx.sync.registerEntity`                        | none                                 | **A3**                  |
+| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4**                  |
+| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5**                  |
+| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4**, extended **B5** |
+| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8**                  |
+| `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
+| `ctx.notify.*`                                   | `notify:send`                        | A6                      |
+| `ctx.auth.*`                                     | `auth:provide`                       | **A8**                  |
+| `ctx.fetch`                                      | `network:outbound`                   | B                       |
 
 `ctx.ssh` was pulled forward from B so plugin transports go through core's
 connect pipeline instead of importing ssh2 helpers from core:
@@ -1099,6 +1099,31 @@ does not own the way fleets does:
 that needs to actually connect uses `ctx.ssh.connect(hostId)` or
 `withConnection(hostId, ...)`, which resolve the full host (secrets included)
 through the one connect pipeline. fleets never holds a `PluginSshHost` itself.
+
+**B5** added `create`, `update` and `listOwned`, for a plugin that creates or
+maintains hosts on the user's behalf rather than only sharing access to
+existing ones (proxmox's discovery and sync flow is the first caller):
+
+- `create(host)` inserts a host owned by the acting user, encrypted the same
+  way the host editor's own create route does. Takes `PluginHostCreateInput`
+  (name, ip, port, username, authType required; connection flags, tags,
+  folder, jumpHosts and the rest optional) and returns the decrypted
+  `PluginHostRecord`. Needs `hosts:write`.
+- `update(hostId, patch)` updates a host the acting user owns, refusing one it
+  does not (sharing a write onto someone else's host goes through `share()`,
+  never `update()`). Returns `null` for a host that does not exist or is not
+  owned by the caller. Needs `hosts:write`.
+- `listOwned()` returns every host the acting user owns as full
+  `PluginHostRecord`s (credentialId, jumpHosts and the rest `list()`'s
+  narrower `PluginHostSummary` leaves out), for a plugin scanning its own
+  hosts in the background, such as proxmox's auto-sync sweep. Needs
+  `hosts:write`, matching `create`/`update`: this is the same "full host
+  detail" surface those calls need to read back, not a wider read grant than
+  `hosts:read` gives through `list`/`get`.
+
+`PluginHostRecord` carries no secret auth material (password, key, vault
+token): a plugin that creates a host picks an `authType` and, for
+`"credential"`, a `credentialId` it does not need to see the contents of.
 
 ### The actor
 

@@ -24,6 +24,9 @@ import type {
   PluginSshAuthProvider,
   PluginSshHost,
   PluginHostSummary,
+  PluginHostRecord,
+  PluginHostCreateInput,
+  PluginHostUpdateInput,
   PluginHostAccess,
   PluginHostShareResult,
   PluginShareableUser,
@@ -174,6 +177,8 @@ export function createFakeContext(
   const hostsById = new Map<number, PluginHostSummary>(
     (options.hosts ?? []).map((h) => [h.id, h]),
   );
+  const hostRecordsById = new Map<number, PluginHostRecord>();
+  let nextHostId = Math.max(0, ...(options.hosts ?? []).map((h) => h.id)) + 1;
   const services = new Map<string, object>();
   const auth: FakeAuthRegistrations = {
     sshAuthProviders: [],
@@ -421,6 +426,33 @@ export function createFakeContext(
           permissionLevel: "manage",
         };
       },
+      create: async (
+        host: PluginHostCreateInput,
+      ): Promise<PluginHostRecord> => {
+        const id = nextHostId++;
+        const record: PluginHostRecord = {
+          tags: null,
+          folder: null,
+          ...host,
+          id,
+          userId: actor ?? "unknown",
+        };
+        hostRecordsById.set(id, record);
+        return record;
+      },
+      update: async (
+        hostId: number,
+        patch: PluginHostUpdateInput,
+      ): Promise<PluginHostRecord | null> => {
+        const existing = hostRecordsById.get(hostId);
+        if (!existing) return null;
+        const updated = { ...existing, ...patch };
+        hostRecordsById.set(hostId, updated);
+        return updated;
+      },
+      listOwned: async (): Promise<PluginHostRecord[]> => [
+        ...hostRecordsById.values(),
+      ],
       share: async (
         hostId,
         targets,
@@ -705,6 +737,18 @@ export function createMockCtx(
       checkAccess: async (hostId, level) => {
         require("hosts:read");
         return ctx.hosts.checkAccess(hostId, level);
+      },
+      create: async (host) => {
+        require("hosts:write");
+        return ctx.hosts.create(host);
+      },
+      update: async (hostId, patch) => {
+        require("hosts:write");
+        return ctx.hosts.update(hostId, patch);
+      },
+      listOwned: async () => {
+        require("hosts:write");
+        return ctx.hosts.listOwned();
       },
       share: async (hostId, targets, permissionLevel, durationHours) => {
         require("hosts:write");
