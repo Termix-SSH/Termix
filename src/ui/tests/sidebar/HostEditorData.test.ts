@@ -375,10 +375,14 @@ describe("Proxmox / Proxmox Stats independent toggles", () => {
 
   it("seeds both configs independently from an existing host", () => {
     const host = {
-      enableProxmox: true,
-      proxmoxConfig: { windowsPatterns: "win", dockerPatterns: "docker" },
-      enableProxmoxStats: true,
-      proxmoxStatsConfig: { pollInterval: 30, nodeName: "pve-custom" },
+      pluginSettings: {
+        proxmox: {
+          enableProxmox: true,
+          proxmoxConfig: { windowsPatterns: "win", dockerPatterns: "docker" },
+          enableProxmoxStats: true,
+          proxmoxStatsConfig: { pollInterval: 30, nodeName: "pve-custom" },
+        },
+      },
     } as unknown as Host;
 
     const form = createHostEditorForm(host);
@@ -446,8 +450,12 @@ describe("Proxmox / Proxmox Stats independent toggles", () => {
     };
     const form = {
       ...createHostEditorForm({
-        enableProxmox: false,
-        proxmoxConfig: { source },
+        pluginSettings: {
+          proxmox: {
+            enableProxmox: false,
+            proxmoxConfig: { source },
+          },
+        },
       } as unknown as Host),
       name: "Edited guest",
     };

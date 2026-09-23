@@ -1,27 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const historyCreate = vi.fn();
-const historyPrune = vi.fn();
-vi.mock("../../../../src/backend/database/repositories/factory.js", () => ({
-  getCurrentSettingValue: () => null,
-  createCurrentProxmoxNodeHistoryRepository: () => ({
-    create: historyCreate,
-    pruneOlderThan: historyPrune,
+vi.mock("../../src/backend/plugin-ctx.js", () => ({
+  pluginCtx: () => ({
+    log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
   }),
 }));
 
 const collectProxmoxStats = vi.fn();
-vi.mock(
-  "../../../../src/backend/hosts/metrics/proxmox/collect-proxmox-stats.js",
-  () => ({
-    collectProxmoxStats: (...args: unknown[]) => collectProxmoxStats(...args),
-  }),
-);
+vi.mock("../../src/backend/proxmox/collect-proxmox-stats.js", () => ({
+  collectProxmoxStats: (...args: unknown[]) => collectProxmoxStats(...args),
+}));
 
 import {
   ProxmoxPollingManager,
   parseProxmoxStatsConfig,
-} from "../../../../src/backend/hosts/metrics/proxmox-stats-polling.js";
+} from "../../src/backend/proxmox-stats-polling.js";
 import type { Client } from "ssh2";
 
 interface TestHost {
@@ -50,8 +43,6 @@ function snapshot(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  historyCreate.mockReset();
-  historyPrune.mockReset();
   collectProxmoxStats.mockReset();
 });
 
@@ -88,11 +79,17 @@ describe("ProxmoxPollingManager", () => {
       async (_host: TestHost, fn: (client: Client) => Promise<unknown>) =>
         fn({} as Client),
     );
+    const historyRepository = {
+      create: vi.fn(async () => {}),
+      pruneOlderThan: vi.fn(async () => {}),
+      listRange: vi.fn(async () => []),
+    };
     const manager = new ProxmoxPollingManager<TestHost>({
       fetchHostById,
       withSshConnection,
+      historyRepository,
     });
-    return { manager, fetchHostById, withSshConnection };
+    return { manager, fetchHostById, withSshConnection, historyRepository };
   }
 
   it("starts polling and caches a snapshot when the first viewer registers", async () => {

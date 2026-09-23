@@ -46,6 +46,10 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
   const isSshHost = h.connectionType === "ssh" || !h.connectionType;
   const parsedTerminalConfig = parseJson(h.terminalConfig) as
     (Host["terminalConfig"] & { sudoPassword?: string }) | undefined;
+  const proxmoxSettings = (h.pluginSettings?.proxmox ?? {}) as Record<
+    string,
+    unknown
+  >;
   return {
     id: String(h.id),
     name: h.name,
@@ -95,13 +99,17 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     dockerConfig: h.dockerConfig ?? null,
     enableWebUi: h.enableWebUi ?? false,
     webUiConfig: h.webUiConfig ?? { endpoints: [] },
-    enableProxmox: h.enableProxmox ?? false,
-    enableProxmoxStats: h.enableProxmoxStats ?? false,
+    enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
+    enableProxmoxStats:
+      (proxmoxSettings.enableProxmoxStats as boolean) ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false,
     enableTerminalToolbar: h.enableTerminalToolbar ?? true,
     enableAiAssistant: h.enableAiAssistant ?? false,
-    proxmoxConfig: h.proxmoxConfig ?? null,
-    proxmoxStatsConfig: h.proxmoxStatsConfig ?? null,
+    proxmoxConfig:
+      (proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
+    proxmoxStatsConfig:
+      (proxmoxSettings.proxmoxStatsConfig as Host["proxmoxStatsConfig"]) ??
+      null,
     enableRdp: h.enableRdp != null ? h.enableRdp : h.connectionType === "rdp",
     enableVnc: h.enableVnc != null ? h.enableVnc : h.connectionType === "vnc",
     enableTelnet:

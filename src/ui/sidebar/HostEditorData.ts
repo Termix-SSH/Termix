@@ -127,6 +127,10 @@ export function createHostEditorForm(
     ...(remoteDefaults ?? {}),
     ...(host?.guacamoleConfig ?? {}),
   };
+  const proxmoxSettings = (host?.pluginSettings?.proxmox ?? {}) as Record<
+    string,
+    unknown
+  >;
   const rawTheme = terminalConfig.theme ?? d?.theme;
   const normalizedTheme =
     !rawTheme ||
@@ -198,22 +202,25 @@ export function createHostEditorForm(
     enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
     enableAiAssistant: host?.enableAiAssistant ?? false,
     allowSessionSharing: host?.allowSessionSharing ?? true,
-    enableProxmox: host?.enableProxmox ?? false,
-    proxmoxConfig: host?.proxmoxConfig ?? {
-      defaultCredentialId: null as number | null,
-      defaultAuthType: "password" as string,
-      windowsPatterns: "win, windows",
-      dockerPatterns: "docker",
-      preferredPrefixes: "10., 192.168.",
-      autoSyncEnabled: false,
-      syncIntervalMinutes: 15,
-      markMissingGuests: true,
-    },
-    enableProxmoxStats: host?.enableProxmoxStats ?? false,
-    proxmoxStatsConfig: host?.proxmoxStatsConfig ?? {
-      pollInterval: 60,
-      nodeName: null as string | null,
-    },
+    enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
+    proxmoxConfig:
+      ((proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? {
+        defaultCredentialId: null,
+        defaultAuthType: "password",
+        windowsPatterns: "win, windows",
+        dockerPatterns: "docker",
+        preferredPrefixes: "10., 192.168.",
+        autoSyncEnabled: false,
+        syncIntervalMinutes: 15,
+        markMissingGuests: true,
+      }) as Host["proxmoxConfig"],
+    enableProxmoxStats:
+      (proxmoxSettings.enableProxmoxStats as boolean) ?? false,
+    proxmoxStatsConfig:
+      ((proxmoxSettings.proxmoxStatsConfig as Host["proxmoxStatsConfig"]) ?? {
+        pollInterval: 60,
+        nodeName: null,
+      }) as Host["proxmoxStatsConfig"],
     enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,

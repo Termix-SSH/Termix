@@ -299,14 +299,6 @@ export const hosts = pgTable(
     statsConfig: text("stats_config"),
     dockerConfig: text("docker_config"),
     webUiConfig: text("web_ui_config"),
-    enableProxmox: boolean("enable_proxmox")
-      .notNull()
-      .default(false),
-    proxmoxConfig: text("proxmox_config"),
-    enableProxmoxStats: boolean("enable_proxmox_stats")
-      .notNull()
-      .default(false),
-    proxmoxStatsConfig: text("proxmox_stats_config"),
     terminalConfig: text("terminal_config"),
     quickActions: text("quick_actions"),
     notes: text("notes"),
@@ -1162,27 +1154,6 @@ export const hostMetricsPreferences = pgTable(
   ],
 );
 
-export const proxmoxStatsPreferences = pgTable(
-  "proxmox_stats_preferences",
-  {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id").notNull().references(() => hosts.id, { onDelete: "cascade" }),
-  // JSON-encoded ProxmoxStatsLayout. Layout has no secrets, so it is stored as
-  // plain JSON (no field-level encryption), same convention as hostMetricsPreferences.layout.
-  layout: text("layout").notNull(),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    uniqueIndex("idx_proxmox_stats_prefs_user_host").on(table.userId, table.hostId),
-  ],
-);
-
 export const hostSidebarPreferences = pgTable("host_sidebar_preferences", {
   userId: varchar("user_id", { length: 255 })
     .primaryKey()
@@ -1387,23 +1358,6 @@ export const hostMetricsHistory = pgTable("host_metrics_history", {
   netTxBytes: integer("net_tx_bytes"),
 });
 // --- metrics-history end ---
-
-// --- proxmox-node-history begin ---
-export const proxmoxNodeHistory = pgTable("proxmox_node_history", {
-  id: serial("id").primaryKey(),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  ts: text("ts")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  cpuPercent: doublePrecision("cpu_percent"),
-  memPercent: doublePrecision("mem_percent"),
-  diskPercent: doublePrecision("disk_percent"),
-  netRxBytes: integer("net_rx_bytes"),
-  netTxBytes: integer("net_tx_bytes"),
-});
-// --- proxmox-node-history end ---
 
 // --- alerts begin ---
 export const notificationChannels = pgTable("notification_channels", {

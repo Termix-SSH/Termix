@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const execCommand = vi.fn();
-vi.mock(
-  "../../../../../src/backend/hosts/metrics-shared/common-utils.js",
-  () => ({
-    execCommand: (...args: unknown[]) => execCommand(...args),
-  }),
-);
+vi.mock("../../../src/backend/proxmox/common-utils.js", () => ({
+  execCommand: (...args: unknown[]) => execCommand(...args),
+}));
 
-import { collectProxmoxNodeNetwork } from "../../../../../src/backend/hosts/metrics/proxmox/node-network-collector.js";
+import { collectProxmoxNodeNetwork } from "../../../src/backend/proxmox/node-network-collector.js";
 import type { Client } from "ssh2";
 
 const fakeClient = {} as Client;

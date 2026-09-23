@@ -10,6 +10,7 @@ import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
   createCurrentHostResolutionRepository,
+  createCurrentPluginSettingsRepository,
 } from "../repositories/factory.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 import { serializeWebUiConfig } from "./host-web-endpoints.js";
@@ -295,10 +296,6 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableTerminalToolbar = updates.enableTerminalToolbar;
         if (typeof updates.enableAiAssistant === "boolean")
           simpleUpdates.enableAiAssistant = updates.enableAiAssistant;
-        // Disabling Proxmox is a plain flag flip; enabling is handled per-host
-        // below so each host can default to its own stored credential.
-        if (updates.enableProxmox === false)
-          simpleUpdates.enableProxmox = false;
 
         if (Object.keys(simpleUpdates).length > 0) {
           await hostRepository.updateManyForUser(
@@ -324,33 +321,58 @@ export function registerHostBulkRoutes(
           }
         }
 
-        // Enabling Proxmox needs per-host handling: each host defaults its
-        // Proxmox credential to the credential already stored on that host, so
-        // discovery works right away without picking one by hand. Existing
-        // proxmoxConfig values are preserved.
-        if (updates.enableProxmox === true) {
+        // Proxmox enable/disable now lives in the proxmox plugin's own
+        // host-scope settings, not a hosts column. Disabling is a plain flag
+        // flip; enabling also defaults the Proxmox credential to the one
+        // already stored on the host, so discovery works without picking one
+        // by hand. Existing proxmoxConfig values are preserved.
+        if (typeof updates.enableProxmox === "boolean") {
+          const pluginSettingsRepository =
+            createCurrentPluginSettingsRepository();
           for (const host of ownedHosts) {
             try {
-              const existing = host.proxmoxConfig
-                ? JSON.parse(host.proxmoxConfig as string)
-                : {};
-              const merged = {
-                defaultCredentialId:
-                  existing.defaultCredentialId ?? host.credentialId ?? null,
-                windowsPatterns: existing.windowsPatterns ?? "win, windows",
-                dockerPatterns: existing.dockerPatterns ?? "docker",
-                preferredPrefixes:
-                  existing.preferredPrefixes ?? "10., 192.168.",
-                autoSyncEnabled: existing.autoSyncEnabled ?? false,
-                syncIntervalMinutes: existing.syncIntervalMinutes ?? 15,
-                markMissingGuests: existing.markMissingGuests ?? true,
-              };
-              await hostRepository.updateForUser(userId, host.id, {
-                enableProxmox: true,
-                proxmoxConfig: JSON.stringify(merged),
-              });
+              const scopeId = String(host.id);
+              await pluginSettingsRepository.set(
+                "proxmox",
+                "host",
+                scopeId,
+                "enableProxmox",
+                JSON.stringify(updates.enableProxmox),
+              );
+
+              if (updates.enableProxmox) {
+                const existingRow = await pluginSettingsRepository.get(
+                  "proxmox",
+                  "host",
+                  scopeId,
+                  "proxmoxConfig",
+                );
+                const existing = existingRow?.value
+                  ? JSON.parse(existingRow.value)
+                  : {};
+                const merged = {
+                  defaultCredentialId:
+                    existing.defaultCredentialId ?? host.credentialId ?? null,
+                  windowsPatterns: existing.windowsPatterns ?? "win, windows",
+                  dockerPatterns: existing.dockerPatterns ?? "docker",
+                  preferredPrefixes:
+                    existing.preferredPrefixes ?? "10., 192.168.",
+                  autoSyncEnabled: existing.autoSyncEnabled ?? false,
+                  syncIntervalMinutes: existing.syncIntervalMinutes ?? 15,
+                  markMissingGuests: existing.markMissingGuests ?? true,
+                };
+                await pluginSettingsRepository.set(
+                  "proxmox",
+                  "host",
+                  scopeId,
+                  "proxmoxConfig",
+                  JSON.stringify(merged),
+                );
+              }
             } catch {
-              errors.push(`Failed to enable Proxmox for host ${host.id}`);
+              errors.push(
+                `Failed to ${updates.enableProxmox ? "enable" : "disable"} Proxmox for host ${host.id}`,
+              );
             }
           }
         }
@@ -716,7 +738,6 @@ export function registerHostBulkRoutes(
             enableFileManager: hostData.enableFileManager !== false,
             enableDocker: hostData.enableDocker || false,
             enableWebUi: hostData.enableWebUi || false,
-            enableProxmox: hostData.enableProxmox || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
             enableAiAssistant: hostData.enableAiAssistant || false,
@@ -743,9 +764,6 @@ export function registerHostBulkRoutes(
               : null,
             webUiConfig: hostData.enableWebUi
               ? serializeWebUiConfig(hostData.webUiConfig)
-              : null,
-            proxmoxConfig: hostData.proxmoxConfig
-              ? JSON.stringify(hostData.proxmoxConfig)
               : null,
             terminalConfig: hostData.terminalConfig
               ? JSON.stringify(hostData.terminalConfig)
@@ -820,6 +838,7 @@ export function registerHostBulkRoutes(
           const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
           const existing = existingHostMap?.get(lookupKey);
 
+          let savedHostId: number;
           if (existing) {
             const saved = await hostRepository.updateEncryptedForUser(
               userId,
@@ -828,6 +847,7 @@ export function registerHostBulkRoutes(
             );
             if (!saved) throw new Error("Host no longer exists");
             if (exportId !== undefined) importedIds.set(exportId, existing.id);
+            savedHostId = existing.id;
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
@@ -836,7 +856,30 @@ export function registerHostBulkRoutes(
               sshDataObj,
             );
             if (exportId !== undefined) importedIds.set(exportId, saved.id);
+            savedHostId = saved.id;
             results.success++;
+          }
+
+          if (hostData.enableProxmox || hostData.proxmoxConfig) {
+            const pluginSettingsRepository =
+              createCurrentPluginSettingsRepository();
+            const scopeId = String(savedHostId);
+            await pluginSettingsRepository.set(
+              "proxmox",
+              "host",
+              scopeId,
+              "enableProxmox",
+              JSON.stringify(hostData.enableProxmox || false),
+            );
+            if (hostData.proxmoxConfig) {
+              await pluginSettingsRepository.set(
+                "proxmox",
+                "host",
+                scopeId,
+                "proxmoxConfig",
+                JSON.stringify(hostData.proxmoxConfig),
+              );
+            }
           }
         } catch (error) {
           results.failed++;
@@ -996,7 +1039,6 @@ export function registerHostBulkRoutes(
             enableFileManager: true,
             enableDocker: false,
             enableWebUi: false,
-            enableProxmox: false,
             enableTmuxMonitor: false,
             enableTerminalToolbar: true,
             enableAiAssistant: false,
@@ -1015,7 +1057,6 @@ export function registerHostBulkRoutes(
             statsConfig: null,
             dockerConfig: null,
             webUiConfig: null,
-            proxmoxConfig: null,
             terminalConfig: null,
             forceKeyboardInteractive: "false",
             notes: null,

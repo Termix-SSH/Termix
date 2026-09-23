@@ -17,7 +17,6 @@ export interface HostBulkUpdateState {
   id: number;
   statsConfig: string | null;
   credentialId: number | null;
-  proxmoxConfig: string | null;
 }
 
 export class HostRepository {
@@ -101,19 +100,6 @@ export class HostRepository {
     if (!userDataKey) return null;
 
     return DataCrypto.decryptRecord("ssh_data", row, userId, userDataKey);
-  }
-
-  async listProxmoxEnabled(): Promise<
-    Pick<HostRecord, "id" | "userId" | "proxmoxConfig">[]
-  > {
-    return this.context.drizzle
-      .select({
-        id: hosts.id,
-        userId: hosts.userId,
-        proxmoxConfig: hosts.proxmoxConfig,
-      })
-      .from(hosts)
-      .where(eq(hosts.enableProxmox, true));
   }
 
   async listByUserId(userId: string): Promise<HostRecord[]> {
@@ -248,7 +234,6 @@ export class HostRepository {
         id: hosts.id,
         statsConfig: hosts.statsConfig,
         credentialId: hosts.credentialId,
-        proxmoxConfig: hosts.proxmoxConfig,
       })
       .from(hosts)
       .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)));

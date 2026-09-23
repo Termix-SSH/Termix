@@ -1,30 +1,34 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { TestSqliteDatabase } from "../../../../../src/backend/tests/database/repositories/test-support.js";
-import { ProxmoxNodeHistoryRepository } from "../../../../../src/backend/database/repositories/proxmox-node-history-repository.js";
+import { createTestDb, type TestDb } from "@termix/plugin-sdk/testing";
+import { proxmoxNodeHistory } from "../../../src/backend/tables.js";
+import {
+  createProxmoxNodeHistoryRepository,
+  type ProxmoxNodeHistoryRepository,
+} from "../../../src/backend/proxmox-node-history-repository.js";
+import { pluginDir } from "../helpers.js";
 
 describe("ProxmoxNodeHistoryRepository", () => {
-  let adapter: TestSqliteDatabase | null = null;
+  let db: TestDb | null = null;
 
-  afterEach(async () => {
-    if (adapter) {
-      await adapter.close();
-      adapter = null;
-    }
+  afterEach(() => {
+    db?.close();
+    db = null;
   });
 
-  async function createRepository(
-    onWrite?: () => void | Promise<void>,
-  ): Promise<ProxmoxNodeHistoryRepository> {
-    adapter = new TestSqliteDatabase();
-    const context = await adapter.connect();
-    await adapter.exec(`
-      INSERT INTO users (id, username, password_hash) VALUES
-        ('user-1', 'user-1', 'hash'),
-        ('user-2', 'user-2', 'hash');
-
-      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
-      VALUES (1, 'user-1', 'pve1', '10.0.0.1', 22, 'root', 'password'), (2, 'user-2', 'pve2', '10.0.0.2', 22, 'root', 'password');
-      INSERT INTO proxmox_node_history (
+  async function createRepository(): Promise<ProxmoxNodeHistoryRepository> {
+    db = await createTestDb(pluginDir, {
+      before: (sqlite) => {
+        sqlite.exec(
+          "INSERT INTO users (id, username) VALUES ('user-1', 'user-1'), ('user-2', 'user-2')",
+        );
+        sqlite.exec("INSERT INTO ssh_data (id) VALUES (1), (2)");
+      },
+      skipMigrations: false,
+    });
+    // Migrations already ran (adopting proxmox_node_history), so seed rows on
+    // the real table after the fact.
+    db.sqlite.exec(`
+      INSERT INTO p_proxmox_node_history (
         host_id, ts, cpu_percent, mem_percent, disk_percent, net_rx_bytes, net_tx_bytes
       )
       VALUES
@@ -34,14 +38,14 @@ describe("ProxmoxNodeHistoryRepository", () => {
         (2, '2026-01-02 00:00:00', 99, 99, 99, 999, 999);
     `);
 
-    return new ProxmoxNodeHistoryRepository(context, onWrite);
+    return createProxmoxNodeHistoryRepository(
+      db.database,
+      await db.database.define(proxmoxNodeHistory),
+    );
   }
 
   it("creates and lists node history rows by range", async () => {
-    let writeCount = 0;
-    const repo = await createRepository(() => {
-      writeCount += 1;
-    });
+    const repo = await createRepository();
 
     await repo.create({
       hostId: 1,
@@ -59,7 +63,7 @@ describe("ProxmoxNodeHistoryRepository", () => {
     );
 
     expect(rows.map((row) => row.cpuPercent)).toEqual([10, 11]);
-    expect(writeCount).toBe(1);
+    expect(db!.persisted).toBe(1);
   });
 
   it("prunes old history for a host only", async () => {
