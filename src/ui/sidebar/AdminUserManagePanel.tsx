@@ -66,8 +66,10 @@ type ApiErrorLike = {
   };
 };
 
+// user-snippets rather than the snippets plugin's own id: this is a tab key
+// in this admin panel's own local state, not a lookup into the plugin registry.
 type ManageTabId =
-  "account" | "hosts" | "credentials" | "snippets" | "sessions" | "danger";
+  "account" | "hosts" | "credentials" | "user-snippets" | "sessions" | "danger";
 
 type ManagedSnippet = {
   id: number;
@@ -253,7 +255,7 @@ export function AdminUserManagePanel({
     { id: "account", label: t("admin.manageTabAccount") },
     { id: "hosts", label: t("admin.manageTabHosts") },
     { id: "credentials", label: t("admin.manageTabCredentials") },
-    { id: "snippets", label: t("admin.manageTabSnippets") },
+    { id: "user-snippets", label: t("admin.manageTabSnippets") },
     { id: "sessions", label: t("admin.manageTabSessions") },
     { id: "danger", label: t("admin.manageTabDanger") },
   ];
@@ -996,7 +998,7 @@ export function AdminUserManagePanel({
             </div>
           ))}
 
-        {activeTab === "snippets" &&
+        {activeTab === "user-snippets" &&
           (!dataUnlocked ? (
             lockedNotice
           ) : (

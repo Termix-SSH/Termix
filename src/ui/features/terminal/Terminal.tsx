@@ -34,11 +34,11 @@ import {
   getCookie,
   isElectron,
   logActivity,
-  getSnippets,
   deleteCommandFromHistory,
   getCommandHistory,
   getHostPassword,
 } from "@/main-axios.ts";
+import { invokeAction } from "@/shell/action-registry";
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
@@ -272,9 +272,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const terminalInputDisposableRef = useRef<{ dispose(): void } | null>(null);
     const localEchoRef = useRef<TerminalLocalEcho | null>(null);
     const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
-    const cachedSnippetsRef = useRef<{ id: number; content: string }[] | null>(
-      null,
-    );
     const [pendingKeybindingSnippet, setPendingKeybindingSnippet] = useState<{
       id: string;
       content: string;
@@ -1961,16 +1958,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               if (terminalConfig.startupSnippetId) {
                 try {
-                  const snippets = await getSnippets();
-                  const snippet = snippets.find(
-                    (s: { id: number }) =>
-                      s.id === terminalConfig.startupSnippetId,
-                  );
-                  if (snippet && ws.readyState === 1) {
+                  const resolved = (await invokeAction(
+                    "snippets.resolveForTerminal",
+                    terminalConfig.startupSnippetId,
+                    {
+                      ip: hostConfig.ip,
+                      username: hostConfig.username,
+                      port: hostConfig.port,
+                      name: hostConfig.name,
+                    },
+                  )) as
+                    | { needsInputs: boolean; content: string }
+                    | null
+                    | undefined;
+                  if (
+                    resolved &&
+                    !resolved.needsInputs &&
+                    ws.readyState === 1
+                  ) {
                     ws.send(
                       JSON.stringify({
                         type: "input",
-                        data: snippet.content + "\n",
+                        data: resolved.content + "\n",
                       }),
                     );
                   }
@@ -3141,7 +3150,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       let cancelled = false;
       const loadKeybindings = () => {
-        cachedSnippetsRef.current = null;
         getUserPreferences()
           .then((prefs) => {
             if (!cancelled) {
@@ -3165,23 +3173,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       if (!terminal) return;
 
-      const getSnippetById = async (
-        id: string,
-      ): Promise<{ content: string } | undefined> => {
-        try {
-          if (!cachedSnippetsRef.current) {
-            cachedSnippetsRef.current = (await getSnippets()) as unknown as {
-              id: number;
-              content: string;
-            }[];
-          }
-          const numericId = Number(id);
-          return cachedSnippetsRef.current?.find((s) => s.id === numericId);
-        } catch {
-          return undefined;
-        }
-      };
-
       const handleCustomKey = (e: KeyboardEvent): boolean => {
         if (e.type !== "keydown") {
           return true;
@@ -3202,7 +3193,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               webSocketRef,
               writeTextToClipboard,
               readTextFromClipboard,
-              getSnippetById,
               hostContext: {
                 ip: hostConfig.ip,
                 username: hostConfig.username,

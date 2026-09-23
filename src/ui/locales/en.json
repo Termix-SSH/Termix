@@ -624,8 +624,6 @@
     "feature_files_desc": "Browse, upload, download and edit files over SFTP without leaving the app.",
     "feature_tunnels": "Tunnels",
     "feature_tunnels_desc": "Forward ports through a server to reach services that are not exposed.",
-    "feature_snippets": "Snippets",
-    "feature_snippets_desc": "Save commands you run often and send them to a terminal in one click.",
     "featuresRailHint": "Do not need one of these? Hide any icon from the sidebar in Settings, under Navigation.",
     "workflowTitle": "Move around faster",
     "workflowIntro": "A few habits that save the most time once you have a couple of servers.",
@@ -710,7 +708,6 @@
     "multiPanelHintDockHow": "Right-click its rail icon, or use the panel icon in the tab bar.",
     "sidebarSettings": "Sidebar Settings...",
     "hosts": "Hosts",
-    "snippets": "Snippets",
     "macros": "Macros",
     "hostManager": "Host Manager",
     "credentials": "Credentials",
@@ -3201,7 +3198,6 @@
       "pluginDisabled": "Plugin disabled",
       "groups": {
         "hosts": "Hosts",
-        "snippets": "Snippets",
         "credentials": "Credentials",
         "admin": "Administration"
       }

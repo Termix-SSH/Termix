@@ -59,7 +59,6 @@ describe("RAIL_ITEMS", () => {
       "serial",
       "ssh-tools",
       "sftp",
-      "snippets",
       "macros",
       "history",
       "session-logs",
@@ -74,10 +73,10 @@ describe("RAIL_ITEMS", () => {
     );
   });
 
-  it("marks exactly the four mobile primary slots", () => {
+  it("marks exactly the three mobile primary slots", () => {
     expect(
       RAIL_ITEMS.filter((item) => item.mobilePrimary).map((item) => item.id),
-    ).toEqual(["hosts", "quick-connect", "ssh-tools", "snippets"]);
+    ).toEqual(["hosts", "quick-connect", "ssh-tools"]);
   });
 
   it("marks the panels that can open as a tab", () => {
@@ -85,14 +84,7 @@ describe("RAIL_ITEMS", () => {
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
-    ).toEqual([
-      "termix-id",
-      "ssh-tools",
-      "snippets",
-      "macros",
-      "history",
-      "session-logs",
-    ]);
+    ).toEqual(["termix-id", "ssh-tools", "macros", "history", "session-logs"]);
   });
 
   it("derives promotableIds from the promotable flag", () => {
@@ -132,7 +124,6 @@ describe("RAIL_ITEMS", () => {
     expect(rightDockableIds()).toEqual([
       "connections",
       "ssh-tools",
-      "snippets",
       "macros",
       "history",
       "session-logs",

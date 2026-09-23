@@ -2,28 +2,30 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
-import {
-  hasSnippetInputs,
-  resolveSnippetContent,
-  type SnippetHostContext,
-} from "@/lib/snippet-variables";
+import { invokeAction } from "@/shell/action-registry";
 import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
 import type { Snippet, Tab } from "@/types/ui-types";
 
+interface ResolvedForTerminal {
+  needsInputs: boolean;
+  content: string;
+  isNote: boolean;
+}
+
 /**
- * Shared "run this snippet against these terminal tabs" flow: resolves
- * $HOST-style vars per target, prompts once for $INPUT_n placeholders when
- * present, and gates on the confirm-before-running setting. Used by both the
- * Snippets sidebar panel and the command palette's snippet entries so the
- * behavior (and the dialog) is identical everywhere a snippet gets sent to a
- * terminal.
+ * Shared "run this snippet against these terminal tabs" flow, for the few
+ * core surfaces (the command palette) that still reach for a snippet
+ * directly rather than through the snippets plugin's own panel. Variable
+ * resolution runs through the snippets plugin's "snippets.resolveForTerminal"
+ * action, and sending runs through ssh-terminal's "terminal.sendToSession",
+ * since core no longer owns snippet content or a terminal ref.
  */
 export function useSnippetRunner() {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
   const [runningSnippet, setRunningSnippet] = useState<{
     snippet: Snippet;
-    host: SnippetHostContext | null;
+    host: Tab["host"] | null;
     onConfirm: (
       resolvedContent: string,
       inputValues: Record<string, string>,
@@ -49,38 +51,41 @@ export function useSnippetRunner() {
     [confirmWithToast, t],
   );
 
-  function sendResolvedToTerminal(
+  async function sendResolvedToTerminal(
     tab: Tab,
     snippet: Snippet,
     inputValues: Record<string, string>,
   ) {
-    const content = resolveSnippetContent(
-      snippet.content,
+    const resolved = (await invokeAction(
+      "snippets.resolveForTerminal",
+      snippet.id,
       tab.host ?? null,
       inputValues,
-    );
-    if (snippet.isNote) {
-      tab.terminalRef?.current?.paste?.(content);
-    } else {
-      tab.terminalRef?.current?.sendInput?.(content + "\r");
-    }
+    )) as ResolvedForTerminal | null | undefined;
+    if (!resolved || resolved.needsInputs) return;
+    await invokeAction("terminal.sendToSession", tab.id, resolved.content, {
+      run: !resolved.isNote,
+    });
   }
 
   const runSnippet = useCallback(
     (snippet: Snippet, targets: Tab[]) => {
       const runWithInputs = (inputValues: Record<string, string>) => {
         const doSend = () => {
-          targets.forEach((tab) =>
-            sendResolvedToTerminal(tab, snippet, inputValues),
-          );
-          toast.success(
-            t(
-              snippet.isNote
-                ? "newUi.sidebar.snippets.pasteSuccess"
-                : "newUi.sidebar.snippets.runSuccess",
-              { name: snippet.name, count: targets.length },
+          void Promise.all(
+            targets.map((tab) =>
+              sendResolvedToTerminal(tab, snippet, inputValues),
             ),
-          );
+          ).then(() => {
+            toast.success(
+              t(
+                snippet.isNote
+                  ? "newUi.sidebar.snippets.pasteSuccess"
+                  : "newUi.sidebar.snippets.runSuccess",
+                { name: snippet.name, count: targets.length },
+              ),
+            );
+          });
         };
         if (snippet.isNote) {
           doSend();
@@ -89,18 +94,25 @@ export function useSnippetRunner() {
         }
       };
 
-      if (hasSnippetInputs(snippet.content)) {
-        setRunningSnippet({
-          snippet,
-          host: targets[0]?.host ?? null,
-          onConfirm: (_resolvedContent, inputValues) => {
-            setRunningSnippet(null);
-            runWithInputs(inputValues);
-          },
-        });
-      } else {
+      void invokeAction(
+        "snippets.resolveForTerminal",
+        snippet.id,
+        targets[0]?.host ?? null,
+      ).then((result) => {
+        const resolved = result as ResolvedForTerminal | null | undefined;
+        if (resolved?.needsInputs) {
+          setRunningSnippet({
+            snippet,
+            host: targets[0]?.host ?? null,
+            onConfirm: (_resolvedContent, inputValues) => {
+              setRunningSnippet(null);
+              runWithInputs(inputValues);
+            },
+          });
+          return;
+        }
         runWithInputs({});
-      }
+      });
     },
     [handleConfirmRun, t],
   );

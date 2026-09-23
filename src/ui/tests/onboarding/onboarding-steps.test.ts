@@ -51,7 +51,7 @@ describe("ONBOARDING_STEPS", () => {
 describe("onboarding step body translations", () => {
   const KEYS: Record<string, string[]> = {
     welcome: ["hosts", "terminal", "files"],
-    feature: ["files", "tunnels", "snippets"],
+    feature: ["files", "tunnels"],
     workflow: ["palette", "split", "dock"],
     security: ["credentials", "twofa", "identity", "sharing"],
     done: ["settings", "rerun", "docs"],

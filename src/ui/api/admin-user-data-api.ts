@@ -195,7 +195,7 @@ export async function adminGetUserSnippets(
   targetUserId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.get("/snippets", {
+    const response = await authApi.get("/plugin-api/snippets", {
       headers: adminHeaders(targetUserId),
     });
     return response.data;
@@ -209,7 +209,7 @@ export async function adminCreateUserSnippet(
   snippetData: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.post("/snippets", snippetData, {
+    const response = await authApi.post("/plugin-api/snippets", snippetData, {
       headers: adminHeaders(targetUserId),
     });
     return response.data;
@@ -224,9 +224,13 @@ export async function adminUpdateUserSnippet(
   snippetData: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.put(`/snippets/${snippetId}`, snippetData, {
-      headers: adminHeaders(targetUserId),
-    });
+    const response = await authApi.put(
+      `/plugin-api/snippets/${snippetId}`,
+      snippetData,
+      {
+        headers: adminHeaders(targetUserId),
+      },
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update user's snippet");
@@ -238,7 +242,7 @@ export async function adminDeleteUserSnippet(
   snippetId: number,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await authApi.delete(`/snippets/${snippetId}`, {
+    const response = await authApi.delete(`/plugin-api/snippets/${snippetId}`, {
       headers: adminHeaders(targetUserId),
     });
     return response.data;

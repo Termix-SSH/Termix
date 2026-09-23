@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { dispatchKeybindingAction } from "../../lib/keybinding-dispatch";
 import type { Terminal } from "@xterm/xterm";
 import type { KeybindingDispatchContext } from "../../lib/keybinding-dispatch";
+import * as actionRegistry from "../../shell/action-registry";
 
 function makeContext(
   overrides: Partial<KeybindingDispatchContext> = {},
@@ -25,7 +26,6 @@ function makeContext(
     webSocketRef: { current: ws as unknown as WebSocket },
     writeTextToClipboard: vi.fn().mockResolvedValue(true),
     readTextFromClipboard: vi.fn().mockResolvedValue(""),
-    getSnippetById: vi.fn().mockResolvedValue(undefined),
     sentData,
     ...overrides,
   };
@@ -33,6 +33,10 @@ function makeContext(
 }
 
 describe("dispatchKeybindingAction", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("copy writes the selection to clipboard and clears it", () => {
     const ctx = makeContext();
     (ctx.terminal.getSelection as ReturnType<typeof vi.fn>).mockReturnValue(
@@ -84,45 +88,58 @@ describe("dispatchKeybindingAction", () => {
     expect(ctx.sentData).toEqual(["ls -la\r"]);
   });
 
-  it("runSnippet resolves the snippet and sends its content with a trailing return", async () => {
-    const ctx = makeContext({
-      getSnippetById: vi.fn().mockResolvedValue({ content: "uptime" }),
+  it("runSnippet resolves the snippet through the snippets.resolveForTerminal action and sends its content with a trailing return", async () => {
+    vi.spyOn(actionRegistry, "invokeAction").mockResolvedValue({
+      needsInputs: false,
+      content: "uptime",
     });
+    const ctx = makeContext();
     dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
     await Promise.resolve();
     await Promise.resolve();
+    expect(actionRegistry.invokeAction).toHaveBeenCalledWith(
+      "snippets.resolveForTerminal",
+      1,
+      null,
+    );
     expect(ctx.sentData).toEqual(["uptime\r"]);
   });
 
   it("runSnippet does nothing when the snippet no longer exists", async () => {
-    const ctx = makeContext({
-      getSnippetById: vi.fn().mockResolvedValue(undefined),
-    });
+    vi.spyOn(actionRegistry, "invokeAction").mockResolvedValue(undefined);
+    const ctx = makeContext();
     dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
     await Promise.resolve();
     await Promise.resolve();
     expect(ctx.sentData).toEqual([]);
   });
 
-  it("runSnippet silently resolves host variables from hostContext", async () => {
+  it("runSnippet passes hostContext through to the resolve action", async () => {
+    vi.spyOn(actionRegistry, "invokeAction").mockResolvedValue({
+      needsInputs: false,
+      content: "ping 10.0.0.5 -p 22",
+    });
     const ctx = makeContext({
-      getSnippetById: vi
-        .fn()
-        .mockResolvedValue({ content: "ping $HOST -p $PORT" }),
       hostContext: { ip: "10.0.0.5", username: "root", port: 22 },
     });
     dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
     await Promise.resolve();
     await Promise.resolve();
+    expect(actionRegistry.invokeAction).toHaveBeenCalledWith(
+      "snippets.resolveForTerminal",
+      1,
+      { ip: "10.0.0.5", username: "root", port: 22 },
+    );
     expect(ctx.sentData).toEqual(["ping 10.0.0.5 -p 22\r"]);
   });
 
-  it("runSnippet defers to onSnippetNeedsInputs instead of sending when $INPUT_n is present", async () => {
-    const onSnippetNeedsInputs = vi.fn();
-    const ctx = makeContext({
-      getSnippetById: vi.fn().mockResolvedValue({ content: "echo $INPUT_1" }),
-      onSnippetNeedsInputs,
+  it("runSnippet defers to onSnippetNeedsInputs instead of sending when the action reports needsInputs", async () => {
+    vi.spyOn(actionRegistry, "invokeAction").mockResolvedValue({
+      needsInputs: true,
+      content: "echo $INPUT_1",
     });
+    const onSnippetNeedsInputs = vi.fn();
+    const ctx = makeContext({ onSnippetNeedsInputs });
     dispatchKeybindingAction({ type: "runSnippet", snippetId: "1" }, ctx);
     await Promise.resolve();
     await Promise.resolve();

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FolderTree, Play, Plug, type LucideIcon } from "lucide-react";
+import { FolderTree, Plug, type LucideIcon } from "lucide-react";
 import { useActionSlot } from "@/hooks/use-action-slot";
 
 /**
@@ -11,7 +11,6 @@ import { useActionSlot } from "@/hooks/use-action-slot";
 const FEATURES: { icon: LucideIcon; key: string }[] = [
   { icon: FolderTree, key: "files" },
   { icon: Plug, key: "tunnels" },
-  { icon: Play, key: "snippets" },
 ];
 
 export function FeaturesStep() {

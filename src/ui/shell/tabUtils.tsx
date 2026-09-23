@@ -16,7 +16,6 @@ import {
   Clock,
   Fingerprint,
   Hammer,
-  Play,
   ScrollText,
   Presentation,
 } from "lucide-react";
@@ -90,9 +89,6 @@ const SessionLogsPanel = lazy(() =>
   import("@/sidebar/SessionLogsPanel").then((m) => ({
     default: m.SessionLogsPanel,
   })),
-);
-const SnippetsPanel = lazy(() =>
-  import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
 );
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
@@ -197,8 +193,6 @@ export function tabIcon(type: TabType) {
       return <Fingerprint className="size-3.5" />;
     case "session-logs":
       return <ScrollText className="size-3.5" />;
-    case "snippets":
-      return <Play className="size-3.5" />;
     case "macros":
       return <Braces className="size-3.5" />;
     case "history":
@@ -370,17 +364,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
 
     case "split-screen":
       return null;
-
-    case "snippets":
-      return withTabSuspense(
-        <PanelTabFrame>
-          <SnippetsPanel
-            terminalTabs={panelProps?.terminalTabs ?? []}
-            activeTabId={panelProps?.targetTerminalTabId ?? ""}
-            storageMode={panelProps?.storageMode ?? "local"}
-          />
-        </PanelTabFrame>,
-      );
 
     case "macros":
       return withTabSuspense(

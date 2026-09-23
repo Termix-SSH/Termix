@@ -29,9 +29,10 @@ import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 /**
  * Core permission groups, mirroring RESERVED_PERMISSION_PREFIXES in the SDK
  * manifest module, which is not imported here because it pulls semver into
- * the browser bundle.
+ * the browser bundle. A group that is itself a plugin id (snippets, once)
+ * does not need an entry here: knownPluginIds() below already covers it.
  */
-const CORE_PERMISSION_GROUPS = ["hosts", "snippets", "credentials", "admin"];
+const CORE_PERMISSION_GROUPS = ["hosts", "credentials", "admin"];
 
 /**
  * Resolves a permission the way the backend's ctx.rbac does: a short name

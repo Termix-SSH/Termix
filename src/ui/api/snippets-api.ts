@@ -3,6 +3,12 @@ import { authApi, handleApiError } from "@/main-axios";
 /**
  * A snippet row as the list endpoint returns it. Callers that need the full
  * shape narrow it themselves; only the id is relied on across the app.
+ *
+ * Snippets themselves are owned by the snippets plugin
+ * (/plugin-api/snippets); this is the thin read/run surface used by a few
+ * core and plugin callers (the host editor's startup snippet, the command
+ * palette, custom keybindings, host-metrics quick actions) that cannot
+ * reach into the snippets plugin's own frontend code.
  */
 export interface SnippetRow {
   id: number;
@@ -11,44 +17,10 @@ export interface SnippetRow {
 
 export async function getSnippets(): Promise<SnippetRow[]> {
   try {
-    const response = await authApi.get("/snippets");
+    const response = await authApi.get("/plugin-api/snippets");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch snippets");
-  }
-}
-
-export async function createSnippet(
-  snippetData: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/snippets", snippetData);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "create snippet");
-  }
-}
-
-export async function updateSnippet(
-  snippetId: number,
-  snippetData: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.put(`/snippets/${snippetId}`, snippetData);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "update snippet");
-  }
-}
-
-export async function deleteSnippet(
-  snippetId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.delete(`/snippets/${snippetId}`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "delete snippet");
   }
 }
 
@@ -58,7 +30,7 @@ export async function executeSnippet(
   inputValues?: Record<string, string>,
 ): Promise<{ success: boolean; output: string; error?: string }> {
   try {
-    const response = await authApi.post("/snippets/execute", {
+    const response = await authApi.post("/plugin-api/snippets/execute", {
       snippetId,
       hostId,
       ...(inputValues ? { inputValues } : {}),
@@ -66,132 +38,5 @@ export async function executeSnippet(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "execute snippet");
-  }
-}
-
-export async function getSnippetFolders(): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/snippets/folders");
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "fetch snippet folders");
-  }
-}
-
-export async function createSnippetFolder(folderData: {
-  name: string;
-  color?: string;
-  icon?: string;
-}): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/snippets/folders", folderData);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "create snippet folder");
-  }
-}
-
-export async function updateSnippetFolderMetadata(
-  folderName: string,
-  metadata: { color?: string; icon?: string },
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.put(
-      `/snippets/folders/${encodeURIComponent(folderName)}/metadata`,
-      metadata,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "update snippet folder metadata");
-  }
-}
-
-export async function renameSnippetFolder(
-  oldName: string,
-  newName: string,
-): Promise<{ success: boolean; oldName: string; newName: string }> {
-  try {
-    const response = await authApi.put("/snippets/folders/rename", {
-      oldName,
-      newName,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "rename snippet folder");
-  }
-}
-
-export async function deleteSnippetFolder(
-  folderName: string,
-): Promise<{ success: boolean }> {
-  try {
-    const response = await authApi.delete(
-      `/snippets/folders/${encodeURIComponent(folderName)}`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "delete snippet folder");
-  }
-}
-
-export async function reorderSnippets(
-  updates: Array<{ id: number; order: number; folder?: string }>,
-): Promise<{ success: boolean }> {
-  try {
-    const response = await authApi.put("/snippets/reorder", {
-      snippets: updates,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "reorder snippets");
-  }
-}
-
-export interface SnippetExportData {
-  snippets: Array<{
-    name: string;
-    content: string;
-    description?: string | null;
-    folder?: string | null;
-    order?: number;
-    hostFilter?: string | null;
-  }>;
-  folders: Array<{
-    name: string;
-    color?: string | null;
-    icon?: string | null;
-  }>;
-}
-
-export async function exportSnippets(): Promise<SnippetExportData> {
-  try {
-    const response = await authApi.get("/snippets/export");
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "export snippets");
-  }
-}
-
-export async function importSnippets(
-  data: SnippetExportData,
-  overwrite: boolean,
-): Promise<{
-  success: boolean;
-  snippetsImported: number;
-  snippetsSkipped: number;
-  snippetsUpdated: number;
-  foldersImported: number;
-  foldersSkipped: number;
-  failed: number;
-  errors: string[];
-}> {
-  try {
-    const response = await authApi.post("/snippets/bulk-import", {
-      ...data,
-      overwrite,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "import snippets");
   }
 }

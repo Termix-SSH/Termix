@@ -7,7 +7,6 @@ import {
   KeyRound,
   LayoutPanelLeft,
   Network,
-  Play,
   Plug,
   ScrollText,
   Server,
@@ -131,15 +130,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     icon: ArrowLeftRight,
     labelKey: "nav.sftp",
     separatorAfter: true,
-  },
-  {
-    id: "snippets",
-    icon: Play,
-    labelKey: "nav.snippets",
-    separatorAfter: true,
-    mobilePrimary: true,
-    promotable: true,
-    rightDockable: true,
   },
   {
     id: "macros",

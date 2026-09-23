@@ -115,7 +115,6 @@ export interface UserPreferences {
   pinAppRail?: boolean | null;
   expandAppRailOnHover?: boolean | null;
   showPinAppRailButton?: boolean | null;
-  foldersCollapsed?: boolean | null;
   confirmSnippetExecution?: boolean | null;
   disableUpdateCheck?: boolean | null;
   confirmTabClose?: boolean | null;

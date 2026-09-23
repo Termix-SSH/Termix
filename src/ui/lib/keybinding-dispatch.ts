@@ -1,18 +1,20 @@
 import type { Terminal } from "@xterm/xterm";
 import type { KeybindingAction } from "@/types/keybindings";
-import {
-  hasSnippetInputs,
-  resolveSnippetContent,
-  type SnippetHostContext,
-} from "@/lib/snippet-variables";
+import { invokeAction } from "@/shell/action-registry";
+
+export interface SnippetHostContext {
+  ip?: string;
+  username?: string;
+  port?: number | string;
+  name?: string;
+}
 
 export interface KeybindingDispatchContext {
   terminal: Terminal;
   webSocketRef: React.MutableRefObject<WebSocket | null>;
   writeTextToClipboard: (text: string) => Promise<boolean>;
   readTextFromClipboard: () => Promise<string>;
-  getSnippetById: (id: string) => Promise<{ content: string } | undefined>;
-  /** Host context used to silently resolve $HOST/$USER/$PORT/$NAME in runSnippet actions. */
+  /** Host context used to resolve $HOST/$USER/$PORT/$NAME in runSnippet actions. */
   hostContext?: SnippetHostContext | null;
   /**
    * Called instead of sending the snippet directly when its content still has
@@ -64,21 +66,26 @@ export function dispatchKeybindingAction(
     }
     case "runSnippet": {
       if (!action.snippetId) return;
-      ctx.getSnippetById(action.snippetId).then((snippet) => {
-        if (!snippet) return;
-        if (hasSnippetInputs(snippet.content)) {
+      const snippetId = Number(action.snippetId);
+      if (!Number.isFinite(snippetId)) return;
+      // Resolving with no inputValues first tells us whether the snippet
+      // still needs them; the plugin decides and reports back.
+      void invokeAction(
+        "snippets.resolveForTerminal",
+        snippetId,
+        ctx.hostContext ?? null,
+      ).then((result) => {
+        const resolved = result as
+          { needsInputs: boolean; content: string } | null | undefined;
+        if (!resolved) return;
+        if (resolved.needsInputs) {
           ctx.onSnippetNeedsInputs?.({
             id: action.snippetId!,
-            content: snippet.content,
+            content: resolved.content,
           });
           return;
         }
-        const resolved = resolveSnippetContent(
-          snippet.content,
-          ctx.hostContext ?? null,
-          {},
-        );
-        sendRaw(resolved + (action.appendEnter !== false ? "\r" : ""));
+        sendRaw(resolved.content + (action.appendEnter !== false ? "\r" : ""));
       });
       return;
     }

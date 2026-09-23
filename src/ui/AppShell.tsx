@@ -86,9 +86,6 @@ const SshToolsPanel = lazy(() =>
 const CollabPanel = lazy(() =>
   import("@/sidebar/CollabPanel").then((m) => ({ default: m.CollabPanel })),
 );
-const SnippetsPanel = lazy(() =>
-  import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
-);
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
@@ -1018,7 +1015,6 @@ export function AppShell({
               "hostTrayOnClick",
               "pinAppRail",
               "expandAppRailOnHover",
-              "defaultSnippetFoldersCollapsed",
               "confirmSnippetExecution",
               "disableUpdateCheck",
               "confirmTabClose",
@@ -1086,14 +1082,6 @@ export function AppShell({
             );
             window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
           }
-          if (
-            prefs.foldersCollapsed !== null &&
-            prefs.foldersCollapsed !== undefined
-          )
-            localStorage.setItem(
-              "defaultSnippetFoldersCollapsed",
-              String(prefs.foldersCollapsed),
-            );
           if (
             prefs.confirmSnippetExecution !== null &&
             prefs.confirmSnippetExecution !== undefined
@@ -2566,18 +2554,6 @@ export function AppShell({
             <SshToolsPanel
               terminalTabs={terminalTabs}
               activeTabId={targetTerminalTabId}
-            />
-          </div>
-        )}
-
-        {railView === "snippets" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <SnippetsPanel
-              terminalTabs={terminalTabs}
-              activeTabId={targetTerminalTabId}
-              storageMode={
-                userPrefs.storageMode === "cloud" ? "cloud" : "local"
-              }
             />
           </div>
         )}

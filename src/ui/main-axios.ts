@@ -2150,20 +2150,10 @@ export {
 // ============================================================================
 // SNIPPETS API
 // ============================================================================
+// Snippets themselves are owned by the snippets plugin. This is the thin
+// list read a few core pickers still need (see src/ui/api/snippets-api.ts).
 
-export {
-  getSnippets,
-  createSnippet,
-  updateSnippet,
-  deleteSnippet,
-  executeSnippet,
-  getSnippetFolders,
-  createSnippetFolder,
-  updateSnippetFolderMetadata,
-  renameSnippetFolder,
-  deleteSnippetFolder,
-  reorderSnippets,
-} from "@/api/snippets-api";
+export { getSnippets, executeSnippet } from "@/api/snippets-api";
 
 // ============================================================================
 export type {
@@ -2216,10 +2206,6 @@ export {
   setHostAuthOverride,
   getPermissionsCatalog,
   getSharedHosts,
-  shareSnippet,
-  getSnippetAccess,
-  revokeSnippetAccess,
-  getSharedSnippets,
 } from "@/api/rbac-api";
 export type {
   SharePermissionLevel,

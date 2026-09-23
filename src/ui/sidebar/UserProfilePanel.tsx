@@ -524,7 +524,6 @@ export function UserProfilePanel({
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
     showPinAppRailButton?: boolean | null;
-    foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
@@ -708,12 +707,10 @@ export function UserProfilePanel({
   const [showPinAppRailButton, setShowPinAppRailButton] = useState(() =>
     readRailPreference("showPinAppRailButton"),
   );
-  // Read values are unused now that the Snippets settings UI lives in
-  // SnippetsPanel.tsx; the setters still back the cloud-sync/reset/snapshot
-  // machinery for these two localStorage-backed prefs below.
-  const [_foldersCollapsed, setFoldersCollapsed] = useState(
-    () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
-  );
+  // Read value is unused; the setter still backs the cloud-sync/reset/
+  // snapshot machinery for this localStorage-backed pref below. The
+  // folder-collapse setting itself now lives in the snippets plugin's own
+  // user settings.
   const [_confirmSnippetExecution, setConfirmSnippetExecution] = useState(
     () => localStorage.getItem("confirmSnippetExecution") === "true",
   );
@@ -850,7 +847,6 @@ export function UserProfilePanel({
         "pinAppRail",
         "expandAppRailOnHover",
         "showPinAppRailButton",
-        "defaultSnippetFoldersCollapsed",
         "snippetShowCommands",
         "confirmSnippetExecution",
         "disableUpdateCheck",
@@ -926,13 +922,6 @@ export function UserProfilePanel({
           );
           window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
         }
-        if (prefs.foldersCollapsed != null) {
-          setFoldersCollapsed(prefs.foldersCollapsed);
-          localStorage.setItem(
-            "defaultSnippetFoldersCollapsed",
-            String(prefs.foldersCollapsed),
-          );
-        }
         if (prefs.confirmSnippetExecution != null) {
           setConfirmSnippetExecution(prefs.confirmSnippetExecution);
           localStorage.setItem(
@@ -1007,8 +996,6 @@ export function UserProfilePanel({
     setShowPinAppRailButton(false);
     localStorage.setItem("showPinAppRailButton", "false");
     window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
-    setFoldersCollapsed(true);
-    localStorage.removeItem("defaultSnippetFoldersCollapsed");
     setConfirmSnippetExecution(false);
     localStorage.setItem("confirmSnippetExecution", "false");
     setDisableUpdateCheck(false);
@@ -1032,7 +1019,6 @@ export function UserProfilePanel({
         pinAppRail: false,
         expandAppRailOnHover: true,
         showPinAppRailButton: false,
-        foldersCollapsed: true,
         confirmSnippetExecution: false,
         disableUpdateCheck: false,
         confirmTabClose: false,
@@ -1120,18 +1106,6 @@ export function UserProfilePanel({
     setShowPinAppRailButton(restoredShowPinButton);
     localStorage.setItem("showPinAppRailButton", String(restoredShowPinButton));
     window.dispatchEvent(new Event("showPinAppRailButtonChanged"));
-
-    const restoredFolders =
-      restore("defaultSnippetFoldersCollapsed", null) !== "false";
-    setFoldersCollapsed(restoredFolders);
-    const snapFolders = hasSnap
-      ? snap["defaultSnippetFoldersCollapsed"]
-      : localStorage.getItem("defaultSnippetFoldersCollapsed");
-    if (snapFolders == null) {
-      localStorage.removeItem("defaultSnippetFoldersCollapsed");
-    } else {
-      localStorage.setItem("defaultSnippetFoldersCollapsed", snapFolders);
-    }
 
     const restoredConfirmSnippet =
       restore("confirmSnippetExecution", "false") === "true";

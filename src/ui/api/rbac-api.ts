@@ -397,47 +397,6 @@ export async function setHostAuthOverride(
   }
 }
 
-// ============================================================================
-// SNIPPET SHARING
-// ============================================================================
-
-export async function shareSnippet(
-  snippetId: number,
-  shareData: {
-    targetType: "user" | "role";
-    targetUserId?: string;
-    targetRoleId?: number;
-    durationHours?: number;
-  },
-): Promise<{ success: boolean }> {
-  try {
-    const response = await rbacApi.post(
-      `/rbac/snippet/${snippetId}/share`,
-      shareData,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "share snippet");
-  }
-}
-
-export async function shareSnippetFolder(
-  folder: string,
-  targets: ShareTarget[],
-  durationHours?: number,
-): Promise<{ success: boolean; snippetsShared: number }> {
-  try {
-    const response = await rbacApi.post("/rbac/snippet-folder/share", {
-      folder,
-      targets,
-      durationHours,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "share snippet folder");
-  }
-}
-
 export type CredentialPermissionLevel = "use" | "manage";
 
 export async function shareCredential(
@@ -478,50 +437,5 @@ export async function revokeCredentialAccess(
     await rbacApi.delete(`/rbac/credential/${credentialId}/access/${accessId}`);
   } catch (error) {
     throw handleApiError(error, "revoke credential access");
-  }
-}
-
-export async function getSnippetAccess(
-  snippetId: number,
-): Promise<{ accessList: AccessRecord[] }> {
-  try {
-    const response = await rbacApi.get(`/rbac/snippet/${snippetId}/access`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "fetch snippet access");
-  }
-}
-
-export async function revokeSnippetAccess(
-  snippetId: number,
-  accessId: number,
-): Promise<{ success: boolean }> {
-  try {
-    const response = await rbacApi.delete(
-      `/rbac/snippet/${snippetId}/access/${accessId}`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "revoke snippet access");
-  }
-}
-
-export async function getSharedSnippets(): Promise<{
-  sharedSnippets: Array<{
-    id: number;
-    name: string;
-    content: string;
-    description: string | null;
-    folder: string | null;
-    ownerUsername: string;
-    permissionLevel: string;
-    expiresAt: string | null;
-  }>;
-}> {
-  try {
-    const response = await rbacApi.get("/rbac/shared-snippets");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch shared snippets");
   }
 }
