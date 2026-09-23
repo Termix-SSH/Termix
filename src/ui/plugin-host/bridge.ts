@@ -56,6 +56,15 @@ export function resolvePluginPermission(
 
 const apiClients = new Map<string, ReturnType<typeof createPluginApi>>();
 
+/** Test seam: renderWithApp's `api` option stands in for the real client. */
+export function setPluginApiForTesting(
+  pluginId: string,
+  client: ReturnType<typeof createPluginApi> | null,
+): void {
+  if (client) apiClients.set(pluginId, client);
+  else apiClients.delete(pluginId);
+}
+
 function getApi(pluginId: string) {
   let client = apiClients.get(pluginId);
   if (!client) {

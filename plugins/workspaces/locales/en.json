@@ -41,7 +41,13 @@
         "lastSessionDescription": "Automatically updated with your most recent tab arrangement. Apply it to recover what you had open.",
         "lastUsed": "Last used {{time}}",
         "neverUsed": "Never applied",
-        "tabsSkipped": "Workspace applied — {{count}} tab(s) skipped (host no longer exists): {{names}}"
+        "tabsSkipped": "Workspace applied, but {{count}} tab(s) were skipped because their host no longer exists: {{names}}",
+        "timeAgo": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}}m ago",
+          "hours": "{{count}}h ago",
+          "days": "{{count}}d ago"
+        }
       }
     }
   },
@@ -51,5 +57,11 @@
   "onboarding": {
     "workflow_workspaces": "Workspaces",
     "workflow_workspaces_desc": "Save a set of open tabs and reopen the whole layout later."
+  },
+  "permissions": {
+    "use": {
+      "title": "Use workspaces",
+      "description": "Save, apply and manage saved tab layouts."
+    }
   }
 }

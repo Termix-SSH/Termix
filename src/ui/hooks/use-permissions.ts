@@ -50,6 +50,12 @@ function load(): Promise<CachedPermissions> {
   return inFlight;
 }
 
+/** The same answer usePermissions().has gives, for code outside a component. */
+export async function hasPermission(permission: string): Promise<boolean> {
+  const { permissions, isAdmin } = await load();
+  return matchesPermission(permissions, isAdmin, permission);
+}
+
 export function notifyPermissionsChanged(): void {
   cache = null;
   window.dispatchEvent(new Event(PERMISSIONS_CHANGED_EVENT));

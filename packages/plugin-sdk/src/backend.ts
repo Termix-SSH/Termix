@@ -93,6 +93,18 @@ export interface PluginDatabase {
   client: <T = unknown>() => Promise<T>;
   /** Read-only references to the core tables a plugin may point at. */
   refs: <T = unknown>() => Promise<T>;
+  /**
+   * Flushes writes to disk. Call it after every write: on SQLite the database
+   * lives in memory and is saved to its encrypted file only when asked, so a
+   * write without it can be lost on restart. A no-op on Postgres and MySQL.
+   */
+  persist: () => Promise<void>;
+  /**
+   * The engine the server runs on. Table objects encode the same on all
+   * three, but MySQL has no RETURNING, so portable code reads a written row
+   * back by its key rather than relying on .returning().
+   */
+  readonly dialect: "sqlite" | "postgres" | "mysql";
 }
 
 /** A row's shape on the wire, before it is written to a table. */
@@ -124,6 +136,11 @@ export interface SyncEntityRegistration {
   readOnlyFields?: readonly string[];
   /** One row per user rather than many, keyed on the owner. */
   singleton?: boolean;
+  /**
+   * Rows this returns false for are left out of sync in both directions, for
+   * state that belongs to one install (a per-device "last session").
+   */
+  shouldSync?: (row: SyncRow) => boolean;
   /**
    * Escape hatch for a row whose references are not plain columns, such as ids
    * embedded in a JSON blob. Runs instead of `references`, not alongside it.

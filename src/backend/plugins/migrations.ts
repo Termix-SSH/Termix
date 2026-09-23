@@ -19,8 +19,11 @@ import { sql } from "drizzle-orm";
 import { pluginLogger } from "../utils/logger.js";
 import type { DatabaseDialect } from "../database/db/dialect.js";
 import { tablePrefix, LEGACY_TABLE_OWNERS } from "@termix/plugin-sdk/db";
+import { splitStatements } from "@termix/plugin-sdk/ddl";
 
-export { LEGACY_TABLE_OWNERS };
+// The splitter is shared with createTestDb in the SDK, so tests apply a
+// migration exactly the way this runner does.
+export { LEGACY_TABLE_OWNERS, splitStatements };
 
 /** Dialect directory names, matching DatabaseDialect exactly. */
 const DIALECTS: readonly DatabaseDialect[] = ["sqlite", "postgres", "mysql"];
@@ -92,79 +95,6 @@ export function readMigrations(
 
   migrations.sort((a, b) => a.sequence - b.sequence);
   return migrations;
-}
-
-/**
- * Splits a migration file into statements.
- *
- * Deliberately simple: statements end at a semicolon that is not inside a
- * string literal or a comment. A plugin needing more than that should put the
- * logic in its own code, not in DDL.
- */
-export function splitStatements(source: string): string[] {
-  const statements: string[] = [];
-  let current = "";
-  let quote: string | null = null;
-  let lineComment = false;
-  let blockComment = false;
-
-  for (let i = 0; i < source.length; i++) {
-    const char = source[i];
-    const next = source[i + 1];
-
-    if (lineComment) {
-      current += char;
-      if (char === "\n") lineComment = false;
-      continue;
-    }
-    if (blockComment) {
-      current += char;
-      if (char === "*" && next === "/") {
-        current += next;
-        i++;
-        blockComment = false;
-      }
-      continue;
-    }
-    if (quote) {
-      current += char;
-      // '' inside a quoted string is an escaped quote, not a terminator.
-      if (char === quote) {
-        if (next === quote) {
-          current += next;
-          i++;
-        } else {
-          quote = null;
-        }
-      }
-      continue;
-    }
-
-    if (char === "-" && next === "-") {
-      lineComment = true;
-      current += char;
-      continue;
-    }
-    if (char === "/" && next === "*") {
-      blockComment = true;
-      current += char;
-      continue;
-    }
-    if (char === "'" || char === '"' || char === "`") {
-      quote = char;
-      current += char;
-      continue;
-    }
-    if (char === ";") {
-      if (current.trim()) statements.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-
-  if (current.trim()) statements.push(current.trim());
-  return statements;
 }
 
 /**

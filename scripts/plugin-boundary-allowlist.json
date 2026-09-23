@@ -106,10 +106,7 @@
     "plugins/web-endpoint/src/frontend/index.tsx",
     "plugins/web-endpoint/src/frontend/web-endpoint-api.ts",
     "plugins/web-endpoint/src/frontend/web-endpoint-url.ts",
-    "plugins/web-endpoint/src/frontend/web-endpoint-validation.ts",
-    "plugins/workspaces/src/frontend/WorkspacesPanel.tsx",
-    "plugins/workspaces/src/frontend/index.tsx",
-    "plugins/workspaces/src/frontend/workspaces-api.ts"
+    "plugins/web-endpoint/src/frontend/web-endpoint-validation.ts"
   ],
   "plugin-to-core": [
     "plugins/ai/src/backend/egress.ts",
@@ -179,8 +176,7 @@
     "plugins/remote-desktop/src/backend/token-service.ts",
     "plugins/ssh-terminal/src/backend/index.ts",
     "plugins/tailscale/src/backend/routes.ts",
-    "plugins/web-endpoint/src/backend/routes.ts",
-    "plugins/workspaces/src/backend/routes.ts"
+    "plugins/web-endpoint/src/backend/routes.ts"
   ],
   "plugin-to-plugin": [
     "plugins/ai/src/backend/tools/executor.ts",

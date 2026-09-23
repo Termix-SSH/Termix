@@ -45,8 +45,34 @@ const CORE_SINGLETON = new Set([
   "ssh-tools",
 ]);
 
+/** Core tab types that are never part of a saved arrangement. */
+const CORE_UNSAVED = new Set([
+  "dashboard",
+  "local-terminal",
+  "host-manager",
+  "user-profile",
+  "admin-settings",
+  "split-screen",
+  "sftp",
+]);
+
+/**
+ * A tab type no running plugin has registered: its plugin is disabled,
+ * failed, still loading or not installed. The shell shows a placeholder for
+ * it, and a layout keeps it so nothing is lost when the plugin comes back.
+ */
+export function isUnregisteredPluginTabType(type: string): boolean {
+  return (
+    !CORE_UNSAVED.has(type) &&
+    !CORE_CAPTURABLE.has(type) &&
+    type !== "serial" &&
+    !getTabType(type)
+  );
+}
+
 export function isCapturableTabType(type: string): boolean {
   if (CORE_CAPTURABLE.has(type)) return true;
+  if (isUnregisteredPluginTabType(type)) return true;
   const def = getTabType(type);
   return !!def && def.inLayouts !== false;
 }
@@ -140,6 +166,12 @@ export function resolveLayoutTabTarget(
 
   if (opensAsSingleton(snapshot.type)) {
     return { kind: "singleton", host };
+  }
+
+  // Reopened as a placeholder rather than dropped, so applying a workspace
+  // while a plugin is off does not quietly lose its tabs.
+  if (!host && isUnregisteredPluginTabType(snapshot.type)) {
+    return { kind: "singleton" };
   }
 
   return host ? { kind: "host", host } : { kind: "skip" };

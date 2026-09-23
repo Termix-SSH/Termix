@@ -1,518 +1,203 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Request, Response, Router } from "express";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { layout, startServer, type TestServer } from "./helpers";
 
-type WorkspaceRow = {
-  id: number;
-  userId: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  kind: "manual" | "last_session";
-  isDefault: boolean;
-  payload: string;
-  syncId: string;
-  createdAt: string;
-  updatedAt: string;
-  lastUsedAt: string | null;
-};
+let server: TestServer;
 
-const state = vi.hoisted(() => ({
-  currentUserId: "user-1",
-  workspaces: new Map<number, WorkspaceRow>(),
-  nextId: 1,
-}));
-
-vi.mock("../../../../src/backend/database/db/index.js", () => ({ db: {} }));
-
-vi.mock("../../../../src/backend/utils/logger.js", () => ({
-  databaseLogger: {
-    error: vi.fn(),
-    warn: vi.fn(),
-    info: vi.fn(),
-    success: vi.fn(),
-  },
-}));
-
-vi.mock("../../../../src/backend/utils/auth-manager.js", () => ({
-  AuthManager: {
-    getInstance: () => ({
-      createAuthMiddleware:
-        () =>
-        (req: Record<string, unknown>, _res: unknown, next: () => void) => {
-          req.userId = state.currentUserId;
-          next();
-        },
-      createDataAccessMiddleware:
-        () => (_req: unknown, _res: unknown, next: () => void) =>
-          next(),
-    }),
-  },
-}));
-
-function findByIdForUser(userId: string, id: number): WorkspaceRow | null {
-  const row = state.workspaces.get(id);
-  return row && row.userId === userId ? row : null;
-}
-
-vi.mock("../../../../src/backend/database/repositories/factory.js", () => ({
-  createCurrentWorkspaceRepository: () => ({
-    listByUser: async (userId: string) =>
-      [...state.workspaces.values()].filter((w) => w.userId === userId),
-    findById: async (userId: string, id: number) => findByIdForUser(userId, id),
-    findLastSession: async (userId: string) =>
-      [...state.workspaces.values()].find(
-        (w) => w.userId === userId && w.kind === "last_session",
-      ) ?? null,
-    upsertLastSession: async (userId: string, payload: string) => {
-      const existing = [...state.workspaces.values()].find(
-        (w) => w.userId === userId && w.kind === "last_session",
-      );
-      if (existing) {
-        existing.payload = payload;
-        existing.updatedAt = new Date().toISOString();
-        return existing;
-      }
-      const row: WorkspaceRow = {
-        id: state.nextId++,
-        userId,
-        name: "Last Session",
-        color: null,
-        icon: null,
-        kind: "last_session",
-        isDefault: false,
-        payload,
-        syncId: `sync-${state.nextId}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastUsedAt: null,
-      };
-      state.workspaces.set(row.id, row);
-      return row;
-    },
-    create: async (
-      userId: string,
-      input: {
-        name: string;
-        color?: string | null;
-        icon?: string | null;
-        payload: string;
-      },
-    ) => {
-      const row: WorkspaceRow = {
-        id: state.nextId++,
-        userId,
-        name: input.name,
-        color: input.color ?? null,
-        icon: input.icon ?? null,
-        kind: "manual",
-        isDefault: false,
-        payload: input.payload,
-        syncId: `sync-${state.nextId}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastUsedAt: null,
-      };
-      state.workspaces.set(row.id, row);
-      return row;
-    },
-    update: async (
-      userId: string,
-      id: number,
-      input: { name?: string; color?: string | null; icon?: string | null },
-    ) => {
-      const row = findByIdForUser(userId, id);
-      if (!row || row.kind !== "manual") return null;
-      if (input.name !== undefined) row.name = input.name;
-      if (input.color !== undefined) row.color = input.color;
-      if (input.icon !== undefined) row.icon = input.icon;
-      return row;
-    },
-    updateContent: async (userId: string, id: number, payload: string) => {
-      const row = findByIdForUser(userId, id);
-      if (!row || row.kind !== "manual") return null;
-      row.payload = payload;
-      return row;
-    },
-    setDefault: async (userId: string, id: number) => {
-      const row = findByIdForUser(userId, id);
-      if (!row || row.kind !== "manual") return null;
-      for (const w of state.workspaces.values()) {
-        if (w.userId === userId && w.kind === "manual") w.isDefault = false;
-      }
-      row.isDefault = true;
-      return row;
-    },
-    unsetDefault: async (userId: string, id: number) => {
-      const row = findByIdForUser(userId, id);
-      if (!row || row.kind !== "manual") return null;
-      row.isDefault = false;
-      return row;
-    },
-    touchLastUsed: async (userId: string, id: number) => {
-      const row = findByIdForUser(userId, id);
-      if (row) row.lastUsedAt = new Date().toISOString();
-    },
-    delete: async (userId: string, id: number) => {
-      const row = findByIdForUser(userId, id);
-      if (!row || row.kind !== "manual") return false;
-      state.workspaces.delete(id);
-      return true;
-    },
-  }),
-}));
-
-vi.mock(
-  "../../../../src/backend/database/routes/workspace-dispatch.js",
-  () => ({
-    registerWorkspacesRouter: vi.fn(),
-    unregisterWorkspacesRouter: vi.fn(),
-  }),
-);
-
-const { router } = await import("../../src/backend/routes.js");
-
-function findLayer(method: string, path: string) {
-  const stack = (router as unknown as Router).stack as Array<{
-    route?: {
-      path: string;
-      methods: Record<string, boolean>;
-      stack: Array<{ handle: (req: Request, res: Response) => unknown }>;
-    };
-  }>;
-  const layer = stack.find(
-    (l) => l.route?.path === path && l.route?.methods[method],
-  );
-  if (!layer?.route) throw new Error(`No route for ${method} ${path}`);
-  return layer.route.stack[layer.route.stack.length - 1].handle;
-}
-
-function makeReqRes(overrides: {
-  body?: Record<string, unknown>;
-  params?: Record<string, unknown>;
-}) {
-  const req = {
-    userId: state.currentUserId,
-    body: overrides.body ?? {},
-    params: overrides.params ?? {},
-    headers: {},
-  } as unknown as Request;
-
-  const res = {
-    statusCode: 200,
-    jsonBody: null as unknown,
-    status(code: number) {
-      (this as unknown as { statusCode: number }).statusCode = code;
-      return this;
-    },
-    json(payload: unknown) {
-      (this as unknown as { jsonBody: unknown }).jsonBody = payload;
-      return this;
-    },
-  } as unknown as Response & { statusCode: number; jsonBody: unknown };
-
-  return { req, res };
-}
-
-async function invoke(
-  method: string,
-  path: string,
-  overrides: {
-    body?: Record<string, unknown>;
-    params?: Record<string, unknown>;
-  } = {},
-) {
-  const handler = findLayer(method, path);
-  const { req, res } = makeReqRes(overrides);
-  await handler(req, res);
-  return res as unknown as {
-    statusCode: number;
-    jsonBody: Record<string, unknown> | null;
-  };
-}
-
-beforeEach(() => {
-  state.currentUserId = "user-1";
-  state.workspaces = new Map();
-  state.nextId = 1;
+beforeEach(async () => {
+  server = await startServer();
 });
 
-describe("GET /", () => {
-  it("returns the list with a computed tabCount", async () => {
-    await invoke("post", "/", {
-      body: {
-        name: "Test A",
-        payload: { version: 1, tabs: [{ slotId: "a" }, { slotId: "b" }] },
-      },
-    });
+afterEach(async () => {
+  await server.close();
+});
 
-    const res = await invoke("get", "/");
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toHaveLength(1);
+async function create(name = "Prod", user = "user-1") {
+  const res = await server.request("POST", "/", {
+    user,
+    body: { name, color: "#ef4444", payload: layout() },
+  });
+  expect(res.status).toBe(200);
+  return res.body;
+}
+
+describe("workspace routes", () => {
+  it("creates and lists workspaces with a parsed payload and tab count", async () => {
+    const created = await create();
+    expect(created).toMatchObject({
+      name: "Prod",
+      color: "#ef4444",
+      kind: "manual",
+      isDefault: false,
+      tabCount: 1,
+    });
+    expect(created.payload.tabs).toHaveLength(1);
+    expect(created.syncId).toEqual(expect.any(String));
+
+    const list = await server.request("GET", "/");
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0].id).toBe(created.id);
+  });
+
+  it("rejects a missing name or payload", async () => {
     expect(
-      (res.jsonBody as unknown as { tabCount: number }[])[0].tabCount,
-    ).toBe(2);
-  });
-});
-
-describe("POST /", () => {
-  it("400s when name is missing", async () => {
-    const res = await invoke("post", "/", {
-      body: { payload: { version: 1, tabs: [] } },
-    });
-    expect(res.statusCode).toBe(400);
-  });
-
-  it("400s when payload has no tabs array", async () => {
-    const res = await invoke("post", "/", {
-      body: { name: "Test A", payload: { version: 1 } },
-    });
-    expect(res.statusCode).toBe(400);
-  });
-
-  it("200s and creates a manual workspace", async () => {
-    const res = await invoke("post", "/", {
-      body: { name: "Test A", payload: { version: 1, tabs: [] } },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toMatchObject({ name: "Test A", kind: "manual" });
-  });
-});
-
-describe("PATCH /:id", () => {
-  it("rejects renaming the last_session row", async () => {
-    const created = await invoke("put", "/last-session", {
-      body: { payload: { version: 1, tabs: [] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const res = await invoke("patch", "/:id", {
-      params: { id: String(id) },
-      body: { name: "Nope" },
-    });
-    expect(res.statusCode).toBe(404);
-  });
-
-  it("renames a manual workspace", async () => {
-    const created = await invoke("post", "/", {
-      body: { name: "Old", payload: { version: 1, tabs: [] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const res = await invoke("patch", "/:id", {
-      params: { id: String(id) },
-      body: { name: "New" },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toMatchObject({ name: "New" });
-  });
-
-  it("404s for a nonexistent id", async () => {
-    const res = await invoke("patch", "/:id", {
-      params: { id: "999" },
-      body: { name: "New" },
-    });
-    expect(res.statusCode).toBe(404);
-  });
-});
-
-describe("PUT /:id/content", () => {
-  it("updates payload for a manual workspace", async () => {
-    const created = await invoke("post", "/", {
-      body: { name: "A", payload: { version: 1, tabs: [] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const res = await invoke("put", "/:id/content", {
-      params: { id: String(id) },
-      body: { payload: { version: 1, tabs: [{ slotId: "x" }] } },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toMatchObject({ tabCount: 1 });
-  });
-
-  it("404s on wrong owner", async () => {
-    const created = await invoke("post", "/", {
-      body: { name: "A", payload: { version: 1, tabs: [] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    state.currentUserId = "user-2";
-    const res = await invoke("put", "/:id/content", {
-      params: { id: String(id) },
-      body: { payload: { version: 1, tabs: [] } },
-    });
-    expect(res.statusCode).toBe(404);
-  });
-});
-
-describe("DELETE /:id", () => {
-  it("rejects deleting the last_session row", async () => {
-    const created = await invoke("put", "/last-session", {
-      body: { payload: { version: 1, tabs: [] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const res = await invoke("delete", "/:id", { params: { id: String(id) } });
-    expect(res.statusCode).toBe(404);
-  });
-
-  it("404s for a nonexistent id", async () => {
-    const res = await invoke("delete", "/:id", { params: { id: "999" } });
-    expect(res.statusCode).toBe(404);
-  });
-
-  it("deletes a manual workspace", async () => {
-    const created = await invoke("post", "/", {
-      body: { name: "A", payload: { version: 1, tabs: [] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const res = await invoke("delete", "/:id", { params: { id: String(id) } });
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toEqual({ success: true });
-  });
-});
-
-describe("POST /:id/duplicate", () => {
-  it("produces a second independent row", async () => {
-    const created = await invoke("post", "/", {
-      body: {
-        name: "A",
-        payload: { version: 1, tabs: [{ slotId: "a" }] },
-      },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const dup = await invoke("post", "/:id/duplicate", {
-      params: { id: String(id) },
-      body: { name: "A (copy)" },
-    });
-    expect(dup.statusCode).toBe(200);
-    expect(dup.jsonBody).toMatchObject({ name: "A (copy)", tabCount: 1 });
-
-    const updateOriginal = await invoke("put", "/:id/content", {
-      params: { id: String(id) },
-      body: { payload: { version: 1, tabs: [] } },
-    });
-    expect(updateOriginal.jsonBody).toMatchObject({ tabCount: 0 });
-
-    const dupId = (dup.jsonBody as unknown as { id: number }).id;
-    const refetched = await invoke("get", "/");
-    const dupRow = (
-      refetched.jsonBody as unknown as { id: number; tabCount: number }[]
-    ).find((w) => w.id === dupId);
-    expect(dupRow?.tabCount).toBe(1);
-  });
-});
-
-describe("POST /:id/set-default", () => {
-  it("clears a previous default and sets the new one", async () => {
-    const a = await invoke("post", "/", {
-      body: { name: "A", payload: { version: 1, tabs: [] } },
-    });
-    const b = await invoke("post", "/", {
-      body: { name: "B", payload: { version: 1, tabs: [] } },
-    });
-    const aId = (a.jsonBody as unknown as { id: number }).id;
-    const bId = (b.jsonBody as unknown as { id: number }).id;
-
-    await invoke("post", "/:id/set-default", { params: { id: String(aId) } });
-    const second = await invoke("post", "/:id/set-default", {
-      params: { id: String(bId) },
-    });
-    expect(second.jsonBody).toMatchObject({ isDefault: true });
-
-    const list = await invoke("get", "/");
-    const aRow = (
-      list.jsonBody as unknown as { id: number; isDefault: boolean }[]
-    ).find((w) => w.id === aId);
-    expect(aRow?.isDefault).toBe(false);
-  });
-
-  it("is idempotent when re-called on an already-default row", async () => {
-    const a = await invoke("post", "/", {
-      body: { name: "A", payload: { version: 1, tabs: [] } },
-    });
-    const aId = (a.jsonBody as unknown as { id: number }).id;
-
-    await invoke("post", "/:id/set-default", { params: { id: String(aId) } });
-    const again = await invoke("post", "/:id/set-default", {
-      params: { id: String(aId) },
-    });
-    expect(again.statusCode).toBe(200);
-    expect(again.jsonBody).toMatchObject({ isDefault: true });
-  });
-});
-
-describe("POST /:id/unset-default", () => {
-  it("clears isDefault on a manual workspace", async () => {
-    const a = await invoke("post", "/", {
-      body: { name: "A", payload: { version: 1, tabs: [] } },
-    });
-    const aId = (a.jsonBody as unknown as { id: number }).id;
-
-    await invoke("post", "/:id/set-default", { params: { id: String(aId) } });
-    const res = await invoke("post", "/:id/unset-default", {
-      params: { id: String(aId) },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toMatchObject({ isDefault: false });
-  });
-
-  it("rejects unsetting the last_session row", async () => {
-    const created = await invoke("put", "/last-session", {
-      body: { payload: { version: 1, tabs: [] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const res = await invoke("post", "/:id/unset-default", {
-      params: { id: String(id) },
-    });
-    expect(res.statusCode).toBe(404);
-  });
-});
-
-describe("POST /:id/apply", () => {
-  it("touches lastUsedAt and returns the parsed payload", async () => {
-    const created = await invoke("post", "/", {
-      body: { name: "A", payload: { version: 1, tabs: [{ slotId: "a" }] } },
-    });
-    const id = (created.jsonBody as unknown as { id: number }).id;
-
-    const res = await invoke("post", "/:id/apply", {
-      params: { id: String(id) },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toMatchObject({
-      payload: { version: 1, tabs: [{ slotId: "a" }] },
-    });
+      (await server.request("POST", "/", { body: { payload: layout() } }))
+        .status,
+    ).toBe(400);
     expect(
-      (res.jsonBody as unknown as { lastUsedAt: string | null }).lastUsedAt,
-    ).toBeTruthy();
+      (await server.request("POST", "/", { body: { name: "x", payload: {} } }))
+        .status,
+    ).toBe(400);
+  });
+
+  it("keeps one last session row per user and never lists it as editable", async () => {
+    expect((await server.request("GET", "/last-session")).body).toBeNull();
+
+    await server.request("PUT", "/last-session", {
+      body: { payload: layout() },
+    });
+    const second = await server.request("PUT", "/last-session", {
+      body: { payload: layout([]) },
+    });
+    expect(second.body.tabCount).toBe(0);
+
+    const list = (await server.request("GET", "/")).body;
+    expect(
+      list.filter(
+        (w: { kind: string; isDefault: boolean; id: number }) =>
+          w.kind === "last_session",
+      ),
+    ).toHaveLength(1);
+
+    const id = second.body.id;
+    expect(
+      (await server.request("PATCH", `/${id}`, { body: { name: "x" } })).status,
+    ).toBe(404);
+    expect((await server.request("DELETE", `/${id}`)).status).toBe(404);
+  });
+
+  it("renames, replaces content and duplicates", async () => {
+    const created = await create();
+
+    const renamed = await server.request("PATCH", `/${created.id}`, {
+      body: { name: "  Staging  ", color: "#22c55e" },
+    });
+    expect(renamed.body).toMatchObject({ name: "Staging", color: "#22c55e" });
+
+    const replaced = await server.request("PUT", `/${created.id}/content`, {
+      body: { payload: layout([]) },
+    });
+    expect(replaced.body.tabCount).toBe(0);
+
+    const copy = await server.request("POST", `/${created.id}/duplicate`, {
+      body: { name: "Staging (copy)" },
+    });
+    expect(copy.body).toMatchObject({
+      name: "Staging (copy)",
+      color: "#22c55e",
+      tabCount: 0,
+    });
+    expect(copy.body.id).not.toBe(created.id);
+  });
+
+  it("keeps a single default", async () => {
+    const a = await create("A");
+    const b = await create("B");
+
+    await server.request("POST", `/${a.id}/set-default`);
+    await server.request("POST", `/${b.id}/set-default`);
+
+    const list = (await server.request("GET", "/")).body;
+    const defaults = list.filter(
+      (w: { kind: string; isDefault: boolean; id: number }) => w.isDefault,
+    );
+    expect(
+      defaults.map(
+        (w: { kind: string; isDefault: boolean; id: number }) => w.id,
+      ),
+    ).toEqual([b.id]);
+
+    const unset = await server.request("POST", `/${b.id}/unset-default`);
+    expect(unset.body.isDefault).toBe(false);
+  });
+
+  it("marks a workspace as used when it is applied", async () => {
+    const created = await create();
+    expect(created.lastUsedAt).toBeNull();
+
+    const applied = await server.request("POST", `/${created.id}/apply`);
+    expect(applied.status).toBe(200);
+
+    const list = (await server.request("GET", "/")).body;
+    expect(list[0].lastUsedAt).toEqual(expect.any(String));
+  });
+
+  it("deletes a workspace", async () => {
+    const created = await create();
+    expect((await server.request("DELETE", `/${created.id}`)).body).toEqual({
+      success: true,
+    });
+    expect((await server.request("GET", "/")).body).toEqual([]);
+    expect((await server.request("DELETE", `/${created.id}`)).status).toBe(404);
+  });
+
+  it("rejects ids that are not numbers", async () => {
+    expect((await server.request("DELETE", "/abc")).status).toBe(400);
+    expect((await server.request("POST", "/abc/apply")).status).toBe(400);
+  });
+
+  it("never shows or changes another user's workspaces", async () => {
+    const mine = await create("Mine", "user-1");
+
+    expect((await server.request("GET", "/", { user: "user-2" })).body).toEqual(
+      [],
+    );
+    for (const [method, path] of [
+      ["PATCH", `/${mine.id}`],
+      ["DELETE", `/${mine.id}`],
+      ["POST", `/${mine.id}/apply`],
+      ["POST", `/${mine.id}/set-default`],
+      ["POST", `/${mine.id}/duplicate`],
+    ] as const) {
+      const res = await server.request(method, path, {
+        user: "user-2",
+        body: { name: "stolen" },
+      });
+      expect(res.status).toBe(404);
+    }
+  });
+
+  it("flushes the database after every write", async () => {
+    const before = server.db.persisted;
+    const created = await create();
+    await server.request("POST", `/${created.id}/set-default`);
+    await server.request("DELETE", `/${created.id}`);
+    expect(server.db.persisted).toBeGreaterThanOrEqual(before + 3);
   });
 });
 
-describe("PUT /last-session and GET /last-session", () => {
-  it("returns null before any save", async () => {
-    const res = await invoke("get", "/last-session");
-    expect(res.jsonBody).toBeNull();
-  });
+describe("workspaces.use", () => {
+  it("refuses every route without it", async () => {
+    await server.close();
+    server = await startServer({ permissions: [] });
 
-  it("upserts idempotently - two calls produce one row", async () => {
-    await invoke("put", "/last-session", {
-      body: { payload: { version: 1, tabs: [] } },
-    });
-    await invoke("put", "/last-session", {
-      body: { payload: { version: 1, tabs: [{ slotId: "a" }] } },
-    });
-
-    const list = await invoke("get", "/");
-    const lastSessionRows = (
-      list.jsonBody as unknown as { kind: string }[]
-    ).filter((w) => w.kind === "last_session");
-    expect(lastSessionRows).toHaveLength(1);
-
-    const res = await invoke("get", "/last-session");
-    expect(res.jsonBody).toMatchObject({ tabCount: 1 });
+    for (const [method, path] of [
+      ["GET", "/"],
+      ["POST", "/"],
+      ["GET", "/last-session"],
+      ["PUT", "/last-session"],
+      ["PATCH", "/1"],
+      ["PUT", "/1/content"],
+      ["POST", "/1/duplicate"],
+      ["POST", "/1/set-default"],
+      ["POST", "/1/unset-default"],
+      ["POST", "/1/apply"],
+      ["DELETE", "/1"],
+    ] as const) {
+      const res = await server.request(method, path, {
+        body: { name: "x", payload: layout() },
+      });
+      expect(res.status, `${method} ${path}`).toBe(403);
+      expect(res.body.required).toBe("workspaces.use");
+    }
   });
 });

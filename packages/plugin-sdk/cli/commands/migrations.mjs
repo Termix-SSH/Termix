@@ -81,6 +81,7 @@ function snapshotTable(definition) {
   return {
     columns: definition.columns,
     indexes: definition.indexes,
+    ...(definition.adopts ? { adopts: definition.adopts } : {}),
   };
 }
 
@@ -155,7 +156,21 @@ export async function migrations({ cwd, args }) {
     return;
   }
 
-  const { createTableSql, addColumnSql } = await loadEmitter();
+  const { LEGACY_TABLE_OWNERS } = await import(
+    new URL("../../dist/db.js", import.meta.url).href
+  );
+  for (const definition of definitions) {
+    if (
+      definition.adopts &&
+      LEGACY_TABLE_OWNERS[definition.adopts] !== pluginId
+    ) {
+      throw new Error(
+        `${pluginId}: table ${definition.name} adopts "${definition.adopts}", which belongs to the "${LEGACY_TABLE_OWNERS[definition.adopts]}" plugin`,
+      );
+    }
+  }
+
+  const { createTableSql, adoptTableSql, addColumnSql } = await loadEmitter();
 
   const previous = readSnapshot(cwd);
   const { created, added, manual } = diff(previous, definitions);
@@ -184,7 +199,13 @@ export async function migrations({ cwd, args }) {
   for (const dialect of DIALECTS) {
     const statements = [];
     for (const definition of created) {
-      statements.push(...createTableSql(dialect, pluginId, definition));
+      // An adopted table renames the legacy one into place, creating it first
+      // on a fresh install, so existing rows are kept rather than copied.
+      statements.push(
+        ...(definition.adopts
+          ? adoptTableSql(dialect, pluginId, definition)
+          : createTableSql(dialect, pluginId, definition)),
+      );
     }
     for (const entry of added) {
       statements.push(

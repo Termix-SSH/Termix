@@ -25,6 +25,7 @@ import type {
   PluginSshHost,
 } from "./backend.js";
 import type { SyncEntityRegistration } from "./backend.js";
+import type { PluginDatabase } from "./backend.js";
 
 export interface FakeContextOptions {
   pluginId?: string;
@@ -37,6 +38,16 @@ export interface FakeContextOptions {
   coreSettings?: Record<string, string>;
   /** What ctx.ssh.connect and withConnection hand back as the client. */
   sshClient?: unknown;
+  /** A real database behind ctx.db, usually createTestDb().database. */
+  db?: PluginDatabase;
+  /** What ctx.http.router returns, e.g. () => express.Router(). */
+  router?: () => unknown;
+  /**
+   * Role permissions the acting user holds, as full ids or this plugin's
+   * short names. When set, ctx.rbac enforces them and require() answers 403;
+   * when omitted every check passes, so tests that do not care stay simple.
+   */
+  permissions?: string[];
 }
 
 export interface FakeAuthRegistrations {
@@ -71,6 +82,27 @@ export interface FakePluginContext {
   sshConnections: Array<{ host: number | PluginSshHost; pool?: string }>;
   /** Everything registered through ctx.auth. */
   auth: FakeAuthRegistrations;
+  /** Changes the acting user, as core's request middleware would. */
+  setActor: (userId: string | undefined) => void;
+  /** Implementations provided through ctx.services.provide, by service name. */
+  services: Map<string, object>;
+}
+
+const CORE_PERMISSION_GROUPS = new Set([
+  "hosts",
+  "snippets",
+  "credentials",
+  "admin",
+]);
+
+/**
+ * A short name takes the plugin's prefix. An id already under this plugin or
+ * a core group is used as given, like src/backend/plugins/rbac.ts does.
+ */
+function qualifyPermission(pluginId: string, permission: string): string {
+  const head = permission.split(".")[0];
+  if (head === pluginId || CORE_PERMISSION_GROUPS.has(head)) return permission;
+  return `${pluginId}.${permission}`;
 }
 
 /** How a settings row is keyed in the doubles. Mirrors the real unique index. */
@@ -114,6 +146,7 @@ export function createFakeContext(
   );
   const settingsListeners = new Map<string, Set<(value: unknown) => void>>();
   const sshConnections: FakePluginContext["sshConnections"] = [];
+  const services = new Map<string, object>();
   const auth: FakeAuthRegistrations = {
     sshAuthProviders: [],
     loginMethods: [],
@@ -122,6 +155,15 @@ export function createFakeContext(
   };
   const sshClient = options.sshClient ?? {};
   let actor = options.actor;
+  const held = options.permissions
+    ? new Set(
+        options.permissions.map((permission) =>
+          qualifyPermission(pluginId, permission),
+        ),
+      )
+    : null;
+  const holds = (permission: string) =>
+    held === null || held.has(qualifyPermission(pluginId, permission));
 
   for (const [key, value] of Object.entries(options.settings ?? {})) {
     settings.set(settingsKey("admin", undefined, key), value);
@@ -184,20 +226,38 @@ export function createFakeContext(
       list: async () => [...kv.keys()],
     },
 
-    db: {
-      // No engine behind this one. A test that needs real SQL should drive the
-      // runtime rather than the double.
-      define: async (definition) => {
-        tables.push(definition);
-        return undefined as never;
-      },
-      client: async () => {
-        throw new Error("createFakeContext does not implement db.client");
-      },
-      refs: async () => {
-        throw new Error("createFakeContext does not implement db.refs");
-      },
-    },
+    db: options.db
+      ? {
+          ...options.db,
+          define: async (definition) => {
+            tables.push(definition);
+            return options.db!.define(definition);
+          },
+          client: () => options.db!.client(),
+          refs: () => options.db!.refs(),
+          persist: () => options.db!.persist(),
+          dialect: options.db.dialect,
+        }
+      : {
+          // No engine behind this one. Pass createTestDb().database as `db`
+          // for a test that needs real SQL.
+          define: async (definition) => {
+            tables.push(definition);
+            return undefined as never;
+          },
+          client: async () => {
+            throw new Error(
+              "createFakeContext has no database: pass createTestDb().database as db",
+            );
+          },
+          refs: async () => {
+            throw new Error(
+              "createFakeContext has no database: pass createTestDb().database as db",
+            );
+          },
+          persist: async () => {},
+          dialect: "sqlite",
+        },
 
     sync: {
       registerEntity: (entity) => {
@@ -212,9 +272,17 @@ export function createFakeContext(
     },
 
     services: {
-      provide: () => {},
-      get: () => {
-        throw new Error("createFakeContext does not implement services.get");
+      provide: (service, implementation) => {
+        services.set(service, implementation);
+      },
+      // Only services this same context provided. A test of a consumer
+      // should provide a stub first.
+      get: (service) => {
+        const implementation = services.get(service);
+        if (!implementation) {
+          throw new Error(`No service "${service}" was provided in this test`);
+        }
+        return implementation as never;
       },
     },
 
@@ -229,7 +297,7 @@ export function createFakeContext(
       // plugin's own route module against its own express app.
       router: (routerOptions) => {
         httpRouters.push(routerOptions);
-        return undefined as never;
+        return (options.router ? options.router() : undefined) as never;
       },
     },
 
@@ -243,11 +311,22 @@ export function createFakeContext(
     },
 
     rbac: {
-      // Passes everything through: a test asserting a permission gate should
-      // drive PermissionManager, not this double.
-      has: async () => true,
-      hasFor: async () => true,
-      require: () => ((_req, _res, next) => next()) as PluginMiddleware,
+      // Enforces options.permissions for the acting user, or passes
+      // everything when none were given. The runtime's own resolution against
+      // other plugins' namespaces is covered by core's tests, not here.
+      has: async (permission) => holds(permission),
+      hasFor: async (_userId, permission) => holds(permission),
+      require: (permission) =>
+        ((_req, res, next) => {
+          if (holds(permission)) {
+            next();
+            return;
+          }
+          res.status(403).json({
+            error: "Insufficient permissions",
+            required: qualifyPermission(pluginId, permission),
+          });
+        }) as PluginMiddleware,
     },
 
     settings: {
@@ -379,6 +458,10 @@ export function createFakeContext(
     coreSettings,
     sshConnections,
     auth,
+    setActor: (userId) => {
+      actor = userId;
+    },
+    services,
   };
 }
 
@@ -397,6 +480,12 @@ export interface MockContextOptions {
   actor?: string;
   /** What ctx.ssh.connect and withConnection hand back as the client. */
   sshClient?: unknown;
+  /** A real database behind ctx.db, usually createTestDb().database. */
+  db?: PluginDatabase;
+  /** What ctx.http.router returns, e.g. () => express.Router(). */
+  router?: () => unknown;
+  /** Role permissions the acting user holds. See FakeContextOptions. */
+  permissions?: string[];
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -427,6 +516,9 @@ export function createMockCtx(
     settings: options.settings,
     coreSettings: options.coreSettings,
     sshClient: options.sshClient,
+    db: options.db,
+    router: options.router,
+    permissions: options.permissions,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -465,6 +557,11 @@ export function createMockCtx(
         require("db:own");
         return guardedDb.refs();
       },
+      persist: async () => {
+        require("db:own");
+        return guardedDb.persist();
+      },
+      dialect: guardedDb.dialect,
     },
 
     kv: {
@@ -585,6 +682,131 @@ export function createMockCtx(
   return { ...base, ctx: gatedCtx, checked };
 }
 
+/** A sqlite handle as createTestDb exposes it. Structural, like better-sqlite3's. */
+export interface TestSqlite {
+  exec: (sql: string) => unknown;
+  prepare: (sql: string) => {
+    run: (...params: unknown[]) => unknown;
+    get: (...params: unknown[]) => unknown;
+    all: (...params: unknown[]) => unknown[];
+  };
+  close: () => void;
+}
+
+export interface TestDbOptions {
+  /**
+   * Runs after the core stub tables exist and before the plugin's migrations,
+   * e.g. to create the legacy table an adoption migration renames.
+   */
+  before?: (sqlite: TestSqlite) => void | Promise<void>;
+  /** Skip applying the migrations, to apply them by hand later. */
+  skipMigrations?: boolean;
+}
+
+export interface TestDb {
+  /** The raw better-sqlite3 handle, for asserting on tables directly. */
+  sqlite: TestSqlite;
+  /** The Drizzle handle ctx.db.client() returns. */
+  drizzle: unknown;
+  /** Pass this as createMockCtx({ db }). */
+  database: PluginDatabase;
+  /** How many times ctx.db.persist() was called. */
+  readonly persisted: number;
+  /** The migration ids applied, in order. */
+  applied: string[];
+  /** Applies the plugin's sqlite migrations, when skipMigrations was set. */
+  migrate: () => Promise<string[]>;
+  close: () => void;
+}
+
+/**
+ * An in-memory SQLite database with a plugin's own migrations applied.
+ *
+ * Core's users and ssh_data exist as minimal stubs with foreign keys on, so a
+ * refUser or refHost column cascades exactly as it does on the server. The
+ * migrations are read from <pluginDir>/migrations/sqlite and split with the
+ * same splitter the server's runner uses.
+ */
+export async function createTestDb(
+  pluginDir: string,
+  options: TestDbOptions = {},
+): Promise<TestDb> {
+  const [{ default: Database }, { drizzle }, fs, path, ddl, builder] =
+    await Promise.all([
+      import("better-sqlite3" as string),
+      import("drizzle-orm/better-sqlite3" as string),
+      import("node:fs"),
+      import("node:path"),
+      import("./ddl.js"),
+      import("./table-builder.js"),
+    ]);
+
+  const sqlite = new Database(":memory:") as TestSqlite;
+  sqlite.exec("PRAGMA foreign_keys = ON");
+  sqlite.exec(
+    "CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL DEFAULT '')",
+  );
+  sqlite.exec("CREATE TABLE ssh_data (id INTEGER PRIMARY KEY AUTOINCREMENT)");
+
+  const handle = drizzle(sqlite);
+  const pluginId = path.basename(pluginDir);
+  const applied: string[] = [];
+  let persisted = 0;
+
+  await options.before?.(sqlite);
+
+  const migrate = async () => {
+    const dir = path.join(pluginDir, "migrations", "sqlite");
+    if (!fs.existsSync(dir)) return [];
+    const files = fs
+      .readdirSync(dir)
+      .filter((file: string) => /^\d{4}_[a-z0-9_]+\.sql$/.test(file))
+      .sort();
+    const now: string[] = [];
+    for (const file of files) {
+      const id = file.replace(/\.sql$/, "");
+      if (applied.includes(id)) continue;
+      const source = fs.readFileSync(path.join(dir, file), "utf8");
+      for (const statement of ddl.splitStatements(source)) {
+        sqlite.exec(statement);
+      }
+      applied.push(id);
+      now.push(id);
+    }
+    return now;
+  };
+
+  if (!options.skipMigrations) await migrate();
+
+  const refs = {
+    users: builder.buildRefTable("users", { id: "text", username: "text" }),
+    hosts: builder.buildRefTable("ssh_data", { id: "integer" }),
+  };
+
+  const database: PluginDatabase = {
+    define: async (definition) =>
+      builder.buildTable(pluginId, definition) as never,
+    client: async () => handle as never,
+    refs: async () => refs as never,
+    persist: async () => {
+      persisted += 1;
+    },
+    dialect: "sqlite",
+  };
+
+  return {
+    sqlite,
+    drizzle: handle,
+    database,
+    get persisted() {
+      return persisted;
+    },
+    applied,
+    migrate,
+    close: () => sqlite.close(),
+  };
+}
+
 /**
  * Rendering a plugin frontend in a test.
  *
@@ -607,6 +829,12 @@ export interface RenderWithAppOptions {
   locales?: Record<string, unknown>;
   /** Render as an anonymous guest page. */
   guest?: boolean;
+  /** What app.tabs.getLayout returns until the plugin applies another. */
+  layout?: import("./frontend.js").ShellLayout;
+  /** Fire app.tabs.onReady after activation, as the shell does after login. */
+  ready?: boolean;
+  /** Stands in for app.api and usePluginApi(), e.g. a stub of the routes. */
+  api?: import("./frontend.js").PluginApiClient;
 }
 
 /** A call a plugin made on the shell, recorded instead of performed. */
@@ -619,7 +847,12 @@ export interface RenderedPluginApp {
   app: TermixApp;
   /** Everything this plugin registered, by kind. */
   registered: {
-    railItems: () => Array<{ id: string; hidden?: boolean }>;
+    railItems: () => Array<{
+      id: string;
+      hidden?: boolean;
+      /** The full permission id the item is gated on, if any. */
+      permission?: string;
+    }>;
     tabs: () => string[];
     panels: () => string[];
     hostActions: () => Array<{ id: string; tabType?: string }>;
@@ -629,8 +862,19 @@ export interface RenderedPluginApp {
     slot: (slotId: string) => string[];
     actions: () => string[];
   };
-  /** Shell calls made by the plugin's code. */
+  /** Shell calls made by the plugin's code, applyLayout included. */
   shellCalls: ShellCall[];
+  /**
+   * Tabs the last app.tabs.applyLayout opened, under the shell's own restore
+   * rules: a tab whose host is gone is skipped, a tab no running plugin
+   * registered is kept.
+   */
+  openedTabs: () => Array<{ type: string; hostId?: number; label: string }>;
+  /**
+   * Renders an opened tab the way the shell would, which for a tab no running
+   * plugin registered is the "needs the plugin" placeholder.
+   */
+  renderOpenedTab: (index: number) => HTMLElement;
   renderTab: (type: string, props?: Record<string, unknown>) => HTMLElement;
   renderPanel: (id: string, props?: Record<string, unknown>) => HTMLElement;
   renderDashboardCard: (id: string) => HTMLElement;

@@ -153,11 +153,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "user_id",
   },
   {
-    name: "idx_user_workspaces_user_id",
-    table: "user_workspaces",
-    columns: "user_id",
-  },
-  {
     name: "idx_homepage_items_user_id",
     table: "homepage_items",
     columns: "user_id",

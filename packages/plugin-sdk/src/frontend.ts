@@ -129,6 +129,12 @@ export interface RailItemContribution {
   separatorAfter?: boolean;
   /** Hidden without being unregistered, e.g. while a feature is switched off. */
   hidden?: boolean;
+  /**
+   * A permission the user needs to see the item at all, usually one of the
+   * plugin's own short names. The rail, the mobile bar, the palette and the
+   * Navigation toggles all leave it out otherwise.
+   */
+  permission?: string;
   /** Place it after this rail id rather than at the end. */
   after?: string;
   /** Lower sorts first among plugin items. */
@@ -502,6 +508,18 @@ export interface TermixApp extends TermixAppInfo {
   registerSshAuthEditor: (editor: SshAuthEditorContribution) => Disposer;
   registerLoginMethod: (method: LoginMethodContribution) => Disposer;
   registerSecondFactorUI: (factor: SecondFactorContribution) => Disposer;
+
+  /**
+   * Translates a key from the plugin's own locales, for code outside a
+   * component (a toast from activate). Components use useTranslation().
+   */
+  t: TranslateFn;
+  /**
+   * Whether the current user holds a permission, for code outside a
+   * component. A short name resolves to <id>.<name>, as usePermission does.
+   * Resolves false before sign-in and when the lookup fails.
+   */
+  hasPermission: (permission: string) => Promise<boolean>;
 
   /** HTTP client for this plugin's /plugin-api/<id>/ routes. */
   api: PluginApiClient;

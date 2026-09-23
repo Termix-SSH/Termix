@@ -44,9 +44,18 @@ import { getSlotContributions, listActions } from "@/shell/action-registry";
 import { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
 import type { Host, Tab } from "@/types/ui-types";
 import { createPluginApp } from "./app";
-import { installPluginHostBridge } from "./bridge";
+import { installPluginHostBridge, setPluginApiForTesting } from "./bridge";
 import { setPluginSummaries, setFrontendState } from "./plugin-store";
-import { setShellCallbacks, setShellHosts } from "./shell-bridge";
+import {
+  notifyShellReady,
+  resetShellBridge,
+  setShellCallbacks,
+  setShellHosts,
+  setShellLayoutProvider,
+} from "./shell-bridge";
+import { PluginViewPlaceholder } from "./PluginViewPlaceholder";
+import { resolveLayoutTabTarget } from "@/shell/shell-layout";
+import type { WorkspaceTabSnapshot } from "@/types/ui-types";
 
 function recordingShell(calls: ShellCall[]): TabShellCallbacks {
   const record =
@@ -78,7 +87,7 @@ function wrap(element: ReactElement): HTMLElement {
   ).container;
 }
 
-function missing(kind: string, id: string): never {
+function missing(kind: string, id: string | number): never {
   throw new Error(`renderWithApp: nothing registered ${kind} "${id}"`);
 }
 
@@ -101,11 +110,44 @@ export async function renderPlugin(
   } as PluginManifest;
 
   installPluginHostBridge();
+  resetShellBridge();
   setPermissionsForTesting(options.permissions ?? [], options.isAdmin);
-  setShellHosts((options.hosts ?? []) as unknown as Host[]);
+  const hosts = (options.hosts ?? []) as unknown as Host[];
+  setShellHosts(hosts);
   const shellCalls: ShellCall[] = [];
   const shell = recordingShell(shellCalls);
   setShellCallbacks(shell);
+
+  // Stands in for AppShell's layout: applying one runs the shell's own
+  // restore rules and records which tabs it would open.
+  let layout = options.layout ?? null;
+  const opened: Array<{ type: string; hostId?: number; label: string }> = [];
+  setShellLayoutProvider({
+    getLayout: () => layout,
+    applyLayout: async (next, applyOptions) => {
+      shellCalls.push({ method: "applyLayout", args: [next, applyOptions] });
+      layout = next;
+      opened.length = 0;
+      const skipped: string[] = [];
+      const tabs = (next.tabs ?? []) as WorkspaceTabSnapshot[];
+      for (const snapshot of tabs) {
+        const target = resolveLayoutTabTarget(snapshot, hosts);
+        if (target.kind === "skip") {
+          skipped.push(snapshot.hostNameSnapshot || snapshot.label);
+          continue;
+        }
+        opened.push({
+          type: snapshot.type,
+          hostId:
+            "host" in target && target.host
+              ? Number(target.host.id)
+              : undefined,
+          label: snapshot.customLabel ?? snapshot.label,
+        });
+      }
+      return { skipped };
+    },
+  });
 
   const summary: PluginSummary = {
     id: pluginId,
@@ -128,11 +170,16 @@ export async function renderPlugin(
     );
   }
 
+  setPluginApiForTesting(
+    pluginId,
+    (options.api as Parameters<typeof setPluginApiForTesting>[1]) ?? null,
+  );
   const handle = createPluginApp(pluginId, manifest, summary.contributes, {
     guest: options.guest,
   });
   await plugin.activate(handle.app);
   setFrontendState(pluginId, "active");
+  if (options.ready) notifyShellReady();
 
   const mine = <T extends { pluginId?: string }>(items: T[]) =>
     items.filter((item) => item.pluginId === pluginId);
@@ -154,6 +201,7 @@ export async function renderPlugin(
         mine(listRegisteredRailItems()).map((item) => ({
           id: item.id,
           hidden: item.hidden,
+          permission: item.permission,
         })),
       tabs: () => mine(listTabTypes()).map((def) => def.id),
       panels: () => mine(listPanels()).map((panel) => panel.id),
@@ -191,6 +239,28 @@ export async function renderPlugin(
           handleRef={null}
           shell={shell}
           {...props}
+        />,
+      );
+    },
+
+    openedTabs: () => opened.map((tab) => ({ ...tab })),
+
+    renderOpenedTab(index) {
+      const tab = opened[index] ?? missing("an opened tab at index", index);
+      const def = getTabType(tab.type);
+      if (!def) {
+        // What tabUtils renders for a tab no running plugin registered.
+        return wrap(<PluginViewPlaceholder kind="tab" viewId={tab.type} />);
+      }
+      const Component = def.component;
+      return wrap(
+        <Component
+          tab={tabRecord(tab.type)}
+          label={tab.label}
+          isVisible
+          isFocusedPane
+          handleRef={null}
+          shell={shell}
         />,
       );
     },
@@ -260,6 +330,7 @@ export async function renderPlugin(
       } finally {
         handle.dispose();
         setFrontendState(pluginId, "inactive");
+        setPluginApiForTesting(pluginId, null);
       }
     },
   };

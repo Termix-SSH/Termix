@@ -45,6 +45,10 @@ import {
 } from "@termix/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
+import {
+  needsExplicitPersist,
+  resolveDatabaseDialect,
+} from "../database/db/dialect.js";
 import { createPluginAuth, createPluginSsh } from "./ctx-ssh-auth.js";
 
 export type { PluginModule };
@@ -330,6 +334,18 @@ export function createPluginContext(
       define: (definition) => dbDefine(definition) as never,
       client: () => dbClient() as never,
       refs: () => dbRefs() as never,
+      // Gated but not audited: it follows every write, and the write itself
+      // went through a client() call that already left an audit line.
+      persist: async () => {
+        await assertCapability(pluginId, "db:own", manifest.capabilities);
+        if (!needsExplicitPersist(resolveDatabaseDialect())) return;
+        const { DatabaseSaveTrigger } =
+          await import("../utils/database-save-trigger.js");
+        await DatabaseSaveTrigger.forceSave(`plugin_${pluginId}_write`);
+      },
+      get dialect() {
+        return resolveDatabaseDialect();
+      },
     },
 
     sync: {

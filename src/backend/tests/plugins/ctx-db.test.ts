@@ -48,6 +48,15 @@ vi.mock("../../database/db/index.js", () => ({
   getDb: () => ({ marker: "db-handle" }),
 }));
 
+const saves: string[] = [];
+vi.mock("../../utils/database-save-trigger.js", () => ({
+  DatabaseSaveTrigger: {
+    forceSave: async (reason: string) => {
+      saves.push(reason);
+    },
+  },
+}));
+
 vi.mock("../../database/db/schema.js", () => ({
   users: { marker: "users" },
   hosts: { marker: "hosts" },
@@ -90,6 +99,39 @@ beforeEach(() => {
   resetSyncRegistry();
   invalidatePluginPermissionCache();
   delete process.env.PLUGIN_MAX_KV_KEYS;
+  delete process.env.DATABASE_DIALECT;
+  saves.length = 0;
+});
+
+describe("ctx.db.persist", () => {
+  it("flushes SQLite to disk under the plugin's name", async () => {
+    grants.set("demo", ["db:own"]);
+    const { ctx } = contextFor("demo", ["db:own"]);
+
+    await ctx.db.persist();
+
+    expect(saves).toEqual(["plugin_demo_write"]);
+    expect(ctx.db.dialect).toBe("sqlite");
+  });
+
+  it("does nothing on an engine that is already durable", async () => {
+    process.env.DATABASE_DIALECT = "postgres";
+    grants.set("demo", ["db:own"]);
+    const { ctx } = contextFor("demo", ["db:own"]);
+
+    await ctx.db.persist();
+
+    expect(saves).toEqual([]);
+    expect(ctx.db.dialect).toBe("postgres");
+  });
+
+  it("refuses without db:own", async () => {
+    grants.set("demo", []);
+    const { ctx } = contextFor("demo", []);
+
+    await expect(ctx.db.persist()).rejects.toThrow(/db:own/);
+    expect(saves).toEqual([]);
+  });
 });
 
 describe("ctx.db capability", () => {

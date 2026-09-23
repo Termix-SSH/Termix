@@ -306,20 +306,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // ssh-terminal, docker and host-metrics plugins start their own servers,
     // so disabling any of them stops its WS/HTTP server. See
     // plugins/ssh-terminal, plugins/docker and plugins/host-metrics.
-    // AI, Proxmox, Remote Desktop, Fleets, Automations, Network Topology and
-    // Workspaces are also absent for the same reason: each plugin registers
-    // its router with its own dispatcher in database.ts on activate (/ai,
-    // /proxmox, /guacamole, /fleets, /automations, /network-topology,
-    // /workspaces), so disabling any of them makes its routes 404 instead of
-    // leaving a dead import here. Web Endpoint works the same way, except its
-    // dispatcher is mounted by the tunnel service below rather than by
-    // database.ts, since its route is served on port 30003. Automations'
-    // scheduler (due schedules,
-    // dwell rechecks, docker-event polling, history pruning) also starts
-    // from its own activate() rather than here. See plugins/ai,
-    // plugins/proxmox, plugins/remote-desktop, plugins/fleets,
-    // plugins/automations, plugins/network-topology, plugins/workspaces and
-    // plugins/web-endpoint.
+    // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
+    // Network Topology, Workspaces, Web Endpoint) is absent for the same
+    // reason: each one serves its routes under /plugin-api/<id>/ through
+    // ctx.http on activate, so disabling it answers 503 instead of leaving a
+    // dead import here. Automations' scheduler also starts from its own
+    // activate() rather than here.
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/tmux/index.js");

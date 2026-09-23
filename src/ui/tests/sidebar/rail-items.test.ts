@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { Boxes } from "lucide-react";
 import {
   hideableRailIds,
+  permittedRailItems,
   promotableIds,
   RAIL_ITEMS,
   RAIL_UTILITY_ITEMS,
@@ -228,5 +229,41 @@ describe("railItemLabel", () => {
         browser,
       );
     });
+  });
+});
+
+describe("permittedRailItems", () => {
+  const items = [
+    { id: "open", icon: Boxes, labelKey: "nav.hosts" },
+    {
+      id: "gated",
+      icon: Boxes,
+      labelKey: "nav.hosts",
+      permission: "demo.use",
+    },
+  ];
+
+  it("hides an item gated on a permission the user lacks", () => {
+    const ids = permittedRailItems(items, {
+      loaded: true,
+      has: () => false,
+    }).map((item) => item.id);
+    expect(ids).toEqual(["open"]);
+  });
+
+  it("shows it once the user holds the permission", () => {
+    const ids = permittedRailItems(items, {
+      loaded: true,
+      has: (permission) => permission === "demo.use",
+    }).map((item) => item.id);
+    expect(ids).toEqual(["open", "gated"]);
+  });
+
+  it("keeps gated items hidden until permissions have loaded", () => {
+    const ids = permittedRailItems(items, {
+      loaded: false,
+      has: () => true,
+    }).map((item) => item.id);
+    expect(ids).toEqual(["open"]);
   });
 });

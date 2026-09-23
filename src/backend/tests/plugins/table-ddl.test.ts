@@ -14,8 +14,11 @@ import {
   refHost,
   prefixedTableName,
   tablePrefix,
+  adoptLegacyTable,
 } from "@termix/plugin-sdk/db";
+import { splitStatements } from "@termix/plugin-sdk/ddl";
 import {
+  adoptTableSql,
   createTableSql,
   dropTableSql,
   addColumnSql,
@@ -251,5 +254,58 @@ describe("buildTable", () => {
 
     expect(getTableName(table)).toBe("p_demo_note");
     expect(Object.keys(getTableColumns(table))).toContain("userId");
+  });
+});
+
+describe("adoptTableSql", () => {
+  const adopted = adoptLegacyTable(
+    "fleets",
+    defineTable(
+      "fleets",
+      { id: id(), name: text().notNull().default("x") },
+      { indexes: [{ name: "idx_fleets_name", columns: ["id"] }] },
+    ),
+  );
+
+  it("creates the legacy table when missing, indexes it, then renames it", () => {
+    const sqlite = adoptTableSql("sqlite", "fleets", adopted);
+    expect(sqlite[0]).toMatch(/^CREATE TABLE IF NOT EXISTS "fleets" \(/);
+    expect(sqlite[1]).toBe(
+      'CREATE INDEX IF NOT EXISTS "idx_fleets_name" ON "fleets" ("id");',
+    );
+    expect(sqlite[2]).toBe('ALTER TABLE "fleets" RENAME TO "p_fleets_fleets";');
+
+    expect(adoptTableSql("postgres", "fleets", adopted).at(-1)).toBe(
+      'ALTER TABLE "fleets" RENAME TO "p_fleets_fleets";',
+    );
+  });
+
+  it("emits no indexes on MySQL, which has no IF NOT EXISTS for them", () => {
+    const mysql = adoptTableSql("mysql", "fleets", adopted);
+    expect(mysql).toHaveLength(2);
+    expect(mysql[1]).toBe("RENAME TABLE `fleets` TO `p_fleets_fleets`;");
+  });
+
+  it("writes a TEXT default as an expression on MySQL", () => {
+    expect(adoptTableSql("mysql", "fleets", adopted)[0]).toContain(
+      "`name` text NOT NULL DEFAULT ('x')",
+    );
+    expect(createTableSql("sqlite", "fleets", adopted)[0]).toContain(
+      "\"name\" text NOT NULL DEFAULT 'x'",
+    );
+  });
+
+  it("refuses a definition that adopts nothing, and a table no plugin may adopt", () => {
+    expect(() => adoptTableSql("sqlite", "demo", definition)).toThrow(
+      /does not adopt/,
+    );
+    expect(() => adoptLegacyTable("users", definition)).toThrow(
+      /not a legacy core table/,
+    );
+  });
+
+  it("splits into statements the runner applies one at a time", () => {
+    const joined = adoptTableSql("sqlite", "fleets", adopted).join("\n");
+    expect(splitStatements(joined)).toHaveLength(3);
   });
 });

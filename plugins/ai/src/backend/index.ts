@@ -1,11 +1,14 @@
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { setPluginSsh } from "./ssh.js";
+import { setPluginServices } from "./services.js";
 import { startAiService, stopAiService } from "./routes.js";
 import { createCurrentAiRepository } from "../../../../src/backend/database/repositories/factory.js";
 
 export async function activate(ctx: PluginContext) {
   setPluginSsh(ctx.ssh);
   ctx.disposables.add(() => setPluginSsh(null));
+  setPluginServices(ctx.services);
+  ctx.disposables.add(() => setPluginServices(null));
   startAiService(ctx.http.router());
 
   // Offered by reference, not copied: this hands over a resolver, so the key

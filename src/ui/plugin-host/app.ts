@@ -43,6 +43,8 @@ import { shell, tabsApi } from "./shell-bridge";
 import { withPluginScope } from "./scope";
 import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
+import { hasPermission } from "@/hooks/use-permissions";
+import i18n from "@/i18n/i18n";
 
 export interface PluginAppHandle {
   app: TermixApp;
@@ -118,6 +120,9 @@ export function createPluginApp(
           after: item.after,
           order: item.order,
           pluginId,
+          permission: item.permission
+            ? resolvePluginPermission(pluginId, item.permission)
+            : undefined,
         }),
       );
     },
@@ -339,6 +344,20 @@ export function createPluginApp(
       );
     },
 
+    t: ((key: string, options?: Record<string, unknown> | string) =>
+      i18n.t(
+        pluginKey(pluginId, key),
+        options as Record<string, unknown>,
+      )) as TermixApp["t"],
+    hasPermission: async (permission) => {
+      try {
+        return await hasPermission(
+          resolvePluginPermission(pluginId, permission),
+        );
+      } catch {
+        return false;
+      }
+    },
     api: pluginHostBridge.getApi(pluginId),
     wsUrl: (path, options) =>
       pluginWsUrl(pluginId, path, options as never) as ReturnType<

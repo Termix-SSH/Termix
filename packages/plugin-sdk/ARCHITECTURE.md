@@ -5,7 +5,9 @@ anyone writing a plugin and the specification the runtime in
 `src/backend/plugins/` implements.
 
 Status: the redesign lands across several steps. Everything marked **A1** is
-built today. Later markers name the step that delivers the rest.
+built today. Later markers name the step that delivers the rest. Phase B
+converts one feature per step by following
+[Converting a feature into a plugin](#converting-a-feature-into-a-plugin).
 
 ---
 
@@ -24,17 +26,18 @@ This is not a sandbox. See [What this protects](#what-this-protects-and-what-it-
 A plugin imports `@termix/plugin-sdk`, its own files and its own npm
 dependencies. Entry points:
 
-| Entry                             | Contents                                                   |
-| --------------------------------- | ---------------------------------------------------------- |
-| `@termix/plugin-sdk/backend`      | `PluginContext`, `definePlugin()`, `PluginCapabilityError` |
-| `@termix/plugin-sdk/db`           | `defineTable()`, the column builders, the legacy-table map |
-| `@termix/plugin-sdk/ddl`          | The per-dialect DDL emitter, shared with the CLI           |
-| `@termix/plugin-sdk/frontend`     | The `app` object types, the hooks, `invokeAction()`        |
-| `@termix/plugin-sdk/ui`           | Core's shared components, a fixed public list (see UI)     |
-| `@termix/plugin-sdk/manifest`     | Manifest types, validation, the JSON schema                |
-| `@termix/plugin-sdk/capabilities` | The capability catalog                                     |
-| `@termix/plugin-sdk/settings`     | Settings field types and the shared value validator        |
-| `@termix/plugin-sdk/testing`      | Test helpers, incl. `createFakeContext()`                  |
+| Entry                              | Contents                                                   |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `@termix/plugin-sdk/backend`       | `PluginContext`, `definePlugin()`, `PluginCapabilityError` |
+| `@termix/plugin-sdk/db`            | `defineTable()`, the column builders, the legacy-table map |
+| `@termix/plugin-sdk/ddl`           | The per-dialect DDL emitter, shared with the CLI           |
+| `@termix/plugin-sdk/table-builder` | `buildTable()`, a definition as a queryable Drizzle table  |
+| `@termix/plugin-sdk/frontend`      | The `app` object types, the hooks, `invokeAction()`        |
+| `@termix/plugin-sdk/ui`            | Core's shared components, a fixed public list (see UI)     |
+| `@termix/plugin-sdk/manifest`      | Manifest types, validation, the JSON schema                |
+| `@termix/plugin-sdk/capabilities`  | The capability catalog                                     |
+| `@termix/plugin-sdk/settings`      | Settings field types and the shared value validator        |
+| `@termix/plugin-sdk/testing`       | Test helpers: `createMockCtx()`, `createTestDb()` and more |
 
 Plugins never import from `src/` or `@/`, and core never imports from
 `plugins/`. Anything a plugin needs from core becomes a typed, documented SDK
@@ -135,11 +138,38 @@ plugin failed and core keeps booting.
 
 **Adoption** is how a feature keeps its rows when it moves out of core. The
 legacy table is renamed into the plugin's namespace
-(`fleets` -> `p_fleets_fleets`) rather than copied, so nothing is duplicated
-and no row is migrated one at a time. `LEGACY_TABLE_OWNERS` maps each legacy
-table to the one plugin allowed to adopt it, enforced by the CLI at build time
-and by the runner at activation, because a plugin installed from a tarball
-never ran the CLI.
+(`user_workspaces` -> `p_workspaces_workspaces`) rather than copied, so nothing
+is duplicated and no row is migrated one at a time. `LEGACY_TABLE_OWNERS` maps
+each legacy table to the one plugin allowed to adopt it, enforced by
+`adoptLegacyTable`, by the CLI at build time and by the runner at activation,
+because a plugin installed from a tarball never ran the CLI.
+
+A plugin marks a definition with `adoptLegacyTable("user_workspaces",
+defineTable(...))` and `termix-plugin migrations` writes the adoption for all
+three dialects. A plain SQL file cannot ask whether the legacy table exists, so
+the migration creates it when it is missing (a fresh install), creates the
+definition's indexes on it with `IF NOT EXISTS`, and then renames it. Both
+paths end with the same table. Two rules follow:
+
+- **Keep the legacy column and index names** in the definition. The rename
+  carries the old indexes across, and a matching name is what makes
+  `IF NOT EXISTS` skip them instead of adding a second copy.
+- **MySQL gets no index statements** in an adoption, because it has no
+  `CREATE INDEX IF NOT EXISTS`. That is safe for every legacy table core ever
+  shipped to MySQL, since core's drizzle migrations already created its indexes.
+
+A MySQL `TEXT` column cannot take a literal default, so the emitter writes one
+as an expression (`DEFAULT ('{}')`), the way it already did for
+`CURRENT_TIMESTAMP`.
+
+**Write through `ctx.db.client()`, then call `ctx.db.persist()`.** On SQLite the
+database lives in memory and reaches its encrypted file only when something
+asks, which core's repositories do after every write. A plugin write that skips
+`persist()` can be lost on restart. It is a no-op on Postgres and MySQL, needs
+`db:own`, and is not audited, because it follows a `client()` call that was.
+`ctx.db.dialect` says which engine is running. The table object encodes the
+same on all three, but MySQL has no `RETURNING`, so portable code reads a new
+row back by a key it chose (a sync id) rather than relying on `.returning()`.
 
 **Anything DDL-only in `db/index.ts` is SQLite-only.** `alert_rules`,
 `alert_rule_channels` and `alert_firings` were created only there and never
@@ -154,6 +184,11 @@ adds an entity to remote sync; core registers its own ten the same way in
 existing tombstones and rows on the far side match on those strings. The
 Electron client asks the server for the ordered list and falls back to its
 frozen array for a server that predates the endpoint.
+
+`shouldSync(row)` leaves rows out in both directions: they are not pulled, and
+a push, update or tombstone aimed at one is refused with 400. It exists for
+state that belongs to one install, such as the workspaces plugin's "Last
+Session" row, which would otherwise leave a user with one from each side.
 
 ### 6. HTTP and WebSockets
 
@@ -350,25 +385,26 @@ when the plugin deactivates. Every registered component is wrapped in the
 plugin's scope (so the hooks know which plugin they belong to), an error
 boundary and Suspense.
 
-| Member                                              | What it does                                                                                             |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `registerRailItem`                                  | A rail button. Hideable items show in Appearance > Sidebar > Navigation. The id must be a declared view  |
-| `registerPanel`                                     | A rail panel, id in `contributes.panels` or `contributes.tabs`                                           |
-| `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs      |
-| `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`            |
-| `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                     |
-| `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                 |
-| `registerPaletteEntry`                              | A global or per-host command palette entry                                                               |
-| `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                     |
-| `registerHomepageWidget`                            | A homepage widget, with an optional edit form                                                            |
-| `registerSettingsComponent`                         | A component a `type: "custom"` settings field names                                                      |
-| `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                             |
-| `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result |
-| `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                           |
-| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method and a second factor challenge (plus an optional `enrollment` section)       |
-| `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                              |
-| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces                                                                          |
-| `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                              |
+| Member                                              | What it does                                                                                                                                        |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `registerRailItem`                                  | A rail button, hidden from users without its `permission`. Hideable items show in Appearance > Sidebar > Navigation. The id must be a declared view |
+| `registerPanel`                                     | A rail panel, id in `contributes.panels` or `contributes.tabs`                                                                                      |
+| `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs                                                 |
+| `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`                                                       |
+| `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                                                                |
+| `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                                                            |
+| `registerPaletteEntry`                              | A global or per-host command palette entry                                                                                                          |
+| `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                                                                |
+| `registerHomepageWidget`                            | A homepage widget, with an optional edit form                                                                                                       |
+| `registerSettingsComponent`                         | A component a `type: "custom"` settings field names                                                                                                 |
+| `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                                                                        |
+| `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result                                            |
+| `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                                                                      |
+| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method and a second factor challenge (plus an optional `enrollment` section)                                                  |
+| `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                         |
+| `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                 |
+| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces                                                                                                                     |
+| `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                         |
 
 Hooks: `useTranslation` (the plugin's namespace), `usePermission` (a short
 name resolves to `<id>.<name>`), `useSettings`, `useHost`, `useHosts`,
@@ -391,6 +427,11 @@ needs the <name> plugin" (`PluginViewPlaceholder`) and is never dropped from
 the saved layout. Tab restore waits for the first plugin pass, so a restored
 tab does not race its plugin.
 
+The same holds when a saved layout is applied (a workspace): a tab type no
+running plugin has registered is reopened as that placeholder rather than
+skipped, and it stays in the next snapshot (`isUnregisteredPluginTabType` in
+`src/ui/shell/shell-layout.ts`). Only a tab whose host was deleted is skipped.
+
 #### The `ui` entry
 
 `@termix/plugin-sdk/ui` is public API, implemented by
@@ -401,7 +442,8 @@ select, select2, separator, switch, textarea, tooltip, section-card,
 metric-card, charts, the card grid, `ConnectionScreen` and the connection
 status helpers, `SnippetVariablesDialog`, `FullScreenAppWrapper`, the
 connection log context, `TOTPDialog`, `SSHAuthDialog`, `WarpgateDialog`,
-`useTabs`/`useTabsSafe`, `ActionSlot` and `ComponentSlot`. Publishing its
+`useTabs`/`useTabsSafe`, `ActionSlot`, `ComponentSlot` and `FOLDER_COLORS` (the
+colour swatches folders and workspaces pick from). Publishing its
 `.d.ts` for plugins outside this repo is a follow-up for the repo split.
 
 #### Strings
@@ -425,6 +467,12 @@ and frontend actions and slots. Dependencies are declared in the manifest:
 `dependencies` are hard, `optionalDependencies` are soft. The loader activates
 in dependency order. A plugin must keep working when an optional dependency is
 missing.
+
+A service call runs as the user its permission was checked for, so the
+provider reads that user from `ctx.currentActor()` and takes no user id from
+the caller. The workspaces plugin provides `workspaces.saved` (`list()`), which
+the AI assistant's `list_workspaces` tool reaches through an optional entry in
+its `requires`, answering `unavailable: true` while workspaces is off.
 
 ### 10. Lifecycle
 
@@ -455,8 +503,26 @@ capability, registry, service, secret and shutdown suites.
 
 `@termix/plugin-sdk/testing` provides `createMockCtx()`, which enforces
 capabilities the way the runtime does, `createFakeContext()` for tests that do
-not care about the gates, and `renderWithApp(plugin, options)` for frontend
-tests. `renderWithApp` activates the plugin against core's real registries,
+not care about the gates, `createTestDb(pluginDir)` for a real database, and
+`renderWithApp(plugin, options)` for frontend tests.
+
+`createTestDb(pluginDir, { before })` opens an in-memory SQLite with stub
+`users` and `ssh_data` tables and foreign keys on, runs `before` (seed a legacy
+table there to test an adoption), then applies the plugin's own
+`migrations/sqlite` with the runner's splitter. Pass its `database` to
+`createMockCtx({ db })`: `define` builds the real table, `client` is Drizzle, and
+`persisted` counts `persist()` calls. The mock also takes `router` (for example
+`() => express.Router()`, so routes are served for real), `permissions`
+(enforced by `ctx.rbac`, answering 403 like core; omit it to pass everything),
+and returns `setActor(userId)` for a test middleware and `services` for what the
+plugin provided. `plugins/workspaces/tests/backend/helpers.ts` is the worked
+example.
+
+`renderWithApp` also takes `api` (a stub for `app.api` and `usePluginApi()`),
+`layout` (what `app.tabs.getLayout()` returns) and `ready` (fire
+`app.tabs.onReady`). `app.tabs.applyLayout` is recorded in `shellCalls` and runs
+the shell's real restore rules, `openedTabs()` lists what it opened, and
+`renderOpenedTab(i)` renders one the way the shell would, placeholder included. `renderWithApp` activates the plugin against core's real registries,
 records what it registered and the shell calls it made, renders any tab,
 panel, card, host editor section, settings component or slot, and
 `deactivate()` disposes it all. Every bundled plugin has a
@@ -930,6 +996,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1** |
 | `ctx.currentActor()`                             | none                                 | **A1** |
 | `ctx.db.define` / `.client` / `.refs`            | `db:own`                             | **A3** |
+| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)              | **A9** |
 | `ctx.sync.registerEntity`                        | none                                 | **A3** |
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4** |
 | `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5** |
@@ -1101,9 +1168,315 @@ The lists live in `packages/plugin-sdk/cli/lib/externals.mjs`.
 
 ---
 
+## Converting a feature into a plugin
+
+The checklist every Phase B step follows. A9 ran it on workspaces, so
+`plugins/workspaces/` is the worked example for each step: read its source and
+tests next to this list. Steps are ordered so data is never dropped before it
+has moved. Commands run from the repo root unless they start with `cd`.
+
+A conversion is done when the plugin imports nothing from `src/` or `@/`, core
+imports nothing of the feature, every piece of existing data survives an
+upgrade on all three engines, and the checks in step 15 are green.
+
+### 1. Scaffold
+
+1. Create `plugins/<id>/` with the layout in [Where plugins live](#13-where-plugins-live).
+   The directory name is the manifest `id`. If A2 already moved the feature
+   there, keep the directory and work through the rest in place.
+2. `package.json` is `@termix-plugin/<id>`, private, with the four scripts
+   (`build`, `test`, `typecheck`, `validate`) calling `termix-plugin`, and
+   `@termix/plugin-sdk` as a dev dependency. `vitest.config.ts` is the one-line
+   preset.
+3. `tsconfig.json` extends `@termix/plugin-sdk/tsconfig.plugin.json` and has
+   **no `paths`** into `../../src`. A path alias is how core imports sneak back.
+4. Run `npm install` so the workspace is linked.
+
+### 2. Manifest and capabilities
+
+1. Fill in the manifest (see the [reference](#manifest-v2-reference)). Declare
+   every view the frontend registers in `contributes.panels`, `tabs` or
+   `dashboardCards`, or `app` refuses to register it.
+2. Pick the **smallest** set of capabilities from the
+   [catalog](#capability-catalog). Choose by the ctx members the code calls,
+   not by what the feature feels like:
+
+   | The code calls                           | Declare                          |
+   | ---------------------------------------- | -------------------------------- |
+   | `ctx.db.*`                               | `db:own`                         |
+   | `ctx.kv.*`                               | `kv:own`                         |
+   | `ctx.http.router`, `ctx.ws.*`            | `network:serve`                  |
+   | `ctx.ssh.*`                              | `ssh:connect`, `credentials:use` |
+   | `ctx.auth.*`                             | `auth:provide`                   |
+   | `ctx.settings.readCore`                  | `settings:read-core`             |
+   | `ctx.events.emit` outside `plugin.<id>.` | `events:core`                    |
+   | anything registered through `app`        | `ui:surface`                     |
+
+   Workspaces needs `db:own`, `network:serve` and `ui:surface`, nothing else.
+
+3. `cd plugins/<id> && npx termix-plugin validate` must print `ok`.
+
+### 3. Backend: replace every core import with the SDK
+
+1. List what the backend reaches in core:
+   `grep -rn "src/backend\|src/types" plugins/<id>/src`. Each hit gets replaced.
+   A plugin never imports `../../../../src/...`.
+2. The usual replacements:
+
+   | Core import                                         | SDK replacement                                                                        |
+   | --------------------------------------------------- | -------------------------------------------------------------------------------------- |
+   | `AuthManager` middleware, `req.userId`              | nothing: core authenticates `ctx.http` routes; read the user with `ctx.currentActor()` |
+   | `requirePermission(...)`                            | `ctx.rbac.require("<short name>")`                                                     |
+   | `databaseLogger`, `*Logger`                         | `ctx.log`                                                                              |
+   | `createCurrent*Repository()` and `schema.ts` tables | the plugin's own table through `ctx.db` (step 4)                                       |
+   | `insertReturning` / `.returning()`                  | insert, then select by a key you set (a sync id)                                       |
+   | `DatabaseSaveTrigger`, a repository write hook      | `await ctx.db.persist()` after every write                                             |
+   | ssh2 connection code, the pool, `resolveHostById`   | `ctx.ssh.connect` / `withConnection` / `jumpChain`                                     |
+   | `getCurrentSettingValue`                            | `ctx.settings.get` for its own keys (step 5), `readCore` for core's                    |
+   | another plugin's source                             | `ctx.services.get(...)` (step 10)                                                      |
+
+3. Everything the backend creates lives inside `activate(ctx)`: the table
+   (`ctx.db.define`), the repository, the router, timers
+   (`ctx.disposables.add`). Nothing at module scope. `deactivate` is usually
+   empty.
+4. **When the SDK does not have it, add it to the SDK.** Never work around a
+   gap with a core import, and never add to
+   `src/backend/auth/legacy-providers.ts`. A new ctx member is:
+   1. the type and a doc comment in `packages/plugin-sdk/src/backend.ts`;
+   2. the implementation in `src/backend/plugins/ctx.ts`, wrapped in `guarded()`
+      when it is privileged, so it checks the capability and writes an audit
+      line; a new capability is one entry in `src/capabilities.ts` plus its
+      i18n title and consequence under `plugins.capabilities.<id>` in
+      `src/ui/locales/en.json`;
+   3. the same member in `createFakeContext` and a gated one in `createMockCtx`
+      (`packages/plugin-sdk/src/testing.ts`);
+   4. a core test in `src/backend/tests/plugins/` (allowed and refused);
+   5. a row in [The ctx surface](#the-ctx-surface) and a line in the right
+      section of this document.
+
+   Then `npm run build:sdk`, because core and the CLI read the SDK's `dist`.
+   A9 added `ctx.db.persist`, `ctx.db.dialect`, sync `shouldSync`,
+   `createTestDb`, `app.t`, `app.hasPermission` and the rail `permission` this
+   way.
+
+### 4. Tables: adopt them, then remove them from core
+
+1. Write `src/backend/tables.ts`. Wrap each definition that replaces a core
+   table in `adoptLegacyTable("<legacy name>", defineTable(...))` and export
+   `tables`. Keep the legacy column names (camelCase properties become
+   snake_case columns) and **the legacy index names**. The table must be listed
+   under this plugin in `LEGACY_TABLE_OWNERS` (`packages/plugin-sdk/src/db.ts`).
+   Use `refUser()` / `refHost()` for owner columns: they cascade on delete.
+2. `cd plugins/<id> && npx termix-plugin migrations adopt_<table>` writes
+   `migrations/{sqlite,postgres,mysql}/0001_adopt_<table>.sql` and
+   `migrations/snapshot.json`. Read all three files. Never edit one after it
+   has shipped; add a new migration instead.
+3. Remove the table from core, in this order:
+   - `src/backend/database/db/schema.ts`: the table block.
+   - `src/backend/database/db/index.ts`: the `CREATE TABLE` bootstrap block and
+     any `ALTER` for it. Some of these files use CRLF line endings; keep them.
+   - `src/backend/database/db/performance-indexes.ts`: its entries. The adopted
+     definition's indexes replace them.
+   - `src/backend/database/repositories/factory.ts` and the repository file.
+   - `src/backend/database/routes/delete-user-data.ts` and the user/host
+     repositories: explicit deletes of the table. A `refUser`/`refHost` column
+     cascades on every engine, because the foreign key survives the rename.
+     Prefer that cascade. A table that cannot carry such a column needs a
+     core "user deleted" or "host deleted" event on `ctx.events`, added to
+     the SDK the step 3 way; none exists yet because no plugin needed one.
+   - `sync-entities.ts`, if core synced it (step 9).
+   - Anything else `grep -rn "<table_name>\|<tableConst>" src` finds, including
+     core tests and `src/types`.
+4. `npm run schema:generate` (the pg and mysql schema variants), then
+   `npm run schema:migrations`. drizzle-kit writes a `DROP TABLE` for each
+   removed table in `drizzle/{sqlite,postgres,mysql}/`. **Replace every one of
+   those statements with a comment and `SELECT 1;`** (MySQL refuses an empty
+   query) and keep the new `meta` snapshots. The drop would run at boot, before
+   the plugin's adoption, and delete every row.
+5. Why the order is safe: core boots first, runs its drizzle migrations (the
+   legacy table is still there, untouched), then the plugin's migration renames
+   it. A plugin that is disabled at upgrade time simply leaves the legacy table
+   alone until it is enabled.
+6. Tests (step 13) prove the adoption with the legacy table present and absent.
+
+### 5. Global settings keys become plugin settings
+
+1. Declare each key in `contributes.settings.admin` (install-wide) or `.user`,
+   keeping the key name the frontend already sends where possible, and give it
+   a `default`. Secrets are `type: "secret"`.
+2. Write a boot migration in `src/backend/utils/crypto-migration/`, modelled on
+   `tailscale-settings-migration.ts`: read the old row from `settings` (or the
+   per-user source), write it to `plugin_settings` for the plugin **only when
+   no row exists there yet**, then leave the old row in place for one release.
+   Call it from the boot sequence in `starter.ts` after the plugins table exists.
+3. Test it in `src/backend/tests/utils/`: values move, secrets stay encrypted,
+   and running it twice changes nothing.
+4. Switch the plugin to `ctx.settings.get` / `getUser`, delete the core
+   settings route and UI for those keys, and remove the keys from
+   `CORE_SETTINGS_ALLOWLIST` if they were there.
+
+### 6. `ssh_data` host columns become host-scope settings
+
+Follow [Moving a host column into a plugin](#moving-a-host-column-into-a-plugin)
+exactly: declare `contributes.settings.host`, copy with an idempotent migration
+tested by running it twice, switch the plugin to `ctx.settings.getHost` and
+delete the hardcoded editor tab, and only then drop the column in lockstep
+across `schema.ts`, `db/index.ts`, `schema:generate` and a drizzle migration per
+dialect. Copy and drop can ship in different steps; a column core still reads
+is not ready to drop.
+
+### 7. Permissions
+
+1. Declare `contributes.permissions` with `titleKey` and `descriptionKey` in the
+   plugin's own locales. **Keep existing ids**: core registers `<id>.<name>`, so
+   pick the short name that makes the id equal the old core one (`ai` + `use` is
+   `ai.use`) and no role needs migrating.
+2. Remove those entries from `PERMISSION_CATALOG` and `SYSTEM_ROLE_DEFAULTS` in
+   `src/backend/utils/permission-catalog.ts`, and move their i18n.
+3. `defaultRoles` are `admin` and/or `user`, applied once.
+4. Gate every route. `router.use(ctx.rbac.require("<name>"))` before the routes
+   is the simplest way to make sure none is missed; workspaces declares `use`
+   and gates the whole router on it.
+5. Gate the frontend too: `permission` on the rail item, `usePermission` in
+   components, `await app.hasPermission(...)` before background calls (the
+   workspaces autosave), so a user without it collects no 403s.
+
+### 8. HTTP, WebSockets and nginx
+
+1. Routes go on `ctx.http.router()` (served at `/plugin-api/<id>/`) and sockets
+   on `ctx.ws.route` / `ctx.ws.upgrade` (`/plugin-ws/<id>/<path>`). Route paths
+   are relative to the mount point.
+2. Update every route's OpenAPI JSDoc path to `/plugin-api/<id>/...`.
+3. Delete the feature's own port and server from core: its import in
+   `src/backend/starter.ts`, its `listen`, and its `location` blocks in **both**
+   `docker/nginx.conf` and `docker/nginx-https.conf`. `/plugin-api/` and
+   `/plugin-ws/` are already proxied.
+4. Point the frontend at the plugin client (step 11); old paths such as
+   `/workspaces` stop existing.
+
+### 9. Sync entities
+
+If core synced the data, or it is personal configuration that should follow a
+user between the desktop app and a server, register it in `activate`:
+`ctx.sync.registerEntity({ type, table, order, ... })`. Keep an existing wire
+name exactly and remove core's registration from `sync-entities.ts`. Leave
+`electron/remote-sync-entities.cjs` alone: it is the fallback for servers
+older than the entity-types endpoint, which still sync the core entity. Give
+an entity that references others a higher `order` than they have. Use `shouldSync` for rows that belong to one
+install (workspaces leaves out its `last_session` row).
+
+### 10. Cross-plugin and core callers
+
+1. `grep -rn` the old repository or module across `src/` and `plugins/`. A core
+   caller means the feature is not fully out yet: move the logic behind a core
+   extension point or into the plugin.
+2. Another plugin calling it gets a service: declare it in `provides`
+   (`<id>.<noun>`, a version and a permission), `ctx.services.provide` it in
+   `activate`, and have the caller declare an optional `requires` entry plus
+   `optionalDependencies`. The caller must work when it is absent (catch and
+   degrade). Workspaces provides `workspaces.saved` to the AI plugin.
+
+### 11. Frontend
+
+1. List core imports:
+   `grep -rn "from \"@/\|src/ui" plugins/<id>/src/frontend`. Replace each:
+
+   | Core import                                     | SDK replacement                                             |
+   | ----------------------------------------------- | ----------------------------------------------------------- |
+   | `@/components/*`                                | `@termix/plugin-sdk/ui`                                     |
+   | `authApi`, `handleApiError` from `@/main-axios` | `app.api` or `usePluginApi()`, paths relative to the plugin |
+   | `react-i18next`, `i18next.t`                    | `useTranslation()` in components, `app.t` elsewhere         |
+   | `usePermissions`                                | `usePermission` / `app.hasPermission`                       |
+   | shell modules (`workspaceUtils`, tab state)     | `app.tabs`, `useTabs`                                       |
+   | `@/types/*`                                     | the plugin's own `types.ts`                                 |
+   | small helpers (`getErrorMessage`)               | a few lines in the plugin                                   |
+
+   Something the plugin genuinely needs from the shell's component library goes
+   into `src/ui/plugin-host/sdk-ui.ts` (a contract change: list it under
+   [The `ui` entry](#the-ui-entry)).
+
+2. Register everything in `activate(app)`: rail item (with `permission` when
+   there is one), panel, tabs, host editor sections, actions and slot
+   contributions. Use `app.onDispose` for timers.
+3. Remove the shell's references: imports from the feature, hardcoded ids and
+   switch cases, and the matching entries in
+   `scripts/shell-plugin-id-allowlist.json`. `node scripts/check-shell-plugin-ids.cjs`
+   must pass.
+4. The rail item appears in Appearance > Sidebar > Navigation on its own
+   because it is registered; confirm it there.
+5. No hardcoded text (a relative time is a translated string), no em dashes,
+   square containers.
+
+### 12. Locales
+
+1. Move every key the plugin uses from `src/ui/locales/en.json` into
+   `plugins/<id>/locales/en.json`, keeping the key paths so the code changes
+   only its namespace. Keys still used by core stay in core; a plugin may keep
+   using core's `common.*`, which is the fallback.
+2. Move the same keys, per language, from `src/ui/locales/translated/<xx_YY>.json`
+   into `plugins/<id>/locales/translated/<xx_YY>.json`, so no translation is lost.
+   Crowdin already picks up `plugins/*/locales/en.json` (`crowdin.yml`).
+3. Manifest keys (`titleKey`, `labelKey`) are plugin-relative.
+4. Only `en.json` is edited by hand afterwards.
+
+### 13. Tests
+
+1. Move the feature's tests to `plugins/<id>/tests/backend` and
+   `tests/frontend`. **No plugin test imports `src/`**, and no core test imports
+   `plugins/`. Delete core tests of code that left core.
+2. The minimum a conversion ships:
+   - routes against a real database: `createTestDb(pluginDir)` +
+     `createMockCtx({ db, router: () => express.Router(), permissions })` +
+     `activate`, served on an ephemeral port and called with `fetch`
+     (`plugins/workspaces/tests/backend/helpers.ts`);
+   - permission denial on every route;
+   - the adoption with the legacy table present (rows and indexes survive) and
+     absent (fresh table), using `createTestDb`'s `before` hook with the legacy
+     DDL copied from `db/index.ts`;
+   - activate failing closed without each capability;
+   - a frontend `activate.test.tsx` on `renderWithApp`, plus the panel or tab
+     rendering against a stubbed `api`.
+3. Every settings or host-column migration gets its run-twice test in core.
+4. `cd plugins/<id> && npx vitest run` while working; `npm run test:plugins` at
+   the end.
+
+### 14. Boundary allowlist
+
+`node scripts/check-plugin-boundaries.cjs --write`, then
+`git diff scripts/plugin-boundary-allowlist.json`: the plugin's entries are
+gone and **no other line was added**. Update the counts in the table under
+[Legacy core imports](#legacy-core-imports-the-debt-d1-removes).
+
+### 15. Build, test and check by hand
+
+```bash
+npm run build:sdk
+(cd plugins/<id> && npx termix-plugin validate && npx termix-plugin migrations --check)
+npm run build:backend
+npm run type-check
+npm run lint
+npm run test
+npm run test:plugins
+```
+
+Then, with the app running:
+
+1. Boot on an existing SQLite database from before the conversion: the data is
+   there, the `p_<id>_` tables exist and the legacy tables are gone.
+2. Use every feature path once: create, edit, delete, anything background.
+3. Remove the plugin's permission from a role: the rail item disappears and
+   the API answers 403.
+4. Disable, enable and disable the plugin in admin without a restart: its
+   views show the "needs the plugin" placeholder while off and come back after.
+5. On Postgres or MySQL if available: `npm run verify:dialect`, then boot.
+6. Update this document for anything the step added to the contract.
+
+---
+
 ## Legacy core imports: the debt D1 removes
 
-The twelve bundled plugins predate the SDK. They still reach core by relative
+The bundled plugins predate the SDK, apart from workspaces, which A9 rebuilt
+as the reference conversion and which imports nothing from core. They still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
 and rewrites to the compiled output path (`../../../backend/backend/...`, or
@@ -1130,8 +1503,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 109 files | D1         |
-| A plugin importing core by relative path         | Warning   | 70 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 106 files | D1         |
+| A plugin importing core by relative path         | Warning   | 68 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
 A warning does not fail a build, so the counts are held by

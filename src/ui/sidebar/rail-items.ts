@@ -19,7 +19,8 @@ import {
   Presentation,
   type LucideIcon,
 } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import { usePermissions } from "@/hooks/use-permissions";
 import { isElectron } from "@/lib/electron";
 import { createRegistry } from "@/lib/registry";
 
@@ -69,6 +70,8 @@ export interface RailItemDef {
   order?: number;
   /** Set for items a plugin registered. */
   pluginId?: string;
+  /** Role permission the user needs to see it at all, as a full id. */
+  permission?: string;
 }
 
 export const RAIL_ITEMS: RailItemDef[] = [
@@ -250,12 +253,36 @@ function railItemsSnapshot(): RailItemDef[] {
   return railSnapshot;
 }
 
-/** visibleRailItems() as a hook, re-rendering when plugins change it. */
+/**
+ * Drops items gated on a permission the user lacks. Until permissions load,
+ * gated items stay hidden rather than flashing in and out.
+ */
+export function permittedRailItems(
+  items: RailItemDef[],
+  permissions: { has: (permission: string) => boolean; loaded: boolean },
+): RailItemDef[] {
+  if (!items.some((item) => item.permission)) return items;
+  return items.filter(
+    (item) =>
+      !item.permission ||
+      (permissions.loaded && permissions.has(item.permission)),
+  );
+}
+
+/**
+ * visibleRailItems() as a hook, re-rendering when plugins change it, without
+ * the items the user's permissions hide.
+ */
 export function useRailItems(): RailItemDef[] {
-  return useSyncExternalStore(
+  const items = useSyncExternalStore(
     registeredRailItems.subscribe,
     railItemsSnapshot,
     railItemsSnapshot,
+  );
+  const { has, loaded } = usePermissions();
+  return useMemo(
+    () => permittedRailItems(items, { has, loaded }),
+    [items, has, loaded],
   );
 }
 

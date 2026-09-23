@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "tables": {
+    "workspaces": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "color": {
+          "type": "text"
+        },
+        "icon": {
+          "type": "text"
+        },
+        "kind": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "manual"
+        },
+        "isDefault": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "payload": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "{}"
+        },
+        "syncId": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "lastUsedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_user_workspaces_user_id",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "user_workspaces"
+    }
+  }
+}

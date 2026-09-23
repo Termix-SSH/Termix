@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import syncRouter, {
+  isSyncedRow,
   isValidEntityType,
   stripWritePayload,
 } from "../../../database/routes/sync.js";
+import { registerEntity } from "../../../plugins/sync-registry.js";
 
 describe("sync route order", () => {
   it("registers POST /tombstones before the POST /:entityType wildcard", () => {
@@ -93,5 +95,27 @@ describe("stripWritePayload", () => {
       syncId: "abc",
       name: "x",
     });
+  });
+});
+
+describe("isSyncedRow", () => {
+  let dispose: (() => void) | null = null;
+  afterEach(() => {
+    dispose?.();
+    dispose = null;
+  });
+
+  it("syncs every row of an entity that does not filter", () => {
+    expect(isSyncedRow("hosts", { id: 1 })).toBe(true);
+  });
+
+  it("leaves out the rows an entity's shouldSync refuses", () => {
+    dispose = registerEntity("demo", {
+      type: "demoLayouts",
+      table: {},
+      shouldSync: (row) => row.kind !== "local",
+    });
+    expect(isSyncedRow("demoLayouts", { kind: "shared" })).toBe(true);
+    expect(isSyncedRow("demoLayouts", { kind: "local" })).toBe(false);
   });
 });

@@ -29,6 +29,16 @@
   "dependencies": {
     "automations": "^1.0.0"
   },
+  "optionalDependencies": {
+    "workspaces": "^1.0.0"
+  },
+  "requires": [
+    {
+      "service": "workspaces.saved",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
+  ],
   "providesSecret": [
     {
       "key": "api-key",

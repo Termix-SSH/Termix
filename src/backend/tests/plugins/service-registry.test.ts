@@ -166,6 +166,16 @@ describe("service registry", () => {
       expect(audits[0].success).toBe(true);
     });
 
+    it("runs the provider as the user the permission was checked for", async () => {
+      const { getActor } = await import("../../plugins/actor.js");
+      register({
+        implementation: { hello: async () => getActor() ?? "nobody" },
+      });
+      const { handle } = handleFor(true, "user-7");
+
+      await expect(handle.hello("x")).resolves.toBe("user-7");
+    });
+
     it("denies without the permission and never reaches the provider", async () => {
       const hello = vi.fn(async () => "should not run");
       register({ implementation: { hello } });

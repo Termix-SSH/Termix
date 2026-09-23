@@ -1,133 +1,57 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { PluginApiClient } from "@termix/plugin-sdk/frontend";
+import { createWorkspacesApi } from "../../src/frontend/workspaces-api";
 
-const authApiMock = vi.hoisted(() => ({
-  get: vi.fn(async () => ({ data: [] })),
-  post: vi.fn(async () => ({ data: {} })),
-  patch: vi.fn(async () => ({ data: {} })),
-  put: vi.fn(async () => ({ data: {} })),
-  delete: vi.fn(async () => ({ data: { success: true } })),
-}));
+function fakeClient() {
+  const reply = (data: unknown) => vi.fn(async () => ({ data }));
+  return {
+    get: reply([]),
+    post: reply({ id: 1 }),
+    put: reply({ id: 1 }),
+    patch: reply({ id: 1 }),
+    delete: reply({ success: true }),
+  };
+}
 
-vi.mock("@/main-axios", () => ({
-  authApi: authApiMock,
-  handleApiError: (error: unknown) => error,
-}));
+const layout = { version: 1, tabs: [] };
 
-import {
-  listWorkspaces,
-  createWorkspace,
-  renameWorkspace,
-  updateWorkspaceContent,
-  deleteWorkspace,
-  duplicateWorkspace,
-  setDefaultWorkspace,
-  applyWorkspaceServer,
-  getLastSessionWorkspace,
-  saveLastSessionWorkspace,
-} from "../../src/frontend/workspaces-api";
-import type { WorkspacePayload } from "@/types/ui-types";
+describe("workspaces api", () => {
+  it("calls each route relative to the plugin's own mount point", async () => {
+    const client = fakeClient();
+    const api = createWorkspacesApi(client as unknown as PluginApiClient);
 
-beforeEach(() => {
-  authApiMock.get.mockClear();
-  authApiMock.post.mockClear();
-  authApiMock.patch.mockClear();
-  authApiMock.put.mockClear();
-  authApiMock.delete.mockClear();
-});
+    await api.list();
+    await api.create({ name: "A", color: "#fff", payload: layout });
+    await api.rename(3, { name: "B" });
+    await api.updateContent(3, layout);
+    await api.remove(3);
+    await api.duplicate(3, "C");
+    await api.setDefault(3);
+    await api.unsetDefault(3);
+    await api.apply(3);
+    await api.getLastSession();
+    await api.saveLastSession(layout);
 
-const samplePayload: WorkspacePayload = {
-  version: 1,
-  tabs: [],
-  activeSlotId: null,
-  splitMode: "none",
-  paneTabIds: [null, null, null, null, null, null],
-  rowSizes: [100],
-  rowColSizes: [[100]],
-};
-
-describe("workspaces-api", () => {
-  it("listWorkspaces GETs /plugin-api/workspaces", async () => {
-    authApiMock.get.mockResolvedValueOnce({ data: [{ id: 1 }] });
-    const result = await listWorkspaces();
-    expect(authApiMock.get).toHaveBeenCalledWith("/plugin-api/workspaces");
-    expect(result).toEqual([{ id: 1 }]);
+    expect(client.get.mock.calls).toEqual([["/"], ["/last-session"]]);
+    expect(client.post.mock.calls).toEqual([
+      ["/", { name: "A", color: "#fff", payload: layout }],
+      ["/3/duplicate", { name: "C" }],
+      ["/3/set-default"],
+      ["/3/unset-default"],
+      ["/3/apply"],
+    ]);
+    expect(client.patch.mock.calls).toEqual([["/3", { name: "B" }]]);
+    expect(client.put.mock.calls).toEqual([
+      ["/3/content", { payload: layout }],
+      ["/last-session", { payload: layout }],
+    ]);
+    expect(client.delete.mock.calls).toEqual([["/3"]]);
   });
 
-  it("createWorkspace POSTs /plugin-api/workspaces with the payload", async () => {
-    await createWorkspace({
-      name: "Test A",
-      color: "#fff",
-      payload: samplePayload,
-    });
-    expect(authApiMock.post).toHaveBeenCalledWith("/plugin-api/workspaces", {
-      name: "Test A",
-      color: "#fff",
-      payload: samplePayload,
-    });
-  });
-
-  it("renameWorkspace PATCHes /plugin-api/workspaces/:id", async () => {
-    await renameWorkspace(5, { name: "New Name" });
-    expect(authApiMock.patch).toHaveBeenCalledWith("/plugin-api/workspaces/5", {
-      name: "New Name",
-    });
-  });
-
-  it("updateWorkspaceContent PUTs /plugin-api/workspaces/:id/content", async () => {
-    await updateWorkspaceContent(5, samplePayload);
-    expect(authApiMock.put).toHaveBeenCalledWith(
-      "/plugin-api/workspaces/5/content",
-      {
-        payload: samplePayload,
-      },
-    );
-  });
-
-  it("deleteWorkspace DELETEs /plugin-api/workspaces/:id", async () => {
-    await deleteWorkspace(5);
-    expect(authApiMock.delete).toHaveBeenCalledWith("/plugin-api/workspaces/5");
-  });
-
-  it("duplicateWorkspace POSTs /plugin-api/workspaces/:id/duplicate with a name", async () => {
-    await duplicateWorkspace(5, "Test A (copy)");
-    expect(authApiMock.post).toHaveBeenCalledWith(
-      "/plugin-api/workspaces/5/duplicate",
-      {
-        name: "Test A (copy)",
-      },
-    );
-  });
-
-  it("setDefaultWorkspace POSTs /plugin-api/workspaces/:id/set-default", async () => {
-    await setDefaultWorkspace(5);
-    expect(authApiMock.post).toHaveBeenCalledWith(
-      "/plugin-api/workspaces/5/set-default",
-    );
-  });
-
-  it("applyWorkspaceServer POSTs /plugin-api/workspaces/:id/apply", async () => {
-    await applyWorkspaceServer(5);
-    expect(authApiMock.post).toHaveBeenCalledWith(
-      "/plugin-api/workspaces/5/apply",
-    );
-  });
-
-  it("getLastSessionWorkspace GETs /plugin-api/workspaces/last-session", async () => {
-    authApiMock.get.mockResolvedValueOnce({ data: null });
-    const result = await getLastSessionWorkspace();
-    expect(authApiMock.get).toHaveBeenCalledWith(
-      "/plugin-api/workspaces/last-session",
-    );
-    expect(result).toBeNull();
-  });
-
-  it("saveLastSessionWorkspace PUTs /plugin-api/workspaces/last-session", async () => {
-    await saveLastSessionWorkspace(samplePayload);
-    expect(authApiMock.put).toHaveBeenCalledWith(
-      "/plugin-api/workspaces/last-session",
-      {
-        payload: samplePayload,
-      },
-    );
+  it("returns the response body", async () => {
+    const client = fakeClient();
+    client.get = vi.fn(async () => ({ data: [{ id: 7 }] }));
+    const api = createWorkspacesApi(client as unknown as PluginApiClient);
+    expect(await api.list()).toEqual([{ id: 7 }]);
   });
 });

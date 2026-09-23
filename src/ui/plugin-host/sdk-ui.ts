@@ -58,6 +58,9 @@ export { TOTPDialog, type MFAPromptMode } from "@/ssh/dialogs/TOTPDialog";
 export { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog";
 export { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog";
 
+// Design tokens: the colour swatches folders, workspaces and tags pick from.
+export { FOLDER_COLORS } from "@/lib/theme";
+
 // Shell context
 export { useTabs, useTabsSafe } from "@/shell/TabContext";
 

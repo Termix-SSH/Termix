@@ -27,6 +27,10 @@ import {
   type SyncReferenceEntity,
 } from "./sync-references.js";
 import { timestampAtOrAfter } from "../sync-timestamp.js";
+import {
+  insertReturningWhere,
+  updateReturning,
+} from "../repositories/returning.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 
 // Primed at import so every consumer of this module - the routes below, the
@@ -58,7 +62,22 @@ function entityConfig(entityType: SyncEntityType) {
     table: entity.table as SyncTable,
     readOnlyFields: entity.readOnlyFields,
     singleton: entity.singleton === true,
+    shouldSync: (row: Record<string, unknown>) => isSyncedRow(entityType, row),
   };
+}
+
+/**
+ * Whether a row takes part in sync. An entity can leave some of its rows out
+ * (a per-install "last session"): they are not pulled, and a push, update or
+ * delete aimed at one is refused.
+ */
+export function isSyncedRow(
+  entityType: string,
+  row: Record<string, unknown>,
+): boolean {
+  const entity = getEntity(entityType);
+  if (!entity?.shouldSync) return true;
+  return entity.shouldSync(row) !== false;
 }
 
 type RepositoryContext = ReturnType<typeof createCurrentRepositoryContext>;
@@ -259,7 +278,7 @@ router.get(
         : null;
 
     try {
-      const { table, singleton } = entityConfig(entityType);
+      const { table, singleton, shouldSync } = entityConfig(entityType);
       const context = createCurrentRepositoryContext();
       const conditions = [eq(table.userId, userId)];
       if (since && "updatedAt" in table) {
@@ -273,8 +292,10 @@ router.get(
         .from(table as typeof hosts)
         .where(and(...conditions));
 
+      const synced = (rows as Record<string, unknown>[]).filter(shouldSync);
+
       const decrypted = await Promise.all(
-        rows.map(async (row) => {
+        synced.map(async (row) => {
           const result = await serializeSyncReferences(
             entityType,
             decryptIfNeeded(entityType, row as Record<string, unknown>, userId),
@@ -331,12 +352,20 @@ router.post(
     }
 
     try {
-      const { table } = entityConfig(entityType);
+      const { table, shouldSync } = entityConfig(entityType);
       const context = createCurrentRepositoryContext();
+      const locateRow = locateSyncRow(entityType, userId, syncId);
 
-      await context.drizzle
-        .delete(table as typeof hosts)
-        .where(locateSyncRow(entityType, userId, syncId));
+      const [target] = (await context.drizzle
+        .select()
+        .from(table as typeof hosts)
+        .where(locateRow)
+        .limit(1)) as Record<string, unknown>[];
+      if (target && !shouldSync(target)) {
+        return res.status(400).json({ error: "This row is not synced" });
+      }
+
+      await context.drizzle.delete(table as typeof hosts).where(locateRow);
 
       await createCurrentSyncTombstoneRepository().record(
         userId,
@@ -397,10 +426,13 @@ router.post(
     try {
       // singleton is still needed below: those tables have no sync_id column
       // for the insert to populate.
-      const { table, singleton } = entityConfig(entityType);
+      const { table, singleton, shouldSync } = entityConfig(entityType);
       const context = createCurrentRepositoryContext();
 
       const locateRow = locateSyncRow(entityType, userId, syncId);
+      if (!shouldSync(payload)) {
+        return res.status(400).json({ error: "This row is not synced" });
+      }
 
       const existingRows = await context.drizzle
         .select()
@@ -408,6 +440,9 @@ router.post(
         .where(locateRow)
         .limit(1);
       const existing = existingRows[0] as Record<string, unknown> | undefined;
+      if (existing && !shouldSync(existing)) {
+        return res.status(400).json({ error: "This row is not synced" });
+      }
 
       const resolvedPayload = await deserializeSyncReferences(
         entityType,
@@ -433,27 +468,30 @@ router.post(
         userId,
       );
 
+      // Through the returning helpers, because MySQL has no RETURNING and a
+      // bare .returning() throws there.
       let resultRow: Record<string, unknown>;
       if (existing) {
-        const updatedRows = await context.drizzle
-          .update(table as typeof hosts)
-          .set(encryptedPayload)
-          .where(locateRow)
-          .returning();
+        const updatedRows = await updateReturning(
+          context,
+          table as typeof hosts,
+          encryptedPayload,
+          locateRow,
+        );
         resultRow = updatedRows[0] as Record<string, unknown>;
       } else {
-        const insertedRows = await context.drizzle
-          .insert(table as typeof hosts)
-          .values(
-            (singleton
-              ? { ...encryptedPayload, userId }
-              : {
-                  ...encryptedPayload,
-                  userId,
-                  syncId,
-                }) as typeof hosts.$inferInsert,
-          )
-          .returning();
+        const insertedRows = await insertReturningWhere(
+          context,
+          table as typeof hosts,
+          (singleton
+            ? { ...encryptedPayload, userId }
+            : {
+                ...encryptedPayload,
+                userId,
+                syncId,
+              }) as typeof hosts.$inferInsert,
+          locateRow,
+        );
         resultRow = insertedRows[0] as Record<string, unknown>;
       }
 

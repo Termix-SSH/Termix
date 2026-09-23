@@ -20,6 +20,10 @@
       "types": "./dist/ddl.d.ts",
       "default": "./dist/ddl.js"
     },
+    "./table-builder": {
+      "types": "./dist/table-builder.d.ts",
+      "default": "./dist/table-builder.js"
+    },
     "./frontend": {
       "types": "./dist/frontend.d.ts",
       "default": "./dist/frontend.js"
@@ -65,5 +69,13 @@
     "esbuild": "^0.28.1",
     "semver": "^7.6.3",
     "tar": "^7.5.22"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "*"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    }
   }
 }

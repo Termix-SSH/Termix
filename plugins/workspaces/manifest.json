@@ -15,6 +15,13 @@
     "api": "1"
   },
   "capabilities": ["db:own", "network:serve", "ui:surface"],
+  "provides": [
+    {
+      "service": "workspaces.saved",
+      "version": "1.0.0",
+      "permission": "workspaces.use"
+    }
+  ],
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"],
   "contributes": {
@@ -23,6 +30,14 @@
         "id": "workspaces",
         "titleKey": "nav.workspaces",
         "icon": "LayoutTemplate"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
       }
     ]
   }

@@ -1,6 +1,9 @@
-import { getErrorMessage } from "@/lib/error-message.js";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import {
+  usePluginApi,
+  useTranslation,
+  type ShellLayout,
+} from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   LayoutTemplate,
@@ -12,40 +15,34 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Badge } from "@/components/badge";
 import {
+  Badge,
+  Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-} from "@/components/dialog";
-import { FOLDER_COLORS } from "@/lib/theme";
-import {
-  listWorkspaces,
-  createWorkspace,
-  renameWorkspace,
-  updateWorkspaceContent,
-  deleteWorkspace,
-  duplicateWorkspace,
-  setDefaultWorkspace,
-  unsetDefaultWorkspace,
-} from "./workspaces-api";
-import type { Workspace, WorkspacePayload } from "@/types/ui-types";
+  FOLDER_COLORS,
+  Input,
+} from "@termix/plugin-sdk/ui";
+import { createWorkspacesApi, type WorkspacesApi } from "./workspaces-api";
+import { errorMessage, type Workspace } from "./types";
 
-function timeAgo(isoStr: string): string {
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+function timeAgo(isoStr: string, t: Translate): string {
   const ms = Date.now() - new Date(isoStr).getTime();
   if (!Number.isFinite(ms)) return "";
+  const prefix = "newUi.sidebar.workspaces.timeAgo";
   const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return t(`${prefix}.seconds`, { count: sec });
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t(`${prefix}.minutes`, { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return `${Math.floor(hr / 24)}d ago`;
+  if (hr < 24) return t(`${prefix}.hours`, { count: hr });
+  return t(`${prefix}.days`, { count: Math.floor(hr / 24) });
 }
 
 function WorkspaceSaveDialog({
@@ -153,10 +150,12 @@ function WorkspaceSaveDialog({
 }
 
 function WorkspaceRenameDialog({
+  api,
   workspace,
   onClose,
   onSaved,
 }: {
+  api: WorkspacesApi;
   workspace: Workspace | null;
   onClose: () => void;
   onSaved: () => void;
@@ -180,12 +179,12 @@ function WorkspaceRenameDialog({
     }
     setSaving(true);
     try {
-      await renameWorkspace(workspace.id, { name: name.trim(), color });
+      await api.rename(workspace.id, { name: name.trim(), color });
       toast.success(t("newUi.sidebar.workspaces.workspaceUpdated"));
       onSaved();
       onClose();
     } catch (error) {
-      const message = getErrorMessage(error, "");
+      const message = errorMessage(error);
       toast.error(message || t("newUi.sidebar.workspaces.updateFailed"));
     } finally {
       setSaving(false);
@@ -309,7 +308,7 @@ function WorkspaceRow({
           ? t("newUi.sidebar.workspaces.lastSessionDescription")
           : workspace.lastUsedAt
             ? t("newUi.sidebar.workspaces.lastUsed", {
-                time: timeAgo(workspace.lastUsedAt),
+                time: timeAgo(workspace.lastUsedAt, t),
               })
             : t("newUi.sidebar.workspaces.neverUsed")}
       </span>
@@ -390,10 +389,12 @@ export function WorkspacesPanel({
   onApplyWorkspace,
 }: {
   active?: boolean;
-  currentPayload: () => WorkspacePayload;
+  currentPayload: () => ShellLayout | null;
   onApplyWorkspace: (workspace: Workspace) => void;
 }) {
   const { t } = useTranslation();
+  const pluginApi = usePluginApi();
+  const api = useMemo(() => createWorkspacesApi(pluginApi), [pluginApi]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -404,13 +405,13 @@ export function WorkspacesPanel({
 
   const loadWorkspaces = useCallback(async () => {
     try {
-      const data = await listWorkspaces();
+      const data = await api.list();
       setWorkspaces(data);
     } catch (error) {
-      const message = getErrorMessage(error, "");
+      const message = errorMessage(error);
       toast.error(message || t("newUi.sidebar.workspaces.loadFailed"));
     }
-  }, [t]);
+  }, [api, t]);
 
   useEffect(() => {
     if (!active || hasLoadedRef.current) return;
@@ -421,11 +422,13 @@ export function WorkspacesPanel({
 
   async function handleSaveNew(name: string, color: string) {
     try {
-      await createWorkspace({ name, color, payload: currentPayload() });
+      const payload = currentPayload();
+      if (!payload) return;
+      await api.create({ name, color, payload });
       toast.success(t("newUi.sidebar.workspaces.workspaceCreated"));
       loadWorkspaces();
     } catch (error) {
-      const message = getErrorMessage(error, "");
+      const message = errorMessage(error);
       toast.error(message || t("newUi.sidebar.workspaces.saveFailed"));
       throw error;
     }
@@ -433,18 +436,20 @@ export function WorkspacesPanel({
 
   async function handleUpdateWithCurrent(workspace: Workspace) {
     try {
-      await updateWorkspaceContent(workspace.id, currentPayload());
+      const payload = currentPayload();
+      if (!payload) return;
+      await api.updateContent(workspace.id, payload);
       toast.success(t("newUi.sidebar.workspaces.workspaceUpdated"));
       loadWorkspaces();
     } catch (error) {
-      const message = getErrorMessage(error, "");
+      const message = errorMessage(error);
       toast.error(message || t("newUi.sidebar.workspaces.updateFailed"));
     }
   }
 
   async function handleDuplicate(workspace: Workspace) {
     try {
-      await duplicateWorkspace(
+      await api.duplicate(
         workspace.id,
         t("newUi.sidebar.workspaces.duplicateNameSuffix", {
           name: workspace.name,
@@ -453,7 +458,7 @@ export function WorkspacesPanel({
       toast.success(t("newUi.sidebar.workspaces.workspaceDuplicated"));
       loadWorkspaces();
     } catch (error) {
-      const message = getErrorMessage(error, "");
+      const message = errorMessage(error);
       toast.error(message || t("newUi.sidebar.workspaces.duplicateFailed"));
     }
   }
@@ -461,13 +466,13 @@ export function WorkspacesPanel({
   async function handleToggleDefault(workspace: Workspace) {
     try {
       if (workspace.isDefault) {
-        await unsetDefaultWorkspace(workspace.id);
+        await api.unsetDefault(workspace.id);
       } else {
-        await setDefaultWorkspace(workspace.id);
+        await api.setDefault(workspace.id);
       }
       loadWorkspaces();
     } catch (error) {
-      const message = getErrorMessage(error, "");
+      const message = errorMessage(error);
       toast.error(message || t("newUi.sidebar.workspaces.updateFailed"));
     }
   }
@@ -475,12 +480,12 @@ export function WorkspacesPanel({
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
-      await deleteWorkspace(deleteTarget.id);
+      await api.remove(deleteTarget.id);
       toast.success(t("newUi.sidebar.workspaces.workspaceDeleted"));
       setDeleteTarget(null);
       loadWorkspaces();
     } catch (error) {
-      const message = getErrorMessage(error, "");
+      const message = errorMessage(error);
       toast.error(message || t("newUi.sidebar.workspaces.deleteFailed"));
     }
   }
@@ -584,6 +589,7 @@ export function WorkspacesPanel({
       />
 
       <WorkspaceRenameDialog
+        api={api}
         workspace={renameTarget}
         onClose={() => setRenameTarget(null)}
         onSaved={loadWorkspaces}

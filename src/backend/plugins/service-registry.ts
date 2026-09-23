@@ -37,6 +37,7 @@
 
 import semver from "semver";
 import { pluginLogger } from "../utils/logger.js";
+import { runAsActor } from "./actor.js";
 import type { PluginManifest, PluginServiceRequire } from "./manifest.js";
 
 export interface ServiceRegistration {
@@ -386,9 +387,14 @@ async function invokeGuarded(
   }
 
   try {
-    const result = await (
-      implementation as (...callArgs: unknown[]) => unknown
-    ).apply(registration.implementation, args);
+    // Runs as the user the permission was checked for, so the provider reads
+    // the same user from ctx.currentActor() and cannot be told another one.
+    const result = await runAsActor(userId, "service", () =>
+      (implementation as (...callArgs: unknown[]) => unknown).apply(
+        registration.implementation,
+        args,
+      ),
+    );
 
     await context.audit({
       userId,

@@ -7,9 +7,9 @@ import {
   createCurrentHostRepository,
   createCurrentNetworkTopologyRepository,
   createCurrentSnippetRepository,
-  createCurrentWorkspaceRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
 import { num, objectSchema, type AiTool } from "./types.js";
+import { listSavedWorkspaces } from "../services.js";
 
 /**
  * Read tools project explicit fields rather than spreading rows. Redaction runs
@@ -178,16 +178,9 @@ export const readTools: AiTool[] = [
     category: "read",
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const workspaces = await createCurrentWorkspaceRepository().listByUser(
-        context.userId,
-      );
-      return {
-        workspaces: workspaces.map((workspace: any) => ({
-          id: workspace.id,
-          name: workspace.name,
-          isDefault: workspace.isDefault ?? false,
-        })),
-      };
+      const workspaces = await listSavedWorkspaces(context.userId);
+      if (workspaces === null) return { workspaces: [], unavailable: true };
+      return { workspaces };
     },
   },
   {

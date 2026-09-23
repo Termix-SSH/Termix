@@ -225,6 +225,13 @@
       "when": 1790135163099,
       "tag": "0031_nifty_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790164291317,
+      "tag": "0032_nifty_hedge_knight",
+      "breakpoints": true
     }
   ]
 }

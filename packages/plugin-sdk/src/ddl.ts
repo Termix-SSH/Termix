@@ -81,6 +81,14 @@ function columnType(
   }
 }
 
+/** Column types that are TEXT on MySQL when nothing keys them. */
+const TEXT_ON_MYSQL: ReadonlySet<PluginColumn["type"]> = new Set([
+  "text",
+  "json",
+  "encryptedText",
+  "timestamp",
+]);
+
 function defaultClause(dialect: SqlDialect, column: PluginColumn): string {
   if (column.defaultNow) {
     // MySQL rejects a bare DEFAULT CURRENT_TIMESTAMP on a text column; an
@@ -98,7 +106,12 @@ function defaultClause(dialect: SqlDialect, column: PluginColumn): string {
       : ` DEFAULT ${value ? "true" : "false"}`;
   }
   if (typeof value === "number") return ` DEFAULT ${value}`;
-  return ` DEFAULT '${String(value).replace(/'/g, "''")}'`;
+  const literal = `'${String(value).replace(/'/g, "''")}'`;
+  // MySQL refuses a literal default on a TEXT column but takes an expression.
+  if (dialect === "mysql" && TEXT_ON_MYSQL.has(column.type)) {
+    return ` DEFAULT (${literal})`;
+  }
+  return ` DEFAULT ${literal}`;
 }
 
 /** Every column that carries a key, and so must be indexable on MySQL. */
@@ -136,13 +149,11 @@ function indexStatement(
   return `CREATE ${unique}INDEX ${guard}${quote(dialect, entry.name)} ON ${quote(dialect, physical)} (${columns});`;
 }
 
-/** The CREATE TABLE and CREATE INDEX statements for one definition. */
-export function createTableSql(
+function createStatements(
   dialect: SqlDialect,
-  pluginId: string,
+  physical: string,
   definition: PluginTableDefinition,
-): string[] {
-  const physical = prefixedTableName(pluginId, definition.name);
+): { table: string; indexes: string[] } {
   const keyed = keyedColumns(definition);
 
   const lines: string[] = [];
@@ -178,18 +189,132 @@ export function createTableSql(
   }
 
   const body = [...lines, ...constraints].join(",\n");
-  const statements = [
-    `CREATE TABLE IF NOT EXISTS ${quote(dialect, physical)} (\n${body}\n);`,
-  ];
+  return {
+    table: `CREATE TABLE IF NOT EXISTS ${quote(dialect, physical)} (\n${body}\n);`,
+    indexes: definition.indexes.map((entry) =>
+      indexStatement(dialect, physical, definition, entry),
+    ),
+  };
+}
 
-  for (const entry of definition.indexes) {
-    statements.push(indexStatement(dialect, physical, definition, entry));
+/** The CREATE TABLE and CREATE INDEX statements for one definition. */
+export function createTableSql(
+  dialect: SqlDialect,
+  pluginId: string,
+  definition: PluginTableDefinition,
+): string[] {
+  const physical = prefixedTableName(pluginId, definition.name);
+  const { table, indexes } = createStatements(dialect, physical, definition);
+  return [table, ...indexes];
+}
+
+/**
+ * Takes over a legacy core table by renaming it into the plugin's namespace.
+ *
+ * A plain SQL migration cannot ask whether the legacy table exists, so it
+ * creates it first when it does not (a fresh install) and then renames either
+ * way. Both paths end with the same table and the same rows.
+ *
+ * Indexes are created on the legacy name with IF NOT EXISTS before the rename,
+ * which is why an adopted definition keeps the legacy index names: an index
+ * that already exists is left alone and follows the table. MySQL has no
+ * CREATE INDEX IF NOT EXISTS, so there none are emitted. That is safe because
+ * every legacy table reached MySQL through core's drizzle migrations, which
+ * already created its indexes.
+ */
+export function adoptTableSql(
+  dialect: SqlDialect,
+  pluginId: string,
+  definition: PluginTableDefinition,
+): string[] {
+  const legacy = definition.adopts;
+  if (!legacy) {
+    throw new Error(`Table "${definition.name}" does not adopt a legacy table`);
+  }
+  const physical = prefixedTableName(pluginId, definition.name);
+  const { table, indexes } = createStatements(dialect, legacy, definition);
+
+  const rename =
+    dialect === "mysql"
+      ? `RENAME TABLE ${quote(dialect, legacy)} TO ${quote(dialect, physical)};`
+      : `ALTER TABLE ${quote(dialect, legacy)} RENAME TO ${quote(dialect, physical)};`;
+
+  return [table, ...(dialect === "mysql" ? [] : indexes), rename];
+}
+
+/**
+ * Splits a migration file into statements.
+ *
+ * Deliberately simple: statements end at a semicolon that is not inside a
+ * string literal or a comment. A plugin needing more than that should put the
+ * logic in its own code, not in DDL.
+ */
+export function splitStatements(source: string): string[] {
+  const statements: string[] = [];
+  let current = "";
+  let quoteChar: string | null = null;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (lineComment) {
+      current += char;
+      if (char === "\n") lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      current += char;
+      if (char === "*" && next === "/") {
+        current += next;
+        i++;
+        blockComment = false;
+      }
+      continue;
+    }
+    if (quoteChar) {
+      current += char;
+      // '' inside a quoted string is an escaped quote, not a terminator.
+      if (char === quoteChar) {
+        if (next === quoteChar) {
+          current += next;
+          i++;
+        } else {
+          quoteChar = null;
+        }
+      }
+      continue;
+    }
+
+    if (char === "-" && next === "-") {
+      lineComment = true;
+      current += char;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      blockComment = true;
+      current += char;
+      continue;
+    }
+    if (char === "'" || char === '"' || char === "`") {
+      quoteChar = char;
+      current += char;
+      continue;
+    }
+    if (char === ";") {
+      if (current.trim()) statements.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
   }
 
+  if (current.trim()) statements.push(current.trim());
   return statements;
 }
 
-/** DROP statement for a definition, for removePluginData. */
 /** DROP statement for a definition, for removePluginData. */
 export function dropTableSql(
   dialect: SqlDialect,

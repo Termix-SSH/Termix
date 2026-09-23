@@ -358,11 +358,49 @@ describe("plugin tab types in layouts", () => {
     expect(snapshots.map((s) => s.type)).toEqual(["terminal"]);
   });
 
-  it("leaves out a plugin tab type nobody registered", () => {
+  it("keeps a plugin tab type nobody registered, so a disabled plugin loses nothing", () => {
     const { snapshots } = buildWorkspaceTabSnapshots([
-      makeTab({ id: "x", type: "some-plugin-tab" }),
+      makeTab({ id: "x", type: "some-plugin-tab", data: { a: 1 } }),
+      makeTab({ id: "d", type: "dashboard" }),
+      makeTab({ id: "h", type: "host-manager" }),
     ]);
-    expect(snapshots).toEqual([]);
+    expect(snapshots.map((s) => s.type)).toEqual(["some-plugin-tab"]);
+    expect(snapshotData(snapshots[0])).toEqual({ a: 1 });
+  });
+
+  it("reopens a hostless tab of a missing plugin as a placeholder", () => {
+    expect(
+      resolveWorkspaceTabTarget(
+        { slotId: "s", type: "some-plugin-tab", label: "Gone" },
+        [],
+      ),
+    ).toEqual({ kind: "singleton" });
+  });
+
+  it("reopens a missing plugin's host tab while its host exists", () => {
+    const host = makeHost({ syncId: "sync-1" });
+    expect(
+      resolveWorkspaceTabTarget(
+        {
+          slotId: "s",
+          type: "some-plugin-tab",
+          label: "Gone",
+          hostSyncId: "sync-1",
+        },
+        [host],
+      ),
+    ).toEqual({ kind: "host", host });
+    expect(
+      resolveWorkspaceTabTarget(
+        {
+          slotId: "s",
+          type: "some-plugin-tab",
+          label: "Gone",
+          hostSyncId: "sync-deleted",
+        },
+        [host],
+      ),
+    ).toEqual({ kind: "skip" });
   });
 
   it("carries a tab's plugin data and reads the older fleetId field", () => {

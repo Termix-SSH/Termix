@@ -23,7 +23,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 interface ActorStore {
   userId: string;
   /** Where the identity came from, for the audit line. */
-  source: "request" | "asUser";
+  source: "request" | "asUser" | "service";
 }
 
 const storage = new AsyncLocalStorage<ActorStore>();

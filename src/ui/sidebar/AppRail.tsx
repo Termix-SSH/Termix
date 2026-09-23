@@ -13,7 +13,7 @@ import {
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
-import { useRailItems, visibleRailItems } from "./rail-items";
+import { useRailItems, type RailItemDef } from "./rail-items";
 
 /** Core rail views; plugins add their own ids at runtime. */
 export type CoreRailView =
@@ -52,12 +52,13 @@ type RailItem =
   | { kind: "separator" };
 
 function buildRailButtons(
+  items: RailItemDef[],
   splitMode: SplitMode,
   t: (key: string) => string,
   hidden: Set<string>,
 ): RailItem[] {
   const all: RailItem[] = [];
-  for (const item of visibleRailItems()) {
+  for (const item of items) {
     const Icon = item.icon;
     if (item.kind === "tab") {
       all.push({
@@ -192,8 +193,8 @@ export function AppRail({
     };
   }, [menuPos]);
 
-  // Plugins add and remove rail items at runtime.
-  useRailItems();
+  // Plugins add and remove rail items at runtime, and permissions hide some.
+  const railItems = useRailItems();
 
   useEffect(() => {
     const handler = () => {
@@ -246,7 +247,12 @@ export function AppRail({
     ...hiddenTabs,
     ...(isRemoteSyncConnected ? [] : ["termix-id"]),
   ]);
-  const railButtons = buildRailButtons(splitMode, t, effectiveHiddenTabs);
+  const railButtons = buildRailButtons(
+    railItems,
+    splitMode,
+    t,
+    effectiveHiddenTabs,
+  );
   const setRailPinned = (nextPinned: boolean) => {
     setPinned(nextPinned);
     localStorage.setItem("pinAppRail", String(nextPinned));

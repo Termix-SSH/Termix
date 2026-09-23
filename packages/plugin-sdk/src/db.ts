@@ -111,6 +111,8 @@ export interface PluginTableDefinition {
   readonly name: string;
   readonly columns: Readonly<Record<string, PluginColumn>>;
   readonly indexes: readonly PluginTableIndex[];
+  /** A legacy core table this definition takes over by rename. See adoptLegacyTable. */
+  readonly adopts?: string;
 }
 
 /** Columns that can never carry an index, because MySQL cannot index them. */
@@ -261,3 +263,25 @@ export const LEGACY_TABLE_OWNERS: Readonly<Record<string, string>> = {
   webauthn_credentials: "webauthn",
   sso_providers: "sso",
 };
+
+/**
+ * Marks a definition as the new home of a legacy core table.
+ *
+ * The migration the CLI writes for it renames the legacy table into the
+ * plugin's namespace, and creates it first when there is none (a fresh
+ * install), so both paths end with the same table. Keep the legacy column and
+ * index names in the definition: the rename carries the old indexes across,
+ * and reusing their names is what stops the migration from creating a second
+ * copy of each.
+ */
+export function adoptLegacyTable(
+  legacyName: string,
+  definition: PluginTableDefinition,
+): PluginTableDefinition {
+  if (!Object.prototype.hasOwnProperty.call(LEGACY_TABLE_OWNERS, legacyName)) {
+    throw new Error(
+      `"${legacyName}" is not a legacy core table a plugin may adopt. See LEGACY_TABLE_OWNERS.`,
+    );
+  }
+  return { ...definition, adopts: legacyName };
+}

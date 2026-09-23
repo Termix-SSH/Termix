@@ -455,24 +455,6 @@ export type WorkspacePayload = {
   };
 };
 
-export type WorkspaceKind = "manual" | "last_session";
-
-export type Workspace = {
-  id: number;
-  userId: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  kind: WorkspaceKind;
-  isDefault: boolean;
-  payload: WorkspacePayload;
-  syncId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  lastUsedAt: string | null;
-  tabCount: number;
-};
-
 export type Snippet = {
   id: number;
   name: string;
