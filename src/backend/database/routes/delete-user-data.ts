@@ -19,7 +19,6 @@ import {
   createCurrentHostSidebarPreferenceRepository,
   createCurrentCredentialSidebarPreferenceRepository,
   createCurrentUiPreferenceRepository,
-  createCurrentNetworkTopologyRepository,
   createCurrentOpksshTokenRepository,
   createCurrentOpenTabRepository,
   createCurrentRecentActivityRepository,
@@ -110,7 +109,6 @@ export async function deleteUserAndRelatedData(
     await createCurrentHostRepository().deleteByUserId(userId);
     await createCurrentCredentialRepository().deleteByUserId(userId);
 
-    await createCurrentNetworkTopologyRepository().deleteByUserId(userId);
     await createCurrentDashboardServiceLinkRepository().deleteByUserId(userId);
     await createCurrentHomepageItemRepository().deleteByUserId(userId);
     await createCurrentHomepageLayoutRepository().deleteByUserId(userId);

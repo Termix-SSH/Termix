@@ -1,36 +1,5 @@
 import { authApi, handleApiError } from "@/main-axios";
 
-export interface NetworkTopologyNode {
-  data: {
-    id: string;
-    label?: string;
-    ip?: string;
-    status?: string;
-    tags?: string[];
-    parent?: string;
-    color?: string;
-    /** Absent on nodes; callers tell nodes from edges by testing these. */
-    source?: undefined;
-    target?: undefined;
-  };
-  position?: { x: number; y: number };
-}
-
-export interface NetworkTopologyEdge {
-  data: {
-    id?: string;
-    source: string;
-    target: string;
-    label?: undefined;
-    ip?: undefined;
-  };
-}
-
-export interface NetworkTopologyData {
-  nodes: NetworkTopologyNode[];
-  edges: NetworkTopologyEdge[];
-}
-
 /**
  * A snippet row as the list endpoint returns it. Callers that need the full
  * shape narrow it themselves; only the id is relied on across the app.
@@ -97,28 +66,6 @@ export async function executeSnippet(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "execute snippet");
-  }
-}
-
-export async function getNetworkTopology(): Promise<NetworkTopologyData | null> {
-  try {
-    const response = await authApi.get("/plugin-api/network-topology/");
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "fetch network topology");
-  }
-}
-
-export async function saveNetworkTopology(
-  topology: NetworkTopologyData,
-): Promise<{ success: boolean }> {
-  try {
-    const response = await authApi.post("/plugin-api/network-topology/", {
-      topology,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "save network topology");
   }
 }
 

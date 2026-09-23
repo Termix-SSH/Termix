@@ -7,34 +7,32 @@ import React, {
   useMemo,
   useReducer,
 } from "react";
-import { Card } from "@/components/card";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
 import {
-  getSSHHosts,
-  getNetworkTopology,
-  saveNetworkTopology,
-  type SSHHostWithStatus,
-  type NetworkTopologyEdge,
-  type NetworkTopologyNode,
-} from "@/main-axios";
-import { Button } from "@/components/button";
-import { Badge } from "@/components/badge";
-import {
+  Card,
+  Button,
+  Badge,
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogAction,
-} from "@/components/alert-dialog";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/dialog";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
+  Input,
+  Label,
+  Select2,
+  useTabsSafe,
+} from "@termix/plugin-sdk/ui";
+import {
+  useTranslation,
+  usePluginApi,
+  useHosts,
+  type PluginHostRecord,
+} from "@termix/plugin-sdk/frontend";
 import {
   Plus,
   Trash2,
@@ -59,11 +57,12 @@ import {
   ArrowDownUp,
   Loader2,
 } from "lucide-react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { useTabsSafe } from "@/shell/TabContext";
-import { cn } from "@/lib/utils";
-import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
-import { Select2 } from "@/components/select2";
+import {
+  createNetworkTopologyApi,
+  type NetworkTopologyData,
+  type NetworkTopologyNode,
+  type NetworkTopologyEdge,
+} from "./network-topology-api";
 
 const AVAILABLE_COLORS = [
   { value: "#ef4444", label: "Red" },
@@ -76,8 +75,19 @@ const AVAILABLE_COLORS = [
   { value: "#6b7280", label: "Gray" },
 ];
 
+type HostStatus = "online" | "reachable" | "offline" | "unknown";
+
+interface HostWithStatus extends PluginHostRecord {
+  status?: HostStatus;
+  enableTerminal?: boolean;
+  enableFileManager?: boolean;
+  enableTunnel?: boolean;
+  enableDocker?: boolean;
+  tunnelConnections?: unknown;
+}
+
 interface HostMap {
-  [key: string]: SSHHostWithStatus;
+  [key: string]: HostWithStatus;
 }
 
 interface ContextMenuState {
@@ -99,6 +109,24 @@ interface NetworkGraphCardProps {
 }
 
 type NetworkElement = NetworkTopologyNode | NetworkTopologyEdge;
+
+type StatusColorScheme = "accent" | "status";
+
+/** Reads the sidebar preferences cache directly, same as core's status dots do. */
+function readStatusColorScheme(): StatusColorScheme {
+  try {
+    const raw = localStorage.getItem("hostSidebarPreferences");
+    if (!raw) return "accent";
+    const parsed = JSON.parse(raw) as {
+      display?: { statusColorScheme?: string };
+    };
+    return parsed?.display?.statusColorScheme === "status"
+      ? "status"
+      : "accent";
+  } catch {
+    return "accent";
+  }
+}
 
 function resolveCssVar(varName: string, fallback: string): string {
   const raw = getComputedStyle(document.documentElement)
@@ -205,15 +233,16 @@ export function NetworkGraphCard({
 }: NetworkGraphCardProps): React.ReactElement {
   const { t } = useTranslation();
   const { addTab } = useTabsSafe();
+  const pluginApi = usePluginApi();
+  const api = useMemo(() => createNetworkTopologyApi(pluginApi), [pluginApi]);
+  const { hosts: liveHosts } = useHosts();
 
   // Gate Cytoscape mounting on the container actually having non-zero dimensions.
   // This avoids the "bb is undefined" crash when the card is hidden via display:none.
   const [containerReady, setContainerReady] = useState(false);
 
   const [elements, setElements] = useState<NetworkElement[]>([]);
-  const [hosts, setHosts] = useState<SSHHostWithStatus[]>([]);
   const [hostMap, setHostMap] = useState<HostMap>({});
-  const hostMapRef = useRef<HostMap>({});
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -237,7 +266,7 @@ export function NetworkGraphCard({
   const [selectedHostForEdge, setSelectedHostForEdge] = useState("");
   const [targetHostForEdge, setTargetHostForEdge] = useState("");
   const [selectedNodeForDetail, setSelectedNodeForDetail] =
-    useState<SSHHostWithStatus | null>(null);
+    useState<HostWithStatus | null>(null);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     visible: false,
@@ -265,30 +294,29 @@ export function NetworkGraphCard({
   }, [containerReady]);
 
   const cyRef = useRef<cytoscape.Core | null>(null);
-  const statusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cyContainerRef = useRef<HTMLDivElement>(null);
 
+  // hostMap tracks the live host list, so status/tags update without polling.
   useEffect(() => {
-    hostMapRef.current = hostMap;
-  }, [hostMap]);
+    const newMap: HostMap = {};
+    (liveHosts as HostWithStatus[]).forEach((h) => (newMap[String(h.id)] = h));
+    setHostMap(newMap);
 
-  useEffect(() => {
-    if (!isVisible) {
-      if (statusIntervalRef.current) {
-        clearInterval(statusIntervalRef.current);
-        statusIntervalRef.current = null;
+    if (!cyRef.current) return;
+    cyRef.current.nodes().forEach((node) => {
+      if (node.isParent()) return;
+      const h = newMap[node.data("id")];
+      if (h) {
+        node.data("status", h.status ?? "unknown");
+        node.data("tags", h.tags ?? []);
       }
-      return;
-    }
+    });
+  }, [liveHosts]);
 
-    loadData();
-    statusIntervalRef.current = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      updateHostStatuses();
-    }, 30000);
+  useEffect(() => {
+    if (!isVisible) return;
     const onClickOutside = (e: MouseEvent) => {
       if (
         contextMenuRef.current &&
@@ -307,27 +335,25 @@ export function NetworkGraphCard({
     });
 
     return () => {
-      if (statusIntervalRef.current) clearInterval(statusIntervalRef.current);
       document.removeEventListener("mousedown", onClickOutside, true);
       themeObserver.disconnect();
     };
   }, [isVisible]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const hostsData = await getSSHHosts();
-      const hostsArray = Array.isArray(hostsData) ? hostsData : [];
-      setHosts(hostsArray);
       const newMap: HostMap = {};
-      hostsArray.forEach((h) => (newMap[String(h.id)] = h));
+      (liveHosts as HostWithStatus[]).forEach(
+        (h) => (newMap[String(h.id)] = h),
+      );
       setHostMap(newMap);
 
       let nodes: NetworkTopologyNode[] = [];
       let edges: NetworkTopologyEdge[] = [];
       try {
-        const topo = await getNetworkTopology();
+        const topo = await api.get();
         if (topo?.nodes && Array.isArray(topo.nodes)) {
           nodes = topo.nodes.map((node) => {
             const h = newMap[node.data.id];
@@ -360,34 +386,18 @@ export function NetworkGraphCard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [api, liveHosts]);
 
-  const updateHostStatuses = useCallback(async () => {
-    if (!cyRef.current) return;
-    try {
-      const updated = await getSSHHosts();
-      const updatedMap: HostMap = {};
-      updated.forEach((h) => (updatedMap[String(h.id)] = h));
-      cyRef.current.nodes().forEach((node) => {
-        if (node.isParent()) return;
-        const h = updatedMap[node.data("id")];
-        if (h) {
-          node.data("status", h.status);
-          node.data("tags", h.tags || []);
-        }
-      });
-      setHostMap(updatedMap);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  useEffect(() => {
+    if (!isVisible) return;
+    void loadData();
+    // Only the initial load per visibility change; hostMap stays live via the
+    // liveHosts effect above.
+  }, [isVisible]);
 
-  const debouncedSave = useCallback(() => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => saveCurrentLayout(), 1000);
-  }, []);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const saveCurrentLayout = async () => {
+  const saveCurrentLayout = useCallback(async () => {
     if (!cyRef.current) return;
     try {
       const nodes = cyRef.current.nodes().map((n) => ({
@@ -409,11 +419,16 @@ export function NetworkGraphCard({
           target: e.data("target"),
         },
       }));
-      await saveNetworkTopology({ nodes, edges });
+      await api.save({ nodes, edges } as NetworkTopologyData);
     } catch {
       /* ignore */
     }
-  };
+  }, [api]);
+
+  const debouncedSave = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => void saveCurrentLayout(), 1000);
+  }, [saveCurrentLayout]);
 
   useEffect(() => {
     if (!cyRef.current || loading || elements.length === 0) return;
@@ -553,7 +568,7 @@ export function NetworkGraphCard({
     [applyStyle, debouncedSave, embedded],
   );
 
-  // Zoom centered on the viewport midpoint — no panning
+  // Zoom centered on the viewport midpoint, no panning
   const zoomIn = useCallback(() => {
     const cy = cyRef.current;
     if (!cy || !cyContainerRef.current) return;
@@ -623,7 +638,7 @@ export function NetworkGraphCard({
     fireOpen(contextMenu.targetId, appType);
   };
 
-  const hasTunnelConnections = (h: SSHHostWithStatus | undefined) => {
+  const hasTunnelConnections = (h: HostWithStatus | undefined) => {
     if (!h?.tunnelConnections) return false;
     try {
       const arr = Array.isArray(h.tunnelConnections)
@@ -781,10 +796,11 @@ export function NetworkGraphCard({
   );
 
   const availableHostsForAdd = useMemo(() => {
-    if (!cyRef.current) return hosts;
+    const hostList = liveHosts as HostWithStatus[];
+    if (!cyRef.current) return hostList;
     const existing = new Set(elements.map((e) => e.data.id));
-    return hosts.filter((h) => !existing.has(String(h.id)));
-  }, [hosts, elements]);
+    return hostList.filter((h) => !existing.has(String(h.id)));
+  }, [liveHosts, elements]);
 
   const btnCls =
     "h-7 w-7 p-0 rounded-sm border-0 hover:bg-muted/60 transition-colors flex items-center justify-center text-muted-foreground hover:text-foreground";
@@ -1043,12 +1059,11 @@ export function NetworkGraphCard({
                     key={c.value}
                     type="button"
                     onClick={() => setNewGroupColor(c.value)}
-                    className={cn(
-                      "h-9 rounded border-2 transition-all",
+                    className={`h-9 rounded border-2 transition-all ${
                       newGroupColor === c.value
                         ? "border-accent-brand ring-1 ring-accent-brand"
-                        : "border-border hover:border-muted-foreground",
-                    )}
+                        : "border-border hover:border-muted-foreground"
+                    }`}
                     style={{ backgroundColor: c.value }}
                     title={c.label}
                   />
@@ -1225,7 +1240,7 @@ export function NetworkGraphCard({
           reader.onload = async (evt) => {
             try {
               const json = JSON.parse(evt.target?.result as string);
-              await saveNetworkTopology({
+              await api.save({
                 nodes: json.nodes,
                 edges: json.edges,
               });
@@ -1349,7 +1364,7 @@ export function NetworkGraphCard({
     );
   }
 
-  /* ── embedded card ── */
+  /* embedded card */
   const nodeCount = elements.filter((e) => !e.data.source).length;
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0 min-h-0">

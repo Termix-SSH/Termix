@@ -28,3 +28,26 @@ export async function listSavedWorkspaces(
     return null;
   }
 }
+
+/** Another plugin's graph, as ctx.services.get("network-topology.graph") returns it. */
+interface NetworkTopologyGraph {
+  get: () => Promise<unknown | null>;
+}
+
+/**
+ * The user's saved network topology, or null when the network-topology
+ * plugin is off or the user may not use it. Optional: the tool disappears
+ * without it.
+ */
+export async function getNetworkTopology(
+  userId: string,
+): Promise<unknown | null> {
+  if (!current) return null;
+  try {
+    return await current
+      .get<NetworkTopologyGraph>("network-topology.graph", { userId })
+      .get();
+  } catch {
+    return null;
+  }
+}

@@ -719,20 +719,6 @@ export const commandHistory = pgTable(
   ],
 );
 
-export const networkTopology = pgTable("network_topology", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  topology: text("topology"),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const hostAccess = pgTable(
   "host_access",
   {

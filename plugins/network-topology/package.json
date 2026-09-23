@@ -9,6 +9,10 @@
     "typecheck": "tsc -p tsconfig.json",
     "validate": "termix-plugin validate"
   },
+  "dependencies": {
+    "cytoscape": "^3.34.3",
+    "react-cytoscapejs": "^2.0.0"
+  },
   "devDependencies": {
     "@termix/plugin-sdk": "*"
   }

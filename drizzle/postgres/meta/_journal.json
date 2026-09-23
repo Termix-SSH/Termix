@@ -232,6 +232,13 @@
       "when": 1790164291317,
       "tag": "0032_nifty_hedge_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790166644445,
+      "tag": "0033_bent_trish_tilby",
+      "breakpoints": true
     }
   ]
 }

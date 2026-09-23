@@ -96,16 +96,20 @@ describe("core sync entities", () => {
     registerCoreSyncEntities();
   });
 
-  it("registers every entity the Electron client knows about", () => {
-    // Nothing asserted this before, which is how networkTopology came to be
-    // missing from the list in sync.test.ts.
-    expect([...listEntityTypes()].sort()).toEqual(
-      [...SYNCED_ENTITY_TYPES].sort(),
-    );
+  it("registers every core-owned entity the Electron client knows about", () => {
+    // The frozen array also lists networkTopology, which is now registered
+    // by the network-topology plugin rather than core.
+    const coreTypes = new Set(listEntityTypes());
+    for (const type of SYNCED_ENTITY_TYPES) {
+      if (type === "networkTopology") continue;
+      expect(coreTypes.has(type), type).toBe(true);
+    }
   });
 
   it("keeps the dependency order the frozen Electron array encodes", () => {
-    expect(listEntityTypes()).toEqual([...SYNCED_ENTITY_TYPES]);
+    expect(listEntityTypes()).toEqual(
+      [...SYNCED_ENTITY_TYPES].filter((type) => type !== "networkTopology"),
+    );
   });
 
   it("owns all of them as core", () => {
@@ -131,12 +135,12 @@ describe("core sync entities", () => {
     }
   });
 
-  it("marks the two singletons and nothing else", () => {
+  it("marks the one singleton and nothing else", () => {
     const singletons = listEntities()
       .filter((entity) => entity.singleton)
       .map((entity) => entity.type);
 
-    expect(singletons.sort()).toEqual(["networkTopology", "userPreferences"]);
+    expect(singletons.sort()).toEqual(["userPreferences"]);
   });
 
   it("keeps the read-only fields that must survive a sync payload", () => {
@@ -144,13 +148,6 @@ describe("core sync entities", () => {
     expect(getEntity("userPreferences")?.readOnlyFields).toEqual([
       "storageMode",
     ]);
-  });
-
-  it("gives networkTopology the custom serializer its JSON blob needs", () => {
-    const topology = getEntity("networkTopology");
-
-    expect(topology?.serialize).toBeTypeOf("function");
-    expect(topology?.deserialize).toBeTypeOf("function");
   });
 
   it("is idempotent, because several modules prime it", () => {

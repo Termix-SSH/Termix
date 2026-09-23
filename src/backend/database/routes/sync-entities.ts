@@ -4,12 +4,11 @@
  * These were a hardcoded ENTITY_CONFIG in sync.ts, a SyncEntityType union in
  * the tombstone repository, a REFERENCES map in sync-references.ts and a
  * frozen array in electron/. Four lists that had to agree and had no test
- * saying they did - which is how networkTopology came to be missing from one
- * of them. Now there is one registration per entity and the rest is derived.
+ * saying they did. Now there is one registration per entity and the rest is
+ * derived.
  *
  * The order values reproduce the dependency order the Electron array encoded:
- * anything referenced by another entity syncs first, and networkTopology
- * syncs last because it holds host ids inside a JSON blob.
+ * anything referenced by another entity syncs first.
  */
 
 import {
@@ -22,14 +21,12 @@ import {
   dashboardServiceLinks,
   homepageItems,
   userPreferences,
-  networkTopology,
 } from "../db/schema.js";
 import {
   CORE_OWNER,
   registerEntity,
   listEntities,
 } from "../../plugins/sync-registry.js";
-import { mapTopologyHostIds } from "./sync-references.js";
 
 const CREDENTIAL_REFERENCE = {
   field: "credentialId",
@@ -139,36 +136,6 @@ export function registerCoreSyncEntities(): void {
     order: 90,
     singleton: true,
     readOnlyFields: ["storageMode"],
-  });
-
-  registerEntity(CORE_OWNER, {
-    type: "networkTopology",
-    table: networkTopology,
-    order: 100,
-    singleton: true,
-    // Host ids live inside the topology JSON rather than in a column, so the
-    // generic reference machinery cannot reach them.
-    serialize: async (row, resolveSyncId) => ({
-      ...row,
-      topology: await mapTopologyHostIds(
-        row.topology as string | null | undefined,
-        async (id) => {
-          const numericId = Number(id);
-          if (!Number.isInteger(numericId)) return null;
-          return resolveSyncId("hosts", numericId);
-        },
-      ),
-    }),
-    deserialize: async (row, resolveId) => ({
-      ...row,
-      topology: await mapTopologyHostIds(
-        row.topology as string | null | undefined,
-        async (syncId) => {
-          const id = await resolveId("hosts", syncId);
-          return id === null ? null : String(id);
-        },
-      ),
-    }),
   });
 }
 

@@ -30,11 +30,17 @@
     "automations": "^1.0.0"
   },
   "optionalDependencies": {
-    "workspaces": "^1.0.0"
+    "workspaces": "^1.0.0",
+    "network-topology": "^1.0.0"
   },
   "requires": [
     {
       "service": "workspaces.saved",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "network-topology.graph",
       "versionRange": "^1.0.0",
       "optional": true
     }

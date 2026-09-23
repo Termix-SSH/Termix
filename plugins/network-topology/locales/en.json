@@ -56,5 +56,11 @@
   },
   "dashboardTab": {
     "nodes": "{{count}} nodes"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use network graph",
+      "description": "View and edit the network topology graph."
+    }
   }
 }

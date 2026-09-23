@@ -2151,19 +2151,12 @@ export {
 // SNIPPETS API
 // ============================================================================
 
-export type {
-  NetworkTopologyNode,
-  NetworkTopologyEdge,
-  NetworkTopologyData,
-} from "@/api/snippets-api";
 export {
   getSnippets,
   createSnippet,
   updateSnippet,
   deleteSnippet,
   executeSnippet,
-  getNetworkTopology,
-  saveNetworkTopology,
   getSnippetFolders,
   createSnippetFolder,
   updateSnippetFolderMetadata,

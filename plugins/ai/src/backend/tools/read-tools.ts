@@ -5,11 +5,10 @@ import {
   createCurrentFleetRepository,
   createCurrentHomepageItemRepository,
   createCurrentHostRepository,
-  createCurrentNetworkTopologyRepository,
   createCurrentSnippetRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
 import { num, objectSchema, type AiTool } from "./types.js";
-import { listSavedWorkspaces } from "../services.js";
+import { listSavedWorkspaces, getNetworkTopology } from "../services.js";
 
 /**
  * Read tools project explicit fields rather than spreading rows. Redaction runs
@@ -260,12 +259,9 @@ export const readTools: AiTool[] = [
     category: "read",
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const topology =
-        await createCurrentNetworkTopologyRepository().findByUserId(
-          context.userId,
-        );
-      if (!topology) return { topology: null };
-      return { topology: (topology as any).data ?? null };
+      const topology = await getNetworkTopology(context.userId);
+      if (topology === null) return { topology: null, unavailable: true };
+      return { topology };
     },
   },
 ];

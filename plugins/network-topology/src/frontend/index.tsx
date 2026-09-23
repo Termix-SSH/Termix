@@ -36,6 +36,7 @@ export function activate(app: TermixApp): void {
     titleKey: "nav.networkGraph",
     kind: "tab",
     after: "local-terminal",
+    permission: "use",
   });
 
   app.registerDashboardCard({

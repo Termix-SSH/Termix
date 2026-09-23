@@ -15,6 +15,13 @@
     "api": "1"
   },
   "capabilities": ["db:own", "network:serve", "ui:surface"],
+  "provides": [
+    {
+      "service": "network-topology.graph",
+      "version": "1.0.0",
+      "permission": "network-topology.use"
+    }
+  ],
   "contributes": {
     "tabs": [
       {
@@ -29,6 +36,14 @@
         "id": "network_graph",
         "titleKey": "dashboard.networkGraph",
         "icon": "Network"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
       }
     ]
   },

@@ -1510,8 +1510,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 106 files | D1         |
-| A plugin importing core by relative path         | Warning   | 68 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 105 files | D1         |
+| A plugin importing core by relative path         | Warning   | 67 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
 A warning does not fail a build, so the counts are held by

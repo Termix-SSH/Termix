@@ -718,20 +718,6 @@ export const commandHistory = mysqlTable(
   ],
 );
 
-export const networkTopology = mysqlTable("network_topology", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  topology: text("topology"),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-
 export const hostAccess = mysqlTable(
   "host_access",
   {
