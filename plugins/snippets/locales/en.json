@@ -1,0 +1,98 @@
+{
+  "nav": {
+    "snippets": "Snippets"
+  },
+  "onboarding": {
+    "feature_snippets": "Snippets",
+    "feature_snippets_desc": "Save commands you run often and send them to a terminal in one click."
+  },
+  "permissions": {
+    "view": {
+      "title": "View snippets",
+      "description": "See your own snippets, notes and shared snippets."
+    },
+    "create": {
+      "title": "Create snippets",
+      "description": "Create new snippets, notes and folders."
+    },
+    "edit": {
+      "title": "Edit snippets",
+      "description": "Rename or change existing snippets and folders."
+    },
+    "delete": {
+      "title": "Delete snippets",
+      "description": "Delete snippets and folders."
+    },
+    "share": {
+      "title": "Share snippets",
+      "description": "Share snippets and folders with other users or roles."
+    }
+  },
+  "settings": {
+    "foldersCollapsed": {
+      "label": "Collapse folders by default",
+      "description": "Start each snippet folder collapsed when you open the Snippets panel."
+    }
+  },
+  "cancel": "Cancel",
+  "loading": "Loading...",
+  "searchPlaceholder": "Search snippets",
+  "newFolder": "New folder",
+  "newSnippet": "New snippet",
+  "noFolder": "No folder",
+  "noSnippetsInFolder": "No snippets in this folder",
+  "noTerminalTabsOpen": "No terminal tab is open",
+  "run": "Run",
+  "pasteToTerminal": "Paste to terminal",
+  "copySuccess": "Copied to clipboard",
+  "shareTitle": "Shared",
+  "importExport": "Import / Export",
+  "importFailed": "Failed to import snippets",
+
+  "nameLabel": "Name",
+  "namePlaceholder": "Snippet name",
+  "descriptionLabel": "Description",
+  "descriptionPlaceholder": "Optional description",
+  "folderLabel": "Folder",
+  "typeLabel": "Type",
+  "typeCommand": "Command",
+  "typeNote": "Note",
+  "commandLabel": "Command",
+  "commandPlaceholder": "Command to run, e.g. systemctl status $HOST",
+  "noteLabel": "Note",
+  "notePlaceholder": "Text to paste into the terminal",
+
+  "createSnippetTitle": "Create snippet",
+  "createSnippetDescription": "Save a command or note you can run or paste into a terminal.",
+  "createSnippetButton": "Create snippet",
+  "createSuccess": "Snippet created",
+  "createFailed": "Failed to create snippet",
+
+  "editSnippetTitle": "Edit snippet",
+  "editSnippetDescription": "Change this snippet's name, content or folder.",
+  "saveSnippetButton": "Save snippet",
+  "updateSuccess": "Snippet updated",
+  "updateFailed": "Failed to update snippet",
+  "deleteFailed": "Failed to delete snippet",
+
+  "createFolderTitle": "Create folder",
+  "createFolderButton": "Create folder",
+  "folderCreateSuccess": "Folder created",
+  "folderCreateFailed": "Failed to create folder",
+  "editFolderTitle": "Edit folder",
+  "saveFolderButton": "Save folder",
+  "folderEditSuccess": "Folder updated",
+  "folderEditFailed": "Failed to update folder",
+  "folderNameLabel": "Folder name",
+  "folderNamePlaceholder": "Folder name",
+  "folderIconLabel": "Icon",
+  "folderDeleteSuccess": "Folder deleted",
+  "folderDeleteFailed": "Failed to delete folder",
+
+  "confirmRunMessage": "Run \"{{name}}\"?",
+  "confirmRunButton": "Run",
+  "runSuccess": "Ran \"{{name}}\" on {{count}} terminal(s)",
+  "pasteSuccess": "Pasted \"{{name}}\" into {{count}} terminal(s)",
+
+  "foldersCollapsedLabel": "Collapse folders by default"
+}

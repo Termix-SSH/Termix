@@ -1,0 +1,85 @@
+{
+  "id": "snippets",
+  "name": "Snippets",
+  "version": "1.0.0",
+  "description": "Saved commands and notes you can run or paste into a terminal, with variables and sharing.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Productivity",
+  "icon": "Play",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "network:serve",
+    "ssh:connect",
+    "credentials:use",
+    "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "snippets.access",
+      "version": "1.0.0",
+      "permission": "snippets.view"
+    }
+  ],
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "contributes": {
+    "panels": [
+      {
+        "id": "snippets",
+        "titleKey": "nav.snippets",
+        "icon": "Play"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "view",
+        "titleKey": "permissions.view.title",
+        "descriptionKey": "permissions.view.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "create",
+        "titleKey": "permissions.create.title",
+        "descriptionKey": "permissions.create.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "edit",
+        "titleKey": "permissions.edit.title",
+        "descriptionKey": "permissions.edit.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "delete",
+        "titleKey": "permissions.delete.title",
+        "descriptionKey": "permissions.delete.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "share",
+        "titleKey": "permissions.share.title",
+        "descriptionKey": "permissions.share.description",
+        "defaultRoles": ["user"]
+      }
+    ],
+    "settings": {
+      "user": [
+        {
+          "key": "foldersCollapsed",
+          "type": "boolean",
+          "labelKey": "settings.foldersCollapsed.label",
+          "descriptionKey": "settings.foldersCollapsed.description",
+          "default": true
+        }
+      ]
+    }
+  }
+}
