@@ -24,10 +24,39 @@
     "ui:surface"
   ],
   "contributes": {
-    "hostCapability": {
-      "key": "enableProxmox",
-      "labelKey": "hosts.proxmoxIntegration",
-      "editorTab": "proxmox"
+    "tabs": [
+      {
+        "id": "proxmox-stats",
+        "titleKey": "nav.proxmoxStats",
+        "icon": "HardDrive",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "fields": [
+          {
+            "key": "enableProxmox",
+            "type": "custom",
+            "component": "proxmoxHostSettings"
+          },
+          {
+            "key": "proxmoxConfig",
+            "type": "custom",
+            "component": "proxmoxHostSettings"
+          },
+          {
+            "key": "enableProxmoxStats",
+            "type": "custom",
+            "component": "proxmoxHostSettings"
+          },
+          {
+            "key": "proxmoxStatsConfig",
+            "type": "custom",
+            "component": "proxmoxHostSettings"
+          }
+        ]
+      }
     }
   },
   "locales": "locales",

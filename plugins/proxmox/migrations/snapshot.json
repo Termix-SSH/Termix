@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "tables": {
+    "node_history": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "ts": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "cpuPercent": {
+          "type": "real"
+        },
+        "memPercent": {
+          "type": "real"
+        },
+        "diskPercent": {
+          "type": "real"
+        },
+        "netRxBytes": {
+          "type": "integer"
+        },
+        "netTxBytes": {
+          "type": "integer"
+        }
+      },
+      "indexes": [],
+      "adopts": "proxmox_node_history"
+    },
+    "stats_preferences": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "layout": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_proxmox_stats_prefs_user_host",
+          "columns": ["userId", "hostId"],
+          "unique": true
+        }
+      ],
+      "adopts": "proxmox_stats_preferences"
+    }
+  }
+}

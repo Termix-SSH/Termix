@@ -1,35 +1,26 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
 import express, { type Router } from "express";
 import type { Client as SSHClient } from "ssh2";
-import { logger } from "../../../../src/backend/utils/logger.js";
-import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
-import { createCurrentHostRepository } from "../../../../src/backend/database/repositories/factory.js";
-import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
-import {
-  type AuthenticatedRequest,
-  type SSHHost,
-} from "../../../../src/types/index.js";
-import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
-import type { PluginSshHost } from "@termix/plugin-sdk/backend";
+import { execElevated } from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+import type {
+  PluginHostCreateInput,
+  PluginHostRecord,
+  PluginHostUpdateInput,
+} from "@termix/plugin-sdk/backend";
 import { connectSsh } from "./ssh.js";
+import { pluginCtx } from "./plugin-ctx.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
 import {
   parseProxmoxJumpHosts,
   serializeProxmoxJumpHosts,
 } from "./proxmox-jump-hosts.js";
-import { isSafeNodeName } from "../../../../src/backend/hosts/proxmox-shared.js";
-import { execElevated } from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+import { isSafeNodeName } from "./proxmox-shared.js";
 
 const router = express.Router();
-const proxmoxLogger = logger;
 const runningSyncs = new Set<string>();
 
 const MIN_SYNC_INTERVAL_MINUTES = 5;
 const DEFAULT_SYNC_INTERVAL_MINUTES = 15;
-
-const authManager = AuthManager.getInstance();
-const authenticateJWT = authManager.createAuthMiddleware();
-const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Helpers
 
@@ -189,6 +180,9 @@ type ProxmoxGuest = {
   enableDocker: boolean;
 };
 
+/** The resolved host ctx.ssh.connect hands back, plus the sudo secret proxmox needs for pvesh. */
+type PluginSshHostWithSudo = PluginHostRecord & { sudoPassword?: string };
+
 type ProxmoxSource = {
   source: "proxmox";
   sourceHostId: number;
@@ -285,44 +279,30 @@ async function discoverProxmoxGuestsForHost(
   parsedHostId: number,
   onProgress?: (done: number, total: number) => void,
 ): Promise<{
-  host: SSHHost;
+  host: PluginSshHostWithSudo;
   guests: ProxmoxGuest[];
   credentialId: number | null;
   defaultCredentialId: number | null;
   jumpHosts: unknown[] | null;
   config: ReturnType<typeof parseProxmoxConfig>;
 }> {
-  if (!DataCrypto.canUserAccessData(userId)) {
-    const error = new Error("Session expired — please log in again");
-    (error as Error & { code?: string }).code = "SESSION_EXPIRED";
-    throw error;
-  }
-
-  const resolvedHost = await resolveHostById(parsedHostId, userId);
-  if (!resolvedHost) {
-    const error = new Error("Host not found");
-    (error as Error & { status?: number }).status = 404;
-    throw error;
-  }
-
-  const host = resolvedHost as SSHHost;
-  const proxmoxCfgRaw = parseJsonObject(host.proxmoxConfig);
+  const ctx = pluginCtx();
+  const proxmoxCfgRaw = await ctx.settings.getHost(
+    parsedHostId,
+    "proxmoxConfig",
+  );
   const config = parseProxmoxConfig(proxmoxCfgRaw);
 
-  const hostCredentialId = host.credentialId ?? null;
-
-  const { client } = await connectSsh(host as unknown as PluginSshHost, {
+  const { client, host } = await connectSsh(parsedHostId, {
     purpose: "proxmox",
     timeoutMs: 35000,
     overrides: { tryKeyboard: false, readyTimeout: 30000 },
   });
+  const hostWithSudo = host as PluginSshHostWithSudo;
+  const hostCredentialId = (hostWithSudo.credentialId as number | null) ?? null;
 
   try {
-    proxmoxLogger.info("Proxmox discovery SSH connection established", {
-      operation: "proxmox_discover",
-      hostId: parsedHostId,
-      userId,
-    });
+    ctx.log.info("Proxmox discovery SSH connection established");
 
     const pveshCheck = await execCommand(
       client,
@@ -337,7 +317,7 @@ async function discoverProxmoxGuestsForHost(
     const resourcesJson = await execPveshCommand(
       client,
       "pvesh get /cluster/resources --output-format json 2>/dev/null",
-      host.sudoPassword,
+      hostWithSudo.sudoPassword,
     );
 
     let resources: Array<Record<string, unknown>>;
@@ -366,11 +346,9 @@ async function discoverProxmoxGuestsForHost(
       if (r.template) continue;
       const node = r.node as string;
       if (!isSafeNodeName(node)) {
-        proxmoxLogger.warn("Skipping guest with unsafe node name", {
-          operation: "proxmox_discover",
-          node,
-          vmid: r.vmid,
-        });
+        ctx.log.warn(
+          `Skipping guest with unsafe node name: ${node} (vmid ${r.vmid})`,
+        );
         continue;
       }
       guestBases.push({
@@ -389,7 +367,7 @@ async function discoverProxmoxGuestsForHost(
           const cfgJson = await execPveshCommand(
             client,
             `pvesh get /nodes/${g.node}/lxc/${g.vmid}/config --output-format json 2>/dev/null`,
-            host.sudoPassword,
+            hostWithSudo.sudoPassword,
             25000,
           );
           configIp = parseLxcIp(JSON.parse(cfgJson), config.preferredPrefixes);
@@ -404,7 +382,7 @@ async function discoverProxmoxGuestsForHost(
             const ifRaw = await execPveshCommand(
               client,
               `pvesh get /nodes/${g.node}/lxc/${g.vmid}/interfaces --output-format json 2>/dev/null`,
-              host.sudoPassword,
+              hostWithSudo.sudoPassword,
               12000,
             );
             const data = JSON.parse(ifRaw);
@@ -437,7 +415,7 @@ async function discoverProxmoxGuestsForHost(
           const ifJson = await execPveshCommand(
             client,
             `pvesh get /nodes/${g.node}/qemu/${g.vmid}/agent/network-get-interfaces --output-format json 2>/dev/null`,
-            host.sudoPassword,
+            hostWithSudo.sudoPassword,
             12000,
           );
           const data = JSON.parse(ifJson);
@@ -508,21 +486,16 @@ async function discoverProxmoxGuestsForHost(
       enableDocker: matchesAny(g.name, config.dockerPatterns),
     }));
 
-    proxmoxLogger.info("Proxmox discovery completed", {
-      operation: "proxmox_discover",
-      hostId: parsedHostId,
-      userId,
-      guestCount: guests.length,
-    });
+    ctx.log.info(
+      `Proxmox discovery completed for host ${parsedHostId}: ${guests.length} guest(s)`,
+    );
 
     return {
-      host,
+      host: hostWithSudo,
       guests,
       credentialId: hostCredentialId,
       defaultCredentialId: config.defaultCredentialId,
-      jumpHosts: parseProxmoxJumpHosts(
-        (host as unknown as { jumpHosts?: unknown }).jumpHosts,
-      ),
+      jumpHosts: parseProxmoxJumpHosts(hostWithSudo.jumpHosts),
       config,
     };
   } finally {
@@ -538,6 +511,7 @@ async function syncProxmoxHost(
   userId: string,
   sourceHostId: number,
 ): Promise<ProxmoxSyncResult> {
+  const ctx = pluginCtx();
   const lockKey = `${userId}:${sourceHostId}`;
   if (runningSyncs.has(lockKey)) {
     return {
@@ -570,10 +544,10 @@ async function syncProxmoxHost(
     );
     const now = new Date().toISOString();
 
-    const existingHosts =
-      (await createCurrentHostRepository().listDecryptedByUserId(
-        userId,
-      )) as unknown as Record<string, unknown>[];
+    const existingHosts = (await ctx.hosts.listOwned()) as unknown as Record<
+      string,
+      unknown
+    >[];
     const existingBySource = new Map<string, Record<string, unknown>>();
     for (const host of existingHosts) {
       const source = getProxmoxSource(host);
@@ -647,10 +621,9 @@ async function syncProxmoxHost(
           update.credentialId = importAuth.credentialId;
           update.overrideCredentialUsername = false;
         }
-        await createCurrentHostRepository().updateEncryptedForUser(
-          userId,
+        await ctx.hosts.update(
           existing.id as number,
-          update,
+          update as PluginHostUpdateInput,
         );
         result.updated++;
         continue;
@@ -665,9 +638,8 @@ async function syncProxmoxHost(
         enableRdp: connectionType === "rdp",
       });
 
-      await createCurrentHostRepository().createEncryptedForUser(userId, {
+      await ctx.hosts.create({
         ...update,
-        userId,
         createdAt: now,
         pin: false,
         authType: connectionType === "rdp" ? "password" : importAuth.authType,
@@ -709,7 +681,7 @@ async function syncProxmoxHost(
         showTunnelInSidebar: 0,
         showDockerInSidebar: 0,
         showServerStatsInSidebar: 0,
-      });
+      } as unknown as PluginHostCreateInput);
       result.created++;
     }
 
@@ -720,8 +692,7 @@ async function syncProxmoxHost(
         const source = getProxmoxSource(existing);
         if (!source) continue;
         const missingSince = source.missingSince || now;
-        await createCurrentHostRepository().updateEncryptedForUser(
-          userId,
+        await ctx.hosts.update(
           existing.id as number,
           {
             tags: mergeTags(existing.tags, ["proxmox-missing"]),
@@ -733,13 +704,13 @@ async function syncProxmoxHost(
               },
             }),
             updatedAt: now,
-          },
+          } as PluginHostUpdateInput,
         );
         result.markedMissing++;
       }
     }
 
-    await writeSyncStatus(userId, sourceHostId, {
+    await writeSyncStatus(sourceHostId, {
       lastSyncAt: startedAt,
       lastSyncStatus: "success",
       lastSyncError: null,
@@ -750,7 +721,7 @@ async function syncProxmoxHost(
   } catch (error) {
     const message = getErrorMessage(error);
     result.errors.push(message);
-    await writeSyncStatus(userId, sourceHostId, {
+    await writeSyncStatus(sourceHostId, {
       lastSyncAt: startedAt,
       lastSyncStatus: "error",
       lastSyncError: message,
@@ -763,22 +734,46 @@ async function syncProxmoxHost(
 }
 
 async function writeSyncStatus(
-  userId: string,
   hostId: number,
   patch: Record<string, unknown>,
 ): Promise<void> {
-  const hostRepository = createCurrentHostRepository();
-  const row = await hostRepository.findByIdForUser(userId, hostId);
-  if (!row) return;
-  const config = parseJsonObject(row.proxmoxConfig);
-  await hostRepository.updateForUser(userId, hostId, {
-    proxmoxConfig: JSON.stringify({ ...config, ...patch }),
-  });
+  const ctx = pluginCtx();
+  const config = parseJsonObject(
+    await ctx.settings.getHost(hostId, "proxmoxConfig"),
+  );
+  await ctx.settings.setHost(hostId, "proxmoxConfig", { ...config, ...patch });
 }
 
-router.post("/sync", authenticateJWT, requireDataAccess, async (req, res) => {
+/**
+ * @openapi
+ * /proxmox/sync:
+ *   post:
+ *     summary: Sync Proxmox guests for a host
+ *     description: Re-runs discovery for a Proxmox node and creates, updates or marks missing the imported guest hosts.
+ *     tags: [Proxmox]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [hostId]
+ *             properties:
+ *               hostId:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Sync result.
+ *       400:
+ *         description: Missing or invalid hostId.
+ *       500:
+ *         description: Sync failed.
+ */
+router.post("/sync", async (req, res) => {
   const { hostId } = req.body as { hostId?: unknown };
-  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const userId = pluginCtx().currentActor()!;
 
   const parsedHostId = Number(hostId);
   if (!hostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
@@ -790,30 +785,48 @@ router.post("/sync", authenticateJWT, requireDataAccess, async (req, res) => {
     return res.json(result);
   } catch (err: unknown) {
     const message = getErrorMessage(err);
-    const status =
-      (err as Error & { code?: string; status?: number }).code ===
-      "SESSION_EXPIRED"
-        ? 401
-        : (err as Error & { status?: number }).status || 500;
-    proxmoxLogger.error("Proxmox sync failed", err, {
-      operation: "proxmox_sync",
-      hostId: parsedHostId,
-      userId,
-    });
+    const status = (err as Error & { status?: number }).status || 500;
+    pluginCtx().log.error(
+      `Proxmox sync failed for host ${parsedHostId}`,
+      err as Error,
+    );
     return res.status(status).json({ error: `Sync failed: ${message}` });
   }
 });
 
 async function runDueProxmoxAutoSyncs(): Promise<void> {
+  const ctx = pluginCtx();
   try {
-    const rows = await createCurrentHostRepository().listProxmoxEnabled();
+    const {
+      createCurrentPluginSettingsRepository,
+      createCurrentHostRepository,
+    } =
+      await import("../../../../src/backend/database/repositories/factory.js");
+    const enabledRows = await createCurrentPluginSettingsRepository().listByKey(
+      "proxmox",
+      "host",
+      "enableProxmox",
+    );
+    const hostRepository = createCurrentHostRepository();
 
     const now = Date.now();
-    for (const row of rows) {
-      const configRaw = parseJsonObject(row.proxmoxConfig);
+    for (const row of enabledRows) {
+      if (row.value !== "true") continue;
+      const hostId = Number(row.scopeId);
+      if (!Number.isInteger(hostId)) continue;
+
+      const host = await hostRepository.findById(hostId);
+      if (!host) continue;
+
+      const configRow = await createCurrentPluginSettingsRepository().get(
+        "proxmox",
+        "host",
+        String(hostId),
+        "proxmoxConfig",
+      );
+      const configRaw = configRow?.value ? JSON.parse(configRow.value) : {};
       const config = parseProxmoxConfig(configRaw);
       if (!config.autoSyncEnabled) continue;
-      if (!DataCrypto.canUserAccessData(row.userId)) continue;
 
       const lastSyncAt =
         typeof configRaw.lastSyncAt === "string"
@@ -822,18 +835,17 @@ async function runDueProxmoxAutoSyncs(): Promise<void> {
       const intervalMs = config.syncIntervalMinutes * 60 * 1000;
       if (lastSyncAt && now - lastSyncAt < intervalMs) continue;
 
-      syncProxmoxHost(row.userId, row.id).catch((error) => {
-        proxmoxLogger.error("Scheduled Proxmox sync failed", error, {
-          operation: "proxmox_auto_sync",
-          hostId: row.id,
-          userId: row.userId,
+      ctx
+        .asUser(host.userId, () => syncProxmoxHost(host.userId, hostId))
+        .catch((error) => {
+          ctx.log.error(
+            `Scheduled Proxmox sync failed for host ${hostId}`,
+            error as Error,
+          );
         });
-      });
     }
   } catch (error) {
-    proxmoxLogger.error("Failed to scan Proxmox auto sync jobs", error, {
-      operation: "proxmox_auto_sync_scan",
-    });
+    ctx.log.error("Failed to scan Proxmox auto sync jobs", error as Error);
   }
 }
 
@@ -915,127 +927,109 @@ let proxmoxAutoSyncStartupTimer: NodeJS.Timeout | undefined;
  *       500:
  *         description: Discovery failed.
  */
-router.get(
-  "/discover/stream",
-  authenticateJWT,
-  requireDataAccess,
-  async (req, res) => {
-    const userId = (req as unknown as AuthenticatedRequest).userId;
-    const parsedHostId = Number((req.query as { hostId?: unknown }).hostId);
-    if (!parsedHostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
-      return res.status(400).json({ error: "Missing or invalid hostId" });
+router.get("/discover/stream", async (req, res) => {
+  const userId = pluginCtx().currentActor()!;
+  const parsedHostId = Number((req.query as { hostId?: unknown }).hostId);
+  if (!parsedHostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
+    return res.status(400).json({ error: "Missing or invalid hostId" });
+  }
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-store, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders?.();
+
+  let closed = false;
+  const send = (event: string, data: unknown) => {
+    if (closed) return;
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      closed = true;
     }
-
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-store, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    });
-    res.flushHeaders?.();
-
-    let closed = false;
-    const send = (event: string, data: unknown) => {
-      if (closed) return;
-      try {
-        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-      } catch {
-        closed = true;
-      }
-    };
-    const heartbeat = setInterval(() => {
-      if (closed) return;
-      try {
-        res.write(": keepalive\n\n");
-      } catch {
-        closed = true;
-        clearInterval(heartbeat);
-      }
-    }, 15000);
-    req.on("close", () => {
+  };
+  const heartbeat = setInterval(() => {
+    if (closed) return;
+    try {
+      res.write(": keepalive\n\n");
+    } catch {
       closed = true;
       clearInterval(heartbeat);
-    });
+    }
+  }, 15000);
+  req.on("close", () => {
+    closed = true;
+    clearInterval(heartbeat);
+  });
 
-    try {
-      const discovery = await discoverProxmoxGuestsForHost(
-        userId,
-        parsedHostId,
-        (done, total) => send("progress", { done, total }),
-      );
-      send("result", {
-        guests: discovery.guests,
-        credentialId: discovery.credentialId,
-        defaultCredentialId: discovery.defaultCredentialId,
-        jumpHosts: discovery.jumpHosts,
-      });
-    } catch (err: unknown) {
-      const message = getErrorMessage(err);
-      proxmoxLogger.error("Proxmox discovery (stream) failed", err, {
-        operation: "proxmox_discover",
-        hostId: parsedHostId,
-        userId,
-      });
-      send("fail", { message });
-    } finally {
-      clearInterval(heartbeat);
-      if (!closed) {
-        try {
-          res.end();
-        } catch {
-          // ignore end errors
-        }
+  try {
+    const discovery = await discoverProxmoxGuestsForHost(
+      userId,
+      parsedHostId,
+      (done, total) => send("progress", { done, total }),
+    );
+    send("result", {
+      guests: discovery.guests,
+      credentialId: discovery.credentialId,
+      defaultCredentialId: discovery.defaultCredentialId,
+      jumpHosts: discovery.jumpHosts,
+    });
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    pluginCtx().log.error(
+      `Proxmox discovery (stream) failed for host ${parsedHostId}`,
+      err as Error,
+    );
+    send("fail", { message });
+  } finally {
+    clearInterval(heartbeat);
+    if (!closed) {
+      try {
+        res.end();
+      } catch {
+        // ignore end errors
       }
     }
-  },
-);
+  }
+});
 
-router.post(
-  "/discover",
-  authenticateJWT,
-  requireDataAccess,
-  async (req, res) => {
-    const { hostId } = req.body as { hostId?: unknown };
-    const userId = (req as unknown as AuthenticatedRequest).userId;
+router.post("/discover", async (req, res) => {
+  const { hostId } = req.body as { hostId?: unknown };
+  const userId = pluginCtx().currentActor()!;
 
-    const parsedHostId = Number(hostId);
-    if (!hostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
-      return res.status(400).json({ error: "Missing or invalid hostId" });
-    }
+  const parsedHostId = Number(hostId);
+  if (!hostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
+    return res.status(400).json({ error: "Missing or invalid hostId" });
+  }
 
-    try {
-      const discovery = await discoverProxmoxGuestsForHost(
-        userId,
-        parsedHostId,
-      );
-      return res.json({
-        guests: discovery.guests,
-        credentialId: discovery.credentialId,
-        defaultCredentialId: discovery.defaultCredentialId,
-        jumpHosts: discovery.jumpHosts,
-      });
-    } catch (err: unknown) {
-      const message = getErrorMessage(err);
-      proxmoxLogger.error("Proxmox discovery failed", err, {
-        operation: "proxmox_discover",
-        hostId: parsedHostId,
-        userId,
-      });
+  try {
+    const discovery = await discoverProxmoxGuestsForHost(userId, parsedHostId);
+    return res.json({
+      guests: discovery.guests,
+      credentialId: discovery.credentialId,
+      defaultCredentialId: discovery.defaultCredentialId,
+      jumpHosts: discovery.jumpHosts,
+    });
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    pluginCtx().log.error(
+      `Proxmox discovery failed for host ${parsedHostId}`,
+      err as Error,
+    );
 
-      const status =
-        (err as Error & { code?: string; status?: number }).code ===
-        "SESSION_EXPIRED"
-          ? 401
-          : (err as Error & { status?: number }).status ||
-            (message.includes("Authentication failed") ||
-            message.includes("connect ECONNREFUSED") ||
-            message.includes("connect ETIMEDOUT")
-              ? 422
-              : 500);
-      return res.status(status).json({ error: `Discovery failed: ${message}` });
-    }
-  },
-);
+    const status =
+      (err as Error & { status?: number }).status ||
+      (message.includes("Authentication failed") ||
+      message.includes("connect ECONNREFUSED") ||
+      message.includes("connect ETIMEDOUT")
+        ? 422
+        : 500);
+    return res.status(status).json({ error: `Discovery failed: ${message}` });
+  }
+});
 
 /** Called from activate(). Mounts this router at /proxmox via the shared
  * dispatcher, and starts the background auto-sync scan (a 60s interval plus

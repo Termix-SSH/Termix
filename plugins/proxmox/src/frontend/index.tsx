@@ -1,15 +1,21 @@
 import { useEffect, useState, type ComponentType } from "react";
-import { Boxes, Server } from "lucide-react";
+import { Boxes, HardDrive, Server } from "lucide-react";
 import {
   useHosts,
   useTranslation,
   type HostEditorSectionProps,
+  type StandaloneViewProps,
+  type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
 import { ComponentSlot, DropdownMenuItem } from "@termix/plugin-sdk/ui";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ProxmoxDiscoverDialog } from "./ProxmoxDiscoverDialog";
 import { HostProxmoxTab } from "./HostProxmoxTab";
+import { ProxmoxStatsTab } from "./stats/ProxmoxStatsTab";
+import ProxmoxStatsApp from "./stats/ProxmoxStatsApp";
+import { HostProxmoxStatsTab } from "./stats/HostProxmoxStatsTab";
+import type { SSHHost } from "@/types";
 
 interface DiscoverRequest {
   hostId?: number;
@@ -26,10 +32,30 @@ function ProxmoxHostSection({ form, setField }: HostEditorSectionProps) {
         form={form}
         setField={setField as Parameters<typeof HostProxmoxTab>[0]["setField"]}
       />
-      {/* Other plugins add Proxmox-related settings here (stats). */}
+      <HostProxmoxStatsTab
+        form={form}
+        setField={setField as Parameters<typeof HostProxmoxTab>[0]["setField"]}
+      />
+      {/* Other plugins add Proxmox-related settings here. */}
       <ComponentSlot slotId="proxmox.hostEditor" props={{ form, setField }} />
     </>
   );
+}
+
+function ProxmoxStatsTabView({ sshHost, label, isVisible }: TabProps) {
+  return (
+    <ProxmoxStatsTab
+      hostConfig={sshHost as unknown as SSHHost}
+      title={label}
+      isVisible={isVisible}
+      isTopbarOpen={false}
+      embedded={true}
+    />
+  );
+}
+
+function ProxmoxStatsStandalone({ hostId }: StandaloneViewProps) {
+  return <ProxmoxStatsApp hostId={hostId} />;
 }
 
 export function activate(app: TermixApp): void {
@@ -124,5 +150,25 @@ export function activate(app: TermixApp): void {
     icon: Server,
     order: 50,
     component: ProxmoxHostSection,
+  });
+
+  app.registerTab("proxmox-stats", ProxmoxStatsTabView, {
+    icon: HardDrive,
+    titleKey: "nav.proxmoxStats",
+    requiresHost: true,
+    noHostMessageKey: "proxmoxStats.noHostSelected",
+    standalone: ProxmoxStatsStandalone,
+    preload: () => import("./stats/ProxmoxStatsTab"),
+  });
+
+  app.registerHostAction({
+    id: "proxmox-stats",
+    titleKey: "nav.proxmoxStats",
+    icon: HardDrive,
+    kind: "open",
+    order: 60,
+    tabType: "proxmox-stats",
+    copyUrlView: "proxmox-stats",
+    when: (host) => host.enableProxmoxStats === true,
   });
 }

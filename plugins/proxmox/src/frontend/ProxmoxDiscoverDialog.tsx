@@ -68,7 +68,8 @@ export function ProxmoxDiscoverDialog({
 
   // When opened from the dropdown (no preselectedHostId), only show Proxmox-enabled hosts
   const sshHosts = hosts.filter(
-    (h) => !("isFolder" in h) && h.enableProxmox === true,
+    (h) =>
+      !("isFolder" in h) && h.pluginSettings?.proxmox?.enableProxmox === true,
   );
 
   // The Proxmox host the discovery runs against — imported guests are grouped
