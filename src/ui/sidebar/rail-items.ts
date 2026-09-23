@@ -1,5 +1,4 @@
 import {
-  ArrowLeftRight,
   Braces,
   Clock,
   Fingerprint,
@@ -124,12 +123,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     mobilePrimary: true,
     promotable: true,
     rightDockable: true,
-  },
-  {
-    id: "sftp",
-    icon: ArrowLeftRight,
-    labelKey: "nav.sftp",
-    separatorAfter: true,
   },
   {
     id: "macros",

@@ -8,7 +8,6 @@ import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 import {
   createCurrentCredentialRepository,
   createCurrentDismissedAlertRepository,
-  createCurrentFileManagerBookmarkRepository,
   createCurrentHostRepository,
   createCurrentRecentActivityRepository,
   createCurrentSettingsRepository,
@@ -70,7 +69,6 @@ export async function resetUserPassword(
   await userRepository.update(userId, { passwordHash });
 
   await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
-  await createCurrentFileManagerBookmarkRepository().deleteByUserId(userId);
   await createCurrentRecentActivityRepository().deleteByUserId(userId);
   await createCurrentDismissedAlertRepository().deleteByUserId(userId);
   await createCurrentHostRepository().deleteByUserId(userId);

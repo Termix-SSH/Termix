@@ -1,0 +1,920 @@
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { cn } from "@/lib/utils.ts";
+import {
+  Star,
+  Clock,
+  Bookmark,
+  File,
+  Folder,
+  Trash2,
+  ChevronDown,
+  Check,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { SSHHost } from "@/types";
+import {
+  getRecentFiles,
+  getPinnedFiles,
+  getFolderShortcuts,
+  removeRecentFile,
+  removePinnedFile,
+  removeFolderShortcut,
+} from "./api/file-manager-data-api";
+import { listSSHFiles } from "./api/ssh-file-operations-api";
+import { type DiskFilesystem } from "@/main-axios.ts";
+import { toast } from "sonner";
+import FolderTree from "@/components/folder.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@termix/plugin-sdk/ui";
+
+// ─── Interfaces ────────────────────────────────────────────────────────────────
+
+interface RecentFileData {
+  id: number;
+  name: string;
+  path: string;
+  lastOpened?: string;
+  [key: string]: unknown;
+}
+
+interface PinnedFileData {
+  id: number;
+  name: string;
+  path: string;
+  [key: string]: unknown;
+}
+
+interface ShortcutData {
+  id: number;
+  name: string;
+  path: string;
+  [key: string]: unknown;
+}
+
+interface DirectoryItemData {
+  name: string;
+  path: string;
+  type: string;
+  [key: string]: unknown;
+}
+
+export interface SidebarItem {
+  id: string;
+  name: string;
+  path: string;
+  type: "recent" | "pinned" | "shortcut" | "folder";
+  lastAccessed?: string;
+  isExpanded?: boolean;
+  children?: SidebarItem[];
+}
+
+interface FileManagerSidebarProps {
+  currentHost: SSHHost;
+  currentPath: string;
+  onPathChange: (path: string) => void;
+  onFileOpen?: (file: SidebarItem) => void;
+  /** Full file-manager context menu (same as main grid). */
+  onItemContextMenu?: (event: React.MouseEvent, item: SidebarItem) => void;
+  sshSessionId?: string;
+  refreshTrigger?: number;
+  onOpenTrash?: () => void;
+  diskInfo?: {
+    usedHuman: string;
+    totalHuman: string;
+    percent: number;
+    mount?: string | null;
+    filesystems?: DiskFilesystem[];
+  };
+}
+
+// ─── Storage meter ─────────────────────────────────────────────────────────────
+
+function StorageMeter({
+  storage,
+  filesystems,
+  selectedMount,
+  onSelectMount,
+}: {
+  storage: { percent: number; usedHuman: string; totalHuman: string };
+  filesystems: DiskFilesystem[];
+  selectedMount: string | null;
+  onSelectMount: (mount: string) => void;
+}) {
+  const { t } = useTranslation();
+  const hasPicker = filesystems.length > 1;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        {hasPicker ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex min-w-0 items-center gap-1 transition-colors hover:text-foreground">
+              <span className="truncate">
+                {selectedMount ?? t("fileManager.disk")}
+              </span>
+              <ChevronDown className="size-3 shrink-0" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="w-auto min-w-[220px] max-w-[min(360px,calc(100vw-2rem))]"
+            >
+              {filesystems.map((fs) => (
+                <DropdownMenuItem
+                  key={fs.mount}
+                  onSelect={() => onSelectMount(fs.mount)}
+                  className="gap-3"
+                >
+                  <Check
+                    className={cn(
+                      "size-3 shrink-0",
+                      fs.mount === selectedMount ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {fs.mount}
+                  </span>
+                  <span className="ml-auto shrink-0 whitespace-nowrap text-[10px] tabular-nums text-muted-foreground">
+                    {fs.usedHuman && fs.totalHuman
+                      ? `${fs.usedHuman}/${fs.totalHuman}`
+                      : "N/A"}
+                    {fs.percent != null ? ` · ${fs.percent}%` : ""}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="truncate">
+            {selectedMount ?? t("fileManager.disk")}
+          </span>
+        )}
+        <span className="shrink-0 text-accent-brand">
+          {storage.percent}% {t("fileManager.used")}
+        </span>
+      </div>
+      <div className="h-1.5 bg-muted rounded-none overflow-hidden border border-border">
+        <div
+          className="h-full bg-accent-brand"
+          style={{ width: `${storage.percent}%` }}
+        />
+      </div>
+      <span className="text-[10px] font-bold text-muted-foreground/60 tracking-tight">
+        {storage.usedHuman} {t("fileManager.of")} {storage.totalHuman}{" "}
+        {t("fileManager.used").toLowerCase()}
+      </span>
+    </div>
+  );
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────────
+
+export function FileManagerSidebar({
+  currentHost,
+  currentPath,
+  onPathChange,
+  onFileOpen,
+  onItemContextMenu,
+  sshSessionId,
+  refreshTrigger,
+  onOpenTrash,
+  diskInfo,
+}: FileManagerSidebarProps) {
+  const { t } = useTranslation();
+
+  // ── Quick access state (API-backed) ──────────────────────────────────────────
+  const [recentItems, setRecentItems] = useState<SidebarItem[]>([]);
+  const [pinnedItems, setPinnedItems] = useState<SidebarItem[]>([]);
+  const [shortcuts, setShortcuts] = useState<SidebarItem[]>([]);
+
+  // ── Directory tree state ──────────────────────────────────────────────────────
+  const [directoryTree, setDirectoryTree] = useState<SidebarItem[]>([]);
+
+  // ── Storage state ─────────────────────────────────────────────────────────────
+  const [selectedMount, setSelectedMount] = useState<string | null>(null);
+
+  /**
+   * Tracks which folder paths have already been lazy-loaded so we don't
+   * re-fetch on every re-selection / collapse-reopen.
+   */
+  const loadedFoldersRef = useRef<Set<string>>(new Set(["/"]));
+
+  // ── Context menu state ────────────────────────────────────────────────────────
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    isVisible: boolean;
+    item: SidebarItem | null;
+  }>({
+    x: 0,
+    y: 0,
+    isVisible: false,
+    item: null,
+  });
+
+  // ─── Effects ──────────────────────────────────────────────────────────────────
+
+  // ─── API: Quick access ────────────────────────────────────────────────────────
+
+  const loadQuickAccessData = useCallback(async () => {
+    if (!currentHost?.id) return;
+
+    try {
+      const recentData = await getRecentFiles(currentHost.id);
+      const recentItems = (recentData as unknown as RecentFileData[])
+        .slice(0, 5)
+        .map((item: RecentFileData) => ({
+          id: `recent-${item.id}`,
+          name: item.name,
+          path: item.path,
+          type: "recent" as const,
+          lastAccessed: item.lastOpened,
+        }));
+      setRecentItems(recentItems);
+
+      const pinnedData = await getPinnedFiles(currentHost.id);
+      const pinnedItems = (pinnedData as unknown as PinnedFileData[]).map(
+        (item: PinnedFileData) => ({
+          id: `pinned-${item.id}`,
+          name: item.name,
+          path: item.path,
+          type: "pinned" as const,
+        }),
+      );
+      setPinnedItems(pinnedItems);
+
+      const shortcutData = await getFolderShortcuts(currentHost.id);
+      const shortcutItems = (shortcutData as unknown as ShortcutData[]).map(
+        (item: ShortcutData) => ({
+          id: `shortcut-${item.id}`,
+          name: item.name,
+          path: item.path,
+          type: "shortcut" as const,
+        }),
+      );
+      setShortcuts(shortcutItems);
+    } catch (error) {
+      console.error("Failed to load quick access data:", error);
+      setRecentItems([]);
+      setPinnedItems([]);
+      setShortcuts([]);
+    }
+  }, [currentHost?.id]);
+
+  // ─── API: Directory tree ──────────────────────────────────────────────────────
+
+  const loadDirectoryTree = useCallback(
+    async (attempt = 0) => {
+      if (!sshSessionId) return;
+
+      try {
+        const response = await listSSHFiles(sshSessionId, "/");
+        const rootFiles = (response.files || []) as DirectoryItemData[];
+        const rootFolders = rootFiles
+          .filter((item: DirectoryItemData) => item.type === "directory")
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          );
+
+        const rootTreeItems = rootFolders.map((folder: DirectoryItemData) => ({
+          id: `folder-${folder.name}`,
+          name: folder.name,
+          path: folder.path,
+          type: "folder" as const,
+          isExpanded: false,
+          children: [],
+        }));
+
+        setDirectoryTree([
+          {
+            id: "root",
+            name: "/",
+            path: "/",
+            type: "folder" as const,
+            isExpanded: true,
+            children: rootTreeItems,
+          },
+        ]);
+      } catch (error: unknown) {
+        const status =
+          (error as { status?: number })?.status ||
+          (error as { response?: { status?: number } })?.response?.status;
+        if (status === 409 && attempt < 3) {
+          // Another request was already listing "/" — retry after a short delay
+          setTimeout(() => loadDirectoryTree(attempt + 1), 600);
+          return;
+        }
+        console.error("Failed to load directory tree:", error);
+        setDirectoryTree([
+          {
+            id: "root",
+            name: "/",
+            path: "/",
+            type: "folder" as const,
+            isExpanded: false,
+            children: [],
+          },
+        ]);
+      }
+    },
+    [sshSessionId],
+  );
+
+  /**
+   * Lazily fetches subdirectory contents and patches them into the tree state.
+   * Called the first time a folder is expanded via FolderTree's onSelect.
+   */
+  const loadSubdirectory = useCallback(
+    async (folderId: string, folderPath: string): Promise<boolean> => {
+      if (!sshSessionId) return false;
+
+      try {
+        const subResponse = await listSSHFiles(sshSessionId, folderPath);
+        const subFiles = (subResponse.files || []) as DirectoryItemData[];
+        const subFolders = subFiles
+          .filter((item: DirectoryItemData) => item.type === "directory")
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          );
+
+        const subTreeItems = subFolders.map((folder: DirectoryItemData) => ({
+          id: `folder-${folder.path.replace(/\//g, "-")}`,
+          name: folder.name,
+          path: folder.path,
+          type: "folder" as const,
+          isExpanded: false,
+          children: [],
+        }));
+
+        setDirectoryTree((prevTree) => {
+          const updateChildren = (items: SidebarItem[]): SidebarItem[] =>
+            items.map((item) => {
+              if (item.id === folderId) {
+                return { ...item, children: subTreeItems };
+              }
+              if (item.children) {
+                return { ...item, children: updateChildren(item.children) };
+              }
+              return item;
+            });
+          return updateChildren(prevTree);
+        });
+        loadedFoldersRef.current.add(folderPath);
+        return true;
+      } catch (error: unknown) {
+        const status =
+          (error as { status?: number })?.status ||
+          (error as { response?: { status?: number } })?.response?.status;
+        if (status === 409) {
+          // Another request was listing this path — retry after the lock clears
+          setTimeout(() => void loadSubdirectory(folderId, folderPath), 600);
+          return false;
+        }
+        loadedFoldersRef.current.delete(folderPath);
+        console.error("Failed to load subdirectory:", error);
+        return false;
+      }
+    },
+    [sshSessionId],
+  );
+
+  useEffect(() => {
+    loadQuickAccessData();
+  }, [loadQuickAccessData, refreshTrigger]);
+
+  useEffect(() => {
+    if (sshSessionId) {
+      loadedFoldersRef.current = new Set(["/"]);
+      loadDirectoryTree();
+    }
+  }, [loadDirectoryTree, sshSessionId]);
+
+  // When currentPath changes externally (grid navigation), ensure the parent
+  // directory is loaded in the tree so the selection highlight can appear.
+  useEffect(() => {
+    if (!sshSessionId || currentPath === "/") return;
+
+    const parentPath =
+      currentPath.substring(0, currentPath.lastIndexOf("/")) || "/";
+
+    const findByPath = (items: SidebarItem[]): SidebarItem | null => {
+      for (const item of items) {
+        if (item.path === parentPath) return item;
+        if (item.children) {
+          const found = findByPath(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const parent = findByPath(directoryTree);
+    if (parent && !loadedFoldersRef.current.has(parent.path)) {
+      void loadSubdirectory(parent.id, parent.path);
+    }
+  }, [currentPath, directoryTree, loadSubdirectory, sshSessionId]);
+
+  // ─── Quick-access mutation handlers ──────────────────────────────────────────
+
+  const handleRemoveRecentFile = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+    try {
+      await removeRecentFile(currentHost.id, item.path);
+      loadQuickAccessData();
+      toast.success(
+        t("fileManager.removedFromRecentFiles", { name: item.name }),
+      );
+    } catch (error) {
+      console.error("Failed to remove recent file:", error);
+      toast.error(t("fileManager.removeFailed"));
+    }
+  };
+
+  const handleUnpinFile = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+    try {
+      await removePinnedFile(currentHost.id, item.path);
+      loadQuickAccessData();
+      toast.success(t("fileManager.unpinnedSuccessfully", { name: item.name }));
+    } catch (error) {
+      console.error("Failed to unpin file:", error);
+      toast.error(t("fileManager.unpinFailed"));
+    }
+  };
+
+  const handleRemoveShortcut = async (item: SidebarItem) => {
+    if (!currentHost?.id) return;
+    try {
+      await removeFolderShortcut(currentHost.id, item.path);
+      loadQuickAccessData();
+      toast.success(t("fileManager.removedShortcut", { name: item.name }));
+    } catch (error) {
+      console.error("Failed to remove shortcut:", error);
+      toast.error(t("fileManager.removeShortcutFailed"));
+    }
+  };
+
+  const handleClearAllRecent = async () => {
+    if (!currentHost?.id || recentItems.length === 0) return;
+    try {
+      await Promise.all(
+        recentItems.map((item) => removeRecentFile(currentHost.id, item.path)),
+      );
+      loadQuickAccessData();
+      toast.success(t("fileManager.clearedAllRecentFiles"));
+    } catch (error) {
+      console.error("Failed to clear recent files:", error);
+      toast.error(t("fileManager.clearFailed"));
+    }
+  };
+
+  // ─── Quick-access item click ──────────────────────────────────────────────────
+
+  const handleQuickAccessClick = (item: SidebarItem) => {
+    if (item.type === "recent" || item.type === "pinned") {
+      if (onFileOpen) {
+        onFileOpen(item);
+      } else {
+        const directory =
+          item.path.substring(0, item.path.lastIndexOf("/")) || "/";
+        onPathChange(directory);
+      }
+    } else if (item.type === "shortcut") {
+      onPathChange(item.path);
+    }
+  };
+
+  // ─── FolderTree directory selection (onSelect callback) ──────────────────────
+
+  /**
+   * Called by FolderTree whenever the user selects (clicks) a tree item.
+   * We navigate to the folder and lazily load children on first visit.
+   */
+  const handleDirectorySelect = useCallback(
+    async (id: string) => {
+      // Walk the tree to find the item by id
+      const findItem = (items: SidebarItem[]): SidebarItem | null => {
+        for (const item of items) {
+          if (item.id === id) return item;
+          if (item.children) {
+            const found = findItem(item.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const item = findItem(directoryTree);
+      if (!item) return;
+
+      // Navigate to path
+      onPathChange(item.path);
+
+      // Lazy-load children the first time this folder is expanded
+      if (
+        sshSessionId &&
+        item.path !== "/" &&
+        !loadedFoldersRef.current.has(item.path)
+      ) {
+        await loadSubdirectory(id, item.path);
+      }
+    },
+    [directoryTree, onPathChange, sshSessionId, loadSubdirectory],
+  );
+
+  // ─── Context menu ─────────────────────────────────────────────────────────────
+
+  const findTreeItemById = useCallback(
+    (items: SidebarItem[], id: string): SidebarItem | null => {
+      for (const item of items) {
+        if (item.id === id) return item;
+        if (item.children) {
+          const found = findTreeItemById(item.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    [],
+  );
+
+  const handleItemContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onItemContextMenu) {
+      onItemContextMenu(e, item);
+      return;
+    }
+    setContextMenu({ x: e.clientX, y: e.clientY, isVisible: true, item });
+  };
+
+  const handleTreeContextMenu = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const row = target.closest<HTMLElement>("[data-id]");
+    if (!row) return;
+    const id = row.getAttribute("data-id");
+    if (!id) return;
+    const item = findTreeItemById(directoryTree, id);
+    if (!item || item.type !== "folder") return;
+    handleItemContextMenu(e, item);
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu((prev) => ({ ...prev, isVisible: false, item: null }));
+  };
+
+  useEffect(() => {
+    if (!contextMenu.isVisible || onItemContextMenu) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      const menuElement = document.querySelector("[data-sidebar-context-menu]");
+      if (!menuElement?.contains(target)) closeContextMenu();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeContextMenu();
+    };
+
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [contextMenu.isVisible, onItemContextMenu]);
+
+  // ─── Derive selected tree node + ancestors from currentPath ──────────────────
+
+  const { selectedTreeId, ancestorIds } = useMemo(() => {
+    if (currentPath === "/")
+      return { selectedTreeId: "root", ancestorIds: new Set<string>() };
+
+    const ancestors: string[] = [];
+    const findByPath = (
+      items: SidebarItem[],
+      path: string[],
+    ): string | null => {
+      for (const item of items) {
+        if (item.path === currentPath) {
+          ancestors.push(...path, "root");
+          return item.id;
+        }
+        if (item.children) {
+          const found = findByPath(item.children, [...path, item.id]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const id = findByPath(directoryTree, []);
+    return { selectedTreeId: id, ancestorIds: new Set(ancestors) };
+  }, [currentPath, directoryTree]);
+
+  // ─── Render helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * Recursively renders directory tree items using FolderTree.Item + Content.
+   *
+   * FolderTree.Item detects "has children" via React.Children.count > 0.
+   * By always wrapping children in <FolderTree.Content> (even when the
+   * children array is empty), every directory shows the expand chevron.
+   * FolderTree.Content internally shows nothing when its own children are
+   * absent, so an unloaded folder simply expands to an empty state while
+   * the async fetch fills it in.
+   */
+  const renderFolderTreeItem = (item: SidebarItem): React.ReactNode => (
+    <FolderTree.Item key={item.id} id={item.id} label={item.name}>
+      <FolderTree.Content>
+        {item.children?.map((child) => renderFolderTreeItem(child))}
+      </FolderTree.Content>
+    </FolderTree.Item>
+  );
+
+  const renderQuickAccessItem = (item: SidebarItem, icon: React.ReactNode) => {
+    const dirPath =
+      item.type === "shortcut"
+        ? item.path
+        : item.path.substring(0, item.path.lastIndexOf("/")) || "/";
+    const isActive = currentPath === dirPath;
+
+    return (
+      <button
+        key={item.id}
+        className={cn(
+          "w-full flex items-center gap-2.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors text-left border-l-2",
+          isActive
+            ? "bg-accent-brand/10 text-accent-brand border-accent-brand"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted border-transparent",
+        )}
+        onClick={() => handleQuickAccessClick(item)}
+        onContextMenu={(e) => handleItemContextMenu(e, item)}
+        title={item.path}
+      >
+        <div className="shrink-0">{icon}</div>
+        <span className="flex-1 truncate">{item.name}</span>
+      </button>
+    );
+  };
+
+  const renderSection = (
+    title: string,
+    items: SidebarItem[],
+    renderItem: (item: SidebarItem) => React.ReactNode,
+  ) => {
+    if (items.length === 0) return null;
+    return (
+      <div>
+        <div className="px-3 py-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {title}
+          </span>
+        </div>
+        {items.map((item) => renderItem(item))}
+      </div>
+    );
+  };
+
+  const hasQuickAccessItems =
+    recentItems.length > 0 || pinnedItems.length > 0 || shortcuts.length > 0;
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
+
+  const storageFilesystems = diskInfo?.filesystems ?? [];
+  const activeStorageMount = selectedMount ?? diskInfo?.mount ?? null;
+  const selectedFs =
+    selectedMount !== null
+      ? (storageFilesystems.find((fs) => fs.mount === selectedMount) ?? null)
+      : null;
+
+  const storage =
+    selectedFs && selectedFs.percent !== null
+      ? {
+          percent: selectedFs.percent,
+          usedHuman: selectedFs.usedHuman ?? "N/A",
+          totalHuman: selectedFs.totalHuman ?? "N/A",
+        }
+      : diskInfo && diskInfo.percent !== null
+        ? {
+            percent: diskInfo.percent,
+            usedHuman: diskInfo.usedHuman,
+            totalHuman: diskInfo.totalHuman,
+          }
+        : null;
+
+  return (
+    <>
+      <div className="h-full flex flex-col bg-card overflow-hidden">
+        <div className="flex-1 overflow-y-auto thin-scrollbar">
+          {onOpenTrash && (
+            <button
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
+              onClick={onOpenTrash}
+            >
+              <Trash2 className="size-3.5 shrink-0" />
+              <span>{t("fileManager.trash")}</span>
+            </button>
+          )}
+          {/* ── Recent files ──────────────────────────────────────── */}
+          {renderSection(t("fileManager.recent"), recentItems, (item) =>
+            renderQuickAccessItem(
+              item,
+              <File
+                className={cn(
+                  "size-3.5 shrink-0",
+                  currentPath ===
+                    (item.path.substring(0, item.path.lastIndexOf("/")) || "/")
+                    ? "text-accent-brand"
+                    : "text-muted-foreground/60",
+                )}
+              />,
+            ),
+          )}
+
+          {/* ── Pinned files ───────────────────────────────────────── */}
+          {renderSection(t("fileManager.pinned"), pinnedItems, (item) =>
+            renderQuickAccessItem(
+              item,
+              <Star
+                className={cn(
+                  "size-3.5 shrink-0",
+                  currentPath ===
+                    (item.path.substring(0, item.path.lastIndexOf("/")) || "/")
+                    ? "text-accent-brand fill-accent-brand"
+                    : "text-muted-foreground/60",
+                )}
+              />,
+            ),
+          )}
+
+          {/* ── Folder shortcuts ───────────────────────────────────── */}
+          {renderSection(t("fileManager.folderShortcuts"), shortcuts, (item) =>
+            renderQuickAccessItem(
+              item,
+              <Folder
+                className={cn(
+                  "size-3.5 shrink-0",
+                  currentPath === item.path
+                    ? "text-accent-brand"
+                    : "text-muted-foreground/60",
+                )}
+              />,
+            ),
+          )}
+
+          {/* ── Directory tree ─────────────────────────────────────── */}
+          <div
+            className={cn(
+              hasQuickAccessItems && "border-t border-border mt-1 pt-1",
+            )}
+          >
+            <div className="px-3 py-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("fileManager.directories")}
+              </span>
+            </div>
+            <div className="px-1">
+              <div onContextMenu={handleTreeContextMenu}>
+                <FolderTree.Root
+                  id="sidebar-directory-tree"
+                  defaultExpanded={["root"]}
+                  selectedId={selectedTreeId}
+                  expandedIds={ancestorIds}
+                  onSelect={(id) => handleDirectorySelect(id)}
+                  className="bg-transparent border-0 rounded-none shadow-none"
+                >
+                  {directoryTree.map((item) => renderFolderTreeItem(item))}
+                </FolderTree.Root>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Storage — mobile only (inside scroll) ──────────────── */}
+          {storage && (
+            <div className="md:hidden">
+              <div className="border-t border-border mx-0 my-2" />
+              <div className="px-3 py-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("fileManager.storage")}
+                </span>
+              </div>
+              <div className="px-3 pb-3">
+                <StorageMeter
+                  storage={storage}
+                  filesystems={storageFilesystems}
+                  selectedMount={activeStorageMount}
+                  onSelectMount={setSelectedMount}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Storage — desktop only (bottom of sidebar) ──────────── */}
+        {storage && (
+          <div className="hidden md:flex flex-col p-3 gap-2 border-t border-border shrink-0">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("fileManager.storage")}
+            </span>
+            <StorageMeter
+              storage={storage}
+              filesystems={storageFilesystems}
+              selectedMount={activeStorageMount}
+              onSelectMount={setSelectedMount}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── Context menu (fallback when parent does not supply onItemContextMenu) */}
+      {!onItemContextMenu && contextMenu.isVisible && contextMenu.item && (
+        <>
+          <div className="fixed inset-0 z-40" />
+
+          <div
+            data-sidebar-context-menu
+            className="fixed bg-card border border-border rounded-none shadow-xl min-w-[180px] z-50 overflow-hidden"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            {contextMenu.item.type === "recent" && (
+              <>
+                <button
+                  className="w-full px-3 h-9 text-left text-[10px] font-bold uppercase tracking-widest flex items-center gap-2.5 hover:bg-accent-brand/10 hover:text-accent-brand text-muted-foreground transition-colors"
+                  onClick={() => {
+                    handleRemoveRecentFile(contextMenu.item!);
+                    closeContextMenu();
+                  }}
+                >
+                  <Clock className="size-3.5 shrink-0" />
+                  <span className="flex-1">
+                    {t("fileManager.removeFromRecentFiles")}
+                  </span>
+                </button>
+
+                {recentItems.length > 1 && (
+                  <>
+                    <div className="border-t border-border" />
+                    <button
+                      className="w-full px-3 h-9 text-left text-[10px] font-bold uppercase tracking-widest flex items-center gap-2.5 text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={() => {
+                        handleClearAllRecent();
+                        closeContextMenu();
+                      }}
+                    >
+                      <Clock className="size-3.5 shrink-0" />
+                      <span className="flex-1">
+                        {t("fileManager.clearAllRecentFiles")}
+                      </span>
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+
+            {contextMenu.item.type === "pinned" && (
+              <button
+                className="w-full px-3 h-9 text-left text-[10px] font-bold uppercase tracking-widest flex items-center gap-2.5 hover:bg-accent-brand/10 hover:text-accent-brand text-muted-foreground transition-colors"
+                onClick={() => {
+                  handleUnpinFile(contextMenu.item!);
+                  closeContextMenu();
+                }}
+              >
+                <Star className="size-3.5 shrink-0" />
+                <span className="flex-1">{t("fileManager.unpinFile")}</span>
+              </button>
+            )}
+
+            {contextMenu.item.type === "shortcut" && (
+              <button
+                className="w-full px-3 h-9 text-left text-[10px] font-bold uppercase tracking-widest flex items-center gap-2.5 hover:bg-accent-brand/10 hover:text-accent-brand text-muted-foreground transition-colors"
+                onClick={() => {
+                  handleRemoveShortcut(contextMenu.item!);
+                  closeContextMenu();
+                }}
+              >
+                <Bookmark className="size-3.5 shrink-0" />
+                <span className="flex-1">
+                  {t("fileManager.removeShortcut")}
+                </span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}

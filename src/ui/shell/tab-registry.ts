@@ -23,8 +23,6 @@ export interface TabShellCallbacks {
   ) => void;
   closeTab: (tabId: string) => void;
   renameTab: (tabId: string, label: string) => void;
-  openFileInEditor: (host: Host, path: string) => void;
-  openFileManager: (host: Host, path?: string) => void;
   openTerminalTab: (host: Host, path?: string) => void;
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown, e.g. when its feature goes away. */
@@ -85,7 +83,7 @@ export const useTabTypes = registry.useList;
 export const resetTabTypes = registry.reset;
 
 /** Core tab types that are saved and reopened after login. */
-const CORE_PERSISTENT = new Set(["files", "tunnel"]);
+const CORE_PERSISTENT = new Set(["tunnel"]);
 /** Core tab types that hold a live session (close confirm, refresh). */
 const CORE_SESSION = new Set(["serial"]);
 /** Core tab types that restore without a host. */

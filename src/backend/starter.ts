@@ -302,10 +302,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     const { primeKnownPermissions } =
       await import("./utils/known-permissions.js");
     await primeKnownPermissions();
-    // Terminal, docker and host-metrics are deliberately absent: the
-    // ssh-terminal, docker and host-metrics plugins start their own servers,
-    // so disabling any of them stops its WS/HTTP server. See
-    // plugins/ssh-terminal, plugins/docker and plugins/host-metrics.
+    // Terminal, docker, host-metrics and file-manager are deliberately
+    // absent: the ssh-terminal, docker, host-metrics and file-manager plugins
+    // start their own servers, so disabling any of them stops its WS/HTTP
+    // server. See plugins/ssh-terminal, plugins/docker, plugins/host-metrics
+    // and plugins/file-manager.
     // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
     // Network Topology, Workspaces, Web Endpoint) is absent for the same
     // reason: each one serves its routes under /plugin-api/<id>/ through
@@ -313,7 +314,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // dead import here. Automations' scheduler also starts from its own
     // activate() rather than here.
     await import("./hosts/tunnel/index.js");
-    await import("./hosts/file-manager/index.js");
     await import("./hosts/tmux/index.js");
     await import("./hosts/serial.js");
     await import("./services/dashboard.js");
@@ -350,6 +350,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runProxmoxSettingsMigration } =
         await import("./utils/crypto-migration/proxmox-settings-migration.js");
       await runProxmoxSettingsMigration();
+
+      const { runFileManagerSettingsMigration } =
+        await import("./utils/crypto-migration/file-manager-settings-migration.js");
+      await runFileManagerSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

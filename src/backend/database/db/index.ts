@@ -350,51 +350,10 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    CREATE TABLE IF NOT EXISTS file_manager_recent (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        path TEXT NOT NULL,
-        last_opened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS file_manager_pinned (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        path TEXT NOT NULL,
-        pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS file_manager_shortcuts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        path TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS transfer_recent (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        source_host_id INTEGER NOT NULL,
-        dest_host_id INTEGER NOT NULL,
-        dest_path TEXT NOT NULL,
-        dest_path_label TEXT NOT NULL,
-        last_used TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (source_host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-        FOREIGN KEY (dest_host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
+    -- file_manager_recent, file_manager_pinned, file_manager_shortcuts and
+    -- transfer_recent are owned by the file-manager plugin now. Its own
+    -- migration creates p_file_manager_* on a fresh install and adopts the
+    -- legacy tables by rename on an upgrade.
 
     CREATE TABLE IF NOT EXISTS dismissed_alerts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

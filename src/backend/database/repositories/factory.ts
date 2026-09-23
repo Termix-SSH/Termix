@@ -14,7 +14,6 @@ import { CommandHistoryRepository } from "./command-history-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { DashboardServiceLinkRepository } from "./dashboard-service-link-repository.js";
 import { DismissedAlertRepository } from "./dismissed-alert-repository.js";
-import { FileManagerBookmarkRepository } from "./file-manager-bookmark-repository.js";
 import { HomepageItemRepository } from "./homepage-item-repository.js";
 import { HomepageLayoutRepository } from "./homepage-layout-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
@@ -57,7 +56,6 @@ import { SsoProviderRepository } from "./sso-provider-repository.js";
 import { TermixIdentityCaRepository } from "./termix-identity-ca-repository.js";
 import { TermixIdentityRepository } from "./termix-identity-repository.js";
 import { TmuxSessionTagRepository } from "./tmux-session-tag-repository.js";
-import { TransferRecentRepository } from "./transfer-recent-repository.js";
 import { TrustedDeviceRepository } from "./trusted-device-repository.js";
 import { UserDataExportRepository } from "./user-data-export-repository.js";
 import { UserPreferenceRepository } from "./user-preference-repository.js";
@@ -229,12 +227,7 @@ export function createCurrentDismissedAlertRepository(): DismissedAlertRepositor
   );
 }
 
-export function createCurrentFileManagerBookmarkRepository(): FileManagerBookmarkRepository {
-  return new FileManagerBookmarkRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("file_manager_bookmarks_repository_write"),
-  );
-}
+// File manager recent/pinned/shortcuts moved to the file-manager plugin.
 
 export function createCurrentHomepageItemRepository(): HomepageItemRepository {
   return new HomepageItemRepository(
@@ -512,12 +505,7 @@ export function createCurrentTmuxSessionTagRepository(): TmuxSessionTagRepositor
   );
 }
 
-export function createCurrentTransferRecentRepository(): TransferRecentRepository {
-  return new TransferRecentRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("transfer_recent_repository_write"),
-  );
-}
+// transfer_recent moved to the file-manager plugin.
 
 export function createCurrentTrustedDeviceRepository(): TrustedDeviceRepository {
   return new TrustedDeviceRepository(

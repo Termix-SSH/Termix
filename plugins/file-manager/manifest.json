@@ -1,0 +1,97 @@
+{
+  "id": "file-manager",
+  "name": "File Manager",
+  "version": "1.0.0",
+  "description": "Browse, edit and transfer files over SFTP, including host-to-host transfers.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Files & Transfer",
+  "icon": "FolderSearch",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "network:serve",
+    "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "files.sftp",
+      "version": "1.0.0",
+      "permission": "file-manager.use"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "files",
+        "titleKey": "nav.files",
+        "icon": "FolderSearch",
+        "openFrom": ["host-context-menu", "palette"]
+      },
+      {
+        "id": "sftp",
+        "titleKey": "nav.sftp",
+        "icon": "ArrowLeftRight",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ],
+    "actions": [
+      {
+        "id": "files.openHost",
+        "titleKey": "nav.files",
+        "handler": "openHost",
+        "permission": "file-manager.use"
+      },
+      {
+        "id": "files.openEditor",
+        "titleKey": "nav.files",
+        "handler": "openEditor",
+        "permission": "file-manager.use"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "enableKey": "enableFileManager",
+        "enableLabelKey": "settings.host.enable.label",
+        "fields": [
+          {
+            "key": "defaultPath",
+            "type": "string",
+            "labelKey": "settings.host.defaultPath.label",
+            "requires": "enableFileManager"
+          },
+          {
+            "key": "scpLegacy",
+            "type": "boolean",
+            "labelKey": "settings.host.scpLegacy.label",
+            "requires": "enableFileManager"
+          }
+        ]
+      }
+    },
+    "hostCapability": {
+      "key": "enableFileManager",
+      "labelKey": "hostCapability.label",
+      "editorTab": "files"
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

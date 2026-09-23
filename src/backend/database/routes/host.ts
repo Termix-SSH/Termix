@@ -18,12 +18,10 @@ import { notifyAutomationInternalEvent } from "../../hosts/automation-events.js"
 import {
   createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
-  createCurrentFileManagerBookmarkRepository,
   createCurrentOpksshTokenRepository,
   createCurrentRecentActivityRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentSessionRecordingRepository,
-  createCurrentTransferRecentRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentHostResolutionRepository,
@@ -55,7 +53,6 @@ import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
 import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
-import { registerHostFileManagerBookmarkRoutes } from "./host-file-manager-bookmark-routes.js";
 import { registerHostCommandHistoryRoutes } from "./host-command-history-routes.js";
 import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
 import { registerHostInternalRoutes } from "./host-internal-routes.js";
@@ -2550,13 +2547,9 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
-      await createCurrentFileManagerBookmarkRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentTransferRecentRepository().deleteByHostId(
-        numericHostId,
-      );
+      // file manager recent/pinned/shortcuts and transfer_recent cascade on
+      // the host's refHost() foreign key, as the file-manager plugin's
+      // adopted tables.
 
       await createCurrentCommandHistoryRepository().deleteByHostId(
         numericHostId,
@@ -2635,87 +2628,8 @@ router.delete(
   },
 );
 
-registerHostFileManagerBookmarkRoutes(
-  router,
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-);
-
-router.get(
-  "/transfer/recent",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const sourceHostIdQuery = Array.isArray(req.query.sourceHostId)
-      ? req.query.sourceHostId[0]
-      : req.query.sourceHostId;
-    const sourceHostId = sourceHostIdQuery
-      ? parseInt(sourceHostIdQuery as string)
-      : null;
-
-    if (!isNonEmptyString(userId)) {
-      return res.status(400).json({ error: "Invalid userId" });
-    }
-
-    if (!sourceHostId) {
-      return res.status(400).json({ error: "Source host ID is required" });
-    }
-
-    try {
-      const recent =
-        await createCurrentTransferRecentRepository().listBySourceHost(
-          userId,
-          sourceHostId,
-          10,
-        );
-
-      res.json(recent);
-    } catch (err) {
-      sshLogger.error("Failed to fetch transfer recent destinations", err);
-      res.status(500).json({ error: "Failed to fetch recent destinations" });
-    }
-  },
-);
-
-router.post(
-  "/transfer/recent",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const { sourceHostId, destHostId, destPath, destPathLabel } = req.body;
-
-    if (
-      !isNonEmptyString(userId) ||
-      !sourceHostId ||
-      !destHostId ||
-      !destPath
-    ) {
-      return res.status(400).json({ error: "Invalid data" });
-    }
-
-    try {
-      const transferRecentRepository = createCurrentTransferRecentRepository();
-      await transferRecentRepository.upsertForDestination(userId, {
-        sourceHostId,
-        destHostId,
-        destPath,
-        destPathLabel,
-      });
-
-      await transferRecentRepository.pruneSourceHost(userId, sourceHostId, 10);
-
-      res.json({ message: "Recent destination saved" });
-    } catch (err) {
-      sshLogger.error("Failed to save transfer recent destination", err);
-      res.status(500).json({ error: "Failed to save recent destination" });
-    }
-  },
-);
+// File manager recent/pinned/shortcuts and transfer/recent routes moved to
+// the file-manager plugin, under /plugin-api/file-manager/.
 registerHostCommandHistoryRoutes(
   router,
   authenticateJWT,

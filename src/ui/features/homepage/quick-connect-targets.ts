@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { FolderSearch, Network } from "lucide-react";
+import { Network } from "lucide-react";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
@@ -20,12 +20,6 @@ export function quickConnectTargets(
   actions: HostActionDef[],
 ): QuickConnectTarget[] {
   const core: QuickConnectTarget[] = [
-    {
-      type: "files",
-      icon: FolderSearch,
-      labelKey: "homepage.connType_files",
-      enabled: (h) => !!(h.enableSsh && h.enableFileManager),
-    },
     {
       type: "tunnel",
       icon: Network,

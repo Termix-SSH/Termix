@@ -25,21 +25,13 @@
       "literals": ["rdp", "ssh-terminal", "telnet", "vnc"],
       "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it. The core terminal opens its own websocket, served by the ssh-terminal plugin, until the terminal moves into it in Phase B."
     },
-    "src/ui/features/file-manager/components/TransferToHostDialog.tsx": {
-      "literals": ["rdp", "vnc"],
-      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
-    },
     "src/ui/features/homepage/widgets/QuickConnectWidget.tsx": {
-      "literals": ["terminal"],
-      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+      "literals": ["files", "terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered. A default widget config value (connectionTypes), not a code branch on the plugin: quick connect offers terminal and files by default regardless of which plugins are enabled."
     },
     "src/ui/features/session-sharing/SharedSessionView.tsx": {
       "literals": ["ssh-terminal"],
       "reason": "The core terminal opens its own websocket, served by the ssh-terminal plugin, until the terminal moves into it in Phase B."
-    },
-    "src/ui/features/sftp/SftpTransferTab.tsx": {
-      "literals": ["rdp", "vnc"],
-      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
     },
     "src/ui/features/terminal/Terminal.tsx": {
       "literals": ["ssh-terminal", "terminal"],
@@ -50,8 +42,8 @@
       "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
     },
     "src/ui/features/terminal/TerminalToolbar.tsx": {
-      "literals": ["terminal"],
-      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+      "literals": ["files", "terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered. The toolbar's \"open file manager here\" button needs the terminal's current working directory before opening the tab, so it special-cases the files host action instead of using the generic opener; folds into the terminal's own Phase B step."
     },
     "src/ui/features/tmux-monitor/TmuxMonitor.tsx": {
       "literals": ["terminal"],
@@ -66,8 +58,8 @@
       "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
     },
     "src/ui/onboarding/steps/WelcomeStep.tsx": {
-      "literals": ["terminal"],
-      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+      "literals": ["files", "terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered. The fixed 3-item first-run welcome card (hosts, terminal, files) is core promotional copy, not an extensible list a plugin contributes to."
     },
     "src/ui/shell/TabBar.tsx": {
       "literals": ["terminal"],
@@ -106,8 +98,8 @@
       "reason": "Host data: the enableDocker column filter and the container runtime name, until Phase B moves them. Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
     },
     "src/ui/sidebar/QuickConnectPanel.tsx": {
-      "literals": ["rdp", "terminal", "vnc"],
-      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+      "literals": ["files", "rdp", "terminal", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered. The quick-connect-for-an-unsaved-host flow offers a fixed terminal/files button pair, not an extensible list a plugin contributes to."
     },
     "src/ui/sidebar/quick-connect-host.ts": {
       "literals": ["rdp", "vnc"],

@@ -38,12 +38,6 @@ import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state"
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import {
-  MAX_TRANSFER_CONCURRENCY,
-  TRANSFER_CONCURRENCY_STORAGE_KEY,
-  getTransferConcurrency,
-  setTransferConcurrency,
-} from "@/features/file-manager/local-transfer-utils";
 import { VersionBadge } from "@/components/version-badge";
 import {
   Dialog,
@@ -211,6 +205,40 @@ type ApiErrorLike = {
 
 function apiErrorMessage(error: unknown, fallback: string) {
   return (error as ApiErrorLike).response?.data?.error || fallback;
+}
+
+// Local transfer concurrency is the file-manager plugin's own setting; this
+// panel just offers the control, using the same storage key the plugin reads.
+const TRANSFER_CONCURRENCY_STORAGE_KEY =
+  "termix:file-manager:transfer-concurrency";
+const DEFAULT_TRANSFER_CONCURRENCY = 4;
+const MAX_TRANSFER_CONCURRENCY = 8;
+
+function clampTransferConcurrency(value: unknown): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return DEFAULT_TRANSFER_CONCURRENCY;
+  return Math.min(MAX_TRANSFER_CONCURRENCY, Math.max(1, n));
+}
+
+function getTransferConcurrency(): number {
+  try {
+    const raw = localStorage.getItem(TRANSFER_CONCURRENCY_STORAGE_KEY);
+    return raw === null
+      ? DEFAULT_TRANSFER_CONCURRENCY
+      : clampTransferConcurrency(raw);
+  } catch {
+    return DEFAULT_TRANSFER_CONCURRENCY;
+  }
+}
+
+function setTransferConcurrency(value: number): number {
+  const clamped = clampTransferConcurrency(value);
+  try {
+    localStorage.setItem(TRANSFER_CONCURRENCY_STORAGE_KEY, String(clamped));
+  } catch {
+    // storage unavailable
+  }
+  return clamped;
 }
 
 type CreatedProfileApiKey = {

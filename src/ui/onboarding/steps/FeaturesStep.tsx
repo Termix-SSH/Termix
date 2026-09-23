@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FolderTree, Plug, type LucideIcon } from "lucide-react";
+import { Plug, type LucideIcon } from "lucide-react";
 import { useActionSlot } from "@/hooks/use-action-slot";
 
 /**
@@ -9,7 +9,6 @@ import { useActionSlot } from "@/hooks/use-action-slot";
  * through the "onboarding.features" slot.
  */
 const FEATURES: { icon: LucideIcon; key: string }[] = [
-  { icon: FolderTree, key: "files" },
   { icon: Plug, key: "tunnels" },
 ];
 

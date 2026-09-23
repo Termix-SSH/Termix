@@ -14,7 +14,6 @@ import {
   Server,
   Settings,
   Terminal,
-  FolderSearch,
   Globe,
   Plus,
   MessagesSquare,
@@ -67,11 +66,6 @@ function getSshActions(host: Host): {
   label: string;
 }[] {
   return [
-    host.enableFileManager && {
-      type: "files",
-      icon: FolderSearch,
-      label: "Files",
-    },
     // --- tmux-monitor --- opt-in per host, off by default
     host.enableTerminal !== false &&
       host.enableTmuxMonitor && {

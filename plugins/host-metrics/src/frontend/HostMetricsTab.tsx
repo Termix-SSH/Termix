@@ -35,6 +35,7 @@ import { useTabsSafe } from "@/shell/TabContext.tsx";
 import {
   useTranslation,
   useSlotContributions,
+  useConnectionRetry,
 } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
@@ -51,7 +52,6 @@ import {
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
-import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { runAdaptivePolling } from "@/lib/adaptive-polling.ts";
 import type { LogEntry } from "@/types/connection-log.ts";
 import {

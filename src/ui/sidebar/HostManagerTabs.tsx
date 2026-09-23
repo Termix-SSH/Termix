@@ -1,7 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
 import {
-  Folder,
   KeyRound,
   Network,
   Settings,
@@ -11,8 +10,7 @@ import {
 import { byOrderThenId, createRegistry } from "@/lib/registry";
 
 /** Core host editor tabs. Plugins add theirs through registerHostEditorSection. */
-export type CoreHostTabId =
-  "general" | "ssh" | "terminal" | "tunnels" | "files";
+export type CoreHostTabId = "general" | "ssh" | "terminal" | "tunnels";
 export type HostTabId = CoreHostTabId | (string & {});
 export type CredentialTabId = "general" | "auth";
 
@@ -68,7 +66,7 @@ export const hostEditorSectionList = sections.list;
 export const useHostEditorSections = sections.useList;
 export const resetHostEditorSections = sections.reset;
 
-const CORE_SSH_GROUP = new Set<string>(["ssh", "terminal", "tunnels", "files"]);
+const CORE_SSH_GROUP = new Set<string>(["ssh", "terminal", "tunnels"]);
 
 /** Whether a tab lives in the SSH group's second strip. */
 export function isSshGroupTab(id: string): boolean {
@@ -166,12 +164,6 @@ export function makeHostSshSubTabs(
         label: t("hosts.tabTunnels"),
         icon: <Network className="size-3" />,
         order: 20,
-      },
-      {
-        id: "files",
-        label: t("hosts.tabFiles"),
-        icon: <Folder className="size-3" />,
-        order: 60,
       },
     ],
     "ssh",

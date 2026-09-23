@@ -253,14 +253,27 @@ describe("resolveWorkspaceTabTarget", () => {
     expect((result as { host?: Host }).host?.syncId).toBe("sync-web-01");
   });
 
-  it("skips a non-singleton, non-serial type with no resolvable host", () => {
+  it("skips a non-singleton, non-serial, non-plugin type with no resolvable host", () => {
+    const snapshot: WorkspaceTabSnapshot = {
+      slotId: "s1",
+      type: "host-manager",
+      label: "host-manager",
+    };
+    expect(resolveWorkspaceTabTarget(snapshot, hosts)).toEqual({
+      kind: "skip",
+    });
+  });
+
+  it("keeps a saved tab whose owning plugin is not running as a placeholder", () => {
+    // "files" is the file-manager plugin's tab type. Nothing registered it in
+    // this test, matching the plugin being disabled, failed or still loading.
     const snapshot: WorkspaceTabSnapshot = {
       slotId: "s1",
       type: "files",
       label: "files",
     };
     expect(resolveWorkspaceTabTarget(snapshot, hosts)).toEqual({
-      kind: "skip",
+      kind: "singleton",
     });
   });
 });

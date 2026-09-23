@@ -1,0 +1,1539 @@
+import type { Express, Request, Response } from "express";
+import Busboy from "busboy";
+import type { PluginContext } from "@termix/plugin-sdk/backend";
+import {
+  execBuffer,
+  execChannel,
+  execWithSudo,
+  execWithSudoBuffer,
+  getSessionSftp,
+  type SSHSession,
+} from "./session.js";
+import { detectBinary } from "./utils.js";
+
+type FileContentRoutesDeps = {
+  ctx: PluginContext;
+  sshSessions: Record<string, SSHSession>;
+  verifySessionOwnership: (session: SSHSession, userId: string) => boolean;
+};
+
+const getRequiredQueryParam = (
+  value: string | string[] | undefined,
+): string | undefined => {
+  if (Array.isArray(value)) return value[0];
+  return value;
+};
+
+const parseByteOffset = (value: string | undefined): number | null => {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return null;
+  return parsed;
+};
+
+export function registerFileContentRoutes(
+  app: Express,
+  { ctx, sshSessions, verifySessionOwnership }: FileContentRoutesDeps,
+): void {
+  /**
+   * @openapi
+   * /plugin-api/file-manager/identifySymlink:
+   *   get:
+   *     summary: Identify symbolic link
+   *     description: Identifies the target of a symbolic link.
+   *     tags:
+   *       - File Manager
+   *     parameters:
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: path
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Symbolic link information.
+   *       400:
+   *         description: Missing required parameters or SSH connection not established.
+   *       500:
+   *         description: Failed to identify symbolic link.
+   */
+  app.get("/identifySymlink", (req, res) => {
+    const sessionId = req.query.sessionId as string;
+    const sshConn = sshSessions[sessionId];
+    const linkPath = req.query.path as string;
+    const userId = ctx.currentActor()!;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session ID is required" });
+    }
+
+    if (!sshConn?.isConnected) {
+      return res.status(400).json({ error: "SSH connection not established" });
+    }
+
+    if (!verifySessionOwnership(sshConn, userId)) {
+      return res.status(403).json({ error: "Session access denied" });
+    }
+
+    if (!linkPath) {
+      return res.status(400).json({ error: "Link path is required" });
+    }
+
+    sshConn.lastActive = Date.now();
+
+    const escapedPath = linkPath.replace(/'/g, "'\"'\"'");
+    const command = `stat -L -c "%F" '${escapedPath}' && readlink -f '${escapedPath}'`;
+
+    execChannel(sshConn, command, (err, stream) => {
+      if (err) {
+        ctx.log.error("SSH identifySymlink error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      let data = "";
+      let errorData = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
+
+      stream.on("close", (code) => {
+        if (code !== 0) {
+          ctx.log.error(
+            `SSH identifySymlink command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+          );
+          return res
+            .status(500)
+            .json({ error: `Command failed: ${errorData}` });
+        }
+
+        const [fileType, target] = data.trim().split("\n");
+
+        res.json({
+          path: linkPath,
+          target: target,
+          type: fileType.toLowerCase().includes("directory")
+            ? "directory"
+            : "file",
+        });
+      });
+
+      stream.on("error", (streamErr) => {
+        ctx.log.error("SSH identifySymlink stream error:", streamErr);
+        if (!res.headersSent) {
+          res.status(500).json({ error: `Stream error: ${streamErr.message}` });
+        }
+      });
+    });
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/file-manager/resolvePath:
+   *   get:
+   *     summary: Resolve a path with environment variables
+   *     description: Expands environment variables and ~ in a path via the SSH session.
+   *     tags:
+   *       - File Manager
+   *     parameters:
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: path
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The resolved absolute path.
+   *       400:
+   *         description: Missing required parameters.
+   *       500:
+   *         description: Failed to resolve path.
+   */
+  app.get("/resolvePath", (req, res) => {
+    const sessionId = req.query.sessionId as string;
+    const sshConn = sshSessions[sessionId];
+    const rawPath = req.query.path as string;
+    const userId = ctx.currentActor()!;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session ID is required" });
+    }
+
+    if (!sshConn?.isConnected) {
+      return res.status(400).json({ error: "SSH connection not established" });
+    }
+
+    if (!verifySessionOwnership(sshConn, userId)) {
+      return res.status(403).json({ error: "Session access denied" });
+    }
+
+    if (!rawPath) {
+      return res.status(400).json({ error: "Path is required" });
+    }
+
+    sshConn.lastActive = Date.now();
+
+    let command: string;
+    if (rawPath.startsWith("~")) {
+      const rest = rawPath.substring(1).replace(/'/g, "'\"'\"'");
+      command = `echo ~'${rest}'`;
+    } else {
+      const escapedPath = rawPath.replace(/'/g, "'\"'\"'");
+      command = `echo '${escapedPath}'`;
+    }
+
+    execChannel(sshConn, command, (err, stream) => {
+      if (err) {
+        ctx.log.error("SSH resolvePath error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      let data = "";
+      let errorData = "";
+
+      stream.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      stream.stderr.on("data", (chunk: Buffer) => {
+        errorData += chunk.toString();
+      });
+
+      stream.on("close", (code) => {
+        if (code !== 0) {
+          ctx.log.error(
+            `SSH resolvePath command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
+          );
+          return res.json({ resolvedPath: rawPath });
+        }
+
+        const resolved = data.trim();
+        res.json({ resolvedPath: resolved || rawPath });
+      });
+
+      stream.on("error", (streamErr) => {
+        ctx.log.error("SSH resolvePath stream error:", streamErr);
+        if (!res.headersSent) {
+          res.json({ resolvedPath: rawPath });
+        }
+      });
+    });
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/file-manager/readFile:
+   *   get:
+   *     summary: Read a file
+   *     description: Reads the content of a file from the remote host.
+   *     tags:
+   *       - File Manager
+   *     parameters:
+   *       - in: query
+   *         name: sessionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: path
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The content of the file.
+   *       400:
+   *         description: Missing required parameters or file too large.
+   *       404:
+   *         description: File not found.
+   *       500:
+   *         description: Failed to read file.
+   */
+  app.get("/readFile", async (req, res) => {
+    const sessionId = req.query.sessionId as string;
+    const sshConn = sshSessions[sessionId];
+    const filePath = req.query.path as string;
+    const userId = ctx.currentActor()!;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session ID is required" });
+    }
+
+    if (!sshConn?.isConnected) {
+      return res.status(400).json({ error: "SSH connection not established" });
+    }
+
+    if (!verifySessionOwnership(sshConn, userId)) {
+      return res.status(403).json({ error: "Session access denied" });
+    }
+
+    if (!filePath) {
+      return res.status(400).json({ error: "File path is required" });
+    }
+
+    ctx.log.info(`Reading file: ${sessionId} (${filePath})`);
+    sshConn.lastActive = Date.now();
+
+    const MAX_READ_SIZE = 500 * 1024 * 1024;
+    const escapedPath = filePath.replace(/'/g, "'\"'\"'");
+
+    const isPermissionDenied = (message: string) =>
+      message.toLowerCase().includes("permission denied");
+    const isFileNotFound = (message: string) => {
+      const lower = message.toLowerCase();
+      return (
+        lower.includes("no such file or directory") ||
+        lower.includes("cannot access") ||
+        lower.includes("not found") ||
+        lower.includes("resource not found")
+      );
+    };
+
+    try {
+      let sizeResult = await execBuffer(
+        sshConn,
+        `stat -c%s '${escapedPath}' 2>/dev/null || wc -c < '${escapedPath}'`,
+      );
+      let sizeError = sizeResult.stderr || sizeResult.stdout.toString("utf8");
+
+      if (
+        sizeResult.code !== 0 &&
+        isPermissionDenied(sizeError) &&
+        sshConn.sudoPassword
+      ) {
+        sizeResult = await execWithSudoBuffer(
+          sshConn,
+          `stat -c%s '${escapedPath}'`,
+          sshConn.sudoPassword,
+        );
+        sizeError = sizeResult.stderr || sizeResult.stdout.toString("utf8");
+      }
+
+      if (sizeResult.code !== 0) {
+        const missing = isFileNotFound(sizeError);
+        const permissionDenied = isPermissionDenied(sizeError);
+        ctx.log.error(`File size check failed: ${sizeError}`);
+        return res.status(missing ? 404 : permissionDenied ? 403 : 500).json({
+          error: `Cannot check file size: ${sizeError}`,
+          fileNotFound: missing,
+          needsSudo: permissionDenied,
+        });
+      }
+
+      const fileSize = parseInt(sizeResult.stdout.toString("utf8").trim(), 10);
+      if (isNaN(fileSize)) {
+        ctx.log.error(
+          `Invalid file size response: ${sizeResult.stdout.toString("utf8")}`,
+        );
+        return res.status(500).json({ error: "Cannot determine file size" });
+      }
+
+      if (fileSize > MAX_READ_SIZE) {
+        ctx.log.warn(
+          `File too large for reading: ${sessionId} (${filePath}, size=${fileSize}, max=${MAX_READ_SIZE})`,
+        );
+        return res.status(400).json({
+          error: `File too large to open in editor. Maximum size is ${MAX_READ_SIZE / 1024 / 1024}MB, file is ${(fileSize / 1024 / 1024).toFixed(2)}MB. Use download instead.`,
+          fileSize,
+          maxSize: MAX_READ_SIZE,
+          tooLarge: true,
+        });
+      }
+
+      let contentResult = await execBuffer(
+        sshConn,
+        `cat '${escapedPath}'`,
+        MAX_READ_SIZE,
+      );
+      let contentError =
+        contentResult.stderr || contentResult.stdout.toString("utf8");
+
+      if (
+        contentResult.code !== 0 &&
+        isPermissionDenied(contentError) &&
+        sshConn.sudoPassword
+      ) {
+        contentResult = await execWithSudoBuffer(
+          sshConn,
+          `cat '${escapedPath}'`,
+          sshConn.sudoPassword,
+          MAX_READ_SIZE,
+        );
+        contentError =
+          contentResult.stderr || contentResult.stdout.toString("utf8");
+      }
+
+      if (contentResult.exceededLimit) {
+        return res.status(400).json({
+          error: `File grew beyond the ${MAX_READ_SIZE / 1024 / 1024}MB read limit`,
+          maxSize: MAX_READ_SIZE,
+          tooLarge: true,
+        });
+      }
+
+      if (contentResult.code !== 0) {
+        const missing = isFileNotFound(contentError);
+        const permissionDenied = isPermissionDenied(contentError);
+        ctx.log.error(
+          `SSH readFile command failed with code ${contentResult.code}: ${contentError.replace(/\n/g, " ").trim()}`,
+        );
+        return res.status(missing ? 404 : permissionDenied ? 403 : 500).json({
+          error: `Command failed: ${contentError}`,
+          fileNotFound: missing,
+          needsSudo: permissionDenied,
+        });
+      }
+
+      const isBinary = detectBinary(contentResult.stdout);
+      ctx.log.info(
+        `File read successfully: ${sessionId} (${filePath}, bytes=${contentResult.stdout.length})`,
+      );
+      return res.json({
+        content: contentResult.stdout.toString(isBinary ? "base64" : "utf8"),
+        path: filePath,
+        encoding: isBinary ? "base64" : "utf8",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      ctx.log.error("SSH readFile error:", error as Error);
+      return res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/file-manager/writeFile:
+   *   post:
+   *     summary: Write to a file
+   *     description: Writes content to a file on the remote host and preserves the existing permissions when the file already exists.
+   *     tags:
+   *       - File Manager
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               sessionId:
+   *                 type: string
+   *               path:
+   *                 type: string
+   *               content:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: File written successfully.
+   *       400:
+   *         description: Missing required parameters or SSH connection not established.
+   *       500:
+   *         description: Failed to write file.
+   */
+  app.post("/writeFile", async (req, res) => {
+    const { sessionId, path: filePath, content } = req.body;
+    const sshConn = sshSessions[sessionId];
+    const userId = ctx.currentActor()!;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session ID is required" });
+    }
+
+    if (!sshConn?.isConnected) {
+      return res.status(400).json({ error: "SSH connection not established" });
+    }
+
+    if (!verifySessionOwnership(sshConn, userId)) {
+      return res.status(403).json({ error: "Session access denied" });
+    }
+
+    if (!filePath) {
+      return res.status(400).json({ error: "File path is required" });
+    }
+
+    if (content === undefined) {
+      return res.status(400).json({ error: "File content is required" });
+    }
+
+    const contentLength =
+      typeof content === "string" ? content.length : Buffer.byteLength(content);
+    ctx.log.info(
+      `Writing file: ${sessionId} (${filePath}, bytes=${contentLength})`,
+    );
+    sshConn.lastActive = Date.now();
+
+    let preservedMode: number | undefined;
+
+    const restoreOriginalMode = (
+      sftp: import("ssh2").SFTPWrapper | null,
+      onComplete: () => void,
+    ) => {
+      if (preservedMode === undefined) {
+        onComplete();
+        return;
+      }
+
+      const permissions = preservedMode.toString(8);
+
+      if (sftp) {
+        sftp.chmod(filePath, preservedMode, (chmodErr) => {
+          if (chmodErr) {
+            ctx.log.warn(
+              `Failed to restore file permissions after save: ${sessionId} (${filePath}, permissions=${permissions}, error=${chmodErr.message})`,
+            );
+          } else {
+            ctx.log.info(
+              `Restored file permissions after save: ${sessionId} (${filePath}, permissions=${permissions})`,
+            );
+          }
+
+          onComplete();
+        });
+        return;
+      }
+
+      const escapedPath = filePath.replace(/'/g, "'\"'\"'");
+      const chmodCommand = `chmod ${permissions} '${escapedPath}' && echo "SUCCESS"`;
+
+      execChannel(sshConn, chmodCommand, (err, stream) => {
+        if (err) {
+          ctx.log.warn(
+            `Failed to restore file permissions after save: ${sessionId} (${filePath}, permissions=${permissions}, error=${err.message})`,
+          );
+          onComplete();
+          return;
+        }
+
+        let outputData = "";
+        let errorData = "";
+
+        stream.on("data", (chunk: Buffer) => {
+          outputData += chunk.toString();
+        });
+
+        stream.stderr.on("data", (chunk: Buffer) => {
+          errorData += chunk.toString();
+        });
+
+        stream.on("close", (code) => {
+          if (outputData.includes("SUCCESS")) {
+            ctx.log.info(
+              `Restored file permissions after save: ${sessionId} (${filePath}, permissions=${permissions})`,
+            );
+          } else {
+            ctx.log.warn(
+              `Failed to restore file permissions after save: ${sessionId} (${filePath}, permissions=${permissions}, exitCode=${code}, error=${errorData || "Permission restore command did not report success"})`,
+            );
+          }
+
+          onComplete();
+        });
+
+        stream.on("error", (streamErr) => {
+          ctx.log.warn(
+            `Failed to restore file permissions after save: ${sessionId} (${filePath}, permissions=${permissions}, error=${streamErr.message})`,
+          );
+          onComplete();
+        });
+      });
+    };
+
+    const trySFTP = () => {
+      try {
+        ctx.log.info(
+          `Opening SFTP channel for writeFile: ${sessionId} (${filePath})`,
+        );
+        getSessionSftp(sshConn)
+          .then((sftp) => {
+            let fileBuffer;
+            try {
+              if (typeof content === "string") {
+                try {
+                  const testBuffer = Buffer.from(content, "base64");
+                  if (testBuffer.toString("base64") === content) {
+                    fileBuffer = testBuffer;
+                  } else {
+                    fileBuffer = Buffer.from(content, "utf8");
+                  }
+                } catch {
+                  fileBuffer = Buffer.from(content, "utf8");
+                }
+              } else if (Buffer.isBuffer(content)) {
+                fileBuffer = content;
+              } else {
+                fileBuffer = Buffer.from(content);
+              }
+            } catch (bufferErr) {
+              ctx.log.error("Buffer conversion error:", bufferErr as Error);
+              if (!res.headersSent) {
+                return res
+                  .status(500)
+                  .json({ error: "Invalid file content format" });
+              }
+              return;
+            }
+
+            sftp.stat(filePath, (statErr, stats) => {
+              try {
+                if (statErr) {
+                  ctx.log.warn(
+                    `Failed to read existing file permissions before save: ${sessionId} (${filePath}, error=${statErr.message})`,
+                  );
+                } else if (stats.isFile()) {
+                  preservedMode = stats.mode & 0o7777;
+                }
+
+                const writeStream = sftp.createWriteStream(filePath);
+
+                let hasError = false;
+                let hasFinished = false;
+                let isFinalizing = false;
+
+                const finalizeSuccess = () => {
+                  if (hasError || hasFinished) return;
+                  hasFinished = true;
+                  isFinalizing = false;
+                  ctx.log.info(
+                    `File written successfully: ${sessionId} (${filePath}, bytes=${fileBuffer.length})`,
+                  );
+                  if (!res.headersSent) {
+                    res.json({
+                      message: "File written successfully",
+                      path: filePath,
+                      toast: {
+                        type: "success",
+                        message: `File written: ${filePath}`,
+                      },
+                    });
+                  }
+                };
+
+                writeStream.on("error", (streamErr) => {
+                  if (hasError || hasFinished || isFinalizing) return;
+                  hasError = true;
+                  isFinalizing = false;
+                  ctx.log.warn(
+                    `SFTP write failed, trying fallback method: ${streamErr.message}`,
+                  );
+                  tryFallbackMethod();
+                });
+
+                const finishWrite = () => {
+                  if (hasError || hasFinished || isFinalizing) return;
+                  isFinalizing = true;
+                  restoreOriginalMode(sftp, finalizeSuccess);
+                };
+
+                writeStream.on("finish", () => {
+                  finishWrite();
+                });
+
+                writeStream.on("close", () => {
+                  finishWrite();
+                });
+
+                try {
+                  writeStream.write(fileBuffer);
+                  writeStream.end();
+                } catch (writeErr) {
+                  if (hasError || hasFinished) return;
+                  hasError = true;
+                  isFinalizing = false;
+                  ctx.log.warn(
+                    `SFTP write operation failed, trying fallback method: ${(writeErr as Error).message}`,
+                  );
+                  tryFallbackMethod();
+                }
+              } catch (callbackErr) {
+                ctx.log.warn(
+                  `SFTP stat callback error, trying fallback method: ${(callbackErr as Error).message}`,
+                );
+                tryFallbackMethod();
+              }
+            });
+          })
+          .catch((err: Error) => {
+            ctx.log.warn(`SFTP failed, trying fallback method: ${err.message}`);
+            tryFallbackMethod();
+          });
+      } catch (sftpErr) {
+        ctx.log.warn(
+          `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
+        );
+        tryFallbackMethod();
+      }
+    };
+
+    const tryFallbackMethod = () => {
+      if (!sshConn?.isConnected) {
+        if (!res.headersSent) {
+          return res.status(500).json({ error: "SSH session disconnected" });
+        }
+        return;
+      }
+      try {
+        let contentBuffer: Buffer;
+        if (typeof content === "string") {
+          try {
+            contentBuffer = Buffer.from(content, "base64");
+            if (contentBuffer.toString("base64") !== content) {
+              contentBuffer = Buffer.from(content, "utf8");
+            }
+          } catch {
+            contentBuffer = Buffer.from(content, "utf8");
+          }
+        } else if (Buffer.isBuffer(content)) {
+          contentBuffer = content;
+        } else {
+          contentBuffer = Buffer.from(content);
+        }
+        const base64Content = contentBuffer.toString("base64");
+        const escapedPath = filePath.replace(/'/g, "'\"'\"'");
+
+        const writeCommand = `echo '${base64Content}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
+
+        execChannel(sshConn, writeCommand, (err, stream) => {
+          if (err) {
+            ctx.log.error("Fallback write command failed:", err);
+            if (!res.headersSent) {
+              return res.status(500).json({
+                error: `Write failed: ${err.message}`,
+                toast: {
+                  type: "error",
+                  message: `Write failed: ${err.message}`,
+                },
+              });
+            }
+            return;
+          }
+
+          let outputData = "";
+          let errorData = "";
+
+          stream.on("data", (chunk: Buffer) => {
+            outputData += chunk.toString();
+          });
+
+          stream.stderr.on("data", (chunk: Buffer) => {
+            errorData += chunk.toString();
+          });
+
+          stream.stderr.on("error", (stderrErr) => {
+            ctx.log.error("Fallback write stderr error:", stderrErr);
+          });
+
+          stream.on("close", (code) => {
+            if (outputData.includes("SUCCESS")) {
+              restoreOriginalMode(null, () => {
+                if (!res.headersSent) {
+                  res.json({
+                    message: "File written successfully",
+                    path: filePath,
+                    toast: {
+                      type: "success",
+                      message: `File written: ${filePath}`,
+                    },
+                  });
+                }
+              });
+            } else {
+              const isPermDenied = errorData
+                .toLowerCase()
+                .includes("permission denied");
+              if (isPermDenied && sshConn.sudoPassword) {
+                execWithSudo(
+                  sshConn,
+                  `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`,
+                  sshConn.sudoPassword,
+                )
+                  .then(({ stdout, code: sudoCode }) => {
+                    if (sudoCode === 0 && stdout.includes("SUCCESS")) {
+                      restoreOriginalMode(null, () => {
+                        if (!res.headersSent) {
+                          res.json({
+                            message: "File written successfully",
+                            path: filePath,
+                          });
+                        }
+                      });
+                    } else if (!res.headersSent) {
+                      res
+                        .status(403)
+                        .json({ error: "Permission denied", needsSudo: true });
+                    }
+                  })
+                  .catch(() => {
+                    if (!res.headersSent) {
+                      res
+                        .status(403)
+                        .json({ error: "Permission denied", needsSudo: true });
+                    }
+                  });
+                return;
+              }
+              ctx.log.error(
+                `Fallback write failed with code ${code}: ${errorData}`,
+              );
+              if (!res.headersSent) {
+                res.status(500).json({
+                  error: `Write failed: ${errorData}`,
+                  needsSudo: isPermDenied,
+                  toast: {
+                    type: "error",
+                    message: `Write failed: ${errorData}`,
+                  },
+                });
+              }
+            }
+          });
+
+          stream.on("error", (streamErr) => {
+            ctx.log.error("Fallback write stream error:", streamErr);
+            if (!res.headersSent) {
+              res
+                .status(500)
+                .json({ error: `Write stream error: ${streamErr.message}` });
+            }
+          });
+        });
+      } catch (fallbackErr) {
+        ctx.log.error("Fallback method failed:", fallbackErr as Error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: `All write methods failed: ${(fallbackErr as Error).message}`,
+          });
+        }
+      }
+    };
+
+    trySFTP();
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/file-manager/uploadFile:
+   *   post:
+   *     summary: Upload a file
+   *     description: Uploads a file to the remote host.
+   *     tags:
+   *       - File Manager
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               sessionId:
+   *                 type: string
+   *               path:
+   *                 type: string
+   *               content:
+   *                 type: string
+   *               fileName:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully.
+   *       400:
+   *         description: Missing required parameters or SSH connection not established.
+   *       500:
+   *         description: Failed to upload file.
+   */
+  app.post("/uploadFile", async (req, res) => {
+    const { sessionId, path: filePath, content, fileName } = req.body;
+    const sshConn = sshSessions[sessionId];
+    const userId = ctx.currentActor()!;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session ID is required" });
+    }
+
+    if (!sshConn?.isConnected) {
+      return res.status(400).json({ error: "SSH connection not established" });
+    }
+
+    if (!verifySessionOwnership(sshConn, userId)) {
+      return res.status(403).json({ error: "Session access denied" });
+    }
+
+    if (!filePath || !fileName || content === undefined) {
+      return res
+        .status(400)
+        .json({ error: "File path, name, and content are required" });
+    }
+
+    sshConn.lastActive = Date.now();
+
+    const contentSize =
+      typeof content === "string"
+        ? Buffer.byteLength(content, "utf8")
+        : content.length;
+
+    const fullPath = filePath.endsWith("/")
+      ? filePath + fileName
+      : filePath + "/" + fileName;
+    const uploadStartTime = Date.now();
+    ctx.log.info(
+      `File upload started: ${sessionId} (${fullPath}, bytes=${contentSize})`,
+    );
+
+    const trySFTP = () => {
+      try {
+        ctx.log.info(
+          `Opening SFTP channel for uploadFile: ${sessionId} (${fullPath})`,
+        );
+        getSessionSftp(sshConn)
+          .then((sftp) => {
+            let fileBuffer;
+            try {
+              if (typeof content === "string") {
+                fileBuffer = Buffer.from(content, "base64");
+              } else if (Buffer.isBuffer(content)) {
+                fileBuffer = content;
+              } else {
+                fileBuffer = Buffer.from(content);
+              }
+            } catch (bufferErr) {
+              ctx.log.error("Buffer conversion error:", bufferErr as Error);
+              if (!res.headersSent) {
+                return res
+                  .status(500)
+                  .json({ error: "Invalid file content format" });
+              }
+              return;
+            }
+
+            const writeStream = sftp.createWriteStream(fullPath);
+
+            let hasError = false;
+            let hasFinished = false;
+
+            writeStream.on("error", (streamErr) => {
+              if (hasError || hasFinished) return;
+              hasError = true;
+              ctx.log.warn(
+                `SFTP write failed, trying fallback method: ${streamErr.message} (sessionId=${sessionId}, fileName=${fileName}, fileSize=${contentSize})`,
+              );
+              tryFallbackMethod();
+            });
+
+            writeStream.on("finish", () => {
+              if (hasError || hasFinished) return;
+              hasFinished = true;
+              ctx.log.info(
+                `File upload completed: ${sessionId} (${fullPath}, bytes=${fileBuffer.length}, duration=${Date.now() - uploadStartTime}ms)`,
+              );
+              if (!res.headersSent) {
+                res.json({
+                  message: "File uploaded successfully",
+                  path: fullPath,
+                  toast: {
+                    type: "success",
+                    message: `File uploaded: ${fullPath}`,
+                  },
+                });
+              }
+            });
+
+            writeStream.on("close", () => {
+              if (hasError || hasFinished) return;
+              hasFinished = true;
+              ctx.log.info(
+                `File upload completed: ${sessionId} (${fullPath}, bytes=${fileBuffer.length}, duration=${Date.now() - uploadStartTime}ms)`,
+              );
+              if (!res.headersSent) {
+                res.json({
+                  message: "File uploaded successfully",
+                  path: fullPath,
+                  toast: {
+                    type: "success",
+                    message: `File uploaded: ${fullPath}`,
+                  },
+                });
+              }
+            });
+
+            try {
+              writeStream.write(fileBuffer);
+              writeStream.end();
+            } catch (writeErr) {
+              if (hasError || hasFinished) return;
+              hasError = true;
+              ctx.log.warn(
+                `SFTP write operation failed, trying fallback method: ${(writeErr as Error).message}`,
+              );
+              tryFallbackMethod();
+            }
+          })
+          .catch((err: Error) => {
+            ctx.log.warn(`SFTP failed, trying fallback method: ${err.message}`);
+            tryFallbackMethod();
+          });
+      } catch (sftpErr) {
+        ctx.log.warn(
+          `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
+        );
+        tryFallbackMethod();
+      }
+    };
+
+    const tryFallbackMethod = () => {
+      if (!sshConn?.isConnected) {
+        if (!res.headersSent) {
+          return res.status(500).json({ error: "SSH session disconnected" });
+        }
+        return;
+      }
+      try {
+        let contentBuffer: Buffer;
+        if (typeof content === "string") {
+          try {
+            contentBuffer = Buffer.from(content, "base64");
+            if (contentBuffer.toString("base64") !== content) {
+              contentBuffer = Buffer.from(content, "utf8");
+            }
+          } catch {
+            contentBuffer = Buffer.from(content, "utf8");
+          }
+        } else if (Buffer.isBuffer(content)) {
+          contentBuffer = content;
+        } else {
+          contentBuffer = Buffer.from(content);
+        }
+        const base64Content = contentBuffer.toString("base64");
+        const chunkSize = 1000000;
+        const chunks = [];
+
+        for (let i = 0; i < base64Content.length; i += chunkSize) {
+          chunks.push(base64Content.slice(i, i + chunkSize));
+        }
+
+        if (!sshConn?.isConnected) {
+          ctx.log.error(
+            `SSH connection lost before fallback upload: ${sessionId} (${fullPath})`,
+          );
+          if (!res.headersSent) {
+            return res
+              .status(500)
+              .json({ error: "SSH connection lost during upload" });
+          }
+          return;
+        }
+
+        if (chunks.length === 1) {
+          const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
+
+          const writeCommand = `echo '${chunks[0]}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
+
+          execChannel(sshConn, writeCommand, (err, stream) => {
+            if (err) {
+              ctx.log.error("Fallback upload command failed:", err);
+              if (!res.headersSent) {
+                return res
+                  .status(500)
+                  .json({ error: `Upload failed: ${err.message}` });
+              }
+              return;
+            }
+
+            let outputData = "";
+            let errorData = "";
+
+            stream.on("data", (chunk: Buffer) => {
+              outputData += chunk.toString();
+            });
+
+            stream.stderr.on("data", (chunk: Buffer) => {
+              errorData += chunk.toString();
+            });
+
+            stream.stderr.on("error", (stderrErr) => {
+              ctx.log.error("Fallback upload stderr error:", stderrErr);
+            });
+
+            stream.on("close", (code) => {
+              if (outputData.includes("SUCCESS")) {
+                if (!res.headersSent) {
+                  res.json({
+                    message: "File uploaded successfully",
+                    path: fullPath,
+                    toast: {
+                      type: "success",
+                      message: `File uploaded: ${fullPath}`,
+                    },
+                  });
+                }
+              } else {
+                ctx.log.error(
+                  `Fallback upload failed with code ${code}: ${errorData}`,
+                );
+                if (!res.headersSent) {
+                  res.status(500).json({
+                    error: `Upload failed: ${errorData}`,
+                    toast: {
+                      type: "error",
+                      message: `Upload failed: ${errorData}`,
+                    },
+                  });
+                }
+              }
+            });
+
+            stream.on("error", (streamErr) => {
+              ctx.log.error("Fallback upload stream error:", streamErr);
+              if (!res.headersSent) {
+                res
+                  .status(500)
+                  .json({ error: `Upload stream error: ${streamErr.message}` });
+              }
+            });
+          });
+        } else {
+          const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
+
+          let writeCommand = `> '${escapedPath}'`;
+
+          chunks.forEach((chunk) => {
+            writeCommand += ` && echo '${chunk}' | base64 -d >> '${escapedPath}'`;
+          });
+
+          writeCommand += ` && echo "SUCCESS"`;
+
+          execChannel(sshConn, writeCommand, (err, stream) => {
+            if (err) {
+              ctx.log.error("Chunked fallback upload failed:", err);
+              if (!res.headersSent) {
+                return res
+                  .status(500)
+                  .json({ error: `Chunked upload failed: ${err.message}` });
+              }
+              return;
+            }
+
+            let outputData = "";
+            let errorData = "";
+
+            stream.on("data", (chunk: Buffer) => {
+              outputData += chunk.toString();
+            });
+
+            stream.stderr.on("data", (chunk: Buffer) => {
+              errorData += chunk.toString();
+            });
+
+            stream.stderr.on("error", (stderrErr) => {
+              ctx.log.error("Chunked fallback upload stderr error:", stderrErr);
+            });
+
+            stream.on("close", (code) => {
+              if (outputData.includes("SUCCESS")) {
+                if (!res.headersSent) {
+                  res.json({
+                    message: "File uploaded successfully",
+                    path: fullPath,
+                    toast: {
+                      type: "success",
+                      message: `File uploaded: ${fullPath}`,
+                    },
+                  });
+                }
+              } else {
+                ctx.log.error(
+                  `Chunked fallback upload failed with code ${code}: ${errorData}`,
+                );
+                if (!res.headersSent) {
+                  res.status(500).json({
+                    error: `Chunked upload failed: ${errorData}`,
+                    toast: {
+                      type: "error",
+                      message: `Chunked upload failed: ${errorData}`,
+                    },
+                  });
+                }
+              }
+            });
+
+            stream.on("error", (streamErr) => {
+              ctx.log.error("Chunked fallback upload stream error:", streamErr);
+              if (!res.headersSent) {
+                res.status(500).json({
+                  error: `Chunked upload stream error: ${streamErr.message}`,
+                });
+              }
+            });
+          });
+        }
+      } catch (fallbackErr) {
+        ctx.log.error("Fallback method failed:", fallbackErr as Error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: `All upload methods failed: ${(fallbackErr as Error).message}`,
+          });
+        }
+      }
+    };
+
+    trySFTP();
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/file-manager/uploadFileStream:
+   *   post:
+   *     summary: Stream-upload a file via multipart form
+   *     description: Uploads a file to the remote host by streaming multipart form data directly into an SFTP write stream, avoiding full in-memory buffering.
+   *     tags:
+   *       - File Manager
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - sessionId
+   *               - path
+   *               - file
+   *             properties:
+   *               sessionId:
+   *                 type: string
+   *               path:
+   *                 type: string
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully.
+   *       400:
+   *         description: Missing required parameters or SSH connection not established.
+   *       500:
+   *         description: Failed to upload file.
+   */
+  app.post("/uploadFileStream", (req: Request, res: Response) => {
+    const userId = ctx.currentActor()!;
+
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      return res
+        .status(400)
+        .json({ error: "Expected multipart/form-data request" });
+    }
+
+    let sessionId: string | undefined;
+    let remotePath: string | undefined;
+    let fileName: string | undefined;
+    let uploadStartTime: number;
+    let resolved = false;
+    let requestAborted = false;
+    let cleanupStarted = false;
+    let destroyUpload: (() => void) | undefined;
+
+    const abortUpload = () => {
+      if (req.complete || cleanupStarted) return;
+      requestAborted = true;
+      cleanupStarted = true;
+      destroyUpload?.();
+    };
+
+    req.once("aborted", abortUpload);
+    req.once("error", abortUpload);
+    req.once("close", abortUpload);
+
+    const bb = Busboy({ headers: req.headers });
+
+    bb.on("field", (name: string, value: string) => {
+      if (name === "sessionId") sessionId = value;
+      if (name === "path") remotePath = value;
+    });
+
+    bb.on(
+      "file",
+      (
+        fieldname: string,
+        fileStream: NodeJS.ReadableStream,
+        info: { filename: string; encoding: string; mimeType: string },
+      ) => {
+        fileName = info.filename;
+
+        if (!sessionId || !remotePath || !fileName) {
+          fileStream.resume();
+          if (!resolved) {
+            resolved = true;
+            res.status(400).json({ error: "Missing sessionId or path field" });
+          }
+          return;
+        }
+
+        const sshConn = sshSessions[sessionId];
+        if (!sshConn?.isConnected) {
+          fileStream.resume();
+          if (!resolved) {
+            resolved = true;
+            res.status(400).json({ error: "SSH connection not established" });
+          }
+          return;
+        }
+
+        if (!verifySessionOwnership(sshConn, userId)) {
+          fileStream.resume();
+          if (!resolved) {
+            resolved = true;
+            res.status(403).json({ error: "Session access denied" });
+          }
+          return;
+        }
+
+        sshConn.lastActive = Date.now();
+        uploadStartTime = Date.now();
+
+        const fullPath = remotePath.endsWith("/")
+          ? remotePath + fileName
+          : remotePath + "/" + fileName;
+
+        ctx.log.info(
+          `Streaming file upload started: ${sessionId} (${fullPath})`,
+        );
+
+        getSessionSftp(sshConn)
+          .then((sftp) => {
+            const writeStream = sftp.createWriteStream(fullPath);
+            const removePartialFile = () => {
+              writeStream.destroy();
+              sftp.unlink(fullPath, (err) => {
+                if (err) {
+                  ctx.log.error(
+                    "Failed to remove partial file after aborted upload:",
+                    err,
+                  );
+                }
+              });
+            };
+            destroyUpload = removePartialFile;
+
+            if (requestAborted) {
+              removePartialFile();
+              return;
+            }
+
+            writeStream.on("error", (err) => {
+              ctx.log.error("SFTP write stream error during upload:", err);
+              if (!resolved && !requestAborted) {
+                resolved = true;
+                res
+                  .status(500)
+                  .json({ error: `Upload failed: ${err.message}` });
+              }
+            });
+
+            const completeUpload = () => {
+              if (resolved || requestAborted) return;
+              resolved = true;
+              ctx.log.info(
+                `Streaming file upload completed: ${sessionId} (${fullPath}, duration=${Date.now() - uploadStartTime}ms)`,
+              );
+              res.json({
+                message: "File uploaded successfully",
+                path: fullPath,
+                toast: {
+                  type: "success",
+                  message: `File uploaded: ${fullPath}`,
+                },
+              });
+            };
+
+            let sourceEnded = false;
+            fileStream.on("end", () => {
+              sourceEnded = true;
+            });
+            writeStream.on("finish", completeUpload);
+            // ssh2's SFTP WriteStream destroys itself inside _final (autoClose),
+            // and a Writable destroyed before its final callback never emits
+            // 'finish' on current Node. 'close' fires once the handle has been
+            // closed after the last write was acknowledged, so it is the
+            // completion signal that reliably arrives -- but only trust it
+            // when the whole body was consumed and nothing aborted the upload.
+            writeStream.on("close", () => {
+              if (sourceEnded) completeUpload();
+            });
+
+            fileStream.on("error", (err) => {
+              ctx.log.error("File read stream error during upload:", err);
+              writeStream.destroy();
+              if (!resolved && !requestAborted) {
+                resolved = true;
+                res
+                  .status(500)
+                  .json({ error: `Upload stream error: ${err.message}` });
+              }
+            });
+
+            (fileStream as NodeJS.ReadableStream).pipe(
+              writeStream as unknown as NodeJS.WritableStream,
+            );
+          })
+          .catch((err: Error) => {
+            fileStream.resume();
+            ctx.log.error("SFTP session error during stream upload:", err);
+            if (!resolved && !requestAborted) {
+              resolved = true;
+              res.status(500).json({ error: `SFTP error: ${err.message}` });
+            }
+          });
+      },
+    );
+
+    bb.on("error", (err: Error) => {
+      ctx.log.error("Busboy parse error during stream upload:", err);
+      if (!resolved && !requestAborted) {
+        resolved = true;
+        res.status(500).json({ error: `Upload parse error: ${err.message}` });
+      }
+    });
+
+    req.pipe(bb);
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/file-manager/uploadFileChunk:
+   *   post:
+   *     summary: Upload one raw file chunk
+   *     description: Writes a raw request body to the remote file at the supplied byte offset, allowing browser clients to avoid multipart/FormData 2GB limits.
+   *     tags:
+   *       - File Manager
+   */
+  app.post("/uploadFileChunk", (req: Request, res: Response) => {
+    const userId = ctx.currentActor()!;
+    const sessionId = getRequiredQueryParam(req.query.sessionId as string);
+    const remotePath = getRequiredQueryParam(req.query.path as string);
+    const fileName = getRequiredQueryParam(req.query.fileName as string);
+    const offset = parseByteOffset(
+      getRequiredQueryParam(req.query.offset as string),
+    );
+    const totalSize = parseByteOffset(
+      getRequiredQueryParam(req.query.totalSize as string),
+    );
+
+    if (!sessionId || !remotePath || !fileName) {
+      req.resume();
+      return res
+        .status(400)
+        .json({ error: "Missing sessionId, path, or fileName" });
+    }
+
+    if (offset === null || totalSize === null || offset > totalSize) {
+      req.resume();
+      return res.status(400).json({ error: "Invalid upload offset" });
+    }
+
+    const sshConn = sshSessions[sessionId];
+    if (!sshConn?.isConnected) {
+      req.resume();
+      return res.status(400).json({ error: "SSH connection not established" });
+    }
+
+    if (!verifySessionOwnership(sshConn, userId)) {
+      req.resume();
+      return res.status(403).json({ error: "Session access denied" });
+    }
+
+    sshConn.lastActive = Date.now();
+    const fullPath = remotePath.endsWith("/")
+      ? remotePath + fileName
+      : remotePath + "/" + fileName;
+    let resolved = false;
+    let bytesWritten = 0;
+    const uploadStartTime = Date.now();
+
+    getSessionSftp(sshConn)
+      .then((sftp) => {
+        const writeStream = sftp.createWriteStream(fullPath, {
+          flags: offset === 0 ? "w" : "r+",
+          start: offset,
+        });
+
+        const fail = (status: number, error: string) => {
+          if (resolved) return;
+          resolved = true;
+          req.unpipe(writeStream as unknown as NodeJS.WritableStream);
+          writeStream.destroy();
+          res.status(status).json({ error });
+        };
+
+        writeStream.on("error", (err) => {
+          ctx.log.error("SFTP write stream error during chunk upload:", err);
+          fail(500, `Upload failed: ${err.message}`);
+        });
+
+        let sourceEnded = false;
+        const completeChunk = () => {
+          if (resolved) return;
+          resolved = true;
+          const nextOffset = offset + bytesWritten;
+          ctx.log.info(
+            `File chunk upload completed: ${sessionId} (${fullPath}, offset=${offset}, bytesWritten=${bytesWritten}, nextOffset=${nextOffset}, totalSize=${totalSize}, duration=${Date.now() - uploadStartTime}ms)`,
+          );
+          res.json({
+            message: "File chunk uploaded successfully",
+            path: fullPath,
+            offset,
+            bytesWritten,
+            nextOffset,
+            complete: nextOffset >= totalSize,
+          });
+        };
+        writeStream.on("finish", completeChunk);
+        // See uploadFileStream: ssh2's WriteStream does not emit 'finish'
+        // on current Node; 'close' after the body ended is completion.
+        writeStream.on("close", () => {
+          if (sourceEnded) completeChunk();
+        });
+
+        req.on("error", (err) => {
+          ctx.log.error("Request stream error during chunk upload:", err);
+          fail(500, `Upload stream error: ${err.message}`);
+        });
+
+        if (Buffer.isBuffer(req.body)) {
+          // Some middleware already drained the request into req.body;
+          // there is nothing left to pipe, so write what it collected.
+          bytesWritten = req.body.length;
+          sourceEnded = true;
+          writeStream.end(req.body);
+          return;
+        }
+
+        req.on("data", (chunk: Buffer) => {
+          bytesWritten += chunk.length;
+        });
+        req.on("end", () => {
+          sourceEnded = true;
+        });
+
+        req.pipe(writeStream as unknown as NodeJS.WritableStream);
+      })
+      .catch((err: Error) => {
+        req.resume();
+        ctx.log.error("SFTP session error during chunk upload:", err);
+        if (!resolved) {
+          resolved = true;
+          res.status(500).json({ error: `SFTP error: ${err.message}` });
+        }
+      });
+  });
+}

@@ -1,12 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
   Braces,
-  FolderSearch,
   LayoutDashboard,
   LayoutGrid,
   LayoutPanelLeft,
   Network,
-  ArrowLeftRight,
   Server,
   Settings,
   Usb,
@@ -46,11 +44,6 @@ const LocalTerminal = lazy(() =>
     default: m.LocalTerminal,
   })),
 );
-const loadFileManager = () =>
-  import("@/features/file-manager/FileManager").then((m) => ({
-    default: m.FileManager,
-  }));
-const FileManager = lazy(loadFileManager);
 const loadTmuxMonitor = () =>
   import("@/features/tmux-monitor/TmuxMonitor").then((m) => ({
     default: m.TmuxMonitor,
@@ -71,11 +64,6 @@ const loadTunnelTab = () =>
     default: m.TunnelTab,
   }));
 const TunnelTab = lazy(loadTunnelTab);
-const SftpTransferTab = lazy(() =>
-  import("@/features/sftp/SftpTransferTab").then((m) => ({
-    default: m.SftpTransferTab,
-  })),
-);
 const Serial = lazy(() =>
   import("@/features/serial/Serial").then((m) => ({
     default: m.Serial,
@@ -100,7 +88,6 @@ const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
 );
 const tabSurfaceLoaders: Partial<Record<TabType, () => Promise<unknown>>> = {
-  files: loadFileManager,
   tmux_monitor: loadTmuxMonitor,
   tunnel: loadTunnelTab,
 };
@@ -168,8 +155,6 @@ export function tabIcon(type: TabType) {
       return <LayoutDashboard className="size-3.5" />;
     case "local-terminal":
       return <TerminalSquare className="size-3.5" />;
-    case "files":
-      return <FolderSearch className="size-3.5" />;
     case "host-manager":
       return <Server className="size-3.5" />;
     case "user-profile":
@@ -178,8 +163,6 @@ export function tabIcon(type: TabType) {
       return <Settings className="size-3.5" />;
     case "tunnel":
       return <Network className="size-3.5" />;
-    case "sftp":
-      return <ArrowLeftRight className="size-3.5" />;
     // --- tmux-monitor ---
     case "tmux_monitor":
       return <Layers className="size-3.5" />;
@@ -293,31 +276,10 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
         <LocalTerminal instanceId={tab.instanceId} isVisible={isVisible} />,
       );
 
-    case "files":
-      if (!host)
-        return (
-          <EmptyState
-            icon={FolderSearch}
-            messageKey="fileManager.noHostSelected"
-          />
-        );
-      return withTabSuspense(
-        <FileManager
-          initialHost={hostToSSHHost(host)}
-          initialFilePath={tab.initialFilePath}
-          initialPath={tab.initialPath}
-          isVisible={isVisible}
-          onOpenTerminalTab={(path) => shell.openTerminalTab(host, path)}
-        />,
-      );
-
     case "tunnel":
       return withTabSuspense(
         <TunnelTab label={label} host={host} isVisible={isVisible} />,
       );
-
-    case "sftp":
-      return withTabSuspense(<SftpTransferTab />);
 
     // --- tmux-monitor ---
     case "tmux_monitor":

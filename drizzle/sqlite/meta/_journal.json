@@ -232,6 +232,13 @@
       "when": 1790185583660,
       "tag": "0032_square_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790189636471,
+      "tag": "0033_careful_random",
+      "breakpoints": true
     }
   ]
 }

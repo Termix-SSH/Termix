@@ -173,7 +173,6 @@ import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
 import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
-import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
 import { changeAppLanguage, consumeLoginLanguage } from "@/i18n/i18n";
@@ -195,6 +194,7 @@ import {
   type TabShellCallbacks,
 } from "@/shell/tab-registry";
 import { getPanel, usePanels } from "@/shell/panel-registry";
+import { invokeAction } from "@/shell/action-registry";
 import { startPluginRuntime, stopPluginRuntime } from "@/plugin-host/loader";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import {
@@ -2207,12 +2207,6 @@ export function AppShell({
   }
 
   function handleRailClick(view: RailView) {
-    if (view === "sftp") {
-      openSingletonTab("sftp");
-      if (isMobile) setSidebarOpen(false);
-      return;
-    }
-
     if (railView === view && sidebarOpen) {
       setSidebarOpen(false);
     } else {
@@ -2435,18 +2429,6 @@ export function AppShell({
       openSingletonTab(type, undefined, undefined, options?.data),
     closeTab: (tabId) => closeTab(tabId),
     renameTab: (tabId, label) => renameTab(tabId, label),
-    openFileInEditor: (host, filePath) =>
-      openTab(host, "files", {
-        instanceId: newInstanceId(),
-        restoredSessionId: null,
-        initialFilePath: filePath,
-      }),
-    openFileManager: (host, path) =>
-      openTab(host, "files", {
-        instanceId: newInstanceId(),
-        restoredSessionId: null,
-        initialPath: path,
-      }),
     openTerminalTab: (host, path) =>
       openTab(host, "terminal", {
         instanceId: newInstanceId(),
@@ -3032,7 +3014,9 @@ export function AppShell({
                 onRenameTab={renameTab}
                 onOpenFileManager={(tabId) => {
                   const targetTab = tabs.find((t) => t.id === tabId);
-                  if (targetTab?.host) openTab(targetTab.host, "files");
+                  if (targetTab?.host) {
+                    void invokeAction("files.openHost", targetTab.host);
+                  }
                 }}
                 onOpenShare={openShareForTab}
                 isAppFullscreen={isAppFullscreen}
@@ -3195,7 +3179,6 @@ export function AppShell({
           />
         </Suspense>
       )}
-      <TransferMonitor />
       <Suspense fallback={null}>
         <AlertManager userId={userId} loggedIn={!!username} />
       </Suspense>

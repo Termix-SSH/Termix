@@ -15,7 +15,10 @@ import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import type { SSHHost } from "@/types";
 import { isElectron } from "@/main-axios.ts";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  useTranslation,
+  useConnectionRetry,
+} from "@termix/plugin-sdk/frontend";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
 import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
@@ -25,7 +28,6 @@ import {
   ConnectionLogProvider,
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 
 interface ConsoleTerminalProps {
   containerId: string;

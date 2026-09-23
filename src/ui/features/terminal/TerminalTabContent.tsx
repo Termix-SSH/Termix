@@ -5,6 +5,7 @@ import type { TerminalHandle, TerminalHostConfig } from "./Terminal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTabsSafe } from "@/shell/TabContext";
 import { hostToSSHHost } from "@/lib/host-to-ssh-host";
+import { invokeAction } from "@/shell/action-registry";
 import type { TabRenderProps } from "@/shell/tab-registry";
 
 const CommandHistoryProvider = lazy(() =>
@@ -88,9 +89,11 @@ export function TerminalTabContent({
               }
               previewTheme={previewTerminalTheme}
               onOpenFileInEditor={(filePath) =>
-                shell.openFileInEditor(host, filePath)
+                void invokeAction("files.openEditor", host, filePath)
               }
-              onOpenFileManager={(path) => shell.openFileManager(host, path)}
+              onOpenFileManager={(path) =>
+                void invokeAction("files.openHost", host, path)
+              }
               isQuickConnect={host.id.startsWith("quick-connect-")}
               onSaveQuickConnect={
                 shell.saveQuickConnect

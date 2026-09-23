@@ -53,6 +53,8 @@ const PLUGIN_PURPOSES = new Set<SshConnectPurpose>([
   "fleet",
   "remote-desktop",
   "tunnel",
+  "file-manager",
+  "file-transfer",
 ]);
 
 function purposeOf(options?: PluginSshConnectOptions): SshConnectPurpose {

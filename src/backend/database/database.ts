@@ -48,7 +48,6 @@ import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 import {
   createCurrentCredentialRepository,
   createCurrentDismissedAlertRepository,
-  createCurrentFileManagerBookmarkRepository,
   createCurrentHostRepository,
   createCurrentSettingsRepository,
   createCurrentSshCredentialUsageRepository,
@@ -63,7 +62,8 @@ import type {
   GitHubAPIResponse,
   AuthenticatedRequest,
 } from "../../types/index.js";
-import { DatabaseSaveTrigger } from "./db/index.js";
+import { DatabaseSaveTrigger, getDb } from "./db/index.js";
+import { sql } from "drizzle-orm";
 import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
 
@@ -855,7 +855,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE file_manager_recent (
+        CREATE TABLE p_file_manager_recent (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL,
           host_id INTEGER NOT NULL,
@@ -864,7 +864,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           last_opened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE file_manager_pinned (
+        CREATE TABLE p_file_manager_pinned (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL,
           host_id INTEGER NOT NULL,
@@ -873,7 +873,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE file_manager_shortcuts (
+        CREATE TABLE p_file_manager_shortcuts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL,
           host_id INTEGER NOT NULL,
@@ -882,7 +882,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE transfer_recent (
+        CREATE TABLE p_file_manager_transfer_recent (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL,
           source_host_id INTEGER NOT NULL,
@@ -1031,56 +1031,84 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      const fileManagerRepository =
-        createCurrentFileManagerBookmarkRepository();
+      // The file manager plugin owns these tables now (p_file_manager_*);
+      // read them by raw SQL rather than importing plugin code into core.
+      const drizzleDb = getDb();
       const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
-        fileManagerRepository.listRecentByUserId(userId),
-        fileManagerRepository.listPinnedByUserId(userId),
-        fileManagerRepository.listShortcutsByUserId(userId),
+        drizzleDb.all<{
+          id: number;
+          user_id: string;
+          host_id: number;
+          name: string;
+          path: string;
+          last_opened: string;
+        }>(
+          sql`SELECT id, user_id, host_id, name, path, last_opened FROM p_file_manager_recent WHERE user_id = ${userId}`,
+        ),
+        drizzleDb.all<{
+          id: number;
+          user_id: string;
+          host_id: number;
+          name: string;
+          path: string;
+          pinned_at: string;
+        }>(
+          sql`SELECT id, user_id, host_id, name, path, pinned_at FROM p_file_manager_pinned WHERE user_id = ${userId}`,
+        ),
+        drizzleDb.all<{
+          id: number;
+          user_id: string;
+          host_id: number;
+          name: string;
+          path: string;
+          created_at: string;
+        }>(
+          sql`SELECT id, user_id, host_id, name, path, created_at FROM p_file_manager_shortcuts WHERE user_id = ${userId}`,
+        ),
       ]);
 
       const insertRecent = exportDb.prepare(`
-        INSERT INTO file_manager_recent (id, user_id, host_id, name, path, last_opened)
+        INSERT INTO p_file_manager_recent (id, user_id, host_id, name, path, last_opened)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
       for (const item of recentFiles) {
         insertRecent.run(
           item.id,
-          item.userId,
-          item.hostId,
+          item.user_id,
+          item.host_id,
           item.name,
           item.path,
-          item.lastOpened,
+          item.last_opened,
         );
       }
 
       const insertPinned = exportDb.prepare(`
-        INSERT INTO file_manager_pinned (id, user_id, host_id, name, path, pinned_at)
+        INSERT INTO p_file_manager_pinned (id, user_id, host_id, name, path, pinned_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
       for (const item of pinnedFiles) {
         insertPinned.run(
           item.id,
-          item.userId,
-          item.hostId,
+          item.user_id,
+          item.host_id,
           item.name,
           item.path,
-          item.pinnedAt,
+          item.pinned_at,
         );
       }
 
       const insertShortcut = exportDb.prepare(`
-        INSERT INTO file_manager_shortcuts (id, user_id, host_id, name, path, created_at)
+        INSERT INTO p_file_manager_shortcuts (id, user_id, host_id, name, path, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
       for (const item of shortcuts) {
         insertShortcut.run(
           item.id,
-          item.userId,
-          item.hostId,
+          item.user_id,
+          item.host_id,
           item.name,
           item.path,
-          item.createdAt,
+          item.created_at,
         );
       }
 
@@ -1445,70 +1473,88 @@ app.post(
             );
           }
 
+          // The file manager plugin owns these tables now (p_file_manager_*).
+          // Older export files still have the legacy name, so try that too.
           const fileManagerTables = [
             {
-              table: "file_manager_recent",
+              tableNames: ["p_file_manager_recent", "file_manager_recent"],
+              physicalTable: "p_file_manager_recent",
+              dateColumn: "last_opened",
               key: "fileManagerItemsImported",
             },
             {
-              table: "file_manager_pinned",
+              tableNames: ["p_file_manager_pinned", "file_manager_pinned"],
+              physicalTable: "p_file_manager_pinned",
+              dateColumn: "pinned_at",
               key: "fileManagerItemsImported",
             },
             {
-              table: "file_manager_shortcuts",
+              tableNames: [
+                "p_file_manager_shortcuts",
+                "file_manager_shortcuts",
+              ],
+              physicalTable: "p_file_manager_shortcuts",
+              dateColumn: "created_at",
               key: "fileManagerItemsImported",
             },
           ];
 
-          const fileManagerRepository =
-            createCurrentFileManagerBookmarkRepository();
+          const importDrizzleDb = getDb();
 
-          for (const { table, key } of fileManagerTables) {
-            try {
-              const importedItems = importDb
-                .prepare(`SELECT * FROM ${table}`)
-                .all();
-              for (const item of importedItems) {
-                try {
-                  const bookmark = {
-                    hostId: item.host_id,
-                    name: item.name,
-                    path: item.path,
-                  };
-                  const created =
-                    table === "file_manager_recent"
-                      ? await fileManagerRepository.createRecentForImport(
-                          userId,
-                          bookmark,
-                          item.last_opened,
-                        )
-                      : table === "file_manager_pinned"
-                        ? await fileManagerRepository.createPinnedForImport(
-                            userId,
-                            bookmark,
-                            item.pinned_at,
-                          )
-                        : await fileManagerRepository.createShortcutForImport(
-                            userId,
-                            bookmark,
-                            item.created_at,
-                          );
-
-                  if (created) {
-                    result.summary[key]++;
-                  } else {
-                    result.summary.skippedItems++;
-                  }
-                } catch (itemError) {
-                  result.summary.errors.push(
-                    `${table} import error: ${itemError.message}`,
-                  );
-                }
+          for (const {
+            tableNames,
+            physicalTable,
+            dateColumn,
+            key,
+          } of fileManagerTables) {
+            let importedItems: Array<Record<string, unknown>> | null = null;
+            let sourceTable = "";
+            for (const tableName of tableNames) {
+              try {
+                importedItems = importDb
+                  .prepare(`SELECT * FROM ${tableName}`)
+                  .all() as Array<Record<string, unknown>>;
+                sourceTable = tableName;
+                break;
+              } catch {
+                // try the next name
               }
-            } catch {
+            }
+
+            if (importedItems === null) {
               apiLogger.info(
-                `${table} table not found in import file, skipping`,
+                `${physicalTable} table not found in import file, skipping`,
               );
+              continue;
+            }
+
+            for (const item of importedItems) {
+              try {
+                const hostId = item.host_id as number;
+                const path = item.path as string;
+                const name =
+                  (item.name as string) || path.split("/").pop() || "Unknown";
+                const dateValue =
+                  (item[dateColumn] as string) || new Date().toISOString();
+
+                const existing = await importDrizzleDb.all<{ id: number }>(
+                  sql`SELECT id FROM ${sql.raw(physicalTable)} WHERE user_id = ${userId} AND host_id = ${hostId} AND path = ${path}`,
+                );
+
+                if (existing.length > 0) {
+                  result.summary.skippedItems++;
+                  continue;
+                }
+
+                await importDrizzleDb.run(
+                  sql`INSERT INTO ${sql.raw(physicalTable)} (user_id, host_id, path, name, ${sql.raw(dateColumn)}) VALUES (${userId}, ${hostId}, ${path}, ${name}, ${dateValue})`,
+                );
+                result.summary[key]++;
+              } catch (itemError) {
+                result.summary.errors.push(
+                  `${sourceTable} import error: ${itemError.message}`,
+                );
+              }
             }
           }
 

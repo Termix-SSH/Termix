@@ -68,8 +68,6 @@ function recordingShell(calls: ShellCall[]): TabShellCallbacks {
     openSingletonTab: record("openSingletonTab"),
     closeTab: record("closeTab"),
     renameTab: record("renameTab"),
-    openFileInEditor: record("openFileInEditor"),
-    openFileManager: record("openFileManager"),
     openTerminalTab: record("openTerminalTab"),
     openRailView: record("openRailView"),
     closeRailView: record("closeRailView"),

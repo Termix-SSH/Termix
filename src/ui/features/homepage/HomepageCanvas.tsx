@@ -44,7 +44,6 @@ import "./widgets/TermixUptimeWidget";
 import "./widgets/SystemOverviewWidget";
 import "./widgets/SshTerminalWidget";
 import "./widgets/QuickConnectWidget";
-import "./widgets/FileManagerWidget";
 import "./widgets/TunnelWidget";
 import "./widgets/CalendarWidget";
 import "./widgets/CountdownWidget";

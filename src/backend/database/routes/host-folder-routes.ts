@@ -5,14 +5,12 @@ import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import {
   createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
-  createCurrentFileManagerBookmarkRepository,
   createCurrentHostFolderRepository,
   createCurrentFolderAccessRepository,
   createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentSessionRecordingRepository,
-  createCurrentTransferRecentRepository,
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
@@ -400,13 +398,9 @@ export function registerHostFolderRoutes(
         const hostIds = hostsToDelete.map((host) => host.id);
 
         if (hostIds.length > 0) {
-          await createCurrentFileManagerBookmarkRepository().deleteByHostIds(
-            hostIds,
-          );
-
-          await createCurrentTransferRecentRepository().deleteByHostIds(
-            hostIds,
-          );
+          // file manager recent/pinned/shortcuts and transfer_recent cascade
+          // on the host's refHost() foreign key, as the file-manager
+          // plugin's adopted tables.
 
           await createCurrentCommandHistoryRepository().deleteByHostIds(
             hostIds,

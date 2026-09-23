@@ -219,16 +219,16 @@ describe("HostItem density parity", () => {
 
   it("learns repeated local actions and preloads the preferred host tool", () => {
     renderHostItem("comfortable");
-    const filesButton = screen.getByTitle("Files");
-    fireEvent.click(filesButton);
-    fireEvent.click(filesButton);
-    fireEvent.click(filesButton);
+    const tunnelButton = screen.getByTitle("Tunnel");
+    fireEvent.click(tunnelButton);
+    fireEvent.click(tunnelButton);
+    fireEvent.click(tunnelButton);
 
     const hostRow = screen.getByText("web-01").closest(".cursor-pointer");
     expect(hostRow).toBeTruthy();
     fireEvent.pointerEnter(hostRow!);
 
     expect(preloadTabSurfaceMock).toHaveBeenCalledWith("terminal");
-    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("files");
+    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("tunnel");
   });
 });

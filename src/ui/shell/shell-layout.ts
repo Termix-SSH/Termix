@@ -19,7 +19,6 @@ import { getTabType } from "./tab-registry";
  * not a meaningful part of an arrangement.
  */
 const CORE_CAPTURABLE = new Set([
-  "files",
   "tunnel",
   "tmux_monitor",
   "serial",
@@ -51,7 +50,6 @@ const CORE_UNSAVED = new Set([
   "user-profile",
   "admin-settings",
   "split-screen",
-  "sftp",
 ]);
 
 /**

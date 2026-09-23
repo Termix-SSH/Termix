@@ -8,7 +8,6 @@ import {
   Copy,
   CopyPlus,
   Cpu,
-  FolderSearch,
   GripVertical,
   Key,
   KeyRound,
@@ -126,13 +125,6 @@ export function getSshActions(host: Host): {
   order: number;
 }[] {
   return [
-    host.enableSsh &&
-      host.enableFileManager && {
-        type: "files" as TabType,
-        icon: FolderSearch,
-        label: "Files",
-        order: 20,
-      },
     host.enableSsh &&
       host.enableTunnel && {
         type: "tunnel" as TabType,
@@ -814,20 +806,6 @@ export function HostItem({
               {t("hosts.copyLink")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {host.enableSsh && host.enableFileManager && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    writeClipboardText(
-                      `${window.location.origin}?view=file-manager&hostId=${host.id}`,
-                    );
-                    toast.success(t("hosts.fileManagerUrlCopied"));
-                  }}
-                >
-                  <FolderSearch className="size-3.5 mr-2" />
-                  {t("hosts.copyFileManagerUrlAction")}
-                </DropdownMenuItem>
-              )}
               {host.enableSsh && host.enableTunnel && (
                 <DropdownMenuItem
                   onClick={(e) => {

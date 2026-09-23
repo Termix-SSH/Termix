@@ -20,7 +20,6 @@ export type CoreRailView =
   | "hosts"
   | "credentials"
   | "port-forwarding"
-  | "sftp"
   | "termix-id"
   | "quick-connect"
   | "serial"

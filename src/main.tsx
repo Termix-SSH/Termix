@@ -34,11 +34,6 @@ const AppShell = lazy(() =>
 
 // Full-screen apps opened via query params (e.g. from external links or
 // Electron). Plugin views register a standalone component with their tab.
-const FileManagerApp = lazy(() =>
-  import("@/features/file-manager/FileManagerApp").then((m) => ({
-    default: m.default,
-  })),
-);
 const TunnelApp = lazy(() =>
   import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
 );
@@ -80,16 +75,8 @@ function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
   const hostId = searchParams.get("hostId");
-  const path = searchParams.get("path");
 
   switch (view) {
-    case "file-manager":
-      return (
-        <FileManagerApp
-          hostId={hostId || undefined}
-          initialPath={path || undefined}
-        />
-      );
     case "tunnel":
       return <TunnelApp hostId={hostId || undefined} />;
     case "tmux-monitor": // --- tmux-monitor ---

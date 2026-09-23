@@ -9,7 +9,6 @@ import {
   createCurrentCredentialRepository,
   createCurrentDashboardServiceLinkRepository,
   createCurrentDismissedAlertRepository,
-  createCurrentFileManagerBookmarkRepository,
   createCurrentHomepageItemRepository,
   createCurrentHomepageLayoutRepository,
   createCurrentHostHealthRepository,
@@ -35,7 +34,6 @@ import {
   createCurrentTrustedDeviceRepository,
   createCurrentUserPreferenceRepository,
   createCurrentUserRepository,
-  createCurrentTransferRecentRepository,
   createCurrentVaultProfileRepository,
   createCurrentSecretSourceRepository,
   createCurrentSharedCredentialSecretsRepository,
@@ -85,9 +83,9 @@ export async function deleteUserAndRelatedData(
 
     await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 
-    await createCurrentFileManagerBookmarkRepository().deleteByUserId(userId);
-
-    await createCurrentTransferRecentRepository().deleteByUserId(userId);
+    // file manager recent/pinned/shortcuts and transfer_recent cascade on the
+    // user's refUser() foreign key, as the file-manager plugin's adopted
+    // tables.
 
     await createCurrentRecentActivityRepository().deleteByUserId(userId);
     await createCurrentDismissedAlertRepository().deleteByUserId(userId);

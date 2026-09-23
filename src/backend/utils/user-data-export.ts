@@ -1,12 +1,34 @@
+import { sql } from "drizzle-orm";
 import {
   createCurrentDismissedAlertRepository,
-  createCurrentFileManagerBookmarkRepository,
-  createCurrentTransferRecentRepository,
   createCurrentUserDataExportRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
+import { getDb } from "../database/db/index.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
+
+// The file manager plugin owns these tables now (p_file_manager_*); read by
+// raw SQL rather than importing plugin code into core.
+async function listFileManagerExportData(userId: string): Promise<{
+  recent: unknown[];
+  pinned: unknown[];
+  shortcuts: unknown[];
+  transferRecent: unknown[];
+}> {
+  const db = getDb();
+  const [recent, pinned, shortcuts, transferRecent] = await Promise.all([
+    db.all(sql`SELECT * FROM p_file_manager_recent WHERE user_id = ${userId}`),
+    db.all(sql`SELECT * FROM p_file_manager_pinned WHERE user_id = ${userId}`),
+    db.all(
+      sql`SELECT * FROM p_file_manager_shortcuts WHERE user_id = ${userId}`,
+    ),
+    db.all(
+      sql`SELECT * FROM p_file_manager_transfer_recent WHERE user_id = ${userId}`,
+    ),
+  ]);
+  return { recent, pinned, shortcuts, transferRecent };
+}
 
 interface UserExportData {
   version: string;
@@ -90,19 +112,12 @@ class UserDataExport {
             : credentials;
       }
 
-      const [recentFiles, pinnedFiles, shortcuts, transferRecentData] =
-        await Promise.all([
-          createCurrentFileManagerBookmarkRepository().listRecentByUserId(
-            userId,
-          ),
-          createCurrentFileManagerBookmarkRepository().listPinnedByUserId(
-            userId,
-          ),
-          createCurrentFileManagerBookmarkRepository().listShortcutsByUserId(
-            userId,
-          ),
-          createCurrentTransferRecentRepository().listByUserId(userId),
-        ]);
+      const {
+        recent: recentFiles,
+        pinned: pinnedFiles,
+        shortcuts,
+        transferRecent: transferRecentData,
+      } = await listFileManagerExportData(userId);
 
       const alerts =
         await createCurrentDismissedAlertRepository().listByUserId(userId);

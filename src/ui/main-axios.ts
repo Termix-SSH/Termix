@@ -843,7 +843,9 @@ let remoteGuacamoleApi: AxiosInstance | null = null;
 
 export function getRemoteFileManagerApi(): AxiosInstance {
   if (!remoteFileManagerApi) {
-    remoteFileManagerApi = createRemoteOriginApiInstance("/ssh/file_manager");
+    remoteFileManagerApi = createRemoteOriginApiInstance(
+      "/plugin-api/file-manager",
+    );
   }
   return remoteFileManagerApi;
 }
@@ -931,9 +933,10 @@ function initializeApiInstances() {
   // Tunnel Management API (port 30003)
   tunnelApi = createApiInstance(getApiUrl("/ssh", 30003), "TUNNEL");
 
-  // File Manager Operations API (port 30004)
+  // File Manager Operations API - the file-manager plugin, mounted on the
+  // main backend.
   fileManagerApi = createApiInstance(
-    getApiUrl("/ssh/file_manager", 30004),
+    getApiUrl("/plugin-api/file-manager", 30001),
     "FILE_MANAGER",
   );
 
@@ -978,7 +981,7 @@ export let sshHostApi: AxiosInstance;
 // Tunnel Management API (port 30003)
 export let tunnelApi: AxiosInstance;
 
-// File Manager Operations API (port 30004)
+// File Manager Operations API (file-manager plugin)
 export let fileManagerApi: AxiosInstance;
 
 // Host Metrics API (host-metrics plugin)
@@ -1203,7 +1206,7 @@ export async function getTransferMethodPreview(
   methodPreference?: TransferMethodPreference,
 ): Promise<TransferMethodPreview> {
   try {
-    const response = await fileManagerApi.post("/ssh/transferMethodPreview", {
+    const response = await fileManagerApi.post("/transferMethodPreview", {
       sourceSessionId,
       sourcePaths,
       destSessionId,
@@ -1383,7 +1386,7 @@ export async function transferToHost(
       parallelSegmentCount,
     });
 
-    const response = await fileManagerApi.post("/ssh/transferToHost", {
+    const response = await fileManagerApi.post("/transferToHost", {
       sourceSessionId,
       sourcePaths,
       destSessionId,
@@ -1410,9 +1413,7 @@ export async function getTransferStatus(
   transferId: string,
 ): Promise<TransferProgressResponse> {
   try {
-    const response = await fileManagerApi.get(
-      `/ssh/transferStatus/${transferId}`,
-    );
+    const response = await fileManagerApi.get(`/transferStatus/${transferId}`);
     return response.data;
   } catch (error) {
     handleApiError(error, "get transfer status");
@@ -1424,7 +1425,7 @@ export async function listActiveTransfers(): Promise<{
   transfers: TransferProgressResponse[];
 }> {
   try {
-    const response = await fileManagerApi.get("/ssh/activeTransfers");
+    const response = await fileManagerApi.get("/activeTransfers");
     return response.data;
   } catch (error) {
     handleApiError(error, "list active transfers");
@@ -1434,7 +1435,7 @@ export async function listActiveTransfers(): Promise<{
 
 export async function cancelTransferToHost(transferId: string): Promise<void> {
   try {
-    await fileManagerApi.post(`/ssh/transferCancel/${transferId}`);
+    await fileManagerApi.post(`/transferCancel/${transferId}`);
   } catch (error) {
     fileLogger.warn("Transfer cancel request failed (non-fatal)", {
       operation: "host_transfer",
@@ -1449,7 +1450,7 @@ export async function cleanupCancelledTransfer(
 ): Promise<{ removedPaths: string[]; failedPaths: string[] }> {
   try {
     const response = await fileManagerApi.post(
-      `/ssh/transferCleanup/${transferId}`,
+      `/transferCleanup/${transferId}`,
     );
     return response.data;
   } catch (error) {
@@ -1462,9 +1463,7 @@ export async function retryTransferToHost(
   transferId: string,
 ): Promise<{ ok: boolean; transferId: string }> {
   try {
-    const response = await fileManagerApi.post(
-      `/ssh/transferRetry/${transferId}`,
-    );
+    const response = await fileManagerApi.post(`/transferRetry/${transferId}`);
     return response.data;
   } catch (error) {
     handleApiError(error, "retry transfer");
@@ -1585,72 +1584,6 @@ export {
   updateC2STunnelPreset,
   deleteC2STunnelPreset,
 } from "@/api/tunnel-api";
-
-export {
-  getFileManagerRecent,
-  addFileManagerRecent,
-  removeFileManagerRecent,
-  getFileManagerPinned,
-  addFileManagerPinned,
-  removeFileManagerPinned,
-  getFileManagerShortcuts,
-  addFileManagerShortcut,
-  removeFileManagerShortcut,
-} from "@/api/file-manager-metadata-api";
-
-export {
-  connectSSH,
-  disconnectSSH,
-  verifySSHTOTP,
-  verifySSHWarpgate,
-  quickConnect,
-  getSSHStatus,
-  keepSSHAlive,
-  listSSHFiles,
-  identifySSHSymlink,
-  resolveSSHPath,
-  readSSHFile,
-  writeSSHFile,
-  uploadSSHFile,
-  downloadSSHFile,
-  downloadSSHFileStream,
-  createSSHFile,
-  createSSHFolder,
-  deleteSSHItem,
-  setSudoPassword,
-  copySSHItem,
-  renameSSHItem,
-  moveSSHItem,
-  changeSSHPermissions,
-  extractSSHArchive,
-  compressSSHFiles,
-  ensureSSHSessionForHost,
-  browseSSHDirectory,
-  type HostConnectionState,
-  type EnsureSSHSessionResult,
-  type BrowseSSHDirectoryResult,
-} from "@/api/ssh-file-operations-api";
-
-export {
-  getRecentFiles,
-  addRecentFile,
-  removeRecentFile,
-  getPinnedFiles,
-  addPinnedFile,
-  removePinnedFile,
-  getFolderShortcuts,
-  addFolderShortcut,
-  removeFolderShortcut,
-} from "@/api/file-manager-data-api";
-
-// Desktop-only local disk <-> remote transfers (dual-pane file manager).
-export {
-  uploadLocalFileToSession,
-  downloadSessionFileToLocal,
-  cancelLocalTransfer,
-  createLocalTransferId,
-  type LocalTransferProgressEvent,
-} from "@/api/local-transfer-api";
 
 export {
   getAllServerStatuses,

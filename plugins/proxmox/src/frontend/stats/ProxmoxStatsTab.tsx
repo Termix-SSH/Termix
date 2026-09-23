@@ -19,7 +19,7 @@ import { GuestTable } from "./GuestTable";
 import { NodeNetworkCard } from "./cards/NodeNetworkCard";
 import { StoragePoolsCard } from "./cards/StoragePoolsCard";
 import { ClusterHealthCard } from "./cards/ClusterHealthCard";
-import { useConnectionRetry } from "./useConnectionRetry";
+import { useConnectionRetry } from "@termix/plugin-sdk/frontend";
 import { runAdaptivePolling } from "./adaptive-polling";
 
 const HISTORY_LEN = 30;

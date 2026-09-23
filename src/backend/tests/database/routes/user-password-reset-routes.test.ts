@@ -27,7 +27,6 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
   createCurrentSettingsRepository: () => ({}),
   createCurrentSshCredentialUsageRepository: deletingRepo("usage"),
-  createCurrentFileManagerBookmarkRepository: deletingRepo("bookmarks"),
   createCurrentRecentActivityRepository: deletingRepo("activity"),
   createCurrentDismissedAlertRepository: deletingRepo("alerts"),
   createCurrentHostRepository: deletingRepo("hosts"),
@@ -117,7 +116,6 @@ describe("resetUserPassword", () => {
     expect(outcome).toEqual({ status: "reset", dataWiped: true });
     expect(calls.deletedFor).toEqual([
       "usage:user-1",
-      "bookmarks:user-1",
       "activity:user-1",
       "alerts:user-1",
       "hosts:user-1",

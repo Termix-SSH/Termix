@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { FolderOpen, Network } from "lucide-react";
+import { Network } from "lucide-react";
 import { tabTypeForActivity } from "@/shell/tab-registry";
 
 export interface ActivityTarget {
@@ -11,11 +11,6 @@ export interface ActivityTarget {
 
 /** Recent-activity types core itself records. */
 const CORE_ACTIVITY: Record<string, ActivityTarget> = {
-  file_manager: {
-    icon: FolderOpen,
-    tab: "files",
-    labelKey: "dashboard.activityFileManager",
-  },
   tunnel: {
     icon: Network,
     tab: "tunnel",

@@ -1067,9 +1067,15 @@ connect pipeline instead of importing ssh2 helpers from core:
   a chain has no single resolved host of its own.
 - `prepare(host, { client, purpose })`, `openTransport`,
   `classifyKeyboardInteractive` and `autoResponses` are the lower level for a
-  transport with its own prompt flow (docker's console, host metrics).
+  transport with its own prompt flow (docker's console, host metrics, **B6**'s
+  interactive file-manager connect with its TOTP/Warpgate parking flow).
 - `requiresSecret(authType)` and `supportsBackground(authType)` ask the
   provider.
+- **B6** added `"file-manager"` and `"file-transfer"` to `PluginSshPurpose`
+  (core's `SshConnectPurpose` already had them; the SDK type had lagged),
+  since the file-manager plugin's interactive connect route and its dedicated
+  transfer sessions both need their own keepalive/timeout defaults rather than
+  falling back to the generic `"plugin"` purpose.
 
 Each new connection is audited and runs as the current actor; pooled reuse is
 not. Connections and pool entries are closed on deactivate.
@@ -1608,8 +1614,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 108 files | D1         |
-| A plugin importing core by relative path         | Warning   | 67 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 138 files | D1         |
+| A plugin importing core by relative path         | Warning   | 68 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
 A warning does not fail a build, so the counts are held by
@@ -1639,11 +1645,17 @@ Known specifics:
   an `optionalDependency` (added in A2; it previously declared nothing, and
   the loader had no reason to order the two).
 - Core feature servers that are not plugins yet still own ports: tunnel 30003,
-  file-manager 30004, dashboard 30006, tmux 30010, serial 30011 and homepage 30012. Each keeps its nginx block until its own Phase B step. No plugin owns
-  a port any more (A4).
+  dashboard 30006, tmux 30010, serial 30011 and homepage 30012. Each keeps its
+  nginx block until its own Phase B step. No plugin owns a port any more (A4).
+  **B6** moved file-manager off port 30004 onto `/plugin-api/file-manager/`.
 - The terminal component and `TerminalTabContent` stay in core until the
-  terminal's Phase B step (session manager, split view and file-manager
-  callbacks). ssh-terminal registers them through the legacy alias.
+  terminal's Phase B step (session manager, split view). ssh-terminal
+  registers them through the legacy alias; **B6** switched every core caller
+  of the file manager over to `invokeAction("files.openHost"/"files.openEditor")`
+  instead of the `openFileManager`/`openFileInEditor` shell callbacks it
+  removed, so `TerminalWindow.tsx`'s embedding of the core terminal component
+  is now the only file-manager-adjacent legacy-core import left, tracked the
+  same way as any other plugin depending on an unconverted core component.
 - Host data columns (`enableDocker`, `enableRdp`, `guacamoleConfig` and so on)
   stay in core types until Phase B moves them. Only UI branches on them left
   the shell.

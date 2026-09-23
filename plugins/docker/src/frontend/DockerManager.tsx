@@ -15,7 +15,10 @@ import {
   Search,
 } from "lucide-react";
 
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  useTranslation,
+  useConnectionRetry,
+} from "@termix/plugin-sdk/frontend";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
 import { logActivity, getSSHHosts } from "@/main-axios";
 import {
@@ -43,7 +46,6 @@ import {
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
-import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
 import type { LogEntry } from "@/types/connection-log.ts";
 import { Select2 } from "@/components/select2";

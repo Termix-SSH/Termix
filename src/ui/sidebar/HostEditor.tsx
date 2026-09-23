@@ -80,7 +80,6 @@ import {
   type HostProtocols,
 } from "./HostEditorData";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
-import { HostFilesTab } from "./HostEditorFilesTab";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import { canEditHost } from "./host-permissions";
 import { VaultProfileManager } from "./VaultProfileManager";
@@ -2515,10 +2514,6 @@ export function HostEditor({
                 </div>
               </SectionCard>
             </>
-          )}
-
-          {activeTab === "files" && (
-            <HostFilesTab form={form} setField={setField} />
           )}
 
           {(() => {

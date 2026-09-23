@@ -577,7 +577,9 @@ export type PluginSshPurpose =
   | "proxmox"
   | "fleet"
   | "remote-desktop"
-  | "tunnel";
+  | "tunnel"
+  | "file-manager"
+  | "file-transfer";
 
 export type PluginSshAuthOutcome =
   | { status: "ready" }

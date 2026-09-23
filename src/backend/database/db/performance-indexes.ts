@@ -110,26 +110,9 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     table: "command_history",
     columns: "user_id, host_id",
   },
-  {
-    name: "idx_file_manager_recent_user",
-    table: "file_manager_recent",
-    columns: "user_id, host_id",
-  },
-  {
-    name: "idx_file_manager_pinned_user",
-    table: "file_manager_pinned",
-    columns: "user_id, host_id",
-  },
-  {
-    name: "idx_file_manager_shortcuts_user",
-    table: "file_manager_shortcuts",
-    columns: "user_id, host_id",
-  },
-  {
-    name: "idx_transfer_recent_user",
-    table: "transfer_recent",
-    columns: "user_id",
-  },
+  // file_manager_recent, file_manager_pinned, file_manager_shortcuts and
+  // transfer_recent are owned by the file-manager plugin now; its adopted
+  // table definitions carry these same indexes across the rename.
   {
     name: "idx_user_open_tabs_user_id",
     table: "user_open_tabs",

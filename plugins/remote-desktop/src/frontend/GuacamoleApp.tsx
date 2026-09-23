@@ -22,7 +22,10 @@ import {
   resolveConnectionOrigin,
   type ConnectionOrigin,
 } from "@/lib/connection-origin.ts";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  useTranslation,
+  useConnectionRetry,
+} from "@termix/plugin-sdk/frontend";
 import { GuacamoleToolbar } from "./GuacamoleToolbar.tsx";
 import { GuacamoleFileBrowser } from "./GuacamoleFileBrowser.tsx";
 import { describeUploadError } from "./guacamole-filesystem.ts";
@@ -42,7 +45,6 @@ import {
   ConnectionLogProvider,
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { SSHHost } from "@/types";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
