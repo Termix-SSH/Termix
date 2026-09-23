@@ -1,4 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { waitFor } from "@testing-library/react";
+
+vi.mock("../../src/frontend/ai-api", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getAiStatus: vi.fn(async () => ({ globallyEnabled: true, enabled: true })),
+}));
 import {
   renderWithApp,
   type RenderedPluginApp,
@@ -49,5 +55,10 @@ describe(`${manifest.id} activate`, () => {
     expect(app.registered.dashboardCards()).toEqual([]);
     expect(app.registered.settingsComponents()).toEqual([]);
     expect(app.registered.actions()).toEqual([]);
+  });
+
+  it("adds the assistant tab once AI is on for the user", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    await waitFor(() => expect(rendered!.registered.tabs()).toEqual(["ai"]));
   });
 });
