@@ -5,10 +5,13 @@ import {
   createCurrentFleetRepository,
   createCurrentHomepageItemRepository,
   createCurrentHostRepository,
-  createCurrentSnippetRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
 import { num, objectSchema, type AiTool } from "./types.js";
-import { listSavedWorkspaces, getNetworkTopology } from "../services.js";
+import {
+  listSavedWorkspaces,
+  getNetworkTopology,
+  listSnippets,
+} from "../services.js";
 
 /**
  * Read tools project explicit fields rather than spreading rows. Redaction runs
@@ -103,15 +106,14 @@ export const readTools: AiTool[] = [
   {
     name: "list_snippets",
     description:
-      "List the user's saved command snippets, including their folder and the command text.",
+      "List the user's saved command snippets, including their folder and the command text. Unavailable if the snippets plugin is disabled.",
     category: "read",
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const snippets = await createCurrentSnippetRepository().listOwnedSnippets(
-        context.userId,
-      );
+      const snippets = await listSnippets(context.userId);
+      if (!snippets) return { unavailable: true, snippets: [] };
       return {
-        snippets: snippets.map((snippet: any) => ({
+        snippets: snippets.map((snippet) => ({
           id: snippet.id,
           name: snippet.name,
           content: snippet.content,

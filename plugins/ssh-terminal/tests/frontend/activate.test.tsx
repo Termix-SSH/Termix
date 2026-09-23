@@ -50,4 +50,27 @@ describe(`${manifest.id} activate`, () => {
     expect(app.registered.settingsComponents()).toEqual([]);
     expect(app.registered.actions()).toEqual([]);
   });
+
+  it("registers the terminal session actions snippets and other plugins call into", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.actions()).toEqual(
+      expect.arrayContaining([
+        "terminal.listSessions",
+        "terminal.sendToActive",
+        "terminal.sendToSession",
+      ]),
+    );
+  });
+
+  it("terminal.sendToActive and terminal.listSessions report no session when none is registered", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    await expect(
+      rendered.app.invokeAction("terminal.listSessions"),
+    ).resolves.toEqual([]);
+    await expect(
+      rendered.app.invokeAction("terminal.sendToActive", "echo hi", {
+        run: true,
+      }),
+    ).resolves.toBe(false);
+  });
 });

@@ -51,3 +51,119 @@ export async function getNetworkTopology(
     return null;
   }
 }
+
+export interface SnippetSummary {
+  id: number;
+  name: string;
+  content: string;
+  description: string | null;
+  isNote: boolean;
+  folder: string | null;
+}
+
+/** Another plugin's snippets, as ctx.services.get("snippets.access") returns them. */
+interface SnippetsAccess {
+  list: () => Promise<SnippetSummary[]>;
+  get: (id: number) => Promise<{
+    id: number;
+    name: string;
+    content: string;
+    isNote: boolean;
+  } | null>;
+  create: (input: {
+    name: string;
+    content: string;
+    description?: string | null;
+    folder?: string | null;
+  }) => Promise<{ id: number; name: string }>;
+  update: (
+    id: number,
+    changes: {
+      name?: string;
+      content?: string;
+      description?: string | null;
+      folder?: string | null;
+    },
+  ) => Promise<void>;
+  remove: (id: number) => Promise<boolean>;
+}
+
+/**
+ * The user's own snippets, or null when the snippets plugin is off or the
+ * user may not use it. Optional: the list_snippets tool disappears without
+ * it, and the propose_*_snippet tools fail with a clear message.
+ */
+export async function listSnippets(
+  userId: string,
+): Promise<SnippetSummary[] | null> {
+  if (!current) return null;
+  try {
+    return await current
+      .get<SnippetsAccess>("snippets.access", { userId })
+      .list();
+  } catch {
+    return null;
+  }
+}
+
+export async function getSnippet(
+  userId: string,
+  id: number,
+): Promise<{
+  id: number;
+  name: string;
+  content: string;
+  isNote: boolean;
+} | null> {
+  if (!current) return null;
+  try {
+    return await current
+      .get<SnippetsAccess>("snippets.access", { userId })
+      .get(id);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Requires the snippets plugin, unlike the read helpers above: a failed
+ * proposal apply must surface as an error the user sees, not silently no-op.
+ */
+function requireSnippetsAccess(userId: string): SnippetsAccess {
+  if (!current) {
+    throw new Error("The snippets plugin is disabled");
+  }
+  return current.get<SnippetsAccess>("snippets.access", { userId });
+}
+
+export async function createSnippet(
+  userId: string,
+  input: {
+    name: string;
+    content: string;
+    description?: string | null;
+    folder?: string | null;
+  },
+): Promise<{ id: number; name: string }> {
+  return requireSnippetsAccess(userId).create(input);
+}
+
+export async function updateSnippet(
+  userId: string,
+  id: number,
+  changes: {
+    name?: string;
+    content?: string;
+    description?: string | null;
+    folder?: string | null;
+  },
+): Promise<void> {
+  return requireSnippetsAccess(userId).update(id, changes);
+}
+
+export async function deleteSnippet(
+  userId: string,
+  id: number,
+): Promise<boolean> {
+  return requireSnippetsAccess(userId).remove(id);
+}

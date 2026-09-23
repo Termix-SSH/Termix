@@ -16,11 +16,20 @@ import {
   getSSHHosts,
   type ServerMetrics,
 } from "@/main-axios.ts";
-import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
+import { SnippetVariablesDialog } from "@termix/plugin-sdk/ui";
 import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
-import { hasSnippetInputs } from "@/lib/snippet-variables.ts";
 import type { Snippet } from "@/types/ui-types.ts";
+
+// Mirrors the snippets plugin's own hasSnippetInputs: a pure check for
+// whether a snippet still has $INPUT_n placeholders once host variables are
+// substituted, so the quick-action dialog knows to ask before running.
+const SNIPPET_INPUT_PATTERN =
+  /\$\{INPUT_(\d+)(?::([^}$]+))?\}|\$INPUT_(\d+)(?![a-zA-Z0-9_])/g;
+function hasSnippetInputs(content: string): boolean {
+  SNIPPET_INPUT_PATTERN.lastIndex = 0;
+  return SNIPPET_INPUT_PATTERN.test(content);
+}
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { useTabsSafe } from "@/shell/TabContext.tsx";
 import { useTranslation } from "@termix/plugin-sdk/frontend";

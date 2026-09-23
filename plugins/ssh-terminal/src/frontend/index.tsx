@@ -5,16 +5,15 @@ import type {
   TabProps,
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import {
-  TerminalTabContent,
-  loadTerminal,
-} from "@/features/terminal/TerminalTabContent";
+import { loadTerminal } from "@/features/terminal/TerminalTabContent";
 import TerminalApp from "@/features/terminal/TerminalApp";
 import {
   TERMINAL_DOCK_SLOT,
   TERMINAL_OVERLAY_SLOT,
   TERMINAL_TOOLBAR_SLOT,
 } from "@/features/terminal/terminal-slots";
+import { TerminalTabWithRegistry } from "./TerminalTabWithRegistry";
+import { listSessions, sendToActive, sendToSession } from "./session-registry";
 
 /** `?view=terminal` full-screen links. */
 function TerminalStandalone({ hostId, params }: StandaloneViewProps) {
@@ -33,7 +32,7 @@ function TerminalStandalone({ hostId, params }: StandaloneViewProps) {
 export function activate(app: TermixApp): void {
   app.registerTab(
     "terminal",
-    TerminalTabContent as unknown as ComponentType<TabProps>,
+    TerminalTabWithRegistry as unknown as ComponentType<TabProps>,
     {
       icon: Terminal,
       titleKey: "nav.terminal",
@@ -63,4 +62,17 @@ export function activate(app: TermixApp): void {
   app.declareActionSlot({ id: TERMINAL_TOOLBAR_SLOT, accepts: ["button"] });
   app.declareActionSlot({ id: TERMINAL_DOCK_SLOT, accepts: ["component"] });
   app.declareActionSlot({ id: TERMINAL_OVERLAY_SLOT, accepts: ["component"] });
+
+  // Lets another plugin (snippets) push text into a live terminal session
+  // without reaching into core's tab state itself.
+  app.registerAction("terminal.listSessions", () => listSessions());
+  app.registerAction("terminal.sendToActive", ((
+    text: string,
+    opts?: { run?: boolean },
+  ) => sendToActive(text, opts)) as never);
+  app.registerAction("terminal.sendToSession", ((
+    sessionId: string,
+    text: string,
+    opts?: { run?: boolean },
+  ) => sendToSession(sessionId, text, opts)) as never);
 }

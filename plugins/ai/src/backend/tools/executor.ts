@@ -2,13 +2,18 @@ import {
   createCurrentAutomationRepository,
   createCurrentFleetRepository,
   createCurrentHostRepository,
-  createCurrentSnippetRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
 import { validateDefinition } from "../../../../automations/src/backend/routes.js";
 import { resolveHostById } from "../../../../../src/backend/hosts/host-resolver.js";
 import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import { withSshConnection } from "../ssh.js";
 import { getTool } from "./catalog.js";
+import {
+  createSnippet,
+  updateSnippet,
+  deleteSnippet,
+  getSnippet,
+} from "../services.js";
 
 /** Approved commands get a bounded window rather than hanging the request. */
 const COMMAND_TIMEOUT_MS = 60_000;
@@ -125,18 +130,15 @@ export async function applyProposal(
     }
 
     case "propose_create_snippet": {
-      const created = await createCurrentSnippetRepository().createSnippet(
-        userId,
-        {
-          name: requireString(payload.name, "name"),
-          content: requireString(payload.content, "content"),
-          description: optionalString(payload.description),
-          folder: optionalString(payload.folder),
-        } as any,
-      );
+      const created = await createSnippet(userId, {
+        name: requireString(payload.name, "name"),
+        content: requireString(payload.content, "content"),
+        description: optionalString(payload.description),
+        folder: optionalString(payload.folder),
+      });
       return {
         ok: true,
-        summary: `Created snippet ${(created as any)?.name ?? ""}`.trim(),
+        summary: `Created snippet ${created.name}`.trim(),
       };
     }
 
@@ -144,10 +146,7 @@ export async function applyProposal(
       const snippetId = requireNumber(payload.snippetId, "snippetId");
       const changes = (payload.changes ?? {}) as Record<string, unknown>;
 
-      const existing = await createCurrentSnippetRepository().findOwnedById(
-        userId,
-        snippetId,
-      );
+      const existing = await getSnippet(userId, snippetId);
       if (!existing) throw new Error("Snippet not found");
 
       const updates: Record<string, unknown> = {};
@@ -164,20 +163,13 @@ export async function applyProposal(
         return { ok: false, summary: "Nothing to change" };
       }
 
-      await createCurrentSnippetRepository().updateSnippet(
-        userId,
-        snippetId,
-        updates as any,
-      );
+      await updateSnippet(userId, snippetId, updates);
       return { ok: true, summary: `Updated snippet ${snippetId}` };
     }
 
     case "propose_delete_snippet": {
       const snippetId = requireNumber(payload.snippetId, "snippetId");
-      const deleted = await createCurrentSnippetRepository().deleteSnippet(
-        userId,
-        snippetId,
-      );
+      const deleted = await deleteSnippet(userId, snippetId);
       if (!deleted) throw new Error("Snippet not found");
       return { ok: true, summary: `Deleted snippet ${snippetId}` };
     }

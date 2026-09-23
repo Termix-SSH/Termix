@@ -35,7 +35,7 @@ import {
 } from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
 import { buildPackageActionCommand } from "../../../../src/backend/hosts/metrics-shared/package-commands.js";
 import { isValidPackageName } from "../../../../src/backend/hosts/metrics-shared/validation.js";
-import { resolveSnippetCommand } from "../../../../src/backend/database/routes/snippets-execution.js";
+import { resolveCommandVariables } from "./command-variables.js";
 
 export const router = express.Router();
 
@@ -900,7 +900,7 @@ router.post(
             return { success: false, error: "Host not found" };
           }
 
-          const resolvedCommand = resolveSnippetCommand(
+          const resolvedCommand = resolveCommandVariables(
             command,
             {
               ip: fullHost.ip,

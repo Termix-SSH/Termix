@@ -8,11 +8,8 @@ import {
   shellSingleQuote,
 } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
 import { withSshConnection } from "../ssh.js";
-import { resolveSnippetCommand } from "../../../../../src/backend/database/routes/snippets-execution.js";
-import {
-  createCurrentNotificationChannelRepository,
-  createCurrentSnippetRepository,
-} from "../../../../../src/backend/database/repositories/factory.js";
+import { createCurrentNotificationChannelRepository } from "../../../../../src/backend/database/repositories/factory.js";
+import { getSnippet, resolveSnippetCommandFor } from "../snippets.js";
 import { sendAutomationNotification } from "../notify.js";
 import { automationFetch } from "../http.js";
 import { renderRecord, renderTemplate } from "../template.js";
@@ -176,11 +173,9 @@ async function runSnippet(
   step: Extract<Step, { type: "run_snippet" }>,
   context: StepExecutionContext,
 ): Promise<StepResult> {
-  const snippet = await createCurrentSnippetRepository()
-    .findOwnedById(context.userId, step.snippetId)
-    .catch(() => null);
+  const snippet = await getSnippet(context.userId, step.snippetId);
 
-  if (!snippet) return fail("Snippet not found");
+  if (!snippet) return fail("Snippet not found, or the snippets plugin is off");
   if (snippet.isNote) return fail("Notes cannot be executed on a host");
 
   // Template values only ever reach the snippet through inputValues, never by
@@ -189,8 +184,9 @@ async function runSnippet(
   const inputValues = renderRecord(step.inputValues, context.template) ?? {};
 
   return runOnTargets(step.hostSelector, context, async (target) => {
-    const command = resolveSnippetCommand(
-      snippet.content,
+    const command = await resolveSnippetCommandFor(
+      context.userId,
+      step.snippetId,
       {
         ip: target.host.ip,
         username: target.host.username,
@@ -199,6 +195,9 @@ async function runSnippet(
       },
       inputValues,
     );
+    if (!command) {
+      return { output: "", error: "Snippet could not be resolved" };
+    }
 
     if (context.dryRun) {
       return { output: `Would run snippet on ${target.name}: ${command}` };

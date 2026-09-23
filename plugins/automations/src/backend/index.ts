@@ -1,5 +1,6 @@
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { setPluginSsh } from "./ssh.js";
+import { setPluginServices } from "./snippets.js";
 import { startAutomationsService, stopAutomationsService } from "./routes.js";
 import {
   startAutomationScheduler,
@@ -9,6 +10,8 @@ import {
 export async function activate(ctx: PluginContext) {
   setPluginSsh(ctx.ssh);
   ctx.disposables.add(() => setPluginSsh(null));
+  setPluginServices(ctx.services);
+  ctx.disposables.add(() => setPluginServices(null));
   startAutomationsService(
     // The webhook route authenticates on its own per-automation token rather
     // than a session, which is the point of an inbound webhook.
