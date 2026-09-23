@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useTranslation } from "react-i18next";
 import {
   ArrowUpDown,
@@ -36,6 +37,7 @@ export function CredentialsPanel({
   active?: boolean;
 }) {
   const { t } = useTranslation();
+  const sshAuthProviders = useSshAuthProviders();
   const { preferences: sidebarPrefs, update: updateSidebarPrefs } =
     useCredentialSidebarPreferences();
   const [search, setSearch] = useState("");
@@ -233,18 +235,23 @@ export function CredentialsPanel({
                   <DropdownMenuLabel>
                     {t("credentials.filterTypeGroup")}
                   </DropdownMenuLabel>
-                  {(["password", "key"] as const).map((val) => (
-                    <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.type.includes(val)}
-                      onCheckedChange={() => handleFilterToggle("type", val)}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      {t(
-                        `credentials.filterType${val.charAt(0).toUpperCase() + val.slice(1)}`,
-                      )}
-                    </DropdownMenuCheckboxItem>
-                  ))}
+                  {sshAuthProviders.providers
+                    .filter((option) => option.credentialType)
+                    .map((option) => (
+                      <DropdownMenuCheckboxItem
+                        key={option.type}
+                        checked={filterState.type.includes(option.type)}
+                        onCheckedChange={() =>
+                          handleFilterToggle("type", option.type)
+                        }
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        {t(
+                          `credentials.filterType${option.type.charAt(0).toUpperCase() + option.type.slice(1)}`,
+                          { defaultValue: t(option.labelKey) },
+                        )}
+                      </DropdownMenuCheckboxItem>
+                    ))}
                   {allTags.length > 0 && (
                     <>
                       <DropdownMenuSeparator />

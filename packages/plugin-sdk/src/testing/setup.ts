@@ -101,6 +101,16 @@ const offline = () =>
     onReady: () => noop,
   }),
   invokeAction: async () => undefined,
+  useSshAuthTypes: () => ({
+    types: ["password", "key", "credential", "agent", "none"].map((type) => ({
+      type,
+      labelKey: type,
+      pluginId: "core",
+      credentialType: type === "password" || type === "key",
+      supportsBackground: type !== "none",
+    })),
+    loaded: true,
+  }),
 };
 
 afterEach(() => {

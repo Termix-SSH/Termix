@@ -3,11 +3,7 @@ import { createCurrentAutomationRepository } from "../../../../src/backend/datab
 import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
 import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
 import { execCommand } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import {
-  createFleetSshFactory,
-  getFleetPoolKey,
-} from "../../../../src/backend/hosts/ssh-client-factory.js";
-import { withConnection } from "../../../../src/backend/hosts/ssh-connection-pool.js";
+import { withSshConnection } from "./ssh.js";
 import { statsLogger } from "../../../../src/backend/utils/logger.js";
 import { onDockerEvent } from "./triggers.js";
 
@@ -154,9 +150,9 @@ async function pollHost(hostId: number, userId: string): Promise<void> {
     return;
   }
 
-  const result = await withConnection(
-    getFleetPoolKey(host as never),
-    createFleetSshFactory(host as never),
+  const result = await withSshConnection(
+    host as never as never,
+    { pool: "fleet", purpose: "fleet" },
     (client) =>
       execCommand(
         client,

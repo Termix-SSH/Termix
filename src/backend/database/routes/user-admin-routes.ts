@@ -9,8 +9,13 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
   createCurrentRoleRepository,
+  createCurrentUserAuthRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
+import {
+  listUserSecondFactors,
+  resetUserSecondFactors,
+} from "../../auth/second-factor-admin.js";
 import type {
   UserRecord,
   UserRepository,
@@ -730,6 +735,11 @@ export function registerUserAdminRoutes(
         totpEnabled: false,
         totpBackupCodes: null,
       });
+      await createCurrentUserAuthRepository().removeSecondFactor(
+        targetUser.id,
+        "core",
+        "totp",
+      );
 
       try {
         await DatabaseSaveTrigger.forceSave("admin_disable_totp");
@@ -759,6 +769,126 @@ export function registerUserAdminRoutes(
       res.status(500).json({ error: "Failed to disable TOTP" });
     }
   });
+
+  /**
+   * @openapi
+   * /users/admin/{userId}/second-factors:
+   *   get:
+   *     summary: List a user's second factors (admin only)
+   *     description: Every second factor the user is enrolled in, and whether the plugin behind it is running.
+   *     tags:
+   *       - Users
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Enrolled factors.
+   *       403:
+   *         description: Admin access required.
+   *       404:
+   *         description: User not found.
+   */
+  router.get(
+    "/admin/:userId/second-factors",
+    authenticateJWT,
+    async (req, res) => {
+      const adminId = (req as AuthenticatedRequest).userId;
+      try {
+        const userRepository = createCurrentUserRepository();
+        const adminUser = await userRepository.findById(adminId);
+        if (!adminUser?.isAdmin) {
+          return res.status(403).json({ error: "Admin access required" });
+        }
+        const targetUser = await userRepository.findById(
+          String(req.params.userId),
+        );
+        if (!targetUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        res.json({ factors: await listUserSecondFactors(targetUser.id) });
+      } catch (err) {
+        authLogger.error("Failed to list second factors", err);
+        res.status(500).json({ error: "Failed to list second factors" });
+      }
+    },
+  );
+
+  /**
+   * @openapi
+   * /users/admin/{userId}/second-factors:
+   *   delete:
+   *     summary: Reset a user's second factors (admin only)
+   *     description: Removes every second factor the user enrolled in, including ones whose plugin is disabled or missing, and forgets their trusted devices. The user can sign in with their first factor and enrol again.
+   *     tags:
+   *       - Users
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Second factors reset.
+   *       403:
+   *         description: Admin access required.
+   *       404:
+   *         description: User not found.
+   */
+  router.delete(
+    "/admin/:userId/second-factors",
+    authenticateJWT,
+    async (req, res) => {
+      const adminId = (req as AuthenticatedRequest).userId;
+      try {
+        const userRepository = createCurrentUserRepository();
+        const adminUser = await userRepository.findById(adminId);
+        if (!adminUser?.isAdmin) {
+          return res.status(403).json({ error: "Admin access required" });
+        }
+        const targetUser = await userRepository.findById(
+          String(req.params.userId),
+        );
+        if (!targetUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        const removed = await resetUserSecondFactors(targetUser.id);
+
+        try {
+          await DatabaseSaveTrigger.forceSave("admin_reset_second_factors");
+        } catch (saveError) {
+          authLogger.error("Failed to persist second factor reset", saveError, {
+            operation: "admin_reset_second_factors_save_failed",
+            userId: targetUser.id,
+          });
+        }
+
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId: adminId,
+          username: adminUser.username ?? adminId,
+          action: "admin_reset_second_factors",
+          resourceType: "user",
+          resourceId: targetUser.id,
+          resourceName: targetUser.username,
+          details: JSON.stringify({ removed }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+
+        res.json({ message: "Second factors reset", removed });
+      } catch (err) {
+        authLogger.error("Failed to reset second factors", err);
+        res.status(500).json({ error: "Failed to reset second factors" });
+      }
+    },
+  );
 
   /**
    * @openapi

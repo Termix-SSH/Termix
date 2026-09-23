@@ -233,6 +233,20 @@ export interface PluginSettingsContribution {
   host?: PluginHostSettingsContribution;
 }
 
+/**
+ * What a plugin adds to sign-in and SSH auth. Declared so core can tell who
+ * owns an auth type or factor even while the plugin is disabled, and so the
+ * login screen knows which bundles it needs before anyone has signed in.
+ */
+export interface PluginAuthContribution {
+  /** Values of ssh_data.auth_type this plugin provides. */
+  sshAuthTypes?: string[];
+  /** Login method ids. */
+  loginMethods?: string[];
+  /** Second factor ids. */
+  secondFactors?: string[];
+}
+
 export interface PluginContributions {
   tabs?: PluginTabContribution[];
   panels?: PluginViewContribution[];
@@ -252,6 +266,7 @@ export interface PluginContributions {
    * proxmox and web-endpoint ship it today.
    */
   hostCapability?: HostCapabilityContribution | HostCapabilityContribution[];
+  auth?: PluginAuthContribution;
 }
 
 export interface PluginManifest {
@@ -328,6 +343,7 @@ const ALLOWED_CONTRIBUTES = new Set([
   "permissions",
   "settings",
   "hostCapability",
+  "auth",
 ]);
 
 const ALLOWED_SETTINGS_FIELD = [
@@ -684,6 +700,44 @@ function validateContributes(
   validateActionSlots(contributes.actionSlots, errors);
   validateSettings(contributes.settings, errors);
   validateHostCapability(contributes.hostCapability, errors);
+  validateAuthContribution(contributes.auth, errors);
+}
+
+const AUTH_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
+
+function validateAuthContribution(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  if (!isPlainObject(value)) {
+    errors.push('Field "contributes.auth" must be an object');
+    return;
+  }
+  rejectUnknown(
+    value,
+    ["sshAuthTypes", "loginMethods", "secondFactors"],
+    "contributes.auth",
+    errors,
+  );
+  for (const key of ["sshAuthTypes", "loginMethods", "secondFactors"]) {
+    const list = value[key];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) {
+      errors.push(`Field "contributes.auth.${key}" must be an array`);
+      continue;
+    }
+    const seen = new Set<string>();
+    list.forEach((entry, index) => {
+      if (typeof entry !== "string" || !AUTH_ID_PATTERN.test(entry)) {
+        errors.push(
+          `Field "contributes.auth.${key}[${index}]" must be a lowercase id (letters, digits and dashes)`,
+        );
+        return;
+      }
+      if (seen.has(entry)) {
+        errors.push(`Duplicate "${entry}" in contributes.auth.${key}`);
+      }
+      seen.add(entry);
+    });
+  }
 }
 
 function validateSettings(settings: unknown, errors: string[]): void {
@@ -1203,6 +1257,18 @@ export function parseManifest(raw: unknown): ParsedManifest {
         );
       }
     }
+  }
+
+  const auth = manifest.contributes?.auth;
+  const contributesAuth =
+    (auth?.sshAuthTypes?.length ?? 0) +
+      (auth?.loginMethods?.length ?? 0) +
+      (auth?.secondFactors?.length ?? 0) >
+    0;
+  if (contributesAuth && !manifest.capabilities.includes("auth:provide")) {
+    errors.push(
+      'contributes.auth needs the "auth:provide" capability in the capabilities array',
+    );
   }
 
   for (const secret of manifest.requiresSecret ?? []) {

@@ -23,9 +23,8 @@ import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { createSocks5Connection } from "../../utils/socks5-helper.js";
 import { withConnection } from "../ssh-connection-pool.js";
-import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import {
-  applyAuthOptions,
+  applyTunnelAuth,
   bindForwardIn,
   connectClient,
   forwardOut,
@@ -659,8 +658,29 @@ export async function connectEndpointThroughSource(
     algorithms: getManagedTunnelAlgorithms(),
   };
 
-  applyAuthOptions(endpointOptions, endpointCredentials);
-  return connectClient(endpointOptions, tunnelConfig.name, "endpoint");
+  const endpointClient = new Client();
+  const authOutcome = await applyTunnelAuth(
+    endpointOptions,
+    endpointCredentials,
+    {
+      client: endpointClient,
+      userId: tunnelConfig.endpointUserId,
+      hostId: null,
+      username: tunnelConfig.endpointUsername,
+      ip: tunnelConfig.endpointIP,
+      port: tunnelConfig.endpointSSHPort,
+    },
+  );
+  if (authOutcome.status !== "ready") {
+    endpointSock.destroy();
+    throw new Error(authOutcome.message);
+  }
+  return connectClient(
+    endpointOptions,
+    tunnelConfig.name,
+    "endpoint",
+    endpointClient,
+  );
 }
 
 export function resolveS2SLocalTargetHost(tunnelConfig: TunnelConfig): string {
@@ -1500,51 +1520,24 @@ export async function connectSSHTunnel(
     },
   };
 
-  if (
-    resolvedSourceCredentials.authMethod === "key" &&
-    resolvedSourceCredentials.sshKey
-  ) {
-    try {
-      connOptions.privateKey = preparePrivateKeyForSSH2(
-        resolvedSourceCredentials.sshKey,
-        resolvedSourceCredentials.keyPassword,
-      );
-    } catch (error) {
-      const message = getErrorMessage(error, "Invalid SSH key format");
-      tunnelLogger.error(
-        `Invalid SSH key format for tunnel '${tunnelName}': ${message}`,
-        undefined,
-        {
-          operation: "tunnel_invalid_ssh_key_format",
-          tunnelName,
-          sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
-          keyType: resolvedSourceCredentials.keyType,
-        },
-      );
-      broadcastTunnelStatus(tunnelName, {
-        connected: false,
-        status: CONNECTION_STATES.FAILED,
-        reason: message,
-      });
-      tunnelConnecting.delete(tunnelName);
-      return;
-    }
-
-    if (resolvedSourceCredentials.keyPassword) {
-      connOptions.passphrase = resolvedSourceCredentials.keyPassword;
-    }
-    if (
-      resolvedSourceCredentials.keyType &&
-      resolvedSourceCredentials.keyType !== "auto"
-    ) {
-      connOptions.privateKeyType = resolvedSourceCredentials.keyType;
-    }
-  } else if (resolvedSourceCredentials.authMethod === "key") {
+  const sourceAuth = await applyTunnelAuth(
+    connOptions,
+    resolvedSourceCredentials,
+    {
+      client: conn,
+      userId: effectiveUserId,
+      hostId: tunnelConfig.sourceHostId,
+      username: tunnelConfig.sourceUsername,
+      ip: tunnelConfig.sourceIP,
+      port: tunnelConfig.sourceSSHPort,
+    },
+  );
+  if (sourceAuth.status !== "ready") {
     tunnelLogger.error(
-      `SSH key authentication requested but no key provided for tunnel '${tunnelName}'`,
+      `SSH auth could not be prepared for tunnel '${tunnelName}': ${sourceAuth.message}`,
       undefined,
       {
-        operation: "tunnel_ssh_key_missing",
+        operation: "tunnel_auth_prepare_failed",
         tunnelName,
         sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
         authMethod: resolvedSourceCredentials.authMethod,
@@ -1553,12 +1546,10 @@ export async function connectSSHTunnel(
     broadcastTunnelStatus(tunnelName, {
       connected: false,
       status: CONNECTION_STATES.FAILED,
-      reason: "SSH key authentication requested but no key provided",
+      reason: sourceAuth.message,
     });
     tunnelConnecting.delete(tunnelName);
     return;
-  } else {
-    connOptions.password = resolvedSourceCredentials.password;
   }
 
   const finalStatus = connectionStatus.get(tunnelName);
@@ -1694,23 +1685,6 @@ export async function killRemoteTunnelByMarker(
     }
   }
 
-  if (
-    resolvedSourceCredentials.authMethod === "key" &&
-    resolvedSourceCredentials.sshKey
-  ) {
-    try {
-      preparePrivateKeyForSSH2(
-        resolvedSourceCredentials.sshKey,
-        resolvedSourceCredentials.keyPassword,
-      );
-    } catch (error) {
-      callback(
-        error instanceof Error ? error : new Error("Invalid SSH key format"),
-      );
-      return;
-    }
-  }
-
   const poolKey = `tunnel:${tunnelConfig.sourceUserId}:${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}:${tunnelConfig.sourceUsername}`;
 
   const factory = async (): Promise<Client> => {
@@ -1758,25 +1732,21 @@ export async function killRemoteTunnelByMarker(
       },
     };
 
-    if (
-      resolvedSourceCredentials.authMethod === "key" &&
-      resolvedSourceCredentials.sshKey
-    ) {
-      connOptions.privateKey = preparePrivateKeyForSSH2(
-        resolvedSourceCredentials.sshKey,
-        resolvedSourceCredentials.keyPassword,
-      );
-      if (resolvedSourceCredentials.keyPassword) {
-        connOptions.passphrase = resolvedSourceCredentials.keyPassword;
-      }
-      if (
-        resolvedSourceCredentials.keyType &&
-        resolvedSourceCredentials.keyType !== "auto"
-      ) {
-        connOptions.privateKeyType = resolvedSourceCredentials.keyType;
-      }
-    } else {
-      connOptions.password = resolvedSourceCredentials.password;
+    const conn = new Client();
+    const killAuth = await applyTunnelAuth(
+      connOptions,
+      resolvedSourceCredentials,
+      {
+        client: conn,
+        userId: tunnelConfig.requestingUserId || tunnelConfig.sourceUserId,
+        hostId: tunnelConfig.sourceHostId,
+        username: tunnelConfig.sourceUsername,
+        ip: tunnelConfig.sourceIP,
+        port: tunnelConfig.sourceSSHPort,
+      },
+    );
+    if (killAuth.status !== "ready") {
+      throw new Error(killAuth.message);
     }
 
     if (
@@ -1827,7 +1797,6 @@ export async function killRemoteTunnelByMarker(
     }
 
     return new Promise<Client>((resolve, reject) => {
-      const conn = new Client();
       conn.on("ready", () => resolve(conn));
       conn.on("error", (err) => reject(err));
       conn.connect(connOptions);

@@ -43,6 +43,7 @@ type GeneralSettingsSectionProps = {
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
   allowPasswordLogin: boolean;
+  passwordLoginForced?: boolean;
   handleTogglePasswordLogin: () => void;
   oidcAutoProvision: boolean;
   handleToggleOidcAutoProvision: () => void;
@@ -93,6 +94,7 @@ export function AdminGeneralSettingsSection({
   allowRegistration,
   handleToggleRegistration,
   allowPasswordLogin,
+  passwordLoginForced,
   handleTogglePasswordLogin,
   oidcAutoProvision,
   handleToggleOidcAutoProvision,
@@ -285,6 +287,11 @@ export function AdminGeneralSettingsSection({
             onToggle={handleTogglePasswordLogin}
           />
         </SettingRow>
+        {passwordLoginForced && (
+          <p className="text-[10px] text-destructive">
+            {t("admin.passwordLoginForced")}
+          </p>
+        )}
         <SettingRow
           label={t("admin.oidcAutoProvision")}
           description={t("admin.oidcAutoProvisionDesc")}

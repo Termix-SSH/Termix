@@ -1,5 +1,4 @@
 import { getErrorMessage } from "../../utils/error-message.js";
-import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import express from "express";
 import {
   logAudit,
@@ -10,25 +9,15 @@ import { createCorsMiddleware } from "../../utils/cors-config.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
-import ssh2Pkg, { Client as SSHClient, type ConnectConfig } from "ssh2";
-import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
+import { Client as SSHClient } from "ssh2";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { fileLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import {
-  type AuthenticatedRequest,
-  type ProxyNode,
-  type SSHHost,
-} from "../../../types/index.js";
-import {
-  createSocks5Connection,
-  type SOCKS5Config,
-} from "../../utils/socks5-helper.js";
+import { type AuthenticatedRequest } from "../../../types/index.js";
 import type {
   LogEntry,
   ConnectionStage,
 } from "../../../types/connection-log.js";
-import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { resolveHostById, resolveHostBySyncId } from "../host-resolver.js";
 import {
   startHostTransfer,
@@ -43,11 +32,7 @@ import {
 } from "./transfer-engine.js";
 import { registerFileContentRoutes } from "./content-routes.js";
 import { createConnectionLog } from "../connection-log.js";
-import { createJumpHostChain, JumpHostChainError } from "../jump-host-chain.js";
-import {
-  isPrivateKeyPassphraseError,
-  preparePrivateKeyForSSH2,
-} from "../../utils/ssh-key-utils.js";
+import { JumpHostChainError } from "../jump-host-chain.js";
 import {
   ChannelOpenSerializer,
   execChannel,
@@ -57,8 +42,6 @@ import {
 } from "./session.js";
 import { registerFileListingRoutes } from "./list-routes.js";
 import { registerFileOperationRoutes } from "./operation-routes.js";
-import { resolveSshConnectConfigHost } from "../ssh-dns.js";
-import { resolveSshKeepalive } from "../ssh-keepalive.js";
 import {
   hostAddressMismatch,
   HostAddressMismatchError,
@@ -67,8 +50,19 @@ import {
 } from "../host-identity.js";
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
-import { applyAgentAuth } from "../terminal-auth-helpers.js";
-import { applyCACertIfPresent } from "./ca-cert-auth.js";
+import { buildConnectConfig } from "../connect/build-connect-config.js";
+import { connectHost } from "../connect/connect-host.js";
+import { getSshAuthProvider } from "../connect/auth-provider-registry.js";
+import {
+  autoResponses,
+  classifyKeyboardInteractive,
+} from "../connect/keyboard-interactive.js";
+import {
+  getHostSocks5Config,
+  openSshTransport,
+  SshTransportError,
+} from "../connect/transport.js";
+import type { SshConnectHost } from "../connect/types.js";
 import { listenOnServicePort } from "../../utils/service-listen.js";
 
 /**
@@ -213,219 +207,6 @@ function resolveBrowseHostId(
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-async function buildDedicatedTransferConnectConfig(
-  host: SSHHost,
-  userId: string,
-  client: SSHClient,
-): Promise<Record<string, unknown>> {
-  const { ip, port, username } = host;
-  const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(host.id);
-  const config: Record<string, unknown> = {
-    host: ip?.replace(/^\[|\]$/g, "") || ip,
-    port,
-    username,
-    tryKeyboard: true,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 120,
-    readyTimeout: 60000,
-    tcpKeepAlive: true,
-    tcpKeepAliveInitialDelay: 5000,
-    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-      host.id,
-      ip,
-      port,
-      null,
-      userId,
-      false,
-      preloadedHostData,
-    ),
-    env: {
-      TERM: "xterm-256color",
-      LANG: "en_US.UTF-8",
-      LC_ALL: "en_US.UTF-8",
-    },
-    algorithms: {
-      kex: [
-        "curve25519-sha256",
-        "curve25519-sha256@libssh.org",
-        "ecdh-sha2-nistp521",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp256",
-        "diffie-hellman-group-exchange-sha256",
-        "diffie-hellman-group14-sha256",
-        "diffie-hellman-group14-sha1",
-        "diffie-hellman-group-exchange-sha1",
-        "diffie-hellman-group1-sha1",
-      ],
-      serverHostKey: [
-        "ssh-ed25519",
-        "ecdsa-sha2-nistp521",
-        "ecdsa-sha2-nistp384",
-        "ecdsa-sha2-nistp256",
-        "rsa-sha2-512",
-        "rsa-sha2-256",
-        "ssh-rsa",
-        "ssh-dss",
-      ],
-      cipher: SSH_ALGORITHMS.cipher,
-      hmac: [
-        "hmac-sha2-512-etm@openssh.com",
-        "hmac-sha2-256-etm@openssh.com",
-        "hmac-sha2-512",
-        "hmac-sha2-256",
-        "hmac-sha1",
-        "hmac-md5",
-      ],
-      compress: ["none", "zlib@openssh.com", "zlib"],
-    },
-  };
-  await resolveSshConnectConfigHost(config);
-
-  const authType = host.authType;
-
-  if (authType === "key" && host.key?.trim()) {
-    const cleanKey = host.key
-      .trim()
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n");
-    config.privateKey = Buffer.from(cleanKey, "utf8");
-    if (host.keyPassword) config.passphrase = host.keyPassword;
-
-    await applyCACertIfPresent(
-      config,
-      client,
-      config.privateKey as Buffer,
-      host as { certPublicKey?: string | null },
-      username,
-      host.keyPassword,
-    );
-  } else if (authType === "password") {
-    if (!host.password) {
-      throw new Error("Password required for transfer connection");
-    }
-    config.password = host.password;
-  } else if (usesIssuedCertificate(authType)) {
-    const { getOPKSSHToken } = await import("../opkssh-auth.js");
-    const token = await getOPKSSHToken(userId, host.id);
-    if (!token) {
-      throw new Error(
-        "OPKSSH authentication required. Open a Terminal connection to this host first.",
-      );
-    }
-    const { setupOPKSSHCertAuth } = await import("../opkssh-cert-auth.js");
-    await setupOPKSSHCertAuth(
-      config as import("ssh2").ConnectConfig,
-      client,
-      token,
-      username,
-    );
-  } else if (authType === "agent") {
-    const result = await applyAgentAuth(
-      config,
-      host.terminalConfig as unknown as Record<string, unknown> | undefined,
-    );
-    if ("error" in result) {
-      throw new Error(result.error);
-    }
-  } else if (authType !== "none" && authType !== "tailscale") {
-    throw new Error(`Unsupported auth type for transfer: ${authType}`);
-  }
-
-  return config;
-}
-
-function attachDedicatedKeyboardInteractive(
-  client: SSHClient,
-  host: SSHHost,
-): void {
-  client.on(
-    "keyboard-interactive",
-    (
-      _name: string,
-      _instructions: string,
-      _instructionsLang: string,
-      prompts: Array<{ prompt: string; echo: boolean }>,
-      finish: (responses: string[]) => void,
-    ) => {
-      const responses = prompts.map((p) => {
-        if (/password/i.test(p.prompt) && host.password) {
-          return host.password;
-        }
-        return "";
-      });
-      finish(responses);
-    },
-  );
-}
-
-async function startDedicatedTransferConnect(
-  client: SSHClient,
-  config: Record<string, unknown>,
-  host: SSHHost,
-  userId: string,
-): Promise<void> {
-  const proxyConfig: SOCKS5Config | null =
-    host.useSocks5 &&
-    (host.socks5Host ||
-      (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-      ? {
-          useSocks5: host.useSocks5,
-          socks5Host: host.socks5Host,
-          socks5Port: host.socks5Port,
-          socks5Username: host.socks5Username,
-          socks5Password: host.socks5Password,
-          socks5ProxyChain: host.socks5ProxyChain,
-        }
-      : null;
-
-  const jumpHosts = host.jumpHosts;
-  const hasJumpHosts = jumpHosts && jumpHosts.length > 0;
-
-  if (hasJumpHosts) {
-    const jumpClient = await createJumpHostChain(jumpHosts, userId);
-    if (!jumpClient) {
-      throw new Error("Failed to connect through jump hosts for transfer");
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      jumpClient.forwardOut(
-        "127.0.0.1",
-        0,
-        host.ip,
-        host.port,
-        (err, stream) => {
-          if (err) {
-            jumpClient.end();
-            reject(
-              new Error(
-                `Failed to forward through jump host for transfer: ${err.message}`,
-              ),
-            );
-            return;
-          }
-          config.sock = stream;
-          client.connect(config);
-          resolve();
-        },
-      );
-    });
-    return;
-  }
-
-  if (proxyConfig) {
-    const proxySocket = await createSocks5Connection(
-      host.ip,
-      host.port,
-      proxyConfig,
-    );
-    if (proxySocket) {
-      config.sock = proxySocket;
-    }
-  }
-
-  client.connect(config);
-}
-
 async function openDedicatedTransferSession(
   browseSessionId: string,
   dedicatedSessionId: string,
@@ -464,14 +245,6 @@ async function openDedicatedTransferSession(
     return existingSession;
   }
 
-  const client = new SSHClient();
-  attachDedicatedKeyboardInteractive(client, host);
-  const config = await buildDedicatedTransferConnectConfig(
-    host,
-    userId,
-    client,
-  );
-
   fileLogger.info("Opening dedicated transfer SSH session", {
     operation: "transfer_ssh_connect",
     transferId,
@@ -483,26 +256,12 @@ async function openDedicatedTransferSession(
     username: host.username,
   });
 
-  await new Promise<void>((resolve, reject) => {
-    const connectTimeout = setTimeout(() => {
-      client.end();
-      reject(new Error("Transfer SSH connection timed out"));
-    }, 60000);
-
-    const fail = (err: Error) => {
-      clearTimeout(connectTimeout);
-      reject(err);
-    };
-
-    client.once("ready", () => {
-      clearTimeout(connectTimeout);
-      resolve();
-    });
-    client.once("error", fail);
-
-    void startDedicatedTransferConnect(client, config, host, userId).catch(
-      fail,
-    );
+  const { client } = await connectHost(host as unknown as SshConnectHost, {
+    userId,
+    purpose: "file-transfer",
+    timeoutMs: 60000,
+    overrides: { tcpKeepAliveInitialDelay: 5000 },
+    transport: { cloudflare: false },
   });
 
   const session: SSHSession = {
@@ -829,8 +588,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     sudoPassword: undefined as string | undefined,
     certPublicKey: undefined as string | undefined,
   };
-  let hostKeepaliveInterval: number | undefined;
-  let hostKeepaliveCountMax: number | undefined;
   let resolvedIp = ip;
   let resolvedPort = port;
   let resolvedUsername = username;
@@ -867,8 +624,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
-        hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
-        hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
         resolvedVaultProfileId =
           (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
@@ -939,8 +694,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
-        hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
-        hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
         resolvedVaultProfileId =
           (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
@@ -997,283 +750,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     serverHostId = resolveServerHostId(hostId, resolvedHost) ?? hostId;
   }
 
-  const preloadedHostData =
-    await SSHHostKeyVerifier.preloadHostData(serverHostId);
-  const keepalive = resolveSshKeepalive(
-    hostKeepaliveInterval,
-    hostKeepaliveCountMax,
-    60000,
-    5,
-  );
-  const config: Record<string, unknown> = {
-    host: resolvedIp?.replace(/^\[|\]$/g, "") || resolvedIp,
-    port: resolvedPort,
-    username: resolvedUsername,
-    tryKeyboard: true,
-    ...keepalive,
-    readyTimeout: 60000,
-    tcpKeepAlive: true,
-    tcpKeepAliveInitialDelay: 30000,
-    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-      serverHostId,
-      resolvedIp,
-      resolvedPort,
-      null,
-      userId,
-      false,
-      preloadedHostData,
-    ),
-    env: {
-      TERM: "xterm-256color",
-      LANG: "en_US.UTF-8",
-      LC_ALL: "en_US.UTF-8",
-      LC_CTYPE: "en_US.UTF-8",
-      LC_MESSAGES: "en_US.UTF-8",
-      LC_MONETARY: "en_US.UTF-8",
-      LC_NUMERIC: "en_US.UTF-8",
-      LC_TIME: "en_US.UTF-8",
-      LC_COLLATE: "en_US.UTF-8",
-      COLORTERM: "truecolor",
-    },
-    algorithms: {
-      kex: [
-        "curve25519-sha256",
-        "curve25519-sha256@libssh.org",
-        "ecdh-sha2-nistp521",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp256",
-        "diffie-hellman-group-exchange-sha256",
-        "diffie-hellman-group14-sha256",
-        "diffie-hellman-group14-sha1",
-        "diffie-hellman-group-exchange-sha1",
-        "diffie-hellman-group1-sha1",
-      ],
-      serverHostKey: [
-        "ssh-ed25519",
-        "ecdsa-sha2-nistp521",
-        "ecdsa-sha2-nistp384",
-        "ecdsa-sha2-nistp256",
-        "rsa-sha2-512",
-        "rsa-sha2-256",
-        "ssh-rsa",
-        "ssh-dss",
-      ],
-      cipher: SSH_ALGORITHMS.cipher,
-      hmac: [
-        "hmac-sha2-512-etm@openssh.com",
-        "hmac-sha2-256-etm@openssh.com",
-        "hmac-sha2-512",
-        "hmac-sha2-256",
-        "hmac-sha1",
-        "hmac-md5",
-      ],
-      compress: ["none", "zlib@openssh.com", "zlib"],
-    },
-  };
-
-  if (
-    resolvedCredentials.authType === "key" &&
-    resolvedCredentials.sshKey &&
-    resolvedCredentials.sshKey.trim()
-  ) {
-    try {
-      config.privateKey = preparePrivateKeyForSSH2(
-        resolvedCredentials.sshKey,
-        resolvedCredentials.keyPassword,
-      );
-
-      const parsedKey = ssh2Pkg.utils.parseKey(
-        config.privateKey as Buffer,
-        resolvedCredentials.keyPassword,
-      );
-      if (parsedKey instanceof Error) throw parsedKey;
-
-      if (resolvedCredentials.keyPassword)
-        config.passphrase = resolvedCredentials.keyPassword;
-
-      await applyCACertIfPresent(
-        config,
-        client,
-        config.privateKey as Buffer,
-        resolvedCredentials,
-        resolvedUsername,
-        resolvedCredentials.keyPassword,
-      );
-
-      connectionLogs.push(
-        createConnectionLog(
-          "info",
-          "sftp_auth",
-          resolvedCredentials.certPublicKey?.trim()
-            ? "Using SSH key authentication with CA certificate"
-            : "Using SSH key authentication",
-        ),
-      );
-    } catch (keyError) {
-      if (isPrivateKeyPassphraseError(keyError)) {
-        return res.json({ status: "passphrase_required", connectionLogs });
-      }
-
-      fileLogger.error("SSH key format error for file manager", {
-        operation: "file_connect",
-        sessionId,
-        hostId,
-        error: keyError.message,
-      });
-      connectionLogs.push(
-        createConnectionLog(
-          "error",
-          "sftp_auth",
-          `Invalid SSH key format: ${keyError.message}`,
-        ),
-      );
-      return res
-        .status(400)
-        .json({ error: "Invalid SSH key format", connectionLogs });
-    }
-  } else if (resolvedCredentials.authType === "password") {
-    if (!resolvedCredentials.password) {
-      connectionLogs.push(
-        createConnectionLog(
-          "error",
-          "sftp_auth",
-          "Password required for password authentication",
-        ),
-      );
-      return res.status(400).json({
-        error: "Password required for password authentication",
-        connectionLogs,
-      });
-    }
-
-    config.password = resolvedCredentials.password;
-    connectionLogs.push(
-      createConnectionLog("info", "sftp_auth", "Using password authentication"),
-    );
-  } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
-    try {
-      const { getOPKSSHToken } = await import("../opkssh-auth.js");
-      const token = await getOPKSSHToken(userId, serverHostId);
-
-      if (!token) {
-        connectionLogs.push(
-          createConnectionLog(
-            "error",
-            "sftp_auth",
-            "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
-          ),
-        );
-        return res.status(401).json({
-          error:
-            "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
-          requiresOPKSSHAuth: true,
-          connectionLogs,
-        });
-      }
-
-      const { setupOPKSSHCertAuth } = await import("../opkssh-cert-auth.js");
-      await setupOPKSSHCertAuth(
-        config as import("ssh2").ConnectConfig,
-        client,
-        token,
-        username,
-      );
-      connectionLogs.push(
-        createConnectionLog(
-          "info",
-          "sftp_auth",
-          "Using OPKSSH certificate authentication",
-        ),
-      );
-    } catch (opksshError) {
-      fileLogger.error("OPKSSH authentication error for file manager", {
-        operation: "file_connect",
-        sessionId,
-        hostId,
-        error: getErrorMessage(opksshError),
-      });
-      connectionLogs.push(
-        createConnectionLog(
-          "error",
-          "sftp_auth",
-          `OPKSSH authentication failed: ${getErrorMessage(opksshError)}`,
-        ),
-      );
-      return res.status(500).json({
-        error: "OPKSSH authentication failed",
-        connectionLogs,
-      });
-    }
-  } else if (resolvedCredentials.authType === "vault") {
-    try {
-      const { setupVaultSshSignerAuth } =
-        await import("../vault-ssh-connect.js");
-      await setupVaultSshSignerAuth(config as ConnectConfig, client, {
-        id: serverHostId,
-        username: resolvedUsername,
-        userId,
-        vaultProfile: { id: resolvedVaultProfileId },
-      });
-      connectionLogs.push(
-        createConnectionLog(
-          "info",
-          "sftp_auth",
-          "Using cached Vault-signed certificate",
-        ),
-      );
-    } catch (vaultError) {
-      const message = getErrorMessage(vaultError);
-      fileLogger.warn("Vault authentication unavailable for file manager", {
-        operation: "file_connect_vault_auth",
-        sessionId,
-        hostId,
-        error: message,
-      });
-      connectionLogs.push(createConnectionLog("error", "sftp_auth", message));
-      return res.status(401).json({
-        error: message,
-        requiresVaultAuth: true,
-        connectionLogs,
-      });
-    }
-  } else if (resolvedCredentials.authType === "agent") {
-    const result = await applyAgentAuth(config, resolvedTerminalConfig);
-    if ("error" in result) {
-      connectionLogs.push(
-        createConnectionLog("error", "sftp_auth", result.error),
-      );
-      return res.status(400).json({ error: result.error, connectionLogs });
-    }
-    connectionLogs.push(
-      createConnectionLog(
-        "info",
-        "sftp_auth",
-        "Using SSH agent authentication",
-      ),
-    );
-  } else if (
-    resolvedCredentials.authType === "none" ||
-    resolvedCredentials.authType === "tailscale" ||
-    resolvedCredentials.authType === "warpgate"
-  ) {
-    connectionLogs.push(
-      createConnectionLog(
-        "info",
-        "sftp_auth",
-        "Using keyboard-interactive authentication",
-      ),
-    );
-  } else {
+  const effectiveAuthType =
+    resolvedCredentials.authType ||
+    (resolvedCredentials.sshKey
+      ? "key"
+      : resolvedCredentials.password
+        ? "password"
+        : undefined);
+  if (!effectiveAuthType) {
     fileLogger.warn(
       "No valid authentication method provided for file manager",
-      {
-        operation: "file_connect",
-        sessionId,
-        hostId,
-        authType: resolvedCredentials.authType,
-        hasPassword: !!resolvedCredentials.password,
-        hasKey: !!resolvedCredentials.sshKey,
-      },
+      { operation: "file_connect", sessionId, hostId },
     );
     connectionLogs.push(
       createConnectionLog(
@@ -1287,6 +774,76 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       connectionLogs,
     });
   }
+
+  const connectTarget: SshConnectHost = {
+    id: serverHostId,
+    ip: resolvedIp,
+    port: resolvedPort,
+    username: resolvedUsername,
+    userId,
+    authType: effectiveAuthType,
+    password: resolvedCredentials.password,
+    key: resolvedCredentials.sshKey,
+    keyPassword: resolvedCredentials.keyPassword,
+    certPublicKey: resolvedCredentials.certPublicKey,
+    terminalConfig: resolvedTerminalConfig ?? null,
+    vaultProfile: resolvedVaultProfileId
+      ? { id: resolvedVaultProfileId }
+      : null,
+    jumpHosts: resolvedJumpHosts,
+    useSocks5: resolvedUseSocks5,
+    socks5Host: resolvedSocks5Host,
+    socks5Port: resolvedSocks5Port,
+    socks5Username: resolvedSocks5Username,
+    socks5Password: resolvedSocks5Password,
+    socks5ProxyChain: resolvedSocks5ProxyChain,
+  };
+
+  const built = await buildConnectConfig(connectTarget, {
+    userId,
+    purpose: "file-manager",
+    client,
+    serverHostId,
+    log: (level, message) =>
+      connectionLogs.push(createConnectionLog(level, "sftp_auth", message)),
+  });
+  const config = built.config;
+
+  if (built.outcome.status !== "ready") {
+    const outcome = built.outcome;
+    if (outcome.status === "error" && outcome.code === "passphrase-required") {
+      return res.json({ status: "passphrase_required", connectionLogs });
+    }
+    fileLogger.warn("File manager SSH auth could not be prepared", {
+      operation: "file_connect",
+      sessionId,
+      hostId,
+      authType: effectiveAuthType,
+      error: outcome.message,
+    });
+    connectionLogs.push(
+      createConnectionLog("error", "sftp_auth", outcome.message),
+    );
+    if (outcome.status === "interaction-required") {
+      return res.status(401).json({
+        error: outcome.message,
+        requiresAuthInteraction: outcome.interaction,
+        ...(outcome.flag ? { [outcome.flag]: true } : {}),
+        connectionLogs,
+      });
+    }
+    return res.status(400).json({
+      error:
+        outcome.status === "error" && outcome.code === "invalid-key"
+          ? "Invalid SSH key format"
+          : outcome.message,
+      connectionLogs,
+    });
+  }
+
+  // Auth types without a stored secret send a password prompt back to the
+  // client as "auth_required" so it can ask for credentials and reconnect.
+  const credentialless = !getSshAuthProvider(effectiveAuthType)?.requiresSecret;
 
   let responseSent = false;
 
@@ -1529,8 +1086,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         connectionLogs,
       });
     } else if (
-      (resolvedCredentials.authType === "none" ||
-        resolvedCredentials.authType === "tailscale") &&
+      credentialless &&
       (err.message.includes("authentication") ||
         err.message.includes("All configured authentication methods failed"))
     ) {
@@ -1557,407 +1113,182 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     cleanupSession(sessionId);
   });
 
+  const parkForAnswer = (
+    finish: (responses: string[]) => void,
+    prompts: Array<{ prompt: string; echo: boolean }>,
+    promptIndex: number,
+    isWarpgate = false,
+  ) => {
+    pendingTOTPSessions[sessionId] = {
+      client,
+      finish,
+      config,
+      createdAt: Date.now(),
+      sessionId,
+      hostId,
+      ip,
+      port,
+      username,
+      userId,
+      prompts,
+      totpPromptIndex: promptIndex,
+      resolvedPassword: resolvedCredentials.password,
+      totpAttempts: 0,
+      ...(isWarpgate ? { isWarpgate: true } : {}),
+    };
+  };
+
   client.on(
     "keyboard-interactive",
     (
       name: string,
       instructions: string,
-      instructionsLang: string,
+      _instructionsLang: string,
       prompts: Array<{ prompt: string; echo: boolean }>,
       finish: (responses: string[]) => void,
     ) => {
-      const promptTexts = prompts.map((p) => p.prompt);
+      const decision = classifyKeyboardInteractive(
+        { name, instructions, prompts },
+        connectTarget,
+      );
+      const autoFinish = () =>
+        finish(autoResponses(prompts, resolvedCredentials.password));
 
-      const warpgatePattern = /warpgate\s+authentication/i;
-      const isWarpgate =
-        warpgatePattern.test(name) ||
-        warpgatePattern.test(instructions) ||
-        promptTexts.some((p) => warpgatePattern.test(p));
-
-      if (isWarpgate) {
-        const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
-        const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
-        const keyMatch = fullText.match(
-          /security key[:\s]+([a-z0-9](?:\s+[a-z0-9]){3}|[a-z0-9]{4})/i,
-        );
-
-        if (urlMatch) {
-          if (responseSent) return;
-          responseSent = true;
-
-          connectionLogs.push(
-            createConnectionLog(
-              "info",
-              "sftp_auth",
-              "Warpgate authentication required",
-              { url: urlMatch[0] },
-            ),
-          );
-
-          pendingTOTPSessions[sessionId] = {
-            client,
-            finish,
-            config,
-            createdAt: Date.now(),
-            sessionId,
-            hostId,
-            ip,
-            port,
-            username,
-            userId,
-            prompts,
-            totpPromptIndex: -1,
-            resolvedPassword: resolvedCredentials.password,
-            totpAttempts: 0,
-            isWarpgate: true,
-          };
-
-          res.json({
-            requires_warpgate: true,
-            sessionId,
-            url: urlMatch[0],
-            securityKey: keyMatch ? keyMatch[1] : "N/A",
-            connectionLogs,
-          });
-          return;
-        }
+      if (decision.kind === "auto") {
+        finish(decision.responses);
+        return;
       }
 
-      const totpPromptIndex = prompts.findIndex((p) =>
-        /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
-          p.prompt,
-        ),
-      );
-
-      if (totpPromptIndex !== -1) {
-        if (responseSent) {
-          const responses = prompts.map((p) => {
-            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-              return resolvedCredentials.password;
-            }
-            return "";
-          });
-          finish(responses);
-          return;
-        }
+      if (decision.kind === "warpgate") {
+        if (responseSent) return;
         responseSent = true;
-
-        if (pendingTOTPSessions[sessionId]) {
-          const responses = prompts.map((p) => {
-            if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-              return resolvedCredentials.password;
-            }
-            return "";
-          });
-          finish(responses);
-          return;
-        }
-
         connectionLogs.push(
           createConnectionLog(
             "info",
             "sftp_auth",
-            "TOTP verification required",
-            { prompt: prompts[totpPromptIndex].prompt },
+            "Warpgate authentication required",
+            { url: decision.url },
           ),
         );
-
-        pendingTOTPSessions[sessionId] = {
-          client,
-          finish,
-          config,
-          createdAt: Date.now(),
+        parkForAnswer(finish, prompts, -1, true);
+        res.json({
+          requires_warpgate: true,
           sessionId,
-          hostId,
-          ip,
-          port,
-          username,
-          userId,
-          prompts,
-          totpPromptIndex,
-          resolvedPassword: resolvedCredentials.password,
-          totpAttempts: 0,
-        };
+          url: decision.url,
+          securityKey: decision.securityKey,
+          connectionLogs,
+        });
+        return;
+      }
 
+      const promptIndex = decision.promptIndex;
+      const promptText = prompts[promptIndex].prompt;
+      const isPasswordPrompt = /password/i.test(promptText);
+
+      if (decision.kind === "input" && !decision.isPush && !isPasswordPrompt) {
+        autoFinish();
+        return;
+      }
+
+      if (decision.kind === "input" && isPasswordPrompt && credentialless) {
+        if (responseSent) return;
+        responseSent = true;
+        client.end();
+        res.json({ status: "auth_required", reason: "no_keyboard" });
+        return;
+      }
+
+      if (responseSent || pendingTOTPSessions[sessionId]) {
+        autoFinish();
+        return;
+      }
+      responseSent = true;
+      parkForAnswer(finish, prompts, promptIndex);
+
+      if (decision.kind === "input" && isPasswordPrompt) {
         res.json({
           requires_totp: true,
           sessionId,
-          prompt: prompts[totpPromptIndex].prompt,
-          connectionLogs,
+          prompt: promptText,
+          isPassword: true,
         });
-      } else {
-        const hasStoredPassword =
-          resolvedCredentials.password &&
-          resolvedCredentials.authType !== "none" &&
-          resolvedCredentials.authType !== "tailscale" &&
-          resolvedCredentials.authType !== "warpgate";
-
-        const passwordPromptIndex = prompts.findIndex((p) =>
-          /password/i.test(p.prompt),
-        );
-
-        if (resolvedCredentials.authType === "warpgate") {
-          finish(prompts.map(() => ""));
-          return;
-        }
-
-        if (
-          (resolvedCredentials.authType === "none" ||
-            resolvedCredentials.authType === "tailscale") &&
-          passwordPromptIndex !== -1
-        ) {
-          if (responseSent) return;
-          responseSent = true;
-
-          client.end();
-
-          res.json({
-            status: "auth_required",
-            reason: "no_keyboard",
-          });
-          return;
-        }
-
-        if (!hasStoredPassword && passwordPromptIndex !== -1) {
-          if (responseSent) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
-              }
-              return "";
-            });
-            finish(responses);
-            return;
-          }
-          responseSent = true;
-
-          if (pendingTOTPSessions[sessionId]) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
-              }
-              return "";
-            });
-            finish(responses);
-            return;
-          }
-
-          pendingTOTPSessions[sessionId] = {
-            client,
-            finish,
-            config,
-            createdAt: Date.now(),
-            sessionId,
-            hostId,
-            ip,
-            port,
-            username,
-            userId,
-            prompts,
-            totpPromptIndex: passwordPromptIndex,
-            resolvedPassword: resolvedCredentials.password,
-            totpAttempts: 0,
-          };
-
-          res.json({
-            requires_totp: true,
-            sessionId,
-            prompt: prompts[passwordPromptIndex].prompt,
-            isPassword: true,
-          });
-          return;
-        }
-
-        const responses = prompts.map((p) => {
-          if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-            return resolvedCredentials.password;
-          }
-          return "";
-        });
-
-        finish(responses);
+        return;
       }
+
+      connectionLogs.push(
+        createConnectionLog("info", "sftp_auth", "TOTP verification required", {
+          prompt: promptText,
+        }),
+      );
+      res.json({
+        requires_totp: true,
+        sessionId,
+        prompt: promptText,
+        connectionLogs,
+      });
     },
   );
 
-  const proxyConfig: SOCKS5Config | null =
-    resolvedUseSocks5 &&
-    (resolvedSocks5Host ||
-      (resolvedSocks5ProxyChain &&
-        (resolvedSocks5ProxyChain as ProxyNode[]).length > 0))
-      ? {
-          useSocks5: resolvedUseSocks5,
-          socks5Host: resolvedSocks5Host,
-          socks5Port: resolvedSocks5Port,
-          socks5Username: resolvedSocks5Username,
-          socks5Password: resolvedSocks5Password,
-          socks5ProxyChain: resolvedSocks5ProxyChain as ProxyNode[],
-        }
-      : null;
-
-  const hasJumpHosts =
-    resolvedJumpHosts && resolvedJumpHosts.length > 0 && userId;
-
-  if (hasJumpHosts) {
-    try {
-      if (proxyConfig) {
-        connectionLogs.push(
-          createConnectionLog(
-            "info",
-            "proxy",
-            "Connecting via proxy + jump hosts",
-          ),
-        );
-      }
+  if (connectTarget.jumpHosts && connectTarget.jumpHosts.length > 0) {
+    if (getHostSocks5Config(connectTarget)) {
       connectionLogs.push(
         createConnectionLog(
           "info",
-          "jump",
-          `Connecting via ${resolvedJumpHosts.length} jump host(s)`,
+          "proxy",
+          "Connecting via proxy + jump hosts",
         ),
       );
-      const jumpClient = await createJumpHostChain(resolvedJumpHosts, userId);
-
-      if (!jumpClient) {
-        fileLogger.error("Failed to establish jump host chain", {
-          operation: "file_jump_chain",
-          sessionId,
-          hostId,
-        });
-        connectionLogs.push(
-          createConnectionLog(
-            "error",
-            "jump",
-            "Failed to establish jump host chain",
-          ),
-        );
-        return res.status(500).json({
-          error: "Failed to connect through jump hosts",
-          connectionLogs,
-        });
-      }
-
-      let forwardOutDone = false;
-      const forwardOutTimeout = setTimeout(() => {
-        if (!forwardOutDone) {
-          forwardOutDone = true;
-          fileLogger.error("Timeout waiting for jump host forwardOut", {
-            operation: "file_jump_forward_timeout",
-            sessionId,
-            hostId,
-            ip,
-            port,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "jump",
-              "Timed out waiting for jump host tunnel to target host",
-            ),
-          );
-          jumpClient.end();
-          res.status(500).json({
-            error: "Jump host tunnel timed out",
-            connectionLogs,
-          });
-        }
-      }, 30000);
-
-      jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
-        if (forwardOutDone) return;
-        forwardOutDone = true;
-        clearTimeout(forwardOutTimeout);
-
-        if (err) {
-          fileLogger.error("Failed to forward through jump host", err, {
-            operation: "file_jump_forward",
-            sessionId,
-            hostId,
-            ip,
-            port,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "jump",
-              `Failed to forward through jump host: ${err.message}`,
-            ),
-          );
-          jumpClient.end();
-          return res.status(500).json({
-            error: "Failed to forward through jump host: " + err.message,
-            connectionLogs,
-          });
-        }
-
-        config.sock = stream;
-        client.connect(config);
-      });
-    } catch (error) {
-      fileLogger.error("Jump host error", error, {
-        operation: "file_jump_host",
-        sessionId,
-        hostId,
-      });
-      connectionLogs.push(
-        createConnectionLog(
-          "error",
-          "jump",
-          `Jump host error: ${getErrorMessage(error)}`,
-        ),
-      );
-      return res.status(500).json({
-        error:
-          error instanceof JumpHostChainError
-            ? `Failed to connect through jump hosts: ${error.message}`
-            : "Failed to connect through jump hosts",
-        connectionLogs,
-      });
     }
-  } else if (proxyConfig) {
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "jump",
+        `Connecting via ${connectTarget.jumpHosts.length} jump host(s)`,
+      ),
+    );
+  } else if (getHostSocks5Config(connectTarget)) {
     connectionLogs.push(
       createConnectionLog("info", "proxy", "Connecting via proxy", {
-        proxyHost: socks5Host,
-        proxyPort: socks5Port || 1080,
+        proxyHost: resolvedSocks5Host,
+        proxyPort: resolvedSocks5Port || 1080,
       }),
     );
-    try {
-      const proxySocket = await createSocks5Connection(ip, port, proxyConfig);
-      if (proxySocket) {
-        connectionLogs.push(
-          createConnectionLog(
-            "success",
-            "proxy",
-            "Proxy connected successfully",
-          ),
-        );
-        config.sock = proxySocket;
-      }
-      client.connect(config);
-    } catch (proxyError) {
-      fileLogger.error("Proxy connection failed", proxyError, {
-        operation: "proxy_connect",
-        sessionId,
-        hostId,
-        proxyHost: socks5Host,
-        proxyPort: socks5Port || 1080,
-      });
-      connectionLogs.push(
-        createConnectionLog(
-          "error",
-          "proxy",
-          `Proxy connection failed: ${getErrorMessage(proxyError)}`,
-        ),
-      );
-      return res.status(500).json({
-        error: "Proxy connection failed: " + getErrorMessage(proxyError),
-        connectionLogs,
-      });
-    }
-  } else {
-    await resolveSshConnectConfigHost(config);
-    client.connect(config);
   }
+
+  try {
+    const transport = await openSshTransport(connectTarget, config);
+    if (transport.via === "proxy") {
+      connectionLogs.push(
+        createConnectionLog("success", "proxy", "Proxy connected successfully"),
+      );
+    }
+    if (transport.jumpClient) {
+      const jumpClient = transport.jumpClient;
+      client.on("close", () => jumpClient.end());
+    }
+  } catch (error) {
+    fileLogger.error("File manager transport failed", error, {
+      operation: "file_transport",
+      sessionId,
+      hostId,
+    });
+    const stage =
+      error instanceof SshTransportError && error.stage === "proxy"
+        ? "proxy"
+        : "jump";
+    connectionLogs.push(
+      createConnectionLog("error", stage, getErrorMessage(error)),
+    );
+    return res.status(500).json({
+      error:
+        error instanceof JumpHostChainError
+          ? `Failed to connect through jump hosts: ${error.message}`
+          : getErrorMessage(error),
+      connectionLogs,
+    });
+  }
+
+  client.connect(config);
 });
 
 /**

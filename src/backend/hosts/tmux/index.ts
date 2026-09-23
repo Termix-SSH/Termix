@@ -1,7 +1,9 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { Client, type ConnectConfig } from "ssh2";
+import type { Client } from "ssh2";
+import { connectHost, getConnectionPoolKey } from "../connect/connect-host.js";
+import type { SshConnectHost } from "../connect/types.js";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -12,19 +14,9 @@ import {
 } from "../../database/repositories/factory.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { sshLogger } from "../../utils/logger.js";
-import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
-import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
-import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { resolveHostById, checkHostAccess } from "../host-resolver.js";
 import type { HostAction } from "../../utils/permission-manager.js";
-import { createJumpHostChain } from "../jump-host-chain.js";
-import { applyAgentAuth } from "../terminal-auth-helpers.js";
-import {
-  createSocks5Connection,
-  type SOCKS5Config,
-} from "../../utils/socks5-helper.js";
 import { withConnection } from "../ssh-connection-pool.js";
-import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import { execCommand, tmuxCommand } from "./helper.js";
 import {
   SEP,
@@ -42,7 +34,6 @@ import {
   type PaneMetrics,
 } from "./monitor-helpers.js";
 import type { SSHHost, AuthenticatedRequest } from "../../../types/index.js";
-import { getTmuxAuthBehavior } from "./auth-utils.js";
 import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const PANE_ID_RE = /^%\d+$/;
@@ -59,179 +50,23 @@ interface TmuxSessionOverview extends TmuxSessionSummary {
   tags: string[];
 }
 
-// SSH connection (lean variant of the per-module pattern used by server-stats
-// and docker; jump hosts and SOCKS5 reuse the shared helpers)
-
-async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
-  const authBehavior = getTmuxAuthBehavior(host.authType);
-  const base: ConnectConfig = {
-    host: (host.ip || "").replace(/^\[|\]$/g, ""),
-    port: host.port,
-    username: host.username,
-    tryKeyboard: authBehavior.tryKeyboard,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 3,
-    readyTimeout: 60000,
-    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-      host.id,
-      host.ip,
-      host.port,
-      null,
-      host.userId || "",
-      false,
-    ),
-    algorithms: SSH_ALGORITHMS,
-  } as ConnectConfig;
-
-  if (host.authType === "password") {
-    if (!host.password) {
-      throw new Error(`No password available for host ${host.ip}`);
-    }
-    base.password = host.password;
-  } else if (host.authType === "key") {
-    if (!host.key) {
-      throw new Error(`No valid SSH key available for host ${host.ip}`);
-    }
-    (base as Record<string, unknown>).privateKey = preparePrivateKeyForSSH2(
-      host.key,
-      host.keyPassword,
-    );
-    if (host.keyPassword) {
-      (base as Record<string, unknown>).passphrase = host.keyPassword;
-    }
-  } else if (authBehavior.credentialless) {
-    // no credentials needed
-  } else if (host.authType === "vault") {
-    // cert auth setup happens in connectToHost (needs client instance)
-  } else if (host.authType === "agent") {
-    const result = await applyAgentAuth(
-      base as Record<string, unknown>,
-      host.terminalConfig as unknown as Record<string, unknown> | undefined,
-    );
-    if ("error" in result) {
-      throw new Error(result.error);
-    }
-  } else {
-    // opkssh and other interactive flows are not supported by this module
-    throw new Error(
-      `Authentication type '${host.authType}' is not supported by the tmux monitor. Open a terminal connection instead.`,
-    );
-  }
-
-  return base;
-}
+// SSH connection
 
 export function connectToHost(host: SSHHost): () => Promise<Client> {
   return async () => {
-    const config = await buildSshConfig(host);
-    const client = new Client();
-
-    if (host.authType === "vault") {
-      const { setupVaultSshSignerAuth } =
-        await import("../vault-ssh-connect.js");
-      await setupVaultSshSignerAuth(config, client, host);
-    }
-
-    const proxyConfig: SOCKS5Config | null =
-      host.useSocks5 &&
-      (host.socks5Host ||
-        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-        ? {
-            useSocks5: host.useSocks5,
-            socks5Host: host.socks5Host,
-            socks5Port: host.socks5Port,
-            socks5Username: host.socks5Username,
-            socks5Password: host.socks5Password,
-            socks5ProxyChain: host.socks5ProxyChain,
-          }
-        : null;
-
-    let jumpClient: Client | null = null;
-    if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
-      jumpClient = await createJumpHostChain(host.jumpHosts, host.userId);
-      if (!jumpClient) {
-        throw new Error("Failed to establish jump host chain");
-      }
-    } else if (proxyConfig) {
-      const proxySocket = await createSocks5Connection(
-        host.ip,
-        host.port,
-        proxyConfig,
-      );
-      if (proxySocket) {
-        config.sock = proxySocket;
-      }
-    }
-
-    return new Promise<Client>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        client.end();
-        jumpClient?.end();
-        reject(new Error("SSH connection timeout"));
-      }, 30000);
-
-      client.on("ready", () => {
-        clearTimeout(timeout);
-        resolve(client);
-      });
-      client.on("error", (err) => {
-        clearTimeout(timeout);
-        jumpClient?.end();
-        reject(err);
-      });
-      client.on(
-        "keyboard-interactive",
-        (_name, _instructions, _lang, prompts, finish) => {
-          finish(
-            prompts.map((p) =>
-              /password/i.test(p.prompt) ? host.password || "" : "",
-            ),
-          );
-        },
-      );
-
-      if (jumpClient) {
-        jumpClient.forwardOut(
-          "127.0.0.1",
-          0,
-          host.ip,
-          host.port,
-          (err, stream) => {
-            if (err) {
-              clearTimeout(timeout);
-              jumpClient!.end();
-              reject(
-                new Error(
-                  "Failed to forward through jump host: " + err.message,
-                ),
-              );
-              return;
-            }
-            config.sock = stream;
-            client.connect(config);
-          },
-        );
-      } else if (config.sock) {
-        client.connect(config);
-      } else {
-        resolveSshConnectConfigHost(config)
-          .then(() => {
-            client.connect(config);
-          })
-          .catch((error) => {
-            clearTimeout(timeout);
-            reject(error);
-          });
-      }
+    const connection = await connectHost(host as unknown as SshConnectHost, {
+      userId: host.userId || "",
+      purpose: "tmux",
     });
+    return connection.client;
   };
 }
 
 function getPoolKey(host: SSHHost): string {
-  const socks5Key = host.useSocks5
-    ? `:socks5:${host.socks5Host}:${host.socks5Port}`
-    : "";
-  return `tmux-monitor:${host.userId}:${host.ip}:${host.port}:${host.username}${socks5Key}`;
+  return getConnectionPoolKey(
+    "tmux-monitor",
+    host as unknown as SshConnectHost,
+  );
 }
 
 async function withHostConnection<T>(

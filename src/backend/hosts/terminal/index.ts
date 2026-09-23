@@ -1,6 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import { getAuditUsername } from "../../utils/audit-logger.js";
-import { usesIssuedCertificate } from "../issued-certificate-auth.js";
 import { collabRoomHub } from "../collab/room-hub.js";
 import type { SessionShareRecord } from "../../database/repositories/session-share-repository.js";
 import { createCurrentCollabRoomRepository } from "../../database/repositories/factory.js";
@@ -18,21 +17,26 @@ import ssh2Pkg, {
   type PseudoTtyOptions,
 } from "ssh2";
 const { Client, utils: ssh2Utils } = ssh2Pkg;
-import { buildSSHAlgorithms } from "../../utils/ssh-algorithms.js";
 import axios from "axios";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { sshLogger, authLogger } from "../../utils/logger.js";
 import { logAudit } from "../../utils/audit-logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { SSHAuthManager } from "../connect/terminal-prompt.js";
+import { buildConnectConfig } from "../connect/build-connect-config.js";
 import {
-  createSocks5Connection,
-  type SOCKS5Config,
-} from "../../utils/socks5-helper.js";
-import { SSHAuthManager } from "../auth-manager.js";
-import type { ProxyNode } from "../../../types/index.js";
-import { SSHHostKeyVerifier } from "../host-key-verifier.js";
-import { createJumpHostChain, JumpHostChainError } from "../jump-host-chain.js";
+  getSshAuthProvider,
+  listSshAuthProviders,
+} from "../connect/auth-provider-registry.js";
+import { ensureCoreSshAuthProviders } from "../connect/core-providers.js";
+import { getHostSocks5Config, openSshTransport } from "../connect/transport.js";
+import type {
+  SshAuthEnv,
+  SshAuthProvider,
+  SshConnectHost,
+} from "../connect/types.js";
+import { JumpHostChainError } from "../jump-host-chain.js";
 import {
   parseTailscaleCheckBanner,
   isTailscaleCheckCompleteBanner,
@@ -50,17 +54,11 @@ import {
   attachOrCreateTmuxSession,
   waitForTmuxSession,
 } from "../tmux/helper.js";
-import {
-  MemoryAgent,
-  performPortKnocking,
-  applyAgentAuth,
-} from "../terminal-auth-helpers.js";
+import { MemoryAgent } from "../terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
-import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { dispatchLoginEvent } from "../../utils/login-event-dispatch.js";
 import { getClientIp } from "../../utils/request-origin.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
-import { resolveSshKeepalive } from "../ssh-keepalive.js";
 import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
@@ -69,11 +67,9 @@ import {
   resolveServerJumpHosts,
 } from "../host-identity.js";
 import { extractWebSocketToken } from "../../utils/ws-auth.js";
-import {
-  createWebSocketDuplex,
-  waitForWebSocketOpen,
-} from "../cloudflare-websocket.js";
 import { hostSessionStatus } from "../host-session-status.js";
+
+class SshInteractionUnavailableError extends Error {}
 
 interface ConnectToHostData {
   cols: number;
@@ -94,6 +90,7 @@ interface ConnectToHostData {
     credentialId?: number;
     userId?: string;
     forceKeyboardInteractive?: boolean;
+    useWarpgate?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
     useSocks5?: boolean;
     socks5Host?: string;
@@ -1112,52 +1109,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         case "opkssh_start_auth": {
           const opksshData = data as { hostId: number };
           try {
-            const { startOPKSSHAuth } = await import("../opkssh-auth.js");
-            const { getRequestOrigin } =
-              await import("../../utils/request-origin.js");
-            const host =
-              await createCurrentHostResolutionRepository().findHostById(
-                opksshData.hostId,
-                userId,
-              );
-            if (!host) {
-              sshLogger.error(
-                `Host ${opksshData.hostId} not found for OPKSSH auth`,
-                {
-                  operation: "opkssh_start_auth_host_not_found",
-                  userId,
-                  hostId: opksshData.hostId,
-                },
-              );
-              ws.send(
-                JSON.stringify({
-                  type: "opkssh_error",
-                  requestId: "",
-                  error: "Host not found",
-                }),
-              );
-              break;
-            }
-            const hostname = host.name || host.ip;
-            const requestOrigin = getRequestOrigin(req);
-            if (host.authType === "stepca") {
-              const { startStepCaAuth } = await import("../step-ca-auth.js");
-              await startStepCaAuth(
-                userId,
-                opksshData.hostId,
-                host.username,
-                ws,
-                requestOrigin,
-              );
-              break;
-            }
-            await startOPKSSHAuth(
-              userId,
-              opksshData.hostId,
-              hostname,
-              ws,
-              requestOrigin,
-            );
+            await startAuthInteraction("opkssh", opksshData.hostId, data);
           } catch (error) {
             sshLogger.error("Failed to start OPKSSH auth", error, {
               operation: "opkssh_start_auth_error",
@@ -1168,7 +1120,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
               JSON.stringify({
                 type: "opkssh_error",
                 requestId: "",
-                error: "Failed to start OPKSSH authentication",
+                error:
+                  error instanceof SshInteractionUnavailableError
+                    ? error.message
+                    : "Failed to start OPKSSH authentication",
               }),
             );
           }
@@ -1245,32 +1200,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         case "vault_start_auth": {
           const vaultData = data as { hostId: number };
           try {
-            const { loadVaultProfileForHost, startVaultAuth } =
-              await import("../vault-oidc-auth.js");
-            const { getRequestOrigin } =
-              await import("../../utils/request-origin.js");
-            const profile = await loadVaultProfileForHost(
-              vaultData.hostId,
-              userId,
-            );
-            if (!profile) {
-              ws.send(
-                JSON.stringify({
-                  type: "vault_error",
-                  hostId: vaultData.hostId,
-                  error: "No Vault signer profile configured for this host",
-                }),
-              );
-              break;
-            }
-            const requestOrigin = getRequestOrigin(req);
-            await startVaultAuth(
-              userId,
-              vaultData.hostId,
-              profile,
-              ws,
-              requestOrigin,
-            );
+            await startAuthInteraction("vault", vaultData.hostId, data);
           } catch (error) {
             sshLogger.error("Failed to start Vault auth", error, {
               operation: "vault_start_auth_error",
@@ -1534,6 +1464,53 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
   });
 
+  /**
+   * Starts the browser sign-in behind an "<interaction>_auth_required"
+   * message. The provider for the host's auth type wins; otherwise the first
+   * provider that owns this interaction (Vault attaches to any auth type).
+   */
+  async function startAuthInteraction(
+    interaction: string,
+    hostId: number,
+    payload: unknown,
+  ): Promise<void> {
+    ensureCoreSshAuthProviders();
+    const host = await createCurrentHostResolutionRepository().findHostById(
+      hostId,
+      userId,
+    );
+    if (!host) throw new SshInteractionUnavailableError("Host not found");
+
+    const own = getSshAuthProvider(host.authType as string);
+    const provider =
+      own?.interaction === interaction && own.startInteraction
+        ? own
+        : listSshAuthProviders().find(
+            (candidate) =>
+              candidate.interaction === interaction &&
+              candidate.startInteraction,
+          );
+    if (!provider?.startInteraction) {
+      throw new SshInteractionUnavailableError(
+        `No enabled provider handles ${interaction} sign-in`,
+      );
+    }
+
+    const { getRequestOrigin } = await import("../../utils/request-origin.js");
+    await provider.startInteraction({
+      userId,
+      hostId,
+      host: {
+        name: host.name as string | null,
+        ip: host.ip as string,
+        username: host.username as string,
+      },
+      socket: ws,
+      requestOrigin: getRequestOrigin(req),
+      payload: (payload ?? {}) as Record<string, unknown>,
+    });
+  }
+
   async function handleConnectToHost(data: ConnectToHostData) {
     const { hostConfig, initialPath, executeCommand, tmuxAttachSession } = data;
     const {
@@ -1660,8 +1637,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
     let connectionTimeout = setTimeout(onConnectionTimeout, 120000);
 
     let tailscaleCheckPending = false;
-    let tailscaleForcePasswordAttempted = false;
-    let isTailscaleRetrying = false;
+    let authRetries = 0;
+    let isAuthRetrying = false;
+    let connectProvider: SshAuthProvider | null = null;
+    let connectEnv: SshAuthEnv | null = null;
+    let connectTarget: SshConnectHost | null = null;
     let clearOnlineStatus: (() => void) | null = null;
 
     let resolvedHostData:
@@ -1974,7 +1954,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("ready", () => {
       clearOnlineStatus ??= hostSessionStatus.register(serverHostId);
       clearTimeout(connectionTimeout);
-      isTailscaleRetrying = false;
+      isAuthRetrying = false;
       if (tailscaleCheckPending) {
         tailscaleCheckPending = false;
         ws.send(
@@ -2530,103 +2510,31 @@ wss.on("connection", async (ws: WebSocket, req) => {
         keyboardInteractiveResponded,
       });
 
-      if (
-        usesIssuedCertificate(resolvedCredentials.authType) &&
-        err.message.includes("All configured authentication methods failed")
-      ) {
-        sshLogger.warn("OPKSSH authentication failed - invalidating token", {
-          operation: "opkssh_auth_failed",
-          hostId: id,
-          userId,
-          error: err.message,
-        });
+      // The provider decides what an auth failure means: clear a cached
+      // certificate and ask for a new sign-in, retry once, or give up with
+      // its own message.
+      const authFollowUp =
+        connectProvider?.onAuthFailed && connectEnv && connectTarget
+          ? connectProvider.onAuthFailed(connectTarget, connectEnv, {
+              error: err,
+              retries: authRetries,
+              canRetry: !connectConfig.sock && !tailscaleCheckPending,
+              methodNotAvailable: authMethodNotAvailable,
+            })
+          : undefined;
 
-        (async () => {
-          try {
-            const { invalidateOPKSSHToken } = await import("../opkssh-auth.js");
-            await invalidateOPKSSHToken(userId, id, "SSH auth failed");
-          } catch (invalidateError) {
-            sshLogger.error("Failed to invalidate OPKSSH token", {
-              operation: "opkssh_token_invalidation_error",
-              userId,
-              hostId: id,
-              error: invalidateError,
-            });
-          }
-        })();
-
+      if (authFollowUp?.status === "interaction-required") {
         if (currentSessionId) {
           sessionManager.destroySession(currentSessionId);
           currentSessionId = null;
         }
         cleanupAuthState(connectionTimeout);
-
-        sendLog(
-          "auth",
-          "error",
-          "OPKSSH certificate authentication failed. Please authenticate again.",
-        );
-
+        sendLog("auth", "error", authFollowUp.message);
         ws.send(
           JSON.stringify({
-            type: "opkssh_auth_required",
+            type: `${authFollowUp.interaction}_auth_required`,
             hostId: id,
-            message:
-              "OPKSSH authentication failed or expired. Please authenticate again.",
-          }),
-        );
-        return;
-      }
-
-      if (
-        resolvedCredentials.authType === "vault" &&
-        err.message.includes("All configured authentication methods failed")
-      ) {
-        sshLogger.warn("Vault certificate authentication failed", {
-          operation: "vault_auth_failed",
-          hostId: id,
-          userId,
-          error: err.message,
-        });
-
-        (async () => {
-          try {
-            const profileId = (
-              resolvedHostData?.vaultProfile as { id?: number } | undefined
-            )?.id;
-            if (profileId) {
-              const { deleteVaultCert } =
-                await import("../vault-signer-auth.js");
-              await deleteVaultCert(userId, profileId);
-            }
-          } catch (invalidateError) {
-            sshLogger.error("Failed to invalidate Vault certificate", {
-              operation: "vault_cert_invalidation_error",
-              userId,
-              hostId: id,
-              error: invalidateError,
-            });
-          }
-        })();
-
-        if (currentSessionId) {
-          sessionManager.destroySession(currentSessionId);
-          currentSessionId = null;
-        }
-        cleanupAuthState(connectionTimeout);
-
-        sendLog(
-          "auth",
-          "error",
-          "Vault certificate authentication failed. Please authenticate again.",
-        );
-
-        ws.send(
-          JSON.stringify({
-            type: "vault_auth_required",
-            hostId: id,
-            message:
-              "Vault authentication failed or expired. Please authenticate again.",
+            message: authFollowUp.message,
           }),
         );
         return;
@@ -2657,71 +2565,39 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
-      // Tailscale documents the "+password" username suffix as the workaround for
-      // clients that mishandle a successful reply to auth type "none". It routes
-      // through PasswordCallback into the same check-mode flow, and the password
-      // value is ignored. Retry once before reporting an auth failure.
-      // Skipped when tunnelled: connectConfig.sock is a one-shot stream that
-      // cannot be reused for a second connect.
-      if (
-        resolvedCredentials.authType === "tailscale" &&
-        !tailscaleForcePasswordAttempted &&
-        !tailscaleCheckPending &&
-        !connectConfig.sock &&
-        (authMethodNotAvailable ||
-          err.message.includes("All configured authentication methods failed"))
-      ) {
-        tailscaleForcePasswordAttempted = true;
-
-        sendLog(
-          "auth",
-          "info",
-          "Retrying Tailscale SSH in forced password mode",
-        );
-        sshLogger.info("Retrying Tailscale SSH with +password suffix", {
-          operation: "tailscale_force_password_retry",
+      if (authFollowUp?.status === "retry") {
+        authRetries++;
+        sendLog("auth", "info", authFollowUp.message);
+        sshLogger.info("Retrying SSH auth with provider changes", {
+          operation: "ssh_auth_retry",
           hostId: id,
           userId,
-          username,
         });
 
         clearTimeout(connectionTimeout);
         connectionTimeout = setTimeout(
           onConnectionTimeout,
-          TAILSCALE_CHECK_TIMEOUT_MS,
+          (connectConfig.readyTimeout as number | undefined) ?? 120000,
         );
 
-        connectConfig.username = `${username}+password`;
-        connectConfig.password = "termix";
-        connectConfig.tryKeyboard = false;
+        Object.assign(connectConfig, authFollowUp.patch);
 
         // ssh2's connect() ends an open socket and reconnects on close, keeping
         // every listener attached, so the same client can be reused here.
-        isTailscaleRetrying = true;
+        isAuthRetrying = true;
         sshConn.connect(connectConfig);
         return;
       }
 
-      if (
-        resolvedCredentials.authType === "tailscale" &&
-        (authMethodNotAvailable ||
-          err.message.includes("All configured authentication methods failed"))
-      ) {
-        sendLog(
-          "auth",
-          "error",
-          `Tailscale SSH authentication failed for user "${username}". Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy grants the "${username}" user to your identity (check tailscale.com/s/ssh for the check/action ACL syntax). If your Tailscale identity maps to a different Unix user, update the username on this host.`,
-        );
+      if (authFollowUp?.status === "error") {
+        sendLog("auth", "error", authFollowUp.message);
         if (currentSessionId) {
           sessionManager.destroySession(currentSessionId);
           currentSessionId = null;
         }
         cleanupAuthState(connectionTimeout);
         ws.send(
-          JSON.stringify({
-            type: "error",
-            message: `Tailscale SSH authentication failed for user "${username}". Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy grants the "${username}" user to your identity. If your Tailscale identity maps to a different Unix user, update the username on this host.`,
-          }),
+          JSON.stringify({ type: "error", message: authFollowUp.message }),
         );
         return;
       }
@@ -2865,7 +2741,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sshConn.on("close", () => {
       // The +password retry ends the socket before reconnecting; that close is
       // part of the retry, not a disconnect.
-      if (isTailscaleRetrying) {
+      if (isAuthRetrying) {
         return;
       }
 
@@ -2981,276 +2857,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     );
 
-    const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
-    const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
-    const keepalive = resolveSshKeepalive(
-      hostKeepaliveInterval,
-      hostKeepaliveCountMax,
-      30000,
-      5,
-    );
-
-    // Pre-fetch the stored host key before connect so the verifier callback
-    // runs synchronously during SSH key exchange, avoiding LoginGraceTime
-    // expiry on slow connections (especially through jump host tunnels).
-    const preloadedHostData =
-      await SSHHostKeyVerifier.preloadHostData(serverHostId);
-
-    const connectConfig: Record<string, unknown> = {
-      host: connectHost,
-      port,
-      username,
-      tryKeyboard: resolvedCredentials.authType !== "tailscale",
-      ...keepalive,
-      readyTimeout:
-        resolvedCredentials.authType === "tailscale"
-          ? TAILSCALE_CHECK_TIMEOUT_MS
-          : 120000,
-      tcpKeepAlive: true,
-      tcpKeepAliveInitialDelay: 30000,
-      // The socket sits idle while a Tailscale check-mode login is pending.
-      timeout:
-        resolvedCredentials.authType === "tailscale"
-          ? TAILSCALE_CHECK_TIMEOUT_MS
-          : 120000,
-      hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-        serverHostId,
-        ip,
-        port,
-        ws,
-        userId,
-        false,
-        preloadedHostData,
-      ),
-      env: {
-        TERM: "xterm-256color",
-        LANG: "en_US.UTF-8",
-        LC_ALL: "en_US.UTF-8",
-        LC_CTYPE: "en_US.UTF-8",
-        LC_MESSAGES: "en_US.UTF-8",
-        LC_MONETARY: "en_US.UTF-8",
-        LC_NUMERIC: "en_US.UTF-8",
-        LC_TIME: "en_US.UTF-8",
-        LC_COLLATE: "en_US.UTF-8",
-        COLORTERM: "truecolor",
-      },
-      algorithms: buildSSHAlgorithms(
-        hostConfig.terminalConfig?.allowLegacyAlgorithms !== false,
-      ),
-    };
-
-    if (
-      resolvedCredentials.authType === "none" ||
-      resolvedCredentials.authType === "tailscale"
-    ) {
-      // Tailscale SSH and "none": no static credentials needed
-    } else if (resolvedCredentials.authType === "password") {
-      if (!resolvedCredentials.password) {
-        sshLogger.error(
-          "Password authentication requested but no password provided",
-        );
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message:
-              "Password authentication requested but no password provided",
-          }),
-        );
-        return;
-      }
-
-      if (!hostConfig.forceKeyboardInteractive) {
-        connectConfig.password = resolvedCredentials.password;
-      }
-      sendLog("auth", "info", "Using password authentication");
-    } else if (
-      resolvedCredentials.authType === "key" &&
-      resolvedCredentials.key
-    ) {
-      sendLog("auth", "info", "Using SSH key authentication");
-      try {
-        connectConfig.privateKey = preparePrivateKeyForSSH2(
-          resolvedCredentials.key,
-          resolvedCredentials.keyPassword,
-        );
-
-        if (resolvedCredentials.keyPassword) {
-          connectConfig.passphrase = resolvedCredentials.keyPassword;
-        }
-
-        if (resolvedCredentials.password) {
-          connectConfig.password = resolvedCredentials.password;
-        }
-
-        // Apply CA-signed certificate if one is stored in the credential
-        if (
-          resolvedCredentials.certPublicKey &&
-          resolvedCredentials.certPublicKey.trim()
-        ) {
-          try {
-            const { setupCACertAuth } = await import("../opkssh-cert-auth.js");
-            await setupCACertAuth(
-              connectConfig,
-              sshConn,
-              connectConfig.privateKey as Buffer,
-              resolvedCredentials.certPublicKey,
-              username,
-              resolvedCredentials.keyPassword,
-            );
-            sendLog("auth", "info", "CA certificate authentication configured");
-            sshLogger.info("CA cert auth configured", {
-              operation: "ca_cert_auth_configured",
-              userId,
-              hostId: id,
-            });
-          } catch (certError) {
-            sendLog(
-              "auth",
-              "warning",
-              "CA certificate setup failed – falling back to key-only auth",
-            );
-            sshLogger.warn("CA cert auth setup failed", {
-              operation: "ca_cert_auth_setup_failed",
-              userId,
-              hostId: id,
-              error: getErrorMessage(certError, String(certError)),
-            });
-          }
-        }
-      } catch (keyError) {
-        const message = getErrorMessage(keyError, "Invalid private key format");
-        sshLogger.error("SSH key format error: " + message);
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message: `SSH key format error: ${message}`,
-          }),
-        );
-        return;
-      }
-    } else if (resolvedCredentials.authType === "key") {
-      sendLog(
-        "auth",
-        "error",
-        "SSH key authentication requested but no key provided",
-      );
-      sshLogger.error("SSH key authentication requested but no key provided");
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: "SSH key authentication requested but no key provided",
-        }),
-      );
-      return;
-    } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
-      sendLog("auth", "info", "Using issued SSH certificate authentication");
-      try {
-        const { getOPKSSHToken } = await import("../opkssh-auth.js");
-        const token = await getOPKSSHToken(userId, id);
-
-        if (!token) {
-          sendLog(
-            "auth",
-            "info",
-            "No valid certificate found, requesting sign-in",
-          );
-          ws.send(
-            JSON.stringify({
-              type: "opkssh_auth_required",
-              hostId: id,
-            }),
-          );
-          return;
-        }
-
-        sendLog("auth", "info", "Using cached SSH certificate");
-
-        const { setupOPKSSHCertAuth } = await import("../opkssh-cert-auth.js");
-        await setupOPKSSHCertAuth(connectConfig, sshConn, token, username);
-      } catch (opksshError) {
-        sshLogger.error("OPKSSH authentication error", opksshError, {
-          operation: "opkssh_auth_error",
-          userId,
-          hostId: id,
-        });
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message:
-              "OPKSSH authentication failed: " + getErrorMessage(opksshError),
-          }),
-        );
-        return;
-      }
-    } else if (resolvedCredentials.authType === "vault") {
-      sendLog("auth", "info", "Using Vault SSH signer authentication");
-      try {
-        const vaultProfile = resolvedHostData?.vaultProfile as
-          { id: number } | undefined;
-        if (!vaultProfile?.id) {
-          throw new Error("Host has no Vault signer profile configured");
-        }
-
-        const { getVaultCert } = await import("../vault-signer-auth.js");
-        const cert = await getVaultCert(userId, vaultProfile.id);
-
-        if (!cert) {
-          sendLog(
-            "auth",
-            "info",
-            "No valid Vault certificate found, requesting authentication",
-          );
-          ws.send(
-            JSON.stringify({
-              type: "vault_auth_required",
-              hostId: id,
-            }),
-          );
-          return;
-        }
-
-        sendLog("auth", "info", "Using cached Vault-signed certificate");
-
-        const { setupOPKSSHCertAuth } = await import("../opkssh-cert-auth.js");
-        await setupOPKSSHCertAuth(
-          connectConfig,
-          sshConn,
-          { privateKey: cert.privateKey, sshCert: cert.sshCert },
-          username,
-        );
-      } catch (vaultError) {
-        sshLogger.error("Vault SSH signer authentication error", vaultError, {
-          operation: "vault_auth_error",
-          userId,
-          hostId: id,
-        });
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message:
-              "Vault SSH signer authentication failed: " +
-              getErrorMessage(vaultError),
-          }),
-        );
-        return;
-      }
-    } else if (resolvedCredentials.authType === "agent") {
-      sendLog("auth", "info", "Using SSH agent authentication");
-      const result = await applyAgentAuth(
-        connectConfig,
-        hostConfig.terminalConfig as Record<string, unknown> | undefined,
-      );
-      if ("error" in result) {
-        ws.send(JSON.stringify({ type: "error", message: result.error }));
-        return;
-      }
-      sendLog(
-        "auth",
-        "info",
-        `SSH agent configured (socket: ${result.socketPath})`,
-      );
-    } else {
-      sendLog("auth", "info", "Using keyboard-interactive authentication");
+    const effectiveAuthType =
+      resolvedCredentials.authType ||
+      (resolvedCredentials.key
+        ? "key"
+        : resolvedCredentials.password
+          ? "password"
+          : undefined);
+    if (!effectiveAuthType) {
       sshLogger.error("No valid authentication method provided");
       ws.send(
         JSON.stringify({
@@ -3258,6 +2872,88 @@ wss.on("connection", async (ws: WebSocket, req) => {
           message: "No valid authentication method provided",
         }),
       );
+      return;
+    }
+
+    connectTarget = {
+      ...(resolvedHostData ?? {}),
+      id: serverHostId ?? id,
+      ip,
+      port,
+      username,
+      userId: hostConfig.userId,
+      authType: effectiveAuthType,
+      password: resolvedCredentials.password,
+      key: resolvedCredentials.key,
+      keyPassword: resolvedCredentials.keyPassword,
+      keyType: resolvedCredentials.keyType,
+      certPublicKey: resolvedCredentials.certPublicKey,
+      forceKeyboardInteractive: hostConfig.forceKeyboardInteractive,
+      useWarpgate: hostConfig.useWarpgate,
+      terminalConfig: hostConfig.terminalConfig,
+      jumpHosts: hostConfig.jumpHosts,
+      useSocks5: hostConfig.useSocks5,
+      socks5Host: hostConfig.socks5Host,
+      socks5Port: hostConfig.socks5Port,
+      socks5Username: hostConfig.socks5Username,
+      socks5Password: hostConfig.socks5Password,
+      socks5ProxyChain: hostConfig.socks5ProxyChain,
+      portKnockSequence: hostConfig.portKnockSequence,
+    } as SshConnectHost;
+
+    const built = await buildConnectConfig(connectTarget, {
+      userId,
+      purpose: "terminal",
+      client: sshConn,
+      serverHostId,
+      hostKeySocket: ws,
+      interactive: true,
+      log: (level, message) => sendLog("auth", level, message),
+    });
+    const connectConfig = built.config;
+    // DNS was resolved above, and skipped when jump hosts do it instead.
+    connectConfig.host = connectHost;
+    connectProvider = built.provider;
+    connectEnv = built.env;
+
+    if (built.outcome.status !== "ready") {
+      const outcome = built.outcome;
+      if (outcome.status === "interaction-required") {
+        ws.send(
+          JSON.stringify({
+            type: `${outcome.interaction}_auth_required`,
+            hostId: id,
+          }),
+        );
+        return;
+      }
+      if (
+        outcome.status === "error" &&
+        outcome.code === "passphrase-required"
+      ) {
+        sendLog(
+          "auth",
+          "error",
+          "SSH key is encrypted but no passphrase was provided",
+        );
+        isAwaitingAuthCredentials = true;
+        cleanupAuthState(connectionTimeout);
+        ws.send(
+          JSON.stringify({
+            type: "passphrase_required",
+            message: outcome.message,
+          }),
+        );
+        return;
+      }
+      sshLogger.error("SSH auth could not be prepared", {
+        operation: "terminal_auth_prepare",
+        hostId: id,
+        authType: effectiveAuthType,
+        error: outcome.message,
+      });
+      sendLog("auth", "error", outcome.message);
+      ws.send(JSON.stringify({ type: "error", message: outcome.message }));
       return;
     }
 
@@ -3279,10 +2975,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             hostId: id,
           });
         }
-      } else if (
-        resolvedCredentials.authType === "agent" &&
-        connectConfig.agent
-      ) {
+      } else if (connectConfig.agent) {
         connectConfig.agentForward = true;
         sendLog(
           "auth",
@@ -3292,229 +2985,63 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }
 
-    if (
-      hostConfig.portKnockSequence &&
-      hostConfig.portKnockSequence.length > 0
-    ) {
-      try {
-        sshLogger.info(
-          `Port knocking ${hostConfig.ip} (${hostConfig.portKnockSequence.length} ports)`,
-          { operation: "port_knock", hostId: hostConfig.id },
-        );
-        await performPortKnocking(hostConfig.ip, hostConfig.portKnockSequence);
-      } catch {
-        sshLogger.warn("Port knocking failed, attempting connection anyway", {
-          operation: "port_knock",
-          hostId: hostConfig.id,
-        });
-      }
-    }
+    const viaProxy = !!getHostSocks5Config(connectTarget);
 
-    const proxyConfig: SOCKS5Config | null =
-      hostConfig.useSocks5 &&
-      (hostConfig.socks5Host ||
-        (hostConfig.socks5ProxyChain &&
-          (hostConfig.socks5ProxyChain as ProxyNode[]).length > 0))
-        ? {
-            useSocks5: hostConfig.useSocks5,
-            socks5Host: hostConfig.socks5Host,
-            socks5Port: hostConfig.socks5Port,
-            socks5Username: hostConfig.socks5Username,
-            socks5Password: hostConfig.socks5Password,
-            socks5ProxyChain: hostConfig.socks5ProxyChain as ProxyNode[],
-          }
-        : null;
-
-    const hasJumpHosts =
-      hostConfig.jumpHosts &&
-      hostConfig.jumpHosts.length > 0 &&
-      hostConfig.userId;
-
-    // Cloudflare Tunnel: connect via WebSocket proxy
-    const cfConfig = hostConfig.terminalConfig as
-      Record<string, unknown> | undefined;
-    if (cfConfig?.cfAccessClientId && cfConfig?.cfAccessClientSecret) {
-      try {
-        const WebSocket = (await import("ws")).default;
-        const cfHostname = (cfConfig.cfTunnelHostname as string) || ip;
-        const wsUrl = `wss://${cfHostname}/cdn-cgi/access/ssh-connect`;
-        const cfWs = new WebSocket(wsUrl, {
-          headers: {
-            "CF-Access-Client-Id": cfConfig.cfAccessClientId as string,
-            "CF-Access-Client-Secret": cfConfig.cfAccessClientSecret as string,
-          },
-        });
-
-        await waitForWebSocketOpen(cfWs, 30000);
-
-        const duplexStream = createWebSocketDuplex(cfWs);
-
-        connectConfig.sock =
-          duplexStream as unknown as typeof connectConfig.sock;
-        sendLog("handshake", "info", "Connected via Cloudflare Tunnel");
-      } catch (cfError) {
-        sshLogger.error("Cloudflare tunnel connection failed", cfError, {
-          operation: "cf_tunnel_connect",
-          hostId: id,
-        });
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message:
-              "Cloudflare tunnel connection failed: " +
-              getErrorMessage(cfError),
-          }),
-        );
-        cleanupAuthState(connectionTimeout);
-        return;
-      }
-    }
-
-    if (hasJumpHosts) {
-      try {
-        const jumpClient = await createJumpHostChain(
-          hostConfig.jumpHosts!,
-          hostConfig.userId!,
-        );
-
-        if (!jumpClient) {
-          sshLogger.error("Failed to establish jump host chain");
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message: "Failed to connect through jump hosts",
-            }),
-          );
-          if (currentSessionId) {
-            sessionManager.destroySession(currentSessionId);
-            currentSessionId = null;
-          }
-          cleanupAuthState(connectionTimeout);
-          return;
-        }
-        lastJumpClient = jumpClient;
-
-        jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
-          if (err) {
-            sshLogger.error("Failed to forward through jump host", err, {
-              operation: "ssh_jump_forward",
-              hostId: id,
-              ip,
-              port,
-            });
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Failed to forward through jump host: " + err.message,
-              }),
-            );
-            jumpClient.end();
-            if (currentSessionId) {
-              sessionManager.destroySession(currentSessionId);
-              currentSessionId = null;
-            }
-            cleanupAuthState(connectionTimeout);
-            return;
-          }
-
-          connectConfig.sock = stream;
-          sendLog(
-            "handshake",
-            "info",
-            "Starting SSH session through jump host" +
-              (proxyConfig ? " (via proxy)" : ""),
-          );
-          sendLog("auth", "info", `Authenticating as ${username}`);
-          sshLogger.info("Initiating SSH connection", {
-            operation: "terminal_ssh_connect_attempt",
-            sessionId,
-            userId,
-            hostId: id,
-            ip,
-            port,
-            username,
-            authType: resolvedCredentials.authType,
-            viaProxy: !!proxyConfig,
-          });
-          sshConn.connect(connectConfig);
-        });
-      } catch (error) {
-        sshLogger.error("Jump host error", error, {
-          operation: "ssh_jump_host",
-          hostId: id,
-        });
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message:
-              error instanceof JumpHostChainError
-                ? `Failed to connect through jump hosts: ${error.message}`
-                : "Failed to connect through jump hosts",
-          }),
-        );
-        if (currentSessionId) {
-          sessionManager.destroySession(currentSessionId);
-          currentSessionId = null;
-        }
-        cleanupAuthState(connectionTimeout);
-        return;
-      }
-    } else if (proxyConfig) {
-      try {
-        const proxySocket = await createSocks5Connection(ip, port, proxyConfig);
-        if (proxySocket) {
-          connectConfig.sock = proxySocket;
-        }
-      } catch (proxyError) {
-        sshLogger.error("Proxy connection failed", proxyError, {
-          operation: "proxy_connect",
-          hostId: id,
-          proxyHost: hostConfig.socks5Host,
-          proxyPort: hostConfig.socks5Port || 1080,
-        });
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            message: "Proxy connection failed: " + getErrorMessage(proxyError),
-          }),
-        );
-        if (currentSessionId) {
-          sessionManager.destroySession(currentSessionId);
-          currentSessionId = null;
-        }
-        cleanupAuthState(connectionTimeout);
-        return;
-      }
-      sendLog("handshake", "info", "Starting SSH session (via proxy)");
-      sendLog("auth", "info", `Authenticating as ${username}`);
-      sshLogger.info("Initiating SSH connection", {
-        operation: "terminal_ssh_connect_attempt",
-        sessionId,
-        userId,
+    let transport: Awaited<ReturnType<typeof openSshTransport>>;
+    try {
+      transport = await openSshTransport(connectTarget, connectConfig, {
+        // Resolved above, or deliberately left to the jump host.
+        resolveDns: false,
+        log: (level, message) => sendLog("handshake", level, message),
+      });
+    } catch (error) {
+      sshLogger.error("SSH transport failed", error, {
+        operation: "ssh_transport",
         hostId: id,
         ip,
         port,
-        username,
-        authType: resolvedCredentials.authType,
-        viaProxy: true,
       });
-      sshConn.connect(connectConfig);
-    } else {
-      sendLog("handshake", "info", "Starting SSH session");
-      sendLog("auth", "info", `Authenticating as ${username}`);
-
-      sshLogger.info("Initiating SSH connection", {
-        operation: "terminal_ssh_connect_attempt",
-        sessionId,
-        userId,
-        hostId: id,
-        ip,
-        port,
-        username,
-        authType: resolvedCredentials.authType,
-      });
-      sshConn.connect(connectConfig);
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message:
+            error instanceof JumpHostChainError
+              ? `Failed to connect through jump hosts: ${error.message}`
+              : getErrorMessage(error),
+        }),
+      );
+      if (currentSessionId) {
+        sessionManager.destroySession(currentSessionId);
+        currentSessionId = null;
+      }
+      cleanupAuthState(connectionTimeout);
+      return;
     }
+    lastJumpClient = transport.jumpClient;
+
+    sendLog(
+      "handshake",
+      "info",
+      transport.via === "jump"
+        ? "Starting SSH session through jump host" +
+            (viaProxy ? " (via proxy)" : "")
+        : transport.via === "proxy"
+          ? "Starting SSH session (via proxy)"
+          : "Starting SSH session",
+    );
+    sendLog("auth", "info", `Authenticating as ${username}`);
+    sshLogger.info("Initiating SSH connection", {
+      operation: "terminal_ssh_connect_attempt",
+      sessionId,
+      userId,
+      hostId: id,
+      ip,
+      port,
+      username,
+      authType: resolvedCredentials.authType,
+      via: transport.via,
+    });
+    sshConn.connect(connectConfig);
   }
 
   function handleResize(data: ResizeData) {

@@ -37,6 +37,7 @@ import { PluginStorageRepository } from "./plugin-storage-repository.js";
 import { PluginSettingsRepository } from "./plugin-settings-repository.js";
 import { PluginMigrationRepository } from "./plugin-migration-repository.js";
 import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
+import { UserAuthRepository } from "./user-auth-repository.js";
 import { PluginRegistryRepository } from "./plugin-registry-repository.js";
 import { PluginInstallCountRepository } from "./plugin-install-count-repository.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
@@ -377,6 +378,13 @@ export function createCurrentPluginRepository(): PluginRepository {
   return new PluginRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("plugin_repository_write"),
+  );
+}
+
+export function createCurrentUserAuthRepository(): UserAuthRepository {
+  return new UserAuthRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("user_auth_repository_write"),
   );
 }
 

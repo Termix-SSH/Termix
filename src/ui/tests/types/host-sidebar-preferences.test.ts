@@ -118,12 +118,13 @@ describe("sanitizeHostSidebarPreferences", () => {
     const result = sanitizeHostSidebarPreferences({
       filters: {
         status: ["online", "bogus", "pinned"],
-        authType: ["key", "nope"],
+        authType: ["key", "corp-sso", "Not A Type!", 7],
         tags: ["prod", 42, null],
       },
     });
     expect(result.filters.status).toEqual(["online", "pinned"]);
-    expect(result.filters.authType).toEqual(["key"]);
+    // Plugins add auth types, so any well-formed id is kept.
+    expect(result.filters.authType).toEqual(["key", "corp-sso"]);
     expect(result.filters.tags).toEqual(["prod"]);
   });
 

@@ -29,6 +29,8 @@ interface SaveRemoteSyncJwtResult {
 const AUTH_MESSAGE_SOURCES = new Set([
   "auth_component",
   "totp_auth_component",
+  "passkey_auth_component",
+  "method_auth_component",
   "oidc_callback",
 ]);
 
@@ -135,6 +137,9 @@ export function ElectronLoginForm({
           const sendResultToIframe = (result: {
             success: boolean;
             error?: string;
+            secondFactor?: boolean;
+            tempToken?: string;
+            factors?: string;
           }) => {
             iframeRef.current?.contentWindow?.postMessage(
               {
@@ -156,6 +161,9 @@ export function ElectronLoginForm({
                   success: boolean;
                   token?: string;
                   error?: string;
+                  secondFactor?: boolean;
+                  tempToken?: string;
+                  factors?: string;
                 }>;
               };
             }
@@ -173,6 +181,16 @@ export function ElectronLoginForm({
           );
           if (result.success && result.token) {
             await handleAuthSuccess(result.token);
+            return;
+          }
+          // The login stopped for a second factor; the iframe asks for it.
+          if (result.secondFactor) {
+            sendResultToIframe({
+              success: false,
+              secondFactor: true,
+              tempToken: result.tempToken,
+              factors: result.factors,
+            });
             return;
           }
           sendResultToIframe({

@@ -2,10 +2,11 @@
 // The plugin build rewrites the prefix to the compiled output path; see
 // packages/plugin-sdk/cli/lib/legacy-core-imports.mjs.
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
-import { usesIssuedCertificate } from "../../../../src/backend/hosts/issued-certificate-auth.js";
 import express from "express";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
+import type { PluginSshHost } from "@termix/plugin-sdk/backend";
+import { pluginSsh } from "./ssh.js";
 import { logger } from "../../../../src/backend/utils/logger.js";
 import {
   logAudit,
@@ -13,33 +14,23 @@ import {
   getRequestMeta,
 } from "../../../../src/backend/utils/audit-logger.js";
 import { createCurrentHostRepository } from "../../../../src/backend/database/repositories/factory.js";
-import { createJumpHostChain } from "../../../../src/backend/hosts/jump-host-chain.js";
 import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
 import { createConnectionLog } from "../../../../src/backend/hosts/connection-log.js";
 import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import type {
   AuthenticatedRequest,
-  ProxyNode,
   SSHHost,
 } from "../../../../src/types/index.js";
-import {
-  createSocks5Connection,
-  type SOCKS5Config,
-} from "../../../../src/backend/utils/socks5-helper.js";
 import type {
   LogEntry,
   ConnectionStage,
 } from "../../../../src/types/connection-log.js";
-import { SSHHostKeyVerifier } from "../../../../src/backend/hosts/host-key-verifier.js";
-import { preparePrivateKeyForSSH2 } from "../../../../src/backend/utils/ssh-key-utils.js";
-import { applyAgentAuth } from "../../../../src/backend/hosts/terminal-auth-helpers.js";
 import {
   containerCommand,
   getContainerRuntimeConfig,
   getRuntimeLabel,
 } from "./container-runtime.js";
-import { resolveSshConnectConfigHost } from "../../../../src/backend/hosts/ssh-dns.js";
 import {
   type SSHSession,
   sshSessions,
@@ -242,200 +233,69 @@ export function registerDockerSshRoutes(app: express.Express): void {
         delete pendingTOTPSessions[sessionId];
       }
 
-      const resolvedCredentials: {
-        password?: string;
-        sshKey?: string;
-        keyPassword?: string;
-        authType?: string;
-      } = {
-        password: host.password,
-        sshKey: host.key,
-        keyPassword: host.keyPassword,
-        authType: host.authType,
-      };
-
+      const connectTarget = {
+        ...(host as unknown as PluginSshHost),
+        id: hostId,
+        port: host.port || 22,
+        userId,
+        // The Docker panel sends its own proxy settings with the request.
+        useSocks5,
+        socks5Host,
+        socks5Port,
+        socks5Username,
+        socks5Password,
+        socks5ProxyChain,
+      } as PluginSshHost;
       if (userProvidedPassword) {
-        resolvedCredentials.password = userProvidedPassword;
-        resolvedCredentials.authType = "password";
+        connectTarget.password = userProvidedPassword;
+        connectTarget.authType = "password";
       }
       if (userProvidedSshKey) {
-        resolvedCredentials.sshKey = userProvidedSshKey;
-        resolvedCredentials.authType = "key";
+        connectTarget.key = userProvidedSshKey;
+        connectTarget.authType = "key";
       }
       if (userProvidedKeyPassword) {
-        resolvedCredentials.keyPassword = userProvidedKeyPassword;
+        connectTarget.keyPassword = userProvidedKeyPassword;
       }
+      const resolvedPassword = connectTarget.password as string | undefined;
+      const authType = (connectTarget.authType as string) || "none";
 
       const client = new SSHClient();
-
-      const config: Record<string, unknown> = {
-        host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
-        port: host.port || 22,
-        username: host.username,
-        tryKeyboard: true,
-        keepaliveInterval:
-          typeof host.terminalConfig?.keepaliveInterval === "number"
-            ? host.terminalConfig.keepaliveInterval * 1000
-            : 60000,
-        keepaliveCountMax:
-          typeof host.terminalConfig?.keepaliveCountMax === "number"
-            ? host.terminalConfig.keepaliveCountMax
-            : 5,
-        readyTimeout: 60000,
-        tcpKeepAlive: true,
-        tcpKeepAliveInitialDelay: 30000,
-        hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-          hostId,
-          host.ip,
-          host.port || 22,
-          null,
-          userId,
-          false,
-        ),
-      };
-
-      if (
-        resolvedCredentials.authType === "none" ||
-        resolvedCredentials.authType === "tailscale" ||
-        resolvedCredentials.authType === "warpgate"
-      ) {
-        // Tailscale SSH, "none", and Warpgate auth: no static credentials
-      } else if (resolvedCredentials.authType === "password") {
-        if (resolvedCredentials.password) {
-          config.password = resolvedCredentials.password;
-        }
-      } else if (usesIssuedCertificate(resolvedCredentials.authType)) {
-        try {
-          const { getOPKSSHToken } =
-            await import("../../../../src/backend/hosts/opkssh-auth.js");
-          const token = await getOPKSSHToken(userId, hostId);
-
-          if (!token) {
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                "docker_auth",
-                "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
-              ),
-            );
-            return res.status(401).json({
-              error:
-                "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.",
-              requiresOPKSSHAuth: true,
-              connectionLogs,
-            });
-          }
-
-          const { setupOPKSSHCertAuth } =
-            await import("../../../../src/backend/hosts/opkssh-cert-auth.js");
-          await setupOPKSSHCertAuth(
-            config as import("ssh2").ConnectConfig,
-            client,
-            token,
-            host.username,
-          );
+      const ssh = pluginSsh();
+      const prepared = await ssh.prepare(connectTarget, {
+        purpose: "docker",
+        client,
+        log: (level, message) =>
           connectionLogs.push(
-            createConnectionLog(
-              "info",
-              "docker_auth",
-              "Using OPKSSH certificate authentication",
-            ),
-          );
-        } catch (opksshError) {
-          sshLogger.error("OPKSSH authentication error for Docker", {
-            operation: "docker_connect",
-            sessionId,
-            hostId,
-            error: getErrorMessage(opksshError),
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "docker_auth",
-              `OPKSSH authentication failed: ${getErrorMessage(opksshError)}`,
-            ),
-          );
-          return res.status(500).json({
-            error: "OPKSSH authentication failed",
+            createConnectionLog(level, "docker_auth", message),
+          ),
+      });
+      const config = prepared.config;
+
+      if (prepared.outcome.status !== "ready") {
+        const outcome = prepared.outcome;
+        connectionLogs.push(
+          createConnectionLog("error", "docker_auth", outcome.message),
+        );
+        if (outcome.status === "interaction-required") {
+          return res.status(401).json({
+            error: outcome.message,
+            requiresAuthInteraction: outcome.interaction,
+            ...(outcome.flag ? { [outcome.flag]: true } : {}),
             connectionLogs,
           });
         }
-      } else if (
-        resolvedCredentials.authType === "key" &&
-        resolvedCredentials.sshKey
-      ) {
-        try {
-          config.privateKey = preparePrivateKeyForSSH2(
-            resolvedCredentials.sshKey,
-            resolvedCredentials.keyPassword,
-          );
-          if (resolvedCredentials.keyPassword) {
-            config.passphrase = resolvedCredentials.keyPassword;
-          }
-        } catch (error) {
-          const message = getErrorMessage(error, "Invalid private key format");
-          sshLogger.error("SSH key processing error", error, {
-            operation: "docker_connect",
-            sessionId,
-            hostId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "docker_auth",
-              `SSH key processing error: ${message}`,
-            ),
-          );
-          return res.status(400).json({
-            error: `SSH key format error: ${message}`,
-            connectionLogs,
-          });
-        }
-      } else if (resolvedCredentials.authType === "key") {
-        sshLogger.error(
-          "SSH key authentication requested but no key provided",
-          {
-            operation: "docker_connect",
-            sessionId,
-            hostId,
-          },
-        );
-        connectionLogs.push(
-          createConnectionLog(
-            "error",
-            "docker_auth",
-            "SSH key authentication requested but no key provided",
-          ),
-        );
-        return res.status(400).json({
-          error: "SSH key authentication requested but no key provided",
-          connectionLogs,
-        });
-      } else if (resolvedCredentials.authType === "agent") {
-        const result = await applyAgentAuth(
-          config,
-          host.terminalConfig as unknown as Record<string, unknown> | undefined,
-        );
-        if ("error" in result) {
-          connectionLogs.push(
-            createConnectionLog("error", "docker_auth", result.error),
-          );
-          return res.status(400).json({ error: result.error, connectionLogs });
-        }
-        connectionLogs.push(
-          createConnectionLog(
-            "info",
-            "docker_auth",
-            "Using SSH agent authentication",
-          ),
-        );
+        return res.status(400).json({ error: outcome.message, connectionLogs });
       }
+
+      // Auth types with no stored secret answer a password prompt with
+      // "auth_required" so the panel can ask for credentials.
+      const credentialless = !ssh.requiresSecret(authType);
 
       let responseSent = false;
       connectionLogs.push(
         createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
       );
-
       connectionLogs.push(
         createConnectionLog(
           "info",
@@ -443,35 +303,9 @@ export function registerDockerSshRoutes(app: express.Express): void {
           `Connecting to ${host.ip}:${host.port || 22}`,
         ),
       );
-
       connectionLogs.push(
         createConnectionLog("info", "handshake", "Initiating SSH handshake"),
       );
-
-      if (resolvedCredentials.authType === "password") {
-        connectionLogs.push(
-          createConnectionLog("info", "auth", "Authenticating with password"),
-        );
-      } else if (resolvedCredentials.authType === "key") {
-        connectionLogs.push(
-          createConnectionLog("info", "auth", "Authenticating with SSH key"),
-        );
-      } else if (resolvedCredentials.authType === "agent") {
-        connectionLogs.push(
-          createConnectionLog("info", "auth", "Authenticating with SSH agent"),
-        );
-      } else if (
-        resolvedCredentials.authType === "none" ||
-        resolvedCredentials.authType === "tailscale"
-      ) {
-        connectionLogs.push(
-          createConnectionLog(
-            "info",
-            "auth",
-            "Attempting keyboard-interactive authentication",
-          ),
-        );
-      }
 
       client.on("ready", () => {
         if (responseSent) return;
@@ -630,8 +464,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
         }
 
         if (
-          (resolvedCredentials.authType === "none" ||
-            resolvedCredentials.authType === "tailscale") &&
+          credentialless &&
           (err.message.includes("authentication") ||
             err.message.includes(
               "All configured authentication methods failed",
@@ -662,388 +495,171 @@ export function registerDockerSshRoutes(app: express.Express): void {
         }
       });
 
+      const parkForAnswer = (
+        finish: (responses: string[]) => void,
+        prompts: Array<{ prompt: string; echo: boolean }>,
+        promptIndex: number,
+        isWarpgate = false,
+      ) => {
+        pendingTOTPSessions[sessionId] = {
+          client,
+          finish,
+          config,
+          createdAt: Date.now(),
+          sessionId,
+          hostId,
+          ip: host.ip,
+          port: host.port || 22,
+          username: host.username,
+          userId,
+          prompts,
+          totpPromptIndex: promptIndex,
+          resolvedPassword,
+          totpAttempts: 0,
+          containerRuntime,
+          ...(isWarpgate ? { isWarpgate: true } : {}),
+        };
+      };
+
       client.on(
         "keyboard-interactive",
         (
           name: string,
           instructions: string,
-          instructionsLang: string,
+          _instructionsLang: string,
           prompts: Array<{ prompt: string; echo: boolean }>,
           finish: (responses: string[]) => void,
         ) => {
-          const promptTexts = prompts.map((p) => p.prompt);
+          const decision = ssh.classifyKeyboardInteractive(
+            { name, instructions, prompts },
+            connectTarget,
+          );
+          const autoFinish = () =>
+            finish(ssh.autoResponses(prompts, resolvedPassword));
 
-          const warpgatePattern = /warpgate\s+authentication/i;
-          const isWarpgate =
-            warpgatePattern.test(name) ||
-            warpgatePattern.test(instructions) ||
-            promptTexts.some((p) => warpgatePattern.test(p));
-
-          if (isWarpgate) {
-            const fullText = `${name}\n${instructions}\n${promptTexts.join("\n")}`;
-            const urlMatch = fullText.match(/https?:\/\/[^\s\n]+/i);
-            const keyMatch = fullText.match(
-              /security key[:\s]+([a-z0-9](?:\s+[a-z0-9]){3}|[a-z0-9]{4})/i,
-            );
-
-            if (urlMatch) {
-              if (responseSent) return;
-              responseSent = true;
-
-              pendingTOTPSessions[sessionId] = {
-                client,
-                finish,
-                config,
-                createdAt: Date.now(),
-                sessionId,
-                hostId,
-                ip: host.ip,
-                port: host.port || 22,
-                username: host.username,
-                userId,
-                prompts,
-                totpPromptIndex: -1,
-                resolvedPassword: resolvedCredentials.password,
-                totpAttempts: 0,
-                isWarpgate: true,
-                containerRuntime,
-              };
-
-              connectionLogs.push(
-                createConnectionLog(
-                  "info",
-                  "docker_auth",
-                  "Warpgate authentication required",
-                ),
-              );
-
-              res.json({
-                requires_warpgate: true,
-                sessionId,
-                url: urlMatch[0],
-                securityKey: keyMatch ? keyMatch[1] : "N/A",
-                connectionLogs,
-              });
-              return;
-            }
+          if (decision.kind === "auto") {
+            finish(decision.responses);
+            return;
           }
 
-          const totpPromptIndex = prompts.findIndex((p) =>
-            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
-              p.prompt,
-            ),
-          );
-
-          if (totpPromptIndex !== -1) {
-            if (responseSent) {
-              const responses = prompts.map((p) => {
-                if (
-                  /password/i.test(p.prompt) &&
-                  resolvedCredentials.password
-                ) {
-                  return resolvedCredentials.password;
-                }
-                return "";
-              });
-              finish(responses);
-              return;
-            }
+          if (decision.kind === "warpgate") {
+            if (responseSent) return;
             responseSent = true;
-
-            if (pendingTOTPSessions[sessionId]) {
-              const responses = prompts.map((p) => {
-                if (
-                  /password/i.test(p.prompt) &&
-                  resolvedCredentials.password
-                ) {
-                  return resolvedCredentials.password;
-                }
-                return "";
-              });
-              finish(responses);
-              return;
-            }
-
-            pendingTOTPSessions[sessionId] = {
-              client,
-              finish,
-              config,
-              createdAt: Date.now(),
-              sessionId,
-              hostId,
-              ip: host.ip,
-              port: host.port || 22,
-              username: host.username,
-              userId,
-              prompts,
-              totpPromptIndex,
-              resolvedPassword: resolvedCredentials.password,
-              totpAttempts: 0,
-              containerRuntime,
-            };
-
+            parkForAnswer(finish, prompts, -1, true);
             connectionLogs.push(
               createConnectionLog(
                 "info",
                 "docker_auth",
-                "TOTP verification required",
+                "Warpgate authentication required",
               ),
             );
+            res.json({
+              requires_warpgate: true,
+              sessionId,
+              url: decision.url,
+              securityKey: decision.securityKey,
+              connectionLogs,
+            });
+            return;
+          }
 
+          const promptText = prompts[decision.promptIndex].prompt;
+          const isPasswordPrompt = /password/i.test(promptText);
+
+          if (
+            decision.kind === "input" &&
+            !decision.isPush &&
+            !isPasswordPrompt
+          ) {
+            autoFinish();
+            return;
+          }
+
+          if (decision.kind === "input" && isPasswordPrompt && credentialless) {
+            if (responseSent) return;
+            responseSent = true;
+            client.end();
+            res.json({ status: "auth_required", reason: "no_keyboard" });
+            return;
+          }
+
+          if (responseSent || pendingTOTPSessions[sessionId]) {
+            autoFinish();
+            return;
+          }
+          responseSent = true;
+          parkForAnswer(finish, prompts, decision.promptIndex);
+
+          if (decision.kind === "input" && isPasswordPrompt) {
             res.json({
               requires_totp: true,
               sessionId,
-              prompt: prompts[totpPromptIndex].prompt,
-              connectionLogs,
+              prompt: promptText,
+              isPassword: true,
             });
-          } else {
-            const passwordPromptIndex = prompts.findIndex((p) =>
-              /password/i.test(p.prompt),
-            );
-
-            if (resolvedCredentials.authType === "warpgate") {
-              finish(prompts.map(() => ""));
-              return;
-            }
-
-            if (
-              (resolvedCredentials.authType === "none" ||
-                resolvedCredentials.authType === "tailscale") &&
-              passwordPromptIndex !== -1
-            ) {
-              if (responseSent) return;
-              responseSent = true;
-              client.end();
-              res.json({
-                status: "auth_required",
-                reason: "no_keyboard",
-              });
-              return;
-            }
-
-            const hasStoredPassword =
-              resolvedCredentials.password &&
-              resolvedCredentials.authType !== "none";
-
-            if (!hasStoredPassword && passwordPromptIndex !== -1) {
-              if (responseSent) {
-                const responses = prompts.map((p) => {
-                  if (
-                    /password/i.test(p.prompt) &&
-                    resolvedCredentials.password
-                  ) {
-                    return resolvedCredentials.password;
-                  }
-                  return "";
-                });
-                finish(responses);
-                return;
-              }
-              responseSent = true;
-
-              if (pendingTOTPSessions[sessionId]) {
-                const responses = prompts.map((p) => {
-                  if (
-                    /password/i.test(p.prompt) &&
-                    resolvedCredentials.password
-                  ) {
-                    return resolvedCredentials.password;
-                  }
-                  return "";
-                });
-                finish(responses);
-                return;
-              }
-
-              pendingTOTPSessions[sessionId] = {
-                client,
-                finish,
-                config,
-                createdAt: Date.now(),
-                sessionId,
-                hostId,
-                ip: host.ip,
-                port: host.port || 22,
-                username: host.username,
-                userId,
-                prompts,
-                totpPromptIndex: passwordPromptIndex,
-                resolvedPassword: resolvedCredentials.password,
-                totpAttempts: 0,
-                containerRuntime,
-              };
-
-              res.json({
-                requires_totp: true,
-                sessionId,
-                prompt: prompts[passwordPromptIndex].prompt,
-                isPassword: true,
-              });
-              return;
-            }
-
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && resolvedCredentials.password) {
-                return resolvedCredentials.password;
-              }
-              return "";
-            });
-            finish(responses);
+            return;
           }
-        },
-      );
 
-      const proxyConfig: SOCKS5Config | null =
-        useSocks5 &&
-        (socks5Host ||
-          (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0))
-          ? {
-              useSocks5,
-              socks5Host,
-              socks5Port,
-              socks5Username,
-              socks5Password,
-              socks5ProxyChain: socks5ProxyChain as ProxyNode[],
-            }
-          : null;
-
-      const hasJumpHosts = host.jumpHosts && host.jumpHosts.length > 0;
-
-      if (hasJumpHosts) {
-        try {
-          if (proxyConfig) {
-            connectionLogs.push(
-              createConnectionLog(
-                "info",
-                "proxy",
-                "Connecting via proxy + jump hosts",
-              ),
-            );
-          }
           connectionLogs.push(
             createConnectionLog(
               "info",
-              "jump",
-              `Connecting via ${host.jumpHosts!.length} jump host(s)`,
+              "docker_auth",
+              "TOTP verification required",
             ),
           );
-          const jumpClient = await createJumpHostChain(
-            host.jumpHosts as Array<{ hostId: number }>,
-            userId,
-          );
-
-          if (!jumpClient) {
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                "jump",
-                "Failed to establish jump host chain",
-              ),
-            );
-            return res.status(500).json({
-              error: "Failed to establish jump host chain",
-              connectionLogs,
-            });
-          }
-
-          jumpClient.forwardOut(
-            "127.0.0.1",
-            0,
-            host.ip,
-            host.port || 22,
-            (err, stream) => {
-              if (err) {
-                sshLogger.error("Failed to forward through jump host", err, {
-                  operation: "docker_jump_forward",
-                  sessionId,
-                  hostId,
-                });
-                connectionLogs.push(
-                  createConnectionLog(
-                    "error",
-                    "jump",
-                    `Failed to forward through jump host: ${err.message}`,
-                  ),
-                );
-                jumpClient.end();
-                if (!responseSent) {
-                  responseSent = true;
-                  return res.status(500).json({
-                    error:
-                      "Failed to forward through jump host: " + err.message,
-                    connectionLogs,
-                  });
-                }
-                return;
-              }
-
-              config.sock = stream;
-              client.connect(config);
-            },
-          );
-        } catch (jumpError) {
-          sshLogger.error("Jump host connection failed", jumpError, {
-            operation: "docker_jump_connect",
+          res.json({
+            requires_totp: true,
             sessionId,
-            hostId,
+            prompt: promptText,
+            connectionLogs,
           });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "jump",
-              `Jump host connection failed: ${getErrorMessage(jumpError)}`,
-            ),
-          );
-          if (!responseSent) {
-            responseSent = true;
-            return res.status(500).json({
-              error:
-                "Jump host connection failed: " + getErrorMessage(jumpError),
-              connectionLogs,
-            });
-          }
-          return;
-        }
-      } else if (proxyConfig) {
+        },
+      );
+
+      if (host.jumpHosts && host.jumpHosts.length > 0) {
+        connectionLogs.push(
+          createConnectionLog(
+            "info",
+            "jump",
+            `Connecting via ${host.jumpHosts.length} jump host(s)`,
+          ),
+        );
+      } else if (useSocks5) {
         connectionLogs.push(
           createConnectionLog("info", "proxy", "Connecting via proxy"),
         );
-        try {
-          const proxySocket = await createSocks5Connection(
-            host.ip,
-            host.port || 22,
-            proxyConfig,
-          );
-          if (proxySocket) {
-            config.sock = proxySocket;
-          }
-          client.connect(config);
-        } catch (proxyError) {
-          sshLogger.error("Proxy connection failed", proxyError, {
-            operation: "docker_proxy_connect",
-            sessionId,
-            hostId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "proxy",
-              `Proxy connection failed: ${getErrorMessage(proxyError)}`,
-            ),
-          );
-          if (!responseSent) {
-            responseSent = true;
-            return res.status(500).json({
-              error: "Proxy connection failed: " + getErrorMessage(proxyError),
-              connectionLogs,
-            });
-          }
-          return;
-        }
-      } else {
-        await resolveSshConnectConfigHost(config);
-        client.connect(config);
       }
+
+      try {
+        const transport = await ssh.openTransport(connectTarget, config);
+        if (transport.jumpClient) {
+          const jumpClient = transport.jumpClient as SSHClient;
+          client.on("close", () => jumpClient.end());
+        }
+      } catch (transportError) {
+        sshLogger.error("Docker SSH transport failed", transportError, {
+          operation: "docker_transport",
+          sessionId,
+          hostId,
+        });
+        connectionLogs.push(
+          createConnectionLog(
+            "error",
+            host.jumpHosts && host.jumpHosts.length > 0 ? "jump" : "proxy",
+            getErrorMessage(transportError),
+          ),
+        );
+        if (!responseSent) {
+          responseSent = true;
+          return res.status(500).json({
+            error: getErrorMessage(transportError),
+            connectionLogs,
+          });
+        }
+        return;
+      }
+
+      client.connect(config);
     } catch (error) {
       sshLogger.error("Docker SSH connection error", error, {
         operation: "docker_connect",

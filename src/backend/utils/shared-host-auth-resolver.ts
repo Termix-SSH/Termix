@@ -12,6 +12,8 @@ import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../database/repositories/host-resolution-repository.js";
+import { getSshAuthProvider } from "../hosts/connect/auth-provider-registry.js";
+import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
 import {
   SharedHostSecretsManager,
   type SharedSecretData,
@@ -38,13 +40,9 @@ export function requiresPersonalHostAuthentication(
   // Owner auth for RDP/VNC/Telnet is snapshotted for every recipient, so only
   // SSH, which sits behind shareSshAuth, can leave a recipient without auth.
   if (protocol !== "ssh") return false;
-  return (
-    !!host.credentialId ||
-    host.authType === "password" ||
-    host.authType === "key" ||
-    host.authType === "credential" ||
-    host.authType === "agent"
-  );
+  if (host.credentialId) return true;
+  ensureCoreSshAuthProviders();
+  return !!getSshAuthProvider(host.authType ?? "none")?.requiresSecret;
 }
 
 /** Whether the owner's auth for this protocol is available to recipients. */

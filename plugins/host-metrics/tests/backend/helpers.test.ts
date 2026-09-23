@@ -1,5 +1,5 @@
 import type { Client } from "ssh2";
-import { describe, it, expect, vi } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
 import {
   supportsMetrics,
   isTcpPingEnabled,
@@ -7,8 +7,17 @@ import {
   tcpPingThroughJumpHost,
 } from "../../src/backend/helpers.js";
 import { createConnectionLog } from "../../../../src/backend/hosts/connection-log.js";
+import { createFakeContext } from "@termix/plugin-sdk/testing";
+import { setPluginSsh } from "../../src/backend/ssh.js";
 
 describe("supportsMetrics", () => {
+  beforeAll(() => {
+    setPluginSsh(createFakeContext().ctx.ssh);
+  });
+  afterAll(() => {
+    setPluginSsh(null);
+  });
+
   it("supports plain ssh hosts", () => {
     expect(
       supportsMetrics({ connectionType: "ssh", authType: "password" }),

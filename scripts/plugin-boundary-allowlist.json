@@ -139,7 +139,6 @@
     "plugins/docker/src/backend/session-manager.ts",
     "plugins/fleets/src/backend/routes.ts",
     "plugins/host-metrics/src/backend/automation-bridge.ts",
-    "plugins/host-metrics/src/backend/helpers.ts",
     "plugins/host-metrics/src/backend/history-routes.ts",
     "plugins/host-metrics/src/backend/managers/cron.ts",
     "plugins/host-metrics/src/backend/managers/firewall.ts",

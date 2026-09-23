@@ -218,6 +218,13 @@
       "when": 1790118360674,
       "tag": "0030_cynical_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790135163099,
+      "tag": "0031_nifty_sentry",
+      "breakpoints": true
     }
   ]
 }

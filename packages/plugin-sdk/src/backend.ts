@@ -6,11 +6,11 @@
  * description of the contract rather than an implementation a plugin could
  * reach around.
  *
- * Members marked A3-A8 are not built yet. A plugin written against them today
- * will type-check and fail at runtime, which is the intended signal.
+ * ctx.ssh is the part of step B's host surface that A8 needed early, so plugin
+ * transports could leave core's internals behind.
  */
 
-import type { PluginManifest } from "./manifest.js";
+import type { PluginManifest, PluginSettingsField } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
 
 /**
@@ -33,6 +33,23 @@ export class PluginCapabilityError extends Error {
     this.name = "PluginCapabilityError";
     this.pluginId = pluginId;
     this.capability = capability;
+  }
+}
+
+/**
+ * Thrown by a login method or second factor to refuse a sign-in with a
+ * message the user can see. `code` is a stable id the login screen can map to
+ * its own text; `status` is the HTTP status for form methods.
+ */
+export class LoginMethodError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(message: string, status = 401, code?: string) {
+    super(message);
+    this.name = "LoginMethodError";
+    this.status = status;
+    this.code = code;
   }
 }
 
@@ -349,6 +366,373 @@ export interface PluginSettings {
   readCore: (key: string) => Promise<string | null>;
 }
 
+/**
+ * A host as the SSH pipeline reads it: resolved by core, with secrets filled
+ * in for the acting user. Plugins get one from core and hand it back; they
+ * should not build one from scratch.
+ */
+export interface PluginSshHost {
+  id: number;
+  ip: string;
+  port: number;
+  username: string;
+  userId?: string | null;
+  authType?: string | null;
+  [key: string]: unknown;
+}
+
+/** Picks keepalive and timeout defaults. "plugin" is the generic one. */
+export type PluginSshPurpose =
+  | "plugin"
+  | "docker"
+  | "docker-console"
+  | "metrics"
+  | "proxmox"
+  | "fleet"
+  | "remote-desktop"
+  | "tunnel";
+
+export type PluginSshAuthOutcome =
+  | { status: "ready" }
+  | {
+      status: "interaction-required";
+      /** Transports send "<interaction>_auth_required", e.g. "opkssh". */
+      interaction: string;
+      message: string;
+      /** Extra boolean HTTP transports put in their 401 body. */
+      flag?: string;
+    }
+  | {
+      status: "error";
+      code:
+        | "missing-secret"
+        | "invalid-key"
+        | "passphrase-required"
+        | "provider-missing"
+        | "failed";
+      message: string;
+    }
+  | {
+      /** Try once more with these config changes. */
+      status: "retry";
+      patch: Record<string, unknown>;
+      message: string;
+    };
+
+export interface PluginKeyboardInteractivePrompt {
+  prompt: string;
+  echo?: boolean;
+}
+
+export type PluginKeyboardInteractiveDecision =
+  | { kind: "auto"; responses: string[] }
+  | {
+      kind: "warpgate";
+      url: string | null;
+      securityKey: string;
+      instructions: string;
+    }
+  | { kind: "totp"; promptIndex: number }
+  | { kind: "input"; promptIndex: number; isPush: boolean };
+
+export type PluginSshPromptRequest =
+  | { kind: "totp"; prompt: string; retry: boolean }
+  | { kind: "input"; prompt: string; echo: boolean; isPush: boolean }
+  | {
+      kind: "warpgate";
+      url: string | null;
+      securityKey: string;
+      instructions: string;
+    };
+
+/** Answers keyboard-interactive prompts. Resolve null to give up. */
+export interface PluginSshPromptChannel {
+  ask: (request: PluginSshPromptRequest) => Promise<string | null>;
+}
+
+export interface PluginSshConnectOptions {
+  purpose?: PluginSshPurpose;
+  /** Overall time to reach "ready". Defaults to 30s. */
+  timeoutMs?: number;
+  /** Without one, the stored password answers password prompts. */
+  prompt?: PluginSshPromptChannel;
+  /** Config fields to force, e.g. a longer readyTimeout. */
+  overrides?: Record<string, unknown>;
+}
+
+export interface PluginSshConnection<Client = unknown> {
+  /** An ssh2 Client, already "ready". */
+  client: Client;
+  jumpClient: Client | null;
+  /** Ends the connection and its jump chain. Also runs on deactivate. */
+  dispose: () => void;
+}
+
+/**
+ * SSH through core's one connect pipeline: host resolution, auth providers,
+ * jump hosts, proxies, host key checks, keepalive and port knocking.
+ *
+ * Every call needs ssh:connect and credentials:use, runs as the acting user
+ * (or the host's owner for background work on a resolved host) and writes an
+ * audit line per new connection. Connections still open on deactivate are
+ * closed.
+ */
+export interface PluginSsh {
+  connect: <Client = unknown>(
+    host: number | PluginSshHost,
+    options?: PluginSshConnectOptions,
+  ) => Promise<PluginSshConnection<Client>>;
+
+  /** Borrows a pooled connection. The pool key is `<pool>:<owner>:<address>`. */
+  withConnection: <T, Client = unknown>(
+    host: number | PluginSshHost,
+    options: PluginSshConnectOptions & { pool: string },
+    fn: (client: Client) => Promise<T>,
+  ) => Promise<T>;
+
+  /**
+   * A ready client at the end of a jump host chain, each hop resolved and
+   * authenticated through the pipeline. For forwarding to something that is
+   * not an SSH server (an RDP port behind a bastion).
+   */
+  jumpChain: <Client = unknown>(
+    jumpHosts: Array<{ hostId: number }>,
+    options?: {
+      /** Background work: resolve the hops as this host's owner. */
+      forHost?: PluginSshHost;
+    },
+  ) => Promise<PluginSshConnection<Client>>;
+
+  /** The pool key withConnection would use, for clearing it. */
+  poolKey: (pool: string, host: PluginSshHost) => string;
+
+  /**
+   * Lower level: fills an ssh2 config for a client the plugin drives itself,
+   * for transports with their own prompt flow. Never connects.
+   */
+  prepare: (
+    host: PluginSshHost,
+    options: {
+      purpose?: PluginSshPurpose;
+      client: unknown;
+      /** Server-side host id when it differs from host.id. */
+      serverHostId?: number;
+      log?: (level: "info" | "warning" | "error", message: string) => void;
+    },
+  ) => Promise<{
+    config: Record<string, unknown>;
+    outcome: PluginSshAuthOutcome;
+  }>;
+
+  /** Lower level: port knocking, jump hosts or proxy; sets config.sock. */
+  openTransport: (
+    host: PluginSshHost,
+    config: Record<string, unknown>,
+  ) => Promise<{ jumpClient: unknown | null; via: string }>;
+
+  /** What a keyboard-interactive round is. Pure; no capability needed. */
+  classifyKeyboardInteractive: (
+    round: {
+      name: string;
+      instructions: string;
+      prompts: PluginKeyboardInteractivePrompt[];
+    },
+    host: PluginSshHost,
+  ) => PluginKeyboardInteractiveDecision;
+
+  /** Stored password for password prompts, empty for the rest. */
+  autoResponses: (
+    prompts: PluginKeyboardInteractivePrompt[],
+    password: string | null | undefined,
+  ) => string[];
+
+  /** Whether an auth type carries a secret (drives "auth_required" flows). */
+  requiresSecret: (authType: string) => boolean;
+
+  /** Whether an auth type can connect unattended, for polling. */
+  supportsBackground: (authType: string) => boolean;
+}
+
+export interface PluginSshAuthEnv {
+  /** The ssh2 Client about to connect; certificate auth patches it. */
+  client: unknown;
+  userId: string;
+  hostId: number;
+  purpose: string;
+  interactive: boolean;
+  log: (level: "info" | "warning" | "error", message: string) => void;
+}
+
+/**
+ * An SSH auth type. Its `type` is what ssh_data.auth_type stores, and it must
+ * be listed in the manifest's contributes.auth.sshAuthTypes.
+ */
+export interface PluginSshAuthProvider {
+  type: string;
+  labelKey: string;
+  descriptionKey?: string;
+  /** Host and credential editor fields, in the settings field schema. */
+  fields?: PluginSettingsField[];
+  /** Also offered as a stored credential type. */
+  credentialType?: boolean;
+  /** Needs a browser sign-in or a person at the keyboard. */
+  needsUserInteraction?: boolean;
+  /** Carries a secret, so a shared host needs one resolved per recipient. */
+  requiresSecret?: boolean;
+  /** Can connect unattended. Defaults to true. */
+  supportsBackground?: boolean;
+  /** Interaction name its outcomes use, for startInteraction routing. */
+  interaction?: string;
+  connectOptions?: (
+    host: PluginSshHost,
+    purpose: string,
+  ) => Record<string, unknown>;
+  /** Fills the ssh2 config for this host. Never connects. */
+  prepare: (
+    config: Record<string, unknown>,
+    host: PluginSshHost,
+    env: PluginSshAuthEnv,
+  ) => Promise<PluginSshAuthOutcome>;
+  /** Claims keyboard-interactive rounds for hosts of this type. */
+  onKeyboardInteractive?: (
+    round: {
+      name: string;
+      instructions: string;
+      prompts: PluginKeyboardInteractivePrompt[];
+    },
+    host: PluginSshHost,
+  ) => PluginKeyboardInteractiveDecision | null;
+  /** Synchronous: decide on a retry before the socket closes. */
+  onAuthFailed?: (
+    host: PluginSshHost,
+    env: PluginSshAuthEnv,
+    context: {
+      error: Error;
+      retries: number;
+      canRetry: boolean;
+      methodNotAvailable: boolean;
+    },
+  ) => PluginSshAuthOutcome | undefined;
+  /** Starts the browser step behind an interaction-required outcome. */
+  startInteraction?: (request: {
+    userId: string;
+    hostId: number;
+    host: { name?: string | null; ip: string; username: string };
+    socket: unknown;
+    requestOrigin: string;
+    payload: Record<string, unknown>;
+  }) => Promise<void>;
+}
+
+/**
+ * Who a login method says the user is. Core finds or provisions the user,
+ * runs second factors and issues the session; a method never does.
+ */
+export type PluginVerifiedIdentity =
+  | {
+      kind: "user";
+      userId: string;
+      /** The method already proved a second factor (a verified passkey). */
+      mfaSatisfied?: boolean;
+      /** Password logins unlock the user's data key with it. */
+      password?: string;
+      /** Redirect methods: where the browser goes back to. */
+      returnTo?: string;
+      rememberMe?: boolean;
+    }
+  | {
+      kind: "external";
+      /** Stable provider id, e.g. an SSO provider row id. */
+      provider: string;
+      /** The provider's id for the user. At most 255 characters. */
+      subject: string;
+      email?: string | null;
+      name?: string | null;
+      groups?: string[];
+      /** Provider says the user is an admin (admin group, LDAP group). */
+      isAdmin?: boolean;
+      /** Allowed-users list to check before provisioning or signing in. */
+      allowedUsers?: string | null;
+      mfaSatisfied?: boolean;
+      /** Redirect methods: where the browser goes back to. */
+      returnTo?: string;
+      rememberMe?: boolean;
+    };
+
+/** Request shape a login method sees. Structural, like PluginRequestLike. */
+export interface PluginLoginRequest {
+  body: Record<string, unknown>;
+  query: Record<string, unknown>;
+  headers: Record<string, unknown>;
+  ip?: string;
+  [key: string]: unknown;
+}
+
+export interface PluginLoginInstance {
+  /** Passed back to start/verify as instanceId, e.g. an SSO provider id. */
+  id: string;
+  label: string;
+  enabled: boolean;
+}
+
+export interface PluginLoginMethod {
+  id: string;
+  labelKey: string;
+  icon?: string;
+  kind: "redirect" | "form";
+  /** Enabled instances, shown on the login screen. No secrets. */
+  describe?: () => Promise<PluginLoginInstance[]>;
+  /** Redirect methods: where to send the browser. */
+  start?: (
+    request: PluginLoginRequest,
+    instanceId: string | null,
+  ) => Promise<{ redirectUrl: string }>;
+  /** Redirect methods: the provider's callback. */
+  callback?: (request: PluginLoginRequest) => Promise<PluginVerifiedIdentity>;
+  /** Form methods: check what the user typed. */
+  verify?: (
+    request: PluginLoginRequest,
+    instanceId: string | null,
+  ) => Promise<PluginVerifiedIdentity>;
+}
+
+export interface PluginSecondFactor {
+  id: string;
+  labelKey: string;
+  isEnrolled: (userId: string) => Promise<boolean>;
+  /** Anything the client needs before the user answers. */
+  challenge?: (userId: string) => Promise<unknown>;
+  /**
+   * True when the answer is right. Return an object to refuse with a specific
+   * message, for example when the factor had to be reset.
+   */
+  verify: (
+    userId: string,
+    body: Record<string, unknown>,
+  ) => Promise<boolean | { ok: false; error: string; code?: string }>;
+  /** Removes the user's enrolment. Called by the admin reset. */
+  reset?: (userId: string) => Promise<void>;
+}
+
+/**
+ * Login methods, second factors and SSH auth types. Every register call needs
+ * auth:provide and a matching contributes.auth entry, and is undone on
+ * deactivate. Core owns sessions: a method returns an identity and core does
+ * the rest.
+ */
+export interface PluginAuth {
+  registerSshAuthProvider: (provider: PluginSshAuthProvider) => void;
+  registerLoginMethod: (method: PluginLoginMethod) => void;
+  registerSecondFactor: (factor: PluginSecondFactor) => void;
+  /**
+   * Marks a user as enrolled in one of this plugin's factors. Core keeps the
+   * row even when the plugin is gone, so it can refuse the login instead of
+   * skipping the factor.
+   */
+  recordEnrollment: (userId: string, factorId: string) => Promise<void>;
+  removeEnrollment: (userId: string, factorId: string) => Promise<void>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -365,6 +749,10 @@ export interface PluginContext {
   readonly rbac: PluginRbac;
   readonly settings: PluginSettings;
   readonly disposables: PluginDisposables;
+  /** SSH through core's connect pipeline. Needs ssh:connect and credentials:use. */
+  readonly ssh: PluginSsh;
+  /** Login methods, second factors and SSH auth types. Needs auth:provide. */
+  readonly auth: PluginAuth;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

@@ -365,18 +365,58 @@ export interface SshAuthEditorContribution {
   component?: ComponentType<SshAuthEditorProps>;
 }
 
-/** A7 declares these; A8 wires them into the login screen. */
+/** What the login screen hands a login method's UI. */
+export interface LoginMethodUIProps {
+  methodId: string;
+  /** Enabled instances from the server, e.g. one per SSO provider. */
+  instances: Array<{ id: string; label: string }>;
+  rememberMe: boolean;
+  disabled: boolean;
+  /** What the user typed in the username field, when there is one. */
+  username?: string;
+  /**
+   * Form methods: posts the body to the method's verify endpoint, then the
+   * login screen finishes the login or shows the second-factor step.
+   */
+  submit: (body: Record<string, unknown>, instanceId?: string) => Promise<void>;
+  /** Redirect methods: sends the browser (or the system browser) away. */
+  startRedirect: (instanceId?: string) => Promise<void>;
+  /** Hands a login response from a request the UI made itself. */
+  complete: (response: Record<string, unknown>) => Promise<void>;
+}
+
+/**
+ * A button or form on the login screen. `id` matches the login method the
+ * backend registered with ctx.auth.registerLoginMethod; the screen shows it
+ * only while the server reports that method as enabled.
+ */
 export interface LoginMethodContribution {
   id: string;
   titleKey: string;
   icon?: IconComponent;
-  component: ComponentType<Record<string, unknown>>;
+  component: ComponentType<LoginMethodUIProps>;
+}
+
+/** What the second-factor step hands a factor's UI. */
+export interface SecondFactorUIProps {
+  factorId: string;
+  rememberMe: boolean;
+  disabled: boolean;
+  /** Sends the user's answer; the login screen finishes or shows the error. */
+  verify: (body: Record<string, unknown>) => Promise<void>;
+  /** Whatever the backend factor's challenge() returns. */
+  challenge: () => Promise<unknown>;
+  cancel: () => void;
 }
 
 export interface SecondFactorContribution {
+  /** Matches the id the backend registered with ctx.auth.registerSecondFactor. */
   id: string;
   titleKey: string;
-  component: ComponentType<Record<string, unknown>>;
+  /** The challenge shown after the first login step. */
+  component: ComponentType<SecondFactorUIProps>;
+  /** Enrolment, shown in Settings > Security. */
+  enrollment?: ComponentType<Record<string, unknown>>;
 }
 
 /** The subset of axios a plugin uses, rooted at /plugin-api/<id>/. */
@@ -516,6 +556,18 @@ export interface SettingsState {
   save: (values: Record<string, unknown>) => Promise<void>;
 }
 
+/** An SSH auth type the server can connect with. */
+export interface SshAuthTypeInfo {
+  type: string;
+  /** Core translation key, or the plugin editor's title. */
+  labelKey: string;
+  pluginId: string;
+  /** Also offered as a stored credential type. */
+  credentialType: boolean;
+  /** Can connect unattended, for polling. */
+  supportsBackground: boolean;
+}
+
 /**
  * What core implements behind the hooks. Internal: a plugin never calls this.
  */
@@ -539,6 +591,7 @@ export interface PluginHostBridge {
   getApi: (pluginId: string) => PluginApiClient;
   useTabs: () => TabsApi;
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
+  useSshAuthTypes: () => { types: SshAuthTypeInfo[]; loaded: boolean };
 }
 
 let host: PluginHostBridge | null = null;
@@ -628,6 +681,17 @@ export function usePluginApi(): PluginApiClient {
 
 export function useTabs(): TabsApi {
   return requireHost().useTabs();
+}
+
+/**
+ * The SSH auth types this server can connect with, core's and every enabled
+ * plugin's, for pickers such as a default auth type.
+ */
+export function useSshAuthTypes(): {
+  types: SshAuthTypeInfo[];
+  loaded: boolean;
+} {
+  return requireHost().useSshAuthTypes();
 }
 
 /**

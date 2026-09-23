@@ -1674,13 +1674,21 @@ ipcMain.handle(
           const success = url.searchParams.get("success");
           const error = url.searchParams.get("error");
           const token = url.searchParams.get("token");
+          const secondFactor = url.searchParams.get("second_factor") === "1";
 
           res.writeHead(200, { "Content-Type": "text/html" });
           res.end(
-            `<html><body><h2>${success === "true" ? "Authentication successful!" : "Authentication failed."}</h2><p>You can close this tab and return to Termix.</p><script>window.close()</script></body></html>`,
+            `<html><body><h2>${success === "true" || secondFactor ? "Authentication successful!" : "Authentication failed."}</h2><p>You can close this tab and return to Termix.</p><script>window.close()</script></body></html>`,
           );
 
-          if (success === "true") {
+          if (secondFactor) {
+            finish({
+              success: false,
+              secondFactor: true,
+              tempToken: url.searchParams.get("temp_token"),
+              factors: url.searchParams.get("second_factors"),
+            });
+          } else if (success === "true") {
             finish({ success: true, token });
           } else {
             finish({

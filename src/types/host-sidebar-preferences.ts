@@ -34,9 +34,8 @@ export type HostTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
 
 export interface HostSidebarFilterState {
   status: ("online" | "offline" | "pinned")[];
-  authType: (
-    "password" | "key" | "credential" | "none" | "opkssh" | "stepca"
-  )[];
+  /** SSH auth type ids; plugins add their own. */
+  authType: string[];
   protocol: ("ssh" | "rdp" | "vnc" | "telnet")[];
   features: ("terminal" | "fileManager" | "tunnel" | "docker")[];
   tags: string[];
@@ -94,14 +93,8 @@ const FILTER_STATUS: HostSidebarFilterState["status"] = [
   "offline",
   "pinned",
 ];
-const FILTER_AUTH_TYPE: HostSidebarFilterState["authType"] = [
-  "password",
-  "key",
-  "credential",
-  "none",
-  "opkssh",
-  "stepca",
-];
+/** Same shape as a manifest's contributes.auth.sshAuthTypes entries. */
+const AUTH_TYPE_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 const FILTER_PROTOCOL: HostSidebarFilterState["protocol"] = [
   "ssh",
   "rdp",
@@ -178,7 +171,9 @@ export function sanitizeHostSidebarPreferences(
   const filtersObj = (obj.filters ?? {}) as Record<string, unknown>;
   const filters: HostSidebarFilterState = {
     status: sanitizeEnumArray(filtersObj.status, FILTER_STATUS),
-    authType: sanitizeEnumArray(filtersObj.authType, FILTER_AUTH_TYPE),
+    authType: sanitizeStringArray(filtersObj.authType).filter((value) =>
+      AUTH_TYPE_PATTERN.test(value),
+    ),
     protocol: sanitizeEnumArray(filtersObj.protocol, FILTER_PROTOCOL),
     features: sanitizeEnumArray(filtersObj.features, FILTER_FEATURES),
     tags: sanitizeStringArray(filtersObj.tags),

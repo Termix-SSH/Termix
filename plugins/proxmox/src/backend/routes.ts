@@ -1,6 +1,6 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
 import express, { type Router } from "express";
-import { Client as SSHClient } from "ssh2";
+import type { Client as SSHClient } from "ssh2";
 import { logger } from "../../../../src/backend/utils/logger.js";
 import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
 import { createCurrentHostRepository } from "../../../../src/backend/database/repositories/factory.js";
@@ -9,9 +9,9 @@ import {
   type AuthenticatedRequest,
   type SSHHost,
 } from "../../../../src/types/index.js";
-import { SSHHostKeyVerifier } from "../../../../src/backend/hosts/host-key-verifier.js";
 import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
-import { createJumpHostChain } from "../../../../src/backend/hosts/jump-host-chain.js";
+import type { PluginSshHost } from "@termix/plugin-sdk/backend";
+import { connectSsh } from "./ssh.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
 import {
   parseProxmoxJumpHosts,
@@ -309,109 +309,15 @@ async function discoverProxmoxGuestsForHost(
   const proxmoxCfgRaw = parseJsonObject(host.proxmoxConfig);
   const config = parseProxmoxConfig(proxmoxCfgRaw);
 
-  const resolvedCredentials: {
-    password?: string;
-    sshKey?: string;
-    keyPassword?: string;
-    authType?: string;
-  } = {
-    password: host.password,
-    sshKey: host.key,
-    keyPassword: host.keyPassword,
-    authType: host.authType,
-  };
-
   const hostCredentialId = host.credentialId ?? null;
 
-  const sshConfig: Record<string, unknown> = {
-    host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
-    port: host.port || 22,
-    username: host.username,
-    tryKeyboard: false,
-    readyTimeout: 30000,
-    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-      parsedHostId,
-      host.ip,
-      host.port || 22,
-      null,
-      userId,
-      false,
-    ),
-  };
+  const { client } = await connectSsh(host as unknown as PluginSshHost, {
+    purpose: "proxmox",
+    timeoutMs: 35000,
+    overrides: { tryKeyboard: false, readyTimeout: 30000 },
+  });
 
-  const authType = resolvedCredentials.authType;
-  if (authType === "key" && resolvedCredentials.sshKey) {
-    sshConfig.privateKey = resolvedCredentials.sshKey;
-    if (resolvedCredentials.keyPassword)
-      sshConfig.passphrase = resolvedCredentials.keyPassword;
-  } else if (authType === "agent") {
-    const { applyAgentAuth } =
-      await import("../../../../src/backend/hosts/terminal-auth-helpers.js");
-    const result = await applyAgentAuth(
-      sshConfig,
-      host.terminalConfig as unknown as Record<string, unknown> | undefined,
-    );
-    if ("error" in result) {
-      const error = new Error(result.error);
-      (error as Error & { status?: number }).status = 400;
-      throw error;
-    }
-  } else if (resolvedCredentials.password) {
-    sshConfig.password = resolvedCredentials.password;
-  }
-
-  const client = new SSHClient();
   try {
-    await new Promise<void>((resolve, reject) => {
-      client.on("ready", resolve);
-      client.on("error", reject);
-
-      // Reuse the shared jump-host chain (same path terminal/metrics use)
-      // so Proxmox hosts that are only reachable via a jump host work too
-      // (otherwise the direct connect fails with EHOSTUNREACH). jumpHosts is
-      // stored as a JSON string on the decrypted record, so parse it first.
-      let parsedJumpHosts: Array<{ hostId: number }> = [];
-      try {
-        const rawJumpHosts = (host as { jumpHosts?: unknown }).jumpHosts;
-        const parsed =
-          typeof rawJumpHosts === "string"
-            ? JSON.parse(rawJumpHosts)
-            : rawJumpHosts;
-        if (Array.isArray(parsed)) parsedJumpHosts = parsed;
-      } catch {
-        parsedJumpHosts = [];
-      }
-
-      if (parsedJumpHosts.length > 0) {
-        createJumpHostChain(parsedJumpHosts, userId)
-          .then((jumpClient) => {
-            if (!jumpClient) {
-              reject(new Error("Jump host chain could not be established"));
-              return;
-            }
-            jumpClient.forwardOut(
-              "127.0.0.1",
-              0,
-              sshConfig.host as string,
-              sshConfig.port as number,
-              (err, stream) => {
-                if (err || !stream) {
-                  reject(err || new Error("Jump host forward failed"));
-                  return;
-                }
-                sshConfig.sock = stream;
-                delete sshConfig.host;
-                delete sshConfig.port;
-                client.connect(sshConfig as import("ssh2").ConnectConfig);
-              },
-            );
-          })
-          .catch(reject);
-      } else {
-        client.connect(sshConfig as import("ssh2").ConnectConfig);
-      }
-    });
-
     proxmoxLogger.info("Proxmox discovery SSH connection established", {
       operation: "proxmox_discover",
       hostId: parsedHostId,

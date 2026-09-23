@@ -1850,7 +1850,11 @@ export async function getRegistrationAllowed(): Promise<{ allowed: boolean }> {
   }
 }
 
-export async function getPasswordLoginAllowed(): Promise<{ allowed: boolean }> {
+export async function getPasswordLoginAllowed(): Promise<{
+  allowed: boolean;
+  /** Turned off by an admin but kept on because nothing else can sign in. */
+  forced?: boolean;
+}> {
   try {
     const response = await authApi.get("/users/password-login-allowed");
     return response.data;

@@ -9,6 +9,7 @@ import userRoutes from "./routes/users.js";
 import hostRoutes from "./routes/host.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
+import sshAuthRoutes from "./routes/ssh-auth-routes.js";
 import snippetsRoutes from "./routes/snippets.js";
 import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
 import terminalRoutes from "./routes/terminal.js";
@@ -27,7 +28,7 @@ import vaultRoutes from "./routes/vault.js";
 import secretSourceRoutes from "./routes/secret-sources.js";
 import notificationChannelsRoutes from "./routes/notification-channels-routes.js";
 import syncRoutes from "./routes/sync.js";
-import pluginApiRoutes from "./routes/plugin-api-routes.js";
+import { mountPluginApi } from "./routes/plugin-api-routes.js";
 import { attachPluginWebSockets } from "../plugins/ws.js";
 import pluginRoutes from "./routes/plugins.js";
 import { createPluginAssetsRouter } from "../plugins/assets.js";
@@ -1762,6 +1763,7 @@ app.use("/users", userRoutes);
 app.use("/host", hostRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
+app.use("/ssh-auth", sshAuthRoutes);
 app.use("/snippets", snippetsRoutes);
 app.use("/c2s-tunnel-presets", c2sTunnelPresetRoutes);
 app.use("/terminal", terminalRoutes);
@@ -1785,7 +1787,7 @@ app.use(
   "/plugin-assets",
   createPluginAssetsRouter((id) => getPluginRuntime().loader.get(id)),
 );
-app.use("/plugin-api", authenticateJWT, pluginApiRoutes);
+mountPluginApi(app);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),

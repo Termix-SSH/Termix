@@ -157,6 +157,7 @@ export function AdminSettingsPanel({
   const [manageUser, setManageUser] = useState<AdminUser | null>(null);
   const [allowRegistration, setAllowRegistration] = useState(true);
   const [allowPasswordLogin, setAllowPasswordLogin] = useState(true);
+  const [passwordLoginForced, setPasswordLoginForced] = useState(false);
   const [allowPasswordReset, setAllowPasswordReset] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("24");
   const [terminalTimeout, setTerminalTimeout] = useState("30");
@@ -425,8 +426,13 @@ export function AdminSettingsPanel({
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
-      if (pwLogin.status === "fulfilled")
-        setAllowPasswordLogin(pwLogin.value.allowed);
+      if (pwLogin.status === "fulfilled") {
+        // When forced on, the setting itself is off; show that and warn.
+        setPasswordLoginForced(!!pwLogin.value.forced);
+        setAllowPasswordLogin(
+          pwLogin.value.forced ? false : pwLogin.value.allowed,
+        );
+      }
       if (oidcProv.status === "fulfilled")
         setOidcAutoProvision(oidcProv.value.enabled);
       if (oidcSilent.status === "fulfilled") {
@@ -1223,6 +1229,7 @@ export function AdminSettingsPanel({
         allowRegistration={allowRegistration}
         handleToggleRegistration={handleToggleRegistration}
         allowPasswordLogin={allowPasswordLogin}
+        passwordLoginForced={passwordLoginForced && !allowPasswordLogin}
         handleTogglePasswordLogin={handleTogglePasswordLogin}
         oidcAutoProvision={oidcAutoProvision}
         handleToggleOidcAutoProvision={handleToggleOidcAutoProvision}

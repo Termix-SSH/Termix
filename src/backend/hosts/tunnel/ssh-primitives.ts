@@ -2,6 +2,9 @@ import { Client, type ClientChannel } from "ssh2";
 import type { Duplex } from "stream";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { tunnelLogger } from "../../utils/logger.js";
+import { getSshAuthProvider } from "../connect/auth-provider-registry.js";
+import { ensureCoreSshAuthProviders } from "../connect/core-providers.js";
+import type { MutableConnectConfig, SshAuthOutcome } from "../connect/types.js";
 
 export function getManagedTunnelAlgorithms() {
   return {
@@ -40,40 +43,90 @@ export function getManagedTunnelAlgorithms() {
   };
 }
 
-export function applyAuthOptions(
+export interface TunnelCredentials {
+  password?: string;
+  sshKey?: string;
+  keyPassword?: string;
+  keyType?: string;
+  authMethod?: string;
+  certPublicKey?: string | null;
+  terminalConfig?: Record<string, unknown> | null;
+  vaultProfile?: { id?: number | null } | null;
+}
+
+/**
+ * Puts a tunnel side's auth into its connect options through the same
+ * providers every other transport uses, so tunnels accept every auth type.
+ */
+export async function applyTunnelAuth(
   connOptions: Record<string, unknown>,
-  credentials: {
-    password?: string;
-    sshKey?: string;
-    keyPassword?: string;
-    keyType?: string;
-    authMethod?: string;
+  credentials: TunnelCredentials,
+  env: {
+    client: Client;
+    userId?: string | null;
+    hostId?: number | null;
+    username: string;
+    ip: string;
+    port: number;
   },
-): void {
-  if (credentials.authMethod === "key" && credentials.sshKey) {
-    const cleanKey = credentials.sshKey
-      .trim()
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n");
-    connOptions.privateKey = Buffer.from(cleanKey, "utf8");
-    if (credentials.keyPassword) {
-      connOptions.passphrase = credentials.keyPassword;
-    }
-    if (credentials.keyType && credentials.keyType !== "auto") {
-      connOptions.privateKeyType = credentials.keyType;
-    }
-  } else {
-    connOptions.password = credentials.password;
+): Promise<SshAuthOutcome> {
+  ensureCoreSshAuthProviders();
+  const authType =
+    credentials.authMethod || (credentials.sshKey ? "key" : "password");
+  const provider = getSshAuthProvider(authType);
+  if (!provider) {
+    return {
+      status: "error",
+      code: "provider-missing",
+      message: `Unsupported authentication type '${authType}' for tunnels`,
+    };
   }
+
+  const outcome = await provider.prepare(
+    connOptions as MutableConnectConfig,
+    {
+      id: env.hostId ?? 0,
+      ip: env.ip,
+      port: env.port,
+      username: env.username,
+      userId: env.userId,
+      authType,
+      password: credentials.password,
+      key: credentials.sshKey,
+      keyPassword: credentials.keyPassword,
+      keyType: credentials.keyType,
+      certPublicKey: credentials.certPublicKey,
+      terminalConfig: credentials.terminalConfig ?? null,
+      vaultProfile: credentials.vaultProfile ?? null,
+    },
+    {
+      client: env.client,
+      userId: env.userId ?? "",
+      hostId: env.hostId ?? 0,
+      purpose: "tunnel",
+      interactive: false,
+      log: () => {},
+    },
+  );
+
+  if (
+    outcome.status === "ready" &&
+    connOptions.privateKey &&
+    credentials.keyType &&
+    credentials.keyType !== "auto"
+  ) {
+    connOptions.privateKeyType = credentials.keyType;
+  }
+  return outcome;
 }
 
 export function connectClient(
   connOptions: Record<string, unknown>,
   tunnelName: string,
   role: "source" | "endpoint",
+  client: Client = new Client(),
 ): Promise<Client> {
   return new Promise((resolve, reject) => {
-    const client = new Client();
     let settled = false;
     client.once("ready", () => {
       settled = true;

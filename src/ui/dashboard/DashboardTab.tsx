@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
@@ -1380,6 +1381,9 @@ export function DashboardTab({
     Map<string, { cpu: number | null; ram: number | null; disk: number | null }>
   >(new Map());
   const viewerSessionsRef = useRef<Map<number, string>>(new Map());
+  const sshAuthProviders = useSshAuthProviders();
+  const sshAuthProvidersRef = useRef(sshAuthProviders);
+  sshAuthProvidersRef.current = sshAuthProviders;
   const statusCheckHosts = hosts.filter(isStatusCheckEnabled);
 
   const fetchMetrics = useCallback(async (hostList: Host[]) => {
@@ -1399,12 +1403,9 @@ export function DashboardTab({
         const hostId = Number(host.id);
         const knownStatus = statuses?.[hostId]?.status;
         if (knownStatus === "offline") return null;
-        if (
-          host.authType === "none" ||
-          host.authType === "opkssh" ||
-          host.authType === "stepca"
-        )
-          return null;
+        // Types that need a person or a browser sign-in cannot be polled.
+        const authOption = sshAuthProvidersRef.current.find(host.authType);
+        if (authOption && !authOption.supportsBackground) return null;
 
         try {
           const existing = newSessions.get(hostId);

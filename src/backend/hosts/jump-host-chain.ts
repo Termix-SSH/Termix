@@ -1,12 +1,11 @@
 import { Client as SSHClient } from "ssh2";
 import { fileLogger } from "../utils/logger.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
-import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
-import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { getErrorMessage } from "../utils/error-message.js";
-import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
-import { applyAgentAuth } from "./terminal-auth-helpers.js";
+import { buildConnectConfig } from "./connect/build-connect-config.js";
+import { createAutoKeyboardInteractiveHandler } from "./connect/keyboard-interactive.js";
+import type { SshConnectHost } from "./connect/types.js";
 import { resolveHostById } from "./host-resolver.js";
 
 type JumpHostConfig = {
@@ -114,15 +113,6 @@ export async function createJumpHostChain(
       const jumpClient = new SSHClient();
       clients.push(jumpClient);
 
-      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
-        jumpHostConfig.id,
-        jumpHostConfig.ip,
-        jumpHostConfig.port || 22,
-        null,
-        userId,
-        true,
-      );
-
       let lastError: Error | null = null;
 
       // eslint-disable-next-line no-async-promise-executor
@@ -167,100 +157,28 @@ export async function createJumpHostChain(
           resolve(false);
         });
 
-        const connectConfig: Record<string, unknown> = {
-          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
-          port: jumpHostConfig.port || 22,
-          username: jumpHostConfig.username,
-          tryKeyboard: jumpHostConfig.authType !== "none",
-          readyTimeout: readyTimeoutMs,
-          hostVerifier: jumpHostVerifier,
-          algorithms: {
-            kex: [
-              "curve25519-sha256",
-              "curve25519-sha256@libssh.org",
-              "ecdh-sha2-nistp521",
-              "ecdh-sha2-nistp384",
-              "ecdh-sha2-nistp256",
-              "diffie-hellman-group-exchange-sha256",
-              "diffie-hellman-group18-sha512",
-              "diffie-hellman-group17-sha512",
-              "diffie-hellman-group16-sha512",
-              "diffie-hellman-group15-sha512",
-              "diffie-hellman-group14-sha256",
-              "diffie-hellman-group14-sha1",
-              "diffie-hellman-group-exchange-sha1",
-              "diffie-hellman-group1-sha1",
-            ],
-            serverHostKey: [
-              "ssh-ed25519",
-              "ecdsa-sha2-nistp521",
-              "ecdsa-sha2-nistp384",
-              "ecdsa-sha2-nistp256",
-              "rsa-sha2-512",
-              "rsa-sha2-256",
-              "ssh-rsa",
-              "ssh-dss",
-            ],
-            cipher: SSH_ALGORITHMS.cipher,
-            hmac: [
-              "hmac-sha2-512-etm@openssh.com",
-              "hmac-sha2-256-etm@openssh.com",
-              "hmac-sha2-512",
-              "hmac-sha2-256",
-              "hmac-sha1",
-              "hmac-md5",
-            ],
-            compress: ["none", "zlib@openssh.com", "zlib"],
-          },
-        };
-
-        if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
-          connectConfig.password = jumpHostConfig.password;
-        } else if (jumpHostConfig.authType === "key" && jumpHostConfig.key) {
-          try {
-            connectConfig.privateKey = preparePrivateKeyForSSH2(
-              jumpHostConfig.key,
-              jumpHostConfig.keyPassword,
-            );
-          } catch (keyError) {
-            clearTimeout(timeout);
-            lastError = new Error(
-              `Jump host ${i + 1}/${totalHops} key error: ${getErrorMessage(keyError, "Invalid private key format")}`,
-            );
-            resolve(false);
-            return;
-          }
-          if (jumpHostConfig.keyPassword) {
-            connectConfig.passphrase = jumpHostConfig.keyPassword;
-          }
-        } else if (jumpHostConfig.authType === "agent") {
-          const result = await applyAgentAuth(
-            connectConfig,
-            jumpHostConfig.terminalConfig as
-              Record<string, unknown> | undefined,
+        // Each hop goes through the same pipeline as the target, so hops get
+        // every auth type, not just password, key and agent.
+        const built = await buildConnectConfig(
+          jumpHostConfig as unknown as SshConnectHost,
+          { userId, purpose: "jump-host", client: jumpClient },
+        );
+        if (built.outcome.status !== "ready") {
+          clearTimeout(timeout);
+          lastError = new Error(
+            `Jump host ${i + 1}/${totalHops}: ${built.outcome.message}`,
           );
-          if ("error" in result) {
-            throw new Error(result.error);
-          }
+          resolve(false);
+          return;
         }
+        const connectConfig = built.config;
+        connectConfig.readyTimeout = readyTimeoutMs;
 
         jumpClient.on(
           "keyboard-interactive",
-          (
-            _name: string,
-            _instructions: string,
-            _lang: string,
-            prompts: Array<{ prompt: string; echo: boolean }>,
-            finish: (responses: string[]) => void,
-          ) => {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && jumpHostConfig.password) {
-                return jumpHostConfig.password as string;
-              }
-              return "";
-            });
-            finish(responses);
-          },
+          createAutoKeyboardInteractiveHandler(
+            jumpHostConfig as unknown as SshConnectHost,
+          ),
         );
 
         if (currentClient) {

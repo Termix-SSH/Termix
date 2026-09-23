@@ -1,14 +1,19 @@
 import type { ComponentType } from "react";
+import type {
+  LoginMethodUIProps,
+  SecondFactorUIProps,
+} from "@termix/plugin-sdk/frontend";
 import { createRegistry } from "@/lib/registry";
 
 /**
  * Auth UI plugins contribute.
  *
- * SSH auth editors are live: the host editor lists registered auth types next
- * to the core ones (password, key, credential, agent, none) and renders the
- * plugin's editor when one is picked. Login methods and second factors are
- * declared here so the app object is complete; A8 wires them into the login
- * screen.
+ * SSH auth editors render in the host and credential editors when their auth
+ * type is picked. Login methods render on the login screen for methods the
+ * server reports as enabled; second factors render in the step after a first
+ * login and, when they bring one, in Settings > Security for enrolment.
+ * Core's own (OIDC, LDAP, passkeys, TOTP) register from
+ * src/ui/auth/legacy-auth-ui.tsx until they move into plugins.
  */
 export interface SshAuthEditorDef {
   /** The authType value stored on the host. */
@@ -28,14 +33,15 @@ export interface LoginMethodDef {
   pluginId?: string;
   titleKey: string;
   icon?: ComponentType<{ className?: string }>;
-  component: ComponentType<Record<string, unknown>>;
+  component: ComponentType<LoginMethodUIProps>;
 }
 
 export interface SecondFactorDef {
   id: string;
   pluginId?: string;
   titleKey: string;
-  component: ComponentType<Record<string, unknown>>;
+  component: ComponentType<SecondFactorUIProps>;
+  enrollment?: ComponentType<Record<string, unknown>>;
 }
 
 const sshAuthEditors = createRegistry<SshAuthEditorDef>();
@@ -47,9 +53,11 @@ export const getSshAuthEditor = sshAuthEditors.get;
 export const useSshAuthEditors = sshAuthEditors.useList;
 
 export const registerLoginMethod = loginMethods.register;
+export const getLoginMethodUI = loginMethods.get;
 export const useLoginMethods = loginMethods.useList;
 
 export const registerSecondFactor = secondFactors.register;
+export const getSecondFactorUI = secondFactors.get;
 export const useSecondFactors = secondFactors.useList;
 
 export function resetAuthRegistries(): void {

@@ -120,6 +120,60 @@ export const trustedDevices = mysqlTable(
   (table) => [index("idx_trusted_devices_user_id").on(table.userId)],
 );
 
+/**
+ * A sign-in identity from an external provider (OIDC, LDAP, GitHub, ...).
+ * Replaces identifier strings like "ldap:<provider>:<id>" on users.
+ */
+export const userExternalIdentities = mysqlTable(
+  "user_external_identities",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    providerId: varchar("provider_id", { length: 255 }).notNull(),
+    /** The provider's id for the user, at most 255 characters. */
+    subject: varchar("subject", { length: 255 }).notNull(),
+    email: text("email"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_user_external_identities_provider_subject").on(
+      table.providerId,
+      table.subject,
+    ),
+    index("idx_user_external_identities_user").on(table.userId),
+  ],
+);
+
+/**
+ * Which second factors a user enrolled in, by plugin. Kept when the plugin is
+ * disabled or removed, so login fails closed instead of skipping the factor.
+ */
+export const userSecondFactors = mysqlTable(
+  "user_second_factors",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pluginId: varchar("plugin_id", { length: 255 }).notNull(),
+    factorId: varchar("factor_id", { length: 255 }).notNull(),
+    enrolledAt: text("enrolled_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_user_second_factors_user_factor").on(
+      table.userId,
+      table.pluginId,
+      table.factorId,
+    ),
+  ],
+);
+
 export const webauthnCredentials = mysqlTable("webauthn_credentials", {
   id: varchar("id", { length: 255 }).primaryKey(),
   userId: varchar("user_id", { length: 255 })

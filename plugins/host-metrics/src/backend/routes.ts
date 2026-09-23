@@ -1,13 +1,7 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
-import { usesIssuedCertificate } from "../../../../src/backend/hosts/issued-certificate-auth.js";
 import express, { type Router } from "express";
 import net from "net";
 import { Client, type ConnectConfig } from "ssh2";
-import { SSH_ALGORITHMS } from "../../../../src/backend/utils/ssh-algorithms.js";
-import {
-  pickResolvedPassword,
-  pickResolvedUsername,
-} from "../../../../src/backend/hosts/credential-username.js";
 import {
   getCurrentSettingValue,
   createCurrentHostMetricsHistoryRepository,
@@ -47,16 +41,7 @@ import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
 import { collectTemperatureMetrics } from "./widgets/temperature-collector.js";
 import { collectGpuMetrics, type GpuMetrics } from "./widgets/gpu-collector.js";
-import {
-  createSocks5Connection,
-  type SOCKS5Config,
-} from "../../../../src/backend/utils/socks5-helper.js";
-import { preparePrivateKeyForSSH2 } from "../../../../src/backend/utils/ssh-key-utils.js";
-import { SSHHostKeyVerifier } from "../../../../src/backend/hosts/host-key-verifier.js";
-import {
-  connectionPool,
-  withConnection,
-} from "../../../../src/backend/hosts/ssh-connection-pool.js";
+import { connectionPool } from "../../../../src/backend/hosts/ssh-connection-pool.js";
 import { registerHostMetricsSettingsRoutes } from "./settings-routes.js";
 import { registerHostMetricsViewerRoutes } from "./viewer-routes.js";
 import { registerHostMetricsPreferencesRoutes } from "./preferences-routes.js";
@@ -75,10 +60,10 @@ import {
 } from "./automation-bridge.js";
 import { notifyAutomationInternalEvent } from "../../../../src/backend/hosts/automation-events.js";
 import { registerManagerRoutes } from "./managers/index.js";
-import { resolveSshConnectConfigHost } from "../../../../src/backend/hosts/ssh-dns.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
-import { createJumpHostChain } from "../../../../src/backend/hosts/jump-host-chain.js";
+import type { PluginSshHost } from "@termix/plugin-sdk/backend";
+import { pluginSsh, withSshConnection as withPooledSsh } from "./ssh.js";
 import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
 import {
   isTcpPingEnabled,
@@ -617,10 +602,15 @@ class PollingManager {
 
       let isOnline: boolean;
       if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
-        const jumpClient = await createJumpHostChain(
-          refreshedHost.jumpHosts,
-          userId,
-        );
+        let jumpClient: Client | null = null;
+        try {
+          ({ client: jumpClient } = await pluginSsh().jumpChain<Client>(
+            refreshedHost.jumpHosts,
+            { forHost: refreshedHost as unknown as PluginSshHost },
+          ));
+        } catch {
+          jumpClient = null;
+        }
         isOnline = jumpClient
           ? await tcpPingThroughJumpHost(
               jumpClient,
@@ -1139,176 +1129,38 @@ async function fetchHostById(
   }
 }
 
+/**
+ * Resolves through core's host resolver, so shared-host overrides and
+ * external secret references apply here exactly as in the terminal.
+ */
 async function resolveHostCredentials(
   host: Record<string, unknown>,
   userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    const baseHost: Record<string, unknown> = {
-      id: host.id,
-      name: host.name,
-      ip: host.ip,
-      port: host.port,
-      username: host.username,
-      folder: host.folder || "",
+    const resolved = (await resolveHostById(
+      host.id as number,
+      userId,
+    )) as unknown as Record<string, unknown> | null;
+    if (!resolved) return undefined;
+    const terminalConfig = resolved.terminalConfig as
+      Record<string, unknown> | undefined;
+    return {
+      ...resolved,
       tags:
-        typeof host.tags === "string"
-          ? host.tags
-            ? host.tags.split(",").filter(Boolean)
+        typeof resolved.tags === "string"
+          ? resolved.tags
+            ? resolved.tags.split(",").filter(Boolean)
             : []
-          : [],
-      pin: !!host.pin,
-      authType: host.authType,
-      enableTerminal: !!host.enableTerminal,
-      enableTunnel: !!host.enableTunnel,
-      enableFileManager: !!host.enableFileManager,
-      defaultPath: host.defaultPath || "/",
-      tunnelConnections: host.tunnelConnections
-        ? JSON.parse(host.tunnelConnections as string)
-        : [],
-      jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
-      statsConfig: host.statsConfig || undefined,
-      sudoPassword: (() => {
-        const top = host.sudoPassword as string | null | undefined;
-        if (top) return top;
-        try {
-          const tc =
-            typeof host.terminalConfig === "string"
-              ? JSON.parse(host.terminalConfig as string)
-              : host.terminalConfig;
-          return (tc?.sudoPassword as string) || undefined;
-        } catch {
-          return undefined;
-        }
-      })(),
-      createdAt: host.createdAt,
-      updatedAt: host.updatedAt,
-      userId: host.userId,
-      useSocks5: !!host.useSocks5,
-      socks5Host: host.socks5Host || undefined,
-      socks5Port: host.socks5Port || undefined,
-      socks5Username: host.socks5Username || undefined,
-      socks5Password: host.socks5Password || undefined,
-      socks5ProxyChain: host.socks5ProxyChain
-        ? JSON.parse(host.socks5ProxyChain as string)
-        : undefined,
+          : (resolved.tags ?? []),
+      sudoPassword:
+        (resolved.sudoPassword as string | undefined) ||
+        (terminalConfig?.sudoPassword as string | undefined) ||
+        undefined,
       connectionType:
-        (host.connectionType as SSHHostWithCredentials["connectionType"]) ||
+        (resolved.connectionType as SSHHostWithCredentials["connectionType"]) ||
         "ssh",
-      rdpPort: (host.rdpPort as number | undefined) ?? undefined,
-      vncPort: (host.vncPort as number | undefined) ?? undefined,
-      telnetPort: (host.telnetPort as number | undefined) ?? undefined,
-    };
-
-    if (host.credentialId) {
-      try {
-        const ownerId = host.userId;
-        const isSharedHost = userId !== ownerId;
-
-        if (isSharedHost) {
-          const { SharedHostSecretsManager } =
-            await import("../../../../src/backend/utils/shared-host-secrets-manager.js");
-          const sharedCred =
-            await SharedHostSecretsManager.getInstance().getSecretForUser(
-              host.id as number,
-              userId,
-              "ssh",
-            );
-
-          if (sharedCred) {
-            baseHost.credentialId = host.credentialId;
-            baseHost.authType = sharedCred.authType;
-
-            baseHost.username = pickResolvedUsername(
-              host.username,
-              sharedCred.username,
-              host.overrideCredentialUsername,
-            );
-
-            if (sharedCred.password) {
-              baseHost.password = sharedCred.password;
-            }
-            if (sharedCred.key) {
-              baseHost.key = sharedCred.key;
-            }
-            if (sharedCred.keyPassword) {
-              baseHost.keyPassword = sharedCred.keyPassword;
-            }
-            if (sharedCred.keyType) {
-              baseHost.keyType = sharedCred.keyType;
-            }
-          }
-        } else {
-          const credential =
-            await createCurrentHostResolutionRepository().findCredentialByIdForUser(
-              host.credentialId as number,
-              userId,
-            );
-
-          if (credential) {
-            baseHost.credentialId = credential.id;
-            baseHost.authType =
-              credential.authType ||
-              (credential.password
-                ? "password"
-                : credential.key ||
-                    (credential as Record<string, unknown>).privateKey
-                  ? "key"
-                  : "none");
-
-            baseHost.username = pickResolvedUsername(
-              host.username,
-              credential.username,
-              host.overrideCredentialUsername,
-            );
-
-            baseHost.password = pickResolvedPassword(
-              host.password,
-              credential.password,
-            );
-            if (
-              credential.key ||
-              (credential as Record<string, unknown>).privateKey
-            ) {
-              baseHost.key =
-                credential.key ||
-                ((credential as Record<string, unknown>).privateKey as string);
-            }
-            if (credential.keyPassword) {
-              baseHost.keyPassword = credential.keyPassword;
-            }
-            if (credential.keyType) {
-              baseHost.keyType = credential.keyType;
-            }
-          } else {
-            addLegacyCredentials(baseHost, host);
-            if (baseHost.authType === "credential") {
-              baseHost.authType = baseHost.password
-                ? "password"
-                : baseHost.key
-                  ? "key"
-                  : "none";
-            }
-          }
-        }
-      } catch (error) {
-        statsLogger.warn(
-          `Failed to resolve credential ${host.credentialId} for host ${host.id}: ${getErrorMessage(error)}`,
-        );
-        addLegacyCredentials(baseHost, host);
-        if (baseHost.authType === "credential") {
-          baseHost.authType = baseHost.password
-            ? "password"
-            : baseHost.key
-              ? "key"
-              : "none";
-        }
-      }
-    } else {
-      addLegacyCredentials(baseHost, host);
-    }
-
-    return baseHost as unknown as SSHHostWithCredentials;
+    } as unknown as SSHHostWithCredentials;
   } catch (error) {
     statsLogger.error(
       `Failed to resolve host credentials for host ${host.id}: ${getErrorMessage(error)}`,
@@ -1317,340 +1169,21 @@ async function resolveHostCredentials(
   }
 }
 
-function addLegacyCredentials(
-  baseHost: Record<string, unknown>,
-  host: Record<string, unknown>,
-): void {
-  baseHost.password = host.password || null;
-  baseHost.key = host.key || null;
-  baseHost.keyPassword = host.keyPassword || null;
-  baseHost.keyType = host.keyType;
-}
-
-async function buildSshConfig(
-  host: SSHHostWithCredentials,
-): Promise<ConnectConfig> {
-  const base: ConnectConfig = {
-    host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
-    port: host.port,
-    username: host.username,
-    tryKeyboard: true,
-    keepaliveInterval: 30000,
-    keepaliveCountMax: 3,
-    readyTimeout: 60000,
-    tcpKeepAlive: true,
-    tcpKeepAliveInitialDelay: 30000,
-    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
-      host.id,
-      host.ip,
-      host.port,
-      null,
-      host.userId || "",
-      false,
-    ),
-    env: {
-      TERM: "xterm-256color",
-      LANG: "en_US.UTF-8",
-      LC_ALL: "en_US.UTF-8",
-      LC_CTYPE: "en_US.UTF-8",
-      LC_MESSAGES: "en_US.UTF-8",
-      LC_MONETARY: "en_US.UTF-8",
-      LC_NUMERIC: "en_US.UTF-8",
-      LC_TIME: "en_US.UTF-8",
-      LC_COLLATE: "en_US.UTF-8",
-      COLORTERM: "truecolor",
-    },
-    algorithms: {
-      kex: [
-        "curve25519-sha256",
-        "curve25519-sha256@libssh.org",
-        "ecdh-sha2-nistp521",
-        "ecdh-sha2-nistp384",
-        "ecdh-sha2-nistp256",
-        "diffie-hellman-group-exchange-sha256",
-        "diffie-hellman-group14-sha256",
-        "diffie-hellman-group14-sha1",
-        "diffie-hellman-group-exchange-sha1",
-        "diffie-hellman-group1-sha1",
-      ],
-      serverHostKey: [
-        "ssh-ed25519",
-        "ecdsa-sha2-nistp521",
-        "ecdsa-sha2-nistp384",
-        "ecdsa-sha2-nistp256",
-        "rsa-sha2-512",
-        "rsa-sha2-256",
-        "ssh-rsa",
-        "ssh-dss",
-      ],
-      cipher: SSH_ALGORITHMS.cipher,
-      hmac: [
-        "hmac-sha2-512-etm@openssh.com",
-        "hmac-sha2-256-etm@openssh.com",
-        "hmac-sha2-512",
-        "hmac-sha2-256",
-        "hmac-sha1",
-        "hmac-md5",
-      ],
-      compress: ["none", "zlib@openssh.com", "zlib"],
-    },
-  } as ConnectConfig;
-
-  if (host.authType === "password") {
-    if (!host.password) {
-      throw new Error(`No password available for host ${host.ip}`);
-    }
-    base.password = host.password;
-  } else if (host.authType === "key") {
-    if (!host.key) {
-      throw new Error(`No SSH key available for host ${host.ip}`);
-    }
-
-    try {
-      (base as Record<string, unknown>).privateKey = preparePrivateKeyForSSH2(
-        host.key,
-        host.keyPassword,
-      );
-
-      if (host.keyPassword) {
-        (base as Record<string, unknown>).passphrase = host.keyPassword;
-      }
-    } catch (keyError) {
-      statsLogger.error(
-        `SSH key format error for host ${host.ip}: ${getErrorMessage(keyError)}`,
-      );
-      throw new Error(`Invalid SSH key format for host ${host.ip}`, {
-        cause: keyError,
-      });
-    }
-  } else if (
-    host.authType === "none" ||
-    host.authType === "tailscale" ||
-    host.authType === "warpgate"
-  ) {
-    // no credentials needed
-  } else if (usesIssuedCertificate(host.authType)) {
-    // cert auth setup happens in createSshFactory (needs client instance)
-  } else if (host.authType === "vault") {
-    // cert auth setup happens in createSshFactory (needs client instance)
-  } else if (host.authType === "credential") {
-    if (host.password) {
-      base.password = host.password;
-    } else if (host.key) {
-      const cleanKey = host.key
-        .trim()
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-      (base as Record<string, unknown>).privateKey = Buffer.from(
-        cleanKey,
-        "utf8",
-      );
-      if (host.keyPassword) {
-        (base as Record<string, unknown>).passphrase = host.keyPassword;
-      }
-    } else {
-      throw new Error(`Credential for host ${host.ip} could not be resolved`);
-    }
-  } else {
-    throw new Error(
-      `Unsupported authentication type '${host.authType}' for host ${host.ip}`,
-    );
-  }
-
-  return base;
-}
-
 function getPoolKey(host: SSHHostWithCredentials): string {
-  const socks5Key = host.useSocks5
-    ? `:socks5:${host.socks5Host}:${host.socks5Port}`
-    : "";
-  return `stats:${host.userId}:${host.ip}:${host.port}:${host.username}${socks5Key}`;
-}
-
-function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
-  return async () => {
-    const config = await buildSshConfig(host);
-    const client = new Client();
-
-    // Set up OPKSSH cert auth if needed (requires client instance)
-    if (usesIssuedCertificate(host.authType) && host.userId) {
-      const { getOPKSSHToken } =
-        await import("../../../../src/backend/hosts/opkssh-auth.js");
-      const token = await getOPKSSHToken(host.userId, host.id);
-      if (!token) {
-        throw new Error(
-          "OPKSSH authentication required. Please open a Terminal connection first.",
-        );
-      }
-      const { setupOPKSSHCertAuth } =
-        await import("../../../../src/backend/hosts/opkssh-cert-auth.js");
-      await setupOPKSSHCertAuth(config, client, token, host.username);
-    } else if (host.authType === "vault") {
-      const { setupVaultSshSignerAuth } =
-        await import("../../../../src/backend/hosts/vault-ssh-connect.js");
-      await setupVaultSshSignerAuth(config, client, host);
-    }
-
-    const proxyConfig: SOCKS5Config | null =
-      host.useSocks5 &&
-      (host.socks5Host ||
-        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-        ? {
-            useSocks5: host.useSocks5,
-            socks5Host: host.socks5Host,
-            socks5Port: host.socks5Port,
-            socks5Username: host.socks5Username,
-            socks5Password: host.socks5Password,
-            socks5ProxyChain: host.socks5ProxyChain,
-          }
-        : null;
-
-    const hasJumpHosts =
-      host.jumpHosts && host.jumpHosts.length > 0 && host.userId;
-
-    let jumpClient: Client | null = null;
-    if (hasJumpHosts) {
-      jumpClient = await createJumpHostChain(host.jumpHosts!, host.userId!);
-
-      if (!jumpClient) {
-        throw new Error("Failed to establish jump host chain");
-      }
-    } else if (proxyConfig) {
-      try {
-        const proxySocket = await createSocks5Connection(
-          host.ip,
-          host.port,
-          proxyConfig,
-        );
-        if (proxySocket) {
-          config.sock = proxySocket;
-        }
-      } catch (proxyError) {
-        throw new Error(
-          "Proxy connection failed: " + getErrorMessage(proxyError),
-          { cause: proxyError },
-        );
-      }
-    }
-
-    return new Promise<Client>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        client.end();
-        jumpClient?.end();
-        reject(new Error("SSH connection timeout"));
-      }, 30000);
-
-      client.on("ready", () => {
-        clearTimeout(timeout);
-        resolve(client);
-      });
-
-      client.on("close", () => {
-        jumpClient?.end();
-      });
-
-      client.on("error", (err) => {
-        clearTimeout(timeout);
-        jumpClient?.end();
-        reject(err);
-      });
-
-      client.on(
-        "keyboard-interactive",
-        (
-          _name: string,
-          _instructions: string,
-          _instructionsLang: string,
-          prompts: Array<{ prompt: string; echo: boolean }>,
-          finish: (responses: string[]) => void,
-        ) => {
-          const totpPromptIndex = prompts.findIndex((p) =>
-            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
-              p.prompt,
-            ),
-          );
-
-          if (totpPromptIndex !== -1) {
-            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-            pendingTOTPSessions[sessionId] = {
-              client,
-              finish,
-              config,
-              createdAt: Date.now(),
-              sessionId,
-              hostId: host.id,
-              userId: host.userId!,
-              prompts: prompts.map((p) => ({
-                prompt: p.prompt,
-                echo: p.echo ?? false,
-              })),
-              totpPromptIndex,
-              resolvedPassword: host.password,
-              totpAttempts: 0,
-            };
-
-            return;
-          } else if (host.password) {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt)) {
-                return host.password || "";
-              }
-              return "";
-            });
-            finish(responses);
-          } else {
-            finish(prompts.map(() => ""));
-          }
-        },
-      );
-
-      if (jumpClient) {
-        jumpClient.forwardOut(
-          "127.0.0.1",
-          0,
-          host.ip,
-          host.port,
-          (err, stream) => {
-            if (err) {
-              clearTimeout(timeout);
-              jumpClient!.end();
-              reject(
-                new Error(
-                  "Failed to forward through jump host: " + err.message,
-                ),
-              );
-              return;
-            }
-
-            config.sock = stream;
-            client.connect(config);
-          },
-        );
-      } else if (config.sock) {
-        client.connect(config);
-      } else {
-        resolveSshConnectConfigHost(config)
-          .then(() => {
-            client.connect(config);
-          })
-          .catch((error) => {
-            clearTimeout(timeout);
-            reject(error);
-          });
-        return;
-      }
-    });
-  };
+  return pluginSsh().poolKey("stats", host as unknown as PluginSshHost);
 }
 
 async function withSshConnection<T>(
   host: SSHHostWithCredentials,
   fn: (client: Client) => Promise<T>,
 ): Promise<T> {
-  const key = getPoolKey(host);
-  const factory = createSshFactory(host);
-  return withConnection(key, factory, fn);
+  // Background polling has nobody to answer a TOTP prompt, so the pooled
+  // connection answers password prompts only and fails fast otherwise.
+  return withPooledSsh(
+    host as unknown as PluginSshHost,
+    { pool: "stats", purpose: "metrics", overrides: { readyTimeout: 60000 } },
+    fn,
+  );
 }
 
 const proxmoxPollingManager = new ProxmoxPollingManager<SSHHostWithCredentials>(
@@ -2347,34 +1880,30 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       return res.json({ success: true, connectionLogs });
     }
 
-    const config = await buildSshConfig(host);
     const client = new Client();
-
-    if (usesIssuedCertificate(host.authType) && host.userId) {
-      const { getOPKSSHToken } =
-        await import("../../../../src/backend/hosts/opkssh-auth.js");
-      const token = await getOPKSSHToken(host.userId, host.id);
-      if (!token) {
-        connectionLogs.push(
-          createConnectionLog(
-            "error",
-            "auth",
-            "OPKSSH authentication required. Please open a Terminal connection first.",
-          ),
-        );
+    const ssh = pluginSsh();
+    const prepared = await ssh.prepare(host as unknown as PluginSshHost, {
+      purpose: "metrics",
+      client,
+      log: (level, message) =>
+        connectionLogs.push(createConnectionLog(level, "auth", message)),
+    });
+    const config = prepared.config as ConnectConfig;
+    config.readyTimeout = 60000;
+    if (prepared.outcome.status !== "ready") {
+      const outcome = prepared.outcome;
+      connectionLogs.push(
+        createConnectionLog("error", "auth", outcome.message),
+      );
+      if (outcome.status === "interaction-required") {
         return res.status(401).json({
-          error: "OPKSSH authentication required",
-          requiresOPKSSHAuth: true,
+          error: outcome.message,
+          requiresAuthInteraction: outcome.interaction,
+          ...(outcome.flag ? { [outcome.flag]: true } : {}),
           connectionLogs,
         });
       }
-      const { setupOPKSSHCertAuth } =
-        await import("../../../../src/backend/hosts/opkssh-cert-auth.js");
-      await setupOPKSSHCertAuth(config, client, token, host.username);
-    } else if (host.authType === "vault") {
-      const { setupVaultSshSignerAuth } =
-        await import("../../../../src/backend/hosts/vault-ssh-connect.js");
-      await setupVaultSshSignerAuth(config, client, host);
+      return res.status(400).json({ error: outcome.message, connectionLogs });
     }
 
     const connectionPromise = new Promise<{
@@ -2396,12 +1925,13 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 
       client.on(
         "keyboard-interactive",
-        (name, instructions, instructionsLang, prompts, finish) => {
-          const totpPromptIndex = prompts.findIndex((p) =>
-            /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
-              p.prompt,
-            ),
+        (name, instructions, _instructionsLang, prompts, finish) => {
+          const decision = ssh.classifyKeyboardInteractive(
+            { name, instructions, prompts },
+            host as unknown as PluginSshHost,
           );
+          const totpPromptIndex =
+            decision.kind === "totp" ? decision.promptIndex : -1;
 
           if (totpPromptIndex !== -1) {
             const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -2443,13 +1973,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
             }
             return;
           } else {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && host.password) {
-                return host.password;
-              }
-              return "";
-            });
-            finish(responses);
+            finish(ssh.autoResponses(prompts, host.password));
           }
         },
       );
@@ -2577,10 +2101,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         }
       });
 
-      const hasJumpHosts =
-        host.jumpHosts && host.jumpHosts.length > 0 && host.userId;
-
-      if (hasJumpHosts) {
+      if (host.jumpHosts && host.jumpHosts.length > 0) {
         connectionLogs.push(
           createConnectionLog(
             "info",
@@ -2588,92 +2109,33 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
             "Connecting via jump host chain",
           ),
         );
-        createJumpHostChain(host.jumpHosts!, host.userId!)
-          .then((jumpClient) => {
-            jumpClient.forwardOut(
-              "127.0.0.1",
-              0,
-              host.ip,
-              host.port,
-              (err, stream) => {
-                if (err || !stream) {
-                  if (!isResolved) {
-                    isResolved = true;
-                    clearTimeout(timeout);
-                    reject(err || new Error("Jump host forward failed"));
-                  }
-                  return;
-                }
-                config.sock = stream;
-                delete config.host;
-                delete config.port;
-                client.connect(config);
-              },
-            );
-          })
-          .catch((error) => {
-            if (!isResolved) {
-              isResolved = true;
-              clearTimeout(timeout);
-              connectionLogs.push(
-                createConnectionLog(
-                  "error",
-                  "proxy",
-                  `Jump host connection failed: ${getErrorMessage(error)}`,
-                ),
-              );
-              reject(error);
-            }
-          });
-      } else if (
-        host.useSocks5 &&
-        (host.socks5Host ||
-          (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
-      ) {
-        connectionLogs.push(
-          createConnectionLog("info", "proxy", "Connecting via SOCKS5 proxy"),
-        );
-        createSocks5Connection(host.ip, host.port, {
-          useSocks5: host.useSocks5,
-          socks5Host: host.socks5Host,
-          socks5Port: host.socks5Port,
-          socks5Username: host.socks5Username,
-          socks5Password: host.socks5Password,
-          socks5ProxyChain: host.socks5ProxyChain,
-        })
-          .then((socks5Socket) => {
-            if (socks5Socket) {
-              config.sock = socks5Socket;
-            }
-            client.connect(config);
-          })
-          .catch((error) => {
-            if (!isResolved) {
-              isResolved = true;
-              clearTimeout(timeout);
-              connectionLogs.push(
-                createConnectionLog(
-                  "error",
-                  "proxy",
-                  `SOCKS5 proxy connection failed: ${getErrorMessage(error)}`,
-                ),
-              );
-              reject(error);
-            }
-          });
-      } else {
-        resolveSshConnectConfigHost(config)
-          .then(() => {
-            client.connect(config);
-          })
-          .catch((error) => {
-            if (!isResolved) {
-              isResolved = true;
-              clearTimeout(timeout);
-              reject(error);
-            }
-          });
       }
+      ssh
+        .openTransport(
+          host as unknown as PluginSshHost,
+          config as Record<string, unknown>,
+        )
+        .then((transport) => {
+          if (transport.jumpClient) {
+            const jumpClient = transport.jumpClient as Client;
+            client.on("close", () => jumpClient.end());
+          }
+          client.connect(config);
+        })
+        .catch((error) => {
+          if (!isResolved) {
+            isResolved = true;
+            clearTimeout(timeout);
+            connectionLogs.push(
+              createConnectionLog(
+                "error",
+                "proxy",
+                `Connection setup failed: ${getErrorMessage(error)}`,
+              ),
+            );
+            reject(error);
+          }
+        });
     });
 
     const result = await connectionPromise;
@@ -3093,5 +2555,7 @@ export function shutdown(): void {
   }
   pollingManager.destroy();
   proxmoxPollingManager.destroy();
-  connectionPool.destroy();
+  // The pool is core's and shared with tmux and the fleet tools; destroying it
+  // here broke them until a restart. ctx.ssh drops this plugin's pooled
+  // connections on deactivate instead.
 }

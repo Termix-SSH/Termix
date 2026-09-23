@@ -106,6 +106,72 @@ router.get("/public", async (_req: Request, res: Response) => {
 
 /**
  * @openapi
+ * /plugins/public-manifest:
+ *   get:
+ *     summary: List the plugin frontends the login screen needs
+ *     description: >
+ *       No auth. The login screen draws login methods and second-factor steps
+ *       that plugins provide, before anyone has signed in. Returns only
+ *       enabled plugins that contribute login methods or second factors, with
+ *       the fields the browser loader needs and the ids they contribute.
+ *       Nothing operational: no capabilities, grants, settings or errors.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: Login-capable plugins.
+ */
+router.get("/public-manifest", async (_req: Request, res: Response) => {
+  try {
+    res.json(await listPreLoginPlugins());
+  } catch (error) {
+    databaseLogger.error(
+      "Failed to list login plugins",
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "plugin_list_public_manifest" },
+    );
+    res.status(500).json({ error: "Failed to list plugins" });
+  }
+});
+
+/** Enabled plugins with login or second-factor UI, without admin data. */
+export async function listPreLoginPlugins(): Promise<
+  Array<Record<string, unknown>>
+> {
+  const records = await createCurrentPluginRepository().listAll();
+  const { loader } = getPluginRuntime();
+  return records.flatMap((record) => {
+    if (record.state !== "enabled") return [];
+    const loaded = loader.get(record.id);
+    if (loaded?.state !== "active") return [];
+    let manifest: PluginManifest;
+    try {
+      manifest = JSON.parse(record.manifestJson) as PluginManifest;
+    } catch {
+      return [];
+    }
+    const auth = manifest?.contributes?.auth;
+    const loginMethods = auth?.loginMethods ?? [];
+    const secondFactors = auth?.secondFactors ?? [];
+    if (loginMethods.length === 0 && secondFactors.length === 0) return [];
+    return [
+      {
+        id: record.id,
+        name: record.name,
+        version: record.version,
+        enabled: true,
+        state: loaded.state,
+        contributes: { auth: { loginMethods, secondFactors } },
+        dependencies: manifest.dependencies ?? {},
+        optionalDependencies: manifest.optionalDependencies ?? {},
+        ...describePluginFrontend(loaded),
+      },
+    ];
+  });
+}
+
+/**
+ * @openapi
  * /plugins:
  *   get:
  *     summary: List installed plugins and their runtime state

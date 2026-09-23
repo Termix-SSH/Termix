@@ -7,11 +7,7 @@ import {
 import { validateDefinition } from "../../../../automations/src/backend/routes.js";
 import { resolveHostById } from "../../../../../src/backend/hosts/host-resolver.js";
 import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import {
-  createFleetSshFactory,
-  getFleetPoolKey,
-} from "../../../../../src/backend/hosts/ssh-client-factory.js";
-import { withConnection } from "../../../../../src/backend/hosts/ssh-connection-pool.js";
+import { withSshConnection } from "../ssh.js";
 import { getTool } from "./catalog.js";
 
 /** Approved commands get a bounded window rather than hanging the request. */
@@ -277,9 +273,9 @@ async function runCommandOnHost(
   command: string,
 ): Promise<{ output?: string; error?: string }> {
   try {
-    const result = await withConnection(
-      getFleetPoolKey(host as any),
-      createFleetSshFactory(host as any),
+    const result = await withSshConnection(
+      host as any as never,
+      { pool: "fleet", purpose: "fleet" },
       async (client) => execCommand(client, command, COMMAND_TIMEOUT_MS),
     );
 

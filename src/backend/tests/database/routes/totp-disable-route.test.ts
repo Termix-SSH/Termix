@@ -9,6 +9,10 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({ findById, update: userUpdate }),
   createCurrentTrustedDeviceRepository: () => ({}),
   createCurrentUserSessionRepository: () => ({}),
+  createCurrentUserAuthRepository: () => ({
+    removeSecondFactor: vi.fn().mockResolvedValue(true),
+    recordSecondFactor: vi.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 vi.mock("../../../utils/logger.js", () => ({

@@ -17,17 +17,14 @@ import { nanoid } from "nanoid";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
-import {
-  generateDeviceFingerprint,
-  getDeviceId,
-  parseUserAgent,
-} from "../../utils/user-agent-parser.js";
+
 import {
   createCurrentUserRepository,
   createCurrentWebauthnCredentialRepository,
-  getCurrentSettingValue,
 } from "../repositories/factory.js";
 import type { WebauthnCredentialRecord } from "../repositories/webauthn-credential-repository.js";
+import { respondWithLogin, sendLoginError } from "../../auth/login-pipeline.js";
+import { LoginMethodError, type VerifiedIdentity } from "../../auth/types.js";
 
 type UserVerification = "discouraged" | "preferred" | "required";
 type NativeAppRequestChecker = (req: Request) => boolean;
@@ -127,6 +124,82 @@ function getCredentialForVerification(
     ) as WebAuthnCredential["publicKey"],
     counter: credential.counter,
     transports: parseTransports(credential.transports),
+  };
+}
+
+/**
+ * Checks a passkey assertion and says who signed in. A passkey that verified
+ * the user (PIN or biometric) counts as the second factor too.
+ */
+export async function verifyPasskeyLogin(
+  req: Request,
+): Promise<VerifiedIdentity> {
+  const challenge = takeChallenge(
+    authenticationChallenges,
+    req.body?.challengeId,
+  );
+  if (!challenge) {
+    throw new LoginMethodError("Authentication challenge expired", 400);
+  }
+
+  const response = req.body?.response as AuthenticationResponseJSON | undefined;
+  if (!response?.id) {
+    throw new LoginMethodError("Invalid passkey response", 400);
+  }
+
+  const credential =
+    await createCurrentWebauthnCredentialRepository().findByCredentialId(
+      response.id,
+    );
+  if (!credential) {
+    throw new LoginMethodError("Passkey not recognized", 401);
+  }
+  if (challenge.userId && challenge.userId !== credential.userId) {
+    throw new LoginMethodError("Passkey not recognized", 401);
+  }
+
+  let verification: Awaited<ReturnType<typeof verifyAuthenticationResponse>>;
+  try {
+    verification = await verifyAuthenticationResponse({
+      response,
+      expectedChallenge: challenge.challenge,
+      expectedOrigin: challenge.origin,
+      expectedRPID: challenge.rpID,
+      credential: getCredentialForVerification(credential),
+      requireUserVerification: challenge.userVerification === "required",
+      advancedFIDOConfig: { userVerification: challenge.userVerification },
+    });
+  } catch (error) {
+    authLogger.warn("WebAuthn authentication failed", {
+      operation: "webauthn_auth_verify",
+      credentialId: credential.id,
+      userId: credential.userId,
+      error: getErrorMessage(error, "Unknown"),
+    });
+    throw new LoginMethodError("Passkey authentication failed", 401);
+  }
+
+  if (!verification.verified) {
+    throw new LoginMethodError("Passkey authentication failed", 401);
+  }
+
+  await createCurrentWebauthnCredentialRepository().updateAuthState(
+    credential.id,
+    {
+      counter: verification.authenticationInfo.newCounter,
+      backedUp: verification.authenticationInfo.credentialBackedUp,
+      deviceType: verification.authenticationInfo.credentialDeviceType,
+      lastUsedAt: new Date().toISOString(),
+    },
+  );
+
+  return {
+    kind: "user",
+    userId: credential.userId,
+    mfaSatisfied: verification.authenticationInfo.userVerified === true,
+    rememberMe: !!req.body?.rememberMe,
+    unlockError:
+      "Passkey cannot unlock this account. Log in with password and register the passkey again.",
   };
 }
 
@@ -412,140 +485,14 @@ export function registerUserWebAuthnRoutes(
    *         description: Passkey not recognized or authentication failed.
    */
   router.post("/webauthn/authenticate/verify", async (req, res) => {
-    const challenge = takeChallenge(
-      authenticationChallenges,
-      req.body?.challengeId,
-    );
-    if (!challenge) {
-      return res
-        .status(400)
-        .json({ error: "Authentication challenge expired" });
-    }
-
-    const response = req.body?.response as
-      AuthenticationResponseJSON | undefined;
-    if (!response?.id) {
-      return res.status(400).json({ error: "Invalid passkey response" });
-    }
-
-    const credential =
-      await createCurrentWebauthnCredentialRepository().findByCredentialId(
-        response.id,
-      );
-
-    if (!credential) {
-      return res.status(401).json({ error: "Passkey not recognized" });
-    }
-
-    if (challenge.userId && challenge.userId !== credential.userId) {
-      return res.status(401).json({ error: "Passkey not recognized" });
-    }
-
     try {
-      const verification = await verifyAuthenticationResponse({
-        response,
-        expectedChallenge: challenge.challenge,
-        expectedOrigin: challenge.origin,
-        expectedRPID: challenge.rpID,
-        credential: getCredentialForVerification(credential),
-        requireUserVerification: challenge.userVerification === "required",
-        advancedFIDOConfig: {
-          userVerification: challenge.userVerification,
-        },
-      });
-
-      if (!verification.verified) {
-        return res.status(401).json({ error: "Passkey authentication failed" });
-      }
-
-      const userRecord = await createCurrentUserRepository().findById(
-        credential.userId,
-      );
-      if (!userRecord) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const deviceInfo = parseUserAgent(req);
-      const authenticated = await authManager.authenticateWebAuthnUser(
-        userRecord.id,
-        deviceInfo.type,
-      );
-
-      if (!authenticated) {
-        return res.status(401).json({
-          error:
-            "Passkey cannot unlock this account. Log in with password and register the passkey again.",
-        });
-      }
-
-      await createCurrentWebauthnCredentialRepository().updateAuthState(
-        credential.id,
-        {
-          counter: verification.authenticationInfo.newCounter,
-          backedUp: verification.authenticationInfo.credentialBackedUp,
-          deviceType: verification.authenticationInfo.credentialDeviceType,
-          lastUsedAt: new Date().toISOString(),
-        },
-      );
-
-      if (
-        userRecord.totpEnabled &&
-        verification.authenticationInfo.userVerified !== true
-      ) {
-        const deviceFingerprint = generateDeviceFingerprint(
-          deviceInfo,
-          getDeviceId(req),
-        );
-        const isTrusted = deviceFingerprint
-          ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
-          : false;
-
-        if (!isTrusted) {
-          const tempToken = await authManager.generateJWTToken(userRecord.id, {
-            pendingTOTP: true,
-            expiresIn: "10m",
-          });
-          return res.json({
-            success: true,
-            requires_totp: true,
-            temp_token: tempToken,
-            rememberMe: !!req.body?.rememberMe,
-          });
-        }
-      }
-
-      const token = await authManager.generateJWTToken(userRecord.id, {
+      const identity = await verifyPasskeyLogin(req);
+      await respondWithLogin(req, res, identity, {
+        methodId: "passkey",
         rememberMe: !!req.body?.rememberMe,
-        deviceType: deviceInfo.type,
-        deviceInfo: deviceInfo.deviceInfo,
-      });
-
-      const timeoutSetting = getCurrentSettingValue("session_timeout_hours");
-      const timeoutHours = timeoutSetting
-        ? parseInt(timeoutSetting, 10) || 24
-        : 24;
-      const maxAge = req.body?.rememberMe
-        ? 30 * 24 * 60 * 60 * 1000
-        : timeoutHours * 60 * 60 * 1000;
-
-      res.cookie("jwt", token, authManager.getSecureCookieOptions(req, maxAge));
-      res.json({
-        success: true,
-        is_admin: !!userRecord.isAdmin,
-        username: userRecord.username,
-        userId: userRecord.id,
-        is_oidc: !!userRecord.isOidc,
-        totp_enabled: !!userRecord.totpEnabled,
-        ...(isNativeAppRequest(req) ? { token } : {}),
       });
     } catch (error) {
-      authLogger.warn("WebAuthn authentication failed", {
-        operation: "webauthn_auth_verify",
-        credentialId: credential.id,
-        userId: credential.userId,
-        error: getErrorMessage(error, "Unknown"),
-      });
-      res.status(401).json({ error: "Passkey authentication failed" });
+      sendLoginError(res, error);
     }
   });
 

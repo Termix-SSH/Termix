@@ -7,11 +7,7 @@ import {
   execElevated,
   shellSingleQuote,
 } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import {
-  createFleetSshFactory,
-  getFleetPoolKey,
-} from "../../../../../src/backend/hosts/ssh-client-factory.js";
-import { withConnection } from "../../../../../src/backend/hosts/ssh-connection-pool.js";
+import { withSshConnection } from "../ssh.js";
 import { resolveSnippetCommand } from "../../../../../src/backend/database/routes/snippets-execution.js";
 import {
   createCurrentNotificationChannelRepository,
@@ -383,9 +379,9 @@ async function execOnHost(
   if (timeout <= 0) return { error: "Run deadline exceeded" };
 
   try {
-    const result = await withConnection(
-      getFleetPoolKey(sshHost),
-      createFleetSshFactory(sshHost),
+    const result = await withSshConnection(
+      sshHost as never,
+      { pool: "fleet", purpose: "fleet" },
       async (client) => {
         if (elevated) {
           return execElevated(client, command, sshHost.sudoPassword, {

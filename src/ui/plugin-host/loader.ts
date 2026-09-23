@@ -350,6 +350,35 @@ async function fetchGuestPlugins(): Promise<PluginSummary[]> {
   return Array.isArray(body) ? (body as PluginSummary[]) : [];
 }
 
+async function fetchPreLoginPlugins(): Promise<PluginSummary[]> {
+  const response = await fetch(getBackendUrl("/plugins/public-manifest"));
+  if (!response.ok) return [];
+  const body = (await response.json()) as unknown;
+  return Array.isArray(body) ? (body as PluginSummary[]) : [];
+}
+
+/**
+ * Loads the plugins the login screen needs (login methods and second
+ * factors) before anyone has signed in. After sign-in the full runtime
+ * reconciles, keeping these active when their bundle has not changed.
+ */
+export async function startPreLoginPlugins(): Promise<void> {
+  installPluginHostBridge();
+  let list: PluginSummary[];
+  try {
+    list = await fetchPreLoginPlugins();
+  } catch {
+    return;
+  }
+  if (list.length === 0) return;
+  setPluginLocaleResolver((namespace, _language, file) => {
+    const summary = getPluginRecord(namespace)?.summary;
+    if (!summary) return Promise.resolve(null);
+    return currentDeps().loadLocale(summary, file);
+  });
+  await syncPlugins(list);
+}
+
 /**
  * Starts the runtime. Idempotent. `guest` is for anonymous pages (shared
  * session links): only plugins declaring contributes.guest load, from the

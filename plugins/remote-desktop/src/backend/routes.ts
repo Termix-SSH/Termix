@@ -19,7 +19,8 @@ import {
   createCurrentSettingsRepository,
 } from "../../../../src/backend/database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../../../src/backend/utils/guacd-config.js";
-import { createJumpHostChain } from "../../../../src/backend/hosts/jump-host-chain.js";
+import type { Client } from "ssh2";
+import { pluginSsh } from "./ssh.js";
 import { getGuacSessionByConnectId } from "./guacamole-server.js";
 import {
   logAudit,
@@ -545,18 +546,9 @@ router.post(
         try {
           // The chain dials the first hop through that hop's own SOCKS5
           // settings; the target host's proxy config does not apply to it.
-          const jumpClient = await createJumpHostChain(jumpHosts, userId);
-
-          if (!jumpClient) {
-            guacLogger.error(
-              "Failed to establish jump host chain for guacamole",
-              undefined,
-              { operation: "guac_ssh_tunnel_error", hostId },
-            );
-            return res.status(500).json({
-              error: "Failed to establish SSH tunnel to remote host",
-            });
-          }
+          const { client: jumpClient } = await pluginSsh().jumpChain<Client>(
+            jumpHosts as Array<{ hostId: number }>,
+          );
 
           const targetHostname = hostname;
           const targetPort = port;

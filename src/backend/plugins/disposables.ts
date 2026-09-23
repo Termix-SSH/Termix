@@ -27,14 +27,19 @@ export class DisposableBag {
 
   constructor(private readonly pluginId: string) {}
 
-  add(dispose: Disposer, label = "disposable"): void {
+  /** Returns a function that drops the entry without running it. */
+  add(dispose: Disposer, label = "disposable"): () => void {
     if (this.disposed) {
       // Registering after teardown means the resource would never be cleaned
       // up. Dispose it immediately rather than silently leaking it.
       void this.run({ dispose, label });
-      return;
+      return () => {};
     }
-    this.entries.push({ dispose, label });
+    const entry = { dispose, label };
+    this.entries.push(entry);
+    return () => {
+      this.entries = this.entries.filter((candidate) => candidate !== entry);
+    };
   }
 
   get size(): number {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { useSshAuthTypes, useTranslation } from "@termix/plugin-sdk/frontend";
 import { Server } from "lucide-react";
 import { Input } from "@/components/input";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
@@ -20,6 +20,7 @@ export function HostProxmoxTab({
   setField: SetHostField;
 }) {
   const { t } = useTranslation();
+  const sshAuthTypes = useSshAuthTypes();
   const [credentials, setCredentials] = useState<
     { id: number; name: string; username: string | null }[]
   >([]);
@@ -107,14 +108,11 @@ export function HostProxmoxTab({
                 }
                 className="h-7 w-44 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
               >
-                <option value="password">{t("hosts.authTypePassword")}</option>
-                <option value="key">{t("hosts.authTypeKey")}</option>
-                <option value="credential">
-                  {t("hosts.authTypeCredential")}
-                </option>
-                <option value="opkssh">{t("hosts.authTypeOpkssh")}</option>
-                <option value="stepca">{t("hosts.authTypeStepca")}</option>
-                <option value="none">{t("hosts.authTypeNone")}</option>
+                {sshAuthTypes.types.map((option) => (
+                  <option key={option.type} value={option.type}>
+                    {t(option.labelKey)}
+                  </option>
+                ))}
               </Select2>
             </SettingRow>
             <SettingRow

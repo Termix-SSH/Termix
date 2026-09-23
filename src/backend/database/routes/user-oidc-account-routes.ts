@@ -4,7 +4,10 @@ import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { authLogger } from "../../utils/logger.js";
-import { createCurrentUserRepository } from "../repositories/factory.js";
+import {
+  createCurrentUserRepository,
+  createCurrentUserAuthRepository,
+} from "../repositories/factory.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 
 type UserOidcAccountRoutesDeps = {
@@ -119,6 +122,12 @@ export function registerUserOidcAccountRoutes(
         namePath: oidcUser.namePath,
         scopes: oidcUser.scopes || "openid email profile",
       });
+
+      // Identities hang off the user row and would go with it.
+      await createCurrentUserAuthRepository().moveIdentities(
+        oidcUserId,
+        targetUser.id,
+      );
 
       await authManager.revokeAllUserSessions(oidcUserId);
       authManager.logoutUser(oidcUserId);
@@ -265,6 +274,9 @@ export function registerUserOidcAccountRoutes(
           namePath: "",
           scopes: "openid email profile",
         });
+        await createCurrentUserAuthRepository().unlinkIdentitiesForUser(
+          targetUser.id,
+        );
 
         try {
           await DatabaseSaveTrigger.forceSave("unlink_oidc_explicit_save");

@@ -45,6 +45,7 @@ import {
 } from "@termix/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
+import { createPluginAuth, createPluginSsh } from "./ctx-ssh-auth.js";
 
 export type { PluginModule };
 
@@ -160,6 +161,11 @@ export function createPluginContext(
   handle: PluginHandle,
 ): PluginContext {
   const pluginId = manifest.id;
+  const auditCall = (
+    action: string,
+    details: string,
+    outcome: { success: boolean; errorMessage?: string },
+  ) => writeAudit(manifest, { action, details: () => details }, outcome);
   // Forced: a plugin cannot log as another plugin.
   const logContext = { operation: `plugin:${pluginId}` };
   const declared = manifest.capabilities;
@@ -566,8 +572,13 @@ export function createPluginContext(
     },
 
     disposables: {
-      add: (dispose) => handle.bag.add(dispose, "plugin resource"),
+      add: (dispose) => {
+        handle.bag.add(dispose, "plugin resource");
+      },
     },
+
+    ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
+    auth: createPluginAuth({ manifest, bag: handle.bag, audit: auditCall }),
 
     /**
      * Background work acts as a named user. Always audited, because "this ran

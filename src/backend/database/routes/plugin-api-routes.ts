@@ -69,4 +69,13 @@ router.use("/:pluginId", (req: Request, res: Response, next) => {
   pluginRouter(req, res, next);
 });
 
+/**
+ * Mounts the dispatcher. No auth in front of it: each plugin router runs
+ * core auth itself and skips it only for the paths it declared public, so a
+ * webhook or OIDC callback a plugin serves can actually be reached.
+ */
+export function mountPluginApi(app: express.Express): void {
+  app.use("/plugin-api", router);
+}
+
 export default router;

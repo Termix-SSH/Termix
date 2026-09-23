@@ -90,6 +90,10 @@ import {
   makeHostTabs,
 } from "./HostManagerTabs";
 import { useSshAuthEditors } from "@/plugin-host/auth-registry";
+import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
+import { SshAuthProviderFields } from "./SshAuthProviderFields";
+import type { PluginSettingsField } from "@termix/plugin-sdk/manifest";
+import { ensureLegacyAuthUI } from "@/auth/legacy-auth-ui";
 import {
   SecretReferenceHint,
   SecretSourceManager,
@@ -102,17 +106,7 @@ import {
 
 const CUSTOM_FONT_OPTION = "__custom__";
 
-/** The SSH auth types core itself handles. Plugins add the rest. */
-const CORE_AUTH_METHODS = [
-  "password",
-  "key",
-  "credential",
-  "vault",
-  "none",
-  "opkssh",
-  "stepca",
-  "agent",
-];
+ensureLegacyAuthUI();
 
 export function HostEditor({
   host,
@@ -373,10 +367,27 @@ export function HostEditor({
     (editor) => editor.id === authMethod,
   );
   const ActiveAuthEditor = activeAuthEditor?.component;
+  const sshAuthProviders = useSshAuthProviders();
   const authEditorLabel = (method: string) => {
-    const editor = sshAuthEditors.find((item) => item.id === method);
-    return editor ? t(editor.titleKey) : method;
+    const option = sshAuthProviders.find(method);
+    if (option?.editorTitleKey) return t(option.editorTitleKey);
+    if (option?.labelKey) return t(option.labelKey, { defaultValue: method });
+    return method;
   };
+  const selectableAuthMethods = sshAuthProviders.providers
+    .filter((option) => option.available)
+    .map((option) => option.type);
+  const currentAuthOption = sshAuthProviders.find(authMethod);
+  // The host uses a type nothing here provides (its plugin is off).
+  const missingAuthNotice =
+    sshAuthProviders.loaded && authMethod && !currentAuthOption?.available
+      ? currentAuthOption?.missingPlugin
+        ? t("hosts.authTypeNeedsPlugin", {
+            type: authMethod,
+            plugin: currentAuthOption.missingPlugin.name,
+          })
+        : t("hosts.authTypeUnknown", { type: authMethod })
+      : null;
   const availableCredentials =
     quickCreatedCredential &&
     !credentials.some(
@@ -611,10 +622,7 @@ export function HostEditor({
                       role="radiogroup"
                       aria-label={t("hosts.authenticationMethod")}
                     >
-                      {[
-                        ...CORE_AUTH_METHODS,
-                        ...sshAuthEditors.map((editor) => editor.id),
-                      ].map((m) => (
+                      {selectableAuthMethods.map((m) => (
                         <button
                           key={m}
                           type="button"
@@ -638,6 +646,11 @@ export function HostEditor({
                     {lockAuthReferences && (
                       <p className="text-[10px] text-muted-foreground/60">
                         {t("hosts.sharing.ownerOnlyControl")}
+                      </p>
+                    )}
+                    {missingAuthNotice && (
+                      <p className="text-[10px] text-destructive">
+                        {missingAuthNotice}
                       </p>
                     )}
                   </div>
@@ -668,26 +681,6 @@ export function HostEditor({
                         <p className="text-[10px] text-muted-foreground/60">
                           {t("hosts.oidcUsernameHint")}
                         </p>
-                      )}
-                      {authMethod === "stepca" && (
-                        <div className="flex flex-col gap-2 border-t border-border pt-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                              {t("hosts.stepcaLabel")}
-                            </span>
-                            <a
-                              href="https://smallstep.com/docs/step-ca/provisioners/#oauthoidc-single-sign-on"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-accent-brand hover:underline"
-                            >
-                              {t("hosts.docsLink")}
-                            </a>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            {t("hosts.stepcaDesc")}
-                          </p>
-                        </div>
                       )}
                       {activeAuthEditor?.hintKey && (
                         <p className="text-[10px] text-muted-foreground/60">
@@ -1056,26 +1049,18 @@ export function HostEditor({
                       </>
                     )}
                   </div>
-                  {authMethod === "opkssh" && (
-                    <div className="flex flex-col gap-2 border-t border-border pt-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.opksshLabel")}
-                        </span>
-                        <a
-                          href="https://docs.termix.site/features/authentication/opkssh"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {t("hosts.opksshDesc")}
-                      </p>
-                    </div>
-                  )}
+                  {!ActiveAuthEditor &&
+                    currentAuthOption?.available &&
+                    currentAuthOption.pluginId !== "core" &&
+                    currentAuthOption.fields.length > 0 && (
+                      <SshAuthProviderFields
+                        pluginId={currentAuthOption.pluginId}
+                        hostId={host?.id ? Number(host.id) : undefined}
+                        fields={
+                          currentAuthOption.fields as unknown as PluginSettingsField[]
+                        }
+                      />
+                    )}
                   {ActiveAuthEditor && (
                     <ActiveAuthEditor
                       form={form}

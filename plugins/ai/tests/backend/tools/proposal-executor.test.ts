@@ -34,14 +34,10 @@ vi.mock(
     execCommand: (...args: unknown[]) => execCommand(...args),
   }),
 );
-vi.mock("../../../../../src/backend/hosts/ssh-client-factory.js", () => ({
-  createFleetSshFactory: () => () => ({}),
-  getFleetPoolKey: () => "pool",
-}));
-vi.mock("../../../../../src/backend/hosts/ssh-connection-pool.js", () => ({
-  withConnection: async (
-    _key: string,
-    _factory: unknown,
+vi.mock("../../../src/backend/ssh.js", () => ({
+  withSshConnection: async (
+    _host: unknown,
+    _options: unknown,
     run: (client: unknown) => Promise<unknown>,
   ) => run({}),
 }));

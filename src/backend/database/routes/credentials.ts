@@ -1,5 +1,7 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
+import { listCredentialTypes } from "../../hosts/connect/auth-provider-registry.js";
+import { ensureCoreSshAuthProviders } from "../../hosts/connect/core-providers.js";
 import express, { type Request, type Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -22,6 +24,12 @@ import {
   createCurrentHostRepository,
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
+
+/** Built-in password and key, plus any type a plugin offers for credentials. */
+function getCredentialTypes(): string[] {
+  ensureCoreSshAuthProviders();
+  return listCredentialTypes();
+}
 
 const router = express.Router();
 
@@ -110,16 +118,17 @@ router.post(
       return res.status(400).json({ error: "Name is required" });
     }
 
-    if (!["password", "key"].includes(authType)) {
+    const credentialTypes = getCredentialTypes();
+    if (!credentialTypes.includes(authType)) {
       authLogger.warn("Invalid auth type provided", {
         operation: "credential_create",
         userId,
         name,
         authType,
       });
-      return res
-        .status(400)
-        .json({ error: 'Auth type must be "password" or "key"' });
+      return res.status(400).json({
+        error: `Auth type must be one of: ${credentialTypes.join(", ")}`,
+      });
     }
 
     try {
@@ -659,8 +668,14 @@ router.put(
       }
       if (updateData.username !== undefined)
         updateFields.username = updateData.username?.trim() || null;
-      if (updateData.authType !== undefined)
+      if (updateData.authType !== undefined) {
+        if (!getCredentialTypes().includes(updateData.authType)) {
+          return res.status(400).json({
+            error: `Auth type must be one of: ${getCredentialTypes().join(", ")}`,
+          });
+        }
         updateFields.authType = updateData.authType;
+      }
       if (updateData.keyType !== undefined)
         updateFields.keyType = updateData.keyType;
 

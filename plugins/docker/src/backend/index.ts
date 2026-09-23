@@ -1,5 +1,6 @@
 import express, { type Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
+import { setPluginSsh } from "./ssh.js";
 import { logger } from "../../../../src/backend/utils/logger.js";
 import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
 import { registerDockerContainerRoutes } from "./container-routes.js";
@@ -23,6 +24,8 @@ let authManagerInstance: ReturnType<typeof AuthManager.getInstance> | null =
   null;
 
 export async function activate(ctx: PluginContext) {
+  setPluginSsh(ctx.ssh);
+  ctx.disposables.add(() => setPluginSsh(null));
   // An express app rather than the router directly, so the existing
   // register*Routes helpers keep the Application they expect. Core mounts it
   // at /plugin-api/docker and runs compression, CORS, cookies, auth and body

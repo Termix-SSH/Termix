@@ -24,6 +24,7 @@ import { usePluginScope } from "./scope";
 import { knownPluginIds } from "./plugin-store";
 import { tabsApi, useShellHosts } from "./shell-bridge";
 import { invokeAction } from "@/shell/action-registry";
+import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 
 /**
  * Core permission groups, mirroring RESERVED_PERMISSION_PREFIXES in the SDK
@@ -243,6 +244,22 @@ export const pluginHostBridge: PluginHostBridge = {
   useTabs: () => tabsApi,
 
   invokeAction: (id, ...args) => invokeAction(id, ...args),
+
+  useSshAuthTypes: () => {
+    const { providers, loaded } = useSshAuthProviders();
+    return {
+      loaded,
+      types: providers
+        .filter((option) => option.available)
+        .map((option) => ({
+          type: option.type,
+          labelKey: option.editorTitleKey ?? option.labelKey,
+          pluginId: option.pluginId,
+          credentialType: option.credentialType,
+          supportsBackground: option.supportsBackground,
+        })),
+    };
+  },
 };
 
 /** Installs the bridge. Idempotent. */

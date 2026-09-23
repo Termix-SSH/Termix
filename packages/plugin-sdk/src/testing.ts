@@ -18,6 +18,12 @@ import type { TermixApp } from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
 import type { PluginMiddleware, PluginRouterOptions } from "./backend.js";
+import type {
+  PluginLoginMethod,
+  PluginSecondFactor,
+  PluginSshAuthProvider,
+  PluginSshHost,
+} from "./backend.js";
 import type { SyncEntityRegistration } from "./backend.js";
 
 export interface FakeContextOptions {
@@ -29,6 +35,16 @@ export interface FakeContextOptions {
   settings?: Record<string, unknown>;
   /** Seed for the core settings ctx.settings.readCore can reach. */
   coreSettings?: Record<string, string>;
+  /** What ctx.ssh.connect and withConnection hand back as the client. */
+  sshClient?: unknown;
+}
+
+export interface FakeAuthRegistrations {
+  sshAuthProviders: PluginSshAuthProvider[];
+  loginMethods: PluginLoginMethod[];
+  secondFactors: PluginSecondFactor[];
+  /** "<userId>:<factorId>" for every recorded enrolment. */
+  enrollments: Set<string>;
 }
 
 export interface FakePluginContext {
@@ -51,6 +67,10 @@ export interface FakePluginContext {
   settings: Map<string, unknown>;
   /** Core settings readable through ctx.settings.readCore. */
   coreSettings: Map<string, string>;
+  /** Every ctx.ssh.connect and withConnection call, in order. */
+  sshConnections: Array<{ host: number | PluginSshHost; pool?: string }>;
+  /** Everything registered through ctx.auth. */
+  auth: FakeAuthRegistrations;
 }
 
 /** How a settings row is keyed in the doubles. Mirrors the real unique index. */
@@ -93,6 +113,14 @@ export function createFakeContext(
     Object.entries(options.coreSettings ?? {}),
   );
   const settingsListeners = new Map<string, Set<(value: unknown) => void>>();
+  const sshConnections: FakePluginContext["sshConnections"] = [];
+  const auth: FakeAuthRegistrations = {
+    sshAuthProviders: [],
+    loginMethods: [],
+    secondFactors: [],
+    enrollments: new Set(),
+  };
+  const sshClient = options.sshClient ?? {};
   let actor = options.actor;
 
   for (const [key, value] of Object.entries(options.settings ?? {})) {
@@ -267,6 +295,64 @@ export function createFakeContext(
 
     disposables,
 
+    ssh: {
+      connect: async (host) => {
+        sshConnections.push({ host });
+        return {
+          client: sshClient as never,
+          jumpClient: null,
+          dispose: () => {},
+        };
+      },
+      withConnection: async (host, connectOptions, fn) => {
+        sshConnections.push({ host, pool: connectOptions.pool });
+        return fn(sshClient as never);
+      },
+      jumpChain: async () => ({
+        client: sshClient as never,
+        jumpClient: null,
+        dispose: () => {},
+      }),
+      poolKey: (pool, host) =>
+        `${pool}:${host.userId}:${host.ip}:${host.port}:${host.username}`,
+      prepare: async () => ({ config: {}, outcome: { status: "ready" } }),
+      openTransport: async () => ({ jumpClient: null, via: "direct" }),
+      classifyKeyboardInteractive: ({ prompts }, host) => ({
+        kind: "auto",
+        responses: prompts.map((p) =>
+          /password/i.test(p.prompt) && typeof host.password === "string"
+            ? host.password
+            : "",
+        ),
+      }),
+      autoResponses: (prompts, password) =>
+        prompts.map((p) =>
+          /password/i.test(p.prompt) && password ? password : "",
+        ),
+      requiresSecret: (authType) =>
+        ["password", "key", "credential", "agent"].includes(authType),
+      supportsBackground: (authType) =>
+        !["none", "opkssh", "stepca"].includes(authType),
+    },
+
+    auth: {
+      registerSshAuthProvider: (provider) => {
+        auth.sshAuthProviders.push(provider);
+      },
+      registerLoginMethod: (method) => {
+        auth.loginMethods.push(method);
+      },
+      registerSecondFactor: (factor) => {
+        auth.secondFactors.push(factor);
+      },
+      recordEnrollment: async (userId, factorId) => {
+        auth.enrollments.add(`${userId}:${factorId}`);
+      },
+      removeEnrollment: async (userId, factorId) => {
+        auth.enrollments.delete(`${userId}:${factorId}`);
+      },
+    },
+
     asUser: async (userId, fn) => {
       const previous = actor;
       actor = userId;
@@ -291,6 +377,8 @@ export function createFakeContext(
     httpRouters,
     settings,
     coreSettings,
+    sshConnections,
+    auth,
   };
 }
 
@@ -307,6 +395,8 @@ export interface MockContextOptions {
   coreSettings?: Record<string, string>;
   /** Acting user returned by currentActor and used by asUser. */
   actor?: string;
+  /** What ctx.ssh.connect and withConnection hand back as the client. */
+  sshClient?: unknown;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -320,8 +410,9 @@ export interface MockPluginContext extends FakePluginContext {
  *
  * The gates on today's ctx surface: kv:own on every ctx.kv call, db:own on
  * ctx.db, network:serve on ctx.http and ctx.ws, events:core on emitting a
- * topic outside the plugin's own namespace, and settings:read-core on
- * ctx.settings.readCore. Reading a plugin's own settings is deliberately
+ * topic outside the plugin's own namespace, settings:read-core on
+ * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh, and
+ * auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
 export function createMockCtx(
@@ -335,6 +426,7 @@ export function createMockCtx(
     actor: options.actor,
     settings: options.settings,
     coreSettings: options.coreSettings,
+    sshClient: options.sshClient,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -435,6 +527,57 @@ export function createMockCtx(
       readCore: async (key) => {
         require("settings:read-core");
         return ctx.settings.readCore(key);
+      },
+    },
+
+    ssh: {
+      ...ctx.ssh,
+      connect: async (host, connectOptions) => {
+        require("ssh:connect");
+        require("credentials:use");
+        return ctx.ssh.connect(host, connectOptions);
+      },
+      withConnection: async (host, connectOptions, fn) => {
+        require("ssh:connect");
+        require("credentials:use");
+        return ctx.ssh.withConnection(host, connectOptions, fn);
+      },
+      prepare: async (host, prepareOptions) => {
+        require("ssh:connect");
+        require("credentials:use");
+        return ctx.ssh.prepare(host, prepareOptions);
+      },
+      openTransport: async (host, config) => {
+        require("ssh:connect");
+        return ctx.ssh.openTransport(host, config);
+      },
+      jumpChain: async (jumpHosts, chainOptions) => {
+        require("ssh:connect");
+        require("credentials:use");
+        return ctx.ssh.jumpChain(jumpHosts, chainOptions);
+      },
+    },
+
+    auth: {
+      registerSshAuthProvider: (provider) => {
+        require("auth:provide");
+        ctx.auth.registerSshAuthProvider(provider);
+      },
+      registerLoginMethod: (method) => {
+        require("auth:provide");
+        ctx.auth.registerLoginMethod(method);
+      },
+      registerSecondFactor: (factor) => {
+        require("auth:provide");
+        ctx.auth.registerSecondFactor(factor);
+      },
+      recordEnrollment: async (userId, factorId) => {
+        require("auth:provide");
+        return ctx.auth.recordEnrollment(userId, factorId);
+      },
+      removeEnrollment: async (userId, factorId) => {
+        require("auth:provide");
+        return ctx.auth.removeEnrollment(userId, factorId);
       },
     },
   };

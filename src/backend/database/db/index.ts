@@ -269,6 +269,29 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS user_external_identities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        provider_id TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (provider_id, subject),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_external_identities_user ON user_external_identities (user_id);
+
+    CREATE TABLE IF NOT EXISTS user_second_factors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        plugin_id TEXT NOT NULL,
+        factor_id TEXT NOT NULL,
+        enrolled_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id, plugin_id, factor_id),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS webauthn_credentials (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,

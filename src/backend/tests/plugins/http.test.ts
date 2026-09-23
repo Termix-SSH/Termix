@@ -69,8 +69,8 @@ vi.mock("../../plugins/permissions.js", () => ({
 vi.mock("../../utils/audit-logger.js", () => ({ logAudit: vi.fn() }));
 
 const http = await import("../../plugins/http.js");
-const pluginApi = (await import("../../database/routes/plugin-api-routes.js"))
-  .default;
+const { mountPluginApi } =
+  await import("../../database/routes/plugin-api-routes.js");
 
 function manifest(overrides: Record<string, unknown> = {}) {
   return {
@@ -86,9 +86,9 @@ let server: Server | null = null;
 
 async function startServer(): Promise<string> {
   const app = express();
-  // Exactly how database.ts mounts it: no auth in front, because the plugin
-  // router brings its own.
-  app.use("/plugin-api", pluginApi);
+  // The same mount database.ts uses. It used to put core auth in front of the
+  // whole prefix, which made every public plugin route unreachable.
+  mountPluginApi(app);
 
   return new Promise((resolve) => {
     server = app.listen(0, "127.0.0.1", () => {

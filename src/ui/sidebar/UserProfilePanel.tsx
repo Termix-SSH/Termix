@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { PluginSecondFactorEnrollment } from "./PluginSecondFactorEnrollment";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
@@ -2567,6 +2568,8 @@ export function UserProfilePanel({
               )}
             </div>
           </div>
+
+          <PluginSecondFactorEnrollment />
 
           {canChangePasword && (
             <PasswordChangeSection

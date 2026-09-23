@@ -27,7 +27,8 @@ export type CredentialTrayTrigger =
   "always" | "hover" | "click" | "actionsOnly";
 
 export interface CredentialSidebarFilterState {
-  type: ("password" | "key")[];
+  /** Credential type ids; plugins can add their own. */
+  type: string[];
   tags: string[];
 }
 
@@ -60,7 +61,7 @@ const TRAY_TRIGGERS: CredentialTrayTrigger[] = [
   "click",
   "actionsOnly",
 ];
-const FILTER_TYPE: CredentialSidebarFilterState["type"] = ["password", "key"];
+const TYPE_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
 
 export function defaultCredentialSidebarPreferences(): CredentialSidebarPreferences {
   return {
@@ -112,7 +113,9 @@ export function sanitizeCredentialSidebarPreferences(
 
   const filtersObj = (obj.filters ?? {}) as Record<string, unknown>;
   const filters: CredentialSidebarFilterState = {
-    type: sanitizeEnumArray(filtersObj.type, FILTER_TYPE),
+    type: sanitizeStringArray(filtersObj.type).filter((value) =>
+      TYPE_PATTERN.test(value),
+    ),
     tags: sanitizeStringArray(filtersObj.tags),
   };
 

@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../database/repositories/factory.js", () => ({
+vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentHostResolutionRepository: () => ({
     findCredentialByIdForUser: async () => null,
   }),
 }));
 
-vi.mock("../../utils/logger.js", () => ({
+vi.mock("../../../utils/logger.js", () => ({
   sshLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   authLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-import { SSHAuthManager } from "../../hosts/auth-manager.js";
+import { SSHAuthManager } from "../../../hosts/connect/terminal-prompt.js";
 
 function createManager() {
   const sent: Record<string, unknown>[] = [];

@@ -1,4 +1,5 @@
 import type { PluginContext } from "@termix/plugin-sdk/backend";
+import { setPluginSsh } from "./ssh.js";
 import {
   onHostDeleted,
   onHostLogin,
@@ -8,6 +9,8 @@ import {
 } from "./routes.js";
 
 export async function activate(ctx: PluginContext) {
+  setPluginSsh(ctx.ssh);
+  ctx.disposables.add(() => setPluginSsh(null));
   await startHostMetricsService(ctx.http.router());
 
   // Core used to POST these to this plugin's own port with an internal auth

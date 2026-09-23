@@ -309,6 +309,11 @@ Anonymous shared-session and collab pages have no session. They load only
 plugins whose manifest sets `contributes.guest: true`, from the public
 `GET /plugins/public`, and `app.guest` is true there.
 
+The login screen runs a smaller pass before anyone signs in: it activates only
+enabled plugins that contribute `loginMethods` or `secondFactors`, listed by
+the public `GET /plugins/public-manifest`. They stay active after login, and
+the full pass does not load the same bundle twice. See Auth below.
+
 #### Shared modules and the import map
 
 A bundle keeps `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`,
@@ -360,14 +365,15 @@ boundary and Suspense.
 | `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                             |
 | `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result |
 | `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                           |
-| `registerLoginMethod`, `registerSecondFactorUI`     | Typed now, wired by A8                                                                                   |
+| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method and a second factor challenge (plus an optional `enrollment` section)       |
 | `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                              |
 | `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces                                                                          |
 | `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                              |
 
 Hooks: `useTranslation` (the plugin's namespace), `usePermission` (a short
 name resolves to `<id>.<name>`), `useSettings`, `useHost`, `useHosts`,
-`useCurrentUser`, `useTheme`, `useToast`, `usePluginApi`, `useTabs`. The SDK
+`useCurrentUser`, `useTheme`, `useToast`, `usePluginApi`, `useTabs`,
+`useSshAuthTypes` (every SSH auth type the server knows, with its plugin). The SDK
 has no runtime dependencies: the hooks delegate to a host bridge core installs.
 
 Slots core owns: `terminal.toolbar`, `terminal.dock`, `terminal.overlay`
@@ -461,7 +467,153 @@ panel, card, host editor section, settings component or slot, and
 Core keeps password login, sessions, API keys, trusted proxy login, Electron
 auto-session and trusted devices, plus the base SSH auth types password, key,
 stored credential, agent and none. Every other login method, second factor and
-SSH auth method is a plugin through `ctx.auth`. **A8.**
+SSH auth method is a plugin through `ctx.auth`.
+
+In 2.9.0, OIDC (and GitHub, Google), LDAP, passkeys, TOTP, OPKSSH, Step-CA,
+Vault, Tailscale and Warpgate still live in core. They register through the
+same interfaces from `src/backend/auth/legacy-providers.ts` and
+`src/ui/auth/legacy-auth-ui.tsx` with `pluginId: "core"`. Phase C moves each
+one into its plugin by moving its block out of those two files; D1 deletes them.
+Nothing else in core branches on those type names.
+
+#### One SSH connect pipeline
+
+Every SSH connection, core's and plugins', goes through
+`src/backend/hosts/connect/`:
+
+1. `resolveHostById` resolves the host for the acting user: RBAC, owner-key
+   decryption, shared-host overrides and shared agent, and `op://` external
+   secret references.
+2. `buildConnectConfig` builds the ssh2 config: the defaults for the
+   connection's purpose (terminal, file-manager, tmux, metrics, fleet, docker,
+   ...), the host key verifier, then the auth provider's `prepare`.
+3. `openSshTransport` does port knocking, the Cloudflare Access tunnel, the
+   jump host chain (every hop through steps 1 and 2) or SOCKS5.
+4. `connectHost` connects with a keyboard-interactive handler: a prompt channel
+   when a person can answer (terminal, file manager, docker), otherwise the
+   stored password for password prompts and nothing else.
+
+Keyboard-interactive rounds are classified once (`classifyKeyboardInteractive`):
+an interceptor first (Warpgate), then push MFA, TOTP, and plain input. The
+transport decides how to ask.
+
+A host whose `authType` has no provider fails with
+`This host uses <type>, which needs the <plugin> plugin` (the plugin is found
+from `contributes.auth.sshAuthTypes`, including disabled plugins), and the host
+editor shows the same notice.
+
+#### SSH auth providers
+
+```ts
+ctx.auth.registerSshAuthProvider({
+  type: "corp-ca", // stored in ssh_data.auth_type
+  labelKey: "authType",
+  requiresSecret: false, // shared hosts: does a recipient need a secret
+  needsUserInteraction: true, // a browser sign-in or a person at the keyboard
+  supportsBackground: false, // can metrics and fleets poll it unattended
+  credentialType: false, // also offered as a stored credential type
+  interaction: "corp-ca", // what its outcomes call the browser step
+  fields: [/* settings fields */],
+  connectOptions: (host, purpose) => ({/* config overrides */}),
+  prepare: async (config, host, env) => {
+    // fill config (env.client is the ssh2 Client, for certificate patching)
+    return { status: "ready" };
+    // or { status: "interaction-required", interaction: "corp-ca", message }
+    // or { status: "error", code: "missing-secret", message }
+  },
+  onKeyboardInteractive: (round, host) => null, // claim a prompt style
+  onAuthFailed: (host, env, context) => undefined, // clear caches, retry once
+  startInteraction: async (request) => {}, // start the browser step
+});
+```
+
+The type must be listed in `contributes.auth.sshAuthTypes`, and the plugin
+needs `auth:provide`. The grant is checked on every `prepare`. `fields` are the
+plugin's own host settings (declare them in `contributes.settings.host` too):
+the host editor renders them when the plugin registered no editor, and
+`prepare` reads them with `ctx.settings.getHost(host.id, key)`. A frontend can
+instead draw its own editor with `app.registerSshAuthEditor`.
+
+A transport that can show a browser step sends `<interaction>_auth_required`
+and later calls the provider's `startInteraction` for `<interaction>_start_auth`.
+
+#### Login methods and second factors
+
+```ts
+ctx.auth.registerLoginMethod({
+  id: "corp-sso",
+  labelKey: "signIn",
+  kind: "redirect",
+  describe: async () => [{ id: "main", label: "Corp", enabled: true }],
+  start: async (request, instanceId) => ({ redirectUrl }),
+  callback: async (request) => ({
+    kind: "external",
+    provider: "corp",
+    subject: "123",
+    email,
+    name,
+    groups,
+    isAdmin,
+    allowedUsers,
+    returnTo,
+    rememberMe,
+  }),
+});
+ctx.auth.registerSecondFactor({
+  id: "pin",
+  labelKey: "pin",
+  isEnrolled: async (userId) => true,
+  challenge: async (userId) => ({/* for the UI */}),
+  verify: async (userId, body) => body.pin === "1234",
+  reset: async (userId) => {},
+});
+await ctx.auth.recordEnrollment(userId, "pin"); // and removeEnrollment
+```
+
+A method never issues a session. It returns an identity: an existing user id,
+or an external identity. Core then:
+
+1. finds the user through `user_external_identities` (provider, subject), or
+   provisions one with the core rules: first user is admin, the allowed-users
+   list is checked on every sign-in, provisioning needs SSO auto-provisioning,
+   admin approval is a hook that is off today, the admin group and role map
+   are kept in step;
+2. unlocks the data key (the password for password logins);
+3. runs second factors: every row in `user_second_factors` plus any factor
+   that reports itself enrolled. **Fail closed:** a row whose plugin is
+   disabled or gone refuses the login ("contact an admin"). A trusted device
+   or a method that already proved a factor (a verified passkey) skips the step;
+4. issues the JWT, cookie, trusted device and the `login` audit line.
+
+Routes, all under `/users/auth`: `GET methods` (public), `GET :methodId/start`,
+`GET|POST :methodId/callback`, `POST :methodId/verify`,
+`POST second-factor/:factorId/challenge`, `POST second-factor/:factorId/verify`.
+A redirect method's provider must send the browser back to
+`/users/auth/<methodId>/callback`. The older routes (`/users/login`,
+`/users/totp/verify-login`, `/users/oidc/*`, `/users/ldap/login`,
+`/users/webauthn/authenticate/verify`) are thin wrappers over the same pipeline.
+
+An admin clears a user's factors, including orphaned ones, with
+`DELETE /users/admin/:userId/second-factors` (audited as
+`admin_reset_second_factors`).
+
+Password login is always a method. The admin "allow password login" setting
+still turns it off, but only while another method (an enabled SSO instance,
+or trusted proxy login) can sign someone in; otherwise it stays on with a
+warning so nobody is locked out.
+
+#### Login UI before sign-in
+
+The login screen loads the frontends of enabled plugins that contribute login
+methods or second factors from the public `GET /plugins/public-manifest`
+(ids, versions, asset info and `contributes.auth` only), before anyone signs
+in. `app.registerLoginMethod` draws a button or form for a method the server
+lists (props: `instances`, `rememberMe`, `submit`, `startRedirect`,
+`complete`); a redirect method with no UI gets one button per instance.
+`app.registerSecondFactorUI` draws the challenge (props: `verify`,
+`challenge`, `cancel`) and, with `enrollment`, a section in Settings >
+Security. At activation before sign-in `app.api` calls fail with 401, so do
+nothing there but register.
 
 ### 13. Where plugins live
 
@@ -594,6 +746,12 @@ not do.
         "defaultRoles": ["user"], // system roles only, applied once
       },
     ],
+    "auth": {
+      // each needs "auth:provide" in capabilities
+      "sshAuthTypes": ["corp-ca"], // host auth types this plugin handles
+      "loginMethods": ["corp-sso"],
+      "secondFactors": ["pin"],
+    },
     "settings": {
       "admin": [
         {
@@ -690,6 +848,10 @@ refuses to register a view the manifest does not declare. `contributes.guest`
 opts a plugin into anonymous guest pages. Action contributions and slots
 accept the kinds `button` and `component`.
 
+`contributes.auth` lists the ids a plugin registers through `ctx.auth`. A
+register call for an id not listed here throws. Core also reads
+`sshAuthTypes` from disabled plugins, to say which plugin a host needs.
+
 `contributes.hostCapability`, `provides`, `requires`, `providesSecret` and
 `requiresSecret` are carried forward from v1 unchanged because the service and
 secret registries read them at activation. Phase B reshapes them.
@@ -718,7 +880,7 @@ deciding, not the mechanism.
 | `ssh:connect`        | high     | Run commands on hosts it is connected to                       |
 | `process:spawn`      | high     | Run programs on the Termix server                              |
 | `users:write`        | high     | Create and change user accounts                                |
-| `auth:provide`       | high     | Add a login method or second factor                            |
+| `auth:provide`       | high     | Add a login method, second factor or SSH auth type             |
 | `system:tls`         | high     | Request and replace the server certificate                     |
 | `hosts:write`        | medium   | Create and change hosts                                        |
 | `credentials:use`    | medium   | Connect using a host's stored credentials, without seeing them |
@@ -772,11 +934,27 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4** |
 | `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5** |
 | `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | B      |
-| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | B      |
+| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8** |
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6** |
 | `ctx.notify.*`                                   | `notify:send`                        | A6     |
-| `ctx.auth.*`                                     | `auth:provide`                       | A8     |
+| `ctx.auth.*`                                     | `auth:provide`                       | **A8** |
 | `ctx.fetch`                                      | `network:outbound`                   | B      |
+
+`ctx.ssh` was pulled forward from B so plugin transports go through core's
+connect pipeline instead of importing ssh2 helpers from core:
+
+- `connect(hostOrId, { purpose, pool? })` returns `{ client, dispose }`.
+- `withConnection(host, { pool, purpose }, fn)` borrows a pooled connection.
+- `jumpChain(jumpHosts, { forHost? })` returns a client at the end of a jump
+  chain, for forwarding to something that is not SSH.
+- `prepare(host, { client, purpose })`, `openTransport`,
+  `classifyKeyboardInteractive` and `autoResponses` are the lower level for a
+  transport with its own prompt flow (docker's console, host metrics).
+- `requiresSecret(authType)` and `supportsBackground(authType)` ask the
+  provider.
+
+Each new connection is audited and runs as the current actor; pooled reuse is
+not. Connections and pool entries are closed on deactivate.
 
 ### The actor
 

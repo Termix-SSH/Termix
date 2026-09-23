@@ -1568,7 +1568,13 @@
     "webUiErrorLabelDuplicate": "Each endpoint needs a different name.",
     "webUiErrorPortRange": "Endpoint {{row}} needs a port between 1 and 65535.",
     "webUiErrorPathInvalid": "Endpoint {{row}} has an invalid path. Use a path like /admin.",
-    "copyViewUrlAction": "Copy {{name}} link"
+    "copyViewUrlAction": "Copy {{name}} link",
+    "filterAuthAgent": "SSH Agent",
+    "filterAuthVault": "Vault",
+    "filterAuthTailscale": "Tailscale",
+    "authTypeNeedsPlugin": "This host uses {{type}}, which needs the {{plugin}} plugin. Turn it on to connect.",
+    "authTypeUnknown": "This host uses {{type}}, which no enabled plugin provides.",
+    "authFieldsAfterSave": "Save the host first, then fill in these fields."
   },
   "commandPalette": {
     "searchPlaceholder": "Search hosts, commands, or settings...",
@@ -2507,7 +2513,14 @@
     "signInWithPasskey": "Sign in with passkey",
     "passkeyLoginFailed": "Passkey login failed",
     "attemptsRemaining": "{{count}} attempts remaining",
-    "confirmResetDataWipe": "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and snippets. Continue?"
+    "confirmResetDataWipe": "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and snippets. Continue?",
+    "loginWithSso": "Sign in with SSO",
+    "loginWithLdap": "Sign in with LDAP",
+    "password": "Password",
+    "totpFactor": "Authenticator code",
+    "backupCodeHint": "You can also enter one of your backup codes.",
+    "secondFactorUnavailable": "Your account uses a second factor that is not available right now. Contact an admin to reset it.",
+    "secondFactorNoUI": "This second factor cannot be shown on this screen. Contact an admin."
   },
   "hostKey": {
     "verifyNewHost": "Verify SSH Host Key",
@@ -3217,7 +3230,15 @@
     "pluginPermissionGranted": "Granted",
     "pluginPermissionNotGranted": "Not granted",
     "pluginGrantFailed": "Failed to grant the capability",
-    "pluginRevokeFailed": "Failed to revoke the capability"
+    "pluginRevokeFailed": "Failed to revoke the capability",
+    "secondFactorsSectionTitle": "Second factors",
+    "secondFactorsNone": "No second factors enrolled",
+    "secondFactorUnavailable": "The {{plugin}} plugin is off",
+    "resetSecondFactors": "Reset second factors",
+    "resetSecondFactorsConfirm": "Remove every second factor for {{username}}? They can sign in with their password or SSO and enrol again.",
+    "secondFactorsResetSuccess": "Second factors reset",
+    "secondFactorsResetFailed": "Failed to reset second factors",
+    "passwordLoginForced": "Password login is turned off, but no other login method is enabled, so it stays on for now. Nobody gets locked out."
   },
   "newUi": {
     "sidebar": {
@@ -4008,7 +4029,7 @@
       },
       "auth:provide": {
         "title": "Handle sign in",
-        "consequence": "It can add a login method or a second factor."
+        "consequence": "It can add a login method, a second factor or an SSH sign-in type."
       },
       "system:tls": {
         "title": "Manage certificates",

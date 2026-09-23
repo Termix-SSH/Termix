@@ -60,15 +60,10 @@ vi.mock("../../../../src/backend/hosts/host-resolver.js", () => ({
   resolveHostById: async (hostId: number) => state.hosts.get(hostId) ?? null,
 }));
 
-vi.mock("../../../../src/backend/hosts/ssh-client-factory.js", () => ({
-  getFleetPoolKey: () => "pool-key",
-  createFleetSshFactory: () => async () => ({}),
-}));
-
-vi.mock("../../../../src/backend/hosts/ssh-connection-pool.js", () => ({
-  withConnection: async (
-    _key: string,
-    _factory: unknown,
+vi.mock("../../src/backend/ssh.js", () => ({
+  withSshConnection: async (
+    _host: unknown,
+    _options: unknown,
     fn: (client: unknown) => unknown,
   ) => fn({}),
 }));

@@ -26,11 +26,7 @@ import {
   createCurrentUserRepository,
 } from "../../../../src/backend/database/repositories/factory.js";
 import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
-import {
-  getFleetPoolKey,
-  createFleetSshFactory,
-} from "../../../../src/backend/hosts/ssh-client-factory.js";
-import { withConnection } from "../../../../src/backend/hosts/ssh-connection-pool.js";
+import { withSshConnection } from "./ssh.js";
 import { execCommand } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import { detectPlatform } from "../../../../src/backend/hosts/metrics-shared/platform.js";
 import {
@@ -915,9 +911,9 @@ router.post(
             inputValues && typeof inputValues === "object" ? inputValues : {},
           );
 
-          const { stdout, stderr, code } = await withConnection(
-            getFleetPoolKey(fullHost),
-            createFleetSshFactory(fullHost),
+          const { stdout, stderr, code } = await withSshConnection(
+            fullHost as never,
+            { pool: "fleet", purpose: "fleet" },
             (client) => execCommand(client, resolvedCommand, 60000),
           );
 
@@ -1017,9 +1013,9 @@ router.post(
             return { success: false, error: "Host not found" };
           }
 
-          await withConnection(
-            getFleetPoolKey(fullHost),
-            createFleetSshFactory(fullHost),
+          await withSshConnection(
+            fullHost as never,
+            { pool: "fleet", purpose: "fleet" },
             async (client) => {
               const sftp = await getSftp(client);
               await sftpWriteFile(sftp, remotePath, file.buffer);
@@ -1112,9 +1108,9 @@ router.post(
             return { success: false, error: "Host not found" };
           }
 
-          const data = await withConnection(
-            getFleetPoolKey(fullHost),
-            createFleetSshFactory(fullHost),
+          const data = await withSshConnection(
+            fullHost as never,
+            { pool: "fleet", purpose: "fleet" },
             async (client) => {
               const sftp = await getSftp(client);
               return sftpReadFile(sftp, remotePath);
@@ -1305,9 +1301,9 @@ router.post(
             return { success: false, error: "Host not found" };
           }
 
-          const record = await withConnection(
-            getFleetPoolKey(fullHost),
-            createFleetSshFactory(fullHost),
+          const record = await withSshConnection(
+            fullHost as never,
+            { pool: "fleet", purpose: "fleet" },
             async (client) => {
               const platform = await detectPlatform(client);
               const { stdout } = await execCommand(
@@ -1418,9 +1414,9 @@ router.post(
             return { success: false, error: "Host not found" };
           }
 
-          return withConnection(
-            getFleetPoolKey(fullHost),
-            createFleetSshFactory(fullHost),
+          return withSshConnection(
+            fullHost as never,
+            { pool: "fleet", purpose: "fleet" },
             async (client) => {
               const platform = await detectPlatform(client);
               // "remove" has no PackageAction counterpart in buildPackageActionCommand

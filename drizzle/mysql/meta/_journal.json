@@ -211,6 +211,13 @@
       "when": 1790118361160,
       "tag": "0029_open_captain_america",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1790135163718,
+      "tag": "0030_sweet_warlock",
+      "breakpoints": true
     }
   ]
 }

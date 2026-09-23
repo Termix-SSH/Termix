@@ -51,6 +51,7 @@ import {
 } from "@/main-axios";
 import type { Host, Credential } from "@/types/ui-types";
 import { CredentialEditorView } from "./CredentialEditorView";
+import { AdminSecondFactorsSection } from "./AdminSecondFactorsSection";
 import { HostEditor } from "./HostEditor";
 import { mapCredentials, sshHostToHost } from "./HostManagerData";
 import type { AdminSession, AdminUser } from "./AdminManagementSections";
@@ -584,6 +585,19 @@ export function AdminUserManagePanel({
                 )}
               </div>
             </div>
+
+            <AdminSecondFactorsSection
+              userId={user.id}
+              username={user.username}
+              heading={sectionHeading(t("admin.secondFactorsSectionTitle"))}
+              requestConfirm={(message, onConfirm) =>
+                setConfirmDialog({ message, onConfirm })
+              }
+              onReset={() => {
+                setTotpEnabled(false);
+                onTotpDisabled();
+              }}
+            />
 
             {/* Roles */}
             <div className="flex flex-col gap-2">

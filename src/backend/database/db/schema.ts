@@ -111,6 +111,60 @@ export const trustedDevices = sqliteTable(
   (table) => [index("idx_trusted_devices_user_id").on(table.userId)],
 );
 
+/**
+ * A sign-in identity from an external provider (OIDC, LDAP, GitHub, ...).
+ * Replaces identifier strings like "ldap:<provider>:<id>" on users.
+ */
+export const userExternalIdentities = sqliteTable(
+  "user_external_identities",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    providerId: text("provider_id").notNull(),
+    /** The provider's id for the user, at most 255 characters. */
+    subject: text("subject").notNull(),
+    email: text("email"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_user_external_identities_provider_subject").on(
+      table.providerId,
+      table.subject,
+    ),
+    index("idx_user_external_identities_user").on(table.userId),
+  ],
+);
+
+/**
+ * Which second factors a user enrolled in, by plugin. Kept when the plugin is
+ * disabled or removed, so login fails closed instead of skipping the factor.
+ */
+export const userSecondFactors = sqliteTable(
+  "user_second_factors",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pluginId: text("plugin_id").notNull(),
+    factorId: text("factor_id").notNull(),
+    enrolledAt: text("enrolled_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_user_second_factors_user_factor").on(
+      table.userId,
+      table.pluginId,
+      table.factorId,
+    ),
+  ],
+);
+
 export const webauthnCredentials = sqliteTable("webauthn_credentials", {
   id: text("id").primaryKey(),
   userId: text("user_id")

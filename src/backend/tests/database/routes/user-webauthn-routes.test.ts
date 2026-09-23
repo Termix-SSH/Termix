@@ -6,6 +6,24 @@ const mocks = vi.hoisted(() => ({
   verify: vi.fn(),
   user: vi.fn(),
   update: vi.fn(),
+  manager: {
+    authenticateWebAuthnUser: vi.fn(),
+    authenticateOIDCUser: vi.fn(),
+    isTrustedDevice: vi.fn(),
+    generateJWTToken: vi.fn(),
+    getSecureCookieOptions: vi.fn(),
+    getClearCookieOptions: vi.fn(),
+  },
+}));
+vi.mock("../../../utils/auth-manager.js", () => ({
+  AuthManager: { getInstance: () => mocks.manager },
+}));
+vi.mock("../../../utils/audit-logger.js", () => ({
+  logAudit: vi.fn(),
+  getRequestMeta: () => ({ ipAddress: "", userAgent: "" }),
+}));
+vi.mock("../../../hosts/automation-events.js", () => ({
+  notifyAutomationInternalEvent: vi.fn(),
 }));
 vi.mock("@simplewebauthn/server", () => ({
   generateAuthenticationOptions: vi
@@ -17,6 +35,10 @@ vi.mock("@simplewebauthn/server", () => ({
 }));
 vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({ findById: mocks.user }),
+  createCurrentUserAuthRepository: () => ({
+    listSecondFactors: async () => [],
+  }),
+  createCurrentSettingsRepository: () => ({ get: async () => null }),
   createCurrentWebauthnCredentialRepository: () => ({
     findByCredentialId: vi.fn().mockResolvedValue({
       id: 1,
@@ -30,7 +52,16 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
   getCurrentSettingValue: vi.fn(),
 }));
-vi.mock("../../../utils/logger.js", () => ({ authLogger: { warn: vi.fn() } }));
+vi.mock("../../../utils/logger.js", () => {
+  const log = {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+    debug: vi.fn(),
+  };
+  return { authLogger: log, sshLogger: log, logger: log, databaseLogger: log };
+});
 vi.mock("../../../utils/user-agent-parser.js", () => ({
   parseUserAgent: () => ({ type: "browser", deviceInfo: "test" }),
   generateDeviceFingerprint: () => "device",
@@ -40,12 +71,7 @@ const { registerUserWebAuthnRoutes } =
   await import("../../../database/routes/user-webauthn-routes.js");
 type Handler = (req: Request, res: Response) => Promise<unknown>;
 const handlers = new Map<string, Handler>();
-const manager = {
-  authenticateWebAuthnUser: vi.fn().mockResolvedValue(true),
-  isTrustedDevice: vi.fn().mockResolvedValue(false),
-  generateJWTToken: vi.fn().mockResolvedValue("token"),
-  getSecureCookieOptions: vi.fn().mockReturnValue({ httpOnly: true }),
-};
+const manager = mocks.manager;
 registerUserWebAuthnRoutes(
   {
     post: (path: string, ...callbacks: Handler[]) =>
@@ -62,6 +88,7 @@ registerUserWebAuthnRoutes(
 function response() {
   const res = { json: vi.fn(), status: vi.fn(), cookie: vi.fn() };
   res.status.mockReturnValue(res);
+  res.cookie.mockReturnValue(res);
   return res;
 }
 async function login(userVerification: string) {
@@ -78,13 +105,21 @@ async function login(userVerification: string) {
   await handlers.get("/webauthn/authenticate/verify")!(
     {
       body: { challengeId, response: { id: "key" }, rememberMe: true },
-    } as Request,
+      get: () => undefined,
+      headers: {},
+      socket: {},
+    } as unknown as Request,
     res as unknown as Response,
   );
   return res;
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  manager.authenticateWebAuthnUser.mockResolvedValue(true);
+  manager.authenticateOIDCUser.mockResolvedValue(true);
+  manager.generateJWTToken.mockResolvedValue("token");
+  manager.getSecureCookieOptions.mockReturnValue({ httpOnly: true });
+  manager.getClearCookieOptions.mockReturnValue({});
   mocks.user.mockResolvedValue({
     id: "user",
     username: "alice",
@@ -134,7 +169,11 @@ describe("WebAuthn second factor policy", () => {
     expect(res.cookie).not.toHaveBeenCalled();
   });
   it("allows users without TOTP to log in with a possession-only key", async () => {
-    mocks.user.mockResolvedValue({ id: "user", totpEnabled: false });
+    mocks.user.mockResolvedValue({
+      id: "user",
+      username: "alice",
+      totpEnabled: false,
+    });
     expect((await login("discouraged")).cookie).toHaveBeenCalled();
   });
 });

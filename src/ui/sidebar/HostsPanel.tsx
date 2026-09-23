@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../lib/error-message.js";
+import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useEffect, useRef, useState } from "react";
 import type { HostData } from "@/types/index";
 import { useTranslation } from "react-i18next";
@@ -204,6 +205,7 @@ export function HostsPanel({
   active?: boolean;
 }) {
   const { t } = useTranslation();
+  const sshAuthProviders = useSshAuthProviders();
   const [hostSearch, setHostSearch] = useState("");
   const [managerEditing, setManagerEditing] = useState(false);
   const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
@@ -750,27 +752,18 @@ export function HostsPanel({
                   <DropdownMenuLabel>
                     {t("hosts.filterAuthGroup")}
                   </DropdownMenuLabel>
-                  {(
-                    [
-                      "password",
-                      "key",
-                      "credential",
-                      "none",
-                      "opkssh",
-                      "stepca",
-                    ] as const
-                  ).map((val) => (
+                  {sshAuthProviders.providers.map((option) => (
                     <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.authType.includes(val)}
+                      key={option.type}
+                      checked={filterState.authType.includes(option.type)}
                       onCheckedChange={() =>
-                        handleFilterToggle("authType", val)
+                        handleFilterToggle("authType", option.type)
                       }
                       onSelect={(e) => e.preventDefault()}
                     >
-                      {t(
-                        `hosts.filterAuth${val.charAt(0).toUpperCase() + val.slice(1)}`,
-                      )}
+                      {option.editorTitleKey
+                        ? t(option.editorTitleKey)
+                        : t(option.labelKey, { defaultValue: option.type })}
                     </DropdownMenuCheckboxItem>
                   ))}
                   <DropdownMenuSeparator />

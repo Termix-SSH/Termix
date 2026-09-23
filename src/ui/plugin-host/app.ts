@@ -320,7 +320,7 @@ export function createPluginApp(
           ...method,
           titleKey: key(method.titleKey),
           pluginId,
-          component: scoped(method.component),
+          component: scoped(method.component) as never,
         }),
       );
     },
@@ -331,7 +331,10 @@ export function createPluginApp(
           ...factor,
           titleKey: key(factor.titleKey),
           pluginId,
-          component: scoped(factor.component),
+          component: scoped(factor.component) as never,
+          enrollment: factor.enrollment
+            ? (scoped(factor.enrollment) as never)
+            : undefined,
         }),
       );
     },

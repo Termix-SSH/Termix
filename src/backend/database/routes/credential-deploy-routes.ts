@@ -4,28 +4,56 @@ import type {
   CredentialBackend,
 } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import ssh2Pkg from "ssh2";
+import type { Client as SshClient } from "ssh2";
 import { createCurrentHostResolutionRepository } from "../repositories/factory.js";
-import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
+import { connectHost } from "../../hosts/connect/connect-host.js";
+import type { SshConnectHost } from "../../hosts/connect/types.js";
+import { resolveHostById } from "../../hosts/host-resolver.js";
 
-const { Client } = ssh2Pkg;
+function describeDeployError(err: unknown): string {
+  const message = getErrorMessage(err, "Connection failed");
+  if (message.includes("All configured authentication methods failed")) {
+    return "Authentication failed. Please check your credentials and ensure the SSH service is running.";
+  }
+  if (message.includes("ENOTFOUND") || message.includes("ENOENT")) {
+    return "Could not resolve hostname or connect to server.";
+  }
+  if (message.includes("ECONNREFUSED")) {
+    return "Connection refused. The server may not be running or the port may be incorrect.";
+  }
+  if (message.includes("ETIMEDOUT")) {
+    return "Connection timed out. Check your network connection and server availability.";
+  }
+  if (
+    message.includes("authentication failed") ||
+    message.includes("Permission denied")
+  ) {
+    return "Authentication failed. Please check your username and password/key.";
+  }
+  if (message === "SSH connection timeout") return "Connection timeout";
+  return message;
+}
 
 async function deploySSHKeyToHost(
-  hostConfig: Record<string, unknown>,
+  host: SshConnectHost,
+  userId: string,
   credData: CredentialBackend,
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   const publicKey = credData.publicKey as string;
+
+  let conn: SshClient;
+  try {
+    ({ client: conn } = await connectHost(host, {
+      userId,
+      purpose: "credential-deploy",
+      timeoutMs: 120000,
+    }));
+  } catch (error) {
+    return { success: false, error: describeDeployError(error) };
+  }
+
   return new Promise((resolve) => {
-    const conn = new Client();
-
-    const connectionTimeout = setTimeout(() => {
-      conn.destroy();
-      resolve({ success: false, error: "Connection timeout" });
-    }, 120000);
-
-    conn.on("ready", async () => {
-      clearTimeout(connectionTimeout);
-
+    void (async () => {
       try {
         await new Promise<void>((resolveCmd, rejectCmd) => {
           const cmdTimeout = setTimeout(() => {
@@ -238,121 +266,7 @@ async function deploySSHKeyToHost(
           error: getErrorMessage(error, "Deployment failed"),
         });
       }
-    });
-
-    conn.on("error", (err) => {
-      clearTimeout(connectionTimeout);
-      let errorMessage = err.message;
-
-      if (
-        err.message.includes("All configured authentication methods failed")
-      ) {
-        errorMessage =
-          "Authentication failed. Please check your credentials and ensure the SSH service is running.";
-      } else if (
-        err.message.includes("ENOTFOUND") ||
-        err.message.includes("ENOENT")
-      ) {
-        errorMessage = "Could not resolve hostname or connect to server.";
-      } else if (err.message.includes("ECONNREFUSED")) {
-        errorMessage =
-          "Connection refused. The server may not be running or the port may be incorrect.";
-      } else if (err.message.includes("ETIMEDOUT")) {
-        errorMessage =
-          "Connection timed out. Check your network connection and server availability.";
-      } else if (
-        err.message.includes("authentication failed") ||
-        err.message.includes("Permission denied")
-      ) {
-        errorMessage =
-          "Authentication failed. Please check your username and password/key.";
-      }
-
-      resolve({ success: false, error: errorMessage });
-    });
-
-    try {
-      const connectionConfig: Record<string, unknown> = {
-        host: hostConfig.ip,
-        port: hostConfig.port || 22,
-        username: hostConfig.username,
-        readyTimeout: 60000,
-        keepaliveInterval: 30000,
-        keepaliveCountMax: 3,
-        tcpKeepAlive: true,
-        tcpKeepAliveInitialDelay: 30000,
-        algorithms: {
-          kex: [
-            "diffie-hellman-group14-sha256",
-            "diffie-hellman-group14-sha1",
-            "diffie-hellman-group1-sha1",
-            "diffie-hellman-group-exchange-sha256",
-            "diffie-hellman-group-exchange-sha1",
-            "ecdh-sha2-nistp256",
-            "ecdh-sha2-nistp384",
-            "ecdh-sha2-nistp521",
-          ],
-          cipher: [
-            "aes128-ctr",
-            "aes192-ctr",
-            "aes256-ctr",
-            "aes128-gcm@openssh.com",
-            "aes256-gcm@openssh.com",
-            "aes128-cbc",
-            "aes192-cbc",
-            "aes256-cbc",
-            "3des-cbc",
-          ],
-          hmac: [
-            "hmac-sha2-256-etm@openssh.com",
-            "hmac-sha2-512-etm@openssh.com",
-            "hmac-sha2-256",
-            "hmac-sha2-512",
-            "hmac-sha1",
-            "hmac-md5",
-          ],
-          compress: ["none", "zlib@openssh.com", "zlib"],
-        },
-      };
-
-      if (hostConfig.authType === "password" && hostConfig.password) {
-        connectionConfig.password = hostConfig.password;
-      } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
-        try {
-          const privateKey = hostConfig.privateKey as string;
-          connectionConfig.privateKey = preparePrivateKeyForSSH2(
-            privateKey,
-            hostConfig.keyPassword as string | undefined,
-          );
-
-          if (hostConfig.keyPassword) {
-            connectionConfig.passphrase = hostConfig.keyPassword;
-          }
-        } catch (keyError) {
-          clearTimeout(connectionTimeout);
-          resolve({
-            success: false,
-            error: `Invalid SSH key format: ${getErrorMessage(keyError)}`,
-          });
-          return;
-        }
-      } else {
-        clearTimeout(connectionTimeout);
-        resolve({
-          success: false,
-          error: `Invalid authentication configuration. Auth type: ${hostConfig.authType}, has password: ${!!hostConfig.password}, has key: ${!!hostConfig.privateKey}`,
-        });
-        return;
-      }
-
-      conn.connect(connectionConfig);
-    } catch (error) {
-      clearTimeout(connectionTimeout);
-      resolve({
-        success: false,
-        error: getErrorMessage(error, "Connection failed"),
-      });
-    }
+    })();
   });
 }
 
@@ -456,6 +370,8 @@ export function registerCredentialDeployRoutes(
             error: "Public key is required for deployment",
           });
         }
+        // Writing authorized_keys is an owner action, so ownership is checked
+        // before the shared resolver fills in the credentials.
         const hostData = await repository.findHostByIdForUser(
           targetHostId,
           userId,
@@ -468,57 +384,19 @@ export function registerCredentialDeployRoutes(
           });
         }
 
-        const hostConfig = {
-          ip: hostData.ip,
-          port: hostData.port,
-          username: hostData.username,
-          authType: hostData.authType,
-          password: hostData.password,
-          privateKey: hostData.key,
-          keyPassword: hostData.keyPassword,
-        };
-
-        if (hostData.authType === "credential" && hostData.credentialId) {
-          const userId = (req as AuthenticatedRequest).userId;
-          if (!userId) {
-            return res.status(400).json({
-              success: false,
-              error: "Authentication required for credential resolution",
-            });
-          }
-
-          try {
-            const hostCredential = await repository.findCredentialByIdForUser(
-              hostData.credentialId as number,
-              userId,
-            );
-
-            if (hostCredential) {
-              hostConfig.authType = hostCredential.authType;
-              hostConfig.username = hostCredential.username;
-
-              if (hostCredential.authType === "password") {
-                hostConfig.password = hostCredential.password;
-              } else if (hostCredential.authType === "key") {
-                hostConfig.privateKey =
-                  hostCredential.privateKey || hostCredential.key;
-                hostConfig.keyPassword = hostCredential.keyPassword;
-              }
-            } else {
-              return res.status(400).json({
-                success: false,
-                error: "Host credential not found",
-              });
-            }
-          } catch {
-            return res.status(500).json({
-              success: false,
-              error: "Failed to resolve host credentials",
-            });
-          }
+        const resolvedHost = await resolveHostById(targetHostId, userId);
+        if (!resolvedHost) {
+          return res.status(400).json({
+            success: false,
+            error: "Host credential not found",
+          });
         }
 
-        const deployResult = await deploySSHKeyToHost(hostConfig, credData);
+        const deployResult = await deploySSHKeyToHost(
+          resolvedHost as unknown as SshConnectHost,
+          userId,
+          credData,
+        );
 
         if (deployResult.success) {
           res.json({

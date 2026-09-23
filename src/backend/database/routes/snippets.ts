@@ -4,7 +4,8 @@ import express, { type Request, type Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
+import { connectHost } from "../../hosts/connect/connect-host.js";
+import type { SshConnectHost } from "../../hosts/connect/types.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import {
   createSnippetExecutionResult,
@@ -586,21 +587,11 @@ router.post(
           .json({ error: "Notes cannot be executed on a host" });
       }
 
-      const { Client } = await import("ssh2");
       const host = await resolveHostById(parseInt(hostId), userId);
 
       if (!host) {
         return res.status(404).json({ error: "Host not found" });
       }
-
-      const password = host.password;
-      const privateKey = host.key;
-      const passphrase = host.keyPassword;
-      const authType = host.authType;
-
-      const conn = new Client();
-      let output = "";
-      let errorOutput = "";
 
       const resolvedCommand = resolveSnippetCommand(
         snippet.content,
@@ -613,6 +604,13 @@ router.post(
         inputValues && typeof inputValues === "object" ? inputValues : {},
       );
 
+      const { client: conn } = await connectHost(
+        host as unknown as SshConnectHost,
+        { userId, purpose: "snippet", timeoutMs: 30000 },
+      );
+      let output = "";
+      let errorOutput = "";
+
       const executePromise = new Promise<{
         success: boolean;
         output: string;
@@ -621,130 +619,42 @@ router.post(
         const timeoutMs = getSnippetExecutionTimeoutMs();
         let timeout: NodeJS.Timeout | undefined;
 
-        conn.on("ready", () => {
-          conn.exec(resolvedCommand, (err, stream) => {
-            if (err) {
-              clearTimeout(timeout);
-              conn.end();
-              return reject(err);
-            }
-
-            if (timeoutMs) {
-              timeout = setTimeout(() => {
-                conn.end();
-                reject(
-                  new Error(`Command execution timeout (${timeoutMs / 1000}s)`),
-                );
-              }, timeoutMs);
-            }
-
-            stream.on("close", (exitCode: number | null) => {
-              clearTimeout(timeout);
-              conn.end();
-              resolve(
-                createSnippetExecutionResult(exitCode, output, errorOutput),
-              );
-            });
-
-            stream.on("data", (data: Buffer) => {
-              output += data.toString();
-            });
-
-            stream.stderr.on("data", (data: Buffer) => {
-              errorOutput += data.toString();
-            });
-          });
-        });
-
         conn.on("error", (err) => {
           clearTimeout(timeout);
           reject(err);
         });
 
-        const config: Record<string, unknown> = {
-          host: host.ip,
-          port: host.port,
-          username: host.username,
-          tryKeyboard: true,
-          keepaliveInterval: 30000,
-          keepaliveCountMax: 3,
-          readyTimeout: 30000,
-          tcpKeepAlive: true,
-          tcpKeepAliveInitialDelay: 30000,
-          timeout: 30000,
-          env: {
-            TERM: "xterm-256color",
-            LANG: "en_US.UTF-8",
-            LC_ALL: "en_US.UTF-8",
-            LC_CTYPE: "en_US.UTF-8",
-            LC_MESSAGES: "en_US.UTF-8",
-            LC_MONETARY: "en_US.UTF-8",
-            LC_NUMERIC: "en_US.UTF-8",
-            LC_TIME: "en_US.UTF-8",
-            LC_COLLATE: "en_US.UTF-8",
-            COLORTERM: "truecolor",
-          },
-          algorithms: {
-            kex: [
-              "curve25519-sha256",
-              "curve25519-sha256@libssh.org",
-              "ecdh-sha2-nistp521",
-              "ecdh-sha2-nistp384",
-              "ecdh-sha2-nistp256",
-              "diffie-hellman-group-exchange-sha256",
-              "diffie-hellman-group14-sha256",
-              "diffie-hellman-group14-sha1",
-              "diffie-hellman-group-exchange-sha1",
-              "diffie-hellman-group1-sha1",
-            ],
-            serverHostKey: [
-              "ssh-ed25519",
-              "ecdsa-sha2-nistp521",
-              "ecdsa-sha2-nistp384",
-              "ecdsa-sha2-nistp256",
-              "rsa-sha2-512",
-              "rsa-sha2-256",
-              "ssh-rsa",
-              "ssh-dss",
-            ],
-            cipher: SSH_ALGORITHMS.cipher,
-            hmac: [
-              "hmac-sha2-512-etm@openssh.com",
-              "hmac-sha2-256-etm@openssh.com",
-              "hmac-sha2-512",
-              "hmac-sha2-256",
-              "hmac-sha1",
-              "hmac-md5",
-            ],
-            compress: ["none", "zlib@openssh.com", "zlib"],
-          },
-        };
-
-        if (authType === "password" && password) {
-          config.password = password;
-        } else if (authType === "key" && privateKey) {
-          const cleanKey = (privateKey as string)
-            .trim()
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n");
-          config.privateKey = Buffer.from(cleanKey, "utf8");
-          if (passphrase) {
-            config.passphrase = passphrase;
+        conn.exec(resolvedCommand, (err, stream) => {
+          if (err) {
+            conn.end();
+            return reject(err);
           }
-        } else if (password) {
-          config.password = password;
-        } else if (privateKey) {
-          const cleanKey = (privateKey as string)
-            .trim()
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n");
-          config.privateKey = Buffer.from(cleanKey, "utf8");
-          if (passphrase) {
-            config.passphrase = passphrase;
-          }
-        }
 
-        conn.connect(config);
+          if (timeoutMs) {
+            timeout = setTimeout(() => {
+              conn.end();
+              reject(
+                new Error(`Command execution timeout (${timeoutMs / 1000}s)`),
+              );
+            }, timeoutMs);
+          }
+
+          stream.on("close", (exitCode: number | null) => {
+            clearTimeout(timeout);
+            conn.end();
+            resolve(
+              createSnippetExecutionResult(exitCode, output, errorOutput),
+            );
+          });
+
+          stream.on("data", (data: Buffer) => {
+            output += data.toString();
+          });
+
+          stream.stderr.on("data", (data: Buffer) => {
+            errorOutput += data.toString();
+          });
+        });
       });
 
       const result = await executePromise;

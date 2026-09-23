@@ -14,6 +14,7 @@ import { setPluginEnabledCheck, unregisterPluginHttp } from "./http.js";
 import { PluginLoader, type LoadedPlugin } from "./loader.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
+import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
 
 let loader: PluginLoader | null = null;
 
@@ -25,6 +26,16 @@ export function getPluginRuntime(): { loader: PluginLoader } {
     // truthful status instead of a 404.
     setPluginEnabledCheck(
       (pluginId) => loader?.get(pluginId)?.state === "active",
+    );
+    // Lets a host whose auth type belongs to a disabled plugin name it.
+    setSshAuthTypeOwnerSource(() =>
+      (loader?.list() ?? []).flatMap((plugin) =>
+        (plugin.manifest.contributes?.auth?.sshAuthTypes ?? []).map((type) => ({
+          type,
+          pluginId: plugin.id,
+          pluginName: plugin.manifest.name,
+        })),
+      ),
     );
   }
   return { loader };

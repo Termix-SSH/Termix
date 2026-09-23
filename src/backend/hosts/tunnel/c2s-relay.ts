@@ -5,7 +5,7 @@ import { createSocks5Connection } from "../../utils/socks5-helper.js";
 import { tunnelLogger } from "../../utils/logger.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import {
-  applyAuthOptions,
+  applyTunnelAuth,
   bindForwardIn,
   connectClient,
   forwardOut,
@@ -163,13 +163,28 @@ async function connectC2SSourceClient(
     algorithms: getManagedTunnelAlgorithms(),
   };
 
-  applyAuthOptions(connOptions, {
-    password: tunnelConfig.sourcePassword,
-    sshKey: tunnelConfig.sourceSSHKey,
-    keyPassword: tunnelConfig.sourceKeyPassword,
-    keyType: tunnelConfig.sourceKeyType,
-    authMethod: tunnelConfig.sourceAuthMethod,
-  });
+  const client = new Client();
+  const authOutcome = await applyTunnelAuth(
+    connOptions,
+    {
+      password: tunnelConfig.sourcePassword,
+      sshKey: tunnelConfig.sourceSSHKey,
+      keyPassword: tunnelConfig.sourceKeyPassword,
+      keyType: tunnelConfig.sourceKeyType,
+      authMethod: tunnelConfig.sourceAuthMethod,
+    },
+    {
+      client,
+      userId: tunnelConfig.requestingUserId || tunnelConfig.sourceUserId,
+      hostId: tunnelConfig.sourceHostId,
+      username: tunnelConfig.sourceUsername,
+      ip: tunnelConfig.sourceIP,
+      port: tunnelConfig.sourceSSHPort,
+    },
+  );
+  if (authOutcome.status !== "ready") {
+    throw new Error(authOutcome.message);
+  }
 
   if (
     tunnelConfig.useSocks5 &&
@@ -194,7 +209,7 @@ async function connectC2SSourceClient(
     }
   }
 
-  return connectClient(connOptions, tunnelConfig.name, "source");
+  return connectClient(connOptions, tunnelConfig.name, "source", client);
 }
 
 async function handleC2SRemoteRelayOpen(

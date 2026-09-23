@@ -31,6 +31,8 @@ const state = vi.hoisted(() => ({
   }[],
   // Which users have admin.plugins.manage, keyed by userId.
   managers: new Set<string>(["admin-1"]),
+  // Plugins the loader reports as running.
+  active: new Set<string>(),
 }));
 
 vi.mock("../../../utils/logger.js", () => ({
@@ -93,7 +95,18 @@ vi.mock("../../../utils/permission-manager.js", () => ({
 
 vi.mock("../../../plugins/index.js", () => ({
   getPluginRuntime: () => ({
-    loader: { list: () => [], get: () => undefined },
+    loader: {
+      list: () => [],
+      get: (id: string) =>
+        state.active.has(id)
+          ? {
+              id,
+              state: "active",
+              dir: "/nonexistent/plugin",
+              manifest: { id, locales: "locales" },
+            }
+          : undefined,
+    },
   }),
   activatePlugin: vi.fn(),
   deactivatePlugin: vi.fn(),
@@ -166,6 +179,7 @@ describe("plugins route", () => {
     state.plugins = new Map();
     state.grants = [];
     state.managers = new Set(["admin-1"]);
+    state.active = new Set();
 
     const app = express();
     app.use(express.json());
@@ -223,6 +237,94 @@ describe("plugins route", () => {
       );
       const res = await fetch(`${baseUrl}/plugins/public`);
       expect(await res.json()).toEqual([]);
+    });
+  });
+
+  describe("GET /plugins/public-manifest", () => {
+    it("lists only running plugins with login or second-factor UI, and nothing sensitive", async () => {
+      state.plugins.set(
+        "login-plugin",
+        makePlugin({
+          id: "login-plugin",
+          manifestJson: JSON.stringify({
+            capabilities: ["auth:provide", "credentials:read"],
+            contributes: {
+              auth: { loginMethods: ["corp-sso"], sshAuthTypes: ["corp"] },
+              settings: { admin: [{ key: "clientSecret", type: "secret" }] },
+              permissions: [{ name: "manage" }],
+            },
+          }),
+        }),
+      );
+      state.plugins.set(
+        "factor-plugin",
+        makePlugin({
+          id: "factor-plugin",
+          manifestJson: JSON.stringify({
+            contributes: { auth: { secondFactors: ["pin"] } },
+          }),
+        }),
+      );
+      state.plugins.set(
+        "stopped-login",
+        makePlugin({
+          id: "stopped-login",
+          manifestJson: JSON.stringify({
+            contributes: { auth: { loginMethods: ["other"] } },
+          }),
+        }),
+      );
+      state.plugins.set(
+        "disabled-login",
+        makePlugin({
+          id: "disabled-login",
+          state: "disabled",
+          manifestJson: JSON.stringify({
+            contributes: { auth: { loginMethods: ["x"] } },
+          }),
+        }),
+      );
+      state.plugins.set("sample-plugin", makePlugin());
+      state.active = new Set([
+        "login-plugin",
+        "factor-plugin",
+        "disabled-login",
+        "sample-plugin",
+      ]);
+
+      const res = await fetch(`${baseUrl}/plugins/public-manifest`);
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body.map((plugin: { id: string }) => plugin.id)).toEqual([
+        "login-plugin",
+        "factor-plugin",
+      ]);
+      expect(body[0].contributes).toEqual({
+        auth: { loginMethods: ["corp-sso"], secondFactors: [] },
+      });
+      for (const plugin of body) {
+        expect(Object.keys(plugin).sort()).toEqual(
+          [
+            "assetVersion",
+            "contributes",
+            "css",
+            "dependencies",
+            "enabled",
+            "frontend",
+            "id",
+            "locales",
+            "name",
+            "optionalDependencies",
+            "state",
+            "version",
+          ].sort(),
+        );
+      }
+      const raw = JSON.stringify(body);
+      expect(raw).not.toContain("clientSecret");
+      expect(raw).not.toContain("credentials:read");
+      expect(raw).not.toContain("sshAuthTypes");
     });
   });
 

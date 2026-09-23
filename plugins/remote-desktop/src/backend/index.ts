@@ -1,4 +1,5 @@
 import type { PluginContext } from "@termix/plugin-sdk/backend";
+import { setPluginSsh } from "./ssh.js";
 import {
   getGuacSessionInfo,
   handleGuacamoleUpgrade,
@@ -10,6 +11,8 @@ import {
 import { startRemoteDesktopService } from "./routes.js";
 
 export async function activate(ctx: PluginContext) {
+  setPluginSsh(ctx.ssh);
+  ctx.disposables.add(() => setPluginSsh(null));
   await startGuacamoleService();
 
   startRemoteDesktopService(ctx.http.router());
