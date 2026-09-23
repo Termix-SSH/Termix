@@ -47,6 +47,8 @@ type GeneralSettingsSectionProps = {
   handleTogglePasswordLogin: () => void;
   oidcAutoProvision: boolean;
   handleToggleOidcAutoProvision: () => void;
+  secondFactorAfterExternalLogin: boolean;
+  handleToggleSecondFactorAfterExternalLogin: () => void;
   oidcSilentLoginDefault: boolean;
   oidcSilentLoginDefaultLocked: boolean;
   handleToggleOidcSilentLoginDefault: () => void;
@@ -98,6 +100,8 @@ export function AdminGeneralSettingsSection({
   handleTogglePasswordLogin,
   oidcAutoProvision,
   handleToggleOidcAutoProvision,
+  secondFactorAfterExternalLogin,
+  handleToggleSecondFactorAfterExternalLogin,
   oidcSilentLoginDefault,
   oidcSilentLoginDefaultLocked,
   handleToggleOidcSilentLoginDefault,
@@ -299,6 +303,15 @@ export function AdminGeneralSettingsSection({
           <AdminToggle
             on={oidcAutoProvision}
             onToggle={handleToggleOidcAutoProvision}
+          />
+        </SettingRow>
+        <SettingRow
+          label={t("admin.secondFactorAfterExternalLogin")}
+          description={t("admin.secondFactorAfterExternalLoginDesc")}
+        >
+          <AdminToggle
+            on={secondFactorAfterExternalLogin}
+            onToggle={handleToggleSecondFactorAfterExternalLogin}
           />
         </SettingRow>
         <SettingRow

@@ -317,6 +317,7 @@ const oidcLoginMethod: LoginMethod = {
   labelKey: "auth.loginWithSso",
   icon: "key-round",
   kind: "redirect",
+  external: true,
   describe: async () =>
     (await listPublicProviders(["oidc", "github", "google"])).map(
       (provider) => ({
@@ -345,6 +346,7 @@ const ldapLoginMethod: LoginMethod = {
   labelKey: "auth.loginWithLdap",
   icon: "server",
   kind: "form",
+  external: true,
   describe: async () =>
     (await listPublicProviders(["ldap"])).map((provider) => ({
       id: String(provider.id),

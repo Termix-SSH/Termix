@@ -37,6 +37,8 @@ import {
   updateGuacamoleSettings,
   getOidcAutoProvision,
   updateOidcAutoProvision,
+  getSecondFactorAfterExternalLogin,
+  updateSecondFactorAfterExternalLogin,
   getOidcSilentLoginDefault,
   updateOidcSilentLoginDefault,
   getCommandHistoryEnabled,
@@ -223,6 +225,8 @@ export function AdminSettingsPanel({
 
   // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
+  const [secondFactorAfterExternalLogin, setSecondFactorAfterExternalLogin] =
+    useState(false);
   const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
   const [ssoProviders, setSsoProviders] = useState<SSOProvider[]>([]);
   const [ssoDialogOpen, setSsoDialogOpen] = useState(false);
@@ -394,6 +398,7 @@ export function AdminSettingsPanel({
         level,
         guac,
         oidcProv,
+        secondFactorExternal,
         oidcSilent,
         cmdHistory,
         analytics,
@@ -413,6 +418,7 @@ export function AdminSettingsPanel({
         getLogLevel(),
         getGuacamoleSettings(),
         getOidcAutoProvision(),
+        getSecondFactorAfterExternalLogin(),
         getOidcSilentLoginDefault(),
         getCommandHistoryEnabled(),
         getAnalyticsEnabled(),
@@ -435,6 +441,8 @@ export function AdminSettingsPanel({
       }
       if (oidcProv.status === "fulfilled")
         setOidcAutoProvision(oidcProv.value.enabled);
+      if (secondFactorExternal.status === "fulfilled")
+        setSecondFactorAfterExternalLogin(secondFactorExternal.value.enabled);
       if (oidcSilent.status === "fulfilled") {
         setOidcSilentLoginDefault(oidcSilent.value.enabled);
         setOidcSilentLoginDefaultLocked(oidcSilent.value.locked ?? false);
@@ -552,6 +560,17 @@ export function AdminSettingsPanel({
     } catch {
       setOidcAutoProvision(!newVal);
       toast.error(t("admin.updateOidcAutoProvisionFailed"));
+    }
+  }
+
+  async function handleToggleSecondFactorAfterExternalLogin() {
+    const newVal = !secondFactorAfterExternalLogin;
+    setSecondFactorAfterExternalLogin(newVal);
+    try {
+      await updateSecondFactorAfterExternalLogin(newVal);
+    } catch {
+      setSecondFactorAfterExternalLogin(!newVal);
+      toast.error(t("admin.updateSecondFactorAfterExternalLoginFailed"));
     }
   }
 
@@ -1233,6 +1252,10 @@ export function AdminSettingsPanel({
         handleTogglePasswordLogin={handleTogglePasswordLogin}
         oidcAutoProvision={oidcAutoProvision}
         handleToggleOidcAutoProvision={handleToggleOidcAutoProvision}
+        secondFactorAfterExternalLogin={secondFactorAfterExternalLogin}
+        handleToggleSecondFactorAfterExternalLogin={
+          handleToggleSecondFactorAfterExternalLogin
+        }
         oidcSilentLoginDefault={oidcSilentLoginDefault}
         oidcSilentLoginDefaultLocked={oidcSilentLoginDefaultLocked}
         handleToggleOidcSilentLoginDefault={handleToggleOidcSilentLoginDefault}

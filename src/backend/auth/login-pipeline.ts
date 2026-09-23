@@ -25,9 +25,13 @@ import {
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
 import type { UserRecord } from "../database/repositories/user-repository.js";
-import { ensureCoreLoginProviders } from "./core-auth.js";
+import {
+  ensureCoreLoginProviders,
+  isSecondFactorAfterExternalLoginEnabled,
+} from "./core-auth.js";
 import { findOrProvisionExternalUser } from "./provisioning.js";
 import {
+  getLoginMethod,
   getSecondFactor,
   listSecondFactors,
   type SecondFactor,
@@ -110,6 +114,18 @@ export async function evaluateSecondFactors(
   }
 
   return { required: [...required.values()], blocked };
+}
+
+/**
+ * Whether second factors should even be asked for this login. Off, they only
+ * run for password and other local form logins, matching 2.8: the setting
+ * governs external methods (SSO, LDAP) alone.
+ */
+function shouldRunSecondFactors(methodId: string): boolean {
+  ensureCoreLoginProviders();
+  const method = getLoginMethod(methodId);
+  if (!method?.external) return true;
+  return isSecondFactorAfterExternalLoginEnabled();
 }
 
 async function isTrustedDevice(req: Request, userId: string): Promise<boolean> {
@@ -221,7 +237,9 @@ export async function runLogin(
     `${context.methodId}_role_shared_credentials`,
   );
 
-  const factors = await evaluateSecondFactors(user.id);
+  const factors = shouldRunSecondFactors(context.methodId)
+    ? await evaluateSecondFactors(user.id)
+    : { required: [], blocked: [] };
   if (factors.blocked.length > 0) {
     authLogger.warn("Login refused: an enrolled second factor is unavailable", {
       operation: "second_factor_unavailable",

@@ -318,6 +318,13 @@ describe("second factors", () => {
     expect(h.state.users.get("u1")!.totpBackupCodes).not.toContain("BACKUP01");
   });
 
+  it("still stops password login for TOTP when the external-login setting is off", async () => {
+    enrolTotp();
+    h.state.settings.set("second_factor_after_external_login", "false");
+    const res = await passwordLogin({ username: "alice", password: PASSWORD });
+    expect(res.body).toMatchObject({ requires_totp: true });
+  });
+
   it("rejects a wrong code without a session", async () => {
     enrolTotp();
     const first = await passwordLogin({
@@ -549,7 +556,31 @@ describe("external identities", () => {
     expect(h.state.users.get("u9")!.isAdmin).toBe(false);
   });
 
-  it("runs enrolled second factors for SSO users too", async () => {
+  it("skips enrolled second factors for SSO users when the setting is off", async () => {
+    addUser({
+      id: "u9",
+      username: "Alice",
+      isOidc: true,
+      passwordHash: "",
+      totpEnabled: true,
+      totpSecret,
+    });
+    h.state.identities.push({
+      id: 1,
+      userId: "u9",
+      providerId: "3",
+      subject: "sub-1",
+      email: null,
+    });
+    const result = await runLogin(fakeRequest() as never, external, {
+      methodId: "oidc",
+      rememberMe: false,
+    });
+    expect(result.kind).toBe("session");
+  });
+
+  it("runs enrolled second factors for SSO users when the setting is on", async () => {
+    h.state.settings.set("second_factor_after_external_login", "true");
     addUser({
       id: "u9",
       username: "Alice",
@@ -621,6 +652,7 @@ describe("redirect logins", () => {
   });
 
   it("sends a second-factor step back with a pending cookie", async () => {
+    h.state.settings.set("second_factor_after_external_login", "true");
     addUser({
       id: "u9",
       username: "Alice",

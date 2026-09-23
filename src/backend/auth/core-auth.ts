@@ -37,6 +37,21 @@ export function isPasswordLoginSettingOn(): boolean {
 }
 
 /**
+ * Off by default, matching 2.8: second factors only ran after password and
+ * other local form logins. On, they also run after external methods (SSO,
+ * LDAP), which needs the pending-cookie/temp_token step those methods'
+ * clients (Termix-Mobile included) may not handle yet.
+ */
+export function isSecondFactorAfterExternalLoginEnabled(): boolean {
+  try {
+    const value = getCurrentSettingValue("second_factor_after_external_login");
+    return value === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Whether anyone could still sign in without a password: trusted proxy auth,
  * or a login method reporting an enabled instance (an SSO provider).
  */

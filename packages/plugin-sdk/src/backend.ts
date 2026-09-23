@@ -697,6 +697,14 @@ export interface PluginLoginMethod {
   labelKey: string;
   icon?: string;
   kind: "redirect" | "form";
+  /**
+   * True for a method that authenticates against something other than a
+   * password or key this server holds: SSO, an external directory, a
+   * federated identity provider. Governs whether the "ask for a second
+   * factor after external logins" admin setting applies to it. Leave unset
+   * for a local method (password, a passkey, a plugin's own local form).
+   */
+  external?: boolean;
   /** Enabled instances, shown on the login screen. No secrets. */
   describe?: () => Promise<PluginLoginInstance[]>;
   /** Redirect methods: where to send the browser. */

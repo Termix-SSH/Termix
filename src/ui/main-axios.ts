@@ -2054,6 +2054,8 @@ export {
   updateRegistrationAllowed,
   getOidcAutoProvision,
   updateOidcAutoProvision,
+  getSecondFactorAfterExternalLogin,
+  updateSecondFactorAfterExternalLogin,
   getOidcSilentLoginDefault,
   updateOidcSilentLoginDefault,
   updatePasswordLoginAllowed,

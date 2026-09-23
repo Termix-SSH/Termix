@@ -1378,6 +1378,18 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /users/oidc-auto-provision:
+ *   get:
+ *     summary: Get OIDC auto-provision status
+ *     description: Whether a new user account is created automatically on first SSO sign-in.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: OIDC auto-provision status.
+ */
 router.get("/oidc-auto-provision", async (_req, res) => {
   try {
     res.json({
@@ -1394,6 +1406,33 @@ router.get("/oidc-auto-provision", async (_req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /users/oidc-auto-provision:
+ *   patch:
+ *     summary: Set OIDC auto-provision status
+ *     description: Enables or disables automatic account creation on first SSO sign-in.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: OIDC auto-provision status updated.
+ *       400:
+ *         description: Invalid value for enabled.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set OIDC auto-provision setting.
+ */
 router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -1415,6 +1454,95 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
     res.status(500).json({ error: "Failed to set OIDC auto-provision" });
   }
 });
+
+/**
+ * @openapi
+ * /users/second-factor-after-external-login:
+ *   get:
+ *     summary: Get the external-login second-factor setting
+ *     description: Whether an enrolled second factor is asked for after an external login method (SSO, LDAP), in addition to password and other local logins.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: External-login second-factor setting.
+ */
+router.get("/second-factor-after-external-login", async (_req, res) => {
+  try {
+    res.json({
+      enabled: await createCurrentSettingsRepository().getBoolean(
+        "second_factor_after_external_login",
+        false,
+      ),
+    });
+  } catch (err) {
+    authLogger.error(
+      "Failed to get second-factor-after-external-login setting",
+      err,
+    );
+    res.status(500).json({
+      error: "Failed to get second-factor-after-external-login setting",
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /users/second-factor-after-external-login:
+ *   patch:
+ *     summary: Set the external-login second-factor setting
+ *     description: Enables or disables asking for an enrolled second factor after an external login method (SSO, LDAP).
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: External-login second-factor setting updated.
+ *       400:
+ *         description: Invalid value for enabled.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to set second-factor-after-external-login setting.
+ */
+router.patch(
+  "/second-factor-after-external-login",
+  authenticateJWT,
+  async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const user = await requireCurrentAdmin(userId);
+      if (!user) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") {
+        return res.status(400).json({ error: "Invalid value for enabled" });
+      }
+      await createCurrentSettingsRepository().set(
+        "second_factor_after_external_login",
+        enabled ? "true" : "false",
+      );
+      res.json({ enabled });
+    } catch (err) {
+      authLogger.error(
+        "Failed to set second-factor-after-external-login setting",
+        err,
+      );
+      res.status(500).json({
+        error: "Failed to set second-factor-after-external-login setting",
+      });
+    }
+  },
+);
 
 /**
  * @openapi

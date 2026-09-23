@@ -610,6 +610,7 @@ ctx.auth.registerLoginMethod({
   id: "corp-sso",
   labelKey: "signIn",
   kind: "redirect",
+  external: true, // governs the "second factor after external logins" setting
   describe: async () => [{ id: "main", label: "Corp", enabled: true }],
   start: async (request, instanceId) => ({ redirectUrl }),
   callback: async (request) => ({
@@ -648,7 +649,13 @@ or an external identity. Core then:
 3. runs second factors: every row in `user_second_factors` plus any factor
    that reports itself enrolled. **Fail closed:** a row whose plugin is
    disabled or gone refuses the login ("contact an admin"). A trusted device
-   or a method that already proved a factor (a verified passkey) skips the step;
+   or a method that already proved a factor (a verified passkey) skips the step.
+   This step is skipped entirely for a login method whose registration sets
+   `external: true` (OIDC, LDAP; a plugin declares it the same way) unless the
+   admin setting "ask for a second factor after external logins" is on. Off
+   by default, matching the behaviour before second factors applied to every
+   method: a local method (password, a passkey, a plugin's own local form)
+   always runs them;
 4. issues the JWT, cookie, trusted device and the `login` audit line.
 
 Routes, all under `/users/auth`: `GET methods` (public), `GET :methodId/start`,

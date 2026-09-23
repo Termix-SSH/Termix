@@ -256,6 +256,33 @@ export async function updateOidcAutoProvision(
   }
 }
 
+export async function getSecondFactorAfterExternalLogin(): Promise<{
+  enabled: boolean;
+}> {
+  try {
+    const response = await authApi.get(
+      "/users/second-factor-after-external-login",
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "check second factor after external login status");
+  }
+}
+
+export async function updateSecondFactorAfterExternalLogin(
+  enabled: boolean,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.patch(
+      "/users/second-factor-after-external-login",
+      { enabled },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update second factor after external login");
+  }
+}
+
 export async function getOidcSilentLoginDefault(): Promise<{
   enabled: boolean;
   locked?: boolean;
