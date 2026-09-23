@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "होस्ट जोड़ें",
+    "addGroup": "समूह जोड़ें",
+    "addLink": "लिंक जोड़ें",
+    "zoomIn": "ज़ूम इन",
+    "zoomOut": "ज़ूम आउट",
+    "resetView": "रीसेट करें",
+    "selectHost": "होस्ट चुनें",
+    "chooseHost": "कोई होस्ट चुनें...",
+    "parentGroup": "मूल समूह",
+    "noGroup": "कोई समूह नहीं",
+    "groupName": "समूह का नाम",
+    "color": "रंग",
+    "source": "स्रोत",
+    "target": "लक्ष्य",
+    "moveToGroup": "समूह में ले जाएँ",
+    "selectGroup": "समूह चुनें...",
+    "addConnection": "कनेक्शन जोड़ें",
+    "hostDetails": "होस्ट विवरण",
+    "removeFromGroup": "समूह से निकालें",
+    "addHostHere": "यहाँ होस्ट जोड़ें",
+    "editGroup": "समूह संपादित करें",
+    "delete": "हटाएँ",
+    "add": "जोड़ें",
+    "create": "बनाएँ",
+    "move": "ले जाएँ",
+    "connect": "कनेक्ट करें",
+    "createGroup": "समूह बनाएँ",
+    "selectSourcePlaceholder": "स्रोत चुनें...",
+    "selectTargetPlaceholder": "लक्ष्य चुनें...",
+    "invalidFile": "अमान्य फ़ाइल",
+    "hostAlreadyExists": "होस्ट पहले से टोपोलॉजी में मौजूद है",
+    "connectionExists": "कनेक्शन पहले से मौजूद है",
+    "unknown": "अज्ञात",
+    "name": "नाम",
+    "ip": "IP",
+    "status": "स्थिति",
+    "failedToAddNode": "नोड जोड़ने में विफल",
+    "sourceDifferentFromTarget": "स्रोत और लक्ष्य भिन्न होने चाहिए",
+    "exportJSON": "JSON निर्यात करें",
+    "importJSON": "JSON आयात करें",
+    "terminal": "टर्मिनल",
+    "fileManager": "फ़ाइल प्रबंधक",
+    "tunnel": "टनल",
+    "docker": "Docker",
+    "serverStats": "होस्ट मेट्रिक्स",
+    "hostMetrics": "होस्ट मेट्रिक्स",
+    "noNodes": "अभी तक कोई नोड नहीं"
+  },
+  "nav": {
+    "networkGraph": "नेटवर्क ग्राफ़"
+  },
+  "dashboard": {
+    "networkGraph": "नेटवर्क ग्राफ़"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} नोड्स"
+  }
+}

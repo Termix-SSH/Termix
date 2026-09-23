@@ -9,8 +9,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/dropdown-menu";
 import type { RailView } from "@/sidebar/AppRail";
-import { visibleRailItems } from "@/sidebar/rail-items";
-import { useAiAvailability } from "@/hooks/use-ai-availability";
+import { useRailItems } from "@/sidebar/rail-items";
 import type { SplitMode } from "@/types/ui-types";
 import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
 
@@ -28,7 +27,7 @@ export function MobileBottomBar({
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(readHiddenRailTabs);
-  const { userEnabled: aiEnabled } = useAiAvailability();
+  const railItems = useRailItems();
 
   // The rail's visibility toggles apply on mobile too; this used to ignore
   // them, so hiding a tab did nothing on a phone.
@@ -40,11 +39,8 @@ export function MobileBottomBar({
 
   const { primaryItems, moreItems } = useMemo(() => {
     // Tab-opening entries (network graph) have no sidebar panel to show here.
-    const visible = visibleRailItems().filter(
-      (item) =>
-        item.kind !== "tab" &&
-        !hidden.has(item.id) &&
-        (item.id !== "ai" || aiEnabled),
+    const visible = railItems.filter(
+      (item) => item.kind !== "tab" && !hidden.has(item.id),
     );
     const preferred = visible.filter((item) => item.mobilePrimary);
     // Keep four primary slots filled even when the user hides the defaults,
@@ -58,7 +54,7 @@ export function MobileBottomBar({
       primaryItems: primary,
       moreItems: visible.filter((item) => !primaryIds.has(item.id)),
     };
-  }, [hidden, aiEnabled]);
+  }, [hidden, railItems]);
 
   const moreActive =
     sidebarOpen &&

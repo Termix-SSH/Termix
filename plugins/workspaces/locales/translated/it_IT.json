@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Spazi di lavoro",
+        "saveCurrent": "Salva corrente",
+        "saveCurrentTitle": "Salva l'area di lavoro corrente",
+        "saveCurrentDescription": "Salva ogni scheda aperta, layout diviso e disposizione dei riquadri come nuova area di lavoro denominata.",
+        "nameLabel": "Nome",
+        "namePlaceholder": "ad esempio, Debugging di produzione",
+        "nameRequired": "Il nome dell'area di lavoro è obbligatorio",
+        "colorLabel": "Colore",
+        "workspaceCreated": "Area di lavoro salvata",
+        "workspaceUpdated": "Area di lavoro aggiornata",
+        "workspaceDeleted": "Area di lavoro eliminata",
+        "workspaceDuplicated": "Area di lavoro duplicata",
+        "saveFailed": "Impossibile salvare l'area di lavoro",
+        "updateFailed": "Impossibile aggiornare l'area di lavoro",
+        "deleteFailed": "Impossibile eliminare l'area di lavoro",
+        "duplicateFailed": "Impossibile duplicare l'area di lavoro",
+        "loadFailed": "Impossibile caricare gli spazi di lavoro",
+        "applyFailed": "Impossibile applicare l'area di lavoro",
+        "deleteWorkspaceTitle": "Elimina l'area di lavoro",
+        "deleteWorkspaceDescription": "Sei sicuro di voler eliminare \"{{name}}\"? Questa operazione non può essere annullata.",
+        "noWorkspaces": "Nessun spazio di lavoro salvato al momento. Salva la disposizione attuale delle schede per iniziare.",
+        "tabCount": "{{count}} tab",
+        "tabCount_other": "{{count}} schede",
+        "apply": "Fare domanda a",
+        "applyConfirmTitle": "Applica l'area di lavoro",
+        "applyConfirmDescription": "Applicando \"{{name}}\" chiuderai le schede correnti e le sostituirai con la disposizione salvata di quest'area di lavoro. Le modifiche non salvate al layout corrente andranno perse.",
+        "applyConfirmButton": "Applica l'area di lavoro",
+        "updateWithCurrent": "Aggiorna con la versione attuale",
+        "updateWithCurrentConfirm": "Sovrascrivi \"{{name}}\" con la tua attuale disposizione delle schede?",
+        "rename": "Rinominare",
+        "duplicate": "Duplicato",
+        "duplicateNameSuffix": "{{name}} (copia)",
+        "setDefault": "Imposta come predefinito",
+        "unsetDefault": "Rimuovi come predefinito",
+        "defaultBadge": "Predefinito",
+        "lastSession": "Ultima sessione",
+        "lastSessionDescription": "Si aggiorna automaticamente con la disposizione delle schede più recente. Applicala per ripristinare quelle che avevi aperte.",
+        "lastUsed": "Ultimo utilizzo {{time}}",
+        "neverUsed": "mai applicato",
+        "tabsSkipped": "Area di lavoro applicata — {{count}} scheda(e) saltata(e) (l'host non esiste più): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Spazi di lavoro"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Spazi di lavoro",
+    "workflow_workspaces_desc": "Salva le schede aperte e riapri l'intero layout in seguito."
+  }
+}

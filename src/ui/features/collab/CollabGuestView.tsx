@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, Eye, Presentation, Users } from "lucide-react";
-import { GuacamoleDisplay } from "../../../../plugins/remote-desktop/src/frontend/GuacamoleDisplay.tsx";
+import { RemoteDisplay } from "@/features/remote-display/RemoteDisplay";
 import {
   GuestTerminalView,
   type SessionParticipantInfo,
@@ -100,13 +100,10 @@ export default function CollabGuestView() {
             }
           />
         ) : stage.connectParams?.token ? (
-          <GuacamoleDisplay
+          <RemoteDisplay
             key={stage.shareId}
-            connectionConfig={{
-              token: stage.connectParams.token,
-              protocol: stage.protocol,
-              type: stage.protocol,
-            }}
+            token={stage.connectParams.token}
+            protocol={stage.protocol}
             isVisible
           />
         ) : null}

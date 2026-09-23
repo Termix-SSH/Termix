@@ -25,24 +25,21 @@ export const BACKEND_EXTERNALS = [
   "drizzle-orm/*",
 ];
 
+/**
+ * Resolved by the page's import map to the shell's own copies, because these
+ * must be one instance: React, i18next, the toast store, and the SDK entries
+ * that share state with core. Anything else a plugin imports is bundled.
+ */
 export const FRONTEND_EXTERNALS = [
   "react",
   "react-dom",
   "react/jsx-runtime",
   "react-dom/client",
-  "@termix/plugin-sdk",
-  "@termix/plugin-sdk/*",
   "i18next",
   "react-i18next",
-  // Core-provided UI libraries. A7 serves these through the SDK ui entry.
-  "lucide-react",
   "sonner",
-  "axios",
-  "cytoscape",
-  "react-cytoscapejs",
-  "guacamole-common-js",
-  "react-xtermjs",
-  "@xterm/*",
-  // Legacy: the shell's own modules, still reached by alias. A7 removes.
-  "@/*",
+  "@termix/plugin-sdk/frontend",
+  "@termix/plugin-sdk/ui",
+  // Legacy: the shell's own modules, see legacy-core-imports.mjs. D1 removes.
+  "@termix/legacy-core/*",
 ];

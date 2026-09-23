@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.plugins.frontend.tsbuildinfo",
+    "types": ["vitest/globals"]
+  },
+  "include": [
+    "src/vite-env.d.ts",
+    "src/types/electron.d.ts",
+    "src/types/guacamole-common-js.d.ts",
+    "plugins/*/src/frontend/**/*.ts",
+    "plugins/*/src/frontend/**/*.tsx",
+    "plugins/*/tests/frontend/**/*.ts",
+    "plugins/*/tests/frontend/**/*.tsx"
+  ]
+}

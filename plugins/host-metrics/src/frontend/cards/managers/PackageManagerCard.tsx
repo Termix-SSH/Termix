@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Package, ArrowUpCircle } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-import { managerPost } from "@/main-axios";
+import { managerPost } from "../../host-metrics-api";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";

@@ -4,7 +4,7 @@ import {
   humanize,
   mentionLabel,
   toolLabel,
-} from "@/features/ai/labels";
+} from "../../src/frontend/labels";
 import { AI_TOOLS } from "../../src/backend/tools/catalog.js";
 
 describe("humanize", () => {

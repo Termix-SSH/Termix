@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { MemoryStick, Timer, HardDrive } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { BarSeries, StatRow } from "@/components/charts";
 import { useManagerData } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";

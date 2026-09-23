@@ -1,9 +1,9 @@
 /**
  * Registers the host editor's "Plugins" tab.
  *
- * Goes through the existing registerHostEditorTab seam rather than adding a
- * case to HostTabId, so the tab genuinely appears and disappears with the
- * plugins that fill it. Nothing is registered when no enabled plugin declares
+ * Goes through the host editor section registry rather than a case in the
+ * editor, so the tab genuinely appears and disappears with the plugins that
+ * fill it. Nothing is registered when no enabled plugin declares
  * host settings, which is what stops an empty tab from showing up.
  *
  * Re-run whenever the plugin list changes: enabling a plugin from the settings
@@ -12,8 +12,8 @@
 
 import { Puzzle } from "lucide-react";
 import {
-  registerHostEditorTab,
-  unregisterHostEditorTab,
+  registerHostEditorSection,
+  unregisterHostEditorSection,
 } from "@/sidebar/HostManagerTabs";
 import type { PluginSummary } from "@/api/plugins-api";
 import {
@@ -42,14 +42,17 @@ export function syncHostPluginsTab(plugins: PluginSummary[]): boolean {
   });
 
   if (contributors.length === 0) {
-    unregisterHostEditorTab(HOST_PLUGINS_TAB_ID);
+    unregisterHostEditorSection(HOST_PLUGINS_TAB_ID);
     return false;
   }
 
-  registerHostEditorTab({
+  registerHostEditorSection({
     id: HOST_PLUGINS_TAB_ID,
+    // In the main strip, so hosts without SSH reach it too.
+    group: "top",
+    order: 100,
     labelKey: "settings.pluginsGroupLabel",
-    icon: <Puzzle className="size-3" />,
+    icon: Puzzle,
     component: ({ form, setField }) => (
       <HostPluginSections
         plugins={contributors}

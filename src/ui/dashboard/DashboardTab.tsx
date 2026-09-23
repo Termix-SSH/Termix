@@ -13,12 +13,10 @@ import {
   KeyRound,
   LayoutDashboard,
   Link,
-  MessagesSquare,
   Network,
   Plus,
   Server,
   Settings,
-  Terminal,
   Trash2,
   User,
   Zap,
@@ -50,7 +48,18 @@ import {
 } from "@/main-axios";
 import type { RecentActivityItem, ServiceLink } from "@/main-axios";
 import { useTranslation } from "react-i18next";
-import { NetworkGraphCard } from "../../../plugins/network-topology/src/frontend/NetworkGraphCard";
+import {
+  getRegisteredDashboardCard,
+  useRegisteredDashboardCards,
+} from "./dashboard-cards-registry";
+import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
+import { activityTarget } from "@/lib/activity-types";
+import { shell } from "@/plugin-host/shell-bridge";
+import {
+  defaultConnectAction,
+  hostActionsFor,
+  listHostActions,
+} from "@/sidebar/host-contributions";
 import { HomepagePreviewCard } from "@/dashboard/cards/HomepagePreviewCard";
 import { HomepageCanvas } from "@/features/homepage/HomepageCanvas";
 
@@ -125,6 +134,51 @@ const DEFAULT_SLOTS: CardSlot[] = [
     height: null,
   },
 ];
+
+/** Cards core draws itself; any other id belongs to a plugin. */
+const CORE_CARD_IDS = new Set<string>([
+  "stats_bar",
+  "counters_bar",
+  "quick_actions",
+  "host_status",
+  "recent_activity",
+  "service_links",
+  "homepage_preview",
+]);
+
+/**
+ * A plugin's card, or a placeholder that keeps the slot while its plugin is
+ * off, so the card comes back in the same place when the plugin does.
+ */
+export function PluginCardSlot({
+  id,
+  isVisible,
+  onOpenSingletonTab,
+}: {
+  id: string;
+  isVisible: boolean;
+  onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
+}) {
+  useRegisteredDashboardCards();
+  const card = getRegisteredDashboardCard(id);
+  if (!card) {
+    return (
+      <Card className="flex h-full w-full overflow-hidden py-0">
+        <PluginViewPlaceholder kind="card" viewId={id} compact />
+      </Card>
+    );
+  }
+  const Component = card.component;
+  return (
+    <Component
+      isVisible={isVisible}
+      shell={{
+        ...shell,
+        openSingletonTab: (type) => onOpenSingletonTab(type),
+      }}
+    />
+  );
+}
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
@@ -261,23 +315,20 @@ function QuickActionsCard({
   const { t } = useTranslation();
   const pinnedHosts = hosts.filter((h) => h.pin);
   const getConnectionEndpoint = (host: Host) => {
-    const type = getDefaultConnectionTab(host);
-    const port =
-      type === "rdp"
+    const port = host.enableSsh
+      ? host.sshPort
+      : host.enableRdp
         ? host.rdpPort
-        : type === "vnc"
+        : host.enableVnc
           ? host.vncPort
-          : type === "telnet"
+          : host.enableTelnet
             ? host.telnetPort
-            : host.sshPort;
-    return `${host.ip}:${port}`;
+            : host.port;
+    return `${host.ip}:${port ?? host.port}`;
   };
   const renderConnectionIcon = (host: Host) => {
-    const type = getDefaultConnectionTab(host);
-    if (type === "terminal" || type === "telnet") {
-      return <Terminal className="size-3 text-accent-brand" />;
-    }
-    return <Server className="size-3 text-accent-brand" />;
+    const Icon = defaultConnectAction(listHostActions(), host)?.icon ?? Server;
+    return <Icon className="size-3 text-accent-brand" />;
   };
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
@@ -473,20 +524,14 @@ export function HostStatusCard({
           return (
             <div
               key={i}
-              onClick={() =>
-                onOpenTab(
-                  host,
-                  host.enableSsh
-                    ? "host-metrics"
-                    : host.enableRdp
-                      ? "rdp"
-                      : host.enableVnc
-                        ? "vnc"
-                        : host.enableTelnet
-                          ? "telnet"
-                          : "host-metrics",
-                )
-              }
+              onClick={() => {
+                // An overview action (a metrics view) wins over connecting.
+                const actions = hostActionsFor(listHostActions(), host);
+                const target =
+                  actions.find((action) => action.overview)?.tabType ??
+                  defaultConnectAction(actions, host)?.tabType;
+                if (target) onOpenTab(host, target);
+              }}
               className="flex min-w-0 items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
             >
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -580,35 +625,13 @@ function RecentActivityCard({
 }) {
   const { t } = useTranslation();
   const statusScheme = useStatusColorScheme();
-  const typeIcon: Record<RecentActivityItem["type"], React.ReactNode> = {
-    terminal: <Terminal className="size-2.5" />,
-    file_manager: <Server className="size-2.5" />,
-    server_stats: <Activity className="size-2.5" />,
-    tunnel: <Network className="size-2.5" />,
-    docker: <Server className="size-2.5" />,
-    rdp: <Server className="size-2.5" />,
-    vnc: <Server className="size-2.5" />,
-    telnet: <MessagesSquare className="size-2.5" />,
+  const typeIcon = (type: string): React.ReactNode => {
+    const Icon = activityTarget(type)?.icon ?? Server;
+    return <Icon className="size-2.5" />;
   };
-  const typeToTab: Record<RecentActivityItem["type"], TabType> = {
-    terminal: "terminal",
-    file_manager: "files",
-    server_stats: "host-metrics",
-    tunnel: "tunnel",
-    docker: "docker",
-    rdp: "rdp",
-    vnc: "vnc",
-    telnet: "telnet",
-  };
-  const typeLabel: Record<RecentActivityItem["type"], string> = {
-    terminal: t("networkGraph.terminal"),
-    file_manager: t("networkGraph.fileManager"),
-    server_stats: t("networkGraph.serverStats"),
-    tunnel: t("networkGraph.tunnel"),
-    docker: t("networkGraph.docker"),
-    rdp: "RDP",
-    vnc: "VNC",
-    telnet: "Telnet",
+  const typeLabel = (type: string): string => {
+    const labelKey = activityTarget(type)?.labelKey;
+    return labelKey ? t(labelKey) : type.replace("_", " ");
   };
   function formatTime(ts: string) {
     const diffMs = Date.now() - new Date(ts).getTime();
@@ -649,7 +672,8 @@ function RecentActivityCard({
             <div
               key={item.id}
               onClick={() => {
-                if (host) onOpenTab(host, typeToTab[item.type]);
+                const target = activityTarget(item.type);
+                if (host && target) onOpenTab(host, target.tab);
               }}
               className="flex items-center justify-between px-4 py-2 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
             >
@@ -662,8 +686,8 @@ function RecentActivityCard({
                     {item.hostName}
                   </span>
                   <div className="flex items-center gap-1 text-muted-foreground">
-                    {typeIcon[item.type]}
-                    <span className="text-[10px]">{typeLabel[item.type]}</span>
+                    {typeIcon(item.type)}
+                    <span className="text-[10px]">{typeLabel(item.type)}</span>
                   </div>
                 </div>
               </div>
@@ -958,11 +982,11 @@ function CardItem({
             statusLoading={statusLoading}
           />
         )}
-        {slot.id === "network_graph" && (
-          <NetworkGraphCard
-            embedded={true}
+        {!CORE_CARD_IDS.has(slot.id) && (
+          <PluginCardSlot
+            id={slot.id}
             isVisible={isVisible}
-            onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+            onOpenSingletonTab={onOpenSingletonTab}
           />
         )}
         {slot.id === "service_links" && (
@@ -1031,12 +1055,16 @@ function AddCardTray({
   onAdd,
   cardLabels,
 }: {
-  activeIds: DashboardCardId[];
-  onAdd: (id: DashboardCardId) => void;
-  cardLabels: Record<DashboardCardId, string>;
+  activeIds: string[];
+  onAdd: (id: string) => void;
+  cardLabels: Record<string, string>;
 }) {
   const { t } = useTranslation();
-  const available = DASHBOARD_CARDS.filter((c) => !activeIds.includes(c.id));
+  const registeredCards = useRegisteredDashboardCards();
+  const available = [
+    ...DASHBOARD_CARDS.map((card) => ({ id: card.id as string })),
+    ...registeredCards.map((card) => ({ id: card.id })),
+  ].filter((c) => !activeIds.includes(c.id));
   if (available.length === 0) return null;
   return (
     <div className="flex items-center gap-2 px-1 py-2 flex-wrap shrink-0">
@@ -1241,6 +1269,7 @@ export function DashboardTab({
   /** When false, pause dashboard metrics refresh while the tab stays mounted. */
   isVisible?: boolean;
 }) {
+  const registeredCards = useRegisteredDashboardCards();
   const { t, i18n } = useTranslation();
   const { initialLoadComplete } = useServerStatus();
   const statusLoading = !initialLoadComplete;
@@ -1561,15 +1590,17 @@ export function DashboardTab({
     .sort((a, b) => a.order - b.order);
   const hasSide = sideSlots.length > 0;
 
-  const cardLabels: Record<DashboardCardId, string> = {
+  const cardLabels: Record<string, string> = {
     stats_bar: t("dashboard.serverOverview"),
     counters_bar: t("dashboard.serverStats"),
     quick_actions: t("dashboard.quickActions"),
     host_status: t("dashboardTab.hostStatus"),
     recent_activity: t("dashboard.recentActivity"),
-    network_graph: t("dashboard.networkGraph"),
     service_links: t("dashboard.serviceLinks"),
     homepage_preview: t("dashboard.homepagePreview"),
+    ...Object.fromEntries(
+      registeredCards.map((card) => [card.id, t(card.titleKey)]),
+    ),
   };
 
   const onColumnDividerMouseDown = useCallback(
@@ -1640,13 +1671,12 @@ export function DashboardTab({
           ? Math.max(...panelSlots.map((s) => s.order)) + 1
           : 0;
       const defaultHeight: number | null =
-        id === "network_graph"
-          ? 350
-          : id === "host_status" || id === "recent_activity"
-            ? null
-            : id === "service_links"
-              ? 200
-              : 150;
+        getRegisteredDashboardCard(id)?.defaultHeight ??
+        (id === "host_status" || id === "recent_activity"
+          ? null
+          : id === "service_links"
+            ? 200
+            : 150);
       const key = `${id}_${Date.now()}`;
       return [
         ...prev,
@@ -1828,11 +1858,11 @@ export function DashboardTab({
                   statusLoading={statusLoading}
                 />
               )}
-              {slot.id === "network_graph" && (
-                <NetworkGraphCard
-                  embedded={true}
+              {!CORE_CARD_IDS.has(slot.id) && (
+                <PluginCardSlot
+                  id={slot.id}
                   isVisible={isVisible}
-                  onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+                  onOpenSingletonTab={onOpenSingletonTab}
                 />
               )}
               {slot.id === "service_links" && (

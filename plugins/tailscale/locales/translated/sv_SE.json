@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Detta måste vara en Unix-användare som din Tailscale-identitet är beviljad i tailnätets SSH ACL, inte nödvändigtvis root.",
+    "tailscaleDeviceSelect": "Välj Tailscale-enhet",
+    "tailscaleDeviceSelectPlaceholder": "Välj en enhet...",
+    "tailscaleNoApiKey": "Ingen Tailscale API-nyckel konfigurerad. Lägg till en i administratörsinställningarna för att aktivera enhetsidentifiering.",
+    "tailscaleDocsLink": "Visa dokument",
+    "tailscaleLoadingDevices": "Laddar enheter...",
+    "tailscaleDeviceLoadFailed": "Misslyckades med att läsa in Tailscale-enheter. Kontrollera API-URL:en och nätverksanslutningen.",
+    "tailscaleNoDevices": "Inga enheter hittades i ditt tailnet.",
+    "tailscaleDeviceAutoFill": "Om du väljer en enhet fylls värdens IP-adress automatiskt i."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale-autentisering krävs",
+    "tailscaleCheckDescription": "Tailscale SSH kräver en ytterligare kontroll. Autentisera i din webbläsare för att fortsätta.",
+    "tailscaleCheckOpenBrowser": "Öppna webbläsaren för att autentisera",
+    "tailscaleCheckWaiting": "Väntar på Tailscale-autentisering...",
+    "tailscaleCheckTimeout": "Tailscale-autentiseringen har gått ut. Försök igen."
+  }
+}

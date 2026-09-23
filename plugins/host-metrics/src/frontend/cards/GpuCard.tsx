@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { Gpu } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { ServerMetrics } from "@/main-axios";
 import type { GpuDevice, GpuProcess } from "@/types/stats-widgets";
 import { MiniStat, RadialGauge, Sparkline, StatRow } from "@/components/charts";

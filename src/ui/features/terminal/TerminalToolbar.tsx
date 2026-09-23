@@ -2,6 +2,7 @@ import React, {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -25,6 +26,7 @@ import {
 } from "@/components/select";
 
 import { cn } from "@/lib/utils";
+import { TERMINAL_TOOLBAR_SLOT, type TerminalSlotApi } from "./terminal-slots";
 import { ActionSlot } from "@/shell/ActionSlot";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -52,7 +54,7 @@ type SelectedToolbarDensity = ToolbarDensity;
 const DENSITY_STORAGE_KEY = "termix-terminal-toolbar-density";
 
 /** Plugins contribute toolbar buttons here. Declared by the ssh-terminal plugin. */
-const TOOLBAR_SLOT_ID = "terminal.toolbar";
+const TOOLBAR_SLOT_ID = TERMINAL_TOOLBAR_SLOT;
 
 const DENSITY_OPTIONS: { value: ToolbarDensity }[] = [
   { value: "icon" },
@@ -124,14 +126,10 @@ interface TerminalToolbarProps {
   onOpenTab?: (type: TabType) => void;
   onOpenFiles?: () => void;
   isFocused: boolean;
-  /**
-   * Whether this host offers the toolbar's contributed actions at all. The
-   * slot itself is generic; the host-level AI flag is not something a
-   * contributing plugin can know about.
-   */
+  /** Hides every contributed action, e.g. while the toolbar is measuring. */
   actionsEnabled?: boolean;
-  /** Read at click time by contributions that want the visible scrollback. */
-  getBufferText?: () => string;
+  /** Handed to contributed actions when they are invoked. */
+  slotApi?: TerminalSlotApi;
 }
 
 export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
@@ -147,12 +145,19 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   onOpenFiles,
   isFocused,
   actionsEnabled = true,
-  getBufferText,
+  slotApi,
 }) => {
   const { t } = useTranslation();
   // Drives both the measurement copy and the separator, so the toolbar sizes
   // itself correctly whether or not anything contributed.
-  const slotContributions = useActionSlot(TOOLBAR_SLOT_ID);
+  const allSlotContributions = useActionSlot(TOOLBAR_SLOT_ID, { host });
+  const slotContributions = useMemo(
+    () =>
+      allSlotContributions.filter(
+        (contribution) => contribution.kind !== "component",
+      ),
+    [allSlotContributions],
+  );
   const [density, setDensity] =
     useState<SelectedToolbarDensity>(readStoredDensity);
   const [responsiveDensity, setResponsiveDensity] =
@@ -855,7 +860,8 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                       className={CONTROL}
                       enabled={actionsEnabled}
                       hideLabels={effectiveDensity === "icon"}
-                      context={() => [getBufferText?.() ?? ""]}
+                      when={{ host }}
+                      context={() => [slotApi]}
                     />
                   </>
                 )}

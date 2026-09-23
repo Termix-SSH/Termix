@@ -12,6 +12,7 @@ import {
   useImperativeHandle,
   forwardRef,
   useCallback,
+  useMemo,
 } from "react";
 import { createPortal } from "react-dom";
 import { useXTerm } from "react-xtermjs";
@@ -43,7 +44,6 @@ import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog.tsx";
-import { TailscaleCheckDialog } from "../../../../plugins/tailscale/src/frontend/TailscaleCheckDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog.tsx";
 import { TmuxSessionPicker } from "@/ssh/dialogs/TmuxSessionPicker.tsx";
 import {
@@ -74,8 +74,15 @@ import {
   CommandAutosuggestion,
 } from "./command-history/CommandAutocomplete.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
-import { useAiAvailability } from "@/hooks/use-ai-availability.ts";
-import { TerminalAiPanel } from "./TerminalAiPanel.tsx";
+import { useActionSlot } from "@/hooks/use-action-slot";
+import { ComponentSlot } from "@/shell/ActionSlot";
+import {
+  TERMINAL_DOCK_SLOT,
+  TERMINAL_OVERLAY_SLOT,
+  type TerminalOverlayProps,
+  type TerminalSessionMessage,
+  type TerminalSlotApi,
+} from "./terminal-slots";
 import {
   ConnectionLogProvider,
   useConnectionLog,
@@ -83,7 +90,7 @@ import {
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-import { Bot, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { authApi } from "@/main-axios.ts";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
@@ -326,14 +333,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const [tailscaleCheckDialog, setTailscaleCheckDialog] = useState<{
-      isOpen: boolean;
-      authUrl: string;
-      message?: string;
-      stage: "prompt" | "waiting";
-    } | null>(null);
-    const tailscaleCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const tailscaleCheckPendingRef = useRef(false);
+    // Overlays contributed by plugins (a Tailscale check, say) hear the
+    // session's messages and may hold the connect timeout while they wait.
+    const sessionListenersRef = useRef(
+      new Set<(message: TerminalSessionMessage) => void>(),
+    );
+    const connectTimeoutHoldsRef = useRef(0);
+    const emitSessionMessage = (message: TerminalSessionMessage) => {
+      for (const listener of sessionListenersRef.current) {
+        try {
+          listener(message);
+        } catch (error) {
+          console.error("[terminal] overlay listener threw", error);
+        }
+      }
+    };
 
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
@@ -460,11 +474,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     });
     const [autosuggestionStyle, setAutosuggestionStyle] =
       useState<React.CSSProperties>({});
-    const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
-    const [aiAssistantContext, setAiAssistantContext] = useState("");
-    const { userEnabled: aiAssistantEnabledForUser } = useAiAvailability();
-    const isAiAssistantAvailable =
-      aiAssistantEnabledForUser && host?.enableAiAssistant === true;
+    const [dock, setDock] = useState<{
+      id: string;
+      props: Record<string, unknown>;
+    } | null>(null);
+    const dockContributions = useActionSlot(TERMINAL_DOCK_SLOT, { host });
+    const hasDock = dockContributions.length > 0;
     const autocompleteHistory = useRef<string[]>([]);
     const currentAutocompleteCommand = useRef<string>("");
     const currentAutosuggestionCommand = useRef<string>("");
@@ -728,26 +743,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       return true;
     }, [clearAutosuggestion]);
 
-    const toggleAiAssistant = useCallback(() => {
-      setAiAssistantOpen((open) => !open);
-    }, []);
+    const firstDockId = dockContributions[0]?.actionId;
+    // Ctrl+Shift+A and the floating button toggle the first docked panel.
+    const toggleDock = useCallback(() => {
+      setDock((open) =>
+        open || !firstDockId ? null : { id: firstDockId, props: {} },
+      );
+    }, [firstDockId]);
 
-    // A plugin-contributed action (the toolbar's AI button) asks for the panel
-    // this way, so the contribution needs no reference into the terminal.
-    useEffect(() => {
-      if (!isFocusedPane) return;
-      const open = (event: Event) => {
-        const detail = (event as CustomEvent<{ context?: string }>).detail;
-        setAiAssistantContext(detail?.context ?? "");
-        setAiAssistantOpen(true);
-      };
-      window.addEventListener("termix:ai:openWithContext", open);
-      return () =>
-        window.removeEventListener("termix:ai:openWithContext", open);
-    }, [isFocusedPane]);
-
-    const closeAiAssistant = useCallback(() => {
-      setAiAssistantOpen(false);
+    const closeDock = useCallback(() => {
+      setDock(null);
       setTimeout(() => terminal?.focus(), 50);
     }, [terminal]);
 
@@ -769,6 +774,50 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         setTimeout(() => terminal?.focus(), 50);
       },
       [clearAutosuggestion, terminal, trackInput],
+    );
+
+    const slotApi = useMemo<TerminalSlotApi>(
+      () => ({
+        host,
+        getBufferText: () => getTerminalBufferText(terminal),
+        openDock: (dockId, props) =>
+          setDock({ id: dockId, props: props ?? {} }),
+        runCommand: handleRunCommandInTerminal,
+      }),
+      [host, terminal, handleRunCommandInTerminal],
+    );
+
+    const overlayProps = useMemo<TerminalOverlayProps>(
+      () => ({
+        host,
+        backgroundColor,
+        subscribe: (listener) => {
+          sessionListenersRef.current.add(listener);
+          return () => {
+            sessionListenersRef.current.delete(listener);
+          };
+        },
+        holdConnectTimeout: (held) => {
+          if (held) {
+            connectTimeoutHoldsRef.current += 1;
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+          } else {
+            connectTimeoutHoldsRef.current = Math.max(
+              0,
+              connectTimeoutHoldsRef.current - 1,
+            );
+          }
+        },
+        fail: (message) => {
+          updateConnectionError(message);
+          webSocketRef.current?.close();
+        },
+        disconnect: () => webSocketRef.current?.close(),
+      }),
+      [host, backgroundColor, updateConnectionError],
     );
 
     const activityLoggingRef = useRef(false);
@@ -1618,7 +1667,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             !isConnected &&
             !totpRequired &&
             !isPasswordPrompt &&
-            !tailscaleCheckPendingRef.current &&
+            connectTimeoutHoldsRef.current === 0 &&
             !connectionErrorRef.current
           ) {
             if (terminal) {
@@ -1778,6 +1827,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       ws.addEventListener("message", (event) => {
         try {
           const msg = JSON.parse(event.data);
+          if (msg.type !== "data" && msg.type !== "pong") {
+            emitSessionMessage(msg);
+          }
           if (msg.type === "pong") {
             pongReceivedRef.current = true;
             return;
@@ -2232,42 +2284,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               stage: "error",
               error: msg.instructions || msg.error,
             });
-          } else if (msg.type === "tailscale_check_required") {
-            if (connectionErrorRef.current) return;
-            tailscaleCheckPendingRef.current = true;
-
-            // Tailscale holds the connection open while the user authenticates,
-            // so the normal connect timeout must not fire during the wait.
-            if (connectionTimeoutRef.current) {
-              clearTimeout(connectionTimeoutRef.current);
-              connectionTimeoutRef.current = null;
-            }
-
-            setTailscaleCheckDialog({
-              isOpen: true,
-              authUrl: msg.url || "",
-              message: msg.message,
-              stage: "prompt",
-            });
-
-            if (tailscaleCheckTimeoutRef.current) {
-              clearTimeout(tailscaleCheckTimeoutRef.current);
-            }
-            tailscaleCheckTimeoutRef.current = setTimeout(() => {
-              tailscaleCheckPendingRef.current = false;
-              setTailscaleCheckDialog(null);
-              updateConnectionError(t("terminal.tailscaleCheckTimeout"));
-              if (webSocketRef.current) {
-                webSocketRef.current.close();
-              }
-            }, 1800000);
-          } else if (msg.type === "tailscale_check_completed") {
-            tailscaleCheckPendingRef.current = false;
-            if (tailscaleCheckTimeoutRef.current) {
-              clearTimeout(tailscaleCheckTimeoutRef.current);
-              tailscaleCheckTimeoutRef.current = null;
-            }
-            setTailscaleCheckDialog(null);
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -2467,12 +2483,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           totpTimeoutRef.current = null;
         }
 
-        tailscaleCheckPendingRef.current = false;
-        if (tailscaleCheckTimeoutRef.current) {
-          clearTimeout(tailscaleCheckTimeoutRef.current);
-          tailscaleCheckTimeoutRef.current = null;
-        }
-        setTailscaleCheckDialog(null);
+        connectTimeoutHoldsRef.current = 0;
+        emitSessionMessage({ type: "session_closed" });
 
         if (wasSessionExpiredRef.current) {
           wasSessionExpiredRef.current = false;
@@ -3252,7 +3264,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          isAiAssistantAvailable &&
+          hasDock &&
           e.ctrlKey &&
           e.shiftKey &&
           !e.altKey &&
@@ -3261,7 +3273,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ) {
           e.preventDefault();
           e.stopPropagation();
-          toggleAiAssistant();
+          toggleDock();
           return false;
         }
         const macLineNav = getMacLineNavigationSequence(e);
@@ -3584,7 +3596,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       terminal.attachCustomKeyEventHandler(handleCustomKey);
-    }, [isAiAssistantAvailable, toggleAiAssistant, terminal]);
+    }, [hasDock, toggleDock, terminal]);
 
     useEffect(() => {
       if (!terminal || !hostConfig || !isVisible) return;
@@ -3807,19 +3819,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         />
 
         {isConnected &&
-          isAiAssistantAvailable &&
-          host?.enableTerminalToolbar === false && (
-            <Button
-              type="button"
-              size="icon"
-              variant="secondary"
-              onClick={toggleAiAssistant}
-              title={t("ai.assistant") + " (Ctrl+Shift+A)"}
-              className="absolute top-2 right-2 z-[110] size-8 bg-black/60 text-white/75 hover:bg-black/80 hover:text-white"
-            >
-              <Bot className="size-4" />
-            </Button>
-          )}
+          host?.enableTerminalToolbar === false &&
+          dockContributions.map((contribution, index) => {
+            const Icon = contribution.icon;
+            return (
+              <Button
+                key={contribution.actionId}
+                type="button"
+                size="icon"
+                variant="secondary"
+                onClick={() =>
+                  setDock((open) =>
+                    open?.id === contribution.actionId
+                      ? null
+                      : { id: contribution.actionId, props: {} },
+                  )
+                }
+                title={
+                  t(contribution.titleKey) +
+                  (index === 0 ? " (Ctrl+Shift+A)" : "")
+                }
+                className="absolute top-2 z-[110] size-8 bg-black/60 text-white/75 hover:bg-black/80 hover:text-white"
+                style={{ right: 8 + index * 40 }}
+              >
+                {Icon && <Icon className="size-4" />}
+              </Button>
+            );
+          })}
 
         {host && host.enableTerminalToolbar !== false && (
           <TerminalToolbar
@@ -3845,21 +3871,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }}
             isFocused={isFocusedPane}
-            actionsEnabled={isAiAssistantAvailable}
-            getBufferText={() => getTerminalBufferText(terminal)}
+            slotApi={slotApi}
           />
         )}
 
-        {aiAssistantOpen && isAiAssistantAvailable && hostConfig.id && (
-          <TerminalAiPanel
-            hostLabel={`${hostConfig.username}@${hostConfig.name || hostConfig.ip}`}
-            hostId={hostConfig.id}
-            activeTab={`terminal:${hostConfig.name || hostConfig.ip}`}
-            initialContext={aiAssistantContext}
-            onClose={closeAiAssistant}
-            onRunInTerminal={handleRunCommandInTerminal}
-          />
-        )}
+        {dock &&
+          (() => {
+            const contribution = dockContributions.find(
+              (item) => item.actionId === dock.id,
+            );
+            const Panel = contribution?.component;
+            if (!Panel) return null;
+            return (
+              <Panel
+                host={host}
+                hostId={hostConfig.id}
+                hostLabel={`${hostConfig.username}@${hostConfig.name || hostConfig.ip}`}
+                dockProps={dock.props}
+                onClose={closeDock}
+                onRunInTerminal={handleRunCommandInTerminal}
+              />
+            );
+          })()}
 
         {isQuickConnect &&
           isConnected &&
@@ -4030,32 +4063,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           />
         )}
 
-        {tailscaleCheckDialog?.isOpen && (
-          <TailscaleCheckDialog
-            isOpen={tailscaleCheckDialog.isOpen}
-            authUrl={tailscaleCheckDialog.authUrl}
-            message={tailscaleCheckDialog.message}
-            stage={tailscaleCheckDialog.stage}
-            onCancel={() => {
-              tailscaleCheckPendingRef.current = false;
-              if (tailscaleCheckTimeoutRef.current) {
-                clearTimeout(tailscaleCheckTimeoutRef.current);
-                tailscaleCheckTimeoutRef.current = null;
-              }
-              setTailscaleCheckDialog(null);
-              if (webSocketRef.current) {
-                webSocketRef.current.close();
-              }
-            }}
-            onOpenUrl={() => {
-              window.open(tailscaleCheckDialog.authUrl, "_blank");
-              setTailscaleCheckDialog((prev) =>
-                prev ? { ...prev, stage: "waiting" } : null,
-              );
-            }}
-            backgroundColor={backgroundColor}
-          />
-        )}
+        <ComponentSlot
+          slotId={TERMINAL_OVERLAY_SLOT}
+          when={{ host }}
+          props={overlayProps as unknown as Record<string, unknown>}
+        />
 
         {vaultDialog && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">

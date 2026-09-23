@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Это должен быть пользователь Unix, которому предоставлена идентификация Tailscale в списке контроля доступа SSH сети TailNet, а не обязательно root.",
+    "tailscaleDeviceSelect": "Выберите устройство Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Выберите устройство...",
+    "tailscaleNoApiKey": "Ключ API Tailscale не настроен. Добавьте его в настройках администратора, чтобы включить обнаружение устройств.",
+    "tailscaleDocsLink": "Документация",
+    "tailscaleLoadingDevices": "Загрузка устройств...",
+    "tailscaleDeviceLoadFailed": "Не удалось загрузить устройства Tailscale. Проверьте URL-адрес API и сетевое соединение.",
+    "tailscaleNoDevices": "В вашем tailnet не найдено устройств.",
+    "tailscaleDeviceAutoFill": "При выборе устройства IP-адрес хоста будет заполнен автоматически."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Требуется аутентификация Tailscale",
+    "tailscaleCheckDescription": "Для работы Tailscale SSH требуется дополнительная проверка. Для продолжения выполните аутентификацию в браузере.",
+    "tailscaleCheckOpenBrowser": "Откройте браузер для аутентификации.",
+    "tailscaleCheckWaiting": "Ожидание аутентификации Tailscale...",
+    "tailscaleCheckTimeout": "Время ожидания аутентификации Tailscale истекло. Пожалуйста, попробуйте еще раз."
+  }
+}

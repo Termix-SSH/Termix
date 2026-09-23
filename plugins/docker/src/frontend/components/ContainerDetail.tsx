@@ -10,7 +10,7 @@ import {
   Settings,
   Terminal,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { DockerContainer, SSHHost } from "@/types";
 import { LogViewer } from "./LogViewer.tsx";
 import { ContainerStats } from "./ContainerStats.tsx";

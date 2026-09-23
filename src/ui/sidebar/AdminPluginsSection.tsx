@@ -9,7 +9,7 @@ import {
   setPluginEnabled,
   type PluginSummary,
 } from "@/api/plugins-api";
-import { refreshPluginState } from "@/shell/pluginLoader";
+import { syncPlugins } from "@/plugin-host/loader";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 import { PluginPermissionsDialog } from "./PluginPermissionsDialog";
 
@@ -50,7 +50,7 @@ export function AdminPluginsSection({
       await setPluginEnabled(plugin.id, !plugin.enabled);
       await load();
       // Re-read state so the shell picks the change up without a reload.
-      await refreshPluginState();
+      await syncPlugins();
       toast.success(
         plugin.enabled
           ? t("admin.pluginDisabled", { name: plugin.name })

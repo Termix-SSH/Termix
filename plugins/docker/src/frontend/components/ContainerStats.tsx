@@ -10,8 +10,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { DockerStats } from "@/types";
-import { getContainerStats } from "@/main-axios.ts";
-import { useTranslation } from "react-i18next";
+import { getContainerStats } from "../docker-api";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { SectionCard } from "@/components/section-card";
 import { DockerBadge } from "./ContainerCard.tsx";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";

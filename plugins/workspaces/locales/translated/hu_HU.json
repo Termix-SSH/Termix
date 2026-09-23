@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Munkaterületek",
+        "saveCurrent": "Aktuális mentése",
+        "saveCurrentTitle": "Aktuális munkaterület mentése",
+        "saveCurrentDescription": "Minden megnyitott lapot, osztott elrendezést és panelelrendezést mentsen el új, elnevezett munkaterületként.",
+        "nameLabel": "Név",
+        "namePlaceholder": "pl., Prod Debugging",
+        "nameRequired": "Munkaterület neve kötelező",
+        "colorLabel": "Szín",
+        "workspaceCreated": "Munkaterület mentve",
+        "workspaceUpdated": "Munkaterület frissítve",
+        "workspaceDeleted": "Munkaterület törölve",
+        "workspaceDuplicated": "Munkaterület duplikálva",
+        "saveFailed": "Nem sikerült menteni a munkaterületet",
+        "updateFailed": "Nem sikerült frissíteni a munkaterületet",
+        "deleteFailed": "Nem sikerült törölni a munkaterületet",
+        "duplicateFailed": "Nem sikerült a munkaterületet másolni",
+        "loadFailed": "Nem sikerült betölteni a munkaterületeket",
+        "applyFailed": "Nem sikerült alkalmazni a munkaterületet",
+        "deleteWorkspaceTitle": "Munkaterület törlése",
+        "deleteWorkspaceDescription": "Biztosan törölni szeretnéd a(z) \"{{name}}\" fájlt? Ez a művelet nem vonható vissza.",
+        "noWorkspaces": "Még nincsenek mentett munkaterületek. A kezdéshez mentse el az aktuális tabulátorelrendezést.",
+        "tabCount": "{{count}} fül",
+        "tabCount_other": "{{count}} fülek",
+        "apply": "Jelentkezés",
+        "applyConfirmTitle": "Munkaterület alkalmazása",
+        "applyConfirmDescription": "A(z) „{{name}}” parancs alkalmazása bezárja az aktuális lapokat, és lecseréli azokat a munkaterület mentett elrendezésére. Az aktuális elrendezés nem mentett módosításai elvesznek.",
+        "applyConfirmButton": "Munkaterület alkalmazása",
+        "updateWithCurrent": "Frissítés az aktuális programmal",
+        "updateWithCurrentConfirm": "Felülírja a(z) \"{{name}}\" szöveget a jelenlegi tabulátorelrendezéssel?",
+        "rename": "Átnevezés",
+        "duplicate": "Másolat",
+        "duplicateNameSuffix": "{{name}} (másolat)",
+        "setDefault": "Beállítás alapértelmezettként",
+        "unsetDefault": "Eltávolítás alapértelmezettként",
+        "defaultBadge": "Alapértelmezett",
+        "lastSession": "Utolsó munkamenet",
+        "lastSessionDescription": "Automatikusan frissül a legutóbbi tabulátorelrendezéssel. Alkalmazd, hogy visszaállítsd a megnyitott tabulátorokat.",
+        "lastUsed": "Utolsó használat {{time}}",
+        "neverUsed": "Soha nem alkalmazták",
+        "tabsSkipped": "Munkaterület alkalmazva — {{count}} tabulátor(ok) kihagyva (a gazdagép már nem létezik): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Munkaterületek"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Munkaterületek",
+    "workflow_workspaces_desc": "Mentse el a megnyitott lapok egy készletét, és később nyissa meg újra a teljes elrendezést."
+  }
+}

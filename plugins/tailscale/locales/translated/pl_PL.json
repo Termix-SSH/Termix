@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Musi to być użytkownik systemu Unix, któremu Twoja tożsamość Tailscale została przyznana w ACL SSH sieci tailnet, niekoniecznie root.",
+    "tailscaleDeviceSelect": "Wybierz urządzenie Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Wybierz urządzenie...",
+    "tailscaleNoApiKey": "Nie skonfigurowano klucza API Tailscale. Dodaj go w Ustawieniach administratora, aby włączyć wykrywanie urządzeń.",
+    "tailscaleDocsLink": "Zobacz dokumentację",
+    "tailscaleLoadingDevices": "Ładowanie urządzeń...",
+    "tailscaleDeviceLoadFailed": "Nie udało się załadować urządzeń Tailscale. Sprawdź adres URL API i połączenie sieciowe.",
+    "tailscaleNoDevices": "Nie znaleziono urządzeń w Twojej sieci tailnet.",
+    "tailscaleDeviceAutoFill": "Wybranie urządzenia spowoduje automatyczne wypełnienie adresu IP hosta."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Wymagane uwierzytelnienie Tailscale",
+    "tailscaleCheckDescription": "Tailscale SSH wymaga dodatkowej weryfikacji. Uwierzytelnij się w przeglądarce, aby kontynuować.",
+    "tailscaleCheckOpenBrowser": "Otwórz przeglądarkę, aby uwierzytelnić",
+    "tailscaleCheckWaiting": "Oczekiwanie na uwierzytelnienie Tailscale...",
+    "tailscaleCheckTimeout": "Upłynął limit czasu uwierzytelniania Tailscale. Spróbuj ponownie."
+  }
+}

@@ -40,7 +40,6 @@ export function FolderItem({
   onShareHost,
   onDeleteHost,
   onDuplicateHost,
-  onProxmoxDiscover,
   query = "",
   stripeMap,
   openFolders,
@@ -85,7 +84,7 @@ export function FolderItem({
     host: Host,
     type: TabType,
     options?: {
-      endpointId?: string;
+      data?: Record<string, unknown>;
       label?: string;
       forceNewTab?: boolean;
     },
@@ -94,7 +93,6 @@ export function FolderItem({
   onShareHost?: (host: Host) => void;
   onDeleteHost: (host: Host) => void;
   onDuplicateHost: (host: Host) => void;
-  onProxmoxDiscover?: (host: Host) => void;
   query?: string;
   stripeMap?: Map<Host | HostFolder, number>;
   openFolders: Set<string>;
@@ -323,7 +321,6 @@ export function FolderItem({
                 onShareHost={onShareHost}
                 onDeleteHost={onDeleteHost}
                 onDuplicateHost={onDuplicateHost}
-                onProxmoxDiscover={onProxmoxDiscover}
                 query={query}
                 stripeMap={stripeMap}
                 openFolders={openFolders}
@@ -362,9 +359,6 @@ export function FolderItem({
                 onOpenTab={(t, options) => onOpenTab(child, t, options)}
                 onEditHost={onEditHost ? () => onEditHost(child) : undefined}
                 onShareHost={onShareHost ? () => onShareHost(child) : undefined}
-                onProxmoxDiscover={
-                  onProxmoxDiscover ? () => onProxmoxDiscover(child) : undefined
-                }
                 onDelete={() => onDeleteHost(child)}
                 onDuplicate={() => onDuplicateHost(child)}
                 query={query}

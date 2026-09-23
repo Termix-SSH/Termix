@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Dit moet 'n Unix-gebruiker wees aan wie jou Tailscale-identiteit in die tailnet se SSH ACL toegestaan word, nie noodwendig root nie.",
+    "tailscaleDeviceSelect": "Kies Tailscale-toestel",
+    "tailscaleDeviceSelectPlaceholder": "Kies 'n toestel...",
+    "tailscaleNoApiKey": "Geen Tailscale API-sleutel gekonfigureer nie. Voeg een by in Admin-instellings om toestelontdekking te aktiveer.",
+    "tailscaleDocsLink": "Bekyk dokumente",
+    "tailscaleLoadingDevices": "Laai toestelle...",
+    "tailscaleDeviceLoadFailed": "Kon nie Tailscale-toestelle laai nie. Kontroleer die API-URL en netwerkverbinding.",
+    "tailscaleNoDevices": "Geen toestelle in jou tailnet gevind nie.",
+    "tailscaleDeviceAutoFill": "As jy 'n toestel kies, sal die gasheer-IP-adres outomaties ingevul word."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Stertskaal-verifikasie vereis",
+    "tailscaleCheckDescription": "Tailscale SSH vereis 'n bykomende kontrole. Verifieer in jou blaaier om voort te gaan.",
+    "tailscaleCheckOpenBrowser": "Maak blaaier oop om te verifieer",
+    "tailscaleCheckWaiting": "Wag vir Tailscale-verifikasie...",
+    "tailscaleCheckTimeout": "Tailscale-verifikasie het verstryk. Probeer asseblief weer."
+  }
+}

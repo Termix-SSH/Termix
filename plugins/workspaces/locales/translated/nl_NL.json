@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Werkruimtes",
+        "saveCurrent": "Huidige opslaan",
+        "saveCurrentTitle": "Huidige werkruimte opslaan",
+        "saveCurrentDescription": "Sla elk geopend tabblad, elke gesplitste lay-out en elke vensterindeling op als een nieuwe, benoemde werkruimte.",
+        "nameLabel": "Naam",
+        "namePlaceholder": "bijvoorbeeld, productiedebugging",
+        "nameRequired": "De naam van de werkruimte is verplicht.",
+        "colorLabel": "Kleur",
+        "workspaceCreated": "Werkruimte opgeslagen",
+        "workspaceUpdated": "Werkruimte bijgewerkt",
+        "workspaceDeleted": "Werkruimte verwijderd",
+        "workspaceDuplicated": "Werkruimte gedupliceerd",
+        "saveFailed": "Het opslaan van de werkruimte is mislukt.",
+        "updateFailed": "Het bijwerken van de werkruimte is mislukt.",
+        "deleteFailed": "Het verwijderen van de werkruimte is mislukt.",
+        "duplicateFailed": "Het dupliceren van de werkruimte is mislukt.",
+        "loadFailed": "Het laden van de werkruimtes is mislukt.",
+        "applyFailed": "Het toepassen van de werkruimte is mislukt.",
+        "deleteWorkspaceTitle": "Werkruimte verwijderen",
+        "deleteWorkspaceDescription": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.",
+        "noWorkspaces": "Er zijn nog geen werkruimtes opgeslagen. Sla je huidige tabbladindeling op om te beginnen.",
+        "tabCount": "{{count}} tab",
+        "tabCount_other": "{{count}} tabs",
+        "apply": "Toepassen",
+        "applyConfirmTitle": "Werkruimte toepassen",
+        "applyConfirmDescription": "Door \"{{name}}\" toe te passen, worden uw huidige tabbladen gesloten en vervangen door de opgeslagen indeling van deze werkruimte. Niet-opgeslagen wijzigingen in uw huidige lay-out gaan verloren.",
+        "applyConfirmButton": "Werkruimte toepassen",
+        "updateWithCurrent": "Update met de huidige",
+        "updateWithCurrentConfirm": "Wil je \"{{name}}\" overschrijven met je huidige tabindeling?",
+        "rename": "Naam wijzigen",
+        "duplicate": "Duplicaat",
+        "duplicateNameSuffix": "{{name}} (kopiëren)",
+        "setDefault": "Instellen als standaard",
+        "unsetDefault": "Verwijderen als standaard",
+        "defaultBadge": "Standaard",
+        "lastSession": "Laatste sessie",
+        "lastSessionDescription": "Wordt automatisch bijgewerkt met uw meest recente tabbladindeling. Gebruik deze instelling om uw geopende tabbladen te herstellen.",
+        "lastUsed": "Laatst gebruikt {{time}}",
+        "neverUsed": "Nooit gesolliciteerd",
+        "tabsSkipped": "Werkruimte toegepast — {{count}} tabblad(en) overgeslagen (host bestaat niet meer): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Werkruimtes"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Werkruimtes",
+    "workflow_workspaces_desc": "Sla een set geopende tabbladen op en open de volledige lay-out later opnieuw."
+  }
+}

@@ -5,9 +5,9 @@ import { Input } from "@/components/input.tsx";
 import { Separator } from "@/components/separator.tsx";
 import { Download, RefreshCw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { DockerLogOptions } from "@/types";
-import { getContainerLogs, downloadContainerLogs } from "@/main-axios.ts";
+import { getContainerLogs, downloadContainerLogs } from "../docker-api";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
 import { Select2 } from "@/components/select2";
 

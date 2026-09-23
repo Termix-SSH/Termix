@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Tämän on oltava Unix-käyttäjä, jolle Tailscale-identiteettisi on myönnetty tailnetin SSH ACL:ssä, ei välttämättä pääkäyttäjä.",
+    "tailscaleDeviceSelect": "Valitse Tailscale-laite",
+    "tailscaleDeviceSelectPlaceholder": "Valitse laite...",
+    "tailscaleNoApiKey": "Tailscale API -avainta ei ole määritetty. Lisää sellainen järjestelmänvalvojan asetuksissa, jotta laitteiden löytäminen on mahdollista.",
+    "tailscaleDocsLink": "Näytä dokumentit",
+    "tailscaleLoadingDevices": "Laitteita ladataan...",
+    "tailscaleDeviceLoadFailed": "Tailscale-laitteiden lataus epäonnistui. Tarkista API-URL-osoite ja verkkoyhteys.",
+    "tailscaleNoDevices": "Hätäverkostasi ei löytynyt laitteita.",
+    "tailscaleDeviceAutoFill": "Laitteen valinta täyttää isännän IP-osoitteen automaattisesti."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale-todennus vaaditaan",
+    "tailscaleCheckDescription": "Tailscale SSH vaatii lisätarkistuksen. Jatka tunnistautumalla selaimessasi.",
+    "tailscaleCheckOpenBrowser": "Avaa selain todennusta varten",
+    "tailscaleCheckWaiting": "Odotetaan Tailscale-todennusta...",
+    "tailscaleCheckTimeout": "Tailscale-todennus aikakatkaistiin. Yritä uudelleen."
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Afegeix amfitrió",
+    "addGroup": "Afegeix un grup",
+    "addLink": "Afegeix un enllaç",
+    "zoomIn": "Ampliar zoom",
+    "zoomOut": "Allunyar",
+    "resetView": "Restableix la vista",
+    "selectHost": "Selecciona l'amfitrió",
+    "chooseHost": "Trieu un amfitrió...",
+    "parentGroup": "Grup de pares",
+    "noGroup": "Sense grup",
+    "groupName": "Nom del grup",
+    "color": "Color",
+    "source": "Font",
+    "target": "Objectiu",
+    "moveToGroup": "Moure al grup",
+    "selectGroup": "Selecciona el grup...",
+    "addConnection": "Afegeix una connexió",
+    "hostDetails": "Detalls de l'amfitrió",
+    "removeFromGroup": "Elimina del grup",
+    "addHostHere": "Afegeix l'amfitrió aquí",
+    "editGroup": "Edita el grup",
+    "delete": "Suprimeix",
+    "add": "Afegeix",
+    "create": "Crea",
+    "move": "Moure",
+    "connect": "Connecta",
+    "createGroup": "Crea un grup",
+    "selectSourcePlaceholder": "Selecciona la font...",
+    "selectTargetPlaceholder": "Selecciona l'objectiu...",
+    "invalidFile": "Fitxer no vàlid",
+    "hostAlreadyExists": "L'amfitrió ja és a la topologia",
+    "connectionExists": "La connexió ja existeix",
+    "unknown": "Desconegut",
+    "name": "Nom",
+    "ip": "IP",
+    "status": "Estat",
+    "failedToAddNode": "No s'ha pogut afegir el node",
+    "sourceDifferentFromTarget": "La font i la destinació han de ser diferents",
+    "exportJSON": "Exporta JSON",
+    "importJSON": "Importa JSON",
+    "terminal": "Terminal",
+    "fileManager": "Gestor de fitxers",
+    "tunnel": "Túnel",
+    "docker": "Docker",
+    "serverStats": "Mètriques de l'amfitrió",
+    "hostMetrics": "Mètriques de l'amfitrió",
+    "noNodes": "Encara no hi ha nodes"
+  },
+  "nav": {
+    "networkGraph": "Gràfic de xarxa"
+  },
+  "dashboard": {
+    "networkGraph": "Gràfic de xarxa"
+  },
+  "dashboardTab": {
+    "nodes": "nodes {{count}}"
+  }
+}

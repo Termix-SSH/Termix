@@ -1,5 +1,5 @@
 import { UserCheck, UserX } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { ServerMetrics } from "@/main-axios";
 import { MetricCard } from "@/components/metric-card";
 

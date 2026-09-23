@@ -16,5 +16,14 @@
   },
   "capabilities": ["db:own", "network:serve", "ui:surface"],
   "locales": "locales",
-  "platforms": ["linux", "win32", "darwin"]
+  "platforms": ["linux", "win32", "darwin"],
+  "contributes": {
+    "panels": [
+      {
+        "id": "workspaces",
+        "titleKey": "nav.workspaces",
+        "icon": "LayoutTemplate"
+      }
+    ]
+  }
 }

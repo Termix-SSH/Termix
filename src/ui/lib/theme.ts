@@ -37,12 +37,6 @@ export const DASHBOARD_CARDS: DashboardCardConfig[] = [
     defaultEnabled: true,
   },
   {
-    id: "network_graph",
-    label: "Network Graph",
-    description: "Visual map of host network topology",
-    defaultEnabled: false,
-  },
-  {
     id: "service_links",
     label: "Service Links",
     description: "Clickable buttons linking to services on your servers",

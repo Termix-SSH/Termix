@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Spații de lucru",
+        "saveCurrent": "Salvați curentul",
+        "saveCurrentTitle": "Salvați spațiul de lucru curent",
+        "saveCurrentDescription": "Salvați fiecare filă deschisă, aspect divizat și aranjament de panouri ca un spațiu de lucru nou denumit.",
+        "nameLabel": "Nume",
+        "namePlaceholder": "de exemplu, Depanare produs",
+        "nameRequired": "Numele spațiului de lucru este obligatoriu",
+        "colorLabel": "Culoare",
+        "workspaceCreated": "Spațiul de lucru a fost salvat",
+        "workspaceUpdated": "Spațiul de lucru a fost actualizat",
+        "workspaceDeleted": "Spațiul de lucru a fost șters",
+        "workspaceDuplicated": "Spațiul de lucru a fost duplicat",
+        "saveFailed": "Spațiul de lucru nu a putut fi salvat",
+        "updateFailed": "Spațiul de lucru nu a putut fi actualizat",
+        "deleteFailed": "Nu s-a putut șterge spațiul de lucru",
+        "duplicateFailed": "Spațiul de lucru nu a putut fi duplicat",
+        "loadFailed": "Nu s-au putut încărca spațiile de lucru",
+        "applyFailed": "Nu s-a putut aplica spațiul de lucru",
+        "deleteWorkspaceTitle": "Ștergeți spațiul de lucru",
+        "deleteWorkspaceDescription": "Sigur vrei să ștergi „{{name}}”? Această acțiune nu poate fi anulată.",
+        "noWorkspaces": "Încă nu există spații de lucru salvate. Salvați aranjamentul actual al filelor pentru a începe.",
+        "tabCount": "fila {{count}}",
+        "tabCount_other": "{{count}} tab-uri",
+        "apply": "Aplică",
+        "applyConfirmTitle": "Aplicați spațiul de lucru",
+        "applyConfirmDescription": "Aplicarea comenzii „{{name}}” va închide filele curente și le va înlocui cu aranjamentul salvat al acestui spațiu de lucru. Modificările nesalvate ale aspectului curent se vor pierde.",
+        "applyConfirmButton": "Aplicați spațiul de lucru",
+        "updateWithCurrent": "Actualizare cu curent",
+        "updateWithCurrentConfirm": "Suprascrieți „{{name}}” cu aranjamentul actual al tabulatorilor?",
+        "rename": "Redenumire",
+        "duplicate": "Duplicat",
+        "duplicateNameSuffix": "{{name}} (copie)",
+        "setDefault": "Setare ca implicită",
+        "unsetDefault": "Eliminare ca implicită",
+        "defaultBadge": "Implicit",
+        "lastSession": "Ultima sesiune",
+        "lastSessionDescription": "Actualizat automat cu cea mai recentă aranjare a filelor. Aplică-l pentru a recupera ce aveai deschis.",
+        "lastUsed": "Ultima utilizare {{time}}",
+        "neverUsed": "Niciodată aplicat",
+        "tabsSkipped": "Spațiu de lucru aplicat — {{count}} filă(e) omisă (gazda nu mai există): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Spații de lucru"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Spații de lucru",
+    "workflow_workspaces_desc": "Salvați un set de file deschise și redeschideți întregul aspect mai târziu."
+  }
+}

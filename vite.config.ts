@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
+import { termixPluginHost } from "./scripts/vite-plugin-termix-plugins.mjs";
 
 const sslCertPath = path.join(process.cwd(), "ssl/termix.crt");
 const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
@@ -98,8 +99,21 @@ function getManualChunk(id: string): string | undefined {
   return undefined;
 }
 
+// The SDK's browser entries resolve to source, so the shell and workspace
+// plugins share one instance in dev and nobody waits on a stale SDK build.
+const sdkFrontendEntry = path.resolve(
+  __dirname,
+  "./packages/plugin-sdk/src/frontend.ts",
+);
+const sdkUiEntry = path.resolve(__dirname, "./src/ui/plugin-host/sdk-ui.ts");
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), svgr()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    svgr(),
+    termixPluginHost({ repoRoot: __dirname, sdkFrontendEntry, sdkUiEntry }),
+  ],
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(
       packageJson.version || "0.0.0",
@@ -107,6 +121,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@termix/plugin-sdk/frontend": sdkFrontendEntry,
+      "@termix/plugin-sdk/ui": sdkUiEntry,
       "@/types": path.resolve(__dirname, "./src/types"),
       "@": path.resolve(__dirname, "./src/ui"),
     },

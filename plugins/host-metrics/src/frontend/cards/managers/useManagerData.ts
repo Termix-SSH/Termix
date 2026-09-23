@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { managerGet, managerPost } from "@/main-axios";
+import { managerGet, managerPost } from "../../host-metrics-api";
 
 interface ManagerError {
   message: string;

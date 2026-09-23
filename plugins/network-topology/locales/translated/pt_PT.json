@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Adicionar Host",
+    "addGroup": "Adicionar Grupo",
+    "addLink": "Adicionar Ligação",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Reduzir",
+    "resetView": "Repor Vista",
+    "selectHost": "Selecionar Host",
+    "chooseHost": "Escolher um host...",
+    "parentGroup": "Grupo Pai",
+    "noGroup": "Nenhum grupo",
+    "groupName": "Nome do Grupo",
+    "color": "Cor",
+    "source": "Origem",
+    "target": "Destino",
+    "moveToGroup": "Mover para Grupo",
+    "selectGroup": "Selecionar grupo...",
+    "addConnection": "Adicionar Ligação",
+    "hostDetails": "Detalhes do Host",
+    "removeFromGroup": "Remover do Grupo",
+    "addHostHere": "Adicionar Host Aqui",
+    "editGroup": "Editar Grupo",
+    "delete": "Eliminar",
+    "add": "Adicionar",
+    "create": "Criar",
+    "move": "Mover",
+    "connect": "Ligar",
+    "createGroup": "Criar Grupo",
+    "selectSourcePlaceholder": "Selecionar Origem...",
+    "selectTargetPlaceholder": "Selecionar Destino...",
+    "invalidFile": "Ficheiro Inválido",
+    "hostAlreadyExists": "O host já está na topologia.",
+    "connectionExists": "A ligação já existe",
+    "unknown": "Desconhecido",
+    "name": "Nome",
+    "ip": "IP",
+    "status": "Estado",
+    "failedToAddNode": "Falha ao adicionar nó",
+    "sourceDifferentFromTarget": "A origem e o destino devem ser diferentes",
+    "exportJSON": "Exportar JSON",
+    "importJSON": "Importar JSON",
+    "terminal": "Terminal",
+    "fileManager": "Gestor de ficheiros",
+    "tunnel": "Túnel",
+    "docker": "Docker",
+    "serverStats": "Métricas do host",
+    "hostMetrics": "Métricas do host",
+    "noNodes": "Ainda sem nós"
+  },
+  "nav": {
+    "networkGraph": "Gráfico de rede"
+  },
+  "dashboard": {
+    "networkGraph": "Gráfico de Rede"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} nós"
+  }
+}

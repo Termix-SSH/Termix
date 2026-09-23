@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Debe tratarse de un usuario de Unix cuya identidad de Tailscale se concede en la ACL SSH de tailnet, no necesariamente como root.",
+    "tailscaleDeviceSelect": "Seleccionar dispositivo Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Seleccione un dispositivo...",
+    "tailscaleNoApiKey": "No se ha configurado ninguna clave de API de Tailscale. Añada una en Ajustes de administración para habilitar el descubrimiento de dispositivos.",
+    "tailscaleDocsLink": "Ver documentación",
+    "tailscaleLoadingDevices": "Cargando dispositivos...",
+    "tailscaleDeviceLoadFailed": "No se pudieron cargar los dispositivos Tailscale. Compruebe la URL de la API y la conexión de red.",
+    "tailscaleNoDevices": "No se han encontrado dispositivos en tu tailnet.",
+    "tailscaleDeviceAutoFill": "Al seleccionar un dispositivo se rellenará automáticamente la dirección IP del host."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Se requiere autenticación de Tailscale.",
+    "tailscaleCheckDescription": "Tailscale SSH requiere una verificación adicional. Autentícate en tu navegador para continuar.",
+    "tailscaleCheckOpenBrowser": "Abra el navegador para autenticarse.",
+    "tailscaleCheckWaiting": "Esperando la autenticación de Tailscale...",
+    "tailscaleCheckTimeout": "La autenticación de Tailscale ha caducado. Inténtalo de nuevo."
+  }
+}

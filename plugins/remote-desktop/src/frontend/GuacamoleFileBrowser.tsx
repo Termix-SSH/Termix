@@ -1,7 +1,7 @@
 import { getErrorMessage } from "@/lib/error-message.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Guacamole from "guacamole-common-js";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import {
   ArrowUp,
   Download,

@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Добавяне на хост",
+    "addGroup": "Добавяне на група",
+    "addLink": "Добавяне на връзка",
+    "zoomIn": "Увеличаване на мащаба",
+    "zoomOut": "Намаляване на мащаба",
+    "resetView": "Нулиране на изгледа",
+    "selectHost": "Изберете хост",
+    "chooseHost": "Изберете хост...",
+    "parentGroup": "Родителска група",
+    "noGroup": "Няма група",
+    "groupName": "Име на групата",
+    "color": "Цвят",
+    "source": "Източник",
+    "target": "Цел",
+    "moveToGroup": "Преместване в група",
+    "selectGroup": "Изберете група...",
+    "addConnection": "Добавяне на връзка",
+    "hostDetails": "Детайли за хоста",
+    "removeFromGroup": "Премахване от групата",
+    "addHostHere": "Добавете хост тук",
+    "editGroup": "Редактиране на група",
+    "delete": "Изтриване",
+    "add": "Добавяне",
+    "create": "Създаване",
+    "move": "Преместване",
+    "connect": "Свържете се",
+    "createGroup": "Създаване на група",
+    "selectSourcePlaceholder": "Изберете източник...",
+    "selectTargetPlaceholder": "Изберете цел...",
+    "invalidFile": "Невалиден файл",
+    "hostAlreadyExists": "Хостът вече е в топологията",
+    "connectionExists": "Връзката вече съществува",
+    "unknown": "Неизвестен",
+    "name": "Име",
+    "ip": "ИП",
+    "status": "Статус",
+    "failedToAddNode": "Добавянето на възел не бе успешно",
+    "sourceDifferentFromTarget": "Източникът и целта трябва да са различни",
+    "exportJSON": "Експортиране на JSON",
+    "importJSON": "Импортиране на JSON",
+    "terminal": "Терминал",
+    "fileManager": "Файлов мениджър",
+    "tunnel": "Тунел",
+    "docker": "Докер",
+    "serverStats": "Метрики на хоста",
+    "hostMetrics": "Метрики на хоста",
+    "noNodes": "Все още няма възли"
+  },
+  "nav": {
+    "networkGraph": "Мрежова графика"
+  },
+  "dashboard": {
+    "networkGraph": "Мрежова графика"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} възли"
+  }
+}

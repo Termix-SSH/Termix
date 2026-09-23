@@ -1,0 +1,121 @@
+{
+  "$comment": "Literals src/ui may still spell that name a plugin id or a plugin-owned view. Each is data or the core terminal, not knowledge of a plugin. Checked by scripts/check-shell-plugin-ids.cjs; D1 and Phase B empty it.",
+  "files": {
+    "src/ui/AppShell.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/api/collab-api.ts": {
+      "literals": ["rdp", "telnet", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/api/session-log-api.ts": {
+      "literals": ["rdp", "telnet", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/api/session-sharing-api.ts": {
+      "literals": ["rdp", "telnet", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/contexts/ConnectionDefaultsContext.tsx": {
+      "literals": ["rdp", "terminal"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/features/collab/CollabRoomTab.tsx": {
+      "literals": ["rdp", "ssh-terminal", "telnet", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it. The core terminal opens its own websocket, served by the ssh-terminal plugin, until the terminal moves into it in Phase B."
+    },
+    "src/ui/features/file-manager/components/TransferToHostDialog.tsx": {
+      "literals": ["rdp", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/features/homepage/widgets/QuickConnectWidget.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/features/session-sharing/SharedSessionView.tsx": {
+      "literals": ["ssh-terminal"],
+      "reason": "The core terminal opens its own websocket, served by the ssh-terminal plugin, until the terminal moves into it in Phase B."
+    },
+    "src/ui/features/sftp/SftpTransferTab.tsx": {
+      "literals": ["rdp", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/features/terminal/Terminal.tsx": {
+      "literals": ["ssh-terminal", "terminal"],
+      "reason": "The core terminal opens its own websocket, served by the ssh-terminal plugin, until the terminal moves into it in Phase B. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/features/terminal/TerminalTabContent.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/features/terminal/TerminalToolbar.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/features/tmux-monitor/TmuxMonitor.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/lib/connection-origin.ts": {
+      "literals": ["rdp", "telnet", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/lib/host-connection-tabs.ts": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/onboarding/steps/WelcomeStep.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/shell/TabBar.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/shell/TabContext.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/sidebar/ConnectionDefaultsSettings.tsx": {
+      "literals": ["rdp", "terminal"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/sidebar/ConnectionsPanel.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/sidebar/HostEditor.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/sidebar/HostEditorData.ts": {
+      "literals": ["docker", "rdp", "telnet", "vnc"],
+      "reason": "Host data: the enableDocker column filter and the container runtime name, until Phase B moves them. Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/sidebar/HostManagerData.ts": {
+      "literals": ["rdp", "telnet", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/sidebar/HostManagerTabs.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/sidebar/HostsPanel.tsx": {
+      "literals": ["docker", "rdp", "telnet", "terminal", "vnc"],
+      "reason": "Host data: the enableDocker column filter and the container runtime name, until Phase B moves them. Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/sidebar/QuickConnectPanel.tsx": {
+      "literals": ["rdp", "terminal", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it. The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    },
+    "src/ui/sidebar/quick-connect-host.ts": {
+      "literals": ["rdp", "vnc"],
+      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
+    },
+    "src/ui/sidebar/tree/HostItem/HostItem.tsx": {
+      "literals": ["terminal"],
+      "reason": "The terminal tab type. The terminal component, split view and file-manager hooks stay in core until the terminal's Phase B step; the ssh-terminal plugin only decides whether it is offered."
+    }
+  }
+}

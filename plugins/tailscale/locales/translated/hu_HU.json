@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Ennek Unix felhasználónak kell lennie, akinek a Tailscale identitását a tailnet SSH ACL-jében adták meg, nem feltétlenül root felhasználónak.",
+    "tailscaleDeviceSelect": "Tailscale eszköz kiválasztása",
+    "tailscaleDeviceSelectPlaceholder": "Válasszon egy eszközt...",
+    "tailscaleNoApiKey": "Nincs konfigurálva Tailscale API-kulcs. Adjon hozzá egyet az adminisztrátori beállításokban az eszközfelderítés engedélyezéséhez.",
+    "tailscaleDocsLink": "Dokumentumok megtekintése",
+    "tailscaleLoadingDevices": "Eszközök betöltése...",
+    "tailscaleDeviceLoadFailed": "Nem sikerült betölteni a Tailscale eszközöket. Ellenőrizze az API URL-t és a hálózati kapcsolatot.",
+    "tailscaleNoDevices": "Nem találhatók eszközök a hátsó hálózatban.",
+    "tailscaleDeviceAutoFill": "Egy eszköz kiválasztása automatikusan kitölti a gazdagép IP-címét."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale hitelesítés szükséges",
+    "tailscaleCheckDescription": "A Tailscale SSH további ellenőrzést igényel. A folytatáshoz hitelesítse magát a böngészőjében.",
+    "tailscaleCheckOpenBrowser": "Böngésző megnyitása a hitelesítéshez",
+    "tailscaleCheckWaiting": "Tailscale hitelesítésre várunk...",
+    "tailscaleCheckTimeout": "A farokskálázási hitelesítés időtúllépést okozott. Próbálja újra."
+  }
+}

@@ -949,19 +949,25 @@ describe("TerminalToolbar Phase 1", () => {
       expect(screen.queryByRole("button", { name: "AI Assistant" })).toBeNull();
     });
 
-    it("invokes the action with the terminal buffer text when permitted", async () => {
+    it("invokes the action with the terminal slot api when permitted", async () => {
       const handler = contribute();
       perms.granted = ["ai.services.use"];
       const getBufferText = vi.fn(() => "$ whoami\nroot");
+      const slotApi = {
+        host: undefined,
+        getBufferText,
+        openDock: vi.fn(),
+        runCommand: vi.fn(),
+      };
 
-      renderToolbar({ getBufferText });
+      renderToolbar({ slotApi });
 
       expect(getBufferText).not.toHaveBeenCalled();
       await userEvent.click(
         screen.getByRole("button", { name: "AI Assistant" }),
       );
 
-      expect(handler).toHaveBeenCalledWith("$ whoami\nroot");
+      expect(handler).toHaveBeenCalledWith(slotApi);
     });
 
     it("hides the slot when the host has contributed actions disabled", () => {

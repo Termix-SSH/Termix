@@ -76,7 +76,6 @@ export function SidebarTree({
   onOpenTab,
   onEditHost,
   onShareHost,
-  onProxmoxDiscover,
   query = "",
   selectionMode,
   onToggleSelectionMode,
@@ -95,14 +94,13 @@ export function SidebarTree({
     host: Host,
     type: TabType,
     options?: {
-      endpointId?: string;
+      data?: Record<string, unknown>;
       label?: string;
       forceNewTab?: boolean;
     },
   ) => void;
   onEditHost: (host: Host) => void;
   onShareHost?: (host: Host) => void;
-  onProxmoxDiscover?: (host: Host) => void;
   query?: string;
   selectionMode: boolean;
   onToggleSelectionMode: () => void;
@@ -974,7 +972,6 @@ export function SidebarTree({
                       onShareHost={onShareHost}
                       onDeleteHost={handleDeleteHost}
                       onDuplicateHost={handleDuplicateHost}
-                      onProxmoxDiscover={onProxmoxDiscover}
                       query={query}
                       openFolders={openFolders}
                       onToggleFolder={toggleFolder}
@@ -1045,11 +1042,6 @@ export function SidebarTree({
                       onEditHost={() => onEditHost(item)}
                       onShareHost={
                         onShareHost ? () => onShareHost(item) : undefined
-                      }
-                      onProxmoxDiscover={
-                        onProxmoxDiscover
-                          ? () => onProxmoxDiscover(item)
-                          : undefined
                       }
                       onDelete={() => handleDeleteHost(item)}
                       onDuplicate={() => handleDuplicateHost(item)}
@@ -1306,10 +1298,7 @@ export function SidebarTree({
                   selectedHostIds.has(String(h.id)),
                 );
                 for (const host of selectedHosts) {
-                  if (host.enableSsh) onOpenTab(host, "terminal");
-                  else if (host.enableRdp) onOpenTab(host, "rdp");
-                  else if (host.enableVnc) onOpenTab(host, "vnc");
-                  else if (host.enableTelnet) onOpenTab(host, "telnet");
+                  onOpenTab(host, resolveHostTabType(host));
                 }
                 setSelectedHostIds(new Set());
                 onToggleSelectionMode();

@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@/lib/error-message.js";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   LayoutTemplate,

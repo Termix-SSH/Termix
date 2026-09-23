@@ -23,7 +23,7 @@ import { hasSnippetInputs } from "@/lib/snippet-variables.ts";
 import type { Snippet } from "@/types/ui-types.ts";
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { useTabsSafe } from "@/shell/TabContext.tsx";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   type StatsConfig,

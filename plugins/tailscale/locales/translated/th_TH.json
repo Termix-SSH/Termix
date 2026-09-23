@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "ผู้ใช้งานนี้ต้องเป็นผู้ใช้ Unix ที่ได้รับสิทธิ์การใช้งาน Tailscale ใน SSH ACL ของ tailnet ไม่จำเป็นต้องเป็น root เสมอไป",
+    "tailscaleDeviceSelect": "เลือกอุปกรณ์ Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "เลือกอุปกรณ์...",
+    "tailscaleNoApiKey": "ไม่ได้กำหนดค่าคีย์ API ของ Tailscale ไว้ โปรดเพิ่มคีย์ใน การตั้งค่าผู้ดูแลระบบ เพื่อเปิดใช้งานการค้นหาอุปกรณ์",
+    "tailscaleDocsLink": "ดูเอกสาร",
+    "tailscaleLoadingDevices": "กำลังโหลดอุปกรณ์...",
+    "tailscaleDeviceLoadFailed": "ไม่สามารถโหลดอุปกรณ์ Tailscale ได้ โปรดตรวจสอบ URL API และการเชื่อมต่อเครือข่าย",
+    "tailscaleNoDevices": "ไม่พบอุปกรณ์ใดๆ ในเครือข่ายของคุณ",
+    "tailscaleDeviceAutoFill": "การเลือกอุปกรณ์จะทำให้ระบบกรอกที่อยู่ IP ของโฮสต์โดยอัตโนมัติ"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "จำเป็นต้องยืนยันตัวตนด้วย Tailscale",
+    "tailscaleCheckDescription": "การเชื่อมต่อ Tailscale SSH ต้องการการตรวจสอบเพิ่มเติม โปรดยืนยันตัวตนในเบราว์เซอร์ของคุณเพื่อดำเนินการต่อ",
+    "tailscaleCheckOpenBrowser": "เปิดเบราว์เซอร์เพื่อยืนยันตัวตน",
+    "tailscaleCheckWaiting": "กำลังรอการยืนยันตัวตนจาก Tailscale...",
+    "tailscaleCheckTimeout": "การตรวจสอบสิทธิ์ Tailscale หมดเวลา โปรดลองอีกครั้ง"
+  }
+}

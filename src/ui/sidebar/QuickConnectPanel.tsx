@@ -23,9 +23,10 @@ const DEFAULT_PORTS: Record<QuickConnectProtocol, string> = {
   vnc: "5900",
 };
 import { Select2 } from "@/components/select2";
+import { resolveHostTabType } from "@/lib/host-connection-tabs";
 
 interface QuickConnectPanelProps {
-  onConnect: (host: Host, type: "terminal" | "files" | "rdp" | "vnc") => void;
+  onConnect: (host: Host, type: string) => void;
 }
 
 export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
@@ -60,7 +61,8 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
     setProtocol(next);
   };
 
-  const connect = (type: "terminal" | "files" | "rdp" | "vnc") => {
+  // The tab comes from whichever plugin connects hosts of this protocol.
+  const connect = (type?: string) => {
     if (!host) return;
     if (!isDesktop && !username) return;
     const hostConfig = createQuickConnectHost({
@@ -74,10 +76,10 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
       protocol,
       domain: domain || undefined,
     });
-    onConnect(hostConfig, type);
+    onConnect(hostConfig, type ?? resolveHostTabType(hostConfig));
   };
 
-  const connectDefault = () => connect(isDesktop ? protocol : "terminal");
+  const connectDefault = () => connect();
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">

@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Çalışma Alanları",
+        "saveCurrent": "Mevcut Olanı Kaydet",
+        "saveCurrentTitle": "Geçerli Çalışma Alanını Kaydet",
+        "saveCurrentDescription": "Açık olan her sekmeyi, bölünmüş düzeni ve bölme düzenini yeni bir adlandırılmış çalışma alanı olarak kaydedin.",
+        "nameLabel": "İsim",
+        "namePlaceholder": "Örneğin, Üretim Hata Ayıklaması",
+        "nameRequired": "Çalışma alanı adı zorunludur.",
+        "colorLabel": "Renk",
+        "workspaceCreated": "Çalışma alanı kaydedildi.",
+        "workspaceUpdated": "Çalışma alanı güncellendi.",
+        "workspaceDeleted": "Çalışma alanı silindi",
+        "workspaceDuplicated": "Çalışma alanı kopyalandı",
+        "saveFailed": "Çalışma alanını kaydetme başarısız oldu.",
+        "updateFailed": "Çalışma alanını güncelleme başarısız oldu.",
+        "deleteFailed": "Çalışma alanını silme işlemi başarısız oldu.",
+        "duplicateFailed": "Çalışma alanını çoğaltma başarısız oldu.",
+        "loadFailed": "Çalışma alanları yüklenemedi.",
+        "applyFailed": "Çalışma alanı uygulanamadı.",
+        "deleteWorkspaceTitle": "Çalışma Alanını Sil",
+        "deleteWorkspaceDescription": "\"{{name}}\" öğesini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "noWorkspaces": "Henüz kaydedilmiş çalışma alanı yok. Başlamak için mevcut sekme düzeninizi kaydedin.",
+        "tabCount": "{{count}} sekmesi",
+        "tabCount_other": "{{count}} sekmeler",
+        "apply": "Uygula",
+        "applyConfirmTitle": "Çalışma Alanına Başvur",
+        "applyConfirmDescription": "\"{{name}}\" komutunu uygulamak, mevcut sekmelerinizi kapatacak ve bunların yerine bu çalışma alanının kaydedilmiş düzenini getirecektir. Mevcut düzeninizde yapılan kaydedilmemiş değişiklikler kaybolacaktır.",
+        "applyConfirmButton": "Çalışma Alanına Başvur",
+        "updateWithCurrent": "Güncel bilgilerle güncelleyin",
+        "updateWithCurrentConfirm": "\"{{name}}\" ifadesini mevcut sekme düzeninizle değiştirin mi?",
+        "rename": "Yeniden isimlendirmek",
+        "duplicate": "Kopyalamak",
+        "duplicateNameSuffix": "{{name}} (kopyala)",
+        "setDefault": "Varsayılan olarak ayarla",
+        "unsetDefault": "Varsayılan ayarı kaldır",
+        "defaultBadge": "Varsayılan",
+        "lastSession": "Son Oturum",
+        "lastSessionDescription": "En son sekme düzeninize göre otomatik olarak güncellenir. Açık olan uygulamalarınızı geri yüklemek için uygulayın.",
+        "lastUsed": "Son kullanım {{time}}",
+        "neverUsed": "Hiç başvurmadım",
+        "tabsSkipped": "Çalışma alanı uygulandı — {{count}} sekme atlandı (ana bilgisayar artık mevcut değil): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Çalışma Alanları"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Çalışma Alanları",
+    "workflow_workspaces_desc": "Açık sekmeleri kaydedin ve daha sonra tüm düzeni yeniden açın."
+  }
+}

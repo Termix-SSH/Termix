@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createQuickConnectHost,
   isQuickConnectHost,
-  quickConnectGuacHost,
   quickConnectHostToPayload,
 } from "../../sidebar/quick-connect-host";
 
@@ -87,14 +86,6 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
       rdpPassword: "pw",
       domain: "CORP",
     });
-    expect(quickConnectGuacHost(host)).toMatchObject({
-      ip: "10.0.0.2",
-      connectionType: "rdp",
-      rdpPort: 3390,
-      rdpUser: "admin",
-      rdpPassword: "pw",
-      domain: "CORP",
-    });
   });
 
   it("builds a VNC host with the password on the VNC fields", () => {
@@ -108,11 +99,6 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
     });
     expect(host).toMatchObject({
       enableVnc: true,
-      vncPort: 5901,
-      vncPassword: "vncpw",
-    });
-    expect(quickConnectGuacHost(host)).toMatchObject({
-      connectionType: "vnc",
       vncPort: 5901,
       vncPassword: "vncpw",
     });

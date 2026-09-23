@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "이 값은 Tailscale ID가 Tailnet의 SSH ACL에 부여된 Unix 사용자여야 하며, 반드시 root일 필요는 없습니다.",
+    "tailscaleDeviceSelect": "Tailscale 기기 선택",
+    "tailscaleDeviceSelectPlaceholder": "기기 선택...",
+    "tailscaleNoApiKey": "Tailscale API 키가 구성되지 않았습니다. 기기 검색을 활성화하려면 관리자 설정에서 추가하세요.",
+    "tailscaleDocsLink": "문서 보기",
+    "tailscaleLoadingDevices": "장치를 불러오는 중...",
+    "tailscaleDeviceLoadFailed": "Tailscale 장치를 불러오는 데 실패했습니다. API URL과 네트워크 연결을 확인하세요.",
+    "tailscaleNoDevices": "테일넷에서 장치를 찾을 수 없습니다.",
+    "tailscaleDeviceAutoFill": "장치를 선택하면 호스트 IP 주소가 자동으로 채워집니다."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale 인증이 필요합니다.",
+    "tailscaleCheckDescription": "Tailscale SSH는 추가 인증이 필요합니다. 계속하려면 브라우저에서 인증하십시오.",
+    "tailscaleCheckOpenBrowser": "인증하려면 브라우저를 여세요",
+    "tailscaleCheckWaiting": "Tailscale 인증을 기다리는 중...",
+    "tailscaleCheckTimeout": "Tailscale 인증 시간이 초과되었습니다. 다시 시도해 주세요."
+  }
+}

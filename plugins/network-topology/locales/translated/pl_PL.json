@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Dodaj hosta",
+    "addGroup": "Dodaj grupę",
+    "addLink": "Dodaj link",
+    "zoomIn": "Powiększ",
+    "zoomOut": "Oddal",
+    "resetView": "Resetuj widok",
+    "selectHost": "Wybierz hosta",
+    "chooseHost": "Wybierz hosta...",
+    "parentGroup": "Grupa nadrzędna",
+    "noGroup": "Brak grupy",
+    "groupName": "Nazwa grupy",
+    "color": "Kolor",
+    "source": "Źródło",
+    "target": "Cel",
+    "moveToGroup": "Przenieś do grupy",
+    "selectGroup": "Wybierz grupę...",
+    "addConnection": "Dodaj połączenie",
+    "hostDetails": "Szczegóły hosta",
+    "removeFromGroup": "Usuń z grupy",
+    "addHostHere": "Dodaj hosta tutaj",
+    "editGroup": "Edytuj grupę",
+    "delete": "Usuń",
+    "add": "Dodaj",
+    "create": "Utwórz",
+    "move": "Przenieś",
+    "connect": "Połącz",
+    "createGroup": "Utwórz grupę",
+    "selectSourcePlaceholder": "Wybierz źródło...",
+    "selectTargetPlaceholder": "Wybierz cel...",
+    "invalidFile": "Nieprawidłowy plik",
+    "hostAlreadyExists": "Host jest już w topologii",
+    "connectionExists": "Połączenie już istnieje",
+    "unknown": "Nieznany",
+    "name": "Nazwa",
+    "ip": "IP",
+    "status": "Status",
+    "failedToAddNode": "Nie udało się dodać węzła",
+    "sourceDifferentFromTarget": "Źródło i cel muszą być różne",
+    "exportJSON": "Eksportuj JSON",
+    "importJSON": "Importuj JSON",
+    "terminal": "Terminal",
+    "fileManager": "Menedżer plików",
+    "tunnel": "Tunel",
+    "docker": "Docker",
+    "serverStats": "Metryki hosta",
+    "hostMetrics": "Metryki hosta",
+    "noNodes": "Brak węzłów"
+  },
+  "nav": {
+    "networkGraph": "Graf sieci"
+  },
+  "dashboard": {
+    "networkGraph": "Graf sieci"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} węzłów"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "添加主机",
+    "addGroup": "添加分组",
+    "addLink": "添加链接",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "resetView": "重置视图",
+    "selectHost": "选择主机",
+    "chooseHost": "选择主机...",
+    "parentGroup": "父分组",
+    "noGroup": "无分组",
+    "groupName": "分组名称",
+    "color": "颜色",
+    "source": "源",
+    "target": "目标",
+    "moveToGroup": "移至分组",
+    "selectGroup": "选择分组...",
+    "addConnection": "添加连接",
+    "hostDetails": "主机详情",
+    "removeFromGroup": "移出群组",
+    "addHostHere": "在此添加主机",
+    "editGroup": "编辑群组",
+    "delete": "删除",
+    "add": "添加",
+    "create": "创建",
+    "move": "移动",
+    "connect": "连接",
+    "createGroup": "创建群组",
+    "selectSourcePlaceholder": "选择源...",
+    "selectTargetPlaceholder": "选择目标...",
+    "invalidFile": "无效文件",
+    "hostAlreadyExists": "主机已在拓扑中",
+    "connectionExists": "连接已存在",
+    "unknown": "未知",
+    "name": "名称",
+    "ip": "IP",
+    "status": "状态",
+    "failedToAddNode": "添加节点失败",
+    "sourceDifferentFromTarget": "源和目标必须不同",
+    "exportJSON": "导出 JSON",
+    "importJSON": "导入 JSON",
+    "terminal": "终端",
+    "fileManager": "文件管理器",
+    "tunnel": "隧道",
+    "docker": "Docker",
+    "serverStats": "主机指标",
+    "hostMetrics": "主机指标",
+    "noNodes": "尚无节点"
+  },
+  "nav": {
+    "networkGraph": "网络拓扑图"
+  },
+  "dashboard": {
+    "networkGraph": "网络图表"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} 个节点"
+  }
+}

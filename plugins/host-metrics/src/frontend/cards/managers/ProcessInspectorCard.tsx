@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { ListTree, X, Skull } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
-import { managerPost } from "@/main-axios";
+import { managerPost } from "../../host-metrics-api";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";

@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Це має бути користувач Unix, якому надано ідентифікатор Tailscale у SSH ACL tailnet, не обов'язково root.",
+    "tailscaleDeviceSelect": "Виберіть пристрій Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Виберіть пристрій...",
+    "tailscaleNoApiKey": "Ключ API Tailscale не налаштовано. Додайте його в налаштуваннях адміністратора, щоб увімкнути виявлення пристроїв.",
+    "tailscaleDocsLink": "Переглянути документи",
+    "tailscaleLoadingDevices": "Завантаження пристроїв...",
+    "tailscaleDeviceLoadFailed": "Не вдалося завантажити пристрої Tailscale. Перевірте URL-адресу API та мережеве з’єднання.",
+    "tailscaleNoDevices": "У вашій мережі не знайдено жодних пристроїв.",
+    "tailscaleDeviceAutoFill": "Вибір пристрою призведе до автоматичного заповнення IP-адреси хоста."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Потрібна автентифікація Tailscale",
+    "tailscaleCheckDescription": "Для Tailscale SSH потрібна додаткова перевірка. Щоб продовжити, автентифікуйтеся у своєму браузері.",
+    "tailscaleCheckOpenBrowser": "Відкрийте браузер для автентифікації",
+    "tailscaleCheckWaiting": "Очікування автентифікації Tailscale...",
+    "tailscaleCheckTimeout": "Час очікування автентифікації Tailscale минув. Будь ласка, спробуйте ще раз."
+  }
+}

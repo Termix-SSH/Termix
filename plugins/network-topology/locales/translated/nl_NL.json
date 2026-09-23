@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Voeg een host toe",
+    "addGroup": "Groep toevoegen",
+    "addLink": "Link toevoegen",
+    "zoomIn": "Inzoomen",
+    "zoomOut": "Uitzoomen",
+    "resetView": "Weergave opnieuw instellen",
+    "selectHost": "Selecteer host",
+    "chooseHost": "Kies een host...",
+    "parentGroup": "Oudergroep",
+    "noGroup": "Geen groep",
+    "groupName": "Groepsnaam",
+    "color": "Kleur",
+    "source": "Bron",
+    "target": "Doel",
+    "moveToGroup": "Verplaatsen naar groep",
+    "selectGroup": "Selecteer groep...",
+    "addConnection": "Verbinding toevoegen",
+    "hostDetails": "Gegevens van de gastheer",
+    "removeFromGroup": "Verwijderen uit groep",
+    "addHostHere": "Voeg hier de host toe",
+    "editGroup": "Groep bewerken",
+    "delete": "Verwijderen",
+    "add": "Toevoegen",
+    "create": "Creëren",
+    "move": "Beweging",
+    "connect": "Verbinden",
+    "createGroup": "Groep aanmaken",
+    "selectSourcePlaceholder": "Selecteer bron...",
+    "selectTargetPlaceholder": "Doel selecteren...",
+    "invalidFile": "Ongeldig bestand",
+    "hostAlreadyExists": "De host bevindt zich al in de topologie.",
+    "connectionExists": "De verbinding bestaat al",
+    "unknown": "Onbekend",
+    "name": "Naam",
+    "ip": "IP",
+    "status": "Status",
+    "failedToAddNode": "Het toevoegen van het knooppunt is mislukt.",
+    "sourceDifferentFromTarget": "Bron en doel moeten verschillend zijn.",
+    "exportJSON": "Exporteer JSON",
+    "importJSON": "JSON importeren",
+    "terminal": "Terminal",
+    "fileManager": "Bestandsbeheerder",
+    "tunnel": "Tunnel",
+    "docker": "Docker",
+    "serverStats": "Hoststatistieken",
+    "hostMetrics": "Hoststatistieken",
+    "noNodes": "Nog geen knooppunten"
+  },
+  "nav": {
+    "networkGraph": "Netwerkgrafiek"
+  },
+  "dashboard": {
+    "networkGraph": "Netwerkgrafiek"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} knooppunten"
+  }
+}

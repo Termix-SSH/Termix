@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Không gian làm việc",
+        "saveCurrent": "Lưu hiện tại",
+        "saveCurrentTitle": "Lưu không gian làm việc hiện tại",
+        "saveCurrentDescription": "Lưu tất cả các tab đang mở, bố cục chia màn hình và cách sắp xếp khung cửa sổ dưới dạng một không gian làm việc mới có tên.",
+        "nameLabel": "Tên",
+        "namePlaceholder": "Ví dụ: Gỡ lỗi sản phẩm",
+        "nameRequired": "Tên không gian làm việc là bắt buộc",
+        "colorLabel": "Màu sắc",
+        "workspaceCreated": "Không gian làm việc đã được lưu",
+        "workspaceUpdated": "Không gian làm việc đã được cập nhật",
+        "workspaceDeleted": "Không gian làm việc đã bị xóa",
+        "workspaceDuplicated": "Không gian làm việc được sao chép",
+        "saveFailed": "Không thể lưu không gian làm việc",
+        "updateFailed": "Không thể cập nhật không gian làm việc",
+        "deleteFailed": "Không thể xóa không gian làm việc",
+        "duplicateFailed": "Không thể sao chép không gian làm việc",
+        "loadFailed": "Không thể tải không gian làm việc",
+        "applyFailed": "Không thể áp dụng không gian làm việc",
+        "deleteWorkspaceTitle": "Xóa không gian làm việc",
+        "deleteWorkspaceDescription": "Bạn có chắc chắn muốn xóa \"{{name}}\" không? Thao tác này không thể hoàn tác.",
+        "noWorkspaces": "Chưa có không gian làm việc nào được lưu. Hãy lưu cách bố trí tab hiện tại của bạn để bắt đầu.",
+        "tabCount": "{{count}} tab",
+        "tabCount_other": "{{count}} tab",
+        "apply": "Áp dụng",
+        "applyConfirmTitle": "Áp dụng Không gian làm việc",
+        "applyConfirmDescription": "Áp dụng \"{{name}}\" sẽ đóng các tab hiện tại của bạn và thay thế chúng bằng bố cục đã lưu của không gian làm việc này. Các thay đổi chưa được lưu đối với bố cục hiện tại của bạn sẽ bị mất.",
+        "applyConfirmButton": "Áp dụng Không gian làm việc",
+        "updateWithCurrent": "Cập nhật với thông tin hiện tại",
+        "updateWithCurrentConfirm": "Bạn có muốn ghi đè \"{{name}}\" bằng cách sắp xếp tab hiện tại của mình không?",
+        "rename": "Đổi tên",
+        "duplicate": "Nhân bản",
+        "duplicateNameSuffix": "{{name}} (copy)",
+        "setDefault": "Đặt làm mặc định",
+        "unsetDefault": "Xóa khỏi danh sách mặc định",
+        "defaultBadge": "Mặc định",
+        "lastSession": "Phiên cuối cùng",
+        "lastSessionDescription": "Tự động cập nhật với cách sắp xếp tab gần đây nhất của bạn. Áp dụng để khôi phục các tab bạn đã mở trước đó.",
+        "lastUsed": "Lần sử dụng cuối cùng {{time}}",
+        "neverUsed": "Chưa từng ứng tuyển",
+        "tabsSkipped": "Không gian làm việc đã được áp dụng — {{count}} tab đã bị bỏ qua (máy chủ không còn tồn tại): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Không gian làm việc"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Không gian làm việc",
+    "workflow_workspaces_desc": "Lưu lại một nhóm các tab đang mở và mở lại toàn bộ bố cục sau."
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "הוסף מארח",
+    "addGroup": "הוסף קבוצה",
+    "addLink": "הוסף קישור",
+    "zoomIn": "לְהִתְמַקֵד",
+    "zoomOut": "התקרבות",
+    "resetView": "איפוס תצוגה",
+    "selectHost": "בחר מארח",
+    "chooseHost": "בחר מארח...",
+    "parentGroup": "קבוצת הורים",
+    "noGroup": "אין קבוצה",
+    "groupName": "שם הקבוצה",
+    "color": "צֶבַע",
+    "source": "מָקוֹר",
+    "target": "יַעַד",
+    "moveToGroup": "העבר לקבוצה",
+    "selectGroup": "בחירת קבוצה...",
+    "addConnection": "הוסף חיבור",
+    "hostDetails": "פרטי המארח",
+    "removeFromGroup": "הסר מהקבוצה",
+    "addHostHere": "הוסף מארח כאן",
+    "editGroup": "עריכת קבוצה",
+    "delete": "לִמְחוֹק",
+    "add": "לְהוֹסִיף",
+    "create": "לִיצוֹר",
+    "move": "מַהֲלָך",
+    "connect": "לְחַבֵּר",
+    "createGroup": "צור קבוצה",
+    "selectSourcePlaceholder": "בחר מקור...",
+    "selectTargetPlaceholder": "בחר יעד...",
+    "invalidFile": "קובץ לא חוקי",
+    "hostAlreadyExists": "המארח כבר נמצא בטופולוגיה",
+    "connectionExists": "החיבור כבר קיים",
+    "unknown": "לֹא יְדוּעַ",
+    "name": "שֵׁם",
+    "ip": "IP",
+    "status": "סטָטוּס",
+    "failedToAddNode": "נכשל בהוספת הצומת",
+    "sourceDifferentFromTarget": "המקור והיעד חייבים להיות שונים",
+    "exportJSON": "ייצוא JSON",
+    "importJSON": "ייבוא JSON",
+    "terminal": "מָסוֹף",
+    "fileManager": "מנהל הקבצים",
+    "tunnel": "מִנהָרָה",
+    "docker": "דוקר",
+    "serverStats": "מדדי מארח",
+    "hostMetrics": "מדדי מארח",
+    "noNodes": "עדיין אין צמתים"
+  },
+  "nav": {
+    "networkGraph": "גרף הרשת"
+  },
+  "dashboard": {
+    "networkGraph": "גרף הרשת"
+  },
+  "dashboardTab": {
+    "nodes": "צמתים {{count}}"
+  }
+}

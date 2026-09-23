@@ -1,19 +1,14 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { notifyAiStatusChanged } from "@/hooks/use-ai-availability";
 import { useBranding } from "@/contexts/BrandingContext";
 import {
-  getAiGloballyEnabled,
-  getAiPrivateEndpoints,
   getNotificationPrivateEndpoints,
   getStepCaPrivateEndpoints,
   setStepCaPrivateEndpoints as setStepCaPrivateEndpointsApi,
   getSecretSourcePrivateEndpoints,
   setSecretSourcePrivateEndpoints as setSecretSourcePrivateEndpointsApi,
-  setAiGloballyEnabled as setAiGloballyEnabledApi,
-  setAiPrivateEndpoints as setAiPrivateEndpointsApi,
   setNotificationPrivateEndpoints as setNotificationPrivateEndpointsApi,
-} from "@/api/ai-api";
+} from "@/api/private-endpoints-api";
 import {
   getUserList,
   getSessions,
@@ -80,10 +75,6 @@ import {
   updateSSOProvider,
   deleteSSOProvider,
 } from "@/api/sso-provider-api";
-import {
-  getMetricsHistoryRetention,
-  saveMetricsHistoryRetention,
-} from "@/api/host-metrics-api";
 import type { SSOProvider } from "@/types/index";
 import {
   type ApiKey,
@@ -176,7 +167,6 @@ export function AdminSettingsPanel({
   }, []);
   const [statusInterval, setStatusInterval] = useState("60");
   const [metricsInterval, setMetricsInterval] = useState("30");
-  const [metricsHistoryRetention, setMetricsHistoryRetention] = useState("7");
   const [guacEnabled, setGuacEnabled] = useState(false);
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
@@ -187,8 +177,6 @@ export function AdminSettingsPanel({
     useState(false);
   const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
     useState(true);
-  const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
-  const [aiPrivateEndpoints, setAiPrivateEndpoints] = useState<string[]>([]);
   const [stepCaPrivateEndpoints, setStepCaPrivateEndpoints] = useState<
     string[]
   >([]);
@@ -410,8 +398,6 @@ export function AdminSettingsPanel({
         analytics,
         sessionSharingEnabled,
         touchInput,
-        aiEnabled,
-        aiEndpoints,
         notificationEndpoints,
         stepCaEndpoints,
         secretSourceEndpoints,
@@ -431,8 +417,6 @@ export function AdminSettingsPanel({
         getAnalyticsEnabled(),
         getSessionSharingGloballyEnabled(),
         getTouchInputSettings(),
-        getAiGloballyEnabled(),
-        getAiPrivateEndpoints(),
         getNotificationPrivateEndpoints(),
         getStepCaPrivateEndpoints(),
         getSecretSourcePrivateEndpoints(),
@@ -457,9 +441,6 @@ export function AdminSettingsPanel({
         setMetricsInterval(String(monitoring.value.metricsInterval));
       }
 
-      getMetricsHistoryRetention()
-        .then((days) => setMetricsHistoryRetention(String(days)))
-        .catch(() => {});
       if (level.status === "fulfilled") setLogLevel(level.value.level);
       if (guac.status === "fulfilled") {
         setGuacEnabled(guac.value.enabled);
@@ -478,12 +459,6 @@ export function AdminSettingsPanel({
       if (touchInput.status === "fulfilled") {
         setTouchInputSettings(touchInput.value);
         cacheTouchInputSettings(touchInput.value);
-      }
-      if (aiEnabled.status === "fulfilled") {
-        setAiGloballyEnabled(aiEnabled.value);
-      }
-      if (aiEndpoints.status === "fulfilled") {
-        setAiPrivateEndpoints(aiEndpoints.value);
       }
       if (stepCaEndpoints.status === "fulfilled") {
         setStepCaPrivateEndpoints(stepCaEndpoints.value);
@@ -628,31 +603,6 @@ export function AdminSettingsPanel({
     } catch {
       setSessionSharingGloballyEnabled(!newVal);
       toast.error(t("admin.updateSessionSharingFailed"));
-    }
-  }
-
-  async function handleToggleAiGloballyEnabled() {
-    const newVal = !aiGloballyEnabled;
-    setAiGloballyEnabled(newVal);
-    try {
-      await setAiGloballyEnabledApi(newVal);
-      // Every AI surface listens for this, so the admin sees the entry appear
-      // or disappear right away instead of after a reload.
-      notifyAiStatusChanged();
-    } catch {
-      setAiGloballyEnabled(!newVal);
-      toast.error(t("admin.updateAiEnabledFailed"));
-    }
-  }
-
-  async function handleSaveAiPrivateEndpoints(hosts: string[]) {
-    const previous = aiPrivateEndpoints;
-    setAiPrivateEndpoints(hosts);
-    try {
-      setAiPrivateEndpoints(await setAiPrivateEndpointsApi(hosts));
-    } catch {
-      setAiPrivateEndpoints(previous);
-      toast.error(t("admin.updateAiEndpointsFailed"));
     }
   }
 
@@ -828,25 +778,15 @@ export function AdminSettingsPanel({
   async function handleSaveMonitoring() {
     const status = parseInt(statusInterval, 10);
     const metrics = parseInt(metricsInterval, 10);
-    const retention = parseInt(metricsHistoryRetention, 10);
     if (isNaN(status) || isNaN(metrics)) {
       toast.error(t("admin.monitoringIntervalInvalid"));
       return;
     }
-    if (!isNaN(retention) && (retention < 1 || retention > 90)) {
-      toast.error(t("admin.metricsHistoryRetentionRange"));
-      return;
-    }
     try {
-      await Promise.all([
-        updateGlobalMonitoringSettings({
-          statusCheckInterval: status,
-          metricsInterval: metrics,
-        }),
-        !isNaN(retention)
-          ? saveMetricsHistoryRetention(retention)
-          : Promise.resolve(),
-      ]);
+      await updateGlobalMonitoringSettings({
+        statusCheckInterval: status,
+        metricsInterval: metrics,
+      });
       toast.success(t("admin.monitoringSaved"));
     } catch {
       toast.error(t("admin.monitoringSaveFailed"));
@@ -1264,10 +1204,6 @@ export function AdminSettingsPanel({
         analyticsLocked={analyticsLocked}
         handleToggleAnalytics={handleToggleAnalytics}
         sessionSharingGloballyEnabled={sessionSharingGloballyEnabled}
-        aiGloballyEnabled={aiGloballyEnabled}
-        onToggleAiGloballyEnabled={handleToggleAiGloballyEnabled}
-        aiPrivateEndpoints={aiPrivateEndpoints}
-        onSaveAiPrivateEndpoints={handleSaveAiPrivateEndpoints}
         notificationPrivateEndpoints={notificationPrivateEndpoints}
         stepCaPrivateEndpoints={stepCaPrivateEndpoints}
         onSaveStepCaPrivateEndpoints={handleSaveStepCaPrivateEndpoints}
@@ -1307,8 +1243,6 @@ export function AdminSettingsPanel({
         setStatusInterval={setStatusInterval}
         metricsInterval={metricsInterval}
         setMetricsInterval={setMetricsInterval}
-        metricsHistoryRetention={metricsHistoryRetention}
-        setMetricsHistoryRetention={setMetricsHistoryRetention}
         handleSaveMonitoring={handleSaveMonitoring}
         guacEnabled={guacEnabled}
         handleToggleGuacamole={handleToggleGuacamole}

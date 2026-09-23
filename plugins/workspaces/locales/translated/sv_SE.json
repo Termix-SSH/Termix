@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Arbetsytor",
+        "saveCurrent": "Spara aktuell",
+        "saveCurrentTitle": "Spara aktuell arbetsyta",
+        "saveCurrentDescription": "Spara alla öppna flikar, delade layouter och rutorrangemang som en ny namngiven arbetsyta.",
+        "nameLabel": "Namn",
+        "namePlaceholder": "t.ex. produktfelsökning",
+        "nameRequired": "Arbetsytans namn krävs",
+        "colorLabel": "Färg",
+        "workspaceCreated": "Arbetsytan sparad",
+        "workspaceUpdated": "Arbetsytan uppdaterad",
+        "workspaceDeleted": "Arbetsytan raderad",
+        "workspaceDuplicated": "Arbetsyta duplicerad",
+        "saveFailed": "Kunde inte spara arbetsytan",
+        "updateFailed": "Misslyckades med att uppdatera arbetsytan",
+        "deleteFailed": "Misslyckades med att ta bort arbetsytan",
+        "duplicateFailed": "Misslyckades med att duplicera arbetsytan",
+        "loadFailed": "Misslyckades med att läsa in arbetsytor",
+        "applyFailed": "Kunde inte tillämpa arbetsytan",
+        "deleteWorkspaceTitle": "Ta bort arbetsyta",
+        "deleteWorkspaceDescription": "Är du säker på att du vill ta bort \"{{name}}\"? Detta kan inte ångras.",
+        "noWorkspaces": "Inga sparade arbetsytor ännu. Spara din nuvarande flikstruktur för att komma igång.",
+        "tabCount": "{{count}} flik",
+        "tabCount_other": "{{count}} flikar",
+        "apply": "Tillämpas",
+        "applyConfirmTitle": "Använd arbetsyta",
+        "applyConfirmDescription": "Om du använder \"{{name}}\" stängs dina nuvarande flikar och ersätts med den här arbetsytans sparade layout. Osparade ändringar i din nuvarande layout kommer att gå förlorade.",
+        "applyConfirmButton": "Använd arbetsyta",
+        "updateWithCurrent": "Uppdatera med aktuellt",
+        "updateWithCurrentConfirm": "Skriv över \"{{name}}\" med din nuvarande tabulering?",
+        "rename": "Döpa om",
+        "duplicate": "Duplicera",
+        "duplicateNameSuffix": "{{name}} (kopiera)",
+        "setDefault": "Ange som standard",
+        "unsetDefault": "Ta bort som standard",
+        "defaultBadge": "Standard",
+        "lastSession": "Senaste sessionen",
+        "lastSessionDescription": "Uppdateras automatiskt med din senaste flikstruktur. Använd den för att återställa det du hade öppet.",
+        "lastUsed": "Senast använd {{time}}",
+        "neverUsed": "Aldrig tillämpad",
+        "tabsSkipped": "Arbetsyta tillämpad — {{count}} flik(kar) hoppade över (värden finns inte längre): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Arbetsytor"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Arbetsytor",
+    "workflow_workspaces_desc": "Spara en uppsättning öppna flikar och öppna hela layouten igen senare."
+  }
+}

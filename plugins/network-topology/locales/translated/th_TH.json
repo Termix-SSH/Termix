@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "เพิ่มโฮสต์",
+    "addGroup": "เพิ่มกลุ่ม",
+    "addLink": "เพิ่มลิงก์",
+    "zoomIn": "ซูมเข้า",
+    "zoomOut": "ซูมออก",
+    "resetView": "รีเซ็ตมุมมอง",
+    "selectHost": "เลือกโฮสต์",
+    "chooseHost": "เลือกเจ้าภาพ...",
+    "parentGroup": "กลุ่มผู้ปกครอง",
+    "noGroup": "ไม่มีกลุ่ม",
+    "groupName": "ชื่อกลุ่ม",
+    "color": "สี",
+    "source": "แหล่งที่มา",
+    "target": "เป้า",
+    "moveToGroup": "ย้ายไปยังกลุ่ม",
+    "selectGroup": "เลือกกลุ่ม...",
+    "addConnection": "เพิ่มการเชื่อมต่อ",
+    "hostDetails": "รายละเอียดโฮสต์",
+    "removeFromGroup": "ลบออกจากกลุ่ม",
+    "addHostHere": "เพิ่มโฮสต์ที่นี่",
+    "editGroup": "แก้ไขกลุ่ม",
+    "delete": "ลบ",
+    "add": "เพิ่ม",
+    "create": "สร้าง",
+    "move": "เคลื่อนไหว",
+    "connect": "เชื่อมต่อ",
+    "createGroup": "สร้างกลุ่ม",
+    "selectSourcePlaceholder": "เลือกแหล่งที่มา...",
+    "selectTargetPlaceholder": "เลือกเป้าหมาย...",
+    "invalidFile": "ไฟล์ไม่ถูกต้อง",
+    "hostAlreadyExists": "โฮสต์อยู่ในโทโพโลยีแล้ว",
+    "connectionExists": "การเชื่อมต่อมีอยู่แล้ว",
+    "unknown": "ไม่ทราบ",
+    "name": "ชื่อ",
+    "ip": "ไอพี",
+    "status": "สถานะ",
+    "failedToAddNode": "ไม่สามารถเพิ่มโหนดได้",
+    "sourceDifferentFromTarget": "แหล่งที่มาและเป้าหมายต้องแตกต่างกัน",
+    "exportJSON": "ส่งออก JSON",
+    "importJSON": "นำเข้า JSON",
+    "terminal": "เทอร์มินัล",
+    "fileManager": "ตัวจัดการไฟล์",
+    "tunnel": "อุโมงค์",
+    "docker": "ด็อกเกอร์",
+    "serverStats": "เมตริกโฮสต์",
+    "hostMetrics": "เมตริกโฮสต์",
+    "noNodes": "ยังไม่มีโหนด"
+  },
+  "nav": {
+    "networkGraph": "กราฟเครือข่าย"
+  },
+  "dashboard": {
+    "networkGraph": "กราฟเครือข่าย"
+  },
+  "dashboardTab": {
+    "nodes": "โหนด {{count}}"
+  }
+}

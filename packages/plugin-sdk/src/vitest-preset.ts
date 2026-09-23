@@ -48,9 +48,33 @@ export function pluginVitestConfig(
   );
 
   const repoRoot = findRepoRoot(pluginDir);
+  // Inside a Termix checkout the SDK's browser entries resolve to source and
+  // the test host is core's, so renderWithApp exercises the real registries
+  // and the plugin shares one SDK instance with them.
   const alias: Record<string, string> = {
     ...(repoRoot
       ? {
+          "@termix/plugin-sdk/frontend": path.join(
+            repoRoot,
+            "packages",
+            "plugin-sdk",
+            "src",
+            "frontend.ts",
+          ),
+          "@termix/plugin-sdk/ui": path.join(
+            repoRoot,
+            "src",
+            "ui",
+            "plugin-host",
+            "sdk-ui.ts",
+          ),
+          "@termix/plugin-host/testing": path.join(
+            repoRoot,
+            "src",
+            "ui",
+            "plugin-host",
+            "testing-host.tsx",
+          ),
           "@/types": path.join(repoRoot, "src", "types"),
           "@": path.join(repoRoot, "src", "ui"),
         }

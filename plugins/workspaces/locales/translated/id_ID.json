@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Ruang kerja",
+        "saveCurrent": "Simpan Saat Ini",
+        "saveCurrentTitle": "Simpan Ruang Kerja Saat Ini",
+        "saveCurrentDescription": "Simpan setiap tab yang terbuka, tata letak terpisah, dan susunan panel sebagai ruang kerja baru yang diberi nama.",
+        "nameLabel": "Nama",
+        "namePlaceholder": "misalnya, Debugging Produksi",
+        "nameRequired": "Nama ruang kerja wajib diisi.",
+        "colorLabel": "Warna",
+        "workspaceCreated": "Ruang kerja tersimpan",
+        "workspaceUpdated": "Ruang kerja diperbarui",
+        "workspaceDeleted": "Ruang kerja dihapus",
+        "workspaceDuplicated": "Ruang kerja diduplikasi",
+        "saveFailed": "Gagal menyimpan ruang kerja",
+        "updateFailed": "Gagal memperbarui ruang kerja",
+        "deleteFailed": "Gagal menghapus ruang kerja.",
+        "duplicateFailed": "Gagal menduplikasi ruang kerja.",
+        "loadFailed": "Gagal memuat ruang kerja",
+        "applyFailed": "Gagal menerapkan ruang kerja",
+        "deleteWorkspaceTitle": "Hapus Ruang Kerja",
+        "deleteWorkspaceDescription": "Apakah Anda yakin ingin menghapus \"{{name}}\"? Tindakan ini tidak dapat dibatalkan.",
+        "noWorkspaces": "Belum ada ruang kerja yang tersimpan. Simpan susunan tab Anda saat ini untuk memulai.",
+        "tabCount": "{{count}} tab",
+        "tabCount_other": "{{count}} tab",
+        "apply": "Menerapkan",
+        "applyConfirmTitle": "Terapkan Ruang Kerja",
+        "applyConfirmDescription": "Menerapkan \"{{name}}\" akan menutup tab Anda saat ini dan menggantinya dengan susunan yang tersimpan di ruang kerja ini. Perubahan yang belum disimpan pada tata letak Anda saat ini akan hilang.",
+        "applyConfirmButton": "Terapkan Ruang Kerja",
+        "updateWithCurrent": "Perbarui dengan yang Terbaru",
+        "updateWithCurrentConfirm": "Timpa \"{{name}}\" dengan susunan tab Anda saat ini?",
+        "rename": "Ganti nama",
+        "duplicate": "Duplikat",
+        "duplicateNameSuffix": "{{name}} (salinan)",
+        "setDefault": "Tetapkan sebagai Default",
+        "unsetDefault": "Hapus sebagai Default",
+        "defaultBadge": "Bawaan",
+        "lastSession": "Sesi Terakhir",
+        "lastSessionDescription": "Diperbarui secara otomatis dengan susunan tab terbaru Anda. Terapkan untuk memulihkan tab yang sebelumnya Anda buka.",
+        "lastUsed": "Terakhir digunakan {{time}}",
+        "neverUsed": "Tidak pernah melamar",
+        "tabsSkipped": "Ruang kerja diterapkan — {{count}} tab dilewati (host tidak lagi ada): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Ruang kerja"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Ruang kerja",
+    "workflow_workspaces_desc": "Simpan sekumpulan tab yang terbuka dan buka kembali seluruh tata letak nanti."
+  }
+}

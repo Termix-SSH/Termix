@@ -7,17 +7,8 @@ import type {
 } from "@/types/homepage-types";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import type { SSHHostWithStatus } from "@/main-axios";
-
-const ALL_TYPES: QuickConnectType[] = [
-  "terminal",
-  "files",
-  "docker",
-  "tunnel",
-  "host-metrics",
-  "rdp",
-  "vnc",
-  "telnet",
-];
+import { useHostActions } from "@/sidebar/host-contributions";
+import { quickConnectTargets } from "../quick-connect-targets";
 
 export function QuickConnectEditForm({
   config,
@@ -25,6 +16,7 @@ export function QuickConnectEditForm({
 }: WidgetEditFormProps<QuickConnectConfig>) {
   const { t } = useTranslation();
   const [hosts, setHosts] = useState<SSHHostWithStatus[]>([]);
+  const targets = quickConnectTargets(useHostActions());
 
   useEffect(() => {
     getSSHHosts()
@@ -84,7 +76,7 @@ export function QuickConnectEditForm({
           {t("homepage.connectionTypes")}
         </label>
         <div className="grid grid-cols-2 gap-1">
-          {ALL_TYPES.map((type) => (
+          {targets.map(({ type, labelKey }) => (
             <label
               key={type}
               className="flex items-center gap-2 text-xs cursor-pointer"
@@ -95,7 +87,7 @@ export function QuickConnectEditForm({
                 onChange={() => toggleType(type)}
                 className="accent-accent-brand"
               />
-              {t(`homepage.connType_${type}`)}
+              {t(labelKey, type)}
             </label>
           ))}
         </div>

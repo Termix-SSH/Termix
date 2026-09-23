@@ -102,3 +102,13 @@ export function resetPermissionsCache(): void {
   cache = null;
   inFlight = null;
 }
+
+/** Test seam: answers every hook with these grants, no request made. */
+export function setPermissionsForTesting(
+  permissions: string[],
+  isAdmin = false,
+): void {
+  cache = { permissions, isAdmin };
+  inFlight = null;
+  window.dispatchEvent(new Event(PERMISSIONS_CHANGED_EVENT));
+}

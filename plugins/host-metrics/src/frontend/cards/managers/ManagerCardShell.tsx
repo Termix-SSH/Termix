@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { RefreshCw, AlertTriangle } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Button } from "@/components/button";
 import { MetricCard } from "@/components/metric-card";
 import type { ManagerError } from "./useManagerData";

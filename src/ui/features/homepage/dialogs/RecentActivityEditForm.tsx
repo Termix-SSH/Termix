@@ -1,20 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/input";
+import { activityFilterTypes } from "../quick-connect-targets";
 import type {
   RecentActivityConfig,
   ActivityType,
   WidgetEditFormProps,
 } from "@/types/homepage-types";
-
-const ALL_TYPES: ActivityType[] = [
-  "terminal",
-  "file_manager",
-  "docker",
-  "tunnel",
-  "rdp",
-  "vnc",
-  "telnet",
-];
 
 export function RecentActivityEditForm({
   config,
@@ -55,7 +46,7 @@ export function RecentActivityEditForm({
           {t("homepage.filterActivityTypes")}
         </label>
         <div className="flex flex-wrap gap-1">
-          {ALL_TYPES.map((type) => (
+          {activityFilterTypes().map((type) => (
             <button
               key={type}
               type="button"

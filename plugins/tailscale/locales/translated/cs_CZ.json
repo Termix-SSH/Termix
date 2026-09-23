@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Musí se jednat o uživatele Unixu, kterému je vaše identita Tailscale udělena v SSH ACL tailnetu, nikoli nutně o uživatele root.",
+    "tailscaleDeviceSelect": "Vyberte zařízení Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Vyberte zařízení...",
+    "tailscaleNoApiKey": "Není nakonfigurován žádný klíč Tailscale API. Přidejte jej v nastavení správce, abyste povolili vyhledávání zařízení.",
+    "tailscaleDocsLink": "Zobrazit dokumenty",
+    "tailscaleLoadingDevices": "Načítání zařízení...",
+    "tailscaleDeviceLoadFailed": "Nepodařilo se načíst zařízení Tailscale. Zkontrolujte URL API a síťové připojení.",
+    "tailscaleNoDevices": "Ve vaší koncové síti nebyla nalezena žádná zařízení.",
+    "tailscaleDeviceAutoFill": "Výběrem zařízení se automaticky vyplní IP adresa hostitele."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Vyžadováno ověřování Tailscale",
+    "tailscaleCheckDescription": "Tailscale SSH vyžaduje dodatečnou kontrolu. Pro pokračování se ověřte ve svém prohlížeči.",
+    "tailscaleCheckOpenBrowser": "Otevřít prohlížeč pro ověření",
+    "tailscaleCheckWaiting": "Čekání na ověření Tailscale...",
+    "tailscaleCheckTimeout": "Časový limit pro ověřování Tailscale vypršel. Zkuste to prosím znovu."
+  }
+}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getWidgetType } from "../widgets/WidgetRegistry";
 import { useTranslation } from "react-i18next";
 import {
   Dialog,
@@ -20,7 +21,6 @@ import type {
   WeatherConfig,
   IframeConfig,
   RssFeedConfig,
-  MetricsChartConfig,
   HostGridConfig,
   PingStatusConfig,
   RecentActivityConfig,
@@ -29,7 +29,6 @@ import type {
   SshTerminalConfig,
   QuickConnectConfig,
   FileManagerWidgetConfig,
-  DockerWidgetConfig,
   TunnelWidgetConfig,
   CalendarConfig,
   CountdownConfig,
@@ -52,7 +51,6 @@ import { HostStatusEditForm } from "./HostStatusEditForm";
 import { WeatherEditForm } from "./WeatherEditForm";
 import { IframeEditForm } from "./IframeEditForm";
 import { RssFeedEditForm } from "./RssFeedEditForm";
-import { MetricsChartEditForm } from "./MetricsChartEditForm";
 import { HostGridEditForm } from "./HostGridEditForm";
 import { PingStatusEditForm } from "./PingStatusEditForm";
 import { RecentActivityEditForm } from "./RecentActivityEditForm";
@@ -61,7 +59,6 @@ import { SystemOverviewEditForm } from "./SystemOverviewEditForm";
 import { SshTerminalEditForm } from "./SshTerminalEditForm";
 import { QuickConnectEditForm } from "./QuickConnectEditForm";
 import { FileManagerWidgetEditForm } from "./FileManagerWidgetEditForm";
-import { DockerWidgetEditForm } from "./DockerWidgetEditForm";
 import { TunnelWidgetEditForm } from "./TunnelWidgetEditForm";
 import { CalendarEditForm } from "./CalendarEditForm";
 import { CountdownEditForm } from "./CountdownEditForm";
@@ -181,13 +178,6 @@ export function WidgetEditDialog({
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
-      case "metrics_chart":
-        return (
-          <MetricsChartEditForm
-            config={config as unknown as MetricsChartConfig}
-            onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
-          />
-        );
       case "host_grid":
         return (
           <HostGridEditForm
@@ -241,13 +231,6 @@ export function WidgetEditDialog({
         return (
           <FileManagerWidgetEditForm
             config={config as unknown as FileManagerWidgetConfig}
-            onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
-          />
-        );
-      case "docker_widget":
-        return (
-          <DockerWidgetEditForm
-            config={config as unknown as DockerWidgetConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
@@ -335,8 +318,13 @@ export function WidgetEditDialog({
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );
-      default:
-        return null;
+      default: {
+        // Plugin widgets bring their own form.
+        const EditForm = getWidgetType(widget.typeId)?.editFormComponent;
+        return EditForm ? (
+          <EditForm config={config} onChange={setConfig} />
+        ) : null;
+      }
     }
   };
 

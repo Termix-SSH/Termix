@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Espaços de trabalho",
+        "saveCurrent": "Guardar atual",
+        "saveCurrentTitle": "Guardar espaço de trabalho atual",
+        "saveCurrentDescription": "Guarde cada separador aberto, layout dividido e disposição de painéis como um novo espaço de trabalho nomeado.",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Exemplo: Depuração de Produção",
+        "nameRequired": "É obrigatório dar um nome ao espaço de trabalho.",
+        "colorLabel": "Cor",
+        "workspaceCreated": "Espaço de trabalho guardado",
+        "workspaceUpdated": "Espaço de trabalho atualizado",
+        "workspaceDeleted": "Espaço de trabalho excluído",
+        "workspaceDuplicated": "Espaço de trabalho duplicado",
+        "saveFailed": "Falha ao guardar o espaço de trabalho",
+        "updateFailed": "Falha ao atualizar o espaço de trabalho",
+        "deleteFailed": "Falha ao eliminar o espaço de trabalho",
+        "duplicateFailed": "Falha ao duplicar o espaço de trabalho",
+        "loadFailed": "Falha ao carregar os espaços de trabalho.",
+        "applyFailed": "Falha ao aplicar o espaço de trabalho",
+        "deleteWorkspaceTitle": "Apagar espaço de trabalho",
+        "deleteWorkspaceDescription": "Tem a certeza que pretende eliminar \"{{name}}\"? Esta ação não pode ser anulada.",
+        "noWorkspaces": "Ainda não há espaços de trabalho guardados. Guarde a sua configuração atual de separadores para começar.",
+        "tabCount": "{{count}} separador",
+        "tabCount_other": "{{count}} separadores",
+        "apply": "Candidatar-se",
+        "applyConfirmTitle": "Aplicar Espaço de Trabalho",
+        "applyConfirmDescription": "Aplicar \"{{name}}\" fechará os seus separadores atuais e substituí-los-á pela configuração guardada deste espaço de trabalho. As alterações não guardadas no seu layout atual serão perdidas.",
+        "applyConfirmButton": "Aplicar Espaço de Trabalho",
+        "updateWithCurrent": "Atualizar com as informações atuais",
+        "updateWithCurrentConfirm": "Substituir \"{{name}}\" pela sua configuração de tabulação atual?",
+        "rename": "Renomear",
+        "duplicate": "Duplicado",
+        "duplicateNameSuffix": "{{name}} (copiar)",
+        "setDefault": "Definir como padrão",
+        "unsetDefault": "Remover como padrão",
+        "defaultBadge": "Predefinição",
+        "lastSession": "Última sessão",
+        "lastSessionDescription": "Atualizado automaticamente com a sua última configuração de separadores. Aplique para recuperar o que estava aberto.",
+        "lastUsed": "Última utilização {{time}}",
+        "neverUsed": "Nunca aplicado",
+        "tabsSkipped": "Espaço de trabalho aplicado — {{count}} separador(es) ignorado(s) (o host já não existe): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Espaços de trabalho"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Espaços de trabalho",
+    "workflow_workspaces_desc": "Guarde um conjunto de separadores abertos e reabra todo o layout mais tarde."
+  }
+}

@@ -1,1 +1,107 @@
-{}
+{
+  "permissions": {
+    "use": {
+      "title": "Use the assistant",
+      "description": "Open the assistant and ask it things."
+    },
+    "manage_providers": {
+      "title": "Manage providers",
+      "description": "Add, edit and remove the AI providers and their API keys."
+    },
+    "apply_proposals": {
+      "title": "Apply proposals",
+      "description": "Let the assistant carry out the changes it suggests."
+    },
+    "services.use": {
+      "title": "Use AI from other plugins",
+      "description": "Other plugins may call the assistant on your behalf."
+    },
+    "secrets.share": {
+      "title": "Share the API key",
+      "description": "Other plugins may use the stored AI API key without seeing it."
+    }
+  },
+  "settings": {
+    "assistantUnavailable": "The AI assistant is turned off on this server."
+  },
+  "ai": {
+    "title": "Assistant",
+    "send": "Send",
+    "stop": "Stop",
+    "save": "Save",
+    "cancel": "Cancel",
+    "running": "running",
+    "approve": "Approve",
+    "reject": "Reject",
+    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
+    "selectProvider": "Select a provider",
+    "providerSettings": "Provider settings",
+    "addProvider": "Add provider",
+    "editProvider": "Edit provider",
+    "removeProvider": "Remove provider",
+    "providerType": "Provider",
+    "providerLabel": "Name",
+    "providerLabelPlaceholder": "For example: Local Ollama",
+    "baseUrl": "Server address",
+    "apiKey": "API key",
+    "defaultModel": "Default model",
+    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
+    "labelRequired": "Give this provider a name",
+    "providerSaveFailed": "Could not save the provider",
+    "providerUpdated": "Provider updated",
+    "providerDeleteFailed": "Could not remove the provider",
+    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "providerOllama": "Ollama",
+    "providerAnthropic": "Anthropic",
+    "providerOpenai": "OpenAI",
+    "providerGemini": "Google Gemini",
+    "providerOpenaiCompatible": "OpenAI compatible",
+    "toolArguments": "Input",
+    "toolResult": "Result",
+    "statusApplied": "Applied",
+    "statusRejected": "Rejected",
+    "proposalApplied": "Change applied",
+    "proposalApplyFailed": "Could not apply the change",
+    "proposalRejectFailed": "Could not reject the change",
+    "enableTitle": "Enable the AI assistant",
+    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
+    "readOnlyCommands": "Allow read-only diagnostic commands",
+    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
+    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
+    "modelCustom": "Enter a model name",
+    "modelRefresh": "Refresh list",
+    "modelPlaceholder": "Choose or type a model",
+    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
+    "runCommandTitle": "Run command",
+    "assistant": "AI Assistant",
+    "terminalPanelEmpty": "Ask the assistant about this host. Anything that changes state needs your approval first.",
+    "terminalPanelPlaceholder": "Ask about this host...",
+    "noProvidersConfigured": "No AI provider is configured yet. Add one in the AI assistant tab.",
+    "runsInOpenTerminal": "Runs in your open terminal session.",
+    "runInTerminal": "Run",
+    "terminalContextPrefill": "Here is my terminal output:\n\n{{output}}\n\n",
+    "secrets": {
+      "shareApiKey": "Let other plugins use your AI provider API key for their own requests. The key is never copied, and you can revoke this at any time."
+    }
+  },
+  "nav": {
+    "ai": "AI"
+  },
+  "onboarding": {
+    "aiTitle": "AI assistant",
+    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
+    "aiSkipTitle": "Leave it off",
+    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
+    "aiEnableTitle": "Turn it on",
+    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
+    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
+  },
+  "admin": {
+    "aiGloballyEnabled": "AI assistant",
+    "aiGloballyEnabledDesc": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone.",
+    "aiPrivateEndpoints": "Allowed private AI hosts",
+    "aiPrivateEndpointsDesc": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Separate them with commas.",
+    "updateAiEnabledFailed": "Could not update the AI setting",
+    "updateAiEndpointsFailed": "Could not update the allowed hosts"
+  }
+}

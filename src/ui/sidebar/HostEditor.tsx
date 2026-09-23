@@ -30,7 +30,6 @@ import {
   Palette,
   Pencil,
   Plus,
-  Settings,
   Shield,
   Upload,
   X,
@@ -57,7 +56,6 @@ import {
   adminCreateUserCredential,
 } from "@/main-axios";
 import { getHostDefaults } from "@/api/settings-api";
-import { getTailscaleDevices } from "../../../plugins/tailscale/src/frontend/tailscale-api";
 import {
   getUserPreferences,
   saveUserPreferences,
@@ -82,23 +80,16 @@ import {
   type HostProtocols,
 } from "./HostEditorData";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
-import {
-  HostDockerTab,
-  HostWebUiTab,
-  HostProxmoxTab,
-  HostProxmoxStatsTab,
-  HostFilesTab,
-} from "./HostEditorFeatureTabs";
+import { HostFilesTab } from "./HostEditorFilesTab";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import { canEditHost } from "./host-permissions";
-import {
-  HostEditorRdpTab,
-  HostEditorTelnetTab,
-  HostEditorVncTab,
-} from "./HostEditorGuacamoleTabs";
-import { HostStatsTab } from "./HostEditorStatsTab";
 import { VaultProfileManager } from "./VaultProfileManager";
-import { getRegisteredHostEditorTab } from "./HostManagerTabs";
+import {
+  getHostEditorSection,
+  isSshGroupTab,
+  makeHostTabs,
+} from "./HostManagerTabs";
+import { useSshAuthEditors } from "@/plugin-host/auth-registry";
 import {
   SecretReferenceHint,
   SecretSourceManager,
@@ -110,6 +101,18 @@ import {
 } from "./quick-created-credential";
 
 const CUSTOM_FONT_OPTION = "__custom__";
+
+/** The SSH auth types core itself handles. Plugins add the rest. */
+const CORE_AUTH_METHODS = [
+  "password",
+  "key",
+  "credential",
+  "vault",
+  "none",
+  "opkssh",
+  "stepca",
+  "agent",
+];
 
 export function HostEditor({
   host,
@@ -168,12 +171,14 @@ export function HostEditor({
     }));
   };
 
-  const setGuacField = (key: string, value: unknown) => {
+  /** Sets several fields at once, from the latest form. For plugin sections. */
+  const updateForm = (
+    patch: (current: Record<string, unknown>) => Record<string, unknown>,
+  ) => {
     onDirtyChange?.(true);
     setForm((current) => ({
       ...current,
-      inheritRemoteDesktopDefaults: false,
-      guacamoleConfig: { ...current.guacamoleConfig, [key]: value },
+      ...patch(current as unknown as Record<string, unknown>),
     }));
   };
 
@@ -182,19 +187,6 @@ export function HostEditor({
   const [tunnelStatuses, setTunnelStatuses] = useState<
     Record<string, TunnelStatus>
   >({});
-  const [tailscaleDevices, setTailscaleDevices] = useState<
-    Array<{
-      id: string;
-      name: string;
-      hostname: string;
-      addresses: string[];
-      os: string;
-      lastSeen: string;
-    }>
-  >([]);
-  const [tailscaleHasApiKey, setTailscaleHasApiKey] = useState(false);
-  const [tailscaleLoading, setTailscaleLoading] = useState(false);
-  const [tailscaleDeviceError, setTailscaleDeviceError] = useState(false);
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
@@ -320,20 +312,6 @@ export function HostEditor({
     return unsub;
   }, [activeTab]);
 
-  useEffect(() => {
-    if (form.authType !== "tailscale") return;
-    setTailscaleLoading(true);
-    setTailscaleDeviceError(false);
-    getTailscaleDevices()
-      .then((res) => {
-        setTailscaleDevices(res?.devices ?? []);
-        setTailscaleHasApiKey(res?.hasApiKey ?? false);
-        setTailscaleDeviceError(!!res?.error);
-      })
-      .catch(() => setTailscaleDeviceError(true))
-      .finally(() => setTailscaleLoading(false));
-  }, [form.authType]);
-
   /**
    * Writes each plugin's host-scope values through its own route.
    *
@@ -389,6 +367,16 @@ export function HostEditor({
   };
 
   const authMethod = form.authType;
+  // Auth types a plugin adds (Tailscale) bring their own editor and label.
+  const sshAuthEditors = useSshAuthEditors();
+  const activeAuthEditor = sshAuthEditors.find(
+    (editor) => editor.id === authMethod,
+  );
+  const ActiveAuthEditor = activeAuthEditor?.component;
+  const authEditorLabel = (method: string) => {
+    const editor = sshAuthEditors.find((item) => item.id === method);
+    return editor ? t(editor.titleKey) : method;
+  };
   const availableCredentials =
     quickCreatedCredential &&
     !credentials.some(
@@ -497,28 +485,31 @@ export function HostEditor({
   ) => {
     onDirtyChange?.(true);
     onProtocolChange({ [proto]: value });
-    const tabForProto: Record<string, string> = {
-      enableSsh: "ssh",
-      enableRdp: "rdp",
-      enableVnc: "vnc",
-      enableTelnet: "telnet",
-    };
-    const sshGroupTabs = [
-      "ssh",
-      "terminal",
-      "tunnels",
-      "docker",
-      "files",
-      "host-metrics",
-    ];
+    // Tabs are shown per protocol: SSH owns its group, plugins decide their
+    // own visibility. Jump to a tab the change reveals, and away from one it
+    // hides.
+    const before = protocols as unknown as Record<string, boolean>;
+    const after = { ...before, [proto]: value };
+    const visibleBefore = new Set(
+      makeHostTabs((k) => k, before).map((tab) => tab.id),
+    );
+    const visibleAfter = makeHostTabs((k) => k, after).map((tab) => tab.id);
     if (!value) {
-      if (proto === "enableSsh" && sshGroupTabs.includes(activeTab)) {
+      if (proto === "enableSsh" && isSshGroupTab(activeTab)) {
         onTabChange("general");
-      } else if (activeTab === tabForProto[proto]) {
+      } else if (!visibleAfter.includes(activeTab)) {
         onTabChange("general");
       }
+      return;
     }
-    if (value && tabForProto[proto]) onTabChange(tabForProto[proto]);
+    if (proto === "enableSsh") {
+      onTabChange("ssh");
+      return;
+    }
+    const revealed = visibleAfter.find(
+      (id) => id !== "ssh" && !visibleBefore.has(id),
+    );
+    if (revealed) onTabChange(revealed);
   };
 
   return (
@@ -621,15 +612,8 @@ export function HostEditor({
                       aria-label={t("hosts.authenticationMethod")}
                     >
                       {[
-                        "password",
-                        "key",
-                        "credential",
-                        "vault",
-                        "none",
-                        "opkssh",
-                        "stepca",
-                        "tailscale",
-                        "agent",
+                        ...CORE_AUTH_METHODS,
+                        ...sshAuthEditors.map((editor) => editor.id),
                       ].map((m) => (
                         <button
                           key={m}
@@ -647,7 +631,7 @@ export function HostEditor({
                           }}
                           className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
                         >
-                          {m}
+                          {authEditorLabel(m)}
                         </button>
                       ))}
                     </div>
@@ -705,9 +689,9 @@ export function HostEditor({
                           </p>
                         </div>
                       )}
-                      {authMethod === "tailscale" && (
+                      {activeAuthEditor?.hintKey && (
                         <p className="text-[10px] text-muted-foreground/60">
-                          {t("hosts.tailscaleUsernameHint")}
+                          {t(activeAuthEditor.hintKey)}
                         </p>
                       )}
                     </div>
@@ -1092,82 +1076,16 @@ export function HostEditor({
                       </p>
                     </div>
                   )}
-                  {authMethod === "tailscale" && (
-                    <div className="flex flex-col gap-2 border-t border-border pt-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.tailscaleDeviceSelect")}
-                        </label>
-                        <a
-                          href="https://docs.termix.site/features/networking/tailscale"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] text-accent-brand hover:underline"
-                        >
-                          {t("hosts.tailscaleDocsLink")}
-                        </a>
-                      </div>
-                      {tailscaleLoading ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          {t("hosts.tailscaleLoadingDevices")}
-                        </p>
-                      ) : tailscaleDeviceError ? (
-                        <p className="text-[10px] text-destructive">
-                          {t("hosts.tailscaleDeviceLoadFailed")}
-                        </p>
-                      ) : !tailscaleHasApiKey ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          {t("hosts.tailscaleNoApiKey")}
-                        </p>
-                      ) : tailscaleDevices.length === 0 ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          {t("hosts.tailscaleNoDevices")}
-                        </p>
-                      ) : (
-                        <>
-                          <Select2
-                            className="w-full border border-border bg-background text-foreground text-xs px-2 py-1.5 focus:outline-none focus:border-accent-brand/50"
-                            value={
-                              tailscaleDevices.find((d) =>
-                                d.addresses.includes(form.ip),
-                              )?.id ?? ""
-                            }
-                            onChange={(e) => {
-                              const device = tailscaleDevices.find(
-                                (d) => d.id === e.target.value,
-                              );
-                              if (device) {
-                                const tailscaleIp =
-                                  device.addresses.find((a) =>
-                                    a.startsWith("100."),
-                                  ) ??
-                                  device.addresses[0] ??
-                                  "";
-                                setField("ip", tailscaleIp);
-                              }
-                            }}
-                          >
-                            <option value="" disabled>
-                              {t("hosts.tailscaleDeviceSelectPlaceholder")}
-                            </option>
-                            {tailscaleDevices.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.hostname} (
-                                {d.addresses.find((a) =>
-                                  a.startsWith("100."),
-                                ) ??
-                                  d.addresses[0] ??
-                                  ""}
-                                )
-                              </option>
-                            ))}
-                          </Select2>
-                          <p className="text-[10px] text-muted-foreground">
-                            {t("hosts.tailscaleDeviceAutoFill")}
-                          </p>
-                        </>
-                      )}
-                    </div>
+                  {ActiveAuthEditor && (
+                    <ActiveAuthEditor
+                      form={form}
+                      setField={
+                        setField as unknown as (
+                          key: string,
+                          value: unknown,
+                        ) => void
+                      }
+                    />
                   )}
                   {authMethod === "agent" && (
                     <div className="flex flex-col gap-2 border-t border-border pt-3">
@@ -2614,93 +2532,27 @@ export function HostEditor({
             </>
           )}
 
-          {activeTab === "docker" && (
-            <HostDockerTab form={form} setField={setField} />
-          )}
-
-          {activeTab === "web-ui" && (
-            <HostWebUiTab
-              form={form}
-              setField={setField}
-              protocols={protocols}
-            />
-          )}
-
-          {activeTab === "proxmox" && (
-            <>
-              <HostProxmoxTab form={form} setField={setField} />
-              <HostProxmoxStatsTab form={form} setField={setField} />
-            </>
-          )}
-
           {activeTab === "files" && (
             <HostFilesTab form={form} setField={setField} />
           )}
 
-          {activeTab === "host-metrics" && (
-            <HostStatsTab form={form} setField={setField} snippets={snippets} />
-          )}
-
-          {activeTab === "rdp" && (
-            <>
-              <SectionCard
-                title={t("hosts.rdpDefaults", {
-                  defaultValue: "RDP defaults",
-                })}
-                icon={<Settings className="size-3.5" />}
-              >
-                <SettingRow
-                  label={t("hosts.useUserDefaults", {
-                    defaultValue: "Use user defaults",
-                  })}
-                  description={t("hosts.useUserRdpDefaultsDesc", {
-                    defaultValue:
-                      "Inherit performance, redirection, and clipboard settings from User Profile.",
-                  })}
-                >
-                  <FakeSwitch
-                    checked={form.inheritRemoteDesktopDefaults}
-                    onChange={(value) =>
-                      setField("inheritRemoteDesktopDefaults", value)
-                    }
-                  />
-                </SettingRow>
-              </SectionCard>
-              <HostEditorRdpTab
+          {(() => {
+            const section = getHostEditorSection(activeTab);
+            if (!section) return null;
+            const Section = section.component;
+            return (
+              <Section
                 form={form}
-                setField={setField}
-                setGuacField={setGuacField}
+                setField={
+                  setField as unknown as (key: string, value: unknown) => void
+                }
+                updateForm={updateForm}
                 host={host}
                 credentials={availableCredentials}
+                snippets={snippets}
+                protocols={protocols as unknown as Record<string, boolean>}
               />
-            </>
-          )}
-
-          {activeTab === "vnc" && (
-            <HostEditorVncTab
-              form={form}
-              setField={setField}
-              setGuacField={setGuacField}
-              host={host}
-              credentials={availableCredentials}
-            />
-          )}
-
-          {activeTab === "telnet" && (
-            <HostEditorTelnetTab
-              form={form}
-              setField={setField}
-              setGuacField={setGuacField}
-              host={host}
-              credentials={availableCredentials}
-            />
-          )}
-
-          {(() => {
-            const registeredTab = getRegisteredHostEditorTab(activeTab);
-            if (!registeredTab) return null;
-            const RegisteredTabComponent = registeredTab.component;
-            return <RegisteredTabComponent form={form} setField={setField} />;
+            );
           })()}
         </div>
       </fieldset>

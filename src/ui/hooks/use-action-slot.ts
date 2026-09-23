@@ -15,7 +15,10 @@ import { usePermissions } from "@/hooks/use-permissions";
  * dropped entirely rather than disabled, which is how admin-gated UI already
  * behaves elsewhere in the app.
  */
-export function useActionSlot(slotId: string): SlotContribution[] {
+export function useActionSlot(
+  slotId: string,
+  context?: Record<string, unknown>,
+): SlotContribution[] {
   const contributions = useSyncExternalStore(
     subscribeToActionRegistry,
     () => getSlotContributions(slotId),
@@ -31,7 +34,24 @@ export function useActionSlot(slotId: string): SlotContribution[] {
     return contributions.filter((contribution) => {
       const permission =
         getActionPermission(contribution.actionId) ?? undefined;
-      return !permission || has(permission);
+      if (permission && !has(permission)) return false;
+      if (!contribution.when) return true;
+      try {
+        return contribution.when(context ?? {});
+      } catch {
+        return false;
+      }
     });
-  }, [contributions, has, loaded]);
+    // context is compared by value: slot owners build it inline.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contributions, has, loaded, contextKey(context)]);
+}
+
+function contextKey(context: Record<string, unknown> | undefined): string {
+  if (!context) return "";
+  try {
+    return JSON.stringify(context);
+  } catch {
+    return String(Object.keys(context));
+  }
 }

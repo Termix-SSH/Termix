@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "হোস্ট যোগ করুন",
+    "addGroup": "গ্রুপ যোগ করুন",
+    "addLink": "লিঙ্ক যোগ করুন",
+    "zoomIn": "জুম ইন",
+    "zoomOut": "জুম আউট",
+    "resetView": "দৃশ্য রিসেট করুন",
+    "selectHost": "হোস্ট নির্বাচন করুন",
+    "chooseHost": "একজন হোস্ট বেছে নিন...",
+    "parentGroup": "অভিভাবক গোষ্ঠী",
+    "noGroup": "কোন গ্রুপ নেই",
+    "groupName": "গ্রুপের নাম",
+    "color": "রঙ",
+    "source": "উৎস",
+    "target": "লক্ষ্য",
+    "moveToGroup": "গ্রুপে যান",
+    "selectGroup": "দল নির্বাচন করুন...",
+    "addConnection": "সংযোগ যোগ করুন",
+    "hostDetails": "হোস্টের বিবরণ",
+    "removeFromGroup": "গ্রুপ থেকে অপসারণ করুন",
+    "addHostHere": "এখানে হোস্ট যোগ করুন",
+    "editGroup": "সম্পাদনা গ্রুপ",
+    "delete": "মুছে ফেলুন",
+    "add": "যোগ করুন",
+    "create": "তৈরি করুন",
+    "move": "স্থানান্তর",
+    "connect": "সংযোগ করুন",
+    "createGroup": "গ্রুপ তৈরি করুন",
+    "selectSourcePlaceholder": "উৎস নির্বাচন করুন...",
+    "selectTargetPlaceholder": "লক্ষ্য নির্বাচন করুন...",
+    "invalidFile": "অবৈধ ফাইল",
+    "hostAlreadyExists": "হোস্ট ইতিমধ্যে টপোলজিতে আছে",
+    "connectionExists": "সংযোগটি ইতিমধ্যেই বিদ্যমান আছে",
+    "unknown": "অজানা",
+    "name": "নাম",
+    "ip": "আইপি",
+    "status": "অবস্থা",
+    "failedToAddNode": "নোড যোগ করতে ব্যর্থ হয়েছে",
+    "sourceDifferentFromTarget": "উৎস এবং লক্ষ্য অবশ্যই ভিন্ন হতে হবে",
+    "exportJSON": "JSON রপ্তানি করুন",
+    "importJSON": "JSON আমদানি করুন",
+    "terminal": "টার্মিনাল",
+    "fileManager": "ফাইল ম্যানেজার",
+    "tunnel": "টানেল",
+    "docker": "ডকার",
+    "serverStats": "হোস্ট মেট্রিক্স",
+    "hostMetrics": "হোস্ট মেট্রিক্স",
+    "noNodes": "এখনো কোনো নোড নেই"
+  },
+  "nav": {
+    "networkGraph": "নেটওয়ার্ক গ্রাফ"
+  },
+  "dashboard": {
+    "networkGraph": "নেটওয়ার্ক গ্রাফ"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} নোড"
+  }
+}

@@ -5,14 +5,12 @@
  * manifest so a plugin cannot ship its own form styling. A few are not: a
  * device browser, a provider list. Those declare a component id here instead,
  * which keeps the escape hatch narrow and named rather than letting a plugin
- * hand core arbitrary markup.
- *
- * A7 lets a plugin's own frontend bundle register these through
- * `app.registerSettingsComponent`. Until then core registers them, in
- * legacy-settings-components.ts.
+ * hand core arbitrary markup. A plugin registers them from its frontend
+ * through `app.registerSettingsComponent`.
  */
 
 import type { ComponentType } from "react";
+import { createRegistry } from "@/lib/registry";
 
 export interface SettingsComponentProps {
   pluginId: string;
@@ -27,7 +25,10 @@ export interface SettingsComponentProps {
 export type SettingsComponent = ComponentType<SettingsComponentProps>;
 
 /** Keyed "<pluginId>:<componentId>" so two plugins may use the same name. */
-const registry = new Map<string, SettingsComponent>();
+const registry = createRegistry<{
+  id: string;
+  component: SettingsComponent;
+}>();
 
 function registryKey(pluginId: string, componentId: string): string {
   return `${pluginId}:${componentId}`;
@@ -38,11 +39,10 @@ export function registerSettingsComponent(
   componentId: string,
   component: SettingsComponent,
 ): () => void {
-  const key = registryKey(pluginId, componentId);
-  registry.set(key, component);
-  return () => {
-    if (registry.get(key) === component) registry.delete(key);
-  };
+  return registry.register({
+    id: registryKey(pluginId, componentId),
+    component,
+  });
 }
 
 export function getSettingsComponent(
@@ -50,16 +50,24 @@ export function getSettingsComponent(
   componentId: string | undefined,
 ): SettingsComponent | undefined {
   if (!componentId) return undefined;
-  return registry.get(registryKey(pluginId, componentId));
+  return registry.get(registryKey(pluginId, componentId))?.component;
 }
 
+/** Registered "<pluginId>:<componentId>" keys. */
+export function listSettingsComponents(): string[] {
+  return registry.list().map((entry) => entry.id);
+}
+
+/** Re-renders when components are registered, e.g. after a plugin loads. */
+export const useSettingsComponents = registry.useList;
+
 export function unregisterSettingsComponents(pluginId: string): void {
-  for (const key of [...registry.keys()]) {
-    if (key.startsWith(`${pluginId}:`)) registry.delete(key);
+  for (const entry of registry.list()) {
+    if (entry.id.startsWith(`${pluginId}:`)) registry.unregister(entry.id);
   }
 }
 
 /** Test helper. */
 export function resetSettingsComponents(): void {
-  registry.clear();
+  registry.reset();
 }

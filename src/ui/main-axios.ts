@@ -754,6 +754,11 @@ export async function checkElectronUpdate(): Promise<ElectronUpdateCheckResult> 
   }
 }
 
+/** A URL on the main backend, resolved for web, dev proxy and Electron. */
+export function getBackendUrl(path: string): string {
+  return getApiUrl(path, 30001);
+}
+
 function getApiUrl(path: string, defaultPort: number): string {
   const devMode = isDev();
   const electronMode = isElectron();
@@ -1662,26 +1667,6 @@ export {
 } from "@/api/host-metrics-status-api";
 
 export {
-  getHostMetricsLayout,
-  saveHostMetricsLayout,
-  getHostPlatform,
-  managerGet,
-  managerGetSub,
-  managerPost,
-  type PlatformInfo,
-} from "@/api/host-metrics-api";
-
-export {
-  getProxmoxStats,
-  startProxmoxStatsPolling,
-  stopProxmoxStatsPolling,
-  sendProxmoxStatsHeartbeat,
-  getProxmoxStatsHistory,
-  type ProxmoxStatsHistoryRow,
-  type ProxmoxStatsHistoryResponse,
-} from "@/api/proxmox-stats-api";
-
-export {
   getHostSidebarPreferences,
   saveHostSidebarPreferences,
 } from "@/api/host-sidebar-preferences-api";
@@ -2211,17 +2196,6 @@ export {
   unlinkOIDCFromPasswordAccount,
 } from "@/api/oidc-account-api";
 
-export type {
-  GuacamoleTokenRequest,
-  GuacamoleTokenResponse,
-} from "../../plugins/remote-desktop/src/frontend/guacamole-api";
-export {
-  getGuacamoleDpi,
-  getGuacamoleToken,
-  getGuacamoleTokenFromHost,
-  getGuacdStatus,
-} from "../../plugins/remote-desktop/src/frontend/guacamole-api";
-
 // ============================================================================
 // RBAC MANAGEMENT
 // ============================================================================
@@ -2254,31 +2228,6 @@ export type {
   PermissionCatalogEntry,
   PermissionCatalogItem,
 } from "@/api/rbac-api";
-
-// ============================================================================
-// DOCKER MANAGEMENT API
-// ============================================================================
-
-export {
-  connectDockerSession,
-  verifyDockerTOTP,
-  verifyDockerWarpgate,
-  disconnectDockerSession,
-  keepaliveDockerSession,
-  getDockerSessionStatus,
-  validateDockerAvailability,
-  listDockerContainers,
-  getDockerContainerDetails,
-  startDockerContainer,
-  stopDockerContainer,
-  restartDockerContainer,
-  pauseDockerContainer,
-  unpauseDockerContainer,
-  removeDockerContainer,
-  getContainerLogs,
-  downloadContainerLogs,
-  getContainerStats,
-} from "@/api/docker-api";
 
 export {
   getOpenTabs,

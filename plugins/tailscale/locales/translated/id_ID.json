@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Ini harus berupa pengguna Unix yang identitas Tailscale Anda diberikan dalam ACL SSH tailnet, tidak harus root.",
+    "tailscaleDeviceSelect": "Pilih perangkat Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Pilih perangkat...",
+    "tailscaleNoApiKey": "Belum ada kunci API Tailscale yang dikonfigurasi. Tambahkan satu di Pengaturan Admin untuk mengaktifkan penemuan perangkat.",
+    "tailscaleDocsLink": "Lihat dokumen",
+    "tailscaleLoadingDevices": "Memuat perangkat...",
+    "tailscaleDeviceLoadFailed": "Gagal memuat perangkat Tailscale. Periksa URL API dan koneksi jaringan.",
+    "tailscaleNoDevices": "Tidak ada perangkat yang terdeteksi di tailnet Anda.",
+    "tailscaleDeviceAutoFill": "Memilih perangkat akan secara otomatis mengisi alamat IP host."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Diperlukan Otentikasi Sisik Ekor",
+    "tailscaleCheckDescription": "Tailscale SSH memerlukan pemeriksaan tambahan. Lakukan otentikasi di browser Anda untuk melanjutkan.",
+    "tailscaleCheckOpenBrowser": "Buka Browser untuk Melakukan Otentikasi",
+    "tailscaleCheckWaiting": "Menunggu autentikasi Tailscale...",
+    "tailscaleCheckTimeout": "Autentikasi Tailscale habis waktu. Silakan coba lagi."
+  }
+}

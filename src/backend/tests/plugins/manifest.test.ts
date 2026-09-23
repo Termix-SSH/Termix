@@ -119,11 +119,9 @@ describe("unknown field rejection", () => {
   });
 
   it("rejects an unknown field inside contributes", () => {
-    const errors = validateManifest(
-      base({ contributes: { dashboardCards: [] } }),
-    );
+    const errors = validateManifest(base({ contributes: { widgets: [] } }));
 
-    expect(errors.join()).toMatch(/Unknown field "dashboardCards"/);
+    expect(errors.join()).toMatch(/Unknown field "widgets"/);
   });
 
   it("rejects an unknown field inside a tab", () => {
@@ -555,5 +553,52 @@ describe("tabs and host capabilities", () => {
         base({ contributes: { hostCapability: [one, one] } }),
       ).join(),
     ).toMatch(/duplicates/);
+  });
+});
+
+describe("panels, dashboard cards and guest pages", () => {
+  it("accepts declared panels, cards and the guest flag", () => {
+    expect(
+      validateManifest(
+        base({
+          contributes: {
+            panels: [{ id: "sample-panel", titleKey: "nav.panel" }],
+            dashboardCards: [
+              { id: "sample-card", titleKey: "cards.sample", icon: "Box" },
+            ],
+            guest: true,
+          },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects duplicate view ids and missing title keys", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          panels: [
+            { id: "p", titleKey: "a" },
+            { id: "p", titleKey: "b" },
+          ],
+          dashboardCards: [{ id: "c" }],
+        },
+      }),
+    ).join();
+    expect(errors).toMatch(/panels\[1\]\.id duplicates "p"/);
+    expect(errors).toMatch(/dashboardCards\[0\]\.titleKey/);
+  });
+
+  it("rejects an unknown field inside a view and a non-boolean guest", () => {
+    const errors = validateManifest(
+      base({
+        contributes: {
+          panels: [{ id: "p", titleKey: "a", width: 3 }],
+          guest: "yes",
+        },
+      }),
+    ).join();
+    expect(errors).toMatch(/Unknown field "width"/);
+    expect(errors).toMatch(/contributes\.guest" must be a boolean/);
   });
 });

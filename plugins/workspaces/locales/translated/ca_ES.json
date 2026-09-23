@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Espais de treball",
+        "saveCurrent": "Desa l'actual",
+        "saveCurrentTitle": "Desa l'espai de treball actual",
+        "saveCurrentDescription": "Desa totes les pestanyes obertes, dissenys dividits i disposicions de panells com un espai de treball amb un nom nou.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "p. ex., depuració de productes",
+        "nameRequired": "El nom de l'espai de treball és obligatori",
+        "colorLabel": "Color",
+        "workspaceCreated": "L'espai de treball s'ha desat",
+        "workspaceUpdated": "Espai de treball actualitzat",
+        "workspaceDeleted": "L'espai de treball s'ha suprimit",
+        "workspaceDuplicated": "Espai de treball duplicat",
+        "saveFailed": "No s'ha pogut desar l'espai de treball",
+        "updateFailed": "No s'ha pogut actualitzar l'espai de treball",
+        "deleteFailed": "No s'ha pogut suprimir l'espai de treball",
+        "duplicateFailed": "No s'ha pogut duplicar l'espai de treball",
+        "loadFailed": "No s'han pogut carregar els espais de treball",
+        "applyFailed": "No s'ha pogut aplicar l'espai de treball",
+        "deleteWorkspaceTitle": "Suprimeix l'espai de treball",
+        "deleteWorkspaceDescription": "Esteu segur que voleu suprimir \"{{name}}\"? Això no es pot desfer.",
+        "noWorkspaces": "Encara no hi ha espais de treball desats. Deseu la disposició actual de les pestanyes per començar.",
+        "tabCount": "Pestanya {{count}}",
+        "tabCount_other": "pestanyes {{count}}",
+        "apply": "Aplica",
+        "applyConfirmTitle": "Aplica l'espai de treball",
+        "applyConfirmDescription": "Si apliqueu \"{{name}}\", es tancaran les pestanyes actuals i les substituiran per la disposició desada d'aquest espai de treball. Els canvis no desats al disseny actual es perdran.",
+        "applyConfirmButton": "Aplica l'espai de treball",
+        "updateWithCurrent": "Actualitza amb l'actual",
+        "updateWithCurrentConfirm": "Voleu sobreescriure \"{{name}}\" amb la disposició actual de les pestanyes?",
+        "rename": "Canvia el nom",
+        "duplicate": "Duplicat",
+        "duplicateNameSuffix": "{{name}} (còpia)",
+        "setDefault": "Estableix com a predeterminat",
+        "unsetDefault": "Elimina com a predeterminat",
+        "defaultBadge": "Per defecte",
+        "lastSession": "Última sessió",
+        "lastSessionDescription": "Actualitzat automàticament amb la disposició de pestanyes més recent. Aplica-ho per recuperar el que tenies obert.",
+        "lastUsed": "Últim ús {{time}}",
+        "neverUsed": "Mai aplicat",
+        "tabsSkipped": "Espai de treball aplicat — {{count}} pestanyes omeses (l'amfitrió ja no existeix): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Espais de treball"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Espais de treball",
+    "workflow_workspaces_desc": "Desa un conjunt de pestanyes obertes i torna a obrir tot el disseny més tard."
+  }
+}

@@ -2,10 +2,10 @@ import { getErrorMessage } from "@/lib/error-message.js";
 import React from "react";
 import { Box, List, Play, RefreshCw, Square, Terminal } from "lucide-react";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Button } from "@/components/button.tsx";
 import type { DockerContainer } from "@/types";
-import { startDockerContainer, stopDockerContainer } from "@/main-axios.ts";
+import { startDockerContainer, stopDockerContainer } from "../docker-api";
 import { DockerBadge } from "./ContainerCard.tsx";
 
 type DetailTab = "logs" | "stats" | "console";

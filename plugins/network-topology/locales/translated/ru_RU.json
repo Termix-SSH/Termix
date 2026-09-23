@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Добавить хост",
+    "addGroup": "Добавить группу",
+    "addLink": "Добавить связь",
+    "zoomIn": "Приблизить",
+    "zoomOut": "Отдалить",
+    "resetView": "Сбросить вид",
+    "selectHost": "Выбрать хост",
+    "chooseHost": "Выберите хост...",
+    "parentGroup": "Родительская группа",
+    "noGroup": "Без группы",
+    "groupName": "Имя группы",
+    "color": "Цвет",
+    "source": "Источник",
+    "target": "Цель",
+    "moveToGroup": "Переместить в группу",
+    "selectGroup": "Выберите группу...",
+    "addConnection": "Добавить соединение",
+    "hostDetails": "Сведения о хосте",
+    "removeFromGroup": "Удалить из группы",
+    "addHostHere": "Добавить хост сюда",
+    "editGroup": "Редактировать группу",
+    "delete": "Удалить",
+    "add": "Добавить",
+    "create": "Создать",
+    "move": "Переместить",
+    "connect": "Соединить",
+    "createGroup": "Создать группу",
+    "selectSourcePlaceholder": "Выберите источник...",
+    "selectTargetPlaceholder": "Выберите цель...",
+    "invalidFile": "Неверный файл",
+    "hostAlreadyExists": "Хост уже присутствует в топологии",
+    "connectionExists": "Соединение уже существует",
+    "unknown": "Неизвестно",
+    "name": "Имя",
+    "ip": "IP",
+    "status": "Статус",
+    "failedToAddNode": "Не удалось добавить узел",
+    "sourceDifferentFromTarget": "Источник и цель должны различаться",
+    "exportJSON": "Экспорт JSON",
+    "importJSON": "Импорт JSON",
+    "terminal": "Терминал",
+    "fileManager": "Файловый менеджер",
+    "tunnel": "Туннель",
+    "docker": "Docker",
+    "serverStats": "Метрики хоста",
+    "hostMetrics": "Метрики хоста",
+    "noNodes": "Пока нет узлов"
+  },
+  "nav": {
+    "networkGraph": "Сетевой график"
+  },
+  "dashboard": {
+    "networkGraph": "Сетевой график"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} узлов"
+  }
+}

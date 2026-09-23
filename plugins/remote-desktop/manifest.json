@@ -59,7 +59,8 @@
         "labelKey": "hosts.tabTelnet",
         "editorTab": "telnet"
       }
-    ]
+    ],
+    "guest": true
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

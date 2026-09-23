@@ -31,7 +31,7 @@ import type {
   GuacamoleDisplayHandle,
   GuacamoleTouchMode,
 } from "./GuacamoleDisplay.tsx";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { cn } from "@/lib/utils";
 import {
   detectRuntimeMetaKeyFamily,

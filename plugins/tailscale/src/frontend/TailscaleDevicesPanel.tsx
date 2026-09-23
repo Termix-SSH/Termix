@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Loader2, RefreshCw, Terminal } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import type { Host } from "@/types/ui-types";
 import { getTailscaleDevices } from "./tailscale-api";
-import { createQuickConnectHost } from "../../../../src/ui/sidebar/quick-connect-host";
+import { createQuickConnectHost } from "@/sidebar/quick-connect-host";
 
 interface TailscaleDevice {
   id: string;

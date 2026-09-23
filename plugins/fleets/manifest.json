@@ -23,5 +23,22 @@
     "ui:surface"
   ],
   "locales": "locales",
-  "platforms": ["linux", "win32", "darwin"]
+  "platforms": ["linux", "win32", "darwin"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "fleet-inventory",
+        "titleKey": "nav.fleets",
+        "icon": "Boxes",
+        "openFrom": ["rail"]
+      }
+    ],
+    "panels": [
+      {
+        "id": "fleets",
+        "titleKey": "nav.fleets",
+        "icon": "Boxes"
+      }
+    ]
+  }
 }

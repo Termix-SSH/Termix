@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Sunucu Ekle",
+    "addGroup": "Grup Ekle",
+    "addLink": "Bağlantı Ekle",
+    "zoomIn": "Yakınlaştır",
+    "zoomOut": "Uzaklaştır",
+    "resetView": "Görünümü Sıfırla",
+    "selectHost": "Sunucu Seç",
+    "chooseHost": "Bir sunucu seçin...",
+    "parentGroup": "Üst Grup",
+    "noGroup": "Grup Yok",
+    "groupName": "Grup Adı",
+    "color": "Renk",
+    "source": "Kaynak",
+    "target": "Hedef",
+    "moveToGroup": "Gruba Taşı",
+    "selectGroup": "Grup seçin...",
+    "addConnection": "Bağlantı Ekle",
+    "hostDetails": "Sunucu Detayları",
+    "removeFromGroup": "Gruptan Kaldır",
+    "addHostHere": "Buraya Sunucu Ekle",
+    "editGroup": "Grubu Düzenle",
+    "delete": "Sil",
+    "add": "Ekle",
+    "create": "Oluştur",
+    "move": "Taşı",
+    "connect": "Bağlan",
+    "createGroup": "Grup Oluştur",
+    "selectSourcePlaceholder": "Kaynak Seçin...",
+    "selectTargetPlaceholder": "Hedef Seçin...",
+    "invalidFile": "Geçersiz Dosya",
+    "hostAlreadyExists": "Sunucu zaten topolojide var",
+    "connectionExists": "Bağlantı zaten var",
+    "unknown": "Bilinmiyor",
+    "name": "Ad",
+    "ip": "IP",
+    "status": "Durum",
+    "failedToAddNode": "Düğüm eklenemedi",
+    "sourceDifferentFromTarget": "Kaynak ve hedef farklı olmalıdır",
+    "exportJSON": "JSON Dışa Aktar",
+    "importJSON": "JSON İçe Aktar",
+    "terminal": "Terminal",
+    "fileManager": "Dosya Yöneticisi",
+    "tunnel": "Tünel",
+    "docker": "Docker",
+    "serverStats": "Sunucu Metrikleri",
+    "hostMetrics": "Sunucu Metrikleri",
+    "noNodes": "Henüz düğüm yok"
+  },
+  "nav": {
+    "networkGraph": "Ağ Grafiği"
+  },
+  "dashboard": {
+    "networkGraph": "Ağ Grafiği"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} düğüm"
+  }
+}

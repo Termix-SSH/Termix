@@ -2,12 +2,20 @@
  * Where a plugin's i18n keys resolve from.
  *
  * A manifest writes plugin-relative keys ("permissions.devices.view.title") so
- * it never has to know where the strings live. Today they live in core
- * en.json under `plugins.<pluginId>.`, because the frontend does not load
- * plugin locale bundles yet. When it does, that subtree moves into
- * plugins/<id>/locales/en.json as the plugin's own namespace and only this
- * function changes; no manifest is touched.
+ * it never has to know where the strings live. They live in the plugin's own
+ * locales/en.json, loaded into an i18next namespace named after the plugin,
+ * so the qualified key is "<pluginId>:<key>". A key that already names a
+ * namespace is left alone. Missing keys fall back to core strings.
  */
-export function pluginKey(pluginId: string, key: string): string {
-  return `plugins.${pluginId}.${key}`;
+export function pluginKey(pluginId: string, key: string): string;
+export function pluginKey(
+  pluginId: string,
+  key: string | undefined,
+): string | undefined;
+export function pluginKey(
+  pluginId: string,
+  key: string | undefined,
+): string | undefined {
+  if (!key) return key;
+  return key.includes(":") ? key : `${pluginId}:${key}`;
 }

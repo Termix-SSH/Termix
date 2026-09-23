@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "工作区",
+        "saveCurrent": "保存当前",
+        "saveCurrentTitle": "保存当前工作区",
+        "saveCurrentDescription": "将所有打开的标签页、拆分布局和窗格排列保存为一个新的命名工作区。",
+        "nameLabel": "名称",
+        "namePlaceholder": "例如，生产环境调试",
+        "nameRequired": "工作区名称为必填项",
+        "colorLabel": "颜色",
+        "workspaceCreated": "工作区已保存",
+        "workspaceUpdated": "工作区已更新",
+        "workspaceDeleted": "工作区已删除",
+        "workspaceDuplicated": "工作区已复制",
+        "saveFailed": "保存工作区失败",
+        "updateFailed": "工作区更新失败",
+        "deleteFailed": "删除工作区失败",
+        "duplicateFailed": "复制工作区失败",
+        "loadFailed": "加载工作区失败",
+        "applyFailed": "应用工作区失败",
+        "deleteWorkspaceTitle": "删除工作区",
+        "deleteWorkspaceDescription": "您确定要删除“{{name}}”吗？此操作无法撤销。",
+        "noWorkspaces": "尚未保存任何工作区。请保存您当前的标签页排列方式以开始使用。",
+        "tabCount": "{{count}} 个标签页",
+        "tabCount_other": "{{count}} 个标签页",
+        "apply": "应用",
+        "applyConfirmTitle": "应用工作区",
+        "applyConfirmDescription": "应用“{{name}}”将关闭您当前的标签页，并将其替换为此工作区已保存的布局。您对当前布局的未保存更改将会丢失。",
+        "applyConfirmButton": "应用工作区",
+        "updateWithCurrent": "更新至当前版本",
+        "updateWithCurrentConfirm": "用您当前的标签页排列覆盖“{{name}}”？",
+        "rename": "重命名",
+        "duplicate": "复制",
+        "duplicateNameSuffix": "{{name}}（副本）",
+        "setDefault": "设置为默认值",
+        "unsetDefault": "移除默认设置",
+        "defaultBadge": "默认",
+        "lastSession": "上次会话",
+        "lastSessionDescription": "自动更新至您最近的标签页排列方式。应用此操作即可恢复您之前打开的标签页。",
+        "lastUsed": "上次使用 {{time}}",
+        "neverUsed": "从未应用过",
+        "tabsSkipped": "已应用工作区 — 跳过 {{count}} 个标签页（主机已不存在）： {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "工作区"
+  },
+  "onboarding": {
+    "workflow_workspaces": "工作区",
+    "workflow_workspaces_desc": "保存当前打开的标签页组合，方便之后一键恢复整个布局。"
+  }
+}

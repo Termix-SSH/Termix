@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Espaços de trabalho",
+        "saveCurrent": "Salvar atual",
+        "saveCurrentTitle": "Salvar espaço de trabalho atual",
+        "saveCurrentDescription": "Salve cada aba aberta, layout dividido e disposição de painéis como um novo espaço de trabalho nomeado.",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Exemplo: Depuração de Produção",
+        "nameRequired": "É obrigatório dar um nome ao espaço de trabalho.",
+        "colorLabel": "Cor",
+        "workspaceCreated": "Espaço de trabalho salvo",
+        "workspaceUpdated": "Espaço de trabalho atualizado",
+        "workspaceDeleted": "Espaço de trabalho excluído",
+        "workspaceDuplicated": "Espaço de trabalho duplicado",
+        "saveFailed": "Falha ao salvar o espaço de trabalho",
+        "updateFailed": "Falha ao atualizar o espaço de trabalho",
+        "deleteFailed": "Falha ao excluir o espaço de trabalho",
+        "duplicateFailed": "Falha ao duplicar o espaço de trabalho",
+        "loadFailed": "Falha ao carregar os espaços de trabalho.",
+        "applyFailed": "Falha ao aplicar o espaço de trabalho",
+        "deleteWorkspaceTitle": "Excluir espaço de trabalho",
+        "deleteWorkspaceDescription": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita.",
+        "noWorkspaces": "Ainda não há espaços de trabalho salvos. Salve sua configuração atual de abas para começar.",
+        "tabCount": "{{count}} aba",
+        "tabCount_other": "{{count}} abas",
+        "apply": "Aplicar",
+        "applyConfirmTitle": "Aplicar Espaço de Trabalho",
+        "applyConfirmDescription": "Aplicar \"{{name}}\" fechará suas abas atuais e as substituirá pela configuração salva deste espaço de trabalho. Alterações não salvas no seu layout atual serão perdidas.",
+        "applyConfirmButton": "Aplicar Espaço de Trabalho",
+        "updateWithCurrent": "Atualizar com as informações atuais",
+        "updateWithCurrentConfirm": "Substituir \"{{name}}\" pela sua configuração de tabulação atual?",
+        "rename": "Renomear",
+        "duplicate": "Duplicado",
+        "duplicateNameSuffix": "{{name}} (copiar)",
+        "setDefault": "Definir como padrão",
+        "unsetDefault": "Remover como padrão",
+        "defaultBadge": "Padrão",
+        "lastSession": "Última sessão",
+        "lastSessionDescription": "Atualizado automaticamente com a sua última configuração de abas. Aplique para recuperar o que estava aberto.",
+        "lastUsed": "Última utilização {{time}}",
+        "neverUsed": "Nunca aplicado",
+        "tabsSkipped": "Espaço de trabalho aplicado — {{count}} guia(s) ignorada(s) (o host não existe mais): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Espaços de trabalho"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Espaços de trabalho",
+    "workflow_workspaces_desc": "Salve um conjunto de abas abertas e reabra todo o layout mais tarde."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Es muss sich um einen Unix-Benutzer handeln, dem Ihre Tailscale-Identität in der SSH-ACL des Tailnets gewährt wird, nicht unbedingt um den Root-Benutzer.",
+    "tailscaleDeviceSelect": "Tailscale-Gerät auswählen",
+    "tailscaleDeviceSelectPlaceholder": "Gerät auswählen...",
+    "tailscaleNoApiKey": "Kein Tailscale API-Schlüssel konfiguriert. Fügen Sie einen in den Admin-Einstellungen hinzu, um die Geräteerkennung zu aktivieren.",
+    "tailscaleDocsLink": "Dokumentation anzeigen",
+    "tailscaleLoadingDevices": "Geräte werden geladen...",
+    "tailscaleDeviceLoadFailed": "Die Tailscale-Geräte konnten nicht geladen werden. Bitte überprüfen Sie die API-URL und die Netzwerkverbindung.",
+    "tailscaleNoDevices": "Keine Geräte in Ihrem Tailnet gefunden.",
+    "tailscaleDeviceAutoFill": "Die Auswahl eines Geräts füllt die Host-IP-Adresse automatisch aus."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale-Authentifizierung erforderlich",
+    "tailscaleCheckDescription": "Tailscale SSH erfordert eine zusätzliche Überprüfung. Authentifizieren Sie sich in Ihrem Browser, um fortzufahren.",
+    "tailscaleCheckOpenBrowser": "Öffnen Sie den Browser zur Authentifizierung",
+    "tailscaleCheckWaiting": "Warten auf Tailscale-Authentifizierung...",
+    "tailscaleCheckTimeout": "Die Tailscale-Authentifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+  }
+}

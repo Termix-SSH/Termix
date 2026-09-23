@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Dette skal være en Unix-bruger, som din Tailscale-identitet er tildelt i tailnets SSH ACL, ikke nødvendigvis root.",
+    "tailscaleDeviceSelect": "Vælg Tailscale-enhed",
+    "tailscaleDeviceSelectPlaceholder": "Vælg en enhed...",
+    "tailscaleNoApiKey": "Ingen Tailscale API-nøgle konfigureret. Tilføj en i administratorindstillinger for at aktivere enhedsregistrering.",
+    "tailscaleDocsLink": "Se dokumenter",
+    "tailscaleLoadingDevices": "Indlæser enheder...",
+    "tailscaleDeviceLoadFailed": "Kunne ikke indlæse Tailscale-enheder. Kontroller API-URL'en og netværksforbindelsen.",
+    "tailscaleNoDevices": "Ingen enheder fundet i dit tailnet.",
+    "tailscaleDeviceAutoFill": "Hvis du vælger en enhed, udfyldes værtens IP-adresse automatisk."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale-godkendelse påkrævet",
+    "tailscaleCheckDescription": "Tailscale SSH kræver en yderligere kontrol. Godkend i din browser for at fortsætte.",
+    "tailscaleCheckOpenBrowser": "Åbn browseren for at godkende",
+    "tailscaleCheckWaiting": "Venter på Tailscale-godkendelse...",
+    "tailscaleCheckTimeout": "Tailscale-godkendelsen er udløbet. Prøv igen."
+  }
+}

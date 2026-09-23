@@ -1,3 +1,4 @@
+import { getTabType, isPersistentTabType } from "@/shell/tab-registry";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ExternalLink, Plug, Search, X, Pencil, Check } from "lucide-react";
@@ -21,27 +22,16 @@ import {
 import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 
-const CONNECTION_TAB_TYPES: TabType[] = [
-  "terminal",
-  "rdp",
-  "vnc",
-  "telnet",
-  "files",
-  "docker",
-  "host-metrics",
-  "tunnel",
-];
-
-const TYPE_LABELS: Record<string, string> = {
-  terminal: "SSH",
-  rdp: "RDP",
-  vnc: "VNC",
-  telnet: "Telnet",
+/** Core badge labels; plugin tabs are labelled by their registered title. */
+const CORE_TYPE_LABELS: Record<string, string> = {
   files: "Files",
-  docker: "Docker",
-  "host-metrics": "Host Metrics",
   tunnel: "Tunnel",
 };
+
+/** Saved connection tabs: the ones reopened after login. */
+function isConnectionTabType(type: TabType): boolean {
+  return isPersistentTabType(type);
+}
 
 function formatDuration(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -195,7 +185,10 @@ function ConnectionRow({
             variant="outline"
             className="text-[9px] px-1 py-0 h-4 font-mono shrink-0 text-muted-foreground/60 border-border/60"
           >
-            {TYPE_LABELS[tabType] ?? tabType}
+            {CORE_TYPE_LABELS[tabType] ??
+              (getTabType(tabType)?.titleKey
+                ? t(getTabType(tabType)!.titleKey!)
+                : tabType)}
           </Badge>
         </div>
         <span className="text-[10px] text-muted-foreground/60 truncate pl-3">
@@ -334,9 +327,7 @@ export function ConnectionsPanel({
   const dragStartY = useRef<number>(0);
   const didDragRef = useRef(false);
 
-  const openTabs = tabs.filter((tab) =>
-    CONNECTION_TAB_TYPES.includes(tab.type),
-  );
+  const openTabs = tabs.filter((tab) => isConnectionTabType(tab.type));
 
   const openInstanceIds = new Set(
     tabs.map((t) => t.instanceId).filter(Boolean),
@@ -437,9 +428,8 @@ export function ConnectionsPanel({
           if (fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) {
             const reordered = [...openTabs];
             reordered.splice(toIdx, 0, reordered.splice(fromIdx, 1)[0]);
-            const connectionSet = new Set(CONNECTION_TAB_TYPES as string[]);
             const nonConnectionTabs = tabs.filter(
-              (t) => !connectionSet.has(t.type),
+              (t) => !isConnectionTabType(t.type),
             );
             onReorderTabs([...nonConnectionTabs, ...reordered]);
           }

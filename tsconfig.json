@@ -9,6 +9,9 @@
     },
     {
       "path": "./tsconfig.plugins.json"
+    },
+    {
+      "path": "./tsconfig.plugins.frontend.json"
     }
   ],
   "compilerOptions": {

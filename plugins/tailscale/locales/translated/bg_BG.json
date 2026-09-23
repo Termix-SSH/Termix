@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Това трябва да е Unix потребител, чиято самоличност на Tailscale е предоставена в SSH ACL на tailnet, не е задължително root.",
+    "tailscaleDeviceSelect": "Изберете устройство за Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Изберете устройство...",
+    "tailscaleNoApiKey": "Няма конфигуриран ключ за Tailscale API. Добавете такъв в настройките на администратора, за да активирате откриването на устройства.",
+    "tailscaleDocsLink": "Преглед на документи",
+    "tailscaleLoadingDevices": "Зареждане на устройства...",
+    "tailscaleDeviceLoadFailed": "Зареждането на устройствата Tailscale не бе успешно. Проверете URL адреса на API и мрежовата връзка.",
+    "tailscaleNoDevices": "Няма намерени устройства във вашата мрежа за контакт.",
+    "tailscaleDeviceAutoFill": "Избирането на устройство ще попълни автоматично IP адреса на хоста."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Изисква се удостоверяване на Tailscale",
+    "tailscaleCheckDescription": "Tailscale SSH изисква допълнителна проверка. Удостоверете се в браузъра си, за да продължите.",
+    "tailscaleCheckOpenBrowser": "Отворете браузъра за удостоверяване",
+    "tailscaleCheckWaiting": "Чака се удостоверяване на Tailscale...",
+    "tailscaleCheckTimeout": "Времето за изчакване на удостоверяването на Tailscale изтече. Моля, опитайте отново."
+  }
+}

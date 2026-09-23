@@ -19,7 +19,7 @@
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-guacamole-common-js.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-node-pty.cjs && node scripts/patch-xterm-android-ime.cjs && node scripts/patch-ssh2-agent.cjs",
     "prepare": "husky || true",
     "prebuild": "node scripts/write-electron-build-info.cjs",
-    "lint": "node scripts/generate-dialect-schema.cjs --check && npm run plugin:validate-manifest && eslint . && node scripts/check-plugin-boundaries.cjs",
+    "lint": "node scripts/generate-dialect-schema.cjs --check && npm run plugin:validate-manifest && eslint . && node scripts/check-plugin-boundaries.cjs && node scripts/check-importmap-csp.cjs && node scripts/check-shell-plugin-ids.cjs",
     "lint:fix": "eslint --fix .",
     "type-check": "tsc -b --force",
     "test": "vitest run",

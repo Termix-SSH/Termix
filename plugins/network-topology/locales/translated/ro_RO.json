@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Adăugați gazdă",
+    "addGroup": "Adăugați un grup",
+    "addLink": "Adăugați link",
+    "zoomIn": "Mărire",
+    "zoomOut": "Micșorare",
+    "resetView": "Resetare vizualizare",
+    "selectHost": "Selectați gazda",
+    "chooseHost": "Alege o gazdă...",
+    "parentGroup": "Grupul de părinți",
+    "noGroup": "Fără grup",
+    "groupName": "Numele grupului",
+    "color": "Culoare",
+    "source": "Sursă",
+    "target": "Ţintă",
+    "moveToGroup": "Mutare în grup",
+    "selectGroup": "Selectați grupul...",
+    "addConnection": "Adăugați o conexiune",
+    "hostDetails": "Detalii gazdă",
+    "removeFromGroup": "Eliminare din grup",
+    "addHostHere": "Adăugați gazda aici",
+    "editGroup": "Editați grupul",
+    "delete": "Şterge",
+    "add": "Adăuga",
+    "create": "Crea",
+    "move": "Mişcare",
+    "connect": "Conectează-te",
+    "createGroup": "Creare grup",
+    "selectSourcePlaceholder": "Selectați sursa...",
+    "selectTargetPlaceholder": "Selectați țintă...",
+    "invalidFile": "Fișier nevalid",
+    "hostAlreadyExists": "Gazda se află deja în topologie",
+    "connectionExists": "Conexiunea există deja",
+    "unknown": "Necunoscut",
+    "name": "Nume",
+    "ip": "IP-ul",
+    "status": "Stare",
+    "failedToAddNode": "Nu s-a putut adăuga nodul",
+    "sourceDifferentFromTarget": "Sursa și ținta trebuie să fie diferite",
+    "exportJSON": "Export JSON",
+    "importJSON": "Import JSON",
+    "terminal": "Terminal",
+    "fileManager": "Manager de fișiere",
+    "tunnel": "Tunel",
+    "docker": "Docher",
+    "serverStats": "Metrici ale gazdei",
+    "hostMetrics": "Metrici ale gazdei",
+    "noNodes": "Încă nu există noduri"
+  },
+  "nav": {
+    "networkGraph": "Grafic de rețea"
+  },
+  "dashboard": {
+    "networkGraph": "Grafic de rețea"
+  },
+  "dashboardTab": {
+    "nodes": "noduri {{count}}"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Arbejdsområder",
+        "saveCurrent": "Gem nuværende",
+        "saveCurrentTitle": "Gem nuværende arbejdsområde",
+        "saveCurrentDescription": "Gem alle åbne faner, opdelte layouts og rudearrangementer som et nyt navngivet arbejdsområde.",
+        "nameLabel": "Navn",
+        "namePlaceholder": "f.eks. produktfejlfinding",
+        "nameRequired": "Arbejdsområdenavn er påkrævet",
+        "colorLabel": "Farve",
+        "workspaceCreated": "Arbejdsområdet er gemt",
+        "workspaceUpdated": "Arbejdsområdet er opdateret",
+        "workspaceDeleted": "Arbejdsområdet er slettet",
+        "workspaceDuplicated": "Arbejdsområdet er duplikeret",
+        "saveFailed": "Kunne ikke gemme arbejdsområdet",
+        "updateFailed": "Kunne ikke opdatere arbejdsområdet",
+        "deleteFailed": "Kunne ikke slette arbejdsområdet",
+        "duplicateFailed": "Kunne ikke duplikere arbejdsområdet",
+        "loadFailed": "Kunne ikke indlæse arbejdsområder",
+        "applyFailed": "Kunne ikke anvende arbejdsområdet",
+        "deleteWorkspaceTitle": "Slet arbejdsområde",
+        "deleteWorkspaceDescription": "Er du sikker på, at du vil slette \"{{name}}\"? Dette kan ikke fortrydes.",
+        "noWorkspaces": "Ingen gemte arbejdsområder endnu. Gem din nuværende faneopstilling for at komme i gang.",
+        "tabCount": "{{count}} faneblad",
+        "tabCount_other": "{{count}} faner",
+        "apply": "Anvende",
+        "applyConfirmTitle": "Anvend arbejdsområde",
+        "applyConfirmDescription": "Hvis du anvender \"{{name}}\", lukkes dine nuværende faner og erstattes med dette arbejdsområdes gemte arrangement. Ændringer af dit nuværende layout, der ikke er gemt, vil gå tabt.",
+        "applyConfirmButton": "Anvend arbejdsområde",
+        "updateWithCurrent": "Opdater med aktuel",
+        "updateWithCurrentConfirm": "Vil du overskrive \"{{name}}\" med din nuværende tabulatoropstilling?",
+        "rename": "Omdøb",
+        "duplicate": "Duplikere",
+        "duplicateNameSuffix": "{{name}} (kopi)",
+        "setDefault": "Angiv som standard",
+        "unsetDefault": "Fjern som standard",
+        "defaultBadge": "Misligholdelse",
+        "lastSession": "Sidste session",
+        "lastSessionDescription": "Opdateres automatisk med din seneste faneopsætning. Anvend den til at gendanne det, du havde åbent.",
+        "lastUsed": "Sidst brugt {{time}}",
+        "neverUsed": "Aldrig anvendt",
+        "tabsSkipped": "Arbejdsområde anvendt — {{count}} faneblad(er) sprunget over (værten findes ikke længere): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Arbejdsområder"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Arbejdsområder",
+    "workflow_workspaces_desc": "Gem et sæt åbne faner, og åbn hele layoutet igen senere."
+  }
+}

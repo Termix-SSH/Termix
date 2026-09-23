@@ -26,14 +26,15 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAiAvailability } from "@/hooks/use-ai-availability";
 import { resetPermissionsCache } from "@/hooks/use-permissions";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { AppRail, type RailView } from "@/sidebar/AppRail";
 import {
+  isCoreRailView,
   railItemLabel,
-  PROMOTABLE_IDS,
-  RIGHT_DOCKABLE_IDS,
+  promotableIds,
+  rightDockableIds,
+  useRailItems,
 } from "@/sidebar/rail-items";
 import { MultiPanelHint } from "@/sidebar/MultiPanelHint";
 import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
@@ -91,33 +92,6 @@ const SnippetsPanel = lazy(() =>
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
-const FleetsPanel = lazy(() =>
-  import("../../plugins/fleets/src/frontend/FleetsPanel").then((m) => ({
-    default: m.FleetsPanel,
-  })),
-);
-const TailscaleDevicesPanel = lazy(() =>
-  import("../../plugins/tailscale/src/frontend/TailscaleDevicesPanel").then(
-    (m) => ({ default: m.TailscaleDevicesPanel }),
-  ),
-);
-const WorkspacesPanel = lazy(() =>
-  import("../../plugins/workspaces/src/frontend/WorkspacesPanel").then((m) => ({
-    default: m.WorkspacesPanel,
-  })),
-);
-const AutomationsPanel = lazy(() =>
-  import("../../plugins/automations/src/frontend/AutomationsPanel").then(
-    (m) => ({
-      default: m.AutomationsPanel,
-    }),
-  ),
-);
-const AiPanel = lazy(() =>
-  import("@/features/ai/AiPanel").then((m) => ({
-    default: m.AiPanel,
-  })),
-);
 const HistoryPanel = lazy(() =>
   import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
 );
@@ -168,7 +142,6 @@ import type {
   ThemeId,
   FontSizeId,
   SerialConfig,
-  Workspace,
   WorkspacePayload,
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
@@ -193,15 +166,11 @@ import {
   type OpenTabRecord,
 } from "@/main-axios";
 import {
-  listWorkspaces,
-  applyWorkspaceServer,
-  saveLastSessionWorkspace,
-} from "../../plugins/workspaces/src/frontend/workspaces-api";
-import {
-  buildWorkspacePayload as buildWorkspacePayloadUtil,
+  buildLayoutPayload,
   remapSlotIds,
-  resolveWorkspaceTabTarget,
-} from "../../plugins/workspaces/src/frontend/workspaceUtils";
+  resolveLayoutTabTarget,
+  snapshotData,
+} from "@/shell/shell-layout";
 import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
 import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";
@@ -221,35 +190,30 @@ import {
   serializeSplitTabs,
   type PersistedSplitTab,
 } from "@/shell/splitTabUtils";
-import { isTabTypeAvailable, refreshPluginState } from "@/shell/pluginLoader";
+import {
+  canRestoreTabType,
+  getTabType,
+  isPersistentTabType,
+  isSessionTabType,
+  type TabShellCallbacks,
+} from "@/shell/tab-registry";
+import { getPanel, usePanels } from "@/shell/panel-registry";
+import { startPluginRuntime, stopPluginRuntime } from "@/plugin-host/loader";
+import { usePluginStore } from "@/plugin-host/plugin-store";
+import {
+  notifyShellReady,
+  notifyTabsChanged,
+  resetShellBridge,
+  setShellCallbacks,
+  setShellHosts,
+  setShellLayoutProvider,
+} from "@/plugin-host/shell-bridge";
+import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 
 export { buildHostTree } from "@/sidebar/build-host-tree";
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
 
 // ─── AppShell ────────────────────────────────────────────────────────────────
-
-/**
- * Tab types whose open/close is mirrored to the backend's open-tabs record, so
- * they survive a reload or reopen on another device.
- *
- * "web-endpoint" is deliberately ABSENT. The backend closes an idle tunnel
- * after ten minutes and re-binds a fresh kernel-assigned port on the next
- * open, so a restored web-endpoint tab could never hold a valid URL -- and the
- * endpoint may have been edited or deleted meanwhile besides. Restoring one
- * would mean re-opening the tunnel on restore, which is a feature, not
- * symmetry. A web-endpoint tab is session-only and simply closes on reload,
- * the same as "local-terminal" already does.
- */
-export const PERSISTENT_TAB_TYPES: TabType[] = [
-  "terminal",
-  "rdp",
-  "vnc",
-  "telnet",
-  "files",
-  "docker",
-  "host-metrics",
-  "tunnel",
-];
 
 export function AppShell({
   username,
@@ -260,8 +224,10 @@ export function AppShell({
 }) {
   const { t, i18n } = useTranslation();
   const { setTheme } = useTheme();
-  const { globallyEnabled: aiGloballyEnabled, loaded: aiStatusLoaded } =
-    useAiAvailability();
+  // Re-render when plugins add or remove rail items, panels or tabs.
+  useRailItems();
+  const registeredPanels = usePanels();
+  const { settled: pluginsSettled } = usePluginStore();
   const [tabs, setTabs] = useState<Tab[]>([
     {
       id: "dashboard",
@@ -309,6 +275,8 @@ export function AppShell({
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
+  const allHostsRef = useRef(allHosts);
+  allHostsRef.current = allHosts;
   const [isAdmin, setIsAdmin] = useState(false);
   // The standalone desktop backend still owns system settings such as the
   // Tailscale API key, even though it has only one implicit user.
@@ -316,7 +284,6 @@ export function AppShell({
   const [userId, setUserId] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingAiEnabled, setOnboardingAiEnabled] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
@@ -329,18 +296,12 @@ export function AppShell({
     uiPrefs.preferences.onboarding.completedVersion < UI_ONBOARDING_VERSION;
 
   /**
-   * Both onboarding entry points resolve the same context first: whether an
-   * admin has enabled the AI assistant. The AI step is skipped entirely when
-   * it is off, so the answer has to be in before the dialog opens.
+   * Both onboarding entry points wait for plugins first, since plugins add
+   * steps of their own (the AI step, feature cards).
    */
   const loadOnboardingContext = useCallback(async () => {
-    try {
-      const { getAiStatus } = await import("@/api/ai-api");
-      const aiStatus = await getAiStatus();
-      setOnboardingAiEnabled(aiStatus.globallyEnabled);
-    } catch {
-      setOnboardingAiEnabled(false);
-    }
+    const { settledPromise } = await import("@/plugin-host/plugin-store");
+    await settledPromise();
   }, []);
 
   useEffect(() => {
@@ -382,7 +343,7 @@ export function AppShell({
   // stay visible while the left sidebar is used for something else.
   const [rightRailView, setRightRailView] = useState<RailView | null>(() => {
     const saved = localStorage.getItem("termix_rightRailView");
-    return saved && RIGHT_DOCKABLE_IDS.includes(saved)
+    return saved && rightDockableIds().includes(saved)
       ? (saved as RailView)
       : null;
   });
@@ -463,10 +424,15 @@ export function AppShell({
       .catch(() => setIsAdmin(false));
   }, []);
 
-  // Plugin state gates which tab types can be opened, so it has to land before
-  // a saved session is restored. A failure leaves everything enabled.
+  // Plugin frontends register the tabs, panels and actions that a saved
+  // session may need, so they load before tabs are restored. On logout every
+  // plugin is deactivated, since the next user may see different ones.
   useEffect(() => {
-    refreshPluginState().catch(() => {});
+    startPluginRuntime().catch(() => {});
+    return () => {
+      void stopPluginRuntime();
+      resetShellBridge();
+    };
   }, []);
 
   const handleDismissDonationModal = useCallback(() => {
@@ -1266,7 +1232,7 @@ export function AppShell({
   }, [allHosts]);
 
   function buildWorkspacePayload(): WorkspacePayload {
-    return buildWorkspacePayloadUtil({
+    return buildLayoutPayload({
       tabs,
       activeTabId,
       splitMode,
@@ -1284,7 +1250,10 @@ export function AppShell({
     });
   }
 
-  async function applyWorkspace(workspace: Workspace) {
+  async function applyLayout(
+    payload: WorkspacePayload,
+    name: string,
+  ): Promise<{ skipped: string[] }> {
     // Tear down the current arrangement the same way an individual tab close does.
     for (const tab of [...tabsRef.current]) {
       doCloseTab(tab.id);
@@ -1293,8 +1262,8 @@ export function AppShell({
     const slotIdToNewTabId = new Map<string, string>();
     const skippedTabs: string[] = [];
 
-    for (const snapshot of workspace.payload.tabs) {
-      const target = resolveWorkspaceTabTarget(snapshot, allHosts);
+    for (const snapshot of payload.tabs) {
+      const target = resolveLayoutTabTarget(snapshot, allHostsRef.current);
 
       if (target.kind === "skip") {
         skippedTabs.push(snapshot.hostNameSnapshot || snapshot.label);
@@ -1312,7 +1281,7 @@ export function AppShell({
           snapshot.type,
           undefined,
           target.host,
-          snapshot.fleetId,
+          snapshotData(snapshot),
         );
         slotIdToNewTabId.set(snapshot.slotId, snapshot.type);
         continue;
@@ -1330,27 +1299,21 @@ export function AppShell({
       }
     }
 
-    const restoredPaneIds = remapSlotIds(
-      workspace.payload.paneTabIds,
-      slotIdToNewTabId,
-    );
+    const restoredPaneIds = remapSlotIds(payload.paneTabIds, slotIdToNewTabId);
     let restoredSplitTabId: string | null = null;
-    if (
-      workspace.payload.splitMode !== "none" &&
-      restoredPaneIds.some(Boolean)
-    ) {
+    if (payload.splitMode !== "none" && restoredPaneIds.some(Boolean)) {
       const instanceId = crypto.randomUUID();
       restoredSplitTabId = `split-${instanceId}`;
       const splitTab: Tab = {
         id: restoredSplitTabId,
         instanceId,
         type: "split-screen",
-        label: workspace.name,
+        label: name,
         openedAt: Date.now(),
         splitConfig: createSplitConfig(
-          workspace.payload.splitMode,
+          payload.splitMode,
           restoredPaneIds,
-          workspace.payload,
+          payload,
         ),
       };
       setTabs((prev) =>
@@ -1358,13 +1321,13 @@ export function AppShell({
       );
     }
 
-    const activeId = workspace.payload.activeSlotId
-      ? (slotIdToNewTabId.get(workspace.payload.activeSlotId) ?? "dashboard")
+    const activeId = payload.activeSlotId
+      ? (slotIdToNewTabId.get(payload.activeSlotId) ?? "dashboard")
       : "dashboard";
     setActiveTabId(restoredSplitTabId ?? activeId);
 
     // Older payloads predate the sidebar field, so leave the docks alone then.
-    const sidebar = workspace.payload.sidebar;
+    const sidebar = payload.sidebar;
     if (sidebar) {
       if (sidebar.left.view) setRailView(sidebar.left.view as RailView);
       setSidebarOpen(sidebar.left.open);
@@ -1372,30 +1335,22 @@ export function AppShell({
 
       const right = sidebar.right.open ? sidebar.right.view : null;
       setRightRailView(
-        right && RIGHT_DOCKABLE_IDS.includes(right)
+        right && rightDockableIds().includes(right)
           ? (right as RailView)
           : null,
       );
       if (sidebar.right.width) setRightSidebarWidth(sidebar.right.width);
     }
 
-    if (skippedTabs.length > 0) {
-      toast.warning(
-        t("newUi.sidebar.workspaces.tabsSkipped", {
-          count: skippedTabs.length,
-          names: skippedTabs.join(", "),
-        }),
-      );
-    }
-
-    applyWorkspaceServer(workspace.id).catch(() => {});
+    return { skipped: skippedTabs };
   }
 
   // On load: always read saved tabs from DB so background sessions are preserved across refreshes.
   // If reopenTabsOnLogin is on, also restore them as open tabs in the tab bar.
   const tabRestoreAttemptedRef = useRef(false);
   useEffect(() => {
-    if (!hostsLoaded || !userPrefsLoaded) return;
+    // Waits for plugins too, so a plugin's saved tabs come back as themselves.
+    if (!hostsLoaded || !userPrefsLoaded || !pluginsSettled) return;
     if (tabRestoreAttemptedRef.current) return;
     tabRestoreAttemptedRef.current = true;
 
@@ -1416,7 +1371,7 @@ export function AppShell({
 
         if (userPrefs.reopenTabsOnLogin) {
           const hasPersistentTabs = tabs.some((t) =>
-            PERSISTENT_TAB_TYPES.includes(t.type),
+            isPersistentTabType(t.type),
           );
           if (!hasPersistentTabs) {
             const restoredTabs: Tab[] = [];
@@ -1424,16 +1379,7 @@ export function AppShell({
               const host = saved.hostId
                 ? allHosts.find((h) => h.id === String(saved.hostId))
                 : undefined;
-              const hostlessTypes: TabType[] = ["dashboard", "tunnel"];
-              if (!host && !hostlessTypes.includes(saved.tabType as TabType))
-                continue;
-
-              if (host) {
-                if (saved.tabType === "terminal" && !host.enableSsh) continue;
-                if (saved.tabType === "rdp" && !host.enableRdp) continue;
-                if (saved.tabType === "vnc" && !host.enableVnc) continue;
-                if (saved.tabType === "telnet" && !host.enableTelnet) continue;
-              }
+              if (!canRestoreTabType(saved.tabType, host)) continue;
 
               // Singleton tabs use their type as the stable ID; host-bound tabs get a unique ID
               const tabId = host
@@ -1457,9 +1403,7 @@ export function AppShell({
                 host,
                 openedAt: new Date(saved.createdAt).getTime(),
                 restoredSessionId,
-                terminalRef: SESSION_TAB_TYPES.includes(
-                  saved.tabType as TabType,
-                )
+                terminalRef: isSessionTabType(saved.tabType)
                   ? createRef()
                   : undefined,
               });
@@ -1489,33 +1433,12 @@ export function AppShell({
     }
 
     loadSavedTabs();
-  }, [hostsLoaded, userPrefsLoaded]);
+  }, [hostsLoaded, userPrefsLoaded, pluginsSettled]);
 
-  // If reopenTabsOnLogin didn't already restore anything (off, or on but
-  // nothing to restore), auto-apply the user's default workspace if they set
-  // one. Runs once, after the open-tabs restore above has had its chance —
-  // that path wins when both would otherwise fire, since it's more granular
-  // and live-session-aware than a workspace snapshot.
-  const defaultWorkspaceAttemptedRef = useRef(false);
+  // Plugins that act once the session is back (the workspaces plugin applies
+  // a default workspace) wait for this.
   useEffect(() => {
-    if (!tabsReady || defaultWorkspaceAttemptedRef.current) return;
-    defaultWorkspaceAttemptedRef.current = true;
-
-    const hasPersistentTabs = tabs.some((t) =>
-      PERSISTENT_TAB_TYPES.includes(t.type),
-    );
-    if (userPrefs.reopenTabsOnLogin && hasPersistentTabs) return;
-
-    listWorkspaces()
-      .then((workspaces) => {
-        const defaultWorkspace = workspaces.find(
-          (w) => w.kind === "manual" && w.isDefault,
-        );
-        if (defaultWorkspace) {
-          applyWorkspace(defaultWorkspace);
-        }
-      })
-      .catch(() => {});
+    if (tabsReady) notifyShellReady();
   }, [tabsReady]);
 
   // Restore named split tabs once their child sessions have stable live ids. The old
@@ -1599,9 +1522,7 @@ export function AppShell({
   const prevTabOrderRef = useRef<string>("");
   useEffect(() => {
     if (!tabsReady) return;
-    const persistable = tabs.filter((t) =>
-      PERSISTENT_TAB_TYPES.includes(t.type),
-    );
+    const persistable = tabs.filter((t) => isPersistentTabType(t.type));
     const orderKey = persistable.map((t) => t.instanceId).join(",");
     if (orderKey === prevTabOrderRef.current) return;
     prevTabOrderRef.current = orderKey;
@@ -1619,25 +1540,10 @@ export function AppShell({
     };
   }, [tabs, tabsReady]);
 
-  // Debounced "Last Session" auto-save: keeps an implicit workspace snapshot
-  // current so the arrangement can always be recovered, even if the user never
-  // manually saves one. Never auto-applied on login — see the default-workspace
-  // effect above, which only considers kind === "manual" rows.
-  const lastSessionSaveTimeoutRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  // Tells plugins the arrangement changed, e.g. so the workspaces plugin can
+  // keep its last-session snapshot current.
   useEffect(() => {
-    if (!tabsReady) return;
-    if (lastSessionSaveTimeoutRef.current)
-      clearTimeout(lastSessionSaveTimeoutRef.current);
-    lastSessionSaveTimeoutRef.current = setTimeout(() => {
-      saveLastSessionWorkspace(buildWorkspacePayload()).catch(() => {});
-    }, 2000);
-
-    return () => {
-      if (lastSessionSaveTimeoutRef.current)
-        clearTimeout(lastSessionSaveTimeoutRef.current);
-    };
+    if (tabsReady) notifyTabsChanged();
   }, [
     tabs,
     paneTabIds,
@@ -1668,19 +1574,19 @@ export function AppShell({
       joinShareId?: string | null;
       collabRoomId?: string;
     },
-    options?: { endpointId?: string; label?: string; forceNewTab?: boolean },
+    options?: {
+      data?: Record<string, unknown>;
+      label?: string;
+      forceNewTab?: boolean;
+    },
   ) {
-    // A tab type owned by a disabled plugin cannot be opened, including from a
-    // restored session. Guarded here rather than at each call site because
-    // every path into a tab goes through this one.
-    if (!isTabTypeAvailable(type)) return null;
-
     if (!restore && !options?.forceNewTab) {
+      const dataKey = JSON.stringify(options?.data ?? null);
       const existing = tabsRef.current.find(
         (t) =>
           t.type === type &&
           t.host?.id === host.id &&
-          t.endpointId === options?.endpointId,
+          JSON.stringify(t.data ?? null) === dataKey,
       );
       if (existing) {
         setActiveTabId(existing.id);
@@ -1694,7 +1600,7 @@ export function AppShell({
         ? crypto.randomUUID()
         : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
     const openedAt = Date.now();
-    const ref = SESSION_TAB_TYPES.includes(type) ? createRef() : undefined;
+    const ref = isSessionTabType(type) ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
 
     let finalLabel = host.name;
@@ -1770,13 +1676,13 @@ export function AppShell({
           initialPath,
           serialConfig,
           collabRoomId: restore?.collabRoomId,
-          endpointId: options?.endpointId,
+          data: options?.data,
         },
       ];
     });
     setActiveTabId(tabId);
 
-    if (PERSISTENT_TAB_TYPES.includes(type)) {
+    if (isPersistentTabType(type)) {
       addOpenTab({
         id: instanceId,
         tabType: type,
@@ -1792,7 +1698,11 @@ export function AppShell({
   function connectHost(
     host: Host,
     preferredType?: TabType,
-    options?: { endpointId?: string; label?: string; forceNewTab?: boolean },
+    options?: {
+      data?: Record<string, unknown>;
+      label?: string;
+      forceNewTab?: boolean;
+    },
   ) {
     const type = resolveHostTabType(host, preferredType);
     // --- tmux-monitor --- singleton tab, not a per-host tab
@@ -1946,15 +1856,12 @@ export function AppShell({
       type: TabType,
       pendingEvent?: string,
       host?: Host,
-      fleetId?: number,
+      data?: Record<string, unknown>,
     ) {
       // Local terminals are never singletons, each one is its own shell.
       if (type === "local-terminal") {
         return openLocalTerminalTab();
       }
-      // The admin kill switch removes the assistant for everyone, so it can
-      // never be promoted into the tab bar while it is off.
-      if (type === "ai" && !aiGloballyEnabled) return;
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
           setSidebarOpen(true);
@@ -1990,27 +1897,28 @@ export function AppShell({
       const id = type;
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.hostManager"),
-        docker: t("nav.docker"),
         tunnel: t("nav.tunnels"),
         sftp: t("nav.sftp"),
-        network_graph: t("nav.networkGraph"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
         homepage: t("nav.homepage"),
-        "fleet-inventory": t("nav.fleets"),
       };
-      // Promoted rail panels reuse the rail's own label so the two stay in sync.
-      const label = singletonLabels[type] ?? railItemLabel(type, t);
+      // A plugin tab names itself; promoted rail panels reuse the rail's own
+      // label so the two stay in sync.
+      const titleKey = getTabType(type)?.titleKey;
+      const label =
+        singletonLabels[type] ??
+        (titleKey ? t(titleKey) : railItemLabel(type, t));
       setTabs((prev) => {
         const existing = prev.find((t) => t.id === id);
         if (existing) {
           // --- tmux-monitor --- refocusing with a host preselects it
-          if (!host && fleetId === undefined) return prev;
+          if (!host && data === undefined) return prev;
           return prev.map((t) =>
             t.id === id
               ? {
                   ...t,
                   ...(host ? { host } : {}),
-                  ...(fleetId !== undefined ? { fleetId } : {}),
+                  ...(data !== undefined ? { data } : {}),
                 }
               : t,
           );
@@ -2024,12 +1932,12 @@ export function AppShell({
             label,
             openedAt: Date.now(),
             ...(host ? { host } : {}), // --- tmux-monitor ---
-            ...(fleetId !== undefined ? { fleetId } : {}),
+            ...(data !== undefined ? { data } : {}),
           },
         ];
       });
       setActiveTabId(id);
-      if (PERSISTENT_TAB_TYPES.includes(type)) {
+      if (isPersistentTabType(type)) {
         addOpenTab({
           id,
           tabType: type,
@@ -2039,24 +1947,15 @@ export function AppShell({
         }).catch(() => {});
       }
     },
-    [t, aiGloballyEnabled],
+    [t],
   );
-
-  const SESSION_TAB_TYPES: TabType[] = [
-    "terminal",
-    "rdp",
-    "vnc",
-    "telnet",
-    "serial",
-  ];
-  const ACTIVE_CLOSE_CONFIRM_TYPES: TabType[] = SESSION_TAB_TYPES;
 
   const getTabCloseLabel = useCallback((tab: Tab) => {
     return tab.customLabel || tab.label || tab.host?.name || String(tab.id);
   }, []);
 
   const isActiveConnectionTab = useCallback((tab: Tab) => {
-    if (!ACTIVE_CLOSE_CONFIRM_TYPES.includes(tab.type)) return false;
+    if (!isSessionTabType(tab.type)) return false;
     return tab.terminalRef?.current?.isConnected?.() === true;
   }, []);
 
@@ -2084,10 +1983,7 @@ export function AppShell({
     if (tabToClose?.terminalRef?.current?.disconnect) {
       tabToClose.terminalRef.current.disconnect();
     }
-    if (
-      tabToClose?.instanceId &&
-      PERSISTENT_TAB_TYPES.includes(tabToClose.type)
-    ) {
+    if (tabToClose?.instanceId && isPersistentTabType(tabToClose.type)) {
       deleteOpenTab(tabToClose.instanceId).catch(() => {});
     }
 
@@ -2136,15 +2032,11 @@ export function AppShell({
 
   function refreshTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
-    if (!tab) return;
-    if (tab.type === "terminal") {
-      const ref = tab.terminalRef?.current;
-      ref?.reconnect?.();
-    } else if (["rdp", "vnc", "telnet"].includes(tab.type)) {
-      window.dispatchEvent(
-        new CustomEvent("termix:refresh-guacamole", { detail: { tabId: id } }),
-      );
-    }
+    const handle = tab?.terminalRef?.current;
+    if (!handle) return;
+    // Session tabs expose one or the other on their handle.
+    if (handle.reconnect) handle.reconnect();
+    else handle.refresh?.();
   }
 
   function openShareForTab(id: string) {
@@ -2188,22 +2080,12 @@ export function AppShell({
       return;
     }
 
-    if (tab && SESSION_TAB_TYPES.includes(tab.type) && confirmEnabled) {
+    if (tab && isSessionTabType(tab.type) && confirmEnabled) {
       toast.dismiss(`close-tab-${id}`);
     }
 
     doCloseTab(id);
   }
-
-  // An admin can turn the assistant off while tabs are already open, and a
-  // saved workspace or restored session can bring one back. Either way the
-  // leftover tab and panel go away as soon as the status says it is off.
-  useEffect(() => {
-    if (!aiStatusLoaded || aiGloballyEnabled) return;
-    if (tabs.some((tab) => tab.type === "ai")) doCloseTab("ai");
-    setRailView((prev) => (prev === "ai" ? "hosts" : prev));
-    setRightRailView((prev) => (prev === "ai" ? null : prev));
-  }, [aiStatusLoaded, aiGloballyEnabled, tabs]);
 
   closeActiveTabRef.current = () => {
     const id = activeTabIdRef.current;
@@ -2332,7 +2214,7 @@ export function AppShell({
       setRightRailView(null);
       return;
     }
-    const fallback = lastRightRailViewRef.current ?? RIGHT_DOCKABLE_IDS[0];
+    const fallback = lastRightRailViewRef.current ?? rightDockableIds()[0];
     if (fallback) setRightRailView(fallback as RailView);
   }
 
@@ -2544,6 +2426,79 @@ export function AppShell({
    */
   // The param deliberately shadows the outer railView so the body reads the
   // same whichever dock is rendering.
+  const newInstanceId = () =>
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+  /**
+   * What plugins may ask of the shell. Rebuilt every render so it always
+   * closes over current state, and published to the plugin runtime.
+   */
+  const shellCallbacks: TabShellCallbacks = {
+    openTab: (host, type, options) => {
+      if (!host || getTabType(type)?.singleton) {
+        openSingletonTab(type, undefined, host ?? undefined, options?.data);
+        return;
+      }
+      openTab(host, type, undefined, options);
+    },
+    openSingletonTab: (type, options) =>
+      openSingletonTab(type, undefined, undefined, options?.data),
+    closeTab: (tabId) => closeTab(tabId),
+    renameTab: (tabId, label) => renameTab(tabId, label),
+    openFileInEditor: (host, filePath) =>
+      openTab(host, "files", {
+        instanceId: newInstanceId(),
+        restoredSessionId: null,
+        initialFilePath: filePath,
+      }),
+    openFileManager: (host, path) =>
+      openTab(host, "files", {
+        instanceId: newInstanceId(),
+        restoredSessionId: null,
+        initialPath: path,
+      }),
+    openTerminalTab: (host, path) =>
+      openTab(host, "terminal", {
+        instanceId: newInstanceId(),
+        restoredSessionId: null,
+        initialFilePath: path,
+      }),
+    openRailView: (id) => {
+      setRailView(id as RailView);
+      setSidebarOpen(true);
+    },
+    closeRailView: (id) => {
+      setRailView((prev) => (prev === id ? "hosts" : prev));
+      setRightRailView((prev) => (prev === id ? null : prev));
+    },
+    saveQuickConnect: saveQuickConnectHost,
+  };
+
+  // Panels close the sidebar on mobile after opening something, the same as
+  // the hosts panel does.
+  const panelShell: TabShellCallbacks = {
+    ...shellCallbacks,
+    openTab: (...args) => {
+      shellCallbacks.openTab(...args);
+      if (isMobile) setSidebarOpen(false);
+    },
+  };
+
+  useEffect(() => {
+    setShellCallbacks(shellCallbacks);
+    setShellLayoutProvider({
+      getLayout: () => (tabsReady ? buildWorkspacePayload() : null),
+      applyLayout: (layout, options) =>
+        applyLayout(layout as WorkspacePayload, options?.name ?? ""),
+    });
+  });
+
+  useEffect(() => {
+    setShellHosts(allHosts, hostsLoaded);
+  }, [allHosts, hostsLoaded]);
+
   const renderSidebarPanels = (railView: RailView, owned = true) => (
     <Suspense fallback={<SidebarPanelFallback />}>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -2606,15 +2561,6 @@ export function AppShell({
           />
         )}
 
-        {railView === "tailscale" && (
-          <TailscaleDevicesPanel
-            onConnect={(host, type) => {
-              openTab(host, type);
-              if (isMobile) setSidebarOpen(false);
-            }}
-          />
-        )}
-
         {railView === "ssh-tools" && (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <SshToolsPanel
@@ -2648,24 +2594,6 @@ export function AppShell({
           </div>
         )}
 
-        {owned && (
-          <div
-            className={`flex flex-col flex-1 min-h-0 ${railView === "fleets" ? "" : "hidden"}`}
-          >
-            <FleetsPanel
-              active={railView === "fleets"}
-              onOpenFleetInventory={(fleetId) =>
-                openSingletonTab(
-                  "fleet-inventory",
-                  undefined,
-                  undefined,
-                  fleetId,
-                )
-              }
-            />
-          </div>
-        )}
-
         {railView === "history" && (
           <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
             <HistoryPanel
@@ -2693,33 +2621,32 @@ export function AppShell({
           </div>
         )}
 
-        {railView === "workspaces" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <WorkspacesPanel
-              active={railView === "workspaces"}
-              currentPayload={buildWorkspacePayload}
-              onApplyWorkspace={applyWorkspace}
-            />
-          </div>
-        )}
+        {registeredPanels.map((panel) => {
+          const shown = railView === panel.id;
+          // A kept-mounted panel lives in the owning dock only, so two live
+          // copies never fight over the same state.
+          if (panel.keepMounted ? !owned : !shown) return null;
+          const Panel = panel.component;
+          return (
+            <div
+              key={panel.id}
+              className={`flex flex-col flex-1 min-h-0 overflow-y-auto ${shown ? "" : "hidden"}`}
+            >
+              <Panel
+                active={shown}
+                shell={panelShell}
+                setEditing={setSidebarEditing}
+                activeTabType={
+                  tabs.find((tab) => tab.id === activeTabId)?.type ?? undefined
+                }
+                placement={owned ? "left" : "right"}
+              />
+            </div>
+          );
+        })}
 
-        {railView === "automations" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <AutomationsPanel
-              active={railView === "automations"}
-              onEditingChange={setSidebarEditing}
-            />
-          </div>
-        )}
-
-        {railView === "ai" && (
-          <div className="flex flex-col flex-1 min-h-0">
-            <AiPanel
-              activeTab={
-                tabs.find((tab) => tab.id === activeTabId)?.type ?? null
-              }
-            />
-          </div>
+        {!isCoreRailView(railView) && !getPanel(railView) && (
+          <PluginViewPlaceholder kind="panel" viewId={railView} compact />
         )}
 
         {railView === "connections" && (
@@ -2918,7 +2845,7 @@ export function AppShell({
       <span className="flex-1 min-w-0 whitespace-nowrap text-base font-bold tracking-tight text-foreground px-3">
         {sidebarTitle(railView)}
       </span>
-      {!isMobile && PROMOTABLE_IDS.includes(railView) && (
+      {!isMobile && promotableIds().includes(railView) && (
         <>
           <Separator orientation="vertical" />
           <Button
@@ -2933,7 +2860,7 @@ export function AppShell({
           </Button>
         </>
       )}
-      {!isMobile && RIGHT_DOCKABLE_IDS.includes(railView) && (
+      {!isMobile && rightDockableIds().includes(railView) && (
         <>
           <Separator orientation="vertical" />
           <Button
@@ -3007,8 +2934,8 @@ export function AppShell({
 
   const sidebarHint = !isMobile && (
     <MultiPanelHint
-      canPromote={PROMOTABLE_IDS.includes(railView)}
-      canRightDock={RIGHT_DOCKABLE_IDS.includes(railView)}
+      canPromote={promotableIds().includes(railView)}
+      canRightDock={rightDockableIds().includes(railView)}
       onOpenAsTab={() => openSingletonTab(railView as TabType)}
       onOpenInRightDock={() => openInRightDock(railView)}
     />
@@ -3189,43 +3116,11 @@ export function AppShell({
                       ? paneIdx === (focusedPaneIndex ?? 0)
                       : activeInline;
                     return createPortal(
-                      renderTabContent(
-                        tab,
-                        openSingletonTab,
-                        openTab,
-                        closeTab,
-                        inPane || activeInline,
-                        (host, filePath) =>
-                          openTab(host, "files", {
-                            instanceId:
-                              typeof crypto.randomUUID === "function"
-                                ? crypto.randomUUID()
-                                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-                            restoredSessionId: null,
-                            initialFilePath: filePath,
-                          }),
-                        (host, path) =>
-                          openTab(host, "files", {
-                            instanceId:
-                              typeof crypto.randomUUID === "function"
-                                ? crypto.randomUUID()
-                                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-                            restoredSessionId: null,
-                            initialPath: path,
-                          }),
-                        (host, path) =>
-                          openTab(host, "terminal", {
-                            instanceId:
-                              typeof crypto.randomUUID === "function"
-                                ? crypto.randomUUID()
-                                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-                            restoredSessionId: null,
-                            initialFilePath: path,
-                          }),
-                        renameTab,
-                        saveQuickConnectHost,
+                      renderTabContent(tab, {
+                        shell: shellCallbacks,
+                        isVisible: inPane || activeInline,
                         isFocusedPane,
-                        {
+                        panelProps: {
                           terminalTabs,
                           targetTerminalTabId,
                           storageMode:
@@ -3233,7 +3128,7 @@ export function AppShell({
                               ? "cloud"
                               : "local",
                         },
-                      ),
+                      }),
                       tabNode,
                       tab.id,
                     );
@@ -3330,7 +3225,7 @@ export function AppShell({
       </Suspense>
       <OnboardingDialog
         open={showOnboarding}
-        context={{ aiGloballyEnabled: onboardingAiEnabled }}
+        context={{}}
         onClose={() => setShowOnboarding(false)}
       />
       <DonationReminderModal

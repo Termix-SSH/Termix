@@ -87,7 +87,23 @@
         "descriptionKey": "permissions.secrets.share.description",
         "defaultRoles": ["user"]
       }
-    ]
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "access",
+          "type": "custom",
+          "component": "access"
+        }
+      ],
+      "user": [
+        {
+          "key": "assistant",
+          "type": "custom",
+          "component": "assistant"
+        }
+      ]
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

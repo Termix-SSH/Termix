@@ -443,43 +443,88 @@ export function createMockCtx(
 }
 
 /**
- * A TermixApp double for frontend tests.
+ * Rendering a plugin frontend in a test.
  *
- * A7 builds the real registration surface; until then this records what a
- * plugin's frontend entry registered, which is all a test can assert about a
- * loader that does not exist yet. Deliberately free of any render library so
- * a plugin only needs testing-library if its own tests render something.
+ * renderWithApp activates the plugin against the real registration surface,
+ * so a test sees exactly what the shell would: which rail items, tabs, host
+ * actions and cards it registered, and each of those rendered with the SDK
+ * hooks working. It is implemented by the Termix host, which is where the
+ * registries live; the vitest preset points "@termix/plugin-host/testing" at
+ * core's implementation.
  */
-export interface FakeTermixApp {
-  app: TermixApp;
-  /** Cleanups the plugin handed to app.onDispose. */
-  disposals: Array<() => void>;
+export interface RenderWithAppOptions {
+  pluginId?: string;
+  manifest?: Partial<PluginManifest>;
+  /** Role permissions the current user holds. */
+  permissions?: string[];
+  isAdmin?: boolean;
+  /** Hosts useHosts() returns. */
+  hosts?: Array<Record<string, unknown>>;
+  /** The plugin's locales/en.json, loaded into its namespace. */
+  locales?: Record<string, unknown>;
+  /** Render as an anonymous guest page. */
+  guest?: boolean;
 }
 
-export function renderWithApp(
-  options: { pluginId?: string; manifest?: Partial<PluginManifest> } = {},
-): FakeTermixApp {
-  const pluginId = options.pluginId ?? "test-plugin";
-  const disposals: Array<() => void> = [];
+/** A call a plugin made on the shell, recorded instead of performed. */
+export interface ShellCall {
+  method: string;
+  args: unknown[];
+}
 
-  const manifest = {
-    id: pluginId,
-    name: pluginId,
-    version: "1.0.0",
-    description: "",
-    author: { name: "test" },
-    license: "MIT",
-    category: "Productivity",
-    engine: { termix: ">=2.9.0", api: "1" },
-    capabilities: [],
-    ...options.manifest,
-  } as PluginManifest;
-
-  const app: TermixApp = {
-    pluginId,
-    manifest,
-    onDispose: (dispose) => disposals.push(dispose),
+export interface RenderedPluginApp {
+  app: TermixApp;
+  /** Everything this plugin registered, by kind. */
+  registered: {
+    railItems: () => Array<{ id: string; hidden?: boolean }>;
+    tabs: () => string[];
+    panels: () => string[];
+    hostActions: () => Array<{ id: string; tabType?: string }>;
+    hostEditorSections: () => string[];
+    dashboardCards: () => string[];
+    settingsComponents: () => string[];
+    slot: (slotId: string) => string[];
+    actions: () => string[];
   };
+  /** Shell calls made by the plugin's code. */
+  shellCalls: ShellCall[];
+  renderTab: (type: string, props?: Record<string, unknown>) => HTMLElement;
+  renderPanel: (id: string, props?: Record<string, unknown>) => HTMLElement;
+  renderDashboardCard: (id: string) => HTMLElement;
+  renderHostEditorSection: (
+    id: string,
+    props?: Record<string, unknown>,
+  ) => HTMLElement;
+  renderSettingsComponent: (
+    componentId: string,
+    props?: Record<string, unknown>,
+  ) => HTMLElement;
+  /** Renders a slot the way its owner would. */
+  renderSlot: (slotId: string, props?: Record<string, unknown>) => HTMLElement;
+  /** Runs deactivate and every disposer, as disabling the plugin does. */
+  deactivate: () => Promise<void>;
+}
 
-  return { app, disposals };
+export type FrontendPluginModule = {
+  activate: (app: TermixApp) => void | Promise<void>;
+  deactivate?: () => void | Promise<void>;
+};
+
+interface PluginTestHost {
+  renderPlugin: (
+    plugin: FrontendPluginModule,
+    options: RenderWithAppOptions,
+  ) => Promise<RenderedPluginApp>;
+}
+
+const TEST_HOST = "@termix/plugin-host/testing";
+
+export async function renderWithApp(
+  plugin: FrontendPluginModule,
+  options: RenderWithAppOptions = {},
+): Promise<RenderedPluginApp> {
+  // A variable specifier keeps bundlers from resolving it at build time; the
+  // test runner resolves it through its alias.
+  const host = (await import(/* @vite-ignore */ TEST_HOST)) as PluginTestHost;
+  return host.renderPlugin(plugin, options);
 }

@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "新增主機",
+    "addGroup": "新增群組",
+    "addLink": "新增連結",
+    "zoomIn": "放大",
+    "zoomOut": "縮小",
+    "resetView": "重置檢視",
+    "selectHost": "選取主機",
+    "chooseHost": "選擇主機...",
+    "parentGroup": "父群組",
+    "noGroup": "無群組",
+    "groupName": "群組名稱",
+    "color": "顏色",
+    "source": "來源",
+    "target": "目標",
+    "moveToGroup": "移至群組",
+    "selectGroup": "選取群組...",
+    "addConnection": "新增連線",
+    "hostDetails": "主機詳細資料",
+    "removeFromGroup": "從群組中移除",
+    "addHostHere": "在此新增主機",
+    "editGroup": "編輯群組",
+    "delete": "刪除",
+    "add": "新增",
+    "create": "建立",
+    "move": "移動",
+    "connect": "連線",
+    "createGroup": "建立群組",
+    "selectSourcePlaceholder": "選取來源...",
+    "selectTargetPlaceholder": "選取目標...",
+    "invalidFile": "無效的檔案",
+    "hostAlreadyExists": "主機已存在於拓撲中",
+    "connectionExists": "連線已存在",
+    "unknown": "未知",
+    "name": "名稱",
+    "ip": "IP",
+    "status": "狀態",
+    "failedToAddNode": "無法新增節點",
+    "sourceDifferentFromTarget": "來源與目標必須不同",
+    "exportJSON": "匯出 JSON",
+    "importJSON": "匯入 JSON",
+    "terminal": "終端機",
+    "fileManager": "檔案管理員",
+    "tunnel": "隧道",
+    "docker": "Docker",
+    "serverStats": "主機指標",
+    "hostMetrics": "主機指標",
+    "noNodes": "尚無節點"
+  },
+  "nav": {
+    "networkGraph": "網路圖表"
+  },
+  "dashboard": {
+    "networkGraph": "網路圖表"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} 個節點"
+  }
+}

@@ -36,7 +36,8 @@ export type WidgetTypeId =
   | "search_links"
   | "link_tree"
   | "docker_activity"
-  | "ssh_quick_connect";
+  | "ssh_quick_connect"
+  | (string & {});
 
 export interface HomepageItemRow {
   id: number;
@@ -177,8 +178,8 @@ export interface PingStatusConfig {
   showLatency: boolean;
 }
 
-export type ActivityType =
-  "terminal" | "file_manager" | "docker" | "tunnel" | "rdp" | "vnc" | "telnet";
+/** Core activity types; plugin tabs record their own. */
+export type ActivityType = "file_manager" | "tunnel" | (string & {});
 
 export interface RecentActivityConfig {
   maxItems: number;
@@ -225,15 +226,8 @@ export interface SshTerminalConfig {
   autoConnect: boolean;
 }
 
-export type QuickConnectType =
-  | "terminal"
-  | "files"
-  | "docker"
-  | "tunnel"
-  | "host-metrics"
-  | "rdp"
-  | "vnc"
-  | "telnet";
+/** Tab types a quick connect widget opens: core tools or plugin actions. */
+export type QuickConnectType = "files" | "tunnel" | (string & {});
 
 export interface QuickConnectConfig {
   hostIds: number[];

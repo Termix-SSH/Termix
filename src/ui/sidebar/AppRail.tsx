@@ -13,10 +13,10 @@ import {
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
-import { visibleRailItems } from "./rail-items";
-import { useAiAvailability } from "@/hooks/use-ai-availability";
+import { useRailItems, visibleRailItems } from "./rail-items";
 
-export type RailView =
+/** Core rail views; plugins add their own ids at runtime. */
+export type CoreRailView =
   | "hosts"
   | "credentials"
   | "port-forwarding"
@@ -29,17 +29,14 @@ export type RailView =
   | "session-logs"
   | "user-profile"
   | "admin-settings"
-  | "automations"
-  | "ai"
-  | "fleets"
-  | "tailscale"
-  | "workspaces"
   | "collab";
 
+export type RailView = CoreRailView | (string & {});
+
 export type HideableRailView =
-  | Exclude<RailView, "user-profile" | "admin-settings">
-  | "network_graph"
-  | "homepage";
+  | Exclude<CoreRailView, "user-profile" | "admin-settings">
+  | "homepage"
+  | (string & {});
 
 type RailItem =
   | {
@@ -195,7 +192,8 @@ export function AppRail({
     };
   }, [menuPos]);
 
-  const { userEnabled: aiEnabled } = useAiAvailability();
+  // Plugins add and remove rail items at runtime.
+  useRailItems();
 
   useEffect(() => {
     const handler = () => {
@@ -247,9 +245,6 @@ export function AppRail({
   const effectiveHiddenTabs = new Set([
     ...hiddenTabs,
     ...(isRemoteSyncConnected ? [] : ["termix-id"]),
-    // The assistant is hidden until an admin has enabled it instance-wide and
-    // the user has said yes, so someone who declined never sees the entry.
-    ...(aiEnabled ? [] : ["ai"]),
   ]);
   const railButtons = buildRailButtons(splitMode, t, effectiveHiddenTabs);
   const setRailPinned = (nextPinned: boolean) => {

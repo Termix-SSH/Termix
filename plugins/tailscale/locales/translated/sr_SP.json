@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Ово мора бити Unix корисник чији је идентитет на Tailscale-у додељен у SSH ACL-у Tailnet-а, не нужно root.",
+    "tailscaleDeviceSelect": "Изаберите уређај Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Изаберите уређај...",
+    "tailscaleNoApiKey": "Није конфигурисан Tailscale API кључ. Додајте га у администраторским подешавањима да бисте омогућили откривање уређаја.",
+    "tailscaleDocsLink": "Прикажи документе",
+    "tailscaleLoadingDevices": "Учитавање уређаја...",
+    "tailscaleDeviceLoadFailed": "Учитавање Tailscale уређаја није успело. Проверите API URL и мрежну везу.",
+    "tailscaleNoDevices": "Није пронађен ниједан уређај у вашој мрежи.",
+    "tailscaleDeviceAutoFill": "Избором уређаја ће се аутоматски попунити ИП адреса хоста."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Потребна је аутентификација на таилскалу",
+    "tailscaleCheckDescription": "Tailscale SSH захтева додатну проверу. Аутентификујте се у прегледачу да бисте наставили.",
+    "tailscaleCheckOpenBrowser": "Отворите прегледач за аутентификацију",
+    "tailscaleCheckWaiting": "Чекање на Tailscale аутентификацију...",
+    "tailscaleCheckTimeout": "Временско ограничење за аутентификацију Tailscale-а је истекло. Молимо покушајте поново."
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Додати хоста",
+    "addGroup": "Додати групу",
+    "addLink": "Додати посилання",
+    "zoomIn": "Збільшити масштаб",
+    "zoomOut": "Зменшити масштаб",
+    "resetView": "Скинути вигляд",
+    "selectHost": "Виберіть хоста",
+    "chooseHost": "Виберіть хоста...",
+    "parentGroup": "Батьківська група",
+    "noGroup": "Без групи",
+    "groupName": "Назва групи",
+    "color": "Колір",
+    "source": "Джерело",
+    "target": "Ціль",
+    "moveToGroup": "Перемістити до групи",
+    "selectGroup": "Виберіть групу...",
+    "addConnection": "Додати підключення",
+    "hostDetails": "Деталі хоста",
+    "removeFromGroup": "Видалити з групи",
+    "addHostHere": "Додати хост тут",
+    "editGroup": "Редагувати групу",
+    "delete": "Видалити",
+    "add": "Додати",
+    "create": "Створити",
+    "move": "Перемістити",
+    "connect": "Підключитися",
+    "createGroup": "Створити групу",
+    "selectSourcePlaceholder": "Виберіть джерело...",
+    "selectTargetPlaceholder": "Виберіть ціль...",
+    "invalidFile": "Недійсний файл",
+    "hostAlreadyExists": "Хост вже є в топології",
+    "connectionExists": "З'єднання вже існує",
+    "unknown": "Невідомо",
+    "name": "Ім'я",
+    "ip": "ІП",
+    "status": "Статус",
+    "failedToAddNode": "Не вдалося додати вузол",
+    "sourceDifferentFromTarget": "Джерело та ціль мають бути різними",
+    "exportJSON": "Експорт JSON",
+    "importJSON": "Імпорт JSON",
+    "terminal": "Термінал",
+    "fileManager": "Файловий менеджер",
+    "tunnel": "Тунель",
+    "docker": "Докер",
+    "serverStats": "Метрики хоста",
+    "hostMetrics": "Метрики хоста",
+    "noNodes": "Поки що немає вузлів"
+  },
+  "nav": {
+    "networkGraph": "Мережевий графік"
+  },
+  "dashboard": {
+    "networkGraph": "Мережевий графік"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} вузлів"
+  }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getAllWidgetTypes } from "../widgets/WidgetRegistry";
+import { useWidgetTypes } from "../widgets/WidgetRegistry";
 import type { ContextMenuState, WidgetTypeId } from "@/types/homepage-types";
 
 interface AddWidgetMenuProps {
@@ -16,7 +16,7 @@ const MARGIN = 8;
 export function AddWidgetMenu({ state, onAdd, onClose }: AddWidgetMenuProps) {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
-  const allTypes = getAllWidgetTypes();
+  const allTypes = useWidgetTypes();
   const [pos, setPos] = useState({ left: state.screenX, top: state.screenY });
   const [selectedCat, setSelectedCat] = useState<
     (typeof CATEGORY_ORDER)[number]

@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "यह एक यूनिक्स उपयोगकर्ता होना चाहिए जिसे टेलनेट के एसएसएच एसीएल में आपकी टेलस्केल पहचान प्रदान की गई हो, जरूरी नहीं कि यह रूट हो।",
+    "tailscaleDeviceSelect": "Tailscale डिवाइस चुनें",
+    "tailscaleDeviceSelectPlaceholder": "एक डिवाइस चुनें...",
+    "tailscaleNoApiKey": "कोई Tailscale API कुंजी कॉन्फ़िगर नहीं की गई है। डिवाइस खोज सक्षम करने के लिए व्यवस्थापक सेटिंग में एक जोड़ें।",
+    "tailscaleDocsLink": "दस्तावेज़ देखें",
+    "tailscaleLoadingDevices": "उपकरण लोड हो रहे हैं...",
+    "tailscaleDeviceLoadFailed": "टेलस्केल डिवाइस लोड करने में विफल। कृपया एपीआई यूआरएल और नेटवर्क कनेक्शन की जांच करें।",
+    "tailscaleNoDevices": "आपके टेलनेट में कोई उपकरण नहीं मिला।",
+    "tailscaleDeviceAutoFill": "डिवाइस चुनने पर होस्ट IP पता स्वतः भर जाएगा।"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "टेलस्केल प्रमाणीकरण आवश्यक है",
+    "tailscaleCheckDescription": "Tailscale SSH के लिए एक अतिरिक्त जांच की आवश्यकता है। जारी रखने के लिए अपने ब्राउज़र में प्रमाणीकरण करें।",
+    "tailscaleCheckOpenBrowser": "प्रमाणीकरण के लिए ब्राउज़र खोलें",
+    "tailscaleCheckWaiting": "टेलस्केल प्रमाणीकरण की प्रतीक्षा की जा रही है...",
+    "tailscaleCheckTimeout": "टेलस्केल प्रमाणीकरण का समय समाप्त हो गया। कृपया पुनः प्रयास करें।"
+  }
+}

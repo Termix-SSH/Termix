@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Gazdagép hozzáadása",
+    "addGroup": "Csoport hozzáadása",
+    "addLink": "Link hozzáadása",
+    "zoomIn": "Nagyítás",
+    "zoomOut": "Kicsinyítés",
+    "resetView": "Nézet visszaállítása",
+    "selectHost": "Válasszon gazdagépet",
+    "chooseHost": "Válassz egy tárhelyszolgáltatót...",
+    "parentGroup": "Szülőcsoport",
+    "noGroup": "Nincs csoport",
+    "groupName": "Csoport neve",
+    "color": "Szín",
+    "source": "Forrás",
+    "target": "Cél",
+    "moveToGroup": "Áthelyezés csoportba",
+    "selectGroup": "Csoport kiválasztása...",
+    "addConnection": "Kapcsolat hozzáadása",
+    "hostDetails": "Gazdagép adatai",
+    "removeFromGroup": "Eltávolítás a csoportból",
+    "addHostHere": "Gazdagép hozzáadása ide",
+    "editGroup": "Csoport szerkesztése",
+    "delete": "Töröl",
+    "add": "Hozzáadás",
+    "create": "Teremt",
+    "move": "Mozog",
+    "connect": "Csatlakozás",
+    "createGroup": "Csoport létrehozása",
+    "selectSourcePlaceholder": "Forrás kiválasztása...",
+    "selectTargetPlaceholder": "Cél kiválasztása...",
+    "invalidFile": "Érvénytelen fájl",
+    "hostAlreadyExists": "A gazdagép már szerepel a topológiában",
+    "connectionExists": "A kapcsolat már létezik",
+    "unknown": "Ismeretlen",
+    "name": "Név",
+    "ip": "IP-cím",
+    "status": "Állapot",
+    "failedToAddNode": "Nem sikerült hozzáadni a csomópontot",
+    "sourceDifferentFromTarget": "A forrásnak és a célnak eltérőnek kell lennie",
+    "exportJSON": "JSON exportálása",
+    "importJSON": "JSON importálása",
+    "terminal": "Terminál",
+    "fileManager": "Fájlkezelő",
+    "tunnel": "Alagút",
+    "docker": "Dokkmunkás",
+    "serverStats": "Gazdagép-metrikák",
+    "hostMetrics": "Gazdagép-metrikák",
+    "noNodes": "Még nincsenek csomópontok"
+  },
+  "nav": {
+    "networkGraph": "Hálózati gráf"
+  },
+  "dashboard": {
+    "networkGraph": "Hálózati gráf"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} csomópontok"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Aquest ha de ser un usuari d'Unix; la teva identitat Tailscale està atorgada a l'ACL SSH de la xarxa principal, no necessàriament un usuari root.",
+    "tailscaleDeviceSelect": "Selecciona el dispositiu Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Selecciona un dispositiu...",
+    "tailscaleNoApiKey": "No hi ha cap clau d'API de Tailscale configurada. Afegeix-ne una a la configuració de l'administrador per habilitar la detecció de dispositius.",
+    "tailscaleDocsLink": "Veure documents",
+    "tailscaleLoadingDevices": "S'estan carregant els dispositius...",
+    "tailscaleDeviceLoadFailed": "No s'han pogut carregar els dispositius Tailscale. Comproveu l'URL de l'API i la connexió de xarxa.",
+    "tailscaleNoDevices": "No s'han trobat dispositius a la xarxa de cua.",
+    "tailscaleDeviceAutoFill": "En seleccionar un dispositiu, l'adreça IP de l'amfitrió s'omplirà automàticament."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Autenticació a escala final requerida",
+    "tailscaleCheckDescription": "L'SSH a escala de punta requereix una comprovació addicional. Autentiqueu-vos al navegador per continuar.",
+    "tailscaleCheckOpenBrowser": "Obre el navegador per autenticar-te",
+    "tailscaleCheckWaiting": "Esperant l'autenticació de Tailscale...",
+    "tailscaleCheckTimeout": "S'ha esgotat el temps d'espera de l'autenticació a escala final. Torna-ho a provar."
+  }
+}

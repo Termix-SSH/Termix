@@ -59,7 +59,7 @@ import {
   ArrowDownUp,
   Loader2,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { useTabsSafe } from "@/shell/TabContext";
 import { cn } from "@/lib/utils";
 import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";

@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Bu, Tailscale kimliğinizin tailnet'in SSH erişim kontrol listesinde (ACL) verildiği bir Unix kullanıcısı olmalıdır, mutlaka root olması gerekmez.",
+    "tailscaleDeviceSelect": "Tailscale cihazı seçin",
+    "tailscaleDeviceSelectPlaceholder": "Bir cihaz seçin...",
+    "tailscaleNoApiKey": "Tailscale API anahtarı yapılandırılmamış. Cihaz keşfini etkinleştirmek için Yönetici Ayarları'ndan bir tane ekleyin.",
+    "tailscaleDocsLink": "Dokümanları görüntüle",
+    "tailscaleLoadingDevices": "Aygıtlar yükleniyor...",
+    "tailscaleDeviceLoadFailed": "Tailscale cihazları yüklenemedi. API URL'sini ve ağ bağlantısını kontrol edin.",
+    "tailscaleNoDevices": "Tailnet'inizde aygıt bulunamadı.",
+    "tailscaleDeviceAutoFill": "Bir aygıt seçmek, host IP adresini otomatik dolduracaktır."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale Kimlik Doğrulaması Gerekli",
+    "tailscaleCheckDescription": "Tailscale SSH ek bir doğrulama gerektiriyor. Devam etmek için tarayıcınızda kimlik doğrulaması yapın.",
+    "tailscaleCheckOpenBrowser": "Kimlik doğrulaması için tarayıcıyı açın.",
+    "tailscaleCheckWaiting": "Tailscale kimlik doğrulamasının tamamlanmasını bekliyoruz...",
+    "tailscaleCheckTimeout": "Tailscale kimlik doğrulama işlemi zaman aşımına uğradı. Lütfen tekrar deneyin."
+  }
+}

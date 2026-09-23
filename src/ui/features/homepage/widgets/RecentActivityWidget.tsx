@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-  Activity,
-  Terminal,
-  FolderOpen,
-  Container,
-  Wifi,
-  Monitor,
-} from "lucide-react";
+import { Activity } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { activityTarget } from "@/lib/activity-types";
 import { registerWidget } from "./WidgetRegistry";
 import type {
   RecentActivityConfig,
@@ -33,23 +27,8 @@ function relativeTime(ts: string): string {
 }
 
 function ActivityIcon({ type }: { type: string }) {
-  const cls = "shrink-0 text-accent-brand";
-  switch (type) {
-    case "terminal":
-      return <Terminal size={10} className={cls} />;
-    case "file_manager":
-      return <FolderOpen size={10} className={cls} />;
-    case "docker":
-      return <Container size={10} className={cls} />;
-    case "tunnel":
-      return <Wifi size={10} className={cls} />;
-    case "rdp":
-    case "vnc":
-    case "telnet":
-      return <Monitor size={10} className={cls} />;
-    default:
-      return <Activity size={10} className={cls} />;
-  }
+  const Icon = activityTarget(type)?.icon ?? Activity;
+  return <Icon className="size-2.5 shrink-0 text-accent-brand" />;
 }
 
 function RecentActivityWidget({

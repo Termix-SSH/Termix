@@ -5,13 +5,10 @@ import { AppearanceStep } from "./steps/AppearanceStep";
 import { FeaturesStep } from "./steps/FeaturesStep";
 import { WorkflowStep } from "./steps/WorkflowStep";
 import { SecurityStep } from "./steps/SecurityStep";
-import { AiAssistantStep } from "./steps/AiAssistantStep";
 import { DoneStep } from "./steps/DoneStep";
 
-export interface OnboardingContext {
-  /** Whether an admin has enabled the AI assistant for this instance. */
-  aiGloballyEnabled: boolean;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface OnboardingContext {}
 
 export interface OnboardingStepProps {
   context: OnboardingContext;
@@ -27,7 +24,8 @@ export interface OnboardingStep {
 
 /**
  * Onboarding as data rather than hardcoded JSX, so steps can be added,
- * reordered or made conditional without touching the dialog shell.
+ * reordered or made conditional without touching the dialog shell. Plugins
+ * add steps through the "onboarding.steps" slot; they land before security.
  */
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
@@ -50,14 +48,6 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "workflow",
     titleKey: "onboarding.workflowTitle",
     Component: WorkflowStep,
-  },
-  {
-    id: "ai",
-    titleKey: "onboarding.aiTitle",
-    Component: AiAssistantStep,
-    // Never shown when the admin has the assistant switched off, so users on
-    // an instance without it are not told about a feature they cannot use.
-    isRelevant: (context) => context.aiGloballyEnabled,
   },
   {
     id: "security",

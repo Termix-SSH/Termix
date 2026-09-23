@@ -38,20 +38,26 @@ vi.mock("@xterm/addon-fit", () => ({
   },
 }));
 
-vi.mock(
-  "../../../../../plugins/remote-desktop/src/frontend/GuacamoleDisplay.tsx",
-  () => ({
-    GuacamoleDisplay: () => <div data-testid="guacamole-display" />,
-  }),
-);
-
 import SharedSessionView from "../../../features/session-sharing/SharedSessionView";
+import {
+  registerSlotContribution,
+  resetActionRegistry,
+} from "@/shell/action-registry";
+import { REMOTE_DISPLAY_SLOT } from "@/features/remote-display/RemoteDisplay";
+import { setPermissionsForTesting } from "@/hooks/use-permissions";
 
 function setSearch(search: string) {
   window.history.pushState({}, "", `/?${search}`);
 }
 
 beforeEach(() => {
+  setPermissionsForTesting([]);
+  registerSlotContribution(REMOTE_DISPLAY_SLOT, {
+    actionId: "fixture.display",
+    titleKey: "x",
+    kind: "component",
+    component: () => <div data-testid="remote-display" />,
+  });
   api.resolveShareLink.mockReset();
   api.resolveShareLink.mockImplementation(async () => {
     throw new Error("resolveShareLink not mocked for this test");
@@ -60,6 +66,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetActionRegistry();
 });
 
 describe("SharedSessionView", () => {
@@ -109,7 +116,7 @@ describe("SharedSessionView", () => {
     });
   });
 
-  it("renders the guacamole display for a resolved rdp share", async () => {
+  it("renders the plugin remote display for a resolved rdp share", async () => {
     setSearch("view=shared&token=abc");
     api.resolveShareLink.mockResolvedValue({
       protocol: "rdp",
@@ -121,7 +128,7 @@ describe("SharedSessionView", () => {
     render(<SharedSessionView />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("guacamole-display")).toBeTruthy();
+      expect(screen.getByTestId("remote-display")).toBeTruthy();
     });
     expect(
       screen.getByText("sessionSharing.guestView.readOnlyBadge"),

@@ -1,1 +1,54 @@
-{}
+{
+  "permissions": {
+    "devices.view": {
+      "title": "View tailnet devices",
+      "description": "See the devices on the connected tailnet."
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "Tailscale API",
+      "devices": "Tailnet"
+    },
+    "apiKey": {
+      "label": "API key",
+      "description": "Used to list the devices on your tailnet. Works with a Tailscale or Headscale key.",
+      "placeholder": "tskey-api-... / hskey-api-..."
+    },
+    "apiBaseUrl": {
+      "label": "API base URL",
+      "description": "Leave empty for Tailscale. Set this to point at a Headscale instance.",
+      "placeholder": "https://api.tailscale.com/api/v2"
+    },
+    "devices": {
+      "label": "Device list",
+      "checking": "Checking the tailnet...",
+      "noKey": "No API key set yet.",
+      "error": "Could not reach the tailnet. Check the API key.",
+      "count": "{{count}} device reachable",
+      "count_other": "{{count}} devices reachable",
+      "refresh": "Check"
+    }
+  },
+  "nav": {
+    "tailscale": "Tailscale"
+  },
+  "hosts": {
+    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
+    "tailscaleDeviceSelect": "Select Tailscale device",
+    "tailscaleDeviceSelectPlaceholder": "Select a device...",
+    "tailscaleNoApiKey": "No Tailscale API key configured. Add one in Admin Settings to enable device discovery.",
+    "tailscaleDocsLink": "View docs",
+    "tailscaleLoadingDevices": "Loading devices...",
+    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
+    "tailscaleNoDevices": "No devices found in your tailnet.",
+    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale Authentication Required",
+    "tailscaleCheckDescription": "Tailscale SSH requires an additional check. Authenticate in your browser to continue.",
+    "tailscaleCheckOpenBrowser": "Open Browser to Authenticate",
+    "tailscaleCheckWaiting": "Waiting for Tailscale authentication...",
+    "tailscaleCheckTimeout": "Tailscale authentication timed out. Please try again."
+  }
+}

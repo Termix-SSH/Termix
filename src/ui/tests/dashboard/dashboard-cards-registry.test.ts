@@ -20,7 +20,7 @@ describe("registerDashboardCard seam", () => {
     registerDashboardCard({
       id: FAKE_CARD_ID,
       titleKey: "nav.fakePluginItem",
-      render: () => null,
+      component: () => null,
     });
 
     expect(registeredDashboardCardList().map((c) => c.id)).toContain(

@@ -31,7 +31,7 @@ export const PLUGIN_CATEGORIES = [
 
 export const PLUGIN_PLATFORMS = ["linux", "win32", "darwin"] as const;
 
-export const ACTION_CONTRIBUTION_KINDS = ["button"] as const;
+export const ACTION_CONTRIBUTION_KINDS = ["button", "component"] as const;
 export type ActionContributionKind = (typeof ACTION_CONTRIBUTION_KINDS)[number];
 
 const OPEN_FROM_VALUES = ["rail", "host-context-menu", "palette"] as const;
@@ -95,6 +95,17 @@ export interface PluginTabContribution {
   titleKey: string;
   icon: string;
   openFrom: string[];
+}
+
+/**
+ * A sidebar panel or dashboard card the plugin's frontend registers. Declared
+ * here so core knows who owns a saved view even while the plugin is off and
+ * its code never loaded.
+ */
+export interface PluginViewContribution {
+  id: string;
+  titleKey: string;
+  icon?: string;
 }
 
 /**
@@ -224,6 +235,13 @@ export interface PluginSettingsContribution {
 
 export interface PluginContributions {
   tabs?: PluginTabContribution[];
+  panels?: PluginViewContribution[];
+  dashboardCards?: PluginViewContribution[];
+  /**
+   * The frontend also runs on anonymous guest pages (shared-session and
+   * collab links), where it is activated with app.guest set.
+   */
+  guest?: boolean;
   actions?: PluginActionContribution[];
   actionSlots?: PluginActionSlot[];
   permissions?: PluginPermissionContribution[];
@@ -302,6 +320,9 @@ const ALLOWED_TOP_LEVEL = new Set([
 
 const ALLOWED_CONTRIBUTES = new Set([
   "tabs",
+  "panels",
+  "dashboardCards",
+  "guest",
   "actions",
   "actionSlots",
   "permissions",
@@ -650,6 +671,14 @@ function validateContributes(
   rejectUnknown(contributes, ALLOWED_CONTRIBUTES, '"contributes"', errors);
 
   validateTabs(contributes.tabs, errors);
+  validateViews(contributes.panels, "panels", errors);
+  validateViews(contributes.dashboardCards, "dashboardCards", errors);
+  if (
+    contributes.guest !== undefined &&
+    typeof contributes.guest !== "boolean"
+  ) {
+    errors.push('Field "contributes.guest" must be a boolean');
+  }
   validatePermissions(contributes.permissions, pluginId, errors);
   validateActions(contributes.actions, errors);
   validateActionSlots(contributes.actionSlots, errors);
@@ -881,6 +910,30 @@ function validateTabs(tabs: unknown, errors: string[]): void {
         );
       }
     });
+  });
+}
+
+function validateViews(views: unknown, field: string, errors: string[]): void {
+  if (views === undefined) return;
+  if (!Array.isArray(views)) {
+    errors.push(`Field "contributes.${field}" must be an array`);
+    return;
+  }
+  const seen = new Set<string>();
+  views.forEach((raw, index) => {
+    const where = `contributes.${field}[${index}]`;
+    if (!isPlainObject(raw)) {
+      errors.push(`${where} must be an object`);
+      return;
+    }
+    rejectUnknown(raw, ["id", "titleKey", "icon"], where, errors);
+    if (requireString(raw.id, `${where}.id`, errors)) {
+      if (seen.has(raw.id)) errors.push(`${where}.id duplicates "${raw.id}"`);
+      seen.add(raw.id);
+    }
+    requireString(raw.titleKey, `${where}.titleKey`, errors);
+    if (raw.icon !== undefined)
+      requireString(raw.icon, `${where}.icon`, errors);
   });
 }
 

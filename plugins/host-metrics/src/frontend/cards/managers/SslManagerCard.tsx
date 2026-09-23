@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { ShieldCheck, RefreshCw, Plus, X, Trash2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Button } from "@/components/button";
-import { managerPost } from "@/main-axios";
+import { managerPost } from "../../host-metrics-api";
 import {
   useManagerData,
   useManagerAction,

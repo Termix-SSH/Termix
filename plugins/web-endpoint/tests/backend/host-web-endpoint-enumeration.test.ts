@@ -39,7 +39,7 @@ const ENUMERATION_POINTS = [
   "src/ui/sidebar/host-export-payload.ts",
   "src/ui/sidebar/HostManagerData.ts",
   "src/ui/sidebar/HostEditorData.ts",
-  "src/ui/shell/tabUtils.tsx",
+  "src/ui/lib/host-to-ssh-host.ts",
 ];
 
 describe("web endpoint column enumeration", () => {

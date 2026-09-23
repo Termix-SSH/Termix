@@ -13,6 +13,7 @@ import {
   createCurrentPluginRepository,
 } from "../repositories/factory.js";
 import { getPluginRuntime } from "../../plugins/index.js";
+import { describePluginFrontend } from "../../plugins/assets.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import {
   findField,
@@ -46,6 +47,65 @@ const requireManagePlugins = permissionManager.requirePermission(
 
 /**
  * @openapi
+ * /plugins/public:
+ *   get:
+ *     summary: List the plugin frontends anonymous guest pages need
+ *     description: >
+ *       No auth. A shared-session or collab guest link has no session, yet its
+ *       page still draws surfaces a plugin provides (a remote desktop stream).
+ *       Returns only enabled plugins whose manifest sets contributes.guest,
+ *       with the fields the browser loader needs and nothing operational.
+ *     tags:
+ *       - Plugins
+ *     responses:
+ *       200:
+ *         description: Guest-capable plugins.
+ */
+router.get("/public", async (_req: Request, res: Response) => {
+  try {
+    const records = await createCurrentPluginRepository().listAll();
+    const { loader } = getPluginRuntime();
+    const plugins = records.flatMap((record) => {
+      if (record.state !== "enabled") return [];
+      const loaded = loader.get(record.id);
+      let manifest: {
+        contributes?: { guest?: boolean };
+        dependencies?: Record<string, string>;
+        optionalDependencies?: Record<string, string>;
+      };
+      try {
+        manifest = JSON.parse(record.manifestJson);
+      } catch {
+        return [];
+      }
+      if (manifest?.contributes?.guest !== true) return [];
+      return [
+        {
+          id: record.id,
+          name: record.name,
+          version: record.version,
+          enabled: true,
+          state: loaded?.state ?? record.state,
+          contributes: { guest: true },
+          dependencies: manifest.dependencies ?? {},
+          optionalDependencies: manifest.optionalDependencies ?? {},
+          ...describePluginFrontend(loaded),
+        },
+      ];
+    });
+    res.json(plugins);
+  } catch (error) {
+    databaseLogger.error(
+      "Failed to list guest plugins",
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "plugin_list_public" },
+    );
+    res.status(500).json({ error: "Failed to list plugins" });
+  }
+});
+
+/**
+ * @openapi
  * /plugins:
  *   get:
  *     summary: List installed plugins and their runtime state
@@ -61,6 +121,13 @@ const requireManagePlugins = permissionManager.requirePermission(
  *       do, what has been granted to it and why it failed are operational
  *       details, so capabilities, grants and lastError are included only for
  *       holders of admin.plugins.manage.
+ *
+ *       The frontend fields drive the browser's plugin loader: `frontend`
+ *       says there is a bundle at /plugin-assets/<id>/frontend.js,
+ *       `assetVersion` is its cache key, `css` says a stylesheet sits beside
+ *       it, and `locales` lists the languages it ships ("en" and xx_YY).
+ *       `dependencies` and `optionalDependencies` let the loader activate
+ *       frontends in the same order the server does.
  *     tags:
  *       - Plugins
  *     responses:
@@ -100,17 +167,23 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       let contributes: unknown = null;
       let capabilities: string[] = [];
       let icon: string | undefined;
+      let dependencies: Record<string, string> = {};
+      let optionalDependencies: Record<string, string> = {};
       try {
         const manifest = JSON.parse(record.manifestJson) as {
           contributes?: unknown;
           capabilities?: unknown;
           icon?: unknown;
+          dependencies?: Record<string, string>;
+          optionalDependencies?: Record<string, string>;
         };
         contributes = manifest?.contributes ?? null;
         capabilities = Array.isArray(manifest?.capabilities)
           ? (manifest.capabilities as string[])
           : [];
         icon = typeof manifest?.icon === "string" ? manifest.icon : undefined;
+        dependencies = manifest?.dependencies ?? {};
+        optionalDependencies = manifest?.optionalDependencies ?? {};
       } catch {
         contributes = null;
       }
@@ -123,6 +196,9 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         state: loaded?.state ?? record.state,
         contributes,
         icon,
+        dependencies,
+        optionalDependencies,
+        ...describePluginFrontend(loaded),
       };
 
       if (!canManage) return summary;

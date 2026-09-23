@@ -14,8 +14,8 @@ import {
   syncHostPluginsTab,
 } from "@/settings/host-plugins-tab";
 import {
-  getRegisteredHostEditorTab,
-  unregisterHostEditorTab,
+  getHostEditorSection,
+  unregisterHostEditorSection,
 } from "@/sidebar/HostManagerTabs";
 import { HostPluginSections } from "@/settings/HostPluginSections";
 
@@ -47,23 +47,23 @@ function plugin(overrides: Partial<PluginSummary> = {}): PluginSummary {
 }
 
 beforeEach(() => {
-  unregisterHostEditorTab(HOST_PLUGINS_TAB_ID);
+  unregisterHostEditorSection(HOST_PLUGINS_TAB_ID);
 });
 
 afterEach(() => {
   cleanup();
-  unregisterHostEditorTab(HOST_PLUGINS_TAB_ID);
+  unregisterHostEditorSection(HOST_PLUGINS_TAB_ID);
 });
 
 describe("syncHostPluginsTab", () => {
   it("registers the tab when a plugin contributes host settings", () => {
     expect(syncHostPluginsTab([plugin()])).toBe(true);
-    expect(getRegisteredHostEditorTab(HOST_PLUGINS_TAB_ID)).toBeDefined();
+    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeDefined();
   });
 
   it("registers nothing when no plugin contributes", () => {
     expect(syncHostPluginsTab([])).toBe(false);
-    expect(getRegisteredHostEditorTab(HOST_PLUGINS_TAB_ID)).toBeUndefined();
+    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeUndefined();
   });
 
   it("ignores a plugin with no host settings", () => {
@@ -81,11 +81,11 @@ describe("syncHostPluginsTab", () => {
 
   it("removes the tab once the last contributor goes", () => {
     syncHostPluginsTab([plugin()]);
-    expect(getRegisteredHostEditorTab(HOST_PLUGINS_TAB_ID)).toBeDefined();
+    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeDefined();
 
     syncHostPluginsTab([plugin({ enabled: false })]);
 
-    expect(getRegisteredHostEditorTab(HOST_PLUGINS_TAB_ID)).toBeUndefined();
+    expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeUndefined();
   });
 
   it("registers for a plugin declaring only an enable switch", () => {
@@ -112,8 +112,8 @@ describe("HostPluginSections", () => {
       />,
     );
 
-    expect(screen.getByText("plugins.docker.enableDocker.label")).toBeTruthy();
-    expect(screen.queryByText("plugins.docker.socket.label")).toBeNull();
+    expect(screen.getByText("docker:enableDocker.label")).toBeTruthy();
+    expect(screen.queryByText("docker:socket.label")).toBeNull();
   });
 
   it("shows the fields once the enable switch is on", () => {
@@ -125,7 +125,7 @@ describe("HostPluginSections", () => {
       />,
     );
 
-    expect(screen.getByText("plugins.docker.socket.label")).toBeTruthy();
+    expect(screen.getByText("docker:socket.label")).toBeTruthy();
   });
 
   it("reports a change against the right plugin", () => {

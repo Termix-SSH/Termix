@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Legg til vert",
+    "addGroup": "Legg til gruppe",
+    "addLink": "Legg til lenke",
+    "zoomIn": "Zoom inn",
+    "zoomOut": "Zoom ut",
+    "resetView": "Tilbakestill visning",
+    "selectHost": "Velg vert",
+    "chooseHost": "Velg en vert...",
+    "parentGroup": "Foreldregruppe",
+    "noGroup": "Ingen gruppe",
+    "groupName": "Gruppenavn",
+    "color": "Farge",
+    "source": "Kilde",
+    "target": "Mål",
+    "moveToGroup": "Flytt til gruppe",
+    "selectGroup": "Velg gruppe...",
+    "addConnection": "Legg til tilkobling",
+    "hostDetails": "Vertsdetaljer",
+    "removeFromGroup": "Fjern fra gruppen",
+    "addHostHere": "Legg til vert her",
+    "editGroup": "Rediger gruppe",
+    "delete": "Slett",
+    "add": "Legge til",
+    "create": "Skape",
+    "move": "Flytte",
+    "connect": "Koble til",
+    "createGroup": "Opprett gruppe",
+    "selectSourcePlaceholder": "Velg kilde...",
+    "selectTargetPlaceholder": "Velg mål...",
+    "invalidFile": "Ugyldig fil",
+    "hostAlreadyExists": "Verten er allerede i topologien",
+    "connectionExists": "Tilkoblingen finnes allerede",
+    "unknown": "Ukjent",
+    "name": "Navn",
+    "ip": "IP-adresse",
+    "status": "Status",
+    "failedToAddNode": "Kunne ikke legge til node",
+    "sourceDifferentFromTarget": "Kilde og mål må være forskjellige",
+    "exportJSON": "Eksporter JSON",
+    "importJSON": "Importer JSON",
+    "terminal": "Terminal",
+    "fileManager": "Filbehandler",
+    "tunnel": "Tunnel",
+    "docker": "Dokker",
+    "serverStats": "Vertsmålinger",
+    "hostMetrics": "Vertsmålinger",
+    "noNodes": "Ingen noder ennå"
+  },
+  "nav": {
+    "networkGraph": "Nettverksgraf"
+  },
+  "dashboard": {
+    "networkGraph": "Nettverksgraf"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} noder"
+  }
+}

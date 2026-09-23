@@ -92,7 +92,9 @@ vi.mock("../../../utils/permission-manager.js", () => ({
 }));
 
 vi.mock("../../../plugins/index.js", () => ({
-  getPluginRuntime: () => ({ loader: { list: () => [] } }),
+  getPluginRuntime: () => ({
+    loader: { list: () => [], get: () => undefined },
+  }),
   activatePlugin: vi.fn(),
   deactivatePlugin: vi.fn(),
 }));
@@ -178,6 +180,50 @@ describe("plugins route", () => {
   afterEach(async () => {
     await new Promise<void>((resolve) => server?.close(() => resolve()));
     server = null;
+  });
+
+  describe("GET /plugins/public", () => {
+    it("lists only enabled plugins that opt into guest pages", async () => {
+      state.plugins.set(
+        "guest-plugin",
+        makePlugin({
+          id: "guest-plugin",
+          manifestJson: JSON.stringify({
+            capabilities: ["hosts:read"],
+            contributes: { guest: true },
+          }),
+        }),
+      );
+      state.plugins.set(
+        "off-guest",
+        makePlugin({
+          id: "off-guest",
+          state: "disabled",
+          manifestJson: JSON.stringify({ contributes: { guest: true } }),
+        }),
+      );
+      state.plugins.set("sample-plugin", makePlugin());
+
+      const res = await fetch(`${baseUrl}/plugins/public`);
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body.map((plugin: { id: string }) => plugin.id)).toEqual([
+        "guest-plugin",
+      ]);
+      expect(body[0].contributes).toEqual({ guest: true });
+      expect(body[0]).not.toHaveProperty("capabilities");
+      expect(body[0]).not.toHaveProperty("lastError");
+    });
+
+    it("skips a plugin whose manifest does not parse", async () => {
+      state.plugins.set(
+        "broken",
+        makePlugin({ id: "broken", manifestJson: "{" }),
+      );
+      const res = await fetch(`${baseUrl}/plugins/public`);
+      expect(await res.json()).toEqual([]);
+    });
   });
 
   it("lists a plugin's declared and granted capabilities", async () => {
@@ -335,6 +381,12 @@ describe("plugins route", () => {
         enabled: true,
         state: "enabled",
         contributes: null,
+        dependencies: {},
+        optionalDependencies: {},
+        frontend: false,
+        css: false,
+        assetVersion: null,
+        locales: [],
       });
     });
 

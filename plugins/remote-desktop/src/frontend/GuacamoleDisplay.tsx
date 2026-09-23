@@ -10,8 +10,9 @@ import {
 } from "react";
 import Guacamole from "guacamole-common-js";
 import { Upload } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { getGuacamoleToken, isElectron } from "@/main-axios.ts";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { isElectron } from "@/main-axios";
+import { getGuacamoleToken } from "./guacamole-api";
 import { getBasePath } from "@/lib/base-path.ts";
 import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
 import {

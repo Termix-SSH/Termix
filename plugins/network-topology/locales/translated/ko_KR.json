@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "호스트 추가",
+    "addGroup": "그룹 추가",
+    "addLink": "링크 추가",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "resetView": "보기 초기화",
+    "selectHost": "호스트 선택",
+    "chooseHost": "호스트 선택...",
+    "parentGroup": "상위 그룹",
+    "noGroup": "그룹 없음",
+    "groupName": "그룹 이름",
+    "color": "색상",
+    "source": "소스",
+    "target": "대상",
+    "moveToGroup": "그룹으로 이동",
+    "selectGroup": "그룹 선택...",
+    "addConnection": "연결 추가",
+    "hostDetails": "호스트 세부 정보",
+    "removeFromGroup": "그룹에서 제거",
+    "addHostHere": "여기에 호스트 추가",
+    "editGroup": "그룹 편집",
+    "delete": "삭제",
+    "add": "추가",
+    "create": "생성",
+    "move": "이동",
+    "connect": "연결",
+    "createGroup": "그룹 생성",
+    "selectSourcePlaceholder": "소스 선택...",
+    "selectTargetPlaceholder": "대상 선택...",
+    "invalidFile": "잘못된 파일",
+    "hostAlreadyExists": "호스트가 이미 토폴로지에 있습니다.",
+    "connectionExists": "연결이 이미 존재합니다.",
+    "unknown": "알 수 없음",
+    "name": "이름",
+    "ip": "IP",
+    "status": "상태",
+    "failedToAddNode": "노드를 추가하지 못했습니다.",
+    "sourceDifferentFromTarget": "소스와 대상은 달라야 합니다.",
+    "exportJSON": "JSON 내보내기",
+    "importJSON": "JSON 가져오기",
+    "terminal": "터미널",
+    "fileManager": "파일 관리자",
+    "tunnel": "터널",
+    "docker": "Docker",
+    "serverStats": "호스트 메트릭",
+    "hostMetrics": "호스트 메트릭",
+    "noNodes": "아직 노드 없음"
+  },
+  "nav": {
+    "networkGraph": "네트워크 그래프"
+  },
+  "dashboard": {
+    "networkGraph": "네트워크 그래프"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}}개 노드"
+  }
+}

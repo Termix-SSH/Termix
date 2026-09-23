@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getHostMetricsLayout, saveHostMetricsLayout } from "@/main-axios";
+import {
+  getHostMetricsLayout,
+  saveHostMetricsLayout,
+} from "../host-metrics-api";
 import type { HostMetricsLayout } from "@/types/host-metrics";
 
 const SAVE_DEBOUNCE_MS = 800;

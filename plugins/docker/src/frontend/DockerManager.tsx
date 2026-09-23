@@ -15,8 +15,9 @@ import {
   Search,
 } from "lucide-react";
 
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
+import { logActivity, getSSHHosts } from "@/main-axios";
 import {
   connectDockerSession,
   disconnectDockerSession,
@@ -25,9 +26,7 @@ import {
   keepaliveDockerSession,
   verifyDockerTOTP,
   verifyDockerWarpgate,
-  logActivity,
-  getSSHHosts,
-} from "@/main-axios.ts";
+} from "./docker-api";
 import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerTable } from "./components/ContainerTable.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";

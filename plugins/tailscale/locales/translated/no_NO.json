@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Dette må være en Unix-bruker som Tailscale-identiteten din er gitt i tailnets SSH ACL, ikke nødvendigvis root.",
+    "tailscaleDeviceSelect": "Velg Tailscale-enhet",
+    "tailscaleDeviceSelectPlaceholder": "Velg en enhet...",
+    "tailscaleNoApiKey": "Ingen Tailscale API-nøkkel konfigurert. Legg til en i administratorinnstillingene for å aktivere enhetsgjenkjenning.",
+    "tailscaleDocsLink": "Vis dokumenter",
+    "tailscaleLoadingDevices": "Laster inn enheter ...",
+    "tailscaleDeviceLoadFailed": "Kunne ikke laste inn Tailscale-enheter. Sjekk API-URL-en og nettverkstilkoblingen.",
+    "tailscaleNoDevices": "Ingen enheter funnet i halenettverket ditt.",
+    "tailscaleDeviceAutoFill": "Hvis du velger en enhet, fylles verts-IP-adressen automatisk ut."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale-autentisering kreves",
+    "tailscaleCheckDescription": "Tailscale SSH krever en ekstra sjekk. Autentiser i nettleseren din for å fortsette.",
+    "tailscaleCheckOpenBrowser": "Åpne nettleseren for å autentisere",
+    "tailscaleCheckWaiting": "Venter på Tailscale-autentisering...",
+    "tailscaleCheckTimeout": "Tailscale-autentiseringen er tidsavbrutt. Prøv på nytt."
+  }
+}

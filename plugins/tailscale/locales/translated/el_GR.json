@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Αυτός πρέπει να είναι χρήστης Unix. Η ταυτότητα Tailscale σας έχει εκχωρηθεί στο SSH ACL του tailnet, όχι απαραίτητα root.",
+    "tailscaleDeviceSelect": "Επιλογή συσκευής κλίμακας ουράς",
+    "tailscaleDeviceSelectPlaceholder": "Επιλέξτε μια συσκευή...",
+    "tailscaleNoApiKey": "Δεν έχει ρυθμιστεί κλειδί API Tailscale. Προσθέστε ένα στις Ρυθμίσεις διαχειριστή για να ενεργοποιήσετε την ανακάλυψη συσκευών.",
+    "tailscaleDocsLink": "Προβολή εγγράφων",
+    "tailscaleLoadingDevices": "Φόρτωση συσκευών...",
+    "tailscaleDeviceLoadFailed": "Αποτυχία φόρτωσης συσκευών Tailscale. Ελέγξτε τη διεύθυνση URL του API και τη σύνδεση δικτύου.",
+    "tailscaleNoDevices": "Δεν βρέθηκαν συσκευές στο tailnet σας.",
+    "tailscaleDeviceAutoFill": "Η επιλογή μιας συσκευής θα συμπληρώσει αυτόματα τη διεύθυνση IP του κεντρικού υπολογιστή."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Απαιτείται έλεγχος ταυτότητας κλίμακας ουράς",
+    "tailscaleCheckDescription": "Το Tailscale SSH απαιτεί έναν επιπλέον έλεγχο. Επαληθεύστε τον κωδικό σας στο πρόγραμμα περιήγησής σας για να συνεχίσετε.",
+    "tailscaleCheckOpenBrowser": "Άνοιγμα προγράμματος περιήγησης για έλεγχο ταυτότητας",
+    "tailscaleCheckWaiting": "Αναμονή για έλεγχο ταυτότητας Tailscale...",
+    "tailscaleCheckTimeout": "Το χρονικό όριο ελέγχου ταυτότητας κλίμακας έληξε. Δοκιμάστε ξανά."
+  }
+}

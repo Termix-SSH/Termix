@@ -263,6 +263,33 @@
             }
           }
         },
+        "guest": { "type": "boolean" },
+        "panels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "icon": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "dashboardCards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "titleKey"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "titleKey": { "type": "string", "minLength": 1 },
+              "icon": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
         "actions": {
           "type": "array",
           "items": {
@@ -296,7 +323,7 @@
               },
               "kind": {
                 "type": "string",
-                "enum": ["button"]
+                "enum": ["button", "component"]
               }
             }
           }
@@ -317,7 +344,7 @@
                 "minItems": 1,
                 "items": {
                   "type": "string",
-                  "enum": ["button"]
+                  "enum": ["button", "component"]
                 }
               },
               "descriptionKey": {

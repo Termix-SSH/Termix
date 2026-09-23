@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@/lib/error-message.js";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   Boxes,
@@ -76,7 +76,7 @@ import {
   type FleetInventoryEntry,
   type FleetPackageAction,
   type FleetShareHostResult,
-} from "@/api/fleets-api";
+} from "./fleets-api";
 import type { SSHHost } from "@/types/index";
 
 const SHARE_PERMISSION_LEVELS: SharePermissionLevel[] = [

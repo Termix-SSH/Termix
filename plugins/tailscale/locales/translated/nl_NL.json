@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Dit moet een Unix-gebruiker zijn die aan uw Tailscale-identiteit is toegekend in de SSH-toegangsregel van het tailnet, niet per se root.",
+    "tailscaleDeviceSelect": "Selecteer het Tailscale-apparaat",
+    "tailscaleDeviceSelectPlaceholder": "Selecteer een apparaat...",
+    "tailscaleNoApiKey": "Er is geen Tailscale API-sleutel geconfigureerd. Voeg er een toe in de beheerdersinstellingen om apparaatdetectie in te schakelen.",
+    "tailscaleDocsLink": "Documenten bekijken",
+    "tailscaleLoadingDevices": "Apparaten laden...",
+    "tailscaleDeviceLoadFailed": "Het laden van Tailscale-apparaten is mislukt. Controleer de API-URL en de netwerkverbinding.",
+    "tailscaleNoDevices": "Geen apparaten gevonden in uw achternet.",
+    "tailscaleDeviceAutoFill": "Als je een apparaat selecteert, wordt het IP-adres van de host automatisch ingevuld."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Tailscale-authenticatie vereist",
+    "tailscaleCheckDescription": "Tailscale SSH vereist een extra controle. Authenticeer in uw browser om verder te gaan.",
+    "tailscaleCheckOpenBrowser": "Open de browser om te authenticeren.",
+    "tailscaleCheckWaiting": "Wachten op Tailscale-authenticatie...",
+    "tailscaleCheckTimeout": "De authenticatie bij Tailscale is mislukt vanwege een time-out. Probeer het opnieuw."
+  }
+}

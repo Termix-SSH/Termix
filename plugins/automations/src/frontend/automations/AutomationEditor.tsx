@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@/lib/error-message.js";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";

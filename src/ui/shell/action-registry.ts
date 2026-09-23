@@ -21,7 +21,7 @@
  * subscribe/getSnapshot plumbing for useSyncExternalStore.
  */
 
-import type { LucideIcon } from "lucide-react";
+import type { ComponentType } from "react";
 
 /**
  * Args are unknown[] because the registry never inspects them: a slot owner
@@ -49,9 +49,18 @@ export interface SlotContribution {
   /** Action invoked when this contribution is activated. */
   actionId: string;
   titleKey: string;
-  icon?: LucideIcon;
+  /** Secondary text, for slots that show one (onboarding cards). */
+  descriptionKey?: string;
+  icon?: ComponentType<{ className?: string }>;
   /** Checked against the slot's accepts. Defaults to "button". */
   kind?: string;
+  /**
+   * For kind "component": rendered by the slot owner with its own props,
+   * e.g. a panel docked into the terminal.
+   */
+  component?: ComponentType<Record<string, unknown>>;
+  /** Extra condition, evaluated against the slot owner's context. */
+  when?: (context: Record<string, unknown>) => boolean;
   pluginId?: string;
   /** Lower sorts first. Ties break on actionId so ordering is stable. */
   order?: number;
@@ -83,13 +92,30 @@ export function registerAction(
   id: string,
   handler: ActionHandler,
   options: { permission?: string; pluginId?: string } = {},
-): void {
-  actions.set(id, { id, handler, ...options });
+): () => void {
+  const action = { id, handler, ...options };
+  actions.set(id, action);
   emit();
+  return () => {
+    if (actions.get(id) === action) {
+      actions.delete(id);
+      emit();
+    }
+  };
 }
 
 export function unregisterAction(id: string): void {
   if (actions.delete(id)) emit();
+}
+
+/** Every registered action. */
+export function listActions(): RegisteredAction[] {
+  return [...actions.values()];
+}
+
+/** Whether a handler is registered, i.e. its plugin is running. */
+export function isActionRegistered(id: string): boolean {
+  return actions.has(id);
 }
 
 /** The permission gating an action, if it declared one. */
@@ -114,9 +140,20 @@ export async function invokeAction(
   return (action.handler as (...a: unknown[]) => unknown)(...args);
 }
 
-export function declareActionSlot(slot: ActionSlotDefinition): void {
+export function declareActionSlot(slot: ActionSlotDefinition): () => void {
   slots.set(slot.id, slot);
   emit();
+  return () => {
+    if (slots.get(slot.id) === slot) {
+      slots.delete(slot.id);
+      emit();
+    }
+  };
+}
+
+/** Whether a slot is declared, i.e. its owner is running. */
+export function isActionSlotDeclared(slotId: string): boolean {
+  return slots.has(slotId);
 }
 
 export function undeclareActionSlot(slotId: string): void {
@@ -133,7 +170,7 @@ export function undeclareActionSlot(slotId: string): void {
 export function registerSlotContribution(
   slotId: string,
   contribution: SlotContribution,
-): void {
+): () => void {
   const slot = slots.get(slotId);
   const kind = contribution.kind ?? "button";
 
@@ -141,7 +178,7 @@ export function registerSlotContribution(
     console.warn(
       `[actions] slot "${slotId}" does not accept "${kind}" (accepts: ${slot.accepts.join(", ")})`,
     );
-    return;
+    return () => {};
   }
 
   let forSlot = contributions.get(slotId);
@@ -149,8 +186,14 @@ export function registerSlotContribution(
     forSlot = new Map();
     contributions.set(slotId, forSlot);
   }
-  forSlot.set(contribution.actionId, { ...contribution, kind });
+  const stored = { ...contribution, kind };
+  forSlot.set(contribution.actionId, stored);
   emit();
+  return () => {
+    if (contributions.get(slotId)?.get(contribution.actionId) === stored) {
+      unregisterSlotContribution(slotId, contribution.actionId);
+    }
+  };
 }
 
 export function unregisterSlotContribution(

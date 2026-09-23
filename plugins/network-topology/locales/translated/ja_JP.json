@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "ホストを追加",
+    "addGroup": "グループを追加",
+    "addLink": "リンクを追加",
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "resetView": "表示をリセット",
+    "selectHost": "ホストを選択",
+    "chooseHost": "ホストを選択...",
+    "parentGroup": "親グループ",
+    "noGroup": "グループなし",
+    "groupName": "グループ名",
+    "color": "色",
+    "source": "ソース",
+    "target": "ターゲット",
+    "moveToGroup": "グループに移動",
+    "selectGroup": "グループを選択...",
+    "addConnection": "接続を追加",
+    "hostDetails": "ホスト詳細",
+    "removeFromGroup": "グループから削除",
+    "addHostHere": "ここにホストを追加",
+    "editGroup": "グループを編集",
+    "delete": "削除",
+    "add": "追加",
+    "create": "作成",
+    "move": "移動",
+    "connect": "接続",
+    "createGroup": "グループを作成",
+    "selectSourcePlaceholder": "ソースを選択...",
+    "selectTargetPlaceholder": "ターゲットを選択...",
+    "invalidFile": "無効なファイル",
+    "hostAlreadyExists": "ホストはトポロジーに既に存在します",
+    "connectionExists": "接続は既に存在しています",
+    "unknown": "不明",
+    "name": "名前",
+    "ip": "IP",
+    "status": "ステータス",
+    "failedToAddNode": "ノードの追加に失敗しました",
+    "sourceDifferentFromTarget": "ソースとターゲットは異なる必要があります",
+    "exportJSON": "JSON エクスポート",
+    "importJSON": "JSON インポート",
+    "terminal": "ターミナル",
+    "fileManager": "ファイルマネージャー",
+    "tunnel": "トンネル",
+    "docker": "Docker",
+    "serverStats": "ホストメトリクス",
+    "hostMetrics": "ホストメトリクス",
+    "noNodes": "ノードはまだありません"
+  },
+  "nav": {
+    "networkGraph": "ネットワークグラフ"
+  },
+  "dashboard": {
+    "networkGraph": "ネットワークグラフ"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} ノード"
+  }
+}

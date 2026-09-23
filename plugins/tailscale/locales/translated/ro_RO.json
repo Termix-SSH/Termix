@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Acesta trebuie să fie un utilizator Unix căruia îi este acordată identitatea Tailscale în ACL-ul SSH al rețelei tailnet, nu neapărat root.",
+    "tailscaleDeviceSelect": "Selectați dispozitivul Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Selectați un dispozitiv...",
+    "tailscaleNoApiKey": "Nu este configurată nicio cheie API Tailscale. Adăugați una în Setările de administrare pentru a activa descoperirea dispozitivelor.",
+    "tailscaleDocsLink": "Vizualizați documentele",
+    "tailscaleLoadingDevices": "Se încarcă dispozitivele...",
+    "tailscaleDeviceLoadFailed": "Nu s-au putut încărca dispozitivele Tailscale. Verificați adresa URL API și conexiunea la rețea.",
+    "tailscaleNoDevices": "Nu s-au găsit dispozitive în rețeaua ta de coadă.",
+    "tailscaleDeviceAutoFill": "Selectarea unui dispozitiv va completa automat adresa IP a gazdei."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Autentificare la scară mică necesară",
+    "tailscaleCheckDescription": "SSH-ul Tailscale necesită o verificare suplimentară. Autentificați-vă în browser pentru a continua.",
+    "tailscaleCheckOpenBrowser": "Deschideți browserul pentru autentificare",
+    "tailscaleCheckWaiting": "Se așteaptă autentificarea Tailscale...",
+    "tailscaleCheckTimeout": "Autentificarea la scară mică a expirat. Vă rugăm să încercați din nou."
+  }
+}

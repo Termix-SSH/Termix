@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Obszary robocze",
+        "saveCurrent": "Zapisz bieżące",
+        "saveCurrentTitle": "Zapisz bieżący obszar roboczy",
+        "saveCurrentDescription": "Zapisz każdą otwartą kartę, podzielony układ i rozmieszczenie paneli jako nowy nazwany obszar roboczy.",
+        "nameLabel": "Nazwa",
+        "namePlaceholder": "np. Debugowanie produkcji",
+        "nameRequired": "Nazwa obszaru roboczego jest wymagana",
+        "colorLabel": "Kolor",
+        "workspaceCreated": "Zapisano obszar roboczy",
+        "workspaceUpdated": "Zaktualizowano obszar roboczy",
+        "workspaceDeleted": "Usunięto obszar roboczy",
+        "workspaceDuplicated": "Zduplikowano obszar roboczy",
+        "saveFailed": "Nie udało się zapisać obszaru roboczego",
+        "updateFailed": "Nie udało się zaktualizować obszaru roboczego",
+        "deleteFailed": "Nie udało się usunąć obszaru roboczego",
+        "duplicateFailed": "Nie udało się zduplikować obszaru roboczego",
+        "loadFailed": "Nie udało się załadować obszarów roboczych",
+        "applyFailed": "Nie udało się zastosować obszaru roboczego",
+        "deleteWorkspaceTitle": "Usuń obszar roboczy",
+        "deleteWorkspaceDescription": "Czy na pewno chcesz usunąć „{{name}}”? Tego nie można cofnąć.",
+        "noWorkspaces": "Brak zapisanych obszarów roboczych. Zapisz aktualny układ kart, aby rozpocząć.",
+        "tabCount": "{{count}} karta",
+        "tabCount_other": "{{count}} karty",
+        "apply": "Zastosuj",
+        "applyConfirmTitle": "Zastosuj obszar roboczy",
+        "applyConfirmDescription": "Zastosowanie „{{name}}” zamknie bieżące karty i zastąpi je układem zapisanym w tym obszarze roboczym. Niezapisane zmiany bieżącego układu zostaną utracone.",
+        "applyConfirmButton": "Zastosuj obszar roboczy",
+        "updateWithCurrent": "Zaktualizuj bieżącym",
+        "updateWithCurrentConfirm": "Nadpisać „{{name}}” obecnym układem kart?",
+        "rename": "Zmień nazwę",
+        "duplicate": "Duplikuj",
+        "duplicateNameSuffix": "{{name}} (kopia)",
+        "setDefault": "Ustaw jako domyślne",
+        "unsetDefault": "Usuń jako domyślne",
+        "defaultBadge": "Domyślny",
+        "lastSession": "Ostatnia sesja",
+        "lastSessionDescription": "Automatycznie aktualizowany o najnowszy układ kart. Zastosuj go, aby przywrócić to, co było otwarte.",
+        "lastUsed": "Ostatnio użyte {{time}}",
+        "neverUsed": "Nigdy nie zastosowano",
+        "tabsSkipped": "Zastosowano obszar roboczy, pominięto {{count}} kart (host już nie istnieje): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Obszary robocze"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Obszary robocze",
+    "workflow_workspaces_desc": "Zapisz zestaw otwartych kart i otwórz cały układ później."
+  }
+}

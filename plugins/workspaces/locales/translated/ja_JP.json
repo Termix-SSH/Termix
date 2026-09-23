@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "ワークスペース",
+        "saveCurrent": "現在の状態を保存",
+        "saveCurrentTitle": "現在のワークスペースを保存",
+        "saveCurrentDescription": "開いているすべてのタブ、分割レイアウト、ペイン配置を、新しい名前付きワークスペースとして保存します。",
+        "nameLabel": "名前",
+        "namePlaceholder": "例：本番環境のデバッグ",
+        "nameRequired": "ワークスペース名は必須です。",
+        "colorLabel": "色",
+        "workspaceCreated": "ワークスペースが保存されました",
+        "workspaceUpdated": "ワークスペースが更新されました",
+        "workspaceDeleted": "ワークスペースが削除されました",
+        "workspaceDuplicated": "ワークスペースが複製されました",
+        "saveFailed": "ワークスペースの保存に失敗しました",
+        "updateFailed": "ワークスペースの更新に失敗しました",
+        "deleteFailed": "ワークスペースの削除に失敗しました",
+        "duplicateFailed": "ワークスペースの複製に失敗しました",
+        "loadFailed": "ワークスペースの読み込みに失敗しました",
+        "applyFailed": "ワークスペースの適用に失敗しました",
+        "deleteWorkspaceTitle": "ワークスペースを削除",
+        "deleteWorkspaceDescription": "「{{name}}」を削除してもよろしいですか？この操作は元に戻せません。",
+        "noWorkspaces": "まだワークスペースが保存されていません。まずは現在のタブの配置を保存してください。",
+        "tabCount": "{{count}} タブ",
+        "tabCount_other": "{{count}} タブ",
+        "apply": "適用する",
+        "applyConfirmTitle": "ワークスペースを適用する",
+        "applyConfirmDescription": "\"{{name}}\" を適用すると、現在のタブが閉じられ、このワークスペースに保存されているレイアウトに置き換えられます。現在のレイアウトに対する未保存の変更は失われます。",
+        "applyConfirmButton": "ワークスペースを適用する",
+        "updateWithCurrent": "最新情報に更新",
+        "updateWithCurrentConfirm": "「{{name}}」を現在のタブ配列で上書きしますか？",
+        "rename": "名前を変更する",
+        "duplicate": "重複",
+        "duplicateNameSuffix": "{{name}} (コピー)",
+        "setDefault": "デフォルトとして設定",
+        "unsetDefault": "デフォルトから削除",
+        "defaultBadge": "デフォルト",
+        "lastSession": "最終セッション",
+        "lastSessionDescription": "最新のタブ配置に合わせて自動的に更新されます。適用すると、以前開いていたウィンドウが復元されます。",
+        "lastUsed": "最後に使用されたのは {{time}} です。",
+        "neverUsed": "一度も応募したことがない",
+        "tabsSkipped": "ワークスペースが適用されました — {{count}} タブがスキップされました (ホストが存在しなくなりました): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "ワークスペース"
+  },
+  "onboarding": {
+    "workflow_workspaces": "ワークスペース",
+    "workflow_workspaces_desc": "開いているタブのセットを保存し、後でレイアウト全体を再度開くことができます。"
+  }
+}

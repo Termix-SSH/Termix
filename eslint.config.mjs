@@ -129,21 +129,21 @@ export default tseslint.config([
     },
   },
   {
-    // The shell still imports plugin components directly (the terminal tab,
-    // the Guacamole app, the Proxmox dialog). There is no frontend plugin
-    // loader yet, so there is nothing to move them to: A7 builds the app
-    // object that registers these surfaces and this becomes an error.
-    files: ["src/ui/**/*.{ts,tsx}"],
+    // The shell never imports a plugin. It reaches plugins only through the
+    // registries their frontends fill via the app object (A7). This block
+    // also carries the backend rule for src/ui files, because flat config
+    // replaces a rule's options rather than merging them.
+    files: ["src/ui/**/*.{ts,tsx}", "src/main.tsx"],
     ignores: ["src/ui/tests/**"],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           patterns: [
             {
-              group: ["**/plugins/*/src/frontend/**"],
+              group: ["**/plugins/*/src/**", "**/plugins/*/dist/**"],
               message:
-                "The shell should not import plugin components directly. A7 replaces these with registrations through the app object.",
+                "The shell does not import plugins. Register the surface through the app object and read it from a registry.",
             },
           ],
         },

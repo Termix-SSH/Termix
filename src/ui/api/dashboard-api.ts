@@ -13,15 +13,8 @@ export interface UptimeInfo {
 export interface RecentActivityItem {
   id: number;
   userId: string;
-  type:
-    | "terminal"
-    | "file_manager"
-    | "server_stats"
-    | "tunnel"
-    | "docker"
-    | "telnet"
-    | "vnc"
-    | "rdp";
+  /** Core records file_manager and tunnel; plugin tabs record their own. */
+  type: string;
   hostId: number;
   hostName: string;
   timestamp: string;
@@ -50,15 +43,7 @@ export async function getRecentActivity(
 }
 
 export async function logActivity(
-  type:
-    | "terminal"
-    | "file_manager"
-    | "server_stats"
-    | "tunnel"
-    | "docker"
-    | "rdp"
-    | "vnc"
-    | "telnet",
+  type: string,
   hostId: number,
   hostName: string,
 ): Promise<{ message: string; id: number | string }> {

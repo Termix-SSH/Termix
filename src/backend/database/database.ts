@@ -30,6 +30,8 @@ import syncRoutes from "./routes/sync.js";
 import pluginApiRoutes from "./routes/plugin-api-routes.js";
 import { attachPluginWebSockets } from "../plugins/ws.js";
 import pluginRoutes from "./routes/plugins.js";
+import { createPluginAssetsRouter } from "../plugins/assets.js";
+import { getPluginRuntime } from "../plugins/index.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
@@ -1779,6 +1781,10 @@ app.use("/secret-sources", secretSourceRoutes);
 app.use("/", notificationChannelsRoutes);
 app.use("/sync", syncRoutes);
 app.use("/plugins", pluginRoutes);
+app.use(
+  "/plugin-assets",
+  createPluginAssetsRouter((id) => getPluginRuntime().loader.get(id)),
+);
 app.use("/plugin-api", authenticateJWT, pluginApiRoutes);
 
 const frontendDistPaths = [

@@ -30,17 +30,20 @@ import {
   Share2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
+import { isSessionTabType } from "@/shell/tab-registry";
 import { isElectron } from "@/lib/electron";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
 
-const CONNECTION_TAB_TYPES: TabType[] = [
-  "terminal",
-  "local-terminal",
-  "rdp",
-  "vnc",
-  "telnet",
-];
+/**
+ * Tabs holding a live connection that can be refreshed and shared: local
+ * terminals and registered session tabs. Serial sessions are not shareable.
+ */
+function isConnectionTab(type: TabType): boolean {
+  return (
+    type === "local-terminal" || (type !== "serial" && isSessionTabType(type))
+  );
+}
 
 export function TabBar({
   tabs,
@@ -453,7 +456,7 @@ export function TabBar({
                   <div
                     className={`flex items-center gap-0.5 ml-1 ${active ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100"}`}
                   >
-                    {CONNECTION_TAB_TYPES.includes(tab.type) && (
+                    {isConnectionTab(tab.type) && (
                       <button
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
@@ -466,7 +469,7 @@ export function TabBar({
                         <RefreshCw className="size-3" />
                       </button>
                     )}
-                    {CONNECTION_TAB_TYPES.includes(tab.type) && onOpenShare && (
+                    {isConnectionTab(tab.type) && onOpenShare && (
                       <button
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
@@ -674,7 +677,7 @@ export function TabBar({
                 {ctxTab.label}
               </div>
               <div className="h-px bg-border my-1" />
-              {CONNECTION_TAB_TYPES.includes(ctxTab.type) && (
+              {isConnectionTab(ctxTab.type) && (
                 <button
                   className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
                   onClick={() => {

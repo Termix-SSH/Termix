@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Host } from "@/types/ui-types";
+import { registerHostAction } from "@/sidebar/host-contributions";
 import { LOCAL_ADAPTIVE_PREFERENCES_KEY } from "@/lib/local-adaptive-preferences";
 
 const { markTabSurfaceUsedMock, preloadTabSurfaceMock } = vi.hoisted(() => ({
@@ -154,12 +155,26 @@ describe("HostItem density parity", () => {
   );
 
   it.each(["comfortable", "compact"] as const)(
-    "exposes RDP, VNC, and Telnet quick-launch buttons in %s density",
+    "exposes plugin connect actions as quick-launch buttons in %s density",
     (density) => {
-      renderHostItem(density);
-      expect(screen.getByTitle("hosts.connectRdp")).toBeTruthy();
-      expect(screen.getByTitle("hosts.connectVnc")).toBeTruthy();
-      expect(screen.getByTitle("hosts.connectTelnet")).toBeTruthy();
+      const Icon = (() => null) as never;
+      const disposers = ["desk", "screen"].map((id) =>
+        registerHostAction({
+          id,
+          titleKey: `fixture.${id}`,
+          icon: Icon,
+          kind: "connect",
+          tabType: id,
+          when: () => true,
+        }),
+      );
+      try {
+        renderHostItem(density);
+        expect(screen.getByTitle("fixture.desk")).toBeTruthy();
+        expect(screen.getByTitle("fixture.screen")).toBeTruthy();
+      } finally {
+        disposers.forEach((dispose) => dispose());
+      }
     },
   );
 

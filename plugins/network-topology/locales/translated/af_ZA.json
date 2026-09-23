@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Voeg gasheer by",
+    "addGroup": "Voeg Groep by",
+    "addLink": "Voeg skakel by",
+    "zoomIn": "Inzoem",
+    "zoomOut": "Uitzoom",
+    "resetView": "Herstel aansig",
+    "selectHost": "Kies gasheer",
+    "chooseHost": "Kies 'n gasheer...",
+    "parentGroup": "Ouergroep",
+    "noGroup": "Geen Groep",
+    "groupName": "Groepnaam",
+    "color": "Kleur",
+    "source": "Bron",
+    "target": "Teiken",
+    "moveToGroup": "Skuif na Groep",
+    "selectGroup": "Kies groep...",
+    "addConnection": "Voeg verbinding by",
+    "hostDetails": "Gasheerbesonderhede",
+    "removeFromGroup": "Verwyder uit Groep",
+    "addHostHere": "Voeg gasheer hier by",
+    "editGroup": "Wysig Groep",
+    "delete": "Vee uit",
+    "add": "Voeg by",
+    "create": "Skep",
+    "move": "Beweeg",
+    "connect": "Verbind",
+    "createGroup": "Skep Groep",
+    "selectSourcePlaceholder": "Kies Bron...",
+    "selectTargetPlaceholder": "Kies Teiken...",
+    "invalidFile": "Ongeldige lêer",
+    "hostAlreadyExists": "Gasheer is reeds in die topologie",
+    "connectionExists": "Verbinding bestaan reeds",
+    "unknown": "Onbekend",
+    "name": "Naam",
+    "ip": "IP-adres",
+    "status": "Status",
+    "failedToAddNode": "Kon nie nodus byvoeg nie",
+    "sourceDifferentFromTarget": "Bron en teiken moet verskillend wees",
+    "exportJSON": "Voer JSON uit",
+    "importJSON": "Voer JSON in",
+    "terminal": "Terminaal",
+    "fileManager": "Lêerbestuurder",
+    "tunnel": "Tonnel",
+    "docker": "Docker",
+    "serverStats": "Gasheermetrieke",
+    "hostMetrics": "Gasheermetrieke",
+    "noNodes": "Geen nodusse nog nie"
+  },
+  "nav": {
+    "networkGraph": "Netwerkgrafiek"
+  },
+  "dashboard": {
+    "networkGraph": "Netwerkgrafiek"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} nodusse"
+  }
+}

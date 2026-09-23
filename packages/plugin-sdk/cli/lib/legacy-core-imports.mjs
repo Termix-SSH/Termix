@@ -12,6 +12,8 @@
  * Delete this file in D1, once every plugin reaches core through the SDK.
  */
 
+import { legacyCoreSpecifier } from "./legacy-core-specifier.mjs";
+
 // "../../../src/backend/" or "../../../../src/backend/", any depth.
 const CORE_BACKEND = /^(?:\.\.\/)+src\/backend\//;
 // Shared types. Mostly erased at compile, but automations imports a real
@@ -27,10 +29,36 @@ const CROSS_PLUGIN = /^(?:\.\.\/)+([a-z0-9-]+)\/(?:src\/)?backend\//;
 const COMPILED_CORE = "../../../backend/backend/";
 const COMPILED_TYPES = "../../../backend/types/";
 
-export function legacyCoreImports({ pluginId, platform }) {
+const CORE_ALIAS = /^@\//;
+
+export function legacyCoreImports({ pluginId, platform, insideTermix = true }) {
   return {
     name: "legacy-core-imports",
     setup(build) {
+      // The shell's own modules, reached as "@/..." or by relative path.
+      // Bundling them would give the plugin a second copy of the shell's
+      // contexts and API client, so each becomes a bare specifier the page's
+      // import map resolves to the shell's own module.
+      if (platform === "browser") {
+        const toLegacy = (args) => {
+          const specifier = legacyCoreSpecifier(args.path);
+          if (!specifier) return null;
+          if (!insideTermix) {
+            return {
+              errors: [
+                {
+                  text: `${pluginId}: "${args.path}" reaches Termix core. Only plugins built inside a Termix checkout may; use @termix/plugin-sdk instead.`,
+                },
+              ],
+            };
+          }
+          return { path: specifier, external: true };
+        };
+        build.onResolve({ filter: CORE_ALIAS }, toLegacy);
+        build.onResolve({ filter: CORE_UI }, toLegacy);
+        build.onResolve({ filter: CORE_TYPES }, toLegacy);
+      }
+
       build.onResolve({ filter: CORE_BACKEND }, (args) => ({
         path: args.path.replace(CORE_BACKEND, COMPILED_CORE),
         external: true,
@@ -40,16 +68,6 @@ export function legacyCoreImports({ pluginId, platform }) {
         path: args.path.replace(CORE_TYPES, COMPILED_TYPES),
         external: true,
       }));
-
-      // The shell's own modules. Only plugins/docker's frontend entry reaches
-      // core this way; every other frontend uses the "@/" alias, which is
-      // externalized by name. A7 removes both.
-      if (platform === "browser") {
-        build.onResolve({ filter: CORE_UI }, (args) => ({
-          path: args.path,
-          external: true,
-        }));
-      }
 
       build.onResolve({ filter: CROSS_PLUGIN }, (args) => {
         const [, other] = CROSS_PLUGIN.exec(args.path);

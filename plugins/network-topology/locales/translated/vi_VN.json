@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Thêm máy chủ",
+    "addGroup": "Thêm nhóm",
+    "addLink": "Thêm liên kết",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "resetView": "Đặt lại khung nhìn",
+    "selectHost": "Chọn máy chủ",
+    "chooseHost": "Chọn một máy chủ...",
+    "parentGroup": "Nhóm cha",
+    "noGroup": "Không nhóm",
+    "groupName": "Tên nhóm",
+    "color": "Màu sắc",
+    "source": "Nguồn",
+    "target": "Đích",
+    "moveToGroup": "Di chuyển vào nhóm",
+    "selectGroup": "Chọn nhóm...",
+    "addConnection": "Thêm kết nối",
+    "hostDetails": "Chi tiết máy chủ",
+    "removeFromGroup": "Xóa khỏi nhóm",
+    "addHostHere": "Thêm máy chủ tại đây",
+    "editGroup": "Sửa nhóm",
+    "delete": "Xóa",
+    "add": "Thêm",
+    "create": "Tạo",
+    "move": "Di chuyển",
+    "connect": "Kết nối",
+    "createGroup": "Tạo nhóm",
+    "selectSourcePlaceholder": "Chọn nguồn...",
+    "selectTargetPlaceholder": "Chọn đích...",
+    "invalidFile": "Tệp không hợp lệ",
+    "hostAlreadyExists": "Máy chủ đã có trong cấu trúc liên kết",
+    "connectionExists": "Kết nối đã tồn tại",
+    "unknown": "Không xác định",
+    "name": "Tên",
+    "ip": "IP",
+    "status": "Trạng thái",
+    "failedToAddNode": "Không thể thêm nút",
+    "sourceDifferentFromTarget": "Nguồn và đích phải khác nhau",
+    "exportJSON": "Xuất JSON",
+    "importJSON": "Nhập JSON",
+    "terminal": "Terminal",
+    "fileManager": "Trình quản lý file",
+    "tunnel": "Đường hầm",
+    "docker": "Docker",
+    "serverStats": "Số liệu máy chủ",
+    "hostMetrics": "Số liệu máy chủ",
+    "noNodes": "Chưa có nút nào"
+  },
+  "nav": {
+    "networkGraph": "Biểu đồ mạng"
+  },
+  "dashboard": {
+    "networkGraph": "Biểu đồ Mạng"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} node"
+  }
+}

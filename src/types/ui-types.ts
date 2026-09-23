@@ -316,10 +316,8 @@ export type Tab = {
   initialFilePath?: string;
   /** Directory to open a Files tab into, distinct from initialFilePath (a specific file to open in an editor window). */
   initialPath?: string;
-  /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
-  fleetId?: number;
-  /** Which web endpoint this tab shows. Only set when type is "web-endpoint". */
-  endpointId?: string;
+  /** Payload owned by the tab's plugin, e.g. which fleet or endpoint it shows. */
+  data?: Record<string, unknown>;
   /** Which collab room a collab tab is showing. */
   collabRoomId?: string;
   serialConfig?: SerialConfig;
@@ -343,15 +341,16 @@ export type Tab = {
   } | null>;
 };
 
+/** Core cards are named here; plugin cards add their own ids. */
 export type DashboardCardId =
   | "stats_bar"
   | "counters_bar"
   | "quick_actions"
   | "host_status"
   | "recent_activity"
-  | "network_graph"
   | "service_links"
-  | "homepage_preview";
+  | "homepage_preview"
+  | (string & {});
 
 export type DashboardCardConfig = {
   id: DashboardCardId;
@@ -425,7 +424,10 @@ export type WorkspaceTabSnapshot = {
   customLabel?: string;
   initialFilePath?: string;
   initialPath?: string;
+  /** Read from payloads saved before tabs carried `data`. */
   fleetId?: number;
+  /** The tab's plugin payload. */
+  data?: Record<string, unknown>;
   /** Only present when type === "serial". Fully self-contained, no host resolution needed. */
   serialConfig?: SerialConfig;
 };

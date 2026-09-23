@@ -46,9 +46,21 @@ export interface PluginSettingsContribution {
   host?: PluginHostSettingsContribution;
 }
 
+/** A panel or dashboard card, declared so its owner is known while it is off. */
+export interface PluginViewContribution {
+  id: string;
+  titleKey: string;
+  icon?: string;
+}
+
 export interface PluginContributions {
   tabs?: PluginTabContribution[];
+  panels?: PluginViewContribution[];
+  dashboardCards?: PluginViewContribution[];
+  /** The frontend also runs on anonymous guest pages. */
+  guest?: boolean;
   settings?: PluginSettingsContribution;
+  permissions?: { name: string; titleKey: string; descriptionKey: string }[];
 }
 
 /** A secret as it arrives from the server. The value never leaves the server. */
@@ -173,6 +185,16 @@ export interface PluginSummary {
   contributes: PluginContributions | null;
   /** Lucide icon name from the manifest. */
   icon?: string;
+  dependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+  /** A built frontend bundle is served at /plugin-assets/<id>/frontend.js. */
+  frontend?: boolean;
+  /** A frontend.css sits beside the bundle. */
+  css?: boolean;
+  /** Cache key for the bundle; changes when it is rebuilt. */
+  assetVersion?: string | null;
+  /** "en" plus the xx_YY names of shipped translations. */
+  locales?: string[];
 
   tier?: string;
   source?: string;

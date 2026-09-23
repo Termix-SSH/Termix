@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "这必须是您在 Tailscale 身份中被授予的 Unix 用户，但不一定是 root 用户。",
+    "tailscaleDeviceSelect": "选择 Tailscale 设备",
+    "tailscaleDeviceSelectPlaceholder": "选择设备...",
+    "tailscaleNoApiKey": "未配置 Tailscale API 密钥。请在管理设置中添加一个以启用设备发现。",
+    "tailscaleDocsLink": "查看文档",
+    "tailscaleLoadingDevices": "正在加载设备...",
+    "tailscaleDeviceLoadFailed": "加载 Tailscale 设备失败。请检查 API URL 和网络连接。",
+    "tailscaleNoDevices": "在您的 tailnet 中未找到设备。",
+    "tailscaleDeviceAutoFill": "选择设备将自动填充主机 IP 地址。"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "需要 Tailscale 身份验证",
+    "tailscaleCheckDescription": "Tailscale SSH 需要进行额外的验证。请在浏览器中进行身份验证以继续。",
+    "tailscaleCheckOpenBrowser": "打开浏览器进行身份验证",
+    "tailscaleCheckWaiting": "正在等待 Tailscale 身份验证……",
+    "tailscaleCheckTimeout": "Tailscale 身份验证超时，请重试。"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "工作區",
+        "saveCurrent": "儲存目前",
+        "saveCurrentTitle": "儲存目前工作區",
+        "saveCurrentDescription": "將所有開啟的標籤頁、分割版面配置和窗格排列儲存為一個新的命名工作區。",
+        "nameLabel": "姓名",
+        "namePlaceholder": "例如，生產環境調試",
+        "nameRequired": "工作區名稱為必填項",
+        "colorLabel": "顏色",
+        "workspaceCreated": "工作區已儲存",
+        "workspaceUpdated": "工作區已更新",
+        "workspaceDeleted": "工作區已刪除",
+        "workspaceDuplicated": "工作區已複製",
+        "saveFailed": "保存工作區失敗",
+        "updateFailed": "工作區更新失敗",
+        "deleteFailed": "刪除工作區失敗",
+        "duplicateFailed": "複製工作區失敗",
+        "loadFailed": "載入工作區失敗",
+        "applyFailed": "應用工作區失敗",
+        "deleteWorkspaceTitle": "刪除工作區",
+        "deleteWorkspaceDescription": "您確定要刪除「{{name}}」嗎？此操作無法撤銷。",
+        "noWorkspaces": "尚未保存任何工作區。請儲存您目前的標籤頁排列方式以開始使用。",
+        "tabCount": "{{count}} 選項卡",
+        "tabCount_other": "{{count}} 標籤",
+        "apply": "申請",
+        "applyConfirmTitle": "應用工作區",
+        "applyConfirmDescription": "應用「{{name}}」將關閉您目前的標籤頁，並將其替換為此工作區已儲存的佈局。您對目前佈局的未儲存變更將會遺失。",
+        "applyConfirmButton": "應用工作區",
+        "updateWithCurrent": "更新至目前版本",
+        "updateWithCurrentConfirm": "用您目前的製表符排列覆蓋“{{name}}”？",
+        "rename": "重新命名",
+        "duplicate": "複製",
+        "duplicateNameSuffix": "{{name}} （複製）",
+        "setDefault": "設定為預設值",
+        "unsetDefault": "移除預設設定",
+        "defaultBadge": "預設",
+        "lastSession": "上次會議",
+        "lastSessionDescription": "自動更新至您最近的標籤頁排列方式。應用此操作即可恢復您先前開啟的標籤頁。",
+        "lastUsed": "上次使用 {{time}}",
+        "neverUsed": "從未申請過",
+        "tabsSkipped": "已應用工作區 — 跳過 {{count}} 個標籤頁（主機已不存在）： {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "工作區"
+  },
+  "onboarding": {
+    "workflow_workspaces": "工作區",
+    "workflow_workspaces_desc": "儲存一組開啟的標籤頁，稍後重新開啟整個佈局。"
+  }
+}

@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@/lib/error-message.js";
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -20,7 +20,7 @@ import {
   refreshFleetInventory,
   type FleetRow,
   type FleetInventoryEntry,
-} from "@/api/fleets-api";
+} from "./fleets-api";
 
 type SortKey =
   | "hostName"

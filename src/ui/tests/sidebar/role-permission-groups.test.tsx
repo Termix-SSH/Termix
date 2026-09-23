@@ -141,9 +141,7 @@ describe("role permission groups", () => {
   it("shows a plugin permission's title beside its raw id", async () => {
     await openEditor(makeRole([]));
 
-    expect(
-      screen.getByText("plugins.automations.permissions.run.title"),
-    ).toBeTruthy();
+    expect(screen.getByText("automations:permissions.run.title")).toBeTruthy();
     expect(screen.getByText("automations.run")).toBeTruthy();
   });
 

@@ -63,6 +63,46 @@ if (typeof globalThis.localStorage === "undefined") {
   });
 }
 
+/**
+ * A plain plugin host for components a test renders on its own: keys come
+ * back as text, every permission is held, and nothing reaches a server.
+ * renderWithApp installs Termix's real host instead, which takes precedence.
+ */
+const noop = () => {};
+const offline = () =>
+  Promise.reject(new Error("No plugin API in a unit test; mock it"));
+(globalThis as Record<string, unknown>).__termixTestPluginHost = {
+  usePluginId: () => "test-plugin",
+  useTranslation: () => ({
+    t: (key: string) => key,
+    language: "en",
+  }),
+  usePermission: () => true,
+  useSettings: () => ({ values: {}, loaded: true, save: async () => {} }),
+  useHost: () => null,
+  useHosts: () => ({ hosts: [], loaded: true }),
+  useCurrentUser: () => null,
+  useTheme: () => ({ theme: "dark" }),
+  toast: { success: noop, error: noop, info: noop, warning: noop },
+  getApi: () => ({
+    get: offline,
+    delete: offline,
+    post: offline,
+    put: offline,
+    patch: offline,
+  }),
+  useTabs: () => ({
+    openTab: noop,
+    openSingletonTab: noop,
+    closeTab: noop,
+    getLayout: () => null,
+    applyLayout: async () => ({ skipped: [] }),
+    onChange: () => noop,
+    onReady: () => noop,
+  }),
+  invokeAction: async () => undefined,
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
 });

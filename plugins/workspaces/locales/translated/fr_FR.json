@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Espaces de travail",
+        "saveCurrent": "Économisez le courant",
+        "saveCurrentTitle": "Enregistrer l'espace de travail actuel",
+        "saveCurrentDescription": "Enregistrez chaque onglet ouvert, chaque disposition fractionnée et chaque agencement de volets comme un nouvel espace de travail nommé.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "par exemple, le débogage en production",
+        "nameRequired": "Le nom de l'espace de travail est requis.",
+        "colorLabel": "Couleur",
+        "workspaceCreated": "Espace de travail enregistré",
+        "workspaceUpdated": "Espace de travail mis à jour",
+        "workspaceDeleted": "Espace de travail supprimé",
+        "workspaceDuplicated": "Espace de travail dupliqué",
+        "saveFailed": "Impossible d'enregistrer l'espace de travail",
+        "updateFailed": "Échec de la mise à jour de l'espace de travail",
+        "deleteFailed": "Échec de la suppression de l'espace de travail",
+        "duplicateFailed": "Échec de la duplication de l'espace de travail",
+        "loadFailed": "Échec du chargement des espaces de travail",
+        "applyFailed": "Échec de l'application de l'espace de travail",
+        "deleteWorkspaceTitle": "Supprimer l'espace de travail",
+        "deleteWorkspaceDescription": "Êtes-vous sûr de vouloir supprimer «{{name}}» ? Cette action est irréversible.",
+        "noWorkspaces": "Aucun espace de travail enregistré pour le moment. Enregistrez votre disposition d'onglets actuelle pour commencer.",
+        "tabCount": "{{count}} onglet",
+        "tabCount_other": "Onglets {{count}}",
+        "apply": "Appliquer",
+        "applyConfirmTitle": "Espace de travail à appliquer",
+        "applyConfirmDescription": "Appliquer «{{name}}» fermera vos onglets actuels et les remplacera par la disposition enregistrée de cet espace de travail. Les modifications non enregistrées de votre disposition actuelle seront perdues.",
+        "applyConfirmButton": "Espace de travail à appliquer",
+        "updateWithCurrent": "Mise à jour avec les données actuelles",
+        "updateWithCurrentConfirm": "Remplacer «{{name}}» par votre disposition de tabulation actuelle ?",
+        "rename": "Rebaptiser",
+        "duplicate": "Double",
+        "duplicateNameSuffix": "{{name}} (copie)",
+        "setDefault": "Définir comme valeur par défaut",
+        "unsetDefault": "Supprimer par défaut",
+        "defaultBadge": "Défaut",
+        "lastSession": "Dernière session",
+        "lastSessionDescription": "Mise à jour automatique avec votre dernière configuration d'onglets. Appliquez-la pour retrouver ce que vous aviez ouvert.",
+        "lastUsed": "Dernière utilisation {{time}}",
+        "neverUsed": "Jamais postulé",
+        "tabsSkipped": "Espace de travail appliqué — {{count}} onglet(s) ignoré(s) (l'hôte n'existe plus) : {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Espaces de travail"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Espaces de travail",
+    "workflow_workspaces_desc": "Enregistrez une série d'onglets ouverts et rouvrez l'ensemble de la mise en page plus tard."
+  }
+}

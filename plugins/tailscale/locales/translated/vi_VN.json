@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "Đây phải là người dùng Unix mà danh tính Tailscale của bạn được cấp trong ACL SSH của tailnet, không nhất thiết phải là người dùng root.",
+    "tailscaleDeviceSelect": "Chọn thiết bị Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "Chọn thiết bị...",
+    "tailscaleNoApiKey": "Chưa cấu hình khóa API Tailscale. Thêm một khóa trong Cài đặt Quản trị để bật khám phá thiết bị.",
+    "tailscaleDocsLink": "Xem tài liệu",
+    "tailscaleLoadingDevices": "Đang tải thiết bị...",
+    "tailscaleDeviceLoadFailed": "Không thể tải thiết bị Tailscale. Vui lòng kiểm tra URL API và kết nối mạng.",
+    "tailscaleNoDevices": "Không tìm thấy thiết bị nào trong tailnet của bạn.",
+    "tailscaleDeviceAutoFill": "Chọn thiết bị sẽ tự động điền địa chỉ IP máy chủ."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "Cần xác thực Tailscale",
+    "tailscaleCheckDescription": "Tailscale SSH yêu cầu kiểm tra bổ sung. Vui lòng xác thực trong trình duyệt của bạn để tiếp tục.",
+    "tailscaleCheckOpenBrowser": "Mở trình duyệt để xác thực.",
+    "tailscaleCheckWaiting": "Đang chờ xác thực Tailscale...",
+    "tailscaleCheckTimeout": "Quá trình xác thực Tailscale đã hết hạn. Vui lòng thử lại."
+  }
+}

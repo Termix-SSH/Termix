@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Додај хоста",
+    "addGroup": "Додај групу",
+    "addLink": "Додај линк",
+    "zoomIn": "Увећај",
+    "zoomOut": "Умањи",
+    "resetView": "Ресетуј приказ",
+    "selectHost": "Изаберите хост",
+    "chooseHost": "Изаберите домаћина...",
+    "parentGroup": "Матична група",
+    "noGroup": "Нема групе",
+    "groupName": "Назив групе",
+    "color": "Боја",
+    "source": "Извор",
+    "target": "Циљ",
+    "moveToGroup": "Премести у групу",
+    "selectGroup": "Изаберите групу...",
+    "addConnection": "Додај везу",
+    "hostDetails": "Детаљи домаћина",
+    "removeFromGroup": "Уклони из групе",
+    "addHostHere": "Додај хост овде",
+    "editGroup": "Уреди групу",
+    "delete": "Обриши",
+    "add": "Додај",
+    "create": "Креирај",
+    "move": "Помери",
+    "connect": "Повежи се",
+    "createGroup": "Направи групу",
+    "selectSourcePlaceholder": "Изаберите извор...",
+    "selectTargetPlaceholder": "Изаберите циљ...",
+    "invalidFile": "Неважећа датотека",
+    "hostAlreadyExists": "Хост је већ у топологији",
+    "connectionExists": "Веза већ постоји",
+    "unknown": "Непознато",
+    "name": "Име",
+    "ip": "ИП",
+    "status": "Статус",
+    "failedToAddNode": "Додавање чвора није успело",
+    "sourceDifferentFromTarget": "Извор и циљ морају бити различити",
+    "exportJSON": "Извези JSON",
+    "importJSON": "Увези JSON",
+    "terminal": "Терминал",
+    "fileManager": "Менаџер датотека",
+    "tunnel": "Тунел",
+    "docker": "Докер",
+    "serverStats": "Метрике хоста",
+    "hostMetrics": "Метрике хоста",
+    "noNodes": "Још нема чворова"
+  },
+  "nav": {
+    "networkGraph": "Мрежни графикон"
+  },
+  "dashboard": {
+    "networkGraph": "Мрежни графикон"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} чворова"
+  }
+}

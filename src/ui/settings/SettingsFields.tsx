@@ -22,7 +22,10 @@ import {
 } from "@/components/select";
 import { pluginKey } from "@/lib/plugin-i18n";
 import { isRedactedSecret, type PluginSettingsField } from "@/api/plugins-api";
-import { getSettingsComponent } from "./settings-components";
+import {
+  getSettingsComponent,
+  useSettingsComponents,
+} from "./settings-components";
 
 export interface SettingsFieldProps {
   pluginId: string;
@@ -46,6 +49,8 @@ export function SettingsFieldRow({
   disabled = false,
 }: SettingsFieldProps) {
   const { t } = useTranslation();
+  // A custom component appears once its plugin's frontend has registered it.
+  useSettingsComponents();
   const label = (key?: string) => (key ? t(pluginKey(pluginId, key)) : "");
 
   // A custom field draws its own row: it has no single control to put in the

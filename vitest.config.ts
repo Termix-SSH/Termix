@@ -4,6 +4,18 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@termix/plugin-sdk/frontend": path.resolve(
+        __dirname,
+        "./packages/plugin-sdk/src/frontend.ts",
+      ),
+      "@termix/plugin-sdk/ui": path.resolve(
+        __dirname,
+        "./src/ui/plugin-host/sdk-ui.ts",
+      ),
+      "@termix/plugin-host/testing": path.resolve(
+        __dirname,
+        "./src/ui/plugin-host/testing-host.tsx",
+      ),
       "@/types": path.resolve(__dirname, "./src/types"),
       "@": path.resolve(__dirname, "./src/ui"),
     },

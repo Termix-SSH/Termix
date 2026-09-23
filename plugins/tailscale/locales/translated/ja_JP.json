@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "これは、tailnetのSSH ACLでTailscaleのIDが付与されているUnixユーザーである必要があり、必ずしもrootである必要はありません。",
+    "tailscaleDeviceSelect": "Tailscaleデバイスを選択",
+    "tailscaleDeviceSelectPlaceholder": "デバイスを選択...",
+    "tailscaleNoApiKey": "Tailscale APIキーが設定されていません。デバイス検出を有効にするには、管理者設定で追加してください。",
+    "tailscaleDocsLink": "ドキュメントを表示",
+    "tailscaleLoadingDevices": "デバイスを読み込み中...",
+    "tailscaleDeviceLoadFailed": "Tailscaleデバイスの読み込みに失敗しました。API URLとネットワーク接続を確認してください。",
+    "tailscaleNoDevices": "テールネットにデバイスが見つかりません。",
+    "tailscaleDeviceAutoFill": "デバイスを選択するとホストIPアドレスが自動入力されます。"
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "テールスケール認証が必要です",
+    "tailscaleCheckDescription": "TailscaleのSSH接続には追加の認証が必要です。ブラウザで認証を行ってから続行してください。",
+    "tailscaleCheckOpenBrowser": "認証のためにブラウザを開く",
+    "tailscaleCheckWaiting": "Tailscaleの認証を待っています...",
+    "tailscaleCheckTimeout": "Tailscaleの認証がタイムアウトしました。もう一度お試しください。"
+  }
+}

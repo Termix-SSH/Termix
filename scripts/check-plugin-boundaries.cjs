@@ -22,11 +22,21 @@ const allowlistPath = path.join(
 const norm = (p) => p.split(path.sep).join("/");
 
 const DIRECTIONS = {
-  // The shell importing plugin components. A7 empties this.
+  // The shell importing plugin code. Empty since A7, and kept at zero: any
+  // entry here fails, allowlisted or not.
   "ui-to-plugin": {
-    roots: ["src/ui"],
+    roots: ["src/ui", "src/main.tsx"],
     skip: (rel) => rel.includes("/tests/"),
-    pattern: /["'][^"']*\/plugins\/[a-z0-9-]+\/src\/(frontend|backend)\//,
+    pattern: /["'][^"']*\/plugins\/[a-z0-9-]+\//,
+    mustBeEmpty: true,
+  },
+  // A bundled plugin frontend importing the shell's own modules through the
+  // "@/" alias, which the CLI turns into @termix/legacy-core/* for the import
+  // map. D1 empties this.
+  "plugin-frontend-to-core": {
+    roots: ["plugins"],
+    only: (rel) => /^plugins\/[a-z0-9-]+\/src\/frontend\//.test(rel),
+    pattern: /(?:from|import)\s*\(?\s*["']@\//,
   },
   // A plugin backend reaching core by relative path. D1 empties this.
   "plugin-to-core": {
@@ -56,10 +66,16 @@ function walk(dir, out = []) {
   return out;
 }
 
+function filesUnder(base) {
+  const full = path.join(root, base);
+  if (fs.existsSync(full) && fs.statSync(full).isFile()) return [full];
+  return walk(full);
+}
+
 function offendersFor(name, config) {
   const found = new Set();
   for (const base of config.roots) {
-    for (const file of walk(path.join(root, base))) {
+    for (const file of filesUnder(base)) {
       const rel = norm(path.relative(root, file));
       if (config.only && !config.only(rel)) continue;
       if (config.skip && config.skip(rel)) continue;
@@ -90,7 +106,9 @@ for (const [name, config] of Object.entries(DIRECTIONS)) {
   const offenders = offendersFor(name, config);
   const allowed = new Set(allowlist[name] ?? []);
 
-  const added = offenders.filter((file) => !allowed.has(file));
+  const added = config.mustBeEmpty
+    ? offenders
+    : offenders.filter((file) => !allowed.has(file));
   const stale = [...allowed].filter((file) => !offenders.includes(file));
 
   if (added.length > 0) {

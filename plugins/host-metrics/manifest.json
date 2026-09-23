@@ -33,8 +33,23 @@
         "titleKey": "nav.hostMetrics",
         "icon": "Activity",
         "openFrom": ["host-context-menu", "palette"]
+      },
+      {
+        "id": "proxmox-stats",
+        "titleKey": "nav.proxmoxStats",
+        "icon": "HardDrive",
+        "openFrom": ["host-context-menu", "palette"]
       }
-    ]
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "historyRetention",
+          "type": "custom",
+          "component": "retention"
+        }
+      ]
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

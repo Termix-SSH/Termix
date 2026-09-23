@@ -1,15 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Terminal,
-  FolderSearch,
-  Box,
-  Network,
-  Server,
-  Monitor,
-  Tv,
-  Phone,
-  Zap,
-} from "lucide-react";
+import { Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { registerWidget } from "./WidgetRegistry";
 import type {
@@ -22,30 +12,8 @@ import { getSSHHosts } from "@/api/ssh-host-management-api";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { TabType } from "@/types/ui-types";
 import { WidgetTitle } from "./WidgetTitle";
-
-const TYPE_ICONS: Record<QuickConnectType, React.ReactNode> = {
-  terminal: <Terminal size={12} />,
-  files: <FolderSearch size={12} />,
-  docker: <Box size={12} />,
-  tunnel: <Network size={12} />,
-  "host-metrics": <Server size={12} />,
-  rdp: <Monitor size={12} />,
-  vnc: <Tv size={12} />,
-  telnet: <Phone size={12} />,
-};
-
-type EnableCheck = (host: SSHHostWithStatus) => boolean;
-
-const TYPE_ENABLED: Record<QuickConnectType, EnableCheck> = {
-  terminal: (h) => !!(h.enableSsh && h.enableTerminal),
-  files: (h) => !!(h.enableSsh && h.enableFileManager),
-  docker: (h) => !!(h.enableSsh && h.enableDocker),
-  tunnel: (h) => !!(h.enableSsh && h.enableTunnel),
-  "host-metrics": (h) => !!h.enableSsh,
-  rdp: (h) => !!h.enableRdp,
-  vnc: (h) => !!h.enableVnc,
-  telnet: (h) => !!h.enableTelnet,
-};
+import { useHostActions } from "@/sidebar/host-contributions";
+import { quickConnectTargets } from "../quick-connect-targets";
 
 function statusDotClass(host: SSHHostWithStatus): string {
   if (host.status === "online") return "bg-green-500";
@@ -68,6 +36,7 @@ function QuickConnectWidget({
   const { t } = useTranslation();
   const [hosts, setHosts] = useState<SSHHostWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const targets = quickConnectTargets(useHostActions());
 
   const types =
     config.connectionTypes.length > 0
@@ -109,9 +78,10 @@ function QuickConnectWidget({
       <WidgetTitle title={widget.title} icon={<Zap size={11} />} />
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
         {hosts.map((host) => {
-          const availableTypes = types.filter((type) =>
-            TYPE_ENABLED[type](host),
-          );
+          const availableTypes = types.flatMap((type) => {
+            const target = targets.find((item) => item.type === type);
+            return target && target.enabled(host) ? [target] : [];
+          });
           if (availableTypes.length === 0) return null;
           return (
             <div
@@ -129,18 +99,18 @@ function QuickConnectWidget({
                 </span>
               </div>
               <div className="flex items-center gap-1 shrink-0 flex-wrap">
-                {availableTypes.map((type) => (
+                {availableTypes.map((target) => (
                   <button
-                    key={type}
-                    title={t(`homepage.connType_${type}`, type)}
+                    key={target.type}
+                    title={t(target.labelKey, target.type)}
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
-                      openTab(host, type);
+                      openTab(host, target.type);
                     }}
                     className="p-1.5 text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/10 transition-colors border border-transparent hover:border-accent-brand/20"
                   >
-                    {TYPE_ICONS[type]}
+                    <target.icon size={12} />
                   </button>
                 ))}
               </div>

@@ -17,7 +17,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Server,
   SlidersHorizontal,
   Upload,
   X,
@@ -28,7 +27,7 @@ import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
 import { HostExportDialog } from "@/sidebar/HostExportDialog";
 import { CustomizeSidebarPanel } from "@/sidebar/CustomizeSidebarPanel";
-import { ProxmoxDiscoverDialog } from "../../../plugins/proxmox/src/frontend/ProxmoxDiscoverDialog";
+import { ComponentSlot } from "@/shell/ActionSlot";
 import { Button } from "@/components/button";
 import {
   DropdownMenu,
@@ -193,7 +192,7 @@ export function HostsPanel({
     host: Host,
     type: TabType,
     options?: {
-      endpointId?: string;
+      data?: Record<string, unknown>;
       label?: string;
       forceNewTab?: boolean;
     },
@@ -216,19 +215,6 @@ export function HostsPanel({
   const [exportPreselection, setExportPreselection] = useState<Set<string>>(
     new Set(),
   );
-  const [proxmoxDialogOpen, setProxmoxDialogOpen] = useState(false);
-  const [proxmoxHostId, setProxmoxHostId] = useState<number | undefined>(
-    undefined,
-  );
-  const [proxmoxDefaultCredentialId, setProxmoxDefaultCredentialId] = useState<
-    number | null
-  >(null);
-  const [proxmoxDefaultAuthType, setProxmoxDefaultAuthType] = useState<
-    string | undefined
-  >(undefined);
-  const [proxmoxDefaultUsername, setProxmoxDefaultUsername] = useState<
-    string | undefined
-  >(undefined);
   const { preferences: sidebarPrefs, update: updateSidebarPrefs } =
     useHostSidebarPreferences();
   const sortKey = sidebarPrefs.sort.key;
@@ -579,16 +565,7 @@ export function HostsPanel({
                     <Upload className="size-3.5 mr-2" />
                     {t("hosts.importSSHConfig")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setProxmoxHostId(undefined);
-                      setProxmoxDialogOpen(true);
-                    }}
-                    disabled={!rawHosts.some((h) => h.enableProxmox)}
-                  >
-                    <Server className="size-3.5 mr-2" />
-                    {t("hosts.proxmoxImportTitle")}
-                  </DropdownMenuItem>
+                  <ComponentSlot slotId="hosts.importMenu" />
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => {
@@ -1059,14 +1036,6 @@ export function HostsPanel({
             onOpenTab={onOpenTab}
             onEditHost={onEditHost}
             onShareHost={(host) => setShareModalHost(host)}
-            onProxmoxDiscover={(host) => {
-              const cfg = host.proxmoxConfig;
-              setProxmoxHostId(Number(host.id));
-              setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
-              setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
-              setProxmoxDefaultUsername(undefined);
-              setProxmoxDialogOpen(true);
-            }}
             query={hostSearch.trim().toLowerCase()}
             selectionMode={selectionMode}
             onToggleSelectionMode={toggleSelectionMode}
@@ -1105,18 +1074,10 @@ export function HostsPanel({
         preselectedHostIds={exportPreselection}
       />
 
-      <ProxmoxDiscoverDialog
-        open={proxmoxDialogOpen}
-        onClose={() => {
-          setProxmoxDialogOpen(false);
-          setProxmoxHostId(undefined);
-        }}
-        hosts={rawHosts}
-        onHostsChanged={setRawHosts}
-        preselectedHostId={proxmoxHostId}
-        defaultCredentialId={proxmoxDefaultCredentialId}
-        defaultAuthType={proxmoxDefaultAuthType}
-        defaultUsername={proxmoxDefaultUsername}
+      {/* Plugins mount their own host-list dialogs here. */}
+      <ComponentSlot
+        slotId="hosts.panel"
+        props={{ hosts: rawHosts, onHostsChanged: setRawHosts }}
       />
     </div>
   );

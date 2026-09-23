@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { AiProvider } from "@/api/ai-api";
+import type { AiProvider } from "../../src/frontend/ai-api";
 
 const api = vi.hoisted(() => ({
   createAiProvider: vi.fn(),
@@ -16,7 +16,7 @@ const api = vi.hoisted(() => ({
   updateAiProvider: vi.fn(),
 }));
 
-vi.mock("@/api/ai-api", () => api);
+vi.mock("../../src/frontend/ai-api", () => api);
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -24,7 +24,7 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-import { AiProviderSettings } from "@/features/ai/AiProviderSettings";
+import { AiProviderSettings } from "../../src/frontend/AiProviderSettings";
 
 const provider: AiProvider = {
   id: 7,

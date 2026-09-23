@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Pracovní prostory",
+        "saveCurrent": "Uložit aktuální",
+        "saveCurrentTitle": "Uložit aktuální pracovní prostor",
+        "saveCurrentDescription": "Uložte každou otevřenou kartu, rozdělené rozvržení a uspořádání panelů jako nový pojmenovaný pracovní prostor.",
+        "nameLabel": "Jméno",
+        "namePlaceholder": "např. ladění produktu",
+        "nameRequired": "Název pracovního prostoru je povinný",
+        "colorLabel": "Barva",
+        "workspaceCreated": "Pracovní prostor uložen",
+        "workspaceUpdated": "Pracovní prostor aktualizován",
+        "workspaceDeleted": "Pracovní prostor smazán",
+        "workspaceDuplicated": "Pracovní prostor byl duplikován",
+        "saveFailed": "Uložení pracovního prostoru se nezdařilo",
+        "updateFailed": "Aktualizace pracovního prostoru se nezdařilo",
+        "deleteFailed": "Nepodařilo se smazat pracovní prostor",
+        "duplicateFailed": "Nepodařilo se duplikovat pracovní prostor",
+        "loadFailed": "Nepodařilo se načíst pracovní prostory",
+        "applyFailed": "Použití pracovního prostoru se nezdařilo",
+        "deleteWorkspaceTitle": "Smazat pracovní prostor",
+        "deleteWorkspaceDescription": "Opravdu chcete smazat „{{name}}“? Tuto akci nelze vrátit zpět.",
+        "noWorkspaces": "Zatím nejsou uložené žádné pracovní prostory. Chcete-li začít, uložte si aktuální uspořádání karet.",
+        "tabCount": "{{count}} záložka",
+        "tabCount_other": "{{count}} záložek",
+        "apply": "Použít",
+        "applyConfirmTitle": "Použít pracovní prostor",
+        "applyConfirmDescription": "Použitím „{{name}}“ zavřete aktuální karty a nahradí je uloženým uspořádáním tohoto pracovního prostoru. Neuložené změny aktuálního rozvržení budou ztraceny.",
+        "applyConfirmButton": "Použít pracovní prostor",
+        "updateWithCurrent": "Aktualizovat s aktuálním",
+        "updateWithCurrentConfirm": "Přepsat „{{name}}“ aktuálním uspořádáním tabulací?",
+        "rename": "Přejmenovat",
+        "duplicate": "Duplikát",
+        "duplicateNameSuffix": "{{name}} (kopie)",
+        "setDefault": "Nastavit jako výchozí",
+        "unsetDefault": "Odebrat jako výchozí",
+        "defaultBadge": "Výchozí",
+        "lastSession": "Poslední sezení",
+        "lastSessionDescription": "Automaticky aktualizováno s vaším posledním uspořádáním karet. Použijte tuto funkci k obnovení toho, co jste měli otevřené.",
+        "lastUsed": "Naposledy použité {{time}}",
+        "neverUsed": "Nikdy nepoužíváno",
+        "tabsSkipped": "Použitý pracovní prostor — {{count}} přeskočeno (hostitel již neexistuje): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Pracovní prostory"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Pracovní prostory",
+    "workflow_workspaces_desc": "Uložte si sadu otevřených karet a celé rozvržení si znovu otevřete později."
+  }
+}

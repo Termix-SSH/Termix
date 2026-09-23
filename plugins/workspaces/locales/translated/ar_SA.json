@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "مساحات العمل",
+        "saveCurrent": "حفظ الوضع الحالي",
+        "saveCurrentTitle": "حفظ مساحة العمل الحالية",
+        "saveCurrentDescription": "احفظ كل علامة تبويب مفتوحة، وتخطيط مقسم، وترتيب أجزاء كمساحة عمل جديدة مسماة.",
+        "nameLabel": "اسم",
+        "namePlaceholder": "مثال: تصحيح أخطاء الإنتاج",
+        "nameRequired": "اسم مساحة العمل مطلوب",
+        "colorLabel": "لون",
+        "workspaceCreated": "تم حفظ مساحة العمل",
+        "workspaceUpdated": "تم تحديث مساحة العمل",
+        "workspaceDeleted": "تم حذف مساحة العمل",
+        "workspaceDuplicated": "تم تكرار مساحة العمل",
+        "saveFailed": "فشل حفظ مساحة العمل",
+        "updateFailed": "فشل تحديث مساحة العمل",
+        "deleteFailed": "فشل حذف مساحة العمل",
+        "duplicateFailed": "فشل تكرار مساحة العمل",
+        "loadFailed": "فشل تحميل مساحات العمل",
+        "applyFailed": "فشل تطبيق مساحة العمل",
+        "deleteWorkspaceTitle": "حذف مساحة العمل",
+        "deleteWorkspaceDescription": "هل أنت متأكد من رغبتك في حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا.",
+        "noWorkspaces": "لم يتم حفظ أي مساحات عمل حتى الآن. احفظ ترتيب علامات التبويب الحالي للبدء.",
+        "tabCount": "{{count}} علامة تبويب",
+        "tabCount_other": "علامات تبويب {{count}}",
+        "apply": "يتقدم",
+        "applyConfirmTitle": "تطبيق مساحة العمل",
+        "applyConfirmDescription": "سيؤدي تطبيق \"{{name}}\" إلى إغلاق علامات التبويب الحالية واستبدالها بالترتيب المحفوظ لمساحة العمل هذه. ستفقد التغييرات غير المحفوظة على تخطيطك الحالي.",
+        "applyConfirmButton": "تطبيق مساحة العمل",
+        "updateWithCurrent": "تحديث بالبيانات الحالية",
+        "updateWithCurrentConfirm": "هل تريد استبدال \"{{name}}\" بترتيب علامات التبويب الحالي؟",
+        "rename": "إعادة تسمية",
+        "duplicate": "ينسخ",
+        "duplicateNameSuffix": "{{name}} (نسخة)",
+        "setDefault": "تعيين كافتراضي",
+        "unsetDefault": "إزالة كإعداد افتراضي",
+        "defaultBadge": "تقصير",
+        "lastSession": "الجلسة الأخيرة",
+        "lastSessionDescription": "يتم تحديثها تلقائيًا بأحدث ترتيب لعلامات التبويب لديك. قم بتطبيقها لاستعادة ما كنت قد فتحته.",
+        "lastUsed": "آخر استخدام {{time}}",
+        "neverUsed": "لم يتم التقديم مطلقا",
+        "tabsSkipped": "تم تطبيق مساحة العمل — تم تخطي علامة (علامات) التبويب {{count}} (لم يعد المضيف موجودًا): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "مساحات العمل"
+  },
+  "onboarding": {
+    "workflow_workspaces": "مساحات العمل",
+    "workflow_workspaces_desc": "احفظ مجموعة من علامات التبويب المفتوحة وأعد فتح التخطيط بأكمله لاحقًا."
+  }
+}

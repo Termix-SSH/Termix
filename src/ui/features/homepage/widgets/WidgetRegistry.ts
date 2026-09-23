@@ -2,11 +2,13 @@ import type {
   WidgetTypeDefinition,
   WidgetTypeId,
 } from "@/types/homepage-types";
+import { createRegistry } from "@/lib/registry";
 
-const registry = new Map<WidgetTypeId, WidgetTypeDefinition>();
+/** Core widgets register on import; plugin widgets while their plugin runs. */
+const registry = createRegistry<WidgetTypeDefinition>();
 
-export function registerWidget<C>(def: WidgetTypeDefinition<C>): void {
-  registry.set(def.id, def as unknown as WidgetTypeDefinition);
+export function registerWidget<C>(def: WidgetTypeDefinition<C>): () => void {
+  return registry.register(def as unknown as WidgetTypeDefinition);
 }
 
 export function getWidgetType(
@@ -16,5 +18,7 @@ export function getWidgetType(
 }
 
 export function getAllWidgetTypes(): WidgetTypeDefinition[] {
-  return Array.from(registry.values());
+  return registry.list();
 }
+
+export const useWidgetTypes = registry.useList;

@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Espacios de trabajo",
+        "saveCurrent": "Guardar actual",
+        "saveCurrentTitle": "Guardar espacio de trabajo actual",
+        "saveCurrentDescription": "Guarda cada pestaña abierta, diseño dividido y disposición de paneles como un nuevo espacio de trabajo con nombre.",
+        "nameLabel": "Nombre",
+        "namePlaceholder": "p. ej., depuración de producción",
+        "nameRequired": "Se requiere el nombre del espacio de trabajo.",
+        "colorLabel": "Color",
+        "workspaceCreated": "Espacio de trabajo guardado",
+        "workspaceUpdated": "Espacio de trabajo actualizado",
+        "workspaceDeleted": "Espacio de trabajo eliminado",
+        "workspaceDuplicated": "Espacio de trabajo duplicado",
+        "saveFailed": "No se pudo guardar el espacio de trabajo",
+        "updateFailed": "No se pudo actualizar el espacio de trabajo",
+        "deleteFailed": "No se pudo eliminar el espacio de trabajo",
+        "duplicateFailed": "Error al duplicar el espacio de trabajo",
+        "loadFailed": "No se pudieron cargar los espacios de trabajo.",
+        "applyFailed": "No se pudo aplicar el espacio de trabajo",
+        "deleteWorkspaceTitle": "Eliminar espacio de trabajo",
+        "deleteWorkspaceDescription": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esto no se puede deshacer.",
+        "noWorkspaces": "Aún no hay espacios de trabajo guardados. Guarda la disposición actual de tus pestañas para empezar.",
+        "tabCount": "{{count}} pestaña",
+        "tabCount_other": "{{count}} pestañas",
+        "apply": "Aplicar",
+        "applyConfirmTitle": "Aplicar espacio de trabajo",
+        "applyConfirmDescription": "Al aplicar \"{{name}}\" se cerrarán las pestañas actuales y se reemplazarán con la disposición guardada de este espacio de trabajo. Los cambios no guardados en la disposición actual se perderán.",
+        "applyConfirmButton": "Aplicar espacio de trabajo",
+        "updateWithCurrent": "Actualizar con la versión actual",
+        "updateWithCurrentConfirm": "¿Sobrescribir \"{{name}}\" con tu disposición de tabulación actual?",
+        "rename": "Rebautizar",
+        "duplicate": "Duplicado",
+        "duplicateNameSuffix": "{{name}} (copiar)",
+        "setDefault": "Establecer como predeterminado",
+        "unsetDefault": "Eliminar como predeterminado",
+        "defaultBadge": "Por defecto",
+        "lastSession": "Última sesión",
+        "lastSessionDescription": "Se actualiza automáticamente con la última configuración de pestañas. Aplícala para recuperar lo que tenías abierto.",
+        "lastUsed": "Último uso {{time}}",
+        "neverUsed": "Nunca se ha aplicado",
+        "tabsSkipped": "Espacio de trabajo aplicado: {{count}} pestaña(s) omitida(s) (el host ya no existe): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Espacios de trabajo"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Espacios de trabajo",
+    "workflow_workspaces_desc": "Guarda un conjunto de pestañas abiertas y vuelve a abrir toda la interfaz más tarde."
+  }
+}

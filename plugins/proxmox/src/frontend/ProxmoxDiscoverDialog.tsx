@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { HostData } from "@/types/index";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Server, RefreshCw, CheckSquare, Square, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/button";

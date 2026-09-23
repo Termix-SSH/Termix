@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Unplug, Search } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { ServerMetrics, ListeningPort } from "@/main-axios";
 import { MetricCard } from "@/components/metric-card";
 import { Select2 } from "@/components/select2";

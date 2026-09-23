@@ -27,13 +27,21 @@
         "id": "terminal",
         "titleKey": "nav.terminal",
         "icon": "SquareTerminal",
-        "openFrom": ["rail", "host-context-menu", "palette"]
+        "openFrom": ["host-context-menu", "palette"]
       }
     ],
     "actionSlots": [
       {
         "id": "terminal.toolbar",
         "accepts": ["button"]
+      },
+      {
+        "id": "terminal.dock",
+        "accepts": ["component"]
+      },
+      {
+        "id": "terminal.overlay",
+        "accepts": ["component"]
       }
     ]
   },

@@ -1,6 +1,6 @@
 import { getErrorMessage } from "@/lib/error-message.js";
 import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -35,7 +35,8 @@ import {
 import { NotificationChannelDialog } from "@/sidebar/NotificationChannelDialog";
 import { getSnippets } from "@/api/snippets-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
-import { listFleets } from "@/api/fleets-api";
+import { invokeAction } from "@termix/plugin-sdk/frontend";
+
 import {
   AutomationEditor,
   emptyDraft,
@@ -68,6 +69,14 @@ function timeAgo(iso: string | null): string {
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}h ago`;
   return `${Math.floor(hr / 24)}d ago`;
+}
+
+/** Fleets from the fleets plugin, or none when it is not running. */
+async function listFleets(): Promise<{ id: number; name: string }[]> {
+  const result = await invokeAction("fleets.list");
+  return Array.isArray(result)
+    ? (result as { id: number; name: string }[])
+    : [];
 }
 
 export function AutomationsPanel({

@@ -27,6 +27,14 @@
     "ui:surface"
   ],
   "contributes": {
+    "tabs": [
+      {
+        "id": "automations",
+        "titleKey": "nav.automations",
+        "icon": "Workflow",
+        "openFrom": ["rail"]
+      }
+    ],
     "permissions": [
       {
         "name": "view",

@@ -29,7 +29,8 @@ dependencies. Entry points:
 | `@termix/plugin-sdk/backend`      | `PluginContext`, `definePlugin()`, `PluginCapabilityError` |
 | `@termix/plugin-sdk/db`           | `defineTable()`, the column builders, the legacy-table map |
 | `@termix/plugin-sdk/ddl`          | The per-dialect DDL emitter, shared with the CLI           |
-| `@termix/plugin-sdk/frontend`     | The `app` object types (stubs until A7)                    |
+| `@termix/plugin-sdk/frontend`     | The `app` object types, the hooks, `invokeAction()`        |
+| `@termix/plugin-sdk/ui`           | Core's shared components, a fixed public list (see UI)     |
 | `@termix/plugin-sdk/manifest`     | Manifest types, validation, the JSON schema                |
 | `@termix/plugin-sdk/capabilities` | The capability catalog                                     |
 | `@termix/plugin-sdk/settings`     | Settings field types and the shared value validator        |
@@ -271,11 +272,145 @@ allowlist (`CORE_SETTINGS_ALLOWLIST`) rather than the whole settings table.
 
 ### 8. UI
 
-A plugin frontend is a built ESM bundle loaded at runtime by the core loader.
-It registers everything through the `app` object: rail items, panels, tabs,
-host editor sections, host actions and badges, context menu items, palette
-entries, dashboard cards, homepage widgets, settings components, action slots,
-login/2FA UI, SSH auth editors. The shell contains no plugin ids. **A7.**
+A plugin frontend is a built ESM bundle, `dist/frontend.js`, exporting
+`activate(app)` and optionally `deactivate()`. The shell has no plugin ids and
+no imports from `plugins/`; everything a plugin shows goes through the `app`
+object. `scripts/check-shell-plugin-ids.cjs` (run by lint) fails on a quoted
+plugin id in `src/ui` outside tests, apart from the entries in
+`scripts/shell-plugin-id-allowlist.json`, each with a reason (host protocol
+data like `rdp`, which Phase B moves).
+
+#### The loader
+
+`src/ui/plugin-host/loader.ts` runs after login and again whenever plugin
+state may have changed: the `termix:plugins-changed` window event (the admin
+toggle fires it) and window focus, throttled to 30 seconds. There is no push
+channel yet. Each pass:
+
+1. Fetches `GET /plugins` (`frontend`, `css`, `assetVersion`, `locales`,
+   `dependencies` and `contributes` per plugin).
+2. Loads every plugin's locales into the i18next namespace `<id>`, enabled or
+   not, because the role editor and the plugin list need disabled plugins'
+   titles.
+3. Orders enabled plugins by dependencies. A plugin whose hard dependency is
+   missing or off is skipped.
+4. For each plugin with a frontend: injects `frontend.css`, imports
+   `/plugin-assets/<id>/frontend.js?v=<assetVersion>` and calls `activate(app)`.
+   In dev the workspace plugins are imported from
+   `plugins/<id>/src/frontend/index.tsx` through Vite, so HMR works.
+5. Deactivates plugins that went away: runs `deactivate()` then every
+   disposer. No reload.
+
+A plugin that throws while importing or activating is marked failed, its
+partial registrations are disposed, and the rest of the app carries on. The
+same `assetVersion` is not retried until it changes.
+
+Anonymous shared-session and collab pages have no session. They load only
+plugins whose manifest sets `contributes.guest: true`, from the public
+`GET /plugins/public`, and `app.guest` is true there.
+
+#### Shared modules and the import map
+
+A bundle keeps `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`,
+`i18next`, `react-i18next`, `sonner`, `@termix/plugin-sdk/frontend`,
+`@termix/plugin-sdk/ui` and `@termix/legacy-core/*` as bare imports. Core's
+Vite build (`scripts/vite-plugin-termix-plugins.mjs`) emits one entry per
+shared module, writes a stable unhashed shim for each at
+`dist/shared/<name>.js`, and injects an import map into `index.html` mapping
+the bare names to those shims. In dev the map points at Vite's virtual
+modules instead. The map is inline, so both nginx configs allow it by hash in
+`script-src`; `scripts/check-importmap-csp.cjs` (run by lint) fails when the
+hash is out of date and `--write` updates it. The map changes only when the
+list of shared modules does, which includes the legacy-core modules plugins
+import.
+
+Electron loads `index.html` from `file://`. The map uses relative URLs, and
+plugin bundles come from the embedded backend
+(`http://localhost:30001/plugin-assets/...`), which is why `/plugin-assets`
+sends `Access-Control-Allow-Origin: *`.
+
+#### Serving bundles
+
+`GET /plugin-assets/<id>/<path>` serves the directory holding a plugin's
+frontend bundle and its `locales/` directory, nothing else: never
+`backend.js`, never a path outside those two, only `.js`, `.css`, `.json` and
+`.map`. It is unauthenticated like `/assets`, since `import()` cannot send the
+bearer header and bundles are not secret. With `?v=` the response is cached
+as immutable; without it, `no-cache`. nginx has a `^~ /plugin-assets/` block.
+
+#### The app object
+
+Every `register*` call returns a disposer and is also disposed automatically
+when the plugin deactivates. Every registered component is wrapped in the
+plugin's scope (so the hooks know which plugin they belong to), an error
+boundary and Suspense.
+
+| Member                                              | What it does                                                                                             |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `registerRailItem`                                  | A rail button. Hideable items show in Appearance > Sidebar > Navigation. The id must be a declared view  |
+| `registerPanel`                                     | A rail panel, id in `contributes.panels` or `contributes.tabs`                                           |
+| `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs      |
+| `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`            |
+| `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                     |
+| `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                 |
+| `registerPaletteEntry`                              | A global or per-host command palette entry                                                               |
+| `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                     |
+| `registerHomepageWidget`                            | A homepage widget, with an optional edit form                                                            |
+| `registerSettingsComponent`                         | A component a `type: "custom"` settings field names                                                      |
+| `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                             |
+| `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result |
+| `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                           |
+| `registerLoginMethod`, `registerSecondFactorUI`     | Typed now, wired by A8                                                                                   |
+| `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                              |
+| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces                                                                          |
+| `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                              |
+
+Hooks: `useTranslation` (the plugin's namespace), `usePermission` (a short
+name resolves to `<id>.<name>`), `useSettings`, `useHost`, `useHosts`,
+`useCurrentUser`, `useTheme`, `useToast`, `usePluginApi`, `useTabs`. The SDK
+has no runtime dependencies: the hooks delegate to a host bridge core installs.
+
+Slots core owns: `terminal.toolbar`, `terminal.dock`, `terminal.overlay`
+(declared by ssh-terminal), `onboarding.steps`, `onboarding.features`,
+`onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`
+and `session.remoteDisplay`. Cross-plugin frontend calls go through actions:
+`automations.list`, `fleets.list`, `session.remoteDisplay.token`.
+
+#### View ownership
+
+Who owns a tab, panel or card comes from manifests, so it is known even for a
+disabled plugin whose code never loaded. A saved tab or dashboard card whose
+plugin is disabled, failed, still loading or not installed renders "This
+needs the <name> plugin" (`PluginViewPlaceholder`) and is never dropped from
+the saved layout. Tab restore waits for the first plugin pass, so a restored
+tab does not race its plugin.
+
+#### The `ui` entry
+
+`@termix/plugin-sdk/ui` is public API, implemented by
+`src/ui/plugin-host/sdk-ui.ts`. Adding to it is a contract change; removing
+from it is a breaking one. Today it exports: alert, alert-dialog, badge,
+button, card, checkbox, dialog, dropdown-menu, input, label, password-input,
+select, select2, separator, switch, textarea, tooltip, section-card,
+metric-card, charts, the card grid, `ConnectionScreen` and the connection
+status helpers, `SnippetVariablesDialog`, `FullScreenAppWrapper`, the
+connection log context, `TOTPDialog`, `SSHAuthDialog`, `WarpgateDialog`,
+`useTabs`/`useTabsSafe`, `ActionSlot` and `ComponentSlot`. Publishing its
+`.d.ts` for plugins outside this repo is a follow-up for the repo split.
+
+#### Strings
+
+A plugin's strings live in `plugins/<id>/locales/en.json` and load into the
+`<id>` namespace, with core's `translation` as the fallback, so a plugin can
+still use `common.*`. Manifest keys (`titleKey`, `labelKey`) resolve in the
+plugin namespace; `pluginKey(id, key)` in core returns `<id>:<key>`.
+Translations go to `plugins/<id>/locales/translated/<xx_YY>.json`, which is
+where Crowdin writes them. Only `en.json` is edited by hand.
+
+#### Type checking
+
+`tsconfig.plugins.frontend.json` checks every plugin frontend and its tests
+with bundler resolution, and is part of `npm run type-check`.
 
 ### 9. Cross-plugin use
 
@@ -314,8 +449,12 @@ capability, registry, service, secret and shutdown suites.
 
 `@termix/plugin-sdk/testing` provides `createMockCtx()`, which enforces
 capabilities the way the runtime does, `createFakeContext()` for tests that do
-not care about the gates, and `renderWithApp()` for frontend tests (**A7**
-finishes it).
+not care about the gates, and `renderWithApp(plugin, options)` for frontend
+tests. `renderWithApp` activates the plugin against core's real registries,
+records what it registered and the shell calls it made, renders any tab,
+panel, card, host editor section, settings component or slot, and
+`deactivate()` disposes it all. Every bundled plugin has a
+`tests/frontend/activate.test.tsx` built on it.
 
 ### 12. Auth
 
@@ -339,8 +478,8 @@ plugins/<id>/
   tsconfig.json            extends @termix/plugin-sdk/tsconfig.plugin.json
   vitest.config.ts         one line, the SDK preset
   src/backend/index.ts     exports activate(ctx) and deactivate()
-  src/frontend/index.tsx   exports activate(app) and deactivate() (A7)
-  locales/en.json          English strings; Crowdin translates the rest
+  src/frontend/index.tsx   exports activate(app) and deactivate()
+  locales/en.json          English strings; Crowdin writes locales/translated/
   migrations/{sqlite,postgres,mysql}/  owned tables, one .sql per dialect
   migrations/snapshot.json        diff basis for the generator
   src/backend/tables.ts           defineTable() definitions
@@ -545,17 +684,23 @@ Cross-field rules the JSON schema cannot express, checked by `parseManifest`:
   appear in the plugin's own `contributes.permissions`. A dotted id is taken as
   given, because the validator cannot know which other plugins exist.
 
+`contributes.panels` and `contributes.dashboardCards` (each `{ id, titleKey,
+icon? }`) declare the views a plugin owns besides its tabs; the app object
+refuses to register a view the manifest does not declare. `contributes.guest`
+opts a plugin into anonymous guest pages. Action contributions and slots
+accept the kinds `button` and `component`.
+
 `contributes.hostCapability`, `provides`, `requires`, `providesSecret` and
 `requiresSecret` are carried forward from v1 unchanged because the service and
-secret registries read them at activation. A6 and A7 reshape them.
+secret registries read them at activation. Phase B reshapes them.
 
 Removed in A5: `contributes.permissionGroup` and its `defaultForRole`, replaced
 by `contributes.permissions`. A plugin no longer picks its own group name.
 
 Removed in v2: `permissions` (replaced by `capabilities`), `sidecars`, the
 `capabilities.{backend,frontend,electron,platforms}` object (replaced by the
-`backend`/`frontend`/`platforms` fields), `contributes.dashboardCards`,
-`contributes.settingsPanel`, `contributes.apiPrefix`, and
+`backend`/`frontend`/`platforms` fields), the v1 shape of
+`contributes.dashboardCards`, `contributes.settingsPanel`, `contributes.apiPrefix`, and
 `process:transport-owner` (the marker for the tier that no longer exists).
 
 ---
@@ -767,11 +912,12 @@ and that is bundled into its output.
 `ws`, `multer`, `cookie-parser`, `axios`, `jszip`, `guacamole-lite`,
 `@anthropic-ai/sdk`, `drizzle-orm`.
 
-**Frontend**: `react`, `react-dom`, `react/jsx-runtime`, `@termix/plugin-sdk`,
-`i18next`, `react-i18next`, and the UI libraries core provides today
-(`lucide-react`, `sonner`, `axios`, `cytoscape`, `react-cytoscapejs`,
-`guacamole-common-js`, `react-xtermjs`, `@xterm/*`). **A7** serves these
-through the SDK `ui` entry.
+**Frontend**: `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`,
+`i18next`, `react-i18next`, `sonner`, `@termix/plugin-sdk/frontend`,
+`@termix/plugin-sdk/ui` and `@termix/legacy-core/*`, all resolved through the
+import map (see UI). Everything else, including `lucide-react`, `axios`,
+`cytoscape` and `guacamole-common-js`, is bundled into the plugin that uses
+it.
 
 The lists live in `packages/plugin-sdk/cli/lib/externals.mjs`.
 
@@ -787,6 +933,13 @@ and rewrites to the compiled output path (`../../../backend/backend/...`, or
 so a source file at any nesting collapses to the same prefix. D1 deletes that
 file.
 
+Frontends do the same with `@/`: in the browser build, `@/x` and
+`../src/ui/x` become the bare `@termix/legacy-core/ui/x` (or
+`@termix/legacy-core/types/x`), which core's Vite build exposes as a shared
+module so plugin and shell use one instance of each core module. The CLI
+refuses the rewrite outside a Termix checkout. Every such import is counted
+in the `plugin-frontend-to-core` direction below.
+
 This is expected and temporary. The SDK does not yet expose what they need:
 the SSH connection pool, host resolution, the repository layer, the shared
 component library. D1 removes the debt once A3 through A8 have given them
@@ -798,7 +951,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | ------------------------------------------------ | --------- | --------- | ---------- |
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
-| The shell importing plugin components            | Warning   | 16 files  | A7         |
+| The shell importing plugin code                  | **Error** | 0         | -          |
+| A plugin frontend importing core through `@/`    | Warning   | 109 files | D1         |
 | A plugin importing core by relative path         | Warning   | 70 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
@@ -831,5 +985,9 @@ Known specifics:
 - Core feature servers that are not plugins yet still own ports: tunnel 30003,
   file-manager 30004, dashboard 30006, tmux 30010, serial 30011 and homepage 30012. Each keeps its nginx block until its own Phase B step. No plugin owns
   a port any more (A4).
-- `src/ui/shell/pluginLoader.ts` still hardcodes plugin ids in
-  `BUILT_IN_TABS_BY_PLUGIN` and `applyFirstPartyActions`. A7 removes both.
+- The terminal component and `TerminalTabContent` stay in core until the
+  terminal's Phase B step (session manager, split view and file-manager
+  callbacks). ssh-terminal registers them through the legacy alias.
+- Host data columns (`enableDocker`, `enableRdp`, `guacamoleConfig` and so on)
+  stay in core types until Phase B moves them. Only UI branches on them left
+  the shell.

@@ -1,15 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { HardDrive } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { ServerMetrics } from "@/main-axios";
 import { FilesystemPicker } from "./FilesystemPicker";
 import { RadialGauge, Sparkline, MiniStat } from "@/components/charts";
 import { MetricCard } from "@/components/metric-card";
 import { LineChart, type LineChartSeries } from "@/components/charts/LineChart";
-import {
-  getMetricsHistory,
-  type MetricsHistoryRow,
-} from "@/api/host-metrics-api";
+import { getMetricsHistory, type MetricsHistoryRow } from "../host-metrics-api";
 import { CardTimeTabs, type HistoryTab } from "./CardTimeTabs";
 
 export function DiskCard({

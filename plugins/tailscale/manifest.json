@@ -21,6 +21,13 @@
     "ui:surface"
   ],
   "contributes": {
+    "panels": [
+      {
+        "id": "tailscale",
+        "titleKey": "nav.tailscale",
+        "icon": "Radar"
+      }
+    ],
     "permissions": [
       {
         "name": "devices.view",

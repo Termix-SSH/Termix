@@ -33,8 +33,10 @@ import { Input } from "@/components/input";
 import { CollabMembersSidebar } from "./CollabMembersSidebar";
 import { Terminal } from "@/features/terminal/Terminal";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
-import { GuacamoleDisplay } from "../../../../plugins/remote-desktop/src/frontend/GuacamoleDisplay.tsx";
-import { getGuacamoleTokenFromHost } from "../../../../plugins/remote-desktop/src/frontend/guacamole-api";
+import {
+  RemoteDisplay,
+  createRemoteSessionToken,
+} from "@/features/remote-display/RemoteDisplay";
 import { getSSHHosts, getUserList, type SSHHostWithStatus } from "@/main-axios";
 import { getRoles } from "@/api/rbac-api";
 import type { Role } from "@/main-axios";
@@ -341,7 +343,7 @@ export function CollabRoomTab({
         setDraft({ protocol, host });
         return;
       }
-      const response = await getGuacamoleTokenFromHost(
+      const response = await createRemoteSessionToken(
         Number(host.id),
         await resolveConnectionOrigin({
           connectionType: protocol,
@@ -349,7 +351,7 @@ export function CollabRoomTab({
         }),
         protocol,
       );
-      if (!response.guacamoleConnectionId) {
+      if (!response?.connectionId) {
         toast.error(t("collab.stageLoading"));
         return;
       }
@@ -357,7 +359,7 @@ export function CollabRoomTab({
         protocol,
         host,
         token: response.token,
-        guacamoleConnectionId: response.guacamoleConnectionId,
+        guacamoleConnectionId: response.connectionId,
       });
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -689,12 +691,9 @@ export function CollabRoomTab({
                 />
               </CommandHistoryProvider>
             ) : (
-              <GuacamoleDisplay
-                connectionConfig={{
-                  token: draft.token,
-                  protocol: draft.protocol,
-                  type: draft.protocol,
-                }}
+              <RemoteDisplay
+                token={draft.token}
+                protocol={draft.protocol}
                 isVisible={isVisible}
                 onConnect={() =>
                   void registerStage(
@@ -735,13 +734,10 @@ export function CollabRoomTab({
                   />
                 </CommandHistoryProvider>
               ) : stage.connectParams?.token ? (
-                <GuacamoleDisplay
+                <RemoteDisplay
                   key={stage.connectParams.token}
-                  connectionConfig={{
-                    token: stage.connectParams.token,
-                    protocol: stage.protocol,
-                    type: stage.protocol,
-                  }}
+                  token={stage.connectParams.token}
+                  protocol={stage.protocol}
                   isVisible={isVisible}
                 />
               ) : (

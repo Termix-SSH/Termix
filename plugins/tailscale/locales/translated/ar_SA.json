@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "يجب أن يكون هذا مستخدمًا لنظام Unix، حيث يتم منح هوية Tailscale الخاصة بك في قائمة التحكم بالوصول SSH الخاصة بشبكة tailnet، وليس بالضرورة المستخدم الجذر.",
+    "tailscaleDeviceSelect": "اختيار جهاز Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "اختر جهازًا...",
+    "tailscaleNoApiKey": "لم يتم تكوين مفتاح API لـ Tailscale. أضف واحدًا في إعدادات المسؤول لتمكين اكتشاف الأجهزة.",
+    "tailscaleDocsLink": "عرض المستندات",
+    "tailscaleLoadingDevices": "جارٍ تحميل الأجهزة...",
+    "tailscaleDeviceLoadFailed": "فشل تحميل أجهزة Tailscale. يرجى التحقق من عنوان URL الخاص بواجهة برمجة التطبيقات (API) واتصال الشبكة.",
+    "tailscaleNoDevices": "لم يتم العثور على أجهزة في tailnet الخاص بك.",
+    "tailscaleDeviceAutoFill": "سيؤدي تحديد جهاز إلى تعبئة عنوان IP للمضيف تلقائيًا."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "يلزم التحقق من الهوية على مستوى ذيل الطائرة",
+    "tailscaleCheckDescription": "يتطلب Tailscale SSH إجراء فحص إضافي. قم بتسجيل الدخول إلى متصفحك للمتابعة.",
+    "tailscaleCheckOpenBrowser": "افتح المتصفح للمصادقة",
+    "tailscaleCheckWaiting": "في انتظار مصادقة Tailscale...",
+    "tailscaleCheckTimeout": "انتهت مهلة مصادقة Tailscale. يرجى المحاولة مرة أخرى."
+  }
+}

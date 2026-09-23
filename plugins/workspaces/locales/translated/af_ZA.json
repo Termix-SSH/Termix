@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Werkruimtes",
+        "saveCurrent": "Stoor Huidige",
+        "saveCurrentTitle": "Stoor huidige werkspasie",
+        "saveCurrentDescription": "Stoor elke oop oortjie, gesplete uitleg en paneelrangskikking as 'n nuwe benoemde werkruimte.",
+        "nameLabel": "Naam",
+        "namePlaceholder": "bv. Produkontfouting",
+        "nameRequired": "Werkruimtenaam word vereis",
+        "colorLabel": "Kleur",
+        "workspaceCreated": "Werkruimte gestoor",
+        "workspaceUpdated": "Werkruimte opgedateer",
+        "workspaceDeleted": "Werkruimte uitgevee",
+        "workspaceDuplicated": "Werkruimte gedupliseer",
+        "saveFailed": "Kon nie werkspasie stoor nie",
+        "updateFailed": "Kon nie werkspasie opdateer nie",
+        "deleteFailed": "Kon nie werkspasie uitvee nie",
+        "duplicateFailed": "Kon nie werkruimte dupliseer nie",
+        "loadFailed": "Kon nie werkruimtes laai nie",
+        "applyFailed": "Kon nie werkspasie toepas nie",
+        "deleteWorkspaceTitle": "Vee Werkspasie uit",
+        "deleteWorkspaceDescription": "Is jy seker jy wil \"{{name}}\" verwyder? Dit kan nie ongedaan gemaak word nie.",
+        "noWorkspaces": "Geen gestoorde werkruimtes nog nie. Stoor jou huidige oortjie-rangskikking om te begin.",
+        "tabCount": "{{count}} oortjie",
+        "tabCount_other": "{{count}} oortjies",
+        "apply": "Dien toe",
+        "applyConfirmTitle": "Pas Werkruimte toe",
+        "applyConfirmDescription": "Deur \"{{name}}\" toe te pas, sal jou huidige oortjies toegemaak word en vervang word met hierdie werkspasie se gestoorde rangskikking. Ongestoorde veranderinge aan jou huidige uitleg sal verlore gaan.",
+        "applyConfirmButton": "Pas Werkruimte toe",
+        "updateWithCurrent": "Opdateer met Huidige",
+        "updateWithCurrentConfirm": "Oorskryf \"{{name}}\" met jou huidige tabbladrangskikking?",
+        "rename": "Hernoem",
+        "duplicate": "Duplikaat",
+        "duplicateNameSuffix": "{{name}} (kopieer)",
+        "setDefault": "Stel as verstek",
+        "unsetDefault": "Verwyder as verstek",
+        "defaultBadge": "Standaard",
+        "lastSession": "Laaste Sessie",
+        "lastSessionDescription": "Outomaties opgedateer met jou mees onlangse oortjie-rangskikking. Pas dit toe om te herstel wat jy oop gehad het.",
+        "lastUsed": "Laas gebruik {{time}}",
+        "neverUsed": "Nooit toegepas nie",
+        "tabsSkipped": "Werkruimte toegepas — {{count}} oortjie(s) oorgeslaan (gasheer bestaan nie meer nie): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Werkruimtes"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Werkruimtes",
+    "workflow_workspaces_desc": "Stoor 'n stel oop oortjies en heropen die hele uitleg later."
+  }
+}

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Pencil, Trash2, GripVertical } from "lucide-react";
 import type { CanvasWidget } from "@/types/homepage-types";
-import { getWidgetType } from "./WidgetRegistry";
+import { getWidgetType, useWidgetTypes } from "./WidgetRegistry";
+import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 
 interface WidgetShellProps {
   widget: CanvasWidget;
@@ -31,6 +32,8 @@ export function WidgetShell({
   children,
 }: WidgetShellProps) {
   const [hovered, setHovered] = useState(false);
+  // A plugin widget appears once its plugin starts.
+  useWidgetTypes();
   const typeDef = getWidgetType(widget.typeId);
   const showControls =
     hovered && !isLocked && !isReadOnly && !isDragging && !isResizing;
@@ -87,9 +90,7 @@ export function WidgetShell({
             onConfigUpdate={onConfigUpdate}
           />
         ) : (
-          <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground">
-            Unknown widget
-          </div>
+          <PluginViewPlaceholder kind="card" viewId={widget.typeId} compact />
         ))}
 
       {/* Hover controls */}

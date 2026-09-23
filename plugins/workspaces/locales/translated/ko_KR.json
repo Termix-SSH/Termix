@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "작업 공간",
+        "saveCurrent": "현재 저장",
+        "saveCurrentTitle": "현재 작업 공간 저장",
+        "saveCurrentDescription": "열려 있는 모든 탭, 분할 레이아웃 및 창 배열을 새 이름의 작업 공간으로 저장합니다.",
+        "nameLabel": "이름",
+        "namePlaceholder": "예: 프로덕션 디버깅",
+        "nameRequired": "워크스페이스 이름은 필수 입력 사항입니다.",
+        "colorLabel": "색상",
+        "workspaceCreated": "작업 공간이 저장되었습니다",
+        "workspaceUpdated": "작업 공간이 업데이트되었습니다.",
+        "workspaceDeleted": "작업 공간이 삭제되었습니다",
+        "workspaceDuplicated": "작업 공간이 복제되었습니다",
+        "saveFailed": "작업 공간 저장에 실패했습니다",
+        "updateFailed": "워크스페이스 업데이트에 실패했습니다.",
+        "deleteFailed": "워크스페이스 삭제에 실패했습니다.",
+        "duplicateFailed": "워크스페이스 복제에 실패했습니다.",
+        "loadFailed": "워크스페이스를 불러오는 데 실패했습니다.",
+        "applyFailed": "워크스페이스 적용에 실패했습니다",
+        "deleteWorkspaceTitle": "작업 공간 삭제",
+        "deleteWorkspaceDescription": "\"{{name}}\"을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+        "noWorkspaces": "아직 저장된 작업 공간이 없습니다. 시작하려면 현재 탭 구성을 저장하세요.",
+        "tabCount": "{{count}} 탭",
+        "tabCount_other": "{{count}} 탭",
+        "apply": "적용하다",
+        "applyConfirmTitle": "작업 공간 적용",
+        "applyConfirmDescription": "\"{{name}}\"를 입력하면 현재 탭이 닫히고 이 작업 공간에 저장된 레이아웃으로 바뀝니다. 현재 레이아웃에 대한 저장되지 않은 변경 사항은 손실됩니다.",
+        "applyConfirmButton": "작업 공간 적용",
+        "updateWithCurrent": "현재 정보로 업데이트",
+        "updateWithCurrentConfirm": "현재 탭 배열로 \"{{name}}\"를 덮어쓰시겠습니까?",
+        "rename": "이름 변경",
+        "duplicate": "복제하다",
+        "duplicateNameSuffix": "{{name}} (복사)",
+        "setDefault": "기본값으로 설정",
+        "unsetDefault": "기본값에서 제거",
+        "defaultBadge": "기본",
+        "lastSession": "지난 세션",
+        "lastSessionDescription": "최근 탭 배열로 자동 업데이트됩니다. 적용하면 이전에 열려 있던 탭을 복구할 수 있습니다.",
+        "lastUsed": "마지막으로 사용된 값 {{time}}",
+        "neverUsed": "지원한 적 없음",
+        "tabsSkipped": "워크스페이스 적용됨 — {{count}} 탭 건너뛰기(호스트가 더 이상 존재하지 않음): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "작업 공간"
+  },
+  "onboarding": {
+    "workflow_workspaces": "작업 공간",
+    "workflow_workspaces_desc": "열려 있는 탭들을 저장해두었다가 나중에 전체 레이아웃을 다시 열어보세요."
+  }
+}

@@ -1,16 +1,20 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { Boxes } from "lucide-react";
 import {
-  HIDEABLE_RAIL_IDS,
-  PROMOTABLE_IDS,
+  hideableRailIds,
+  promotableIds,
   RAIL_ITEMS,
   RAIL_UTILITY_ITEMS,
-  RIGHT_DOCKABLE_IDS,
+  registerRailItem,
+  resetRegisteredRailItems,
+  rightDockableIds,
   railItemLabel,
   visibleRailItems,
 } from "@/sidebar/rail-items";
-import { WORKSPACE_CAPTURABLE_TYPES } from "../../../../plugins/workspaces/src/frontend/workspaceUtils";
-import type { TabType } from "@/types/ui-types";
+import { isCapturableTabType } from "@/shell/shell-layout";
 import en from "@/locales/en.json";
+
+afterEach(() => resetRegisteredRailItems());
 
 function lookup(key: string): unknown {
   return key
@@ -56,21 +60,17 @@ describe("RAIL_ITEMS", () => {
       "sftp",
       "snippets",
       "macros",
-      "fleets",
-      "tailscale",
-      "automations",
-      "ai",
       "history",
       "session-logs",
       "split-screen",
-      "workspaces",
       "local-terminal",
-      "network_graph",
     ]);
   });
 
-  it("exposes every rail item as hideable", () => {
-    expect(HIDEABLE_RAIL_IDS).toEqual(RAIL_ITEMS.map((item) => item.id));
+  it("exposes every visible rail item as hideable", () => {
+    expect(hideableRailIds()).toEqual(
+      visibleRailItems().map((item) => item.id),
+    );
   });
 
   it("marks exactly the four mobile primary slots", () => {
@@ -89,17 +89,15 @@ describe("RAIL_ITEMS", () => {
       "ssh-tools",
       "snippets",
       "macros",
-      "automations",
-      "ai",
       "history",
       "session-logs",
     ]);
   });
 
-  it("derives PROMOTABLE_IDS from the promotable flag", () => {
+  it("derives promotableIds from the promotable flag", () => {
     // The header button and the hint both gate on this list, so a drift here
     // silently hides the feature for that panel.
-    expect(PROMOTABLE_IDS).toEqual(
+    expect(promotableIds()).toEqual(
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
@@ -112,33 +110,85 @@ describe("RAIL_ITEMS", () => {
     for (const item of [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]) {
       if (!item.promotable) continue;
       expect(
-        WORKSPACE_CAPTURABLE_TYPES,
+        isCapturableTabType(item.id),
         `${item.id} is promotable but not workspace-capturable`,
-      ).toContain(item.id as TabType);
+      ).toBe(true);
     }
   });
 
   it("keeps the mounted-but-hidden panels out of the right dock", () => {
     // Hosts, credentials and fleets stay mounted while hidden and share editing
     // state, so a second live instance in the right dock would fight the first.
-    for (const id of ["hosts", "credentials", "fleets"]) {
+    for (const id of ["hosts", "credentials"]) {
       expect(
-        RIGHT_DOCKABLE_IDS,
+        rightDockableIds(),
         `${id} must not be right-dockable`,
       ).not.toContain(id);
     }
   });
 
   it("only offers reference panels in the right dock", () => {
-    expect(RIGHT_DOCKABLE_IDS).toEqual([
+    expect(rightDockableIds()).toEqual([
       "connections",
       "ssh-tools",
       "snippets",
       "macros",
-      "ai",
       "history",
       "session-logs",
     ]);
+  });
+});
+
+describe("registered rail items", () => {
+  const item = (id: string, extra: object = {}) => ({
+    id,
+    icon: Boxes,
+    labelKey: `nav.${id}`,
+    pluginId: "p",
+    ...extra,
+  });
+
+  it("places items after their anchor, keeping their own order", () => {
+    registerRailItem(item("second", { after: "macros", order: 2 }));
+    registerRailItem(item("first", { after: "macros", order: 1 }));
+    const ids = visibleRailItems().map((entry) => entry.id);
+    const at = ids.indexOf("macros");
+    expect(ids.slice(at + 1, at + 3)).toEqual(["first", "second"]);
+  });
+
+  it("goes to the end when its anchor does not exist", () => {
+    registerRailItem(item("orphan", { after: "nowhere" }));
+    expect(visibleRailItems().at(-1)?.id).toBe("orphan");
+  });
+
+  it("feeds its flags into the promotable, dock and hideable lists", () => {
+    registerRailItem(item("docked", { promotable: true, rightDockable: true }));
+    registerRailItem(item("pinned", { hideable: false }));
+    expect(promotableIds()).toContain("docked");
+    expect(rightDockableIds()).toContain("docked");
+    expect(hideableRailIds()).toContain("docked");
+    expect(hideableRailIds()).not.toContain("pinned");
+  });
+
+  it("drops a hidden item everywhere without unregistering it", () => {
+    registerRailItem(item("off", { hidden: true, promotable: true }));
+    expect(visibleRailItems().map((entry) => entry.id)).not.toContain("off");
+    expect(hideableRailIds()).not.toContain("off");
+    expect(promotableIds()).not.toContain("off");
+  });
+
+  it("labels a registered item by its own key", () => {
+    registerRailItem(item("labelled"));
+    expect(railItemLabel("labelled", (key) => `t:${key}`)).toBe(
+      "t:nav.labelled",
+    );
+  });
+
+  it("disposes only the entry it registered", () => {
+    const dispose = registerRailItem(item("same", { order: 1 }));
+    registerRailItem(item("same", { order: 2 }));
+    dispose();
+    expect(visibleRailItems().map((entry) => entry.id)).toContain("same");
   });
 });
 

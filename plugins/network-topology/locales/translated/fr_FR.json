@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Ajouter un hôte",
+    "addGroup": "Ajouter un groupe",
+    "addLink": "Ajouter un lien",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "resetView": "Réinitialiser la vue",
+    "selectHost": "Sélectionner l'hôte",
+    "chooseHost": "Choisir un hôte...",
+    "parentGroup": "Groupe parent",
+    "noGroup": "Aucun groupe",
+    "groupName": "Nom du groupe",
+    "color": "Couleur",
+    "source": "Source",
+    "target": "Cible",
+    "moveToGroup": "Déplacer vers le groupe",
+    "selectGroup": "Sélectionner un groupe...",
+    "addConnection": "Ajouter une connexion",
+    "hostDetails": "Détails de l'hôte",
+    "removeFromGroup": "Retirer du groupe",
+    "addHostHere": "Ajouter un hôte ici",
+    "editGroup": "Modifier le groupe",
+    "delete": "Supprimer",
+    "add": "Ajouter",
+    "create": "Créer",
+    "move": "Déplacer",
+    "connect": "Connecter",
+    "createGroup": "Créer un groupe",
+    "selectSourcePlaceholder": "Sélectionner la source...",
+    "selectTargetPlaceholder": "Sélectionner la cible...",
+    "invalidFile": "Fichier non valide",
+    "hostAlreadyExists": "L'hôte est déjà dans la topologie",
+    "connectionExists": "La connexion existe déjà",
+    "unknown": "Inconnu",
+    "name": "Nom",
+    "ip": "IP",
+    "status": "Statut",
+    "failedToAddNode": "Échec de l'ajout du nœud",
+    "sourceDifferentFromTarget": "La source et la cible doivent être différentes",
+    "exportJSON": "Exporter JSON",
+    "importJSON": "Importer JSON",
+    "terminal": "Terminal",
+    "fileManager": "Gestionnaire de fichiers",
+    "tunnel": "Tunnel",
+    "docker": "Docker",
+    "serverStats": "Métriques de l'hôte",
+    "hostMetrics": "Métriques de l'hôte",
+    "noNodes": "Aucun nœud pour l'instant"
+  },
+  "nav": {
+    "networkGraph": "Graphique réseau"
+  },
+  "dashboard": {
+    "networkGraph": "Graphique réseau"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} nœuds"
+  }
+}

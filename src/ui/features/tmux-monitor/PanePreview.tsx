@@ -70,35 +70,15 @@ export function PanePreview({
     setAttachNonce((n) => n + 1);
   }
 
-  // For Tailscale-auth hosts the generic pane-preview attach path can fail
-  // host-reachability checks because the connection is initiated as a plain
-  // TCP/SSH dial rather than through the Tailscale transport that was used for
-  // the interactive terminal.  Building the hostConfig with an explicit
-  // authType and a defensively derived SSH port ensures the backend selects
-  // the correct Tailscale-aware PTY path for both initial attach and reattach.
-  let terminalHostConfig: TerminalHostConfig;
-  if (host.authType === "tailscale") {
-    // Prefer host.sshPort when set (Tailscale SSH can be on a non-standard
-    // port); fall back to the general host.port.
-    const resolvedPort = host.sshPort ?? host.port;
-    terminalHostConfig = {
-      ...host,
-      port: resolvedPort,
-      sshPort: resolvedPort,
-      // Carry authType explicitly to guard against accidental omission
-      // in the spread (e.g. if host object shape changes upstream).
-      authType: "tailscale",
-      instanceId: instanceIdRef.current,
-    } as TerminalHostConfig;
-  } else {
-    const resolvedPort = host.sshPort ?? host.port;
-    terminalHostConfig = {
-      ...host,
-      port: resolvedPort,
-      sshPort: resolvedPort,
-      instanceId: instanceIdRef.current,
-    } as TerminalHostConfig;
-  }
+  // The host's own authType travels in the spread, so a Tailscale host still
+  // gets the Tailscale-aware PTY path. The SSH port may be non-standard.
+  const resolvedPort = host.sshPort ?? host.port;
+  const terminalHostConfig = {
+    ...host,
+    port: resolvedPort,
+    sshPort: resolvedPort,
+    instanceId: instanceIdRef.current,
+  } as TerminalHostConfig;
 
   return (
     <>

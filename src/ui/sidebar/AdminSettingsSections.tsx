@@ -28,10 +28,6 @@ type GeneralSettingsSectionProps = {
   analyticsLocked: boolean;
   handleToggleAnalytics: () => void;
   sessionSharingGloballyEnabled: boolean;
-  aiGloballyEnabled: boolean;
-  onToggleAiGloballyEnabled: () => void;
-  aiPrivateEndpoints: string[];
-  onSaveAiPrivateEndpoints: (hosts: string[]) => void;
   notificationPrivateEndpoints: string[];
   onSaveNotificationPrivateEndpoints: (hosts: string[]) => void;
   stepCaPrivateEndpoints: string[];
@@ -67,8 +63,6 @@ type GeneralSettingsSectionProps = {
   setStatusInterval: Dispatch<SetStateAction<string>>;
   metricsInterval: string;
   setMetricsInterval: Dispatch<SetStateAction<string>>;
-  metricsHistoryRetention: string;
-  setMetricsHistoryRetention: Dispatch<SetStateAction<string>>;
   handleSaveMonitoring: () => void;
   guacEnabled: boolean;
   handleToggleGuacamole: () => void;
@@ -86,10 +80,6 @@ export function AdminGeneralSettingsSection({
   analyticsLocked,
   handleToggleAnalytics,
   sessionSharingGloballyEnabled,
-  aiGloballyEnabled,
-  onToggleAiGloballyEnabled,
-  aiPrivateEndpoints,
-  onSaveAiPrivateEndpoints,
   notificationPrivateEndpoints,
   onSaveNotificationPrivateEndpoints,
   stepCaPrivateEndpoints,
@@ -123,8 +113,6 @@ export function AdminGeneralSettingsSection({
   setStatusInterval,
   metricsInterval,
   setMetricsInterval,
-  metricsHistoryRetention,
-  setMetricsHistoryRetention,
   handleSaveMonitoring,
   guacEnabled,
   handleToggleGuacamole,
@@ -167,40 +155,6 @@ export function AdminGeneralSettingsSection({
             onToggle={handleToggleSessionSharingGloballyEnabled}
           />
         </SettingRow>
-        <SettingRow
-          label={t("admin.aiGloballyEnabled")}
-          description={t("admin.aiGloballyEnabledDesc")}
-        >
-          <AdminToggle
-            on={aiGloballyEnabled}
-            onToggle={onToggleAiGloballyEnabled}
-          />
-        </SettingRow>
-        {aiGloballyEnabled && (
-          // Full-width rather than a SettingRow: the panel is narrow, and an
-          // inline field here squeezes the label down to a word per line.
-          <div className="flex flex-col gap-1.5 py-2">
-            <span className="text-xs font-medium">
-              {t("admin.aiPrivateEndpoints")}
-            </span>
-            <span className="text-[11px] leading-snug text-muted-foreground">
-              {t("admin.aiPrivateEndpointsDesc")}
-            </span>
-            <Input
-              className="rounded-none"
-              defaultValue={aiPrivateEndpoints.join(", ")}
-              placeholder="localhost, 127.0.0.1"
-              onBlur={(event) =>
-                onSaveAiPrivateEndpoints(
-                  event.target.value
-                    .split(",")
-                    .map((entry) => entry.trim())
-                    .filter(Boolean),
-                )
-              }
-            />
-          </div>
-        )}
         <div className="flex flex-col gap-1.5 py-2">
           <span className="text-xs font-medium">
             {t("admin.notificationPrivateEndpoints")}
@@ -476,35 +430,6 @@ export function AdminGeneralSettingsSection({
                 {t("common.save")}
               </Button>
             </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              {t("admin.metricsHistoryRetention")}
-            </label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={1}
-                max={90}
-                value={metricsHistoryRetention}
-                onChange={(e) => setMetricsHistoryRetention(e.target.value)}
-                className="w-20 text-sm"
-              />
-              <span className="text-xs text-muted-foreground">
-                {t("admin.days")}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
-                onClick={handleSaveMonitoring}
-              >
-                {t("common.save")}
-              </Button>
-            </div>
-            <span className="text-[10px] text-muted-foreground">
-              {t("admin.metricsHistoryRetentionRange")}
-            </span>
           </div>
         </div>
 

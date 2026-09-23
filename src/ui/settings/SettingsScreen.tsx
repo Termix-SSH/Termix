@@ -24,7 +24,6 @@ import { Separator } from "@/components/separator";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { PluginSettingsPage } from "./PluginSettingsPage";
-import { registerLegacySettingsComponents } from "./legacy-settings-components";
 
 const UserProfilePanel = lazy(() =>
   import("@/sidebar/UserProfilePanel").then((m) => ({
@@ -86,12 +85,6 @@ export function SettingsScreen({
   const [section, setSection] = useState<SettingsSectionId>(initialSection);
   const [navOpen, setNavOpen] = useState(false);
   const [plugins, setPlugins] = useState<PluginSummary[]>([]);
-
-  // Registered here rather than at module scope so a custom field's component
-  // exists before any page that renders one. A7 moves this into the loader.
-  useEffect(() => {
-    registerLegacySettingsComponents();
-  }, []);
 
   useEffect(() => {
     let cancelled = false;

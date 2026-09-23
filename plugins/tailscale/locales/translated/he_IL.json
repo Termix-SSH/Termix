@@ -1,0 +1,20 @@
+{
+  "hosts": {
+    "tailscaleUsernameHint": "זה חייב להיות משתמש יוניקס שזהות Tailscale שלך מוענקת לו ב-SSH ACL של tailnet, לאו דווקא root.",
+    "tailscaleDeviceSelect": "בחר מכשיר Tailscale",
+    "tailscaleDeviceSelectPlaceholder": "בחר מכשיר...",
+    "tailscaleNoApiKey": "לא הוגדר מפתח API של Tailscale. הוסף אחד בהגדרות הניהול כדי לאפשר גילוי מכשירים.",
+    "tailscaleDocsLink": "הצג מסמכים",
+    "tailscaleLoadingDevices": "טוען מכשירים...",
+    "tailscaleDeviceLoadFailed": "טעינת התקני Tailscale נכשלה. בדוק את כתובת ה-URL של ה-API ואת חיבור הרשת.",
+    "tailscaleNoDevices": "לא נמצאו מכשירים ברשת הזנב שלך.",
+    "tailscaleDeviceAutoFill": "בחירת מכשיר תמלא אוטומטית את כתובת ה-IP של המארח."
+  },
+  "terminal": {
+    "tailscaleCheckRequired": "נדרש אימות של Tailscale",
+    "tailscaleCheckDescription": "‏SSH של Tailscale דורש בדיקה נוספת. יש לבצע אימות בדפדפן כדי להמשיך.",
+    "tailscaleCheckOpenBrowser": "פתח את הדפדפן כדי לאמת",
+    "tailscaleCheckWaiting": "ממתין לאימות Tailscale...",
+    "tailscaleCheckTimeout": "אימות Tailscale הסתיים. אנא נסה שוב."
+  }
+}

@@ -14,20 +14,15 @@ import {
   type GuacamoleDisplayHandle,
   type GuacamoleTouchMode,
 } from "./GuacamoleDisplay.tsx";
-import {
-  getGuacamoleTokenFromHost,
-  getGuacdStatus,
-  getSSHHosts,
-  logActivity,
-  isElectron,
-} from "@/main-axios.ts";
+import { getSSHHosts, logActivity, isElectron } from "@/main-axios";
+import { getGuacamoleTokenFromHost, getGuacdStatus } from "./guacamole-api";
 import { readConfiguredDimension } from "./guacamole-display-size.ts";
 import { getGuacamoleToken, parseGuacamoleConfig } from "./guacamole-api";
 import {
   resolveConnectionOrigin,
   type ConnectionOrigin,
 } from "@/lib/connection-origin.ts";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { GuacamoleToolbar } from "./GuacamoleToolbar.tsx";
 import { GuacamoleFileBrowser } from "./GuacamoleFileBrowser.tsx";
 import { describeUploadError } from "./guacamole-filesystem.ts";
@@ -73,6 +68,8 @@ export interface GuacamoleAppHandle {
   isConnected: () => boolean;
   openShareModal: () => void;
   canShare: () => boolean;
+  /** Reconnects, from the tab bar's refresh. */
+  refresh: () => void;
 }
 
 const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
@@ -294,11 +291,15 @@ const GuacamoleAppInner = React.forwardRef<
   const [promptPassword, setPromptPassword] = useState("");
   const [promptDomain, setPromptDomain] = useState(hostConfig.domain ?? "");
 
+  // Assigned below, once handleReconnect exists; the shell's tab refresh calls it.
+  const reconnectRef = useRef<() => void>(() => {});
+
   useImperativeHandle(ref, () => ({
     disconnect: () => displayRef.current?.disconnect(),
     isConnected: () => displayRef.current?.isConnected() === true,
     openShareModal: () => setShareModalOpen(true),
     canShare: () => guacamoleConnectionId !== null,
+    refresh: () => reconnectRef.current(),
   }));
 
   const fetchToken = useCallback(async (): Promise<void> => {
@@ -454,16 +455,7 @@ const GuacamoleAppInner = React.forwardRef<
     tokenRetryRef.current.retryNow();
   }, [needsCredentialPrompt, hostConfig.domain, clearLogs]);
 
-  useEffect(() => {
-    if (!tabId) return;
-    const handler = (e: Event) => {
-      const { tabId: eventTabId } = (e as CustomEvent).detail;
-      if (eventTabId === tabId) handleReconnect();
-    };
-    window.addEventListener("termix:refresh-guacamole", handler);
-    return () =>
-      window.removeEventListener("termix:refresh-guacamole", handler);
-  }, [tabId, handleReconnect]);
+  reconnectRef.current = handleReconnect;
 
   if (promptOpen) {
     return (

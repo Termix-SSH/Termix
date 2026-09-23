@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Přidat hostitele",
+    "addGroup": "Přidat skupinu",
+    "addLink": "Přidat odkaz",
+    "zoomIn": "Přiblížit",
+    "zoomOut": "Oddálit",
+    "resetView": "Obnovit zobrazení",
+    "selectHost": "Vyberte hostitele",
+    "chooseHost": "Vyberte si hostitele...",
+    "parentGroup": "Nadřazená skupina",
+    "noGroup": "Žádná skupina",
+    "groupName": "Název skupiny",
+    "color": "Barva",
+    "source": "Zdroj",
+    "target": "Cíl",
+    "moveToGroup": "Přesunout do skupiny",
+    "selectGroup": "Vyberte skupinu...",
+    "addConnection": "Přidat připojení",
+    "hostDetails": "Podrobnosti o hostiteli",
+    "removeFromGroup": "Odebrat ze skupiny",
+    "addHostHere": "Přidat hostitele zde",
+    "editGroup": "Upravit skupinu",
+    "delete": "Vymazat",
+    "add": "Přidat",
+    "create": "Vytvořit",
+    "move": "Pohyb",
+    "connect": "Připojit",
+    "createGroup": "Vytvořit skupinu",
+    "selectSourcePlaceholder": "Vyberte zdroj...",
+    "selectTargetPlaceholder": "Vyberte cíl...",
+    "invalidFile": "Neplatný soubor",
+    "hostAlreadyExists": "Hostitel je již v topologii",
+    "connectionExists": "Připojení již existuje",
+    "unknown": "Neznámý",
+    "name": "Jméno",
+    "ip": "IP adresa",
+    "status": "Postavení",
+    "failedToAddNode": "Nepodařilo se přidat uzel",
+    "sourceDifferentFromTarget": "Zdroj a cíl se musí lišit",
+    "exportJSON": "Exportovat JSON",
+    "importJSON": "Importovat JSON",
+    "terminal": "Terminál",
+    "fileManager": "Správce souborů",
+    "tunnel": "Tunel",
+    "docker": "Přístavní dělník",
+    "serverStats": "Metriky hostitele",
+    "hostMetrics": "Metriky hostitele",
+    "noNodes": "Zatím žádné uzly"
+  },
+  "nav": {
+    "networkGraph": "Síťový graf"
+  },
+  "dashboard": {
+    "networkGraph": "Síťový graf"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} uzlů"
+  }
+}

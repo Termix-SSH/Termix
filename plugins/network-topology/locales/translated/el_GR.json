@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Προσθήκη κεντρικού υπολογιστή",
+    "addGroup": "Προσθήκη ομάδας",
+    "addLink": "Προσθήκη συνδέσμου",
+    "zoomIn": "Μεγέθυνση",
+    "zoomOut": "Σμίκρυνση",
+    "resetView": "Επαναφορά προβολής",
+    "selectHost": "Επιλέξτε κεντρικό υπολογιστή",
+    "chooseHost": "Επιλέξτε έναν οικοδεσπότη...",
+    "parentGroup": "Γονική ομάδα",
+    "noGroup": "Καμία ομάδα",
+    "groupName": "Όνομα ομάδας",
+    "color": "Χρώμα",
+    "source": "Πηγή",
+    "target": "Στόχος",
+    "moveToGroup": "Μετακίνηση σε ομάδα",
+    "selectGroup": "Επιλογή ομάδας...",
+    "addConnection": "Προσθήκη σύνδεσης",
+    "hostDetails": "Στοιχεία κεντρικού υπολογιστή",
+    "removeFromGroup": "Αφαίρεση από την ομάδα",
+    "addHostHere": "Προσθήκη κεντρικού υπολογιστή εδώ",
+    "editGroup": "Επεξεργασία ομάδας",
+    "delete": "Διαγράφω",
+    "add": "Προσθέτω",
+    "create": "Δημιουργώ",
+    "move": "Κίνηση",
+    "connect": "Συνδέω",
+    "createGroup": "Δημιουργία ομάδας",
+    "selectSourcePlaceholder": "Επιλογή Πηγής...",
+    "selectTargetPlaceholder": "Επιλογή Στόχου...",
+    "invalidFile": "Μη έγκυρο αρχείο",
+    "hostAlreadyExists": "Ο κεντρικός υπολογιστής βρίσκεται ήδη στην τοπολογία",
+    "connectionExists": "Η σύνδεση υπάρχει ήδη",
+    "unknown": "Αγνωστος",
+    "name": "Ονομα",
+    "ip": "Πνευματική Ιδιοκτησία",
+    "status": "Κατάσταση",
+    "failedToAddNode": "Αποτυχία προσθήκης κόμβου",
+    "sourceDifferentFromTarget": "Η πηγή και ο στόχος πρέπει να είναι διαφορετικοί",
+    "exportJSON": "Εξαγωγή JSON",
+    "importJSON": "Εισαγωγή JSON",
+    "terminal": "Τερματικό",
+    "fileManager": "Διαχειριστής αρχείων",
+    "tunnel": "Σήραγγα",
+    "docker": "Λιμενεργάτης",
+    "serverStats": "Μετρήσεις κεντρικού υπολογιστή",
+    "hostMetrics": "Μετρήσεις κεντρικού υπολογιστή",
+    "noNodes": "Δεν υπάρχουν ακόμη κόμβοι"
+  },
+  "nav": {
+    "networkGraph": "Γράφημα δικτύου"
+  },
+  "dashboard": {
+    "networkGraph": "Γράφημα δικτύου"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} κόμβοι"
+  }
+}

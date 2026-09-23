@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Lisää isäntä",
+    "addGroup": "Lisää ryhmä",
+    "addLink": "Lisää linkki",
+    "zoomIn": "Lähennä",
+    "zoomOut": "Loitonna",
+    "resetView": "Palauta näkymä",
+    "selectHost": "Valitse isäntä",
+    "chooseHost": "Valitse isäntä...",
+    "parentGroup": "Yläryhmä",
+    "noGroup": "Ei ryhmää",
+    "groupName": "Ryhmän nimi",
+    "color": "Väri",
+    "source": "Lähde",
+    "target": "Kohde",
+    "moveToGroup": "Siirrä ryhmään",
+    "selectGroup": "Valitse ryhmä...",
+    "addConnection": "Lisää yhteys",
+    "hostDetails": "Isännän tiedot",
+    "removeFromGroup": "Poista ryhmästä",
+    "addHostHere": "Lisää isäntä tähän",
+    "editGroup": "Muokkaa ryhmää",
+    "delete": "Poistaa",
+    "add": "Lisätä",
+    "create": "Luoda",
+    "move": "Liikkua",
+    "connect": "Yhdistä",
+    "createGroup": "Luo ryhmä",
+    "selectSourcePlaceholder": "Valitse lähde...",
+    "selectTargetPlaceholder": "Valitse kohde...",
+    "invalidFile": "Virheellinen tiedosto",
+    "hostAlreadyExists": "Isäntä on jo topologiassa",
+    "connectionExists": "Yhteys on jo olemassa",
+    "unknown": "Tuntematon",
+    "name": "Nimi",
+    "ip": "IP-osoite",
+    "status": "Status",
+    "failedToAddNode": "Solmun lisääminen epäonnistui",
+    "sourceDifferentFromTarget": "Lähteen ja kohteen on oltava eri",
+    "exportJSON": "Vie JSON",
+    "importJSON": "Tuo JSON",
+    "terminal": "Terminaali",
+    "fileManager": "Tiedostonhallinta",
+    "tunnel": "Tunneli",
+    "docker": "Satamatyöläinen",
+    "serverStats": "Isännän mittarit",
+    "hostMetrics": "Isännän mittarit",
+    "noNodes": "Ei vielä solmuja"
+  },
+  "nav": {
+    "networkGraph": "Verkkokaavio"
+  },
+  "dashboard": {
+    "networkGraph": "Verkkokaavio"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} solmut"
+  }
+}

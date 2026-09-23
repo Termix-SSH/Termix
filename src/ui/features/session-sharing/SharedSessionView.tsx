@@ -10,7 +10,7 @@ import {
 } from "@/api/session-sharing-api";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { pluginWsUrl } from "@/lib/plugin-transport";
-import { GuacamoleDisplay } from "../../../../plugins/remote-desktop/src/frontend/GuacamoleDisplay.tsx";
+import { RemoteDisplay } from "@/features/remote-display/RemoteDisplay";
 
 const PING_INTERVAL_MS = 30000;
 
@@ -286,12 +286,9 @@ function GuestGuacamoleView({ share }: { share: ResolvedShareLink }) {
           />
         </div>
       )}
-      <GuacamoleDisplay
-        connectionConfig={{
-          token: share.connectParams.token,
-          protocol: share.protocol as "rdp" | "vnc" | "telnet",
-          type: share.protocol as "rdp" | "vnc" | "telnet",
-        }}
+      <RemoteDisplay
+        token={share.connectParams.token}
+        protocol={share.protocol}
         isVisible={true}
         onError={(err) => setConnectionError(err)}
       />

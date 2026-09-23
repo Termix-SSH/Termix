@@ -24,17 +24,16 @@ import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
+import { startPluginRuntime } from "@/plugin-host/loader";
+import { standaloneViewFor } from "@/shell/tab-registry";
+import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
 );
 
-// Full-screen apps opened via query params (e.g. from external links or Electron)
-const TerminalApp = lazy(() =>
-  import("@/features/terminal/TerminalApp").then((m) => ({
-    default: m.default,
-  })),
-);
+// Full-screen apps opened via query params (e.g. from external links or
+// Electron). Plugin views register a standalone component with their tab.
 const FileManagerApp = lazy(() =>
   import("@/features/file-manager/FileManagerApp").then((m) => ({
     default: m.default,
@@ -42,26 +41,6 @@ const FileManagerApp = lazy(() =>
 );
 const TunnelApp = lazy(() =>
   import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
-);
-const HostMetricsApp = lazy(() =>
-  import("../plugins/host-metrics/src/frontend/HostMetricsApp").then((m) => ({
-    default: m.default,
-  })),
-);
-const ProxmoxStatsApp = lazy(() =>
-  import("@/features/proxmox-stats/ProxmoxStatsApp").then((m) => ({
-    default: m.default,
-  })),
-);
-const DockerApp = lazy(() =>
-  import("../plugins/docker/src/frontend/DockerApp").then((m) => ({
-    default: m.default,
-  })),
-);
-const GuacamoleApp = lazy(() =>
-  import("../plugins/remote-desktop/src/frontend/GuacamoleApp").then((m) => ({
-    default: m.default,
-  })),
 );
 // --- tmux-monitor ---
 const TmuxMonitorApp = lazy(() =>
@@ -101,17 +80,9 @@ function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
   const hostId = searchParams.get("hostId");
-  const tmuxSession = searchParams.get("tmuxSession");
   const path = searchParams.get("path");
 
   switch (view) {
-    case "terminal":
-      return (
-        <TerminalApp
-          hostId={hostId || undefined}
-          tmuxSession={tmuxSession || undefined}
-        />
-      );
     case "file-manager":
       return (
         <FileManagerApp
@@ -121,29 +92,25 @@ function FullscreenApp() {
       );
     case "tunnel":
       return <TunnelApp hostId={hostId || undefined} />;
-    case "host-metrics":
-    case "server-stats":
-      return <HostMetricsApp hostId={hostId || undefined} />;
-    case "proxmox-stats":
-      return <ProxmoxStatsApp hostId={hostId || undefined} />;
-    case "docker":
-      return <DockerApp hostId={hostId || undefined} />;
-    case "rdp":
-    case "vnc":
-    case "telnet":
-      return (
-        <GuacamoleApp
-          hostId={hostId || undefined}
-          protocol={view as "rdp" | "vnc" | "telnet"}
-        />
-      );
     case "tmux-monitor": // --- tmux-monitor ---
     case "tmux_monitor": // tab type spelling, so copied links also resolve
       return <TmuxMonitorApp hostId={hostId || undefined} />;
     case "homepage":
       return <HomepageApp />;
-    default:
-      return null;
+    default: {
+      const def = view ? standaloneViewFor(view) : undefined;
+      if (!def?.standalone) {
+        return view ? <PluginViewPlaceholder kind="tab" viewId={view} /> : null;
+      }
+      const Standalone = def.standalone;
+      return (
+        <Standalone
+          hostId={hostId || undefined}
+          view={view!}
+          params={searchParams}
+        />
+      );
+    }
   }
 }
 
@@ -166,6 +133,9 @@ function FullscreenAppGate() {
             // WebSocket connections can still fall back to cookie auth.
           }
         }
+        // Plugin views (metrics, Docker, remote desktop) register their
+        // full-screen component when their plugin starts.
+        await startPluginRuntime().catch(() => {});
         if (!cancelled) setReady(true);
       })
       .catch(() => {
@@ -432,6 +402,20 @@ function App() {
   );
 }
 
+/**
+ * Guest links draw surfaces plugins provide (a remote desktop stream), so the
+ * guest-capable plugins load first, without a session.
+ */
+function GuestPlugins({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    startPluginRuntime({ guest: true })
+      .catch(() => {})
+      .finally(() => setReady(true));
+  }, []);
+  return ready ? <>{children}</> : null;
+}
+
 function RootApp() {
   const [showVersionCheck, setShowVersionCheck] = useState(true);
 
@@ -445,14 +429,18 @@ function RootApp() {
   if (searchParams.get("view") === "shared") {
     return (
       <Suspense fallback={null}>
-        <SharedSessionView />
+        <GuestPlugins>
+          <SharedSessionView />
+        </GuestPlugins>
       </Suspense>
     );
   }
   if (searchParams.get("view") === "collab-guest") {
     return (
       <Suspense fallback={null}>
-        <CollabGuestView />
+        <GuestPlugins>
+          <CollabGuestView />
+        </GuestPlugins>
       </Suspense>
     );
   }

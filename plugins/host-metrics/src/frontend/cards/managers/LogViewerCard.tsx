@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollText } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { managerGet, managerGetSub } from "@/main-axios";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { managerGet, managerGetSub } from "../../host-metrics-api";
 import { extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";

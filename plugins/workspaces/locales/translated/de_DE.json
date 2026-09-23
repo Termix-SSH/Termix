@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Arbeitsbereiche",
+        "saveCurrent": "Aktuellen Stand speichern",
+        "saveCurrentTitle": "Aktuellen Arbeitsbereich speichern",
+        "saveCurrentDescription": "Alle geöffneten Tabs, geteilten Layouts und Fensteranordnungen werden als neuer, benannter Arbeitsbereich gespeichert.",
+        "nameLabel": "Name",
+        "namePlaceholder": "z. B. Produktions-Debugging",
+        "nameRequired": "Die Angabe eines Arbeitsbereichsnamens ist erforderlich.",
+        "colorLabel": "Farbe",
+        "workspaceCreated": "Arbeitsbereich gespeichert",
+        "workspaceUpdated": "Arbeitsbereich aktualisiert",
+        "workspaceDeleted": "Arbeitsbereich gelöscht",
+        "workspaceDuplicated": "Arbeitsbereich dupliziert",
+        "saveFailed": "Arbeitsbereich konnte nicht gespeichert werden",
+        "updateFailed": "Aktualisierung des Arbeitsbereichs fehlgeschlagen",
+        "deleteFailed": "Arbeitsbereich konnte nicht gelöscht werden",
+        "duplicateFailed": "Arbeitsbereich konnte nicht dupliziert werden",
+        "loadFailed": "Arbeitsbereiche konnten nicht geladen werden",
+        "applyFailed": "Arbeitsbereich konnte nicht angewendet werden",
+        "deleteWorkspaceTitle": "Arbeitsbereich löschen",
+        "deleteWorkspaceDescription": "Möchten Sie \"{{name}}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+        "noWorkspaces": "Es sind noch keine Arbeitsbereiche gespeichert. Speichern Sie Ihre aktuelle Tab-Anordnung, um loszulegen.",
+        "tabCount": "{{count}} Tab",
+        "tabCount_other": "{{count}} Tabs",
+        "apply": "Anwenden",
+        "applyConfirmTitle": "Arbeitsbereich anwenden",
+        "applyConfirmDescription": "Durch Anwenden von \"{{name}}\" werden Ihre aktuellen Tabs geschlossen und durch die gespeicherte Anordnung dieses Arbeitsbereichs ersetzt. Nicht gespeicherte Änderungen an Ihrem aktuellen Layout gehen dabei verloren.",
+        "applyConfirmButton": "Arbeitsbereich anwenden",
+        "updateWithCurrent": "Aktualisierung mit aktuellem Stand",
+        "updateWithCurrentConfirm": "Soll \"{{name}}\" mit Ihrer aktuellen Tab-Anordnung überschrieben werden?",
+        "rename": "Umbenennen",
+        "duplicate": "Duplikat",
+        "duplicateNameSuffix": "{{name}} (Kopie)",
+        "setDefault": "Als Standard festlegen",
+        "unsetDefault": "Als Standard entfernen",
+        "defaultBadge": "Standard",
+        "lastSession": "Letzte Sitzung",
+        "lastSessionDescription": "Die Tab-Anordnung wird automatisch aktualisiert. Wenden Sie sie an, um Ihre geöffneten Tabs wiederherzustellen.",
+        "lastUsed": "Zuletzt verwendet {{time}}",
+        "neverUsed": "Nie angewendet",
+        "tabsSkipped": "Arbeitsbereich angewendet — {{count}} Registerkarte(n) übersprungen (Host existiert nicht mehr): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Arbeitsbereiche"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Arbeitsbereiche",
+    "workflow_workspaces_desc": "Speichern Sie einen Satz geöffneter Tabs und öffnen Sie das gesamte Layout später wieder."
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Lägg till värd",
+    "addGroup": "Lägg till grupp",
+    "addLink": "Lägg till länk",
+    "zoomIn": "Zooma in",
+    "zoomOut": "Zooma ut",
+    "resetView": "Återställ vy",
+    "selectHost": "Välj värd",
+    "chooseHost": "Välj en värd...",
+    "parentGroup": "Föräldragrupp",
+    "noGroup": "Ingen grupp",
+    "groupName": "Gruppnamn",
+    "color": "Färg",
+    "source": "Källa",
+    "target": "Mål",
+    "moveToGroup": "Flytta till grupp",
+    "selectGroup": "Välj grupp...",
+    "addConnection": "Lägg till anslutning",
+    "hostDetails": "Värduppgifter",
+    "removeFromGroup": "Ta bort från gruppen",
+    "addHostHere": "Lägg till värd här",
+    "editGroup": "Redigera grupp",
+    "delete": "Radera",
+    "add": "Tillägga",
+    "create": "Skapa",
+    "move": "Flytta",
+    "connect": "Ansluta",
+    "createGroup": "Skapa grupp",
+    "selectSourcePlaceholder": "Välj källa...",
+    "selectTargetPlaceholder": "Välj mål...",
+    "invalidFile": "Ogiltig fil",
+    "hostAlreadyExists": "Värden finns redan i topologin",
+    "connectionExists": "Anslutningen finns redan",
+    "unknown": "Okänd",
+    "name": "Namn",
+    "ip": "IP-adress",
+    "status": "Status",
+    "failedToAddNode": "Misslyckades med att lägga till nod",
+    "sourceDifferentFromTarget": "Källa och mål måste vara olika",
+    "exportJSON": "Exportera JSON",
+    "importJSON": "Importera JSON",
+    "terminal": "Terminal",
+    "fileManager": "Filhanteraren",
+    "tunnel": "Tunnel",
+    "docker": "Hamnarbetare",
+    "serverStats": "Värdstatistik",
+    "hostMetrics": "Värdstatistik",
+    "noNodes": "Inga noder ännu"
+  },
+  "nav": {
+    "networkGraph": "Nätverksgraf"
+  },
+  "dashboard": {
+    "networkGraph": "Nätverksgraf"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} noder"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Arbeidsområder",
+        "saveCurrent": "Lagre gjeldende",
+        "saveCurrentTitle": "Lagre gjeldende arbeidsområde",
+        "saveCurrentDescription": "Lagre alle åpne faner, delte oppsett og ruteoppsett som et nytt navngitt arbeidsområde.",
+        "nameLabel": "Navn",
+        "namePlaceholder": "f.eks. produktfeilsøking",
+        "nameRequired": "Arbeidsområdenavn er obligatorisk",
+        "colorLabel": "Farge",
+        "workspaceCreated": "Arbeidsområdet er lagret",
+        "workspaceUpdated": "Arbeidsområdet er oppdatert",
+        "workspaceDeleted": "Arbeidsområdet er slettet",
+        "workspaceDuplicated": "Arbeidsområdet er duplisert",
+        "saveFailed": "Kunne ikke lagre arbeidsområdet",
+        "updateFailed": "Kunne ikke oppdatere arbeidsområdet",
+        "deleteFailed": "Kunne ikke slette arbeidsområdet",
+        "duplicateFailed": "Kunne ikke duplisere arbeidsområdet",
+        "loadFailed": "Kunne ikke laste inn arbeidsområder",
+        "applyFailed": "Kunne ikke bruke arbeidsområdet",
+        "deleteWorkspaceTitle": "Slett arbeidsområde",
+        "deleteWorkspaceDescription": "Er du sikker på at du vil slette «{{name}}»? Dette kan ikke angres.",
+        "noWorkspaces": "Ingen lagrede arbeidsområder ennå. Lagre den nåværende faneoppsettet for å komme i gang.",
+        "tabCount": "{{count}} fane",
+        "tabCount_other": "{{count}} faner",
+        "apply": "Søke",
+        "applyConfirmTitle": "Bruk arbeidsområde",
+        "applyConfirmDescription": "Hvis du bruker «{{name}}», lukkes de nåværende fanene dine og erstattes med den lagrede plasseringen i dette arbeidsområdet. Ulagrede endringer i den nåværende layouten vil gå tapt.",
+        "applyConfirmButton": "Bruk arbeidsområde",
+        "updateWithCurrent": "Oppdater med gjeldende",
+        "updateWithCurrentConfirm": "Vil du overskrive «{{name}}» med din nåværende tabulatorordning?",
+        "rename": "Gi nytt navn",
+        "duplicate": "Kopiere",
+        "duplicateNameSuffix": "{{name}} (kopi)",
+        "setDefault": "Angi som standard",
+        "unsetDefault": "Fjern som standard",
+        "defaultBadge": "Misligholde",
+        "lastSession": "Siste økt",
+        "lastSessionDescription": "Oppdateres automatisk med den nyeste faneoppsettet ditt. Bruk det for å gjenopprette det du hadde åpent.",
+        "lastUsed": "Sist brukt {{time}}",
+        "neverUsed": "Aldri brukt",
+        "tabsSkipped": "Arbeidsområde brukt — {{count}} fane(r) hoppet over (verten finnes ikke lenger): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Arbeidsområder"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Arbeidsområder",
+    "workflow_workspaces_desc": "Lagre et sett med åpne faner og åpne hele layouten på nytt senere."
+  }
+}

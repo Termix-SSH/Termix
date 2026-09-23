@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { ShieldCheck, Plus, Trash2, Save } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-import { managerPost, type FirewallChain } from "@/main-axios";
+import { type FirewallChain } from "@/main-axios";
+import { managerPost } from "../../host-metrics-api";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";

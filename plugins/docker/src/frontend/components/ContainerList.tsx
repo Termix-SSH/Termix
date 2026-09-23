@@ -1,6 +1,6 @@
 import React from "react";
 import { Box } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import type { DockerContainer } from "@/types";
 import { ContainerCard } from "./ContainerCard.tsx";
 

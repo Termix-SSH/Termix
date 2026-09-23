@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 
 export type HistoryTab = "live" | "1h" | "6h" | "24h" | "7d";
 

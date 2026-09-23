@@ -1,33 +1,32 @@
-import type { ReactNode } from "react";
+import type { ComponentType } from "react";
+import { createRegistry } from "@/lib/registry";
+import type { TabShellCallbacks } from "@/shell/tab-registry";
+
+export interface DashboardCardRenderProps {
+  isVisible: boolean;
+  /** The shell, e.g. to open the full-page version of the card. */
+  shell: TabShellCallbacks;
+}
 
 /**
- * Runtime registry for plugin-contributed dashboard cards.
- *
- * Unlike registerRailItem/registerTabComponent (rail-items.ts, tabUtils.tsx),
- * nothing in DashboardTab.tsx consumes this yet: its card system
- * (DASHBOARD_CARDS in @/lib/theme, DashboardCardId in @/types/ui-types) is a
- * closed, typed set with its own drag/drop layout and per-user persisted
- * slot preferences, and no plugin today contributes an actual dashboard
- * card. This registry exists so a plugin CAN register one without another
- * round of seam-building, but adding it to the DashboardTab render/layout
- * system is future work, not part of this change.
+ * A dashboard card a plugin contributes. DashboardTab offers registered cards
+ * next to the core ones, and a saved slot whose card is not registered keeps
+ * its place and shows a placeholder, so turning a plugin off and on again
+ * puts the card back where it was.
  */
 export interface RegisteredDashboardCard {
   id: string;
+  pluginId?: string;
   titleKey: string;
-  render: () => ReactNode;
+  defaultHeight?: number;
+  component: ComponentType<DashboardCardRenderProps>;
 }
 
-const registeredDashboardCards = new Map<string, RegisteredDashboardCard>();
+const registry = createRegistry<RegisteredDashboardCard>();
 
-export function registerDashboardCard(def: RegisteredDashboardCard): void {
-  registeredDashboardCards.set(def.id, def);
-}
-
-export function unregisterDashboardCard(id: string): void {
-  registeredDashboardCards.delete(id);
-}
-
-export function registeredDashboardCardList(): RegisteredDashboardCard[] {
-  return [...registeredDashboardCards.values()];
-}
+export const registerDashboardCard = registry.register;
+export const unregisterDashboardCard = registry.unregister;
+export const getRegisteredDashboardCard = registry.get;
+export const registeredDashboardCardList = registry.list;
+export const useRegisteredDashboardCards = registry.useList;
+export const resetDashboardCards = registry.reset;

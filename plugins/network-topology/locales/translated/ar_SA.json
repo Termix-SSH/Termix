@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "إضافة مضيف",
+    "addGroup": "إضافة مجموعة",
+    "addLink": "إضافة رابط",
+    "zoomIn": "تكبير",
+    "zoomOut": "تصغير",
+    "resetView": "إعادة ضبط العرض",
+    "selectHost": "تحديد مضيف",
+    "chooseHost": "اختر مضيفًا...",
+    "parentGroup": "المجموعة الأم",
+    "noGroup": "بدون مجموعة",
+    "groupName": "اسم المجموعة",
+    "color": "اللون",
+    "source": "المصدر",
+    "target": "الهدف",
+    "moveToGroup": "نقل إلى مجموعة",
+    "selectGroup": "تحديد مجموعة...",
+    "addConnection": "إضافة اتصال",
+    "hostDetails": "تفاصيل المضيف",
+    "removeFromGroup": "إزالة من المجموعة",
+    "addHostHere": "إضافة مضيف هنا",
+    "editGroup": "تعديل المجموعة",
+    "delete": "حذف",
+    "add": "إضافة",
+    "create": "إنشاء",
+    "move": "نقل",
+    "connect": "اتصل",
+    "createGroup": "إنشاء مجموعة",
+    "selectSourcePlaceholder": "تحديد المصدر...",
+    "selectTargetPlaceholder": "تحديد الهدف...",
+    "invalidFile": "ملف غير صالح",
+    "hostAlreadyExists": "المضيف موجود بالفعل في الطوبولوجيا",
+    "connectionExists": "الاتصال موجود بالفعل",
+    "unknown": "غير معروف",
+    "name": "الاسم",
+    "ip": "IP",
+    "status": "الحالة",
+    "failedToAddNode": "فشل في إضافة العقدة",
+    "sourceDifferentFromTarget": "يجب أن يكون المصدر والهدف مختلفين",
+    "exportJSON": "تصدير JSON",
+    "importJSON": "استيراد JSON",
+    "terminal": "الطرفية",
+    "fileManager": "مدير الملفات",
+    "tunnel": "نفق",
+    "docker": "Docker",
+    "serverStats": "مقاييس المضيف",
+    "hostMetrics": "مقاييس المضيف",
+    "noNodes": "لا توجد عُقد بعد"
+  },
+  "nav": {
+    "networkGraph": "رسم بياني للشبكة"
+  },
+  "dashboard": {
+    "networkGraph": "الرسم البياني للشبكة"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} عقدة"
+  }
+}

@@ -1,1 +1,60 @@
-{}
+{
+  "networkGraph": {
+    "addHost": "Add Host",
+    "addGroup": "Add Group",
+    "addLink": "Add Link",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetView": "Reset View",
+    "selectHost": "Select Host",
+    "chooseHost": "Choose a host...",
+    "parentGroup": "Parent Group",
+    "noGroup": "No Group",
+    "groupName": "Group Name",
+    "color": "Color",
+    "source": "Source",
+    "target": "Target",
+    "moveToGroup": "Move to Group",
+    "selectGroup": "Select group...",
+    "addConnection": "Add Connection",
+    "hostDetails": "Host Details",
+    "removeFromGroup": "Remove from Group",
+    "addHostHere": "Add Host Here",
+    "editGroup": "Edit Group",
+    "delete": "Delete",
+    "add": "Add",
+    "create": "Create",
+    "move": "Move",
+    "connect": "Connect",
+    "createGroup": "Create Group",
+    "selectSourcePlaceholder": "Select Source...",
+    "selectTargetPlaceholder": "Select Target...",
+    "invalidFile": "Invalid File",
+    "hostAlreadyExists": "Host is already in the topology",
+    "connectionExists": "Connection already exists",
+    "unknown": "Unknown",
+    "name": "Name",
+    "ip": "IP",
+    "status": "Status",
+    "failedToAddNode": "Failed to add node",
+    "sourceDifferentFromTarget": "Source and target must be different",
+    "exportJSON": "Export JSON",
+    "importJSON": "Import JSON",
+    "terminal": "Terminal",
+    "fileManager": "File Manager",
+    "tunnel": "Tunnel",
+    "docker": "Docker",
+    "serverStats": "Host Metrics",
+    "hostMetrics": "Host Metrics",
+    "noNodes": "No nodes yet"
+  },
+  "nav": {
+    "networkGraph": "Network Graph"
+  },
+  "dashboard": {
+    "networkGraph": "Network Graph"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} nodes"
+  }
+}

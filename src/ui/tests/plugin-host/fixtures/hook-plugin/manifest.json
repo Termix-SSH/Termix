@@ -1,0 +1,14 @@
+{
+  "id": "hook-fixture",
+  "name": "Hook fixture",
+  "version": "1.0.0",
+  "description": "Built by the CLI in a test to prove a bundle shares the shell's React.",
+  "author": { "name": "Termix" },
+  "license": "MIT",
+  "category": "Productivity",
+  "engine": { "termix": ">=2.9.0", "api": "1" },
+  "capabilities": ["ui:surface"],
+  "contributes": {
+    "panels": [{ "id": "hook-panel", "titleKey": "title" }]
+  }
+}

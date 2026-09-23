@@ -1,5 +1,5 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { DockerManager } from "./DockerManager.tsx";
 import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";

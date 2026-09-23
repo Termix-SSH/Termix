@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/button.tsx";
 import { Shield, ExternalLink, Loader2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 
 interface TailscaleCheckDialogProps {
   isOpen: boolean;

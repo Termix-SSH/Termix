@@ -23,6 +23,13 @@
         "icon": "Network",
         "openFrom": ["rail", "palette"]
       }
+    ],
+    "dashboardCards": [
+      {
+        "id": "network_graph",
+        "titleKey": "dashboard.networkGraph",
+        "icon": "Network"
+      }
     ]
   },
   "locales": "locales",

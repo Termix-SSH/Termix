@@ -1,0 +1,60 @@
+{
+  "networkGraph": {
+    "addHost": "Host hinzufügen",
+    "addGroup": "Gruppe hinzufügen",
+    "addLink": "Link hinzufügen",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "resetView": "Ansicht zurücksetzen",
+    "selectHost": "Host auswählen",
+    "chooseHost": "Host auswählen...",
+    "parentGroup": "Übergeordnete Gruppe",
+    "noGroup": "Keine Gruppe",
+    "groupName": "Gruppenname",
+    "color": "Farbe",
+    "source": "Quelle",
+    "target": "Ziel",
+    "moveToGroup": "In Gruppe verschieben",
+    "selectGroup": "Gruppe auswählen...",
+    "addConnection": "Verbindung hinzufügen",
+    "hostDetails": "Host-Details",
+    "removeFromGroup": "Aus Gruppe entfernen",
+    "addHostHere": "Host hier hinzufügen",
+    "editGroup": "Gruppe bearbeiten",
+    "delete": "Löschen",
+    "add": "Hinzufügen",
+    "create": "Erstellen",
+    "move": "Verschieben",
+    "connect": "Verbinden",
+    "createGroup": "Gruppe erstellen",
+    "selectSourcePlaceholder": "Quelle auswählen...",
+    "selectTargetPlaceholder": "Ziel auswählen...",
+    "invalidFile": "Ungültige Datei",
+    "hostAlreadyExists": "Host ist bereits in der Topologie",
+    "connectionExists": "Verbindung ist bereits vorhanden",
+    "unknown": "Unbekannt",
+    "name": "Name",
+    "ip": "IP",
+    "status": "Status",
+    "failedToAddNode": "Knoten konnte nicht hinzugefügt werden",
+    "sourceDifferentFromTarget": "Quelle und Ziel müssen unterschiedlich sein",
+    "exportJSON": "JSON exportieren",
+    "importJSON": "JSON importieren",
+    "terminal": "Terminal",
+    "fileManager": "Dateimanager",
+    "tunnel": "Tunnel",
+    "docker": "Docker",
+    "serverStats": "Host-Metriken",
+    "hostMetrics": "Host-Metriken",
+    "noNodes": "Noch keine Knoten"
+  },
+  "nav": {
+    "networkGraph": "Netzwerkdiagramm"
+  },
+  "dashboard": {
+    "networkGraph": "Netzwerkdiagramm"
+  },
+  "dashboardTab": {
+    "nodes": "{{count}} Knoten"
+  }
+}

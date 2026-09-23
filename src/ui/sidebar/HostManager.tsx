@@ -39,7 +39,8 @@ import {
   makeCredentialTabs,
   makeHostTabs,
   makeHostSshSubTabs,
-  SSH_GROUP_TABS,
+  isSshGroupTab,
+  useHostEditorSections,
   TabStrip,
 } from "./HostManagerTabs";
 import { Select2 } from "@/components/select2";
@@ -73,6 +74,8 @@ export function HostManager({
   onTagsChange?: (tags: string[]) => void;
   active?: boolean;
 } = {}) {
+  // Re-render when a plugin adds or removes a host editor tab.
+  useHostEditorSections();
   const { t } = useTranslation();
   const [editingHost, setEditingHost] = useState<Host | "new" | null>(null);
   const [shareCredential, setShareCredential] = useState<Credential | null>(
@@ -422,15 +425,13 @@ export function HostManager({
     // buildHostEditorPayload still serializes all of them, so hiding a tab
     // hides its inputs, not its values.
     const collapseAdvanced = isHost && simpleEditor && !showAdvancedEditor;
+    const protocols = editingProtocols as unknown as Record<string, boolean>;
+    // Plugin tabs decide their own visibility from the host's protocols.
     const tabs = isHost
-      ? makeHostTabs(t).filter((tab) => {
+      ? makeHostTabs(t, protocols).filter((tab) => {
           if (tab.id === "general") return true;
           if (tab.id === "ssh") return editingProtocols.enableSsh;
-          if (collapseAdvanced) return false;
-          if (tab.id === "rdp") return editingProtocols.enableRdp;
-          if (tab.id === "vnc") return editingProtocols.enableVnc;
-          if (tab.id === "telnet") return editingProtocols.enableTelnet;
-          return false;
+          return !collapseAdvanced;
         })
       : makeCredentialTabs(t);
     // Collapsing while on a now-hidden tab would leave nothing selected. The
@@ -438,14 +439,17 @@ export function HostManager({
     // The top-level strip only lists general/ssh/rdp/vnc/telnet -- the SSH
     // sub-tabs live in the secondary strip, so they count as visible whenever
     // the SSH group is expanded.
+    const sshSubTabs = makeHostSshSubTabs(t, protocols);
+    // Registered SSH-group tabs count too: checking a fixed list here is what
+    // left plugin tabs unreachable.
     const hostTabVisible =
       tabs.some((tab) => tab.id === activeHostTab) ||
       (!collapseAdvanced &&
         editingProtocols.enableSsh &&
-        SSH_GROUP_TABS.has(activeHostTab as never));
+        sshSubTabs.some((tab) => tab.id === activeHostTab));
     const effectiveHostTab = hostTabVisible
       ? activeHostTab
-      : collapseAdvanced && SSH_GROUP_TABS.has(activeHostTab as never)
+      : collapseAdvanced && isSshGroupTab(activeHostTab)
         ? "ssh"
         : "general";
     const activeTab = isHost ? effectiveHostTab : activeCredentialTab;
@@ -454,8 +458,7 @@ export function HostManager({
       isHost &&
       !collapseAdvanced &&
       editingProtocols.enableSsh &&
-      SSH_GROUP_TABS.has(activeHostTab as never);
-    const sshSubTabs = makeHostSshSubTabs(t);
+      isSshGroupTab(activeHostTab);
 
     return (
       <div className="flex flex-col flex-1 min-h-0">
@@ -499,7 +502,7 @@ export function HostManager({
             activeTab={activeTab}
             onTabChange={(id) => {
               if (isHost && id === "ssh") {
-                if (!SSH_GROUP_TABS.has(activeHostTab as never)) {
+                if (!isSshGroupTab(activeHostTab)) {
                   setActiveHostTab("ssh");
                 }
               } else {
@@ -510,7 +513,7 @@ export function HostManager({
               isHost
                 ? (id) =>
                     id === "ssh"
-                      ? SSH_GROUP_TABS.has(activeHostTab as never)
+                      ? isSshGroupTab(activeHostTab)
                       : activeHostTab === id
                 : undefined
             }

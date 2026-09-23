@@ -405,14 +405,10 @@ export function AdminUserManagePanel({
   if (editor) {
     const isHost = editor.kind === "host";
     const tabs = isHost
-      ? makeHostTabs(t).filter((tab) => {
-          if (tab.id === "general") return true;
-          if (tab.id === "ssh") return editorProtocols.enableSsh;
-          if (tab.id === "rdp") return editorProtocols.enableRdp;
-          if (tab.id === "vnc") return editorProtocols.enableVnc;
-          if (tab.id === "telnet") return editorProtocols.enableTelnet;
-          return false;
-        })
+      ? makeHostTabs(
+          t,
+          editorProtocols as unknown as Record<string, boolean>,
+        ).filter((tab) => tab.id !== "ssh" || editorProtocols.enableSsh)
       : makeCredentialTabs(t);
 
     return (

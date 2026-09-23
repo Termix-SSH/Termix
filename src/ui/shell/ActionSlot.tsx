@@ -22,6 +22,8 @@ interface ActionSlotProps {
   ) => React.ReactNode;
   /** Icon-only, for toolbars that collapse their labels. */
   hideLabels?: boolean;
+  /** Passed to each contribution's `when`. */
+  when?: Record<string, unknown>;
 }
 
 /**
@@ -39,9 +41,12 @@ export function ActionSlot({
   enabled = true,
   renderItem,
   hideLabels,
+  when,
 }: ActionSlotProps) {
   const { t } = useTranslation();
-  const contributions = useActionSlot(slotId);
+  const contributions = useActionSlot(slotId, when).filter(
+    (contribution) => contribution.kind !== "component",
+  );
 
   if (!enabled || contributions.length === 0) return null;
 
@@ -76,6 +81,35 @@ export function ActionSlot({
             {!hideLabels && label}
           </button>
         );
+      })}
+    </>
+  );
+}
+
+/**
+ * Renders the component contributions in a slot, each with the owner's
+ * props. Same permission and `when` filtering as buttons, and the same
+ * nothing-at-all output when there is nothing to show.
+ */
+export function ComponentSlot({
+  slotId,
+  props,
+  when,
+}: {
+  slotId: string;
+  props?: Record<string, unknown>;
+  when?: Record<string, unknown>;
+}) {
+  const contributions = useActionSlot(slotId, when).filter(
+    (contribution) =>
+      contribution.kind === "component" && contribution.component,
+  );
+  if (contributions.length === 0) return null;
+  return (
+    <>
+      {contributions.map((contribution) => {
+        const Contributed = contribution.component!;
+        return <Contributed key={contribution.actionId} {...(props ?? {})} />;
       })}
     </>
   );

@@ -1,0 +1,55 @@
+{
+  "newUi": {
+    "sidebar": {
+      "workspaces": {
+        "title": "Työtilat",
+        "saveCurrent": "Tallenna nykyinen",
+        "saveCurrentTitle": "Tallenna nykyinen työtila",
+        "saveCurrentDescription": "Tallenna jokainen avoin välilehti, jaettu asettelu ja ruutujärjestely uutena nimettynä työtilana.",
+        "nameLabel": "Nimi",
+        "namePlaceholder": "esim. Tuotantovirheenkorjaus",
+        "nameRequired": "Työtilan nimi on pakollinen",
+        "colorLabel": "Väri",
+        "workspaceCreated": "Työtila tallennettu",
+        "workspaceUpdated": "Työtila päivitetty",
+        "workspaceDeleted": "Työtila poistettu",
+        "workspaceDuplicated": "Työtila kopioitu",
+        "saveFailed": "Työtilan tallentaminen epäonnistui",
+        "updateFailed": "Työtilan päivittäminen epäonnistui",
+        "deleteFailed": "Työtilan poistaminen epäonnistui",
+        "duplicateFailed": "Työtilan kopiointi epäonnistui",
+        "loadFailed": "Työtilojen lataaminen epäonnistui",
+        "applyFailed": "Työtilan käyttöönotto epäonnistui",
+        "deleteWorkspaceTitle": "Poista työtila",
+        "deleteWorkspaceDescription": "Oletko varma, että haluat poistaa \"{{name}}\"? Tätä ei voi perua.",
+        "noWorkspaces": "Ei vielä tallennettuja työtiloja. Tallenna nykyinen välilehtijärjestys aloittaaksesi.",
+        "tabCount": "{{count}} -välilehti",
+        "tabCount_other": "{{count}} välilehdet",
+        "apply": "Käytä",
+        "applyConfirmTitle": "Käytä työtilaa",
+        "applyConfirmDescription": "Komentosarjan \"{{name}}\" käyttäminen sulkee nykyiset välilehdet ja korvaa ne tämän työtilan tallennetulla asettelulla. Nykyiseen asetteluun tehdyt tallentamattomat muutokset menetetään.",
+        "applyConfirmButton": "Käytä työtilaa",
+        "updateWithCurrent": "Päivitä nykyisellä",
+        "updateWithCurrentConfirm": "Korvataanko \"{{name}}\" nykyisellä sarkainjärjestykselläsi?",
+        "rename": "Nimeä uudelleen",
+        "duplicate": "Kopio",
+        "duplicateNameSuffix": "{{name}} (kopio)",
+        "setDefault": "Aseta oletukseksi",
+        "unsetDefault": "Poista oletusarvoksi",
+        "defaultBadge": "Oletus",
+        "lastSession": "Viimeisin istunto",
+        "lastSessionDescription": "Päivittyy automaattisesti viimeisimmän välilehtijärjestyksen mukaan. Käytä sitä palauttaaksesi avoimena olleen sisällön.",
+        "lastUsed": "Viimeksi käytetty {{time}}",
+        "neverUsed": "Ei koskaan sovellettu",
+        "tabsSkipped": "Työtilaa käytetty — {{count}} välilehteä ohitettu (isäntä ei enää ole olemassa): {{names}}"
+      }
+    }
+  },
+  "nav": {
+    "workspaces": "Työtilat"
+  },
+  "onboarding": {
+    "workflow_workspaces": "Työtilat",
+    "workflow_workspaces_desc": "Tallenna joukko avoimia välilehtiä ja avaa koko asettelu uudelleen myöhemmin."
+  }
+}

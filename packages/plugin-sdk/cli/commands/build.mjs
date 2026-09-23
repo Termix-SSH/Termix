@@ -17,6 +17,17 @@ const FRONTEND_ENTRIES = [
   "src/frontend/index.js",
 ];
 
+/** Whether the plugin sits in a Termix checkout, i.e. is a bundled plugin. */
+function insideTermixCheckout(cwd) {
+  let dir = path.resolve(cwd);
+  for (;;) {
+    if (fs.existsSync(path.join(dir, "src", "ui", "plugin-host"))) return true;
+    const parent = path.dirname(dir);
+    if (parent === dir) return false;
+    dir = parent;
+  }
+}
+
 export async function build({ cwd }) {
   const manifest = readManifest(cwd);
   const pluginId = manifest.id ?? path.basename(cwd);
@@ -58,7 +69,13 @@ export async function build({ cwd }) {
       sourcemap: true,
       logLevel: "warning",
       external: FRONTEND_EXTERNALS,
-      plugins: [legacyCoreImports({ pluginId, platform: "browser" })],
+      plugins: [
+        legacyCoreImports({
+          pluginId,
+          platform: "browser",
+          insideTermix: insideTermixCheckout(cwd),
+        }),
+      ],
     });
   }
 
