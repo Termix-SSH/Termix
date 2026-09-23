@@ -98,7 +98,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     enableDocker: h.enableDocker ?? false,
     dockerConfig: h.dockerConfig ?? null,
     enableWebUi: h.enableWebUi ?? false,
-    webUiConfig: h.webUiConfig ?? { endpoints: [] },
     enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
     enableProxmoxStats:
       (proxmoxSettings.enableProxmoxStats as boolean) ?? false,

@@ -73,10 +73,6 @@ import type {
 } from "../repositories/host-resolution-repository.js";
 import { AUTH_PROTOCOL_METADATA } from "../../../types/auth-protocols.js";
 import {
-  parseWebUiConfig,
-  serializeWebUiConfig,
-} from "./host-web-endpoints.js";
-import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
 } from "../../utils/shared-host-auth-resolver.js";
@@ -202,7 +198,6 @@ router.post(
       enableFileManager,
       scpLegacy,
       enableDocker,
-      enableWebUi,
       enableProxmox,
       enableTmuxMonitor,
       enableTerminalToolbar,
@@ -219,7 +214,6 @@ router.post(
       quickActions,
       statsConfig,
       dockerConfig,
-      webUiConfig,
       proxmoxConfig,
       enableProxmoxStats,
       proxmoxStatsConfig,
@@ -348,7 +342,6 @@ router.post(
       enableFileManager: enableFileManager ? 1 : 0,
       scpLegacy: scpLegacy ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
-      enableWebUi: enableWebUi ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
       enableAiAssistant: enableAiAssistant ? 1 : 0,
@@ -368,13 +361,6 @@ router.post(
         ? typeof dockerConfig === "string"
           ? dockerConfig
           : JSON.stringify(dockerConfig)
-        : null,
-      webUiConfig: enableWebUi
-        ? serializeWebUiConfig(
-            typeof webUiConfig === "string"
-              ? safeParseJson(webUiConfig)
-              : webUiConfig,
-          )
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -930,7 +916,6 @@ router.put(
       enableFileManager,
       scpLegacy,
       enableDocker,
-      enableWebUi,
       enableProxmox,
       enableTmuxMonitor,
       enableTerminalToolbar,
@@ -947,7 +932,6 @@ router.put(
       quickActions,
       statsConfig,
       dockerConfig,
-      webUiConfig,
       proxmoxConfig,
       enableProxmoxStats,
       proxmoxStatsConfig,
@@ -1079,7 +1063,6 @@ router.put(
       enableFileManager: enableFileManager ? 1 : 0,
       scpLegacy: scpLegacy ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
-      enableWebUi: enableWebUi ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
       enableAiAssistant: enableAiAssistant ? 1 : 0,
@@ -1099,13 +1082,6 @@ router.put(
         ? typeof dockerConfig === "string"
           ? dockerConfig
           : JSON.stringify(dockerConfig)
-        : null,
-      webUiConfig: enableWebUi
-        ? serializeWebUiConfig(
-            typeof webUiConfig === "string"
-              ? safeParseJson(webUiConfig)
-              : webUiConfig,
-          )
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -2100,9 +2076,10 @@ router.get(
       }
 
       const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
-      const proxmoxSettings = (
+      const hostPluginSettings = (
         await loadHostPluginSettings([Number(hostId)])
-      ).get(Number(hostId))?.proxmox as
+      ).get(Number(hostId));
+      const proxmoxSettings = hostPluginSettings?.proxmox as
         | {
             enableProxmox?: boolean;
             proxmoxConfig?: unknown;
@@ -2110,6 +2087,8 @@ router.get(
             proxmoxStatsConfig?: unknown;
           }
         | undefined;
+      const webEndpointSettings = hostPluginSettings?.["web-endpoint"] as
+        { enableWebUi?: boolean; webUiConfig?: unknown } | undefined;
 
       const exportedConnectionType =
         (resolvedHost.connectionType as string) || "ssh";
@@ -2177,7 +2156,7 @@ router.get(
             enableFileManager: resolvedHost.enableFileManager !== false,
             scpLegacy: !!resolvedHost.scpLegacy,
             enableDocker: !!resolvedHost.enableDocker,
-            enableWebUi: !!resolvedHost.enableWebUi,
+            enableWebUi: !!webEndpointSettings?.enableWebUi,
             enableProxmox: !!proxmoxSettings?.enableProxmox,
             enableProxmoxStats: !!proxmoxSettings?.enableProxmoxStats,
             enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
@@ -2202,7 +2181,7 @@ router.get(
             statsConfig: resolvedHost.statsConfig
               ? JSON.parse(resolvedHost.statsConfig as string)
               : null,
-            webUiConfig: parseWebUiConfig(resolvedHost.webUiConfig),
+            webUiConfig: webEndpointSettings?.webUiConfig ?? { endpoints: [] },
             dockerConfig: resolvedHost.dockerConfig
               ? JSON.parse(resolvedHost.dockerConfig as string)
               : null,
@@ -2282,7 +2261,7 @@ router.get(
     try {
       const allHosts =
         await createCurrentHostResolutionRepository().findHostsByUserId(userId);
-      const proxmoxSettingsByHost = await loadHostPluginSettings(
+      const pluginSettingsByHost = await loadHostPluginSettings(
         allHosts.map((h) => h.id as number),
       );
 
@@ -2293,9 +2272,11 @@ router.get(
         const resolvedHost = shareMode
           ? host
           : (await resolveHostCredentials(host, userId)) || host;
-        const proxmoxSettings = proxmoxSettingsByHost.get(host.id as number)
-          ?.proxmox as
+        const hostPluginSettings = pluginSettingsByHost.get(host.id as number);
+        const proxmoxSettings = hostPluginSettings?.proxmox as
           { enableProxmox?: boolean; proxmoxConfig?: unknown } | undefined;
+        const webEndpointSettings = hostPluginSettings?.["web-endpoint"] as
+          { enableWebUi?: boolean; webUiConfig?: unknown } | undefined;
 
         const exportedConnectionType =
           (resolvedHost.connectionType as string) || "ssh";
@@ -2344,7 +2325,7 @@ router.get(
               enableTunnel: !!resolvedHost.enableTunnel,
               enableFileManager: resolvedHost.enableFileManager !== false,
               enableDocker: !!resolvedHost.enableDocker,
-              enableWebUi: !!resolvedHost.enableWebUi,
+              enableWebUi: !!webEndpointSettings?.enableWebUi,
               enableProxmox: !!proxmoxSettings?.enableProxmox,
               enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
               enableTerminalToolbar:
@@ -2371,7 +2352,9 @@ router.get(
               statsConfig: resolvedHost.statsConfig
                 ? JSON.parse(resolvedHost.statsConfig as string)
                 : null,
-              webUiConfig: parseWebUiConfig(resolvedHost.webUiConfig),
+              webUiConfig: webEndpointSettings?.webUiConfig ?? {
+                endpoints: [],
+              },
               dockerConfig: resolvedHost.dockerConfig
                 ? JSON.parse(resolvedHost.dockerConfig as string)
                 : null,
@@ -3010,10 +2993,9 @@ registerHostNetworkRoutes(router, {
 export default router;
 
 /**
- * A webUiConfig arriving as a JSON string (an import, or a client that
- * stringified it) must still reach serializeWebUiConfig as an object.
- * Malformed input becomes null, which serializes to a cleared column rather
- * than throwing inside a host save.
+ * A config field arriving as a JSON string (an import, or a client that
+ * stringified it) must still reach storage as an object. Malformed input
+ * becomes null rather than throwing inside a host save.
  */
 function safeParseJson(raw: string): unknown {
   try {

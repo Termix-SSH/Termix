@@ -13,7 +13,7 @@ import {
   createCurrentPluginSettingsRepository,
 } from "../repositories/factory.js";
 import { validateParentHostId } from "./host-parent-validation.js";
-import { serializeWebUiConfig } from "./host-web-endpoints.js";
+import { applyPluginHostImportSettings } from "./host-plugin-settings.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -286,10 +286,6 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableFileManager = updates.enableFileManager;
         if (typeof updates.enableDocker === "boolean")
           simpleUpdates.enableDocker = updates.enableDocker;
-        if (typeof updates.enableWebUi === "boolean") {
-          simpleUpdates.enableWebUi = updates.enableWebUi;
-          if (!updates.enableWebUi) simpleUpdates.webUiConfig = null;
-        }
         if (typeof updates.enableTmuxMonitor === "boolean")
           simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
         if (typeof updates.enableTerminalToolbar === "boolean")
@@ -372,6 +368,39 @@ export function registerHostBulkRoutes(
             } catch {
               errors.push(
                 `Failed to ${updates.enableProxmox ? "enable" : "disable"} Proxmox for host ${host.id}`,
+              );
+            }
+          }
+        }
+
+        // Web endpoint enable/disable lives in the plugin's own host-scope
+        // settings. Disabling clears webUiConfig, matching the old column
+        // write it replaces.
+        if (typeof updates.enableWebUi === "boolean") {
+          const pluginSettingsRepository =
+            createCurrentPluginSettingsRepository();
+          for (const host of ownedHosts) {
+            try {
+              const scopeId = String(host.id);
+              await pluginSettingsRepository.set(
+                "web-endpoint",
+                "host",
+                scopeId,
+                "enableWebUi",
+                JSON.stringify(updates.enableWebUi),
+              );
+              if (!updates.enableWebUi) {
+                await pluginSettingsRepository.set(
+                  "web-endpoint",
+                  "host",
+                  scopeId,
+                  "webUiConfig",
+                  JSON.stringify(null),
+                );
+              }
+            } catch {
+              errors.push(
+                `Failed to ${updates.enableWebUi ? "enable" : "disable"} web endpoints for host ${host.id}`,
               );
             }
           }
@@ -737,7 +766,6 @@ export function registerHostBulkRoutes(
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
             enableDocker: hostData.enableDocker || false,
-            enableWebUi: hostData.enableWebUi || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
             enableAiAssistant: hostData.enableAiAssistant || false,
@@ -761,9 +789,6 @@ export function registerHostBulkRoutes(
               : null,
             dockerConfig: hostData.dockerConfig
               ? JSON.stringify(hostData.dockerConfig)
-              : null,
-            webUiConfig: hostData.enableWebUi
-              ? serializeWebUiConfig(hostData.webUiConfig)
               : null,
             terminalConfig: hostData.terminalConfig
               ? JSON.stringify(hostData.terminalConfig)
@@ -860,27 +885,14 @@ export function registerHostBulkRoutes(
             results.success++;
           }
 
-          if (hostData.enableProxmox || hostData.proxmoxConfig) {
-            const pluginSettingsRepository =
-              createCurrentPluginSettingsRepository();
-            const scopeId = String(savedHostId);
-            await pluginSettingsRepository.set(
-              "proxmox",
-              "host",
-              scopeId,
-              "enableProxmox",
-              JSON.stringify(hostData.enableProxmox || false),
-            );
-            if (hostData.proxmoxConfig) {
-              await pluginSettingsRepository.set(
-                "proxmox",
-                "host",
-                scopeId,
-                "proxmoxConfig",
-                JSON.stringify(hostData.proxmoxConfig),
-              );
-            }
-          }
+          // Every enabled plugin that declares host-scope settings and
+          // registered a hostImportNormalizer validates and writes its own
+          // fields here, so this loop does not need to know which plugins
+          // exist. See host-plugin-settings.ts.
+          await applyPluginHostImportSettings(
+            savedHostId,
+            hostData as Record<string, unknown>,
+          );
         } catch (error) {
           results.failed++;
           results.errors.push(`Host ${i + 1}: ${getErrorMessage(error)}`);
@@ -1038,7 +1050,6 @@ export function registerHostBulkRoutes(
             enableTunnel: true,
             enableFileManager: true,
             enableDocker: false,
-            enableWebUi: false,
             enableTmuxMonitor: false,
             enableTerminalToolbar: true,
             enableAiAssistant: false,
@@ -1056,7 +1067,6 @@ export function registerHostBulkRoutes(
             quickActions: null,
             statsConfig: null,
             dockerConfig: null,
-            webUiConfig: null,
             terminalConfig: null,
             forceKeyboardInteractive: "false",
             notes: null,

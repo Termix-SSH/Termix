@@ -7,7 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { WebEndpoint } from "@/types/index";
+import type { WebEndpoint } from "../../src/shared/web-endpoint-config";
 import type { Host } from "@/types/ui-types";
 
 const openWebEndpointTunnel = vi.hoisted(() => vi.fn());
@@ -59,7 +59,7 @@ function host(
   return {
     id: "7",
     ip: "192.168.1.10",
-    webUiConfig: { endpoints },
+    pluginSettings: { "web-endpoint": { webUiConfig: { endpoints } } },
     ...overrides,
   } as unknown as Host;
 }

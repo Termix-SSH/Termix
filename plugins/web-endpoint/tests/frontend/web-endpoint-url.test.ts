@@ -6,7 +6,7 @@ import {
   sharesCookieSiteWithPage,
   webEndpointRefusalReason,
 } from "../../src/frontend/web-endpoint-url";
-import type { WebEndpoint } from "@/types/index";
+import type { WebEndpoint } from "../../src/shared/web-endpoint-config";
 
 function endpoint(overrides: Partial<WebEndpoint> = {}): WebEndpoint {
   return {

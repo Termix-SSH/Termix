@@ -31,7 +31,8 @@ export function hostToSSHHost(h: Host): SSHHost {
     enableAiAssistant: h.enableAiAssistant ?? false,
     dockerConfig: h.dockerConfig ?? null,
     enableWebUi: h.enableWebUi ?? false,
-    webUiConfig: h.webUiConfig ?? { endpoints: [] },
+    webUiConfig: (h.pluginSettings?.["web-endpoint"]?.webUiConfig as
+      SSHHost["webUiConfig"] | undefined) ?? { endpoints: [] },
     showTerminalInSidebar: true,
     showFileManagerInSidebar: true,
     showTunnelInSidebar: true,

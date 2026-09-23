@@ -9,9 +9,9 @@ import type {
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
 import type { Host } from "@/types/ui-types";
-import type { WebEndpoint } from "@/types";
+import type { WebEndpoint } from "../shared/web-endpoint-config";
 import { WebEndpointTab } from "./WebEndpointTab";
-import { HostWebUiTab } from "./HostWebUiTab";
+import { HostEditorWebUiSection } from "./HostEditorWebUiSection";
 import {
   openWebEndpointExternally,
   setWebEndpointApi,
@@ -19,10 +19,26 @@ import {
 
 const TAB_TYPE = "web-endpoint";
 
+function webEndpointSettings(host: PluginHostRecord): {
+  enableWebUi: boolean;
+  webUiConfig: { endpoints: WebEndpoint[] };
+} {
+  const settings = (
+    host.pluginSettings as Record<string, Record<string, unknown>> | undefined
+  )?.["web-endpoint"];
+  return {
+    enableWebUi: settings?.enableWebUi === true,
+    webUiConfig: (settings?.webUiConfig as
+      { endpoints: WebEndpoint[] } | undefined) ?? {
+      endpoints: [],
+    },
+  };
+}
+
 function endpointsOf(host: PluginHostRecord): WebEndpoint[] {
-  if (!host.enableWebUi) return [];
-  const config = host.webUiConfig as { endpoints?: WebEndpoint[] } | undefined;
-  return config?.endpoints ?? [];
+  const { enableWebUi, webUiConfig } = webEndpointSettings(host);
+  if (!enableWebUi) return [];
+  return webUiConfig.endpoints ?? [];
 }
 
 function openEndpoint(
@@ -31,8 +47,8 @@ function openEndpoint(
   shell: ShellApi,
 ): void {
   if (endpoint.render === "external") {
-    // No tab at all: the real browser opens it. On the desktop the main
-    // process routes it to shell.openExternal.
+    // No tab at all: the real browser opens it. On the desktop the plugin
+    // asks the backend to open it in an isolated window.
     openWebEndpointExternally(
       host as unknown as { id: string; ip: string },
       endpoint,
@@ -63,16 +79,8 @@ function EndpointTab({ host, tab }: TabProps) {
   );
 }
 
-function WebUiSection({ form, setField, protocols }: HostEditorSectionProps) {
-  return (
-    <HostWebUiTab
-      form={form}
-      setField={setField as Parameters<typeof HostWebUiTab>[0]["setField"]}
-      protocols={
-        protocols as unknown as Parameters<typeof HostWebUiTab>[0]["protocols"]
-      }
-    />
-  );
+function WebUiSection(props: HostEditorSectionProps) {
+  return <HostEditorWebUiSection {...props} />;
 }
 
 export function activate(app: TermixApp): void {

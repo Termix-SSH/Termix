@@ -109,6 +109,13 @@ export interface FakePluginContext {
   }>;
   /** Everything registered through ctx.auth. */
   auth: FakeAuthRegistrations;
+  /** Every ctx.desktop.openIsolatedWindow call, in order. */
+  desktopWindows: Array<{
+    url: string;
+    partition?: string;
+    title?: string;
+    ignoreCert?: boolean;
+  }>;
   /** Changes the acting user, as core's request middleware would. */
   setActor: (userId: string | undefined) => void;
   /** Implementations provided through ctx.services.provide, by service name. */
@@ -179,12 +186,14 @@ export function createFakeContext(
   const settingsListeners = new Map<string, Set<(value: unknown) => void>>();
   const sshConnections: FakePluginContext["sshConnections"] = [];
   const hostShares: FakePluginContext["hostShares"] = [];
+  const desktopWindows: FakePluginContext["desktopWindows"] = [];
   const hostsById = new Map<number, PluginHostSummary>(
     (options.hosts ?? []).map((h) => [h.id, h]),
   );
   const hostRecordsById = new Map<number, PluginHostRecord>();
   let nextHostId = Math.max(0, ...(options.hosts ?? []).map((h) => h.id)) + 1;
   const services = new Map<string, object>();
+  const registryProviders = new Map<string, unknown>();
   const auth: FakeAuthRegistrations = {
     sshAuthProviders: [],
     loginMethods: [],
@@ -308,9 +317,17 @@ export function createFakeContext(
     },
 
     registry: {
-      provide: () => {},
-      consume: () => undefined,
-      revoke: () => false,
+      provide: (key, value) => {
+        registryProviders.set(key, value);
+      },
+      consume: (key) => registryProviders.get(key) as never,
+      revoke: (key, value) => {
+        if (!registryProviders.has(key)) return false;
+        if (value !== undefined && registryProviders.get(key) !== value) {
+          return false;
+        }
+        return registryProviders.delete(key);
+      },
     },
 
     services: {
@@ -533,6 +550,13 @@ export function createFakeContext(
       },
     },
 
+    desktop: {
+      openIsolatedWindow: async (request) => {
+        desktopWindows.push(request);
+        return { success: true };
+      },
+    },
+
     asUser: async (userId, fn) => {
       const previous = actor;
       actor = userId;
@@ -561,6 +585,7 @@ export function createFakeContext(
     sshConnections,
     hostShares,
     auth,
+    desktopWindows,
     setActor: (userId) => {
       actor = userId;
     },
@@ -589,6 +614,8 @@ export interface MockContextOptions {
   router?: () => unknown;
   /** Role permissions the acting user holds. See FakeContextOptions. */
   permissions?: string[];
+  /** Hosts ctx.hosts.list/get/checkAccess serve. See FakeContextOptions. */
+  hosts?: PluginHostSummary[];
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -622,6 +649,7 @@ export function createMockCtx(
     db: options.db,
     router: options.router,
     permissions: options.permissions,
+    hosts: options.hosts,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -817,6 +845,13 @@ export function createMockCtx(
       removeEnrollment: async (userId, factorId) => {
         require("auth:provide");
         return ctx.auth.removeEnrollment(userId, factorId);
+      },
+    },
+
+    desktop: {
+      openIsolatedWindow: async (request) => {
+        require("desktop:window");
+        return ctx.desktop.openIsolatedWindow(request);
       },
     },
   };

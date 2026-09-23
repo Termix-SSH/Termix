@@ -110,3 +110,37 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   remote-origin plugin API client. `subscribeTunnelStatuses` already takes a
   `fetchRemote` and merges with local statuses winning, so it only needs a
   client for `/plugin-api/tunnels/status` on the remote server. Owner: D1.
+- **B8 (web-endpoint):** `enable_web_ui` and `web_ui_config` are still live
+  `ssh_data` columns; only the copy-into-plugin-settings migration shipped
+  (`web-endpoint-settings-migration.ts`). Unlike B6/B7, this step DID convert
+  every core read/write of those two fields (`host.ts`'s create/update and
+  export routes, `host-normalizers.ts`, `host-bulk-routes.ts`,
+  `database.ts`'s encrypt/decrypt round trip is the one exception - it copies
+  whatever is already in the column for the raw DB export/backup tool, which
+  needs no change since nothing reads that copy through `pluginSettings`).
+  Dropping the columns in lockstep (`schema.ts`, `db/index.ts`, a drizzle
+  migration per dialect, `schema:generate`) is the only remaining piece.
+  Owner: a dedicated follow-up step, or D0.
+- **B8 (web-endpoint):** added the first generic cross-plugin hook for core
+  routes that touch host-scope plugin settings without importing a plugin:
+  `ctx.registry.provide("<id>.hostImportNormalizer", fn)` plus
+  `applyPluginHostImportSettings` in `host-plugin-settings.ts`, called from
+  `host-bulk-routes.ts`'s Termix-JSON import path. Only import validation is
+  covered; B7's TODO above about the Hosts panel feature filter and the bulk
+  enable/disable menu (`hostCapability`-driven, not import-driven) is
+  unrelated and still open. Owner: D1 for extending the same pattern there.
+- **B8 (web-endpoint):** noticed while sanity-checking with `npm run lint`
+  (not required by this step): `eslint.config.mjs`'s
+  `globalIgnores(["dist", ...])` only matches a top-level `dist/` folder, not
+  nested `packages/*/dist` or `plugins/*/dist`, so `npm run lint` fails on
+  bundled output repo-wide with "Definition for rule X was not found"
+  errors. Pre-existing, not introduced by this or any single plugin step.
+  Owner: whoever next needs a clean `npm run lint`, or D0.
+- **B8 (web-endpoint):** the isolated-window Electron IPC bridge
+  (`src/backend/utils/electron-ipc-bridge.ts`, `ctx.desktop.openIsolatedWindow`)
+  is a single request/response channel keyed by a random id with one
+  registered backend-request handler (`open-isolated-window`) in
+  `electron/main.cjs`. Fine for today's one caller; if a second plugin needs
+  to ask Electron's main process for something, extend
+  `BACKEND_REQUEST_HANDLERS` there rather than building a parallel channel.
+  No owner needed unless a second caller appears.

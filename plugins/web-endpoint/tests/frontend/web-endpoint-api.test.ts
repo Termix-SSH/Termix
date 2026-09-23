@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WebEndpoint } from "@/types/index";
+import type { WebEndpoint } from "../../src/shared/web-endpoint-config";
 
 const isElectron = vi.hoisted(() => vi.fn(() => false));
 vi.mock("@/lib/electron", () => ({ isElectron }));
 
-const tunnelPost = vi.hoisted(() => vi.fn());
+const pluginPost = vi.hoisted(() => vi.fn());
 vi.mock("@/main-axios", () => ({
   handleApiError: (error: unknown) => {
     throw new Error(`generic: ${String(error)}`);
@@ -27,32 +27,17 @@ function endpoint(overrides: Partial<WebEndpoint> = {}): WebEndpoint {
 
 const host = { id: "7", ip: "192.168.1.10" };
 
-let pageHostname = "localhost";
-const realLocation = window.location;
-const windowOpen = vi.fn();
-
 beforeEach(async () => {
   const { setWebEndpointApi } =
     await import("../../src/frontend/web-endpoint-api");
-  setWebEndpointApi({ post: tunnelPost } as never);
-  pageHostname = "localhost";
+  setWebEndpointApi({ post: pluginPost } as never);
   isElectron.mockReturnValue(false);
-  tunnelPost.mockReset();
-  tunnelPost.mockResolvedValue({ data: { port: 41234 } });
-  Object.defineProperty(window, "location", {
-    configurable: true,
-    get: () => ({ ...realLocation, hostname: pageHostname }),
-  });
-  vi.stubGlobal("open", windowOpen);
+  pluginPost.mockReset();
+  pluginPost.mockResolvedValue({ data: { port: 41234 } });
 });
 
 afterEach(() => {
-  Object.defineProperty(window, "location", {
-    configurable: true,
-    value: realLocation,
-  });
   vi.unstubAllGlobals();
-  windowOpen.mockReset();
 });
 
 describe("openWebEndpointTunnel", () => {
@@ -63,7 +48,7 @@ describe("openWebEndpointTunnel", () => {
       await import("../../src/frontend/web-endpoint-api");
     await openWebEndpointTunnel(7, "e1");
 
-    expect(tunnelPost).toHaveBeenCalledWith("/open", {
+    expect(pluginPost).toHaveBeenCalledWith("/open", {
       hostId: 7,
       endpointId: "e1",
     });
@@ -86,7 +71,7 @@ describe("openWebEndpointTunnel", () => {
         data: { error: "Timed out reaching the endpoint port" },
       },
     });
-    tunnelPost.mockRejectedValue(axiosError);
+    pluginPost.mockRejectedValue(axiosError);
     const { openWebEndpointTunnel, WebEndpointTunnelError } =
       await import("../../src/frontend/web-endpoint-api");
 
@@ -101,7 +86,7 @@ describe("openWebEndpointTunnel", () => {
   it("falls back to the shared handler when the body carries no string reason", async () => {
     // A body shaped { error: <object> } would otherwise render as
     // "[object Object]" to the user.
-    tunnelPost.mockRejectedValue(
+    pluginPost.mockRejectedValue(
       Object.assign(new Error("boom"), {
         isAxiosError: true,
         response: { status: 500, data: { error: { nested: true } } },
@@ -113,7 +98,7 @@ describe("openWebEndpointTunnel", () => {
   });
 
   it("treats a missing port as a failure rather than returning undefined", async () => {
-    tunnelPost.mockResolvedValue({ data: {} });
+    pluginPost.mockResolvedValue({ data: {} });
     const { openWebEndpointTunnel } =
       await import("../../src/frontend/web-endpoint-api");
     await expect(openWebEndpointTunnel(7, "e1")).rejects.toThrow(/no port/);
@@ -132,35 +117,45 @@ describe("requireNumericHostId", () => {
 });
 
 /**
- * "Open externally" is not the safer path. The cookie jar belongs to the
- * browser either way, so a tunnel URL on the host string serving Termix hands
- * the tunnelled service this session exactly as an embedded frame would.
+ * The backend now resolves and validates the target URL itself (host address,
+ * tunnel port, loopback/session-cookie checks) before ever calling
+ * ctx.desktop.openIsolatedWindow, so this call is a thin ask-and-report over
+ * the plugin's own /open-window route rather than a client-side URL builder.
  */
 describe("openWebEndpointExternally", () => {
-  it("refuses shared-cookie browser windows before opening a tunnel", async () => {
+  it("refuses outside the desktop app before calling the backend", async () => {
     const { openWebEndpointExternally } =
       await import("../../src/frontend/web-endpoint-api");
     await expect(openWebEndpointExternally(host, endpoint())).rejects.toThrow(
       /desktop app/,
     );
-    expect(windowOpen).not.toHaveBeenCalled();
-    expect(tunnelPost).not.toHaveBeenCalled();
+    expect(pluginPost).not.toHaveBeenCalled();
   });
-  it("opens desktop endpoints through the isolated-window bridge", async () => {
+
+  it("posts hostId, endpointId and ignoreCert to /open-window", async () => {
     isElectron.mockReturnValue(true);
-    const invoke = vi.fn().mockResolvedValue({ success: true });
-    Object.defineProperty(window, "electronAPI", {
-      configurable: true,
-      value: { invoke },
-    });
+    pluginPost.mockResolvedValue({ data: { success: true } });
     const { openWebEndpointExternally } =
       await import("../../src/frontend/web-endpoint-api");
     await openWebEndpointExternally(host, endpoint({ ignoreCert: true }));
-    expect(invoke).toHaveBeenCalledWith("open-isolated-web-endpoint", {
-      url: "https://127.0.0.1:41234/",
+    expect(pluginPost).toHaveBeenCalledWith("/open-window", {
+      hostId: 7,
+      endpointId: "e1",
       ignoreCert: true,
     });
-    expect(windowOpen).not.toHaveBeenCalled();
-    delete (window as unknown as { electronAPI?: unknown }).electronAPI;
+  });
+
+  it("preserves the backend's reason instead of the generic message", async () => {
+    isElectron.mockReturnValue(true);
+    const axiosError = Object.assign(new Error("Request failed"), {
+      isAxiosError: true,
+      response: { status: 502, data: { error: "No window to attach to" } },
+    });
+    pluginPost.mockRejectedValue(axiosError);
+    const { openWebEndpointExternally, WebEndpointTunnelError } =
+      await import("../../src/frontend/web-endpoint-api");
+    await expect(
+      openWebEndpointExternally(host, endpoint()),
+    ).rejects.toBeInstanceOf(WebEndpointTunnelError);
   });
 });

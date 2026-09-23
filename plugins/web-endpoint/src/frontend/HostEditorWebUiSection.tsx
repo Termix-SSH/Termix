@@ -1,27 +1,33 @@
+import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { isElectron } from "@/lib/electron";
 import {
-  webEndpointRefusalReason,
-  type WebEndpointRefusalReason,
-} from "./web-endpoint-url";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Checkbox } from "@/components/checkbox";
+  useTranslation,
+  type HostEditorSectionProps,
+} from "@termix/plugin-sdk/frontend";
 import {
+  Button,
+  Checkbox,
+  FakeSwitch,
+  Input,
+  SectionCard,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/select";
-import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
+  SettingRow,
+} from "@termix/plugin-sdk/ui";
+import { resolveConnectionOrigin } from "@/lib/connection-origin";
+import { isElectron } from "@/lib/electron";
 import {
   MAX_WEB_ENDPOINTS,
   MAX_WEB_ENDPOINT_LABEL_LENGTH,
   type WebEndpoint,
-  type WebUiConfig,
-} from "@/types/index";
+} from "../shared/web-endpoint-config";
+import {
+  webEndpointRefusalReason,
+  type WebEndpointRefusalReason,
+} from "./web-endpoint-url";
 import {
   MAX_WEB_ENDPOINT_PORT,
   MIN_WEB_ENDPOINT_PORT,
@@ -30,11 +36,12 @@ import {
   webEndpointRowError,
 } from "./web-endpoint-validation";
 
+type PluginSettingsForm = Record<string, Record<string, unknown>>;
+
 /**
  * crypto.randomUUID is undefined outside a secure context, so a plain-http web
  * deployment -- a first-class target for the direct+external path -- would
- * throw on "Add endpoint". Matches the guarded form already used in
- * MacrosPanel, PanePreview, KeybindingsDialog and AppShell.
+ * throw on "Add endpoint".
  */
 function endpointId(): string {
   return typeof crypto.randomUUID === "function"
@@ -79,22 +86,74 @@ function newEndpoint(label: string): WebEndpoint {
   };
 }
 
+/**
+ * The host editor's Web UI tab. Writes into the form's pluginSettings for
+ * this plugin, which the editor saves through the plugin's host settings
+ * route after the host itself, exactly as the tunnels plugin's own section
+ * does.
+ *
+ * Owns the async connection-origin resolution for the tunnel gate itself
+ * (tunnelAvailable = enableSsh && originIsLocal), deliberately NOT gated on
+ * isElectron(): the forward binds wherever the backend runs, exactly as the
+ * tunnels plugin does, and a web deployment reaches it at the host serving
+ * Termix provided the endpoint opted out of a loopback bind.
+ *
+ * connectionType is passed as "ssh" deliberately: a tunnel endpoint always
+ * rides an SSH connection, and "ssh" keeps resolveConnectionOrigin out of its
+ * RDP/VNC/Telnet guacamole special case, which always resolves to "remote".
+ *
+ * Note the deliberate asymmetry with the sidebar: the sidebar entry appears on
+ * enableWebUi alone, because a direct endpoint needs no SSH -- but Web UI is
+ * an SSH sub-tab, so a host with SSH disabled cannot configure endpoints at
+ * all. That is the accepted behaviour, not an oversight.
+ */
 export function HostEditorWebUiSection({
-  enableWebUi,
-  webUiConfig,
-  tunnelAvailable,
-  setField,
-}: {
-  enableWebUi: boolean;
-  webUiConfig: WebUiConfig;
-  tunnelAvailable: boolean;
-  setField: (field: string, value: unknown) => void;
-}) {
+  form,
+  updateForm,
+  protocols,
+}: HostEditorSectionProps) {
   const { t } = useTranslation();
-  const endpoints = webUiConfig?.endpoints ?? [];
+  const [originIsLocal, setOriginIsLocal] = useState(false);
+
+  const connectionOrigin = (form?.connectionOrigin as string | null) ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    void resolveConnectionOrigin({
+      connectionType: "ssh",
+      connectionOrigin: connectionOrigin as "local" | "remote" | null,
+    }).then((origin) => {
+      if (!cancelled) setOriginIsLocal(origin === "local");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionOrigin]);
+
+  const tunnelAvailable = protocols.enableSsh && originIsLocal;
+
+  const settings = ((form?.pluginSettings as PluginSettingsForm | undefined)?.[
+    "web-endpoint"
+  ] ?? {}) as Record<string, unknown>;
+  const enableWebUi = settings.enableWebUi === true;
+  const webUiConfig = (settings.webUiConfig ?? { endpoints: [] }) as {
+    endpoints: WebEndpoint[];
+  };
+  const endpoints = webUiConfig.endpoints ?? [];
+
+  const setSettings = (patch: Record<string, unknown>) =>
+    updateForm((current) => {
+      const all = (current.pluginSettings ?? {}) as PluginSettingsForm;
+      return {
+        ...current,
+        pluginSettings: {
+          ...all,
+          "web-endpoint": { ...(all["web-endpoint"] ?? {}), ...patch },
+        },
+      };
+    });
 
   const commit = (next: WebEndpoint[]) =>
-    setField("webUiConfig", { endpoints: next });
+    setSettings({ webUiConfig: { endpoints: next } });
 
   const update = (index: number, patch: Partial<WebEndpoint>) =>
     commit(
@@ -135,7 +194,7 @@ export function HostEditorWebUiSection({
           >
             <FakeSwitch
               checked={enableWebUi}
-              onChange={(v: boolean) => setField("enableWebUi", v)}
+              onChange={(v: boolean) => setSettings({ enableWebUi: v })}
             />
           </SettingRow>
           <div className="text-xs text-muted-foreground p-3 bg-muted/30 border border-border space-y-1">

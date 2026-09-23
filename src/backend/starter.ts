@@ -357,6 +357,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runTunnelsSettingsMigration } =
         await import("./utils/crypto-migration/tunnels-settings-migration.js");
       await runTunnelsSettingsMigration();
+
+      const { runWebEndpointSettingsMigration } =
+        await import("./utils/crypto-migration/web-endpoint-settings-migration.js");
+      await runWebEndpointSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

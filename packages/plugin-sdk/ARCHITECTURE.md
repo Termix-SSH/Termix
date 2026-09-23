@@ -511,6 +511,20 @@ to poll the plugin's state. A plugin can also listen for another plugin's
 `plugin.<id>.*` events without any capability: automations turns
 `plugin.tunnels.tunnel_disconnected` into its `tunnel_disconnected` trigger.
 
+**B8** added a second, narrower use of `ctx.registry`: a core route that
+touches every plugin's host-scope settings generically (without importing any
+one of them) consumes `ctx.registry.provide("<pluginId>.hostImportNormalizer",
+fn)`. `host-bulk-routes.ts`'s Termix-JSON import path is the first caller,
+through `applyPluginHostImportSettings` in `host-plugin-settings.ts`: for
+every enabled plugin that declares `contributes.settings.host`, it looks up
+`"<id>.hostImportNormalizer"` and, if the plugin registered one, calls it with
+the raw imported row and writes back whatever it returns (or nothing, for
+`null`). This is not part of the SDK's typed `ctx` surface - it is a plain
+`ctx.registry` convention, the same mechanism `terminal.sessions` and
+`remote-desktop.sessions` already use, just with a name core's own code knows
+to look for. web-endpoint (`src/backend/host-import.ts`) is the first plugin
+to register one.
+
 ### 10. Lifecycle
 
 `activate(ctx)` creates all state. Everything registered through `ctx` or `app`
@@ -555,10 +569,14 @@ against the real schema's property names works unchanged in a test. Pass its
 `createMockCtx({ db })`: `define` builds the real table, `client` is Drizzle, and
 `persisted` counts `persist()` calls. The mock also takes `router` (for example
 `() => express.Router()`, so routes are served for real), `permissions`
-(enforced by `ctx.rbac`, answering 403 like core; omit it to pass everything),
-and returns `setActor(userId)` for a test middleware and `services` for what the
-plugin provided. `plugins/workspaces/tests/backend/helpers.ts` is the worked
-example.
+(enforced by `ctx.rbac`, answering 403 like core; omit it to pass everything)
+and `hosts` (`PluginHostSummary[]`, what `ctx.hosts.list/get/checkAccess`
+serve - **B8** added this option, since it existed on `createFakeContext`
+already but was not forwarded), and returns `setActor(userId)` for a test
+middleware and `services` for what the plugin provided. **B8** also gave
+`ctx.registry` on both doubles a real in-memory backing (it was a no-op stub
+before), so `provide`/`consume`/`revoke` round-trip the way the real registry
+does. `plugins/workspaces/tests/backend/helpers.ts` is the worked example.
 
 `renderWithApp` also takes `api` (a stub for `app.api` and `usePluginApi()`),
 `layout` (what `app.tabs.getLayout()` returns) and `ready` (fire
@@ -1063,6 +1081,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
 | `ctx.notify.*`                                   | `notify:send`                        | A6                      |
 | `ctx.auth.*`                                     | `auth:provide`                       | **A8**                  |
+| `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
 | `ctx.fetch`                                      | `network:outbound`                   | B                       |
 
 `ctx.ssh` was pulled forward from B so plugin transports go through core's
@@ -1149,6 +1168,20 @@ existing ones (proxmox's discovery and sync flow is the first caller):
 `PluginHostRecord` carries no secret auth material (password, key, vault
 token): a plugin that creates a host picks an `authType` and, for
 `"credential"`, a `credentialId` it does not need to see the contents of.
+
+**B8** added `ctx.desktop.openIsolatedWindow({ url, partition?, title?,
+ignoreCert? })`, for a plugin that wants a URL shown outside the main
+renderer's own session (a tunnelled or direct host web UI, so far). The
+backend cannot open a `BrowserWindow` itself: it runs as a separate forked
+process (`electron/main.cjs` forks it with `stdio: [..., "ipc"]`), so the call
+is relayed over that same fork IPC channel to a small request/response
+protocol in `src/backend/utils/electron-ipc-bridge.ts`, and handled in
+`electron/main.cjs` by `createIsolatedWindows` (`electron/isolated-window.cjs`,
+the module both the renderer's own isolated-window IPC call and this bridge
+share). Rejects outside the desktop app (`ELECTRON_EMBEDDED` unset, or no
+`process.send`). Each window gets its own non-persistent session, so it never
+shares cookies or storage with the main window or with another isolated
+window.
 
 ### The actor
 
@@ -1633,8 +1666,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 138 files | D1         |
-| A plugin importing core by relative path         | Warning   | 68 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 135 files | D1         |
+| A plugin importing core by relative path         | Warning   | 67 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
 A warning does not fail a build, so the counts are held by

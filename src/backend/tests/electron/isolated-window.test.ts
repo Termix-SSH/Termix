@@ -1,8 +1,8 @@
 import { createRequire } from "node:module";
 import { EventEmitter } from "node:events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const { createWebEndpointWindows } = createRequire(import.meta.url)(
-  "../../../../electron/web-endpoint-window.cjs",
+const { createIsolatedWindows } = createRequire(import.meta.url)(
+  "../../../../electron/isolated-window.cjs",
 );
 const created: FakeWindow[] = [];
 class FakeWindow extends EventEmitter {
@@ -38,10 +38,7 @@ type TestSession = EventEmitter & {
 };
 let sessions: TestSession[];
 let fromPartition: ReturnType<typeof vi.fn>;
-let manager: ReturnType<typeof createWebEndpointWindows>;
-function event() {
-  return { sender: main.webContents, senderFrame: main.webContents.mainFrame };
-}
+let manager: ReturnType<typeof createIsolatedWindows>;
 beforeEach(() => {
   created.length = 0;
   sessions = [];
@@ -59,16 +56,16 @@ beforeEach(() => {
     sessions.push(session);
     return session;
   });
-  manager = createWebEndpointWindows({
+  manager = createIsolatedWindows({
     BrowserWindow: FakeWindow,
     session: { fromPartition },
     getMainWindow: () => main,
   });
 });
-describe("isolated endpoint windows", () => {
+describe("isolated windows", () => {
   it("creates unique non-persistent sessions without preload or Node privileges", async () => {
-    await manager.open(event(), { url: "https://service.test" });
-    await manager.open(event(), { url: "https://service.test" });
+    await manager.open({ url: "https://service.test" });
+    await manager.open({ url: "https://service.test" });
     expect(fromPartition.mock.calls[0][0]).not.toBe(
       fromPartition.mock.calls[1][0],
     );
@@ -82,27 +79,33 @@ describe("isolated endpoint windows", () => {
       webSecurity: true,
     });
   });
-  it("rejects subframes, other windows and non-web destinations before creating a session", async () => {
-    await expect(
-      manager.open(
-        { ...event(), senderFrame: {} },
-        { url: "https://service.test" },
-      ),
-    ).rejects.toThrow(/main Termix/);
-    await expect(
-      manager.open({ ...event(), sender: {} }, { url: "https://service.test" }),
-    ).rejects.toThrow(/main Termix/);
+  it("uses a caller-supplied partition when given one", async () => {
+    await manager.open({ url: "https://service.test", partition: "fixed" });
+    expect(fromPartition.mock.calls[0][0]).toBe("fixed");
+  });
+  it("rejects non-web destinations before creating a session", async () => {
     for (const url of [
       "file:///etc/passwd",
       "javascript:alert(1)",
       "https://user:secret@service.test",
     ]) {
-      await expect(manager.open(event(), { url })).rejects.toThrow();
+      await expect(manager.open({ url })).rejects.toThrow();
     }
     expect(fromPartition).not.toHaveBeenCalled();
   });
+  it("refuses when there is no window to attach to", async () => {
+    manager = createIsolatedWindows({
+      BrowserWindow: FakeWindow,
+      session: { fromPartition },
+      getMainWindow: () => null,
+    });
+    await expect(manager.open({ url: "https://service.test" })).rejects.toThrow(
+      /No window/,
+    );
+    expect(fromPartition).not.toHaveBeenCalled();
+  });
   it("keeps login popups in the same isolated session and blocks native-protocol navigation", async () => {
-    await manager.open(event(), { url: "https://service.test" });
+    await manager.open({ url: "https://service.test" });
     const win = created[0],
       open = win.webContents.setWindowOpenHandler.mock.calls[0][0];
     expect(
@@ -121,7 +124,7 @@ describe("isolated endpoint windows", () => {
     expect(callback).toHaveBeenCalledWith({ cancel: true });
   });
   it("limits invalid certificates to the opted-in origin, including its port", async () => {
-    await manager.open(event(), {
+    await manager.open({
       url: "https://service.test:8443",
       ignoreCert: true,
     });
@@ -153,7 +156,7 @@ describe("isolated endpoint windows", () => {
     ).toBe(false);
   });
   it("closes login popups and clears session data when the endpoint closes", async () => {
-    await manager.open(event(), { url: "https://service.test" });
+    await manager.open({ url: "https://service.test" });
     const root = created[0],
       popup = new FakeWindow({});
     root.webContents.emit("did-create-window", popup);

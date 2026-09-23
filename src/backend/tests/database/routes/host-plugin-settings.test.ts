@@ -24,6 +24,18 @@ const getAllForScopeIds = vi.fn(async (scope: string, scopeIds: string[]) =>
     (row) => row.scope === scope && scopeIds.includes(row.scopeId ?? ""),
   ),
 );
+const setCalls: Array<[string, string, string, string, string]> = [];
+const set = vi.fn(
+  async (
+    pluginId: string,
+    scope: string,
+    scopeId: string,
+    key: string,
+    value: string,
+  ) => {
+    setCalls.push([pluginId, scope, scopeId, key, value]);
+  },
+);
 
 vi.mock("../../../utils/logger.js", () => {
   const logger = {
@@ -37,7 +49,7 @@ vi.mock("../../../utils/logger.js", () => {
 });
 
 vi.mock("../../../database/repositories/factory.js", () => ({
-  createCurrentPluginSettingsRepository: () => ({ getAllForScopeIds }),
+  createCurrentPluginSettingsRepository: () => ({ getAllForScopeIds, set }),
 }));
 
 vi.mock("../../../plugins/index.js", () => ({
@@ -50,10 +62,17 @@ vi.mock("../../../utils/system-secret-crypto.js", () => ({
   decryptSystemSecret: async (stored: string) => stored,
 }));
 
+const registryProviders = new Map<string, unknown>();
+vi.mock("../../../plugins/registry.js", () => ({
+  consume: (key: string) => registryProviders.get(key),
+}));
+
 const {
   attachHostPluginSettings,
   loadHostPluginSettings,
   withHostPluginSettings,
+  writeHostPluginSettings,
+  applyPluginHostImportSettings,
 } = await import("../../../database/routes/host-plugin-settings.js");
 
 function manifest(id: string, host: unknown): PluginManifest {
@@ -80,7 +99,10 @@ const DOCKER = manifest("docker", {
 beforeEach(() => {
   rows.length = 0;
   loaded.length = 0;
+  setCalls.length = 0;
+  registryProviders.clear();
   getAllForScopeIds.mockClear();
+  set.mockClear();
 });
 
 describe("loadHostPluginSettings", () => {
@@ -240,5 +262,83 @@ describe("withHostPluginSettings", () => {
     const host = { name: "web" };
 
     expect(await withHostPluginSettings(host)).toBe(host);
+  });
+});
+
+describe("writeHostPluginSettings", () => {
+  it("JSON-stringifies each value under the plugin's own namespace", async () => {
+    await writeHostPluginSettings("docker", 7, {
+      enableDocker: true,
+      socketPath: null,
+    });
+
+    expect(setCalls).toEqual([
+      ["docker", "host", "7", "enableDocker", "true"],
+      ["docker", "host", "7", "socketPath", "null"],
+    ]);
+  });
+
+  it("skips a field whose value is undefined", async () => {
+    await writeHostPluginSettings("docker", 7, {
+      enableDocker: true,
+      socketPath: undefined,
+    });
+
+    expect(setCalls).toEqual([["docker", "host", "7", "enableDocker", "true"]]);
+  });
+});
+
+describe("applyPluginHostImportSettings", () => {
+  it("runs every enabled plugin's registered normalizer and writes what it returns", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    loaded.push({
+      id: "web-endpoint",
+      manifest: manifest("web-endpoint", {
+        enableKey: "enableWebUi",
+        enableLabelKey: "k",
+        fields: [{ key: "webUiConfig", type: "json", labelKey: "k" }],
+      }),
+      state: "active",
+    });
+    registryProviders.set("docker.hostImportNormalizer", () => ({
+      enableDocker: true,
+    }));
+    registryProviders.set("web-endpoint.hostImportNormalizer", () => null);
+
+    await applyPluginHostImportSettings(7, { enableDocker: true });
+
+    expect(setCalls).toEqual([["docker", "host", "7", "enableDocker", "true"]]);
+  });
+
+  it("skips a plugin with no registered normalizer", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+
+    await applyPluginHostImportSettings(7, {});
+
+    expect(setCalls).toEqual([]);
+  });
+
+  it("logs and continues past a normalizer that throws", async () => {
+    loaded.push({ id: "docker", manifest: DOCKER, state: "active" });
+    loaded.push({
+      id: "web-endpoint",
+      manifest: manifest("web-endpoint", {
+        enableKey: "enableWebUi",
+        enableLabelKey: "k",
+        fields: [{ key: "webUiConfig", type: "json", labelKey: "k" }],
+      }),
+      state: "active",
+    });
+    registryProviders.set("docker.hostImportNormalizer", () => {
+      throw new Error("boom");
+    });
+    registryProviders.set("web-endpoint.hostImportNormalizer", () => ({
+      enableWebUi: true,
+    }));
+
+    await expect(applyPluginHostImportSettings(7, {})).resolves.toBeUndefined();
+    expect(setCalls).toEqual([
+      ["web-endpoint", "host", "7", "enableWebUi", "true"],
+    ]);
   });
 });

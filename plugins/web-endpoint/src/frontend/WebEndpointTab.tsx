@@ -18,6 +18,7 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { isElectron } from "@/lib/electron";
 import { Button } from "@/components/button";
 import type { Host } from "@/types/ui-types";
+import type { WebEndpoint } from "../shared/web-endpoint-config";
 
 const REFUSAL_MESSAGES: Record<WebEndpointRefusalReason, string> = {
   "loopback-bind-on-remote-backend": "webEndpoint.tunnelUnreachableFromBrowser",
@@ -42,7 +43,10 @@ export function WebEndpointTab({
   endpointId?: string;
 }) {
   const { t } = useTranslation();
-  const endpoint = (host.webUiConfig?.endpoints ?? []).find(
+  const webUiConfig = (
+    host.pluginSettings as Record<string, Record<string, unknown>> | undefined
+  )?.["web-endpoint"]?.webUiConfig as { endpoints?: WebEndpoint[] } | undefined;
+  const endpoint = (webUiConfig?.endpoints ?? []).find(
     (candidate) => candidate.id === endpointId,
   );
 

@@ -42,6 +42,7 @@ import {
   PluginCapabilityError,
   type PluginContext,
   type PluginModule,
+  type PluginOpenIsolatedWindowRequest,
 } from "@termix/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
@@ -297,6 +298,28 @@ export function createPluginContext(
       };
     },
     { action: "db_refs" },
+  );
+
+  const desktopOpenIsolatedWindow = guarded(
+    manifest,
+    "desktop:window",
+    async (request: PluginOpenIsolatedWindowRequest) => {
+      const { isElectronIpcAvailable, requestFromElectronMain } =
+        await import("../utils/electron-ipc-bridge.js");
+      if (!isElectronIpcAvailable()) {
+        throw new Error(
+          `Plugin ${pluginId} tried to open an isolated window outside the desktop app`,
+        );
+      }
+      return requestFromElectronMain<{ success: true }>(
+        "open-isolated-window",
+        request,
+      );
+    },
+    {
+      action: "desktop_open_isolated_window",
+      details: () => "opened an isolated Electron window",
+    },
   );
 
   return {
@@ -612,6 +635,10 @@ export function createPluginContext(
     hosts: createPluginHosts({ manifest, audit: auditCall }),
     ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
     auth: createPluginAuth({ manifest, bag: handle.bag, audit: auditCall }),
+
+    desktop: {
+      openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
+    },
 
     /**
      * Background work acts as a named user. Always audited, because "this ran

@@ -133,12 +133,9 @@
     "plugins/tailscale/src/frontend/index.tsx",
     "plugins/tailscale/src/frontend/tailscale-api.ts",
     "plugins/web-endpoint/src/frontend/HostEditorWebUiSection.tsx",
-    "plugins/web-endpoint/src/frontend/HostWebUiTab.tsx",
     "plugins/web-endpoint/src/frontend/WebEndpointTab.tsx",
     "plugins/web-endpoint/src/frontend/index.tsx",
-    "plugins/web-endpoint/src/frontend/web-endpoint-api.ts",
-    "plugins/web-endpoint/src/frontend/web-endpoint-url.ts",
-    "plugins/web-endpoint/src/frontend/web-endpoint-validation.ts"
+    "plugins/web-endpoint/src/frontend/web-endpoint-api.ts"
   ],
   "plugin-to-core": [
     "plugins/ai/src/backend/egress.ts",
@@ -207,8 +204,7 @@
     "plugins/remote-desktop/src/backend/token-service.ts",
     "plugins/ssh-terminal/src/backend/index.ts",
     "plugins/tailscale/src/backend/host-metrics-manager.ts",
-    "plugins/tailscale/src/backend/routes.ts",
-    "plugins/web-endpoint/src/backend/routes.ts"
+    "plugins/tailscale/src/backend/routes.ts"
   ],
   "plugin-to-plugin": [
     "plugins/ai/src/backend/tools/executor.ts",

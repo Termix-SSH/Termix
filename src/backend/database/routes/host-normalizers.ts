@@ -1,5 +1,4 @@
 import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
-import { parseWebUiConfig } from "./host-web-endpoints.js";
 
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -364,8 +363,6 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableTunnel",
   "enableFileManager",
   "enableDocker",
-  "enableWebUi",
-  "webUiConfig",
   "enableTmuxMonitor",
   "enableTerminalToolbar",
   "enableAiAssistant",
@@ -467,7 +464,6 @@ export function transformHostResponse(
     enableTunnel: !!host.enableTunnel,
     enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
-    enableWebUi: !!host.enableWebUi,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
     enableTerminalToolbar: host.enableTerminalToolbar !== false,
     enableAiAssistant: !!host.enableAiAssistant,
@@ -519,9 +515,6 @@ export function transformHostResponse(
     dockerConfig: host.dockerConfig
       ? JSON.parse(host.dockerConfig as string)
       : undefined,
-    // Guarded, unlike dockerConfig directly above: parseWebUiConfig never
-    // throws, so a half-written config cannot take out the whole host listing.
-    webUiConfig: parseWebUiConfig(host.webUiConfig),
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     useWarpgate: !!host.useWarpgate,
     socks5ProxyChain: host.socks5ProxyChain

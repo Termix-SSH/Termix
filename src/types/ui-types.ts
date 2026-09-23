@@ -1,5 +1,5 @@
 import type { GuacamoleConfig } from "./guacamole-config.js";
-import type { TerminalConfig, WebUiConfig } from "./index.js";
+import type { TerminalConfig } from "./index.js";
 import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
@@ -108,7 +108,6 @@ export type Host = {
     runtime?: "docker" | "podman";
   } | null;
   enableWebUi?: boolean;
-  webUiConfig?: WebUiConfig | null;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;

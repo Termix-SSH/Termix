@@ -1,10 +1,63 @@
-import {
-  MAX_WEB_ENDPOINTS,
-  MAX_WEB_ENDPOINT_LABEL_LENGTH,
-} from "../../../types/index.js";
-import type { WebEndpoint, WebUiConfig } from "../../../types/index.js";
+/**
+ * The plugin's own copy of what used to be core's host-web-endpoints.ts,
+ * now that webUiConfig lives in this plugin's host-scope settings instead of
+ * an ssh_data column. Same rules, same shape.
+ *
+ * Shared between backend and frontend (validation runs in both: the backend
+ * is the real enforcement point, the editor mirrors it for instant feedback),
+ * so this file has no runtime dependencies of its own.
+ */
 
-export { MAX_WEB_ENDPOINTS, MAX_WEB_ENDPOINT_LABEL_LENGTH };
+export type WebEndpointAccess = "direct" | "tunnel";
+export type WebEndpointRender = "external" | "embedded";
+
+/** One web UI a host serves, declared in this plugin's host settings. */
+export interface WebEndpoint {
+  /**
+   * Stable identifier. Must NOT be derived from the port: it keys both the
+   * tunnel name and the tab identity, so editing a port has to leave a live
+   * tunnel findable under the same name.
+   */
+  id: string;
+  label: string;
+  scheme: "http" | "https";
+  port: number;
+  /** Defaults to "/". Normalized at the storage boundary, never here. */
+  path?: string;
+  access: WebEndpointAccess;
+  render: WebEndpointRender;
+  /**
+   * Direct endpoints only. Allows an invalid TLS certificate for this
+   * endpoint's exact origin. A no-op for tunnel access, whose host component
+   * is loopback and therefore already exempt.
+   */
+  ignoreCert?: boolean;
+  /**
+   * Tunnel endpoints only. Where the backend binds the forward, exactly as
+   * the tunnels plugin exposes it. Defaults to 127.0.0.1, reachable only from
+   * the machine running the backend. A web deployment runs the backend on a
+   * server, so reaching the forward from a browser needs an address that
+   * machine answers on -- which also exposes the target's web UI to anyone
+   * who can reach the port, with no login in front of it.
+   */
+  bindHost?: string;
+  /**
+   * Tunnel endpoints only. Which port the forward listens on, as the tunnels
+   * plugin's Source Port does. Left unset the kernel picks a free one, which
+   * is fine when backend and browser share a machine -- but a container can
+   * only publish ports it knows in advance.
+   */
+  localPort?: number;
+}
+
+export interface WebUiConfig {
+  endpoints: WebEndpoint[];
+}
+
+/** A host may declare at most this many web endpoints. */
+export const MAX_WEB_ENDPOINTS = 16;
+/** Endpoint labels are truncated to this length. */
+export const MAX_WEB_ENDPOINT_LABEL_LENGTH = 64;
 
 const SCHEMES = new Set(["http", "https"]);
 const ACCESS_VALUES = new Set(["direct", "tunnel"]);
@@ -146,7 +199,7 @@ function normalizeEndpoint(raw: unknown): WebEndpoint | null {
  * Drops any endpoint it refuses rather than rejecting the whole host -- one
  * bad row must not make a host unsaveable or unlistable. The editor is
  * responsible for telling the user before that happens
- * (plugins/web-endpoint/src/frontend/web-endpoint-validation.ts).
+ * (src/frontend/web-endpoint-validation.ts).
  */
 export function normalizeWebEndpoints(raw: unknown): WebEndpoint[] {
   if (!Array.isArray(raw)) return [];
@@ -168,8 +221,7 @@ export function normalizeWebEndpoints(raw: unknown): WebEndpoint[] {
 
 /**
  * Never throws. A malformed stored value yields an empty endpoint list, so a
- * half-written config cannot take out the whole host listing -- which is what
- * dockerConfig's bare JSON.parse does today.
+ * half-written config cannot take out the whole host listing.
  */
 export function parseWebUiConfig(raw: unknown): WebUiConfig {
   if (raw === undefined || raw === null) return { endpoints: [] };
@@ -191,11 +243,11 @@ export function parseWebUiConfig(raw: unknown): WebUiConfig {
   };
 }
 
-/** Null when nothing survives normalization, so the column is cleared. */
-export function serializeWebUiConfig(config: unknown): string | null {
+/** Null when nothing survives normalization, so the setting is cleared. */
+export function serializeWebUiConfig(config: unknown): WebUiConfig | null {
   const endpoints = normalizeWebEndpoints(
     (config as { endpoints?: unknown } | null | undefined)?.endpoints,
   );
   if (endpoints.length === 0) return null;
-  return JSON.stringify({ endpoints });
+  return { endpoints };
 }

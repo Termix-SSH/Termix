@@ -964,6 +964,28 @@ export interface PluginAuth {
   removeEnrollment: (userId: string, factorId: string) => Promise<void>;
 }
 
+export interface PluginOpenIsolatedWindowRequest {
+  /** http(s) only. Refused when it points anywhere else. */
+  url: string;
+  /** Isolated Electron session partition; a fresh one when omitted. */
+  partition?: string;
+  title?: string;
+  /** Present an invalid TLS certificate on this window's own origin only. */
+  ignoreCert?: boolean;
+}
+
+/**
+ * Opens a desktop window outside the main renderer, for a target a plugin
+ * does not want sharing Termix's own session (a tunnelled or direct web UI).
+ * Electron only: rejects when the server is not running embedded in the
+ * desktop app. Needs desktop:window.
+ */
+export interface PluginDesktop {
+  openIsolatedWindow: (
+    request: PluginOpenIsolatedWindowRequest,
+  ) => Promise<{ success: true }>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -986,6 +1008,8 @@ export interface PluginContext {
   readonly ssh: PluginSsh;
   /** Login methods, second factors and SSH auth types. Needs auth:provide. */
   readonly auth: PluginAuth;
+  /** Opens Electron windows outside the main renderer. Needs desktop:window. */
+  readonly desktop: PluginDesktop;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

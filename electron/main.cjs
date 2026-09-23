@@ -633,15 +633,45 @@ if (isInsecureModeEnabled()) {
 app.commandLine.appendSwitch("--enable-features=NetworkService");
 
 let mainWindow = null;
-const { createWebEndpointWindows } = require("./web-endpoint-window.cjs");
-const webEndpointWindows = createWebEndpointWindows({
+const { createIsolatedWindows } = require("./isolated-window.cjs");
+const isolatedWindows = createIsolatedWindows({
   BrowserWindow,
   session,
   getMainWindow: () => mainWindow,
 });
-ipcMain.handle("open-isolated-web-endpoint", (event, options) =>
-  webEndpointWindows.open(event, options),
-);
+
+// Requests from the embedded backend over the fork IPC channel (the other
+// direction from the "shutdown" message main already sends it). A plugin's
+// ctx.desktop.openIsolatedWindow is the one caller today.
+const BACKEND_REQUEST_HANDLERS = {
+  "open-isolated-window": (payload) => isolatedWindows.open(payload),
+};
+
+async function handleBackendRequest(msg) {
+  if (!msg || msg.type !== "backend-request") return;
+  const { id, channel, payload } = msg;
+  const handler = BACKEND_REQUEST_HANDLERS[channel];
+  const reply = (response) => {
+    if (backendProcess && !backendProcess.killed) {
+      try {
+        backendProcess.send({ type: "backend-response", id, ...response });
+      } catch (error) {
+        logToFile("Failed to reply to backend request:", error.message);
+      }
+    }
+  };
+  if (!handler) {
+    reply({ ok: false, error: `Unknown backend request channel: ${channel}` });
+    return;
+  }
+  try {
+    const result = await handler(payload);
+    reply({ ok: true, result });
+  } catch (error) {
+    reply({ ok: false, error: error.message || String(error) });
+  }
+}
+
 let backendProcess = null;
 let backendStartFailed = false;
 // Why the embedded backend died, once it has. Null while it is healthy
@@ -826,12 +856,7 @@ app.on(
   "certificate-error",
   (event, _webContents, url, error, certificate, callback) => {
     if (
-      webEndpointWindows.handleCertificateError(
-        event,
-        _webContents,
-        url,
-        callback,
-      )
+      isolatedWindows.handleCertificateError(event, _webContents, url, callback)
     )
       return;
     if (isWebEndpointCertificateAllowed(url)) {
@@ -1153,6 +1178,10 @@ function startBackendServer() {
         -BACKEND_STDERR_TAIL_LIMIT,
       );
       logToFile("[backend:stderr]", chunk.trim());
+    });
+
+    backendProcess.on("message", (msg) => {
+      void handleBackendRequest(msg);
     });
 
     backendProcess.on("exit", (code, signal) => {

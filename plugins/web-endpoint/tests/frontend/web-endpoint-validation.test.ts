@@ -6,8 +6,8 @@ import {
   webEndpointErrorKey,
   webEndpointRowError,
 } from "../../src/frontend/web-endpoint-validation";
-import { normalizeWebEndpoints } from "../../../../src/backend/database/routes/host-web-endpoints.js";
-import type { WebEndpoint } from "@/types/index";
+import { normalizeWebEndpoints } from "../../src/shared/web-endpoint-config";
+import type { WebEndpoint } from "../../src/shared/web-endpoint-config";
 
 function endpoint(overrides: Partial<WebEndpoint> = {}): WebEndpoint {
   return {

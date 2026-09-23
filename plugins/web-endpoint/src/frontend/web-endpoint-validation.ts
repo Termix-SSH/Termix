@@ -1,20 +1,18 @@
-import type { WebEndpoint } from "@/types/index";
+import type { WebEndpoint } from "../shared/web-endpoint-config";
 
 /**
  * Editor-side validation for web endpoint rows.
  *
  * The authority on what a stored endpoint may look like is
- * `normalizeWebEndpoints` in
- * src/backend/database/routes/host-web-endpoints.ts, and it DROPS any row it
- * refuses rather than reporting it -- so without a check here the user adds a
- * row, saves, sees no error, and finds the endpoint gone on reload.
+ * `normalizeWebEndpoints` in ../shared/web-endpoint-config.ts, and it DROPS
+ * any row it refuses rather than reporting it -- so without a check here the
+ * user adds a row, saves, sees no error, and finds the endpoint gone on
+ * reload.
  *
- * This deliberately does NOT restate that module's full rule set, and does not
- * import it: the renderer does not import backend route modules (the same
- * reason MAX_WEB_ENDPOINTS lives in src/types rather than beside the
- * validator). It covers only the conditions a user can reach by typing.
- * src/ui/tests/lib/web-endpoint-validation.test.ts runs both implementations
- * over the same samples so the two cannot drift apart silently.
+ * This deliberately does NOT restate that module's full rule set: it covers
+ * only the conditions a user can reach by typing, with per-field errors a
+ * drop/keep normalizer cannot give. tests/backend/web-endpoint-config.test.ts
+ * covers the normalizer; this file's own tests cover the same inputs here.
  */
 
 export const MIN_WEB_ENDPOINT_PORT = 1;

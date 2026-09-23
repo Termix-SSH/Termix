@@ -1,4 +1,4 @@
-import type { WebEndpoint } from "@/types/index";
+import type { WebEndpoint } from "../shared/web-endpoint-config";
 
 /**
  * Builds the URL a web endpoint opens at.

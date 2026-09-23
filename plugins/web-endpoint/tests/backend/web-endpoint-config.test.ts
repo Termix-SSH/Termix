@@ -4,7 +4,7 @@ import {
   normalizeWebEndpoints,
   parseWebUiConfig,
   serializeWebUiConfig,
-} from "../../../../src/backend/database/routes/host-web-endpoints.js";
+} from "../../src/shared/web-endpoint-config.js";
 
 function valid(overrides: Record<string, unknown> = {}) {
   return {
@@ -249,8 +249,7 @@ describe("parseWebUiConfig", () => {
   });
 
   it("returns empty endpoints for malformed JSON instead of throwing", () => {
-    // A half-written config must not take out the whole host listing, which
-    // is what dockerConfig's bare JSON.parse does today.
+    // A half-written config must not take out the whole host listing.
     expect(parseWebUiConfig("{ not json")).toEqual({ endpoints: [] });
   });
 
@@ -263,8 +262,7 @@ describe("parseWebUiConfig", () => {
 describe("serializeWebUiConfig", () => {
   it("round-trips through normalization", () => {
     expect(
-      parseWebUiConfig(serializeWebUiConfig({ endpoints: [valid()] }))
-        .endpoints[0].id,
+      serializeWebUiConfig({ endpoints: [valid()] })?.endpoints[0].id,
     ).toBe("e1");
   });
 

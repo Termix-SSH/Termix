@@ -1,9 +1,8 @@
-import { currentTunnelHost, resolveWebEndpointUrl } from "./web-endpoint-url";
 import axios from "axios";
 import type { PluginApiClient } from "@termix/plugin-sdk/frontend";
 import { handleApiError } from "@/main-axios";
 import { isElectron } from "@/lib/electron";
-import type { WebEndpoint } from "@/types/index";
+import type { WebEndpoint } from "../shared/web-endpoint-config";
 
 let pluginApi: PluginApiClient | null = null;
 
@@ -109,35 +108,43 @@ export function requireNumericHostId(id: string): number {
   return numericId;
 }
 
-/** Desktop windows use a dedicated ephemeral session, including login popups. */
+/**
+ * Desktop windows use a dedicated ephemeral session, including login popups.
+ *
+ * The backend resolves and validates the target URL (the host's own declared
+ * address for a direct endpoint, or the tunnel port it opens for a tunnel
+ * one) and opens the window itself through ctx.desktop.openIsolatedWindow, so
+ * the capability check and audit line cover the whole decision -- this call
+ * only asks for it and reports whether it worked.
+ */
 export async function openWebEndpointExternally(
   host: { id: string; ip: string },
   endpoint: WebEndpoint,
 ): Promise<void> {
-  if (!isElectron() || !window.electronAPI?.invoke) {
+  if (!isElectron()) {
     throw new Error(
       "Isolated windows require the desktop app. Choose Embedded in the endpoint settings.",
     );
   }
-  const localPort =
-    endpoint.access === "tunnel"
-      ? await openWebEndpointTunnel(requireNumericHostId(host.id), endpoint.id)
-      : undefined;
-  const url = resolveWebEndpointUrl({
-    hostAddress: host.ip,
-    endpoint,
-    localPort,
-    tunnelHost: currentTunnelHost(true) ?? undefined,
-  });
-  const result = await window.electronAPI.invoke("open-isolated-web-endpoint", {
-    url,
-    ignoreCert: endpoint.ignoreCert === true,
-  });
-  if (
-    !result ||
-    typeof result !== "object" ||
-    !("success" in result) ||
-    result.success !== true
-  )
-    throw new Error("Failed to open isolated web endpoint");
+  if (!pluginApi) throw new Error("The web endpoint plugin is not active");
+  try {
+    await pluginApi.post("/open-window", {
+      hostId: requireNumericHostId(host.id),
+      endpointId: endpoint.id,
+      ignoreCert: endpoint.ignoreCert === true,
+    });
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data as
+        { error?: unknown; message?: unknown } | undefined;
+      const backendMessage = data?.error ?? data?.message;
+      if (typeof backendMessage === "string" && backendMessage) {
+        throw new WebEndpointTunnelError(
+          backendMessage,
+          error.response?.status,
+        );
+      }
+    }
+    return handleApiError(error, "open isolated web endpoint");
+  }
 }

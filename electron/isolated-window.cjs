@@ -1,6 +1,6 @@
 const { randomUUID } = require("node:crypto");
 
-function webUrl(value) {
+function isolatedUrl(value) {
   const url = new URL(value);
   if (
     !["http:", "https:"].includes(url.protocol) ||
@@ -8,27 +8,35 @@ function webUrl(value) {
     url.password
   ) {
     throw new Error(
-      "Web endpoints require an HTTP(S) URL without embedded credentials",
+      "Isolated windows require an HTTP(S) URL without embedded credentials",
     );
   }
   return url;
 }
 
-function createWebEndpointWindows({ BrowserWindow, session, getMainWindow }) {
+/**
+ * Opens a BrowserWindow in its own non-persistent session, isolated from the
+ * main Termix window's cookies and storage. Used for any URL a plugin wants
+ * shown without sharing Termix's own session (a tunnelled or direct host web
+ * UI today; core has no other caller yet).
+ *
+ * Two ways in, both trusted: the renderer's own IPC call (checked against the
+ * main window's webContents before reaching here) and the embedded backend's
+ * fork IPC request (trusted because it is this app's own forked process, not
+ * arbitrary web content -- see the "backend-request" handler below).
+ */
+function createIsolatedWindows({ BrowserWindow, session, getMainWindow }) {
   const certificates = new WeakMap();
-  async function open(event, options = {}) {
+  async function open(options = {}) {
     const main = getMainWindow();
-    if (
-      !main ||
-      event.sender !== main.webContents ||
-      event.senderFrame !== main.webContents.mainFrame
-    ) {
-      throw new Error("Only the main Termix window can open web endpoints");
+    if (!main) {
+      throw new Error("No window to attach an isolated window to");
     }
-    const url = webUrl(options.url);
-    const isolated = session.fromPartition(`web-endpoint-${randomUUID()}`, {
-      cache: false,
-    });
+    const url = isolatedUrl(options.url);
+    const isolated = session.fromPartition(
+      options.partition || `isolated-window-${randomUUID()}`,
+      { cache: false },
+    );
     isolated.setPermissionRequestHandler((_contents, _permission, callback) =>
       callback(false),
     );
@@ -57,7 +65,7 @@ function createWebEndpointWindows({ BrowserWindow, session, getMainWindow }) {
       win.setMenu(null);
       const canNavigate = (target) => {
         try {
-          return target === "about:blank" || !!webUrl(target);
+          return target === "about:blank" || !!isolatedUrl(target);
         } catch {
           return false;
         }
@@ -90,7 +98,7 @@ function createWebEndpointWindows({ BrowserWindow, session, getMainWindow }) {
     const win = new BrowserWindow({
       width: 1100,
       height: 800,
-      title: `Web endpoint — ${url.hostname}`,
+      title: options.title || url.hostname,
       webPreferences: preferences,
     });
     configure(win);
@@ -125,4 +133,4 @@ function createWebEndpointWindows({ BrowserWindow, session, getMainWindow }) {
   }
   return { open, handleCertificateError };
 }
-module.exports = { createWebEndpointWindows, webUrl };
+module.exports = { createIsolatedWindows, isolatedUrl };

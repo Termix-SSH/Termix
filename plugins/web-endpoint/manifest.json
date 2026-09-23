@@ -14,7 +14,12 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": ["hosts:read", "network:serve", "ui:surface"],
+  "capabilities": [
+    "hosts:read",
+    "network:serve",
+    "ui:surface",
+    "desktop:window"
+  ],
   "dependencies": {
     "tunnels": "^1.0.0"
   },
@@ -33,6 +38,20 @@
         "openFrom": ["host-context-menu"]
       }
     ],
+    "settings": {
+      "host": {
+        "enableKey": "enableWebUi",
+        "enableLabelKey": "hosts.enableWebUi",
+        "fields": [
+          {
+            "key": "webUiConfig",
+            "type": "json",
+            "labelKey": "hosts.webUiEndpointsSection",
+            "requires": "enableWebUi"
+          }
+        ]
+      }
+    },
     "hostCapability": {
       "key": "enableWebUi",
       "labelKey": "hosts.tabWebUi",

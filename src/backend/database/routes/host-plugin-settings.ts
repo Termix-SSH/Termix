@@ -15,12 +15,13 @@ import { createCurrentPluginSettingsRepository } from "../repositories/factory.j
 import type { PluginSettingsRecord } from "../repositories/plugin-settings-repository.js";
 import { declaredFields, resolveFieldValue } from "../../plugins/settings.js";
 import { getPluginRuntime } from "../../plugins/index.js";
+import { consume } from "../../plugins/registry.js";
 import { sshLogger } from "../../utils/logger.js";
 
 export type HostPluginSettings = Record<string, Record<string, unknown>>;
 
 /** Enabled plugins that declare host-scope settings, with their manifests. */
-function hostSettingsPlugins(): PluginManifest[] {
+export function hostSettingsPlugins(): PluginManifest[] {
   try {
     const { loader } = getPluginRuntime();
     return loader
@@ -145,5 +146,50 @@ export async function writeHostPluginSettings(
   for (const [key, value] of Object.entries(values)) {
     if (value === undefined) continue;
     await repository.set(pluginId, "host", scopeId, key, JSON.stringify(value));
+  }
+}
+
+/**
+ * A plugin's own validator for the fields it accepts inline on a bulk host
+ * import row (host-bulk-routes.ts's Termix-JSON import path). Registered
+ * through ctx.registry.provide("<pluginId>.hostImportNormalizer", fn) - not
+ * part of the SDK's typed ctx surface, because only this one bulk-import
+ * path calls it and a full contract is speculative until a second caller
+ * needs it. Returns the fields to write (JSON-serializable, matching
+ * writeHostPluginSettings's input), or null to write nothing for this row.
+ */
+export type PluginHostImportNormalizer = (
+  raw: Record<string, unknown>,
+) => Record<string, unknown> | null;
+
+/**
+ * Runs every enabled plugin's registered import normalizer over one imported
+ * host row and writes whatever each one returns, so a plugin's host-scope
+ * settings are validated the same way on bulk import as they are anywhere
+ * else - instead of host-bulk-routes.ts hardcoding one plugin's shape.
+ *
+ * Best-effort per plugin: one plugin's normalizer throwing must not fail the
+ * whole import, so it is logged and skipped rather than propagated.
+ */
+export async function applyPluginHostImportSettings(
+  hostId: number,
+  raw: Record<string, unknown>,
+): Promise<void> {
+  for (const manifest of hostSettingsPlugins()) {
+    const normalizer = consume<PluginHostImportNormalizer>(
+      `${manifest.id}.hostImportNormalizer`,
+    );
+    if (!normalizer) continue;
+    try {
+      const values = normalizer(raw);
+      if (values) await writeHostPluginSettings(manifest.id, hostId, values);
+    } catch (error) {
+      sshLogger.warn("Plugin host import normalizer failed", {
+        operation: "host_import_plugin_settings",
+        pluginId: manifest.id,
+        hostId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }
