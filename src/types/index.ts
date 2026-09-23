@@ -220,14 +220,10 @@ export type Host = {
   enableFileManager: boolean;
   scpLegacy?: boolean;
   enableDocker: boolean;
-  enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
   enableAiAssistant: boolean;
   allowSessionSharing?: boolean;
-  proxmoxConfig?: ProxmoxConfig | null;
-  enableProxmoxStats: boolean;
-  proxmoxStatsConfig?: ProxmoxStatsConfig | null;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
   showTunnelInSidebar: boolean;
@@ -319,6 +315,9 @@ export type Host = {
   permissionLevel?: "connect" | "view" | "edit" | "manage";
   sharedExpiresAt?: string;
   ownerUsername?: string;
+
+  /** Enabled plugins' host-scope settings, keyed by plugin id. Secrets redacted. */
+  pluginSettings?: Record<string, Record<string, unknown>>;
 };
 
 export interface JumpHostData {

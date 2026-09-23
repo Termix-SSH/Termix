@@ -346,6 +346,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runTailscaleSettingsMigration } =
         await import("./utils/crypto-migration/tailscale-settings-migration.js");
       await runTailscaleSettingsMigration();
+
+      const { runProxmoxSettingsMigration } =
+        await import("./utils/crypto-migration/proxmox-settings-migration.js");
+      await runProxmoxSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

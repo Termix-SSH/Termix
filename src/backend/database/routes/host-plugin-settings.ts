@@ -128,3 +128,22 @@ export async function withHostPluginSettings(
   const values = settings.get(hostId);
   return values ? { ...host, pluginSettings: values } : host;
 }
+
+/**
+ * Writes a set of host-scope plugin settings in one call, for a core route
+ * that still accepts a plugin's fields inline on the host create/update body
+ * (the fields haven't grown their own editor UI flow yet). Values are
+ * JSON-stringified the same way ctx.settings.setHost stores them.
+ */
+export async function writeHostPluginSettings(
+  pluginId: string,
+  hostId: number,
+  values: Record<string, unknown>,
+): Promise<void> {
+  const repository = createCurrentPluginSettingsRepository();
+  const scopeId = String(hostId);
+  for (const [key, value] of Object.entries(values)) {
+    if (value === undefined) continue;
+    await repository.set(pluginId, "host", scopeId, key, JSON.stringify(value));
+  }
+}

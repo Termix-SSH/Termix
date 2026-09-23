@@ -14,6 +14,9 @@ const h = vi.hoisted(() => ({
   ownerId: "user-1",
   hostById: null as Record<string, unknown> | null,
   upserts: [] as Array<Record<string, unknown>>,
+  created: [] as Array<Record<string, unknown>>,
+  updates: [] as Array<Record<string, unknown>>,
+  updateResult: null as Record<string, unknown> | null,
   users: [] as Array<{ id: string; username: string }>,
   roles: [] as Array<{
     id: number;
@@ -66,6 +69,26 @@ vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({
     listAll: async () => h.users,
   }),
+  createCurrentHostRepository: () => ({
+    createEncryptedForUser: async (
+      userId: string,
+      host: Record<string, unknown>,
+    ) => {
+      const created = { id: 99, ...host, userId };
+      h.created.push(created);
+      return created;
+    },
+    updateEncryptedForUser: async (
+      userId: string,
+      hostId: number,
+      patch: Record<string, unknown>,
+    ) => {
+      h.updates.push({ userId, hostId, patch });
+      if (!h.updateResult) return null;
+      return { ...h.updateResult, ...patch, id: hostId, userId };
+    },
+    listDecryptedByUserId: async () => h.ownedHosts,
+  }),
 }));
 vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
   SharedHostSecretsManager: {
@@ -98,6 +121,9 @@ beforeEach(() => {
   h.ownerId = "user-1";
   h.hostById = null;
   h.upserts = [];
+  h.created = [];
+  h.updates = [];
+  h.updateResult = null;
   h.users = [];
   h.roles = [];
 });
@@ -240,5 +266,84 @@ describe("ctx.hosts", () => {
     expect(await hosts.listRoles()).toEqual([
       { id: 2, name: "auditor", displayName: "Auditor" },
     ]);
+  });
+
+  it("refuses create/update/listOwned without hosts:write", async () => {
+    const audit = vi.fn(async () => {});
+    const hosts = createPluginHosts({ manifest: manifest([]), audit });
+    await expect(
+      hosts.create({
+        name: "n",
+        ip: "10.0.0.1",
+        port: 22,
+        username: "root",
+        authType: "password",
+      }),
+    ).rejects.toBeInstanceOf(PluginCapabilityError);
+    await expect(hosts.update(1, { name: "x" })).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+    await expect(hosts.listOwned()).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+    expect(audit).toHaveBeenCalledWith(
+      "hosts_create",
+      expect.any(String),
+      expect.objectContaining({ success: false }),
+    );
+  });
+
+  it("creates a host once granted hosts:write", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const created = await hosts.create({
+      name: "pve-guest",
+      ip: "10.0.0.5",
+      port: 22,
+      username: "root",
+      authType: "password",
+    });
+    expect(created).toMatchObject({
+      id: 99,
+      name: "pve-guest",
+      userId: "user-1",
+    });
+    expect(h.created).toHaveLength(1);
+  });
+
+  it("updates a host once granted hosts:write", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.updateResult = { id: 5, name: "old" };
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const updated = await hosts.update(5, { name: "new" });
+    expect(updated).toMatchObject({ id: 5, name: "new" });
+    expect(h.updates).toEqual([
+      { userId: "user-1", hostId: 5, patch: { name: "new" } },
+    ]);
+  });
+
+  it("returns null updating a host that does not exist for this user", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(await hosts.update(404, { name: "x" })).toBeNull();
+  });
+
+  it("lists owned hosts decrypted once granted hosts:write", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.ownedHosts = [{ id: 1, userId: "user-1", name: "own" }];
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(await hosts.listOwned()).toMatchObject([{ id: 1, name: "own" }]);
   });
 });

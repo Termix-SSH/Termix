@@ -846,20 +846,6 @@ async function initializeCompleteDatabase(): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_host_metrics_prefs_user_host
         ON host_metrics_preferences (user_id, host_id);
 
-    CREATE TABLE IF NOT EXISTS proxmox_stats_preferences (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        layout TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_proxmox_stats_prefs_user_host
-        ON proxmox_stats_preferences (user_id, host_id);
-
     CREATE TABLE IF NOT EXISTS host_sidebar_preferences (
         user_id TEXT PRIMARY KEY,
         data TEXT NOT NULL,
@@ -1342,18 +1328,6 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
   addColumnIfNotExists("ssh_data", "web_ui_config", "TEXT");
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_proxmox",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists("ssh_data", "proxmox_config", "TEXT");
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_proxmox_stats",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists("ssh_data", "proxmox_stats_config", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "enable_tmux_monitor",
@@ -2380,34 +2354,6 @@ const migrateSchema = () => {
     }
   }
   // --- metrics-history end ---
-
-  // --- proxmox-node-history begin ---
-  try {
-    sqlite.prepare("SELECT id FROM proxmox_node_history LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS proxmox_node_history (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
-          ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          cpu_percent REAL,
-          mem_percent REAL,
-          disk_percent REAL,
-          net_rx_bytes INTEGER,
-          net_tx_bytes INTEGER
-        );
-        CREATE INDEX IF NOT EXISTS idx_proxmox_node_history_host_ts
-          ON proxmox_node_history (host_id, ts DESC);
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create proxmox_node_history table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-  // --- proxmox-node-history end ---
 
   // --- alerts begin ---
   // alert_rules, alert_rule_channels and alert_firings were only ever created

@@ -366,8 +366,6 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableDocker",
   "enableWebUi",
   "webUiConfig",
-  "enableProxmox",
-  "enableProxmoxStats",
   "enableTmuxMonitor",
   "enableTerminalToolbar",
   "enableAiAssistant",
@@ -470,8 +468,6 @@ export function transformHostResponse(
     enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
     enableWebUi: !!host.enableWebUi,
-    enableProxmox: !!host.enableProxmox,
-    enableProxmoxStats: !!host.enableProxmoxStats,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
     enableTerminalToolbar: host.enableTerminalToolbar !== false,
     enableAiAssistant: !!host.enableAiAssistant,
@@ -526,12 +522,6 @@ export function transformHostResponse(
     // Guarded, unlike dockerConfig directly above: parseWebUiConfig never
     // throws, so a half-written config cannot take out the whole host listing.
     webUiConfig: parseWebUiConfig(host.webUiConfig),
-    proxmoxConfig: host.proxmoxConfig
-      ? JSON.parse(host.proxmoxConfig as string)
-      : undefined,
-    proxmoxStatsConfig: host.proxmoxStatsConfig
-      ? JSON.parse(host.proxmoxStatsConfig as string)
-      : undefined,
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     useWarpgate: !!host.useWarpgate,
     socks5ProxyChain: host.socks5ProxyChain

@@ -10,6 +10,9 @@
 import type {
   PluginHosts,
   PluginHostSummary,
+  PluginHostRecord,
+  PluginHostCreateInput,
+  PluginHostUpdateInput,
   PluginHostAccess,
   PluginHostShareLevel,
   PluginHostShareResult,
@@ -53,6 +56,34 @@ function toSummary(host: {
     tags: host.tags,
     folder: host.folder,
     authType: host.authType,
+  };
+}
+
+function toRecord(host: Record<string, unknown>): PluginHostRecord {
+  return {
+    id: host.id as number,
+    userId: host.userId as string,
+    name: (host.name as string | null) ?? null,
+    ip: host.ip as string,
+    port: host.port as number,
+    username: host.username as string,
+    authType: host.authType as string,
+    credentialId: (host.credentialId as number | null) ?? null,
+    overrideCredentialUsername:
+      (host.overrideCredentialUsername as boolean | null) ?? null,
+    connectionType: (host.connectionType as string | null) ?? null,
+    tags: (host.tags as string | null) ?? null,
+    folder: (host.folder as string | null) ?? null,
+    jumpHosts: host.jumpHosts,
+    enableSsh: (host.enableSsh as boolean | null) ?? null,
+    enableRdp: (host.enableRdp as boolean | null) ?? null,
+    enableTerminal: (host.enableTerminal as boolean | null) ?? null,
+    enableFileManager: (host.enableFileManager as boolean | null) ?? null,
+    enableTunnel: (host.enableTunnel as boolean | null) ?? null,
+    enableDocker: (host.enableDocker as boolean | null) ?? null,
+    createdAt: (host.createdAt as string | null) ?? null,
+    updatedAt: (host.updatedAt as string | null) ?? null,
+    ...host,
   };
 }
 
@@ -152,6 +183,70 @@ export function createPluginHosts({ manifest, audit }: Deps): PluginHosts {
           PluginHostShareLevel | undefined,
         expiresAt: access.expiresAt,
       };
+    },
+
+    create: async (host: PluginHostCreateInput): Promise<PluginHostRecord> => {
+      try {
+        await requireWrite();
+      } catch (error) {
+        await audit("hosts_create", host.name ?? host.ip, {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+      const userId = actingUser();
+      const { createCurrentHostRepository } =
+        await import("../database/repositories/factory.js");
+      const created =
+        await createCurrentHostRepository().createEncryptedForUser(userId, {
+          ...host,
+          userId,
+        });
+      await audit("hosts_create", `host ${created.id}`, { success: true });
+      return toRecord(created as unknown as Record<string, unknown>);
+    },
+
+    update: async (
+      hostId: number,
+      patch: PluginHostUpdateInput,
+    ): Promise<PluginHostRecord | null> => {
+      try {
+        await requireWrite();
+      } catch (error) {
+        await audit("hosts_update", `host ${hostId}`, {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+      const userId = actingUser();
+      const { createCurrentHostRepository } =
+        await import("../database/repositories/factory.js");
+      const updated =
+        await createCurrentHostRepository().updateEncryptedForUser(
+          userId,
+          hostId,
+          patch,
+        );
+      await audit("hosts_update", `host ${hostId}`, {
+        success: updated !== null,
+      });
+      return updated
+        ? toRecord(updated as unknown as Record<string, unknown>)
+        : null;
+    },
+
+    listOwned: async (): Promise<PluginHostRecord[]> => {
+      await requireWrite();
+      const userId = actingUser();
+      const { createCurrentHostRepository } =
+        await import("../database/repositories/factory.js");
+      const rows =
+        await createCurrentHostRepository().listDecryptedByUserId(userId);
+      return rows.map((row) =>
+        toRecord(row as unknown as Record<string, unknown>),
+      );
     },
 
     share: async (

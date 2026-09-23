@@ -89,6 +89,29 @@ export class PluginSettingsRepository {
       );
   }
 
+  /**
+   * Every row across all scope ids for one plugin/scope/key, regardless of
+   * owner. For a plugin's own background scan (auto-sync, polling) that needs
+   * to find every host with a setting enabled, across every user, before it
+   * knows which actor to run as.
+   */
+  async listByKey(
+    pluginId: string,
+    scope: PluginSettingsScope,
+    key: string,
+  ): Promise<PluginSettingsRecord[]> {
+    return this.context.drizzle
+      .select()
+      .from(pluginSettings)
+      .where(
+        and(
+          eq(pluginSettings.pluginId, pluginId),
+          eq(pluginSettings.scope, scope),
+          eq(pluginSettings.key, key),
+        ),
+      );
+  }
+
   async set(
     pluginId: string,
     scope: PluginSettingsScope,

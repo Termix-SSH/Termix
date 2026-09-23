@@ -48,6 +48,7 @@ import {
 import {
   attachHostPluginSettings,
   loadHostPluginSettings,
+  writeHostPluginSettings,
   withHostPluginSettings,
 } from "./host-plugin-settings.js";
 import { validateParentHostId } from "./host-parent-validation.js";
@@ -351,7 +352,6 @@ router.post(
       scpLegacy: scpLegacy ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
       enableWebUi: enableWebUi ? 1 : 0,
-      enableProxmox: enableProxmox ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
       enableAiAssistant: enableAiAssistant ? 1 : 0,
@@ -378,17 +378,6 @@ router.post(
               ? safeParseJson(webUiConfig)
               : webUiConfig,
           )
-        : null,
-      proxmoxConfig: proxmoxConfig
-        ? typeof proxmoxConfig === "string"
-          ? proxmoxConfig
-          : JSON.stringify(proxmoxConfig)
-        : null,
-      enableProxmoxStats: enableProxmoxStats ? 1 : 0,
-      proxmoxStatsConfig: proxmoxStatsConfig
-        ? typeof proxmoxStatsConfig === "string"
-          ? proxmoxStatsConfig
-          : JSON.stringify(proxmoxStatsConfig)
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -522,6 +511,37 @@ router.post(
       }
 
       const createdHost = result;
+
+      if (
+        enableProxmox !== undefined ||
+        proxmoxConfig !== undefined ||
+        enableProxmoxStats !== undefined ||
+        proxmoxStatsConfig !== undefined
+      ) {
+        try {
+          await writeHostPluginSettings("proxmox", createdHost.id as number, {
+            enableProxmox: !!enableProxmox,
+            proxmoxConfig: proxmoxConfig
+              ? typeof proxmoxConfig === "string"
+                ? safeParseJson(proxmoxConfig)
+                : proxmoxConfig
+              : null,
+            enableProxmoxStats: !!enableProxmoxStats,
+            proxmoxStatsConfig: proxmoxStatsConfig
+              ? typeof proxmoxStatsConfig === "string"
+                ? safeParseJson(proxmoxStatsConfig)
+                : proxmoxStatsConfig
+              : null,
+          });
+        } catch (proxmoxSettingsError) {
+          sshLogger.warn("Failed to save Proxmox host settings", {
+            operation: "host_create_proxmox_settings",
+            hostId: createdHost.id,
+            error: getErrorMessage(proxmoxSettingsError),
+          });
+        }
+      }
+
       // Standing folder shares apply to the newcomer.
       try {
         await applyFolderAccessRules(
@@ -784,8 +804,6 @@ router.post(
         enableFileManager: true,
         enableDocker: false,
         enableWebUi: false,
-        enableProxmox: false,
-        enableProxmoxStats: false,
         enableTmuxMonitor: false,
         enableTerminalToolbar: true,
         enableAiAssistant: false,
@@ -1065,7 +1083,6 @@ router.put(
       scpLegacy: scpLegacy ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
       enableWebUi: enableWebUi ? 1 : 0,
-      enableProxmox: enableProxmox ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
       enableAiAssistant: enableAiAssistant ? 1 : 0,
@@ -1092,17 +1109,6 @@ router.put(
               ? safeParseJson(webUiConfig)
               : webUiConfig,
           )
-        : null,
-      proxmoxConfig: proxmoxConfig
-        ? typeof proxmoxConfig === "string"
-          ? proxmoxConfig
-          : JSON.stringify(proxmoxConfig)
-        : null,
-      enableProxmoxStats: enableProxmoxStats ? 1 : 0,
-      proxmoxStatsConfig: proxmoxStatsConfig
-        ? typeof proxmoxStatsConfig === "string"
-          ? proxmoxStatsConfig
-          : JSON.stringify(proxmoxStatsConfig)
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -1412,6 +1418,36 @@ router.put(
         Number(hostId),
         sshDataObj,
       );
+
+      if (
+        enableProxmox !== undefined ||
+        proxmoxConfig !== undefined ||
+        enableProxmoxStats !== undefined ||
+        proxmoxStatsConfig !== undefined
+      ) {
+        try {
+          await writeHostPluginSettings("proxmox", Number(hostId), {
+            enableProxmox: !!enableProxmox,
+            proxmoxConfig: proxmoxConfig
+              ? typeof proxmoxConfig === "string"
+                ? safeParseJson(proxmoxConfig)
+                : proxmoxConfig
+              : null,
+            enableProxmoxStats: !!enableProxmoxStats,
+            proxmoxStatsConfig: proxmoxStatsConfig
+              ? typeof proxmoxStatsConfig === "string"
+                ? safeParseJson(proxmoxStatsConfig)
+                : proxmoxStatsConfig
+              : null,
+          });
+        } catch (proxmoxSettingsError) {
+          sshLogger.warn("Failed to save Proxmox host settings", {
+            operation: "host_update_proxmox_settings",
+            hostId: parseInt(hostId),
+            error: getErrorMessage(proxmoxSettingsError),
+          });
+        }
+      }
 
       // A host that moved into a folder inherits that folder's standing shares.
       try {
@@ -2067,6 +2103,16 @@ router.get(
       }
 
       const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
+      const proxmoxSettings = (
+        await loadHostPluginSettings([Number(hostId)])
+      ).get(Number(hostId))?.proxmox as
+        | {
+            enableProxmox?: boolean;
+            proxmoxConfig?: unknown;
+            enableProxmoxStats?: boolean;
+            proxmoxStatsConfig?: unknown;
+          }
+        | undefined;
 
       const exportedConnectionType =
         (resolvedHost.connectionType as string) || "ssh";
@@ -2135,8 +2181,8 @@ router.get(
             scpLegacy: !!resolvedHost.scpLegacy,
             enableDocker: !!resolvedHost.enableDocker,
             enableWebUi: !!resolvedHost.enableWebUi,
-            enableProxmox: !!resolvedHost.enableProxmox,
-            enableProxmoxStats: !!resolvedHost.enableProxmoxStats,
+            enableProxmox: !!proxmoxSettings?.enableProxmox,
+            enableProxmoxStats: !!proxmoxSettings?.enableProxmoxStats,
             enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
             enableTerminalToolbar: resolvedHost.enableTerminalToolbar !== false,
             enableAiAssistant: !!resolvedHost.enableAiAssistant,
@@ -2163,12 +2209,8 @@ router.get(
             dockerConfig: resolvedHost.dockerConfig
               ? JSON.parse(resolvedHost.dockerConfig as string)
               : null,
-            proxmoxConfig: resolvedHost.proxmoxConfig
-              ? JSON.parse(resolvedHost.proxmoxConfig as string)
-              : null,
-            proxmoxStatsConfig: resolvedHost.proxmoxStatsConfig
-              ? JSON.parse(resolvedHost.proxmoxStatsConfig as string)
-              : null,
+            proxmoxConfig: proxmoxSettings?.proxmoxConfig ?? null,
+            proxmoxStatsConfig: proxmoxSettings?.proxmoxStatsConfig ?? null,
             terminalConfig: resolvedHost.terminalConfig
               ? JSON.parse(resolvedHost.terminalConfig as string)
               : null,
@@ -2243,6 +2285,9 @@ router.get(
     try {
       const allHosts =
         await createCurrentHostResolutionRepository().findHostsByUserId(userId);
+      const proxmoxSettingsByHost = await loadHostPluginSettings(
+        allHosts.map((h) => h.id as number),
+      );
 
       const exportedHosts = [];
       const usedCredentialIds = new Set<number>();
@@ -2251,6 +2296,9 @@ router.get(
         const resolvedHost = shareMode
           ? host
           : (await resolveHostCredentials(host, userId)) || host;
+        const proxmoxSettings = proxmoxSettingsByHost.get(host.id as number)
+          ?.proxmox as
+          { enableProxmox?: boolean; proxmoxConfig?: unknown } | undefined;
 
         const exportedConnectionType =
           (resolvedHost.connectionType as string) || "ssh";
@@ -2300,7 +2348,7 @@ router.get(
               enableFileManager: resolvedHost.enableFileManager !== false,
               enableDocker: !!resolvedHost.enableDocker,
               enableWebUi: !!resolvedHost.enableWebUi,
-              enableProxmox: !!resolvedHost.enableProxmox,
+              enableProxmox: !!proxmoxSettings?.enableProxmox,
               enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
               enableTerminalToolbar:
                 resolvedHost.enableTerminalToolbar !== false,
@@ -2330,9 +2378,7 @@ router.get(
               dockerConfig: resolvedHost.dockerConfig
                 ? JSON.parse(resolvedHost.dockerConfig as string)
                 : null,
-              proxmoxConfig: resolvedHost.proxmoxConfig
-                ? JSON.parse(resolvedHost.proxmoxConfig as string)
-                : null,
+              proxmoxConfig: proxmoxSettings?.proxmoxConfig ?? null,
               terminalConfig: resolvedHost.terminalConfig
                 ? JSON.parse(resolvedHost.terminalConfig as string)
                 : null,

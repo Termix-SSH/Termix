@@ -1,18 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const execCommand = vi.fn();
-vi.mock(
-  "../../../../../src/backend/hosts/metrics-shared/common-utils.js",
-  () => ({
-    execCommand: (...args: unknown[]) => execCommand(...args),
-    toFixedNum: (n: number | null | undefined, digits = 2) => {
-      if (typeof n !== "number" || !Number.isFinite(n)) return null;
-      return Number(n.toFixed(digits));
-    },
-  }),
-);
+vi.mock("../../../src/backend/proxmox/common-utils.js", () => ({
+  execCommand: (...args: unknown[]) => execCommand(...args),
+  toFixedNum: (n: number | null | undefined, digits = 2) => {
+    if (typeof n !== "number" || !Number.isFinite(n)) return null;
+    return Number(n.toFixed(digits));
+  },
+}));
 
-import { collectProxmoxGuestsSummary } from "../../../../../src/backend/hosts/metrics/proxmox/guests-collector.js";
+import { collectProxmoxGuestsSummary } from "../../../src/backend/proxmox/guests-collector.js";
 import type { Client } from "ssh2";
 
 const fakeClient = {} as Client;
