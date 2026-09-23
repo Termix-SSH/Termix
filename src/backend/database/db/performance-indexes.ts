@@ -168,23 +168,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "host_id",
   },
 
-  // Fleets.
-  {
-    name: "idx_fleet_members_fleet",
-    table: "fleet_members",
-    columns: "fleet_id",
-  },
-  {
-    name: "idx_fleet_members_host",
-    table: "fleet_members",
-    columns: "host_id",
-  },
-  {
-    name: "idx_fleet_inventory_user",
-    table: "fleet_inventory",
-    columns: "user_id",
-  },
-
   // Automations.
   {
     name: "idx_automations_user",

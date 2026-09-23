@@ -52,6 +52,10 @@
       "types": "./dist/vitest-preset.d.ts",
       "default": "./dist/vitest-preset.js"
     },
+    "./host-commands": {
+      "types": "./dist/host-commands.d.ts",
+      "default": "./dist/host-commands.js"
+    },
     "./tsconfig.plugin.json": "./tsconfig.plugin.json",
     "./schema/manifest.schema.json": "./schema/manifest.schema.json"
   },
@@ -71,10 +75,14 @@
     "tar": "^7.5.22"
   },
   "peerDependencies": {
-    "drizzle-orm": "*"
+    "drizzle-orm": "*",
+    "ssh2": "*"
   },
   "peerDependenciesMeta": {
     "drizzle-orm": {
+      "optional": true
+    },
+    "ssh2": {
       "optional": true
     }
   }

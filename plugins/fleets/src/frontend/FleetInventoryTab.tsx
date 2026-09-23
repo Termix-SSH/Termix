@@ -1,6 +1,7 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage, cn } from "./helpers.js";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { Input, Button } from "@termix/plugin-sdk/ui";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -11,16 +12,7 @@ import {
   Search,
   Server,
 } from "lucide-react";
-import { Input } from "@/components/input";
-import { Button } from "@/components/button";
-import { cn } from "@/lib/utils";
-import {
-  listFleets,
-  getFleetInventory,
-  refreshFleetInventory,
-  type FleetRow,
-  type FleetInventoryEntry,
-} from "./fleets-api";
+import type { FleetsApi, FleetRow, FleetInventoryEntry } from "./fleets-api.js";
 
 type SortKey =
   | "hostName"
@@ -90,9 +82,11 @@ function SortHeader({
 }
 
 export function FleetInventoryTab({
+  api,
   fleetId,
   isVisible = true,
 }: {
+  api: FleetsApi;
   fleetId?: number;
   isVisible?: boolean;
 }) {
@@ -113,10 +107,11 @@ export function FleetInventoryTab({
   }, [fleetId]);
 
   useEffect(() => {
-    listFleets()
+    api
+      .list()
       .then(setFleets)
       .catch(() => {});
-  }, []);
+  }, [api]);
 
   useEffect(() => {
     if (!fleets.length) return;
@@ -129,7 +124,7 @@ export function FleetInventoryTab({
     if (selectedFleetId === undefined) return;
     setLoading(true);
     try {
-      const data = await getFleetInventory(selectedFleetId);
+      const data = await api.inventory(selectedFleetId);
       setEntries(data);
     } catch (error) {
       const message = getErrorMessage(error, "");
@@ -137,7 +132,7 @@ export function FleetInventoryTab({
     } finally {
       setLoading(false);
     }
-  }, [selectedFleetId, t]);
+  }, [api, selectedFleetId, t]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -148,7 +143,7 @@ export function FleetInventoryTab({
     if (selectedFleetId === undefined) return;
     setRefreshing(true);
     try {
-      const { results } = await refreshFleetInventory(selectedFleetId);
+      const { results } = await api.refreshInventory(selectedFleetId);
       const failed = results.filter((r) => !r.success).length;
       if (failed > 0) {
         toast.warning(

@@ -1,6 +1,5 @@
 import {
   createCurrentAutomationRepository,
-  createCurrentFleetRepository,
   createCurrentHostRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
 import { validateDefinition } from "../../../../automations/src/backend/routes.js";
@@ -13,6 +12,8 @@ import {
   updateSnippet,
   deleteSnippet,
   getSnippet,
+  createFleet,
+  addFleetMember,
 } from "../services.js";
 
 /** Approved commands get a bounded window rather than hanging the request. */
@@ -175,10 +176,11 @@ export async function applyProposal(
     }
 
     case "propose_create_fleet": {
-      const fleet = await createCurrentFleetRepository().create(userId, {
+      const fleet = await createFleet(userId, {
         name: requireString(payload.name, "name"),
         description: optionalString(payload.description),
-      } as any);
+      });
+      if (!fleet) throw new Error("The fleets plugin is disabled");
 
       const hostIds = Array.isArray(payload.hostIds) ? payload.hostIds : [];
       let added = 0;
@@ -191,16 +193,13 @@ export async function applyProposal(
           hostId,
         );
         if (!host) continue;
-        await createCurrentFleetRepository().addMember(
-          (fleet as any).id,
-          hostId,
-        );
+        await addFleetMember(userId, fleet.id, hostId);
         added += 1;
       }
 
       return {
         ok: true,
-        summary: `Created fleet ${(fleet as any).name} with ${added} host${added === 1 ? "" : "s"}`,
+        summary: `Created fleet ${fleet.name} with ${added} host${added === 1 ? "" : "s"}`,
       };
     }
 

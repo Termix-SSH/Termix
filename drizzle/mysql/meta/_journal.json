@@ -239,6 +239,13 @@
       "when": 1790169398523,
       "tag": "0033_clear_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "5",
+      "when": 1790176259240,
+      "tag": "0034_green_vector",
+      "breakpoints": true
     }
   ]
 }

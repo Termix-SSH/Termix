@@ -1,7 +1,7 @@
 import type { HostSelector } from "../../../../../src/types/automations.js";
 import { resolveHostById } from "../../../../../src/backend/hosts/host-resolver.js";
-import { createCurrentFleetRepository } from "../../../../../src/backend/database/repositories/factory.js";
 import { PermissionManager } from "../../../../../src/backend/utils/permission-manager.js";
+import { fleetMemberIds } from "../snippets.js";
 import type { StepExecutionContext } from "./types.js";
 
 /** A host the caller is allowed to act on. `host` is always resolved. */
@@ -63,13 +63,7 @@ async function fleetHostIds(
   fleetId: number,
   userId: string,
 ): Promise<number[]> {
-  try {
-    const repository = createCurrentFleetRepository();
-    const members = await repository.listEffectiveMembers(userId, fleetId);
-    return members.map((member) => member.id);
-  } catch {
-    return [];
-  }
+  return fleetMemberIds(userId, fleetId);
 }
 
 async function allAccessibleHostIds(userId: string): Promise<number[]> {

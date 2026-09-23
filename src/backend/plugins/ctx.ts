@@ -50,6 +50,7 @@ import {
   resolveDatabaseDialect,
 } from "../database/db/dialect.js";
 import { createPluginAuth, createPluginSsh } from "./ctx-ssh-auth.js";
+import { createPluginHosts } from "./ctx-hosts.js";
 
 export type { PluginModule };
 
@@ -608,6 +609,7 @@ export function createPluginContext(
       },
     },
 
+    hosts: createPluginHosts({ manifest, audit: auditCall }),
     ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
     auth: createPluginAuth({ manifest, bag: handle.bag, audit: auditCall }),
 

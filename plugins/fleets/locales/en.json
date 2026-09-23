@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "view": {
+      "title": "View fleets",
+      "description": "See fleets, their members and inventory."
+    },
+    "manage": {
+      "title": "Manage fleets",
+      "description": "Create, edit and delete fleets, change membership, and share fleets with other users or roles."
+    },
+    "execute": {
+      "title": "Run fleet actions",
+      "description": "Run commands and package actions across a fleet, and transfer files to and from its member hosts."
+    }
+  },
   "newUi": {
     "sidebar": {
       "fleets": {

@@ -2,7 +2,6 @@ import {
   createCurrentNotificationChannelRepository,
   createCurrentAutomationRepository,
   createCurrentCommandHistoryRepository,
-  createCurrentFleetRepository,
   createCurrentHomepageItemRepository,
   createCurrentHostRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
@@ -11,6 +10,7 @@ import {
   listSavedWorkspaces,
   getNetworkTopology,
   listSnippets,
+  listFleets,
 } from "../services.js";
 
 /**
@@ -87,18 +87,16 @@ export const readTools: AiTool[] = [
   {
     name: "list_fleets",
     description:
-      "List the user's fleets. Fleets group hosts for bulk operations and inventory.",
+      "List the user's fleets. Fleets group hosts for bulk operations and inventory. Unavailable if the fleets plugin is disabled.",
     category: "read",
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const fleets = await createCurrentFleetRepository().listByUser(
-        context.userId,
-      );
+      const fleets = await listFleets(context.userId);
+      if (fleets === null) return { unavailable: true, fleets: [] };
       return {
-        fleets: fleets.map((fleet: any) => ({
+        fleets: fleets.map((fleet) => ({
           id: fleet.id,
           name: fleet.name,
-          description: fleet.description ?? null,
         })),
       };
     },

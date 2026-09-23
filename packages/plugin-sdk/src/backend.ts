@@ -395,6 +395,90 @@ export interface PluginSettings {
   readCore: (key: string) => Promise<string | null>;
 }
 
+/** A host's non-secret fields, for listing, tag matching and display. */
+export interface PluginHostSummary {
+  id: number;
+  userId: string;
+  name: string | null;
+  ip: string;
+  port: number;
+  username: string;
+  /** Comma-separated, as ssh_data stores them. Split on "," to match tags. */
+  tags: string | null;
+  folder: string | null;
+  authType: string;
+}
+
+/** The same shape canAccessHost returns internally, without secrets. */
+export interface PluginHostAccess {
+  hasAccess: boolean;
+  isOwner: boolean;
+  isShared: boolean;
+  permissionLevel?: "connect" | "view" | "edit" | "manage";
+  expiresAt?: string | null;
+}
+
+export type PluginHostShareLevel = "connect" | "view" | "edit" | "manage";
+
+export interface PluginShareTarget {
+  type: "user" | "role";
+  id: string | number;
+}
+
+export interface PluginHostShareResult {
+  hostId: number;
+  shared: boolean;
+  reason?: string;
+}
+
+/** A user or role a plugin can offer as a share target. No secrets, no roles' permission lists. */
+export interface PluginShareableUser {
+  id: string;
+  username: string;
+}
+
+export interface PluginShareableRole {
+  id: number;
+  name: string;
+  displayName: string | null;
+}
+
+/**
+ * Hosts the acting user can see, and the RBAC + sharing operations a plugin
+ * needs to build a feature (like fleets) on top of hosts it does not own.
+ *
+ * list/get/checkAccess need hosts:read. share, and the user/role pickers a
+ * share UI needs, need hosts:write: sharing changes who can reach a host,
+ * which is a write on that host's access, even though the plugin owns
+ * neither the host nor the grant.
+ */
+export interface PluginHosts {
+  /** Every host the acting user owns or was shared, without secrets. */
+  list: () => Promise<PluginHostSummary[]>;
+  /** One host the acting user can see, or null if it does not exist or they cannot. */
+  get: (hostId: number) => Promise<PluginHostSummary | null>;
+  /** The same access rule ctx.ssh.connect enforces, but naming the level, not just yes/no. */
+  checkAccess: (
+    hostId: number,
+    level: PluginHostShareLevel,
+  ) => Promise<PluginHostAccess>;
+  /**
+   * Grants access to a host the caller manages, snapshotting shared secrets
+   * for each target the same way the host editor's own share action does.
+   * Refuses a host the caller does not hold "manage" on.
+   */
+  share: (
+    hostId: number,
+    targets: PluginShareTarget[],
+    permissionLevel: PluginHostShareLevel,
+    durationHours?: number,
+  ) => Promise<PluginHostShareResult>;
+  /** Users the caller may pick as a share target, for building a picker UI. */
+  listUsers: () => Promise<PluginShareableUser[]>;
+  /** Non-system roles the caller may pick as a share target. */
+  listRoles: () => Promise<PluginShareableRole[]>;
+}
+
 /**
  * A host as the SSH pipeline reads it: resolved by core, with secrets filled
  * in for the acting user. Plugins get one from core and hand it back; they
@@ -814,6 +898,8 @@ export interface PluginContext {
   readonly rbac: PluginRbac;
   readonly settings: PluginSettings;
   readonly disposables: PluginDisposables;
+  /** Hosts the actor can see, and host-sharing operations. Needs hosts:read / hosts:write. */
+  readonly hosts: PluginHosts;
   /** SSH through core's connect pipeline. Needs ssh:connect and credentials:use. */
   readonly ssh: PluginSsh;
   /** Login methods, second factors and SSH auth types. Needs auth:provide. */

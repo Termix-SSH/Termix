@@ -23,6 +23,11 @@ import type {
   PluginSecondFactor,
   PluginSshAuthProvider,
   PluginSshHost,
+  PluginHostSummary,
+  PluginHostAccess,
+  PluginHostShareResult,
+  PluginShareableUser,
+  PluginShareableRole,
 } from "./backend.js";
 import type { SyncEntityRegistration } from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
@@ -48,6 +53,11 @@ export interface FakeContextOptions {
    * when omitted every check passes, so tests that do not care stay simple.
    */
   permissions?: string[];
+  /** Hosts ctx.hosts.list/get/checkAccess answer with. */
+  hosts?: PluginHostSummary[];
+  /** Users and roles ctx.hosts.listUsers/listRoles answer with. */
+  shareableUsers?: PluginShareableUser[];
+  shareableRoles?: PluginShareableRole[];
 }
 
 export interface FakeAuthRegistrations {
@@ -82,6 +92,13 @@ export interface FakePluginContext {
   coreSettings: Map<string, string>;
   /** Every ctx.ssh.connect and withConnection call, in order. */
   sshConnections: Array<{ host: number | PluginSshHost; pool?: string }>;
+  /** Every ctx.hosts.share call, in order. */
+  hostShares: Array<{
+    hostId: number;
+    targets: unknown[];
+    permissionLevel: string;
+    durationHours?: number;
+  }>;
   /** Everything registered through ctx.auth. */
   auth: FakeAuthRegistrations;
   /** Changes the acting user, as core's request middleware would. */
@@ -153,6 +170,10 @@ export function createFakeContext(
   );
   const settingsListeners = new Map<string, Set<(value: unknown) => void>>();
   const sshConnections: FakePluginContext["sshConnections"] = [];
+  const hostShares: FakePluginContext["hostShares"] = [];
+  const hostsById = new Map<number, PluginHostSummary>(
+    (options.hosts ?? []).map((h) => [h.id, h]),
+  );
   const services = new Map<string, object>();
   const auth: FakeAuthRegistrations = {
     sshAuthProviders: [],
@@ -385,6 +406,34 @@ export function createFakeContext(
 
     disposables,
 
+    hosts: {
+      list: async () => [...hostsById.values()],
+      get: async (hostId) => hostsById.get(hostId) ?? null,
+      checkAccess: async (hostId): Promise<PluginHostAccess> => {
+        const found = hostsById.get(hostId);
+        if (!found)
+          return { hasAccess: false, isOwner: false, isShared: false };
+        const isOwner = found.userId === actor;
+        return {
+          hasAccess: true,
+          isOwner,
+          isShared: !isOwner,
+          permissionLevel: "manage",
+        };
+      },
+      share: async (
+        hostId,
+        targets,
+        permissionLevel,
+        durationHours,
+      ): Promise<PluginHostShareResult> => {
+        hostShares.push({ hostId, targets, permissionLevel, durationHours });
+        return { hostId, shared: true };
+      },
+      listUsers: async () => options.shareableUsers ?? [],
+      listRoles: async () => options.shareableRoles ?? [],
+    },
+
     ssh: {
       connect: async (host) => {
         sshConnections.push({ host });
@@ -473,6 +522,7 @@ export function createFakeContext(
     settings,
     coreSettings,
     sshConnections,
+    hostShares,
     auth,
     setActor: (userId) => {
       actor = userId;
@@ -640,6 +690,33 @@ export function createMockCtx(
       readCore: async (key) => {
         require("settings:read-core");
         return ctx.settings.readCore(key);
+      },
+    },
+
+    hosts: {
+      list: async () => {
+        require("hosts:read");
+        return ctx.hosts.list();
+      },
+      get: async (hostId) => {
+        require("hosts:read");
+        return ctx.hosts.get(hostId);
+      },
+      checkAccess: async (hostId, level) => {
+        require("hosts:read");
+        return ctx.hosts.checkAccess(hostId, level);
+      },
+      share: async (hostId, targets, permissionLevel, durationHours) => {
+        require("hosts:write");
+        return ctx.hosts.share(hostId, targets, permissionLevel, durationHours);
+      },
+      listUsers: async () => {
+        require("hosts:write");
+        return ctx.hosts.listUsers();
+      },
+      listRoles: async () => {
+        require("hosts:write");
+        return ctx.hosts.listRoles();
       },
     },
 

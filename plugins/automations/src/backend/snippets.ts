@@ -62,3 +62,30 @@ export async function getSnippet(
     return null;
   }
 }
+
+/** Another plugin's fleets, as ctx.services.get("fleets.access") returns them. */
+interface FleetsAccess {
+  members: (
+    fleetId: number,
+  ) => Promise<Array<{ id: number; name: string | null; ip: string }>>;
+}
+
+/**
+ * A fleet's effective member host ids, for a "fleet" target selector. Empty
+ * when the fleets plugin is off, the user may not use it, or the fleet does
+ * not exist - the step then runs against no hosts rather than failing.
+ */
+export async function fleetMemberIds(
+  userId: string,
+  fleetId: number,
+): Promise<number[]> {
+  if (!current) return [];
+  try {
+    const members = await current
+      .get<FleetsAccess>("fleets.access", { userId })
+      .members(fleetId);
+    return members.map((member) => member.id);
+  } catch {
+    return [];
+  }
+}

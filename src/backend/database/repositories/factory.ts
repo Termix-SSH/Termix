@@ -15,8 +15,6 @@ import { CredentialRepository } from "./credential-repository.js";
 import { DashboardServiceLinkRepository } from "./dashboard-service-link-repository.js";
 import { DismissedAlertRepository } from "./dismissed-alert-repository.js";
 import { FileManagerBookmarkRepository } from "./file-manager-bookmark-repository.js";
-import { FleetRepository } from "./fleet-repository.js";
-import { FleetInventoryRepository } from "./fleet-inventory-repository.js";
 import { HomepageItemRepository } from "./homepage-item-repository.js";
 import { HomepageLayoutRepository } from "./homepage-layout-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
@@ -236,20 +234,6 @@ export function createCurrentFileManagerBookmarkRepository(): FileManagerBookmar
   return new FileManagerBookmarkRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("file_manager_bookmarks_repository_write"),
-  );
-}
-
-export function createCurrentFleetRepository(): FleetRepository {
-  return new FleetRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("fleet_repository_write"),
-  );
-}
-
-export function createCurrentFleetInventoryRepository(): FleetInventoryRepository {
-  return new FleetInventoryRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("fleet_inventory_repository_write"),
   );
 }
 

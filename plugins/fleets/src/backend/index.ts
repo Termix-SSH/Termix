@@ -1,14 +1,75 @@
+import type { Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
-import { setPluginSsh } from "./ssh.js";
-import { startFleetsService, stopFleetsService } from "./routes.js";
+import { fleets, fleetMembers, fleetInventory } from "./tables.js";
+import { createFleetRepository } from "./repository.js";
+import { registerFleetRoutes } from "./routes.js";
+
+/** What other plugins get from ctx.services.get("fleets.access", {userId}). */
+export interface FleetsService {
+  /** The calling user's fleets, without resolving membership. */
+  list: () => Promise<
+    Array<{ id: number; name: string; color: string | null }>
+  >;
+  /** A fleet's effective member hosts (static membership union tag matches). */
+  members: (
+    fleetId: number,
+  ) => Promise<Array<{ id: number; name: string | null; ip: string }>>;
+  /** Creates a fleet owned by the calling user. */
+  create: (input: {
+    name: string;
+    description?: string | null;
+  }) => Promise<{ id: number; name: string }>;
+  /** Adds a host the calling user owns to a fleet's static membership. */
+  addMember: (fleetId: number, hostId: number) => Promise<void>;
+}
 
 export async function activate(ctx: PluginContext) {
-  setPluginSsh(ctx.ssh);
-  ctx.disposables.add(() => setPluginSsh(null));
-  startFleetsService(ctx.http.router());
+  const fleetsTable = await ctx.db.define(fleets);
+  const membersTable = await ctx.db.define(fleetMembers);
+  const inventoryTable = await ctx.db.define(fleetInventory);
+
+  const repo = createFleetRepository(
+    ctx.db,
+    ctx.hosts,
+    fleetsTable,
+    membersTable,
+    inventoryTable,
+  );
+
+  registerFleetRoutes(ctx.http.router<Router>(), repo, ctx);
+
+  const service: FleetsService = {
+    list: async () => {
+      const userId = ctx.currentActor();
+      if (!userId) return [];
+      const rows = await repo.listByUser(userId);
+      return rows.map((f) => ({ id: f.id, name: f.name, color: f.color }));
+    },
+    members: async (fleetId) => {
+      const userId = ctx.currentActor();
+      if (!userId) return [];
+      const members = await repo.listEffectiveMembers(userId, fleetId);
+      return members.map((m) => ({ id: m.id, name: m.name, ip: m.ip }));
+    },
+    create: async (input) => {
+      const userId = ctx.currentActor();
+      if (!userId) throw new Error("fleets.access.create needs an actor");
+      const created = await repo.create(userId, input);
+      return { id: created.id, name: created.name };
+    },
+    addMember: async (fleetId, hostId) => {
+      const userId = ctx.currentActor();
+      if (!userId) throw new Error("fleets.access.addMember needs an actor");
+      const fleet = await repo.findById(userId, fleetId);
+      if (!fleet) throw new Error("Fleet not found");
+      await repo.addMember(fleetId, hostId);
+    },
+  };
+  ctx.services.provide("fleets.access", service);
+
   ctx.log.info("Fleets routes mounted at /plugin-api/fleets");
 }
 
 export async function deactivate() {
-  stopFleetsService();
+  // Everything above was registered through ctx and is disposed by core.
 }

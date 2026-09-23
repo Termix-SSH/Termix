@@ -26,18 +26,19 @@ This is not a sandbox. See [What this protects](#what-this-protects-and-what-it-
 A plugin imports `@termix/plugin-sdk`, its own files and its own npm
 dependencies. Entry points:
 
-| Entry                              | Contents                                                   |
-| ---------------------------------- | ---------------------------------------------------------- |
-| `@termix/plugin-sdk/backend`       | `PluginContext`, `definePlugin()`, `PluginCapabilityError` |
-| `@termix/plugin-sdk/db`            | `defineTable()`, the column builders, the legacy-table map |
-| `@termix/plugin-sdk/ddl`           | The per-dialect DDL emitter, shared with the CLI           |
-| `@termix/plugin-sdk/table-builder` | `buildTable()`, a definition as a queryable Drizzle table  |
-| `@termix/plugin-sdk/frontend`      | The `app` object types, the hooks, `invokeAction()`        |
-| `@termix/plugin-sdk/ui`            | Core's shared components, a fixed public list (see UI)     |
-| `@termix/plugin-sdk/manifest`      | Manifest types, validation, the JSON schema                |
-| `@termix/plugin-sdk/capabilities`  | The capability catalog                                     |
-| `@termix/plugin-sdk/settings`      | Settings field types and the shared value validator        |
-| `@termix/plugin-sdk/testing`       | Test helpers: `createMockCtx()`, `createTestDb()` and more |
+| Entry                              | Contents                                                                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `@termix/plugin-sdk/backend`       | `PluginContext`, `definePlugin()`, `PluginCapabilityError`                                                                    |
+| `@termix/plugin-sdk/db`            | `defineTable()`, the column builders, the legacy-table map                                                                    |
+| `@termix/plugin-sdk/ddl`           | The per-dialect DDL emitter, shared with the CLI                                                                              |
+| `@termix/plugin-sdk/table-builder` | `buildTable()`, a definition as a queryable Drizzle table                                                                     |
+| `@termix/plugin-sdk/frontend`      | The `app` object types, the hooks, `invokeAction()`                                                                           |
+| `@termix/plugin-sdk/ui`            | Core's shared components, a fixed public list (see UI)                                                                        |
+| `@termix/plugin-sdk/manifest`      | Manifest types, validation, the JSON schema                                                                                   |
+| `@termix/plugin-sdk/capabilities`  | The capability catalog                                                                                                        |
+| `@termix/plugin-sdk/settings`      | Settings field types and the shared value validator                                                                           |
+| `@termix/plugin-sdk/host-commands` | Platform detection, package manager commands, sudo elevation - pure helpers over an ssh2 `Client` a plugin got from `ctx.ssh` |
+| `@termix/plugin-sdk/testing`       | Test helpers: `createMockCtx()`, `createTestDb()` and more                                                                    |
 
 Plugins never import from `src/` or `@/`, and core never imports from
 `plugins/`. Anything a plugin needs from core becomes a typed, documented SDK
@@ -1045,7 +1046,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.sync.registerEntity`                        | none                                 | **A3** |
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4** |
 | `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5** |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | B      |
+| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4** |
 | `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8** |
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6** |
 | `ctx.notify.*`                                   | `notify:send`                        | A6     |
@@ -1072,6 +1073,32 @@ connect pipeline instead of importing ssh2 helpers from core:
 
 Each new connection is audited and runs as the current actor; pooled reuse is
 not. Connections and pool entries are closed on deactivate.
+
+**B4** added `ctx.hosts`, for a plugin that groups or acts across hosts it
+does not own the way fleets does:
+
+- `list()` / `get(hostId)` return `PluginHostSummary` (id, userId, name, ip,
+  port, username, tags, folder, authType - no secrets) for the acting user's
+  own and shared hosts. Needs `hosts:read`.
+- `checkAccess(hostId, level)` mirrors `PermissionManager.canAccessHost`,
+  naming the level ("connect" | "view" | "edit" | "manage") rather than a
+  bare yes/no, because a plugin fanning out across a fleet needs to know
+  whether it can only connect, or also manage. Needs `hosts:read`.
+- `share(hostId, targets, permissionLevel, durationHours)` grants access the
+  same way the host editor's own share action does, snapshotting shared
+  secrets per target through core's `SharedHostSecretsManager`. Refuses a
+  host the caller does not hold "manage" on. Needs `hosts:write`, because
+  granting access to a host is a write on that host even when the plugin
+  owns neither the host nor the grant.
+- `listUsers()` / `listRoles()` return minimal `{ id, username }` /
+  `{ id, name, displayName }` lists (roles filtered to non-system) for a
+  share-target picker UI, without exposing the full admin user/role
+  management surface. Needs `hosts:write`, matching `share`.
+
+`ctx.hosts.get` returns the same non-secret projection as `list`; a plugin
+that needs to actually connect uses `ctx.ssh.connect(hostId)` or
+`withConnection(hostId, ...)`, which resolve the full host (secrets included)
+through the one connect pipeline. fleets never holds a `PluginSshHost` itself.
 
 ### The actor
 

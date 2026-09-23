@@ -1,6 +1,33 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import {
+  getErrorMessage,
+  extractSnippetInputs,
+  type SnippetInput,
+} from "./helpers.js";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  useTranslation,
+  useHosts,
+  type PluginHostRecord,
+} from "@termix/plugin-sdk/frontend";
+import {
+  Button,
+  Input,
+  Textarea,
+  Checkbox,
+  Badge,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  FOLDER_COLORS,
+  Select2,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@termix/plugin-sdk/ui";
 import { toast } from "sonner";
 import {
   Boxes,
@@ -23,61 +50,19 @@ import {
   User,
   X,
 } from "lucide-react";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Textarea } from "@/components/textarea";
-import { Checkbox } from "@/components/checkbox";
-import { Badge } from "@/components/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/dialog";
-import { FOLDER_COLORS } from "@/lib/theme";
-import { getSSHHosts } from "@/api/ssh-host-management-api";
-import { getUserList } from "@/api/user-management-api";
-import {
-  getRoles,
-  type SharePermissionLevel,
-  type ShareTarget,
-} from "@/api/rbac-api";
-import { Select2 } from "@/components/select2";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
-import {
-  extractSnippetInputs,
-  type SnippetInput,
-} from "@/lib/snippet-variables";
-import {
-  listFleets,
-  createFleet,
-  updateFleet,
-  deleteFleet,
-  getFleetMembers,
-  addFleetMember,
-  removeFleetMember,
-  runFleetCommand,
-  pushFleetFile,
-  pullFleetFile,
-  getFleetInventory,
-  refreshFleetInventory,
-  runFleetPackageAction,
-  shareFleet,
-  type FleetRow,
-  type FleetMemberRow,
-  type FleetHostResult,
-  type FleetInventoryEntry,
-  type FleetPackageAction,
-  type FleetShareHostResult,
-} from "./fleets-api";
-import type { SSHHost } from "@/types/index";
+import type {
+  FleetsApi,
+  FleetRow,
+  FleetMemberRow,
+  FleetHostResult,
+  FleetInventoryEntry,
+  FleetPackageAction,
+  FleetShareHostResult,
+  ShareableUser,
+  ShareableRole,
+  SharePermissionLevel,
+  ShareTarget,
+} from "./fleets-api.js";
 
 const SHARE_PERMISSION_LEVELS: SharePermissionLevel[] = [
   "connect",
@@ -144,11 +129,13 @@ function ResultsList({ results }: { results: FleetHostResult[] }) {
 }
 
 function FleetFormDialog({
+  api,
   open,
   onClose,
   fleet,
   onSaved,
 }: {
+  api: FleetsApi;
   open: boolean;
   onClose: () => void;
   fleet: FleetRow | null;
@@ -182,7 +169,7 @@ function FleetFormDialog({
     setSaving(true);
     try {
       if (fleet) {
-        await updateFleet(fleet.id, {
+        await api.update(fleet.id, {
           name: name.trim(),
           description: description.trim() || null,
           color,
@@ -190,7 +177,7 @@ function FleetFormDialog({
         });
         toast.success(t("newUi.sidebar.fleets.fleetUpdated"));
       } else {
-        await createFleet({
+        await api.create({
           name: name.trim(),
           description: description.trim() || null,
           color,
@@ -304,6 +291,7 @@ function FleetFormDialog({
 }
 
 function MemberPickerDialog({
+  api,
   open,
   onClose,
   fleetId,
@@ -311,10 +299,11 @@ function MemberPickerDialog({
   memberIds,
   onChanged,
 }: {
+  api: FleetsApi;
   open: boolean;
   onClose: () => void;
   fleetId: number;
-  allHosts: SSHHost[];
+  allHosts: PluginHostRecord[];
   memberIds: Set<number>;
   onChanged: () => void;
 }) {
@@ -330,13 +319,14 @@ function MemberPickerDialog({
     [allHosts, search],
   );
 
-  async function toggleHost(host: SSHHost, isMember: boolean) {
-    setBusyId(host.id);
+  async function toggleHost(host: PluginHostRecord, isMember: boolean) {
+    const hostId = Number(host.id);
+    setBusyId(hostId);
     try {
       if (isMember) {
-        await removeFleetMember(fleetId, host.id);
+        await api.removeMember(fleetId, hostId);
       } else {
-        await addFleetMember(fleetId, host.id);
+        await api.addMember(fleetId, hostId);
       }
       onChanged();
     } catch (error) {
@@ -371,7 +361,8 @@ function MemberPickerDialog({
 
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
           {visibleHosts.map((host) => {
-            const isMember = memberIds.has(host.id);
+            const hostId = Number(host.id);
+            const isMember = memberIds.has(hostId);
             return (
               <label
                 key={host.id}
@@ -379,7 +370,7 @@ function MemberPickerDialog({
               >
                 <Checkbox
                   checked={isMember}
-                  disabled={busyId === host.id}
+                  disabled={busyId === hostId}
                   onCheckedChange={() => toggleHost(host, isMember)}
                 />
                 <span className="truncate flex-1">{host.name}</span>
@@ -411,10 +402,12 @@ function MemberPickerDialog({
 }
 
 function FleetShareDialog({
+  api,
   open,
   onClose,
   fleet,
 }: {
+  api: FleetsApi;
   open: boolean;
   onClose: () => void;
   fleet: FleetRow | null;
@@ -422,12 +415,8 @@ function FleetShareDialog({
   const { t } = useTranslation();
   const [targetTab, setTargetTab] = useState<"user" | "role">("user");
   const [search, setSearch] = useState("");
-  const [shareUsers, setShareUsers] = useState<
-    { id: string; username: string }[]
-  >([]);
-  const [shareRoles, setShareRoles] = useState<
-    { id: number; name: string; displayName?: string }[]
-  >([]);
+  const [shareUsers, setShareUsers] = useState<ShareableUser[]>([]);
+  const [shareRoles, setShareRoles] = useState<ShareableRole[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
     new Set(),
   );
@@ -457,26 +446,13 @@ function FleetShareDialog({
     setTargetTab("user");
     setSummary(null);
     Promise.all([
-      getUserList().catch(() => ({ users: [] })),
-      getRoles().catch(() => ({ roles: [] })),
+      api.shareTargetUsers().catch(() => ({ users: [] })),
+      api.shareTargetRoles().catch(() => ({ roles: [] })),
     ]).then(([usersRes, rolesRes]) => {
-      setShareUsers(
-        (usersRes.users ?? []).map((u) => ({
-          id: String(u.userId),
-          username: u.username,
-        })),
-      );
-      setShareRoles(
-        (rolesRes.roles ?? [])
-          .filter((r) => !r.isSystem)
-          .map((r) => ({
-            id: Number(r.id),
-            name: r.name,
-            displayName: r.displayName,
-          })),
-      );
+      setShareUsers(usersRes.users ?? []);
+      setShareRoles(rolesRes.roles ?? []);
     });
-  }, [open]);
+  }, [open, api]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -523,7 +499,7 @@ function FleetShareDialog({
 
     setSubmitting(true);
     try {
-      const result = await shareFleet(fleet.id, {
+      const result = await api.share(fleet.id, {
         targets,
         permissionLevel,
         ...(durationHours ? { durationHours } : {}),
@@ -808,7 +784,7 @@ function FleetShareDialog({
   );
 }
 
-function RunCommandTab({ fleetId }: { fleetId: number }) {
+function RunCommandTab({ api, fleetId }: { api: FleetsApi; fleetId: number }) {
   const { t } = useTranslation();
   const [command, setCommand] = useState("");
   const [inputs, setInputs] = useState<SnippetInput[]>([]);
@@ -828,7 +804,7 @@ function RunCommandTab({ fleetId }: { fleetId: number }) {
     setRunning(true);
     setResults(null);
     try {
-      const { results: r } = await runFleetCommand(
+      const { results: r } = await api.runCommand(
         fleetId,
         command,
         inputs.length > 0 ? inputValues : undefined,
@@ -901,7 +877,7 @@ function RunCommandTab({ fleetId }: { fleetId: number }) {
   );
 }
 
-function TransferTab({ fleetId }: { fleetId: number }) {
+function TransferTab({ api, fleetId }: { api: FleetsApi; fleetId: number }) {
   const { t } = useTranslation();
   const [direction, setDirection] = useState<"push" | "pull">("push");
   const [remotePath, setRemotePath] = useState("");
@@ -923,14 +899,14 @@ function TransferTab({ fleetId }: { fleetId: number }) {
     setResults(null);
     try {
       if (direction === "push" && file) {
-        const { results: r } = await pushFleetFile(fleetId, file, remotePath);
+        const { results: r } = await api.pushFile(fleetId, file, remotePath);
         setResults(r);
       } else {
         const {
           results: r,
           blob,
           fileName,
-        } = await pullFleetFile(fleetId, remotePath);
+        } = await api.pullFile(fleetId, remotePath);
         setResults(r);
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -1018,7 +994,7 @@ function TransferTab({ fleetId }: { fleetId: number }) {
   );
 }
 
-function InventoryTab({ fleetId }: { fleetId: number }) {
+function InventoryTab({ api, fleetId }: { api: FleetsApi; fleetId: number }) {
   const { t } = useTranslation();
   const [entries, setEntries] = useState<FleetInventoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1027,7 +1003,7 @@ function InventoryTab({ fleetId }: { fleetId: number }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getFleetInventory(fleetId);
+      const data = await api.inventory(fleetId);
       setEntries(data);
     } catch (error) {
       const message = getErrorMessage(error, "");
@@ -1035,7 +1011,7 @@ function InventoryTab({ fleetId }: { fleetId: number }) {
     } finally {
       setLoading(false);
     }
-  }, [fleetId, t]);
+  }, [api, fleetId, t]);
 
   useEffect(() => {
     load();
@@ -1044,7 +1020,7 @@ function InventoryTab({ fleetId }: { fleetId: number }) {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const { results } = await refreshFleetInventory(fleetId);
+      const { results } = await api.refreshInventory(fleetId);
       const failed = results.filter((r) => !r.success).length;
       if (failed > 0) {
         toast.warning(
@@ -1137,7 +1113,7 @@ function InventoryTab({ fleetId }: { fleetId: number }) {
   );
 }
 
-function PackagesTab({ fleetId }: { fleetId: number }) {
+function PackagesTab({ api, fleetId }: { api: FleetsApi; fleetId: number }) {
   const { t } = useTranslation();
   const [action, setAction] = useState<FleetPackageAction>("install");
   const [packageName, setPackageName] = useState("");
@@ -1152,7 +1128,7 @@ function PackagesTab({ fleetId }: { fleetId: number }) {
     setRunning(true);
     setResults(null);
     try {
-      const { results: r } = await runFleetPackageAction(
+      const { results: r } = await api.runPackageAction(
         fleetId,
         action,
         action === "upgrade-all" ? undefined : packageName.trim(),
@@ -1240,14 +1216,16 @@ function PackagesTab({ fleetId }: { fleetId: number }) {
 type FleetActionView = "run" | "transfer" | "inventory" | "packages";
 
 function FleetDetail({
+  api,
   fleet,
   allHosts,
   onBack,
   onFleetChanged,
   onOpenFleetInventory,
 }: {
+  api: FleetsApi;
   fleet: FleetRow;
-  allHosts: SSHHost[];
+  allHosts: PluginHostRecord[];
   onBack: () => void;
   onFleetChanged: () => void;
   onOpenFleetInventory?: (fleetId: number) => void;
@@ -1262,7 +1240,7 @@ function FleetDetail({
   const loadMembers = useCallback(async () => {
     setLoadingMembers(true);
     try {
-      const data = await getFleetMembers(fleet.id);
+      const data = await api.members(fleet.id);
       setMembers(data);
     } catch (error) {
       const message = getErrorMessage(error, "");
@@ -1270,7 +1248,7 @@ function FleetDetail({
     } finally {
       setLoadingMembers(false);
     }
-  }, [fleet.id, t]);
+  }, [api, fleet.id, t]);
 
   useEffect(() => {
     loadMembers();
@@ -1354,15 +1332,24 @@ function FleetDetail({
               )}
             </div>
 
-            {actionView === "run" && <RunCommandTab fleetId={fleet.id} />}
-            {actionView === "transfer" && <TransferTab fleetId={fleet.id} />}
-            {actionView === "inventory" && <InventoryTab fleetId={fleet.id} />}
-            {actionView === "packages" && <PackagesTab fleetId={fleet.id} />}
+            {actionView === "run" && (
+              <RunCommandTab api={api} fleetId={fleet.id} />
+            )}
+            {actionView === "transfer" && (
+              <TransferTab api={api} fleetId={fleet.id} />
+            )}
+            {actionView === "inventory" && (
+              <InventoryTab api={api} fleetId={fleet.id} />
+            )}
+            {actionView === "packages" && (
+              <PackagesTab api={api} fleetId={fleet.id} />
+            )}
           </div>
         )}
       </div>
 
       <MemberPickerDialog
+        api={api}
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         fleetId={fleet.id}
@@ -1372,6 +1359,7 @@ function FleetDetail({
       />
 
       <FleetShareDialog
+        api={api}
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         fleet={fleet}
@@ -1381,15 +1369,17 @@ function FleetDetail({
 }
 
 export function FleetsPanel({
+  api,
   active,
   onOpenFleetInventory,
 }: {
+  api: FleetsApi;
   active?: boolean;
   onOpenFleetInventory?: (fleetId: number) => void;
 }) {
   const { t } = useTranslation();
+  const { hosts: allHosts } = useHosts();
   const [fleets, setFleets] = useState<FleetRow[]>([]);
-  const [allHosts, setAllHosts] = useState<SSHHost[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedFleet, setSelectedFleet] = useState<FleetRow | null>(null);
@@ -1401,7 +1391,7 @@ export function FleetsPanel({
 
   const loadFleets = useCallback(async () => {
     try {
-      const data = await listFleets();
+      const data = await api.list();
       setFleets(data);
       setSelectedFleet((prev) =>
         prev ? (data.find((f) => f.id === prev.id) ?? null) : null,
@@ -1410,28 +1400,24 @@ export function FleetsPanel({
       const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.loadFailed"));
     }
-  }, [t]);
+  }, [api, t]);
 
   useEffect(() => {
     if (!active || hasLoadedRef.current) return;
     hasLoadedRef.current = true;
     setLoading(true);
-    Promise.all([listFleets(), getSSHHosts({ includeStatus: false })])
-      .then(([fleetData, hosts]) => {
-        setFleets(fleetData);
-        setAllHosts(hosts as unknown as SSHHost[]);
-      })
+    loadFleets()
       .catch((error: unknown) => {
         const message = getErrorMessage(error, "");
         toast.error(message || t("newUi.sidebar.fleets.loadFailed"));
       })
       .finally(() => setLoading(false));
-  }, [active, hasLoadedRef, t]);
+  }, [active, hasLoadedRef, loadFleets, t]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
-      await deleteFleet(deleteTarget.id);
+      await api.remove(deleteTarget.id);
       toast.success(t("newUi.sidebar.fleets.fleetDeleted"));
       if (selectedFleet?.id === deleteTarget.id) setSelectedFleet(null);
       setDeleteTarget(null);
@@ -1449,6 +1435,7 @@ export function FleetsPanel({
   if (selectedFleet) {
     return (
       <FleetDetail
+        api={api}
         fleet={selectedFleet}
         allHosts={allHosts}
         onBack={() => setSelectedFleet(null)}
@@ -1578,6 +1565,7 @@ export function FleetsPanel({
       </div>
 
       <FleetFormDialog
+        api={api}
         open={formOpen}
         onClose={() => setFormOpen(false)}
         fleet={editingFleet}
@@ -1585,6 +1573,7 @@ export function FleetsPanel({
       />
 
       <FleetShareDialog
+        api={api}
         open={!!shareTarget}
         onClose={() => setShareTarget(null)}
         fleet={shareTarget}

@@ -27,11 +27,17 @@
     "ui:surface"
   ],
   "optionalDependencies": {
-    "snippets": "^1.0.0"
+    "snippets": "^1.0.0",
+    "fleets": "^1.0.0"
   },
   "requires": [
     {
       "service": "snippets.access",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "fleets.access",
       "versionRange": "^1.0.0",
       "optional": true
     }

@@ -16,11 +16,19 @@
   },
   "capabilities": [
     "hosts:read",
+    "hosts:write",
     "credentials:use",
     "ssh:connect",
     "db:own",
     "network:serve",
     "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "fleets.access",
+      "version": "1.0.0",
+      "permission": "fleets.view"
+    }
   ],
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"],
@@ -38,6 +46,26 @@
         "id": "fleets",
         "titleKey": "nav.fleets",
         "icon": "Boxes"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "view",
+        "titleKey": "permissions.view.title",
+        "descriptionKey": "permissions.view.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "manage",
+        "titleKey": "permissions.manage.title",
+        "descriptionKey": "permissions.manage.description",
+        "defaultRoles": ["user"]
+      },
+      {
+        "name": "execute",
+        "titleKey": "permissions.execute.title",
+        "descriptionKey": "permissions.execute.description",
+        "defaultRoles": ["user"]
       }
     ]
   }

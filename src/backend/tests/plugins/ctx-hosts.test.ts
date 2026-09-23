@@ -1,0 +1,244 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const h = vi.hoisted(() => ({
+  granted: new Set<string>(),
+  actor: undefined as string | undefined,
+  access: {
+    hasAccess: true,
+    isOwner: true,
+    isShared: false,
+  } as Record<string, unknown>,
+  ownedHosts: [] as Array<Record<string, unknown>>,
+  sharedRows: [] as Array<Record<string, unknown>>,
+  visibleGrants: [] as Array<{ hostId: number }>,
+  ownerId: "user-1",
+  hostById: null as Record<string, unknown> | null,
+  upserts: [] as Array<Record<string, unknown>>,
+  users: [] as Array<{ id: string; username: string }>,
+  roles: [] as Array<{
+    id: number;
+    name: string;
+    displayName: string | null;
+    isSystem: boolean;
+  }>,
+}));
+
+vi.mock("../../plugins/permissions.js", async () => {
+  const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+  return {
+    assertCapability: async (
+      pluginId: string,
+      capability: string,
+      declared: readonly string[],
+    ) => {
+      if (!declared.includes(capability) || !h.granted.has(capability)) {
+        throw new PluginCapabilityError(pluginId, capability);
+      }
+    },
+  };
+});
+vi.mock("../../plugins/actor.js", () => ({ getActor: () => h.actor }));
+vi.mock("../../utils/permission-manager.js", () => ({
+  PermissionManager: {
+    getInstance: () => ({
+      canAccessHost: async () => h.access,
+    }),
+  },
+}));
+vi.mock("../../database/repositories/factory.js", () => ({
+  createCurrentHostResolutionRepository: () => ({
+    findHostsByUserId: async () => h.ownedHosts,
+    listHostRowsForAccessList: async () => h.sharedRows,
+    findHostOwnerId: async () => h.ownerId,
+    findHostById: async () => h.hostById,
+  }),
+  createCurrentRoleRepository: () => ({
+    listUserRoleIds: async () => [],
+    listRoles: async () => h.roles,
+  }),
+  createCurrentRbacAccessRepository: () => ({
+    listVisibleHostAccessEntries: async () => h.visibleGrants,
+    upsertHostAccess: async (input: Record<string, unknown>) => {
+      h.upserts.push(input);
+      return { id: h.upserts.length, created: true };
+    },
+  }),
+  createCurrentUserRepository: () => ({
+    listAll: async () => h.users,
+  }),
+}));
+vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
+  SharedHostSecretsManager: {
+    getInstance: () => ({
+      snapshotForUser: async () => {},
+      snapshotForRole: async () => {},
+    }),
+  },
+}));
+
+const { createPluginHosts } = await import("../../plugins/ctx-hosts.js");
+const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
+
+function manifest(capabilities: string[]) {
+  return {
+    id: "fixture",
+    name: "Fixture",
+    version: "1.0.0",
+    capabilities,
+  } as never;
+}
+
+beforeEach(() => {
+  h.granted = new Set();
+  h.actor = "user-1";
+  h.access = { hasAccess: true, isOwner: true, isShared: false };
+  h.ownedHosts = [];
+  h.sharedRows = [];
+  h.visibleGrants = [];
+  h.ownerId = "user-1";
+  h.hostById = null;
+  h.upserts = [];
+  h.users = [];
+  h.roles = [];
+});
+
+describe("ctx.hosts", () => {
+  it("refuses list/get/checkAccess without hosts:read", async () => {
+    const audit = vi.fn(async () => {});
+    const hosts = createPluginHosts({ manifest: manifest([]), audit });
+    await expect(hosts.list()).rejects.toBeInstanceOf(PluginCapabilityError);
+    await expect(hosts.get(1)).rejects.toBeInstanceOf(PluginCapabilityError);
+    await expect(hosts.checkAccess(1, "view")).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+  });
+
+  it("lists owned and shared hosts once granted hosts:read", async () => {
+    h.granted = new Set(["hosts:read"]);
+    h.ownedHosts = [
+      {
+        id: 1,
+        userId: "user-1",
+        name: "own",
+        ip: "10.0.0.1",
+        port: 22,
+        username: "root",
+        tags: "prod",
+        folder: null,
+        authType: "password",
+      },
+    ];
+    h.sharedRows = [
+      {
+        id: 2,
+        userId: "user-2",
+        name: "shared",
+        ip: "10.0.0.2",
+        port: 22,
+        username: "root",
+        tags: null,
+        folder: null,
+        authType: "key",
+      },
+    ];
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:read"]),
+      audit: vi.fn(async () => {}),
+    });
+    const list = await hosts.list();
+    expect(list.map((h2) => h2.id)).toEqual([1, 2]);
+  });
+
+  it("checkAccess reports the granted level", async () => {
+    h.granted = new Set(["hosts:read"]);
+    h.access = {
+      hasAccess: true,
+      isOwner: false,
+      isShared: true,
+      permissionLevel: "edit",
+      expiresAt: null,
+    };
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:read"]),
+      audit: vi.fn(async () => {}),
+    });
+    const access = await hosts.checkAccess(1, "edit");
+    expect(access).toMatchObject({ hasAccess: true, permissionLevel: "edit" });
+  });
+
+  it("refuses share, listUsers, listRoles without hosts:write, auditing the refusal", async () => {
+    const audit = vi.fn(async () => {});
+    const hosts = createPluginHosts({ manifest: manifest([]), audit });
+    await expect(
+      hosts.share(1, [{ type: "user", id: "user-2" }], "view"),
+    ).rejects.toBeInstanceOf(PluginCapabilityError);
+    await expect(hosts.listUsers()).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+    await expect(hosts.listRoles()).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+    expect(audit).toHaveBeenCalledWith(
+      "hosts_share",
+      expect.any(String),
+      expect.objectContaining({ success: false }),
+    );
+  });
+
+  it("shares a host it manages and snapshots secrets per target", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.access = { hasAccess: true, isOwner: true, isShared: false };
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const result = await hosts.share(
+      5,
+      [{ type: "user", id: "user-2" }],
+      "view",
+      24,
+    );
+    expect(result).toEqual({ hostId: 5, shared: true });
+    expect(h.upserts).toHaveLength(1);
+    expect(h.upserts[0]).toMatchObject({
+      hostId: 5,
+      permissionLevel: "view",
+      targetType: "user",
+      targetUserId: "user-2",
+    });
+  });
+
+  it("refuses to share a host the caller does not manage", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.access = { hasAccess: false, isOwner: false, isShared: false };
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    const result = await hosts.share(
+      5,
+      [{ type: "user", id: "user-2" }],
+      "view",
+    );
+    expect(result).toEqual({ hostId: 5, shared: false, reason: "forbidden" });
+  });
+
+  it("lists non-system roles and users once granted hosts:write", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.users = [{ id: "user-1", username: "alice" }];
+    h.roles = [
+      { id: 1, name: "admin", displayName: "Admin", isSystem: true },
+      { id: 2, name: "auditor", displayName: "Auditor", isSystem: false },
+    ];
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(await hosts.listUsers()).toEqual([
+      { id: "user-1", username: "alice" },
+    ]);
+    expect(await hosts.listRoles()).toEqual([
+      { id: 2, name: "auditor", displayName: "Auditor" },
+    ]);
+  });
+});

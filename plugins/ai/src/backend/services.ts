@@ -52,6 +52,60 @@ export async function getNetworkTopology(
   }
 }
 
+/** Another plugin's fleets, as ctx.services.get("fleets.access") returns them. */
+interface FleetsAccess {
+  list: () => Promise<
+    Array<{ id: number; name: string; color: string | null }>
+  >;
+  create: (input: {
+    name: string;
+    description?: string | null;
+  }) => Promise<{ id: number; name: string }>;
+  addMember: (fleetId: number, hostId: number) => Promise<void>;
+}
+
+/**
+ * The user's fleets, or null when the fleets plugin is off or the user may
+ * not use it. Optional: the list_fleets tool disappears without it.
+ */
+export async function listFleets(
+  userId: string,
+): Promise<Array<{ id: number; name: string; color: string | null }> | null> {
+  if (!current) return null;
+  try {
+    return await current.get<FleetsAccess>("fleets.access", { userId }).list();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Requires the fleets plugin, unlike listFleets above: a proposal apply must
+ * surface a failure as an error the user sees, not silently no-op.
+ */
+function requireFleetsAccess(userId: string): FleetsAccess {
+  if (!current) {
+    throw new Error("The fleets plugin is disabled");
+  }
+  return current.get<FleetsAccess>("fleets.access", { userId });
+}
+
+export async function createFleet(
+  userId: string,
+  input: { name: string; description?: string | null },
+): Promise<{ id: number; name: string } | null> {
+  if (!current) return null;
+  return requireFleetsAccess(userId).create(input);
+}
+
+export async function addFleetMember(
+  userId: string,
+  fleetId: number,
+  hostId: number,
+): Promise<void> {
+  await requireFleetsAccess(userId).addMember(fleetId, hostId);
+}
+
 export interface SnippetSummary {
   id: number;
   name: string;

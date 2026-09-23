@@ -12,13 +12,12 @@ const snippetRepository = {
   updateSnippet: vi.fn(),
   deleteSnippet: vi.fn(),
 };
-const fleetRepository = { create: vi.fn(), addMember: vi.fn() };
 const automationRepository = { create: vi.fn() };
+const fleetsAccess = { create: vi.fn(), addMember: vi.fn() };
 
 vi.mock("../../../../../src/backend/database/repositories/factory.js", () => ({
   createCurrentHostRepository: () => hostRepository,
   createCurrentSnippetRepository: () => snippetRepository,
-  createCurrentFleetRepository: () => fleetRepository,
   createCurrentAutomationRepository: () => automationRepository,
 }));
 
@@ -44,10 +43,12 @@ vi.mock("../../../src/backend/ssh.js", () => ({
 
 const { applyProposal } =
   await import("../../../src/backend/tools/executor.js");
+const { setPluginServices } = await import("../../../src/backend/services.js");
 
 describe("applyProposal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setPluginServices(null);
   });
 
   it("refuses a kind that is not a real tool", async () => {
@@ -221,7 +222,15 @@ describe("applyProposal", () => {
   });
 
   it("only adds fleet members the approving user owns", async () => {
-    fleetRepository.create.mockResolvedValue({ id: 3, name: "prod" });
+    setPluginServices({
+      get: (service: string) => {
+        if (service !== "fleets.access")
+          throw new Error(`unexpected ${service}`);
+        return fleetsAccess as never;
+      },
+      provide: vi.fn(),
+    } as never);
+    fleetsAccess.create.mockResolvedValue({ id: 3, name: "prod" });
     hostRepository.findByIdForUser.mockImplementation(
       async (_userId: string, hostId: number) =>
         hostId === 1 ? { id: 1 } : null,
@@ -233,9 +242,15 @@ describe("applyProposal", () => {
       "user-1",
     );
 
-    expect(fleetRepository.addMember).toHaveBeenCalledTimes(1);
-    expect(fleetRepository.addMember).toHaveBeenCalledWith(3, 1);
+    expect(fleetsAccess.addMember).toHaveBeenCalledTimes(1);
+    expect(fleetsAccess.addMember).toHaveBeenCalledWith(3, 1);
     expect(result.summary).toContain("1 host");
+  });
+
+  it("fails clearly when the fleets plugin is disabled", async () => {
+    await expect(
+      applyProposal("propose_create_fleet", { name: "prod" }, "user-1"),
+    ).rejects.toThrow("fleets plugin is disabled");
   });
 
   it("reports nothing to change on an empty update", async () => {
