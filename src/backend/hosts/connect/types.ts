@@ -193,7 +193,35 @@ export interface SshAuthProvider {
     env: SshAuthEnv,
     context: SshAuthFailureContext,
   ) => SshAuthOutcome | undefined;
+  /**
+   * Claims an ssh2 "banner" event during the handshake, for a provider whose
+   * server holds the connection open pending an out-of-band step (Tailscale
+   * SSH check mode). A transport that can show this to a person sends
+   * `<type>_check_required` / `<type>_check_completed` over its socket;
+   * `details` is merged into that message. Returning nothing leaves the
+   * banner unhandled.
+   */
+  onBanner?: (
+    banner: string,
+    host: SshConnectHost,
+    env: SshAuthEnv,
+  ) => SshBannerDecision | undefined;
 }
+
+export type SshBannerDecision =
+  | {
+      /** Hold the connect timeout open and wait for the out-of-band step. */
+      action: "hold";
+      /** How long to wait before failing the connection. */
+      timeoutMs: number;
+      message: string;
+      details?: Record<string, unknown>;
+    }
+  | {
+      /** The out-of-band step finished; resume the normal connect timeout. */
+      action: "release";
+      details?: Record<string, unknown>;
+    };
 
 export interface KeyboardInteractivePrompt {
   prompt: string;

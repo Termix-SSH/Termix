@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseTailscaleCheckBanner,
   isTailscaleCheckCompleteBanner,
-} from "../../../../src/backend/hosts/tailscale-check.js";
+} from "../../src/backend/tailscale-check.js";
 
 describe("parseTailscaleCheckBanner", () => {
   it("extracts the login URL from a real check-mode banner", () => {

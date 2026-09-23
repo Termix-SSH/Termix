@@ -43,12 +43,12 @@ describe("tailscale permissions", () => {
     }
   });
 
-  // No wildcard covered tailscale in SYSTEM_ROLE_DEFAULTS, so nothing is
-  // granted by default and an admin has to opt in.
-  it("grants nothing by default", () => {
-    for (const permission of manifest.manifest?.contributes?.permissions ??
-      []) {
-      expect(permission.defaultRoles).toBeUndefined();
-    }
+  // The device list is a full tailnet inventory, so only admins get it by
+  // default; everyone else needs an explicit grant.
+  it("grants devices.view to admins by default", () => {
+    const devicesView = manifest.manifest?.contributes?.permissions?.find(
+      (permission) => permission.name === "devices.view",
+    );
+    expect(devicesView?.defaultRoles).toEqual(["admin"]);
   });
 });

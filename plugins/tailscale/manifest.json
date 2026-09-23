@@ -18,8 +18,14 @@
     "settings:read-core",
     "network:outbound",
     "network:serve",
+    "auth:provide",
+    "ssh:connect",
+    "credentials:use",
     "ui:surface"
   ],
+  "optionalDependencies": {
+    "host-metrics": "^1.0.0"
+  },
   "contributes": {
     "panels": [
       {
@@ -32,9 +38,13 @@
       {
         "name": "devices.view",
         "titleKey": "permissions.devices.view.title",
-        "descriptionKey": "permissions.devices.view.description"
+        "descriptionKey": "permissions.devices.view.description",
+        "defaultRoles": ["admin"]
       }
     ],
+    "auth": {
+      "sshAuthTypes": ["tailscale"]
+    },
     "settings": {
       "admin": [
         {

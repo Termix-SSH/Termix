@@ -33,7 +33,6 @@ import {
   DiskBreakdownCard,
 } from "./managers/SimpleManagerCards";
 import { WireGuardManagerCard } from "./managers/WireGuardManagerCard";
-import { TailscaleManagerCard } from "./managers/TailscaleManagerCard";
 
 export interface MetricCardHistories {
   cpu: number[];
@@ -208,20 +207,46 @@ export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
     "hostMetrics.managers.wireguard",
     WireGuardManagerCard,
   ),
-  tailscale_manager: managerCard(
-    "tailscale_manager",
-    "hostMetrics.managers.tailscale",
-    TailscaleManagerCard,
-  ),
 };
 
-/** All card ids implemented and available in the Add tray. */
+/**
+ * Manager cards other plugins contribute to "host-metrics.managers" (a
+ * component slot), keyed by contribution actionId. Built once per render from
+ * useSlotContributions and merged with CARD_DEFINITIONS below, so a plugin
+ * like tailscale can add its own manager card without host-metrics knowing it
+ * exists.
+ */
+export function definitionsFromSlot(
+  contributions: Array<{
+    actionId: string;
+    titleKey: string;
+    component?: ComponentType<Record<string, unknown>>;
+  }>,
+): Record<string, CardDefinition> {
+  const out: Record<string, CardDefinition> = {};
+  for (const contribution of contributions) {
+    if (!contribution.component) continue;
+    const Comp = contribution.component;
+    out[contribution.actionId] = {
+      id: contribution.actionId as HostMetricsCardId,
+      labelKey: contribution.titleKey,
+      kind: "manager",
+      render: ({ hostId }) => <Comp hostId={hostId} />,
+    };
+  }
+  return out;
+}
+
+/** All card ids built into this plugin and available in the Add tray. */
 export const IMPLEMENTED_CARD_IDS = Object.keys(
   CARD_DEFINITIONS,
 ) as HostMetricsCardId[];
 
-export function getCardDefinition(id: string): CardDefinition | undefined {
-  return CARD_DEFINITIONS[id];
+export function getCardDefinition(
+  id: string,
+  extra?: Record<string, CardDefinition>,
+): CardDefinition | undefined {
+  return CARD_DEFINITIONS[id] ?? extra?.[id];
 }
 
 export { defaultColSpanFor, defaultHeightFor };

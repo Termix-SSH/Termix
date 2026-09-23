@@ -158,4 +158,9 @@ export function activate(app: TermixApp): void {
     descriptionKey: "onboarding.feature_metrics_desc",
     icon: Activity as ComponentType<{ className?: string }>,
   });
+
+  app.declareActionSlot({
+    id: "host-metrics.managers",
+    accepts: ["component"],
+  });
 }

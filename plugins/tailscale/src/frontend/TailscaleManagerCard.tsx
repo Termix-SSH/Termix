@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Power } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { useManagerData, useManagerAction } from "./useManagerData";
-import { ManagerCardShell } from "./ManagerCardShell";
-import { ManagerSearch } from "./ManagerToolbar";
+import { useTailscaleData, useTailscaleAction } from "./useTailscaleManager";
+import {
+  TailscaleManagerShell,
+  TailscaleManagerSearch,
+} from "./TailscaleManagerShell";
 
 interface TailscalePeer {
   hostname: string;
@@ -23,30 +25,23 @@ interface TailscaleData {
 
 export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
   const { t } = useTranslation();
-  const { data, loading, error, refresh } = useManagerData<TailscaleData>(
-    hostId,
-    "tailscale",
-  );
-  const { busy, run } = useManagerAction(hostId);
+  const { data, loading, error, refresh } =
+    useTailscaleData<TailscaleData>(hostId);
+  const { busy, run } = useTailscaleAction(hostId);
   const [query, setQuery] = useState("");
 
   const handleToggle = async () => {
     if (!data) return;
     const action = data.running ? "down" : "up";
-    await run(
-      "tailscale",
-      { action },
-      {
-        action: "action",
-        loadingMsg: data.running
-          ? t("hostMetrics.managers.tsDisabling")
-          : t("hostMetrics.managers.tsEnabling"),
-        successMsg: data.running
-          ? t("hostMetrics.managers.tsDisabled")
-          : t("hostMetrics.managers.tsEnabled"),
-        onDone: refresh,
-      },
-    );
+    await run(action, {
+      loadingMsg: data.running
+        ? t("manager.tsDisabling")
+        : t("manager.tsEnabling"),
+      successMsg: data.running
+        ? t("manager.tsDisabled")
+        : t("manager.tsEnabled"),
+      onDone: refresh,
+    });
   };
 
   const filteredPeers = (data?.peers ?? []).filter(
@@ -59,14 +54,14 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
   const isNotInstalled = data && !data.installed;
 
   return (
-    <ManagerCardShell
-      title={t("hostMetrics.managers.tailscale")}
+    <TailscaleManagerShell
+      title={t("manager.title")}
       icon={<Power className="size-3.5" />}
       loading={loading}
       error={error}
       onRefresh={refresh}
       empty={!!isNotInstalled}
-      emptyMessage={t("hostMetrics.managers.tsNotInstalled")}
+      emptyMessage={t("manager.tsNotInstalled")}
     >
       {data && (
         <div className="flex flex-col">
@@ -79,8 +74,8 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
               <div className="flex min-w-0 flex-col">
                 <span className="text-xs font-semibold">
                   {data.running
-                    ? t("hostMetrics.managers.tsRunning")
-                    : t("hostMetrics.managers.tsStopped")}
+                    ? t("manager.tsRunning")
+                    : t("manager.tsStopped")}
                 </span>
                 {data.hostname && (
                   <span className="truncate font-mono text-[10px] text-muted-foreground">
@@ -102,9 +97,7 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
                 onClick={handleToggle}
                 disabled={busy || !data.installed}
                 title={
-                  data.running
-                    ? t("hostMetrics.managers.tsDisable")
-                    : t("hostMetrics.managers.tsEnable")
+                  data.running ? t("manager.tsDisable") : t("manager.tsEnable")
                 }
                 className={`flex size-6 items-center justify-center transition-colors disabled:opacity-40 ${
                   data.running
@@ -121,14 +114,14 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
           {data.exitNodeInUse && (
             <div className="border-b border-border/50 px-0 py-1.5">
               <span className="text-[10px] text-blue-500">
-                {t("hostMetrics.managers.tsExitNodeActive")}
+                {t("manager.tsExitNodeActive")}
               </span>
             </div>
           )}
 
           {/* Peers */}
           {(data.peers?.length ?? 0) > 5 && (
-            <ManagerSearch
+            <TailscaleManagerSearch
               value={query}
               onChange={setQuery}
               count={filteredPeers.length}
@@ -159,13 +152,13 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
               </div>
               {peer.isExitNode && (
                 <span className="shrink-0 text-[10px] text-blue-500">
-                  {t("hostMetrics.managers.tsExitNode")}
+                  {t("manager.tsExitNode")}
                 </span>
               )}
             </div>
           ))}
         </div>
       )}
-    </ManagerCardShell>
+    </TailscaleManagerShell>
   );
 }

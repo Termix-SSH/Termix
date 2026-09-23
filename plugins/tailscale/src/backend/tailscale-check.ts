@@ -8,6 +8,9 @@ const TAILSCALE_CHECK_URL = /https:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/;
 
 const CHECK_COMPLETE = /authentication checked/i;
 
+/** How long a Tailscale check-mode login may sit waiting for approval. */
+export const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
+
 export interface TailscaleCheckBanner {
   url: string;
   message: string;

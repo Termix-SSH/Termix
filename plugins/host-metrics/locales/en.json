@@ -168,7 +168,6 @@
       "firewallPersist": "Persist rules",
       "firewallPersisted": "Firewall rules persisted",
       "wireguard": "WireGuard",
-      "tailscale": "Tailscale",
       "wgNotInstalled": "WireGuard is not installed on this host",
       "wgNoInterfaces": "No WireGuard interfaces configured",
       "wgInterfaceUp": "Bring up",
@@ -183,23 +182,7 @@
       "wgAllowedIPs": "Allowed IPs",
       "wgLastHandshake": "Last handshake",
       "wgHandshakeNever": "Never",
-      "wgTransfer": "Transfer",
-      "tsNotInstalled": "Tailscale is not installed on this host",
-      "tsRunning": "Running",
-      "tsStopped": "Stopped",
-      "tsEnable": "Connect",
-      "tsDisable": "Disconnect",
-      "tsEnabling": "Connecting to Tailscale...",
-      "tsDisabling": "Disconnecting from Tailscale...",
-      "tsEnabled": "Tailscale connected",
-      "tsDisabled": "Tailscale disconnected",
-      "tsIPs": "Tailscale IPs",
-      "tsPeers": "Peers",
-      "tsOnline": "Online",
-      "tsOffline": "Offline",
-      "tsExitNode": "Exit node",
-      "tsExitNodeActive": "Exit node active",
-      "tsHostname": "Hostname"
+      "wgTransfer": "Transfer"
     }
   },
   "metricsHistory": {

@@ -38,10 +38,6 @@ import type {
 } from "../connect/types.js";
 import { JumpHostChainError } from "../jump-host-chain.js";
 import {
-  parseTailscaleCheckBanner,
-  isTailscaleCheckCompleteBanner,
-} from "../tailscale-check.js";
-import {
   sessionManager,
   isMessageAllowedForParticipant,
 } from "./session-manager.js";
@@ -129,10 +125,6 @@ interface TOTPResponseData {
 }
 
 const authManager = AuthManager.getInstance();
-
-// Tailscale holds a check-mode connection open for up to 30 minutes while the
-// user completes the browser login, so match that rather than timing out first.
-const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
@@ -1632,11 +1624,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     };
 
-    // Reassigned when Tailscale check mode starts, so the short connect timeout
-    // does not tear down a connection the server is deliberately holding open.
+    // Reassigned when an auth provider's onBanner holds the connection open
+    // (Tailscale SSH check mode), so the short connect timeout does not tear
+    // down a connection the server is deliberately waiting on.
     let connectionTimeout = setTimeout(onConnectionTimeout, 120000);
 
-    let tailscaleCheckPending = false;
+    let bannerHoldPending = false;
     let authRetries = 0;
     let isAuthRetrying = false;
     let connectProvider: SshAuthProvider | null = null;
@@ -1912,41 +1905,44 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
-    // Tailscale SSH check mode delivers its re-auth URL as an auth banner and then
-    // blocks for up to 30 minutes while the user logs in via the browser.
+    // A provider can hold the handshake open pending an out-of-band step
+    // (Tailscale SSH check mode delivers its re-auth URL as an auth banner,
+    // then blocks while the user logs in via the browser).
     sshConn.on("banner", (banner: string) => {
-      const check = parseTailscaleCheckBanner(banner);
-      if (check) {
-        tailscaleCheckPending = true;
+      if (!connectProvider?.onBanner || !connectTarget || !connectEnv) return;
+      const decision = connectProvider.onBanner(
+        banner,
+        connectTarget,
+        connectEnv,
+      );
+      if (!decision) return;
 
+      const authType = connectProvider.type;
+
+      if (decision.action === "hold") {
+        bannerHoldPending = true;
         clearTimeout(connectionTimeout);
-        connectionTimeout = setTimeout(
-          onConnectionTimeout,
-          TAILSCALE_CHECK_TIMEOUT_MS,
-        );
-
-        sendLog(
-          "auth",
-          "info",
-          `Tailscale SSH requires an additional check. Waiting for browser authentication at ${check.url}`,
-        );
-
+        connectionTimeout = setTimeout(onConnectionTimeout, decision.timeoutMs);
+        sendLog("auth", "info", decision.message);
         ws.send(
           JSON.stringify({
-            type: "tailscale_check_required",
+            type: `${authType}_check_required`,
             hostId: id,
-            url: check.url,
-            message: check.message,
+            ...decision.details,
           }),
         );
         return;
       }
 
-      if (tailscaleCheckPending && isTailscaleCheckCompleteBanner(banner)) {
-        tailscaleCheckPending = false;
-        sendLog("auth", "info", "Tailscale SSH check completed");
+      if (bannerHoldPending) {
+        bannerHoldPending = false;
+        sendLog("auth", "info", `${authType} check completed`);
         ws.send(
-          JSON.stringify({ type: "tailscale_check_completed", hostId: id }),
+          JSON.stringify({
+            type: `${authType}_check_completed`,
+            hostId: id,
+            ...decision.details,
+          }),
         );
       }
     });
@@ -1955,10 +1951,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
       clearOnlineStatus ??= hostSessionStatus.register(serverHostId);
       clearTimeout(connectionTimeout);
       isAuthRetrying = false;
-      if (tailscaleCheckPending) {
-        tailscaleCheckPending = false;
+      if (bannerHoldPending) {
+        bannerHoldPending = false;
         ws.send(
-          JSON.stringify({ type: "tailscale_check_completed", hostId: id }),
+          JSON.stringify({
+            type: `${connectProvider?.type}_check_completed`,
+            hostId: id,
+          }),
         );
       }
       sshLogger.success("SSH connection established", {
@@ -2518,7 +2517,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ? connectProvider.onAuthFailed(connectTarget, connectEnv, {
               error: err,
               retries: authRetries,
-              canRetry: !connectConfig.sock && !tailscaleCheckPending,
+              canRetry: !connectConfig.sock && !bannerHoldPending,
               methodNotAvailable: authMethodNotAvailable,
             })
           : undefined;

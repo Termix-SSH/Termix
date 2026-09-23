@@ -610,6 +610,7 @@ export interface PluginHostBridge {
   useTabs: () => TabsApi;
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
   useSshAuthTypes: () => { types: SshAuthTypeInfo[]; loaded: boolean };
+  useSlotContributions: (slotId: string) => SlotContribution[];
 }
 
 let host: PluginHostBridge | null = null;
@@ -710,6 +711,17 @@ export function useSshAuthTypes(): {
   loaded: boolean;
 } {
   return requireHost().useSshAuthTypes();
+}
+
+/**
+ * The visible contributions to a slot another plugin owns, with their
+ * metadata (id, titleKey, component). For an owner that needs to build a
+ * catalog from what was contributed rather than just render it in place, e.g.
+ * host-metrics listing manager cards plugins added to "host-metrics.managers"
+ * next to its own. Same permission and `when` filtering as ComponentSlot.
+ */
+export function useSlotContributions(slotId: string): SlotContribution[] {
+  return requireHost().useSlotContributions(slotId);
 }
 
 /**

@@ -324,6 +324,11 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
           ) as never;
         },
       };
+      if (provider.onBanner) {
+        const onBanner = provider.onBanner;
+        wrapped.onBanner = (banner, host, env) =>
+          onBanner(banner, host as PluginSshHost, env as never) as never;
+      }
       ensureCoreSshAuthProviders();
       const disposers = [registerSshAuthProvider(wrapped)];
       if (provider.onKeyboardInteractive) {

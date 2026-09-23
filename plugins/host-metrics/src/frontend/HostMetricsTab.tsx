@@ -32,7 +32,10 @@ function hasSnippetInputs(content: string): boolean {
 }
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { useTabsSafe } from "@/shell/TabContext.tsx";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import {
+  useTranslation,
+  useSlotContributions,
+} from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   type StatsConfig,
@@ -61,6 +64,7 @@ import {
   CARD_DEFINITIONS,
   IMPLEMENTED_CARD_IDS,
   getCardDefinition,
+  definitionsFromSlot,
   defaultColSpanFor,
   defaultHeightFor,
   type MetricCardHistories,
@@ -177,38 +181,57 @@ function HostMetricsInner({
     );
   }, [layout, statsConfig.enabledWidgets, metricsPrefs.columns]);
 
+  // Manager cards other plugins contribute (tailscale's, say), merged in next
+  // to the ones this plugin ships. A contribution for a slot that never
+  // arrives (its plugin is off) just never appears here.
+  const managerContributions = useSlotContributions("host-metrics.managers");
+  const pluginManagerDefs = React.useMemo(
+    () => definitionsFromSlot(managerContributions),
+    [managerContributions],
+  );
+
   // Only render/keep cards that are implemented (metric cards in Phase A).
   const visibleSlots = React.useMemo(
-    () => effectiveLayout.slots.filter((s) => getCardDefinition(s.id)),
-    [effectiveLayout.slots],
+    () =>
+      effectiveLayout.slots.filter((s) =>
+        getCardDefinition(s.id, pluginManagerDefs),
+      ),
+    [effectiveLayout.slots, pluginManagerDefs],
   );
 
   const cardCatalog: GridCardCatalogEntry[] = React.useMemo(
-    () =>
-      IMPLEMENTED_CARD_IDS.map((id) => ({
+    () => [
+      ...IMPLEMENTED_CARD_IDS.map((id) => ({
         id,
         label: t(CARD_DEFINITIONS[id].labelKey),
         defaultColSpan: defaultColSpanFor(id),
         defaultHeight: defaultHeightFor(id),
       })),
-    [t],
+      ...Object.values(pluginManagerDefs).map((def) => ({
+        id: def.id,
+        label: t(def.labelKey),
+        defaultColSpan: defaultColSpanFor(def.id),
+        defaultHeight: defaultHeightFor(def.id),
+      })),
+    ],
+    [t, pluginManagerDefs],
   );
 
   const cardLabel = React.useCallback(
     (id: string) => {
-      const def = getCardDefinition(id);
+      const def = getCardDefinition(id, pluginManagerDefs);
       return def ? t(def.labelKey) : id;
     },
-    [t],
+    [t, pluginManagerDefs],
   );
 
   const renderCard = React.useCallback(
     (id: string) => {
-      const def = getCardDefinition(id);
+      const def = getCardDefinition(id, pluginManagerDefs);
       if (!def) return null;
       return def.render({ metrics, histories, hostId });
     },
-    [metrics, histories, hostId],
+    [metrics, histories, hostId, pluginManagerDefs],
   );
 
   React.useEffect(() => {

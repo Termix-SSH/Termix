@@ -417,13 +417,21 @@ boundary and Suspense.
 Hooks: `useTranslation` (the plugin's namespace), `usePermission` (a short
 name resolves to `<id>.<name>`), `useSettings`, `useHost`, `useHosts`,
 `useCurrentUser`, `useTheme`, `useToast`, `usePluginApi`, `useTabs`,
-`useSshAuthTypes` (every SSH auth type the server knows, with its plugin). The SDK
-has no runtime dependencies: the hooks delegate to a host bridge core installs.
+`useSshAuthTypes` (every SSH auth type the server knows, with its plugin),
+`useSlotContributions` (the visible contributions to a slot another plugin
+owns, with their metadata, for a slot owner that builds a catalog from what
+was contributed rather than just rendering it in place - host-metrics uses it
+to list manager cards plugins added to `host-metrics.managers` next to its
+own). The SDK has no runtime dependencies: the hooks delegate to a host
+bridge core installs.
 
 Slots core owns: `terminal.toolbar`, `terminal.dock`, `terminal.overlay`
 (declared by ssh-terminal), `onboarding.steps`, `onboarding.features`,
 `onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`
-and `session.remoteDisplay`. Cross-plugin frontend calls go through actions:
+and `session.remoteDisplay`. `host-metrics.managers` (component slot,
+**B3**) is host-metrics's own: tailscale contributes its manager card there
+instead of host-metrics knowing tailscale exists, and host-metrics works with
+or without tailscale enabled. Cross-plugin frontend calls go through actions:
 `automations.list`, `fleets.list`, `session.remoteDisplay.token`.
 
 **B2** added a live-terminal-session surface, for a plugin that needs to push
@@ -610,6 +618,15 @@ ctx.auth.registerSshAuthProvider({
   },
   onKeyboardInteractive: (round, host) => null, // claim a prompt style
   onAuthFailed: (host, env, context) => undefined, // clear caches, retry once
+  onBanner: (banner, host, env) => undefined,
+  // claim an ssh2 "banner" event during the handshake, for a server that
+  // holds the connection open pending an out-of-band step (Tailscale SSH
+  // check mode). Return { action: "hold", timeoutMs, message, details? } to
+  // extend the connect timeout and have the terminal send
+  // "<type>_check_required" with `details` merged in, or
+  // { action: "release", details? } once the banner says it is done, which
+  // sends "<type>_check_completed". Undefined leaves the banner unhandled.
+  // B3 (tailscale) is the only caller today.
   startInteraction: async (request) => {}, // start the browser step
 });
 ```
@@ -1539,7 +1556,7 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 107 files | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 108 files | D1         |
 | A plugin importing core by relative path         | Warning   | 67 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 

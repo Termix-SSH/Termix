@@ -448,6 +448,20 @@ export type PluginSshAuthOutcome =
       message: string;
     };
 
+export type PluginSshBannerDecision =
+  | {
+      /** Hold the connect timeout open and wait for the out-of-band step. */
+      action: "hold";
+      timeoutMs: number;
+      message: string;
+      details?: Record<string, unknown>;
+    }
+  | {
+      /** The out-of-band step finished; resume the normal connect timeout. */
+      action: "release";
+      details?: Record<string, unknown>;
+    };
+
 export interface PluginKeyboardInteractivePrompt {
   prompt: string;
   echo?: boolean;
@@ -644,6 +658,18 @@ export interface PluginSshAuthProvider {
       methodNotAvailable: boolean;
     },
   ) => PluginSshAuthOutcome | undefined;
+  /**
+   * Claims an ssh2 "banner" event during the handshake, for a server that
+   * holds the connection open pending an out-of-band step (Tailscale SSH
+   * check mode). A transport that can show this sends `<type>_check_required`
+   * / `<type>_check_completed` over its socket, with `details` merged in.
+   * Return nothing to leave the banner unhandled.
+   */
+  onBanner?: (
+    banner: string,
+    host: PluginSshHost,
+    env: PluginSshAuthEnv,
+  ) => PluginSshBannerDecision | undefined;
   /** Starts the browser step behind an interaction-required outcome. */
   startInteraction?: (request: {
     userId: string;

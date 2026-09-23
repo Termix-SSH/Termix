@@ -6,6 +6,7 @@ import { TailscaleDevicesPanel } from "./TailscaleDevicesPanel";
 import { TailscaleDevicesStatus } from "./TailscaleDevicesStatus";
 import { TailscaleAuthEditor } from "./TailscaleAuthEditor";
 import { TailscaleCheckOverlay } from "./TailscaleCheckOverlay";
+import { TailscaleManagerCard } from "./TailscaleManagerCard";
 
 function Panel({ shell }: PanelProps) {
   return (
@@ -46,6 +47,16 @@ export function activate(app: TermixApp): void {
     titleKey: "terminal.tailscaleCheckRequired",
     kind: "component",
     component: TailscaleCheckOverlay as unknown as ComponentType<
+      Record<string, unknown>
+    >,
+  });
+
+  // The Host Metrics manager card, present only when host-metrics is running.
+  app.registerSlotContribution("host-metrics.managers", {
+    actionId: "tailscale_manager",
+    titleKey: "manager.title",
+    kind: "component",
+    component: TailscaleManagerCard as unknown as ComponentType<
       Record<string, unknown>
     >,
   });

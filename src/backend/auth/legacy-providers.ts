@@ -31,9 +31,6 @@ const VAULT_REQUIRED_MESSAGE =
 
 const AUTH_FAILED_PATTERN = /All configured authentication methods failed/i;
 
-/** How long a Tailscale check-mode login may sit waiting for approval. */
-export const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
-
 function issuedCertificateProvider(
   type: "opkssh" | "stepca",
   labelKey: string,
@@ -207,51 +204,6 @@ const vaultProvider: SshAuthProvider = {
   },
 };
 
-const tailscaleProvider: SshAuthProvider = {
-  type: "tailscale",
-  pluginId: "core",
-  labelKey: "hosts.filterAuthTailscale",
-  connectOptions: (_host, purpose) =>
-    purpose === "terminal"
-      ? {
-          tryKeyboard: false,
-          readyTimeout: TAILSCALE_CHECK_TIMEOUT_MS,
-          // The socket sits idle while a check-mode login is pending.
-          timeout: TAILSCALE_CHECK_TIMEOUT_MS,
-        }
-      : { tryKeyboard: false },
-  prepare: async (_config, _host, env) => {
-    env.log("info", "Using Tailscale SSH");
-    return { status: "ready" };
-  },
-  onAuthFailed: (host, _env, context) => {
-    const failed =
-      context.methodNotAvailable ||
-      AUTH_FAILED_PATTERN.test(context.error.message);
-    if (!failed) return;
-
-    // Tailscale documents the "+password" suffix for clients that mishandle a
-    // successful "none" reply. The password value is ignored.
-    if (context.retries === 0 && context.canRetry) {
-      return {
-        status: "retry",
-        message: "Retrying Tailscale SSH in forced password mode",
-        patch: {
-          username: `${host.username}+password`,
-          password: "termix",
-          tryKeyboard: false,
-        },
-      };
-    }
-
-    return {
-      status: "error",
-      code: "failed",
-      message: `Tailscale SSH authentication failed for user "${host.username}". Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy grants the "${host.username}" user to your identity. If your Tailscale identity maps to a different Unix user, update the username on this host.`,
-    };
-  },
-};
-
 const WARPGATE_PATTERN = /warpgate\s+authentication/i;
 
 let sshRegistered = false;
@@ -267,7 +219,6 @@ export function registerLegacySshAuthProviders(): void {
     issuedCertificateProvider("stepca", "hosts.filterAuthStepca"),
   );
   registerSshAuthProvider(vaultProvider);
-  registerSshAuthProvider(tailscaleProvider);
 
   // Warpgate is a flag on a host, not an auth type: it shows up as a
   // keyboard-interactive round with a sign-in URL.

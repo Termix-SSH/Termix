@@ -94,7 +94,6 @@ import {
   setSshAuthTypeOwnerSource,
 } from "../../../hosts/connect/auth-provider-registry.js";
 import { ensureCoreSshAuthProviders } from "../../../hosts/connect/core-providers.js";
-import { TAILSCALE_CHECK_TIMEOUT_MS } from "../../../auth/legacy-providers.js";
 import type { SshConnectHost } from "../../../hosts/connect/types.js";
 
 const plainKey = ssh2.utils.generateKeyPairSync("ed25519").private;
@@ -325,48 +324,8 @@ describe("buildConnectConfig per auth type", () => {
     expect(mocks.getVaultCert).toHaveBeenLastCalledWith("user-1", 3);
   });
 
-  it("tailscale turns off keyboard-interactive, with long timeouts in the terminal", async () => {
-    const terminal = await build(host({ authType: "tailscale" }));
-    expect(terminal.config).toMatchObject({
-      tryKeyboard: false,
-      readyTimeout: TAILSCALE_CHECK_TIMEOUT_MS,
-      timeout: TAILSCALE_CHECK_TIMEOUT_MS,
-    });
-
-    const fleet = await build(host({ authType: "tailscale" }), "fleet");
-    expect(fleet.config.tryKeyboard).toBe(false);
-    expect(fleet.config.readyTimeout).toBe(30000);
-  });
-
-  it("tailscale retries once with +password, then reports the failure", async () => {
-    ensureCoreSshAuthProviders();
-    const provider = getSshAuthProvider("tailscale")!;
-    const env = {} as never;
-    const failure = new Error("All configured authentication methods failed");
-
-    const first = provider.onAuthFailed!(host({ authType: "tailscale" }), env, {
-      error: failure,
-      retries: 0,
-      canRetry: true,
-      methodNotAvailable: false,
-    });
-    expect(first).toMatchObject({
-      status: "retry",
-      patch: { username: "root+password", tryKeyboard: false },
-    });
-
-    const second = provider.onAuthFailed!(
-      host({ authType: "tailscale" }),
-      env,
-      {
-        error: failure,
-        retries: 1,
-        canRetry: true,
-        methodNotAvailable: false,
-      },
-    );
-    expect(second).toMatchObject({ status: "error" });
-  });
+  // Tailscale is a plugin-registered SSH auth provider now: see
+  // plugins/tailscale/tests/backend/ssh-auth-provider.test.ts.
 
   it("a type nobody provides names the plugin that would", async () => {
     setSshAuthTypeOwnerSource(() => [

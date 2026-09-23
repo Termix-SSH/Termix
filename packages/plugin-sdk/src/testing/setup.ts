@@ -111,6 +111,7 @@ const offline = () =>
     })),
     loaded: true,
   }),
+  useSlotContributions: () => [],
 };
 
 afterEach(() => {
