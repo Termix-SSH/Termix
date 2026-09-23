@@ -153,7 +153,6 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
     const ok =
       (filters.features.includes("terminal") && host.enableTerminal) ||
       (filters.features.includes("fileManager") && host.enableFileManager) ||
-      (filters.features.includes("tunnel") && host.enableTunnel) ||
       (filters.features.includes("docker") && host.enableDocker);
     if (!ok) return false;
   }
@@ -797,7 +796,6 @@ export function HostsPanel({
                     [
                       ["terminal", "Terminal"],
                       ["fileManager", "FileManager"],
-                      ["tunnel", "Tunnel"],
                       ["docker", "Docker"],
                     ] as const
                   ).map(([val, key]) => (

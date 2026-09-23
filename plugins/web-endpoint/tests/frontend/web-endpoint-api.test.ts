@@ -6,7 +6,6 @@ vi.mock("@/lib/electron", () => ({ isElectron }));
 
 const tunnelPost = vi.hoisted(() => vi.fn());
 vi.mock("@/main-axios", () => ({
-  tunnelApi: { post: tunnelPost },
   handleApiError: (error: unknown) => {
     throw new Error(`generic: ${String(error)}`);
   },
@@ -32,7 +31,10 @@ let pageHostname = "localhost";
 const realLocation = window.location;
 const windowOpen = vi.fn();
 
-beforeEach(() => {
+beforeEach(async () => {
+  const { setWebEndpointApi } =
+    await import("../../src/frontend/web-endpoint-api");
+  setWebEndpointApi({ post: tunnelPost } as never);
   pageHostname = "localhost";
   isElectron.mockReturnValue(false);
   tunnelPost.mockReset();
@@ -54,17 +56,14 @@ afterEach(() => {
 });
 
 describe("openWebEndpointTunnel", () => {
-  it("posts a path relative to the tunnel base, never one starting /ssh", async () => {
-    // tunnelApi's baseURL already includes /ssh; a leading "/ssh" here would
-    // resolve to /ssh/ssh/... and 404 on every call. Asserted on the captured
-    // runtime argument rather than by scanning source, so quoting style and
-    // indirection cannot fool it.
+  it("posts to the plugin's own /open route", async () => {
+    // app.api is already rooted at /plugin-api/web-endpoint, so the path is
+    // relative to that and must not repeat the prefix.
     const { openWebEndpointTunnel } =
       await import("../../src/frontend/web-endpoint-api");
     await openWebEndpointTunnel(7, "e1");
 
-    expect(tunnelPost.mock.calls[0][0]).not.toMatch(/^\/ssh\//);
-    expect(tunnelPost).toHaveBeenCalledWith("/tunnel/web-endpoint/open", {
+    expect(tunnelPost).toHaveBeenCalledWith("/open", {
       hostId: 7,
       endpointId: "e1",
     });

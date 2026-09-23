@@ -19,7 +19,6 @@ import { getTabType } from "./tab-registry";
  * not a meaningful part of an arrangement.
  */
 const CORE_CAPTURABLE = new Set([
-  "tunnel",
   "tmux_monitor",
   "serial",
   "homepage",
@@ -32,7 +31,6 @@ const CORE_CAPTURABLE = new Set([
 
 /** Core types reopened as singletons, with an optional preselected host. */
 const CORE_SINGLETON = new Set([
-  "tunnel",
   "tmux_monitor",
   "homepage",
   "termix-id",

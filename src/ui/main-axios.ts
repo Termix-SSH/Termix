@@ -55,7 +55,6 @@ import {
   apiLogger,
   authLogger,
   sshLogger,
-  tunnelLogger,
   fileLogger,
   statsLogger,
   dashboardLogger,
@@ -268,8 +267,6 @@ export { isElectron };
 function getLoggerForService(serviceName: string) {
   if (serviceName.includes("SSH") || serviceName.includes("ssh")) {
     return sshLogger;
-  } else if (serviceName.includes("TUNNEL") || serviceName.includes("tunnel")) {
-    return tunnelLogger;
   } else if (serviceName.includes("FILE") || serviceName.includes("file")) {
     return fileLogger;
   } else if (serviceName.includes("STATS") || serviceName.includes("stats")) {
@@ -786,12 +783,12 @@ function getApiUrl(path: string, defaultPort: number): string {
 // PER-HOST ORIGIN ROUTING (Electron desktop only)
 // ============================================================================
 //
-// hostApi/fileManagerApi/tunnelApi/statsApi above always point at the
+// hostApi/fileManagerApi/statsApi above always point at the
 // embedded local backend -- they're the shared, always-on instances. When a
 // host's connection origin resolves to "remote" (see
 // src/ui/lib/connection-origin.ts), the backend that actually holds that
 // host's live SSH session is the connected remote server instead, so file
-// manager, tunnel, and stats calls for that host must follow it there.
+// manager and stats calls for that host must follow it there.
 //
 // These dynamically-baseURL'd instances resolve the remote server's URL and
 // JWT fresh on every request (cheap, and correct even if the user
@@ -836,7 +833,6 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
 }
 
 let remoteFileManagerApi: AxiosInstance | null = null;
-let remoteTunnelApi: AxiosInstance | null = null;
 let remoteStatsApi: AxiosInstance | null = null;
 let remoteCoreApi: AxiosInstance | null = null;
 let remoteGuacamoleApi: AxiosInstance | null = null;
@@ -848,13 +844,6 @@ export function getRemoteFileManagerApi(): AxiosInstance {
     );
   }
   return remoteFileManagerApi;
-}
-
-export function getRemoteTunnelApi(): AxiosInstance {
-  if (!remoteTunnelApi) {
-    remoteTunnelApi = createRemoteOriginApiInstance("/ssh");
-  }
-  return remoteTunnelApi;
 }
 
 export function getRemoteStatsApi(): AxiosInstance {
@@ -913,12 +902,6 @@ export function getSessionOrigin(sessionId: string): "local" | "remote" {
   return sessionOrigins.get(sessionId) === "remote" ? "remote" : "local";
 }
 
-export function getTunnelApiForOrigin(
-  origin: "local" | "remote",
-): AxiosInstance {
-  return origin === "remote" ? getRemoteTunnelApi() : tunnelApi;
-}
-
 export function getStatsApiForOrigin(
   origin: "local" | "remote",
 ): AxiosInstance {
@@ -929,9 +912,6 @@ function initializeApiInstances() {
   // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
   hostApi = createApiInstance(getApiUrl("/host", 30001), "HOST");
   sshHostApi = hostApi;
-
-  // Tunnel Management API (port 30003)
-  tunnelApi = createApiInstance(getApiUrl("/ssh", 30003), "TUNNEL");
 
   // File Manager Operations API - the file-manager plugin, mounted on the
   // main backend.
@@ -977,9 +957,6 @@ function initializeApiInstances() {
 export let hostApi: AxiosInstance;
 // Backward compatibility
 export let sshHostApi: AxiosInstance;
-
-// Tunnel Management API (port 30003)
-export let tunnelApi: AxiosInstance;
 
 // File Manager Operations API (file-manager plugin)
 export let fileManagerApi: AxiosInstance;
@@ -1571,19 +1548,6 @@ export {
   getAutoStartStatus,
   testProxyConnection,
 } from "@/api/ssh-host-management-api";
-
-export {
-  getTunnelStatuses,
-  subscribeTunnelStatuses,
-  getTunnelStatusByName,
-  connectTunnel,
-  disconnectTunnel,
-  cancelTunnel,
-  getC2STunnelPresets,
-  createC2STunnelPreset,
-  updateC2STunnelPreset,
-  deleteC2STunnelPreset,
-} from "@/api/tunnel-api";
 
 export {
   getAllServerStatuses,

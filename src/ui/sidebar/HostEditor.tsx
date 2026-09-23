@@ -26,7 +26,6 @@ import {
   Globe,
   Info,
   Layers, // --- tmux-monitor ---
-  Network,
   Palette,
   Pencil,
   Plus,
@@ -42,9 +41,6 @@ import {
   createSSHHost,
   updateSSHHost,
   getSnippets,
-  subscribeTunnelStatuses,
-  connectTunnel,
-  disconnectTunnel,
   getUserInfo,
   getVaultProfiles,
   getHostPassword,
@@ -63,7 +59,7 @@ import {
   type SavedCustomTheme,
 } from "@/api/open-tabs-api";
 import type { Host, VaultProfile } from "@/types/ui-types";
-import type { SSHHost, TunnelStatus } from "@/types";
+import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 import { updatePluginHostSettings } from "@/api/plugins-api";
 import {
@@ -97,7 +93,6 @@ import {
   SecretReferenceHint,
   SecretSourceManager,
 } from "./SecretSourceManager";
-import { findHostByTunnelEndpoint } from "@/features/tunnel/tunnel-endpoints";
 import {
   toCredentialOption,
   type CredentialOption,
@@ -177,10 +172,6 @@ export function HostEditor({
 
   const [saving, setSaving] = useState(false);
   const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
-  const [tunnelStatuses, setTunnelStatuses] = useState<
-    Record<string, TunnelStatus>
-  >({});
-  const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
   const [showVaultManager, setShowVaultManager] = useState(false);
@@ -298,12 +289,6 @@ export function HostEditor({
       cancelled = true;
     };
   }, [form.vncAuthType, form.vncPassword, host?.id, adminTargetUserId]);
-
-  useEffect(() => {
-    if (activeTab !== "tunnels") return;
-    const unsub = subscribeTunnelStatuses((s) => setTunnelStatuses(s));
-    return unsub;
-  }, [activeTab]);
 
   /**
    * Writes each plugin's host-scope values through its own route.
@@ -2125,392 +2110,6 @@ export function HostEditor({
                       onChange={(v) => setField("enableTmuxMonitor", v)}
                     />
                   </SettingRow>
-                </div>
-              </SectionCard>
-            </>
-          )}
-
-          {activeTab === "tunnels" && (
-            <>
-              <SectionCard
-                title={t("hosts.tunnelSettings")}
-                icon={<Network className="size-3.5" />}
-              >
-                <div className="flex flex-col gap-4 py-3">
-                  <SettingRow
-                    label={t("hosts.enableTunneling")}
-                    description={
-                      <>
-                        {t("hosts.enableTunnelingDesc")}{" "}
-                        <a
-                          href="https://docs.termix.site/features/networking/tunnels"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </>
-                    }
-                  >
-                    <FakeSwitch
-                      checked={form.enableTunnel}
-                      onChange={(v) => setField("enableTunnel", v)}
-                    />
-                  </SettingRow>
-                  <div className="text-xs text-muted-foreground p-3 bg-muted/30 border border-border space-y-1">
-                    <p>{t("hosts.tunnelRequirementsText")}</p>
-                  </div>
-                </div>
-              </SectionCard>
-              <SectionCard
-                title={t("hosts.serverTunnelsSection")}
-                icon={<Network className="size-3.5" />}
-                action={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                    onClick={() =>
-                      setField("serverTunnels", [
-                        ...form.serverTunnels,
-                        {
-                          mode: "local" as const,
-                          sourcePort: 8080,
-                          endpointHost: "",
-                          endpointPort: 80,
-                          bindHost: "127.0.0.1",
-                          maxRetries: 3,
-                          retryInterval: 10,
-                          autoStart: false,
-                        },
-                      ])
-                    }
-                  >
-                    <Plus className="size-3 mr-1" /> {t("hosts.addTunnelBtn")}
-                  </Button>
-                }
-              >
-                <div className="flex flex-col gap-3 py-3">
-                  {form.serverTunnels.length === 0 && (
-                    <p className="text-[10px] text-muted-foreground/50 px-1">
-                      {t("hosts.noTunnelsConfigured")}
-                    </p>
-                  )}
-                  {form.serverTunnels.map((tun, i) => {
-                    const endpointValue = (tun.endpointHost ?? "").trim();
-                    const selectedEndpointHost = findHostByTunnelEndpoint(
-                      hosts,
-                      endpointValue,
-                    );
-                    const directEndpoint =
-                      !endpointValue ||
-                      endpointValue === "127.0.0.1" ||
-                      endpointValue === "localhost";
-                    const endpointInputId = `server-tunnel-endpoint-${host?.id ?? "new"}-${i}`;
-                    const hostLabel =
-                      host?.name ||
-                      (host ? `${host.username}@${host.ip}` : "new");
-                    const tunnelName = `${host?.id ?? "new"}::${i}::${hostLabel}::${tun.sourcePort}::${endpointValue}::${tun.endpointPort}`;
-                    const tunnelStatus = tunnelStatuses[tunnelName]?.status as
-                      string | undefined;
-                    const isConnected = tunnelStatus === "connected";
-                    return (
-                      <div
-                        key={i}
-                        className="flex flex-col gap-3 p-3 border border-border bg-muted/20 relative group"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-muted-foreground">
-                              {t("hosts.tunnelLabel", { number: i + 1 })}
-                            </span>
-                            <div
-                              className={`size-1.5 rounded-full shrink-0 ${
-                                isConnected
-                                  ? "bg-accent-brand shadow-[0_0_4px_rgba(251,146,60,0.4)]"
-                                  : tunnelStatus === "error"
-                                    ? "bg-red-400"
-                                    : "bg-muted-foreground/25"
-                              }`}
-                              title={tunnelStatus ?? "not connected"}
-                            />
-                            {host && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={connectingTunnel === i}
-                                className={`h-6 text-[10px] px-2 ${isConnected ? "border-destructive/40 text-destructive hover:bg-destructive/10" : "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"}`}
-                                onClick={async () => {
-                                  setConnectingTunnel(i);
-                                  try {
-                                    if (isConnected) {
-                                      await disconnectTunnel(tunnelName);
-                                      toast.success(
-                                        t("hosts.tunnelDisconnected"),
-                                      );
-                                    } else {
-                                      await connectTunnel({
-                                        name: tunnelName,
-                                        mode: tun.mode,
-                                        sourceHostId: Number(host.id),
-                                        tunnelIndex: i,
-                                        hostName: host.name,
-                                        sourceIP: host.ip,
-                                        sourceSSHPort:
-                                          host.sshPort ?? host.port,
-                                        sourceUsername: form.username,
-                                        sourcePassword:
-                                          form.password || undefined,
-                                        sourceAuthMethod: form.authType,
-                                        sourceSSHKey: form.key || undefined,
-                                        sourceKeyPassword:
-                                          form.keyPassword || undefined,
-                                        sourceCredentialId: form.credentialId
-                                          ? Number(form.credentialId)
-                                          : undefined,
-                                        endpointIP: directEndpoint
-                                          ? host.ip
-                                          : (selectedEndpointHost?.ip ??
-                                            endpointValue),
-                                        endpointSSHPort:
-                                          directEndpoint || selectedEndpointHost
-                                            ? directEndpoint
-                                              ? (host.sshPort ?? host.port)
-                                              : (selectedEndpointHost?.sshPort ??
-                                                selectedEndpointHost?.port ??
-                                                22)
-                                            : 22,
-                                        endpointHost: endpointValue,
-                                        endpointUsername: directEndpoint
-                                          ? form.username
-                                          : (selectedEndpointHost?.username ??
-                                            ""),
-                                        endpointAuthMethod:
-                                          selectedEndpointHost?.authType ??
-                                          "none",
-                                        endpointCredentialId:
-                                          selectedEndpointHost?.credentialId
-                                            ? Number(
-                                                selectedEndpointHost.credentialId,
-                                              )
-                                            : undefined,
-                                        sourcePort: tun.sourcePort,
-                                        endpointPort: tun.endpointPort ?? 0,
-                                        bindHost: tun.bindHost ?? "127.0.0.1",
-                                        maxRetries: tun.maxRetries ?? 3,
-                                        retryInterval: tun.retryInterval ?? 10,
-                                        autoStart: tun.autoStart ?? false,
-                                        isPinned: false,
-                                      });
-                                      toast.success(
-                                        t("hosts.tunnelConnecting"),
-                                      );
-                                    }
-                                  } catch {
-                                    toast.error(
-                                      isConnected
-                                        ? t("hosts.failedToDisconnectTunnel")
-                                        : t("hosts.failedToConnectTunnel"),
-                                    );
-                                  } finally {
-                                    setConnectingTunnel(null);
-                                  }
-                                }}
-                              >
-                                {connectingTunnel === i
-                                  ? "..."
-                                  : isConnected
-                                    ? t("hosts.disconnectBtn")
-                                    : t("hosts.connectBtn")}
-                              </Button>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-[10px] px-2 text-destructive"
-                            onClick={() =>
-                              setField(
-                                "serverTunnels",
-                                form.serverTunnels.filter(
-                                  (_, idx) => idx !== i,
-                                ),
-                              )
-                            }
-                          >
-                            {t("common.delete")}
-                          </Button>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-bold text-muted-foreground">
-                            {t("hosts.tunnelType")}
-                          </label>
-                          <div className="flex gap-2">
-                            {(["remote", "local", "dynamic"] as const).map(
-                              (m) => (
-                                <button
-                                  key={m}
-                                  onClick={() => {
-                                    const updated = [...form.serverTunnels];
-                                    updated[i] = { ...updated[i], mode: m };
-                                    setField("serverTunnels", updated);
-                                  }}
-                                  className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${tun.mode === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                                >
-                                  {m}
-                                </button>
-                              ),
-                            )}
-                          </div>
-                          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                            {tun.mode === "local"
-                              ? t("hosts.tunnelModeLocalDesc")
-                              : tun.mode === "remote"
-                                ? t("hosts.tunnelModeRemoteDesc")
-                                : t("hosts.tunnelModeDynamicDesc")}
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {tun.mode !== "dynamic" && (
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-muted-foreground">
-                                {t("hosts.endpointHost")}
-                              </label>
-                              <Input
-                                className="h-7 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
-                                list={endpointInputId}
-                                placeholder={t("hosts.endpointHostPlaceholder")}
-                                value={tun.endpointHost ?? ""}
-                                onChange={(e) => {
-                                  const updated = [...form.serverTunnels];
-                                  updated[i] = {
-                                    ...updated[i],
-                                    endpointHost: e.target.value,
-                                  };
-                                  setField("serverTunnels", updated);
-                                }}
-                              />
-                              <datalist id={endpointInputId}>
-                                {hosts
-                                  .filter((h) => h.enableSsh)
-                                  .map((h) => (
-                                    <option key={h.id} value={h.ip}>
-                                      {h.name || h.ip} ({h.ip})
-                                    </option>
-                                  ))}
-                              </datalist>
-                            </div>
-                          )}
-                          {tun.mode !== "dynamic" && (
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-muted-foreground">
-                                {t("hosts.endpointPort")}
-                              </label>
-                              <Input
-                                className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                type="number"
-                                value={tun.endpointPort}
-                                onChange={(e) => {
-                                  const updated = [...form.serverTunnels];
-                                  updated[i] = {
-                                    ...updated[i],
-                                    endpointPort: Number(e.target.value),
-                                  };
-                                  setField("serverTunnels", updated);
-                                }}
-                              />
-                            </div>
-                          )}
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">
-                              {t("hosts.bindHost")}
-                            </label>
-                            <Input
-                              className="h-7 text-xs"
-                              placeholder="127.0.0.1"
-                              value={tun.bindHost ?? ""}
-                              onChange={(e) => {
-                                const updated = [...form.serverTunnels];
-                                updated[i] = {
-                                  ...updated[i],
-                                  bindHost: e.target.value,
-                                };
-                                setField("serverTunnels", updated);
-                              }}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">
-                              {t("hosts.sourcePort")}
-                            </label>
-                            <Input
-                              className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              type="number"
-                              value={tun.sourcePort}
-                              onChange={(e) => {
-                                const updated = [...form.serverTunnels];
-                                updated[i] = {
-                                  ...updated[i],
-                                  sourcePort: Number(e.target.value),
-                                };
-                                setField("serverTunnels", updated);
-                              }}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">
-                              {t("hosts.maxRetries")}
-                            </label>
-                            <Input
-                              className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              type="number"
-                              value={tun.maxRetries}
-                              onChange={(e) => {
-                                const updated = [...form.serverTunnels];
-                                updated[i] = {
-                                  ...updated[i],
-                                  maxRetries: Number(e.target.value),
-                                };
-                                setField("serverTunnels", updated);
-                              }}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">
-                              {t("hosts.retryIntervalS")}
-                            </label>
-                            <Input
-                              className="h-7 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              type="number"
-                              value={tun.retryInterval}
-                              onChange={(e) => {
-                                const updated = [...form.serverTunnels];
-                                updated[i] = {
-                                  ...updated[i],
-                                  retryInterval: Number(e.target.value),
-                                };
-                                setField("serverTunnels", updated);
-                              }}
-                            />
-                          </div>
-                        </div>
-                        <SettingRow
-                          label={t("hosts.autoStartLabel")}
-                          description={t("hosts.autoStartDesc")}
-                        >
-                          <FakeSwitch
-                            checked={tun.autoStart}
-                            onChange={(v) => {
-                              const updated = [...form.serverTunnels];
-                              updated[i] = { ...updated[i], autoStart: v };
-                              setField("serverTunnels", updated);
-                            }}
-                          />
-                        </SettingRow>
-                      </div>
-                    );
-                  })}
                 </div>
               </SectionCard>
             </>

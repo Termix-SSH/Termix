@@ -1,16 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
-import {
-  KeyRound,
-  Network,
-  Settings,
-  SquareTerminal,
-  Terminal,
-} from "lucide-react";
+import { KeyRound, Settings, SquareTerminal, Terminal } from "lucide-react";
 import { byOrderThenId, createRegistry } from "@/lib/registry";
 
 /** Core host editor tabs. Plugins add theirs through registerHostEditorSection. */
-export type CoreHostTabId = "general" | "ssh" | "terminal" | "tunnels";
+export type CoreHostTabId = "general" | "ssh" | "terminal";
 export type HostTabId = CoreHostTabId | (string & {});
 export type CredentialTabId = "general" | "auth";
 
@@ -66,7 +60,7 @@ export const hostEditorSectionList = sections.list;
 export const useHostEditorSections = sections.useList;
 export const resetHostEditorSections = sections.reset;
 
-const CORE_SSH_GROUP = new Set<string>(["ssh", "terminal", "tunnels"]);
+const CORE_SSH_GROUP = new Set<string>(["ssh", "terminal"]);
 
 /** Whether a tab lives in the SSH group's second strip. */
 export function isSshGroupTab(id: string): boolean {
@@ -158,12 +152,6 @@ export function makeHostSshSubTabs(
         label: t("hosts.tabTerminal"),
         icon: <SquareTerminal className="size-3" />,
         order: 10,
-      },
-      {
-        id: "tunnels",
-        label: t("hosts.tabTunnels"),
-        icon: <Network className="size-3" />,
-        order: 20,
       },
     ],
     "ssh",

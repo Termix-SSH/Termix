@@ -5,7 +5,6 @@ import {
   Hammer,
   KeyRound,
   LayoutPanelLeft,
-  Network,
   Plug,
   ScrollText,
   Server,
@@ -78,13 +77,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     id: "credentials",
     icon: KeyRound,
     labelKey: "nav.credentials",
-    separatorAfter: true,
-  },
-  {
-    id: "port-forwarding",
-    icon: Network,
-    labelKey: "nav.portForwarding",
-    electronOnly: true,
     separatorAfter: true,
   },
   {

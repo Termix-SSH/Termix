@@ -2,7 +2,7 @@ export type FieldGroup =
   | "connection"
   | "notes"
   | "tags"
-  | "tunnels"
+  | "proxy"
   | "jumpHosts"
   | "quickActions"
   | "featureFlags"
@@ -29,8 +29,7 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   ],
   notes: ["notes"],
   tags: ["tags", "pin"],
-  tunnels: [
-    "tunnelConnections",
+  proxy: [
     "useSocks5",
     "socks5Host",
     "socks5Port",
@@ -44,7 +43,6 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "enableCommandHistory",
     "enableTerminalToolbar",
     "enableAiAssistant",
-    "enableTunnel",
     "enableFileManager",
     "enableDocker",
     "enableWebUi",

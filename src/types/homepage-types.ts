@@ -217,10 +217,6 @@ export interface DockerWidgetConfig {
   hostId: number;
 }
 
-export interface TunnelWidgetConfig {
-  hostId: number;
-}
-
 export interface SshTerminalConfig {
   hostId: number;
   autoConnect: boolean;

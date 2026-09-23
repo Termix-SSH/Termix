@@ -19,7 +19,6 @@ import {
   MessagesSquare,
   LifeBuoy,
   Search,
-  Network,
   User,
   KeyRound,
   Layers, // --- tmux-monitor ---
@@ -73,7 +72,6 @@ function getSshActions(host: Host): {
         icon: Layers,
         label: "Tmux Monitor",
       },
-    host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
   ].filter(Boolean) as {
     type: TabType;
     icon: React.ElementType;

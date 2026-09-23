@@ -109,11 +109,6 @@ const CredentialsPanel = lazy(() =>
     default: m.CredentialsPanel,
   })),
 );
-const PortForwardingPanel = lazy(() =>
-  import("@/sidebar/PortForwardingPanel").then((m) => ({
-    default: m.PortForwardingPanel,
-  })),
-);
 const TermixIdPanel = lazy(() =>
   import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
 );
@@ -1885,7 +1880,6 @@ export function AppShell({
       const id = type;
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.hostManager"),
-        tunnel: t("nav.tunnels"),
         sftp: t("nav.sftp"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
         homepage: t("nav.homepage"),
@@ -2501,12 +2495,6 @@ export function AppShell({
           </>
         )}
 
-        {railView === "port-forwarding" && (
-          <div className="flex flex-col flex-1 min-h-0">
-            <PortForwardingPanel />
-          </div>
-        )}
-
         {railView === "termix-id" && (
           <div className="flex flex-col flex-1 min-h-0">
             <TermixIdPanel />
@@ -2623,9 +2611,7 @@ export function AppShell({
                 const host = record.hostId
                   ? allHosts.find((h) => h.id === String(record.hostId))
                   : undefined;
-                const hostlessTypes: TabType[] = ["tunnel"];
-                if (!host && !hostlessTypes.includes(record.tabType as TabType))
-                  return;
+                if (!host && !getTabType(record.tabType)?.hostless) return;
                 setBackgroundTabRecords((prev) =>
                   prev.filter((r) => r.id !== record.id),
                 );

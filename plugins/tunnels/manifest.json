@@ -1,0 +1,92 @@
+{
+  "id": "tunnels",
+  "name": "Tunnels",
+  "version": "1.0.0",
+  "description": "SSH port forwarding between servers, and client tunnels from the desktop app.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Networking",
+  "icon": "ArrowLeftRight",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "network:serve",
+    "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "tunnels.access",
+      "version": "1.0.0",
+      "permission": "tunnels.use"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "tunnel",
+        "titleKey": "nav.tunnels",
+        "icon": "ArrowLeftRight",
+        "openFrom": ["host-context-menu"]
+      }
+    ],
+    "panels": [
+      {
+        "id": "port-forwarding",
+        "titleKey": "nav.portForwarding",
+        "icon": "Network"
+      }
+    ],
+    "actions": [
+      {
+        "id": "tunnels.statuses",
+        "titleKey": "nav.tunnels",
+        "handler": "statuses",
+        "permission": "tunnels.use"
+      },
+      {
+        "id": "tunnels.open",
+        "titleKey": "nav.tunnels",
+        "handler": "open",
+        "permission": "tunnels.use"
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "enableKey": "enableTunnel",
+        "enableLabelKey": "settings.host.enable.label",
+        "fields": [
+          {
+            "key": "tunnelConnections",
+            "type": "custom",
+            "component": "tunnelConnections",
+            "requires": "enableTunnel"
+          }
+        ]
+      }
+    },
+    "hostCapability": {
+      "key": "enableTunnel",
+      "labelKey": "hosts.tabTunnels",
+      "editorTab": "general"
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

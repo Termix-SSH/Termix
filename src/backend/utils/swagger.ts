@@ -23,10 +23,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "Main database and authentication server",
       },
       {
-        url: "http://localhost:30003",
-        description: "SSH tunnel management server",
-      },
-      {
         url: "http://localhost:30004",
         description: "SSH file manager server",
       },

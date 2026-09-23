@@ -30,7 +30,6 @@ const RESOURCE_TYPES = [
   "session",
   "api_key",
   "setting",
-  "tunnel",
 ];
 
 type AdminAuditLogSectionProps = {

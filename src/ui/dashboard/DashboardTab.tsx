@@ -26,6 +26,7 @@ import { Kbd } from "@/components/kbd";
 import { VersionBadge } from "@/components/version-badge";
 import { DASHBOARD_CARDS } from "@/lib/theme";
 import { CONNECTION_STATES } from "@/types/index";
+import { invokeAction } from "@/shell/action-registry";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
@@ -34,7 +35,6 @@ import {
   releaseUrlFrom,
   getDatabaseHealth,
   getRecentActivity,
-  getTunnelStatuses,
   getCredentials,
   resetRecentActivity,
   getAllServerStatuses,
@@ -289,7 +289,7 @@ function CountersBarCard({
         </span>
       </button>
       <button
-        onClick={() => onOpenSingletonTab("tunnel")}
+        onClick={() => void invokeAction("tunnels.open")}
         className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
       >
         <Network className="size-3.5 text-muted-foreground shrink-0" />
@@ -1501,11 +1501,12 @@ export function DashboardTab({
         ),
       )
       .catch(() => {});
-    getTunnelStatuses()
+    // Undefined while the tunnels plugin is off, which reads as zero.
+    invokeAction("tunnels.statuses")
       .then((statuses) => {
-        const active = Object.values(statuses ?? {}).filter(
-          (s) => s?.status === CONNECTION_STATES.CONNECTED,
-        ).length;
+        const active = Object.values(
+          (statuses ?? {}) as Record<string, { status?: string }>,
+        ).filter((s) => s?.status === CONNECTION_STATES.CONNECTED).length;
         setActiveTunnelCount(active);
       })
       .catch(() => {});

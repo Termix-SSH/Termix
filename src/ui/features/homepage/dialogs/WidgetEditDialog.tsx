@@ -28,7 +28,6 @@ import type {
   SystemOverviewConfig,
   SshTerminalConfig,
   QuickConnectConfig,
-  TunnelWidgetConfig,
   CalendarConfig,
   CountdownConfig,
   SearchBarConfig,
@@ -57,7 +56,6 @@ import { TermixUptimeEditForm } from "./TermixUptimeEditForm";
 import { SystemOverviewEditForm } from "./SystemOverviewEditForm";
 import { SshTerminalEditForm } from "./SshTerminalEditForm";
 import { QuickConnectEditForm } from "./QuickConnectEditForm";
-import { TunnelWidgetEditForm } from "./TunnelWidgetEditForm";
 import { CalendarEditForm } from "./CalendarEditForm";
 import { CountdownEditForm } from "./CountdownEditForm";
 import { SearchBarEditForm } from "./SearchBarEditForm";
@@ -222,13 +220,6 @@ export function WidgetEditDialog({
         return (
           <QuickConnectEditForm
             config={config as unknown as QuickConnectConfig}
-            onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
-          />
-        );
-      case "tunnel_widget":
-        return (
-          <TunnelWidgetEditForm
-            config={config as unknown as TunnelWidgetConfig}
             onChange={(c) => setConfig(c as unknown as Record<string, unknown>)}
           />
         );

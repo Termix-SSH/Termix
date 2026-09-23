@@ -35,7 +35,6 @@ import type React from "react";
 import { isElectron } from "@/lib/electron";
 import { RemoteSyncPanel } from "@/settings/RemoteSyncPanel.tsx";
 import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state";
-import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { VersionBadge } from "@/components/version-badge";
@@ -48,7 +47,6 @@ import {
   DialogFooter,
 } from "@/components/dialog";
 import {
-  Activity,
   AlertCircle,
   CheckCircle2,
   ChevronDown,
@@ -92,13 +90,7 @@ import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences"
 import { ConnectionDefaultsSettings } from "./ConnectionDefaultsSettings";
 
 type UserProfileSection =
-  | "account"
-  | "interface"
-  | "appearance"
-  | "security"
-  | "api-keys"
-  | "data"
-  | "c2s-tunnels";
+  "account" | "interface" | "appearance" | "security" | "api-keys" | "data";
 
 const THEMES: { id: ThemeId; preview: string }[] = [
   { id: "system", preview: "auto" },
@@ -2762,18 +2754,6 @@ export function UserProfilePanel({
           </div>
         </div>
       </AccordionSection>
-
-      {isElectron() && (
-        <AccordionSection
-          id="c2s-tunnels"
-          label={t("newUi.sidebar.userProfile.sectionC2sTunnels")}
-          icon={<Activity className="size-3.5" />}
-          open={openSections.has("c2s-tunnels")}
-          onToggle={() => toggle("c2s-tunnels")}
-        >
-          <C2STunnelPresetManager />
-        </AccordionSection>
-      )}
 
       {/* Delete account dialog */}
       <Dialog

@@ -1,6 +1,5 @@
 import type { GuacamoleConfig } from "./guacamole-config.js";
 import type { StatsConfig } from "./stats-widgets.js";
-import type { Client } from "ssh2";
 import type { Request } from "express";
 import type { RefObject } from "react";
 import type { HostAuthOverrides } from "./auth-protocols.js";
@@ -567,97 +566,6 @@ export interface TunnelConnection {
   autoStart: boolean;
 }
 
-export interface TunnelConfig {
-  name: string;
-  scope?: TunnelScope;
-  mode?: TunnelMode;
-  tunnelType?: "local" | "remote";
-  localAddress?: string;
-  remoteAddress?: string;
-  bindHost?: string;
-  targetHost?: string;
-
-  sourceHostId: number;
-  sourceHostSyncId?: string;
-  tunnelIndex: number;
-
-  requestingUserId?: string;
-
-  hostName: string;
-  sourceIP: string;
-  sourceSSHPort: number;
-  sourceUsername: string;
-  sourcePassword?: string;
-  sourceAuthMethod: string;
-  sourceSSHKey?: string;
-  sourceKeyPassword?: string;
-  sourceKeyType?: string;
-  sourceCredentialId?: number;
-  sourceUserId?: string;
-  endpointIP: string;
-  endpointSSHPort: number;
-  endpointUsername: string;
-  endpointHost: string;
-  endpointPassword?: string;
-  endpointAuthMethod: string;
-  endpointSSHKey?: string;
-  endpointKeyPassword?: string;
-  endpointKeyType?: string;
-  endpointCredentialId?: number;
-  endpointUserId?: string;
-  sourcePort: number;
-  endpointPort: number;
-  maxRetries: number;
-  retryInterval: number;
-  autoStart: boolean;
-  isPinned: boolean;
-
-  useSocks5?: boolean;
-  socks5Host?: string;
-  socks5Port?: number;
-  socks5Username?: string;
-  socks5Password?: string;
-  socks5ProxyChain?: ProxyNode[];
-
-  keepaliveInterval?: number;
-  keepaliveCountMax?: number;
-  /**
-   * When set, the tunnel closes itself once it has had no connected sockets
-   * for this long. Used by web endpoint tunnels, which are opened on demand
-   * and must not outlive their tab.
-   */
-  idleTimeoutMs?: number;
-}
-
-export interface C2STunnelPreset {
-  id: number;
-  userId: string;
-  name: string;
-  config: TunnelConnection[];
-  platform?: string | null;
-  computerName?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TunnelStatus {
-  connected: boolean;
-  status: ConnectionState;
-  retryCount?: number;
-  maxRetries?: number;
-  nextRetryIn?: number;
-  reason?: string;
-  errorType?: ErrorType;
-  manualDisconnect?: boolean;
-  retryExhausted?: boolean;
-  connectionLogs?: Array<{
-    type: "info" | "success" | "warning" | "error";
-    stage: string;
-    message: string;
-    details?: Record<string, unknown>;
-  }>;
-}
-
 // ============================================================================
 // FILE MANAGER TYPES
 // ============================================================================
@@ -981,28 +889,6 @@ export interface HostProps {
   onHostConnect?: () => void;
 }
 
-export interface SSHTunnelProps {
-  filterHostKey?: string;
-}
-
-export interface SSHTunnelViewerProps {
-  hosts?: SSHHost[];
-  tunnelStatuses?: Record<string, TunnelStatus>;
-  tunnelActions?: Record<
-    string,
-    (
-      action: "connect" | "disconnect" | "cancel",
-      host: SSHHost,
-      tunnelIndex: number,
-    ) => Promise<void>
-  >;
-  onTunnelAction?: (
-    action: "connect" | "disconnect" | "cancel",
-    host: SSHHost,
-    tunnelIndex: number,
-  ) => Promise<void>;
-}
-
 export interface FileManagerProps {
   onSelectView?: (view: string) => void;
   embedded?: boolean;
@@ -1020,20 +906,6 @@ export interface AlertManagerProps {
   loggedIn: boolean;
 }
 
-export interface SSHTunnelObjectProps {
-  host: SSHHost;
-  tunnelIndex?: number;
-  tunnelStatuses: Record<string, TunnelStatus>;
-  tunnelActions: Record<string, boolean>;
-  onTunnelAction: (
-    action: "connect" | "disconnect" | "cancel",
-    host: SSHHost,
-    tunnelIndex: number,
-  ) => Promise<void>;
-  compact?: boolean;
-  bare?: boolean;
-}
-
 export interface FolderStats {
   totalHosts: number;
   hostsByType: Array<{
@@ -1044,23 +916,6 @@ export interface FolderStats {
 
 // Snippet, SnippetFolder types live in ui-types.ts (the shape actually used
 // by SnippetsPanel.tsx); this file's older definitions were unused and removed.
-
-// ============================================================================
-// BACKEND TYPES
-// ============================================================================
-
-export interface HostConfig {
-  host: SSHHost;
-  tunnels: TunnelConfig[];
-}
-
-export interface VerificationData {
-  conn: Client;
-  timeout: NodeJS.Timeout;
-  startTime: number;
-  attempts: number;
-  maxAttempts: number;
-}
 
 // ============================================================================
 // UTILITY TYPES

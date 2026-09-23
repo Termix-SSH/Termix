@@ -1024,7 +1024,7 @@ function getBackendPidFilePath() {
 // Manager) rather than through the normal quit flow, will-quit never fires
 // and stopBackendServer() never runs -- the forked backend child is a
 // genuinely separate OS process on Windows/mac/Linux, so it keeps running
-// and holding every port the backend binds (30001, 30003, 30004, 30006,
+// and holding every port the backend binds (30001, 30004, 30006,
 // 30010-30012). Every subsequent launch's own backend then fails outright
 // with EADDRINUSE and the app is stuck until something manually kills the
 // orphan. Reap any such leftover process, identified by PID file, before
@@ -2031,7 +2031,7 @@ function getC2SRelayUrl() {
   }
 
   const base = serverUrl.replace(/\/$/, "");
-  const relayHttpUrl = `${base}/ssh/tunnel/c2s/stream`;
+  const relayHttpUrl = `${base}/plugin-ws/tunnels/c2s/stream`;
   return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
@@ -2062,7 +2062,9 @@ function isC2SAuthError(message) {
     value === "missing authentication token" ||
     value === "invalid token" ||
     value === "session expired" ||
-    value === "session not found"
+    value === "session not found" ||
+    // The plugin relay refuses an unauthenticated upgrade before any message.
+    value === "unexpected server response: 401"
   );
 }
 

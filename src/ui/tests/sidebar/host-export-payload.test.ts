@@ -12,7 +12,7 @@ const ALL_GROUPS = new Set<FieldGroup>([
   "connection",
   "notes",
   "tags",
-  "tunnels",
+  "proxy",
   "jumpHosts",
   "quickActions",
   "featureFlags",

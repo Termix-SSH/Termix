@@ -308,12 +308,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // server. See plugins/ssh-terminal, plugins/docker, plugins/host-metrics
     // and plugins/file-manager.
     // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
-    // Network Topology, Workspaces, Web Endpoint) is absent for the same
-    // reason: each one serves its routes under /plugin-api/<id>/ through
+    // Network Topology, Workspaces, Web Endpoint, Tunnels) is absent for the
+    // same reason: each one serves its routes under /plugin-api/<id>/ through
     // ctx.http on activate, so disabling it answers 503 instead of leaving a
-    // dead import here. Automations' scheduler also starts from its own
-    // activate() rather than here.
-    await import("./hosts/tunnel/index.js");
+    // dead import here. Automations' scheduler and tunnel autostart also
+    // start from their own activate() rather than here.
     await import("./hosts/tmux/index.js");
     await import("./hosts/serial.js");
     await import("./services/dashboard.js");
@@ -354,6 +353,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runFileManagerSettingsMigration } =
         await import("./utils/crypto-migration/file-manager-settings-migration.js");
       await runFileManagerSettingsMigration();
+
+      const { runTunnelsSettingsMigration } =
+        await import("./utils/crypto-migration/tunnels-settings-migration.js");
+      await runTunnelsSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

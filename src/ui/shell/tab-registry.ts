@@ -83,11 +83,11 @@ export const useTabTypes = registry.useList;
 export const resetTabTypes = registry.reset;
 
 /** Core tab types that are saved and reopened after login. */
-const CORE_PERSISTENT = new Set(["tunnel"]);
+const CORE_PERSISTENT = new Set<string>();
 /** Core tab types that hold a live session (close confirm, refresh). */
 const CORE_SESSION = new Set(["serial"]);
 /** Core tab types that restore without a host. */
-const CORE_HOSTLESS = new Set(["dashboard", "tunnel"]);
+const CORE_HOSTLESS = new Set(["dashboard"]);
 
 /**
  * A plugin tab type nobody registered right now: its plugin is off, failed or

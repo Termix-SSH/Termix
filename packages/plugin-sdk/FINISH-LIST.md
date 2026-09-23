@@ -80,3 +80,33 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   dialect, `schema:generate`) is real, separate work this step didn't
   attempt, since none of those reads block the plugin conversion itself.
   Owner: a dedicated follow-up step, or D0.
+- **B7 (tunnels):** `enable_tunnel` and `tunnel_connections` are still live
+  `ssh_data` columns; only the copy-into-plugin-settings migration shipped
+  (`tunnels-settings-migration.ts`), and the plugin reads its host settings
+  now. Core still carries the columns through the host routes, the
+  encrypt/decrypt round trip, `SidebarTree.tsx`'s host duplicate payload, the
+  quick-connect mapping and the `Host`/`SSHHost` types, none of which the
+  plugin reads any more. Dropping them in lockstep (`schema.ts`, `db/index.ts`,
+  a drizzle migration per dialect, `schema:generate`) is the same follow-up the
+  B6 file-manager line above describes. Owner: a dedicated follow-up step, or D0.
+- **B7 (tunnels):** host export/import, host duplicate, the Hosts panel
+  feature filter and the bulk enable/disable menu all work off `ssh_data`
+  columns, so none of them can see a plugin's host settings. For tunnels the
+  "Tunnel" filter and the bulk enable/disable entries were removed, and the
+  export's "Tunnels" group became "Proxy" (SOCKS5 fields only) since
+  `tunnelConnections` there is now stale. Bringing these back needs a way for
+  core to read and write host-scope plugin settings generically (keyed off
+  `contributes.settings.host` or `hostCapability`) rather than per column.
+  Owner: D1.
+- **B7 (tunnels):** the tunnel tab no longer writes a recent-activity entry:
+  `logActivity` is a core `@/main-axios` call and the plugin imports nothing
+  from `@/`. Old "tunnel" entries still reopen the tab through the plugin's
+  `activityTypes`. An `app.logActivity` (or equivalent bridge member) would
+  restore it for this plugin and let docker, file-manager and host-metrics drop
+  their own `@/main-axios` import for it too. Owner: D1.
+- **B7 (tunnels):** on the desktop app, tunnel statuses from a connected
+  remote server are no longer merged into the tab: the old code polled the
+  remote tunnel service through `getRemoteTunnelApi()`, and the SDK has no
+  remote-origin plugin API client. `subscribeTunnelStatuses` already takes a
+  `fetchRemote` and merges with local statuses winning, so it only needs a
+  client for `/plugin-api/tunnels/status` on the remote server. Owner: D1.

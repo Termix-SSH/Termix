@@ -12,7 +12,10 @@ import type { Host } from "@/types/ui-types";
 import type { WebEndpoint } from "@/types";
 import { WebEndpointTab } from "./WebEndpointTab";
 import { HostWebUiTab } from "./HostWebUiTab";
-import { openWebEndpointExternally } from "./web-endpoint-api";
+import {
+  openWebEndpointExternally,
+  setWebEndpointApi,
+} from "./web-endpoint-api";
 
 const TAB_TYPE = "web-endpoint";
 
@@ -73,6 +76,9 @@ function WebUiSection({ form, setField, protocols }: HostEditorSectionProps) {
 }
 
 export function activate(app: TermixApp): void {
+  setWebEndpointApi(app.api);
+  app.onDispose(() => setWebEndpointApi(null));
+
   app.registerTab(TAB_TYPE, EndpointTab, {
     icon: Globe,
     titleKey: "hosts.tabWebUi",

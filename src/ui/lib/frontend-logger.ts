@@ -161,10 +161,6 @@ class FrontendLogger {
     this.info(`SSH: ${message}`, { ...context, operation: "ssh" });
   }
 
-  tunnel(message: string, context?: LogContext): void {
-    this.info(`TUNNEL: ${message}`, { ...context, operation: "tunnel" });
-  }
-
   file(message: string, context?: LogContext): void {
     this.info(`FILE: ${message}`, { ...context, operation: "file" });
   }
@@ -375,7 +371,6 @@ class FrontendLogger {
 export const apiLogger = new FrontendLogger("API", "🌐", "#3b82f6");
 export const authLogger = new FrontendLogger("AUTH", "🔐", "#dc2626");
 export const sshLogger = new FrontendLogger("SSH", "🖥️", "#1e3a8a");
-export const tunnelLogger = new FrontendLogger("TUNNEL", "📡", "#1e3a8a");
 export const fileLogger = new FrontendLogger("FILE", "📁", "#1e3a8a");
 export const statsLogger = new FrontendLogger("STATS", "📊", "#22c55e");
 export const systemLogger = new FrontendLogger("SYSTEM", "🚀", "#1e3a8a");

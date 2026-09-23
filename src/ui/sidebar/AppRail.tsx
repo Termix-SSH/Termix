@@ -19,7 +19,6 @@ import { useRailItems, type RailItemDef } from "./rail-items";
 export type CoreRailView =
   | "hosts"
   | "credentials"
-  | "port-forwarding"
   | "termix-id"
   | "quick-connect"
   | "serial"

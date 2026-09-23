@@ -467,23 +467,6 @@ export const sshCredentialUsage = pgTable(
   ],
 );
 
-export const c2sTunnelPresets = pgTable("c2s_tunnel_presets", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  config: text("config").notNull(),
-  platform: text("platform"),
-  computerName: text("computer_name"),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const sshFolders = pgTable(
   "ssh_folders",
   {

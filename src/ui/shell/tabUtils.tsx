@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LayoutPanelLeft,
-  Network,
   Server,
   Settings,
   Usb,
@@ -59,11 +58,6 @@ const HomepageCanvas = lazy(() =>
     default: m.HomepageCanvas,
   })),
 );
-const loadTunnelTab = () =>
-  import("@/features/tunnel/TunnelTab").then((m) => ({
-    default: m.TunnelTab,
-  }));
-const TunnelTab = lazy(loadTunnelTab);
 const Serial = lazy(() =>
   import("@/features/serial/Serial").then((m) => ({
     default: m.Serial,
@@ -89,7 +83,6 @@ const SshToolsPanel = lazy(() =>
 );
 const tabSurfaceLoaders: Partial<Record<TabType, () => Promise<unknown>>> = {
   tmux_monitor: loadTmuxMonitor,
-  tunnel: loadTunnelTab,
 };
 
 /** Download a likely next tab without starting a connection or mounting UI. */
@@ -161,8 +154,6 @@ export function tabIcon(type: TabType) {
       return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
-    case "tunnel":
-      return <Network className="size-3.5" />;
     // --- tmux-monitor ---
     case "tmux_monitor":
       return <Layers className="size-3.5" />;
@@ -259,7 +250,7 @@ export interface TabRenderContext {
 
 export function renderTabContent(tab: Tab, context: TabRenderContext) {
   const { shell, isVisible = true, isFocusedPane = true, panelProps } = context;
-  const { host, label } = tab;
+  const { host } = tab;
 
   switch (tab.type) {
     case "dashboard":
@@ -274,11 +265,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
     case "local-terminal":
       return withTabSuspense(
         <LocalTerminal instanceId={tab.instanceId} isVisible={isVisible} />,
-      );
-
-    case "tunnel":
-      return withTabSuspense(
-        <TunnelTab label={label} host={host} isVisible={isVisible} />,
       );
 
     // --- tmux-monitor ---

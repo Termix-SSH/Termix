@@ -22,12 +22,9 @@ Each host can define up to 16 endpoints (`MAX_WEB_ENDPOINTS`). An endpoint is ei
 
 ## What stays in core
 
-This plugin owns its lifecycle, not all of its code. Four pieces deliberately stay in
+This plugin owns its lifecycle, not all of its code. Three pieces deliberately stay in
 Termix proper:
 
-- **The tunnel manager** (`src/backend/hosts/tunnel/manager.ts`). It serves the whole
-  server-tunnels feature. The reserved `web:` tunnel-name prefix that exempts these
-  tunnels from the retry machinery is part of its own disconnect path.
 - **`host-web-endpoints.ts`** (`src/backend/database/routes/`). Despite sitting in
   `routes/` it has no router — it is the `webUiConfig` normalizer, imported by `host.ts`,
   `host-bulk-routes.ts` and `host-normalizers.ts` to sanitize the column on every host
@@ -44,21 +41,18 @@ Termix proper:
 The `enableWebUi` and `webUiConfig` columns stay on core's `ssh_data` table, declared
 here through `contributes.hostCapability`.
 
-## Why it runs in-process
+## Tunnels
 
-The open route polls the tunnel manager's live maps, builds a `TunnelConfig` from
-plaintext host credentials that `ctx.hosts` deliberately withholds, and hands the
-resulting live `ssh2.Client` to `forwardOut`. A structured-clone postMessage boundary
-can carry none of those, so this is a genuine transport dependency — see
-`src/backend/plugins/first-party.ts`.
+A tunnel endpoint opens through the tunnels plugin, a hard dependency. `POST /open`
+calls `forward()` on its `tunnels.access` service, which connects through core's SSH
+pipeline, binds the local listener, probes the target once and only then returns the
+bound port. The forward runs under the reserved `web:<hostId>:<endpointId>` name, so
+the tunnels plugin never retries it and closes it after ten idle minutes.
 
 ## Routing
 
-The route is served by the tunnel service on port 30003, so the dispatcher lives at
-`src/backend/hosts/tunnel/web-endpoint-dispatch.ts` rather than in `database.ts` with
-the others. The public path stays `/ssh/tunnel/web-endpoint/open`, which the generic
-`location /ssh/tunnel/` block in both nginx configs already proxies — so no nginx change
-was needed.
+Core mounts the route at `/plugin-api/web-endpoint/open` through `ctx.http.router()`,
+which the generic `/plugin-api/` block in both nginx configs already proxies.
 
 ## Tests
 

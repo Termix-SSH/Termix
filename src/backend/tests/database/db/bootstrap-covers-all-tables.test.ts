@@ -21,7 +21,6 @@ describe("bootstrap creates the tables the removed probes covered", () => {
 
   // Exactly the tables whose unreachable re-creation was deleted.
   const TABLES = [
-    "c2s_tunnel_presets",
     "sessions",
     "trusted_devices",
     "host_access",

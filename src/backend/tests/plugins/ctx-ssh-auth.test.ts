@@ -133,6 +133,27 @@ describe("ctx.ssh", () => {
     await expect(ssh.connect(3)).rejects.toThrow(/acting user/);
   });
 
+  it("passes a given stream through to the pipeline, gated like any connect", async () => {
+    const stream = { throughSource: true };
+    const ssh = createPluginSsh({
+      manifest: manifest(["ssh:connect", "credentials:use"]),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    h.granted = new Set(["ssh:connect"]);
+    await expect(ssh.connect(7, { sock: stream })).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+    expect(h.connects).toEqual([]);
+
+    h.granted = new Set(["ssh:connect", "credentials:use"]);
+    await ssh.connect(7, { purpose: "tunnel", sock: stream });
+    expect(h.connects[0].options).toMatchObject({
+      purpose: "tunnel",
+      sock: stream,
+    });
+  });
+
   it("closes open connections when the plugin is disposed", async () => {
     h.granted = new Set(["ssh:connect", "credentials:use"]);
     const bag = new DisposableBag("fixture");

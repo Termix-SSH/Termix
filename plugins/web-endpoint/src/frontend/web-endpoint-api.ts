@@ -1,8 +1,16 @@
 import { currentTunnelHost, resolveWebEndpointUrl } from "./web-endpoint-url";
 import axios from "axios";
-import { handleApiError, tunnelApi } from "@/main-axios";
+import type { PluginApiClient } from "@termix/plugin-sdk/frontend";
+import { handleApiError } from "@/main-axios";
 import { isElectron } from "@/lib/electron";
 import type { WebEndpoint } from "@/types/index";
+
+let pluginApi: PluginApiClient | null = null;
+
+/** Set from activate with app.api, cleared on deactivate. */
+export function setWebEndpointApi(api: PluginApiClient | null): void {
+  pluginApi = api;
+}
 
 /**
  * Thrown when the backend rejects a web endpoint tunnel open with a specific,
@@ -32,10 +40,9 @@ export async function openWebEndpointTunnel(
   endpointId: string,
 ): Promise<number> {
   try {
-    // Relative to the tunnel API base, which already includes /ssh
-    // (getApiUrl("/ssh", 30003)). A path beginning "/ssh" here would resolve
-    // to /ssh/ssh/... and 404 on every call.
-    const response = await tunnelApi.post("/tunnel/web-endpoint/open", {
+    if (!pluginApi) throw new Error("The web endpoint plugin is not active");
+    // Relative to the plugin mount, /plugin-api/web-endpoint.
+    const response = await pluginApi.post("/open", {
       hostId,
       endpointId,
     });

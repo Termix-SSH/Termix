@@ -63,6 +63,11 @@ export interface ConnectHostOptions {
   /** Use this client instead of a new one. */
   client?: Client;
   transport?: OpenTransportOptions;
+  /**
+   * An already-open stream to the host (a forwardOut channel through another
+   * host). Skips openSshTransport entirely.
+   */
+  sock?: MutableConnectConfig["sock"];
   log?: SshAuthLog;
 }
 
@@ -105,10 +110,15 @@ export async function connectHost(
     throw new SshConnectError(outcome);
   }
 
-  const { jumpClient } = await openSshTransport(host, config, {
-    log: options.log,
-    ...options.transport,
-  });
+  let jumpClient: Client | null = null;
+  if (options.sock) {
+    config.sock = options.sock;
+  } else {
+    ({ jumpClient } = await openSshTransport(host, config, {
+      log: options.log,
+      ...options.transport,
+    }));
+  }
 
   const keyboardInteractive =
     options.keyboardInteractive ??

@@ -1,34 +1,23 @@
 import { useTranslation } from "react-i18next";
-import { Plug, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useActionSlot } from "@/hooks/use-action-slot";
 
 /**
  * A tour of the things people miss because they live behind a rail icon.
  * Terminal and hosts are covered by the welcome step, so this is deliberately
- * the "there is more than SSH here" list. Plugins add their own entries
+ * the "there is more than SSH here" list. Every entry comes from a plugin,
  * through the "onboarding.features" slot.
  */
-const FEATURES: { icon: LucideIcon; key: string }[] = [
-  { icon: Plug, key: "tunnels" },
-];
 
 export function FeaturesStep() {
   const { t } = useTranslation();
   const pluginFeatures = useActionSlot("onboarding.features");
-  const features = [
-    ...FEATURES.map(({ icon, key }) => ({
-      id: key,
-      icon,
-      title: t(`onboarding.feature_${key}`),
-      description: t(`onboarding.feature_${key}_desc`),
-    })),
-    ...pluginFeatures.map((feature) => ({
-      id: feature.actionId,
-      icon: feature.icon as LucideIcon | undefined,
-      title: t(feature.titleKey),
-      description: feature.descriptionKey ? t(feature.descriptionKey) : "",
-    })),
-  ];
+  const features = pluginFeatures.map((feature) => ({
+    id: feature.actionId,
+    icon: feature.icon as LucideIcon | undefined,
+    title: t(feature.titleKey),
+    description: feature.descriptionKey ? t(feature.descriptionKey) : "",
+  }));
 
   return (
     <div className="flex flex-col gap-3">

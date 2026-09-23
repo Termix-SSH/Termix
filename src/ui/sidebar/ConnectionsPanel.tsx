@@ -25,7 +25,6 @@ import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 /** Core badge labels; plugin tabs are labelled by their registered title. */
 const CORE_TYPE_LABELS: Record<string, string> = {
   files: "Files",
-  tunnel: "Tunnel",
 };
 
 /** Saved connection tabs: the ones reopened after login. */

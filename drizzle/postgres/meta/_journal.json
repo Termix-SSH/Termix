@@ -267,6 +267,13 @@
       "when": 1790189637011,
       "tag": "0037_dizzy_sage",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790201004950,
+      "tag": "0038_cute_vermin",
+      "breakpoints": true
     }
   ]
 }

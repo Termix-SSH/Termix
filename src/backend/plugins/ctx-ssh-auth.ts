@@ -128,6 +128,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         timeoutMs: options?.timeoutMs,
         prompt: options?.prompt,
         overrides: options?.overrides as Partial<MutableConnectConfig>,
+        sock: options?.sock as MutableConnectConfig["sock"],
       });
       await audit("ssh_connect", describeHost(host), { success: true });
 

@@ -34,9 +34,6 @@ const AppShell = lazy(() =>
 
 // Full-screen apps opened via query params (e.g. from external links or
 // Electron). Plugin views register a standalone component with their tab.
-const TunnelApp = lazy(() =>
-  import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
-);
 // --- tmux-monitor ---
 const TmuxMonitorApp = lazy(() =>
   import("@/features/tmux-monitor/TmuxMonitorApp").then((m) => ({
@@ -77,8 +74,6 @@ function FullscreenApp() {
   const hostId = searchParams.get("hostId");
 
   switch (view) {
-    case "tunnel":
-      return <TunnelApp hostId={hostId || undefined} />;
     case "tmux-monitor": // --- tmux-monitor ---
     case "tmux_monitor": // tab type spelling, so copied links also resolve
       return <TmuxMonitorApp hostId={hostId || undefined} />;

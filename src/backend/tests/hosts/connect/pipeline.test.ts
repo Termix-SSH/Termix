@@ -521,6 +521,30 @@ describe("connectHost", () => {
     ).toEqual({ proxied: true });
   });
 
+  it("connects over a stream it is given and skips the transport", async () => {
+    const connection = await connectHost(
+      host({
+        jumpHosts: [{ hostId: 2 }],
+        useSocks5: true,
+        socks5Host: "proxy",
+        portKnockSequence: [{ port: 7000 }],
+      }),
+      {
+        userId: "user-1",
+        purpose: "tunnel",
+        sock: { throughSource: true } as never,
+      },
+    );
+    const config = (connection.client as unknown as FakeSshClient)
+      .connectConfig!;
+    expect(config.sock).toEqual({ throughSource: true });
+    expect(config.hostVerifier).toBe(mocks.verifier);
+    expect(mocks.createJumpHostChain).not.toHaveBeenCalled();
+    expect(mocks.createSocks5Connection).not.toHaveBeenCalled();
+    expect(mocks.performPortKnocking).not.toHaveBeenCalled();
+    expect(connection.jumpClient).toBeNull();
+  });
+
   it("knocks before connecting when the host has a sequence", async () => {
     await connectHost(
       host({ portKnockSequence: [{ port: 7000 }, { port: 8000 }] }),

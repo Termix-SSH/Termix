@@ -48,11 +48,11 @@ describe("RAIL_ITEMS", () => {
     // Guards against a destination silently disappearing now that the rail,
     // the settings toggles, the sidebar titles and the mobile bar all read
     // from this one list.
-    // "sftp" moved to the file-manager plugin's own registerRailItem.
+    // "sftp" moved to the file-manager plugin's own registerRailItem, and
+    // "port-forwarding" to the tunnels plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
-      "port-forwarding",
       "termix-id",
       "connections",
       "collab",

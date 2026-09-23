@@ -14,12 +14,15 @@
     "termix": ">=2.9.0",
     "api": "1"
   },
-  "capabilities": [
-    "hosts:read",
-    "credentials:use",
-    "ssh:connect",
-    "network:serve",
-    "ui:surface"
+  "capabilities": ["hosts:read", "network:serve", "ui:surface"],
+  "dependencies": {
+    "tunnels": "^1.0.0"
+  },
+  "requires": [
+    {
+      "service": "tunnels.access",
+      "versionRange": "^1.0.0"
+    }
   ],
   "contributes": {
     "tabs": [

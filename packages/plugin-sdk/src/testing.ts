@@ -22,6 +22,7 @@ import type {
   PluginLoginMethod,
   PluginSecondFactor,
   PluginSshAuthProvider,
+  PluginSshConnectOptions,
   PluginSshHost,
   PluginHostSummary,
   PluginHostRecord,
@@ -94,7 +95,11 @@ export interface FakePluginContext {
   /** Core settings readable through ctx.settings.readCore. */
   coreSettings: Map<string, string>;
   /** Every ctx.ssh.connect and withConnection call, in order. */
-  sshConnections: Array<{ host: number | PluginSshHost; pool?: string }>;
+  sshConnections: Array<{
+    host: number | PluginSshHost;
+    pool?: string;
+    options?: PluginSshConnectOptions;
+  }>;
   /** Every ctx.hosts.share call, in order. */
   hostShares: Array<{
     hostId: number;
@@ -467,8 +472,8 @@ export function createFakeContext(
     },
 
     ssh: {
-      connect: async (host) => {
-        sshConnections.push({ host });
+      connect: async (host, connectOptions) => {
+        sshConnections.push({ host, options: connectOptions });
         return {
           client: sshClient as never,
           jumpClient: null,

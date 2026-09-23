@@ -433,7 +433,10 @@ and `session.remoteDisplay`. `host-metrics.managers` (component slot,
 **B3**) is host-metrics's own: tailscale contributes its manager card there
 instead of host-metrics knowing tailscale exists, and host-metrics works with
 or without tailscale enabled. Cross-plugin frontend calls go through actions:
-`automations.list`, `fleets.list`, `session.remoteDisplay.token`.
+`automations.list`, `fleets.list`, `session.remoteDisplay.token`. Core calls
+plugin actions the same way when a core view shows a plugin's data:
+`files.openHost`, and **B7**'s `tunnels.statuses` and `tunnels.open` behind the
+dashboard's active tunnel counter, which reads as zero while tunnels is off.
 
 **B2** added a live-terminal-session surface, for a plugin that needs to push
 resolved text into an open SSH session rather than just fill a slot with a
@@ -498,6 +501,15 @@ provider reads that user from `ctx.currentActor()` and takes no user id from
 the caller. The workspaces plugin provides `workspaces.saved` (`list()`), which
 the AI assistant's `list_workspaces` tool reaches through an optional entry in
 its `requires`, answering `unavailable: true` while workspaces is off.
+
+**B7**'s `tunnels.access` is the first service with a hard consumer:
+web-endpoint lists tunnels in `dependencies` and a non-optional `requires`,
+because its tunnel endpoints cannot work without it, while automations keeps
+it optional for its one tunnel step. `forward()` resolves only once the
+forward is listening and the target answered a probe, so a caller never has
+to poll the plugin's state. A plugin can also listen for another plugin's
+`plugin.<id>.*` events without any capability: automations turns
+`plugin.tunnels.tunnel_disconnected` into its `tunnel_disconnected` trigger.
 
 ### 10. Lifecycle
 
@@ -1076,6 +1088,13 @@ connect pipeline instead of importing ssh2 helpers from core:
   since the file-manager plugin's interactive connect route and its dedicated
   transfer sessions both need their own keepalive/timeout defaults rather than
   falling back to the generic `"plugin"` purpose.
+- **B7** added `sock` to the connect options: an already-open stream to the
+  host, such as a `forwardOut` channel through another host. `connect` then
+  skips the transport step (port knocking, proxy, jump hosts, DNS) and runs
+  the host key check and auth over that stream. The tunnels plugin opens the
+  endpoint leg of a source-to-endpoint tunnel this way, so both legs go
+  through the pipeline; before B7 tunnels built their own ssh2 `Client` and
+  never checked host keys at all.
 
 Each new connection is audited and runs as the current actor; pooled reuse is
 not. Connections and pool entries are closed on deactivate.
@@ -1644,10 +1663,12 @@ Known specifics:
   degrade silently when automations is absent, so host-metrics declares it as
   an `optionalDependency` (added in A2; it previously declared nothing, and
   the loader had no reason to order the two).
-- Core feature servers that are not plugins yet still own ports: tunnel 30003,
-  dashboard 30006, tmux 30010, serial 30011 and homepage 30012. Each keeps its
-  nginx block until its own Phase B step. No plugin owns a port any more (A4).
-  **B6** moved file-manager off port 30004 onto `/plugin-api/file-manager/`.
+- Core feature servers that are not plugins yet still own ports: dashboard
+  30006, tmux 30010, serial 30011 and homepage 30012. Each keeps its nginx
+  block until its own Phase B step. No plugin owns a port any more (A4).
+  **B6** moved file-manager off port 30004 onto `/plugin-api/file-manager/`,
+  and **B7** moved tunnels off port 30003 onto `/plugin-api/tunnels/` and
+  `/plugin-ws/tunnels/c2s/stream`.
 - The terminal component and `TerminalTabContent` stay in core until the
   terminal's Phase B step (session manager, split view). ssh-terminal
   registers them through the legacy alias; **B6** switched every core caller

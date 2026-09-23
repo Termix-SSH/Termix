@@ -221,7 +221,6 @@ export function createHostEditorForm(
         pollInterval: 60,
         nodeName: null,
       }) as Host["proxmoxStatsConfig"],
-    enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
     inheritTerminalAppearance:
@@ -290,7 +289,6 @@ export function createHostEditorForm(
     environmentVariables:
       host?.terminalConfig?.environmentVariables ??
       ([] as { key: string; value: string }[]),
-    serverTunnels: host?.serverTunnels ?? ([] as Host["serverTunnels"]),
     jumpHosts: host?.jumpHosts ?? ([] as { hostId: string }[]),
     portKnockSequence:
       host?.portKnockSequence ??
@@ -506,7 +504,6 @@ export function buildHostEditorPayload(
     enableTerminal: form.enableTerminal,
     enableSessionLogging: form.enableSessionLogging,
     enableCommandHistory: form.enableCommandHistory,
-    enableTunnel: form.enableTunnel,
     enableFileManager: form.enableFileManager,
     scpLegacy: form.scpLegacy,
     enableDocker: form.enableDocker,
@@ -606,7 +603,6 @@ export function buildHostEditorPayload(
     // a number, and a string id does not compare equal on Postgres/MySQL.
     jumpHosts: form.jumpHosts.map((j) => ({ hostId: Number(j.hostId) })),
     portKnockSequence: form.portKnockSequence,
-    tunnelConnections: form.serverTunnels,
     quickActions: form.quickActions.map((a) => ({
       name: a.name,
       snippetId: Number(a.snippetId),

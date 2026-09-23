@@ -4,7 +4,6 @@ import {
   createCurrentNotificationChannelRepository,
   createCurrentApiKeyRepository,
   createCurrentAuditLogRepository,
-  createCurrentC2sTunnelPresetRepository,
   createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
   createCurrentDashboardServiceLinkRepository,
@@ -110,7 +109,6 @@ export async function deleteUserAndRelatedData(
     await createCurrentDashboardServiceLinkRepository().deleteByUserId(userId);
     await createCurrentHomepageItemRepository().deleteByUserId(userId);
     await createCurrentHomepageLayoutRepository().deleteByUserId(userId);
-    await createCurrentC2sTunnelPresetRepository().deleteByUserId(userId);
     await createCurrentOpksshTokenRepository().deleteByUserId(userId);
     await createCurrentVaultTokenRepository().deleteByUserId(userId);
     await createCurrentVaultProfileRepository().deleteByUserId(userId);

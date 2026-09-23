@@ -17,7 +17,6 @@ import {
   FolderOpen,
   FolderSearch,
   Loader2,
-  Network,
   Plus,
   Server,
   Terminal,
@@ -1168,18 +1167,6 @@ export function SidebarTree({
                     field: "enableFileManager",
                     value: false,
                     icon: FolderSearch,
-                  },
-                  {
-                    labelKey: "hosts.enableTunnelsFeature",
-                    field: "enableTunnel",
-                    value: true,
-                    icon: Network,
-                  },
-                  {
-                    labelKey: "hosts.disableTunnelsFeature",
-                    field: "enableTunnel",
-                    value: false,
-                    icon: Network,
                   },
                   {
                     labelKey: "hosts.enableDockerFeature",

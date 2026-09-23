@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import { Network } from "lucide-react";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
@@ -15,19 +14,11 @@ export interface QuickConnectTarget {
   enabled: (host: SSHHostWithStatus) => boolean;
 }
 
-/** What a quick connect widget can open: core tools plus plugin actions. */
+/** What a quick connect widget can open: the tools plugins registered. */
 export function quickConnectTargets(
   actions: HostActionDef[],
 ): QuickConnectTarget[] {
-  const core: QuickConnectTarget[] = [
-    {
-      type: "tunnel",
-      icon: Network,
-      labelKey: "homepage.connType_tunnel",
-      enabled: (h) => !!(h.enableSsh && h.enableTunnel),
-    },
-  ];
-  const seen = new Set(core.map((target) => target.type));
+  const seen = new Set<string>();
   const fromPlugins: QuickConnectTarget[] = [];
   for (const action of actions) {
     if (!action.tabType || seen.has(action.tabType)) continue;
@@ -45,12 +36,12 @@ export function quickConnectTargets(
       },
     });
   }
-  return [...fromPlugins, ...core];
+  return fromPlugins;
 }
 
 /** Recent-activity types a filter can pick: core ones plus plugin tabs'. */
 export function activityFilterTypes(): string[] {
-  const types = new Set(["file_manager", "tunnel"]);
+  const types = new Set(["file_manager"]);
   for (const def of listTabTypes()) {
     for (const type of def.activityTypes ?? []) types.add(type);
   }

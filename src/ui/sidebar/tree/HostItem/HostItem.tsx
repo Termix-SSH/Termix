@@ -15,7 +15,6 @@ import {
   Link,
   MemoryStick,
   MoreHorizontal,
-  Network,
   Pencil,
   Pin,
   Share2,
@@ -125,13 +124,6 @@ export function getSshActions(host: Host): {
   order: number;
 }[] {
   return [
-    host.enableSsh &&
-      host.enableTunnel && {
-        type: "tunnel" as TabType,
-        icon: Network,
-        label: "Tunnel",
-        order: 40,
-      },
     // --- tmux-monitor --- opt-in per host, off by default
     host.enableSsh &&
       host.enableTerminal &&
@@ -806,20 +798,6 @@ export function HostItem({
               {t("hosts.copyLink")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {host.enableSsh && host.enableTunnel && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    writeClipboardText(
-                      `${window.location.origin}?view=tunnel&hostId=${host.id}`,
-                    );
-                    toast.success(t("hosts.tunnelUrlCopied"));
-                  }}
-                >
-                  <Network className="size-3.5 mr-2" />
-                  {t("hosts.copyTunnelUrlAction")}
-                </DropdownMenuItem>
-              )}
               {host.enableSsh &&
                 host.enableTerminal &&
                 host.enableTmuxMonitor && (

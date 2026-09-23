@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "tables": {
+    "presets": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "config": {
+          "type": "text",
+          "notNull": true
+        },
+        "platform": {
+          "type": "text"
+        },
+        "computerName": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [],
+      "adopts": "c2s_tunnel_presets"
+    }
+  }
+}

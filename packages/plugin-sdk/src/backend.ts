@@ -661,6 +661,12 @@ export interface PluginSshConnectOptions {
   prompt?: PluginSshPromptChannel;
   /** Config fields to force, e.g. a longer readyTimeout. */
   overrides?: Record<string, unknown>;
+  /**
+   * An already-open stream to the host, such as a forwardOut channel through
+   * another host. The transport step is skipped: no port knocking, proxy,
+   * jump hosts or DNS lookup. Host key checks and auth still run.
+   */
+  sock?: unknown;
 }
 
 export interface PluginSshConnection<Client = unknown> {

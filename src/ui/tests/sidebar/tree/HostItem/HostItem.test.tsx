@@ -60,6 +60,7 @@ const baseHost: Host = {
   enableTerminal: true,
   enableCommandHistory: true,
   enableTunnel: true,
+  enableTmuxMonitor: true,
   enableFileManager: true,
   enableDocker: true,
   enableRdp: true,
@@ -219,16 +220,16 @@ describe("HostItem density parity", () => {
 
   it("learns repeated local actions and preloads the preferred host tool", () => {
     renderHostItem("comfortable");
-    const tunnelButton = screen.getByTitle("Tunnel");
-    fireEvent.click(tunnelButton);
-    fireEvent.click(tunnelButton);
-    fireEvent.click(tunnelButton);
+    const tmuxButton = screen.getByTitle("Tmux Monitor");
+    fireEvent.click(tmuxButton);
+    fireEvent.click(tmuxButton);
+    fireEvent.click(tmuxButton);
 
     const hostRow = screen.getByText("web-01").closest(".cursor-pointer");
     expect(hostRow).toBeTruthy();
     fireEvent.pointerEnter(hostRow!);
 
     expect(preloadTabSurfaceMock).toHaveBeenCalledWith("terminal");
-    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("tunnel");
+    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("tmux_monitor");
   });
 });

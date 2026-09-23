@@ -25,9 +25,6 @@ vi.mock("react-i18next", () => ({
 vi.mock("@/settings/RemoteSyncPanel.tsx", () => ({
   RemoteSyncPanel: () => null,
 }));
-vi.mock("@/user/C2STunnelPresetManager", () => ({
-  C2STunnelPresetManager: () => null,
-}));
 vi.mock("@/i18n/i18n", () => ({
   changeAppLanguage: vi.fn(),
   normalizeLanguageCode: (code: string) => code,

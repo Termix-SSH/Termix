@@ -9,7 +9,6 @@ import { NotificationChannelRepository } from "./notification-channel-repository
 import { AutomationRepository } from "./automation-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
-import { C2sTunnelPresetRepository } from "./c2s-tunnel-preset-repository.js";
 import { CommandHistoryRepository } from "./command-history-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { DashboardServiceLinkRepository } from "./dashboard-service-link-repository.js";
@@ -182,13 +181,6 @@ export function createCurrentAuditLogRepository(): AuditLogRepository {
   return new AuditLogRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("audit_log_repository_write"),
-  );
-}
-
-export function createCurrentC2sTunnelPresetRepository(): C2sTunnelPresetRepository {
-  return new C2sTunnelPresetRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("c2s_tunnel_preset_repository_write"),
   );
 }
 

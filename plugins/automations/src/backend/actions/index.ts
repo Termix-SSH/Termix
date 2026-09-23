@@ -10,6 +10,7 @@ import {
 import { withSshConnection } from "../ssh.js";
 import { createCurrentNotificationChannelRepository } from "../../../../../src/backend/database/repositories/factory.js";
 import { getSnippet, resolveSnippetCommandFor } from "../snippets.js";
+import { runTunnelAction } from "../tunnels.js";
 import { sendAutomationNotification } from "../notify.js";
 import { automationFetch } from "../http.js";
 import { renderRecord, renderTemplate } from "../template.js";
@@ -241,25 +242,15 @@ async function runTunnel(
   const name = renderTemplate(step.tunnelName, context.template);
   if (context.dryRun) return ok(`Would ${step.action} tunnel ${name}`);
 
-  try {
-    const manager =
-      await import("../../../../../src/backend/hosts/tunnel/manager.js");
-    const config = manager.tunnelConfigs?.get(name);
-    if (!config) return fail(`Tunnel "${name}" is not configured`);
-
-    if (step.action === "connect") {
-      await manager.connectSSHTunnel(config);
-      return ok(`Tunnel ${name} connected`);
-    }
-
-    // shouldRetry false, otherwise the manager immediately reconnects the
-    // tunnel the automation just asked it to drop.
-    manager.manualDisconnects.add(name);
-    await manager.handleDisconnect(name, config, false);
-    return ok(`Tunnel ${name} disconnected`);
-  } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
-  }
+  // A disconnect goes through the tunnels plugin's manual stop, which also
+  // holds off its retries, so the tunnel stays down.
+  const result = await runTunnelAction(context.userId, step.action, name);
+  if (!result.ok) return fail(result.error);
+  return ok(
+    step.action === "connect"
+      ? `Tunnel ${name} connected`
+      : `Tunnel ${name} disconnected`,
+  );
 }
 
 async function runWol(

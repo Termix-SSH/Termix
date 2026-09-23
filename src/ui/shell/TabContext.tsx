@@ -111,11 +111,7 @@ export function TabProvider({ children }: TabProviderProps) {
   const computeUniqueTitle = useCallback(
     (tabType: Tab["type"], desiredTitle: string | undefined): string => {
       const defaultTitle =
-        tabType === "file_manager"
-          ? t("nav.fileManager")
-          : tabType === "tunnel"
-            ? t("nav.tunnels")
-            : t("nav.terminal");
+        tabType === "file_manager" ? t("nav.fileManager") : t("nav.terminal");
       const baseTitle = (desiredTitle || defaultTitle).trim();
       const match = baseTitle.match(/^(.*) \((\d+)\)$/);
       const root = match ? match[1] : baseTitle;
@@ -180,9 +176,7 @@ export function TabProvider({ children }: TabProviderProps) {
       const id = nextTabId.current++;
       const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const needsUniqueTitle =
-        tabData.type === "terminal" ||
-        tabData.type === "file_manager" ||
-        tabData.type === "tunnel";
+        tabData.type === "terminal" || tabData.type === "file_manager";
       const effectiveTitle = needsUniqueTitle
         ? computeUniqueTitle(tabData.type, tabData.title)
         : tabData.type === "tmux_monitor" // --- tmux-monitor ---

@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import { Network } from "lucide-react";
 import { tabTypeForActivity } from "@/shell/tab-registry";
 
 export interface ActivityTarget {
@@ -9,14 +8,8 @@ export interface ActivityTarget {
   labelKey: string | undefined;
 }
 
-/** Recent-activity types core itself records. */
-const CORE_ACTIVITY: Record<string, ActivityTarget> = {
-  tunnel: {
-    icon: Network,
-    tab: "tunnel",
-    labelKey: "dashboard.activityTunnel",
-  },
-};
+/** Recent-activity types core itself records. None today. */
+const CORE_ACTIVITY: Record<string, ActivityTarget> = {};
 
 /**
  * What a recent-activity entry opens and how it is labelled. Plugin tabs
