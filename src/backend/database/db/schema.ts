@@ -27,12 +27,6 @@ export const users = sqliteTable("users", {
   namePath: text("name_path"),
   scopes: text().default("openid email profile"),
 
-  totpSecret: text("totp_secret"),
-  totpEnabled: integer("totp_enabled", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  totpBackupCodes: text("totp_backup_codes"),
-
   registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   donationModalDismissed: integer("donation_modal_dismissed", {
     mode: "boolean",
@@ -163,25 +157,6 @@ export const userSecondFactors = sqliteTable(
     ),
   ],
 );
-
-export const webauthnCredentials = sqliteTable("webauthn_credentials", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  credentialId: text("credential_id").notNull(),
-  publicKey: text("public_key").notNull(),
-  counter: integer("counter").notNull().default(0),
-  deviceType: text("device_type"),
-  backedUp: integer("backed_up", { mode: "boolean" }).notNull().default(false),
-  transports: text("transports"),
-  userVerification: text("user_verification").notNull().default("preferred"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  lastUsedAt: text("last_used_at"),
-});
 
 export const hosts = sqliteTable(
   "ssh_data",

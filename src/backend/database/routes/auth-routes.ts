@@ -177,6 +177,50 @@ export function registerAuthRoutes(router: Router): void {
 
   /**
    * @openapi
+   * /users/totp/verify-login:
+   *   post:
+   *     summary: Finish a login with a second factor (2.8 route)
+   *     description: Kept for clients built against 2.8, such as Termix-Mobile. Verifies the pending login against the factor named in `factor`, or the user's first enrolled factor, the same way as /users/auth/second-factor/{factorId}/verify.
+   *     tags:
+   *       - Auth
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               temp_token:
+   *                 type: string
+   *               totp_code:
+   *                 type: string
+   *               factor:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Login finished.
+   *       400:
+   *         description: Token and code are required.
+   *       401:
+   *         description: Invalid temporary token or code.
+   */
+  router.post("/totp/verify-login", async (req, res) => {
+    if (!req.body?.temp_token || !req.body?.totp_code) {
+      return res.status(400).json({ error: "Token and code are required" });
+    }
+    try {
+      await verifySecondFactorAndRespond(
+        req,
+        res,
+        typeof req.body.factor === "string" ? req.body.factor : undefined,
+      );
+    } catch (error) {
+      sendLoginError(res, error);
+    }
+  });
+
+  /**
+   * @openapi
    * /users/auth/{methodId}/start:
    *   get:
    *     summary: Start a redirect login

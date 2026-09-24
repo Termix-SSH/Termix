@@ -1,0 +1,18 @@
+{
+  "title": "Kode akses",
+  "signIn": "Masuk dengan kata sandi",
+  "loginFailed": "Login dengan kata sandi gagal.",
+  "description": "Gunakan kredensial WebAuthn/FIDO2 untuk masuk tanpa kata sandi.",
+  "namePlaceholder": "Nama kata sandi",
+  "uv": {
+    "preferred": "Lebih disukai",
+    "required": "Diperlukan",
+    "discouraged": "Berkecil hati"
+  },
+  "add": "Tambahkan Kata Sandi",
+  "none": "Tidak ada kata sandi yang terdaftar.",
+  "added": "Kata sandi telah ditambahkan",
+  "addFailed": "Gagal menambahkan kata sandi.",
+  "deleted": "Kata sandi telah dihapus.",
+  "deleteFailed": "Gagal menghapus kata sandi."
+}

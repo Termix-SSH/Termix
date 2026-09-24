@@ -232,9 +232,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         identifier_path TEXT,
         name_path TEXT,
         scopes TEXT DEFAULT 'openid email profile',
-        totp_secret TEXT,
-        totp_enabled INTEGER NOT NULL DEFAULT 0,
-        totp_backup_codes TEXT,
         registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         donation_modal_dismissed INTEGER NOT NULL DEFAULT 0
     );
@@ -288,22 +285,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         factor_id TEXT NOT NULL,
         enrolled_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (user_id, plugin_id, factor_id),
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS webauthn_credentials (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        credential_id TEXT NOT NULL UNIQUE,
-        public_key TEXT NOT NULL,
-        counter INTEGER NOT NULL DEFAULT 0,
-        device_type TEXT,
-        backed_up INTEGER NOT NULL DEFAULT 0,
-        transports TEXT,
-        user_verification TEXT NOT NULL DEFAULT 'preferred',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_used_at TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
@@ -884,10 +865,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("users", "name_path", "TEXT");
   addColumnIfNotExists("users", "scopes", "TEXT");
 
-  addColumnIfNotExists("users", "totp_secret", "TEXT");
-  addColumnIfNotExists("users", "totp_enabled", "INTEGER NOT NULL DEFAULT 0");
-  addColumnIfNotExists("users", "totp_backup_codes", "TEXT");
-
   const hadRegisteredAtColumn = (() => {
     try {
       sqlite.prepare(`SELECT "registered_at" FROM users LIMIT 1`).get();
@@ -939,24 +916,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("sessions", "oidc_sub", "TEXT");
   addColumnIfNotExists("sessions", "oidc_sid", "TEXT");
   addColumnIfNotExists("sessions", "sso_provider_id", "INTEGER");
-
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS webauthn_credentials (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      credential_id TEXT NOT NULL UNIQUE,
-      public_key TEXT NOT NULL,
-      counter INTEGER NOT NULL DEFAULT 0,
-      device_type TEXT,
-      backed_up INTEGER NOT NULL DEFAULT 0,
-      transports TEXT,
-      user_verification TEXT NOT NULL DEFAULT 'preferred',
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      last_used_at TEXT,
-      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-  `);
 
   addColumnIfNotExists("ssh_data", "name", "TEXT");
   addColumnIfNotExists("ssh_data", "folder", "TEXT");

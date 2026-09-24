@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Masukkan kode verifikasi",
+    "verify": "Verifikasi Kode"
+  },
+  "enrollment": {
+    "title": "Otentikator TOTP",
+    "on": "Otentikasi dua faktor (2FA) diaktifkan.",
+    "off": "Tambahkan keamanan login ekstra",
+    "enable": "Memungkinkan",
+    "disable": "Cacat",
+    "addDevice": "Tambahkan perangkat",
+    "addTitle": "Tambahkan perangkat otentikasi",
+    "addScanInstructions": "Pindai kode QR ini dengan otentikator tambahan. Otentikator yang sudah ada akan tetap berfungsi.",
+    "addSuccess": "Autentikator tambahan terdaftar",
+    "addFailed": "Gagal menambahkan autentikator",
+    "setupTitle": "Pengaturan TOTP",
+    "setupFailed": "Gagal memulai pengaturan TOTP",
+    "qrCode": "Kode QR",
+    "secretCopied": "Rahasia disalin ke papan klip",
+    "continueVerify": "Lanjutkan Verifikasi",
+    "verifyTitle": "Verifikasi Kode",
+    "verify": "Memeriksa",
+    "enter6Digits": "Masukkan kode 6 digit",
+    "enabledSuccess": "Autentikasi dua faktor diaktifkan",
+    "invalidCode": "Kode tidak valid, silakan coba lagi.",
+    "disableTitle": "Nonaktifkan otentikasi dua faktor (2FA).",
+    "disabledSuccess": "Autentikasi dua faktor dinonaktifkan",
+    "disableFailed": "Gagal menonaktifkan 2FA.",
+    "backupTitle": "Kode Cadangan",
+    "downloadBackup": "Unduh Kode Cadangan",
+    "done": "Selesai"
+  }
+}

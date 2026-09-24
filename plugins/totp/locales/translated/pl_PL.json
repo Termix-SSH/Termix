@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Wprowadź kod weryfikacyjny",
+    "verify": "Zweryfikuj kod"
+  },
+  "enrollment": {
+    "title": "Aplikacja TOTP",
+    "on": "Włączono uwierzytelnianie dwuskładnikowe",
+    "off": "Dodaj dodatkowe zabezpieczenia logowania",
+    "enable": "Włącz",
+    "disable": "Wyłącz",
+    "addDevice": "Dodaj urządzenie",
+    "addTitle": "Dodaj urządzenie uwierzytelniające",
+    "addScanInstructions": "Zeskanuj ten kod QR za pomocą dodatkowego uwierzytelniacza. Istniejące uwierzytelniacze będą nadal działać.",
+    "addSuccess": "Zarejestrowano dodatkowego uwierzytelniacza",
+    "addFailed": "Nie udało się dodać uwierzytelniacza",
+    "setupTitle": "Skonfiguruj TOTP",
+    "setupFailed": "Nie udało się uruchomić konfiguracji TOTP",
+    "qrCode": "Kod QR",
+    "secretCopied": "Skopiowano sekret do schowka",
+    "continueVerify": "Kontynuuj weryfikację",
+    "verifyTitle": "Zweryfikuj kod",
+    "verify": "Zweryfikuj",
+    "enter6Digits": "Wprowadź 6-cyfrowy kod",
+    "enabledSuccess": "Włączono uwierzytelnianie dwuskładnikowe",
+    "invalidCode": "Nieprawidłowy kod, spróbuj ponownie",
+    "disableTitle": "Wyłącz 2FA",
+    "disabledSuccess": "Wyłączono uwierzytelnianie dwuskładnikowe",
+    "disableFailed": "Nie udało się wyłączyć uwierzytelniania dwuskładnikowego",
+    "backupTitle": "Kody zapasowe",
+    "downloadBackup": "Pobierz kody zapasowe",
+    "done": "Gotowe"
+  }
+}

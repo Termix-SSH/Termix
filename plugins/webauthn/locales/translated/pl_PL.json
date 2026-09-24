@@ -1,0 +1,18 @@
+{
+  "title": "Klucze dostępu",
+  "signIn": "Zaloguj się za pomocą klucza dostępu",
+  "loginFailed": "Nie udało się zalogować za pomocą klucza dostępu",
+  "description": "Używaj poświadczeń WebAuthn/FIDO2, aby logować się bez hasła",
+  "namePlaceholder": "Nazwa klucza dostępu",
+  "uv": {
+    "preferred": "Preferowane",
+    "required": "Wymagane",
+    "discouraged": "Odradzane"
+  },
+  "add": "Dodaj klucz dostępu",
+  "none": "Nie zarejestrowano żadnych kluczy dostępu.",
+  "added": "Dodano klucz dostępu",
+  "addFailed": "Nie udało się dodać klucza dostępu",
+  "deleted": "Usunięto klucz dostępu",
+  "deleteFailed": "Nie udało się usunąć klucza dostępu"
+}

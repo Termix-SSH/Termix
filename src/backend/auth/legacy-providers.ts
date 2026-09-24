@@ -16,12 +16,7 @@ import type {
   SshAuthProvider,
   SshConnectHost,
 } from "../hosts/connect/types.js";
-import {
-  registerLoginMethod,
-  registerSecondFactor,
-  type LoginMethod,
-} from "./registry.js";
-import { totpSecondFactor } from "./legacy/totp-factor.js";
+import { registerLoginMethod, type LoginMethod } from "./registry.js";
 
 const OPKSSH_REQUIRED_MESSAGE =
   "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.";
@@ -328,22 +323,6 @@ const ldapLoginMethod: LoginMethod = {
   },
 };
 
-// Passkeys prove the user as well as possession, so a passkey login can
-// stand in for the second factor. No describe: a passkey only helps a user
-// who already registered one, so it never counts for the lockout guard.
-const passkeyLoginMethod: LoginMethod = {
-  id: "passkey",
-  pluginId: "core",
-  labelKey: "auth.loginWithPasskey",
-  icon: "fingerprint",
-  kind: "form",
-  verify: async (request) => {
-    const { verifyPasskeyLogin } =
-      await import("../database/routes/user-webauthn-routes.js");
-    return verifyPasskeyLogin(request as never);
-  },
-};
-
 let loginRegistered = false;
 
 export function registerLegacyLoginProviders(): void {
@@ -351,8 +330,6 @@ export function registerLegacyLoginProviders(): void {
   loginRegistered = true;
   registerLoginMethod(oidcLoginMethod);
   registerLoginMethod(ldapLoginMethod);
-  registerLoginMethod(passkeyLoginMethod);
-  registerSecondFactor(totpSecondFactor);
 }
 
 /** Test helper. */

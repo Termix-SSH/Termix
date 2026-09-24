@@ -1,0 +1,18 @@
+{
+  "title": "Jelszavak",
+  "signIn": "Bejelentkezés jelszóval",
+  "loginFailed": "Jelszóval történő bejelentkezés sikertelen",
+  "description": "Jelszó nélküli bejelentkezéshez használja a WebAuthn/FIDO2 hitelesítő adatokat",
+  "namePlaceholder": "Jelszó neve",
+  "uv": {
+    "preferred": "Előnyben részesített",
+    "required": "Kívánt",
+    "discouraged": "Elbátortalanodva"
+  },
+  "add": "Jelszó hozzáadása",
+  "none": "Nincsenek regisztrált jelszók.",
+  "added": "Hozzáadott jelszó",
+  "addFailed": "Nem sikerült hozzáadni a jelszót",
+  "deleted": "Jelszó törölve",
+  "deleteFailed": "Nem sikerült törölni a jelszót"
+}

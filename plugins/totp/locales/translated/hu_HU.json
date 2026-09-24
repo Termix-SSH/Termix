@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Írja be az ellenőrző kódot",
+    "verify": "Kód ellenőrzése"
+  },
+  "enrollment": {
+    "title": "TOTP hitelesítő",
+    "on": "2FA engedélyezve",
+    "off": "Fokozott bejelentkezési biztonság",
+    "enable": "Engedélyezés",
+    "disable": "Letiltás",
+    "addDevice": "Eszköz hozzáadása",
+    "addTitle": "Hitelesítő eszköz hozzáadása",
+    "addScanInstructions": "Olvasd be ezt a QR-kódot a további hitelesítővel. A meglévő hitelesítők továbbra is működni fognak.",
+    "addSuccess": "További hitelesítő regisztrálva",
+    "addFailed": "Nem sikerült hozzáadni a hitelesítőt",
+    "setupTitle": "TOTP beállítása",
+    "setupFailed": "Nem sikerült elindítani a TOTP beállítását",
+    "qrCode": "QR-kód",
+    "secretCopied": "Titkos kód a vágólapra másolva",
+    "continueVerify": "Tovább az ellenőrzéshez",
+    "verifyTitle": "Kód ellenőrzése",
+    "verify": "Ellenőrzés",
+    "enter6Digits": "Adjon meg egy 6 jegyű kódot",
+    "enabledSuccess": "Kétfaktoros hitelesítés engedélyezve",
+    "invalidCode": "Érvénytelen kód, kérjük, próbálja újra",
+    "disableTitle": "2FA letiltása",
+    "disabledSuccess": "Kétfaktoros hitelesítés letiltva",
+    "disableFailed": "Nem sikerült letiltani a 2FA-t",
+    "backupTitle": "Biztonsági kódok",
+    "downloadBackup": "Tartalékkódok letöltése",
+    "done": "Kész"
+  }
+}

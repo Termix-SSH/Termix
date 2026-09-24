@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "输入验证码",
+    "verify": "验证"
+  },
+  "enrollment": {
+    "title": "TOTP 身份验证器",
+    "on": "双因素认证已启用",
+    "off": "添加额外的登录安全",
+    "enable": "启用",
+    "disable": "禁用",
+    "addDevice": "添加设备",
+    "addTitle": "添加身份验证器设备",
+    "addScanInstructions": "请使用新增的验证器扫描此二维码。现有验证器将继续有效。",
+    "addSuccess": "已注册其他身份验证器",
+    "addFailed": "添加身份验证器失败",
+    "setupTitle": "设置 TOTP",
+    "setupFailed": "启动 TOTP 设置失败",
+    "qrCode": "二维码",
+    "secretCopied": "密钥已复制到剪贴板",
+    "continueVerify": "继续验证",
+    "verifyTitle": "验证验证码",
+    "verify": "验证",
+    "enter6Digits": "输入 6 位验证码",
+    "enabledSuccess": "双因素认证已启用",
+    "invalidCode": "验证码无效，请重试",
+    "disableTitle": "禁用 2FA",
+    "disabledSuccess": "双因素认证已禁用",
+    "disableFailed": "禁用 2FA 失败",
+    "backupTitle": "备份验证码",
+    "downloadBackup": "下载备份验证码",
+    "done": "完成"
+  }
+}

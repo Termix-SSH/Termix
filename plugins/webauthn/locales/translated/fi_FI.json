@@ -1,0 +1,18 @@
+{
+  "title": "Salasanat",
+  "signIn": "Kirjaudu sisään salasanalla",
+  "loginFailed": "Salasanan kirjautuminen epäonnistui",
+  "description": "Kirjaudu sisään ilman salasanaa WebAuthn/FIDO2-tunnuksilla",
+  "namePlaceholder": "Salasanan nimi",
+  "uv": {
+    "preferred": "Ensisijainen",
+    "required": "Pakollinen",
+    "discouraged": "Lannistunut"
+  },
+  "add": "Lisää salasana",
+  "none": "Ei rekisteröityjä salasanoja.",
+  "added": "Salasana lisätty",
+  "addFailed": "Salasanan lisääminen epäonnistui",
+  "deleted": "Salasana poistettu",
+  "deleteFailed": "Salasanan poistaminen epäonnistui"
+}

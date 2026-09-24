@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Syötä vahvistuskoodi",
+    "verify": "Vahvista koodi"
+  },
+  "enrollment": {
+    "title": "TOTP-todentaja",
+    "on": "2FA on käytössä",
+    "off": "Lisää kirjautumisen turvallisuutta",
+    "enable": "Ota käyttöön",
+    "disable": "Poista käytöstä",
+    "addDevice": "Lisää laite",
+    "addTitle": "Lisää todennuslaite",
+    "addScanInstructions": "Skannaa tämä QR-koodi lisätodentajalla. Nykyiset todentajat toimivat edelleen.",
+    "addSuccess": "Lisätodentaja rekisteröity",
+    "addFailed": "Todentajan lisääminen epäonnistui",
+    "setupTitle": "TOTP:n määrittäminen",
+    "setupFailed": "TOTP-asennuksen aloittaminen epäonnistui",
+    "qrCode": "QR-koodi",
+    "secretCopied": "Salaisuus kopioitu leikepöydälle",
+    "continueVerify": "Jatka vahvistamiseen",
+    "verifyTitle": "Vahvista koodi",
+    "verify": "Vahvista",
+    "enter6Digits": "Syötä 6-numeroinen koodi",
+    "enabledSuccess": "Kaksivaiheinen todennus käytössä",
+    "invalidCode": "Virheellinen koodi, yritä uudelleen",
+    "disableTitle": "Poista 2FA käytöstä",
+    "disabledSuccess": "Kaksivaiheinen todennus poistettu käytöstä",
+    "disableFailed": "2FA:n poistaminen käytöstä epäonnistui",
+    "backupTitle": "Varakoodit",
+    "downloadBackup": "Lataa varakoodit",
+    "done": "Tehty"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Wagwoorde",
+  "signIn": "Teken aan met wagwoord",
+  "loginFailed": "Wagwoord-aanmelding het misluk",
+  "description": "Gebruik WebAuthn/FIDO2-bewyse om aan te meld sonder 'n wagwoord",
+  "namePlaceholder": "Wagwoordnaam",
+  "uv": {
+    "preferred": "Verkies",
+    "required": "Vereis",
+    "discouraged": "Ontmoedig"
+  },
+  "add": "Voeg wagwoord by",
+  "none": "Geen wagwoorde geregistreer nie.",
+  "added": "Wagwoord bygevoeg",
+  "addFailed": "Kon nie wagwoord byvoeg nie",
+  "deleted": "Wagwoord verwyder",
+  "deleteFailed": "Kon nie wagwoord verwyder nie"
+}

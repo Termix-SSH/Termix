@@ -466,7 +466,21 @@ export interface LoginMethodContribution {
   titleKey: string;
   icon?: IconComponent;
   component: ComponentType<LoginMethodUIProps>;
+  /**
+   * "inline" also draws the method under the password form, for a local
+   * method people use instead of a password (a passkey). Otherwise it only
+   * shows in the list of other sign-in methods.
+   */
+  placement?: "inline";
+  /** Enrolment, shown in Settings > Security (registering a passkey). */
+  enrollment?: ComponentType<Record<string, unknown>>;
 }
+
+/**
+ * How an SSH keyboard-interactive prompt is shown by TOTPDialog: a code field
+ * (the default), a password, a menu choice, or a push approval.
+ */
+export type MFAPromptMode = "totp" | "password" | "menu" | "push";
 
 /** What the second-factor step hands a factor's UI. */
 export interface SecondFactorUIProps {

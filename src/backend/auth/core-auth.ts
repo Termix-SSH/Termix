@@ -8,6 +8,7 @@ import { isTrustedProxyAuthEnabled } from "../utils/trusted-proxy-auth.js";
 import { registerPasswordLoginMethod } from "./builtin-login-methods.js";
 import { registerLegacyLoginProviders } from "./legacy-providers.js";
 import { listLoginMethods } from "./registry.js";
+import { LoginMethodError } from "./types.js";
 
 let registered = false;
 
@@ -33,6 +34,29 @@ export function isPasswordLoginSettingOn(): boolean {
     return value ? value === "true" : true;
   } catch {
     return true;
+  }
+}
+
+/**
+ * Refuses a new second-factor enrolment when core could not honour it: with
+ * trusted proxy login on the proxy decides who signs in, and with password
+ * login off users sign in through external methods that skip second factors
+ * by default.
+ */
+export function assertSecondFactorEnrollmentAllowed(): void {
+  if (isTrustedProxyAuthEnabled()) {
+    throw new LoginMethodError(
+      "Second factors are disabled while trusted proxy authentication is enabled",
+      409,
+      "trusted_proxy_enabled",
+    );
+  }
+  if (!isPasswordLoginSettingOn()) {
+    throw new LoginMethodError(
+      "Cannot enable 2FA while password login is disabled. Enable password login first.",
+      409,
+      "password_login_disabled",
+    );
   }
 }
 

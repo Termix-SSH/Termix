@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "tables": {
+    "enrollments": {
+      "columns": {
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true,
+          "primaryKey": true
+        },
+        "secret": {
+          "type": "encryptedText"
+        },
+        "pendingSecret": {
+          "type": "encryptedText"
+        },
+        "backupCodes": {
+          "type": "encryptedText"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": []
+    }
+  }
+}

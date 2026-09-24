@@ -38,12 +38,6 @@ export const users = mysqlTable("users", {
   namePath: text("name_path"),
   scopes: text().default("openid email profile"),
 
-  totpSecret: text("totp_secret"),
-  totpEnabled: boolean("totp_enabled")
-    .notNull()
-    .default(false),
-  totpBackupCodes: text("totp_backup_codes"),
-
   registeredAt: text("registered_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   donationModalDismissed: boolean("donation_modal_dismissed")
     .notNull()
@@ -172,25 +166,6 @@ export const userSecondFactors = mysqlTable(
     ),
   ],
 );
-
-export const webauthnCredentials = mysqlTable("webauthn_credentials", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  credentialId: varchar("credential_id", { length: 255 }).notNull(),
-  publicKey: text("public_key").notNull(),
-  counter: int("counter").notNull().default(0),
-  deviceType: text("device_type"),
-  backedUp: boolean("backed_up").notNull().default(false),
-  transports: text("transports"),
-  userVerification: text("user_verification").notNull().default("preferred"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  lastUsedAt: text("last_used_at"),
-});
 
 export const hosts = mysqlTable(
   "ssh_data",

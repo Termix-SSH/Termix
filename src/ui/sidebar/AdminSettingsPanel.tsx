@@ -306,7 +306,7 @@ export function AdminSettingsPanel({
             isOidc: user.is_oidc,
             passwordHash: user.password_hash,
             dataUnlocked: user.data_unlocked,
-            totpEnabled: user.totp_enabled,
+            secondFactorEnabled: user.second_factor_enabled,
           })),
         );
         setUserTotal(total ?? u.length);
@@ -989,10 +989,10 @@ export function AdminSettingsPanel({
           setUsers((prev) => prev.filter((u) => u.id !== manageUser.id));
           setManageUser(null);
         }}
-        onTotpDisabled={() => {
+        onSecondFactorsReset={() => {
           setUsers((prev) =>
             prev.map((u) =>
-              u.id === manageUser.id ? { ...u, totpEnabled: false } : u,
+              u.id === manageUser.id ? { ...u, secondFactorEnabled: false } : u,
             ),
           );
         }}

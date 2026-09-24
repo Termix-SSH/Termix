@@ -1,0 +1,18 @@
+{
+  "title": "Claus d'accés",
+  "signIn": "Inicia la sessió amb la clau d'accés",
+  "loginFailed": "Error d'inici de sessió amb contrasenya",
+  "description": "Utilitzeu les credencials de WebAuthn/FIDO2 per iniciar la sessió sense contrasenya",
+  "namePlaceholder": "Nom de la clau d'accés",
+  "uv": {
+    "preferred": "Preferit",
+    "required": "Obligatori",
+    "discouraged": "Desanimat"
+  },
+  "add": "Afegeix una contrasenya",
+  "none": "No hi ha cap clau d'accés registrada.",
+  "added": "Clau d'accés afegida",
+  "addFailed": "No s'ha pogut afegir la contrasenya",
+  "deleted": "Clau d'accés suprimida",
+  "deleteFailed": "No s'ha pogut suprimir la clau d'accés"
+}

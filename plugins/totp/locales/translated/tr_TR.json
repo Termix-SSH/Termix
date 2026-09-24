@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Doğrulama kodunu girin",
+    "verify": "Kodu Doğrula"
+  },
+  "enrollment": {
+    "title": "TOTP Kimlik Doğrulayıcı",
+    "on": "2FA etkin",
+    "off": "Ek giriş güvenliği ekleyin",
+    "enable": "Etkinleştir",
+    "disable": "Devre Dışı Bırak",
+    "addDevice": "Cihaz ekle",
+    "addTitle": "Kimlik doğrulama cihazı ekle",
+    "addScanInstructions": "Bu QR kodunu ek kimlik doğrulayıcı ile tarayın. Mevcut kimlik doğrulayıcılar çalışmaya devam edecektir.",
+    "addSuccess": "Ek kimlik doğrulayıcı kaydedildi.",
+    "addFailed": "Kimlik doğrulayıcı eklenemedi.",
+    "setupTitle": "TOTP Kurulumu",
+    "setupFailed": "TOTP kurulumu başlatılamadı",
+    "qrCode": "QR Kodu",
+    "secretCopied": "Gizli anahtar panoya kopyalandı",
+    "continueVerify": "Doğrulamaya Devam Et",
+    "verifyTitle": "Kodu Doğrula",
+    "verify": "Doğrula",
+    "enter6Digits": "6 haneli bir kod girin",
+    "enabledSuccess": "İki faktörlü kimlik doğrulama etkinleştirildi",
+    "invalidCode": "Geçersiz kod, lütfen tekrar deneyin",
+    "disableTitle": "2FA'yı Devre Dışı Bırak",
+    "disabledSuccess": "İki faktörlü kimlik doğrulama devre dışı bırakıldı",
+    "disableFailed": "2FA devre dışı bırakılamadı",
+    "backupTitle": "Yedek Kodlar",
+    "downloadBackup": "Yedek Kodları İndir",
+    "done": "Tamam"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "totp",
+  "name": "TOTP",
+  "version": "1.0.0",
+  "description": "Ask for a code from an authenticator app after signing in, with backup codes for when the phone is not at hand.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "ShieldCheck",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "secrets:own",
+    "network:serve",
+    "auth:provide",
+    "ui:surface"
+  ],
+  "contributes": {
+    "auth": {
+      "secondFactors": ["totp"]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

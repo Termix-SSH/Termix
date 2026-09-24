@@ -14,7 +14,6 @@ function makeUser(overrides: Partial<UserRecord> = {}): UserRecord {
     username: "local",
     passwordHash: "",
     isOidc: false,
-    totpEnabled: false,
     isAdmin: false,
     registeredAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -143,11 +142,6 @@ describe("resolveDesktopAutoSessionUser", () => {
 
   it("returns the sole local user even when OIDC-enabled", () => {
     const user = makeUser({ isOidc: true });
-    expect(resolveDesktopAutoSessionUser([user])).toBe(user);
-  });
-
-  it("returns the sole local user even when TOTP-enabled", () => {
-    const user = makeUser({ totpEnabled: true });
     expect(resolveDesktopAutoSessionUser([user])).toBe(user);
   });
 

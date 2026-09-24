@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Nhập mã xác minh",
+    "verify": "Xác minh mã"
+  },
+  "enrollment": {
+    "title": "Trình xác thực TOTP",
+    "on": "2FA đã được bật",
+    "off": "Thêm bảo mật đăng nhập bổ sung",
+    "enable": "Bật",
+    "disable": "Tắt",
+    "addDevice": "Thêm thiết bị",
+    "addTitle": "Thêm thiết bị xác thực",
+    "addScanInstructions": "Quét mã QR này bằng thiết bị xác thực bổ sung. Các thiết bị xác thực hiện có vẫn sẽ hoạt động bình thường.",
+    "addSuccess": "Đã đăng ký thêm trình xác thực.",
+    "addFailed": "Thêm trình xác thực không thành công",
+    "setupTitle": "Thiết lập TOTP",
+    "setupFailed": "Không khởi động được cài đặt TOTP",
+    "qrCode": "Mã QR",
+    "secretCopied": "Đã sao chép mã bí mật vào clipboard",
+    "continueVerify": "Tiếp tục xác minh",
+    "verifyTitle": "Xác minh mã",
+    "verify": "Xác minh",
+    "enter6Digits": "Nhập mã 6 chữ số",
+    "enabledSuccess": "Đã bật xác thực hai yếu tố",
+    "invalidCode": "Mã không hợp lệ, vui lòng thử lại",
+    "disableTitle": "Tắt 2FA",
+    "disabledSuccess": "Đã tắt xác thực hai yếu tố",
+    "disableFailed": "Không tắt được 2FA",
+    "backupTitle": "Mã dự phòng",
+    "downloadBackup": "Tải mã dự phòng",
+    "done": "Xong"
+  }
+}

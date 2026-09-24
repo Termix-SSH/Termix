@@ -11,7 +11,10 @@ import { loginRateLimiter } from "../utils/login-rate-limiter.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { emitInternalEvent } from "../hosts/internal-events.js";
-import { createCurrentSettingsRepository } from "../database/repositories/factory.js";
+import {
+  createCurrentSettingsRepository,
+  createCurrentUserAuthRepository,
+} from "../database/repositories/factory.js";
 import type { UserRecord } from "../database/repositories/user-repository.js";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -139,7 +142,10 @@ export async function issueSession(
       username: user.username,
       userId: user.id,
       is_oidc: !!user.isOidc,
-      totp_enabled: !!user.totpEnabled,
+      // Any second factor; the name is what 2.8 clients read.
+      totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
+        user.id,
+      ),
       ...(isNativeAppRequest(req) ? { token } : {}),
     },
   };

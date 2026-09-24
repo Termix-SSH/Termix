@@ -9,6 +9,10 @@ const h = vi.hoisted(() => ({
   cleared: [] as string[],
   clearedAll: 0,
   pooled: [] as string[],
+  sessionId: undefined as string | undefined,
+  revoked: [] as Array<{ userId: string; except?: string }>,
+  trustedCleared: [] as string[],
+  policyError: null as Error | null,
 }));
 
 vi.mock("../../utils/logger.js", () => {
@@ -29,7 +33,15 @@ vi.mock("../../plugins/permissions.js", async () => {
     },
   };
 });
-vi.mock("../../plugins/actor.js", () => ({ getActor: () => h.actor }));
+vi.mock("../../plugins/actor.js", () => ({
+  getActor: () => h.actor,
+  getActorSessionId: () => h.sessionId,
+}));
+vi.mock("../../auth/core-auth.js", () => ({
+  assertSecondFactorEnrollmentAllowed: () => {
+    if (h.policyError) throw h.policyError;
+  },
+}));
 vi.mock("../../hosts/ssh-connection-pool.js", () => ({
   withConnection: async (
     key: string,
@@ -73,6 +85,17 @@ vi.mock("../../database/repositories/factory.js", () => ({
       h.factors.push({ userId, pluginId, factorId });
     },
     removeSecondFactor: async () => true,
+  }),
+  createCurrentSessionRepository: () => ({
+    revokeAllForUser: async (userId: string, except?: string) => {
+      h.revoked.push({ userId, except });
+      return 0;
+    },
+  }),
+  createCurrentTrustedDeviceRepository: () => ({
+    deleteByUserId: async (userId: string) => {
+      h.trustedCleared.push(userId);
+    },
   }),
 }));
 
@@ -358,5 +381,42 @@ describe("ctx.auth", () => {
     await bag.disposeAll();
     expect(getLoginMethod("corp-sso")).toBeUndefined();
     expect(getSecondFactor("fixture", "pin")).toBeUndefined();
+  });
+
+  it("revokes other sessions and trusted devices on enrolment, keeping the caller's session", async () => {
+    h.granted = new Set(["auth:provide"]);
+    h.factors = [];
+    h.revoked = [];
+    h.trustedCleared = [];
+    h.policyError = null;
+    h.actor = "user-1";
+    h.sessionId = "session-a";
+    const auth = createPluginAuth({
+      manifest: manifest(["auth:provide"], { secondFactors: ["pin"] }),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    await auth.recordEnrollment("user-1", "pin");
+    expect(h.revoked).toEqual([{ userId: "user-1", except: "session-a" }]);
+    expect(h.trustedCleared).toEqual(["user-1"]);
+    h.actor = undefined;
+    h.sessionId = undefined;
+  });
+
+  it("refuses enrolment when core policy forbids second factors", async () => {
+    h.granted = new Set(["auth:provide"]);
+    h.factors = [];
+    const { LoginMethodError } = await import("@termix/plugin-sdk/backend");
+    h.policyError = new LoginMethodError("password login is off", 409);
+    const auth = createPluginAuth({
+      manifest: manifest(["auth:provide"], { secondFactors: ["pin"] }),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(auth.recordEnrollment("user-1", "pin")).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(h.factors).toEqual([]);
+    h.policyError = null;
   });
 });

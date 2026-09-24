@@ -759,10 +759,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           token_url TEXT,
           identifier_path TEXT,
           name_path TEXT,
-          scopes TEXT DEFAULT 'openid email profile',
-          totp_secret TEXT,
-          totp_enabled INTEGER NOT NULL DEFAULT 0,
-          totp_backup_codes TEXT
+          scopes TEXT DEFAULT 'openid email profile'
         );
 
         CREATE TABLE settings (
@@ -900,8 +897,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
       const userRecord = user;
       const insertUser = exportDb.prepare(`
-        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       insertUser.run(
         userRecord.id,
@@ -918,9 +915,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userRecord.identifierPath || null,
         userRecord.namePath || null,
         userRecord.scopes || null,
-        userRecord.totpSecret || null,
-        userRecord.totpEnabled ? 1 : 0,
-        userRecord.totpBackupCodes || null,
       );
 
       const sshHosts =

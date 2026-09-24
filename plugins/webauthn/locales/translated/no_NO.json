@@ -1,0 +1,18 @@
+{
+  "title": "Passord",
+  "signIn": "Logg inn med passord",
+  "loginFailed": "Innlogging med passord mislyktes",
+  "description": "Bruk WebAuthn/FIDO2-legitimasjon for å logge på uten passord",
+  "namePlaceholder": "Navn på passord",
+  "uv": {
+    "preferred": "Foretrukket",
+    "required": "Obligatorisk",
+    "discouraged": "Motløs"
+  },
+  "add": "Legg til tilgangsnøkkel",
+  "none": "Ingen passord registrert.",
+  "added": "Tilgangsnøkkel lagt til",
+  "addFailed": "Kunne ikke legge til passord",
+  "deleted": "Tilgangsnøkkel slettet",
+  "deleteFailed": "Kunne ikke slette passordet"
+}

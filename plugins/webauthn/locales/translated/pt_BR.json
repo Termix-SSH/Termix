@@ -1,0 +1,18 @@
+{
+  "title": "Senhas",
+  "signIn": "Faça login com a chave de acesso.",
+  "loginFailed": "Falha no login com a chave de acesso",
+  "description": "Use as credenciais WebAuthn/FIDO2 para fazer login sem senha.",
+  "namePlaceholder": "Nome da chave de acesso",
+  "uv": {
+    "preferred": "Preferido",
+    "required": "Obrigatório",
+    "discouraged": "Desencorajado"
+  },
+  "add": "Adicionar chave de acesso",
+  "none": "Nenhuma chave de acesso registrada.",
+  "added": "Senha adicionada",
+  "addFailed": "Falha ao adicionar a chave de acesso.",
+  "deleted": "Senha excluída",
+  "deleteFailed": "Falha ao excluir a chave de acesso."
+}

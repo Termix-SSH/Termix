@@ -18,7 +18,7 @@ import {
   PluginSshInteractionError,
 } from "@termix/plugin-sdk/backend";
 import { assertCapability } from "./permissions.js";
-import { getActor } from "./actor.js";
+import { getActor, getActorSessionId } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import {
   getSshAuthProvider,
@@ -511,13 +511,26 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
     recordEnrollment: async (userId, factorId) => {
       requireDeclared(contributes.secondFactors, factorId, "secondFactors");
       await granted();
-      const { createCurrentUserAuthRepository } =
-        await import("../database/repositories/factory.js");
+      const { assertSecondFactorEnrollmentAllowed } =
+        await import("../auth/core-auth.js");
+      assertSecondFactorEnrollmentAllowed();
+      const {
+        createCurrentSessionRepository,
+        createCurrentTrustedDeviceRepository,
+        createCurrentUserAuthRepository,
+      } = await import("../database/repositories/factory.js");
       await createCurrentUserAuthRepository().recordSecondFactor(
         userId,
         pluginId,
         factorId,
       );
+      // A new factor signs the user out everywhere else and forgets trusted
+      // devices, so nothing that skipped it before keeps skipping it.
+      await createCurrentSessionRepository().revokeAllForUser(
+        userId,
+        getActor() === userId ? getActorSessionId() : undefined,
+      );
+      await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
       await audit("auth_factor_enrolled", `${factorId} for ${userId}`, {
         success: true,
       });

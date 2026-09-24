@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "הזן קוד אימות",
+    "verify": "אימות קוד"
+  },
+  "enrollment": {
+    "title": "מאמת TOTP",
+    "on": "2FA מופעל",
+    "off": "הוסף אבטחת התחברות נוספת",
+    "enable": "לְאַפשֵׁר",
+    "disable": "השבת",
+    "addDevice": "הוסף מכשיר",
+    "addTitle": "הוסף מכשיר אימות",
+    "addScanInstructions": "סרוק את קוד ה-QR הזה עם המאמת הנוסף. המאמתים הקיימים ימשיכו לפעול.",
+    "addSuccess": "מאמת נוסף נרשם",
+    "addFailed": "נכשלה הוספת המאמת",
+    "setupTitle": "הגדר TOTP",
+    "setupFailed": "נכשל בהתחלת הגדרת TOTP",
+    "qrCode": "קוד QR",
+    "secretCopied": "סוד הועתק ללוח",
+    "continueVerify": "המשך לאימות",
+    "verifyTitle": "אימות קוד",
+    "verify": "לְאַמֵת",
+    "enter6Digits": "הזן קוד בן 6 ספרות",
+    "enabledSuccess": "אימות דו-שלבי מופעל",
+    "invalidCode": "קוד לא תקין, אנא נסה שוב",
+    "disableTitle": "השבת 2FA",
+    "disabledSuccess": "אימות דו-שלבי מושבת",
+    "disableFailed": "נכשל בהשבתת 2FA",
+    "backupTitle": "קודי גיבוי",
+    "downloadBackup": "הורד קודי גיבוי",
+    "done": "נַעֲשָׂה"
+  }
+}

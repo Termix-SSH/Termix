@@ -246,23 +246,69 @@ describe("login methods on the login screen", () => {
   });
 
   it("picks up the second factor step after a redirect login", async () => {
-    window.history.replaceState(
-      {},
-      "",
-      "/?second_factor=1&second_factors=totp",
-    );
-    render(<Auth onLogin={vi.fn()} />);
-    const input = await screen.findByPlaceholderText("000000");
-    // Backup codes are letters and digits, and are accepted now.
-    fireEvent.change(input, { target: { value: "abcd-2345" } });
-    expect((input as HTMLInputElement).value).toBe("ABCD2345");
+    const dispose = registerSecondFactor({
+      id: "pin",
+      pluginId: "corp",
+      titleKey: "corp.pin",
+      component: ({ verify }: SecondFactorUIProps) => (
+        <button onClick={() => void verify({ pin: "1234" })}>send pin</button>
+      ),
+    });
+    window.history.replaceState({}, "", "/?second_factor=1&second_factors=pin");
     authMethodsApi.verifySecondFactor.mockResolvedValue({ success: true });
-    fireEvent.submit(input.closest("form")!);
-    await waitFor(() =>
-      expect(authMethodsApi.verifySecondFactor).toHaveBeenCalledWith("totp", {
-        totp_code: "ABCD2345",
-        rememberMe: false,
-      }),
-    );
+    try {
+      render(<Auth onLogin={vi.fn()} />);
+      fireEvent.click(await screen.findByText("send pin"));
+      await waitFor(() =>
+        expect(authMethodsApi.verifySecondFactor).toHaveBeenCalledWith("pin", {
+          pin: "1234",
+          rememberMe: false,
+        }),
+      );
+    } finally {
+      dispose();
+    }
+  });
+
+  it("offers every registered factor when the server lists none", async () => {
+    const dispose = registerSecondFactor({
+      id: "pin",
+      pluginId: "corp",
+      titleKey: "corp.pin",
+      component: () => <span>pin challenge</span>,
+    });
+    window.history.replaceState({}, "", "/?second_factor=1");
+    try {
+      render(<Auth onLogin={vi.fn()} />);
+      expect(await screen.findByText("pin challenge")).toBeTruthy();
+    } finally {
+      dispose();
+    }
+  });
+
+  it("draws an inline method under the password form, not in the external list", async () => {
+    authMethodsApi.getLoginMethods.mockResolvedValue([
+      {
+        id: "quick-key",
+        pluginId: "keys",
+        kind: "form",
+        labelKey: "keys.title",
+        instances: [],
+      },
+    ]);
+    const dispose = registerLoginMethod({
+      id: "quick-key",
+      pluginId: "keys",
+      titleKey: "keys.title",
+      placement: "inline",
+      component: () => <button>quick key</button>,
+    });
+    try {
+      render(<Auth onLogin={vi.fn()} />);
+      expect(await screen.findByText("quick key")).toBeTruthy();
+      expect(screen.queryByText("auth.external")).toBeNull();
+    } finally {
+      dispose();
+    }
   });
 });

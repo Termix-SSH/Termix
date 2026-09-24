@@ -1,0 +1,18 @@
+{
+  "title": "Passkeys",
+  "signIn": "Iniciar sessão com passkey",
+  "loginFailed": "Falha no início de sessão com passkey",
+  "description": "Utilize credenciais WebAuthn/FIDO2 para iniciar sessão sem palavra-passe",
+  "namePlaceholder": "Nome da passkey",
+  "uv": {
+    "preferred": "Preferencial",
+    "required": "Obrigatório",
+    "discouraged": "Desaconselhado"
+  },
+  "add": "Adicionar Passkey",
+  "none": "Nenhuma passkey registada.",
+  "added": "Passkey adicionada",
+  "addFailed": "Falha ao adicionar passkey",
+  "deleted": "Passkey eliminada",
+  "deleteFailed": "Falha ao eliminar chave de acesso"
+}

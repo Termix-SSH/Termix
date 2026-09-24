@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Voer de verificatiecode in.",
+    "verify": "Code verifiëren"
+  },
+  "enrollment": {
+    "title": "TOTP-authenticator",
+    "on": "Tweefactorauthenticatie (2FA) is ingeschakeld.",
+    "off": "Voeg extra inlogbeveiliging toe.",
+    "enable": "Inschakelen",
+    "disable": "Uitzetten",
+    "addDevice": "Apparaat toevoegen",
+    "addTitle": "Authenticatorapparaat toevoegen",
+    "addScanInstructions": "Scan deze QR-code met de extra authenticatie-app. Bestaande authenticatie-apps blijven gewoon werken.",
+    "addSuccess": "Extra authenticatie-app geregistreerd",
+    "addFailed": "Authenticator toevoegen mislukt",
+    "setupTitle": "TOTP instellen",
+    "setupFailed": "Het starten van de TOTP-configuratie is mislukt.",
+    "qrCode": "QR-code",
+    "secretCopied": "Geheim gekopieerd naar het klembord",
+    "continueVerify": "Doorgaan met verifiëren",
+    "verifyTitle": "Code verifiëren",
+    "verify": "Verifiëren",
+    "enter6Digits": "Voer een 6-cijferige code in",
+    "enabledSuccess": "Tweefactorauthenticatie ingeschakeld",
+    "invalidCode": "Ongeldige code, probeer het opnieuw.",
+    "disableTitle": "Schakel 2FA uit",
+    "disabledSuccess": "Tweefactorauthenticatie uitgeschakeld",
+    "disableFailed": "Het uitschakelen van 2FA is mislukt.",
+    "backupTitle": "Back-upcodes",
+    "downloadBackup": "Back-upcodes downloaden",
+    "done": "Klaar"
+  }
+}

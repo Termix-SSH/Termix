@@ -286,8 +286,6 @@ export class LazyFieldEncryption {
     rdpPassword: "rdp_password",
     vncPassword: "vnc_password",
     telnetPassword: "telnet_password",
-    totpSecret: "totp_secret",
-    totpBackupCodes: "totp_backup_codes",
     clientSecret: "client_secret",
     oidcIdentifier: "oidc_identifier",
   };
@@ -314,7 +312,6 @@ export class LazyFieldEncryption {
         "privateKey",
         "publicKey",
       ],
-      users: ["totpSecret", "totpBackupCodes"],
     };
 
     return sensitiveFieldsMap[tableName] || [];
@@ -435,33 +432,6 @@ export class LazyFieldEncryption {
             table: "ssh_credentials",
             recordId: credential.id.toString(),
             fields: credentialPlaintextFields,
-          });
-        }
-      }
-
-      const user = store.getUserRecord(userId);
-      if (user) {
-        const sensitiveFields = this.getSensitiveFieldsForTable("users");
-        const userPlaintextFields: string[] = [];
-
-        for (const field of sensitiveFields) {
-          const column = this.propertyToColumn(field);
-          const value = user[column];
-          if (
-            typeof value === "string" &&
-            value &&
-            this.fieldNeedsMigration(value, userKEK, userId, field)
-          ) {
-            userPlaintextFields.push(field);
-            needsMigration = true;
-          }
-        }
-
-        if (userPlaintextFields.length > 0) {
-          plaintextFields.push({
-            table: "users",
-            recordId: userId,
-            fields: userPlaintextFields,
           });
         }
       }

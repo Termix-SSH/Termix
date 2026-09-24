@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import bcrypt from "bcryptjs";
-import speakeasy from "speakeasy";
 import {
   createAuthState,
   fakeAuthManager,
@@ -98,7 +97,19 @@ const { registerLoginMethod, registerSecondFactor } =
 const { loginRateLimiter } = await import("../../utils/login-rate-limiter.js");
 
 const PASSWORD = "correct-horse";
-const totpSecret = speakeasy.generateSecret({ name: "test" }).base32;
+// Stands in for the totp plugin's factor: core only sees the registration.
+const TOTP_CODE = "123456";
+let disposeTotp: (() => void) | null = null;
+function registerTotpFixture() {
+  disposeTotp = registerSecondFactor({
+    id: "totp",
+    pluginId: "totp",
+    labelKey: "totp:factor",
+    isEnrolled: async () => false,
+    verify: async (_userId, body) => body.totp_code === TOTP_CODE,
+    reset: async () => {},
+  });
+}
 
 function addUser(
   overrides: Partial<import("./auth-test-helpers.js").FakeUser> = {},
@@ -109,7 +120,6 @@ function addUser(
     passwordHash: bcrypt.hashSync(PASSWORD, 4),
     isAdmin: false,
     isOidc: false,
-    totpEnabled: false,
     ...overrides,
   };
   h.state.users.set(user.id, user);
@@ -124,6 +134,8 @@ beforeEach(() => {
   loginRateLimiter.resetAttempts("10.0.0.1", "alice");
   loginRateLimiter.resetTOTPAttempts("u1");
   delete process.env.ALLOW_PASSWORD_LOGIN;
+  disposeTotp?.();
+  registerTotpFixture();
 });
 
 async function passwordLogin(body: Record<string, unknown>, headers = {}) {
@@ -241,12 +253,8 @@ describe("password login through the pipeline", () => {
 
 describe("second factors", () => {
   function enrolTotp() {
-    addUser({
-      totpEnabled: true,
-      totpSecret,
-      totpBackupCodes: JSON.stringify(["BACKUP01"]),
-    });
-    h.state.factors.push({ userId: "u1", pluginId: "core", factorId: "totp" });
+    addUser();
+    h.state.factors.push({ userId: "u1", pluginId: "totp", factorId: "totp" });
   }
 
   it("stops for TOTP with the pending token the old route returned", async () => {
@@ -259,7 +267,7 @@ describe("second factors", () => {
       temp_token: "pending-1",
       rememberMe: false,
       second_factors: [
-        expect.objectContaining({ id: "totp", pluginId: "core" }),
+        expect.objectContaining({ id: "totp", pluginId: "totp" }),
       ],
     });
     expect(h.manager.generateJWTToken).toHaveBeenCalledWith("u1", {
@@ -280,7 +288,7 @@ describe("second factors", () => {
     const req = fakeRequest({
       body: {
         temp_token: tempToken,
-        totp_code: speakeasy.totp({ secret: totpSecret, encoding: "base32" }),
+        totp_code: TOTP_CODE,
         rememberMe: true,
       },
     });
@@ -298,24 +306,40 @@ describe("second factors", () => {
     expect(h.state.audits.at(-1)).toMatchObject({ action: "login" });
   });
 
-  it("accepts a backup code once, stored encrypted", async () => {
+  it("answers the 2.8 route with the user's first factor when none is named", async () => {
     enrolTotp();
     const first = await passwordLogin({
       username: "alice",
       password: PASSWORD,
     });
-    const tempToken = (first.body as { temp_token: string }).temp_token;
     const res = fakeResponse();
     await verifySecondFactorAndRespond(
       fakeRequest({
-        body: { temp_token: tempToken, totp_code: "BACKUP01" },
+        body: {
+          temp_token: (first.body as { temp_token: string }).temp_token,
+          totp_code: TOTP_CODE,
+        },
       }) as never,
       res as never,
-      "totp",
     );
     expect(res.statusCode).toBe(200);
-    // Re-encrypted after use, and the code is gone.
-    expect(h.state.users.get("u1")!.totpBackupCodes).not.toContain("BACKUP01");
+  });
+
+  it("fails closed for a 2.8 TOTP user while the totp plugin is disabled", async () => {
+    enrolTotp();
+    disposeTotp?.();
+    disposeTotp = null;
+    const req = fakeRequest({
+      body: { username: "alice", password: PASSWORD },
+    });
+    const identity = await verifyPasswordLogin(req as never);
+    await expect(
+      runLogin(req as never, identity, {
+        methodId: "password",
+        rememberMe: false,
+      }),
+    ).rejects.toMatchObject({ status: 403, code: "second_factor_unavailable" });
+    expect(h.manager.generateJWTToken).not.toHaveBeenCalled();
   });
 
   it("still stops password login for TOTP when the external-login setting is off", async () => {
@@ -562,9 +586,8 @@ describe("external identities", () => {
       username: "Alice",
       isOidc: true,
       passwordHash: "",
-      totpEnabled: true,
-      totpSecret,
     });
+    h.state.factors.push({ userId: "u9", pluginId: "totp", factorId: "totp" });
     h.state.identities.push({
       id: 1,
       userId: "u9",
@@ -586,9 +609,8 @@ describe("external identities", () => {
       username: "Alice",
       isOidc: true,
       passwordHash: "",
-      totpEnabled: true,
-      totpSecret,
     });
+    h.state.factors.push({ userId: "u9", pluginId: "totp", factorId: "totp" });
     h.state.identities.push({
       id: 1,
       userId: "u9",
@@ -658,9 +680,8 @@ describe("redirect logins", () => {
       username: "Alice",
       isOidc: true,
       passwordHash: "",
-      totpEnabled: true,
-      totpSecret,
     });
+    h.state.factors.push({ userId: "u9", pluginId: "totp", factorId: "totp" });
     h.state.identities.push({
       id: 1,
       userId: "u9",
@@ -686,7 +707,7 @@ describe("redirect logins", () => {
       fakeRequest({
         cookies: { termix_pending_login: res.cookies[0].value },
         body: {
-          totp_code: speakeasy.totp({ secret: totpSecret, encoding: "base32" }),
+          totp_code: TOTP_CODE,
         },
       }) as never,
       verify as never,

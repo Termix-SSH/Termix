@@ -358,7 +358,7 @@ describe("LDAP through the pipeline", () => {
     ).rejects.toMatchObject({ status: 401 });
   });
 
-  it("skips TOTP for an LDAP user who enrolled when the external-login setting is off", async () => {
+  it("skips second factors for an LDAP user who enrolled when the external-login setting is off", async () => {
     h.providerConfig = providerConfig;
     h.state.users.set("u-bob", {
       id: "u-bob",
@@ -367,8 +367,11 @@ describe("LDAP through the pipeline", () => {
       isAdmin: false,
       isOidc: true,
       oidcIdentifier: "ldap:4:bob",
-      totpEnabled: true,
-      totpSecret: "JBSWY3DPEHPK3PXP",
+    });
+    h.state.factors.push({
+      userId: "u-bob",
+      pluginId: "fixture",
+      factorId: "pin",
     });
     const identity = await verifyLdapLogin({
       body: { providerId: 4, username: "bob", password: "hunter2" },
@@ -381,7 +384,7 @@ describe("LDAP through the pipeline", () => {
     expect(result.kind).toBe("session");
   });
 
-  it("runs TOTP for an LDAP user who enrolled when the external-login setting is on", async () => {
+  it("runs second factors for an LDAP user who enrolled when the external-login setting is on", async () => {
     h.providerConfig = providerConfig;
     h.state.settings.set("second_factor_after_external_login", "true");
     h.state.users.set("u-bob", {
@@ -391,17 +394,32 @@ describe("LDAP through the pipeline", () => {
       isAdmin: false,
       isOidc: true,
       oidcIdentifier: "ldap:4:bob",
-      totpEnabled: true,
-      totpSecret: "JBSWY3DPEHPK3PXP",
+    });
+    h.state.factors.push({
+      userId: "u-bob",
+      pluginId: "fixture",
+      factorId: "pin",
     });
     const identity = await verifyLdapLogin({
       body: { providerId: 4, username: "bob", password: "hunter2" },
       ip: "10.0.0.3",
     });
-    const result = await runLogin(fakeRequest() as never, identity, {
-      methodId: "ldap",
-      rememberMe: false,
+    const { registerSecondFactor } = await import("../../auth/registry.js");
+    const dispose = registerSecondFactor({
+      id: "pin",
+      pluginId: "fixture",
+      labelKey: "pin",
+      isEnrolled: async () => false,
+      verify: async () => true,
     });
-    expect(result.kind).toBe("second-factor");
+    try {
+      const result = await runLogin(fakeRequest() as never, identity, {
+        methodId: "ldap",
+        rememberMe: false,
+      });
+      expect(result.kind).toBe("second-factor");
+    } finally {
+      dispose();
+    }
   });
 });

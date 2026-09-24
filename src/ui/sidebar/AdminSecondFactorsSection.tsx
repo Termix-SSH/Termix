@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ShieldOff } from "lucide-react";
 import { Button } from "@/components/button";
+import { pluginKey } from "@/lib/plugin-i18n";
 import {
   getUserSecondFactors,
   resetUserSecondFactors,
@@ -70,7 +71,12 @@ export function AdminSecondFactorsSection({
             >
               <span>
                 {factor.labelKey
-                  ? t(factor.labelKey, { defaultValue: factor.factorId })
+                  ? t(
+                      factor.pluginId === "core"
+                        ? factor.labelKey
+                        : pluginKey(factor.pluginId, factor.labelKey),
+                      { defaultValue: factor.factorId },
+                    )
                   : factor.factorId}
               </span>
               {!factor.available && (

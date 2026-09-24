@@ -8,17 +8,12 @@ export interface UserEncryptionMigrationRecord {
 export interface UserEncryptionMigrationStore {
   listHostRecords(userId: string): UserEncryptionMigrationRecord[];
   listCredentialRecords(userId: string): UserEncryptionMigrationRecord[];
-  getUserRecord(userId: string): UserEncryptionMigrationRecord | undefined;
   updateHostSensitiveFields(
     recordId: number | string,
     record: Record<string, unknown>,
   ): void;
   updateCredentialSensitiveFields(
     recordId: number | string,
-    record: Record<string, unknown>,
-  ): void;
-  updateUserSensitiveFields(
-    userId: string,
     record: Record<string, unknown>,
   ): void;
   updatePasswordResetFields(
@@ -50,10 +45,6 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
     return this.db
       .prepare("SELECT * FROM ssh_credentials WHERE user_id = ?")
       .all(userId);
-  }
-
-  getUserRecord(userId: string): UserEncryptionMigrationRecord | undefined {
-    return this.db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
   }
 
   updateHostSensitiveFields(
@@ -101,27 +92,6 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
         record.public_key || null,
         record.key_type || null,
         recordId,
-      );
-  }
-
-  updateUserSensitiveFields(
-    userId: string,
-    record: Record<string, unknown>,
-  ): void {
-    this.db
-      .prepare(
-        `
-          UPDATE users
-          SET totp_secret = ?, totp_backup_codes = ?, client_secret = ?, oidc_identifier = ?
-          WHERE id = ?
-        `,
-      )
-      .run(
-        record.totp_secret || null,
-        record.totp_backup_codes || null,
-        record.client_secret || null,
-        record.oidc_identifier || null,
-        userId,
       );
   }
 

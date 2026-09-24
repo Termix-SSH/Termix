@@ -1,0 +1,18 @@
+{
+  "title": "Geçiş Anahtarları",
+  "signIn": "passkey ile oturum aç",
+  "loginFailed": "Passkey girişi başarısız oldu",
+  "description": "Parola olmadan oturum açmak için WebAuthn/FIDO2 kimlik bilgilerini kullanın",
+  "namePlaceholder": "Geçiş anahtarı adı",
+  "uv": {
+    "preferred": "Tercih edilen",
+    "required": "Gerekli",
+    "discouraged": "Önerilmeyen"
+  },
+  "add": "Geçiş Anahtarı Ekle",
+  "none": "Kayıtlı geçiş anahtarı yok.",
+  "added": "Geçiş anahtarı eklendi",
+  "addFailed": "Geçiş anahtarı eklenemedi",
+  "deleted": "Geçiş anahtarı silindi",
+  "deleteFailed": "Geçiş anahtarı silinemedi"
+}

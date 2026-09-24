@@ -22,7 +22,6 @@ const mainAxios = vi.hoisted(() => ({
   verifyPasswordResetCode: vi.fn(),
   completePasswordReset: vi.fn(),
   getOIDCAuthorizeUrl: vi.fn(),
-  verifyTOTPLogin: vi.fn(),
   isElectron: vi.fn(),
   getCurrentToken: vi.fn(),
   getOidcSilentLoginDefault: vi.fn(),

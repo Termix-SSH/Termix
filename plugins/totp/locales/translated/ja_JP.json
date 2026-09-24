@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "認証コードを入力",
+    "verify": "コードを確認"
+  },
+  "enrollment": {
+    "title": "TOTP認証",
+    "on": "2FAが有効です",
+    "off": "ログインのセキュリティを強化",
+    "enable": "有効にする",
+    "disable": "無効にする",
+    "addDevice": "デバイスを追加する",
+    "addTitle": "認証デバイスを追加する",
+    "addScanInstructions": "追加の認証デバイスでこのQRコードをスキャンしてください。既存の認証デバイスは引き続きご利用いただけます。",
+    "addSuccess": "追加の認証デバイスを登録しました",
+    "addFailed": "認証システムの追加に失敗しました",
+    "setupTitle": "TOTPを設定",
+    "setupFailed": "TOTPのセットアップを開始できませんでした",
+    "qrCode": "QRコード",
+    "secretCopied": "シークレットをクリップボードにコピーしました",
+    "continueVerify": "確認に進む",
+    "verifyTitle": "コードの確認",
+    "verify": "確認",
+    "enter6Digits": "6桁のコードを入力してください",
+    "enabledSuccess": "二要素認証が有効になりました",
+    "invalidCode": "コードが無効です。もう一度お試しください",
+    "disableTitle": "2FAを無効にする",
+    "disabledSuccess": "二要素認証が無効になりました",
+    "disableFailed": "2FAの無効化に失敗しました",
+    "backupTitle": "バックアップコード",
+    "downloadBackup": "バックアップコードをダウンロード",
+    "done": "完了"
+  }
+}

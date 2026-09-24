@@ -1,0 +1,21 @@
+{
+  "name": "@termix-plugin/totp",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "speakeasy": "^2.0.0"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*",
+    "@types/qrcode": "^1.5.6",
+    "@types/speakeasy": "^2.0.10"
+  }
+}

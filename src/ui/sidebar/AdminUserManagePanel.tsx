@@ -11,7 +11,6 @@ import {
   Pencil,
   Plus,
   RefreshCw,
-  ShieldOff,
   SquareTerminal,
   Trash2,
   TriangleAlert,
@@ -30,7 +29,6 @@ import {
   adminUpdateUserSnippet,
   adminDeleteUserSnippet,
   adminResetUserPassword,
-  adminDisableUserTotp,
   adminExportUserData,
   getSessions,
   revokeSession,
@@ -112,14 +110,14 @@ export function AdminUserManagePanel({
   onBack,
   onOpenHostTab,
   onUserDeleted,
-  onTotpDisabled,
+  onSecondFactorsReset,
 }: {
   user: AdminUser;
   roles: Role[];
   onBack: () => void;
   onOpenHostTab?: (host: Host) => void;
   onUserDeleted: () => void;
-  onTotpDisabled: () => void;
+  onSecondFactorsReset: () => void;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ManageTabId>("account");
@@ -172,7 +170,6 @@ export function AdminUserManagePanel({
   // Account tab state
   const [resetPassword, setResetPassword] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
-  const [totpEnabled, setTotpEnabled] = useState(!!user.totpEnabled);
   const [exportLoading, setExportLoading] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyLoading, setNewKeyLoading] = useState(false);
@@ -289,17 +286,6 @@ export function AdminUserManagePanel({
       }
     } finally {
       setResetLoading(false);
-    }
-  }
-
-  async function handleDisableTotp() {
-    try {
-      await adminDisableUserTotp(user.id);
-      setTotpEnabled(false);
-      onTotpDisabled();
-      toast.success(t("admin.totpDisabledSuccess"));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.totpDisableFailed")));
     }
   }
 
@@ -556,36 +542,6 @@ export function AdminUserManagePanel({
               )}
             </div>
 
-            {/* TOTP */}
-            <div className="flex flex-col gap-2">
-              {sectionHeading(t("admin.totpSectionTitle"))}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  {totpEnabled
-                    ? t("admin.totpStatusEnabled")
-                    : t("admin.totpStatusDisabled")}
-                </span>
-                {totpEnabled && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[10px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() =>
-                      setConfirmDialog({
-                        message: t("admin.disableTotpConfirm", {
-                          username: user.username,
-                        }),
-                        onConfirm: handleDisableTotp,
-                      })
-                    }
-                  >
-                    <ShieldOff className="size-3" />
-                    {t("admin.disableTotp")}
-                  </Button>
-                )}
-              </div>
-            </div>
-
             <AdminSecondFactorsSection
               userId={user.id}
               username={user.username}
@@ -593,10 +549,7 @@ export function AdminUserManagePanel({
               requestConfirm={(message, onConfirm) =>
                 setConfirmDialog({ message, onConfirm })
               }
-              onReset={() => {
-                setTotpEnabled(false);
-                onTotpDisabled();
-              }}
+              onReset={onSecondFactorsReset}
             />
 
             {/* Roles */}

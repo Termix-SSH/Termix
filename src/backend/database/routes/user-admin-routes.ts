@@ -112,6 +112,10 @@ export function registerUserAdminRoutes(
         total = pageUsers.length;
       }
 
+      const secondFactorUsers = requester?.isAdmin
+        ? await createCurrentUserAuthRepository().listUserIdsWithSecondFactors()
+        : new Set<string>();
+
       res.json({
         users: pageUsers.map((u) => ({
           userId: u.id,
@@ -124,7 +128,7 @@ export function registerUserAdminRoutes(
           ...(requester?.isAdmin
             ? {
                 data_unlocked: DataCrypto.canUserAccessData(u.id),
-                totp_enabled: !!u.totpEnabled,
+                second_factor_enabled: secondFactorUsers.has(u.id),
               }
             : {}),
         })),
@@ -473,9 +477,6 @@ export function registerUserAdminRoutes(
         identifierPath: "",
         namePath: "",
         scopes: "openid email profile",
-        totpSecret: null,
-        totpEnabled: false,
-        totpBackupCodes: null,
       });
 
       try {
@@ -673,100 +674,6 @@ export function registerUserAdminRoutes(
     } catch (err) {
       authLogger.error("Failed to reset user password", err);
       res.status(500).json({ error: "Failed to reset password" });
-    }
-  });
-
-  /**
-   * @openapi
-   * /users/admin/totp/disable:
-   *   post:
-   *     summary: Disable a user's TOTP (admin only)
-   *     description: Clears another user's TOTP secret, enabled flag and backup codes so they can log in without 2FA.
-   *     tags:
-   *       - Users
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               userId:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: TOTP disabled for the user.
-   *       400:
-   *         description: User ID is required or TOTP is not enabled.
-   *       403:
-   *         description: Admin access required.
-   *       404:
-   *         description: User not found.
-   *       500:
-   *         description: Failed to disable TOTP.
-   */
-  router.post("/admin/totp/disable", authenticateJWT, async (req, res) => {
-    const adminId = (req as AuthenticatedRequest).userId;
-    const { userId: targetUserId } = req.body;
-
-    if (!isNonEmptyString(targetUserId)) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
-
-    try {
-      const userRepository = createCurrentUserRepository();
-      const adminUser = await userRepository.findById(adminId);
-      if (!adminUser?.isAdmin) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-
-      const targetUser = await userRepository.findById(targetUserId.trim());
-      if (!targetUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      if (!targetUser.totpEnabled) {
-        return res
-          .status(400)
-          .json({ error: "TOTP is not enabled for this user" });
-      }
-
-      await userRepository.update(targetUser.id, {
-        totpSecret: null,
-        totpEnabled: false,
-        totpBackupCodes: null,
-      });
-      await createCurrentUserAuthRepository().removeSecondFactor(
-        targetUser.id,
-        "core",
-        "totp",
-      );
-
-      try {
-        await DatabaseSaveTrigger.forceSave("admin_disable_totp");
-      } catch (saveError) {
-        authLogger.error("Failed to persist TOTP disable to disk", saveError, {
-          operation: "admin_disable_totp_save_failed",
-          userId: targetUser.id,
-        });
-      }
-
-      const { ipAddress, userAgent } = getRequestMeta(req);
-      await logAudit({
-        userId: adminId,
-        username: adminUser.username ?? adminId,
-        action: "admin_disable_totp",
-        resourceType: "user",
-        resourceId: targetUser.id,
-        resourceName: targetUser.username,
-        ipAddress,
-        userAgent,
-        success: true,
-      });
-
-      res.json({ message: "TOTP disabled" });
-    } catch (err) {
-      authLogger.error("Failed to disable TOTP for user", err);
-      res.status(500).json({ error: "Failed to disable TOTP" });
     }
   });
 

@@ -204,12 +204,15 @@ export function createPluginRouter({
   // After auth, so the actor is the user core authenticated rather than
   // whatever the request claimed.
   outer.use((req: Request, _res: Response, next: NextFunction) => {
-    const userId = (req as Request & { userId?: string }).userId;
+    const { userId, sessionId } = req as Request & {
+      userId?: string;
+      sessionId?: string;
+    };
     if (!userId) {
       next();
       return;
     }
-    runAsActor(userId, "request", () => next());
+    runAsActor(userId, "request", () => next(), sessionId);
   });
 
   outer.use(inner);

@@ -232,6 +232,14 @@ export interface PluginSecrets {
   set: (key: string, value: string | null) => Promise<void>;
   /** Removes the acting user's secret. Needs secrets:own. Audited. */
   delete: (key: string) => Promise<void>;
+  /**
+   * Encrypts a value with the installation key, for a plugin that keeps a
+   * secret in its own table and has to read it without an acting user (a
+   * second factor checked during login). Needs secrets:own. Not audited.
+   */
+  seal: (value: string) => Promise<string>;
+  /** Reverses seal(). Null when the value cannot be decrypted. */
+  unseal: (sealed: string) => Promise<string | null>;
   offer: (
     key: string,
     resolve: (userId: string) => Promise<string | null> | string | null,

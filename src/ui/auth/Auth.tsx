@@ -103,16 +103,9 @@ ensureLegacyAuthUI();
 
 const STORAGE_KEY = "termix_auth";
 
-/** Methods drawn by the login form itself rather than the external tab. */
-const INLINE_METHODS = new Set(["password", "passkey"]);
-
-const DEFAULT_SECOND_FACTORS: SecondFactorRef[] = [
-  { id: "totp", pluginId: "core", labelKey: "auth.twoFactorAuth" },
-];
-
+/** An empty list means "whichever factors this screen has UI for". */
 function parseSecondFactorIds(value: string | null): SecondFactorRef[] {
   const ids = (value ?? "").split(",").filter(Boolean);
-  if (ids.length === 0) return DEFAULT_SECOND_FACTORS;
   return ids.map((id) => ({ id, pluginId: "", labelKey: "" }));
 }
 const DESKTOP_MANUAL_LOGOUT_KEY = "termix_desktop_manual_logout";
@@ -153,7 +146,7 @@ function storeAuth(username: string) {
   );
 }
 
-type AuthView = "login" | "register" | "reset" | "totp" | "external";
+type AuthView = "login" | "register" | "reset" | "second-factor" | "external";
 type ResetStep = "email" | "code" | "newpass";
 
 interface AuthProps {
@@ -272,12 +265,20 @@ export function Auth({ onLogin }: AuthProps) {
   // An empty token means the server holds the pending login in a cookie,
   // which is how a redirect login hands over to the second factor step.
   const [pendingToken, setPendingToken] = useState("");
-  const [secondFactors, setSecondFactors] = useState<SecondFactorRef[]>(
-    DEFAULT_SECOND_FACTORS,
-  );
-  const [activeFactorId, setActiveFactorId] = useState("totp");
+  const [secondFactors, setSecondFactors] = useState<SecondFactorRef[]>([]);
+  const [activeFactorId, setActiveFactorId] = useState("");
   const loginMethodUIs = useLoginMethods();
   const secondFactorUIs = useSecondFactors();
+  // A server that did not list its factors gets every factor with a UI here.
+  const shownFactors: SecondFactorRef[] =
+    secondFactors.length > 0
+      ? secondFactors
+      : secondFactorUIs.map((ui) => ({
+          id: ui.id,
+          pluginId: ui.pluginId ?? "",
+          labelKey: ui.titleKey,
+        }));
+  const currentFactorId = activeFactorId || shownFactors[0]?.id || "";
 
   const [resetStep, setResetStep] = useState<ResetStep>("email");
   const [resetCode, setResetCode] = useState("");
@@ -301,10 +302,15 @@ export function Auth({ onLogin }: AuthProps) {
   const [passwordResetAllowed, setPasswordResetAllowed] = useState(true);
   const [authMethods, setAuthMethods] = useState<PublicLoginMethod[]>([]);
   const [authMethodsLoaded, setAuthMethodsLoaded] = useState(false);
-  const externalMethods = authMethods.filter(
-    (method) => !INLINE_METHODS.has(method.id),
+  const inlineMethodIds = new Set(
+    loginMethodUIs.filter((ui) => ui.placement === "inline").map((ui) => ui.id),
   );
-  const passkeyMethod = authMethods.find((method) => method.id === "passkey");
+  const inlineMethods = authMethods.filter((method) =>
+    inlineMethodIds.has(method.id),
+  );
+  const externalMethods = authMethods.filter(
+    (method) => method.id !== "password" && !inlineMethodIds.has(method.id),
+  );
   const silentSigninHandledRef = useRef(false);
   const proxySigninHandledRef = useRef(false);
   const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
@@ -678,14 +684,13 @@ export function Auth({ onLogin }: AuthProps) {
 
   function enterSecondFactorStep(
     tempToken: string,
-    factors: SecondFactorRef[] = DEFAULT_SECOND_FACTORS,
+    factors: SecondFactorRef[] = [],
   ) {
-    const list = factors.length > 0 ? factors : DEFAULT_SECOND_FACTORS;
     setPendingToken(tempToken);
-    setSecondFactors(list);
-    setActiveFactorId(list[0].id);
+    setSecondFactors(factors);
+    setActiveFactorId(factors[0]?.id ?? "");
     setLoading(false);
-    setView("totp");
+    setView("second-factor");
   }
 
   function showLoginError(err: unknown, fallbackKey: string) {
@@ -835,12 +840,12 @@ export function Auth({ onLogin }: AuthProps) {
   async function verifyActiveFactor(body: Record<string, unknown>) {
     setLoading(true);
     try {
-      const res = await verifySecondFactor(activeFactorId, {
+      const res = await verifySecondFactor(currentFactorId, {
         ...body,
         rememberMe,
         ...(pendingToken ? { temp_token: pendingToken } : {}),
       });
-      await finishLogin(res, "totp_auth_component", {
+      await finishLogin(res, "second_factor_auth_component", {
         fallbackUsername: username,
       });
     } catch (err: unknown) {
@@ -1032,12 +1037,9 @@ export function Auth({ onLogin }: AuthProps) {
       startRedirect: (instanceId?: string) =>
         startRedirect(method.id, instanceId),
       complete: (response: Record<string, unknown>) =>
-        completeMethodResponse(
-          response,
-          method.id === "passkey"
-            ? "passkey_auth_component"
-            : "method_auth_component",
-        ).catch((err) => showLoginError(err, "errors.loginFailed")),
+        completeMethodResponse(response).catch((err) =>
+          showLoginError(err, "errors.loginFailed"),
+        ),
     };
     if (ui) {
       const Component = ui.component;
@@ -1330,7 +1332,7 @@ export function Auth({ onLogin }: AuthProps) {
         <div className="flex flex-1 items-center justify-center p-6 overflow-y-auto relative">
           <div className="w-full max-w-sm flex flex-col gap-6">
             {/* TOTP view */}
-            {view === "totp" && (
+            {view === "second-factor" && (
               <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1">
                   <h1 className="text-xl font-bold">
@@ -1340,9 +1342,9 @@ export function Auth({ onLogin }: AuthProps) {
                     {t("auth.enterCode")}
                   </p>
                 </div>
-                {secondFactors.length > 1 && (
+                {shownFactors.length > 1 && (
                   <div className="flex border border-border overflow-hidden">
-                    {secondFactors.map((factor) => {
+                    {shownFactors.map((factor) => {
                       const ui = secondFactorUIs.find(
                         (candidate) => candidate.id === factor.id,
                       );
@@ -1351,7 +1353,7 @@ export function Auth({ onLogin }: AuthProps) {
                           key={factor.id}
                           type="button"
                           onClick={() => setActiveFactorId(factor.id)}
-                          className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeFactorId === factor.id ? "bg-accent-brand text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                          className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${currentFactorId === factor.id ? "bg-accent-brand text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                         >
                           {ui ? t(ui.titleKey) : factor.id}
                         </button>
@@ -1361,7 +1363,7 @@ export function Auth({ onLogin }: AuthProps) {
                 )}
                 {(() => {
                   const ui = secondFactorUIs.find(
-                    (candidate) => candidate.id === activeFactorId,
+                    (candidate) => candidate.id === currentFactorId,
                   );
                   if (!ui) {
                     return (
@@ -1373,14 +1375,14 @@ export function Auth({ onLogin }: AuthProps) {
                   const Component = ui.component;
                   return (
                     <Component
-                      key={activeFactorId}
-                      factorId={activeFactorId}
+                      key={currentFactorId}
+                      factorId={currentFactorId}
                       rememberMe={rememberMe}
                       disabled={loading}
                       verify={verifyActiveFactor}
                       challenge={() =>
                         challengeSecondFactor(
-                          activeFactorId,
+                          currentFactorId,
                           pendingToken || undefined,
                         )
                       }
@@ -1590,7 +1592,7 @@ export function Auth({ onLogin }: AuthProps) {
                       {externalMethods.map((method) =>
                         renderLoginMethod(method),
                       )}
-                      {passkeyMethod && renderLoginMethod(passkeyMethod)}
+                      {inlineMethods.map((method) => renderLoginMethod(method))}
                     </div>
                   </div>
                 )}
@@ -1658,7 +1660,7 @@ export function Auth({ onLogin }: AuthProps) {
                         </span>
                       )}
                     </Button>
-                    {passkeyMethod && renderLoginMethod(passkeyMethod)}
+                    {inlineMethods.map((method) => renderLoginMethod(method))}
                   </form>
                 )}
 

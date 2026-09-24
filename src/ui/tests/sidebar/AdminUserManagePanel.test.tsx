@@ -15,7 +15,6 @@ const api = vi.hoisted(() => ({
   adminUpdateUserSnippet: vi.fn(async () => ({})),
   adminDeleteUserSnippet: vi.fn(async () => ({})),
   adminResetUserPassword: vi.fn(async () => ({ dataWiped: false })),
-  adminDisableUserTotp: vi.fn(async () => ({})),
   adminExportUserData: vi.fn(async () => ({})),
   getSessions: vi.fn(async () => ({ sessions: [] as unknown[] })),
   revokeSession: vi.fn(async () => ({})),
@@ -56,7 +55,6 @@ function makeUser(overrides: Partial<AdminUser> = {}): AdminUser {
     isOidc: false,
     passwordHash: "hash",
     dataUnlocked: true,
-    totpEnabled: false,
     ...overrides,
   };
 }
@@ -72,7 +70,7 @@ function renderPanel(
       onBack={callbacks.onBack ?? vi.fn()}
       onOpenHostTab={callbacks.onOpenHostTab as never}
       onUserDeleted={callbacks.onUserDeleted ?? vi.fn()}
-      onTotpDisabled={callbacks.onTotpDisabled ?? vi.fn()}
+      onSecondFactorsReset={callbacks.onSecondFactorsReset ?? vi.fn()}
     />,
   );
 }
@@ -142,21 +140,6 @@ describe("AdminUserManagePanel", () => {
       id: "7",
       ip: "10.0.0.5",
     });
-  });
-
-  it("disables TOTP through the confirm dialog", async () => {
-    const onTotpDisabled = vi.fn();
-    renderPanel(makeUser({ totpEnabled: true }), { onTotpDisabled });
-
-    expect(screen.getByText("admin.totpStatusEnabled")).toBeTruthy();
-    await userEvent.click(screen.getByText("admin.disableTotp"));
-    await userEvent.click(screen.getByText("common.confirm"));
-
-    await waitFor(() => {
-      expect(api.adminDisableUserTotp).toHaveBeenCalledWith("u2");
-      expect(onTotpDisabled).toHaveBeenCalled();
-    });
-    expect(screen.getByText("admin.totpStatusDisabled")).toBeTruthy();
   });
 
   it("creates a snippet for the target user", async () => {

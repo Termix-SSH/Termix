@@ -7,6 +7,7 @@ const calls = vi.hoisted(() => ({
   rotatedFor: [] as string[],
   legacyWrapsDeletedFor: [] as string[],
   dataWipedEvents: [] as Array<{ userId: string }>,
+  secondFactorsReset: [] as string[],
 }));
 
 function deletingRepo(label: string) {
@@ -59,6 +60,13 @@ vi.mock("../../../utils/crypto-migration/dek-migration.js", () => ({
   },
 }));
 
+vi.mock("../../../auth/second-factor-admin.js", () => ({
+  resetUserSecondFactors: async (userId: string) => {
+    calls.secondFactorsReset.push(userId);
+    return [];
+  },
+}));
+
 import { resetUserPassword } from "../../../database/routes/user-password-reset-routes.js";
 
 function fakeAuthManager(unlocked: boolean): AuthManager {
@@ -70,6 +78,7 @@ function fakeAuthManager(unlocked: boolean): AuthManager {
 
 beforeEach(() => {
   calls.userUpdates = [];
+  calls.secondFactorsReset = [];
   calls.deletedFor = [];
   calls.rotatedFor = [];
   calls.legacyWrapsDeletedFor = [];
@@ -124,8 +133,6 @@ describe("resetUserPassword", () => {
     expect(calls.dataWipedEvents).toEqual([{ userId: "user-1" }]);
     expect(calls.rotatedFor).toEqual(["user-1"]);
     expect(calls.legacyWrapsDeletedFor).toEqual(["user-1"]);
-    expect(
-      calls.userUpdates.some(([, update]) => update.totpEnabled === false),
-    ).toBe(true);
+    expect(calls.secondFactorsReset).toEqual(["user-1"]);
   });
 });

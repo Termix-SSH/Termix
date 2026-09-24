@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "tables": {
+    "credentials": {
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "length": 255,
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "credentialId": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true,
+          "unique": true
+        },
+        "publicKey": {
+          "type": "text",
+          "notNull": true
+        },
+        "counter": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 0
+        },
+        "deviceType": {
+          "type": "text"
+        },
+        "backedUp": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "transports": {
+          "type": "text"
+        },
+        "userVerification": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "preferred"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "lastUsedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [],
+      "adopts": "webauthn_credentials"
+    }
+  }
+}

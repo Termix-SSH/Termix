@@ -113,6 +113,27 @@ export class UserAuthRepository {
     return this.context.drizzle.select().from(userSecondFactors);
   }
 
+  /** Users enrolled in at least one second factor, whichever plugin owns it. */
+  async listUserIdsWithSecondFactors(): Promise<Set<string>> {
+    const rows = await this.context.drizzle
+      .selectDistinct({ userId: userSecondFactors.userId })
+      .from(userSecondFactors);
+    return new Set(rows.map((row) => row.userId));
+  }
+
+  async countUsersWithSecondFactors(): Promise<number> {
+    return (await this.listUserIdsWithSecondFactors()).size;
+  }
+
+  async hasSecondFactor(userId: string): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .select({ userId: userSecondFactors.userId })
+      .from(userSecondFactors)
+      .where(eq(userSecondFactors.userId, userId))
+      .limit(1);
+    return rows.length > 0;
+  }
+
   async recordSecondFactor(
     userId: string,
     pluginId: string,

@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Insira o código de verificação",
+    "verify": "Código de verificação"
+  },
+  "enrollment": {
+    "title": "Autenticador TOTP",
+    "on": "A autenticação de dois fatores está ativada.",
+    "off": "Adicione segurança extra ao login.",
+    "enable": "Habilitar",
+    "disable": "Desativar",
+    "addDevice": "Adicionar dispositivo",
+    "addTitle": "Adicionar dispositivo autenticador",
+    "addScanInstructions": "Escaneie este código QR com o autenticador adicional. Os autenticadores existentes continuarão funcionando.",
+    "addSuccess": "Autenticador adicional cadastrado",
+    "addFailed": "Falha ao adicionar autenticador",
+    "setupTitle": "Configurar TOTP",
+    "setupFailed": "Falha ao iniciar a configuração TOTP",
+    "qrCode": "Código QR",
+    "secretCopied": "Segredo copiado para a área de transferência",
+    "continueVerify": "Continuar a verificar",
+    "verifyTitle": "Código de verificação",
+    "verify": "Verificar",
+    "enter6Digits": "Digite um código de 6 dígitos",
+    "enabledSuccess": "Autenticação de dois fatores ativada",
+    "invalidCode": "Código inválido, tente novamente.",
+    "disableTitle": "Desative a autenticação de dois fatores (2FA).",
+    "disabledSuccess": "Autenticação de dois fatores desativada",
+    "disableFailed": "Falha ao desativar a autenticação de dois fatores (2FA).",
+    "backupTitle": "Códigos de backup",
+    "downloadBackup": "Baixar códigos de backup",
+    "done": "Feito"
+  }
+}

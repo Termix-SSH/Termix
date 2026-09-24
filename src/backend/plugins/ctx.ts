@@ -600,6 +600,26 @@ export function createPluginContext(
         { action: "secret_delete", details: () => "deleted a secret" },
       ),
 
+      seal: async (value) => {
+        await assertCapability(pluginId, "secrets:own", declared);
+        const { encryptSystemSecret } =
+          await import("../utils/system-secret-crypto.js");
+        return encryptSystemSecret(value);
+      },
+
+      unseal: async (sealed) => {
+        await assertCapability(pluginId, "secrets:own", declared);
+        const { decryptSystemSecret, isSystemEncrypted } =
+          await import("../utils/system-secret-crypto.js");
+        // Only values seal() wrote: a plain string must not pass as sealed.
+        if (!sealed || !isSystemEncrypted(sealed)) return null;
+        try {
+          return await decryptSystemSecret(sealed);
+        } catch {
+          return null;
+        }
+      },
+
       offer: (key, resolve) => {
         const entry = manifest.providesSecret?.find(
           (candidate) => candidate.key === key,

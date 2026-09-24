@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Bestätigungscode eingeben",
+    "verify": "Code überprüfen"
+  },
+  "enrollment": {
+    "title": "TOTP-Authentifikator",
+    "on": "2FA ist aktiviert",
+    "off": "Zusätzliche Anmeldesicherheit hinzufügen",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "addDevice": "Gerät hinzufügen",
+    "addTitle": "Authentifizierungsgerät hinzufügen",
+    "addScanInstructions": "Scannen Sie diesen QR-Code mit dem zusätzlichen Authentifikator. Bestehende Authentifikatoren funktionieren weiterhin.",
+    "addSuccess": "Zusätzlicher Authentifizierungsalgorithmus registriert",
+    "addFailed": "Authentifikator konnte nicht hinzugefügt werden",
+    "setupTitle": "TOTP einrichten",
+    "setupFailed": "Fehler beim Starten der TOTP-Einrichtung",
+    "qrCode": "QR-Code",
+    "secretCopied": "Secret in die Zwischenablage kopiert",
+    "continueVerify": "Weiter zur Verifizierung",
+    "verifyTitle": "Code verifizieren",
+    "verify": "Verifizieren",
+    "enter6Digits": "Geben Sie einen 6-stelligen Code ein",
+    "enabledSuccess": "Zwei-Faktor-Authentifizierung aktiviert",
+    "invalidCode": "Ungültiger Code, bitte versuchen Sie es erneut",
+    "disableTitle": "2FA deaktivieren",
+    "disabledSuccess": "Zwei-Faktor-Authentifizierung deaktiviert",
+    "disableFailed": "Fehler beim Deaktivieren der 2FA",
+    "backupTitle": "Backup-Codes",
+    "downloadBackup": "Backup-Codes herunterladen",
+    "done": "Fertig"
+  }
+}

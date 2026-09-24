@@ -1,0 +1,18 @@
+{
+  "title": "Passkeys",
+  "signIn": "Accedi con passkey",
+  "loginFailed": "Accesso con passkey non riuscito",
+  "description": "Utilizza credenziali WebAuthn/FIDO2 per accedere senza password",
+  "namePlaceholder": "Nome passkey",
+  "uv": {
+    "preferred": "Preferita",
+    "required": "Obbligatoria",
+    "discouraged": "Sconsigliata"
+  },
+  "add": "Aggiungi passkey",
+  "none": "Nessuna passkey registrata.",
+  "added": "Passkey aggiunta",
+  "addFailed": "Impossibile aggiungere la passkey",
+  "deleted": "Passkey eliminata",
+  "deleteFailed": "Impossibile eliminare la passkey"
+}

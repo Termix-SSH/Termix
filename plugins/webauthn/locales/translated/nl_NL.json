@@ -1,0 +1,18 @@
+{
+  "title": "Wachtwoorden",
+  "signIn": "Aanmelden met wachtwoord",
+  "loginFailed": "Aanmelden met wachtwoord mislukt",
+  "description": "Gebruik WebAuthn/FIDO2-gegevens om zonder wachtwoord in te loggen.",
+  "namePlaceholder": "Wachtwoordnaam",
+  "uv": {
+    "preferred": "Voorkeur",
+    "required": "Vereist",
+    "discouraged": "Ontmoedigd"
+  },
+  "add": "Voeg wachtwoord toe",
+  "none": "Er zijn geen wachtwoorden geregistreerd.",
+  "added": "Wachtwoord toegevoegd",
+  "addFailed": "Wachtwoord toevoegen mislukt",
+  "deleted": "Wachtwoord verwijderd",
+  "deleteFailed": "Het verwijderen van de toegangscode is mislukt."
+}

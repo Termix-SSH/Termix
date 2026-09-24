@@ -8,9 +8,6 @@ export interface FakeUser {
   isOidc: boolean;
   oidcIdentifier?: string | null;
   ssoProviderId?: number | null;
-  totpEnabled?: boolean;
-  totpSecret?: string | null;
-  totpBackupCodes?: string | null;
 }
 
 /** In-memory stand-ins for the repositories the login pipeline touches. */
@@ -99,6 +96,12 @@ export function fakeFactory(state: AuthState) {
       },
       listSecondFactors: async (userId: string) =>
         state.factors.filter((row) => row.userId === userId),
+      hasSecondFactor: async (userId: string) =>
+        state.factors.some((row) => row.userId === userId),
+      listUserIdsWithSecondFactors: async () =>
+        new Set(state.factors.map((row) => row.userId)),
+      countUsersWithSecondFactors: async () =>
+        new Set(state.factors.map((row) => row.userId)).size,
       recordSecondFactor: async (
         userId: string,
         pluginId: string,
@@ -199,7 +202,7 @@ export function fakeAuthManager(state: AuthState) {
     }),
     authenticateUser: vi.fn(async () => true),
     authenticateOIDCUser: vi.fn(async () => true),
-    authenticateWebAuthnUser: vi.fn(async () => true),
+    unlockWithSystemKey: vi.fn(async () => true),
     registerOIDCUser: vi.fn(async () => {}),
     isTrustedDevice: vi.fn(async (userId: string, fingerprint: string) =>
       state.trusted.has(`${userId}:${fingerprint}`),

@@ -11,9 +11,9 @@ import { createRegistry } from "@/lib/registry";
  * SSH auth editors render in the host and credential editors when their auth
  * type is picked. Login methods render on the login screen for methods the
  * server reports as enabled; second factors render in the step after a first
- * login and, when they bring one, in Settings > Security for enrolment.
- * Core's own (OIDC, LDAP, passkeys, TOTP) register from
- * src/ui/auth/legacy-auth-ui.tsx until they move into plugins.
+ * login. Either kind may bring an enrolment section for Settings > Security.
+ * Core's own (OIDC, LDAP) register from src/ui/auth/legacy-auth-ui.tsx until
+ * they move into plugins.
  */
 export interface SshAuthEditorDef {
   /** The authType value stored on the host. */
@@ -34,6 +34,9 @@ export interface LoginMethodDef {
   titleKey: string;
   icon?: ComponentType<{ className?: string }>;
   component: ComponentType<LoginMethodUIProps>;
+  /** Also drawn under the password form. */
+  placement?: "inline";
+  enrollment?: ComponentType<Record<string, unknown>>;
 }
 
 export interface SecondFactorDef {
@@ -55,10 +58,12 @@ export const useSshAuthEditors = sshAuthEditors.useList;
 export const registerLoginMethod = loginMethods.register;
 export const getLoginMethodUI = loginMethods.get;
 export const useLoginMethods = loginMethods.useList;
+export const listLoginMethodUIs = loginMethods.list;
 
 export const registerSecondFactor = secondFactors.register;
 export const getSecondFactorUI = secondFactors.get;
 export const useSecondFactors = secondFactors.useList;
+export const listSecondFactorUIs = secondFactors.list;
 
 export function resetAuthRegistries(): void {
   sshAuthEditors.reset();

@@ -1,0 +1,18 @@
+{
+  "title": "Passkeys",
+  "signIn": "Đăng nhập bằng khóa truy cập",
+  "loginFailed": "Đăng nhập bằng passkey thất bại",
+  "description": "Sử dụng thông tin đăng nhập WebAuthn/FIDO2 để đăng nhập không cần mật khẩu",
+  "namePlaceholder": "Tên passkey",
+  "uv": {
+    "preferred": "Ưu tiên",
+    "required": "Bắt buộc",
+    "discouraged": "Không khuyến khích"
+  },
+  "add": "Thêm Passkey",
+  "none": "Chưa đăng ký passkey nào.",
+  "added": "Đã thêm Passkey",
+  "addFailed": "Không thêm được Passkey",
+  "deleted": "Đã xóa Passkey",
+  "deleteFailed": "Xóa passkey thất bại"
+}

@@ -54,7 +54,6 @@ describe("UserRepository and SessionRepository", () => {
     });
 
     expect(await repo.users.countAdmins()).toBe(1);
-    expect(await repo.users.countTotpEnabled()).toBe(0);
     expect((await repo.users.listAll()).map((user) => user.id)).toEqual([
       "user-1",
     ]);
@@ -66,10 +65,8 @@ describe("UserRepository and SessionRepository", () => {
 
     const updated = await repo.users.update("user-1", {
       oidcIdentifier: "oidc:admin",
-      totpEnabled: true,
     });
     expect(updated?.oidcIdentifier).toBe("oidc:admin");
-    expect(await repo.users.countTotpEnabled()).toBe(1);
     expect((await repo.users.findByOidcIdentifier("oidc:admin"))?.id).toBe(
       "user-1",
     );

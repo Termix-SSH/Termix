@@ -74,24 +74,19 @@ describe("parseLegacyIdentifier", () => {
 });
 
 describe("runExternalIdentityMigration", () => {
-  it("moves every identifier and TOTP enrolment without touching the old data", async () => {
+  it("moves every identifier without touching the old data", async () => {
     user("ldap-user", { oidcIdentifier: "ldap:4:bob", ssoProviderId: 4 });
     user("gh-user", { oidcIdentifier: "github:7:42", ssoProviderId: 7 });
     user("oidc-user", {
       oidcIdentifier: "sub-123",
       ssoProviderId: 3,
-      totpEnabled: true,
     });
     user("env-user", { oidcIdentifier: "someone@example.com" });
-    user("local", {
-      isOidc: false,
-      passwordHash: "hash",
-      totpEnabled: true,
-    });
+    user("local", { isOidc: false, passwordHash: "hash" });
 
     const result = await runExternalIdentityMigration();
 
-    expect(result).toEqual({ identities: 4, factors: 2, skipped: 0 });
+    expect(result).toEqual({ identities: 4, skipped: 0 });
     expect(
       h.state.identities.map(({ userId, providerId, subject }) => ({
         userId,
@@ -108,21 +103,15 @@ describe("runExternalIdentityMigration", () => {
         subject: "someone@example.com",
       },
     ]);
-    expect(h.state.factors).toEqual([
-      { userId: "oidc-user", pluginId: "core", factorId: "totp" },
-      { userId: "local", pluginId: "core", factorId: "totp" },
-    ]);
-    // Lossless: the old column and flag stay.
+    // Lossless: the old column stays.
     expect(h.state.users.get("ldap-user")!.oidcIdentifier).toBe("ldap:4:bob");
-    expect(h.state.users.get("local")!.totpEnabled).toBe(true);
   });
 
   it("is idempotent", async () => {
-    user("ldap-user", { oidcIdentifier: "ldap:4:bob", totpEnabled: true });
+    user("ldap-user", { oidcIdentifier: "ldap:4:bob" });
     await runExternalIdentityMigration();
     const second = await runExternalIdentityMigration();
-    expect(second).toEqual({ identities: 0, factors: 0, skipped: 2 });
+    expect(second).toEqual({ identities: 0, skipped: 1 });
     expect(h.state.identities).toHaveLength(1);
-    expect(h.state.factors).toHaveLength(1);
   });
 });

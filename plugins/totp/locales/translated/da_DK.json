@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Indtast bekræftelseskode",
+    "verify": "Bekræft kode"
+  },
+  "enrollment": {
+    "title": "TOTP-godkendelse",
+    "on": "2FA er aktiveret",
+    "off": "Tilføj ekstra loginsikkerhed",
+    "enable": "Aktivér",
+    "disable": "Deaktiver",
+    "addDevice": "Tilføj enhed",
+    "addTitle": "Tilføj godkendelsesenhed",
+    "addScanInstructions": "Scan denne QR-kode med den ekstra godkendelsesfunktion. Eksisterende godkendelsesfunktioner vil fortsat virke.",
+    "addSuccess": "Yderligere godkendelsesfunktion tilmeldt",
+    "addFailed": "Kunne ikke tilføje godkendelse",
+    "setupTitle": "Opsæt TOTP",
+    "setupFailed": "Kunne ikke starte TOTP-opsætningen",
+    "qrCode": "QR-kode",
+    "secretCopied": "Hemmelighed kopieret til udklipsholder",
+    "continueVerify": "Fortsæt med at bekræfte",
+    "verifyTitle": "Bekræft kode",
+    "verify": "Verificere",
+    "enter6Digits": "Indtast en 6-cifret kode",
+    "enabledSuccess": "Tofaktorgodkendelse aktiveret",
+    "invalidCode": "Ugyldig kode, prøv igen",
+    "disableTitle": "Deaktiver 2FA",
+    "disabledSuccess": "Tofaktorgodkendelse deaktiveret",
+    "disableFailed": "Kunne ikke deaktivere 2FA",
+    "backupTitle": "Backupkoder",
+    "downloadBackup": "Download backupkoder",
+    "done": "Færdig"
+  }
+}

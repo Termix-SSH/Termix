@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "輸入驗證碼",
+    "verify": "驗證代碼"
+  },
+  "enrollment": {
+    "title": "TOTP 驗證器",
+    "on": "雙因素驗證已啟用",
+    "off": "新增額外的登入安全性",
+    "enable": "啟用",
+    "disable": "停用",
+    "addDevice": "新增設備",
+    "addTitle": "新增身份驗證器設備",
+    "addScanInstructions": "請使用新增的驗證器掃描此二維碼。現有驗證器將繼續有效。",
+    "addSuccess": "已註冊其他身份驗證器",
+    "addFailed": "新增身份驗證器失敗",
+    "setupTitle": "設定 TOTP",
+    "setupFailed": "無法啟動 TOTP 設定",
+    "qrCode": "QR 碼",
+    "secretCopied": "密鑰已複製到剪貼簿",
+    "continueVerify": "繼續驗證",
+    "verifyTitle": "驗證碼",
+    "verify": "驗證",
+    "enter6Digits": "輸入 6 位數驗證碼",
+    "enabledSuccess": "雙因素驗證已啟用",
+    "invalidCode": "驗證碼無效，請再試一次",
+    "disableTitle": "停用雙因素驗證",
+    "disabledSuccess": "雙因素驗證已停用",
+    "disableFailed": "無法停用雙因素驗證",
+    "backupTitle": "備用驗證碼",
+    "downloadBackup": "下載備用驗證碼",
+    "done": "完成"
+  }
+}

@@ -168,7 +168,11 @@ class AuthManager {
     return this.ensureUserDEK(userId);
   }
 
-  async authenticateWebAuthnUser(
+  /**
+   * Opens the user's data key with the server-held wrapping, for a sign-in
+   * that carries no password (a passkey, trusted proxy login).
+   */
+  async unlockWithSystemKey(
     userId: string,
     _deviceType?: DeviceType,
   ): Promise<boolean> {

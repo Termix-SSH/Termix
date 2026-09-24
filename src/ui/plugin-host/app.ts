@@ -350,6 +350,9 @@ export function createPluginApp(
           titleKey: key(method.titleKey),
           pluginId,
           component: scoped(method.component) as never,
+          enrollment: method.enrollment
+            ? (scoped(method.enrollment) as never)
+            : undefined,
         }),
       );
     },

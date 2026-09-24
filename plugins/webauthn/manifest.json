@@ -1,0 +1,31 @@
+{
+  "id": "webauthn",
+  "name": "Passkeys",
+  "version": "1.0.0",
+  "description": "Sign in with a passkey or security key instead of a password. A passkey that checks your PIN or fingerprint also counts as the second factor.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "Fingerprint",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "network:serve",
+    "auth:provide",
+    "settings:read-core",
+    "ui:surface"
+  ],
+  "contributes": {
+    "auth": {
+      "loginMethods": ["passkey"]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

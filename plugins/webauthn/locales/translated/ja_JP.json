@@ -1,0 +1,18 @@
+{
+  "title": "パスキー",
+  "signIn": "パスキーでサインイン",
+  "loginFailed": "パスキーログインに失敗しました",
+  "description": "WebAuthn/FIDO2認証情報を使用してパスワードなしでサインインできます",
+  "namePlaceholder": "パスキー名",
+  "uv": {
+    "preferred": "優先",
+    "required": "必須",
+    "discouraged": "非推奨"
+  },
+  "add": "パスキーを追加",
+  "none": "登録されたパスキーはありません。",
+  "added": "パスキーが追加されました",
+  "addFailed": "パスキーの追加に失敗しました",
+  "deleted": "パスキーが削除されました",
+  "deleteFailed": "パスキーの削除に失敗しました"
+}

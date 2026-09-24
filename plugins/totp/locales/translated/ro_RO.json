@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Introduceți codul de verificare",
+    "verify": "Verificați codul"
+  },
+  "enrollment": {
+    "title": "Autentificator TOTP",
+    "on": "2FA este activat",
+    "off": "Adăugați securitate suplimentară la conectare",
+    "enable": "Permite",
+    "disable": "Dezactivare",
+    "addDevice": "Adăugați dispozitiv",
+    "addTitle": "Adăugați un dispozitiv de autentificare",
+    "addScanInstructions": "Scanați acest cod QR cu ajutorul autentificatorului suplimentar. Autentificatoarele existente vor continua să funcționeze.",
+    "addSuccess": "Autentificator suplimentar înscris",
+    "addFailed": "Nu s-a putut adăuga autentificatorul",
+    "setupTitle": "Configurați TOTP",
+    "setupFailed": "Nu s-a putut porni configurarea TOTP",
+    "qrCode": "Cod QR",
+    "secretCopied": "Secret copiat în clipboard",
+    "continueVerify": "Continuați verificarea",
+    "verifyTitle": "Verificați codul",
+    "verify": "Verifica",
+    "enter6Digits": "Introduceți un cod de 6 cifre",
+    "enabledSuccess": "Autentificarea cu doi factori activată",
+    "invalidCode": "Cod nevalid, vă rugăm să încercați din nou",
+    "disableTitle": "Dezactivați 2FA",
+    "disabledSuccess": "Autentificarea cu doi factori este dezactivată",
+    "disableFailed": "Nu s-a putut dezactiva 2FA",
+    "backupTitle": "Coduri de rezervă",
+    "downloadBackup": "Descărcați coduri de rezervă",
+    "done": "Făcut"
+  }
+}

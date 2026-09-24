@@ -24,6 +24,8 @@ interface ActorStore {
   userId: string;
   /** Where the identity came from, for the audit line. */
   source: "request" | "asUser" | "service";
+  /** The session a request came in on, so core can spare it when revoking. */
+  sessionId?: string;
 }
 
 const storage = new AsyncLocalStorage<ActorStore>();
@@ -32,8 +34,13 @@ export function runAsActor<T>(
   userId: string,
   source: ActorStore["source"],
   fn: () => T,
+  sessionId?: string,
 ): T {
-  return storage.run({ userId, source }, fn);
+  return storage.run({ userId, source, sessionId }, fn);
+}
+
+export function getActorSessionId(): string | undefined {
+  return storage.getStore()?.sessionId;
 }
 
 export function getActor(): string | undefined {

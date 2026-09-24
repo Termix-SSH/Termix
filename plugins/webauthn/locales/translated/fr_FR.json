@@ -1,0 +1,18 @@
+{
+  "title": "Clés d’accès",
+  "signIn": "Se connecter avec une clé d'accès",
+  "loginFailed": "Échec de la connexion par clé d'accès",
+  "description": "Utilisez des identifiants WebAuthn/FIDO2 pour vous connecter sans mot de passe",
+  "namePlaceholder": "Nom de la clé d’accès",
+  "uv": {
+    "preferred": "Préféré",
+    "required": "Requis",
+    "discouraged": "Déconseillé"
+  },
+  "add": "Ajouter une clé d’accès",
+  "none": "Aucune clé d’accès enregistrée.",
+  "added": "Clé d’accès ajoutée",
+  "addFailed": "Échec de l’ajout de la clé d’accès",
+  "deleted": "Clé d’accès supprimée",
+  "deleteFailed": "Échec de la suppression de la clé d'accès"
+}

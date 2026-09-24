@@ -1,0 +1,18 @@
+{
+  "title": "Lösenord",
+  "signIn": "Logga in med lösenord",
+  "loginFailed": "Inloggning med lösenordsnyckel misslyckades",
+  "description": "Använd WebAuthn/FIDO2-inloggningsuppgifter för att logga in utan lösenord",
+  "namePlaceholder": "Lösenordsnamn",
+  "uv": {
+    "preferred": "Föredragen",
+    "required": "Nödvändig",
+    "discouraged": "Avskräckt"
+  },
+  "add": "Lägg till lösenord",
+  "none": "Inga lösennycklar registrerade.",
+  "added": "Lösenord tillagt",
+  "addFailed": "Misslyckades med att lägga till lösenord",
+  "deleted": "Lösenordet raderat",
+  "deleteFailed": "Misslyckades med att ta bort lösenordet"
+}

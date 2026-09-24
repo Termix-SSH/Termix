@@ -1,0 +1,19 @@
+{
+  "name": "@termix-plugin/webauthn",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*"
+  }
+}

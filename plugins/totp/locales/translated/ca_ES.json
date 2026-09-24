@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Introduïu el codi de verificació",
+    "verify": "Verifica el codi"
+  },
+  "enrollment": {
+    "title": "Autenticador TOTP",
+    "on": "2FA està activat",
+    "off": "Afegeix seguretat d'inici de sessió addicional",
+    "enable": "Activa",
+    "disable": "Desactiva",
+    "addDevice": "Afegeix un dispositiu",
+    "addTitle": "Afegeix un dispositiu d'autenticació",
+    "addScanInstructions": "Escaneja aquest codi QR amb l'autenticador addicional. Els autenticadors existents continuaran funcionant.",
+    "addSuccess": "Autenticador addicional inscrit",
+    "addFailed": "No s'ha pogut afegir l'autenticador",
+    "setupTitle": "Configura TOTP",
+    "setupFailed": "No s'ha pogut iniciar la configuració del TOTP",
+    "qrCode": "Codi QR",
+    "secretCopied": "Secret copiat al porta-retalls",
+    "continueVerify": "Continua a verificar",
+    "verifyTitle": "Verifica el codi",
+    "verify": "Verifica",
+    "enter6Digits": "Introduïu un codi de 6 dígits",
+    "enabledSuccess": "Autenticació de dos factors activada",
+    "invalidCode": "Codi no vàlid, si us plau, torna-ho a intentar.",
+    "disableTitle": "Desactiva la 2FA",
+    "disabledSuccess": "Autenticació de dos factors desactivada",
+    "disableFailed": "No s'ha pogut desactivar la 2FA",
+    "backupTitle": "Codis de còpia de seguretat",
+    "downloadBackup": "Baixa els codis de còpia de seguretat",
+    "done": "Fet"
+  }
+}

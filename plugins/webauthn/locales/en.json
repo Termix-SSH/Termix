@@ -1,0 +1,22 @@
+{
+  "title": "Passkeys",
+  "signIn": "Sign in with passkey",
+  "loginFailed": "Passkey login failed",
+  "description": "Use WebAuthn/FIDO2 credentials to sign in without a password",
+  "namePlaceholder": "Passkey name",
+  "defaultName": "Passkey",
+  "uv": {
+    "preferred": "Preferred",
+    "required": "Required",
+    "discouraged": "Discouraged"
+  },
+  "add": "Add Passkey",
+  "none": "No passkeys registered.",
+  "added": "Passkey added",
+  "addFailed": "Failed to add passkey",
+  "delete": "Delete passkey",
+  "deleted": "Passkey deleted",
+  "deleteFailed": "Failed to delete passkey",
+  "unknownDevice": "unknown",
+  "synced": "synced"
+}

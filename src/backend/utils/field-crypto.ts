@@ -15,13 +15,7 @@ class FieldCrypto {
   private static readonly SALT_LENGTH = 32;
 
   private static readonly ENCRYPTED_FIELDS = {
-    users: new Set([
-      "passwordHash",
-      "clientSecret",
-      "totpSecret",
-      "totpBackupCodes",
-      "oidcIdentifier",
-    ]),
+    users: new Set(["passwordHash", "clientSecret", "oidcIdentifier"]),
     ssh_data: new Set([
       "password",
       "key",

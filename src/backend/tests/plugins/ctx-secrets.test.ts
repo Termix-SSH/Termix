@@ -63,6 +63,7 @@ vi.mock("../../database/repositories/factory.js", () => ({
 vi.mock("../../utils/system-secret-crypto.js", () => ({
   encryptSystemSecret: async (value: string) => `sysenc:${value}`,
   decryptSystemSecret: async (value: string) => value.replace(/^sysenc:/, ""),
+  isSystemEncrypted: (value: string) => value.startsWith("sysenc:"),
 }));
 
 vi.mock("../../utils/audit-logger.js", () => ({
@@ -155,5 +156,21 @@ describe("ctx.secrets store", () => {
       expect(await ctx.secrets.get("b")).toBeNull();
     });
     expect(state.rows.size).toBe(0);
+  });
+
+  it("seals without an acting user and refuses without secrets:own", async () => {
+    const denied = contextFor([]);
+    await expect(denied.secrets.seal("v")).rejects.toThrow(/secrets:own/);
+    await expect(denied.secrets.unseal("sysenc:v")).rejects.toThrow(
+      /secrets:own/,
+    );
+
+    const ctx = contextFor(["secrets:own"]);
+    const sealed = await ctx.secrets.seal("totp-secret");
+    expect(sealed).toBe("sysenc:totp-secret");
+    expect(await ctx.secrets.unseal(sealed)).toBe("totp-secret");
+    // A plain string was never sealed and must not read back as one.
+    expect(await ctx.secrets.unseal("totp-secret")).toBeNull();
+    expect(JSON.stringify(auditEntries)).not.toContain("totp-secret");
   });
 });

@@ -168,10 +168,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "Single sign-on provider configuration",
       },
       {
-        name: "WebAuthn",
-        description: "Passkey registration and authentication",
-      },
-      {
         name: "Vault",
         description: "HashiCorp Vault SSH signing profiles",
       },

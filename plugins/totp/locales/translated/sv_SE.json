@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Ange verifieringskod",
+    "verify": "Verifiera kod"
+  },
+  "enrollment": {
+    "title": "TOTP-autentiserare",
+    "on": "2FA är aktiverat",
+    "off": "Lägg till extra inloggningssäkerhet",
+    "enable": "Aktivera",
+    "disable": "Inaktivera",
+    "addDevice": "Lägg till enhet",
+    "addTitle": "Lägg till autentiseringsenhet",
+    "addScanInstructions": "Skanna den här QR-koden med den extra autentiseringsfunktionen. Befintliga autentiseringsfunktioner kommer att fortsätta fungera.",
+    "addSuccess": "Ytterligare autentiserare registrerad",
+    "addFailed": "Misslyckades med att lägga till autentiserare",
+    "setupTitle": "Konfigurera TOTP",
+    "setupFailed": "Misslyckades med att starta TOTP-installationen",
+    "qrCode": "QR-kod",
+    "secretCopied": "Hemlighet kopierad till urklipp",
+    "continueVerify": "Fortsätt att verifiera",
+    "verifyTitle": "Verifiera kod",
+    "verify": "Kontrollera",
+    "enter6Digits": "Ange en 6-siffrig kod",
+    "enabledSuccess": "Tvåfaktorsautentisering aktiverad",
+    "invalidCode": "Ogiltig kod, försök igen",
+    "disableTitle": "Inaktivera 2FA",
+    "disabledSuccess": "Tvåfaktorsautentisering inaktiverad",
+    "disableFailed": "Misslyckades med att inaktivera 2FA",
+    "backupTitle": "Reservkoder",
+    "downloadBackup": "Ladda ner reservkoder",
+    "done": "Gjort"
+  }
+}

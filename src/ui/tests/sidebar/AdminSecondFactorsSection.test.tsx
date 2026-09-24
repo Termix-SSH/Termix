@@ -22,9 +22,9 @@ describe("AdminSecondFactorsSection", () => {
   it("shows a factor whose plugin is off and resets after confirming", async () => {
     api.getUserSecondFactors.mockResolvedValue([
       {
-        pluginId: "core",
+        pluginId: "totp",
         factorId: "totp",
-        labelKey: "auth.totpFactor",
+        labelKey: "factor",
         available: true,
       },
       { pluginId: "yubi", factorId: "otp", labelKey: null, available: false },
@@ -46,6 +46,8 @@ describe("AdminSecondFactorsSection", () => {
     expect(
       await screen.findByText("admin.secondFactorUnavailable:yubi"),
     ).toBeTruthy();
+    // A plugin's label resolves in its own namespace.
+    expect(screen.getByText("totp:factor")).toBeTruthy();
     fireEvent.click(screen.getByText("admin.resetSecondFactors"));
     expect(requestConfirm).toHaveBeenCalled();
     await waitFor(() =>

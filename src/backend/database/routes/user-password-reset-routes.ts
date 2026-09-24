@@ -84,11 +84,11 @@ export async function resetUserPassword(
   await deleteLegacyWraps(userId);
   await authManager.logoutUser(userId);
 
-  await userRepository.update(userId, {
-    totpEnabled: false,
-    totpSecret: null,
-    totpBackupCodes: null,
-  });
+  // Same as 2.8, where the wipe took the TOTP secret with it: the user sets
+  // up their second factors again after this.
+  const { resetUserSecondFactors } =
+    await import("../../auth/second-factor-admin.js");
+  await resetUserSecondFactors(userId);
 
   authLogger.warn(
     `Password reset completed for user: ${username}. All encrypted data has been deleted because the old key was unrecoverable.`,

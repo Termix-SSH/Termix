@@ -1,0 +1,18 @@
+{
+  "title": "通行金鑰",
+  "signIn": "使用通行密鑰登入",
+  "loginFailed": "Passkey 登入失敗",
+  "description": "使用 WebAuthn/FIDO2 憑證無需密碼即可登入",
+  "namePlaceholder": "通行金鑰名稱",
+  "uv": {
+    "preferred": "偏好",
+    "required": "需要",
+    "discouraged": "不鼓勵"
+  },
+  "add": "新增通行金鑰",
+  "none": "尚未註冊通行金鑰。",
+  "added": "通行金鑰已新增",
+  "addFailed": "無法新增通行金鑰",
+  "deleted": "通行金鑰已刪除",
+  "deleteFailed": "刪除通行密鑰失敗"
+}

@@ -27,8 +27,6 @@ import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
-import { registerUserTotpRoutes } from "./user-totp-routes.js";
-import { registerUserWebAuthnRoutes } from "./user-webauthn-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
 import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
@@ -43,6 +41,7 @@ import {
   getCurrentSettingValue,
   createCurrentRoleRepository,
   createCurrentSsoProviderRepository,
+  createCurrentUserAuthRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
@@ -215,9 +214,6 @@ router.post("/create", async (req, res) => {
       identifierPath: "",
       namePath: "",
       scopes: "openid email profile",
-      totpSecret: null,
-      totpEnabled: false,
-      totpBackupCodes: null,
     });
 
     try {
@@ -750,9 +746,13 @@ router.post("/proxy-login", async (req, res) => {
     if (!userRecord) {
       return res.status(403).json({ error: "Proxy user must already exist" });
     }
-    if (userRecord.isOidc || userRecord.totpEnabled) {
+    if (
+      userRecord.isOidc ||
+      (await createCurrentUserAuthRepository().hasSecondFactor(userRecord.id))
+    ) {
       return res.status(409).json({
-        error: "Proxy authentication cannot be used with OIDC or TOTP users",
+        error:
+          "Proxy authentication cannot be used with OIDC or second factor users",
       });
     }
 
@@ -795,10 +795,7 @@ router.post("/proxy-login", async (req, res) => {
 
     const deviceInfo = parseUserAgent(req);
     if (
-      !(await authManager.authenticateWebAuthnUser(
-        userRecord.id,
-        deviceInfo.type,
-      ))
+      !(await authManager.unlockWithSystemKey(userRecord.id, deviceInfo.type))
     ) {
       return res
         .status(409)
@@ -1057,7 +1054,10 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       is_admin: !!user.isAdmin,
       is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
-      totp_enabled: !!user.totpEnabled,
+      // Any second factor; the name is what 2.8 clients read.
+      totp_enabled: await createCurrentUserAuthRepository().hasSecondFactor(
+        user.id,
+      ),
       show_donation_modal: showDonationModal,
     });
   } catch (err) {
@@ -1702,9 +1702,9 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
     if (!allowed) {
-      const totpEnabledCount =
-        await createCurrentUserRepository().countTotpEnabled();
-      if (totpEnabledCount > 0) {
+      const secondFactorUsers =
+        await createCurrentUserAuthRepository().countUsersWithSecondFactors();
+      if (secondFactorUsers > 0) {
         return res.status(409).json({
           error:
             "Cannot disable password login while 2FA is enabled for one or more users. Disable 2FA first.",
@@ -1977,18 +1977,6 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 });
 
 registerUserAdminRoutes(router, authenticateJWT);
-
-registerUserTotpRoutes(router, {
-  authenticateJWT,
-  authManager,
-  isNativeAppRequest,
-});
-
-registerUserWebAuthnRoutes(router, {
-  authenticateJWT,
-  authManager,
-  isNativeAppRequest,
-});
 
 /**
  * @openapi

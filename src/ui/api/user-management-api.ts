@@ -194,19 +194,6 @@ export async function adminResetUserPassword(
   return response.data;
 }
 
-export async function adminDisableUserTotp(
-  userId: string,
-): Promise<{ message: string }> {
-  try {
-    const response = await authApi.post("/users/admin/totp/disable", {
-      userId,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "disable user TOTP");
-  }
-}
-
 export async function adminExportUserData(
   userId: string,
 ): Promise<Record<string, unknown>> {

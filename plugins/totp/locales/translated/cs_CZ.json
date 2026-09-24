@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Zadejte ověřovací kód",
+    "verify": "Ověřte kód"
+  },
+  "enrollment": {
+    "title": "Ověřovač TOTP",
+    "on": "2FA je povoleno",
+    "off": "Přidejte další zabezpečení přihlášení",
+    "enable": "Umožnit",
+    "disable": "Zakázat",
+    "addDevice": "Přidat zařízení",
+    "addTitle": "Přidat ověřovací zařízení",
+    "addScanInstructions": "Naskenujte tento QR kód pomocí dalšího ověřovače. Stávající ověřovače budou i nadále fungovat.",
+    "addSuccess": "Další ověřovatel zaregistrován",
+    "addFailed": "Přidání ověřovatele se nezdařilo",
+    "setupTitle": "Nastavení TOTP",
+    "setupFailed": "Nepodařilo se spustit nastavení TOTP",
+    "qrCode": "QR kód",
+    "secretCopied": "Tajný kód zkopírován do schránky",
+    "continueVerify": "Pokračovat k ověřování",
+    "verifyTitle": "Ověřte kód",
+    "verify": "Ověřit",
+    "enter6Digits": "Zadejte 6místný kód",
+    "enabledSuccess": "Dvoufázové ověřování povoleno",
+    "invalidCode": "Neplatný kód, zkuste to prosím znovu.",
+    "disableTitle": "Zakázat 2FA",
+    "disabledSuccess": "Dvoufázové ověřování zakázáno",
+    "disableFailed": "Nepodařilo se zakázat 2FA",
+    "backupTitle": "Záložní kódy",
+    "downloadBackup": "Stáhnout záložní kódy",
+    "done": "Hotovo"
+  }
+}

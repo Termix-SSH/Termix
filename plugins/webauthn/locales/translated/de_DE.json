@@ -1,0 +1,18 @@
+{
+  "title": "Passkeys",
+  "signIn": "Mit Passkey anmelden",
+  "loginFailed": "Passkey-Anmeldung fehlgeschlagen",
+  "description": "WebAuthn/FIDO2-Anmeldedaten für eine Anmeldung ohne Passwort verwenden",
+  "namePlaceholder": "Passkey-Name",
+  "uv": {
+    "preferred": "Bevorzugt",
+    "required": "Erforderlich",
+    "discouraged": "Nicht empfohlen"
+  },
+  "add": "Passkey hinzufügen",
+  "none": "Keine Passkeys registriert.",
+  "added": "Passkey hinzugefügt",
+  "addFailed": "Fehler beim Hinzufügen des Passkeys",
+  "deleted": "Passkey gelöscht",
+  "deleteFailed": "Löschen des Passkeys fehlgeschlagen"
+}

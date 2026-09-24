@@ -12,12 +12,11 @@ describe("RawSqliteUserEncryptionMigrationStore", () => {
   }
 
   it("owns legacy user encryption migration reads", () => {
-    const { db, all, get } = createDb();
+    const { db, all } = createDb();
     const store = new RawSqliteUserEncryptionMigrationStore(db);
 
     expect(store.listHostRecords("user-1")).toEqual([{ id: 1 }]);
     expect(store.listCredentialRecords("user-1")).toEqual([{ id: 1 }]);
-    expect(store.getUserRecord("user-1")).toEqual({ id: "user-1" });
 
     expect(db.prepare).toHaveBeenCalledWith(
       "SELECT * FROM ssh_data WHERE user_id = ?",
@@ -25,9 +24,7 @@ describe("RawSqliteUserEncryptionMigrationStore", () => {
     expect(db.prepare).toHaveBeenCalledWith(
       "SELECT * FROM ssh_credentials WHERE user_id = ?",
     );
-    expect(db.prepare).toHaveBeenCalledWith("SELECT * FROM users WHERE id = ?");
     expect(all).toHaveBeenCalledWith("user-1");
-    expect(get).toHaveBeenCalledWith("user-1");
   });
 
   it("owns legacy sensitive field update statements", () => {
@@ -52,21 +49,12 @@ describe("RawSqliteUserEncryptionMigrationStore", () => {
       public_key: "pub",
       key_type: "rsa",
     });
-    store.updateUserSensitiveFields("user-1", {
-      totp_secret: "totp",
-      totp_backup_codes: "codes",
-      client_secret: "client",
-      oidc_identifier: "oidc",
-    });
 
     expect(db.prepare).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE ssh_data"),
     );
     expect(db.prepare).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE ssh_credentials"),
-    );
-    expect(db.prepare).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE users"),
     );
     expect(run).toHaveBeenCalledWith(
       "p",
@@ -80,13 +68,6 @@ describe("RawSqliteUserEncryptionMigrationStore", () => {
       12,
     );
     expect(run).toHaveBeenCalledWith("p", "k", "kp", "priv", "pub", "rsa", 13);
-    expect(run).toHaveBeenCalledWith(
-      "totp",
-      "codes",
-      "client",
-      "oidc",
-      "user-1",
-    );
   });
 
   it("owns password-reset dynamic field updates", () => {

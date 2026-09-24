@@ -28,8 +28,7 @@ interface SaveRemoteSyncJwtResult {
 
 const AUTH_MESSAGE_SOURCES = new Set([
   "auth_component",
-  "totp_auth_component",
-  "passkey_auth_component",
+  "second_factor_auth_component",
   "method_auth_component",
   "oidc_callback",
 ]);

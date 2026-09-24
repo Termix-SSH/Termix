@@ -1,0 +1,18 @@
+{
+  "title": "通行密钥",
+  "signIn": "使用通行密钥登录",
+  "loginFailed": "通行密钥登录失败",
+  "description": "使用 WebAuthn/FIDO2 凭据进行无密码登录",
+  "namePlaceholder": "通行密钥名称",
+  "uv": {
+    "preferred": "首选",
+    "required": "必需",
+    "discouraged": "不鼓励"
+  },
+  "add": "添加通行密钥",
+  "none": "未注册通行密钥。",
+  "added": "通行密钥已添加",
+  "addFailed": "添加通行密钥失败",
+  "deleted": "通行密钥已删除",
+  "deleteFailed": "删除通行密钥失败"
+}

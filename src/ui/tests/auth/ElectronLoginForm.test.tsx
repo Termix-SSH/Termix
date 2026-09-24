@@ -26,8 +26,7 @@ describe("ElectronLoginForm", () => {
 
   it.each([
     "auth_component",
-    "totp_auth_component",
-    "passkey_auth_component",
+    "second_factor_auth_component",
     "method_auth_component",
   ])("accepts a login hand-off from %s", async (source) => {
     const onAuthSuccess = vi.fn();

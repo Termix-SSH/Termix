@@ -1,0 +1,18 @@
+{
+  "title": "Chei de acces",
+  "signIn": "Conectați-vă cu cheia de acces",
+  "loginFailed": "Conectarea cu parola a eșuat",
+  "description": "Folosește acreditările WebAuthn/FIDO2 pentru a te conecta fără parolă",
+  "namePlaceholder": "Numele cheii de acces",
+  "uv": {
+    "preferred": "Preferat",
+    "required": "Necesar",
+    "discouraged": "Descurajat"
+  },
+  "add": "Adăugați o cheie de acces",
+  "none": "Nicio cheie de acces înregistrată.",
+  "added": "Cheie de acces adăugată",
+  "addFailed": "Nu s-a putut adăuga parola",
+  "deleted": "Cheia de acces a fost ștearsă",
+  "deleteFailed": "Nu s-a putut șterge parola"
+}

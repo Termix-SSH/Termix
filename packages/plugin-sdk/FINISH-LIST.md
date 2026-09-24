@@ -453,6 +453,18 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `web-endpoint`'s "answers 503 while the tunnels plugin is not available"
   test gets 502. Confirmed present on `dev-2.9.0` before this step (checked
   by stashing B20's changes and re-running). Owner: D0.
+- **C1 (totp):** `totp-migration.ts` moves a user's TOTP secret only when
+  their data key opens at boot. A 2.8 user whose key is still a pre-2.5.1
+  password wrap keeps their enrolment row (fail closed) but has no secret in
+  `p_totp_enrollments` until a boot after their next password login migrates
+  the key, so that one login fails at the TOTP step. Likewise, enabling the
+  totp plugin for the first time without a restart does not move secrets
+  until the next boot. Decide whether either needs handling (a migration run
+  on plugin activation, or an admin reset message). Owner: D0.
+- **C1 (totp/webauthn):** the `users` columns `totp_secret`, `totp_enabled`
+  and `totp_backup_codes` stay in the database (dropped from `schema.ts`, the
+  drizzle drop is a no-op) until 3.0.0 removes them, after the boot
+  migration has run everywhere. Owner: 3.0.0.
 
 ## Manual checks after 2.9.0
 
@@ -520,3 +532,10 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   plugin disabled; the AI assistant lists homepage items and says
   unavailable with homepage off; disable homepage in admin (the tab, its
   dashboard cards and the toggle disappear) then enable it again.
+- TOTP and passkeys: on a 2.8 database a TOTP user is still asked for a
+  code (and a backup code works once); set up TOTP from Settings > Security,
+  add a second device, regenerate backup codes, disable it; enabling signs
+  out other sessions; "remember me" skips it next time; disable the totp
+  plugin and a TOTP user's login is refused until an admin resets their
+  factors; register a passkey, sign in with it with and without a PIN (no
+  PIN still asks for TOTP), delete it; existing 2.8 passkeys still sign in.

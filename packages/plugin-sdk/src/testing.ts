@@ -8,7 +8,7 @@
  * The vitest config these run under comes from @termix/plugin-sdk/vitest-preset.
  */
 
-import { PluginCapabilityError } from "./backend.js";
+import { LoginMethodError, PluginCapabilityError } from "./backend.js";
 import type {
   PluginContext,
   PluginDisposables,
@@ -118,6 +118,11 @@ export interface FakeContextOptions {
    * reaches the network by accident.
    */
   fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
+  /**
+   * Makes ctx.auth.recordEnrollment refuse the way core's policy does (trusted
+   * proxy login on, password login off), with this message and a 409.
+   */
+  refuseEnrollment?: string;
 }
 
 export interface FakeAuthRegistrations {
@@ -508,6 +513,12 @@ export function createFakeContext(
       delete: async (key) => {
         secretStore.delete(`${actor ?? ""}:${key}`);
       },
+      seal: async (value) =>
+        `sealed:${Buffer.from(value, "utf8").toString("base64")}`,
+      unseal: async (sealed) =>
+        sealed?.startsWith("sealed:")
+          ? Buffer.from(sealed.slice(7), "base64").toString("utf8")
+          : null,
       offer: () => {},
       withdraw: () => false,
       getShared: async () => null,
@@ -782,6 +793,9 @@ export function createFakeContext(
         auth.secondFactors.push(factor);
       },
       recordEnrollment: async (userId, factorId) => {
+        if (options.refuseEnrollment) {
+          throw new LoginMethodError(options.refuseEnrollment, 409);
+        }
         auth.enrollments.add(`${userId}:${factorId}`);
       },
       removeEnrollment: async (userId, factorId) => {
@@ -927,6 +941,8 @@ export interface MockContextOptions {
    * reaches the network by accident.
    */
   fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
+  /** See FakeContextOptions. */
+  refuseEnrollment?: string;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -969,6 +985,7 @@ export function createMockCtx(
     hostStatuses: options.hostStatuses,
     notificationChannels: options.notificationChannels,
     fetch: options.fetch,
+    refuseEnrollment: options.refuseEnrollment,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -1271,6 +1288,14 @@ export function createMockCtx(
         require("secrets:own");
         return ctx.secrets.delete(key);
       },
+      seal: async (value) => {
+        require("secrets:own");
+        return ctx.secrets.seal(value);
+      },
+      unseal: async (sealed) => {
+        require("secrets:own");
+        return ctx.secrets.unseal(sealed);
+      },
     },
 
     capabilities: {
@@ -1485,6 +1510,8 @@ export interface RenderedPluginApp {
     settingsComponents: () => string[];
     slot: (slotId: string) => string[];
     actions: () => string[];
+    loginMethods: () => string[];
+    secondFactors: () => string[];
   };
   /** Shell calls made by the plugin's code, applyLayout included. */
   shellCalls: ShellCall[];
@@ -1510,6 +1537,18 @@ export interface RenderedPluginApp {
     componentId: string,
     props?: Record<string, unknown>,
   ) => HTMLElement;
+  /** Renders a login method's UI with login screen props, overridable. */
+  renderLoginMethod: (
+    id: string,
+    props?: Record<string, unknown>,
+  ) => HTMLElement;
+  /** Renders a second factor's challenge with overridable props. */
+  renderSecondFactor: (
+    id: string,
+    props?: Record<string, unknown>,
+  ) => HTMLElement;
+  /** Renders the Settings > Security section a factor or method brought. */
+  renderEnrollment: (id: string) => HTMLElement;
   /** Renders a slot the way its owner would. */
   renderSlot: (slotId: string, props?: Record<string, unknown>) => HTMLElement;
   /** Runs deactivate and every disposer, as disabling the plugin does. */

@@ -87,7 +87,10 @@ export interface AuthResponse {
 }
 
 export interface UserInfo {
+  /** Any second factor, kept under its 2.8 name for older clients. */
   totp_enabled: boolean;
+  /** Admin user list only. */
+  second_factor_enabled?: boolean;
   userId: string;
   username: string;
   is_admin: boolean;
@@ -1759,7 +1762,6 @@ export {
   updateOIDCConfig,
   disableOIDCConfig,
   adminResetUserPassword,
-  adminDisableUserTotp,
   adminExportUserData,
   type ApiKey,
   type CreatedApiKey,
@@ -1786,11 +1788,6 @@ export {
 } from "@/api/admin-user-data-api";
 
 export {
-  setupTOTP,
-  enableTOTP,
-  disableTOTP,
-  verifyTOTPLogin,
-  generateBackupCodes,
   getUserAlerts,
   dismissAlert,
   getReleasesRSS,

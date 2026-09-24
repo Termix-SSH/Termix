@@ -186,7 +186,7 @@ async function unlockUser(
 
   const ok = identity.password
     ? await authManager.authenticateUser(user.id, identity.password, deviceType)
-    : await authManager.authenticateWebAuthnUser(user.id, deviceType);
+    : await authManager.unlockWithSystemKey(user.id, deviceType);
   if (!ok) {
     throw new LoginMethodError(
       identity.password
@@ -378,12 +378,13 @@ export function consumePendingLogin(token: string): void {
 
 /**
  * Finishes a login that stopped for a second factor. The pending token comes
- * from the body, or from the cookie a redirect method set.
+ * from the body, or from the cookie a redirect method set. Without a factor
+ * id the user's first required factor answers, for the 2.8 route.
  */
 export async function verifySecondFactorAndRespond(
   req: Request,
   res: Response,
-  factorId: string,
+  factorId?: string,
 ): Promise<Response> {
   const lookup = await readPendingLogin(req);
   if (!lookup) {
@@ -416,9 +417,9 @@ export async function verifySecondFactorAndRespond(
       code: "second_factor_unavailable",
     });
   }
-  const factor = factors.required.find(
-    (candidate) => candidate.id === factorId,
-  );
+  const factor = factorId
+    ? factors.required.find((candidate) => candidate.id === factorId)
+    : factors.required[0];
   if (!factor) {
     return res
       .status(400)
@@ -436,7 +437,7 @@ export async function verifySecondFactorAndRespond(
     authLogger.warn("Second factor verification failed", {
       operation: "totp_verify_failed",
       userId: user.id,
-      factorId,
+      factorId: factor.id,
     });
     const { ipAddress, userAgent } = getRequestMeta(req);
     await logAudit({
@@ -444,7 +445,7 @@ export async function verifySecondFactorAndRespond(
       username: user.username,
       action: "login_second_factor_failed",
       resourceType: "session",
-      details: JSON.stringify({ factor: factorId }),
+      details: JSON.stringify({ factor: factor.id }),
       ipAddress,
       userAgent,
       success: false,

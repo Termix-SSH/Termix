@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { PluginSecondFactorEnrollment } from "./PluginSecondFactorEnrollment";
+import { AuthEnrollmentSections } from "./AuthEnrollmentSections";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
@@ -11,9 +11,6 @@ import {
   changePassword,
   deleteAccount,
   logoutUser,
-  setupTOTP,
-  enableTOTP,
-  disableTOTP,
   getVersionInfo,
   releaseUrlFrom,
   getUserRoles,
@@ -23,13 +20,6 @@ import {
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { useHostSidebarPreferences } from "./tree/hooks/useHostSidebarPreferences";
-import {
-  deleteWebAuthnCredential,
-  listWebAuthnCredentials,
-  registerWebAuthnCredential,
-  type WebAuthnCredentialSummary,
-  type WebAuthnUserVerification,
-} from "@/api/webauthn-api";
 import type { UserRole } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
@@ -48,7 +38,6 @@ import {
 } from "@/components/dialog";
 import {
   AlertCircle,
-  CheckCircle2,
   ChevronDown,
   Copy,
   Database,
@@ -65,7 +54,6 @@ import {
   Trash2,
   Type,
   User,
-  X,
 } from "lucide-react";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
 import { NavigationVisibilityToggles } from "./NavigationVisibilityToggles";
@@ -584,27 +572,6 @@ export function UserProfilePanel({
   const [isOidc, setIsOidc] = useState(false);
   const [isDualAuth, setIsDualAuth] = useState(false);
 
-  // TOTP
-  const [totpEnabled, setTotpEnabled] = useState(false);
-  const [totpStep, setTotpStep] = useState<
-    "idle" | "setup" | "verify" | "backup"
-  >("idle");
-  const [totpQrCode, setTotpQrCode] = useState("");
-  const [totpSecret, setTotpSecret] = useState("");
-  const [totpCode, setTotpCode] = useState("");
-  const [totpBackupCodes, setTotpBackupCodes] = useState<string[]>([]);
-  const [totpLoading, setTotpLoading] = useState(false);
-  const [showDisableTotp, setShowDisableTotp] = useState(false);
-  const [disableTotpInput, setDisableTotpInput] = useState("");
-  const [showAddTotp, setShowAddTotp] = useState(false);
-  const [addTotpInput, setAddTotpInput] = useState("");
-  const [addingTotpAuthenticator, setAddingTotpAuthenticator] = useState(false);
-  const [passkeys, setPasskeys] = useState<WebAuthnCredentialSummary[]>([]);
-  const [passkeyLoading, setPasskeyLoading] = useState(false);
-  const [passkeyName, setPasskeyName] = useState("");
-  const [passkeyUserVerification, setPasskeyUserVerification] =
-    useState<WebAuthnUserVerification>("preferred");
-
   // Delete account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
@@ -760,7 +727,6 @@ export function UserProfilePanel({
     getUserInfo()
       .then(async (localInfo) => {
         setUserId(localInfo.userId);
-        setTotpEnabled(localInfo.totp_enabled ?? false);
         setIsOidc(localInfo.is_oidc ?? false);
         setIsDualAuth(localInfo.is_dual_auth ?? false);
         const remoteInfo = await getRemoteSyncUserInfo();
@@ -790,9 +756,6 @@ export function UserProfilePanel({
       .catch(() => {});
     getApiKeys()
       .then(({ apiKeys: keys }) => setApiKeys(keys))
-      .catch(() => {});
-    listWebAuthnCredentials()
-      .then(({ credentials }) => setPasskeys(credentials ?? []))
       .catch(() => {});
     getVersionInfo()
       .then((info) => {
@@ -1202,133 +1165,6 @@ export function UserProfilePanel({
       else next.add(id);
       return next;
     });
-  }
-
-  async function handleStartTotpSetup() {
-    setTotpLoading(true);
-    try {
-      const result = await setupTOTP();
-      setTotpQrCode(result.qr_code);
-      setTotpSecret(result.secret);
-      setTotpCode("");
-      setTotpStep("setup");
-    } catch {
-      toast.error(t("newUi.sidebar.userProfile.totpSetupFailed"));
-    } finally {
-      setTotpLoading(false);
-    }
-  }
-
-  async function handleAddTotpAuthenticator() {
-    if (!addTotpInput) {
-      toast.error(t("newUi.sidebar.userProfile.totpAddInputRequired"));
-      return;
-    }
-    setTotpLoading(true);
-    try {
-      const result = await setupTOTP(addTotpInput);
-      setTotpQrCode(result.qr_code);
-      setTotpSecret(result.secret);
-      setAddingTotpAuthenticator(true);
-      setShowAddTotp(false);
-      setAddTotpInput("");
-      setTotpStep("setup");
-    } catch (e: unknown) {
-      toast.error(
-        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpAddFailed")),
-      );
-    } finally {
-      setTotpLoading(false);
-    }
-  }
-
-  async function handleVerifyTotp() {
-    if (!totpCode || totpCode.length !== 6) {
-      toast.error(t("newUi.sidebar.userProfile.totpEnter6Digits"));
-      return;
-    }
-    setTotpLoading(true);
-    try {
-      const result = await enableTOTP(totpCode);
-      setTotpBackupCodes(result.backup_codes ?? []);
-      setTotpEnabled(true);
-      if (!isRemoteSyncConnected) setAccountTotpEnabled(true);
-      setTotpStep("backup");
-      toast.success(t("newUi.sidebar.userProfile.totpEnabledSuccess"));
-    } catch (e: unknown) {
-      toast.error(
-        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpInvalidCode")),
-      );
-    } finally {
-      setTotpLoading(false);
-    }
-  }
-
-  async function handleDisableTotp() {
-    if (!disableTotpInput) {
-      toast.error(t("newUi.sidebar.userProfile.totpDisableInputRequired"));
-      return;
-    }
-    setTotpLoading(true);
-    try {
-      await disableTOTP(disableTotpInput);
-      setTotpEnabled(false);
-      if (!isRemoteSyncConnected) setAccountTotpEnabled(false);
-      setShowDisableTotp(false);
-      setDisableTotpInput("");
-      toast.success(t("newUi.sidebar.userProfile.totpDisabledSuccess"));
-    } catch (e: unknown) {
-      toast.error(
-        apiErrorMessage(e, t("newUi.sidebar.userProfile.totpDisableFailed")),
-      );
-    } finally {
-      setTotpLoading(false);
-    }
-  }
-
-  async function handleRegisterPasskey() {
-    setPasskeyLoading(true);
-    try {
-      await registerWebAuthnCredential(
-        passkeyName || "Passkey",
-        passkeyUserVerification,
-      );
-      const { credentials } = await listWebAuthnCredentials();
-      setPasskeys(credentials ?? []);
-      setPasskeyName("");
-      toast.success(t("newUi.sidebar.userProfile.passkeyAdded"));
-    } catch (e: unknown) {
-      toast.error(
-        apiErrorMessage(e, t("newUi.sidebar.userProfile.passkeyAddFailed")),
-      );
-    } finally {
-      setPasskeyLoading(false);
-    }
-  }
-
-  async function handleDeletePasskey(credentialId: string) {
-    setPasskeyLoading(true);
-    try {
-      await deleteWebAuthnCredential(credentialId);
-      setPasskeys((prev) => prev.filter((item) => item.id !== credentialId));
-      toast.success(t("newUi.sidebar.userProfile.passkeyDeleted"));
-    } catch (e: unknown) {
-      toast.error(
-        apiErrorMessage(e, t("newUi.sidebar.userProfile.passkeyDeleteFailed")),
-      );
-    } finally {
-      setPasskeyLoading(false);
-    }
-  }
-
-  function downloadBackupCodes() {
-    const blob = new Blob([totpBackupCodes.join("\n")], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "termix-backup-codes.txt";
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   async function handleDeleteAccount() {
@@ -2173,395 +2009,7 @@ export function UserProfilePanel({
         onToggle={() => toggle("security")}
       >
         <div className="flex flex-col gap-4 pt-3">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium">
-                    {t("newUi.sidebar.userProfile.totpAuthenticator")}
-                  </span>
-                  <a
-                    href="https://docs.termix.site/features/authentication/totp"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-accent-brand hover:underline"
-                  >
-                    {t("hosts.docsLink")}
-                  </a>
-                </div>
-                <span className="text-[10px] text-muted-foreground">
-                  {totpEnabled
-                    ? t("newUi.sidebar.userProfile.totpEnabled")
-                    : t("newUi.sidebar.userProfile.totpDisabled")}
-                </span>
-              </div>
-              {totpEnabled ? (
-                <div className="ml-3 flex shrink-0 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                    onClick={() => setShowAddTotp((open) => !open)}
-                    disabled={totpLoading || totpStep !== "idle"}
-                  >
-                    {t("newUi.sidebar.userProfile.totpAddAuthenticator")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[10px] border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setShowDisableTotp((o) => !o)}
-                  >
-                    {t("newUi.sidebar.userProfile.disable")}
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 ml-3 text-[10px] h-7 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  onClick={handleStartTotpSetup}
-                  disabled={totpLoading || totpStep !== "idle"}
-                >
-                  {t("newUi.sidebar.userProfile.enable")}
-                </Button>
-              )}
-            </div>
-
-            {totpEnabled && showAddTotp && (
-              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.totpAddTitle")}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.totpAddDescription")}
-                </span>
-                <Input
-                  placeholder={t(
-                    "newUi.sidebar.userProfile.totpDisablePlaceholder",
-                  )}
-                  value={addTotpInput}
-                  onChange={(e) => setAddTotpInput(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && handleAddTotpAuthenticator()
-                  }
-                  className="text-sm"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 text-xs"
-                    onClick={() => {
-                      setShowAddTotp(false);
-                      setAddTotpInput("");
-                    }}
-                  >
-                    {t("newUi.sidebar.userProfile.cancel")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                    onClick={handleAddTotpAuthenticator}
-                    disabled={totpLoading}
-                  >
-                    {t("common.continue")}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Disable TOTP form */}
-            {totpEnabled && showDisableTotp && (
-              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.totpDisableTitle")}
-                </span>
-                <Input
-                  placeholder={t(
-                    "newUi.sidebar.userProfile.totpDisablePlaceholder",
-                  )}
-                  value={disableTotpInput}
-                  onChange={(e) => setDisableTotpInput(e.target.value)}
-                  className="text-sm"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 text-xs"
-                    onClick={() => {
-                      setShowDisableTotp(false);
-                      setDisableTotpInput("");
-                    }}
-                  >
-                    {t("newUi.sidebar.userProfile.cancel")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={handleDisableTotp}
-                    disabled={totpLoading}
-                  >
-                    {t("newUi.sidebar.userProfile.totpDisableConfirm")}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* TOTP setup: scan QR */}
-            {totpStep === "setup" && (
-              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {t("newUi.sidebar.userProfile.setupTotp")}
-                  </span>
-                  <button
-                    onClick={() => {
-                      setTotpStep("idle");
-                      setAddingTotpAuthenticator(false);
-                    }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-                {totpQrCode ? (
-                  <div className="flex items-center justify-center p-3 bg-background border border-border">
-                    <img
-                      src={totpQrCode}
-                      alt={t("newUi.sidebar.userProfile.qrCode")}
-                      className="size-32"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center p-3 bg-background border border-border">
-                    <div className="size-24 bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
-                      {t("newUi.sidebar.userProfile.qrCode")}
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 bg-muted/30 border border-border px-2 py-1.5">
-                  <span className="text-[10px] font-mono flex-1 tracking-widest select-all truncate">
-                    {totpSecret}
-                  </span>
-                  <button
-                    onClick={() => {
-                      copyToClipboard(totpSecret);
-                      toast.info(t("newUi.sidebar.userProfile.secretCopied"));
-                    }}
-                    className="text-muted-foreground hover:text-accent-brand shrink-0"
-                  >
-                    <Copy className="size-3.5" />
-                  </button>
-                </div>
-                <span className="text-[10px] text-muted-foreground text-center">
-                  {t(
-                    addingTotpAuthenticator
-                      ? "newUi.sidebar.userProfile.totpAddScanInstructions"
-                      : "newUi.sidebar.userProfile.totpInstructions",
-                  )}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  onClick={() => {
-                    if (addingTotpAuthenticator) {
-                      setAddingTotpAuthenticator(false);
-                      setTotpStep("idle");
-                      toast.success(
-                        t("newUi.sidebar.userProfile.totpAddSuccess"),
-                      );
-                    } else {
-                      setTotpStep("verify");
-                    }
-                  }}
-                >
-                  {t(
-                    addingTotpAuthenticator
-                      ? "newUi.sidebar.userProfile.done"
-                      : "newUi.sidebar.userProfile.totpContinueVerify",
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* TOTP setup: verify code */}
-            {!totpEnabled && totpStep === "verify" && (
-              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {t("newUi.sidebar.userProfile.totpVerifyTitle")}
-                  </span>
-                  <button
-                    onClick={() => setTotpStep("setup")}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-                <Input
-                  placeholder={t(
-                    "newUi.sidebar.userProfile.totpCodePlaceholder",
-                  )}
-                  value={totpCode}
-                  onChange={(e) =>
-                    setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  onKeyDown={(e) => e.key === "Enter" && handleVerifyTotp()}
-                  className="text-center font-mono tracking-widest text-lg h-10"
-                  maxLength={6}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 text-xs"
-                    onClick={() => setTotpStep("setup")}
-                  >
-                    {t("newUi.sidebar.userProfile.cancel")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                    onClick={handleVerifyTotp}
-                    disabled={totpLoading || totpCode.length !== 6}
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                    {t("newUi.sidebar.userProfile.verify")}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* TOTP setup: backup codes */}
-            {totpStep === "backup" && totpBackupCodes.length > 0 && (
-              <div className="border border-border bg-muted/20 p-3 flex flex-col gap-3">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.totpBackupTitle")}
-                </span>
-                <div className="grid grid-cols-2 gap-1">
-                  {totpBackupCodes.map((code) => (
-                    <span
-                      key={code}
-                      className="text-[10px] font-mono bg-muted border border-border px-2 py-1 text-center"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                  onClick={downloadBackupCodes}
-                >
-                  {t("newUi.sidebar.userProfile.totpDownloadBackup")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setTotpStep("idle")}
-                >
-                  {t("newUi.sidebar.userProfile.done")}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-border pt-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium">
-                  {t("newUi.sidebar.userProfile.passkeys")}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.passkeysDesc")}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-[1fr_auto] gap-2">
-              <Input
-                placeholder={t("newUi.sidebar.userProfile.passkeyName")}
-                value={passkeyName}
-                onChange={(e) => setPasskeyName(e.target.value)}
-                className="h-8 text-xs"
-                disabled={passkeyLoading}
-              />
-              <Select2
-                value={passkeyUserVerification}
-                onChange={(e) =>
-                  setPasskeyUserVerification(
-                    e.target.value as WebAuthnUserVerification,
-                  )
-                }
-                className="h-8 w-28 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
-                disabled={passkeyLoading}
-              >
-                <option value="preferred">
-                  {t("newUi.sidebar.userProfile.passkeyUvPreferred")}
-                </option>
-                <option value="required">
-                  {t("newUi.sidebar.userProfile.passkeyUvRequired")}
-                </option>
-                <option value="discouraged">
-                  {t("newUi.sidebar.userProfile.passkeyUvDiscouraged")}
-                </option>
-              </Select2>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-              onClick={handleRegisterPasskey}
-              disabled={passkeyLoading}
-            >
-              <KeyRound className="size-3" />
-              {t("newUi.sidebar.userProfile.addPasskey")}
-            </Button>
-
-            <div className="flex flex-col divide-y divide-border border border-border">
-              {passkeys.length === 0 ? (
-                <div className="py-4 text-center text-[10px] text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.noPasskeys")}
-                </div>
-              ) : (
-                passkeys.map((passkey) => (
-                  <div
-                    key={passkey.id}
-                    className="flex items-center justify-between gap-2 px-2 py-2"
-                  >
-                    <div className="min-w-0 flex flex-col">
-                      <span className="text-xs font-medium truncate">
-                        {passkey.name}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground truncate">
-                        {passkey.deviceType || "unknown"}
-                        {passkey.backedUp ? " / synced" : ""}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDeletePasskey(passkey.id)}
-                      disabled={passkeyLoading}
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <PluginSecondFactorEnrollment />
+          <AuthEnrollmentSections />
 
           {canChangePasword && (
             <PasswordChangeSection

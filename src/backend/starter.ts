@@ -70,9 +70,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     identifierPath: "",
     namePath: "",
     scopes: "openid email profile",
-    totpSecret: null,
-    totpEnabled: false,
-    totpBackupCodes: null,
   });
 
   try {
@@ -203,18 +200,21 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const {
         createCurrentSettingsRepository,
         createCurrentSsoProviderRepository,
+        createCurrentUserAuthRepository,
         createCurrentUserRepository,
       } = await import("./database/repositories/factory.js");
-      const [legacyOidc, providers, users] = await Promise.all([
-        createCurrentSettingsRepository().get("oidc_config"),
-        createCurrentSsoProviderRepository().listEnabled(),
-        createCurrentUserRepository().listAll(),
-      ]);
+      const [legacyOidc, providers, users, secondFactorUsers] =
+        await Promise.all([
+          createCurrentSettingsRepository().get("oidc_config"),
+          createCurrentSsoProviderRepository().listEnabled(),
+          createCurrentUserRepository().listAll(),
+          createCurrentUserAuthRepository().listUserIdsWithSecondFactors(),
+        ]);
       const conflictingProvider = providers.some((provider) =>
         ["oidc", "github", "google"].includes(provider.type),
       );
       const conflictingUser = users.some(
-        (user) => user.isOidc || user.totpEnabled,
+        (user) => user.isOidc || secondFactorUsers.has(user.id),
       );
       if (
         legacyOidc ||
@@ -223,7 +223,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         conflictingUser
       ) {
         throw new Error(
-          "Trusted proxy authentication cannot start while OIDC or TOTP is enabled",
+          "Trusted proxy authentication cannot start while OIDC or a second factor is enabled",
         );
       }
       systemLogger.info("Trusted proxy authentication enabled", {
@@ -409,6 +409,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runSecretSourcesTokenMigration } =
         await import("./utils/crypto-migration/secret-sources-token-migration.js");
       await runSecretSourcesTokenMigration();
+
+      const { runTotpMigration } =
+        await import("./utils/crypto-migration/totp-migration.js");
+      await runTotpMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

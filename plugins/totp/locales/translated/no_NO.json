@@ -1,0 +1,34 @@
+{
+  "challenge": {
+    "enterCode": "Skriv inn bekreftelseskoden",
+    "verify": "Bekreft kode"
+  },
+  "enrollment": {
+    "title": "TOTP-autentisering",
+    "on": "2FA er aktivert",
+    "off": "Legg til ekstra sikkerhet for pålogging",
+    "enable": "Aktiver",
+    "disable": "Deaktiver",
+    "addDevice": "Legg til enhet",
+    "addTitle": "Legg til autentiseringsenhet",
+    "addScanInstructions": "Skann denne QR-koden med den ekstra autentiseringsfunksjonen. Eksisterende autentiseringsfunksjoner vil fortsette å fungere.",
+    "addSuccess": "Ekstra autentiseringsfunksjon registrert",
+    "addFailed": "Kunne ikke legge til autentiseringsfunksjonen",
+    "setupTitle": "Konfigurer TOTP",
+    "setupFailed": "Kunne ikke starte TOTP-oppsettet",
+    "qrCode": "QR-kode",
+    "secretCopied": "Hemmelighet kopiert til utklippstavlen",
+    "continueVerify": "Fortsett å bekrefte",
+    "verifyTitle": "Bekreft kode",
+    "verify": "Verifisere",
+    "enter6Digits": "Skriv inn en 6-sifret kode",
+    "enabledSuccess": "Tofaktorautentisering aktivert",
+    "invalidCode": "Ugyldig kode, prøv på nytt",
+    "disableTitle": "Deaktiver 2FA",
+    "disabledSuccess": "Tofaktorautentisering deaktivert",
+    "disableFailed": "Kunne ikke deaktivere 2FA",
+    "backupTitle": "Sikkerhetskopieringskoder",
+    "downloadBackup": "Last ned sikkerhetskoder",
+    "done": "Ferdig"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Přístupové klíče",
+  "signIn": "Přihlásit se pomocí hesla",
+  "loginFailed": "Přihlášení k heslu se nezdařilo",
+  "description": "Pro přihlášení bez hesla použijte přihlašovací údaje WebAuthn/FIDO2",
+  "namePlaceholder": "Název přístupového klíče",
+  "uv": {
+    "preferred": "Preferované",
+    "required": "Požadovaný",
+    "discouraged": "Odradit"
+  },
+  "add": "Přidat přístupový klíč",
+  "none": "Nejsou registrovány žádné přístupové klíče.",
+  "added": "Přístupový klíč byl přidán",
+  "addFailed": "Nepodařilo se přidat přístupový klíč",
+  "deleted": "Přístupový klíč smazán",
+  "deleteFailed": "Nepodařilo se smazat přístupový klíč"
+}

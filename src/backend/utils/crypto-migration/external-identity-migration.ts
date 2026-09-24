@@ -1,15 +1,13 @@
 /**
- * Moves sign-in identities and 2FA enrolment into their own tables.
+ * Moves sign-in identities into their own table.
  *
  * users.oidc_identifier packed provider and subject into one string:
  * "ldap:<provider>:<id>", "github:<provider>:<id>", or a bare OIDC subject
  * whose provider was users.sso_provider_id. Each becomes a
- * user_external_identities row. users.totp_enabled becomes a
- * user_second_factors row for core's TOTP factor, so a login can tell a user
- * has a factor even after the plugin that runs it is gone.
+ * user_external_identities row. TOTP enrolment moves in totp-migration.ts.
  *
- * Lossless: the old column and flag are left as they are. Idempotent: rows
- * that already exist are skipped, so it runs on every boot.
+ * Lossless: the old column is left as it is. Idempotent: rows that already
+ * exist are skipped, so it runs on every boot.
  */
 
 import { databaseLogger } from "../logger.js";
@@ -23,7 +21,6 @@ const LEGACY_OIDC_PROVIDER_ID = "legacy-oidc";
 
 export interface ExternalIdentityMigrationResult {
   identities: number;
-  factors: number;
   skipped: number;
 }
 
@@ -58,7 +55,6 @@ export function parseLegacyIdentifier(
 export async function runExternalIdentityMigration(): Promise<ExternalIdentityMigrationResult> {
   const result: ExternalIdentityMigrationResult = {
     identities: 0,
-    factors: 0,
     skipped: 0,
   };
 
@@ -89,24 +85,10 @@ export async function runExternalIdentityMigration(): Promise<ExternalIdentityMi
           }
         }
       }
-
-      if (user.totpEnabled) {
-        const enrolled = await auth.listSecondFactors(user.id);
-        if (
-          enrolled.some(
-            (row) => row.pluginId === "core" && row.factorId === "totp",
-          )
-        ) {
-          result.skipped++;
-        } else {
-          await auth.recordSecondFactor(user.id, "core", "totp");
-          result.factors++;
-        }
-      }
     }
 
-    if (result.identities > 0 || result.factors > 0) {
-      databaseLogger.info("Moved sign-in identities and 2FA enrolment", {
+    if (result.identities > 0) {
+      databaseLogger.info("Moved sign-in identities", {
         operation: "external_identity_migration",
         ...result,
       });

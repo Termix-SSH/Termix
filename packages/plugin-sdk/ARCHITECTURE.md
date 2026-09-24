@@ -454,7 +454,7 @@ boundary and Suspense.
 | `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                                                                        |
 | `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result                                            |
 | `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                                                                      |
-| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method and a second factor challenge (plus an optional `enrollment` section)                                                  |
+| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method (`placement: "inline"` beside the password form) and a second factor challenge, each with an optional `enrollment`     |
 | `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                         |
 | `apiFor(origin)`                                    | The same client for a resolved connection origin: `"remote"` reaches the desktop app's connected server (**B14**)                                   |
 | `fetch(path, init)`                                 | A raw `fetch` on `/plugin-api/<id>/<path>` with core's auth, for a streamed response (SSE) axios cannot read (**B18**)                              |
@@ -575,7 +575,9 @@ popover, scroll-area, select, select2, separator, skeleton, switch, textarea,
 tooltip, sheet, section-card, metric-card, charts, the card grid,
 `ConnectionScreen` and the connection status helpers,
 `SnippetVariablesDialog`, `FullScreenAppWrapper`, the connection log context,
-`TOTPDialog`, `SSHAuthDialog`, `WarpgateDialog`, `PassphraseDialog`,
+`TOTPDialog` (its `MFAPromptMode` type lives in
+`@termix/plugin-sdk/frontend` since **C1**, so the shell spells no `"totp"`),
+`SSHAuthDialog`, `WarpgateDialog`, `PassphraseDialog`,
 `OPKSSHDialog` (until opkssh moves in Phase C), `HostKeyVerificationDialog`,
 `useTabs`/`useTabsSafe`, `ActionSlot`, `ComponentSlot`, `PluginComponent` and
 `FOLDER_COLORS` (the colour swatches folders and workspaces pick from).
@@ -980,7 +982,11 @@ and activates it again that way.
 `layout` (what `app.tabs.getLayout()` returns) and `ready` (fire
 `app.tabs.onReady`). `app.tabs.applyLayout` is recorded in `shellCalls` and runs
 the shell's real restore rules, `openedTabs()` lists what it opened, and
-`renderOpenedTab(i)` renders one the way the shell would, placeholder included. `renderWithApp` activates the plugin against core's real registries,
+`renderOpenedTab(i)` renders one the way the shell would, placeholder included.
+**C1** added `registered.loginMethods()` / `.secondFactors()` and
+`renderLoginMethod`, `renderSecondFactor` and `renderEnrollment`, and the
+backend doubles take `refuseEnrollment` to make `recordEnrollment` refuse the
+way core's policy does. `renderWithApp` activates the plugin against core's real registries,
 records what it registered and the shell calls it made, renders any tab,
 panel, card, host editor section, settings component or slot, and
 `deactivate()` disposes it all. Every bundled plugin has a
@@ -993,12 +999,49 @@ auto-session and trusted devices, plus the base SSH auth types password, key,
 stored credential, agent and none. Every other login method, second factor and
 SSH auth method is a plugin through `ctx.auth`.
 
-In 2.9.0, OIDC (and GitHub, Google), LDAP, passkeys, TOTP, OPKSSH, Step-CA,
-Vault, Tailscale and Warpgate still live in core. They register through the
-same interfaces from `src/backend/auth/legacy-providers.ts` and
+In 2.9.0, OIDC (and GitHub, Google), LDAP, OPKSSH, Step-CA, Vault, Tailscale
+and Warpgate still live in core. They register through the same interfaces
+from `src/backend/auth/legacy-providers.ts` and
 `src/ui/auth/legacy-auth-ui.tsx` with `pluginId: "core"`. Phase C moves each
 one into its plugin by moving its block out of those two files; D1 deletes them.
 Nothing else in core branches on those type names.
+
+**C1** moved TOTP and passkeys out:
+
+- `totp` registers the `totp` second factor. It owns `p_totp_enrollments`
+  (one row per user: the active secret, an unfinished setup's secret and the
+  backup codes, all sealed with `ctx.secrets.seal`), so `verify` reads them
+  during login with no acting user. Its routes at `/plugin-api/totp/`
+  (`status`, `setup`, `enable`, `disable`, `backup-codes`) re-authenticate
+  with a TOTP or backup code, never the account password, which a plugin
+  cannot see. `enable` calls `ctx.auth.recordEnrollment` before it turns
+  anything on, so core's policy can refuse it cleanly.
+- `webauthn` registers the `passkey` login method (inline on the login
+  screen) and adopts `webauthn_credentials`. A passkey is a login method only,
+  as in 2.8: an assertion whose authenticator verified the user returns
+  `mfaSatisfied`, which skips core's second-factor step; without it the user
+  still gets their factors. The relying party id and origin come from the
+  request exactly as before (no core setting holds them); the relying party
+  name is `ctx.settings.readCore("app_name")`.
+  `POST /plugin-api/webauthn/authenticate/options` is public; the assertion
+  goes to core's `/users/auth/passkey/verify`.
+- `src/backend/utils/crypto-migration/totp-migration.ts` takes a 2.8
+  database across: every `core`/`totp` enrolment row (A8) becomes
+  `totp`/`totp`, every user with `users.totp_enabled` gets one, and once
+  the plugin's table exists each secret and its backup codes are decrypted
+  with the user's data key, sealed into it, and the `users` columns cleared.
+  The rows move even while the plugin is off, so those users fail closed. The
+  `users` TOTP columns left `schema.ts`, and the drizzle migration that would
+  drop them is a no-op, like an adopted table.
+- Core keeps no TOTP knowledge. `totp_enabled` in the login body and
+  `/users/me` is still sent under that name for 2.8 clients (Termix-Mobile,
+  older remote-sync peers) but means "has any second factor"; the admin user
+  list sends `second_factor_enabled`. Trusted proxy login, "disable password
+  login" and a password reset that wipes data go through
+  `user_second_factors` and `resetUserSecondFactors`.
+  `/users/admin/totp/disable` is gone; the generic admin reset covers it.
+  `AuthManager.unlockWithSystemKey` (was `authenticateWebAuthnUser`) opens
+  the data key for any identity that carries no password.
 
 #### One SSH connect pipeline
 
@@ -1130,8 +1173,18 @@ Routes, all under `/users/auth`: `GET methods` (public), `GET :methodId/start`,
 `POST second-factor/:factorId/challenge`, `POST second-factor/:factorId/verify`.
 A redirect method's provider must send the browser back to
 `/users/auth/<methodId>/callback`. The older routes (`/users/login`,
-`/users/totp/verify-login`, `/users/oidc/*`, `/users/ldap/login`,
-`/users/webauthn/authenticate/verify`) are thin wrappers over the same pipeline.
+`/users/oidc/*`, `/users/ldap/login`) are thin wrappers over the same
+pipeline. `/users/totp/verify-login` stays for 2.8 clients: it answers with
+the factor named in `factor`, or the user's first required factor, and core
+never names one itself.
+
+**Enrolment policy (C1).** `ctx.auth.recordEnrollment` refuses with a
+`LoginMethodError` (409) while trusted proxy login is on or the password
+login setting is off, the rules the 2.8 TOTP route had, now applied to every
+factor. When it records one it also revokes the user's other sessions and
+forgets their trusted devices, so nothing that skipped the factor before
+keeps skipping it. The session to keep is the request's: the HTTP middleware
+puts the session id next to the actor (`getActorSessionId`).
 
 An admin clears a user's factors, including orphaned ones, with
 `DELETE /users/admin/:userId/second-factors` (audited as
@@ -1152,7 +1205,11 @@ lists (props: `instances`, `rememberMe`, `submit`, `startRedirect`,
 `complete`); a redirect method with no UI gets one button per instance.
 `app.registerSecondFactorUI` draws the challenge (props: `verify`,
 `challenge`, `cancel`) and, with `enrollment`, a section in Settings >
-Security. At activation before sign-in `app.api` calls fail with 401, so do
+Security. **C1** gave `app.registerLoginMethod` the same `enrollment` (a
+passkey is registered there) and `placement: "inline"`, which also draws
+the method under the password form; the login screen no longer knows the
+passkey method by name. A server that sends a second-factor step without
+naming its factors gets every factor UI registered on the screen. At activation before sign-in `app.api` calls fail with 401, so do
 nothing there but register.
 
 ### 13. Where plugins live
@@ -1497,6 +1554,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                     | **A1**, named **B12**   |
 | `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1**                  |
 | `ctx.secrets.get` / `.set` / `.delete`           | `secrets:own`                        | **B18**                 |
+| `ctx.secrets.seal` / `.unseal`                   | `secrets:own`                        | **C1**                  |
 | `ctx.disposables.add`                            | none                                 | **A1**                  |
 | `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1**                  |
 | `ctx.currentActor()`                             | none                                 | **A1**                  |
@@ -1756,6 +1814,13 @@ notification)` delivers to the ones among them that are theirs and
   `ctx.db.persist`, because a plugin reads its keys on every request that
   uses them. The AI assistant keeps each provider's key under
   `provider:<id>` instead of in its providers table.
+- **C1** added `ctx.secrets.seal(value)` and `.unseal(sealed)`: the same
+  installation-key encryption, returned to the plugin instead of stored, for
+  a secret that lives in the plugin's own table and has to be read without
+  an acting user (a second factor checked during login). Both need
+  `secrets:own`; neither needs an actor or writes an audit line. `unseal`
+  answers null for anything `seal` did not write. The totp plugin keeps its
+  secrets and backup codes this way.
 - `ctx.fetch` takes a `signal`. It aborts the request and a streamed body;
   `timeoutMs` still only covers the wait for the headers, so a long model
   stream is not cut.
@@ -2296,7 +2361,7 @@ Then, with the app running:
 
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
-(B17), ai (B18) and homepage (B19), which import
+(B17), ai (B18), homepage (B19), totp and webauthn (C1), which import
 nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle

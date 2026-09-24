@@ -36,7 +36,7 @@ export type AdminUser = {
   isOidc: boolean;
   passwordHash?: string;
   dataUnlocked?: boolean;
-  totpEnabled?: boolean;
+  secondFactorEnabled?: boolean;
 };
 
 export type AdminSession = {
