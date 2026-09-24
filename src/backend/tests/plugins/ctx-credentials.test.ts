@@ -60,9 +60,17 @@ vi.mock("../../utils/shared-host-auth-resolver.js", () => ({
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { runAsActor } from "../../plugins/actor.js";
+import {
+  getSecretResolver,
+  requireSecretResolver,
+  resetSecretResolverRegistryForTests,
+} from "../../hosts/connect/secret-resolver-registry.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 
-function contextFor(capabilities: string[]) {
+function contextFor(
+  capabilities: string[],
+  contributes?: PluginManifest["contributes"],
+) {
   const manifest = {
     id: "demo",
     name: "demo",
@@ -73,6 +81,7 @@ function contextFor(capabilities: string[]) {
     category: "Productivity",
     engine: { termix: ">=2.9.0", api: "1" },
     capabilities,
+    contributes,
   } as PluginManifest;
   const handle = createPluginHandle("demo", { activate: () => {} });
   return createPluginContext(manifest, handle);
@@ -104,6 +113,7 @@ beforeEach(() => {
   state.resolution = null;
   state.resolverCalls.length = 0;
   state.hosts.set(7, { ...baseHost });
+  resetSecretResolverRegistryForTests();
 });
 
 describe("ctx.credentials.resolveHostProtocol", () => {
@@ -224,5 +234,74 @@ describe("ctx.credentials.resolveHostProtocol", () => {
       ),
     ).resolves.toBeNull();
     expect(auditEntries.at(-1)).toMatchObject({ success: false });
+  });
+});
+
+describe("ctx.credentials.registerSecretResolver", () => {
+  it("refuses without auth:provide", () => {
+    grants.set("demo", []);
+    const ctx = contextFor([], { auth: { secretSchemes: ["op"] } });
+
+    expect(() =>
+      ctx.credentials.registerSecretResolver("op", async () => ""),
+    ).toThrow(/auth:provide/);
+  });
+
+  it("refuses a scheme not listed in contributes.auth.secretSchemes", () => {
+    grants.set("demo", ["auth:provide"]);
+    const ctx = contextFor(["auth:provide"], { auth: {} });
+
+    expect(() =>
+      ctx.credentials.registerSecretResolver("op", async () => ""),
+    ).toThrow(/secretSchemes/);
+  });
+
+  it("resolves through the registered scheme and audits the call", async () => {
+    grants.set("demo", ["auth:provide"]);
+    const ctx = contextFor(["auth:provide"], {
+      auth: { secretSchemes: ["op"] },
+    });
+
+    ctx.credentials.registerSecretResolver("op", async (userId, ref) => {
+      state.resolverCalls.push({ userId, ref });
+      return `resolved:${ref}`;
+    });
+
+    const registration = requireSecretResolver("op");
+    expect(registration.pluginId).toBe("demo");
+
+    const value = await registration.resolve("alice", "op://v/i/f");
+    expect(value).toBe("resolved:op://v/i/f");
+    expect(state.resolverCalls[0]).toMatchObject({
+      userId: "alice",
+      ref: "op://v/i/f",
+    });
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_secret_resolve",
+      success: true,
+    });
+  });
+
+  it("is removed when the plugin is deactivated", async () => {
+    grants.set("demo", ["auth:provide"]);
+    const manifest = {
+      id: "demo",
+      name: "demo",
+      version: "1.0.0",
+      description: "",
+      author: { name: "test" },
+      license: "MIT",
+      category: "Productivity",
+      engine: { termix: ">=2.9.0", api: "1" },
+      capabilities: ["auth:provide"],
+      contributes: { auth: { secretSchemes: ["op"] } },
+    } as PluginManifest;
+    const handle = createPluginHandle("demo", { activate: () => {} });
+    const ctx = createPluginContext(manifest, handle);
+
+    ctx.credentials.registerSecretResolver("op", async () => "x");
+    await handle.bag.disposeAll();
+
+    expect(getSecretResolver("op")).toBeUndefined();
   });
 });

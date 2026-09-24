@@ -405,6 +405,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runWakeOnLanSettingsMigration } =
         await import("./utils/crypto-migration/wake-on-lan-settings-migration.js");
       await runWakeOnLanSettingsMigration();
+
+      const { runSecretSourcesTokenMigration } =
+        await import("./utils/crypto-migration/secret-sources-token-migration.js");
+      await runSecretSourcesTokenMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

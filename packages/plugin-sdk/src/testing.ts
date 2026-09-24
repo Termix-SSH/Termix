@@ -126,6 +126,11 @@ export interface FakeAuthRegistrations {
   secondFactors: PluginSecondFactor[];
   /** "<userId>:<factorId>" for every recorded enrolment. */
   enrollments: Set<string>;
+  /** Secret schemes registered through ctx.credentials.registerSecretResolver. */
+  secretResolvers: Map<
+    string,
+    (userId: string, reference: string) => Promise<string>
+  >;
 }
 
 export interface FakePluginContext {
@@ -336,6 +341,7 @@ export function createFakeContext(
     loginMethods: [],
     secondFactors: [],
     enrollments: new Set(),
+    secretResolvers: new Map(),
   };
   const sshClient = options.sshClient ?? {};
   let actor = options.actor;
@@ -800,6 +806,12 @@ export function createFakeContext(
         credentialReads.push({ hostId, protocol });
         return options.protocolTargets?.[`${hostId}:${protocol}`] ?? null;
       },
+      registerSecretResolver: (scheme, resolve) => {
+        auth.secretResolvers.set(scheme, resolve);
+        disposals.push(() => {
+          auth.secretResolvers.delete(scheme);
+        });
+      },
     },
 
     notify: {
@@ -1222,6 +1234,10 @@ export function createMockCtx(
       resolveHostProtocol: async (hostId, protocol) => {
         require("credentials:read");
         return ctx.credentials.resolveHostProtocol(hostId, protocol);
+      },
+      registerSecretResolver: (scheme, resolve) => {
+        require("auth:provide");
+        ctx.credentials.registerSecretResolver(scheme, resolve);
       },
     },
 

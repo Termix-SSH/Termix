@@ -1,0 +1,43 @@
+{
+  "id": "secret-sources",
+  "name": "Secret Sources",
+  "version": "1.0.0",
+  "description": "Pull host secrets from an external password manager at connect time instead of storing them, using op:// references.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "KeyRound",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "secrets:own",
+    "network:outbound",
+    "network:serve",
+    "auth:provide",
+    "ui:surface"
+  ],
+  "contributes": {
+    "auth": {
+      "secretSchemes": ["op"]
+    },
+    "settings": {
+      "admin": [
+        {
+          "key": "privateEndpoints",
+          "type": "textarea",
+          "labelKey": "settings.admin.privateEndpoints.label",
+          "descriptionKey": "settings.admin.privateEndpoints.description",
+          "default": "localhost\n127.0.0.1\n::1\nhost.docker.internal"
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

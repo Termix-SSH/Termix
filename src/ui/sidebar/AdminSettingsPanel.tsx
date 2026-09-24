@@ -5,8 +5,6 @@ import {
   getNotificationPrivateEndpoints,
   getStepCaPrivateEndpoints,
   setStepCaPrivateEndpoints as setStepCaPrivateEndpointsApi,
-  getSecretSourcePrivateEndpoints,
-  setSecretSourcePrivateEndpoints as setSecretSourcePrivateEndpointsApi,
   setNotificationPrivateEndpoints as setNotificationPrivateEndpointsApi,
 } from "@/api/private-endpoints-api";
 import {
@@ -142,8 +140,6 @@ export function AdminSettingsPanel({
   const [stepCaPrivateEndpoints, setStepCaPrivateEndpoints] = useState<
     string[]
   >([]);
-  const [secretSourcePrivateEndpoints, setSecretSourcePrivateEndpoints] =
-    useState<string[]>([]);
   const [stepCaSettings, setStepCaSettings] = useState({
     caUrl: "",
     fingerprint: "",
@@ -351,7 +347,6 @@ export function AdminSettingsPanel({
         analytics,
         notificationEndpoints,
         stepCaEndpoints,
-        secretSourceEndpoints,
         branding,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
@@ -366,7 +361,6 @@ export function AdminSettingsPanel({
         getAnalyticsEnabled(),
         getNotificationPrivateEndpoints(),
         getStepCaPrivateEndpoints(),
-        getSecretSourcePrivateEndpoints(),
         getBranding(),
       ]);
 
@@ -400,9 +394,6 @@ export function AdminSettingsPanel({
       }
       if (stepCaEndpoints.status === "fulfilled") {
         setStepCaPrivateEndpoints(stepCaEndpoints.value);
-      }
-      if (secretSourceEndpoints.status === "fulfilled") {
-        setSecretSourcePrivateEndpoints(secretSourceEndpoints.value);
       }
       if (notificationEndpoints.status === "fulfilled") {
         setNotificationPrivateEndpoints(notificationEndpoints.value);
@@ -538,19 +529,6 @@ export function AdminSettingsPanel({
       toast.error(
         error instanceof Error ? error.message : t("admin.stepCaSaveFailed"),
       );
-    }
-  }
-
-  async function handleSaveSecretSourcePrivateEndpoints(hosts: string[]) {
-    const previous = secretSourcePrivateEndpoints;
-    setSecretSourcePrivateEndpoints(hosts);
-    try {
-      setSecretSourcePrivateEndpoints(
-        await setSecretSourcePrivateEndpointsApi(hosts),
-      );
-    } catch {
-      setSecretSourcePrivateEndpoints(previous);
-      toast.error(t("admin.updateSecretSourceEndpointsFailed"));
     }
   }
 
@@ -1033,10 +1011,6 @@ export function AdminSettingsPanel({
         notificationPrivateEndpoints={notificationPrivateEndpoints}
         stepCaPrivateEndpoints={stepCaPrivateEndpoints}
         onSaveStepCaPrivateEndpoints={handleSaveStepCaPrivateEndpoints}
-        secretSourcePrivateEndpoints={secretSourcePrivateEndpoints}
-        onSaveSecretSourcePrivateEndpoints={
-          handleSaveSecretSourcePrivateEndpoints
-        }
         stepCaSettings={stepCaSettings}
         setStepCaSettings={setStepCaSettings}
         handleSaveStepCaSettings={handleSaveStepCaSettings}

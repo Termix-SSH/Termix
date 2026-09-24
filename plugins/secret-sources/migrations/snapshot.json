@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "tables": {
+    "sources": {
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "length": 255,
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "kind": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "onepassword-connect"
+        },
+        "baseUrl": {
+          "type": "text",
+          "notNull": true
+        },
+        "shared": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_secret_sources_user",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "secret_sources"
+    }
+  }
+}

@@ -15,6 +15,7 @@ import { PluginLoader, type LoadedPlugin } from "./loader.js";
 import type { PluginPermissionContribution } from "./manifest.js";
 import { invalidatePluginPermissionCache } from "./permissions.js";
 import { setSshAuthTypeOwnerSource } from "../hosts/connect/auth-provider-registry.js";
+import { setSecretResolverOwnerSource } from "../hosts/connect/secret-resolver-registry.js";
 
 let loader: PluginLoader | null = null;
 
@@ -35,6 +36,18 @@ export function getPluginRuntime(): { loader: PluginLoader } {
           pluginId: plugin.id,
           pluginName: plugin.manifest.name,
         })),
+      ),
+    );
+    // Lets a secret reference whose scheme belongs to a disabled plugin name it.
+    setSecretResolverOwnerSource(() =>
+      (loader?.list() ?? []).flatMap((plugin) =>
+        (plugin.manifest.contributes?.auth?.secretSchemes ?? []).map(
+          (scheme) => ({
+            scheme,
+            pluginId: plugin.id,
+            pluginName: plugin.manifest.name,
+          }),
+        ),
       ),
     );
   }

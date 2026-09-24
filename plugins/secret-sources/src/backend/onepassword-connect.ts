@@ -1,4 +1,4 @@
-import { safeOutboundFetch } from "./safe-outbound-fetch.js";
+import type { PluginFetch } from "@termix/plugin-sdk/backend";
 
 /**
  * The slice of the 1Password Connect REST API needed to resolve a secret
@@ -22,27 +22,24 @@ export function parseSecretReference(raw: string): SecretReference | null {
   return { vault, item, field };
 }
 
-export function isSecretReference(value: unknown): value is string {
-  return typeof value === "string" && value.trimStart().startsWith("op://");
-}
-
 export interface ConnectSource {
   baseUrl: string;
   token: string;
   allowedPrivateHosts: readonly string[];
 }
 
-async function connectGet<T>(source: ConnectSource, path: string): Promise<T> {
+async function connectGet<T>(
+  fetch: PluginFetch,
+  source: ConnectSource,
+  path: string,
+): Promise<T> {
   const base = source.baseUrl.replace(/\/+$/, "");
-  const response = await safeOutboundFetch(
-    `${base}${path}`,
-    {
-      method: "GET",
-      headers: { Authorization: `Bearer ${source.token}` },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    },
-    source.allowedPrivateHosts,
-  );
+  const response = await fetch(`${base}${path}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${source.token}` },
+    timeoutMs: FETCH_TIMEOUT_MS,
+    allowPrivateHosts: source.allowedPrivateHosts,
+  });
   if (!response.ok) {
     throw new Error(
       `1Password Connect ${path} failed: HTTP ${response.status}`,
@@ -73,9 +70,10 @@ interface ConnectField {
 
 /** Reachability + token validity: the vault list needs a valid token. */
 export async function testConnectSource(
+  fetch: PluginFetch,
   source: ConnectSource,
 ): Promise<number> {
-  const vaults = await connectGet<ConnectVault[]>(source, "/v1/vaults");
+  const vaults = await connectGet<ConnectVault[]>(fetch, source, "/v1/vaults");
   return vaults.length;
 }
 
@@ -87,21 +85,24 @@ const byIdOrName =
       name.toLowerCase();
 
 export async function resolveConnectReference(
+  fetch: PluginFetch,
   source: ConnectSource,
   ref: SecretReference,
 ): Promise<string> {
   const vaults = await connectGet<ConnectVault[]>(
+    fetch,
     source,
     `/v1/vaults?filter=${eqFilter(ref.vault)}`,
   );
   const vault =
     vaults.find(byIdOrName(ref.vault)) ??
-    (await connectGet<ConnectVault[]>(source, "/v1/vaults")).find(
+    (await connectGet<ConnectVault[]>(fetch, source, "/v1/vaults")).find(
       byIdOrName(ref.vault),
     );
   if (!vault) throw new Error(`1Password vault "${ref.vault}" not found`);
 
   const items = await connectGet<ConnectItemSummary[]>(
+    fetch,
     source,
     `/v1/vaults/${vault.id}/items?filter=${eqFilter(ref.item)}`,
   );
@@ -113,6 +114,7 @@ export async function resolveConnectReference(
   }
 
   const item = await connectGet<{ fields?: ConnectField[] }>(
+    fetch,
     source,
     `/v1/vaults/${vault.id}/items/${summary.id}`,
   );

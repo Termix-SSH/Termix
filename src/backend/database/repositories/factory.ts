@@ -30,7 +30,6 @@ import { RbacPermissionRepository } from "./rbac-permission-repository.js";
 import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
 import { SessionRepository } from "./session-repository.js";
-import { SecretSourceRepository } from "./secret-source-repository.js";
 import { CredentialAccessRepository } from "./credential-access-repository.js";
 import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
 import { FolderAccessRepository } from "./folder-access-repository.js";
@@ -438,13 +437,6 @@ export function createCurrentSharedCredentialSecretsRepository(): SharedCredenti
     createCurrentRepositoryWriteHook(
       "shared_credential_secrets_repository_write",
     ),
-  );
-}
-
-export function createCurrentSecretSourceRepository(): SecretSourceRepository {
-  return new SecretSourceRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("secret_source_repository_write"),
   );
 }
 

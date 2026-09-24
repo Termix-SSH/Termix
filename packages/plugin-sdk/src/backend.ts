@@ -1257,6 +1257,21 @@ export interface PluginCredentials {
     hostId: number,
     protocol: PluginHostProtocol,
   ) => Promise<PluginProtocolTarget | null>;
+  /**
+   * Registers this plugin as the resolver for "<scheme>://..." references in
+   * a host's secret fields (secret-sources registers "op" for
+   * "op://vault/item/field"). Needs auth:provide, like registerSshAuthProvider.
+   *
+   * `resolve` runs once per host resolution, for the user the field's owner
+   * resolves as (the host owner, or the recipient for a personal override),
+   * and its result is cached briefly by the connect pipeline. A scheme with no
+   * registered resolver fails the connect with a message naming the plugin
+   * that would provide it.
+   */
+  registerSecretResolver: (
+    scheme: string,
+    resolve: (userId: string, reference: string) => Promise<string>,
+  ) => void;
 }
 
 /**

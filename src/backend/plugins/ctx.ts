@@ -804,7 +804,11 @@ export function createPluginContext(
       available: () => isElectronIpcAvailable(),
     },
 
-    credentials: createPluginCredentials({ manifest, audit: auditCall }),
+    credentials: createPluginCredentials({
+      manifest,
+      bag: handle.bag,
+      audit: auditCall,
+    }),
 
     audit: {
       // Attribution comes from the runtime: the actor, never a plugin value.

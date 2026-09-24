@@ -375,11 +375,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   there: it writes host rows only and never plugin settings. Owner: D1, with
   the generic host-settings export and import.
 
-- **B17 (automations), for B20:** the wake-on-lan step calls the optional
-  `wake-on-lan.send` v1 service, `wake(hostId): Promise<void>`, as the
-  automation's owner; the provider resolves the host's MAC and checks access
-  itself. Until B20 provides it, the step is offered nowhere and an existing
-  one is skipped with "Needs the wake-on-lan plugin". Owner: B20.
 - **B17 (automations), for D2:** the ctx table says `ctx.events.on` needs
   `events:core` for core topics, but the runtime only checks `emit`.
   docker, file-manager, host-metrics, session-recording and snippets
@@ -450,6 +445,14 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   own B10 step moved off of (per `plugins/tmux-monitor/CHANGELOG.md`) without
   updating this frontend constant to `/plugin-api/tmux-monitor`. Not
   something this step touched or verified further. Owner: D0.
+- **Pre-existing, found in B20:** `npm run test:plugins` fails on three tests
+  unrelated to wake-on-lan or secret-sources: `ssh-terminal` and `tunnels`
+  both assert `mock.wsRoutes` equals `[{ path, raw }]`, but the mock now also
+  carries `handler` and `options` (added for **B15**'s doubles, per the
+  contract's "Tests" section), so the exact-equality assertion fails; and
+  `web-endpoint`'s "answers 503 while the tunnels plugin is not available"
+  test gets 502. Confirmed present on `dev-2.9.0` before this step (checked
+  by stashing B20's changes and re-running). Owner: D0.
 
 ## Manual checks after 2.9.0
 

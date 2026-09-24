@@ -257,6 +257,8 @@ export interface PluginAuthContribution {
   loginMethods?: string[];
   /** Second factor ids. */
   secondFactors?: string[];
+  /** Schemes this plugin resolves for "<scheme>://..." secret references, e.g. "op". */
+  secretSchemes?: string[];
 }
 
 export interface PluginContributions {
@@ -790,11 +792,16 @@ function validateAuthContribution(value: unknown, errors: string[]): void {
   }
   rejectUnknown(
     value,
-    ["sshAuthTypes", "loginMethods", "secondFactors"],
+    ["sshAuthTypes", "loginMethods", "secondFactors", "secretSchemes"],
     "contributes.auth",
     errors,
   );
-  for (const key of ["sshAuthTypes", "loginMethods", "secondFactors"]) {
+  for (const key of [
+    "sshAuthTypes",
+    "loginMethods",
+    "secondFactors",
+    "secretSchemes",
+  ]) {
     const list = value[key];
     if (list === undefined) continue;
     if (!Array.isArray(list)) {
@@ -1343,7 +1350,8 @@ export function parseManifest(raw: unknown): ParsedManifest {
   const contributesAuth =
     (auth?.sshAuthTypes?.length ?? 0) +
       (auth?.loginMethods?.length ?? 0) +
-      (auth?.secondFactors?.length ?? 0) >
+      (auth?.secondFactors?.length ?? 0) +
+      (auth?.secretSchemes?.length ?? 0) >
     0;
   if (contributesAuth && !manifest.capabilities.includes("auth:provide")) {
     errors.push(

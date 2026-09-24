@@ -477,19 +477,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
     );
 
-    CREATE TABLE IF NOT EXISTS secret_sources (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        kind TEXT NOT NULL DEFAULT 'onepassword-connect',
-        base_url TEXT NOT NULL,
-        token TEXT NOT NULL,
-        shared INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    );
-
     CREATE TABLE IF NOT EXISTS credential_access (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         credential_id INTEGER NOT NULL,

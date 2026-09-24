@@ -752,7 +752,7 @@ sessions shared with a user from the `sessions.sharedWithMe` action.
 (`snippets.access`, a hard dependency), fleets (`fleets.access`), tunnels
 (`tunnels.access`), Docker (`docker.containers`, `docker.events`), host metrics
 (`host-metrics.viewers`) and wake-on-lan (`wake-on-lan.send` v1,
-`wake(hostId)`, which B20 provides) as services, notification channels through
+`wake(hostId)`, which **B20** provides) as services, notification channels through
 `ctx.notify`, the HTTP step through `ctx.fetch`, hosts through `ctx.hosts` and
 `ctx.ssh.resolveHost`, and commands through `ctx.ssh.withConnection`. Every run
 executes inside `ctx.asUser(<owner>)`, so each of those calls is the owner's.
@@ -844,6 +844,38 @@ caller. The shared `host`/`selectHost`/`noHostConfigured`/`loading` strings
 several widget-owning plugins relied on through the `homepage` namespace's
 core fallback moved to core's `common.*`, which is what that fallback is
 actually for.
+
+**Wake-on-LAN (B20)** imports nothing from core. It owns no table: `macAddress`
+and `broadcastAddress` are host settings (`contributes.settings.host`), moved
+out of `ssh_data.mac_address`/`wol_broadcast_address` by a boot migration in
+`src/backend/utils/crypto-migration/wake-on-lan-settings-migration.ts`. A
+"Wake" host action sends the magic packet, gated on `network:broadcast`
+(medium, added to the capability catalog this step). It provides
+`wake-on-lan.send` v1 (`wake(hostId): Promise<void>`, which resolves the
+host's MAC and broadcast address itself and checks the caller's own
+`wake-on-lan.send` permission), which automations (B17) already declared as
+an optional dependency.
+
+**Secret sources (B20)** imports nothing from core. It adopts `secret_sources`
+(rename only; the access token is not a column - see below), and provides no
+service, only `ctx.credentials.registerSecretResolver("op", resolve)`. The
+1Password Connect client, its egress allowlist (an admin `privateEndpoints`
+textarea, the same shape as the ai plugin's) and the source manager UI (a
+component slot core's host editor and credential editor render through
+`app.registerComponent("secret-sources.hint" | "secret-sources.manager", ...)`
+and `PluginComponent`, replacing the static imports those two core files used
+to carry) all moved in. The access token follows the pattern the ai plugin set
+for provider keys: it lives in `ctx.secrets` under `"source:<id>"` rather than
+in the table, so it is encrypted with the installation key rather than the
+owner's data key and is readable whenever the plugin runs, not only while the
+owner is signed in. A shared source's token is still only ever read for its
+own owner: `resolveConnectReference` and the `/test` route both go through
+`ctx.asUser(<owner>)` before reading it, so a recipient using a shared source
+never touches the raw value directly. `src/backend/utils/crypto-migration/secret-sources-token-migration.ts`
+moves an existing owner-DEK-encrypted token out of the column and into
+`ctx.secrets` at boot, the same shape as `ai-settings-migration.ts`'s provider
+key move. The `/users/secret-source-private-endpoints` route and its admin UI
+are gone; the allowlist is the plugin's own admin setting now.
 
 #### Host status is core
 
@@ -1276,6 +1308,7 @@ not do.
       "sshAuthTypes": ["corp-ca"], // host auth types this plugin handles
       "loginMethods": ["corp-sso"],
       "secondFactors": ["pin"],
+      "secretSchemes": ["op"], // "<scheme>://..." secret references this plugin resolves
     },
     "settings": {
       "admin": [
@@ -1380,6 +1413,10 @@ accept the kinds `button` and `component`.
 `contributes.auth` lists the ids a plugin registers through `ctx.auth`. A
 register call for an id not listed here throws. Core also reads
 `sshAuthTypes` from disabled plugins, to say which plugin a host needs.
+`secretSchemes` (**B20**) is the same idea for
+`ctx.credentials.registerSecretResolver`: core reads it from disabled
+plugins too, so a reference whose scheme belongs to a disabled plugin can
+name that plugin in its error instead of saying nothing resolves it.
 
 `contributes.hostCapability`, `provides`, `requires`, `providesSecret` and
 `requiresSecret` are carried forward from v1 unchanged because the service and
@@ -1416,6 +1453,7 @@ deciding, not the mechanism.
 | `credentials:use`    | medium   | Connect using a host's stored credentials, without seeing them |
 | `network:outbound`   | medium   | Make outbound requests                                         |
 | `network:serve`      | medium   | Open a listening port                                          |
+| `network:broadcast`  | medium   | Send network broadcast packets                                 |
 | `users:read`         | medium   | See usernames and roles, never hashes or 2FA state             |
 | `events:core`        | medium   | Subscribe to and emit core events carrying other users' data   |
 | `notify:send`        | medium   | Send notifications through configured channels                 |
@@ -1477,6 +1515,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
 | `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)       | **B14**                 |
 | `ctx.credentials.resolveHostProtocol`            | `credentials:read`                   | **B14**                 |
+| `ctx.credentials.registerSecretResolver`         | `auth:provide`                       | **B20**                 |
 | `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
 | `ctx.schedule.every` / `.after`                  | none                                 | **B16**                 |
 | `ctx.fetch`                                      | `network:outbound`                   | **B17**, signal **B18** |
@@ -1635,6 +1674,22 @@ credential it points at; a shared recipient gets only core's sharing
 resolution (the owner's shared snapshot or their own override), never the
 owner's raw secret; no connect access, or no host, is `null`. Every call is
 audited as `plugin_credentials_read`, allowed or refused.
+
+**B20** added `ctx.credentials.registerSecretResolver(scheme, resolve)`,
+behind `auth:provide` like `ctx.auth`'s registrations, for a plugin that
+expands `"<scheme>://..."` references in a host's secret fields into the
+real secret (secret-sources registers `"op"` for
+`"op://vault/item/field"`). The scheme must be listed in
+`contributes.auth.secretSchemes`, which exists for the same reason
+`sshAuthTypes` does: so core can name the plugin a disabled scheme needs. A
+core registry in `src/backend/hosts/connect/secret-resolver-registry.ts`
+mirrors the SSH auth provider registry one-for-one (one owner per scheme,
+`SecretResolverMissingError` naming the plugin when none is registered).
+`resolve` is called once per host resolution, for the user the field's owner
+resolves as, by `src/backend/hosts/external-secrets.ts`, which is scheme-
+generic now: it detects a reference by its `scheme://` prefix, looks up the
+registered resolver, and caches the result for a minute. Core registers
+nothing here itself.
 
 **B16** added `ctx.hosts.status`, the plugin side of core's host status
 check (see [Host status](#host-status-is-core)):

@@ -89,10 +89,7 @@ import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { SshAuthProviderFields } from "./SshAuthProviderFields";
 import type { PluginSettingsField } from "@termix/plugin-sdk/manifest";
 import { ensureLegacyAuthUI } from "@/auth/legacy-auth-ui";
-import {
-  SecretReferenceHint,
-  SecretSourceManager,
-} from "./SecretSourceManager";
+import { PluginComponent } from "@/plugin-host/component-registry";
 import {
   toCredentialOption,
   type CredentialOption,
@@ -698,14 +695,16 @@ export function HostEditor({
                           }}
                           onChange={(e) => setField("password", e.target.value)}
                         />
-                        <SecretReferenceHint
+                        <PluginComponent
+                          id="secret-sources.hint"
                           onManage={() => setShowSecretSources((v) => !v)}
                         />
                       </div>
                     )}
                     {(authMethod === "password" || authMethod === "key") &&
                       showSecretSources && (
-                        <SecretSourceManager
+                        <PluginComponent
+                          id="secret-sources.manager"
                           onClose={() => setShowSecretSources(false)}
                         />
                       )}

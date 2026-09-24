@@ -1,8 +1,5 @@
 import { useRef, useState } from "react";
-import {
-  SecretReferenceHint,
-  SecretSourceManager,
-} from "./SecretSourceManager";
+import { PluginComponent } from "@/plugin-host/component-registry";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Copy, Info, Lock, Upload, X } from "lucide-react";
@@ -296,12 +293,14 @@ export function CredentialEditorView({
                 value={credForm.password}
                 onChange={(e) => setCredField("password", e.target.value)}
               />
-              <SecretReferenceHint
+              <PluginComponent
+                id="secret-sources.hint"
                 onManage={() => setShowSecretSources((v) => !v)}
               />
             </div>
             {showSecretSources && (
-              <SecretSourceManager
+              <PluginComponent
+                id="secret-sources.manager"
                 onClose={() => setShowSecretSources(false)}
               />
             )}

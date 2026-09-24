@@ -1,35 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { KeyRound, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { PasswordInput } from "@/components/password-input";
-import { getErrorMessage } from "@/lib/error-message";
+import { Button, Input, PasswordInput } from "@termix/plugin-sdk/ui";
+import { usePluginApi, useTranslation } from "@termix/plugin-sdk/frontend";
 import {
-  createSecretSource,
-  deleteSecretSource,
-  listSecretSources,
-  testSecretSource,
-  updateSecretSource,
+  createSecretSourcesApi,
   type SecretSource,
-} from "@/api/secret-sources-api";
+} from "./secret-sources-api";
 
-/** One line under a secret field: references are allowed, here is where to set them up. */
-export function SecretReferenceHint({ onManage }: { onManage: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <p className="text-[10px] text-muted-foreground">
-      {t("hosts.secretRefHint")}{" "}
-      <button
-        type="button"
-        className="text-accent-brand hover:underline"
-        onClick={onManage}
-      >
-        {t("hosts.secretSourcesManage")}
-      </button>
-    </p>
-  );
+function errorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message ?? "");
+  }
+  return String(error);
 }
 
 type FormState = {
@@ -49,6 +32,8 @@ const emptyForm: FormState = {
 
 export function SecretSourceManager({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
+  const pluginApi = usePluginApi();
+  const api = useMemo(() => createSecretSourcesApi(pluginApi), [pluginApi]);
   const [sources, setSources] = useState<SecretSource[]>([]);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -56,11 +41,11 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
 
   const reload = useCallback(async () => {
     try {
-      setSources(await listSecretSources());
+      setSources(await api.list());
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      toast.error(errorMessage(e));
     }
-  }, []);
+  }, [api]);
 
   useEffect(() => {
     void reload();
@@ -76,31 +61,31 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
       !form.baseUrl.trim() ||
       (!form.id && !form.token)
     ) {
-      toast.error(t("hosts.secretSourceRequired"));
+      toast.error(t("required"));
       return;
     }
     setSaving(true);
     try {
       if (form.id) {
-        await updateSecretSource(form.id, {
+        await api.update(form.id, {
           name: form.name,
           baseUrl: form.baseUrl,
           shared: form.shared,
           ...(form.token ? { token: form.token } : {}),
         });
       } else {
-        await createSecretSource({
+        await api.create({
           name: form.name,
           baseUrl: form.baseUrl,
           token: form.token,
           shared: form.shared,
         });
       }
-      toast.success(t("hosts.secretSourceSaved"));
+      toast.success(t("saved"));
       setForm(null);
       await reload();
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      toast.error(errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -108,27 +93,25 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
 
   const handleDelete = async (source: SecretSource) => {
     try {
-      await deleteSecretSource(source.id);
-      toast.success(t("hosts.secretSourceDeleted"));
+      await api.remove(source.id);
+      toast.success(t("deleted"));
       await reload();
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      toast.error(errorMessage(e));
     }
   };
 
   const handleTest = async (source: SecretSource) => {
     setTesting(source.id);
     try {
-      const result = await testSecretSource(source.id);
+      const result = await api.test(source.id);
       if (result.ok) {
-        toast.success(
-          t("hosts.secretSourceTestOk", { count: result.vaults ?? 0 }),
-        );
+        toast.success(t("testOk", { count: result.vaults ?? 0 }));
       } else {
-        toast.error(result.error ?? t("hosts.secretSourceTestFailed"));
+        toast.error(result.error ?? t("testFailed"));
       }
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      toast.error(errorMessage(e));
     } finally {
       setTesting(null);
     }
@@ -138,7 +121,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
     <div className="flex flex-col gap-3 col-span-2 border border-border bg-muted/20 p-3">
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          {t("hosts.secretSourcesTitle")}
+          {t("title")}
         </span>
         <button
           type="button"
@@ -148,9 +131,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
           <X className="size-3.5" />
         </button>
       </div>
-      <p className="text-[10px] text-muted-foreground">
-        {t("hosts.secretSourcesDesc")}
-      </p>
+      <p className="text-[10px] text-muted-foreground">{t("description")}</p>
 
       {!form && (
         <>
@@ -165,7 +146,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
                   {source.name}
                   {source.shared && (
                     <span className="ml-1 text-[9px] uppercase text-muted-foreground">
-                      {t("hosts.secretSourceShared")}
+                      {t("shared")}
                     </span>
                   )}
                 </div>
@@ -181,7 +162,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
                 disabled={testing === source.id}
                 onClick={() => void handleTest(source)}
               >
-                {t("hosts.secretSourceTest")}
+                {t("test")}
               </Button>
               {source.owned && (
                 <>
@@ -218,7 +199,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
             className="self-start border-accent-brand/40 text-accent-brand"
             onClick={() => setForm(emptyForm)}
           >
-            <Plus className="size-3 mr-1" /> {t("hosts.secretSourceNew")}
+            <Plus className="size-3 mr-1" /> {t("new")}
           </Button>
         </>
       )}
@@ -228,7 +209,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
               <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.friendlyNameLabel")}
+                {t("nameLabel")}
               </label>
               <Input
                 className="h-8 text-xs"
@@ -239,7 +220,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.secretSourceUrlLabel")}
+                {t("urlLabel")}
               </label>
               <Input
                 className="h-8 text-xs"
@@ -251,13 +232,11 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("hosts.secretSourceTokenLabel")}
+              {t("tokenLabel")}
             </label>
             <PasswordInput
               className="h-8 text-xs pr-8"
-              placeholder={
-                form.id ? t("hosts.secretSourceTokenKeep") : "eyJhbGciOi..."
-              }
+              placeholder={form.id ? t("tokenKeep") : "eyJhbGciOi..."}
               value={form.token}
               onChange={(e) => setField("token", e.target.value)}
             />
@@ -268,7 +247,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
               checked={form.shared}
               onChange={(e) => setField("shared", e.target.checked)}
             />
-            {t("hosts.secretSourceSharedLabel")}
+            {t("sharedLabel")}
           </label>
           <div className="flex justify-end gap-2">
             <Button
@@ -278,7 +257,7 @@ export function SecretSourceManager({ onClose }: { onClose: () => void }) {
               onClick={() => setForm(null)}
               disabled={saving}
             >
-              {t("hosts.cancelBtn")}
+              {t("common.cancel")}
             </Button>
             <Button
               type="button"

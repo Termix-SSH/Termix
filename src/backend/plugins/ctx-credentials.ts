@@ -7,6 +7,12 @@
  * The protocol credentials themselves stay in core, next to the host, because
  * core's sharing model (per-recipient secret snapshots, personal overrides)
  * is what decides which ones a shared recipient may use.
+ *
+ * registerSecretResolver is the other half: a plugin that resolves
+ * "<scheme>://..." references in a host's secret fields (secret-sources and
+ * "op://") instead of handing over a host's own stored secret. Needs
+ * auth:provide, like ctx.auth's registrations, and the scheme must be listed
+ * in contributes.auth.secretSchemes.
  */
 
 import type {
@@ -14,9 +20,12 @@ import type {
   PluginHostProtocol,
   PluginProtocolTarget,
 } from "@termix/plugin-sdk/backend";
+import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
 import { getActor } from "./actor.js";
+import type { DisposableBag } from "./disposables.js";
+import { registerSecretResolver } from "../hosts/connect/secret-resolver-registry.js";
 
 type AuditFn = (
   action: string,
@@ -26,6 +35,7 @@ type AuditFn = (
 
 interface Deps {
   manifest: PluginManifest;
+  bag: DisposableBag;
   audit: AuditFn;
 }
 
@@ -149,12 +159,45 @@ async function resolveRecipientAuth(
 
 export function createPluginCredentials({
   manifest,
+  bag,
   audit,
 }: Deps): PluginCredentials {
   const pluginId = manifest.id;
   const declared = manifest.capabilities;
 
   return {
+    registerSecretResolver: (scheme, resolve) => {
+      if (!declared.includes("auth:provide")) {
+        throw new PluginCapabilityError(pluginId, "auth:provide");
+      }
+      if (!manifest.contributes?.auth?.secretSchemes?.includes(scheme)) {
+        throw new Error(
+          `Plugin ${pluginId} cannot register secret scheme "${scheme}": it is not listed in contributes.auth.secretSchemes`,
+        );
+      }
+      const dispose = registerSecretResolver(
+        scheme,
+        { pluginId, pluginName: manifest.name },
+        async (userId, reference) => {
+          await assertCapability(pluginId, "auth:provide", declared);
+          const details = `secret reference for ${userId}`;
+          try {
+            const value = await resolve(userId, reference);
+            await audit("secret_resolve", details, { success: true });
+            return value;
+          } catch (error) {
+            await audit("secret_resolve", details, {
+              success: false,
+              errorMessage:
+                error instanceof Error ? error.message : String(error),
+            });
+            throw error;
+          }
+        },
+      );
+      bag.add(dispose, `secret scheme "${scheme}"`);
+    },
+
     resolveHostProtocol: async (hostId, protocol) => {
       const details = `${protocol} credentials for host ${hostId}`;
       try {
