@@ -38,6 +38,7 @@ export * from "@/components/tooltip";
 export * from "@/components/section-card";
 export * from "@/components/metric-card";
 export * from "@/components/charts";
+export { LineChart, type LineChartSeries } from "@/components/charts/LineChart";
 export {
   CardGridCanvas,
   ColumnCountStepper,
@@ -82,6 +83,12 @@ export {
 } from "@/lib/adaptive-polling";
 export * from "@/components/sheet";
 export { useConfirmation } from "@/hooks/use-confirmation";
+export { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
+// Per-area display density and chart options the user picked in Appearance.
+export { useAreaPreferences } from "@/contexts/UiPreferencesContext";
+// Homepage widget pieces, for plugins that register a widget.
+export { WidgetTitle } from "@/features/homepage/widgets/WidgetTitle";
+export { runVisibleInterval } from "@/features/homepage/use-visible-interval";
 export { useIsMobile } from "@/hooks/use-mobile";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
 export { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog";

@@ -1,10 +1,10 @@
+import { execCommand } from "@termix/plugin-sdk/host-commands";
 import type { Client } from "ssh2";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import type {
   FirewallMetrics,
   FirewallChain,
   FirewallRule,
-} from "../../../../../src/types/stats-widgets.js";
+} from "../../shared/stats-widgets.js";
 
 function parseIptablesRule(line: string): FirewallRule | null {
   if (!line.startsWith("-A ")) return null;

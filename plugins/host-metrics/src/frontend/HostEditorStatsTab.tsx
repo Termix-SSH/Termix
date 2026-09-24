@@ -1,7 +1,18 @@
-import { useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
 import {
-  Activity,
+  Button,
+  Input,
+  SectionCard,
+  SettingRow,
+  FakeSwitch,
+  Select2,
+} from "@termix/plugin-sdk/ui";
+import { useEffect, useState } from "react";
+import {
+  usePluginApi,
+  useTranslation,
+  type HostEditorSectionProps,
+} from "@termix/plugin-sdk/frontend";
+import {
   HardDrive,
   LayoutDashboard,
   Plus,
@@ -10,32 +21,66 @@ import {
   Zap,
 } from "lucide-react";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
-import type { HostEditorForm } from "@/sidebar/HostEditorData";
-import { Select2 } from "@/components/select2";
+import { readHostMetricsSettings } from "../shared/stats-widgets.js";
 
-type SetHostField = <K extends keyof HostEditorForm>(
-  key: K,
-  value: HostEditorForm[K],
-) => void;
+const PLUGIN_ID = "host-metrics";
 
+type PluginSettingsBag = Record<string, Record<string, unknown>>;
+type QuickActionRow = { name: string; snippetId: string };
+
+/**
+ * The Host Metrics section of the host editor. Its values are this plugin's
+ * host settings, carried on form.pluginSettings and saved by the editor after
+ * the host itself. Quick actions are a core host field.
+ */
 export function HostStatsTab({
   form,
   setField,
+  updateForm,
+  host,
   snippets,
-}: {
-  form: HostEditorForm;
-  setField: SetHostField;
-  snippets: { id: number; name: string }[];
-}) {
+}: HostEditorSectionProps) {
   const { t } = useTranslation();
   const [newMount, setNewMount] = useState("");
   const [newMonitoredPath, setNewMonitoredPath] = useState("");
   const [newMonitoredLabel, setNewMonitoredLabel] = useState("");
-  const excludedMounts = form.statsConfig.excludedMounts ?? [];
-  const monitoredMounts = form.statsConfig.monitoredMounts ?? [];
+  const bag = (form.pluginSettings as PluginSettingsBag | undefined)?.[
+    PLUGIN_ID
+  ];
+  const settings = readHostMetricsSettings(bag);
+  const { excludedMounts, monitoredMounts } = settings;
+  const quickActions = (form.quickActions ?? []) as QuickActionRow[];
+  const snippetOptions = (snippets ?? []) as { id: number; name: string }[];
+  const api = usePluginApi();
+
+  const patch = (values: Record<string, unknown>) =>
+    updateForm((current) => {
+      const all =
+        (current.pluginSettings as PluginSettingsBag | undefined) ?? {};
+      return {
+        pluginSettings: {
+          ...all,
+          [PLUGIN_ID]: { ...(all[PLUGIN_ID] ?? {}), ...values },
+        },
+      };
+    });
+
+  // A new host starts with the admin's default for metrics.
+  useEffect(() => {
+    if (host || bag?.metricsEnabled !== undefined) return;
+    let cancelled = false;
+    api
+      .get<{ enabledForNewHosts: boolean }>("/defaults")
+      .then(({ data }) => {
+        if (!cancelled && data.enabledForNewHosts === false) {
+          patch({ metricsEnabled: false });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [host]);
 
   const addExcludedMount = () => {
     const value = newMount.trim();
@@ -43,18 +88,14 @@ export function HostStatsTab({
       setNewMount("");
       return;
     }
-    setField("statsConfig", {
-      ...form.statsConfig,
-      excludedMounts: [...excludedMounts, value],
-    });
+    patch({ excludedMounts: [...excludedMounts, value] });
     setNewMount("");
   };
 
   const addMonitoredMount = () => {
     const path = newMonitoredPath.trim();
     if (!path || monitoredMounts.some((entry) => entry.path === path)) return;
-    setField("statsConfig", {
-      ...form.statsConfig,
+    patch({
       monitoredMounts: [
         ...monitoredMounts,
         { path, label: newMonitoredLabel.trim() || undefined },
@@ -67,62 +108,6 @@ export function HostStatsTab({
   return (
     <>
       <SectionCard
-        title={t("hosts.statusChecksLabel")}
-        icon={<Activity className="size-3.5" />}
-      >
-        <div className="flex flex-col gap-0 py-1">
-          <SettingRow
-            label={t("hosts.enableStatusChecks")}
-            description={t("hosts.enableStatusChecksDesc")}
-          >
-            <FakeSwitch
-              checked={form.statsConfig.statusCheckEnabled}
-              onChange={(v) =>
-                setField("statsConfig", {
-                  ...form.statsConfig,
-                  statusCheckEnabled: v,
-                })
-              }
-            />
-          </SettingRow>
-          {form.statsConfig.statusCheckEnabled && (
-            <SettingRow
-              label={t("hosts.useGlobalInterval")}
-              description={t("hosts.useGlobalIntervalDesc")}
-            >
-              <FakeSwitch
-                checked={form.statsConfig.useGlobalStatusInterval}
-                onChange={(v) =>
-                  setField("statsConfig", {
-                    ...form.statsConfig,
-                    useGlobalStatusInterval: v,
-                  })
-                }
-              />
-            </SettingRow>
-          )}
-          {form.statsConfig.statusCheckEnabled &&
-            !form.statsConfig.useGlobalStatusInterval && (
-              <SettingRow
-                label={t("hosts.checkIntervalS")}
-                description={t("hosts.checkIntervalDesc")}
-              >
-                <Input
-                  type="number"
-                  value={form.statsConfig.statusCheckInterval}
-                  onChange={(e) =>
-                    setField("statsConfig", {
-                      ...form.statsConfig,
-                      statusCheckInterval: Number(e.target.value),
-                    })
-                  }
-                  className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </SettingRow>
-            )}
-        </div>
-      </SectionCard>
-      <SectionCard
         title={t("hosts.metricsCollectionLabel")}
         icon={<Server className="size-3.5" />}
       >
@@ -132,50 +117,36 @@ export function HostStatsTab({
             description={t("hosts.enableMetricsDesc")}
           >
             <FakeSwitch
-              checked={form.statsConfig.metricsEnabled}
-              onChange={(v) =>
-                setField("statsConfig", {
-                  ...form.statsConfig,
-                  metricsEnabled: v,
-                })
-              }
+              checked={settings.metricsEnabled}
+              onChange={(v) => patch({ metricsEnabled: v })}
             />
           </SettingRow>
-          {form.statsConfig.metricsEnabled && (
+          {settings.metricsEnabled && (
             <SettingRow
               label={t("hosts.useGlobalMetrics")}
               description={t("hosts.useGlobalMetricsDesc")}
             >
               <FakeSwitch
-                checked={form.statsConfig.useGlobalMetricsInterval}
-                onChange={(v) =>
-                  setField("statsConfig", {
-                    ...form.statsConfig,
-                    useGlobalMetricsInterval: v,
-                  })
-                }
+                checked={settings.metricsInterval === null}
+                onChange={(v) => patch({ metricsInterval: v ? null : 30 })}
               />
             </SettingRow>
           )}
-          {form.statsConfig.metricsEnabled &&
-            !form.statsConfig.useGlobalMetricsInterval && (
-              <SettingRow
-                label={t("hosts.metricsIntervalS")}
-                description={t("hosts.metricsIntervalDesc2")}
-              >
-                <Input
-                  type="number"
-                  value={form.statsConfig.metricsInterval}
-                  onChange={(e) =>
-                    setField("statsConfig", {
-                      ...form.statsConfig,
-                      metricsInterval: Number(e.target.value),
-                    })
-                  }
-                  className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </SettingRow>
-            )}
+          {settings.metricsEnabled && settings.metricsInterval !== null && (
+            <SettingRow
+              label={t("hosts.metricsIntervalS")}
+              description={t("hosts.metricsIntervalDesc2")}
+            >
+              <Input
+                type="number"
+                value={settings.metricsInterval ?? 30}
+                onChange={(e) =>
+                  patch({ metricsInterval: Number(e.target.value) })
+                }
+                className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </SettingRow>
+          )}
         </div>
       </SectionCard>
       <SectionCard
@@ -236,8 +207,7 @@ export function HostStatsTab({
               <button
                 className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                 onClick={() =>
-                  setField("statsConfig", {
-                    ...form.statsConfig,
+                  patch({
                     monitoredMounts: monitoredMounts.filter(
                       (mount) => mount.path !== entry.path,
                     ),
@@ -295,8 +265,7 @@ export function HostStatsTab({
               <button
                 className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() =>
-                  setField("statsConfig", {
-                    ...form.statsConfig,
+                  patch({
                     excludedMounts: excludedMounts.filter(
                       (_, idx) => idx !== i,
                     ),
@@ -329,7 +298,7 @@ export function HostStatsTab({
             className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
             onClick={() =>
               setField("quickActions", [
-                ...form.quickActions,
+                ...quickActions,
                 { name: "", snippetId: "" },
               ])
             }
@@ -342,13 +311,13 @@ export function HostStatsTab({
           <p className="text-xs text-muted-foreground">
             {t("hosts.quickActionsToolbar")}
           </p>
-          {form.quickActions.length === 0 && (
+          {quickActions.length === 0 && (
             <div className="flex flex-col items-center justify-center py-4 text-muted-foreground/40 gap-1.5">
               <Zap className="size-6" />
               <span className="text-xs">{t("hosts.noQuickActions")}</span>
             </div>
           )}
-          {form.quickActions.map((a, i) => (
+          {quickActions.map((a, i) => (
             <div
               key={i}
               className="flex items-center gap-2 p-2 bg-muted/20 border border-border group"
@@ -358,7 +327,7 @@ export function HostStatsTab({
                 placeholder={t("hosts.buttonLabel")}
                 value={a.name}
                 onChange={(e) => {
-                  const updated = [...form.quickActions];
+                  const updated = [...quickActions];
                   updated[i] = { ...updated[i], name: e.target.value };
                   setField("quickActions", updated);
                 }}
@@ -367,7 +336,7 @@ export function HostStatsTab({
                 className="h-7 text-xs flex-1 border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
                 value={a.snippetId}
                 onChange={(e) => {
-                  const updated = [...form.quickActions];
+                  const updated = [...quickActions];
                   updated[i] = {
                     ...updated[i],
                     snippetId: e.target.value,
@@ -376,7 +345,7 @@ export function HostStatsTab({
                 }}
               >
                 <option value="">{t("hosts.selectSnippetPlaceholder")}</option>
-                {snippets.map((s) => (
+                {snippetOptions.map((s) => (
                   <option key={s.id} value={String(s.id)}>
                     {s.name}
                   </option>
@@ -387,7 +356,7 @@ export function HostStatsTab({
                 onClick={() =>
                   setField(
                     "quickActions",
-                    form.quickActions.filter((_, idx) => idx !== i),
+                    quickActions.filter((_, idx) => idx !== i),
                   )
                 }
               >

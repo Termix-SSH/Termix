@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { managerGet, managerPost } from "../../host-metrics-api";
+import { useHostMetricsApi } from "../../host-metrics-api";
 
 interface ManagerError {
   message: string;
@@ -27,6 +27,7 @@ export function useManagerData<T>(
   resource: string,
   params?: Record<string, string | number>,
 ) {
+  const { managerGet } = useHostMetricsApi();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ManagerError | null>(null);
@@ -66,6 +67,7 @@ interface ActionResult {
  * to refresh the card). Returns the result so callers can branch further.
  */
 export function useManagerAction(hostId: number | null) {
+  const { managerPost } = useHostMetricsApi();
   const [busy, setBusy] = useState(false);
 
   const run = useCallback(

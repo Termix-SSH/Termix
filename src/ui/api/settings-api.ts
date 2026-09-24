@@ -1,32 +1,5 @@
-import { authApi, handleApiError, statsApi } from "@/main-axios";
+import { authApi, handleApiError } from "@/main-axios";
 
-// GLOBAL MONITORING SETTINGS
-// ============================================================================
-
-export async function getGlobalMonitoringSettings(): Promise<{
-  statusCheckInterval: number;
-  metricsInterval: number;
-}> {
-  try {
-    const response = await statsApi.get("/global-settings");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch global monitoring settings");
-  }
-}
-
-export async function updateGlobalMonitoringSettings(settings: {
-  statusCheckInterval?: number;
-  metricsInterval?: number;
-}): Promise<void> {
-  try {
-    await statsApi.post("/global-settings", settings);
-  } catch (error) {
-    handleApiError(error, "update global monitoring settings");
-  }
-}
-
-// ============================================================================
 // LOG LEVEL SETTINGS
 // ============================================================================
 
@@ -184,7 +157,6 @@ export type HostDefaults = {
   socks5Username?: string;
   socks5Password?: string;
   credentialId?: number | null;
-  metricsEnabled?: boolean;
   statusCheckEnabled?: boolean;
   fontSize?: number;
   fontFamily?: string;

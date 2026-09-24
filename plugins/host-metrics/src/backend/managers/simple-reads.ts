@@ -1,5 +1,5 @@
-import type { Express } from "express";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
+import { execCommand } from "@termix/plugin-sdk/host-commands";
+import type { Router } from "express";
 import { managerHandler } from "./route-helpers.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
@@ -106,13 +106,14 @@ export function parseDfMounts(output: string): MountUsage[] {
 }
 
 export function registerSimpleReadRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
+  app: Router,
+  deps: ManagerRoutesDeps,
 ): void {
+  const { validateHostId } = deps;
   app.get(
     "/host-metrics/managers/top-memory/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "top_memory", async (client) => {
+    managerHandler(deps, "connect", "top_memory", async (client) => {
       const { stdout } = await execCommand(client, TOP_MEM_CMD, 15000);
       return { processes: parseTopMemory(stdout) };
     }),
@@ -121,7 +122,7 @@ export function registerSimpleReadRoutes(
   app.get(
     "/host-metrics/managers/timers/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "systemd_timers", async (client) => {
+    managerHandler(deps, "connect", "systemd_timers", async (client) => {
       const { stdout } = await execCommand(client, TIMERS_CMD, 15000);
       return { timers: parseTimers(stdout) };
     }),
@@ -130,7 +131,7 @@ export function registerSimpleReadRoutes(
   app.get(
     "/host-metrics/managers/disk-breakdown/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "disk_breakdown", async (client) => {
+    managerHandler(deps, "connect", "disk_breakdown", async (client) => {
       const { stdout } = await execCommand(client, DF_CMD, 15000);
       return { mounts: parseDfMounts(stdout) };
     }),

@@ -1,9 +1,9 @@
-import type { Client } from "ssh2";
 import {
   execCommand,
   execPowerShell,
   type HostPlatform,
-} from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
+} from "@termix/plugin-sdk/host-commands";
+import type { Client } from "ssh2";
 
 async function collectWindowsSystemMetrics(client: Client): Promise<{
   hostname: string | null;

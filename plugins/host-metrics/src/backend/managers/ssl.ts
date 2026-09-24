@@ -1,16 +1,16 @@
-import type { Express } from "express";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import {
+  execCommand,
   execElevated,
   shellSingleQuote,
-} from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { managerHandler, ManagerInputError } from "./route-helpers.js";
+  detectPlatform,
+} from "@termix/plugin-sdk/host-commands";
 import {
   isValidDomain,
   isValidDnsProvider,
   isAllowedPath,
-} from "../../../../../src/backend/hosts/metrics-shared/validation.js";
-import { detectPlatform } from "../../../../../src/backend/hosts/metrics-shared/platform.js";
+} from "./validation.js";
+import type { Router } from "express";
+import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
 export type AcmeClient = "certbot" | "acme.sh";
@@ -149,14 +149,12 @@ export function buildRevokeCommand(client: AcmeClient, name: string): string {
   return `${ACMESH_BIN} --revoke -d ${d} && ${ACMESH_BIN} --remove -d ${d}`;
 }
 
-export function registerSslRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
-): void {
+export function registerSslRoutes(app: Router, deps: ManagerRoutesDeps): void {
+  const { validateHostId } = deps;
   app.get(
     "/host-metrics/managers/ssl/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "ssl_list", async (client, host) => {
+    managerHandler(deps, "connect", "ssl_list", async (client, host) => {
       const platform = await detectPlatform(client);
       const certs: CertInfo[] = [];
       if (platform.hasCertbot) {
@@ -188,78 +186,68 @@ export function registerSslRoutes(
   app.post(
     "/host-metrics/managers/ssl/:id/issue",
     validateHostId,
-    managerHandler(
-      runOnHost,
-      "connect",
-      "ssl_issue",
-      async (client, host, req) => {
-        const body = req.body as Partial<IssueRequest>;
-        if (body.client !== "certbot" && body.client !== "acme.sh") {
-          throw new ManagerInputError("Invalid ACME client");
-        }
-        if (!Array.isArray(body.domains) || body.domains.length === 0) {
-          throw new ManagerInputError("At least one domain is required");
-        }
-        for (const d of body.domains) {
-          if (!isValidDomain(d))
-            throw new ManagerInputError(`Invalid domain: ${d}`);
-        }
-        const challenge = body.challenge;
-        if (
-          challenge !== "http-standalone" &&
-          challenge !== "http-webroot" &&
-          challenge !== "dns"
-        ) {
-          throw new ManagerInputError("Invalid challenge type");
-        }
-        if (challenge === "dns" && !isValidDnsProvider(body.dnsProvider)) {
-          throw new ManagerInputError("Invalid DNS provider");
-        }
-        if (
-          challenge === "http-webroot" &&
-          !isAllowedPath(body.webroot, ["/var/www", "/srv", "/usr/share/nginx"])
-        ) {
-          throw new ManagerInputError("Invalid or disallowed webroot path");
-        }
-        const cmd = buildIssueCommand(body as IssueRequest);
-        const result = await execElevated(client, cmd, host.sudoPassword, {
-          forceSudo: true,
-          timeoutMs: 300000,
-        });
-        return {
-          success: result.code === 0,
-          output: (result.stdout || result.stderr).slice(-8000),
-        };
-      },
-    ),
+    managerHandler(deps, "connect", "ssl_issue", async (client, host, req) => {
+      const body = req.body as Partial<IssueRequest>;
+      if (body.client !== "certbot" && body.client !== "acme.sh") {
+        throw new ManagerInputError("Invalid ACME client");
+      }
+      if (!Array.isArray(body.domains) || body.domains.length === 0) {
+        throw new ManagerInputError("At least one domain is required");
+      }
+      for (const d of body.domains) {
+        if (!isValidDomain(d))
+          throw new ManagerInputError(`Invalid domain: ${d}`);
+      }
+      const challenge = body.challenge;
+      if (
+        challenge !== "http-standalone" &&
+        challenge !== "http-webroot" &&
+        challenge !== "dns"
+      ) {
+        throw new ManagerInputError("Invalid challenge type");
+      }
+      if (challenge === "dns" && !isValidDnsProvider(body.dnsProvider)) {
+        throw new ManagerInputError("Invalid DNS provider");
+      }
+      if (
+        challenge === "http-webroot" &&
+        !isAllowedPath(body.webroot, ["/var/www", "/srv", "/usr/share/nginx"])
+      ) {
+        throw new ManagerInputError("Invalid or disallowed webroot path");
+      }
+      const cmd = buildIssueCommand(body as IssueRequest);
+      const result = await execElevated(client, cmd, host.sudoPassword, {
+        forceSudo: true,
+        timeoutMs: 300000,
+      });
+      return {
+        success: result.code === 0,
+        output: (result.stdout || result.stderr).slice(-8000),
+      };
+    }),
   );
 
   app.post(
     "/host-metrics/managers/ssl/:id/renew",
     validateHostId,
-    managerHandler(
-      runOnHost,
-      "connect",
-      "ssl_renew",
-      async (client, host, req) => {
-        const { client: acmeClient, dryRun } = req.body as {
-          client?: AcmeClient;
-          dryRun?: boolean;
-        };
-        if (acmeClient !== "certbot" && acmeClient !== "acme.sh") {
-          throw new ManagerInputError("Invalid ACME client");
-        }
-        const cmd = buildRenewCommand(acmeClient, !!dryRun);
-        const result = await execElevated(client, cmd, host.sudoPassword, {
-          forceSudo: true,
-          timeoutMs: 300000,
-        });
-        return {
-          success: result.code === 0,
-          output: (result.stdout || result.stderr).slice(-8000),
-        };
-      },
-    ),
+    managerHandler(deps, "connect", "ssl_renew", async (client, host, req) => {
+      const { client: acmeClient, dryRun } = req.body as {
+        client?: AcmeClient;
+        dryRun?: boolean;
+      };
+      if (acmeClient !== "certbot" && acmeClient !== "acme.sh") {
+        throw new ManagerInputError("Invalid ACME client");
+      }
+      const cmd = buildRenewCommand(acmeClient, !!dryRun);
+      const result = await execElevated(client, cmd, host.sudoPassword, {
+        forceSudo: true,
+        timeoutMs: 300000,
+      });
+      return {
+        success: result.code === 0,
+        output: (result.stdout || result.stderr).slice(-8000),
+      };
+    }),
   );
 
   /**
@@ -290,31 +278,26 @@ export function registerSslRoutes(
   app.post(
     "/host-metrics/managers/ssl/:id/revoke",
     validateHostId,
-    managerHandler(
-      runOnHost,
-      "connect",
-      "ssl_revoke",
-      async (client, host, req) => {
-        const { client: acmeClient, name } = req.body as {
-          client?: AcmeClient;
-          name?: string;
-        };
-        if (acmeClient !== "certbot" && acmeClient !== "acme.sh") {
-          throw new ManagerInputError("Invalid ACME client");
-        }
-        if (!isValidCertName(name)) {
-          throw new ManagerInputError("Invalid certificate name");
-        }
-        const cmd = buildRevokeCommand(acmeClient, name);
-        const result = await execElevated(client, cmd, host.sudoPassword, {
-          forceSudo: true,
-          timeoutMs: 120000,
-        });
-        return {
-          success: result.code === 0,
-          output: (result.stdout || result.stderr).slice(-8000),
-        };
-      },
-    ),
+    managerHandler(deps, "connect", "ssl_revoke", async (client, host, req) => {
+      const { client: acmeClient, name } = req.body as {
+        client?: AcmeClient;
+        name?: string;
+      };
+      if (acmeClient !== "certbot" && acmeClient !== "acme.sh") {
+        throw new ManagerInputError("Invalid ACME client");
+      }
+      if (!isValidCertName(name)) {
+        throw new ManagerInputError("Invalid certificate name");
+      }
+      const cmd = buildRevokeCommand(acmeClient, name);
+      const result = await execElevated(client, cmd, host.sudoPassword, {
+        forceSudo: true,
+        timeoutMs: 120000,
+      });
+      return {
+        success: result.code === 0,
+        output: (result.stdout || result.stderr).slice(-8000),
+      };
+    }),
   );
 }

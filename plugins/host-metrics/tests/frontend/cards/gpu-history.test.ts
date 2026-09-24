@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GpuDevice } from "@/types/stats-widgets";
+import type { GpuDevice } from "../../../src/shared/stats-widgets.js";
 import { appendGpuHistories } from "../../../src/frontend/cards/gpu-history";
 
 function gpu(

@@ -240,7 +240,9 @@
     "noQuickActions": "尚无快速操作。",
     "buttonLabel": "按钮标签",
     "selectSnippetPlaceholder": "选择代码片段...",
-    "addActionBtn": "添加操作"
+    "addActionBtn": "添加操作",
+    "hostNotFound": "未找到主机",
+    "loadingHost": "正在加载主机..."
   },
   "onboarding": {
     "feature_metrics": "指标与告警",
@@ -255,6 +257,41 @@
     "noData": "暂无数据",
     "showCurrentValue": "显示当前值",
     "chartMetric": "指标",
-    "metricRange": "范围"
+    "metricRange": "范围",
+    "host": "主机",
+    "loading": "加载中...",
+    "metricCpu": "CPU",
+    "metricDisk": "磁盘",
+    "metricHostname": "主机名",
+    "metricKernel": "内核",
+    "metricMemory": "内存",
+    "metricNetwork": "网络",
+    "metricOs": "操作系统",
+    "metricProcesses": "进程",
+    "metricProcessesRunning": "运行中",
+    "metricProcessesTotal": "总数",
+    "metricUptime": "运行时间",
+    "metricsNotAvailable": "指标不可用",
+    "noHostSelected": "未选择主机",
+    "selectHost": "选择主机..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "内存"
+  },
+  "dashboardTab": {
+    "disk": "磁盘"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "取消",
+        "confirmRunButton": "运行",
+        "confirmRunMessage": "运行“{{name}}”？"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "已连接"
   }
 }

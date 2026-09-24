@@ -466,8 +466,12 @@ Slots core owns: `terminal.toolbar`, `terminal.toolbarStatus`,
 `terminal.sidePanel`, `terminal.overlay` (declared by ssh-terminal; **B9**
 renamed `terminal.dock` to `terminal.sidePanel` and added the status slot,
 where host-metrics puts its CPU, memory and disk bars), `onboarding.steps`, `onboarding.features`,
-`onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`
-and `shell.overlay`. **B12** added `shell.overlay`, a component slot the
+`onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`,
+`shell.overlay`, `dashboard.hostMetrics` and `homepage.hostMetrics`. **B16**
+added the last two, component slots in the dashboard's host status card
+(`{ hostId, online }`, one per host row) and the homepage's host status widget
+(`{ hostId, shownMetrics, online }`): core draws the status and a plugin draws
+the numbers, so core no longer calls the metrics API. **B12** added `shell.overlay`, a component slot the
 shell renders once at its root for always-mounted plugin UI: session-sharing
 keeps its share dialog and its room-invite watcher there.
 `session.remoteDisplay` moved to session-sharing, which declares it and draws
@@ -482,6 +486,9 @@ or without tailscale enabled. Cross-plugin frontend calls go through actions:
 plugin actions the same way when a core view shows a plugin's data:
 `files.openHost`, and **B7**'s `tunnels.statuses` and `tunnels.open` behind the
 dashboard's active tunnel counter, which reads as zero while tunnels is off.
+**B16** added `host-metrics.disk` (the file manager's disk usage bar) and
+`snippets.get` / `snippets.execute` (host-metrics's quick actions); each
+answers undefined while its plugin is off.
 
 **B9** moved the terminal itself into ssh-terminal, which adds
 `terminal.open(host, { path?, joinSharedSessionId?, joinShareId?, label? })`
@@ -571,6 +578,11 @@ connection helpers (`isElectron`, `resolveConnectionOrigin`, `pluginWsUrl`,
 (`logActivity`, `getHostPassword`, `patchOpenTab`, `getUserPreferences`,
 `parseCustomKeybindings`, `setHostAutoTmux`, `getCookie`). The APIs are a
 stopgap in the right place: D1 turns them into typed bridge members.
+**B16** added `LineChart`, `useAdaptivePolling`, `useAreaPreferences` (the
+Appearance density and chart options), and the homepage widget pieces
+`WidgetTitle` and `runVisibleInterval`, for host-metrics's cards and its
+metrics chart widget. The frontend SDK gained `useHostStatus(hostId)`: core's
+status for a host, from the shell's own polling, or null outside the shell.
 **B14** added `buildOriginWsUrl`, `getBasePath`, `resolveRemoteHostId` and the
 `ConnectionStage` type, for remote desktop's display socket and its remote
 host lookup. `useConnectionDefaults` now carries terminal defaults only; the
@@ -695,6 +707,44 @@ themselves and are rate limited per IP. The share button is a contribution to
 the `shareable`, `canShare`, `openShareModal` and `getShareTarget` members of
 `TabOptions`/`TabHandle` are gone. Core's active connections list gets the
 sessions shared with a user from the `sessions.sharedWithMe` action.
+
+#### Host status is core
+
+The status dot in the host list, the dashboard and the homepage widget is
+core, in `src/backend/hosts/status/`. **B16** moved it out of host-metrics's
+poller. Core opens a TCP connection to every host with status checks on
+(`status_check_enabled`, a core host column), on the host's own interval
+(`status_check_interval`) or the admin default (`global_status_check_interval`
+under `GET/PUT /host/status/settings`), through core's jump host chain when the
+host has one. It never logs in: on RADIUS or Duo backed devices a login fires
+a real 2FA push. That gives "reachable" or "offline". A host is "online" when
+a login worked: an open session (`ctx.hosts.trackSession`) or a plugin's
+`ctx.hosts.status.reportLogin`. Polling is demand driven: a user asking for
+`GET /host/status` starts their own hosts. Core emits `host.status`
+(`{ hostId, ownerUserId, status, previous, online, reason? }`) when a status
+changes, and `host.key.updated` (`{ hostId }`) when a changed host key is
+accepted. The status half of the old `stats_config` moved into the two columns
+(`host-status-config-migration.ts`); its metrics half is host-metrics's.
+
+**Host metrics (B16)** polls only hosts somebody is looking at (a tab, a
+dashboard row, a homepage widget, or another plugin through the
+`host-metrics.viewers` service, v1: `register(hostId)`, `heartbeat`,
+`unregister`, all as the caller). It samples over `ctx.ssh` pools and timers
+from `ctx.schedule`, keeps the adaptive metrics concurrency (one worker per 20
+polled hosts, 5 to 50, `METRICS_POLL_CONCURRENCY` overrides), and waits for
+core to call a host reachable before the first heavy sample. It emits
+`plugin.host-metrics.snapshot` (`{ hostId, ownerUserId, metrics }`) for every
+sample, `plugin.host-metrics.status` (`{ hostId, ownerUserId, state,
+previous }`, state `collecting`, `auth_failed`, `host_key_changed` or
+`unreachable`) when collection changes, and `plugin.host-metrics.health-check`
+(`{ hostId, userId, checkId, ok, detail? }`) for each health check result;
+automations subscribes to them. A plugin adds data to every sample by
+providing `host-metrics.collectors` (v1: `collect(client, hostId)`) under its
+own provider name; the result lands under `extra[<name>]`. Proxmox does not:
+its stats come from the Proxmox API, not from SSH on the host. The intervals,
+history retention and the new-host default are admin settings, the
+temperature unit a user setting, and the rest of `stats_config` host
+settings.
 
 ### 10. Lifecycle
 
@@ -999,7 +1049,11 @@ the database, unused, until 3.0.0 removes it. A copy reads it with raw SQL
 through `utils/crypto-migration/raw-rows.ts`, whose `selectRows` and
 `runStatement` work on all three engines: `getDb().all()` exists only on
 SQLite. Remote desktop's host options and `user_preferences.rdp_defaults` are
-the first columns handled this way.
+the first columns handled this way. **B16** split `stats_config` the same way, into
+two core columns and host-metrics's host settings. Adding columns and
+dropping one in the same drizzle-kit run makes it ask whether that is a
+rename, which it cannot do without a terminal, so B16 generated two
+migrations: the added columns first, then the no-op drop.
 
 ---
 
@@ -1266,12 +1320,13 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1**                  |
 | `ctx.currentActor()`                             | none                                 | **A1**                  |
 | `ctx.db.define` / `.client` / `.refs`            | `db:own`                             | **A3**                  |
-| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)              | **A9**                  |
+| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)              | **A9**, lazy **B16**    |
 | `ctx.sync.registerEntity`                        | none                                 | **A3**                  |
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4**                  |
 | `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5**                  |
 | `ctx.capabilities.has` / `.require`              | the capability itself                | **B11**                 |
 | `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4**, extended **B5** |
+| `ctx.hosts.status.*`                             | `hosts:read`                         | **B16**                 |
 | `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8**                  |
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
 | `ctx.notify.*`                                   | `notify:send`                        | A6                      |
@@ -1280,6 +1335,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)       | **B14**                 |
 | `ctx.credentials.resolveHostProtocol`            | `credentials:read`                   | **B14**                 |
 | `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
+| `ctx.schedule.every` / `.after`                  | none                                 | **B16**                 |
 | `ctx.fetch`                                      | `network:outbound`                   | B                       |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
@@ -1430,6 +1486,39 @@ credential it points at; a shared recipient gets only core's sharing
 resolution (the owner's shared snapshot or their own override), never the
 owner's raw secret; no connect access, or no host, is `null`. Every call is
 audited as `plugin_credentials_read`, allowed or refused.
+
+**B16** added `ctx.hosts.status`, the plugin side of core's host status
+check (see [Host status](#host-status-is-core)):
+
+- `get(hostId)` is core's last result, or `null` before the first check or
+  for a host with status checks off. `check(hostId)` checks now unless the
+  last result is under 30 seconds old. host-metrics calls it before the first
+  heavy sample of a host.
+- `reportLogin(hostId, { ok, hostKeyChanged? })` tells core a login to the
+  host worked or failed. A working login is what turns "reachable" into
+  "online". Synchronous and not audited, like `trackSession`: a poller calls
+  it on every sample.
+- `registerPort(connectionType, resolve)` tells core which port proves a host
+  of that connection type is up, for a protocol whose port is the plugin's own
+  host setting. remote-desktop registers `rdp`, `vnc` and `telnet`; without
+  it core checks the host's port. Removed on deactivate.
+
+**B16** also added `ctx.ssh.dropPooled(pool, hostId)`, which closes this
+plugin's pooled connections to one host (host-metrics calls it on
+`host.updated`). It only touches keys this plugin created, so, like
+deactivate, it never closes another plugin's connections. The core pool is
+never cleared as a whole by a plugin.
+
+**B16** added `ctx.schedule`: `every(ms, fn, { jitterMs?, runNow? })` and
+`after(ms, fn)`, each returning a function that stops it. Timers live in the
+plugin's disposable bag, so deactivate clears them; a run that throws is
+logged, and a repeating job skips a tick while its last run is still going.
+`jitterMs` delays the first run by a random amount up to that, so a fleet of
+per-host timers spreads out. Needs no capability.
+
+`ctx.db.persist({ lazy: true })` (**B16**) marks the database dirty and lets
+the debounced save write it, for frequent low-value writes such as metrics
+samples; the default still saves before returning.
 
 `ctx.hosts.create` (**B14**) hands the created row to every plugin's
 `hostImportNormalizer`, the same as a bulk import row, so a plugin creating a
@@ -1961,7 +2050,8 @@ Then, with the app running:
 ## Legacy core imports: the debt D1 removes
 
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
-(B2) and remote-desktop (B14), which import nothing from core. The others still reach core by relative
+(B2), remote-desktop (B14) and host-metrics (B16), which import nothing from
+core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
 and rewrites to the compiled output path (`../../../backend/backend/...`, or
@@ -1988,9 +2078,9 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 120 files | D1         |
-| A plugin importing core by relative path         | Warning   | 63 files  | D1         |
-| A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
+| A plugin frontend importing core through `@/`    | Warning   | 84 files  | D1         |
+| A plugin importing core by relative path         | Warning   | 29 files  | D1         |
+| A plugin importing another plugin's source       | Warning   | 1 file    | B18        |
 
 A warning does not fail a build, so the counts are held by
 `scripts/check-plugin-boundaries.cjs`, run by `npm run lint`. Every offender is
@@ -2012,12 +2102,12 @@ Known specifics:
   automations is disabled. In B18 `ai` calls automations through an
   `automations` service as an `optionalDependency` and the direct import goes
   away.
-- **TODO(B18):** `plugins/host-metrics/src/backend/` reaches `automations`
-  twice, for a `MetricsSnapshot` type and a fire-and-forget
-  `import("...headless-viewer.js")` that registers a viewer bridge. Both
-  degrade silently when automations is absent, so host-metrics declares it as
-  an `optionalDependency` (added in A2; it previously declared nothing, and
-  the loader had no reason to order the two).
+- **B16** moved host-metrics onto the SDK: it imports nothing from core or
+  automations. Automations reaches it through the `host-metrics.viewers`
+  service and its `plugin.host-metrics.*` events, and core reaches it through
+  the `dashboard.hostMetrics` and `homepage.hostMetrics` slots and the
+  `host-metrics.disk` action. Core's `hosts/metrics-shared/` is gone: ai,
+  automations, proxmox and tailscale use `@termix/plugin-sdk/host-commands`.
 - Core feature servers that are not plugins yet still own ports: dashboard
   30006 and homepage 30012. Each keeps its nginx block until its own Phase B
   step. No plugin owns a port any more (A4). **B6** moved file-manager off

@@ -57,8 +57,6 @@ type GeneralSettingsSectionProps = {
   handleSaveSessionTimeout: () => void;
   statusInterval: string;
   setStatusInterval: Dispatch<SetStateAction<string>>;
-  metricsInterval: string;
-  setMetricsInterval: Dispatch<SetStateAction<string>>;
   handleSaveMonitoring: () => void;
   logLevel: string;
   handleSaveLogLevel: (level: string) => void;
@@ -98,8 +96,6 @@ export function AdminGeneralSettingsSection({
   handleSaveSessionTimeout,
   statusInterval,
   setStatusInterval,
-  metricsInterval,
-  setMetricsInterval,
   handleSaveMonitoring,
   logLevel,
   handleSaveLogLevel,
@@ -347,22 +343,6 @@ export function AdminGeneralSettingsSection({
                 type="number"
                 value={statusInterval}
                 onChange={(e) => setStatusInterval(e.target.value)}
-                className="w-20 text-sm"
-              />
-              <span className="text-xs text-muted-foreground">
-                {t("admin.sec")}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              {t("admin.metrics")}
-            </label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                value={metricsInterval}
-                onChange={(e) => setMetricsInterval(e.target.value)}
                 className="w-20 text-sm"
               />
               <span className="text-xs text-muted-foreground">
@@ -972,22 +952,8 @@ export function AdminHostDefaultsSection({
 
         <div className="flex flex-col gap-2 border-t border-border pt-3">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {t("admin.hostDefaultsMetrics")}
+            {t("admin.hostDefaultsStatus")}
           </span>
-          <SettingRow
-            label={t("admin.hostDefaultsMetricsEnabled")}
-            description={t("admin.hostDefaultsMetricsEnabledDesc")}
-          >
-            <AdminToggle
-              on={defaults.metricsEnabled ?? true}
-              onToggle={() =>
-                setDefaults((p) => ({
-                  ...p,
-                  metricsEnabled: !(p.metricsEnabled ?? true),
-                }))
-              }
-            />
-          </SettingRow>
           <SettingRow
             label={t("admin.hostDefaultsStatusCheckEnabled")}
             description={t("admin.hostDefaultsStatusCheckEnabledDesc")}

@@ -57,7 +57,8 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "forceKeyboardInteractive",
   ],
   advanced: [
-    "statsConfig",
+    "statusCheckEnabled",
+    "statusCheckInterval",
     "dockerConfig",
     "webUiConfig",
     "proxmoxConfig",

@@ -1,9 +1,6 @@
+import { type HostMetricsLayout } from "../../shared/host-metrics.js";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getHostMetricsLayout,
-  saveHostMetricsLayout,
-} from "../host-metrics-api";
-import type { HostMetricsLayout } from "@/types/host-metrics";
+import { useHostMetricsApi } from "../host-metrics-api";
 
 const SAVE_DEBOUNCE_MS = 800;
 
@@ -38,6 +35,7 @@ function writeCache(hostId: number, layout: HostMetricsLayout) {
  * debounced. Returns null layout until the first load resolves.
  */
 export function useHostMetricsPreferences(hostId: number | null) {
+  const { getHostMetricsLayout, saveHostMetricsLayout } = useHostMetricsApi();
   const [layout, setLayout] = useState<HostMetricsLayout | null>(() =>
     hostId != null ? readCache(hostId) : null,
   );

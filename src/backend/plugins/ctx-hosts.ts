@@ -25,6 +25,8 @@ import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 import { assertCapability } from "./permissions.js";
 import { hostSessionStatus } from "../hosts/host-session-status.js";
 import { getActor } from "./actor.js";
+import { hostStatusService } from "../hosts/status/host-status-service.js";
+import type { DisposableBag } from "./disposables.js";
 
 type AuditFn = (
   action: string,
@@ -34,6 +36,8 @@ type AuditFn = (
 
 interface Deps {
   manifest: PluginManifest;
+  /** Where registerPort entries go, so deactivate removes them. */
+  bag?: DisposableBag;
   audit: AuditFn;
 }
 
@@ -98,11 +102,16 @@ function actingUser(): string {
   return actor;
 }
 
-export function createPluginHosts({ manifest, audit }: Deps): PluginHosts {
+export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
   const pluginId = manifest.id;
   const declared = manifest.capabilities;
 
   const requireRead = () => assertCapability(pluginId, "hosts:read", declared);
+  const requireReadSync = () => {
+    if (!declared.includes("hosts:read")) {
+      throw new PluginCapabilityError(pluginId, "hosts:read");
+    }
+  };
   const requireWrite = () =>
     assertCapability(pluginId, "hosts:write", declared);
 
@@ -417,6 +426,35 @@ export function createPluginHosts({ manifest, audit }: Deps): PluginHosts {
       const { recordRecentActivity } =
         await import("../services/recent-activity.js");
       await recordRecentActivity(userId, { type, hostId, hostName });
+    },
+
+    // Synchronous and not audited, like trackSession: pollers call these on
+    // every sample.
+    status: {
+      get: (hostId) => {
+        requireReadSync();
+        return hostStatusService.get(hostId);
+      },
+      check: async (hostId) => {
+        await requireRead();
+        return hostStatusService.check(hostId);
+      },
+      reportLogin: (hostId, outcome) => {
+        requireReadSync();
+        hostStatusService.reportLogin(hostId, outcome);
+      },
+      registerPort: (connectionType, resolve) => {
+        requireReadSync();
+        const unregister = hostStatusService.registerPort(
+          connectionType,
+          resolve,
+        );
+        const drop = bag?.add(unregister, `status port for ${connectionType}`);
+        return () => {
+          drop?.();
+          unregister();
+        };
+      },
     },
   };
 }

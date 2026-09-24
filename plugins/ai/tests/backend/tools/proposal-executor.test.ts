@@ -27,12 +27,10 @@ vi.mock("../../../../../src/backend/hosts/host-resolver.js", () => ({
 }));
 
 const execCommand = vi.fn();
-vi.mock(
-  "../../../../../src/backend/hosts/metrics-shared/common-utils.js",
-  () => ({
-    execCommand: (...args: unknown[]) => execCommand(...args),
-  }),
-);
+vi.mock("@termix/plugin-sdk/host-commands", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  execCommand: (...args: unknown[]) => execCommand(...args),
+}));
 vi.mock("../../../src/backend/ssh.js", () => ({
   withSshConnection: async (
     _host: unknown,

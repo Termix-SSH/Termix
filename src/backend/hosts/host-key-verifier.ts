@@ -1,4 +1,4 @@
-import { authFailureTracker } from "./metrics-shared/state.js";
+import { pluginEvents, TOPICS } from "../plugins/events.js";
 import type { WebSocket } from "ws";
 import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { sshLogger } from "../utils/logger.js";
@@ -328,7 +328,7 @@ export class SSHHostKeyVerifier {
       algorithm,
       currentChangeCount,
     );
-    authFailureTracker.resetHostKeyFailure(hostId);
+    pluginEvents.emit(TOPICS.hostKeyUpdated, { hostId });
   }
 
   private static async promptUserForNewKey(

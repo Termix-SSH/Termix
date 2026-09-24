@@ -96,9 +96,8 @@ describe("plugin event bus", () => {
   it("exposes the internal topic names the server publishes", () => {
     expect(TOPICS.hostSessionStatus).toBe("host.session.status");
     expect(TOPICS.internalEvent).toBe("internal.event");
-    expect(TOPICS.hostMetrics).toBe("host.metrics");
     expect(TOPICS.hostStatus).toBe("host.status");
-    expect(TOPICS.hostHealthCheck).toBe("host.health_check");
+    expect(TOPICS.hostKeyUpdated).toBe("host.key.updated");
   });
 });
 
@@ -133,30 +132,6 @@ describe("hosts publishers route through the bus", () => {
 
     notifyAutomationInternalEvent("host_deleted", "");
     expect(listener).not.toHaveBeenCalled();
-  });
-
-  it("notifyAutomationStatus and notifyAutomationMetrics emit their topics", async () => {
-    const { notifyAutomationStatus, notifyAutomationMetrics } =
-      await import("../../../../plugins/host-metrics/src/backend/automation-bridge.js");
-
-    const status = vi.fn();
-    const metrics = vi.fn();
-    pluginEvents.on(TOPICS.hostStatus, status);
-    pluginEvents.on(TOPICS.hostMetrics, metrics);
-
-    notifyAutomationStatus(42, "user-1", true);
-    notifyAutomationMetrics(42, "user-1", { cpu: 10 } as never);
-
-    expect(status).toHaveBeenCalledWith({
-      hostId: 42,
-      ownerUserId: "user-1",
-      online: true,
-    });
-    expect(metrics).toHaveBeenCalledWith({
-      hostId: 42,
-      ownerUserId: "user-1",
-      metrics: { cpu: 10 },
-    });
   });
 
   it("hostSessionStatus publishes host.session.status on the refcount edges", async () => {

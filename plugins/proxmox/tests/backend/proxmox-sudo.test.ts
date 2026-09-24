@@ -2,12 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Client } from "ssh2";
 
 const execElevated = vi.fn();
-vi.mock(
-  "../../../../src/backend/hosts/metrics-shared/exec-elevated.js",
-  () => ({
-    execElevated: (...args: unknown[]) => execElevated(...args),
-  }),
-);
+vi.mock("@termix/plugin-sdk/host-commands", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  execElevated: (...args: unknown[]) => execElevated(...args),
+}));
 
 const { execPveshCommand } = await import("../../src/backend/routes.js");
 

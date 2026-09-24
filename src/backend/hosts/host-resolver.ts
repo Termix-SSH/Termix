@@ -117,13 +117,6 @@ export async function resolveHostById(
       host.tunnelConnections = [];
     }
   }
-  if (typeof host.statsConfig === "string" && host.statsConfig) {
-    try {
-      host.statsConfig = JSON.parse(host.statsConfig as string);
-    } catch {
-      host.statsConfig = undefined;
-    }
-  }
   if (typeof host.terminalConfig === "string" && host.terminalConfig) {
     try {
       host.terminalConfig = JSON.parse(host.terminalConfig as string);

@@ -309,6 +309,20 @@
       "when": 1790227893380,
       "tag": "0043_melodic_terror",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790266378802,
+      "tag": "0044_nostalgic_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1790266402403,
+      "tag": "0045_thankful_shinobi_shaw",
+      "breakpoints": true
     }
   ]
 }

@@ -24,21 +24,6 @@ const METRIC_OPTIONS: { key: HostMetricKey; labelKey: string }[] = [
   { key: "processes", labelKey: "homepage.metricProcesses" },
 ];
 
-function parseMetricsEnabled(statsConfig: unknown): boolean {
-  if (!statsConfig) return false;
-  try {
-    const cfg =
-      typeof statsConfig === "string" ? JSON.parse(statsConfig) : statsConfig;
-    if (typeof cfg === "object" && cfg !== null) {
-      const c = cfg as Record<string, unknown>;
-      return c.metricsEnabled !== false;
-    }
-  } catch {
-    // ignore
-  }
-  return false;
-}
-
 export function HostStatusEditForm({
   config,
   onChange,
@@ -57,7 +42,7 @@ export function HostStatusEditForm({
       .then((all) =>
         setHosts(
           all
-            .filter((x) => parseMetricsEnabled(x.statsConfig))
+            .filter((x) => x.statusCheckEnabled !== false)
             .map((x) => ({
               id: String(x.id),
               name: x.name,

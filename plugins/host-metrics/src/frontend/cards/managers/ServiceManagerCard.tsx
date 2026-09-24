@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Cog, Play, Square, RotateCw, Power } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
-import { managerPost } from "../../host-metrics-api";
+import { useHostMetricsApi } from "../../host-metrics-api";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";
@@ -15,6 +15,7 @@ interface SystemdService {
 }
 
 export function ServiceManagerCard({ hostId }: { hostId: number | null }) {
+  const { managerPost } = useHostMetricsApi();
   const { t } = useTranslation();
   const { data, loading, error, refresh } = useManagerData<{
     services: SystemdService[];

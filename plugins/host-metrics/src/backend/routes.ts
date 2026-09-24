@@ -1,1054 +1,49 @@
-import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
-import express, { type Router } from "express";
-import net from "net";
-import { Client, type ConnectConfig } from "ssh2";
-import {
-  getCurrentSettingValue,
-  createCurrentHostMetricsHistoryRepository,
-  createCurrentHostResolutionRepository,
-} from "../../../../src/backend/database/repositories/factory.js";
-import { statsLogger } from "../../../../src/backend/utils/logger.js";
-import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
-import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
-import { PermissionManager } from "../../../../src/backend/utils/permission-manager.js";
 import type {
-  AuthenticatedRequest,
-  ProxyNode,
-} from "../../../../src/types/index.js";
-import type {
-  LogEntry,
-  ConnectionStage,
-} from "../../../../src/types/connection-log.js";
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+  Router,
+} from "express";
+import type { PluginContext } from "@termix/plugin-sdk/backend";
 import {
-  collectCpuMetrics,
-  clearCpuSampleCache,
-} from "./widgets/cpu-collector.js";
-import { collectMemoryMetrics } from "./widgets/memory-collector.js";
+  defaultLayoutFromWidgets,
+  deriveEnabledWidgets,
+  type HostMetricsLayout,
+} from "../shared/host-metrics.js";
+import { newSessionId, supportsMetrics } from "./helpers.js";
 import {
-  collectDiskMetrics,
-  type DiskFilesystem,
-} from "./widgets/disk-collector.js";
-import {
-  collectNetworkMetrics,
-  clearNetworkSampleCache,
-} from "./widgets/network-collector.js";
-import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
-import { collectProcessesMetrics } from "./widgets/processes-collector.js";
-import { collectSystemMetrics } from "./widgets/system-collector.js";
-import { detectPlatform } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import { collectLoginStats } from "./widgets/login-stats-collector.js";
-import { collectPortsMetrics } from "./widgets/ports-collector.js";
-import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
-import { collectTemperatureMetrics } from "./widgets/temperature-collector.js";
-import { collectGpuMetrics, type GpuMetrics } from "./widgets/gpu-collector.js";
-import { connectionPool } from "../../../../src/backend/hosts/ssh-connection-pool.js";
-import { registerHostMetricsSettingsRoutes } from "./settings-routes.js";
-import { registerHostMetricsViewerRoutes } from "./viewer-routes.js";
-import { registerHostMetricsPreferencesRoutes } from "./preferences-routes.js";
-import { registerHostMetricsHistoryRoutes } from "./history-routes.js";
-import type { HostSessionStatusPayload } from "../../../../src/backend/hosts/host-session-status.js";
-import {
-  pluginEvents,
-  TOPICS,
-} from "../../../../src/backend/plugins/events.js";
-import {
-  notifyAutomationMetrics,
-  notifyAutomationStatus,
-} from "./automation-bridge.js";
-import { notifyAutomationInternalEvent } from "../../../../src/backend/hosts/automation-events.js";
+  startInteractive,
+  submitTotp,
+  type InteractiveDeps,
+} from "./interactive.js";
+import type { MetricsLogger } from "./log.js";
 import { registerManagerRoutes } from "./managers/index.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
-import type { ManagerHost } from "./managers/types.js";
-import type { PluginSshHost } from "@termix/plugin-sdk/backend";
-import { pluginSsh, withSshConnection as withPooledSsh } from "./ssh.js";
-import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
-import {
-  isTcpPingEnabled,
-  parseStatusHostIds,
-  supportsMetrics,
-  tcpPingThroughJumpHost,
-} from "./helpers.js";
-import {
-  type HostStatus,
-  isHostKeyVerificationError,
-  statusAfterAuthentication,
-  statusAfterReachabilityCheck,
-} from "../../../../src/backend/hosts/metrics-shared/host-status.js";
-import { createConnectionLog } from "../../../../src/backend/hosts/connection-log.js";
-import {
-  cleanupMetricsSession,
-  getSessionKey,
-  metricsSessions,
-  pendingTOTPSessions,
-  scheduleMetricsSessionCleanup,
-  type MetricsViewer,
-} from "./sessions.js";
-import {
-  authFailureTracker,
-  canStartInitialMetrics,
-  hostPollCache,
-  initialMetricsPollLimiter,
-  metricsCache,
-  metricsPollLimiter,
-  metricsConcurrencyFor,
-  pollingBackoff,
-  requestQueue,
-  statusPollLimiter,
-} from "../../../../src/backend/hosts/metrics-shared/state.js";
+import type { HealthCheckEvent } from "./managers/types.js";
+import type { MetricsPoller } from "./poller.js";
+import { sqlTimestamp, type HostMetricsRepository } from "./repository.js";
+import { sessionKey, type MetricsSessions } from "./sessions.js";
+import { sudoPasswordOf } from "./helpers.js";
 
-const authManager = AuthManager.getInstance();
-const permissionManager = PermissionManager.getInstance();
-
-interface SSHHostWithCredentials {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  folder: string;
-  tags: string[];
-  pin: boolean;
-  authType: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  keyType?: string;
-  sudoPassword?: string;
-  credentialId?: number;
-  enableTerminal: boolean;
-  enableTunnel: boolean;
-  enableFileManager: boolean;
-  defaultPath: string;
-  tunnelConnections: unknown[];
-  jumpHosts?: Array<{ hostId: number }>;
-  statsConfig?: string | StatsConfig;
-  createdAt: string;
-  updatedAt: string;
-  userId: string;
-
-  useSocks5?: boolean;
-  socks5Host?: string;
-  socks5Port?: number;
-  socks5Username?: string;
-  socks5Password?: string;
-  socks5ProxyChain?: ProxyNode[];
-  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
-  rdpPort?: number;
-  vncPort?: number;
-  telnetPort?: number;
-  vaultProfile?: { id?: number | null } | null;
+export interface RouteDeps {
+  ctx: PluginContext;
+  log: MetricsLogger;
+  poller: MetricsPoller;
+  sessions: MetricsSessions;
+  repository: HostMetricsRepository;
+  onHealthCheck: (event: HealthCheckEvent) => void;
 }
 
-type StatusEntry = {
-  status: HostStatus;
-  lastChecked: string;
-  reason?: "host_key_changed";
+const RANGE_OFFSETS: Record<string, number> = {
+  "1h": 60 * 60 * 1000,
+  "6h": 6 * 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
-interface StatsConfig {
-  enabledWidgets: string[];
-  statusCheckEnabled: boolean;
-  statusCheckInterval: number;
-  useGlobalStatusInterval?: boolean;
-  metricsEnabled: boolean;
-  metricsInterval: number;
-  useGlobalMetricsInterval?: boolean;
-  disableTcpPing?: boolean;
-  excludedMounts?: string[];
-  monitoredMounts?: Array<{ path: string; label?: string }>;
-}
-
-const DEFAULT_STATS_CONFIG: StatsConfig = {
-  enabledWidgets: [
-    "cpu",
-    "memory",
-    "disk",
-    "network",
-    "uptime",
-    "system",
-    "login_stats",
-    "processes",
-    "ports",
-    "firewall",
-    "temperature",
-  ],
-  statusCheckEnabled: true,
-  statusCheckInterval: 60,
-  metricsEnabled: true,
-  metricsInterval: 30,
-  excludedMounts: [],
-};
-
-interface HostPollingConfig {
-  host: SSHHostWithCredentials;
-  statsConfig: StatsConfig;
-  statusTimer?: NodeJS.Timeout;
-  metricsTimer?: NodeJS.Timeout;
-  viewerUserId?: string;
-}
-
-class PollingManager {
-  private pollingConfigs = new Map<number, HostPollingConfig>();
-  private statusStore = new Map<number, StatusEntry>();
-  private metricsStore = new Map<
-    number,
-    {
-      data: Awaited<ReturnType<typeof collectMetrics>>;
-      timestamp: number;
-    }
-  >();
-  private activeViewers = new Map<number, Set<string>>();
-  private viewerDetails = new Map<string, MetricsViewer>();
-  private viewerCleanupInterval: NodeJS.Timeout;
-  /** Skip stacking another status/metrics poll while one is already running. */
-  private statusInFlight = new Set<number>();
-  private metricsInFlight = new Set<number>();
-  private initialMetricsRequested = new Set<number>();
-  private terminalOnlineHosts = new Set<number>();
-  private metricsAuthenticatedHosts = new Set<number>();
-  private unsubscribeHostSessionStatus: () => void;
-
-  constructor() {
-    this.unsubscribeHostSessionStatus = pluginEvents.on(
-      TOPICS.hostSessionStatus,
-      (payload) => {
-        const { hostId, online } = payload as HostSessionStatusPayload;
-        this.setTerminalSessionOnline(hostId, online);
-      },
-    );
-    this.viewerCleanupInterval = setInterval(() => {
-      this.cleanupInactiveViewers();
-    }, 60000);
-  }
-
-  private setTerminalSessionOnline(hostId: number, online: boolean): void {
-    if (online) {
-      this.terminalOnlineHosts.add(hostId);
-      const config = this.pollingConfigs.get(hostId);
-      if (config && isTcpPingEnabled(config.statsConfig)) {
-        this.statusStore.set(hostId, {
-          status: "online",
-          lastChecked: new Date().toISOString(),
-        });
-      }
-      return;
-    }
-
-    this.terminalOnlineHosts.delete(hostId);
-    if (
-      !this.metricsAuthenticatedHosts.has(hostId) &&
-      this.statusStore.get(hostId)?.status === "online"
-    ) {
-      this.statusStore.set(hostId, {
-        status: "reachable",
-        lastChecked: new Date().toISOString(),
-      });
-    }
-  }
-
-  /**
-   * Keeps poll concurrency matched to how many hosts are actually being
-   * polled, so a sweep still finishes inside its interval as a fleet grows.
-   */
-  private syncPollConcurrency(): void {
-    const metricsHosts = Array.from(this.pollingConfigs.values()).filter(
-      (config) => config.statsConfig.metricsEnabled,
-    ).length;
-
-    const target = metricsConcurrencyFor(metricsHosts);
-    if (target === metricsPollLimiter.limit) return;
-
-    const previous = metricsPollLimiter.limit;
-    metricsPollLimiter.setLimit(target);
-    statsLogger.info(
-      `Metrics poll concurrency ${previous} -> ${target} for ${metricsHosts} host(s)`,
-      {
-        operation: "metrics_concurrency_resize",
-        hosts: metricsHosts,
-        concurrency: target,
-      },
-    );
-  }
-
-  /** Spread timers so N hosts do not fire on the same wall-clock second. */
-  private intervalWithJitter(intervalMs: number, hostId: number): number {
-    const spread = Math.min(intervalMs * 0.2, 15_000);
-    const jitter = (hostId * 1103515245) % Math.max(1, Math.floor(spread));
-    return intervalMs + jitter;
-  }
-
-  private async resolveHostForPoll(
-    host: SSHHostWithCredentials,
-    userId: string,
-  ): Promise<SSHHostWithCredentials | null> {
-    const cached = hostPollCache.get(
-      host.id,
-      userId,
-    ) as SSHHostWithCredentials | null;
-    if (cached) {
-      return cached;
-    }
-
-    const refreshed = await fetchHostById(host.id, userId);
-    if (!refreshed) {
-      return null;
-    }
-
-    hostPollCache.set(host.id, userId, refreshed);
-    const config = this.pollingConfigs.get(host.id);
-    if (config) {
-      config.host = refreshed;
-      config.statsConfig = this.parseStatsConfig(refreshed.statsConfig);
-    }
-    return refreshed;
-  }
-
-  private scheduleStatusPoll(
-    host: SSHHostWithCredentials,
-    viewerUserId?: string,
-  ): void {
-    if (this.statusInFlight.has(host.id)) {
-      return;
-    }
-    this.statusInFlight.add(host.id);
-    void statusPollLimiter
-      .run(() => this.pollHostStatus(host, viewerUserId))
-      .catch((err) => {
-        statsLogger.error("Status polling failed", err, {
-          operation: "status_poll_unhandled",
-          hostId: host.id,
-        });
-      })
-      .finally(() => {
-        this.statusInFlight.delete(host.id);
-      });
-  }
-
-  private scheduleMetricsPoll(
-    host: SSHHostWithCredentials,
-    viewerUserId?: string,
-  ): void {
-    if (this.metricsInFlight.has(host.id)) {
-      return;
-    }
-    this.metricsInFlight.add(host.id);
-    void metricsPollLimiter
-      .run(() => this.pollHostMetrics(host, viewerUserId))
-      .catch((err) => {
-        statsLogger.error("Metrics polling failed", err, {
-          operation: "metrics_poll_unhandled",
-          hostId: host.id,
-        });
-      })
-      .finally(() => {
-        this.metricsInFlight.delete(host.id);
-      });
-  }
-
-  private scheduleInitialMetricsPoll(
-    host: SSHHostWithCredentials,
-    viewerUserId?: string,
-  ): void {
-    if (
-      this.metricsStore.has(host.id) ||
-      this.initialMetricsRequested.has(host.id)
-    ) {
-      return;
-    }
-
-    this.initialMetricsRequested.add(host.id);
-    void initialMetricsPollLimiter
-      .run(async () => {
-        if (
-          !canStartInitialMetrics(
-            this.statusStore.get(host.id)?.status,
-            this.activeViewers.has(host.id),
-            isTcpPingEnabled(
-              this.pollingConfigs.get(host.id)?.statsConfig ??
-                this.parseStatsConfig(host.statsConfig),
-            ),
-          )
-        ) {
-          return;
-        }
-        if (this.metricsInFlight.has(host.id)) return;
-
-        this.metricsInFlight.add(host.id);
-        try {
-          await metricsPollLimiter.run(() =>
-            this.pollHostMetrics(host, viewerUserId),
-          );
-        } finally {
-          this.metricsInFlight.delete(host.id);
-        }
-      })
-      .catch((err) => {
-        statsLogger.error("Initial metrics polling failed", err, {
-          operation: "initial_metrics_poll_unhandled",
-          hostId: host.id,
-        });
-      })
-      .finally(() => {
-        this.initialMetricsRequested.delete(host.id);
-      });
-  }
-
-  private getGlobalDefaults(): {
-    statusCheckInterval: number;
-    metricsInterval: number;
-  } {
-    try {
-      const statusValue = getCurrentSettingValue(
-        "global_status_check_interval",
-      );
-      const metricsValue = getCurrentSettingValue("global_metrics_interval");
-
-      return {
-        statusCheckInterval: statusValue
-          ? parseInt(statusValue, 10) ||
-            DEFAULT_STATS_CONFIG.statusCheckInterval
-          : DEFAULT_STATS_CONFIG.statusCheckInterval,
-        metricsInterval: metricsValue
-          ? parseInt(metricsValue, 10) || DEFAULT_STATS_CONFIG.metricsInterval
-          : DEFAULT_STATS_CONFIG.metricsInterval,
-      };
-    } catch {
-      return {
-        statusCheckInterval: DEFAULT_STATS_CONFIG.statusCheckInterval,
-        metricsInterval: DEFAULT_STATS_CONFIG.metricsInterval,
-      };
-    }
-  }
-
-  parseStatsConfig(statsConfigStr?: string | StatsConfig): StatsConfig {
-    if (!statsConfigStr) {
-      return DEFAULT_STATS_CONFIG;
-    }
-
-    let parsed: StatsConfig;
-
-    if (typeof statsConfigStr === "object") {
-      parsed = statsConfigStr;
-    } else {
-      try {
-        let temp: unknown = JSON.parse(statsConfigStr);
-
-        if (typeof temp === "string") {
-          temp = JSON.parse(temp);
-        }
-
-        parsed = temp as StatsConfig;
-      } catch (error) {
-        statsLogger.warn(
-          `Failed to parse statsConfig: ${getErrorMessage(error)}`,
-          {
-            operation: "parse_stats_config_error",
-            statsConfigStr,
-          },
-        );
-        return DEFAULT_STATS_CONFIG;
-      }
-    }
-
-    const result = { ...DEFAULT_STATS_CONFIG, ...parsed };
-
-    const globalDefaults = this.getGlobalDefaults();
-    if (result.useGlobalStatusInterval !== false) {
-      result.statusCheckInterval = globalDefaults.statusCheckInterval;
-    }
-    if (result.useGlobalMetricsInterval !== false) {
-      result.metricsInterval = globalDefaults.metricsInterval;
-    }
-
-    return result;
-  }
-
-  async startPollingForHost(
-    host: SSHHostWithCredentials,
-    options?: { statusOnly?: boolean; viewerUserId?: string },
-  ): Promise<void> {
-    const statsConfig = this.parseStatsConfig(host.statsConfig);
-    const statusOnly = options?.statusOnly ?? false;
-    const viewerUserId = options?.viewerUserId;
-
-    const canCollectMetrics = supportsMetrics(host);
-
-    const enabledCollectors: string[] = [];
-    if (isTcpPingEnabled(statsConfig)) {
-      enabledCollectors.push("status");
-    }
-    if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
-      enabledCollectors.push(
-        "cpu",
-        "memory",
-        "disk",
-        "network",
-        "uptime",
-        "processes",
-        "system",
-      );
-    }
-
-    const existingConfig = this.pollingConfigs.get(host.id);
-
-    if (existingConfig) {
-      if (existingConfig.statusTimer) {
-        clearInterval(existingConfig.statusTimer);
-        existingConfig.statusTimer = undefined;
-      }
-      if (existingConfig.metricsTimer) {
-        clearInterval(existingConfig.metricsTimer);
-        existingConfig.metricsTimer = undefined;
-      }
-    }
-
-    if (!isTcpPingEnabled(statsConfig) && !statsConfig.metricsEnabled) {
-      this.pollingConfigs.delete(host.id);
-      this.syncPollConcurrency();
-      this.statusStore.delete(host.id);
-      this.metricsStore.delete(host.id);
-      clearCpuSampleCache(host.id);
-      clearNetworkSampleCache(host.id);
-      return;
-    }
-
-    const config: HostPollingConfig = {
-      host,
-      statsConfig,
-      viewerUserId,
-    };
-    this.pollingConfigs.set(host.id, config);
-
-    if (isTcpPingEnabled(statsConfig)) {
-      const intervalMs = this.intervalWithJitter(
-        statsConfig.statusCheckInterval * 1000,
-        host.id,
-      );
-
-      this.scheduleStatusPoll(host, viewerUserId);
-
-      config.statusTimer = setInterval(() => {
-        const latestConfig = this.pollingConfigs.get(host.id);
-        if (latestConfig && isTcpPingEnabled(latestConfig.statsConfig)) {
-          this.scheduleStatusPoll(latestConfig.host, latestConfig.viewerUserId);
-        }
-      }, intervalMs);
-    } else {
-      this.statusStore.delete(host.id);
-    }
-
-    if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
-      const intervalMs = this.intervalWithJitter(
-        statsConfig.metricsInterval * 1000,
-        host.id,
-      );
-
-      // Viewer registration can arrive for an entire fleet at once. Only
-      // collect the first heavy SSH sample after the cheap status probe has
-      // confirmed the host is reachable; the status completion path below
-      // starts it when the result was not already cached.
-      if (
-        canStartInitialMetrics(
-          this.statusStore.get(host.id)?.status,
-          this.activeViewers.has(host.id),
-          isTcpPingEnabled(statsConfig),
-        )
-      ) {
-        this.scheduleInitialMetricsPoll(host, viewerUserId);
-      }
-
-      config.metricsTimer = setInterval(() => {
-        const latestConfig = this.pollingConfigs.get(host.id);
-        if (
-          latestConfig &&
-          latestConfig.statsConfig.metricsEnabled &&
-          supportsMetrics(latestConfig.host)
-        ) {
-          this.scheduleMetricsPoll(
-            latestConfig.host,
-            latestConfig.viewerUserId,
-          );
-        }
-      }, intervalMs);
-    } else {
-      this.metricsStore.delete(host.id);
-    }
-
-    this.syncPollConcurrency();
-  }
-
-  private async pollHostStatus(
-    host: SSHHostWithCredentials,
-    viewerUserId?: string,
-  ): Promise<void> {
-    const userId = viewerUserId || host.userId;
-    const refreshedHost = await this.resolveHostForPoll(host, userId);
-    if (!refreshedHost) {
-      return;
-    }
-
-    try {
-      const ct = refreshedHost.connectionType || "ssh";
-      let pingPort: number;
-      if (ct === "rdp") pingPort = refreshedHost.rdpPort ?? 3389;
-      else if (ct === "vnc") pingPort = refreshedHost.vncPort ?? 5900;
-      else if (ct === "telnet") pingPort = refreshedHost.telnetPort ?? 23;
-      else pingPort = refreshedHost.port;
-
-      let isOnline: boolean;
-      if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
-        let jumpClient: Client | null = null;
-        try {
-          ({ client: jumpClient } = await pluginSsh().jumpChain<Client>(
-            refreshedHost.jumpHosts,
-            { forHost: refreshedHost as unknown as PluginSshHost },
-          ));
-        } catch {
-          jumpClient = null;
-        }
-        isOnline = jumpClient
-          ? await tcpPingThroughJumpHost(
-              jumpClient,
-              refreshedHost.ip,
-              pingPort,
-              5000,
-            )
-          : false;
-      } else {
-        isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
-      }
-      const config = this.pollingConfigs.get(refreshedHost.id);
-      // Routine status polling is TCP-only. Hosts with metrics disabled
-      // never get a full SSH auth attempt here, since on RADIUS/Duo-backed
-      // devices that fires a live 2FA push every interval with no session
-      // to show for it; those hosts settle at "reachable" rather than
-      // "online", since metrics collection (the only path that
-      // authenticates and can promote a host to "online") never runs for
-      // them.
-      const statusEntry: StatusEntry = {
-        status:
-          isOnline && this.terminalOnlineHosts.has(refreshedHost.id)
-            ? "online"
-            : statusAfterReachabilityCheck(
-                isOnline,
-                this.statusStore.get(refreshedHost.id)?.status,
-              ),
-        lastChecked: new Date().toISOString(),
-        ...(isOnline &&
-        this.statusStore.get(refreshedHost.id)?.reason === "host_key_changed"
-          ? { reason: "host_key_changed" as const }
-          : {}),
-      };
-      this.statusStore.set(refreshedHost.id, statusEntry);
-      if (isOnline && this.activeViewers.has(refreshedHost.id)) {
-        if (config?.statsConfig.metricsEnabled) {
-          this.scheduleInitialMetricsPoll(config.host, config.viewerUserId);
-        }
-      }
-      notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, isOnline);
-    } catch {
-      const statusEntry: StatusEntry = {
-        status: "offline",
-        lastChecked: new Date().toISOString(),
-      };
-      this.statusStore.set(refreshedHost.id, statusEntry);
-      notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, false);
-    }
-  }
-
-  private async pollHostMetrics(
-    host: SSHHostWithCredentials,
-    viewerUserId?: string,
-  ): Promise<void> {
-    const userId = viewerUserId || host.userId;
-    const refreshedHost = await this.resolveHostForPoll(host, userId);
-    if (!refreshedHost) {
-      return;
-    }
-
-    if (!supportsMetrics(refreshedHost)) {
-      statsLogger.debug("Skipping metrics collection for non-SSH host", {
-        operation: "poll_host_metrics_skipped",
-        hostId: refreshedHost.id,
-        connectionType: refreshedHost.connectionType || "ssh",
-      });
-      return;
-    }
-
-    const config = this.pollingConfigs.get(refreshedHost.id);
-    if (!config || !config.statsConfig.metricsEnabled) {
-      return;
-    }
-
-    if (authFailureTracker.shouldSkip(host.id)) {
-      return;
-    }
-
-    if (pollingBackoff.shouldSkip(host.id)) {
-      return;
-    }
-
-    let authenticated = false;
-    try {
-      const metrics = await collectMetrics(refreshedHost, () => {
-        authenticated = true;
-        this.metricsAuthenticatedHosts.add(refreshedHost.id);
-        this.statusStore.set(refreshedHost.id, {
-          status: statusAfterAuthentication(true),
-          lastChecked: new Date().toISOString(),
-        });
-      });
-      this.statusStore.set(refreshedHost.id, {
-        status: statusAfterAuthentication(true),
-        lastChecked: new Date().toISOString(),
-      });
-      this.metricsStore.set(refreshedHost.id, {
-        data: metrics,
-        timestamp: Date.now(),
-      });
-      await this.insertMetricsHistory(refreshedHost.id, metrics);
-      notifyAutomationMetrics(refreshedHost.id, refreshedHost.userId, metrics);
-      pollingBackoff.reset(refreshedHost.id);
-      authFailureTracker.reset(refreshedHost.id);
-    } catch (error) {
-      const hostKeyChanged = isHostKeyVerificationError(error);
-      if (!authenticated) {
-        this.metricsAuthenticatedHosts.delete(refreshedHost.id);
-        this.statusStore.set(refreshedHost.id, {
-          status: this.terminalOnlineHosts.has(refreshedHost.id)
-            ? "online"
-            : statusAfterAuthentication(
-                false,
-                this.statusStore.get(refreshedHost.id)?.status,
-              ),
-          lastChecked: new Date().toISOString(),
-          ...(hostKeyChanged ? { reason: "host_key_changed" as const } : {}),
-        });
-      }
-      const isAuthError =
-        error instanceof Error &&
-        (error.message.includes("authentication") ||
-          error.message.includes("Authentication") ||
-          error.message.includes("permission denied") ||
-          error.message.includes("Permission denied"));
-
-      if (isAuthError) {
-        // authFailureTracker already handles auth errors inside collectMetrics;
-        // only log on the first occurrence to avoid repeated spam
-        const alreadyTracked = authFailureTracker.shouldSkip(host.id);
-        if (!alreadyTracked) {
-          statsLogger.error("Stats collector connection failed", error, {
-            operation: "stats_connect_failed",
-            hostId: refreshedHost.id,
-          });
-        }
-        return;
-      }
-
-      if (hostKeyChanged) {
-        authFailureTracker.recordFailure(refreshedHost.id, "HOST_KEY", true);
-        statsLogger.error(
-          "Stats collector host key verification failed",
-          error,
-          {
-            operation: "stats_host_key_verification_failed",
-            hostId: refreshedHost.id,
-          },
-        );
-        return;
-      }
-
-      pollingBackoff.recordFailure(refreshedHost.id);
-
-      // Only log when a new retry window opens, not on every skipped poll
-      const backoff = pollingBackoff.getBackoffInfo(refreshedHost.id);
-      const isNewFailure =
-        backoff !== null && !backoff.includes("polling suspended");
-      if (isNewFailure) {
-        statsLogger.error("Stats collector connection failed", error, {
-          operation: "stats_connect_failed",
-          hostId: refreshedHost.id,
-        });
-      }
-    }
-  }
-
-  private getRetentionDays(): number {
-    try {
-      const value = getCurrentSettingValue("metrics_history_retention_days");
-      const days = value ? parseInt(value, 10) : 7;
-      return isNaN(days) || days < 1 ? 7 : Math.min(days, 90);
-    } catch {
-      return 7;
-    }
-  }
-
-  private async insertMetricsHistory(
-    hostId: number,
-    metrics: {
-      cpu: { percent: number | null };
-      memory: { percent: number | null };
-      disk: { percent: number | null };
-      network: {
-        interfaces: Array<{ rxBytes: string | null; txBytes: string | null }>;
-      };
-    },
-  ): Promise<void> {
-    try {
-      const iface = metrics.network?.interfaces?.[0];
-      const rxRaw = iface?.rxBytes ? parseInt(iface.rxBytes, 10) : null;
-      const txRaw = iface?.txBytes ? parseInt(iface.txBytes, 10) : null;
-
-      const repository = createCurrentHostMetricsHistoryRepository();
-      await repository.create({
-        hostId,
-        cpuPercent: metrics.cpu?.percent ?? null,
-        memPercent: metrics.memory?.percent ?? null,
-        diskPercent: metrics.disk?.percent ?? null,
-        netRxBytes: isNaN(rxRaw as number) ? null : rxRaw,
-        netTxBytes: isNaN(txRaw as number) ? null : txRaw,
-      });
-
-      const retentionDays = this.getRetentionDays();
-      await repository.pruneOlderThan(hostId, retentionDays);
-    } catch (err) {
-      statsLogger.warn("Failed to write metrics history", {
-        operation: "insert_metrics_history",
-        hostId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  stopPollingForHost(hostId: number, clearData = true): void {
-    const config = this.pollingConfigs.get(hostId);
-    if (config) {
-      if (config.statusTimer) {
-        clearInterval(config.statusTimer);
-        config.statusTimer = undefined;
-      }
-      if (config.metricsTimer) {
-        clearInterval(config.metricsTimer);
-        config.metricsTimer = undefined;
-      }
-
-      this.pollingConfigs.delete(hostId);
-
-      this.syncPollConcurrency();
-      if (clearData) {
-        this.statusStore.delete(hostId);
-        this.metricsStore.delete(hostId);
-        clearCpuSampleCache(hostId);
-        clearNetworkSampleCache(hostId);
-      }
-    }
-    hostPollCache.invalidate(hostId);
-    this.statusInFlight.delete(hostId);
-    this.metricsInFlight.delete(hostId);
-  }
-
-  stopMetricsOnly(hostId: number): void {
-    const config = this.pollingConfigs.get(hostId);
-    if (config?.metricsTimer) {
-      clearInterval(config.metricsTimer);
-      config.metricsTimer = undefined;
-    }
-  }
-
-  getStatus(hostId: number): StatusEntry | undefined {
-    return this.statusStore.get(hostId);
-  }
-
-  getAllStatuses(): Map<number, StatusEntry> {
-    return this.statusStore;
-  }
-
-  getMetrics(
-    hostId: number,
-  ):
-    | { data: Awaited<ReturnType<typeof collectMetrics>>; timestamp: number }
-    | undefined {
-    return this.metricsStore.get(hostId);
-  }
-
-  async initializePolling(userId: string): Promise<void> {
-    const hosts = await fetchAllHosts(userId);
-
-    for (const host of hosts) {
-      await this.startPollingForHost(host, { statusOnly: true });
-    }
-  }
-
-  async reconcileStatusPolling(
-    userId: string,
-    allowedHostIds: Set<number>,
-  ): Promise<void> {
-    const hosts = await fetchAllHosts(userId);
-
-    for (const host of hosts) {
-      if (allowedHostIds.has(host.id)) {
-        if (!this.pollingConfigs.has(host.id)) {
-          await this.startPollingForHost(host, { statusOnly: true });
-        }
-        continue;
-      }
-
-      this.stopPollingForHost(host.id, true);
-    }
-  }
-
-  async refreshHostPolling(userId: string): Promise<void> {
-    const hosts = await fetchAllHosts(userId);
-    const currentHostIds = new Set(hosts.map((h) => h.id));
-
-    for (const hostId of this.pollingConfigs.keys()) {
-      this.stopPollingForHost(hostId, false);
-    }
-
-    for (const hostId of this.statusStore.keys()) {
-      if (!currentHostIds.has(hostId)) {
-        this.statusStore.delete(hostId);
-        this.metricsStore.delete(hostId);
-        clearCpuSampleCache(hostId);
-        clearNetworkSampleCache(hostId);
-      }
-    }
-
-    for (const host of hosts) {
-      await this.startPollingForHost(host, { statusOnly: true });
-    }
-  }
-
-  async refreshAllPolling(): Promise<void> {
-    const hostsToRefresh: Array<{
-      host: SSHHostWithCredentials;
-      viewerUserId?: string;
-    }> = [];
-
-    for (const [hostId, config] of this.pollingConfigs.entries()) {
-      const status = this.statusStore.get(hostId);
-
-      if (
-        !status ||
-        status.status === "online" ||
-        status.status === "reachable"
-      ) {
-        hostsToRefresh.push({
-          host: config.host,
-          viewerUserId: config.viewerUserId,
-        });
-      }
-    }
-
-    for (const hostId of this.pollingConfigs.keys()) {
-      this.stopPollingForHost(hostId, false);
-    }
-
-    for (const { host, viewerUserId } of hostsToRefresh) {
-      await this.startPollingForHost(host, { statusOnly: true, viewerUserId });
-    }
-  }
-
-  registerViewer(hostId: number, sessionId: string, userId: string): void {
-    if (!this.activeViewers.has(hostId)) {
-      this.activeViewers.set(hostId, new Set());
-    }
-    this.activeViewers.get(hostId)!.add(sessionId);
-
-    this.viewerDetails.set(sessionId, {
-      sessionId,
-      userId,
-      hostId,
-      lastHeartbeat: Date.now(),
-    });
-
-    if (this.activeViewers.get(hostId)!.size === 1) {
-      // Fire-and-forget: never let background metrics start-up failures
-      // propagate up to the HTTP handler that registered the viewer.
-      Promise.resolve()
-        .then(() => this.startMetricsForHost(hostId, userId))
-        .catch((err) => {
-          statsLogger.warn("startMetricsForHost rejected (non-fatal)", {
-            operation: "start_metrics_unhandled",
-            hostId,
-            userId,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        });
-    }
-  }
-
-  updateHeartbeat(sessionId: string): boolean {
-    const viewer = this.viewerDetails.get(sessionId);
-    if (viewer) {
-      viewer.lastHeartbeat = Date.now();
-      return true;
-    }
-    return false;
-  }
-
-  unregisterViewer(hostId: number, sessionId: string): void {
-    const viewers = this.activeViewers.get(hostId);
-    if (viewers) {
-      viewers.delete(sessionId);
-
-      if (viewers.size === 0) {
-        this.activeViewers.delete(hostId);
-        this.stopMetricsForHost(hostId);
-      }
-    }
-    this.viewerDetails.delete(sessionId);
-  }
-
-  private async startMetricsForHost(
-    hostId: number,
-    userId: string,
-  ): Promise<void> {
-    try {
-      const host = await fetchHostById(hostId, userId);
-      if (host) {
-        await this.startPollingForHost(host, { viewerUserId: userId });
-      }
-    } catch (error) {
-      statsLogger.error("Failed to start metrics polling", {
-        operation: "start_metrics_error",
-        hostId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  private stopMetricsForHost(hostId: number): void {
-    this.stopMetricsOnly(hostId);
-  }
-
-  private cleanupInactiveViewers(): void {
-    const now = Date.now();
-    const maxInactivity = 120000;
-
-    for (const [sessionId, viewer] of this.viewerDetails.entries()) {
-      if (now - viewer.lastHeartbeat > maxInactivity) {
-        this.unregisterViewer(viewer.hostId, sessionId);
-      }
-    }
-  }
-
-  destroy(): void {
-    this.unsubscribeHostSessionStatus();
-    clearInterval(this.viewerCleanupInterval);
-    for (const hostId of this.pollingConfigs.keys()) {
-      this.stopPollingForHost(hostId);
-    }
-  }
-}
-
-const pollingManager = new PollingManager();
-
-function validateHostId(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) {
+function validateHostId(req: Request, res: Response, next: NextFunction) {
   const id = Number(req.params.id);
   if (!id || !Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ error: "Invalid host ID" });
@@ -1056,1459 +51,655 @@ function validateHostId(
   next();
 }
 
-// Mounted onto the router core hands this plugin at /plugin-api/host-metrics,
-// rather than listening on a port of its own. Compression, CORS, cookies and
-// body parsing all run in core's stack in front of this, so only the
-// cache header and the routes themselves stay here.
-export const app = express();
-app.set("trust proxy", "loopback");
-app.use((_req, res, next) => {
-  res.setHeader("Cache-Control", "no-store");
-  next();
-});
-
-// Core authenticates every /plugin-api request before it reaches this app.
-const requireAdmin = authManager.createAdminMiddleware();
-
-async function fetchAllHosts(
-  userId: string,
-): Promise<SSHHostWithCredentials[]> {
-  try {
-    const repository = createCurrentHostResolutionRepository();
-    const hostResults = await repository.findHostsByUserId(userId);
-
-    const hostsWithCredentials: SSHHostWithCredentials[] = [];
-    for (const host of hostResults) {
-      try {
-        const hostWithCreds = await resolveHostCredentials(host, userId);
-        if (hostWithCreds) {
-          hostsWithCredentials.push(hostWithCreds);
-        }
-      } catch (err) {
-        statsLogger.warn(
-          `Failed to resolve credentials for host ${host.id}: ${getErrorMessage(err)}`,
-        );
-      }
-    }
-
-    return hostsWithCredentials.filter((h) => !!h.id && !!h.ip && !!h.port);
-  } catch (err) {
-    statsLogger.error("Failed to fetch hosts from database", err);
-    return [];
-  }
+export function sanitizeLayout(input: unknown): HostMetricsLayout | null {
+  if (!input || typeof input !== "object") return null;
+  const obj = input as Record<string, unknown>;
+  if (!Array.isArray(obj.slots)) return null;
+  const columns =
+    typeof obj.columns === "number" && obj.columns >= 1 && obj.columns <= 4
+      ? Math.round(obj.columns)
+      : 3;
+  const slots = obj.slots
+    .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
+    .map((s, i) => ({
+      id: String(s.id),
+      order: typeof s.order === "number" ? s.order : i,
+      colSpan:
+        s.colSpan === 1 || s.colSpan === 2 || s.colSpan === 3 ? s.colSpan : 1,
+      height:
+        typeof s.height === "number" && s.height > 0
+          ? Math.round(s.height)
+          : null,
+    }))
+    .filter((s) => s.id && s.id !== "undefined");
+  return { slots, columns } as HostMetricsLayout;
 }
 
-async function fetchHostById(
-  id: number,
-  userId: string,
-): Promise<SSHHostWithCredentials | undefined> {
-  try {
-    if (DataCrypto.getUserDataKey(userId) === null) {
-      return undefined;
-    }
+/** Everything under /plugin-api/host-metrics. Core authenticates first. */
+export function registerRoutes(router: Router, deps: RouteDeps): void {
+  const { ctx, log, poller, sessions, repository } = deps;
 
-    const host = await resolveHostById(id, userId);
-    if (!host) {
-      statsLogger.warn(`User ${userId} cannot resolve host ${id}`, {
-        operation: "fetch_host_access_denied",
-        userId,
+  router.use(ctx.rbac.require("use") as unknown as RequestHandler);
+  router.use((_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    next();
+  });
+
+  const actor = (res: Response): string | null => {
+    const userId = ctx.currentActor();
+    if (!userId) res.status(401).json({ error: "Authentication required" });
+    return userId ?? null;
+  };
+
+  const canConnect = async (hostId: number) =>
+    (await ctx.hosts.checkAccess(hostId, "connect")).hasAccess;
+
+  const interactive: InteractiveDeps = {
+    ssh: ctx.ssh,
+    sessions,
+    log,
+    registerViewer: (hostId, sessionId, userId) =>
+      poller.registerViewer(hostId, sessionId, userId),
+  };
+
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/defaults:
+   *   get:
+   *     summary: Get defaults for new hosts
+   *     description: Whether a new host starts with metrics on, an admin setting any user creating a host needs.
+   *     tags:
+   *       - Host Metrics
+   *     responses:
+   *       200:
+   *         description: The defaults.
+   */
+  router.get("/defaults", async (_req, res) => {
+    res.json({
+      enabledForNewHosts:
+        (await ctx.settings.get<boolean>("enabledForNewHosts")) !== false,
+    });
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/{id}:
+   *   get:
+   *     summary: Get host metrics
+   *     description: Returns the latest sample for a host, including CPU, memory, disk, network, processes and system information.
+   *     tags:
+   *       - Host Metrics
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Host metrics data.
+   *       403:
+   *         description: No access to this host.
+   *       404:
+   *         description: Metrics not available.
+   */
+  router.get("/metrics/:id", validateHostId, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!actor(res)) return;
+    if (!(await canConnect(id))) {
+      return res.status(403).json({ error: "No access to this host" });
+    }
+    const sample = poller.getMetrics(id);
+    if (!sample) {
+      return res.status(404).json({
+        error: "Metrics not available",
+        cpu: { percent: null, cores: null, load: null },
+        memory: { percent: null, usedGiB: null, totalGiB: null },
+        disk: {
+          percent: null,
+          usedHuman: null,
+          totalHuman: null,
+          availableHuman: null,
+          mount: null,
+          filesystems: [],
+        },
+        network: { interfaces: [] },
+        uptime: { seconds: null, formatted: null },
+        processes: { total: null, running: null, top: [] },
+        system: { hostname: null, kernel: null, os: null },
+        lastChecked: new Date().toISOString(),
+      });
+    }
+    res.json({
+      ...sample.data,
+      lastChecked: new Date(sample.timestamp).toISOString(),
+    });
+  });
+
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/start/{id}:
+   *   post:
+   *     summary: Start metrics collection
+   *     description: Opens an SSH connection from the tab, where a TOTP prompt can be answered, and starts collecting metrics for the host.
+   *     tags:
+   *       - Host Metrics
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Metrics collection started, or a TOTP code is required.
+   *       401:
+   *         description: The host needs a sign-in step first.
+   *       404:
+   *         description: Host not found.
+   *       500:
+   *         description: Failed to start metrics collection.
+   */
+  router.post("/metrics/start/:id", validateHostId, async (req, res) => {
+    const id = Number(req.params.id);
+    const userId = actor(res);
+    if (!userId) return;
+    try {
+      const host = await poller.resolve(id, userId);
+      if (!host) {
+        return res.status(404).json({
+          error: "Host not found",
+          connectionLogs: [
+            {
+              type: "error",
+              stage: "stats_connecting",
+              message: "Host not found",
+            },
+          ],
+        });
+      }
+      const result = await startInteractive(interactive, host, userId);
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      log.error("Failed to start metrics collection", error, {
+        operation: "metrics_start_error",
         hostId: id,
       });
-      return undefined;
+      res.status(500).json({ error: "Failed to start metrics collection" });
     }
+  });
 
-    return host as SSHHostWithCredentials;
-  } catch (err) {
-    statsLogger.error(`Failed to fetch host ${id}`, err);
-    return undefined;
-  }
-}
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/stop/{id}:
+   *   post:
+   *     summary: Stop metrics collection
+   *     description: Closes the tab's connection and drops its viewer, which stops polling when it was the last one.
+   *     tags:
+   *       - Host Metrics
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               viewerSessionId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Metrics collection stopped.
+   */
+  router.post("/metrics/stop/:id", validateHostId, async (req, res) => {
+    const id = Number(req.params.id);
+    const userId = actor(res);
+    if (!userId) return;
+    sessions.close(sessionKey(id, userId));
+    const { viewerSessionId } = (req.body ?? {}) as {
+      viewerSessionId?: unknown;
+    };
+    if (typeof viewerSessionId === "string" && viewerSessionId) {
+      poller.unregisterViewer(id, viewerSessionId, userId);
+    } else if (await canConnect(id)) {
+      poller.pause(id);
+    }
+    res.json({ success: true });
+  });
 
-/**
- * Resolves through core's host resolver, so shared-host overrides and
- * external secret references apply here exactly as in the terminal.
- */
-async function resolveHostCredentials(
-  host: Record<string, unknown>,
-  userId: string,
-): Promise<SSHHostWithCredentials | undefined> {
-  try {
-    const resolved = (await resolveHostById(
-      host.id as number,
-      userId,
-    )) as unknown as Record<string, unknown> | null;
-    if (!resolved) return undefined;
-    const terminalConfig = resolved.terminalConfig as
-      Record<string, unknown> | undefined;
-    return {
-      ...resolved,
-      tags:
-        typeof resolved.tags === "string"
-          ? resolved.tags
-            ? resolved.tags.split(",").filter(Boolean)
-            : []
-          : (resolved.tags ?? []),
-      sudoPassword:
-        (resolved.sudoPassword as string | undefined) ||
-        (terminalConfig?.sudoPassword as string | undefined) ||
-        undefined,
-      connectionType:
-        (resolved.connectionType as SSHHostWithCredentials["connectionType"]) ||
-        "ssh",
-    } as unknown as SSHHostWithCredentials;
-  } catch (error) {
-    statsLogger.error(
-      `Failed to resolve host credentials for host ${host.id}: ${getErrorMessage(error)}`,
-    );
-    return undefined;
-  }
-}
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/connect-totp:
+   *   post:
+   *     summary: Submit a TOTP code
+   *     description: Answers the TOTP prompt a metrics connection is waiting on.
+   *     tags:
+   *       - Host Metrics
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               sessionId:
+   *                 type: string
+   *               totpCode:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Connected.
+   *       400:
+   *         description: Missing sessionId or totpCode.
+   *       401:
+   *         description: TOTP verification failed.
+   *       404:
+   *         description: TOTP session not found or expired.
+   *       429:
+   *         description: Too many TOTP attempts.
+   */
+  router.post("/metrics/connect-totp", async (req, res) => {
+    const userId = actor(res);
+    if (!userId) return;
+    const { sessionId, totpCode } = (req.body ?? {}) as {
+      sessionId?: unknown;
+      totpCode?: unknown;
+    };
+    if (typeof sessionId !== "string" || typeof totpCode !== "string") {
+      return res.status(400).json({ error: "Missing sessionId or totpCode" });
+    }
+    const result = await submitTotp(interactive, userId, sessionId, totpCode);
+    res.status(result.status).json(result.body);
+  });
 
-function getPoolKey(host: SSHHostWithCredentials): string {
-  return pluginSsh().poolKey("stats", host as unknown as PluginSshHost);
-}
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/heartbeat:
+   *   post:
+   *     summary: Keep a metrics viewer alive
+   *     description: A viewer without a heartbeat for two minutes is dropped.
+   *     tags:
+   *       - Host Metrics
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               viewerSessionId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Heartbeat updated.
+   *       400:
+   *         description: Invalid viewerSessionId.
+   *       404:
+   *         description: Viewer session not found.
+   */
+  router.post("/metrics/heartbeat", (req, res) => {
+    const userId = actor(res);
+    if (!userId) return;
+    const { viewerSessionId } = (req.body ?? {}) as {
+      viewerSessionId?: unknown;
+    };
+    if (typeof viewerSessionId !== "string" || !viewerSessionId) {
+      return res.status(400).json({ error: "Invalid viewerSessionId" });
+    }
+    if (poller.updateHeartbeat(viewerSessionId, userId)) {
+      return res.json({ success: true });
+    }
+    res.status(404).json({ error: "Viewer session not found" });
+  });
 
-async function withSshConnection<T>(
-  host: SSHHostWithCredentials,
-  fn: (client: Client) => Promise<T>,
-): Promise<T> {
-  // Background polling has nobody to answer a TOTP prompt, so the pooled
-  // connection answers password prompts only and fails fast otherwise.
-  return withPooledSsh(
-    host as unknown as PluginSshHost,
-    { pool: "stats", purpose: "metrics", overrides: { readyTimeout: 60000 } },
-    fn,
-  );
-}
-
-async function collectMetrics(
-  host: SSHHostWithCredentials,
-  onAuthenticated?: () => void,
-): Promise<{
-  cpu: {
-    percent: number | null;
-    cores: number | null;
-    load: [number, number, number] | null;
-  };
-  memory: {
-    percent: number | null;
-    usedGiB: number | null;
-    totalGiB: number | null;
-  };
-  disk: {
-    percent: number | null;
-    usedHuman: string | null;
-    totalHuman: string | null;
-    availableHuman: string | null;
-    mount: string | null;
-    filesystems: DiskFilesystem[];
-  };
-  network: {
-    interfaces: Array<{
-      name: string;
-      ip: string;
-      state: string;
-      rxBytes: string | null;
-      txBytes: string | null;
-      rxRateBps: number | null;
-      txRateBps: number | null;
-    }>;
-  };
-  uptime: {
-    seconds: number | null;
-    formatted: string | null;
-  };
-  processes: {
-    total: number | null;
-    running: number | null;
-    top: Array<{
-      pid: string;
-      user: string;
-      cpu: string;
-      mem: string;
-      command: string;
-    }>;
-  };
-  system: {
-    hostname: string | null;
-    kernel: string | null;
-    os: string | null;
-  };
-}> {
-  if (!supportsMetrics(host)) {
-    throw new Error("Metrics collection only supported for SSH hosts");
-  }
-
-  if (authFailureTracker.shouldSkip(host.id)) {
-    const reason = authFailureTracker.getSkipReason(host.id);
-    throw new Error(reason || "Authentication failed");
-  }
-
-  const cached = metricsCache.get(host.id);
-  if (cached) {
-    onAuthenticated?.();
-    return cached as ReturnType<typeof collectMetrics> extends Promise<infer T>
-      ? T
-      : never;
-  }
-
-  return requestQueue.queueRequest(host.id, async () => {
-    const sessionKey = getSessionKey(host.id, host.userId!);
-    const existingSession = metricsSessions[sessionKey];
-
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/register-viewer:
+   *   post:
+   *     summary: Register a metrics viewer
+   *     description: Starts polling a host while something shows its metrics. Answers skipped instead of failing when the host has no metrics.
+   *     tags:
+   *       - Host Metrics
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               hostId:
+   *                 type: integer
+   *     responses:
+   *       200:
+   *         description: Viewer registered, or skipped with a reason.
+   *       400:
+   *         description: Invalid hostId.
+   */
+  router.post("/metrics/register-viewer", async (req, res) => {
+    const userId = actor(res);
+    if (!userId) return;
+    const { hostId } = (req.body ?? {}) as { hostId?: unknown };
+    if (
+      typeof hostId !== "number" ||
+      !Number.isInteger(hostId) ||
+      hostId <= 0
+    ) {
+      return res.status(400).json({ error: "Invalid hostId" });
+    }
+    const skipped = (reason: string) =>
+      res.json({ success: true, skipped: true, reason });
     try {
-      const excludedMounts = pollingManager.parseStatsConfig(
-        host.statsConfig,
-      ).excludedMounts;
-      const monitoredMounts = pollingManager.parseStatsConfig(
-        host.statsConfig,
-      ).monitoredMounts;
+      const host = await poller.resolve(hostId, userId);
+      if (!host) return skipped("host_not_found");
+      if (!supportsMetrics(host, ctx.ssh))
+        return skipped("metrics_unsupported");
+      if (!(await poller.settingsFor(hostId)).metricsEnabled) {
+        return skipped("metrics_disabled");
+      }
+      const viewerSessionId = newSessionId("viewer");
+      poller.registerViewer(hostId, viewerSessionId, userId);
+      res.json({ success: true, viewerSessionId });
+    } catch (error) {
+      log.warn("Failed to register viewer", {
+        operation: "register_viewer_error",
+        hostId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.json({ success: false, skipped: true, reason: "internal_error" });
+    }
+  });
 
-      const collectFn = async (client: Client) => {
-        onAuthenticated?.();
-        const platform = await detectPlatform(client);
-        const cpu = await collectCpuMetrics(client, platform, host.id);
-        const memory = await collectMemoryMetrics(client, platform);
-        const disk = await collectDiskMetrics(
-          client,
-          excludedMounts,
-          monitoredMounts,
-          platform,
-        );
-        const network = await collectNetworkMetrics(client, platform, host.id);
-        const uptime = await collectUptimeMetrics(client, platform);
-        const processes = await collectProcessesMetrics(client);
-        const system = await collectSystemMetrics(client, platform);
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/unregister-viewer:
+   *   post:
+   *     summary: Unregister a metrics viewer
+   *     description: Drops a viewer. Polling stops with the last one.
+   *     tags:
+   *       - Host Metrics
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               hostId:
+   *                 type: integer
+   *               viewerSessionId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Viewer unregistered.
+   *       400:
+   *         description: Invalid hostId or viewerSessionId.
+   */
+  router.post("/metrics/unregister-viewer", (req, res) => {
+    const userId = actor(res);
+    if (!userId) return;
+    const { hostId, viewerSessionId } = (req.body ?? {}) as {
+      hostId?: unknown;
+      viewerSessionId?: unknown;
+    };
+    if (typeof hostId !== "number" || !hostId) {
+      return res.status(400).json({ error: "Invalid hostId" });
+    }
+    if (typeof viewerSessionId !== "string" || !viewerSessionId) {
+      return res.status(400).json({ error: "Invalid viewerSessionId" });
+    }
+    poller.unregisterViewer(hostId, viewerSessionId, userId);
+    res.json({ success: true });
+  });
 
-        let login_stats = {
-          recentLogins: [],
-          failedLogins: [],
-          totalLogins: 0,
-          uniqueIPs: 0,
-        };
-        try {
-          login_stats = await collectLoginStats(client);
-        } catch {
-          // expected
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/metrics/history/{id}:
+   *   get:
+   *     summary: Get metrics history
+   *     description: Returns stored CPU, memory, disk and network samples for a host over a range.
+   *     tags:
+   *       - Host Metrics
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: range
+   *         schema:
+   *           type: string
+   *           enum: [1h, 6h, 24h, 7d, 30d]
+   *       - in: query
+   *         name: from
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: to
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The samples in the range.
+   *       400:
+   *         description: Invalid range or dates.
+   *       403:
+   *         description: No access to this host.
+   */
+  router.get("/metrics/history/:id", validateHostId, async (req, res) => {
+    const hostId = Number(req.params.id);
+    if (!actor(res)) return;
+    try {
+      if (!(await canConnect(hostId))) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const { range, from, to } = req.query as Record<
+        string,
+        string | undefined
+      >;
+      let fromDate: Date;
+      let toDate = new Date();
+      if (range) {
+        const offsetMs = RANGE_OFFSETS[range];
+        if (!offsetMs) {
+          return res
+            .status(400)
+            .json({ error: "Invalid range. Use 1h, 6h, 24h, 7d, or 30d" });
         }
-
-        let ports: {
-          source: "ss" | "netstat" | "none";
-          ports: Array<{
-            protocol: "tcp" | "udp";
-            localAddress: string;
-            localPort: number;
-            state?: string;
-            pid?: number;
-            process?: string;
-          }>;
-        } = {
-          source: "none",
-          ports: [],
-        };
-        try {
-          ports = await collectPortsMetrics(client);
-        } catch {
-          // expected
-        }
-
-        let firewall: {
-          type: "iptables" | "nftables" | "none";
-          status: "active" | "inactive" | "unknown";
-          chains: Array<{
-            name: string;
-            policy: string;
-            rules: Array<{
-              chain: string;
-              target: string;
-              protocol: string;
-              source: string;
-              destination: string;
-              dport?: string;
-              sport?: string;
-              state?: string;
-              interface?: string;
-              extra?: string;
-            }>;
-          }>;
-        } = {
-          type: "none",
-          status: "unknown",
-          chains: [],
-        };
-        try {
-          firewall = await collectFirewallMetrics(client);
-        } catch {
-          // expected
-        }
-
-        let temperature: {
-          source: "sysfs" | "sensors" | "none";
-          highestCelsius: number | null;
-          sensors: Array<{ label: string; celsius: number }>;
-        } = {
-          source: "none",
-          highestCelsius: null,
-          sensors: [],
-        };
-        try {
-          temperature = await collectTemperatureMetrics(client);
-        } catch {
-          // expected
-        }
-
-        let gpu: GpuMetrics = { source: "none", gpus: [], processes: [] };
-        try {
-          gpu = await collectGpuMetrics(client);
-        } catch {
-          // expected
-        }
-
-        const result = {
-          cpu,
-          memory,
-          disk,
-          network,
-          uptime,
-          processes,
-          system,
-          login_stats,
-          ports,
-          firewall,
-          temperature,
-          gpu,
-        };
-
-        metricsCache.set(host.id, result);
-        return result;
-      };
-
-      if (existingSession && existingSession.isConnected) {
-        existingSession.activeOperations++;
-        try {
-          const result = await collectFn(existingSession.client);
-          existingSession.lastActive = Date.now();
-          return result;
-        } finally {
-          existingSession.activeOperations--;
+        fromDate = new Date(Date.now() - offsetMs);
+      } else if (from && to) {
+        fromDate = new Date(from);
+        toDate = new Date(to);
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+          return res.status(400).json({ error: "Invalid from/to date format" });
         }
       } else {
-        return await withSshConnection(host, collectFn);
+        fromDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes("TOTP authentication required")) {
-          throw error;
-        } else if (
-          error.message.includes("No password available") ||
-          error.message.includes("Unsupported authentication type") ||
-          error.message.includes("No SSH key available") ||
-          error.message.includes("Invalid SSH key format")
-        ) {
-          authFailureTracker.recordFailure(host.id, "AUTH", true);
-        } else if (isHostKeyVerificationError(error)) {
-          authFailureTracker.recordFailure(host.id, "HOST_KEY", true);
-        } else if (
-          error.message.includes("authentication") ||
-          error.message.includes("Permission denied") ||
-          error.message.includes("All configured authentication methods failed")
-        ) {
-          authFailureTracker.recordFailure(host.id, "AUTH");
-        } else if (
-          error.message.includes("timeout") ||
-          error.message.includes("ETIMEDOUT")
-        ) {
-          authFailureTracker.recordFailure(host.id, "TIMEOUT");
-        }
-      }
-      throw error;
-    }
-  });
-}
 
-function tcpPing(
-  host: string,
-  port: number,
-  timeoutMs = 5000,
-): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-    let settled = false;
-
-    const finish = (result: boolean) => {
-      if (settled) return;
-      settled = true;
-      resolve(result);
-    };
-
-    const cleanup = () => {
-      try {
-        socket.destroy();
-      } catch {
-        // expected
-      }
-    };
-
-    socket.setTimeout(timeoutMs);
-
-    socket.once("connect", () => {
-      const dataTimeout = setTimeout(() => {
-        cleanup();
-        finish(true);
-      }, 2000);
-
-      socket.once("data", (data) => {
-        clearTimeout(dataTimeout);
-        const dataStr = data.toString("utf8");
-        if (dataStr.startsWith("SSH-")) {
-          try {
-            socket.end("SSH-2.0-TermixHealthCheck\r\n");
-          } catch {
-            // expected
-          }
-          setTimeout(cleanup, 200);
-        } else {
-          cleanup();
-        }
-        finish(true);
-      });
-    });
-
-    socket.once("timeout", () => {
-      cleanup();
-      finish(false);
-    });
-    socket.once("error", () => {
-      cleanup();
-      finish(false);
-    });
-    socket.connect(port, host);
-  });
-}
-
-/**
- * @openapi
- * /status:
- *   get:
- *     summary: Get all host statuses
- *     description: Retrieves the status of all hosts for the authenticated user.
- *     tags:
- *       - Host Metrics
- *     responses:
- *       200:
- *         description: A map of host IDs to their status entries.
- *       401:
- *         description: Session expired - please log in again.
- */
-app.get("/status", async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  const requestedHostIds = parseStatusHostIds(req.query.hostIds);
-  if (requestedHostIds !== null) {
-    await pollingManager.reconcileStatusPolling(userId, requestedHostIds);
-  } else if (pollingManager.getAllStatuses().size === 0) {
-    await pollingManager.initializePolling(userId);
-  }
-
-  // One batched permission resolution for the whole fleet; this endpoint is
-  // polled every few seconds, and a per-host check made it linear in host
-  // count against the database.
-  const entries = Array.from(pollingManager.getAllStatuses().entries());
-  const allowed = await permissionManager.filterAccessibleHostIds(
-    userId,
-    entries.map(([id]) => id),
-  );
-
-  const result: Record<number, StatusEntry> = {};
-  for (const [id, entry] of entries) {
-    if (
-      allowed.has(id) &&
-      (requestedHostIds === null || requestedHostIds.has(id))
-    ) {
-      result[id] = entry;
-    }
-  }
-  res.json(result);
-});
-
-/**
- * @openapi
- * /status/{id}:
- *   get:
- *     summary: Get host status by ID
- *     description: Retrieves the status of a specific host by its ID.
- *     tags:
- *       - Host Metrics
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Host status entry.
- *       401:
- *         description: Session expired - please log in again.
- *       404:
- *         description: Status not available.
- */
-app.get("/status/:id", validateHostId, async (req, res) => {
-  const id = Number(req.params.id);
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  const access = await permissionManager.canAccessHost(userId, id, "connect");
-  if (!access.hasAccess) {
-    return res.status(404).json({ error: "Status not available" });
-  }
-
-  const statuses = pollingManager.getAllStatuses();
-  if (statuses.size === 0) {
-    await pollingManager.initializePolling(userId);
-  }
-
-  const statusEntry = pollingManager.getStatus(id);
-  if (!statusEntry) {
-    return res.status(404).json({ error: "Status not available" });
-  }
-
-  res.json(statusEntry);
-});
-
-/**
- * @openapi
- * /clear-connections:
- *   post:
- *     summary: Clear all SSH connections
- *     description: Clears all SSH connections from the connection pool.
- *     tags:
- *       - Host Metrics
- *     responses:
- *       200:
- *         description: All SSH connections cleared.
- *       401:
- *         description: Session expired - please log in again.
- */
-app.post("/clear-connections", requireAdmin, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  connectionPool.clearAllConnections();
-  res.json({ message: "All SSH connections cleared" });
-});
-
-/**
- * @openapi
- * /refresh:
- *   post:
- *     summary: Refresh polling
- *     description: Refreshes host polling for the authenticated user.
- *     tags:
- *       - Host Metrics
- *     responses:
- *       200:
- *         description: Polling refreshed.
- *       401:
- *         description: Session expired - please log in again.
- */
-app.post("/refresh", async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  await pollingManager.refreshHostPolling(userId);
-  res.json({ message: "Polling refreshed" });
-});
-
-/**
- * Reacts to a host being created or updated somewhere in core.
- *
- * Used to be POST /host-updated on this plugin's own port. An event now, so
- * there is no service-to-service HTTP call and no port. The acting user comes
- * with the event because re-reading a host needs their data key.
- */
-export async function onHostUpdated(payload: {
-  hostId: number;
-  userId: string;
-}): Promise<void> {
-  const { hostId, userId } = payload;
-  if (!hostId || !userId) return;
-
-  // No data key means that user is not unlocked on this process, so there is
-  // nothing to decrypt the host with. Polling resumes when they next log in.
-  if (DataCrypto.getUserDataKey(userId) === null) return;
-
-  try {
-    hostPollCache.invalidate(hostId);
-    const host = await fetchHostById(hostId, userId);
-    if (!host) return;
-
-    connectionPool.clearKeyConnections(getPoolKey(host));
-    await pollingManager.startPollingForHost(host);
-  } catch (error) {
-    statsLogger.error("Failed to start polling for host", error, {
-      operation: "host_updated",
-      hostId,
-      userId,
-    });
-  }
-}
-
-/** Reacts to a host being deleted. Was POST /host-deleted. */
-export function onHostDeleted(payload: { hostId: number }): void {
-  const { hostId } = payload;
-  if (!hostId) return;
-
-  try {
-    pollingManager.stopPollingForHost(hostId, true);
-  } catch (error) {
-    statsLogger.error("Failed to stop polling for host", error, {
-      operation: "host_deleted",
-      hostId,
-    });
-  }
-}
-
-/** Reacts to an SSH login. Was the internal POST /internal/login-alert. */
-export function onHostLogin(payload: {
-  hostId: number;
-  userId: string;
-  sshUser: string;
-  fromIp: string;
-}): void {
-  const { hostId, userId, sshUser, fromIp } = payload;
-  if (!hostId || !userId) return;
-  notifyAutomationInternalEvent("user_login", userId, hostId, {
-    sshUser,
-    fromIp,
-  });
-}
-
-/**
- * @openapi
- * /metrics/{id}:
- *   get:
- *     summary: Get host metrics
- *     description: Retrieves current metrics for a specific host including CPU, memory, disk, network, processes, and system information.
- *     tags:
- *       - Host Metrics
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Host metrics data.
- *       401:
- *         description: Session expired - please log in again.
- *       404:
- *         description: Metrics not available.
- */
-app.get("/metrics/:id", validateHostId, async (req, res) => {
-  const id = Number(req.params.id);
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  const metricsData = pollingManager.getMetrics(id);
-  if (!metricsData) {
-    return res.status(404).json({
-      error: "Metrics not available",
-      cpu: { percent: null, cores: null, load: null },
-      memory: { percent: null, usedGiB: null, totalGiB: null },
-      disk: {
-        percent: null,
-        usedHuman: null,
-        totalHuman: null,
-        availableHuman: null,
-        mount: null,
-        filesystems: [],
-      },
-      network: { interfaces: [] },
-      uptime: { seconds: null, formatted: null },
-      processes: { total: null, running: null, top: [] },
-      system: { hostname: null, kernel: null, os: null },
-      lastChecked: new Date().toISOString(),
-    });
-  }
-
-  res.json({
-    ...metricsData.data,
-    lastChecked: new Date(metricsData.timestamp).toISOString(),
-  });
-});
-
-/**
- * @openapi
- * /metrics/start/{id}:
- *   post:
- *     summary: Start metrics collection
- *     description: Establishes an SSH connection and starts collecting metrics for a specific host.
- *     tags:
- *       - Host Metrics
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Metrics collection started successfully, or TOTP required.
- *       401:
- *         description: Session expired - please log in again.
- *       404:
- *         description: Host not found.
- *       500:
- *         description: Failed to start metrics collection.
- */
-app.post("/metrics/start/:id", validateHostId, async (req, res) => {
-  const id = Number(req.params.id);
-  const userId = (req as AuthenticatedRequest).userId;
-
-  const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    connectionLogs.push(
-      createConnectionLog("error", "stats_connecting", "Session expired"),
-    );
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-      connectionLogs,
-    });
-  }
-
-  try {
-    const host = await fetchHostById(id, userId);
-    if (!host) {
-      connectionLogs.push(
-        createConnectionLog("error", "stats_connecting", "Host not found"),
-      );
-      return res.status(404).json({ error: "Host not found", connectionLogs });
-    }
-
-    connectionLogs.push(
-      createConnectionLog(
-        "info",
-        "stats_connecting",
-        "Starting metrics collection",
-      ),
-    );
-
-    connectionLogs.push(
-      createConnectionLog("info", "dns", `Resolving DNS for ${host.ip}`),
-    );
-
-    connectionLogs.push(
-      createConnectionLog(
-        "info",
-        "tcp",
-        `Connecting to ${host.ip}:${host.port}`,
-      ),
-    );
-
-    connectionLogs.push(
-      createConnectionLog("info", "handshake", "Initiating SSH handshake"),
-    );
-
-    if (host.authType === "password") {
-      connectionLogs.push(
-        createConnectionLog("info", "auth", "Authenticating with password"),
-      );
-    } else if (host.authType === "key") {
-      connectionLogs.push(
-        createConnectionLog("info", "auth", "Authenticating with SSH key"),
-      );
-    }
-
-    const sessionKey = getSessionKey(host.id, userId);
-
-    const existingSession = metricsSessions[sessionKey];
-    if (existingSession && existingSession.isConnected) {
-      connectionLogs.push(
-        createConnectionLog(
-          "success",
-          "stats_polling",
-          "Using existing metrics session",
-        ),
-      );
-      return res.json({ success: true, connectionLogs });
-    }
-
-    const client = new Client();
-    const ssh = pluginSsh();
-    const prepared = await ssh.prepare(host as unknown as PluginSshHost, {
-      purpose: "metrics",
-      client,
-      log: (level, message) =>
-        connectionLogs.push(createConnectionLog(level, "auth", message)),
-    });
-    const config = prepared.config as ConnectConfig;
-    config.readyTimeout = 60000;
-    if (prepared.outcome.status !== "ready") {
-      const outcome = prepared.outcome;
-      connectionLogs.push(
-        createConnectionLog("error", "auth", outcome.message),
-      );
-      if (outcome.status === "interaction-required") {
-        return res.status(401).json({
-          error: outcome.message,
-          requiresAuthInteraction: outcome.interaction,
-          ...(outcome.flag ? { [outcome.flag]: true } : {}),
-          connectionLogs,
-        });
-      }
-      return res.status(400).json({ error: outcome.message, connectionLogs });
-    }
-
-    const connectionPromise = new Promise<{
-      success: boolean;
-      requires_totp?: boolean;
-      sessionId?: string;
-      prompt?: string;
-      viewerSessionId?: string;
-    }>((resolve, reject) => {
-      let isResolved = false;
-
-      const timeout = setTimeout(() => {
-        if (!isResolved) {
-          isResolved = true;
-          client.end();
-          reject(new Error("Connection timeout"));
-        }
-      }, 60000);
-
-      client.on(
-        "keyboard-interactive",
-        (name, instructions, _instructionsLang, prompts, finish) => {
-          const decision = ssh.classifyKeyboardInteractive(
-            { name, instructions, prompts },
-            host as unknown as PluginSshHost,
-          );
-          const totpPromptIndex =
-            decision.kind === "totp" ? decision.promptIndex : -1;
-
-          if (totpPromptIndex !== -1) {
-            const sessionId = `totp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-            pendingTOTPSessions[sessionId] = {
-              client,
-              finish,
-              config,
-              createdAt: Date.now(),
-              sessionId,
-              hostId: host.id,
-              userId: host.userId!,
-              prompts: prompts.map((p) => ({
-                prompt: p.prompt,
-                echo: p.echo ?? false,
-              })),
-              totpPromptIndex,
-              resolvedPassword: host.password,
-              totpAttempts: 0,
-            };
-
-            connectionLogs.push(
-              createConnectionLog(
-                "info",
-                "stats_totp",
-                "TOTP verification required",
-              ),
-            );
-
-            clearTimeout(timeout);
-            if (!isResolved) {
-              isResolved = true;
-              resolve({
-                success: false,
-                requires_totp: true,
-                sessionId,
-                prompt: prompts[totpPromptIndex].prompt,
-              });
-            }
-            return;
-          } else {
-            finish(ssh.autoResponses(prompts, host.password));
-          }
-        },
-      );
-
-      client.on("ready", () => {
-        clearTimeout(timeout);
-        if (!isResolved) {
-          isResolved = true;
-
-          connectionLogs.push(
-            createConnectionLog(
-              "success",
-              "connected",
-              "SSH connection established successfully",
-            ),
-          );
-
-          connectionLogs.push(
-            createConnectionLog(
-              "success",
-              "stats_polling",
-              "Metrics session established",
-            ),
-          );
-
-          metricsSessions[sessionKey] = {
-            client,
-            isConnected: true,
-            lastActive: Date.now(),
-            activeOperations: 0,
-            hostId: host.id,
-            userId,
-          };
-          scheduleMetricsSessionCleanup(sessionKey);
-
-          const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          pollingManager.registerViewer(host.id, viewerSessionId, userId);
-
-          resolve({ success: true, viewerSessionId });
-        }
-      });
-
-      client.on("error", (error) => {
-        clearTimeout(timeout);
-        if (!isResolved) {
-          isResolved = true;
-
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          let errorStage: ConnectionStage;
-
-          if (
-            errorMessage.includes("ENOTFOUND") ||
-            errorMessage.includes("getaddrinfo")
-          ) {
-            errorStage = "dns";
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                errorStage,
-                `DNS resolution failed: ${errorMessage}`,
-              ),
-            );
-          } else if (
-            errorMessage.includes("ECONNREFUSED") ||
-            errorMessage.includes("ETIMEDOUT")
-          ) {
-            errorStage = "tcp";
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                errorStage,
-                `TCP connection failed: ${errorMessage}`,
-              ),
-            );
-          } else if (
-            errorMessage.includes("handshake") ||
-            errorMessage.includes("key exchange")
-          ) {
-            errorStage = "handshake";
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                errorStage,
-                `SSH handshake failed: ${errorMessage}`,
-              ),
-            );
-          } else if (
-            errorMessage.includes("authentication") ||
-            errorMessage.includes("Authentication")
-          ) {
-            errorStage = "auth";
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                errorStage,
-                `Authentication failed: ${errorMessage}`,
-              ),
-            );
-          } else if (errorMessage.includes("verification failed")) {
-            errorStage = "handshake";
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                errorStage,
-                `SSH host key has changed. For security, please open a Terminal connection to this host first to verify and accept the new key fingerprint.`,
-              ),
-            );
-          } else {
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                "error",
-                `SSH connection failed: ${errorMessage}`,
-              ),
-            );
-          }
-
-          statsLogger.error("SSH connection error in metrics/start", {
-            operation: "metrics_start_ssh_error",
-            hostId: host.id,
-            error: errorMessage,
-          });
-          reject(error);
-        }
-      });
-
-      if (host.jumpHosts && host.jumpHosts.length > 0) {
-        connectionLogs.push(
-          createConnectionLog(
-            "info",
-            "proxy",
-            "Connecting via jump host chain",
-          ),
-        );
-      }
-      ssh
-        .openTransport(
-          host as unknown as PluginSshHost,
-          config as Record<string, unknown>,
+      const rows = (
+        await repository.listSamples(
+          hostId,
+          sqlTimestamp(fromDate),
+          sqlTimestamp(toDate),
         )
-        .then((transport) => {
-          if (transport.jumpClient) {
-            const jumpClient = transport.jumpClient as Client;
-            client.on("close", () => jumpClient.end());
-          }
-          client.connect(config);
-        })
-        .catch((error) => {
-          if (!isResolved) {
-            isResolved = true;
-            clearTimeout(timeout);
-            connectionLogs.push(
-              createConnectionLog(
-                "error",
-                "proxy",
-                `Connection setup failed: ${getErrorMessage(error)}`,
-              ),
-            );
-            reject(error);
-          }
-        });
-    });
-
-    const result = await connectionPromise;
-    res.json({ ...result, connectionLogs });
-  } catch (error) {
-    statsLogger.error("Failed to start metrics collection", {
-      operation: "metrics_start_error",
-      hostId: id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    connectionLogs.push(
-      createConnectionLog(
-        "error",
-        "stats_connecting",
-        `Failed to start metrics: ${getErrorMessage(error)}`,
-      ),
-    );
-    res.status(500).json({
-      error: getErrorMessage(error, "Failed to start metrics collection"),
-      connectionLogs,
-    });
-  }
-});
-
-/**
- * @openapi
- * /metrics/stop/{id}:
- *   post:
- *     summary: Stop metrics collection
- *     description: Stops metrics collection for a specific host and cleans up the SSH session.
- *     tags:
- *       - Host Metrics
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               viewerSessionId:
- *                 type: string
- *     responses:
- *       200:
- *         description: Metrics collection stopped successfully.
- *       401:
- *         description: Session expired - please log in again.
- *       500:
- *         description: Failed to stop metrics collection.
- */
-app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
-  const id = Number(req.params.id);
-  const userId = (req as AuthenticatedRequest).userId;
-  const { viewerSessionId } = req.body;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  try {
-    const sessionKey = getSessionKey(id, userId);
-    const session = metricsSessions[sessionKey];
-
-    if (session) {
-      cleanupMetricsSession(sessionKey);
-    }
-
-    if (viewerSessionId && typeof viewerSessionId === "string") {
-      pollingManager.unregisterViewer(id, viewerSessionId);
-    } else {
-      pollingManager.stopMetricsOnly(id);
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    statsLogger.error("Failed to stop metrics collection", {
-      operation: "metrics_stop_error",
-      hostId: id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    res.status(500).json({
-      error: getErrorMessage(error, "Failed to stop metrics collection"),
-    });
-  }
-});
-
-/**
- * @openapi
- * /metrics/connect-totp:
- *   post:
- *     summary: Complete TOTP verification for metrics
- *     description: Verifies the TOTP code and completes the metrics SSH connection.
- *     tags:
- *       - Host Metrics
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               totpCode:
- *                 type: string
- *     responses:
- *       200:
- *         description: TOTP verified, metrics connection established.
- *       400:
- *         description: Missing sessionId or totpCode.
- *       401:
- *         description: Session expired or invalid TOTP code.
- *       404:
- *         description: TOTP session not found or expired.
- *       500:
- *         description: Failed to verify TOTP.
- */
-app.post("/metrics/connect-totp", async (req, res) => {
-  const { sessionId, totpCode } = req.body;
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    return res.status(401).json({
-      error: "Session expired - please log in again",
-      code: "SESSION_EXPIRED",
-    });
-  }
-
-  if (!sessionId || !totpCode) {
-    return res.status(400).json({ error: "Missing sessionId or totpCode" });
-  }
-
-  const session = pendingTOTPSessions[sessionId];
-  if (!session) {
-    return res.status(404).json({ error: "TOTP session not found or expired" });
-  }
-
-  if (Date.now() - session.createdAt > 180000) {
-    delete pendingTOTPSessions[sessionId];
-    try {
-      session.client.end();
-    } catch {
-      // expected
-    }
-    return res.status(408).json({ error: "TOTP session timeout" });
-  }
-
-  if (session.userId !== userId) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-
-  session.totpAttempts++;
-  if (session.totpAttempts > 3) {
-    delete pendingTOTPSessions[sessionId];
-    try {
-      session.client.end();
-    } catch {
-      // expected
-    }
-    return res.status(429).json({ error: "Too many TOTP attempts" });
-  }
-
-  try {
-    const responses = (session.prompts || []).map((p, idx) => {
-      if (idx === session.totpPromptIndex) {
-        return totpCode.trim();
-      } else if (/password/i.test(p.prompt) && session.resolvedPassword) {
-        return session.resolvedPassword;
-      }
-      return "";
-    });
-
-    const connectionPromise = new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error("TOTP verification timeout"));
-      }, 30000);
-
-      session.client.once(
-        "keyboard-interactive",
-        (name, instructions, instructionsLang, prompts, finish) => {
-          statsLogger.warn("Second keyboard-interactive received after TOTP", {
-            operation: "totp_second_keyboard_interactive",
-            hostId: session.hostId,
-            sessionId,
-            prompts: prompts.map((p) => p.prompt),
-          });
-          const secondResponses = prompts.map((p) => {
-            if (/password/i.test(p.prompt) && session.resolvedPassword) {
-              return session.resolvedPassword;
-            }
-            return "";
-          });
-          finish(secondResponses);
-        },
-      );
-
-      session.client.once("ready", () => {
-        clearTimeout(timeout);
-        resolve();
+      ).map((row) => ({
+        ts: row.ts,
+        cpu_percent: row.cpuPercent,
+        mem_percent: row.memPercent,
+        disk_percent: row.diskPercent,
+        net_rx_bytes: row.netRxBytes,
+        net_tx_bytes: row.netTxBytes,
+      }));
+      res.json({
+        rows,
+        fromTs: fromDate.toISOString(),
+        toTs: toDate.toISOString(),
       });
-
-      session.client.once("error", (error) => {
-        clearTimeout(timeout);
-        statsLogger.error("SSH client error after TOTP", {
-          operation: "totp_client_error",
-          hostId: session.hostId,
-          sessionId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        reject(error);
+    } catch (error) {
+      log.error("Failed to fetch metrics history", error, {
+        operation: "metrics_history_fetch_error",
+        hostId,
       });
-    });
+      res.status(500).json({ error: "Failed to fetch metrics history" });
+    }
+  });
 
-    session.finish(responses);
-
-    await connectionPromise;
-
-    const sessionKey = getSessionKey(session.hostId, userId);
-    metricsSessions[sessionKey] = {
-      client: session.client,
-      isConnected: true,
-      lastActive: Date.now(),
-      activeOperations: 0,
-      hostId: session.hostId,
-      userId,
-    };
-    scheduleMetricsSessionCleanup(sessionKey);
-
-    delete pendingTOTPSessions[sessionId];
-
-    const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    pollingManager.registerViewer(session.hostId, viewerSessionId, userId);
-
-    res.json({ success: true, viewerSessionId });
-  } catch (error) {
-    statsLogger.error("TOTP verification failed", {
-      operation: "totp_verification_failed",
-      hostId: session.hostId,
-      sessionId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-
-    if (session.totpAttempts >= 3) {
-      delete pendingTOTPSessions[sessionId];
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/host-metrics/preferences/{id}:
+   *   get:
+   *     summary: Get the Host Metrics layout for a host
+   *     description: Returns the current user's saved card layout for the host, or a default layout from the host's enabled widgets when none is saved.
+   *     tags:
+   *       - Host Metrics
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: The layout for this host.
+   *       403:
+   *         description: No access to this host.
+   */
+  router.get(
+    "/host-metrics/preferences/:id",
+    validateHostId,
+    async (req, res) => {
+      const userId = actor(res);
+      if (!userId) return;
+      const hostId = Number(req.params.id);
       try {
-        session.client.end();
-      } catch {
-        // expected
+        if (!(await canConnect(hostId))) {
+          return res.status(403).json({ error: "No access to this host" });
+        }
+        const saved = await repository.findLayout(userId, hostId);
+        if (saved) {
+          try {
+            const parsed = sanitizeLayout(JSON.parse(saved));
+            if (parsed) return res.json({ layout: parsed });
+          } catch {
+            // fall through to the default
+          }
+        }
+        const settings = await poller.settingsFor(hostId);
+        res.json({ layout: defaultLayoutFromWidgets(settings.enabledWidgets) });
+      } catch (error) {
+        log.error("Failed to fetch host metrics preferences", error, {
+          operation: "host_metrics_prefs_fetch_error",
+          hostId,
+        });
+        res
+          .status(500)
+          .json({ error: "Failed to fetch host metrics preferences" });
       }
-    }
-
-    res.status(401).json({
-      error: "TOTP verification failed",
-      attemptsRemaining: Math.max(0, 3 - session.totpAttempts),
-    });
-  }
-});
-
-// Lets automations keep metrics flowing for hosts they watch, through the same
-// viewer refcount the UI uses rather than around it.
-import("../../../automations/src/backend/headless-viewer.js")
-  .then(({ setViewerRegistry }) => {
-    setViewerRegistry({
-      registerViewer: (hostId, sessionId, userId) =>
-        pollingManager.registerViewer(hostId, sessionId, userId),
-      unregisterViewer: (hostId, sessionId) =>
-        pollingManager.unregisterViewer(hostId, sessionId),
-      updateHeartbeat: (sessionId) => pollingManager.updateHeartbeat(sessionId),
-    });
-  })
-  .catch(() => {});
-
-registerHostMetricsViewerRoutes(app, {
-  fetchHostById,
-  supportsMetrics: (host: SSHHostWithCredentials) => supportsMetrics(host),
-  parseStatsConfig: (statsConfig: SSHHostWithCredentials["statsConfig"]) =>
-    pollingManager.parseStatsConfig(statsConfig),
-  updateHeartbeat: (viewerSessionId) =>
-    pollingManager.updateHeartbeat(viewerSessionId),
-  registerViewer: (hostId, viewerSessionId, userId) =>
-    pollingManager.registerViewer(hostId, viewerSessionId, userId),
-  unregisterViewer: (hostId, viewerSessionId) =>
-    pollingManager.unregisterViewer(hostId, viewerSessionId),
-});
-
-registerHostMetricsSettingsRoutes(app, {
-  requireAdmin,
-  defaultStatsConfig: DEFAULT_STATS_CONFIG,
-  refreshAllPolling: () => pollingManager.refreshAllPolling(),
-});
-
-registerHostMetricsPreferencesRoutes(app, {
-  validateHostId,
-  fetchHostById: async (hostId, userId) =>
-    (await fetchHostById(hostId, userId)) ?? null,
-  parseStatsConfig: (statsConfig) =>
-    pollingManager.parseStatsConfig(
-      statsConfig as string | StatsConfig | undefined,
-    ),
-  canAccessHost: async (userId, hostId, level) =>
-    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
-});
-
-registerHostMetricsHistoryRoutes(app, {
-  validateHostId,
-  canAccessHost: async (userId, hostId, level) =>
-    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
-});
-
-registerManagerRoutes(app, {
-  validateHostId,
-  runOnHost: async (hostId, userId, level, fn) => {
-    const access = await permissionManager.canAccessHost(userId, hostId, level);
-    if (!access.hasAccess) {
-      throw new AccessDeniedError();
-    }
-    const host = await fetchHostById(hostId, userId);
-    if (!host) {
-      throw new AccessDeniedError("Host not found");
-    }
-    // sudoPassword is encrypted with the owner's key; when the viewer is a
-    // different user, re-fetch under the owner's key to decrypt it correctly.
-    let sudoPassword = host.sudoPassword;
-    if (host.userId && host.userId !== userId) {
-      const ownerHost = await fetchHostById(hostId, host.userId);
-      if (ownerHost) sudoPassword = ownerHost.sudoPassword;
-    }
-    const managerHost: ManagerHost = {
-      id: host.id,
-      userId: host.userId,
-      sudoPassword,
-      enableDocker: !!(host as { enableDocker?: boolean }).enableDocker,
-    };
-    return withSshConnection(host, (client) => fn(client, managerHost));
-  },
-});
-
-let cleanupInterval: NodeJS.Timeout | undefined;
-
-/**
- * Mounts the Host Metrics routes on the router core provides. Called from the
- * plugin's activate(); there is no port to bind any more.
- */
-export async function startHostMetricsService(mountOn: Router): Promise<void> {
-  mountOn.use(app);
-
-  try {
-    await authManager.initialize();
-  } catch (err) {
-    statsLogger.error("Failed to initialize AuthManager", err, {
-      operation: "auth_init_error",
-    });
-  }
-
-  cleanupInterval = setInterval(
-    () => {
-      authFailureTracker.cleanup();
-      pollingBackoff.cleanup();
     },
-    10 * 60 * 1000,
   );
-}
 
-/**
- * Releases everything the service holds: polling timers, pooled SSH
- * connections and the periodic auth-failure cleanup. Called from the
- * plugin's deactivate(), replacing the old SIGINT/SIGTERM handlers -- the
- * process itself no longer owns this service's shutdown, the plugin
- * lifecycle does.
- */
-export function shutdown(): void {
-  if (cleanupInterval) {
-    clearInterval(cleanupInterval);
-    cleanupInterval = undefined;
-  }
-  pollingManager.destroy();
-  // The pool is core's and shared with tmux and the fleet tools; destroying it
-  // here broke them until a restart. ctx.ssh drops this plugin's pooled
-  // connections on deactivate instead.
+  /**
+   * @openapi
+   * /plugin-api/host-metrics/host-metrics/preferences/{id}:
+   *   post:
+   *     summary: Save the Host Metrics layout for a host
+   *     description: Saves the current user's card layout for the host. For the host's owner it also updates the host's enabled widgets.
+   *     tags:
+   *       - Host Metrics
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               slots:
+   *                 type: array
+   *               columns:
+   *                 type: integer
+   *     responses:
+   *       200:
+   *         description: Layout saved.
+   *       400:
+   *         description: Invalid layout.
+   *       403:
+   *         description: No access to this host.
+   */
+  router.post(
+    "/host-metrics/preferences/:id",
+    validateHostId,
+    async (req, res) => {
+      const userId = actor(res);
+      if (!userId) return;
+      const hostId = Number(req.params.id);
+      try {
+        const access = await ctx.hosts.checkAccess(hostId, "connect");
+        if (!access.hasAccess) {
+          return res.status(403).json({ error: "No access to this host" });
+        }
+        const layout = sanitizeLayout(req.body);
+        if (!layout) return res.status(400).json({ error: "Invalid layout" });
+
+        await repository.saveLayout(userId, hostId, JSON.stringify(layout));
+        if (access.isOwner) {
+          await ctx.settings.setHost(
+            hostId,
+            "enabledWidgets",
+            deriveEnabledWidgets(layout.slots),
+          );
+        }
+        res.json({ success: true });
+      } catch (error) {
+        log.error("Failed to save host metrics preferences", error, {
+          operation: "host_metrics_prefs_save_error",
+          hostId,
+        });
+        res
+          .status(500)
+          .json({ error: "Failed to save host metrics preferences" });
+      }
+    },
+  );
+
+  registerManagerRoutes(router, {
+    validateHostId,
+    log,
+    repository,
+    onHealthCheck: deps.onHealthCheck,
+    runOnHost: async (hostId, level, fn) => {
+      const userId = ctx.currentActor();
+      if (!userId) throw new AccessDeniedError("Authentication required");
+      const access = await ctx.hosts.checkAccess(hostId, level);
+      if (!access.hasAccess) throw new AccessDeniedError();
+      const host = await poller.resolve(hostId, userId);
+      if (!host) throw new AccessDeniedError("Host not found");
+      return ctx.ssh.withConnection(
+        host,
+        {
+          pool: "stats",
+          purpose: "metrics",
+          overrides: { readyTimeout: 60000 },
+        },
+        (client) =>
+          fn(client as never, {
+            id: host.id,
+            userId: host.userId,
+            actorId: userId,
+            sudoPassword: sudoPasswordOf(host),
+            enableDocker: !!host.enableDocker,
+          }),
+      );
+    },
+  });
 }

@@ -1,13 +1,13 @@
-import type { Express } from "express";
+import {
+  execCommand,
+  shellSingleQuote,
+} from "@termix/plugin-sdk/host-commands";
+import { isValidPort } from "./validation.js";
+import type { Router } from "express";
 import type { Client } from "ssh2";
-import type { AuthenticatedRequest } from "../../../../../src/types/index.js";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import { createCurrentHostHealthRepository } from "../../../../../src/backend/database/repositories/factory.js";
 import { managerHandler, ManagerInputError } from "./route-helpers.js";
-import { shellSingleQuote } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { isValidPort } from "../../../../../src/backend/hosts/metrics-shared/validation.js";
 import type { ManagerRoutesDeps } from "./types.js";
-import { notifyAutomationHealthCheck } from "../automation-bridge.js";
+import type { HostMetricsRepository } from "../repository.js";
 
 export interface HealthCheck {
   id: string;
@@ -111,24 +111,12 @@ async function runChecks(
 
 const HISTORY_KEEP = 500;
 
-function recordHistory(
-  userId: string,
-  hostId: number,
-  results: HealthResult[],
-): Promise<void> {
-  return createCurrentHostHealthRepository()
-    .recordHistory(userId, hostId, results, HISTORY_KEEP)
-    .then(() => undefined);
-}
-
 async function loadChecks(
+  repository: HostMetricsRepository,
   userId: string,
   hostId: number,
 ): Promise<HealthCheck[]> {
-  const row = await createCurrentHostHealthRepository().findChecksByUserAndHost(
-    userId,
-    hostId,
-  );
+  const row = await repository.findChecks(userId, hostId);
   if (!row?.checks) return [];
   try {
     const parsed = JSON.parse(row.checks);
@@ -139,60 +127,50 @@ async function loadChecks(
 }
 
 export function registerHealthRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
+  app: Router,
+  deps: ManagerRoutesDeps,
 ): void {
+  const { validateHostId, repository } = deps;
+
+  const record = async (
+    userId: string,
+    hostId: number,
+    results: HealthResult[],
+  ) => {
+    if (!results.length) return;
+    await repository.recordHealth(userId, hostId, results, HISTORY_KEEP);
+    for (const result of results) {
+      deps.onHealthCheck({
+        hostId,
+        userId,
+        checkId: result.checkId,
+        ok: result.ok,
+        detail: result.detail ?? undefined,
+      });
+    }
+  };
   app.get(
     "/host-metrics/managers/health/:id",
     validateHostId,
-    managerHandler(
-      runOnHost,
-      "connect",
-      "health_get",
-      async (client, host, req) => {
-        const userId = (req as AuthenticatedRequest).userId;
-        const checks = await loadChecks(userId, host.id);
-        const results = checks.length ? await runChecks(client, checks) : [];
-        if (results.length) {
-          await recordHistory(userId, host.id, results);
-          for (const r of results) {
-            notifyAutomationHealthCheck(
-              host.id,
-              userId,
-              r.checkId,
-              r.ok,
-              r.detail ?? undefined,
-            );
-          }
-        }
-
-        const history = (
-          await createCurrentHostHealthRepository().listHistory(
-            userId,
-            host.id,
-            200,
-          )
-        ).map((row) => ({
-          checkId: row.checkId,
-          ts: row.ts,
-          ok: row.ok,
-          latencyMs: row.latencyMs,
-          detail: row.detail,
-        }));
-        return { checks, results, history };
-      },
-    ),
+    managerHandler(deps, "connect", "health_get", async (client, host) => {
+      const userId = host.actorId;
+      const checks = await loadChecks(repository, userId, host.id);
+      const results = checks.length ? await runChecks(client, checks) : [];
+      await record(userId, host.id, results);
+      const history = await repository.listHealth(userId, host.id, 200);
+      return { checks, results, history };
+    }),
   );
 
   app.post(
     "/host-metrics/managers/health/:id/config",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "health_config",
       async (_client, host, req) => {
-        const userId = (req as AuthenticatedRequest).userId;
+        const userId = host.actorId;
         const { checks, intervalSeconds } = req.body as {
           checks?: unknown;
           intervalSeconds?: number;
@@ -206,13 +184,11 @@ export function registerHealthRoutes(
           intervalSeconds <= 86400
             ? Math.round(intervalSeconds)
             : 300;
-        const now = new Date().toISOString();
-        await createCurrentHostHealthRepository().upsertChecks(
+        await repository.saveChecks(
           userId,
           host.id,
           JSON.stringify(checks),
           interval,
-          now,
         );
         return { success: true };
       },
@@ -222,28 +198,11 @@ export function registerHealthRoutes(
   app.post(
     "/host-metrics/managers/health/:id/run",
     validateHostId,
-    managerHandler(
-      runOnHost,
-      "connect",
-      "health_run",
-      async (client, host, req) => {
-        const userId = (req as AuthenticatedRequest).userId;
-        const checks = await loadChecks(userId, host.id);
-        const results = await runChecks(client, checks);
-        if (results.length) {
-          await recordHistory(userId, host.id, results);
-          for (const r of results) {
-            notifyAutomationHealthCheck(
-              host.id,
-              userId,
-              r.checkId,
-              r.ok,
-              r.detail ?? undefined,
-            );
-          }
-        }
-        return { results };
-      },
-    ),
+    managerHandler(deps, "connect", "health_run", async (client, host) => {
+      const checks = await loadChecks(repository, host.actorId, host.id);
+      const results = await runChecks(client, checks);
+      await record(host.actorId, host.id, results);
+      return { results };
+    }),
   );
 }

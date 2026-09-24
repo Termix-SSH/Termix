@@ -55,6 +55,7 @@ import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
 import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
+import { registerHostStatusRoutes } from "./host-status-routes.js";
 import {
   applyHostEnrollmentDefaults,
   requireHostEnrollmentAccessForPath,
@@ -108,6 +109,11 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
 registerHostInternalRoutes(router);
+
+registerHostStatusRoutes(router, {
+  authenticateJWT,
+  requireAdmin: authManager.createAdminMiddleware(),
+});
 
 /**
  * @openapi
@@ -207,7 +213,8 @@ router.post(
       tunnelConnections,
       jumpHosts,
       quickActions,
-      statsConfig,
+      statusCheckEnabled,
+      statusCheckInterval,
       dockerConfig,
       proxmoxConfig,
       enableProxmoxStats,
@@ -335,11 +342,8 @@ router.post(
       showDockerInSidebar: showDockerInSidebar ? 1 : 0,
       showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
       defaultPath: defaultPath || null,
-      statsConfig: statsConfig
-        ? typeof statsConfig === "string"
-          ? statsConfig
-          : JSON.stringify(statsConfig)
-        : null,
+      statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
+      statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       dockerConfig: dockerConfig
         ? typeof dockerConfig === "string"
           ? dockerConfig
@@ -774,7 +778,8 @@ router.post(
         tunnelConnections: [],
         jumpHosts: [],
         quickActions: [],
-        statsConfig: {},
+        statusCheckEnabled: true,
+        statusCheckInterval: null,
         notes: "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -904,7 +909,8 @@ router.put(
       tunnelConnections,
       jumpHosts,
       quickActions,
-      statsConfig,
+      statusCheckEnabled,
+      statusCheckInterval,
       dockerConfig,
       proxmoxConfig,
       enableProxmoxStats,
@@ -1033,11 +1039,8 @@ router.put(
       showDockerInSidebar: showDockerInSidebar ? 1 : 0,
       showServerStatsInSidebar: showServerStatsInSidebar ? 1 : 0,
       defaultPath: defaultPath || null,
-      statsConfig: statsConfig
-        ? typeof statsConfig === "string"
-          ? statsConfig
-          : JSON.stringify(statsConfig)
-        : null,
+      statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
+      statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
       dockerConfig: dockerConfig
         ? typeof dockerConfig === "string"
           ? dockerConfig
@@ -2119,9 +2122,6 @@ router.get(
             quickActions: resolvedHost.quickActions
               ? JSON.parse(resolvedHost.quickActions as string)
               : null,
-            statsConfig: resolvedHost.statsConfig
-              ? JSON.parse(resolvedHost.statsConfig as string)
-              : null,
             webUiConfig: webEndpointSettings?.webUiConfig ?? { endpoints: [] },
             dockerConfig: resolvedHost.dockerConfig
               ? JSON.parse(resolvedHost.dockerConfig as string)
@@ -2284,9 +2284,6 @@ router.get(
                 : null,
               quickActions: resolvedHost.quickActions
                 ? JSON.parse(resolvedHost.quickActions as string)
-                : null,
-              statsConfig: resolvedHost.statsConfig
-                ? JSON.parse(resolvedHost.statsConfig as string)
                 : null,
               webUiConfig: webEndpointSettings?.webUiConfig ?? {
                 endpoints: [],
@@ -2928,4 +2925,13 @@ function safeParseJson(raw: string): unknown {
   } catch {
     return null;
   }
+}
+
+/** Seconds between status checks, or null to follow the global setting. */
+function normalizeStatusInterval(value: unknown): number | null {
+  const seconds = Number(value);
+  if (value === null || value === undefined || value === "") return null;
+  return Number.isInteger(seconds) && seconds >= 5 && seconds <= 86400
+    ? seconds
+    : null;
 }

@@ -240,7 +240,9 @@
     "noQuickActions": "अभी तक कोई त्वरित कार्रवाई नहीं।",
     "buttonLabel": "बटन लेबल",
     "selectSnippetPlaceholder": "स्निपेट चुनें...",
-    "addActionBtn": "कार्रवाई जोड़ें"
+    "addActionBtn": "कार्रवाई जोड़ें",
+    "hostNotFound": "होस्ट नहीं मिला",
+    "loadingHost": "होस्ट लोड हो रहा है..."
   },
   "onboarding": {
     "feature_metrics": "मैट्रिक्स और अलर्ट",
@@ -255,6 +257,41 @@
     "noData": "कोई डेटा उपलब्ध नहीं",
     "showCurrentValue": "वर्तमान मान दिखाएं",
     "chartMetric": "मीट्रिक",
-    "metricRange": "सीमा"
+    "metricRange": "सीमा",
+    "host": "होस्ट",
+    "loading": "लोड हो रहा है...",
+    "metricCpu": "CPU",
+    "metricDisk": "डिस्क",
+    "metricHostname": "होस्टनेम",
+    "metricKernel": "कर्नेल",
+    "metricMemory": "मेमोरी",
+    "metricNetwork": "नेटवर्क",
+    "metricOs": "ओएस",
+    "metricProcesses": "प्रोसेस",
+    "metricProcessesRunning": "चालू",
+    "metricProcessesTotal": "कुल",
+    "metricUptime": "अपटाइम",
+    "metricsNotAvailable": "मेट्रिक्स उपलब्ध नहीं",
+    "noHostSelected": "कोई होस्ट चयनित नहीं",
+    "selectHost": "होस्ट चुनें..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "डिस्क"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "रद्द करें",
+        "confirmRunButton": "चलाएँ",
+        "confirmRunMessage": "\"{{name}}\" चलाएँ?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "कनेक्टेड"
   }
 }

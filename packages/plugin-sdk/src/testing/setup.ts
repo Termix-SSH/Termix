@@ -81,6 +81,7 @@ const offline = () =>
   useSettings: () => ({ values: {}, loaded: true, save: async () => {} }),
   useHost: () => null,
   useHosts: () => ({ hosts: [], loaded: true }),
+  useHostStatus: () => null,
   useCurrentUser: () => null,
   useTheme: () => ({ theme: "dark" }),
   toast: { success: noop, error: noop, info: noop, warning: noop },

@@ -269,6 +269,14 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./utils/crypto-migration/external-identity-migration.js");
     await runExternalIdentityMigration();
 
+    const { runHostStatusConfigMigration } =
+      await import("./utils/crypto-migration/host-status-config-migration.js");
+    await runHostStatusConfigMigration();
+
+    const { hostStatusService } =
+      await import("./hosts/status/host-status-service.js");
+    hostStatusService.start();
+
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();
     }
@@ -381,6 +389,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runRemoteDesktopSettingsMigration } =
         await import("./utils/crypto-migration/remote-desktop-settings-migration.js");
       await runRemoteDesktopSettingsMigration();
+
+      const { runHostMetricsSettingsMigration } =
+        await import("./utils/crypto-migration/host-metrics-settings-migration.js");
+      await runHostMetricsSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

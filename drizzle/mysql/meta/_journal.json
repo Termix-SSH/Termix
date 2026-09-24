@@ -302,6 +302,20 @@
       "when": 1790227893950,
       "tag": "0042_colorful_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1790266379295,
+      "tag": "0043_unusual_lucky_pierre",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "5",
+      "when": 1790266402855,
+      "tag": "0044_jittery_thunderball",
+      "breakpoints": true
     }
   ]
 }

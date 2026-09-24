@@ -57,6 +57,17 @@ export type HostListRow = HostResolutionHostRecord & {
   expiresAt?: string | null;
 };
 
+export interface HostStatusTargetRow {
+  id: number;
+  userId: string;
+  ip: string;
+  port: number;
+  connectionType: string;
+  jumpHosts: string | null;
+  statusCheckEnabled: boolean;
+  statusCheckInterval: number | null;
+}
+
 export class HostResolutionRepository {
   constructor(
     private readonly context: DatabaseContext,
@@ -260,6 +271,34 @@ export class HostResolutionRepository {
       .limit(1);
 
     return rows.length > 0;
+  }
+
+  /**
+   * What the status checker needs, without decrypting anything: none of these
+   * columns are encrypted. Filtered by owner, by id, or both.
+   */
+  async listStatusTargets(filter: {
+    userId?: string;
+    hostIds?: number[];
+  }): Promise<HostStatusTargetRow[]> {
+    if (filter.hostIds && filter.hostIds.length === 0) return [];
+    const conditions = [
+      filter.userId ? eq(hosts.userId, filter.userId) : undefined,
+      filter.hostIds ? inArray(hosts.id, filter.hostIds) : undefined,
+    ].filter((condition) => condition !== undefined);
+    return this.context.drizzle
+      .select({
+        id: hosts.id,
+        userId: hosts.userId,
+        ip: hosts.ip,
+        port: hosts.port,
+        connectionType: hosts.connectionType,
+        jumpHosts: hosts.jumpHosts,
+        statusCheckEnabled: hosts.statusCheckEnabled,
+        statusCheckInterval: hosts.statusCheckInterval,
+      })
+      .from(hosts)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
   }
 
   async listAllHosts(): Promise<HostResolutionHostRecord[]> {

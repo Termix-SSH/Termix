@@ -1,11 +1,11 @@
-import type { Express } from "express";
-import { execElevated } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { managerHandler, ManagerInputError } from "./route-helpers.js";
-import type { ManagerRoutesDeps } from "./types.js";
+import { execElevated } from "@termix/plugin-sdk/host-commands";
 import {
   isValidWireGuardInterface,
   isValidWireGuardAction,
-} from "../../../../../src/backend/hosts/metrics-shared/validation.js";
+} from "./validation.js";
+import type { Router } from "express";
+import { managerHandler, ManagerInputError } from "./route-helpers.js";
+import type { ManagerRoutesDeps } from "./types.js";
 
 export interface WireGuardPeer {
   publicKey: string;
@@ -117,9 +117,10 @@ export function parseWireGuardData(output: string): WireGuardData {
 }
 
 export function registerWireGuardRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
+  app: Router,
+  deps: ManagerRoutesDeps,
 ): void {
+  const { validateHostId } = deps;
   /**
    * @openapi
    * /host-metrics/managers/wireguard/{id}:
@@ -140,23 +141,13 @@ export function registerWireGuardRoutes(
   app.get(
     "/host-metrics/managers/wireguard/:id",
     validateHostId,
-    managerHandler(
-      runOnHost,
-      "connect",
-      "wireguard_read",
-      async (client, host) => {
-        const result = await execElevated(
-          client,
-          PROBE_CMD,
-          host.sudoPassword,
-          {
-            forceSudo: false,
-            timeoutMs: 15000,
-          },
-        );
-        return parseWireGuardData(result.stdout);
-      },
-    ),
+    managerHandler(deps, "connect", "wireguard_read", async (client, host) => {
+      const result = await execElevated(client, PROBE_CMD, host.sudoPassword, {
+        forceSudo: false,
+        timeoutMs: 15000,
+      });
+      return parseWireGuardData(result.stdout);
+    }),
   );
 
   /**
@@ -192,7 +183,7 @@ export function registerWireGuardRoutes(
     "/host-metrics/managers/wireguard/:id/action",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "wireguard_action",
       async (client, host, req) => {

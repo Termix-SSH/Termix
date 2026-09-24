@@ -44,7 +44,7 @@ import {
   ConnectionScreen,
 } from "@termix/plugin-sdk/ui";
 import { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel.tsx";
-import { useConnectionRetry } from "@termix/plugin-sdk/frontend";
+import { invokeAction, useConnectionRetry } from "@termix/plugin-sdk/frontend";
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import {
   listSSHFiles,
@@ -78,12 +78,11 @@ import {
 } from "./api/file-manager-data-api";
 import {
   logActivity,
-  getServerMetricsById,
   transferToHost,
   addTransferRecent,
   type TransferMethodPreference,
-  type DiskFilesystem,
 } from "@/main-axios.ts";
+import type { DiskFilesystem, HostDiskInfo } from "./disk-info";
 import {
   getAdaptiveResourceBudget,
   markAdaptiveResourceUsed,
@@ -3262,19 +3261,17 @@ function FileManagerContent({
   useEffect(() => {
     if (currentHost?.id) {
       loadPinnedFiles();
-      getServerMetricsById(currentHost.id)
-        .then((metrics) => {
-          if (
-            metrics?.disk?.percent != null &&
-            metrics.disk.usedHuman &&
-            metrics.disk.totalHuman
-          ) {
+      // Undefined while the host-metrics plugin is off: no disk bar then.
+      invokeAction("host-metrics.disk", currentHost.id)
+        .then((result) => {
+          const disk = result as HostDiskInfo | null | undefined;
+          if (disk?.percent != null && disk.usedHuman && disk.totalHuman) {
             setDiskInfo({
-              usedHuman: metrics.disk.usedHuman,
-              totalHuman: metrics.disk.totalHuman,
-              percent: metrics.disk.percent,
-              mount: metrics.disk.mount ?? null,
-              filesystems: metrics.disk.filesystems ?? [],
+              usedHuman: disk.usedHuman,
+              totalHuman: disk.totalHuman,
+              percent: disk.percent,
+              mount: disk.mount ?? null,
+              filesystems: disk.filesystems ?? [],
             });
           }
         })

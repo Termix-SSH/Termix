@@ -1,7 +1,7 @@
 import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
 import express, { type Router } from "express";
 import type { Client as SSHClient } from "ssh2";
-import { execElevated } from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+import { execElevated } from "@termix/plugin-sdk/host-commands";
 import type {
   PluginHostCreateInput,
   PluginHostRecord,

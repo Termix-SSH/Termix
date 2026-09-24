@@ -1,5 +1,5 @@
+import { execCommand } from "@termix/plugin-sdk/host-commands";
 import type { Client } from "ssh2";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
 
 export interface LoginRecord {
   user: string;

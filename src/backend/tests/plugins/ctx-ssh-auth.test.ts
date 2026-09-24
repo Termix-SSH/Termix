@@ -6,6 +6,9 @@ const h = vi.hoisted(() => ({
   connects: [] as Array<{ target: unknown; options: Record<string, unknown> }>,
   factors: [] as Array<{ userId: string; pluginId: string; factorId: string }>,
   actor: undefined as string | undefined,
+  cleared: [] as string[],
+  clearedAll: 0,
+  pooled: [] as string[],
 }));
 
 vi.mock("../../utils/logger.js", () => {
@@ -27,7 +30,33 @@ vi.mock("../../plugins/permissions.js", async () => {
   };
 });
 vi.mock("../../plugins/actor.js", () => ({ getActor: () => h.actor }));
+vi.mock("../../hosts/ssh-connection-pool.js", () => ({
+  withConnection: async (
+    key: string,
+    factory: () => Promise<unknown>,
+    fn: (client: unknown) => Promise<unknown>,
+  ) => {
+    h.pooled.push(key);
+    return fn(await factory());
+  },
+  connectionPool: {
+    clearKeyConnections: (key: string) => h.cleared.push(key),
+    clearAllConnections: () => {
+      h.clearedAll += 1;
+    },
+  },
+}));
 vi.mock("../../hosts/connect/connect-host.js", () => ({
+  resolveConnectHost: async (target: unknown) =>
+    typeof target === "number"
+      ? {
+          id: target,
+          userId: "user-1",
+          ip: `10.0.0.${target}`,
+          port: 22,
+          username: "root",
+        }
+      : target,
   connectHost: async (target: unknown, options: Record<string, unknown>) => {
     h.connects.push({ target, options });
     const client = Object.assign(new EventEmitter(), { end: vi.fn() });
@@ -71,6 +100,9 @@ beforeEach(() => {
   h.connects = [];
   h.factors = [];
   h.actor = "user-1";
+  h.cleared = [];
+  h.clearedAll = 0;
+  h.pooled = [];
 });
 
 describe("ctx.ssh", () => {
@@ -167,6 +199,62 @@ describe("ctx.ssh", () => {
     expect(
       (connection.client as { end: ReturnType<typeof vi.fn> }).end,
     ).toHaveBeenCalled();
+  });
+});
+
+describe("ctx.ssh pooled connections", () => {
+  const both = ["ssh:connect", "credentials:use"];
+
+  function plugin(id: string) {
+    const bag = new DisposableBag(id);
+    const ssh = createPluginSsh({
+      manifest: { ...(manifest(both) as object), id } as never,
+      bag,
+      audit: vi.fn(async () => {}),
+    });
+    return { bag, ssh };
+  }
+
+  it("disabling one plugin leaves ctx.ssh and the pool working for others", async () => {
+    h.granted = new Set(both);
+    const metrics = plugin("host-metrics");
+    const other = plugin("fleets");
+
+    await metrics.ssh.withConnection(7, { pool: "stats" }, async () => "a");
+    await other.ssh.withConnection(8, { pool: "fleet" }, async () => "b");
+    await metrics.bag.disposeAll();
+
+    expect(h.clearedAll).toBe(0);
+    expect(h.cleared).toEqual(["stats:user-1:10.0.0.7:22:root"]);
+    await expect(
+      other.ssh.withConnection(8, { pool: "fleet" }, async () => "still"),
+    ).resolves.toBe("still");
+  });
+
+  it("dropPooled clears only this plugin's keys for that host", async () => {
+    h.granted = new Set(both);
+    const metrics = plugin("host-metrics");
+    await metrics.ssh.withConnection(7, { pool: "stats" }, async () => 1);
+    await metrics.ssh.withConnection(8, { pool: "stats" }, async () => 1);
+
+    metrics.ssh.dropPooled("stats", 7);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.cleared).toEqual(["stats:user-1:10.0.0.7:22:root"]);
+
+    // Dropped keys are forgotten, so deactivate only clears what is left.
+    h.cleared = [];
+    await metrics.bag.disposeAll();
+    expect(h.cleared).toEqual(["stats:user-1:10.0.0.8:22:root"]);
+  });
+
+  it("dropPooled ignores another pool and an unknown host", async () => {
+    h.granted = new Set(both);
+    const metrics = plugin("host-metrics");
+    await metrics.ssh.withConnection(7, { pool: "stats" }, async () => 1);
+    metrics.ssh.dropPooled("other", 7);
+    metrics.ssh.dropPooled("stats", 99);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.cleared).toEqual([]);
   });
 });
 

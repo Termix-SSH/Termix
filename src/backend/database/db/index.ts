@@ -334,7 +334,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         autostart_key TEXT,
         autostart_key_password TEXT,
         force_keyboard_interactive TEXT,
-        stats_config TEXT,
+        status_check_enabled INTEGER NOT NULL DEFAULT 1,
+        status_check_interval INTEGER,
         docker_config TEXT,
         web_ui_config TEXT,
         terminal_config TEXT,
@@ -687,20 +688,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    CREATE TABLE IF NOT EXISTS host_metrics_preferences (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        layout TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_host_metrics_prefs_user_host
-        ON host_metrics_preferences (user_id, host_id);
-
     CREATE TABLE IF NOT EXISTS host_sidebar_preferences (
         user_id TEXT PRIMARY KEY,
         data TEXT NOT NULL,
@@ -721,37 +708,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
-
-    CREATE TABLE IF NOT EXISTS host_health_checks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        checks TEXT NOT NULL,
-        interval_seconds INTEGER NOT NULL DEFAULT 300,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_host_health_checks_user_host
-        ON host_health_checks (user_id, host_id);
-
-    CREATE TABLE IF NOT EXISTS host_health_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        check_id TEXT NOT NULL,
-        ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        ok INTEGER NOT NULL,
-        latency_ms INTEGER,
-        detail TEXT,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_host_health_history_lookup
-        ON host_health_history (user_id, host_id, check_id, ts);
 
     CREATE TABLE IF NOT EXISTS sso_providers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1111,7 +1067,12 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key_password", "TEXT");
-  addColumnIfNotExists("ssh_data", "stats_config", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "status_check_enabled",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists("ssh_data", "status_check_interval", "INTEGER");
   addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
   addColumnIfNotExists("ssh_data", "quick_actions", "TEXT");
   addColumnIfNotExists(
@@ -2034,34 +1995,6 @@ const migrateSchema = () => {
     });
   }
 
-  // --- metrics-history begin ---
-  try {
-    sqlite.prepare("SELECT id FROM host_metrics_history LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS host_metrics_history (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
-          ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          cpu_percent REAL,
-          mem_percent REAL,
-          disk_percent REAL,
-          net_rx_bytes INTEGER,
-          net_tx_bytes INTEGER
-        );
-        CREATE INDEX IF NOT EXISTS idx_host_metrics_history_host_ts
-          ON host_metrics_history (host_id, ts DESC);
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create host_metrics_history table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-  // --- metrics-history end ---
-
   // --- alerts begin ---
   // alert_rules, alert_rule_channels and alert_firings were only ever created
   // here, never declared in schema.ts, so they never existed on Postgres or
@@ -2257,19 +2190,6 @@ const migrateSchema = () => {
     }
   }
   // --- automations end ---
-
-  // Seed default metrics history retention setting
-  try {
-    ensureRawSettingDefault("metrics_history_retention_days", "7");
-  } catch (e) {
-    databaseLogger.warn(
-      "Could not initialize metrics_history_retention_days setting",
-      {
-        operation: "schema_migration",
-        error: e,
-      },
-    );
-  }
 
   // --- homepage begin ---
   try {

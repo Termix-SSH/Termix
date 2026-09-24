@@ -240,7 +240,9 @@
     "noQuickActions": "Brak szybkich akcji.",
     "buttonLabel": "Etykieta przycisku",
     "selectSnippetPlaceholder": "Wybierz snippet...",
-    "addActionBtn": "Dodaj akcję"
+    "addActionBtn": "Dodaj akcję",
+    "hostNotFound": "Nie znaleziono hosta",
+    "loadingHost": "Ładowanie hosta..."
   },
   "onboarding": {
     "feature_metrics": "Metryki i alerty",
@@ -255,6 +257,41 @@
     "noData": "Brak dostępnych danych",
     "showCurrentValue": "Pokaż wartość bieżącą",
     "chartMetric": "Metryka",
-    "metricRange": "Zakres"
+    "metricRange": "Zakres",
+    "host": "Host",
+    "loading": "Ładowanie...",
+    "metricCpu": "Procesor",
+    "metricDisk": "Dysk",
+    "metricHostname": "Nazwa hosta",
+    "metricKernel": "Jądro",
+    "metricMemory": "Pamięć",
+    "metricNetwork": "Sieć",
+    "metricOs": "System operacyjny",
+    "metricProcesses": "Procesy",
+    "metricProcessesRunning": "działa",
+    "metricProcessesTotal": "łącznie",
+    "metricUptime": "Czas działania",
+    "metricsNotAvailable": "Metryki niedostępne",
+    "noHostSelected": "Nie wybrano hosta",
+    "selectHost": "Wybierz hosta..."
+  },
+  "dashboard": {
+    "cpu": "Procesor",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Dysk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Anuluj",
+        "confirmRunButton": "Uruchom",
+        "confirmRunMessage": "Uruchomić „{{name}}”?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Połączono"
   }
 }

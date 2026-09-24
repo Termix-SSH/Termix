@@ -8,7 +8,11 @@ import {
 import { resolveGuacdOptions } from "./guacd-config.js";
 import { registerRoutes } from "./routes.js";
 import { createLiveSessions } from "./live-sessions.js";
-import { normalizeImportedHost } from "./host-settings.js";
+import {
+  normalizeImportedHost,
+  PORT_KEY,
+  readHostSettings,
+} from "./host-settings.js";
 import { createLogger } from "./log.js";
 
 export async function activate(ctx: PluginContext) {
@@ -103,6 +107,14 @@ export async function activate(ctx: PluginContext) {
     "remote-desktop.hostImportNormalizer",
     normalizeImportedHost,
   );
+
+  // Core's status dot pings these hosts on the protocol's own port.
+  for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+    ctx.hosts.status.registerPort(protocol, async (hostId) => {
+      const settings = await readHostSettings(ctx, hostId);
+      return settings[PORT_KEY[protocol]] as number;
+    });
+  }
 }
 
 export async function deactivate() {}

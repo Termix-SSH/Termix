@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "tables": {
+    "host_metrics_preferences": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "layout": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_host_metrics_prefs_user_host",
+          "columns": ["userId", "hostId"],
+          "unique": true
+        }
+      ],
+      "adopts": "host_metrics_preferences"
+    },
+    "host_health_checks": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "checks": {
+          "type": "text",
+          "notNull": true
+        },
+        "intervalSeconds": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 300
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_host_health_checks_user_host",
+          "columns": ["userId", "hostId"],
+          "unique": true
+        }
+      ],
+      "adopts": "host_health_checks"
+    },
+    "host_health_history": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "checkId": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "ts": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "ok": {
+          "type": "boolean",
+          "notNull": true
+        },
+        "latencyMs": {
+          "type": "integer"
+        },
+        "detail": {
+          "type": "text"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_host_health_history_lookup",
+          "columns": ["userId", "hostId", "checkId", "ts"]
+        }
+      ],
+      "adopts": "host_health_history"
+    },
+    "host_metrics_history": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "ts": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "cpuPercent": {
+          "type": "real"
+        },
+        "memPercent": {
+          "type": "real"
+        },
+        "diskPercent": {
+          "type": "real"
+        },
+        "netRxBytes": {
+          "type": "integer"
+        },
+        "netTxBytes": {
+          "type": "integer"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_host_metrics_history_host_ts",
+          "columns": ["hostId", "ts"]
+        }
+      ],
+      "adopts": "host_metrics_history"
+    }
+  }
+}

@@ -1,14 +1,13 @@
+import { Button, Select2 } from "@termix/plugin-sdk/ui";
+import { type FirewallChain } from "../../../shared/metrics.js";
 import { useMemo, useState } from "react";
 import { ShieldCheck, Plus, Trash2, Save } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
-import { type FirewallChain } from "@/main-axios";
-import { managerPost } from "../../host-metrics-api";
+import { useHostMetricsApi } from "../../host-metrics-api";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";
-import { Select2 } from "@/components/select2";
 
 interface FirewallData {
   type: "iptables" | "nftables" | "none";
@@ -17,6 +16,7 @@ interface FirewallData {
 }
 
 export function FirewallManagerCard({ hostId }: { hostId: number | null }) {
+  const { managerPost } = useHostMetricsApi();
   const { t } = useTranslation();
   const { data, loading, error, refresh } = useManagerData<FirewallData>(
     hostId,

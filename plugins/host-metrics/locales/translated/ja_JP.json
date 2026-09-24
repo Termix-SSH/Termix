@@ -240,7 +240,9 @@
     "noQuickActions": "クイックアクションはまだありません",
     "buttonLabel": "ボタンラベル",
     "selectSnippetPlaceholder": "スニペットを選択...",
-    "addActionBtn": "アクションを追加"
+    "addActionBtn": "アクションを追加",
+    "hostNotFound": "ホストが見つかりません",
+    "loadingHost": "ホストを読み込み中..."
   },
   "onboarding": {
     "feature_metrics": "指標とアラート",
@@ -255,6 +257,41 @@
     "noData": "利用可能なデータはありません",
     "showCurrentValue": "現在の値を表示",
     "chartMetric": "メトリック",
-    "metricRange": "範囲"
+    "metricRange": "範囲",
+    "host": "ホスト",
+    "loading": "読み込み中...",
+    "metricCpu": "CPU",
+    "metricDisk": "ディスク",
+    "metricHostname": "ホスト名",
+    "metricKernel": "カーネル",
+    "metricMemory": "メモリ",
+    "metricNetwork": "ネットワーク",
+    "metricOs": "OS",
+    "metricProcesses": "プロセス",
+    "metricProcessesRunning": "実行中",
+    "metricProcessesTotal": "合計",
+    "metricUptime": "稼働時間",
+    "metricsNotAvailable": "メトリクスは利用できません",
+    "noHostSelected": "ホストが選択されていません",
+    "selectHost": "ホストを選択..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "ディスク"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "キャンセル",
+        "confirmRunButton": "実行",
+        "confirmRunMessage": "「{{name}}」を実行しますか？"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "接続中"
   }
 }

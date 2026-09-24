@@ -9,9 +9,7 @@ import {
   createCurrentDismissedAlertRepository,
   createCurrentHomepageItemRepository,
   createCurrentHomepageLayoutRepository,
-  createCurrentHostHealthRepository,
   createCurrentHostFolderRepository,
-  createCurrentHostMetricsPreferenceRepository,
   createCurrentHostRepository,
   createCurrentHostSidebarPreferenceRepository,
   createCurrentCredentialSidebarPreferenceRepository,
@@ -93,8 +91,6 @@ export async function deleteUserAndRelatedData(
 
     await createCurrentHostFolderRepository().deleteByUserId(userId);
 
-    await createCurrentHostHealthRepository().deleteByUserId(userId);
-    await createCurrentHostMetricsPreferenceRepository().deleteByUserId(userId);
     await createCurrentHostSidebarPreferenceRepository().deleteByUserId(userId);
     await createCurrentCredentialSidebarPreferenceRepository().deleteByUserId(
       userId,

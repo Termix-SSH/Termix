@@ -240,7 +240,9 @@
     "noQuickActions": "Zatím žádné rychlé akce.",
     "buttonLabel": "Štítek tlačítka",
     "selectSnippetPlaceholder": "Vybrat úryvek...",
-    "addActionBtn": "Přidat akci"
+    "addActionBtn": "Přidat akci",
+    "hostNotFound": "Hostitel nenalezen",
+    "loadingHost": "Načítání hostitele..."
   },
   "onboarding": {
     "feature_metrics": "Metriky a upozornění",
@@ -255,6 +257,41 @@
     "noData": "Nejsou k dispozici žádná data",
     "showCurrentValue": "Zobrazit aktuální hodnotu",
     "chartMetric": "Metrický",
-    "metricRange": "Rozsah"
+    "metricRange": "Rozsah",
+    "host": "Hostitel",
+    "loading": "Načítání...",
+    "metricCpu": "Procesor",
+    "metricDisk": "Disk",
+    "metricHostname": "Název hostitele",
+    "metricKernel": "Jádro",
+    "metricMemory": "Paměť",
+    "metricNetwork": "Síť",
+    "metricOs": "OS",
+    "metricProcesses": "Procesy",
+    "metricProcessesRunning": "běh",
+    "metricProcessesTotal": "celkový",
+    "metricUptime": "Doba provozuschopnosti",
+    "metricsNotAvailable": "Metriky nejsou k dispozici",
+    "noHostSelected": "Nebyl vybrán žádný hostitel",
+    "selectHost": "Vyberte hostitele..."
+  },
+  "dashboard": {
+    "cpu": "Procesor",
+    "ram": "BERAN"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Zrušit",
+        "confirmRunButton": "Běh",
+        "confirmRunMessage": "Spustit „{{name}}“?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Připojeno"
   }
 }

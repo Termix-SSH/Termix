@@ -1,10 +1,10 @@
-import type { Client } from "ssh2";
 import {
   execCommand,
   execPowerShell,
-  toFixedNum,
   type HostPlatform,
-} from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
+} from "@termix/plugin-sdk/host-commands";
+import { toFixedNum } from "../util.js";
+import type { Client } from "ssh2";
 
 /**
  * CPU percent is derived from the delta against the previous poll's

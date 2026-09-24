@@ -1,14 +1,14 @@
 import type { Router } from "express";
 import type { Request, Response } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
-import type { AuthenticatedRequest } from "../../../../src/types/index.js";
-import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
-import { PermissionManager } from "../../../../src/backend/utils/permission-manager.js";
-import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
-import { execCommand } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import { execElevated } from "../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { isValidTailscaleAction } from "../../../../src/backend/hosts/metrics-shared/validation.js";
+import { execCommand, execElevated } from "@termix/plugin-sdk/host-commands";
 import { withSshConnection } from "./ssh.js";
+
+export type TailscaleAction = "up" | "down";
+
+export function isValidTailscaleAction(a: unknown): a is TailscaleAction {
+  return a === "up" || a === "down";
+}
 
 export interface TailscalePeer {
   hostname: string;
@@ -116,32 +116,29 @@ interface ManagerHost {
   sudoPassword?: string;
 }
 
+/**
+ * The host as the acting user may reach it. The resolved host carries the
+ * owner's sudo password even for a shared user: core decrypts it with the
+ * owner's key.
+ */
 async function resolveManagerHost(
+  ctx: PluginContext,
   hostId: number,
-  userId: string,
 ): Promise<ManagerHost> {
-  const access = await PermissionManager.getInstance().canAccessHost(
-    userId,
-    hostId,
-    "connect",
-  );
+  const access = await ctx.hosts.checkAccess(hostId, "connect");
   if (!access.hasAccess) throw new AccessDeniedError();
-
-  if (DataCrypto.getUserDataKey(userId) === null) {
-    throw new AccessDeniedError();
-  }
-  const host = await resolveHostById(hostId, userId);
+  const host = await ctx.ssh.resolveHost(hostId);
   if (!host) throw new AccessDeniedError("Host not found");
-
-  let sudoPassword = (host as { sudoPassword?: string }).sudoPassword;
-  const ownerId = (host as { userId?: string }).userId;
-  if (ownerId && ownerId !== userId) {
-    const ownerHost = await resolveHostById(hostId, ownerId);
-    sudoPassword = (ownerHost as { sudoPassword?: string } | null)
-      ?.sudoPassword;
-  }
-
-  return { id: hostId, userId, sudoPassword };
+  const terminalConfig = host.terminalConfig as
+    { sudoPassword?: string } | undefined;
+  return {
+    id: hostId,
+    userId: String(host.userId ?? ""),
+    sudoPassword:
+      (host.sudoPassword as string | undefined) ||
+      terminalConfig?.sudoPassword ||
+      undefined,
+  };
 }
 
 function managerErrorResponse(
@@ -183,10 +180,9 @@ export function registerTailscaleHostMetricsManager(
   router.get(
     "/host-metrics-manager/:id",
     async (req: Request, res: Response) => {
-      const userId = (req as AuthenticatedRequest).userId;
       const hostId = parseInt(String(req.params.id), 10);
       try {
-        const host = await resolveManagerHost(hostId, userId);
+        const host = await resolveManagerHost(ctx, hostId);
         const data = await withSshConnection(
           host.id,
           { pool: "tailscale", purpose: "metrics" },
@@ -236,10 +232,9 @@ export function registerTailscaleHostMetricsManager(
   router.post(
     "/host-metrics-manager/:id/action",
     async (req: Request, res: Response) => {
-      const userId = (req as AuthenticatedRequest).userId;
       const hostId = parseInt(String(req.params.id), 10);
       try {
-        const host = await resolveManagerHost(hostId, userId);
+        const host = await resolveManagerHost(ctx, hostId);
         const { action } = req.body as { action: unknown };
         if (!isValidTailscaleAction(action)) {
           throw new ManagerInputError("Invalid action, must be 'up' or 'down'");

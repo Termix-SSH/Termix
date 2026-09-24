@@ -240,7 +240,9 @@
     "noQuickActions": "Geen vinnige aksies nog nie.",
     "buttonLabel": "Knoppie-etiket",
     "selectSnippetPlaceholder": "Kies uittreksel...",
-    "addActionBtn": "Voeg Aksie by"
+    "addActionBtn": "Voeg Aksie by",
+    "hostNotFound": "Gasheer nie gevind nie",
+    "loadingHost": "Laai gasheer..."
   },
   "onboarding": {
     "feature_metrics": "Metrieke en waarskuwings",
@@ -255,6 +257,41 @@
     "noData": "Geen data beskikbaar nie",
     "showCurrentValue": "Wys huidige waarde",
     "chartMetric": "Metrieke",
-    "metricRange": "Reikwydte"
+    "metricRange": "Reikwydte",
+    "host": "Gasheer",
+    "loading": "Laai tans...",
+    "metricCpu": "SVE",
+    "metricDisk": "Skyf",
+    "metricHostname": "Gasheernaam",
+    "metricKernel": "Kern",
+    "metricMemory": "Geheue",
+    "metricNetwork": "Netwerk",
+    "metricOs": "OS",
+    "metricProcesses": "Prosesse",
+    "metricProcessesRunning": "hardloop",
+    "metricProcessesTotal": "totaal",
+    "metricUptime": "Optyd",
+    "metricsNotAvailable": "Metrieke nie beskikbaar nie",
+    "noHostSelected": "Geen gasheer gekies nie",
+    "selectHost": "Kies 'n gasheer..."
+  },
+  "dashboard": {
+    "cpu": "SVE",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Skyf"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Kanselleer",
+        "confirmRunButton": "Hardloop",
+        "confirmRunMessage": "Begin \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Verbonde"
   }
 }

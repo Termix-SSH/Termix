@@ -240,7 +240,9 @@
     "noQuickActions": "Nicio acțiune rapidă încă.",
     "buttonLabel": "Etichetă buton",
     "selectSnippetPlaceholder": "Selectați fragmentul...",
-    "addActionBtn": "Adăugați o acțiune"
+    "addActionBtn": "Adăugați o acțiune",
+    "hostNotFound": "Gazdă negăsită",
+    "loadingHost": "Se încarcă gazda..."
   },
   "onboarding": {
     "feature_metrics": "Metrici și alerte",
@@ -255,6 +257,41 @@
     "noData": "Nu sunt disponibile date",
     "showCurrentValue": "Afișează valoarea curentă",
     "chartMetric": "Metric",
-    "metricRange": "Gamă"
+    "metricRange": "Gamă",
+    "host": "Gazdă",
+    "loading": "Încărcare...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disc",
+    "metricHostname": "Nume gazdă",
+    "metricKernel": "Nucleu",
+    "metricMemory": "Memorie",
+    "metricNetwork": "Reţea",
+    "metricOs": "Sistem de operare",
+    "metricProcesses": "Procese",
+    "metricProcessesRunning": "funcţionare",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Timp de funcționare",
+    "metricsNotAvailable": "Indicatorii nu sunt disponibili",
+    "noHostSelected": "Nicio gazdă selectată",
+    "selectHost": "Selectați o gazdă..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disc"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Anula",
+        "confirmRunButton": "Aleargă",
+        "confirmRunMessage": "Executați „{{name}}”?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Conectat"
   }
 }

@@ -240,7 +240,9 @@
     "noQuickActions": "Henüz hızlı eylem yok.",
     "buttonLabel": "Düğme etiketi",
     "selectSnippetPlaceholder": "Parçacık seç...",
-    "addActionBtn": "Eylem Ekle"
+    "addActionBtn": "Eylem Ekle",
+    "hostNotFound": "Host bulunamadı",
+    "loadingHost": "Host yükleniyor..."
   },
   "onboarding": {
     "feature_metrics": "Ölçümler ve uyarılar",
@@ -255,6 +257,41 @@
     "noData": "Veri yok",
     "showCurrentValue": "Geçerli Değeri Göster",
     "chartMetric": "Metrik",
-    "metricRange": "Aralık"
+    "metricRange": "Aralık",
+    "host": "Sunucu",
+    "loading": "Yükleniyor...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Ana Bilgisayar Adı",
+    "metricKernel": "Çekirdek",
+    "metricMemory": "Bellek",
+    "metricNetwork": "Ağ",
+    "metricOs": "İşletim Sistemi",
+    "metricProcesses": "İşlemler",
+    "metricProcessesRunning": "çalışan",
+    "metricProcessesTotal": "toplam",
+    "metricUptime": "Çalışma Süresi",
+    "metricsNotAvailable": "Metrikler kullanılamıyor",
+    "noHostSelected": "Sunucu seçilmedi",
+    "selectHost": "Bir sunucu seçin..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "İptal",
+        "confirmRunButton": "Çalıştır",
+        "confirmRunMessage": "\"{{name}}\" çalıştırılsın mı?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Bağlandı"
   }
 }

@@ -1,12 +1,11 @@
-import type { Express } from "express";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import { execElevated } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { managerHandler, ManagerInputError } from "./route-helpers.js";
+import { execCommand, execElevated } from "@termix/plugin-sdk/host-commands";
 import {
   isValidSystemdUnit,
   isValidServiceAction,
   type ServiceAction,
-} from "../../../../../src/backend/hosts/metrics-shared/validation.js";
+} from "./validation.js";
+import type { Router } from "express";
+import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
 export interface SystemdService {
@@ -50,9 +49,10 @@ export function buildServiceActionCommand(
 }
 
 export function registerServiceRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
+  app: Router,
+  deps: ManagerRoutesDeps,
 ): void {
+  const { validateHostId } = deps;
   /**
    * @openapi
    * /host-metrics/managers/services/{id}:
@@ -70,7 +70,7 @@ export function registerServiceRoutes(
   app.get(
     "/host-metrics/managers/services/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "services_list", async (client) => {
+    managerHandler(deps, "connect", "services_list", async (client) => {
       const { stdout } = await execCommand(client, LIST_SERVICES_CMD, 20000);
       return { services: parseServiceList(stdout) };
     }),
@@ -105,7 +105,7 @@ export function registerServiceRoutes(
     "/host-metrics/managers/services/:id/action",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "services_action",
       async (client, host, req) => {

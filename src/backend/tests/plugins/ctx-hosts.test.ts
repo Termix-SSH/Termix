@@ -22,6 +22,9 @@ const h = vi.hoisted(() => ({
   sessions: [] as number[],
   released: [] as number[],
   importRows: [] as Array<{ hostId: number; row: Record<string, unknown> }>,
+  statusReports: [] as Array<Record<string, unknown>>,
+  statusPorts: [] as string[],
+  statusPortsRemoved: [] as string[],
   roles: [] as Array<{
     id: number;
     name: string;
@@ -108,6 +111,22 @@ vi.mock("../../hosts/host-session-status.js", () => ({
     register: (hostId: number) => {
       h.sessions.push(hostId);
       return () => h.released.push(hostId);
+    },
+  },
+}));
+vi.mock("../../hosts/status/host-status-service.js", () => ({
+  hostStatusService: {
+    get: (hostId: number) =>
+      hostId === 4 ? { status: "reachable", lastChecked: "t" } : null,
+    check: async (hostId: number) => ({
+      status: "offline",
+      lastChecked: String(hostId),
+    }),
+    reportLogin: (hostId: number, outcome: Record<string, unknown>) =>
+      h.statusReports.push({ hostId, ...outcome }),
+    registerPort: (connectionType: string) => {
+      h.statusPorts.push(connectionType);
+      return () => h.statusPortsRemoved.push(connectionType);
     },
   },
 }));
@@ -417,5 +436,71 @@ describe("ctx.hosts session tracking and activity", () => {
     expect(h.activities).toEqual([
       { userId: "user-7", type: "terminal", hostId: 4, hostName: "web-01" },
     ]);
+  });
+});
+
+describe("ctx.hosts.status", () => {
+  it("reads and checks core's status with hosts:read", async () => {
+    h.granted = new Set(["hosts:read"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:read"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(hosts.status.get(4)).toEqual({
+      status: "reachable",
+      lastChecked: "t",
+    });
+    expect(hosts.status.get(5)).toBeNull();
+    await expect(hosts.status.check(5)).resolves.toEqual({
+      status: "offline",
+      lastChecked: "5",
+    });
+  });
+
+  it("refuses every status member without hosts:read", async () => {
+    const hosts = createPluginHosts({
+      manifest: manifest([]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(() => hosts.status.get(4)).toThrow(PluginCapabilityError);
+    expect(() => hosts.status.reportLogin(4, { ok: true })).toThrow(
+      PluginCapabilityError,
+    );
+    expect(() => hosts.status.registerPort("rdp", () => 3389)).toThrow(
+      PluginCapabilityError,
+    );
+    await expect(hosts.status.check(4)).rejects.toBeInstanceOf(
+      PluginCapabilityError,
+    );
+  });
+
+  it("passes login reports on to core", () => {
+    h.statusReports = [];
+    h.granted = new Set(["hosts:read"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:read"]),
+      audit: vi.fn(async () => {}),
+    });
+    hosts.status.reportLogin(4, { ok: false, hostKeyChanged: true });
+    expect(h.statusReports).toEqual([
+      { hostId: 4, ok: false, hostKeyChanged: true },
+    ]);
+  });
+
+  it("removes a registered port when the plugin is disposed", async () => {
+    h.statusPorts = [];
+    h.statusPortsRemoved = [];
+    h.granted = new Set(["hosts:read"]);
+    const { DisposableBag } = await import("../../plugins/disposables.js");
+    const bag = new DisposableBag("fixture");
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:read"]),
+      bag,
+      audit: vi.fn(async () => {}),
+    });
+    hosts.status.registerPort("rdp", () => 3389);
+    expect(h.statusPorts).toEqual(["rdp"]);
+    await bag.disposeAll();
+    expect(h.statusPortsRemoved).toEqual(["rdp"]);
   });
 });

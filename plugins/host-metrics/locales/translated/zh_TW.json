@@ -240,7 +240,9 @@
     "noQuickActions": "尚無快速動作。",
     "buttonLabel": "按鈕標籤",
     "selectSnippetPlaceholder": "選取程式碼片段...",
-    "addActionBtn": "新增動作"
+    "addActionBtn": "新增動作",
+    "hostNotFound": "找不到主機",
+    "loadingHost": "正在載入主機..."
   },
   "onboarding": {
     "feature_metrics": "指標和警報",
@@ -255,6 +257,41 @@
     "noData": "無可用資料",
     "showCurrentValue": "顯示目前值",
     "chartMetric": "指標",
-    "metricRange": "範圍"
+    "metricRange": "範圍",
+    "host": "主機",
+    "loading": "載入中...",
+    "metricCpu": "CPU",
+    "metricDisk": "磁碟",
+    "metricHostname": "主機名稱",
+    "metricKernel": "核心",
+    "metricMemory": "記憶體",
+    "metricNetwork": "網路",
+    "metricOs": "作業系統",
+    "metricProcesses": "程序",
+    "metricProcessesRunning": "執行中",
+    "metricProcessesTotal": "總數",
+    "metricUptime": "運作時間",
+    "metricsNotAvailable": "效能指標無法使用",
+    "noHostSelected": "未選取主機",
+    "selectHost": "選擇主機..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "磁碟"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "取消",
+        "confirmRunButton": "執行",
+        "confirmRunMessage": "執行 \"{{name}}\"？"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "已連線"
   }
 }

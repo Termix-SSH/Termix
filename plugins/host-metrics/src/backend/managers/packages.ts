@@ -1,25 +1,26 @@
-import type { Express } from "express";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import { execElevated } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { managerHandler, ManagerInputError } from "./route-helpers.js";
-import { isValidPackageName } from "../../../../../src/backend/hosts/metrics-shared/validation.js";
-import { detectPlatform } from "../../../../../src/backend/hosts/metrics-shared/platform.js";
 import {
+  execCommand,
+  execElevated,
+  detectPlatform,
   buildListUpgradableCommand,
   buildPackageActionCommand,
   parseUpgradable,
   type PackageAction,
-} from "../../../../../src/backend/hosts/metrics-shared/package-commands.js";
+} from "@termix/plugin-sdk/host-commands";
+import { isValidPackageName } from "./validation.js";
+import type { Router } from "express";
+import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
 export function registerPackageRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
+  app: Router,
+  deps: ManagerRoutesDeps,
 ): void {
+  const { validateHostId } = deps;
   app.get(
     "/host-metrics/managers/packages/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "packages_list", async (client) => {
+    managerHandler(deps, "connect", "packages_list", async (client) => {
       const platform = await detectPlatform(client);
       const cmd = buildListUpgradableCommand(platform.pkg);
       if (!cmd) return { pkg: platform.pkg, upgradable: [] };
@@ -35,7 +36,7 @@ export function registerPackageRoutes(
     "/host-metrics/managers/packages/:id/action",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "packages_action",
       async (client, host, req) => {

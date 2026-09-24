@@ -191,7 +191,8 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   tunnelConnections?: unknown;
   jumpHosts?: unknown;
   quickActions?: unknown;
-  statsConfig?: unknown;
+  statusCheckEnabled?: unknown;
+  statusCheckInterval?: unknown;
   dockerConfig?: unknown;
   webUiConfig?: unknown;
   proxmoxConfig?: unknown;
@@ -348,6 +349,8 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "showTunnelInSidebar",
   "showDockerInSidebar",
   "showServerStatsInSidebar",
+  "statusCheckEnabled",
+  "statusCheckInterval",
   "enableSsh",
   "sshPort",
   "rdpAuthType",
@@ -456,9 +459,12 @@ export function transformHostResponse(
     quickActions: host.quickActions
       ? JSON.parse(host.quickActions as string)
       : [],
-    statsConfig: host.statsConfig
-      ? JSON.parse(host.statsConfig as string)
-      : undefined,
+    statusCheckEnabled:
+      host.statusCheckEnabled !== false && host.statusCheckEnabled !== 0,
+    statusCheckInterval:
+      typeof host.statusCheckInterval === "number"
+        ? host.statusCheckInterval
+        : null,
     terminalConfig: host.terminalConfig
       ? JSON.parse(host.terminalConfig as string)
       : undefined,

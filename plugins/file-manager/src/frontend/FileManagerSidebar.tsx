@@ -27,7 +27,7 @@ import {
   removeFolderShortcut,
 } from "./api/file-manager-data-api";
 import { listSSHFiles } from "./api/ssh-file-operations-api";
-import { type DiskFilesystem } from "@/main-axios.ts";
+import type { DiskFilesystem } from "./disk-info";
 import { toast } from "sonner";
 import FolderTree from "@/components/folder.tsx";
 import {

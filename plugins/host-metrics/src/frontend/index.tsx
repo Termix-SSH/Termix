@@ -3,24 +3,37 @@ import { Activity, Server } from "lucide-react";
 import type {
   HomepageWidgetContribution,
   HostEditorSectionProps,
+  PluginHostRecord,
   StandaloneViewProps,
   TabProps,
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import type { SSHHost } from "@/types";
 import { HostMetricsTab } from "./HostMetricsTab";
 import HostMetricsApp from "./HostMetricsApp";
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { metricsChartWidget } from "./MetricsChartWidget";
-import { MetricsRetentionSetting } from "./MetricsRetentionSetting";
 import { TerminalMetricsStatus } from "./TerminalMetricsStatus";
+import { createHostMetricsApi } from "./host-metrics-api";
+import { createMetricsSummaryStore } from "./summary-store";
+import {
+  createDashboardHostMetrics,
+  createHomepageHostMetrics,
+} from "./SummaryViews";
 
-type SectionSetField = Parameters<typeof HostStatsTab>[0]["setField"];
+type HostMetricsTabConfig = Parameters<typeof HostMetricsTab>[0]["hostConfig"];
+
+/** This plugin's metricsEnabled host setting; on unless turned off. */
+function metricsEnabledFor(host: unknown): boolean {
+  const bag = (
+    host as { pluginSettings?: Record<string, Record<string, unknown>> }
+  )?.pluginSettings;
+  return bag?.["host-metrics"]?.metricsEnabled !== false;
+}
 
 function MetricsTab({ sshHost, label, isVisible }: TabProps) {
   return (
     <HostMetricsTab
-      hostConfig={sshHost as unknown as SSHHost}
+      hostConfig={sshHost as unknown as HostMetricsTabConfig}
       title={label}
       isVisible={isVisible}
       isTopbarOpen={false}
@@ -33,21 +46,25 @@ function MetricsStandalone({ hostId }: StandaloneViewProps) {
   return <HostMetricsApp hostId={hostId} />;
 }
 
-function MetricsHostSection({
-  form,
-  setField,
-  snippets,
-}: HostEditorSectionProps) {
-  return (
-    <HostStatsTab
-      form={form}
-      setField={setField as SectionSetField}
-      snippets={(snippets ?? []) as { id: number; name: string }[]}
-    />
-  );
+function MetricsHostSection(props: HostEditorSectionProps) {
+  return <HostStatsTab {...props} />;
 }
 
-export function activate(app: TermixApp): void {
+export async function activate(app: TermixApp): Promise<void> {
+  const allowed = await app.hasPermission("use");
+  const metricsApi = createHostMetricsApi(app.api);
+  const summaries = createMetricsSummaryStore(metricsApi);
+  app.onDispose(() => summaries.dispose());
+
+  // The latest disk sample, for the file manager's usage bar.
+  app.registerAction(
+    "host-metrics.disk",
+    (async (hostId: number) =>
+      (await metricsApi.getMetrics(hostId).catch(() => null))?.disk ??
+      null) as never,
+    { permission: "use" },
+  );
+
   app.registerTab("host-metrics", MetricsTab, {
     icon: Server,
     titleKey: "nav.hostMetrics",
@@ -70,10 +87,8 @@ export function activate(app: TermixApp): void {
     tabType: "host-metrics",
     copyUrlView: "host-metrics",
     overview: true,
-    when: (host) =>
-      !!host.enableSsh &&
-      (host.statsConfig as { metricsEnabled?: boolean } | undefined)
-        ?.metricsEnabled !== false,
+    when: (host: PluginHostRecord) =>
+      allowed && !!host.enableSsh && metricsEnabledFor(host),
   });
 
   app.registerHostEditorSection({
@@ -89,17 +104,29 @@ export function activate(app: TermixApp): void {
     metricsChartWidget as unknown as HomepageWidgetContribution,
   );
 
-  app.registerSettingsComponent("retention", MetricsRetentionSetting);
-
   // Live CPU, memory and disk bars in the terminal toolbar's expanded view.
   app.registerSlotContribution("terminal.toolbarStatus", {
     actionId: "host-metrics.terminalStatus",
     titleKey: "nav.hostMetrics",
     kind: "component",
     component: TerminalMetricsStatus,
-    when: (context) =>
-      (context.host as { statsConfig?: { metricsEnabled?: boolean } })
-        ?.statsConfig?.metricsEnabled !== false,
+    when: (context) => allowed && metricsEnabledFor(context.host),
+  });
+
+  // The usage bars in the dashboard's host status card.
+  app.registerSlotContribution("dashboard.hostMetrics", {
+    actionId: "host-metrics.dashboardHost",
+    titleKey: "nav.hostMetrics",
+    kind: "component",
+    component: createDashboardHostMetrics(summaries),
+  });
+
+  // The numbers in the homepage's host status widget.
+  app.registerSlotContribution("homepage.hostMetrics", {
+    actionId: "host-metrics.homepageHost",
+    titleKey: "nav.hostMetrics",
+    kind: "component",
+    component: createHomepageHostMetrics(summaries),
   });
 
   app.registerSlotContribution("onboarding.features", {

@@ -1,12 +1,7 @@
-import type { Express } from "express";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import { execElevated } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+import { execCommand, execElevated } from "@termix/plugin-sdk/host-commands";
+import { isValidPid, isValidSignal, type Signal } from "./validation.js";
+import type { Router } from "express";
 import { managerHandler, ManagerInputError } from "./route-helpers.js";
-import {
-  isValidPid,
-  isValidSignal,
-  type Signal,
-} from "../../../../../src/backend/hosts/metrics-shared/validation.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
 export interface ProcessRow {
@@ -54,9 +49,10 @@ export function buildKillCommand(pid: number, signal: Signal): string {
 }
 
 export function registerProcessRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
+  app: Router,
+  deps: ManagerRoutesDeps,
 ): void {
+  const { validateHostId } = deps;
   /**
    * @openapi
    * /host-metrics/managers/processes/{id}:
@@ -74,7 +70,7 @@ export function registerProcessRoutes(
   app.get(
     "/host-metrics/managers/processes/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "processes_list", async (client) => {
+    managerHandler(deps, "connect", "processes_list", async (client) => {
       const { stdout } = await execCommand(client, LIST_PROCESSES_CMD, 20000);
       return { processes: parseProcessList(stdout) };
     }),
@@ -109,7 +105,7 @@ export function registerProcessRoutes(
     "/host-metrics/managers/processes/:id/signal",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "processes_signal",
       async (client, host, req) => {

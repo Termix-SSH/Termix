@@ -10,7 +10,6 @@ import React, {
   useState,
 } from "react";
 import { getAllServerStatuses, getSSHHosts } from "@/main-axios";
-import { DEFAULT_STATS_CONFIG } from "@/types/stats-widgets";
 import {
   ServerStatusStore,
   type ServerStatusEntry,
@@ -73,21 +72,7 @@ export function ServerStatusProvider({
       const enabled = new Set<number>();
 
       hosts.forEach((host) => {
-        const statsConfig = (() => {
-          try {
-            if (!host.statsConfig) return DEFAULT_STATS_CONFIG;
-            if (typeof host.statsConfig === "string") {
-              return JSON.parse(host.statsConfig);
-            }
-            return host.statsConfig;
-          } catch {
-            return DEFAULT_STATS_CONFIG;
-          }
-        })();
-
-        if (statsConfig.statusCheckEnabled !== false) {
-          enabled.add(host.id);
-        }
+        if (host.statusCheckEnabled !== false) enabled.add(host.id);
       });
 
       store.setEnabledHostIds(enabled);
@@ -321,4 +306,31 @@ export function useServerStatusMeta(): {
     initialLoadComplete: store.getInitialLoadComplete(),
     isLoading: store.getIsLoading(),
   };
+}
+
+const noStatus = () => "";
+
+/**
+ * One host's status for plugin views, which can render outside the app shell
+ * (a standalone window). Null there, and while the host has not been checked.
+ */
+export function useOptionalHostStatusEntry(hostId: number | undefined): {
+  status: StatusValue;
+  reason?: "host_key_changed";
+} | null {
+  const store = useContext(StatusStoreContext);
+  const snapshot = useSyncExternalStore(
+    (onChange) =>
+      store && hostId !== undefined
+        ? store.subscribeHost(hostId, onChange)
+        : () => {},
+    () => (store && hostId !== undefined ? store.getHostSnapshot(hostId) : ""),
+    noStatus,
+  );
+  if (!snapshot) return null;
+  const [status] = snapshot.split(":", 1);
+  if (!status) return null;
+  return snapshot.endsWith(":host_key_changed")
+    ? { status: status as StatusValue, reason: "host_key_changed" }
+    : { status: status as StatusValue };
 }

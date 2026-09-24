@@ -38,11 +38,7 @@ export type { PluginSettingsScope };
  * to it means deciding that every plugin holding settings:read-core may see
  * that value, so it is a review decision rather than a convenience.
  */
-export const CORE_SETTINGS_ALLOWLIST: readonly string[] = [
-  "app_name",
-  "global_metrics_interval",
-  "global_status_check_interval",
-];
+export const CORE_SETTINGS_ALLOWLIST: readonly string[] = ["app_name"];
 
 type ChangeListener = (value: unknown) => void;
 

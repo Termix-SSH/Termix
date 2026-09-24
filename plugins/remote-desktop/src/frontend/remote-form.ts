@@ -28,7 +28,6 @@ export interface RemoteDesktopForm {
   telnetCredentialId: string;
   telnetUser: string;
   telnetPassword: string;
-  statsConfig: Record<string, any>;
 }
 
 export type RemoteFormSetField = <K extends keyof RemoteDesktopForm>(

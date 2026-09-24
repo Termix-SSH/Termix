@@ -1,8 +1,8 @@
 import { EventEmitter } from "node:events";
 import type { WebSocket } from "ws";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
-import { authFailureTracker } from "../../hosts/metrics-shared/state.js";
+import { pluginEvents, TOPICS } from "../../plugins/events.js";
 
 const { updateHostKey } = vi.hoisted(() => ({ updateHostKey: vi.fn() }));
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -12,10 +12,15 @@ vi.mock("../../utils/logger.js", () => ({
   sshLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 const hostId = 991267;
+const accepted: unknown[] = [];
+const unsubscribe = pluginEvents.on(TOPICS.hostKeyUpdated, (payload) =>
+  accepted.push(payload),
+);
 afterEach(() => {
-  authFailureTracker.reset(hostId);
+  accepted.length = 0;
   vi.resetAllMocks();
 });
+afterAll(() => unsubscribe());
 
 async function verifyChangedKey(action: "accept" | "reject") {
   const socket = new EventEmitter() as EventEmitter & {
@@ -52,35 +57,22 @@ async function verifyChangedKey(action: "accept" | "reject") {
   );
 }
 
-describe("metrics recovery after host key verification", () => {
-  it("allows polling after accepting and saving the replacement key", async () => {
-    authFailureTracker.recordFailure(hostId, "HOST_KEY", true);
-    expect(authFailureTracker.shouldSkip(hostId)).toBe(true);
+describe("host key recovery", () => {
+  it("announces an accepted and saved replacement key", async () => {
     expect(await verifyChangedKey("accept")).toBe(true);
     expect(updateHostKey).toHaveBeenCalledOnce();
-    expect(authFailureTracker.shouldSkip(hostId)).toBe(false);
+    expect(accepted).toEqual([{ hostId }]);
   });
 
-  it("keeps polling blocked when the new key is rejected", async () => {
-    authFailureTracker.recordFailure(hostId, "HOST_KEY", true);
+  it("announces nothing when the new key is rejected", async () => {
     expect(await verifyChangedKey("reject")).toBe(false);
     expect(updateHostKey).not.toHaveBeenCalled();
-    expect(authFailureTracker.shouldSkip(hostId)).toBe(true);
+    expect(accepted).toEqual([]);
   });
 
-  it("keeps polling blocked if persisting the accepted key fails", async () => {
-    authFailureTracker.recordFailure(hostId, "HOST_KEY", true);
+  it("announces nothing if persisting the accepted key fails", async () => {
     updateHostKey.mockRejectedValueOnce(new Error("database unavailable"));
     expect(await verifyChangedKey("accept")).toBe(false);
-    expect(authFailureTracker.shouldSkip(hostId)).toBe(true);
+    expect(accepted).toEqual([]);
   });
-
-  it.each(["AUTH", "TOTP"] as const)(
-    "preserves unrelated %s failures",
-    async (reason) => {
-      authFailureTracker.recordFailure(hostId, reason, true);
-      expect(await verifyChangedKey("accept")).toBe(true);
-      expect(authFailureTracker.shouldSkip(hostId)).toBe(true);
-    },
-  );
 });

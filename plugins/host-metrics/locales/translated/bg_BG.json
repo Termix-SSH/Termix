@@ -240,7 +240,9 @@
     "noQuickActions": "Все още няма бързи действия.",
     "buttonLabel": "Етикет на бутона",
     "selectSnippetPlaceholder": "Изберете фрагмент...",
-    "addActionBtn": "Добавяне на действие"
+    "addActionBtn": "Добавяне на действие",
+    "hostNotFound": "Хостът не е намерен",
+    "loadingHost": "Зареждане на хоста..."
   },
   "onboarding": {
     "feature_metrics": "Показатели и сигнали",
@@ -255,6 +257,41 @@
     "noData": "Няма налични данни",
     "showCurrentValue": "Показване на текущата стойност",
     "chartMetric": "Метричен",
-    "metricRange": "Диапазон"
+    "metricRange": "Диапазон",
+    "host": "Домакин",
+    "loading": "Зареждане...",
+    "metricCpu": "Процесор",
+    "metricDisk": "Диск",
+    "metricHostname": "Име на хост",
+    "metricKernel": "Ядро",
+    "metricMemory": "Памет",
+    "metricNetwork": "Мрежа",
+    "metricOs": "ОС",
+    "metricProcesses": "Процеси",
+    "metricProcessesRunning": "бягане",
+    "metricProcessesTotal": "общо",
+    "metricUptime": "Време на работа",
+    "metricsNotAvailable": "Показателите не са налични",
+    "noHostSelected": "Няма избран хост",
+    "selectHost": "Изберете хост..."
+  },
+  "dashboard": {
+    "cpu": "Процесор",
+    "ram": "RAM памет"
+  },
+  "dashboardTab": {
+    "disk": "Диск"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Отказ",
+        "confirmRunButton": "Бягане",
+        "confirmRunMessage": "Изпълни „{{name}}“?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Свързан"
   }
 }

@@ -2,7 +2,7 @@ import type { AutomationDefinition } from "../../../../src/types/automations.js"
 import { createCurrentAutomationRepository } from "../../../../src/backend/database/repositories/factory.js";
 import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
 import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
-import { execCommand } from "../../../../src/backend/hosts/metrics-shared/common-utils.js";
+import { execCommand } from "@termix/plugin-sdk/host-commands";
 import { withSshConnection } from "./ssh.js";
 import { statsLogger } from "../../../../src/backend/utils/logger.js";
 import { onDockerEvent } from "./triggers.js";

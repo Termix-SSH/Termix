@@ -90,7 +90,9 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
   const pluginId = manifest.id;
   const declared = manifest.capabilities;
   const open = new Set<() => void>();
-  const poolKeys = new Set<string>();
+  // Pool key -> host id, so dropPooled can find a host's keys after its
+  // address changed.
+  const poolKeys = new Map<string, number>();
 
   bag.add(async () => {
     for (const dispose of [...open]) dispose();
@@ -98,7 +100,9 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     if (poolKeys.size > 0) {
       const { connectionPool } =
         await import("../hosts/ssh-connection-pool.js");
-      for (const key of poolKeys) connectionPool.clearKeyConnections(key);
+      for (const key of poolKeys.keys()) {
+        connectionPool.clearKeyConnections(key);
+      }
       poolKeys.clear();
     }
   }, "SSH connections");
@@ -183,7 +187,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         actingUser(host),
       );
       const key = poolKey(options.pool, resolved as PluginSshHost);
-      poolKeys.add(key);
+      poolKeys.set(key, resolved.id);
       const { withConnection } =
         await import("../hosts/ssh-connection-pool.js");
       return withConnection(
@@ -227,6 +231,19 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
     },
 
     poolKey,
+
+    dropPooled: (pool, hostId) => {
+      const keys = [...poolKeys.entries()]
+        .filter(([key, id]) => id === hostId && key.startsWith(`${pool}:`))
+        .map(([key]) => key);
+      if (keys.length === 0) return;
+      for (const key of keys) poolKeys.delete(key);
+      void import("../hosts/ssh-connection-pool.js").then(
+        ({ connectionPool }) => {
+          for (const key of keys) connectionPool.clearKeyConnections(key);
+        },
+      );
+    },
 
     resolveHost: async (hostId, options) => {
       await checkSsh(true);

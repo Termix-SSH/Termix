@@ -7,6 +7,7 @@ import { PasswordInput } from "@/components/password-input";
 import { FakeSwitch, SectionCard, SettingRow } from "@/components/section-card";
 import type { Host } from "@/types/ui-types";
 import {
+  Activity,
   Globe,
   LayoutGrid,
   Plus,
@@ -840,6 +841,53 @@ export function HostEditorGeneralTab({
               ))}
             </div>
           </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title={t("hosts.statusChecksLabel")}
+        icon={<Activity className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-0 py-1">
+          <SettingRow
+            label={t("hosts.enableStatusChecks")}
+            description={t("hosts.enableStatusChecksDesc")}
+          >
+            <FakeSwitch
+              checked={form.statusCheckEnabled}
+              onChange={(value) => setField("statusCheckEnabled", value)}
+            />
+          </SettingRow>
+          {form.statusCheckEnabled && (
+            <SettingRow
+              label={t("hosts.useGlobalInterval")}
+              description={t("hosts.useGlobalIntervalDesc")}
+            >
+              <FakeSwitch
+                checked={form.statusCheckInterval === null}
+                onChange={(useGlobal) =>
+                  setField("statusCheckInterval", useGlobal ? null : 60)
+                }
+              />
+            </SettingRow>
+          )}
+          {form.statusCheckEnabled && form.statusCheckInterval !== null && (
+            <SettingRow
+              label={t("hosts.checkIntervalS")}
+              description={t("hosts.checkIntervalDesc")}
+            >
+              <Input
+                type="number"
+                min={5}
+                max={86400}
+                value={form.statusCheckInterval}
+                onChange={(e) =>
+                  setField("statusCheckInterval", Number(e.target.value))
+                }
+                className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </SettingRow>
+          )}
         </div>
       </SectionCard>
 

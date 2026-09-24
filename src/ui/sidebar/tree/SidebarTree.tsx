@@ -642,7 +642,8 @@ export function SidebarTree({
           name: a.name,
           snippetId: Number(a.snippetId),
         })),
-        statsConfig: host.statsConfig,
+        statusCheckEnabled: host.statusCheckEnabled,
+        statusCheckInterval: host.statusCheckInterval,
         terminalConfig: host.terminalConfig ?? null,
       };
       const created = await createSSHHost(duplicateHost);

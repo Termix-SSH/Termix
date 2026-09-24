@@ -367,18 +367,34 @@ export function subscribeAutomationTriggers(): void {
   if (unsubscribers.length > 0) return;
 
   unsubscribers = [
-    pluginEvents.on(TOPICS.hostMetrics, (payload) =>
+    pluginEvents.on("plugin.host-metrics.snapshot", (payload) =>
       onMetrics(payload as MetricEvent),
     ),
     pluginEvents.on(TOPICS.hostStatus, (payload) =>
       onStatus(payload as StatusEvent),
     ),
-    pluginEvents.on(TOPICS.hostHealthCheck, (payload) =>
+    pluginEvents.on("plugin.host-metrics.health-check", (payload) =>
       onHealthCheck(payload as HealthEvent),
     ),
     pluginEvents.on(TOPICS.internalEvent, (payload) =>
       onInternalEvent(payload as InternalEvent),
     ),
+    // An SSH login seen by the terminal, which host-metrics used to relay.
+    pluginEvents.on(TOPICS.hostLogin, (payload) => {
+      const login = payload as {
+        hostId: number;
+        userId: string;
+        sshUser?: string;
+        fromIp?: string;
+      };
+      if (!login?.userId) return;
+      return onInternalEvent({
+        event: "user_login",
+        userId: login.userId,
+        hostId: login.hostId,
+        details: { sshUser: login.sshUser, fromIp: login.fromIp },
+      });
+    }),
   ];
 }
 

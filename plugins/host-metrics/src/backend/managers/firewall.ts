@@ -1,15 +1,14 @@
-import type { Express } from "express";
-import { collectFirewallMetrics } from "../widgets/firewall-collector.js";
-import { execElevated } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { managerHandler, ManagerInputError } from "./route-helpers.js";
+import { execElevated, detectPlatform } from "@termix/plugin-sdk/host-commands";
 import {
   isValidPort,
   isValidIpProtocol,
   isValidFirewallTarget,
   type IpProtocol,
   type FirewallTarget,
-} from "../../../../../src/backend/hosts/metrics-shared/validation.js";
-import { detectPlatform } from "../../../../../src/backend/hosts/metrics-shared/platform.js";
+} from "./validation.js";
+import type { Router } from "express";
+import { collectFirewallMetrics } from "../widgets/firewall-collector.js";
+import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
 export interface FirewallRuleSpec {
@@ -45,13 +44,14 @@ export function buildNftRuleCommand(
 }
 
 export function registerFirewallRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
+  app: Router,
+  deps: ManagerRoutesDeps,
 ): void {
+  const { validateHostId } = deps;
   app.get(
     "/host-metrics/managers/firewall/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "firewall_read", async (client) => {
+    managerHandler(deps, "connect", "firewall_read", async (client) => {
       return await collectFirewallMetrics(client);
     }),
   );
@@ -60,7 +60,7 @@ export function registerFirewallRoutes(
     "/host-metrics/managers/firewall/:id/rule",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "firewall_rule",
       async (client, host, req) => {
@@ -105,7 +105,7 @@ export function registerFirewallRoutes(
     "/host-metrics/managers/firewall/:id/persist",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "firewall_persist",
       async (client, host) => {

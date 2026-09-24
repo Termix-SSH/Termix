@@ -150,7 +150,8 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     terminalConfig: parsedTerminalConfig as Host["terminalConfig"],
     hasSudoPassword:
       !!host.hasSudoPassword || !!parsedTerminalConfig?.sudoPassword,
-    statsConfig: parseJson(h.statsConfig) as Host["statsConfig"],
+    statusCheckEnabled: h.statusCheckEnabled !== false,
+    statusCheckInterval: h.statusCheckInterval ?? null,
     forceKeyboardInteractive: h.forceKeyboardInteractive ?? false,
     useSocks5: h.useSocks5,
     socks5Host: h.socks5Host,

@@ -112,7 +112,14 @@ export interface PluginDatabase {
    * lives in memory and is saved to its encrypted file only when asked, so a
    * write without it can be lost on restart. A no-op on Postgres and MySQL.
    */
-  persist: () => Promise<void>;
+  persist: (options?: {
+    /**
+     * Mark the database dirty and let the debounced save pick it up, rather
+     * than saving now. For frequent, low-value writes such as samples, where
+     * losing a couple of seconds on a crash is fine.
+     */
+    lazy?: boolean;
+  }) => Promise<void>;
   /**
    * The engine the server runs on. Table objects encode the same on all
    * three, but MySQL has no RETURNING, so portable code reads a written row
@@ -614,6 +621,48 @@ export interface PluginHosts {
     type: string,
     hostName: string,
   ) => Promise<void>;
+  /**
+   * Core's reachability status, the one behind the host list's status dot.
+   * Needs hosts:read.
+   */
+  status: PluginHostStatusApi;
+}
+
+/** online: a login worked. reachable: the port answers. offline: it does not. */
+export type PluginHostStatus = "online" | "reachable" | "offline";
+
+export interface PluginHostStatusEntry {
+  status: PluginHostStatus;
+  lastChecked: string;
+  reason?: "host_key_changed";
+}
+
+/**
+ * Core checks every host with status checks on by opening a TCP connection to
+ * it. A plugin that logs in to hosts tells core how that went, which is what
+ * turns "reachable" into "online".
+ */
+export interface PluginHostStatusApi {
+  /** The last known status, or null when core has not checked the host yet. */
+  get: (hostId: number) => PluginHostStatusEntry | null;
+  /** Checks the host now unless core checked it recently. */
+  check: (hostId: number) => Promise<PluginHostStatusEntry | null>;
+  /** Reports a login attempt. Not audited: pollers call it every sample. */
+  reportLogin: (
+    hostId: number,
+    outcome: { ok: boolean; hostKeyChanged?: boolean },
+  ) => void;
+  /**
+   * Tells core which port proves a host of this connection type is up, for
+   * protocols whose port lives in the plugin's own host settings. Core falls
+   * back to the host's port. Removed on deactivate.
+   */
+  registerPort: (
+    connectionType: string,
+    resolve: (
+      hostId: number,
+    ) => number | undefined | Promise<number | undefined>,
+  ) => () => void;
 }
 
 /**
@@ -781,6 +830,12 @@ export interface PluginSsh {
 
   /** The pool key withConnection would use, for clearing it. */
   poolKey: (pool: string, host: PluginSshHost) => string;
+
+  /**
+   * Closes this plugin's pooled connections to a host, for when its details
+   * changed. Only keys this plugin created are touched.
+   */
+  dropPooled: (pool: string, hostId: number) => void;
 
   /**
    * The host as the acting user may connect to it: RBAC, owner-key
@@ -1216,6 +1271,28 @@ export interface PluginCapabilities {
   require: (capability: string) => Promise<void>;
 }
 
+/**
+ * Timers owned by the plugin. Every timer is cleared on deactivate, a run that
+ * throws is logged instead of crashing the server, and a repeating job never
+ * overlaps itself: a tick that arrives while the last run is still going is
+ * skipped. No capability needed.
+ */
+export interface PluginSchedule {
+  /** Runs `fn` every `intervalMs`. Returns a function that stops it. */
+  every: (
+    intervalMs: number,
+    fn: () => void | Promise<void>,
+    options?: {
+      /** Delays the first run by up to this much, so many timers spread out. */
+      jitterMs?: number;
+      /** Also run once straight away. */
+      runNow?: boolean;
+    },
+  ) => () => void;
+  /** Runs `fn` once after `delayMs`. Returns a function that cancels it. */
+  after: (delayMs: number, fn: () => void | Promise<void>) => () => void;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -1247,6 +1324,8 @@ export interface PluginContext {
   readonly credentials: PluginCredentials;
   /** Audit lines under the plugin's own action names. */
   readonly audit: PluginAudit;
+  /** Timers that stop on deactivate. */
+  readonly schedule: PluginSchedule;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

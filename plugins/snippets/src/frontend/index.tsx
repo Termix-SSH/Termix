@@ -64,4 +64,26 @@ export function activate(app: TermixApp): void {
       isNote: snippet.isNote,
     };
   }) as never);
+
+  // For other plugins' quick actions (host metrics): the snippet's content,
+  // so the caller can ask for $INPUT_n values, and a run on a host.
+  app.registerAction("snippets.get", (async (snippetId: number) => {
+    const snippet = await createSnippetsApi(app.api)
+      .get(snippetId)
+      .catch(() => null);
+    return snippet
+      ? { id: snippet.id, name: snippet.name, content: snippet.content }
+      : null;
+  }) as never);
+
+  app.registerAction("snippets.execute", (async (
+    snippetId: number,
+    hostId: number,
+    inputValues?: Record<string, string>,
+  ) =>
+    createSnippetsApi(app.api).execute(
+      snippetId,
+      hostId,
+      inputValues,
+    )) as never);
 }

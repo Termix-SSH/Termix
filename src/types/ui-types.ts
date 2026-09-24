@@ -1,5 +1,4 @@
 import type { TerminalConfig } from "./index.js";
-import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
 export type Host = {
@@ -147,7 +146,9 @@ export type Host = {
     enabledCards?: string[];
   } | null;
 
-  statsConfig?: StatsConfig;
+  statusCheckEnabled?: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval?: number | null;
   quickActions: { name: string; snippetId: string }[];
 
   enableSsh: boolean;

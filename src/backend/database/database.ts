@@ -806,7 +806,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           show_docker_in_sidebar INTEGER NOT NULL DEFAULT 0,
           show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0,
           default_path TEXT,
-          stats_config TEXT,
+          status_check_enabled INTEGER NOT NULL DEFAULT 1,
+          status_check_interval INTEGER,
           docker_config TEXT,
           web_ui_config TEXT,
           terminal_config TEXT,
@@ -928,8 +929,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
       const sshHosts =
         await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
-        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, enable_web_ui, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, docker_config, web_ui_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, mac_address, port_knock_sequence, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, enable_web_ui, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, status_check_enabled, status_check_interval, docker_config, web_ui_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, mac_address, port_knock_sequence, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const decrypted of sshHosts) {
@@ -969,7 +970,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           decrypted.showDockerInSidebar ? 1 : 0,
           decrypted.showServerStatsInSidebar ? 1 : 0,
           decrypted.defaultPath || null,
-          decrypted.statsConfig || null,
+          decrypted.statusCheckEnabled === false ? 0 : 1,
+          decrypted.statusCheckInterval ?? null,
           decrypted.dockerConfig || null,
           decrypted.webUiConfig || null,
           decrypted.terminalConfig || null,
@@ -1378,7 +1380,7 @@ app.post(
                     host.show_server_stats_in_sidebar,
                   ),
                   defaultPath: host.default_path,
-                  statsConfig: host.stats_config,
+                  ...legacyStatusCheck(host),
                   terminalConfig: host.terminal_config,
                   quickActions: host.quick_actions,
                   notes: host.notes,
@@ -2155,4 +2157,43 @@ if (
       },
     );
   }
+}
+
+/**
+ * Status check columns from an export row. Exports from before 2.9.0 only
+ * have stats_config, which carried them.
+ */
+function legacyStatusCheck(row: Record<string, unknown>): {
+  statusCheckEnabled: boolean;
+  statusCheckInterval: number | null;
+} {
+  if (row.status_check_enabled !== undefined) {
+    return {
+      statusCheckEnabled: Boolean(row.status_check_enabled),
+      statusCheckInterval:
+        typeof row.status_check_interval === "number"
+          ? row.status_check_interval
+          : null,
+    };
+  }
+  let legacy: Record<string, unknown> = {};
+  try {
+    legacy =
+      typeof row.stats_config === "string" && row.stats_config
+        ? JSON.parse(row.stats_config)
+        : {};
+  } catch {
+    legacy = {};
+  }
+  const seconds = Number(legacy.statusCheckInterval);
+  return {
+    statusCheckEnabled:
+      legacy.statusCheckEnabled !== false && legacy.disableTcpPing !== true,
+    statusCheckInterval:
+      legacy.useGlobalStatusInterval === false &&
+      Number.isInteger(seconds) &&
+      seconds >= 5
+        ? seconds
+        : null,
+  };
 }

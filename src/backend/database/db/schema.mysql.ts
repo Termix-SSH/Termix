@@ -295,7 +295,10 @@ export const hosts = mysqlTable(
       .notNull()
       .default(false),
     defaultPath: text("default_path"),
-    statsConfig: text("stats_config"),
+    statusCheckEnabled: boolean("status_check_enabled")
+      .notNull()
+      .default(true),
+    statusCheckInterval: int("status_check_interval"),
     dockerConfig: text("docker_config"),
     webUiConfig: text("web_ui_config"),
     terminalConfig: text("terminal_config"),
@@ -887,40 +890,12 @@ export const userPreferences = mysqlTable("user_preferences", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
-export const hostMetricsPreferences = mysqlTable(
-  "host_metrics_preferences",
-  {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  // JSON-encoded HostMetricsLayout. Layout has no secrets, so it is stored as
-  // plain JSON (no field-level encryption).
-  layout: text("layout").notNull(),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  // One layout per user per host. Enforced in production since the inline DDL
-  // creates it, but it was never declared here, so the generated Postgres and
-  // MySQL schemas lacked it — and the upsert has nothing to conflict on.
-  (table) => [
-    uniqueIndex("idx_host_metrics_prefs_user_host").on(table.userId, table.hostId),
-  ],
-);
-
 export const hostSidebarPreferences = mysqlTable("host_sidebar_preferences", {
   userId: varchar("user_id", { length: 255 })
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   // JSON-encoded HostSidebarPreferences. No secrets in this blob, stored as
-  // plain JSON like hostMetricsPreferences.layout.
+  // plain JSON.
   data: text("data").notNull(),
   updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
@@ -953,47 +928,6 @@ export const uiPreferences = mysqlTable("ui_preferences", {
   updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-});
-
-export const hostHealthChecks = mysqlTable(
-  "host_health_checks",
-  {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  // JSON array of { id, name, type: "tcp"|"http", target, port, path }
-  checks: text("checks").notNull(),
-  intervalSeconds: int("interval_seconds").notNull().default(300),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  // Same as above: one set of checks per user per host.
-  (table) => [
-    uniqueIndex("idx_host_health_checks_user_host").on(table.userId, table.hostId),
-  ],
-);
-
-export const hostHealthHistory = mysqlTable("host_health_history", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  checkId: text("check_id").notNull(),
-  ts: text("ts").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  ok: boolean("ok").notNull(),
-  latencyMs: int("latency_ms"),
-  detail: text("detail"),
 });
 
 export const dashboardServiceLinks = mysqlTable("dashboard_service_links", {
@@ -1085,23 +1019,6 @@ export const termixIdentityCa = mysqlTable("termix_identity_ca", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 // --- termix-id end ---
-
-// --- metrics-history begin ---
-export const hostMetricsHistory = mysqlTable("host_metrics_history", {
-  id: int("id").autoincrement().primaryKey(),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  ts: text("ts")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  cpuPercent: double("cpu_percent"),
-  memPercent: double("mem_percent"),
-  diskPercent: double("disk_percent"),
-  netRxBytes: int("net_rx_bytes"),
-  netTxBytes: int("net_tx_bytes"),
-});
-// --- metrics-history end ---
 
 // --- alerts begin ---
 export const notificationChannels = mysqlTable("notification_channels", {

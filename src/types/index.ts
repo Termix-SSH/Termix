@@ -1,4 +1,3 @@
-import type { StatsConfig } from "./stats-widgets.js";
 import type { Request } from "express";
 import type { RefObject } from "react";
 import type { HostAuthOverrides } from "./auth-protocols.js";
@@ -230,7 +229,9 @@ export type Host = {
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
-  statsConfig?: string | StatsConfig;
+  statusCheckEnabled?: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval?: number | null;
   terminalConfig?: Partial<TerminalConfig>;
   notes?: string;
 
@@ -385,7 +386,9 @@ export interface HostData {
   tunnelConnections?: TunnelConnection[];
   jumpHosts?: JumpHostData[];
   quickActions?: QuickActionData[];
-  statsConfig?: string | StatsConfig;
+  statusCheckEnabled?: boolean;
+  /** Seconds between status checks; null follows the global setting. */
+  statusCheckInterval?: number | null;
   terminalConfig?: Partial<TerminalConfig>;
   notes?: string;
 

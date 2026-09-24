@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import type { ServerMetrics } from "@/main-axios";
-import type { GpuMetrics } from "@/types/stats-widgets";
+import type { ServerMetrics } from "../../../src/shared/metrics.js";
+import type { GpuMetrics } from "../../../src/shared/stats-widgets.js";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
 import { GpuCard } from "../../../src/frontend/cards/GpuCard";

@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import type { ServerMetrics } from "@/main-axios";
+import type { ServerMetrics } from "../../src/shared/metrics.js";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -35,25 +35,28 @@ const SAMPLE = {
   lastChecked: "2026-09-18T07:00:00.000Z",
 } as ServerMetrics;
 
-vi.mock("@/main-axios.ts", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/main-axios.ts")>()),
-  getServerStatusById: vi.fn(async () => ({ status: "online" })),
-  getServerMetricsById: vi.fn(async () => SAMPLE),
-  startMetricsPolling: vi.fn(async () => ({ viewerSessionId: "viewer-1" })),
-  stopMetricsPolling: vi.fn(async () => undefined),
-  sendMetricsHeartbeat: vi.fn(async () => true),
-  getSnippets: vi.fn(async () => []),
-  getSSHHosts: vi.fn(async () => []),
-  logActivity: vi.fn(async () => undefined),
-}));
+vi.mock("../../src/frontend/host-metrics-api", async (importOriginal) => {
+  const api = {
+    getMetrics: vi.fn(async () => SAMPLE),
+    startMetrics: vi.fn(async () => ({
+      success: true,
+      viewerSessionId: "viewer-1",
+    })),
+    stopMetrics: vi.fn(async () => undefined),
+    heartbeat: vi.fn(async () => true),
+    submitTotp: vi.fn(),
+  };
+  return {
+    ...(await importOriginal<object>()),
+    useHostMetricsApi: () => api,
+  };
+});
 
-vi.mock("@/contexts/UiPreferencesContext", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/contexts/UiPreferencesContext")>()),
+vi.mock("@termix/plugin-sdk/ui", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useAreaPreferences: () => ({ columns: 3 }),
-}));
-
-vi.mock("@/hooks/use-confirmation.ts", () => ({
   useConfirmation: () => ({ confirmWithToast: vi.fn() }),
+  logActivity: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../src/frontend/hooks/useHostMetricsPreferences.ts", () => ({
@@ -90,11 +93,13 @@ describe("HostMetricsTab", () => {
           username: "admin",
           port: 22,
           authType: "password",
-          statsConfig: JSON.stringify({
-            metricsEnabled: true,
-            metricsInterval: 30,
-            enabledWidgets: ["gpu"],
-          }),
+          pluginSettings: {
+            "host-metrics": {
+              metricsEnabled: true,
+              metricsInterval: 30,
+              enabledWidgets: ["gpu"],
+            },
+          },
         }}
       />,
     );

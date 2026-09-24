@@ -1,9 +1,9 @@
+import { execCommand } from "@termix/plugin-sdk/host-commands";
 import type { Client } from "ssh2";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import type {
   PortsMetrics,
   ListeningPort,
-} from "../../../../../src/types/stats-widgets.js";
+} from "../../shared/stats-widgets.js";
 
 function parseSsOutput(output: string): ListeningPort[] {
   const ports: ListeningPort[] = [];

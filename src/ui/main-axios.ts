@@ -10,7 +10,6 @@ import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { clearTermixSessionStorage } from "@/shell/TabContext";
 import type { SSHHost } from "@/types/index";
-import type { GpuMetrics } from "@/types/stats-widgets";
 
 // ============================================================================
 // RBAC TYPE DEFINITIONS
@@ -72,140 +71,6 @@ export type ServerStatus = {
 
 export type SSHHostWithStatus = SSHHost & {
   status: "online" | "reachable" | "offline" | "unknown";
-};
-
-interface CpuMetrics {
-  percent: number | null;
-  cores: number | null;
-  load: [number, number, number] | null;
-}
-
-interface MemoryMetrics {
-  percent: number | null;
-  usedGiB: number | null;
-  totalGiB: number | null;
-}
-
-export interface DiskFilesystem {
-  filesystem: string;
-  type: string;
-  mount: string;
-  percent: number | null;
-  usedHuman: string | null;
-  totalHuman: string | null;
-  availableHuman: string | null;
-  usedBytes: number | null;
-  totalBytes: number | null;
-  availableBytes: number | null;
-  label?: string;
-}
-
-interface DiskMetrics {
-  percent: number | null;
-  usedHuman: string | null;
-  totalHuman: string | null;
-  availableHuman?: string | null;
-  mount?: string | null;
-  filesystems?: DiskFilesystem[];
-}
-
-export interface NetworkInterface {
-  name: string;
-  ip: string;
-  state: string;
-  rx?: string | null;
-  tx?: string | null;
-  rxBytes?: string | null;
-  txBytes?: string | null;
-  rxRateBps?: number | null;
-  txRateBps?: number | null;
-}
-
-export interface ProcessInfo {
-  pid: string;
-  user: string;
-  cpu: string;
-  mem: string;
-  command: string;
-}
-
-export interface LoginRecord {
-  user: string;
-  ip: string;
-  time: string;
-  status: "success" | "failed";
-}
-
-export interface ListeningPort {
-  protocol: "tcp" | "udp";
-  localAddress: string;
-  localPort: number;
-  state?: string;
-  pid?: number;
-  process?: string;
-}
-
-export interface FirewallRule {
-  chain: string;
-  target: string;
-  protocol: string;
-  source: string;
-  destination: string;
-  dport?: string;
-  sport?: string;
-  state?: string;
-  interface?: string;
-  extra?: string;
-}
-
-export interface FirewallChain {
-  name: string;
-  policy: string;
-  rules: FirewallRule[];
-}
-
-export type ServerMetrics = {
-  cpu: CpuMetrics;
-  memory: MemoryMetrics;
-  disk: DiskMetrics;
-  network?: { interfaces?: NetworkInterface[] };
-  uptime?: { seconds?: number | null; formatted?: string | null };
-  system?: {
-    hostname?: string | null;
-    os?: string | null;
-    kernel?: string | null;
-    arch?: string | null;
-  };
-  processes?: {
-    total?: number | null;
-    running?: number | null;
-    top?: ProcessInfo[];
-  };
-  login_stats?: {
-    recentLogins?: LoginRecord[];
-    failedLogins?: LoginRecord[];
-    totalLogins?: number;
-    uniqueIPs?: number;
-  };
-  ports?: {
-    source?: "ss" | "netstat" | "none";
-    ports?: ListeningPort[];
-  };
-  firewall?: {
-    type?: "iptables" | "nftables" | "none";
-    status?: "active" | "inactive" | "unknown";
-    chains?: FirewallChain[];
-  };
-  temperature?: {
-    source?: "sysfs" | "sensors" | "none";
-    highestCelsius?: number | null;
-    sensors?: Array<{
-      label: string;
-      celsius: number;
-    }>;
-  };
-  gpu?: GpuMetrics;
-  lastChecked: string;
 };
 
 export interface AuthResponse {
@@ -783,7 +648,7 @@ function getApiUrl(path: string, defaultPort: number): string {
 // PER-HOST ORIGIN ROUTING (Electron desktop only)
 // ============================================================================
 //
-// hostApi/fileManagerApi/statsApi above always point at the
+// hostApi/fileManagerApi above always point at the
 // embedded local backend -- they're the shared, always-on instances. When a
 // host's connection origin resolves to "remote" (see
 // src/ui/lib/connection-origin.ts), the backend that actually holds that
@@ -833,7 +698,6 @@ export function createRemoteOriginApiInstance(path: string): AxiosInstance {
 }
 
 let remoteFileManagerApi: AxiosInstance | null = null;
-let remoteStatsApi: AxiosInstance | null = null;
 let remoteCoreApi: AxiosInstance | null = null;
 
 export function getRemoteFileManagerApi(): AxiosInstance {
@@ -845,19 +709,10 @@ export function getRemoteFileManagerApi(): AxiosInstance {
   return remoteFileManagerApi;
 }
 
-export function getRemoteStatsApi(): AxiosInstance {
-  if (!remoteStatsApi) {
-    remoteStatsApi = createRemoteOriginApiInstance("/plugin-api/host-metrics");
-  }
-  return remoteStatsApi;
-}
-
 /**
  * The remote server's core routes, unprefixed.
  *
- * Separate from getRemoteStatsApi because that one is rooted at the
- * host-metrics plugin's mount point, and callers reaching core routes such as
- * /sync/hosts must not inherit it.
+ * For core routes such as /sync/hosts and /host/status.
  */
 export function getRemoteCoreApi(): AxiosInstance {
   if (!remoteCoreApi) {
@@ -894,12 +749,6 @@ export function getSessionOrigin(sessionId: string): "local" | "remote" {
   return sessionOrigins.get(sessionId) === "remote" ? "remote" : "local";
 }
 
-export function getStatsApiForOrigin(
-  origin: "local" | "remote",
-): AxiosInstance {
-  return origin === "remote" ? getRemoteStatsApi() : statsApi;
-}
-
 function initializeApiInstances() {
   // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
   hostApi = createApiInstance(getApiUrl("/host", 30001), "HOST");
@@ -910,14 +759,6 @@ function initializeApiInstances() {
   fileManagerApi = createApiInstance(
     getApiUrl("/plugin-api/file-manager", 30001),
     "FILE_MANAGER",
-  );
-
-  // Host Metrics API - the host-metrics plugin, mounted on the main backend.
-  // Every existing /status, /metrics/*, /host-metrics/* and /proxmox-stats/*
-  // path still resolves, because the base carries the plugin mount point.
-  statsApi = createApiInstance(
-    getApiUrl("/plugin-api/host-metrics", 30001),
-    "STATS",
   );
 
   // Authentication API (port 30001)
@@ -952,9 +793,6 @@ export let sshHostApi: AxiosInstance;
 
 // File Manager Operations API (file-manager plugin)
 export let fileManagerApi: AxiosInstance;
-
-// Host Metrics API (host-metrics plugin)
-export let statsApi: AxiosInstance;
 
 // Authentication API (port 30001)
 export let authApi: AxiosInstance;
@@ -1544,16 +1382,10 @@ export {
 export {
   getAllServerStatuses,
   getServerStatusById,
-  getServerMetricsById,
-  startMetricsPolling,
-  stopMetricsPolling,
-  sendMetricsHeartbeat,
-  registerMetricsViewer,
-  unregisterMetricsViewer,
-  submitMetricsTOTP,
   refreshServerPolling,
-  notifyHostCreatedOrUpdated,
-} from "@/api/host-metrics-status-api";
+  getStatusCheckSettings,
+  updateStatusCheckSettings,
+} from "@/api/host-status-api";
 
 export {
   getHostSidebarPreferences,
@@ -1568,8 +1400,6 @@ export {
 export { getUiPreferences, saveUiPreferences } from "@/api/ui-preferences-api";
 
 export {
-  getGlobalMonitoringSettings,
-  updateGlobalMonitoringSettings,
   getLogLevel,
   updateLogLevel,
   getSessionTimeout,

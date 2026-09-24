@@ -1,10 +1,15 @@
+import {
+  MiniStat,
+  RadialGauge,
+  Sparkline,
+  StatRow,
+  MetricCard,
+} from "@termix/plugin-sdk/ui";
+import { type ServerMetrics } from "../../shared/metrics.js";
+import { type GpuDevice, type GpuProcess } from "../../shared/stats-widgets.js";
 import { useId } from "react";
 import { Gpu } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { ServerMetrics } from "@/main-axios";
-import type { GpuDevice, GpuProcess } from "@/types/stats-widgets";
-import { MiniStat, RadialGauge, Sparkline, StatRow } from "@/components/charts";
-import { MetricCard } from "@/components/metric-card";
 import type { GpuHistories, GpuHistory } from "./gpu-history";
 
 const NA = "N/A";

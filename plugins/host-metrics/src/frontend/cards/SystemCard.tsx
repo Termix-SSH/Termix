@@ -1,8 +1,7 @@
+import { StatRow, MetricCard } from "@termix/plugin-sdk/ui";
+import { type ServerMetrics } from "../../shared/metrics.js";
 import { Server } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { ServerMetrics } from "@/main-axios";
-import { StatRow } from "@/components/charts";
-import { MetricCard } from "@/components/metric-card";
 
 export function SystemCard({ metrics }: { metrics: ServerMetrics | null }) {
   const { t } = useTranslation();

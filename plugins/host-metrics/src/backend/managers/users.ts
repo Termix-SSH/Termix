@@ -1,11 +1,7 @@
-import type { Express } from "express";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
-import { execElevated } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+import { execCommand, execElevated } from "@termix/plugin-sdk/host-commands";
+import { isValidUsername, isValidGroupName } from "./validation.js";
+import type { Router } from "express";
 import { managerHandler, ManagerInputError } from "./route-helpers.js";
-import {
-  isValidUsername,
-  isValidGroupName,
-} from "../../../../../src/backend/hosts/metrics-shared/validation.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
 export interface SystemUser {
@@ -75,14 +71,12 @@ export function parseSudoers(output: string): string[] {
 
 export type UserAction = "create" | "delete" | "addToGroup" | "removeFromGroup";
 
-export function registerUserRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
-): void {
+export function registerUserRoutes(app: Router, deps: ManagerRoutesDeps): void {
+  const { validateHostId } = deps;
   app.get(
     "/host-metrics/managers/users/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "users_list", async (client) => {
+    managerHandler(deps, "connect", "users_list", async (client) => {
       const [passwd, groups, sudoers] = await Promise.all([
         execCommand(client, READ_USERS_CMD, 15000),
         execCommand(client, READ_GROUPS_CMD, 15000),
@@ -100,7 +94,7 @@ export function registerUserRoutes(
     "/host-metrics/managers/users/:id/action",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "users_action",
       async (client, host, req) => {

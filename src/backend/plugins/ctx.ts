@@ -53,6 +53,7 @@ import {
 } from "../database/db/dialect.js";
 import { createPluginAuth, createPluginSsh } from "./ctx-ssh-auth.js";
 import { createPluginHosts } from "./ctx-hosts.js";
+import { createPluginSchedule } from "./schedule.js";
 import { createPluginCredentials } from "./ctx-credentials.js";
 import { isElectronIpcAvailable } from "../utils/electron-ipc-bridge.js";
 
@@ -425,11 +426,15 @@ export function createPluginContext(
       refs: () => dbRefs() as never,
       // Gated but not audited: it follows every write, and the write itself
       // went through a client() call that already left an audit line.
-      persist: async () => {
+      persist: async (options) => {
         await assertCapability(pluginId, "db:own", manifest.capabilities);
         if (!needsExplicitPersist(resolveDatabaseDialect())) return;
         const { DatabaseSaveTrigger } =
           await import("../utils/database-save-trigger.js");
+        if (options?.lazy) {
+          DatabaseSaveTrigger.triggerSave(`plugin_${pluginId}_write`);
+          return;
+        }
         await DatabaseSaveTrigger.forceSave(`plugin_${pluginId}_write`);
       },
       get dialect() {
@@ -715,7 +720,15 @@ export function createPluginContext(
       },
     },
 
-    hosts: createPluginHosts({ manifest, audit: auditCall }),
+    hosts: createPluginHosts({ manifest, bag: handle.bag, audit: auditCall }),
+
+    schedule: createPluginSchedule(handle.bag, (message, error) =>
+      pluginLogger.error(
+        message,
+        error instanceof Error ? error : new Error(String(error)),
+        logContext,
+      ),
+    ),
     ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
     auth: createPluginAuth({ manifest, bag: handle.bag, audit: auditCall }),
 

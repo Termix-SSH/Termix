@@ -240,7 +240,9 @@
     "noQuickActions": "Ei vielä nopeita toimia.",
     "buttonLabel": "Painikkeen nimi",
     "selectSnippetPlaceholder": "Valitse katkelma...",
-    "addActionBtn": "Lisää toiminto"
+    "addActionBtn": "Lisää toiminto",
+    "hostNotFound": "Isäntää ei löydy",
+    "loadingHost": "Ladataan isäntää..."
   },
   "onboarding": {
     "feature_metrics": "Mittarit ja hälytykset",
@@ -255,6 +257,41 @@
     "noData": "Ei tietoja saatavilla",
     "showCurrentValue": "Näytä nykyinen arvo",
     "chartMetric": "Metrinen",
-    "metricRange": "Alue"
+    "metricRange": "Alue",
+    "host": "Isäntä",
+    "loading": "Ladataan...",
+    "metricCpu": "Suoritin",
+    "metricDisk": "Levy",
+    "metricHostname": "Isäntänimi",
+    "metricKernel": "Ydin",
+    "metricMemory": "Muisti",
+    "metricNetwork": "Verkko",
+    "metricOs": "Käyttöjärjestelmä",
+    "metricProcesses": "Prosessit",
+    "metricProcessesRunning": "juokseminen",
+    "metricProcessesTotal": "kokonais-",
+    "metricUptime": "Käyttöaika",
+    "metricsNotAvailable": "Mittareita ei ole saatavilla",
+    "noHostSelected": "Ei valittua isäntää",
+    "selectHost": "Valitse isäntä..."
+  },
+  "dashboard": {
+    "cpu": "Suoritin",
+    "ram": "RAM-muistia"
+  },
+  "dashboardTab": {
+    "disk": "Levy"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Peruuttaa",
+        "confirmRunButton": "Juokse",
+        "confirmRunMessage": "Suorittaa \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Yhdistetty"
   }
 }

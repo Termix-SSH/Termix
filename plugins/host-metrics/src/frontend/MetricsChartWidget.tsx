@@ -1,18 +1,16 @@
+import { WidgetTitle, runVisibleInterval } from "@termix/plugin-sdk/ui";
 import { useEffect, useState, useRef } from "react";
 import { TrendingUp } from "lucide-react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { useHost, useTranslation } from "@termix/plugin-sdk/frontend";
 import { MetricsChartEditForm } from "./MetricsChartEditForm";
-import type {
-  MetricsChartConfig,
-  MetricsChartMetric,
-  WidgetComponentProps,
-  WidgetTypeDefinition,
-} from "@/types/homepage-types";
-import { GRID_SIZE } from "@/types/homepage-types";
-import { getMetricsHistory, type MetricsHistoryRow } from "./host-metrics-api";
-import { getSSHHosts } from "@/api/ssh-host-management-api";
-import { WidgetTitle } from "@/features/homepage/widgets/WidgetTitle";
-import { runVisibleInterval } from "@/features/homepage/use-visible-interval";
+import {
+  GRID_SIZE,
+  type MetricsChartConfig,
+  type MetricsChartMetric,
+  type WidgetComponentProps,
+  type WidgetDefinition,
+} from "../shared/homepage.js";
+import { type MetricsHistoryRow, useHostMetricsApi } from "./host-metrics-api";
 
 function getAccentColor(): string {
   return (
@@ -119,23 +117,14 @@ function MetricsChartWidget({
   widget,
   config,
 }: WidgetComponentProps<MetricsChartConfig>) {
+  const { getMetricsHistory } = useHostMetricsApi();
   const { t } = useTranslation();
   const { hostId, metric, range, showCurrentValue } = config;
-  const [hostName, setHostName] = useState<string | null>(null);
+  const hostName = useHost(hostId || undefined)?.name ?? null;
   const [values, setValues] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
-
-  useEffect(() => {
-    if (!hostId) return;
-    getSSHHosts()
-      .then((hosts) => {
-        const h = hosts.find((x) => x.id === hostId);
-        if (h) setHostName(h.name);
-      })
-      .catch(() => {});
-  }, [hostId]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -233,7 +222,7 @@ function MetricsChartWidget({
 }
 
 /** Registered by the plugin while it runs. */
-export const metricsChartWidget: WidgetTypeDefinition<MetricsChartConfig> = {
+export const metricsChartWidget: WidgetDefinition<MetricsChartConfig> = {
   id: "metrics_chart",
   name: "Metrics Chart",
   description: "Historical CPU, memory, disk, or network chart for a host",

@@ -240,7 +240,9 @@
     "noQuickActions": "এখনো কোনো দ্রুত পদক্ষেপ নেওয়া হয়নি।",
     "buttonLabel": "বোতাম লেবেল",
     "selectSnippetPlaceholder": "স্নিপেট নির্বাচন করুন...",
-    "addActionBtn": "অ্যাকশন যোগ করুন"
+    "addActionBtn": "অ্যাকশন যোগ করুন",
+    "hostNotFound": "হোস্ট খুঁজে পাওয়া যায়নি",
+    "loadingHost": "হোস্ট লোড হচ্ছে..."
   },
   "onboarding": {
     "feature_metrics": "মেট্রিক্স এবং সতর্কতা",
@@ -255,6 +257,41 @@
     "noData": "কোন ডেটা উপলব্ধ নেই",
     "showCurrentValue": "বর্তমান মান দেখান",
     "chartMetric": "মেট্রিক",
-    "metricRange": "পরিসর"
+    "metricRange": "পরিসর",
+    "host": "হোস্ট",
+    "loading": "লোড হচ্ছে...",
+    "metricCpu": "সিপিইউ",
+    "metricDisk": "ডিস্ক",
+    "metricHostname": "হোস্টনাম",
+    "metricKernel": "কার্নেল",
+    "metricMemory": "স্মৃতি",
+    "metricNetwork": "নেটওয়ার্ক",
+    "metricOs": "ওএস",
+    "metricProcesses": "প্রক্রিয়া",
+    "metricProcessesRunning": "দৌড়ানো",
+    "metricProcessesTotal": "মোট",
+    "metricUptime": "আপটাইম",
+    "metricsNotAvailable": "মেট্রিক্স উপলব্ধ নেই",
+    "noHostSelected": "কোন হোস্ট নির্বাচন করা হয়নি",
+    "selectHost": "একজন হোস্ট নির্বাচন করুন..."
+  },
+  "dashboard": {
+    "cpu": "সিপিইউ",
+    "ram": "রাম"
+  },
+  "dashboardTab": {
+    "disk": "ডিস্ক"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "বাতিল করুন",
+        "confirmRunButton": "দৌড়",
+        "confirmRunMessage": "\"{{name}} \" চালান?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "সংযুক্ত"
   }
 }

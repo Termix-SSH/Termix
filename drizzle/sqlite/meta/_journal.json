@@ -281,6 +281,20 @@
       "when": 1790227892787,
       "tag": "0039_lively_impossible_man",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1790266378262,
+      "tag": "0040_rich_zuras",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1790266401908,
+      "tag": "0041_nosy_mystique",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ServerMetrics } from "@/main-axios";
-import type { GpuMetrics } from "@/types/stats-widgets";
+import type { ServerMetrics } from "../../src/shared/metrics.js";
+import type { GpuMetrics } from "../../src/shared/stats-widgets.js";
 import { metricsChangeKey } from "../../src/frontend/metrics-change-key";
 
 function poll(gpu: GpuMetrics): ServerMetrics {

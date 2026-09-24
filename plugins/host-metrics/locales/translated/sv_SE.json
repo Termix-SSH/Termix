@@ -240,7 +240,9 @@
     "noQuickActions": "Inga snabba åtgärder ännu.",
     "buttonLabel": "Knappetikett",
     "selectSnippetPlaceholder": "Välj utdrag...",
-    "addActionBtn": "Lägg till åtgärd"
+    "addActionBtn": "Lägg till åtgärd",
+    "hostNotFound": "Värden hittades inte",
+    "loadingHost": "Laddar värd..."
   },
   "onboarding": {
     "feature_metrics": "Mätvärden och varningar",
@@ -255,6 +257,41 @@
     "noData": "Inga data tillgängliga",
     "showCurrentValue": "Visa aktuellt värde",
     "chartMetric": "Metrisk",
-    "metricRange": "Räckvidd"
+    "metricRange": "Räckvidd",
+    "host": "Värd",
+    "loading": "Belastning...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Värdnamn",
+    "metricKernel": "Kärna",
+    "metricMemory": "Minne",
+    "metricNetwork": "Nätverk",
+    "metricOs": "operativsystem",
+    "metricProcesses": "Processer",
+    "metricProcessesRunning": "spring",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Drifttid",
+    "metricsNotAvailable": "Mätvärden är inte tillgängliga",
+    "noHostSelected": "Ingen värd vald",
+    "selectHost": "Välj en värd..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM-minne"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Avboka",
+        "confirmRunButton": "Sikt",
+        "confirmRunMessage": "Kör \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Ansluten"
   }
 }

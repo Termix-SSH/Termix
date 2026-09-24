@@ -1,60 +1,51 @@
-import type { Client } from "ssh2";
-import { pluginSsh } from "./ssh.js";
+import type { PluginSsh, PluginSshHost } from "@termix/plugin-sdk/backend";
 
-export type StatsCapableHost = {
-  connectionType?: string;
-  authType?: string;
+/** A host as ctx.ssh.resolveHost returns it, with the fields polling reads. */
+export type MetricsHost = PluginSshHost & {
+  userId: string;
+  name?: string | null;
+  connectionType?: string | null;
+  enableSsh?: boolean | null;
+  password?: string | null;
+  sudoPassword?: string | null;
+  terminalConfig?: { sudoPassword?: string | null } | null;
+  enableDocker?: boolean | null;
+  jumpHosts?: Array<{ hostId: number }> | null;
 };
 
-export type TcpPingStatsConfig = {
-  statusCheckEnabled: boolean;
-  disableTcpPing?: boolean;
-};
-
-export function supportsMetrics(host: StatsCapableHost): boolean {
+/** Metrics run over SSH, unattended, so the auth type has to allow that. */
+export function supportsMetrics(
+  host: Pick<MetricsHost, "connectionType" | "enableSsh" | "authType">,
+  ssh: Pick<PluginSsh, "supportsBackground">,
+): boolean {
   const connectionType = host.connectionType || "ssh";
-  if (connectionType !== "ssh") return false;
-  return pluginSsh().supportsBackground(host.authType || "none");
+  if (connectionType !== "ssh" && host.enableSsh !== true) return false;
+  return ssh.supportsBackground(host.authType || "none");
 }
 
-export function isTcpPingEnabled(statsConfig: TcpPingStatsConfig): boolean {
-  return statsConfig.statusCheckEnabled && !statsConfig.disableTcpPing;
+export function sudoPasswordOf(host: MetricsHost): string | undefined {
+  return host.sudoPassword || host.terminalConfig?.sudoPassword || undefined;
 }
 
-export function parseStatusHostIds(value: unknown): Set<number> | null {
-  if (value === undefined) return null;
-  if (typeof value !== "string") return new Set();
+export type ConnectionLogType = "info" | "success" | "warning" | "error";
 
-  return new Set(
-    value
-      .split(",")
-      .map(Number)
-      .filter((id) => Number.isSafeInteger(id) && id > 0),
-  );
+export interface ConnectionLog {
+  type: ConnectionLogType;
+  stage: string;
+  message: string;
+  details?: Record<string, unknown>;
 }
 
-export function tcpPingThroughJumpHost(
-  jumpClient: Pick<Client, "forwardOut" | "end">,
-  host: string,
-  port: number,
-  timeoutMs = 5000,
-): Promise<boolean> {
-  return new Promise((resolve) => {
-    let settled = false;
+/** The entry shape the connection log panel reads. */
+export function connectionLog(
+  type: ConnectionLogType,
+  stage: string,
+  message: string,
+  details?: Record<string, unknown>,
+): ConnectionLog {
+  return { type, stage, message, ...(details ? { details } : {}) };
+}
 
-    const finish = (result: boolean) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      jumpClient.end();
-      resolve(result);
-    };
-
-    const timeout = setTimeout(() => finish(false), timeoutMs);
-
-    jumpClient.forwardOut("127.0.0.1", 0, host, port, (error, stream) => {
-      stream?.destroy();
-      finish(!error && !!stream);
-    });
-  });
+export function newSessionId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }

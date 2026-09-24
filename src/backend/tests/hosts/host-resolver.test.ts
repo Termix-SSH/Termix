@@ -122,7 +122,6 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     autostartKeyPassword: null,
     jumpHosts: null,
     tunnelConnections: null,
-    statsConfig: null,
     terminalConfig: null,
     socks5ProxyChain: null,
     quickActions: null,

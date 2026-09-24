@@ -15,7 +15,6 @@ export type NewHostRecord = typeof hosts.$inferInsert;
 export type HostUpdate = Partial<Omit<NewHostRecord, "id" | "userId">>;
 export interface HostBulkUpdateState {
   id: number;
-  statsConfig: string | null;
   credentialId: number | null;
 }
 
@@ -232,7 +231,6 @@ export class HostRepository {
     return this.context.drizzle
       .select({
         id: hosts.id,
-        statsConfig: hosts.statsConfig,
         credentialId: hosts.credentialId,
       })
       .from(hosts)

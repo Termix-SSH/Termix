@@ -1,5 +1,5 @@
-import type { Express } from "express";
-import { detectPlatform } from "../../../../../src/backend/hosts/metrics-shared/platform.js";
+import { detectPlatform } from "@termix/plugin-sdk/host-commands";
+import type { Router } from "express";
 import { managerHandler } from "./route-helpers.js";
 import type { ManagerRoutesDeps } from "./types.js";
 import { registerServiceRoutes } from "./services.js";
@@ -19,10 +19,10 @@ import { registerWireGuardRoutes } from "./wireguard.js";
  * prefix on the stats app. All routes are on-demand (not polled).
  */
 export function registerManagerRoutes(
-  app: Express,
+  app: Router,
   deps: ManagerRoutesDeps,
 ): void {
-  const { validateHostId, runOnHost } = deps;
+  const { validateHostId } = deps;
 
   /**
    * @openapi
@@ -44,7 +44,7 @@ export function registerManagerRoutes(
   app.get(
     "/host-metrics/platform/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "platform_detect", (client) =>
+    managerHandler(deps, "connect", "platform_detect", (client) =>
       detectPlatform(client),
     ),
   );

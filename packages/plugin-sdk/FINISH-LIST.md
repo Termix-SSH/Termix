@@ -10,29 +10,15 @@ it's done.
   shared with host-metrics's originals. Promote a shared version into
   `@termix/plugin-sdk/ui` once a second manager-card plugin needs one, per the
   contract's "add to the SDK when a second plugin needs it" rule. Owner: D1.
-- **B3 (tailscale):** `plugins/tailscale/src/backend/host-metrics-manager.ts`
-  and `routes.ts` still resolve hosts and access through core's
-  `PermissionManager`/`resolveHostById`/`DataCrypto` by relative import
-  instead of `ctx.hosts`, which **B4** built. Same debt every other
-  host-metrics manager already carries; not new, but tailscale now carries it
-  too. Owner: host-metrics's own Phase B step (it and every manager plugin
-  convert together).
-- **B4 (fleets/host-metrics):** `src/backend/hosts/metrics-shared/` (platform
-  detection, package commands, exec-elevated) is still core's own copy, used
-  by host-metrics, which has not converted yet. `@termix/plugin-sdk/host-commands`
-  is the SDK copy fleets now uses; core's copy was left in place rather than
-  turned into a re-export, since host-metrics's own conversion step is where
-  its imports should move wholesale. Owner: host-metrics's Phase B step.
 - **B5 (proxmox):** `runAdaptivePolling` and `cn` are duplicated in
   `plugins/proxmox/src/frontend/stats/` rather than shared with core's
   `src/ui/lib/` originals. `useConnectionRetry` (the third duplicate B5 left
   here) is resolved: **B6** promoted it into `@termix/plugin-sdk/frontend`
   once file-manager became its fourth caller (after proxmox, docker,
   host-metrics, remote-desktop) and switched proxmox's own copy over too.
-  host-metrics's own conversion needs `runAdaptivePolling` for its stats tab,
-  so promote it into `@termix/plugin-sdk/frontend` (and `cn` into
-  `@termix/plugin-sdk/ui`) the next time either is touched. Owner: D1, or
-  host-metrics's Phase B step if it lands first.
+  `runAdaptivePolling` and `cn` are exported from `@termix/plugin-sdk/ui`
+  now (B9), and host-metrics uses them there (B16); only proxmox's copies are
+  left to switch. Owner: D1.
 - **B5 (proxmox):** `runDueProxmoxAutoSyncs` in
   `plugins/proxmox/src/backend/routes.ts` still reaches
   `createCurrentPluginSettingsRepository`/`createCurrentHostRepository` by
@@ -102,8 +88,9 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `logActivity` is a core `@/main-axios` call and the plugin imports nothing
   from `@/`. Old "tunnel" entries still reopen the tab through the plugin's
   `activityTypes`. An `app.logActivity` (or equivalent bridge member) would
-  restore it for this plugin and let docker, file-manager and host-metrics drop
-  their own `@/main-axios` import for it too. Owner: D1.
+  restore it for this plugin and let docker and file-manager drop their own
+  `@/main-axios` import for it too (host-metrics uses the `logActivity` the
+  ui entry exports). Owner: D1.
 - **B7 (tunnels):** on the desktop app, tunnel statuses from a connected
   remote server are no longer merged into the tab: the old code polled the
   remote tunnel service through `getRemoteTunnelApi()`, and the SDK has no
@@ -345,6 +332,46 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `@termix/plugin-sdk/ui`), workspaces included. `npm run type-check` covers
   plugins through `tsconfig.plugins*.json` and passes. Owner: D0.
 
+- **B16 (host-metrics):** automations still sets up its headless viewers
+  through `setViewerRegistry` in `plugins/automations/src/backend/headless-viewer.ts`,
+  which nothing calls any more, so hosts an automation watches are only
+  sampled while somebody has them open. Switch it to the
+  `host-metrics.viewers` service (`register(hostId)` as the automation's
+  owner, `heartbeat`, `unregister`) and make host-metrics an optional
+  dependency again. Its triggers already listen to the final topics
+  (`plugin.host-metrics.snapshot`, `plugin.host-metrics.health-check`, core
+  `host.status`, `host.login`), but through core's bus by relative import
+  instead of `ctx.events`. Owner: B17.
+- **B16 (host-metrics):** Termix-Mobile read `statsConfig` on each host
+  (`statusCheckEnabled`, `enabledWidgets`) and the host status from the
+  metrics API. The host payload now carries `statusCheckEnabled` and
+  `statusCheckInterval` at the top level, the metrics options under
+  `pluginSettings["host-metrics"]`, and statuses come from `GET /host/status`.
+  The mobile app needs the matching change, or the host payload a
+  `statsConfig` built from those fields for one release. Owner: D1.
+- **B16 (host-metrics):** a host's status is only checked once its owner has
+  asked for statuses (opened the app) since the server started: a user who
+  only has a host shared with them sees no dot for it until then. This was
+  already true before B16 (the first user to load the host list started
+  polling for their own hosts only). Starting checks for the owners of every
+  host a requester can see would fix it. Owner: D1.
+- **B16 (host-metrics):** the host JSON export does not carry host-metrics's
+  host settings (it did carry `statsConfig`); import reads both the old
+  `statsConfig` and `pluginSettings["host-metrics"]` through the plugin's
+  import normalizer. Same gap as the B7 line about exporting plugin host
+  settings generically. Owner: D1.
+- **B16 (host-metrics):** the CPU and network collectors keep their last
+  sample per host in module-level maps (`widgets/cpu-collector.ts`,
+  `widgets/network-collector.ts`) to compute rates. The poller clears them on
+  deactivate and per host, so nothing leaks, but they are still module state
+  rather than per-activation. Owner: D1.
+- **Pre-existing, found in B16:** automations
+  `tests/backend/tunnels.test.ts` fails "fails the step cleanly while the
+  tunnels plugin is off": it expects "tunnels plugin is not available" and
+  gets "tunnels.start is not a function". Same cause as the tunnels line
+  above: since B12 `ctx.services.get` hands back an empty handle instead of
+  throwing, so the step has to check `typeof start`. Owner: B17 or D0.
+
 ## Manual checks after 2.9.0
 
 - SSH terminal: password auth, key auth (and an encrypted key's passphrase
@@ -362,6 +389,16 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   off records nothing, retention prunes an old recording on schedule, a guacd
   RDP/VNC/Telnet recording still gets a row and plays back, and deleting a
   user anonymizes their recordings instead of removing them.
+- Host status and metrics: on a 2.8 database, hosts whose status checks were
+  off stay off and a custom interval survives; the host list dot goes
+  reachable, then online once the Host Metrics tab or a terminal logs in;
+  an RDP-only host on a custom port shows online; the metrics tab, the
+  dashboard host bars, the homepage host status widget, the metrics chart
+  widget, the terminal toolbar bars and the file manager's disk bar; a
+  manager card (services, packages) and a health check; TOTP on the metrics
+  connect; the admin metrics interval, history retention and new-host default;
+  the temperature unit; disabling host metrics leaves every other plugin's
+  SSH working, then enabling it again.
 - Remote desktop: an RDP, a VNC and a Telnet host; a host behind one jump
   host (tunnels plugin on and off) and behind a chain of two; macOS Screen
   Sharing over VNC with no username; RDP recording (and none with

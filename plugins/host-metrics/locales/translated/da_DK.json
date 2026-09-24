@@ -240,7 +240,9 @@
     "noQuickActions": "Ingen hurtige handlinger endnu.",
     "buttonLabel": "Knapmærke",
     "selectSnippetPlaceholder": "Vælg uddrag...",
-    "addActionBtn": "Tilføj handling"
+    "addActionBtn": "Tilføj handling",
+    "hostNotFound": "Værten blev ikke fundet",
+    "loadingHost": "Indlæser vært..."
   },
   "onboarding": {
     "feature_metrics": "Målinger og advarsler",
@@ -255,6 +257,41 @@
     "noData": "Ingen data tilgængelige",
     "showCurrentValue": "Vis aktuel værdi",
     "chartMetric": "Metrisk",
-    "metricRange": "Rækkevidde"
+    "metricRange": "Rækkevidde",
+    "host": "Vært",
+    "loading": "Indlæser...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Værtsnavn",
+    "metricKernel": "Kernen",
+    "metricMemory": "Hukommelse",
+    "metricNetwork": "Netværk",
+    "metricOs": "OS",
+    "metricProcesses": "Processer",
+    "metricProcessesRunning": "løb",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Oppetid",
+    "metricsNotAvailable": "Målinger er ikke tilgængelige",
+    "noHostSelected": "Ingen vært valgt",
+    "selectHost": "Vælg en vært..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "VÆDDER"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Ophæve",
+        "confirmRunButton": "Løbe",
+        "confirmRunMessage": "Kør \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Forbundet"
   }
 }

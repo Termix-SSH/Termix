@@ -240,7 +240,9 @@
     "noQuickActions": "Belum ada tindakan cepat.",
     "buttonLabel": "Label tombol",
     "selectSnippetPlaceholder": "Pilih cuplikan...",
-    "addActionBtn": "Tambahkan Tindakan"
+    "addActionBtn": "Tambahkan Tindakan",
+    "hostNotFound": "Host tidak ditemukan",
+    "loadingHost": "Memuat host..."
   },
   "onboarding": {
     "feature_metrics": "Metrik dan peringatan",
@@ -255,6 +257,41 @@
     "noData": "Tidak ada data yang tersedia",
     "showCurrentValue": "Tampilkan Nilai Saat Ini",
     "chartMetric": "Metrik",
-    "metricRange": "Jangkauan"
+    "metricRange": "Jangkauan",
+    "host": "Tuan rumah",
+    "loading": "Memuat...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Nama host",
+    "metricKernel": "Inti",
+    "metricMemory": "Ingatan",
+    "metricNetwork": "Jaringan",
+    "metricOs": "Sistem Operasi",
+    "metricProcesses": "Proses",
+    "metricProcessesRunning": "berlari",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Waktu aktif",
+    "metricsNotAvailable": "Metrik tidak tersedia",
+    "noHostSelected": "Tidak ada pembawa acara yang dipilih.",
+    "selectHost": "Pilih tuan rumah..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Membatalkan",
+        "confirmRunButton": "Berlari",
+        "confirmRunMessage": "Jalankan \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Terhubung"
   }
 }

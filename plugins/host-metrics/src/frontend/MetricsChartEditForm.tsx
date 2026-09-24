@@ -1,13 +1,11 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { Select2 } from "@termix/plugin-sdk/ui";
+import { useHosts, useTranslation } from "@termix/plugin-sdk/frontend";
 import type {
   MetricsChartConfig,
   MetricsChartMetric,
   MetricsChartRange,
   WidgetEditFormProps,
-} from "@/types/homepage-types";
-import { getSSHHosts } from "@/api/ssh-host-management-api";
-import { Select2 } from "@/components/select2";
+} from "../shared/homepage.js";
 
 const METRICS: { id: MetricsChartMetric; label: string }[] = [
   { id: "cpu", label: "CPU" },
@@ -29,13 +27,11 @@ export function MetricsChartEditForm({
   onChange,
 }: WidgetEditFormProps<MetricsChartConfig>) {
   const { t } = useTranslation();
-  const [hosts, setHosts] = useState<{ id: number; name: string }[]>([]);
-
-  useEffect(() => {
-    getSSHHosts()
-      .then((h) => setHosts(h.map((x) => ({ id: x.id, name: x.name }))))
-      .catch(() => {});
-  }, []);
+  const { hosts: records } = useHosts();
+  const hosts = records.map((host) => ({
+    id: Number(host.id),
+    name: host.name,
+  }));
 
   return (
     <div className="flex flex-col gap-3">

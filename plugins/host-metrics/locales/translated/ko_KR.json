@@ -240,7 +240,9 @@
     "noQuickActions": "아직 빠른 작업이 없습니다.",
     "buttonLabel": "버튼 레이블",
     "selectSnippetPlaceholder": "스니펫 선택...",
-    "addActionBtn": "작업 추가"
+    "addActionBtn": "작업 추가",
+    "hostNotFound": "호스트를 찾을 수 없습니다",
+    "loadingHost": "호스트 로드 중..."
   },
   "onboarding": {
     "feature_metrics": "지표 및 알림",
@@ -255,6 +257,41 @@
     "noData": "데이터 없음",
     "showCurrentValue": "현재 값 표시",
     "chartMetric": "메트릭",
-    "metricRange": "범위"
+    "metricRange": "범위",
+    "host": "호스트",
+    "loading": "로딩 중...",
+    "metricCpu": "CPU",
+    "metricDisk": "디스크",
+    "metricHostname": "호스트명",
+    "metricKernel": "커널",
+    "metricMemory": "메모리",
+    "metricNetwork": "네트워크",
+    "metricOs": "OS",
+    "metricProcesses": "프로세스",
+    "metricProcessesRunning": "실행 중",
+    "metricProcessesTotal": "전체",
+    "metricUptime": "업타임",
+    "metricsNotAvailable": "메트릭을 사용할 수 없습니다",
+    "noHostSelected": "선택된 호스트 없음",
+    "selectHost": "호스트 선택..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "디스크"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "취소",
+        "confirmRunButton": "실행",
+        "confirmRunMessage": "\"{{name}}\"을(를) 실행하시겠습니까?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "연결됨"
   }
 }

@@ -240,7 +240,9 @@
     "noQuickActions": "لا توجد إجراءات سريعة بعد.",
     "buttonLabel": "تسمية الزر",
     "selectSnippetPlaceholder": "اختر مقتطفًا...",
-    "addActionBtn": "إضافة إجراء"
+    "addActionBtn": "إضافة إجراء",
+    "hostNotFound": "المضيف غير موجود",
+    "loadingHost": "جارٍ تحميل المضيف..."
   },
   "onboarding": {
     "feature_metrics": "المقاييس والتنبيهات",
@@ -255,6 +257,41 @@
     "noData": "لا توجد بيانات",
     "showCurrentValue": "إظهار القيمة الحالية",
     "chartMetric": "المقياس",
-    "metricRange": "النطاق"
+    "metricRange": "النطاق",
+    "host": "المضيف",
+    "loading": "جار التحميل...",
+    "metricCpu": "CPU",
+    "metricDisk": "القرص",
+    "metricHostname": "اسم المضيف",
+    "metricKernel": "النواة",
+    "metricMemory": "الذاكرة",
+    "metricNetwork": "الشبكة",
+    "metricOs": "نظام التشغيل",
+    "metricProcesses": "العمليات",
+    "metricProcessesRunning": "قيد التشغيل",
+    "metricProcessesTotal": "إجمالي",
+    "metricUptime": "وقت التشغيل",
+    "metricsNotAvailable": "المقاييس غير متوفرة",
+    "noHostSelected": "لم يتم تحديد أي مضيف",
+    "selectHost": "اختيار مضيف..."
+  },
+  "dashboard": {
+    "cpu": "المعالج",
+    "ram": "الذاكرة"
+  },
+  "dashboardTab": {
+    "disk": "القرص"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "إلغاء",
+        "confirmRunButton": "تشغيل",
+        "confirmRunMessage": "تشغيل \"{{name}}\"؟"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "متصل"
   }
 }

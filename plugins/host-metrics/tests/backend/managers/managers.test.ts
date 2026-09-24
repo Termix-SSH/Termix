@@ -2,8 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   buildSudoCommand,
   shellSingleQuote,
-} from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
-import { parsePlatformProbe } from "../../../../../src/backend/hosts/metrics-shared/platform.js";
+  parsePlatformProbe,
+  buildPackageActionCommand,
+  parseUpgradable,
+  buildListUpgradableCommand,
+} from "@termix/plugin-sdk/host-commands";
 import {
   isValidSystemdUnit,
   isValidPid,
@@ -15,7 +18,7 @@ import {
   isValidSignal,
   isValidServiceAction,
   isAllowedPath,
-} from "../../../../../src/backend/hosts/metrics-shared/validation.js";
+} from "../../../src/backend/managers/validation.js";
 import {
   parseServiceList,
   buildServiceActionCommand,
@@ -34,11 +37,6 @@ import {
   isValidCronSchedule,
   buildApplyCrontabCommand,
 } from "../../../src/backend/managers/cron.js";
-import {
-  buildPackageActionCommand,
-  parseUpgradable,
-  buildListUpgradableCommand,
-} from "../../../../../src/backend/hosts/metrics-shared/package-commands.js";
 import {
   buildIssueCommand,
   buildRenewCommand,

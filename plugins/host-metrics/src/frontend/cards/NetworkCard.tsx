@@ -1,10 +1,13 @@
+import {
+  MetricCard,
+  LineChart,
+  type LineChartSeries,
+} from "@termix/plugin-sdk/ui";
+import { type ServerMetrics } from "../../shared/metrics.js";
 import { useState, useEffect } from "react";
 import { Cable, Container, Network, Wifi, WifiOff } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { ServerMetrics } from "@/main-axios";
-import { MetricCard } from "@/components/metric-card";
-import { LineChart, type LineChartSeries } from "@/components/charts/LineChart";
-import { getMetricsHistory, type MetricsHistoryRow } from "../host-metrics-api";
+import { type MetricsHistoryRow, useHostMetricsApi } from "../host-metrics-api";
 import { CardTimeTabs, type HistoryTab } from "./CardTimeTabs";
 
 function ifaceIcon(name: string) {
@@ -65,6 +68,7 @@ export function NetworkCard({
   metrics: ServerMetrics | null;
   hostId: number | null;
 }) {
+  const { getMetricsHistory } = useHostMetricsApi();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<HistoryTab>("live");
   const [rows, setRows] = useState<MetricsHistoryRow[] | null>(null);

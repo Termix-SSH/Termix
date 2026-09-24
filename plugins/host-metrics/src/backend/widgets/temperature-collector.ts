@@ -1,8 +1,6 @@
+import { execCommand } from "@termix/plugin-sdk/host-commands";
+import { toFixedNum } from "../util.js";
 import type { Client } from "ssh2";
-import {
-  execCommand,
-  toFixedNum,
-} from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
 
 export interface TemperatureSensor {
   label: string;

@@ -240,7 +240,9 @@
     "noQuickActions": "ยังไม่มีการดำเนินการใดๆ อย่างเร่งด่วนในขณะนี้",
     "buttonLabel": "ป้ายกำกับปุ่ม",
     "selectSnippetPlaceholder": "เลือกส่วนย่อย...",
-    "addActionBtn": "เพิ่มการดำเนินการ"
+    "addActionBtn": "เพิ่มการดำเนินการ",
+    "hostNotFound": "ไม่พบโฮสต์",
+    "loadingHost": "กำลังโหลดโฮสต์..."
   },
   "onboarding": {
     "feature_metrics": "ตัวชี้วัดและการแจ้งเตือน",
@@ -255,6 +257,41 @@
     "noData": "ไม่มีข้อมูล",
     "showCurrentValue": "แสดงมูลค่าปัจจุบัน",
     "chartMetric": "เมตริก",
-    "metricRange": "พิสัย"
+    "metricRange": "พิสัย",
+    "host": "เจ้าภาพ",
+    "loading": "กำลังโหลด...",
+    "metricCpu": "ซีพียู",
+    "metricDisk": "ดิสก์",
+    "metricHostname": "ชื่อโฮสต์",
+    "metricKernel": "เคอร์เนล",
+    "metricMemory": "หน่วยความจำ",
+    "metricNetwork": "เครือข่าย",
+    "metricOs": "โอเอส",
+    "metricProcesses": "กระบวนการ",
+    "metricProcessesRunning": "วิ่ง",
+    "metricProcessesTotal": "ทั้งหมด",
+    "metricUptime": "เวลาใช้งาน",
+    "metricsNotAvailable": "ข้อมูลตัวชี้วัดไม่พร้อมใช้งาน",
+    "noHostSelected": "ไม่ได้เลือกโฮสต์",
+    "selectHost": "เลือกโฮสต์..."
+  },
+  "dashboard": {
+    "cpu": "ซีพียู",
+    "ram": "แรม"
+  },
+  "dashboardTab": {
+    "disk": "ดิสก์"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "ยกเลิก",
+        "confirmRunButton": "วิ่ง",
+        "confirmRunMessage": "เรียกใช้ \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "เชื่อมต่อแล้ว"
   }
 }

@@ -1,13 +1,13 @@
-import { ChevronDown, Check } from "lucide-react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { DiskFilesystem } from "@/main-axios";
-import { cn } from "@/lib/utils";
 import {
+  cn,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@/components/dropdown-menu";
+} from "@termix/plugin-sdk/ui";
+import { type DiskFilesystem } from "../../shared/metrics.js";
+import { ChevronDown, Check } from "lucide-react";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
 
 export function FilesystemPicker({
   filesystems,

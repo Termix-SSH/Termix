@@ -5,7 +5,7 @@ import {
   isMetricCardId,
   isManagerCardId,
   METRIC_CARD_IDS,
-} from "../../../../src/types/host-metrics.js";
+} from "../../src/shared/host-metrics.js";
 
 describe("deriveEnabledWidgets", () => {
   it("returns only metric ids, in canonical order, deduped", () => {

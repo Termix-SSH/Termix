@@ -1,5 +1,3 @@
-import type { ServerMetrics } from "@/main-axios";
-
 /**
  * Coarse fingerprint of a metrics poll. Adaptive polling backs off while it
  * stays the same, so it must move whenever something a card shows changes.
@@ -22,3 +20,4 @@ export function metricsChangeKey(data: ServerMetrics): string {
     gpuProcesses: data.gpu?.processes?.length ?? 0,
   });
 }
+import { type ServerMetrics } from "../shared/metrics.js";

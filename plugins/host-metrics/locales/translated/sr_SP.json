@@ -240,7 +240,9 @@
     "noQuickActions": "Још нема брзих акција.",
     "buttonLabel": "Ознака дугмета",
     "selectSnippetPlaceholder": "Изаберите исечак...",
-    "addActionBtn": "Додај акцију"
+    "addActionBtn": "Додај акцију",
+    "hostNotFound": "Хост није пронађен",
+    "loadingHost": "Учитавање хоста..."
   },
   "onboarding": {
     "feature_metrics": "Метрике и упозорења",
@@ -255,6 +257,41 @@
     "noData": "Нема доступних података",
     "showCurrentValue": "Прикажи тренутну вредност",
     "chartMetric": "Метрика",
-    "metricRange": "Домет"
+    "metricRange": "Домет",
+    "host": "Домаћин",
+    "loading": "Учитавање...",
+    "metricCpu": "Процесор",
+    "metricDisk": "Диск",
+    "metricHostname": "Име хоста",
+    "metricKernel": "Језгро",
+    "metricMemory": "Памћење",
+    "metricNetwork": "Мрежа",
+    "metricOs": "ОС",
+    "metricProcesses": "Процеси",
+    "metricProcessesRunning": "трчање",
+    "metricProcessesTotal": "укупно",
+    "metricUptime": "Време непрекидног рада",
+    "metricsNotAvailable": "Метрике нису доступне",
+    "noHostSelected": "Није изабран домаћин",
+    "selectHost": "Изаберите хост..."
+  },
+  "dashboard": {
+    "cpu": "Процесор",
+    "ram": "РАМ меморија"
+  },
+  "dashboardTab": {
+    "disk": "Диск"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Откажи",
+        "confirmRunButton": "Трчи",
+        "confirmRunMessage": "Покрени „{{name}}“?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Повезано"
   }
 }

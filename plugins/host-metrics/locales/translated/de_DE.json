@@ -240,7 +240,9 @@
     "noQuickActions": "Noch keine Schnellaktionen.",
     "buttonLabel": "Schaltflächenbeschriftung",
     "selectSnippetPlaceholder": "Snippet auswählen...",
-    "addActionBtn": "Aktion hinzufügen"
+    "addActionBtn": "Aktion hinzufügen",
+    "hostNotFound": "Host nicht gefunden",
+    "loadingHost": "Host wird geladen..."
   },
   "onboarding": {
     "feature_metrics": "Kennzahlen und Warnmeldungen",
@@ -255,6 +257,41 @@
     "noData": "Keine Daten verfügbar",
     "showCurrentValue": "Aktuellen Wert anzeigen",
     "chartMetric": "Metrik",
-    "metricRange": "Bereich"
+    "metricRange": "Bereich",
+    "host": "Host",
+    "loading": "Wird geladen...",
+    "metricCpu": "CPU",
+    "metricDisk": "Festplatte",
+    "metricHostname": "Hostname",
+    "metricKernel": "Kernel",
+    "metricMemory": "Arbeitsspeicher",
+    "metricNetwork": "Netzwerk",
+    "metricOs": "Betriebssystem",
+    "metricProcesses": "Prozesse",
+    "metricProcessesRunning": "laufend",
+    "metricProcessesTotal": "gesamt",
+    "metricUptime": "Betriebszeit",
+    "metricsNotAvailable": "Metriken nicht verfügbar",
+    "noHostSelected": "Kein Host ausgewählt",
+    "selectHost": "Host auswählen..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Datenträger"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Abbrechen",
+        "confirmRunButton": "Ausführen",
+        "confirmRunMessage": "„{{name}}“ ausführen?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Verbunden"
   }
 }

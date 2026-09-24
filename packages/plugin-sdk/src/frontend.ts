@@ -695,6 +695,16 @@ export interface PluginHostBridge {
     id: string,
   ) => ComponentType<Record<string, unknown>> | undefined;
   hostProtocols: (host: PluginHostRecord) => string[];
+  useHostStatus: (hostId: number | undefined) => HostStatusInfo | null;
+}
+
+/**
+ * Core's status for a host, the one behind the host list's dot. online: a
+ * login worked. reachable: the port answers. unknown: not checked yet.
+ */
+export interface HostStatusInfo {
+  status: "online" | "reachable" | "offline" | "unknown";
+  reason?: "host_key_changed";
 }
 
 let host: PluginHostBridge | null = null;
@@ -763,6 +773,17 @@ export function useHost(
 
 export function useHosts(): { hosts: PluginHostRecord[]; loaded: boolean } {
   return requireHost().useHosts();
+}
+
+/**
+ * Core's status for one host, kept current by the shell's own polling. Null
+ * outside the app shell (a standalone window) and for hosts with status
+ * checks off.
+ */
+export function useHostStatus(
+  hostId: number | undefined,
+): HostStatusInfo | null {
+  return requireHost().useHostStatus(hostId);
 }
 
 export function useCurrentUser(): CurrentUser | null {

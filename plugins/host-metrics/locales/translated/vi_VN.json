@@ -240,7 +240,9 @@
     "noQuickActions": "Chưa có hành động nhanh nào.",
     "buttonLabel": "Nhãn nút",
     "selectSnippetPlaceholder": "Chọn đoạn mã...",
-    "addActionBtn": "Thêm hành động"
+    "addActionBtn": "Thêm hành động",
+    "hostNotFound": "Không tìm thấy máy chủ",
+    "loadingHost": "Đang tải máy chủ..."
   },
   "onboarding": {
     "feature_metrics": "Số liệu và cảnh báo",
@@ -255,6 +257,41 @@
     "noData": "Không có dữ liệu",
     "showCurrentValue": "Hiển thị giá trị hiện tại",
     "chartMetric": "Chỉ số",
-    "metricRange": "Phạm vi"
+    "metricRange": "Phạm vi",
+    "host": "Máy chủ",
+    "loading": "Đang tải...",
+    "metricCpu": "CPU",
+    "metricDisk": "Đĩa",
+    "metricHostname": "Tên máy chủ",
+    "metricKernel": "Nhân",
+    "metricMemory": "Bộ nhớ",
+    "metricNetwork": "Mạng",
+    "metricOs": "Hệ điều hành",
+    "metricProcesses": "Tiến trình",
+    "metricProcessesRunning": "đang chạy",
+    "metricProcessesTotal": "tổng",
+    "metricUptime": "Thời gian hoạt động",
+    "metricsNotAvailable": "Chỉ số không khả dụng",
+    "noHostSelected": "Chưa chọn máy chủ",
+    "selectHost": "Chọn máy chủ..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Ổ đĩa"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Hủy",
+        "confirmRunButton": "Chạy",
+        "confirmRunMessage": "Chạy \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Đã kết nối"
   }
 }

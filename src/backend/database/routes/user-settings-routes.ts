@@ -32,7 +32,6 @@ export type HostDefaults = {
   socks5Username?: string;
   socks5Password?: string;
   credentialId?: number | null;
-  metricsEnabled?: boolean;
   statusCheckEnabled?: boolean;
   fontSize?: number;
   fontFamily?: string;

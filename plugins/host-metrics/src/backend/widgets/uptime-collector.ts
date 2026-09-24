@@ -1,9 +1,9 @@
-import type { Client } from "ssh2";
 import {
   execCommand,
   execPowerShell,
   type HostPlatform,
-} from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
+} from "@termix/plugin-sdk/host-commands";
+import type { Client } from "ssh2";
 
 function formatUptime(uptimeSeconds: number): string {
   const days = Math.floor(uptimeSeconds / 86400);

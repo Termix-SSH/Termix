@@ -282,29 +282,9 @@ export function createHostEditorForm(
     telnetAuthType: (host?.telnetAuthType ??
       (host?.telnetCredentialId ? "credential" : "direct")) as
       "direct" | "credential",
-    statsConfig: host?.statsConfig ?? {
-      statusCheckEnabled: d?.statusCheckEnabled ?? true,
-      statusCheckInterval: 60,
-      useGlobalStatusInterval: true,
-      metricsEnabled: d?.metricsEnabled ?? true,
-      metricsInterval: 30,
-      useGlobalMetricsInterval: true,
-      enabledWidgets: [
-        "cpu",
-        "memory",
-        "disk",
-        "network",
-        "uptime",
-        "system",
-        "login_stats",
-        "processes",
-        "ports",
-        "firewall",
-        "temperature",
-      ],
-      excludedMounts: [] as string[],
-      monitoredMounts: [] as Array<{ path: string; label?: string }>,
-    },
+    statusCheckEnabled:
+      host?.statusCheckEnabled ?? d?.statusCheckEnabled ?? true,
+    statusCheckInterval: (host?.statusCheckInterval ?? null) as number | null,
 
     // Host-scope plugin settings, keyed by plugin id. Loaded with the host and
     // saved through the plugin's own scoped route, not in the host payload.
@@ -546,7 +526,8 @@ export function buildHostEditorPayload(
       name: a.name,
       snippetId: Number(a.snippetId),
     })),
-    statsConfig: form.statsConfig,
+    statusCheckEnabled: form.statusCheckEnabled,
+    statusCheckInterval: form.statusCheckInterval,
     terminalConfig: protocols.enableSsh ? terminalOverrides : null,
   };
 }

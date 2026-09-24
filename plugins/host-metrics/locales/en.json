@@ -182,7 +182,8 @@
       "wgLastHandshake": "Last handshake",
       "wgHandshakeNever": "Never",
       "wgTransfer": "Transfer"
-    }
+    },
+    "snippetsUnavailable": "The Snippets plugin is off, so quick actions cannot run."
   },
   "metricsHistory": {
     "title": "Metrics History",
@@ -223,7 +224,9 @@
     "noQuickActions": "No quick actions yet.",
     "buttonLabel": "Button label",
     "selectSnippetPlaceholder": "Select snippet...",
-    "addActionBtn": "Add Action"
+    "addActionBtn": "Add Action",
+    "hostNotFound": "Host not found",
+    "loadingHost": "Loading host..."
   },
   "onboarding": {
     "feature_metrics": "Metrics and alerts",
@@ -238,9 +241,91 @@
     "noData": "No data available",
     "showCurrentValue": "Show Current Value",
     "chartMetric": "Metric",
-    "metricRange": "Range"
+    "metricRange": "Range",
+    "host": "Host",
+    "loading": "Loading...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Hostname",
+    "metricKernel": "Kernel",
+    "metricMemory": "Memory",
+    "metricNetwork": "Network",
+    "metricOs": "OS",
+    "metricProcesses": "Processes",
+    "metricProcessesRunning": "running",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Uptime",
+    "metricsNotAvailable": "Metrics not available",
+    "noHostSelected": "No host selected",
+    "selectHost": "Select a host..."
   },
   "terminalStatus": {
     "unavailable": "Live stats unavailable"
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Cancel",
+        "confirmRunButton": "Run",
+        "confirmRunMessage": "Run \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Connected"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Host Metrics",
+      "description": "View host metrics and use the host managers (services, packages, firewall and more) on hosts you can reach."
+    }
+  },
+  "settings": {
+    "admin": {
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)",
+        "description": "How often a host being viewed is sampled, unless the host sets its own interval."
+      },
+      "historyRetentionDays": {
+        "label": "History retention (days)",
+        "description": "How long metrics samples are kept for the history charts."
+      },
+      "enabledForNewHosts": {
+        "label": "Metrics on for new hosts",
+        "description": "Whether new hosts start with metrics collection turned on."
+      }
+    },
+    "user": {
+      "temperatureUnit": {
+        "label": "Temperature unit",
+        "description": "How temperatures are shown in Host Metrics.",
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    },
+    "host": {
+      "metricsEnabled": {
+        "label": "Collect metrics"
+      },
+      "metricsInterval": {
+        "label": "Metrics interval (seconds)"
+      },
+      "enabledWidgets": {
+        "label": "Enabled widgets"
+      },
+      "excludedMounts": {
+        "label": "Excluded mounts"
+      },
+      "monitoredMounts": {
+        "label": "Monitored paths"
+      }
+    }
   }
 }

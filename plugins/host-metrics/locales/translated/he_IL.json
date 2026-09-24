@@ -240,7 +240,9 @@
     "noQuickActions": "אין עדיין פעולות מהירות.",
     "buttonLabel": "תווית כפתור",
     "selectSnippetPlaceholder": "בחר קטע...",
-    "addActionBtn": "הוסף פעולה"
+    "addActionBtn": "הוסף פעולה",
+    "hostNotFound": "המארח לא נמצא",
+    "loadingHost": "טוען מארח..."
   },
   "onboarding": {
     "feature_metrics": "מדדים והתראות",
@@ -255,6 +257,41 @@
     "noData": "אין נתונים זמינים",
     "showCurrentValue": "הצג ערך נוכחי",
     "chartMetric": "מֶטרִי",
-    "metricRange": "לָנוּעַ"
+    "metricRange": "לָנוּעַ",
+    "host": "מְאָרֵחַ",
+    "loading": "טְעִינָה...",
+    "metricCpu": "מעבד",
+    "metricDisk": "דִיסק",
+    "metricHostname": "שם מארח",
+    "metricKernel": "גַרעִין",
+    "metricMemory": "זֵכֶר",
+    "metricNetwork": "רֶשֶׁת",
+    "metricOs": "מערכת הפעלה",
+    "metricProcesses": "תהליכים",
+    "metricProcessesRunning": "רִיצָה",
+    "metricProcessesTotal": "סַך הַכֹּל",
+    "metricUptime": "זמן פעולה",
+    "metricsNotAvailable": "מדדים אינם זמינים",
+    "noHostSelected": "לא נבחר מארח",
+    "selectHost": "בחר מארח..."
+  },
+  "dashboard": {
+    "cpu": "מעבד",
+    "ram": "אַיִל"
+  },
+  "dashboardTab": {
+    "disk": "דִיסק"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "לְבַטֵל",
+        "confirmRunButton": "לָרוּץ",
+        "confirmRunMessage": "להפעיל את \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "מְחוּבָּר"
   }
 }

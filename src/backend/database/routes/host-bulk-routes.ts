@@ -292,6 +292,8 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableTerminalToolbar = updates.enableTerminalToolbar;
         if (typeof updates.enableAiAssistant === "boolean")
           simpleUpdates.enableAiAssistant = updates.enableAiAssistant;
+        if (typeof updates.statusCheckEnabled === "boolean")
+          simpleUpdates.statusCheckEnabled = updates.statusCheckEnabled;
 
         if (Object.keys(simpleUpdates).length > 0) {
           await hostRepository.updateManyForUser(
@@ -299,22 +301,6 @@ export function registerHostBulkRoutes(
             ownedIds,
             simpleUpdates,
           );
-        }
-
-        if (updates.statsConfig && typeof updates.statsConfig === "object") {
-          for (const host of ownedHosts) {
-            try {
-              const existing = host.statsConfig
-                ? JSON.parse(host.statsConfig as string)
-                : {};
-              const merged = { ...existing, ...updates.statsConfig };
-              await hostRepository.updateForUser(userId, host.id, {
-                statsConfig: JSON.stringify(merged),
-              });
-            } catch {
-              errors.push(`Failed to update statsConfig for host ${host.id}`);
-            }
-          }
         }
 
         // Proxmox enable/disable now lives in the proxmox plugin's own
@@ -784,9 +770,7 @@ export function registerHostBulkRoutes(
             quickActions: hostData.quickActions
               ? JSON.stringify(hostData.quickActions)
               : null,
-            statsConfig: hostData.statsConfig
-              ? JSON.stringify(hostData.statsConfig)
-              : null,
+            ...importedStatusCheck(hostData as Record<string, unknown>),
             dockerConfig: hostData.dockerConfig
               ? JSON.stringify(hostData.dockerConfig)
               : null,
@@ -1048,7 +1032,8 @@ export function registerHostBulkRoutes(
               ? JSON.stringify(hostData.jumpHosts)
               : null,
             quickActions: null,
-            statsConfig: null,
+            statusCheckEnabled: true,
+            statusCheckInterval: null,
             dockerConfig: null,
             terminalConfig: null,
             forceKeyboardInteractive: "false",
@@ -1098,4 +1083,30 @@ export function registerHostBulkRoutes(
       });
     },
   );
+}
+
+/**
+ * Status check fields from an import row. Exports from before 2.9.0 carried
+ * them inside statsConfig.
+ */
+function importedStatusCheck(raw: Record<string, unknown>): {
+  statusCheckEnabled: boolean;
+  statusCheckInterval: number | null;
+} {
+  const legacy =
+    raw.statsConfig && typeof raw.statsConfig === "object"
+      ? (raw.statsConfig as Record<string, unknown>)
+      : {};
+  const enabled = raw.statusCheckEnabled ?? legacy.statusCheckEnabled;
+  const useGlobal = legacy.useGlobalStatusInterval !== false;
+  const interval =
+    raw.statusCheckInterval ?? (useGlobal ? null : legacy.statusCheckInterval);
+  const seconds = Number(interval);
+  return {
+    statusCheckEnabled: enabled !== false && legacy.disableTcpPing !== true,
+    statusCheckInterval:
+      interval != null && Number.isInteger(seconds) && seconds >= 5
+        ? seconds
+        : null,
+  };
 }

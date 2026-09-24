@@ -4,7 +4,7 @@ import {
 } from "../../../../../src/backend/database/repositories/factory.js";
 import { validateDefinition } from "../../../../automations/src/backend/routes.js";
 import { resolveHostById } from "../../../../../src/backend/hosts/host-resolver.js";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
+import { execCommand } from "@termix/plugin-sdk/host-commands";
 import { withSshConnection } from "../ssh.js";
 import { getTool } from "./catalog.js";
 import {

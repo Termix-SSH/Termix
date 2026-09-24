@@ -15,9 +15,6 @@ import { DismissedAlertRepository } from "./dismissed-alert-repository.js";
 import { HomepageItemRepository } from "./homepage-item-repository.js";
 import { HomepageLayoutRepository } from "./homepage-layout-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
-import { HostHealthRepository } from "./host-health-repository.js";
-import { HostMetricsHistoryRepository } from "./host-metrics-history-repository.js";
-import { HostMetricsPreferenceRepository } from "./host-metrics-preference-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
 import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repository.js";
@@ -227,31 +224,6 @@ export function createCurrentHostFolderRepository(): HostFolderRepository {
   return new HostFolderRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("host_folder_repository_write"),
-  );
-}
-
-export function createCurrentHostHealthRepository(): HostHealthRepository {
-  return new HostHealthRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("host_health_repository_write"),
-  );
-}
-
-export function createCurrentHostMetricsHistoryRepository(): HostMetricsHistoryRepository {
-  return new HostMetricsHistoryRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryLazyWriteHook(
-      "host_metrics_history_repository_write",
-    ),
-  );
-}
-
-export function createCurrentHostMetricsPreferenceRepository(): HostMetricsPreferenceRepository {
-  return new HostMetricsPreferenceRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook(
-      "host_metrics_preference_repository_write",
-    ),
   );
 }
 

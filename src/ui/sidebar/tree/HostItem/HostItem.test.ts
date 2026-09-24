@@ -17,7 +17,7 @@ function makeHost(overrides: Partial<Host> = {}): Host {
     enableRdp: false,
     enableVnc: false,
     enableTelnet: false,
-    statsConfig: { statusCheckEnabled: true },
+    statusCheckEnabled: true,
     ...overrides,
   } as unknown as Host;
 }
@@ -56,15 +56,7 @@ describe("buildStatusTooltip", () => {
   });
 
   it("returns 'Monitoring disabled' when status check is disabled", () => {
-    const host = makeHost({
-      statsConfig: {
-        enabledWidgets: [],
-        statusCheckEnabled: false,
-        statusCheckInterval: 30,
-        metricsEnabled: false,
-        metricsInterval: 30,
-      },
-    });
+    const host = makeHost({ statusCheckEnabled: false });
     const tooltip = buildStatusTooltip(host, "online", t);
     expect(tooltip).toBe("Monitoring disabled");
   });
@@ -106,20 +98,12 @@ describe("buildStatusTooltip", () => {
 
 describe("statusCheckEnabled", () => {
   it("returns true when statusCheckEnabled is not set (default)", () => {
-    const host = makeHost({ statsConfig: undefined });
+    const host = makeHost({ statusCheckEnabled: undefined });
     expect(statusCheckEnabled(host)).toBe(true);
   });
 
   it("returns false when statusCheckEnabled is explicitly false", () => {
-    const host = makeHost({
-      statsConfig: {
-        enabledWidgets: [],
-        statusCheckEnabled: false,
-        statusCheckInterval: 30,
-        metricsEnabled: false,
-        metricsInterval: 30,
-      },
-    });
+    const host = makeHost({ statusCheckEnabled: false });
     expect(statusCheckEnabled(host)).toBe(false);
   });
 });

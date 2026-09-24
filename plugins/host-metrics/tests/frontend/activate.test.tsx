@@ -38,6 +38,18 @@ describe(`${manifest.id} activate`, () => {
     }
   });
 
+  it("fills core's metric slots and offers disk usage to other plugins", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.slot("dashboard.hostMetrics")).toEqual([
+      "host-metrics.dashboardHost",
+    ]);
+    expect(rendered.registered.slot("homepage.hostMetrics")).toEqual([
+      "host-metrics.homepageHost",
+    ]);
+    expect(rendered.registered.actions()).toContain("host-metrics.disk");
+    expect(rendered.registered.hostEditorSections()).toEqual(["host-metrics"]);
+  });
+
   it("removes everything it registered on deactivate", async () => {
     const app = await renderWithApp(plugin, { manifest, locales });
     await app.deactivate();

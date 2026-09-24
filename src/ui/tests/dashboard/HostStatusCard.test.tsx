@@ -23,13 +23,7 @@ describe("HostStatusCard", () => {
       online: false,
     } as Host;
 
-    render(
-      <HostStatusCard
-        hosts={[host]}
-        hostMetrics={new Map()}
-        onOpenTab={() => {}}
-      />,
-    );
+    render(<HostStatusCard hosts={[host]} onOpenTab={() => {}} />);
 
     const name = screen.getByText(host.name);
     const ip = screen.getByText(host.ip);
@@ -90,13 +84,7 @@ describe("dashboard host routing", () => {
       ...flags,
     } as unknown as Host;
     const onOpenTab = vi.fn();
-    render(
-      <HostStatusCard
-        hosts={[host]}
-        hostMetrics={new Map()}
-        onOpenTab={onOpenTab}
-      />,
-    );
+    render(<HostStatusCard hosts={[host]} onOpenTab={onOpenTab} />);
     fireEvent.click(screen.getByText("Remote host"));
     expect(onOpenTab).toHaveBeenCalledWith(host, expected);
   });

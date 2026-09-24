@@ -240,7 +240,9 @@
     "noQuickActions": "Пока нет быстрых действий.",
     "buttonLabel": "Надпись кнопки",
     "selectSnippetPlaceholder": "Выбрать сниппет...",
-    "addActionBtn": "Добавить действие"
+    "addActionBtn": "Добавить действие",
+    "hostNotFound": "Хост не найден",
+    "loadingHost": "Загрузка хоста..."
   },
   "onboarding": {
     "feature_metrics": "Метрики и оповещения",
@@ -255,6 +257,41 @@
     "noData": "Нет данных",
     "showCurrentValue": "Показать текущее значение",
     "chartMetric": "Метрика",
-    "metricRange": "Диапазон"
+    "metricRange": "Диапазон",
+    "host": "Хост",
+    "loading": "Загрузка...",
+    "metricCpu": "ЦП",
+    "metricDisk": "Диск",
+    "metricHostname": "Имя хоста",
+    "metricKernel": "Ядро",
+    "metricMemory": "Память",
+    "metricNetwork": "Сеть",
+    "metricOs": "ОС",
+    "metricProcesses": "Процессы",
+    "metricProcessesRunning": "запущено",
+    "metricProcessesTotal": "всего",
+    "metricUptime": "Время работы",
+    "metricsNotAvailable": "Метрики недоступны",
+    "noHostSelected": "Хост не выбран",
+    "selectHost": "Выберите хост..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Диск"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Отмена",
+        "confirmRunButton": "Запустить",
+        "confirmRunMessage": "Запустить \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Подключено"
   }
 }

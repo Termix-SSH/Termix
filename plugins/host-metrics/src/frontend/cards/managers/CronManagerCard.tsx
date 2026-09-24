@@ -1,9 +1,9 @@
+import { Button } from "@termix/plugin-sdk/ui";
 import { useEffect, useMemo, useState } from "react";
 import { Clock4, Plus, Trash2, Save } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
-import { managerPost } from "../../host-metrics-api";
+import { useHostMetricsApi } from "../../host-metrics-api";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";
@@ -16,6 +16,7 @@ interface CronEntry {
 }
 
 export function CronManagerCard({ hostId }: { hostId: number | null }) {
+  const { managerPost } = useHostMetricsApi();
   const { t } = useTranslation();
   const { data, loading, error, refresh } = useManagerData<{
     entries: CronEntry[];

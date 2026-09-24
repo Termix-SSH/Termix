@@ -2,7 +2,7 @@
   "id": "host-metrics",
   "name": "Host Metrics",
   "version": "1.0.0",
-  "description": "Live CPU, memory, disk, network and process metrics, plus host management (services, packages, firewall, cron, users, SSL, logs, WireGuard, Tailscale).",
+  "description": "Live CPU, memory, disk, network and process metrics, plus host management (services, packages, firewall, cron, users, SSL, logs, WireGuard).",
   "author": {
     "name": "Termix"
   },
@@ -20,12 +20,15 @@
     "ssh:connect",
     "db:own",
     "network:serve",
-    "events:core",
     "ui:surface"
   ],
-  "optionalDependencies": {
-    "automations": "^1.0.0"
-  },
+  "provides": [
+    {
+      "service": "host-metrics.viewers",
+      "version": "1.0.0",
+      "permission": "host-metrics.use"
+    }
+  ],
   "contributes": {
     "tabs": [
       {
@@ -35,14 +38,98 @@
         "openFrom": ["host-context-menu", "palette"]
       }
     ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
     "settings": {
       "admin": [
         {
-          "key": "historyRetention",
-          "type": "custom",
-          "component": "retention"
+          "key": "metricsInterval",
+          "type": "number",
+          "labelKey": "settings.admin.metricsInterval.label",
+          "descriptionKey": "settings.admin.metricsInterval.description",
+          "default": 30,
+          "min": 5,
+          "max": 3600
+        },
+        {
+          "key": "historyRetentionDays",
+          "type": "number",
+          "labelKey": "settings.admin.historyRetentionDays.label",
+          "descriptionKey": "settings.admin.historyRetentionDays.description",
+          "default": 7,
+          "min": 1,
+          "max": 90
+        },
+        {
+          "key": "enabledForNewHosts",
+          "type": "boolean",
+          "labelKey": "settings.admin.enabledForNewHosts.label",
+          "descriptionKey": "settings.admin.enabledForNewHosts.description",
+          "default": true
         }
-      ]
+      ],
+      "user": [
+        {
+          "key": "temperatureUnit",
+          "type": "select",
+          "labelKey": "settings.user.temperatureUnit.label",
+          "descriptionKey": "settings.user.temperatureUnit.description",
+          "default": "celsius",
+          "options": [
+            {
+              "value": "celsius",
+              "labelKey": "settings.user.temperatureUnit.celsius"
+            },
+            {
+              "value": "fahrenheit",
+              "labelKey": "settings.user.temperatureUnit.fahrenheit"
+            }
+          ]
+        }
+      ],
+      "host": {
+        "fields": [
+          {
+            "key": "metricsEnabled",
+            "type": "boolean",
+            "labelKey": "settings.host.metricsEnabled.label",
+            "default": true,
+            "hidden": true
+          },
+          {
+            "key": "metricsInterval",
+            "type": "number",
+            "labelKey": "settings.host.metricsInterval.label",
+            "min": 5,
+            "max": 3600,
+            "hidden": true
+          },
+          {
+            "key": "enabledWidgets",
+            "type": "json",
+            "labelKey": "settings.host.enabledWidgets.label",
+            "hidden": true
+          },
+          {
+            "key": "excludedMounts",
+            "type": "json",
+            "labelKey": "settings.host.excludedMounts.label",
+            "hidden": true
+          },
+          {
+            "key": "monitoredMounts",
+            "type": "json",
+            "labelKey": "settings.host.monitoredMounts.label",
+            "hidden": true
+          }
+        ]
+      }
     },
     "actionSlots": [
       {

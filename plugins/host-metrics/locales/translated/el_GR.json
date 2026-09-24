@@ -240,7 +240,9 @@
     "noQuickActions": "Δεν υπάρχουν ακόμη γρήγορες ενέργειες.",
     "buttonLabel": "Ετικέτα κουμπιού",
     "selectSnippetPlaceholder": "Επιλογή αποσπάσματος...",
-    "addActionBtn": "Προσθήκη ενέργειας"
+    "addActionBtn": "Προσθήκη ενέργειας",
+    "hostNotFound": "Δεν βρέθηκε κεντρικός υπολογιστής",
+    "loadingHost": "Φόρτωση κεντρικού υπολογιστή..."
   },
   "onboarding": {
     "feature_metrics": "Μετρήσεις και ειδοποιήσεις",
@@ -255,6 +257,41 @@
     "noData": "Δεν υπάρχουν διαθέσιμα δεδομένα",
     "showCurrentValue": "Εμφάνιση τρέχουσας τιμής",
     "chartMetric": "Μετρικός",
-    "metricRange": "Σειρά"
+    "metricRange": "Σειρά",
+    "host": "Πλήθος",
+    "loading": "Φόρτωση...",
+    "metricCpu": "ΚΜΕ",
+    "metricDisk": "Δίσκος",
+    "metricHostname": "Όνομα κεντρικού υπολογιστή",
+    "metricKernel": "Πυρήνας",
+    "metricMemory": "Μνήμη",
+    "metricNetwork": "Δίκτυο",
+    "metricOs": "Λειτουργικό σύστημα",
+    "metricProcesses": "Διαδικασίες",
+    "metricProcessesRunning": "τρέξιμο",
+    "metricProcessesTotal": "σύνολο",
+    "metricUptime": "Χρόνος λειτουργίας",
+    "metricsNotAvailable": "Οι μετρήσεις δεν είναι διαθέσιμες",
+    "noHostSelected": "Δεν έχει επιλεγεί κεντρικός υπολογιστής",
+    "selectHost": "Επιλέξτε έναν οικοδεσπότη..."
+  },
+  "dashboard": {
+    "cpu": "ΚΜΕ",
+    "ram": "ΕΜΒΟΛΟ"
+  },
+  "dashboardTab": {
+    "disk": "Δίσκος"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Ματαίωση",
+        "confirmRunButton": "Τρέξιμο",
+        "confirmRunMessage": "Εκτέλεση \"{{name}}\";"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Συνδεδεμένος"
   }
 }

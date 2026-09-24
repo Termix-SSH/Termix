@@ -15,6 +15,7 @@
     "api": "1"
   },
   "capabilities": [
+    "hosts:read",
     "settings:read-core",
     "network:outbound",
     "network:serve",

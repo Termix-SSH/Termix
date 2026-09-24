@@ -1,11 +1,10 @@
+import { useAdaptivePolling, Select2 } from "@termix/plugin-sdk/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { managerGet, managerGetSub } from "../../host-metrics-api";
+import { useHostMetricsApi } from "../../host-metrics-api";
 import { extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
-import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
-import { Select2 } from "@/components/select2";
 
 interface LogFiles {
   common: string[];
@@ -15,6 +14,7 @@ interface LogFiles {
 type Mode = "file" | "unit";
 
 export function LogViewerCard({ hostId }: { hostId: number | null }) {
+  const { managerGet, managerGetSub } = useHostMetricsApi();
   const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("file");
   const [path, setPath] = useState<string>("/var/log/syslog");

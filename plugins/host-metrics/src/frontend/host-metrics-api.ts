@@ -1,14 +1,14 @@
-import { handleApiError, statsApi } from "@/main-axios";
-import type { HostMetricsLayout } from "@/types/host-metrics";
+import { useMemo } from "react";
+import {
+  usePluginApi,
+  type PluginApiClient,
+} from "@termix/plugin-sdk/frontend";
+import type { HostMetricsLayout } from "../shared/host-metrics.js";
+import type { ServerMetrics } from "../shared/metrics.js";
 
-// Every function below is keyed by a host's numeric database id, and the
-// receiving backend must own that host in its own database -- a synced
-// host has a different numeric id on each side (only its syncId matches
-// across them). These calls always target the embedded local backend; see
-// getAllServerStatuses in host-metrics-status-api.ts for the one metrics
-// call that IS safely merged across local + remote (a process-local,
-// in-memory aggregate keyed by whichever host ids that process happens to
-// know about, not a per-host lookup).
+// Every call is keyed by a host's numeric database id, and the receiving
+// backend must own that host in its own database: a synced host has a
+// different numeric id on each side. They always target this backend.
 
 export interface MetricsHistoryRow {
   ts: string;
@@ -25,63 +25,6 @@ export interface MetricsHistoryResponse {
   toTs: string;
 }
 
-export async function getMetricsHistory(
-  hostId: number,
-  opts: { range?: string; from?: string; to?: string },
-): Promise<MetricsHistoryResponse> {
-  const res = await statsApi.get(`/metrics/history/${hostId}`, {
-    params: opts,
-  });
-  return res.data as MetricsHistoryResponse;
-}
-
-export async function getMetricsHistoryRetention(): Promise<number> {
-  const res = await statsApi.get("/global-settings/history");
-  return (res.data as { metricsHistoryRetentionDays: number })
-    .metricsHistoryRetentionDays;
-}
-
-export async function saveMetricsHistoryRetention(days: number): Promise<void> {
-  await statsApi.post("/global-settings/history", {
-    metricsHistoryRetentionDays: days,
-  });
-}
-
-/**
- * Host Metrics layout persistence (server-synced per user/host) + the manager
- * card endpoints. All routes live under the `/host-metrics/*` prefix on the
- * stats app (port 30005).
- */
-
-export async function getHostMetricsLayout(
-  hostId: number,
-): Promise<HostMetricsLayout | null> {
-  try {
-    const res = await statsApi.get(`/host-metrics/preferences/${hostId}`, {
-      validateStatus: (status) => status === 200 || status === 404,
-    });
-    if (res.status === 404) return null;
-    return res.data?.layout ?? null;
-  } catch (error) {
-    handleApiError(error, "fetch host metrics layout");
-    throw error;
-  }
-}
-
-export async function saveHostMetricsLayout(
-  hostId: number,
-  layout: HostMetricsLayout,
-): Promise<void> {
-  try {
-    await statsApi.post(`/host-metrics/preferences/${hostId}`, layout);
-  } catch (error) {
-    handleApiError(error, "save host metrics layout");
-    throw error;
-  }
-}
-
-// ─── Managers ───────────────────────────────────────────────────────────────
-
 export interface PlatformInfo {
   hasSystemd: boolean;
   pkg: "apt" | "dnf" | "yum" | "pacman" | null;
@@ -91,56 +34,193 @@ export interface PlatformInfo {
   osPrettyName: string | null;
 }
 
-export async function getHostPlatform(hostId: number): Promise<PlatformInfo> {
-  const res = await statsApi.get(`/host-metrics/platform/${hostId}`);
-  return res.data;
+export interface ConnectionLogEntry {
+  type: "info" | "success" | "warning" | "error";
+  stage: string;
+  message: string;
+  details?: Record<string, unknown>;
 }
 
-/** GET a manager resource (read). */
-export async function managerGet<T>(
-  hostId: number,
-  resource: string,
-  params?: Record<string, string | number>,
-): Promise<T> {
-  const res = await statsApi.get(
-    `/host-metrics/managers/${resource}/${hostId}`,
-    { params },
-  );
-  return res.data as T;
+export interface StartMetricsResult {
+  success: boolean;
+  requires_totp?: boolean;
+  sessionId?: string;
+  prompt?: string;
+  viewerSessionId?: string;
+  connectionLogs?: ConnectionLogEntry[];
 }
 
-/**
- * GET a manager sub-resource where the host id sits in the middle of the path,
- * e.g. /managers/logs/{id}/files.
- */
-export async function managerGetSub<T>(
-  hostId: number,
-  resource: string,
-  sub: string,
-  params?: Record<string, string | number>,
-): Promise<T> {
-  const res = await statsApi.get(
-    `/host-metrics/managers/${resource}/${hostId}/${sub}`,
-    { params },
-  );
-  return res.data as T;
+function statusOf(error: unknown): number | undefined {
+  return (error as { response?: { status?: number } })?.response?.status;
 }
 
-/**
- * POST a manager action. `resource` is the manager name; `action` is the
- * optional sub-path (e.g. "action", "signal", "renew"). The host id always
- * sits between them: /managers/{resource}/{id}[/{action}].
- */
-export async function managerPost<T>(
-  hostId: number,
-  resource: string,
-  body: unknown,
-  action?: string,
-): Promise<T> {
-  const suffix = action ? `/${action}` : "";
-  const res = await statsApi.post(
-    `/host-metrics/managers/${resource}/${hostId}${suffix}`,
-    body,
-  );
-  return res.data as T;
+function bodyOf(error: unknown): Record<string, unknown> | undefined {
+  return (error as { response?: { data?: Record<string, unknown> } })?.response
+    ?.data;
+}
+
+/** The plugin's routes, relative to /plugin-api/host-metrics/. */
+export function createHostMetricsApi(api: PluginApiClient) {
+  return {
+    async getMetrics(hostId: number): Promise<ServerMetrics | null> {
+      try {
+        return (await api.get<ServerMetrics>(`/metrics/${hostId}`)).data;
+      } catch (error) {
+        // No sample yet, or metrics are off for the host.
+        if (statusOf(error) === 404) return null;
+        throw error;
+      }
+    },
+
+    /** Throws an Error carrying the server's connectionLogs on failure. */
+    async startMetrics(hostId: number): Promise<StartMetricsResult> {
+      try {
+        return (await api.post<StartMetricsResult>(`/metrics/start/${hostId}`))
+          .data;
+      } catch (error) {
+        const body = bodyOf(error);
+        if (body?.connectionLogs) {
+          const wrapped = new Error(
+            String(body.error || body.message || "Failed to start metrics"),
+          );
+          Object.assign(wrapped, { connectionLogs: body.connectionLogs });
+          throw wrapped;
+        }
+        throw error;
+      }
+    },
+
+    async stopMetrics(hostId: number, viewerSessionId?: string) {
+      await api.post(`/metrics/stop/${hostId}`, { viewerSessionId });
+    },
+
+    async submitTotp(
+      sessionId: string,
+      totpCode: string,
+    ): Promise<{ success: boolean; viewerSessionId?: string }> {
+      return (
+        await api.post<{ success: boolean; viewerSessionId?: string }>(
+          "/metrics/connect-totp",
+          { sessionId, totpCode },
+        )
+      ).data;
+    },
+
+    /** False when the server no longer knows the viewer. */
+    async heartbeat(viewerSessionId: string): Promise<boolean> {
+      try {
+        await api.post("/metrics/heartbeat", { viewerSessionId });
+        return true;
+      } catch (error) {
+        if (statusOf(error) === 404) return false;
+        throw error;
+      }
+    },
+
+    async registerViewer(hostId: number): Promise<{
+      success: boolean;
+      viewerSessionId?: string;
+      skipped?: boolean;
+      reason?: string;
+    }> {
+      return (await api.post("/metrics/register-viewer", { hostId })).data as {
+        success: boolean;
+        viewerSessionId?: string;
+        skipped?: boolean;
+        reason?: string;
+      };
+    },
+
+    async unregisterViewer(hostId: number, viewerSessionId: string) {
+      await api.post("/metrics/unregister-viewer", {
+        hostId,
+        viewerSessionId,
+      });
+    },
+
+    async getMetricsHistory(
+      hostId: number,
+      opts: { range?: string; from?: string; to?: string },
+    ): Promise<MetricsHistoryResponse> {
+      return (
+        await api.get<MetricsHistoryResponse>(`/metrics/history/${hostId}`, {
+          params: opts,
+        })
+      ).data;
+    },
+
+    async getHostMetricsLayout(
+      hostId: number,
+    ): Promise<HostMetricsLayout | null> {
+      try {
+        const res = await api.get<{ layout?: HostMetricsLayout }>(
+          `/host-metrics/preferences/${hostId}`,
+        );
+        return res.data?.layout ?? null;
+      } catch (error) {
+        if (statusOf(error) === 404) return null;
+        throw error;
+      }
+    },
+
+    async saveHostMetricsLayout(hostId: number, layout: HostMetricsLayout) {
+      await api.post(`/host-metrics/preferences/${hostId}`, layout);
+    },
+
+    async getHostPlatform(hostId: number): Promise<PlatformInfo> {
+      return (await api.get<PlatformInfo>(`/host-metrics/platform/${hostId}`))
+        .data;
+    },
+
+    /** GET a manager resource (read). */
+    async managerGet<T>(
+      hostId: number,
+      resource: string,
+      params?: Record<string, string | number>,
+    ): Promise<T> {
+      return (
+        await api.get<T>(`/host-metrics/managers/${resource}/${hostId}`, {
+          params,
+        })
+      ).data;
+    },
+
+    /** GET where the host id sits mid-path: /managers/logs/{id}/files. */
+    async managerGetSub<T>(
+      hostId: number,
+      resource: string,
+      sub: string,
+      params?: Record<string, string | number>,
+    ): Promise<T> {
+      return (
+        await api.get<T>(
+          `/host-metrics/managers/${resource}/${hostId}/${sub}`,
+          { params },
+        )
+      ).data;
+    },
+
+    /** POST a manager action: /managers/{resource}/{id}[/{action}]. */
+    async managerPost<T>(
+      hostId: number,
+      resource: string,
+      body: unknown,
+      action?: string,
+    ): Promise<T> {
+      const suffix = action ? `/${action}` : "";
+      return (
+        await api.post<T>(
+          `/host-metrics/managers/${resource}/${hostId}${suffix}`,
+          body,
+        )
+      ).data;
+    },
+  };
+}
+
+export type HostMetricsApi = ReturnType<typeof createHostMetricsApi>;
+
+export function useHostMetricsApi(): HostMetricsApi {
+  const api = usePluginApi();
+  return useMemo(() => createHostMetricsApi(api), [api]);
 }

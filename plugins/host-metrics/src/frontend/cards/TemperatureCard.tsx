@@ -1,19 +1,14 @@
+import { StatRow, MetricCard } from "@termix/plugin-sdk/ui";
+import { type ServerMetrics } from "../../shared/metrics.js";
 import { Thermometer } from "lucide-react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { ServerMetrics } from "@/main-axios";
-import { StatRow } from "@/components/charts";
-import { MetricCard } from "@/components/metric-card";
+import { useSettings, useTranslation } from "@termix/plugin-sdk/frontend";
 import { useEffect, useState } from "react";
 import {
+  formatTemperature,
   selectTemperatureSensor,
   temperaturePreferenceKey,
+  temperatureUnitOf,
 } from "../temperature-preference";
-
-function formatTemperature(value: number | null | undefined): string {
-  return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(1)}°C`
-    : "N/A";
-}
 
 export function TemperatureCard({
   metrics,
@@ -23,6 +18,7 @@ export function TemperatureCard({
   hostId: number | null;
 }) {
   const { t } = useTranslation();
+  const unit = temperatureUnitOf(useSettings("user").values.temperatureUnit);
   const temperature = metrics?.temperature;
   const sensors = temperature?.sensors ?? [];
   const [preferredLabel, setPreferredLabel] = useState("");
@@ -59,7 +55,7 @@ export function TemperatureCard({
       <div className="flex flex-col gap-3">
         <div>
           <div className="text-3xl font-semibold tabular-nums">
-            {formatTemperature(displayedTemperature)}
+            {formatTemperature(displayedTemperature, unit)}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
             {displayedLabel}
@@ -92,7 +88,7 @@ export function TemperatureCard({
               <StatRow
                 key={`${sensor.label}-${sensor.celsius}`}
                 label={sensor.label}
-                value={formatTemperature(sensor.celsius)}
+                value={formatTemperature(sensor.celsius, unit)}
                 mono
               />
             ))}

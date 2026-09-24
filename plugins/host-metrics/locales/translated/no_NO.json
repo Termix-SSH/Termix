@@ -240,7 +240,9 @@
     "noQuickActions": "Ingen hurtighandlinger ennå.",
     "buttonLabel": "Knappetikett",
     "selectSnippetPlaceholder": "Velg utdrag...",
-    "addActionBtn": "Legg til handling"
+    "addActionBtn": "Legg til handling",
+    "hostNotFound": "Verten ble ikke funnet",
+    "loadingHost": "Laster inn vert ..."
   },
   "onboarding": {
     "feature_metrics": "Målinger og varsler",
@@ -255,6 +257,41 @@
     "noData": "Ingen data tilgjengelig",
     "showCurrentValue": "Vis gjeldende verdi",
     "chartMetric": "Metrisk",
-    "metricRange": "Spekter"
+    "metricRange": "Spekter",
+    "host": "Vert",
+    "loading": "Laster inn...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disk",
+    "metricHostname": "Vertsnavn",
+    "metricKernel": "Kjerne",
+    "metricMemory": "Hukommelse",
+    "metricNetwork": "Nettverk",
+    "metricOs": "OS",
+    "metricProcesses": "Prosesser",
+    "metricProcessesRunning": "løping",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Oppetid",
+    "metricsNotAvailable": "Målinger er ikke tilgjengelige",
+    "noHostSelected": "Ingen vert valgt",
+    "selectHost": "Velg en vert..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "VÆR"
+  },
+  "dashboardTab": {
+    "disk": "Disk"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Kansellere",
+        "confirmRunButton": "Løp",
+        "confirmRunMessage": "Kjør \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Tilkoblet"
   }
 }

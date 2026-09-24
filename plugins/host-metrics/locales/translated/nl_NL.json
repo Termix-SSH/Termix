@@ -240,7 +240,9 @@
     "noQuickActions": "Nog geen snelle acties ondernomen.",
     "buttonLabel": "Knoplabel",
     "selectSnippetPlaceholder": "Selecteer fragment...",
-    "addActionBtn": "Actie toevoegen"
+    "addActionBtn": "Actie toevoegen",
+    "hostNotFound": "Host niet gevonden",
+    "loadingHost": "Host wordt geladen..."
   },
   "onboarding": {
     "feature_metrics": "Statistieken en waarschuwingen",
@@ -255,6 +257,41 @@
     "noData": "Geen gegevens beschikbaar",
     "showCurrentValue": "Toon huidige waarde",
     "chartMetric": "Metrisch",
-    "metricRange": "Bereik"
+    "metricRange": "Bereik",
+    "host": "Gastheer",
+    "loading": "Laden...",
+    "metricCpu": "CPU",
+    "metricDisk": "Schijf",
+    "metricHostname": "Hostnaam",
+    "metricKernel": "Kernel",
+    "metricMemory": "Geheugen",
+    "metricNetwork": "Netwerk",
+    "metricOs": "OS",
+    "metricProcesses": "Processen",
+    "metricProcessesRunning": "rennen",
+    "metricProcessesTotal": "totaal",
+    "metricUptime": "Beschikbaarheid",
+    "metricsNotAvailable": "Gegevens niet beschikbaar",
+    "noHostSelected": "Geen host geselecteerd",
+    "selectHost": "Selecteer een host..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Schijf"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Annuleren",
+        "confirmRunButton": "Loop",
+        "confirmRunMessage": "Run \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Aangesloten"
   }
 }

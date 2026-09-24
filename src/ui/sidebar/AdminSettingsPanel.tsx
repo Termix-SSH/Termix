@@ -29,8 +29,8 @@ import {
   updatePasswordResetAllowed,
   getSessionTimeout,
   updateSessionTimeout,
-  getGlobalMonitoringSettings,
-  updateGlobalMonitoringSettings,
+  getStatusCheckSettings,
+  updateStatusCheckSettings,
   getLogLevel,
   updateLogLevel,
   getOidcAutoProvision,
@@ -134,7 +134,6 @@ export function AdminSettingsPanel({
   const [allowPasswordReset, setAllowPasswordReset] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("24");
   const [statusInterval, setStatusInterval] = useState("60");
-  const [metricsInterval, setMetricsInterval] = useState("30");
   const [logLevel, setLogLevel] = useState("info");
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
@@ -359,7 +358,7 @@ export function AdminSettingsPanel({
         getPasswordLoginAllowed(),
         getPasswordResetAllowed(),
         getSessionTimeout(),
-        getGlobalMonitoringSettings(),
+        getStatusCheckSettings(),
         getLogLevel(),
         getOidcAutoProvision(),
         getSecondFactorAfterExternalLogin(),
@@ -392,7 +391,6 @@ export function AdminSettingsPanel({
         setSessionTimeout(String(timeout.value.timeoutHours));
       if (monitoring.status === "fulfilled") {
         setStatusInterval(String(monitoring.value.statusCheckInterval));
-        setMetricsInterval(String(monitoring.value.metricsInterval));
       }
 
       if (level.status === "fulfilled") setLogLevel(level.value.level);
@@ -630,16 +628,12 @@ export function AdminSettingsPanel({
 
   async function handleSaveMonitoring() {
     const status = parseInt(statusInterval, 10);
-    const metrics = parseInt(metricsInterval, 10);
-    if (isNaN(status) || isNaN(metrics)) {
+    if (isNaN(status) || status < 5 || status > 3600) {
       toast.error(t("admin.monitoringIntervalInvalid"));
       return;
     }
     try {
-      await updateGlobalMonitoringSettings({
-        statusCheckInterval: status,
-        metricsInterval: metrics,
-      });
+      await updateStatusCheckSettings({ statusCheckInterval: status });
       toast.success(t("admin.monitoringSaved"));
     } catch {
       toast.error(t("admin.monitoringSaveFailed"));
@@ -1070,8 +1064,6 @@ export function AdminSettingsPanel({
         handleSaveSessionTimeout={handleSaveSessionTimeout}
         statusInterval={statusInterval}
         setStatusInterval={setStatusInterval}
-        metricsInterval={metricsInterval}
-        setMetricsInterval={setMetricsInterval}
         handleSaveMonitoring={handleSaveMonitoring}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}

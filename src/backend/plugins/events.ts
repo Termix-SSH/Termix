@@ -1,9 +1,8 @@
 /**
  * The process-wide event bus behind ctx.events.
  *
- * This formalises three ad-hoc publish paths that already existed:
+ * This formalises the ad-hoc publish paths that already existed:
  *   - hosts/automation-events.ts  (generic named internal events)
- *   - hosts/metrics/automation-bridge.ts  (metrics-shaped siblings)
  *   - hosts/host-session-status.ts  (the "host.session.status" topic)
  *
  * Each of those lazily imported the automations engine and swallowed errors,
@@ -28,12 +27,10 @@ export const TOPICS = {
   hostSessionStatus: "host.session.status",
   /** A generic named internal event (host_deleted, user_login, ...). */
   internalEvent: "internal.event",
-  /** A metrics snapshot for one host. */
-  hostMetrics: "host.metrics",
-  /** A host went online or offline as seen by the metrics poller. */
+  /** A host's status dot changed (hosts/status/host-status-service.ts). */
   hostStatus: "host.status",
-  /** A health check result. */
-  hostHealthCheck: "host.health_check",
+  /** A host's key was accepted again after it changed. */
+  hostKeyUpdated: "host.key.updated",
   /** A host's connection details changed and pollers should re-read them. */
   hostUpdated: "host.updated",
   /** A host was deleted and any poller holding it should drop it. */

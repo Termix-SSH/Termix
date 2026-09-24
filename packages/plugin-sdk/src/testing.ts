@@ -38,7 +38,16 @@ import type { PluginDatabase } from "./backend.js";
 import type {
   PluginNativeRdpRequest,
   PluginProtocolTarget,
+  PluginHostStatusEntry,
 } from "./backend.js";
+
+/** A timer registered through ctx.schedule, run by hand with runScheduled. */
+export interface FakeScheduledJob {
+  kind: "every" | "after";
+  ms: number;
+  fn: () => void | Promise<void>;
+  stopped: boolean;
+}
 
 export interface FakeContextOptions {
   pluginId?: string;
@@ -80,6 +89,8 @@ export interface FakeContextOptions {
   protocolTargets?: Record<string, PluginProtocolTarget>;
   /** What ctx.desktop.available() answers. Defaults to false. */
   desktopAvailable?: boolean;
+  /** What ctx.hosts.status.get and check answer, by host id. */
+  hostStatuses?: Record<number, PluginHostStatusEntry>;
 }
 
 export interface FakeAuthRegistrations {
@@ -150,6 +161,22 @@ export interface FakePluginContext {
     interaction: string;
     request: Record<string, unknown>;
   }>;
+  /** Every ctx.hosts.status.reportLogin call, in order. */
+  statusReports: Array<{
+    hostId: number;
+    ok: boolean;
+    hostKeyChanged?: boolean;
+  }>;
+  /** ctx.hosts.status.registerPort resolvers, by connection type. */
+  statusPorts: Map<string, (hostId: number) => unknown>;
+  /** Backing store behind ctx.hosts.status.get and check. */
+  hostStatuses: Map<number, PluginHostStatusEntry>;
+  /** Every ctx.ssh.dropPooled call, in order. */
+  droppedPools: Array<{ pool: string; hostId: number }>;
+  /** Every ctx.schedule timer, stopped ones included. */
+  scheduled: FakeScheduledJob[];
+  /** Runs every live ctx.schedule job once; "after" jobs are then done. */
+  runScheduled: () => Promise<void>;
   /** Changes the acting user, as core's request middleware would. */
   setActor: (userId: string | undefined) => void;
   /** Provided or seeded services, by name or "<service>#<provider>". */
@@ -227,6 +254,29 @@ export function createFakeContext(
   const activities: FakePluginContext["activities"] = [];
   const trackedSessions: number[] = [];
   const interactions: FakePluginContext["interactions"] = [];
+  const statusReports: FakePluginContext["statusReports"] = [];
+  const statusPorts: FakePluginContext["statusPorts"] = new Map();
+  const hostStatuses = new Map<number, PluginHostStatusEntry>(
+    Object.entries(options.hostStatuses ?? {}).map(([id, entry]) => [
+      Number(id),
+      entry,
+    ]),
+  );
+  const droppedPools: FakePluginContext["droppedPools"] = [];
+  const scheduled: FakeScheduledJob[] = [];
+  const schedule = (
+    kind: FakeScheduledJob["kind"],
+    ms: number,
+    fn: FakeScheduledJob["fn"],
+  ) => {
+    const job: FakeScheduledJob = { kind, ms, fn, stopped: false };
+    scheduled.push(job);
+    const stop = () => {
+      job.stopped = true;
+    };
+    disposals.push(stop);
+    return stop;
+  };
   const hostsById = new Map<number, PluginHostSummary>(
     (options.hosts ?? []).map((h) => [h.id, h]),
   );
@@ -561,6 +611,28 @@ export function createFakeContext(
       recordActivity: async (hostId, type, hostName) => {
         activities.push({ hostId, type, hostName });
       },
+      status: {
+        get: (hostId) => hostStatuses.get(hostId) ?? null,
+        check: async (hostId) => hostStatuses.get(hostId) ?? null,
+        reportLogin: (hostId, outcome) => {
+          statusReports.push({ hostId, ...outcome });
+        },
+        registerPort: (connectionType, resolve) => {
+          statusPorts.set(connectionType, resolve);
+          return () => {
+            statusPorts.delete(connectionType);
+          };
+        },
+      },
+    },
+
+    schedule: {
+      every: (intervalMs, fn, scheduleOptions) => {
+        const stop = schedule("every", intervalMs, fn);
+        if (scheduleOptions?.runNow) void fn();
+        return stop;
+      },
+      after: (delayMs, fn) => schedule("after", delayMs, fn),
     },
 
     audit: {
@@ -591,6 +663,9 @@ export function createFakeContext(
         host: { id: 0, ip: "", port: 22, username: "" } as never,
         dispose: () => {},
       }),
+      dropPooled: (pool, hostId) => {
+        droppedPools.push({ pool, hostId });
+      },
       poolKey: (pool, host) =>
         `${pool}:${host.userId}:${host.ip}:${host.port}:${host.username}`,
       resolveHost: async (hostId, resolveOptions) =>
@@ -701,6 +776,17 @@ export function createFakeContext(
     activities,
     trackedSessions,
     interactions,
+    statusReports,
+    statusPorts,
+    hostStatuses,
+    droppedPools,
+    scheduled,
+    runScheduled: async () => {
+      for (const job of scheduled.filter((candidate) => !candidate.stopped)) {
+        if (job.kind === "after") job.stopped = true;
+        await job.fn();
+      }
+    },
     setActor: (userId) => {
       actor = userId;
     },
@@ -739,6 +825,8 @@ export interface MockContextOptions {
   protocolTargets?: Record<string, PluginProtocolTarget>;
   /** What ctx.desktop.available() answers. */
   desktopAvailable?: boolean;
+  /** What ctx.hosts.status answers. See FakeContextOptions. */
+  hostStatuses?: Record<number, PluginHostStatusEntry>;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -777,6 +865,7 @@ export function createMockCtx(
     services: options.services,
     protocolTargets: options.protocolTargets,
     desktopAvailable: options.desktopAvailable,
+    hostStatuses: options.hostStatuses,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -815,9 +904,9 @@ export function createMockCtx(
         require("db:own");
         return guardedDb.refs();
       },
-      persist: async () => {
+      persist: async (persistOptions) => {
         require("db:own");
-        return guardedDb.persist();
+        return guardedDb.persist(persistOptions);
       },
       dialect: guardedDb.dialect,
     },
@@ -936,6 +1025,24 @@ export function createMockCtx(
       recordActivity: async (hostId, type, hostName) => {
         require("hosts:read");
         return ctx.hosts.recordActivity(hostId, type, hostName);
+      },
+      status: {
+        get: (hostId) => {
+          require("hosts:read");
+          return ctx.hosts.status.get(hostId);
+        },
+        check: async (hostId) => {
+          require("hosts:read");
+          return ctx.hosts.status.check(hostId);
+        },
+        reportLogin: (hostId, outcome) => {
+          require("hosts:read");
+          ctx.hosts.status.reportLogin(hostId, outcome);
+        },
+        registerPort: (connectionType, resolve) => {
+          require("hosts:read");
+          return ctx.hosts.status.registerPort(connectionType, resolve);
+        },
       },
     },
 

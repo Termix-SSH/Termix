@@ -2,11 +2,11 @@ import {
   DEFAULT_STEP_TIMEOUT_MS,
   type Step,
 } from "../../../../../src/types/automations.js";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
 import {
+  execCommand,
   execElevated,
   shellSingleQuote,
-} from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+} from "@termix/plugin-sdk/host-commands";
 import { withSshConnection } from "../ssh.js";
 import { createCurrentNotificationChannelRepository } from "../../../../../src/backend/database/repositories/factory.js";
 import { getSnippet, resolveSnippetCommandFor } from "../snippets.js";

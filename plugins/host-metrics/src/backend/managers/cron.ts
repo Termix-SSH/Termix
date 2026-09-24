@@ -1,7 +1,9 @@
-import type { Express } from "express";
-import { execCommand } from "../../../../../src/backend/hosts/metrics-shared/common-utils.js";
+import {
+  execCommand,
+  shellSingleQuote,
+} from "@termix/plugin-sdk/host-commands";
+import type { Router } from "express";
 import { managerHandler, ManagerInputError } from "./route-helpers.js";
-import { shellSingleQuote } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
 import type { ManagerRoutesDeps } from "./types.js";
 
 export interface CronEntry {
@@ -78,14 +80,12 @@ export function buildApplyCrontabCommand(body: string): string {
   return `printf '%s' ${shellSingleQuote(body)} | crontab -`;
 }
 
-export function registerCronRoutes(
-  app: Express,
-  { validateHostId, runOnHost }: ManagerRoutesDeps,
-): void {
+export function registerCronRoutes(app: Router, deps: ManagerRoutesDeps): void {
+  const { validateHostId } = deps;
   app.get(
     "/host-metrics/managers/cron/:id",
     validateHostId,
-    managerHandler(runOnHost, "connect", "cron_list", async (client) => {
+    managerHandler(deps, "connect", "cron_list", async (client) => {
       const { stdout } = await execCommand(client, READ_CRONTAB_CMD, 15000);
       return { entries: parseCrontab(stdout) };
     }),
@@ -95,7 +95,7 @@ export function registerCronRoutes(
     "/host-metrics/managers/cron/:id",
     validateHostId,
     managerHandler(
-      runOnHost,
+      deps,
       "connect",
       "cron_replace",
       async (client, _host, req) => {

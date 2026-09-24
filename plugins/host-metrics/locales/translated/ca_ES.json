@@ -240,7 +240,9 @@
     "noQuickActions": "Encara no hi ha accions ràpides.",
     "buttonLabel": "Etiqueta del botó",
     "selectSnippetPlaceholder": "Selecciona un fragment...",
-    "addActionBtn": "Afegeix una acció"
+    "addActionBtn": "Afegeix una acció",
+    "hostNotFound": "No s'ha trobat l'amfitrió",
+    "loadingHost": "S'està carregant l'amfitrió..."
   },
   "onboarding": {
     "feature_metrics": "Mètriques i alertes",
@@ -255,6 +257,41 @@
     "noData": "No hi ha dades disponibles",
     "showCurrentValue": "Mostra el valor actual",
     "chartMetric": "Mètrica",
-    "metricRange": "Rang"
+    "metricRange": "Rang",
+    "host": "Amfitrió",
+    "loading": "S'està carregant...",
+    "metricCpu": "CPU",
+    "metricDisk": "Disc",
+    "metricHostname": "Nom d'amfitrió",
+    "metricKernel": "Nucli",
+    "metricMemory": "Memòria",
+    "metricNetwork": "Xarxa",
+    "metricOs": "Sistema operatiu",
+    "metricProcesses": "Processos",
+    "metricProcessesRunning": "corrent",
+    "metricProcessesTotal": "total",
+    "metricUptime": "Temps de funcionament",
+    "metricsNotAvailable": "Mètriques no disponibles",
+    "noHostSelected": "No s'ha seleccionat cap amfitrió",
+    "selectHost": "Seleccioneu un amfitrió..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Disc"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Cancel·la",
+        "confirmRunButton": "Corre",
+        "confirmRunMessage": "Executar \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Connectat"
   }
 }

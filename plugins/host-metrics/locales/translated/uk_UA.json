@@ -240,7 +240,9 @@
     "noQuickActions": "Поки що жодних швидких дій.",
     "buttonLabel": "Мітка кнопки",
     "selectSnippetPlaceholder": "Вибрати фрагмент...",
-    "addActionBtn": "Додати дію"
+    "addActionBtn": "Додати дію",
+    "hostNotFound": "Хост не знайдено",
+    "loadingHost": "Завантаження хоста..."
   },
   "onboarding": {
     "feature_metrics": "Метрики та сповіщення",
@@ -255,6 +257,41 @@
     "noData": "Дані недоступні",
     "showCurrentValue": "Показати поточне значення",
     "chartMetric": "Метрика",
-    "metricRange": "Діапазон"
+    "metricRange": "Діапазон",
+    "host": "Хост",
+    "loading": "Завантаження...",
+    "metricCpu": "Процесор",
+    "metricDisk": "Диск",
+    "metricHostname": "Ім'я хоста",
+    "metricKernel": "Ядро",
+    "metricMemory": "Пам'ять",
+    "metricNetwork": "Мережа",
+    "metricOs": "ОС",
+    "metricProcesses": "Процеси",
+    "metricProcessesRunning": "біг",
+    "metricProcessesTotal": "загальна сума",
+    "metricUptime": "Час безперебійної роботи",
+    "metricsNotAvailable": "Метрики недоступні",
+    "noHostSelected": "Хост не вибрано",
+    "selectHost": "Виберіть хоста..."
+  },
+  "dashboard": {
+    "cpu": "Процесор",
+    "ram": "Оперативна пам'ять"
+  },
+  "dashboardTab": {
+    "disk": "Диск"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Скасувати",
+        "confirmRunButton": "Бігти",
+        "confirmRunMessage": "Запустити \"{{name}}\"?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Підключено"
   }
 }

@@ -1,11 +1,10 @@
-import { getErrorMessage } from "../../../../../src/backend/utils/error-message.js";
+import { ElevationError } from "@termix/plugin-sdk/host-commands";
 import type { Request, Response } from "express";
 import type { Client } from "ssh2";
-import type { AuthenticatedRequest } from "../../../../../src/types/index.js";
-import { statsLogger } from "../../../../../src/backend/utils/logger.js";
-import { ElevationError } from "../../../../../src/backend/hosts/metrics-shared/exec-elevated.js";
+import type { PluginHostShareLevel } from "@termix/plugin-sdk/backend";
+import { errorMessage } from "../util.js";
+import type { MetricsLogger } from "../log.js";
 import type { ManagerHost, RunOnHost } from "./types.js";
-import type { HostAction } from "../../../../../src/backend/utils/permission-manager.js";
 
 export class AccessDeniedError extends Error {
   constructor(message = "No access to this host") {
@@ -26,16 +25,15 @@ export class ManagerInputError extends Error {
  * given access level, and maps known errors to clean HTTP responses.
  */
 export function managerHandler(
-  runOnHost: RunOnHost,
-  level: HostAction,
+  { runOnHost, log }: { runOnHost: RunOnHost; log: MetricsLogger },
+  level: PluginHostShareLevel,
   operation: string,
   fn: (client: Client, host: ManagerHost, req: Request) => Promise<unknown>,
 ) {
   return async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
     const hostId = parseInt(String(req.params.id), 10);
     try {
-      const result = await runOnHost(hostId, userId, level, (client, host) =>
+      const result = await runOnHost(hostId, level, (client, host) =>
         fn(client, host, req),
       );
       return res.json(result);
@@ -49,13 +47,13 @@ export function managerHandler(
       if (error instanceof ElevationError) {
         return res.status(403).json({ error: error.message, code: error.code });
       }
-      statsLogger.error(`Manager operation failed: ${operation}`, {
+      log.error(`Manager operation failed: ${operation}`, {
         operation,
         hostId,
         error: error instanceof Error ? error.message : String(error),
       });
       return res.status(500).json({
-        error: getErrorMessage(error, "Operation failed"),
+        error: errorMessage(error, "Operation failed"),
       });
     }
   };

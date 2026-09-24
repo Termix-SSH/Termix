@@ -148,7 +148,6 @@ describe("HostRepository Proxmox sync inserts", () => {
       tunnelConnections: "[]",
       jumpHosts: null,
       quickActions: null,
-      statsConfig: null,
       dockerConfig: null,
       terminalConfig: null,
       forceKeyboardInteractive: "false",

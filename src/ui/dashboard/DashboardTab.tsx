@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { enabledHostProtocols, protocolPort } from "@/sidebar/host-protocols";
-import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
+import { ComponentSlot } from "@/shell/ActionSlot";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
@@ -38,10 +38,6 @@ import {
   getRecentActivity,
   getCredentials,
   resetRecentActivity,
-  getAllServerStatuses,
-  getServerMetricsById,
-  registerMetricsViewer,
-  sendMetricsHeartbeat,
   getUserInfo,
   getServiceLinks,
   createServiceLink,
@@ -446,45 +442,12 @@ function QuickActionsCard({
   );
 }
 
-function MetricBar({ label, value }: { label: string; value: number }) {
-  const color =
-    value >= 90
-      ? "bg-red-500"
-      : value >= 70
-        ? "bg-yellow-500"
-        : "bg-accent-brand";
-  const textColor =
-    value >= 90
-      ? "text-red-400"
-      : value >= 70
-        ? "text-yellow-400"
-        : "text-accent-brand";
-  return (
-    <div className="flex flex-col gap-0.5 w-16">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground">{label}</span>
-        <span className={`text-[10px] font-bold ${textColor}`}>
-          {value.toFixed(0)}%
-        </span>
-      </div>
-      <div className="h-0.5 bg-muted w-full">
-        <div className={`h-full ${color}`} style={{ width: `${value}%` }} />
-      </div>
-    </div>
-  );
-}
-
 export function HostStatusCard({
   hosts,
-  hostMetrics,
   onOpenTab,
   statusLoading,
 }: {
   hosts: Host[];
-  hostMetrics: Map<
-    string,
-    { cpu: number | null; ram: number | null; disk: number | null }
-  >;
   onOpenTab: (host: Host, type: TabType) => void;
   statusLoading?: boolean;
 }) {
@@ -518,11 +481,6 @@ export function HostStatusCard({
               : host.online
                 ? "online"
                 : "offline";
-          const metrics = hostMetrics.get(host.id);
-          const cpu = metrics?.cpu ?? null;
-          const ram = metrics?.ram ?? null;
-          const disk = metrics?.disk ?? null;
-          const hasMetrics = cpu !== null || ram !== null || disk !== null;
           return (
             <div
               key={i}
@@ -559,31 +517,14 @@ export function HostStatusCard({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                {availability === "online" && hasMetrics ? (
-                  <div className="flex items-center gap-3">
-                    {cpu !== null && (
-                      <MetricBar label={t("dashboard.cpu")} value={cpu} />
-                    )}
-                    {ram !== null && (
-                      <MetricBar label={t("dashboard.ram")} value={ram} />
-                    )}
-                    {disk !== null && (
-                      <MetricBar label={t("dashboardTab.disk")} value={disk} />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-muted-foreground w-16 text-center">
-                      —
-                    </span>
-                    <span className="text-[10px] text-muted-foreground w-16 text-center">
-                      —
-                    </span>
-                    <span className="text-[10px] text-muted-foreground w-16 text-center">
-                      —
-                    </span>
-                  </div>
-                )}
+                {/* Plugins such as host metrics show live usage here. */}
+                <ComponentSlot
+                  slotId="dashboard.hostMetrics"
+                  props={{
+                    hostId: Number(host.id),
+                    online: availability === "online",
+                  }}
+                />
                 <span
                   className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(availability, statusScheme, "badge", statusLoading)}`}
                 >
@@ -609,7 +550,7 @@ export function HostStatusCard({
 }
 
 function isStatusCheckEnabled(host: Host): boolean {
-  return host.statsConfig?.statusCheckEnabled !== false;
+  return host.statusCheckEnabled !== false;
 }
 
 function RecentActivityCard({
@@ -843,7 +784,6 @@ function CardItem({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
-  hostMetrics,
   uptimeFormatted,
   versionText,
   versionStatus,
@@ -871,10 +811,6 @@ function CardItem({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
-  hostMetrics: Map<
-    string,
-    { cpu: number | null; ram: number | null; disk: number | null }
-  >;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
@@ -970,7 +906,6 @@ function CardItem({
         {slot.id === "host_status" && (
           <HostStatusCard
             hosts={hosts}
-            hostMetrics={hostMetrics}
             onOpenTab={onOpenTab}
             statusLoading={statusLoading}
           />
@@ -1103,10 +1038,6 @@ type PanelColumnProps = {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
-  hostMetrics: Map<
-    string,
-    { cpu: number | null; ram: number | null; disk: number | null }
-  >;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
@@ -1139,7 +1070,6 @@ function PanelColumn({
   onOpenSingletonTab,
   onOpenTab,
   hosts,
-  hostMetrics,
   uptimeFormatted,
   versionText,
   versionStatus,
@@ -1198,7 +1128,6 @@ function PanelColumn({
             onOpenSingletonTab={onOpenSingletonTab}
             onOpenTab={onOpenTab}
             hosts={hosts}
-            hostMetrics={hostMetrics}
             uptimeFormatted={uptimeFormatted}
             versionText={versionText}
             versionStatus={versionStatus}
@@ -1378,83 +1307,13 @@ export function DashboardTab({
   const [credentialCount, setCredentialCount] = useState(0);
   const [activeTunnelCount, setActiveTunnelCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
-  const [hostMetrics, setHostMetrics] = useState<
-    Map<string, { cpu: number | null; ram: number | null; disk: number | null }>
-  >(new Map());
-  const viewerSessionsRef = useRef<Map<number, string>>(new Map());
-  const sshAuthProviders = useSshAuthProviders();
-  const sshAuthProvidersRef = useRef(sshAuthProviders);
-  sshAuthProvidersRef.current = sshAuthProviders;
   const statusCheckHosts = hosts.filter(isStatusCheckEnabled);
-
-  const fetchMetrics = useCallback(async (hostList: Host[]) => {
-    let statuses: Record<number, { status?: string }> = {};
-    try {
-      statuses = (await getAllServerStatuses()) as Record<
-        number,
-        { status?: string }
-      >;
-    } catch {
-      /* best-effort */
-    }
-
-    const newSessions = new Map<number, string>(viewerSessionsRef.current);
-    const results = await Promise.all(
-      hostList.map(async (host) => {
-        const hostId = Number(host.id);
-        const knownStatus = statuses?.[hostId]?.status;
-        if (knownStatus === "offline") return null;
-        // Types that need a person or a browser sign-in cannot be polled.
-        const authOption = sshAuthProvidersRef.current.find(host.authType);
-        if (authOption && !authOption.supportsBackground) return null;
-
-        try {
-          const existing = newSessions.get(hostId);
-          if (existing && !(await sendMetricsHeartbeat(existing))) {
-            newSessions.delete(hostId);
-          }
-          if (!newSessions.has(hostId)) {
-            const reg = await registerMetricsViewer(hostId);
-            if (reg.skipped) return null;
-            if (reg.success && reg.viewerSessionId) {
-              newSessions.set(hostId, reg.viewerSessionId);
-            }
-          }
-          const metrics = await getServerMetricsById(hostId);
-          if (!metrics) return null;
-          return {
-            id: host.id,
-            cpu: metrics.cpu?.percent ?? null,
-            ram: metrics.memory?.percent ?? null,
-            disk: metrics.disk?.percent ?? null,
-          };
-        } catch {
-          return null;
-        }
-      }),
-    );
-
-    viewerSessionsRef.current = newSessions;
-    const map = new Map<
-      string,
-      { cpu: number | null; ram: number | null; disk: number | null }
-    >();
-    for (const r of results) {
-      if (r) map.set(r.id, { cpu: r.cpu, ram: r.ram, disk: r.disk });
-    }
-    setHostMetrics(map);
-  }, []);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       const raw = await getSSHHosts().catch(() => []);
-      const mapped = raw.map(sshHostToHost);
-      const statusHosts = mapped.filter(isStatusCheckEnabled);
-      if (mounted) setHosts(mapped);
-      if (isVisible) {
-        fetchMetrics(statusHosts).catch(() => {});
-      }
+      if (mounted) setHosts(raw.map(sshHostToHost));
     };
     load();
 
@@ -1518,37 +1377,17 @@ export function DashboardTab({
       };
     }
 
-    const metricsInterval = setInterval(async () => {
+    const hostsInterval = setInterval(async () => {
       if (document.visibilityState === "hidden") return;
       const raw = await getSSHHosts().catch(() => []);
-      const mapped = raw.map(sshHostToHost);
-      const statusHosts = mapped.filter(isStatusCheckEnabled);
-      if (mounted) setHosts(mapped);
-      fetchMetrics(statusHosts).catch(() => {});
+      if (mounted) setHosts(raw.map(sshHostToHost));
     }, 30000);
 
     return () => {
       mounted = false;
-      clearInterval(metricsInterval);
+      clearInterval(hostsInterval);
     };
-  }, [fetchMetrics, isVisible]);
-
-  useEffect(() => {
-    if (!isVisible || viewerSessionsRef.current.size === 0) return;
-    const heartbeat = setInterval(async () => {
-      if (document.visibilityState === "hidden") return;
-      for (const [hostId, sessionId] of viewerSessionsRef.current) {
-        sendMetricsHeartbeat(sessionId)
-          .then((alive) => {
-            if (!alive && viewerSessionsRef.current.get(hostId) === sessionId) {
-              viewerSessionsRef.current.delete(hostId);
-            }
-          })
-          .catch(() => {});
-      }
-    }, 30000);
-    return () => clearInterval(heartbeat);
-  }, [hostMetrics, isVisible]);
+  }, [isVisible]);
 
   const handleClearActivity = async () => {
     try {
@@ -1705,7 +1544,6 @@ export function DashboardTab({
 
   const columnProps = {
     hosts,
-    hostMetrics,
     uptimeFormatted,
     versionText,
     versionStatus,
@@ -1847,7 +1685,6 @@ export function DashboardTab({
               {slot.id === "host_status" && (
                 <HostStatusCard
                   hosts={statusCheckHosts}
-                  hostMetrics={hostMetrics}
                   onOpenTab={onOpenTab}
                   statusLoading={statusLoading}
                 />

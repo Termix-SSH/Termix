@@ -1,25 +1,40 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import {
+  Separator,
+  Button,
+  useAreaPreferences,
+  useConfirmation,
+  TOTPDialog,
+  useTabsSafe,
+  ConnectionLogProvider,
+  useConnectionLog,
+  ConnectionScreen,
+  runAdaptivePolling,
+  CardGridCanvas,
+  ColumnCountStepper,
+  type GridCardCatalogEntry,
+  logActivity,
+  SnippetVariablesDialog,
+} from "@termix/plugin-sdk/ui";
+import { readHostMetricsSettings } from "../shared/stats-widgets.js";
+import {
+  defaultLayoutFromWidgets,
+  type HostMetricsLayout,
+} from "../shared/host-metrics.js";
+import type { ServerMetrics } from "../shared/metrics.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React from "react";
-import { Separator } from "@/components/separator.tsx";
-import { Button } from "@/components/button.tsx";
-import {
-  getServerStatusById,
-  getServerMetricsById,
-  startMetricsPolling,
-  stopMetricsPolling,
-  submitMetricsTOTP,
-  executeSnippet,
-  getSnippets,
-  logActivity,
-  sendMetricsHeartbeat,
-  getSSHHosts,
-  type ServerMetrics,
-} from "@/main-axios.ts";
-import { SnippetVariablesDialog } from "@termix/plugin-sdk/ui";
-import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
-import { useConfirmation } from "@/hooks/use-confirmation.ts";
-import type { Snippet } from "@/types/ui-types.ts";
+import { useHostMetricsApi } from "./host-metrics-api";
+
+interface Snippet {
+  id: number;
+  name: string;
+  content: string;
+}
+
+function errorText(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return typeof error === "string" ? error : "";
+}
 
 // Mirrors the snippets plugin's own hasSnippetInputs: a pure check for
 // whether a snippet still has $INPUT_n placeholders once host variables are
@@ -30,35 +45,16 @@ function hasSnippetInputs(content: string): boolean {
   SNIPPET_INPUT_PATTERN.lastIndex = 0;
   return SNIPPET_INPUT_PATTERN.test(content);
 }
-import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
-import { useTabsSafe } from "@/shell/TabContext.tsx";
 import {
   useTranslation,
   useSlotContributions,
   useConnectionRetry,
+  useHost,
+  useHostStatus,
+  invokeAction,
 } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
-import {
-  type StatsConfig,
-  DEFAULT_STATS_CONFIG,
-} from "@/types/stats-widgets.ts";
-import {
-  defaultLayoutFromWidgets,
-  type HostMetricsLayout,
-} from "@/types/host-metrics.ts";
 import { RefreshCw, Server, LayoutDashboard } from "lucide-react";
-import {
-  ConnectionLogProvider,
-  useConnectionLog,
-} from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
-import { runAdaptivePolling } from "@/lib/adaptive-polling.ts";
-import type { LogEntry } from "@/types/connection-log.ts";
-import {
-  CardGridCanvas,
-  ColumnCountStepper,
-} from "@/components/card-grid/CardGridCanvas.tsx";
-import type { GridCardCatalogEntry } from "@/components/card-grid/types.ts";
 import { useHostMetricsPreferences } from "./hooks/useHostMetricsPreferences.ts";
 import {
   CARD_DEFINITIONS,
@@ -79,7 +75,9 @@ interface QuickAction {
   snippetId: number;
 }
 
-type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
+type ConnectionLogPayload = Parameters<
+  ReturnType<typeof useConnectionLog>["addLog"]
+>[0];
 type ConnectionLogError = Error & {
   connectionLogs?: ConnectionLogPayload[];
 };
@@ -90,7 +88,8 @@ interface HostConfig {
   ip: string;
   username: string;
   quickActions?: QuickAction[];
-  statsConfig?: string | StatsConfig;
+  statusCheckEnabled?: boolean;
+  pluginSettings?: Record<string, Record<string, unknown>>;
   authType?: string;
   port?: number;
   [key: string]: unknown;
@@ -104,16 +103,6 @@ interface HostMetricsProps {
   embedded?: boolean;
 }
 
-function parseStatsConfig(raw?: string | StatsConfig): StatsConfig {
-  if (!raw) return DEFAULT_STATS_CONFIG;
-  try {
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return { ...DEFAULT_STATS_CONFIG, ...parsed };
-  } catch {
-    return DEFAULT_STATS_CONFIG;
-  }
-}
-
 function HostMetricsInner({
   hostConfig,
   title,
@@ -122,6 +111,7 @@ function HostMetricsInner({
   embedded = false,
 }: HostMetricsProps): React.ReactElement {
   const { t } = useTranslation();
+  const metricsApi = useHostMetricsApi();
   const { addLog, clearLogs } = useConnectionLog();
   const { currentTab, removeTab } = useTabsSafe();
 
@@ -157,14 +147,16 @@ function HostMetricsInner({
 
   const activityLoggedRef = React.useRef(false);
   const activityLoggingRef = React.useRef(false);
-  const snippetsCacheRef = React.useRef<Snippet[] | null>(null);
+  const snippetsCacheRef = React.useRef(new Map<number, Snippet>());
 
-  const statsConfig = React.useMemo(
-    () => parseStatsConfig(currentHostConfig?.statsConfig),
-    [currentHostConfig?.statsConfig],
-  );
+  const statsConfig = React.useMemo(() => {
+    const settings = readHostMetricsSettings(
+      currentHostConfig?.pluginSettings?.["host-metrics"],
+    );
+    return { ...settings, metricsInterval: settings.metricsInterval ?? 30 };
+  }, [currentHostConfig?.pluginSettings]);
   const metricsEnabled = statsConfig.metricsEnabled !== false;
-  const statusCheckEnabled = statsConfig.statusCheckEnabled !== false;
+  const statusCheckEnabled = currentHostConfig?.statusCheckEnabled !== false;
 
   const hostId = currentHostConfig?.id ?? null;
   const { layout, setLayout } = useHostMetricsPreferences(hostId);
@@ -245,7 +237,7 @@ function HostMetricsInner({
   React.useEffect(() => {
     if (!viewerSessionId || !isActuallyVisible) return;
     const interval = setInterval(() => {
-      sendMetricsHeartbeat(viewerSessionId).catch(() => {});
+      metricsApi.heartbeat(viewerSessionId).catch(() => {});
     }, 30000);
     return () => clearInterval(interval);
   }, [viewerSessionId, isActuallyVisible]);
@@ -297,7 +289,7 @@ function HostMetricsInner({
   const handleTOTPSubmit = async (totpCode: string) => {
     if (!totpSessionId || !currentHostConfig) return;
     try {
-      const result = await submitMetricsTOTP(totpSessionId, totpCode);
+      const result = await metricsApi.submitTotp(totpSessionId, totpCode);
       if (result.success) {
         setTotpRequired(false);
         setTotpSessionId(null);
@@ -314,66 +306,33 @@ function HostMetricsInner({
   const handleTOTPCancel = async () => {
     setTotpRequired(false);
     if (currentHostConfig?.id) {
-      await stopMetricsPolling(currentHostConfig.id).catch(() => {});
+      await metricsApi.stopMetrics(currentHostConfig.id).catch(() => {});
     }
     if (currentTab !== null) removeTab(currentTab);
   };
 
+  // The shell keeps the host list current, including plugin settings.
+  const latestHost = useHost(hostConfig?.id);
   React.useEffect(() => {
-    const fetchLatest = async () => {
-      if (!hostConfig?.id) return;
-      try {
-        const hosts = await getSSHHosts();
-        const updated = hosts.find((h) => h.id === hostConfig.id);
-        if (updated) setCurrentHostConfig(updated as unknown as HostConfig);
-      } catch {
-        toast.error(t("hostMetrics.failedToFetchHostConfig"));
-      }
-    };
-    fetchLatest();
-    const onChanged = () => fetchLatest();
-    window.addEventListener("ssh-hosts:changed", onChanged);
-    return () => window.removeEventListener("ssh-hosts:changed", onChanged);
-  }, [hostConfig?.id]);
+    if (latestHost) {
+      setCurrentHostConfig({
+        ...(latestHost as unknown as HostConfig),
+        id: Number(latestHost.id),
+      });
+    }
+  }, [latestHost]);
 
+  // Core's status check, the same one behind the host list's dot.
+  const hostStatus = useHostStatus(hostId ?? undefined);
   React.useEffect(() => {
-    if (!statusCheckEnabled || !currentHostConfig?.id || !isActuallyVisible) {
-      if (!statusCheckEnabled) setServerStatus("offline");
+    if (!statusCheckEnabled) {
+      setServerStatus("offline");
       return;
     }
-    let cancelled = false;
-    let lastStatus = serverStatus;
-    const fetchStatus = async () => {
-      try {
-        const res = await getServerStatusById(currentHostConfig.id);
-        const nextStatus = res?.status === "online" ? "online" : "offline";
-        if (!cancelled) {
-          setServerStatus(nextStatus);
-        }
-        const changed = nextStatus !== lastStatus;
-        lastStatus = nextStatus;
-        return changed;
-      } catch {
-        if (!cancelled) setServerStatus("offline");
-        throw new Error("Host status check failed");
-      }
-    };
-    const minIntervalMs = statsConfig.statusCheckInterval * 1000;
-    const stop = runAdaptivePolling(fetchStatus, {
-      minIntervalMs,
-      maxIntervalMs: Math.min(120_000, minIntervalMs * 6),
-      stablePollsPerStep: 3,
-    });
-    return () => {
-      cancelled = true;
-      stop();
-    };
-  }, [
-    currentHostConfig?.id,
-    statusCheckEnabled,
-    statsConfig.statusCheckInterval,
-    isActuallyVisible,
-  ]);
+    if (hostStatus) {
+      setServerStatus(hostStatus.status === "online" ? "online" : "offline");
+    }
+  }, [hostStatus?.status, statusCheckEnabled]);
 
   const stopMetricsPollingRef = React.useRef<(() => void) | null>(null);
 
@@ -391,7 +350,7 @@ function HostMetricsInner({
         stage: "stats_connecting",
         message: `Connecting to ${currentHostConfig.username}@${currentHostConfig.ip}:${currentHostConfig.port}`,
       });
-      const result = await startMetricsPolling(currentHostConfig.id);
+      const result = await metricsApi.startMetrics(currentHostConfig.id);
       result?.connectionLogs?.forEach((log) =>
         addLog(log as ConnectionLogPayload),
       );
@@ -409,10 +368,10 @@ function HostMetricsInner({
     // collected asynchronously on the backend (status check, then metrics
     // exec), so it isn't ready the instant the connection succeeds. Give it
     // a few short retries before treating the initial fetch as a failure.
-    let data = await getServerMetricsById(currentHostConfig.id);
+    let data = await metricsApi.getMetrics(currentHostConfig.id);
     for (let i = 0; !data && i < 5; i++) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      data = await getServerMetricsById(currentHostConfig.id);
+      data = await metricsApi.getMetrics(currentHostConfig.id);
     }
     if (!data) {
       throw new Error(t("hostMetrics.connectionFailed"));
@@ -433,7 +392,7 @@ function HostMetricsInner({
     stopMetricsPollingRef.current?.();
     stopMetricsPollingRef.current = runAdaptivePolling(
       async () => {
-        const next = await getServerMetricsById(currentHostConfig.id);
+        const next = await metricsApi.getMetrics(currentHostConfig.id);
         if (!next) throw new Error(t("hostMetrics.connectionFailed"));
         const nextSignature = metricsChangeKey(next);
         const changed = nextSignature !== signature;
@@ -458,6 +417,7 @@ function HostMetricsInner({
     currentTab,
     removeTab,
     pushHistory,
+    metricsApi,
   ]);
 
   const metricsRetry = useConnectionRetry({
@@ -506,10 +466,9 @@ function HostMetricsInner({
       stopMetricsPollingRef.current?.();
       stopMetricsPollingRef.current = null;
       if (currentHostConfig?.id) {
-        await stopMetricsPolling(
-          currentHostConfig.id,
-          viewerSessionId || undefined,
-        ).catch(() => {});
+        await metricsApi
+          .stopMetrics(currentHostConfig.id, viewerSessionId || undefined)
+          .catch(() => {});
       }
     };
 
@@ -530,7 +489,7 @@ function HostMetricsInner({
       stopMetricsPollingRef.current?.();
       stopMetricsPollingRef.current = null;
       if (currentHostConfig?.id) {
-        stopMetricsPolling(currentHostConfig.id).catch(() => {});
+        metricsApi.stopMetrics(currentHostConfig.id).catch(() => {});
       }
     };
   }, [currentHostConfig?.id, isPageVisible, metricsEnabled]);
@@ -559,9 +518,7 @@ function HostMetricsInner({
     }
     try {
       setIsRefreshing(true);
-      const res = await getServerStatusById(currentHostConfig.id);
-      setServerStatus(res?.status === "online" ? "online" : "offline");
-      const data = await getServerMetricsById(currentHostConfig.id);
+      const data = await metricsApi.getMetrics(currentHostConfig.id);
       if (data) {
         setMetrics(data);
         pushHistory(data);
@@ -586,12 +543,19 @@ function HostMetricsInner({
       },
     );
     try {
-      const result = await executeSnippet(
+      const result = (await invokeAction(
+        "snippets.execute",
         action.snippetId,
         currentHostConfig.id,
         Object.keys(inputValues).length > 0 ? inputValues : undefined,
-      );
-      if (result.success) {
+      )) as { success: boolean; output?: string; error?: string } | undefined;
+      if (!result) {
+        toast.error(t("hostMetrics.quickActionError", { name: action.name }), {
+          id: `quick-action-${action.snippetId}`,
+          description: t("hostMetrics.snippetsUnavailable"),
+          duration: 5000,
+        });
+      } else if (result.success) {
         toast.success(
           t("hostMetrics.quickActionSuccess", { name: action.name }),
           {
@@ -610,7 +574,7 @@ function HostMetricsInner({
     } catch (error) {
       toast.error(t("hostMetrics.quickActionError", { name: action.name }), {
         id: `quick-action-${action.snippetId}`,
-        description: getErrorMessage(error),
+        description: errorText(error),
         duration: 5000,
       });
     } finally {
@@ -645,13 +609,13 @@ function HostMetricsInner({
   async function runQuickAction(action: QuickAction) {
     if (!currentHostConfig) return;
     try {
-      if (!snippetsCacheRef.current) {
-        snippetsCacheRef.current =
-          (await getSnippets()) as unknown as Snippet[];
+      let snippet = snippetsCacheRef.current.get(action.snippetId);
+      if (!snippet) {
+        snippet =
+          ((await invokeAction("snippets.get", action.snippetId)) as
+            Snippet | null | undefined) ?? undefined;
+        if (snippet) snippetsCacheRef.current.set(snippet.id, snippet);
       }
-      const snippet = snippetsCacheRef.current?.find(
-        (s) => s.id === action.snippetId,
-      );
       if (snippet && hasSnippetInputs(snippet.content)) {
         setRunningAction({ action, snippet });
         return;
@@ -843,7 +807,11 @@ function HostMetricsInner({
 
       {runningAction && (
         <SnippetVariablesDialog
-          snippet={runningAction.snippet}
+          snippet={
+            runningAction.snippet as Parameters<
+              typeof SnippetVariablesDialog
+            >[0]["snippet"]
+          }
           host={
             currentHostConfig
               ? {

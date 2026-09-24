@@ -1,82 +1,53 @@
-import type { Client } from "ssh2";
-import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
+  connectionLog,
+  sudoPasswordOf,
   supportsMetrics,
-  isTcpPingEnabled,
-  parseStatusHostIds,
-  tcpPingThroughJumpHost,
+  type MetricsHost,
 } from "../../src/backend/helpers.js";
-import { createConnectionLog } from "../../../../src/backend/hosts/connection-log.js";
 import { createFakeContext } from "@termix/plugin-sdk/testing";
-import { setPluginSsh } from "../../src/backend/ssh.js";
+
+const ssh = createFakeContext().ctx.ssh;
 
 describe("supportsMetrics", () => {
-  beforeAll(() => {
-    setPluginSsh(createFakeContext().ctx.ssh);
-  });
-  afterAll(() => {
-    setPluginSsh(null);
-  });
-
   it("supports plain ssh hosts", () => {
     expect(
-      supportsMetrics({ connectionType: "ssh", authType: "password" }),
+      supportsMetrics({ connectionType: "ssh", authType: "password" }, ssh),
     ).toBe(true);
   });
 
   it("defaults missing connectionType to ssh", () => {
-    expect(supportsMetrics({ authType: "key" })).toBe(true);
+    expect(supportsMetrics({ authType: "key" }, ssh)).toBe(true);
   });
 
-  it("rejects non-ssh connection types", () => {
-    expect(supportsMetrics({ connectionType: "rdp" })).toBe(false);
-    expect(supportsMetrics({ connectionType: "vnc" })).toBe(false);
-    expect(supportsMetrics({ connectionType: "telnet" })).toBe(false);
+  it("rejects remote desktop only hosts", () => {
+    expect(supportsMetrics({ connectionType: "rdp" }, ssh)).toBe(false);
+    expect(supportsMetrics({ connectionType: "vnc" }, ssh)).toBe(false);
+    expect(supportsMetrics({ connectionType: "telnet" }, ssh)).toBe(false);
   });
 
-  it("rejects ssh hosts that cannot run shell commands", () => {
-    expect(supportsMetrics({ connectionType: "ssh", authType: "none" })).toBe(
-      false,
-    );
-    expect(supportsMetrics({ connectionType: "ssh", authType: "opkssh" })).toBe(
-      false,
-    );
-  });
-});
-
-describe("isTcpPingEnabled", () => {
-  it("is enabled when status checks are on and tcp ping is not disabled", () => {
+  it("accepts a remote desktop host that also has ssh on", () => {
     expect(
-      isTcpPingEnabled({ statusCheckEnabled: true, disableTcpPing: false }),
+      supportsMetrics(
+        { connectionType: "rdp", enableSsh: true, authType: "password" },
+        ssh,
+      ),
     ).toBe(true);
-    expect(isTcpPingEnabled({ statusCheckEnabled: true })).toBe(true);
   });
 
-  it("is disabled when status checks are off", () => {
-    expect(isTcpPingEnabled({ statusCheckEnabled: false })).toBe(false);
-  });
-
-  it("is disabled when tcp ping is explicitly disabled", () => {
+  it("rejects ssh hosts that cannot connect unattended", () => {
     expect(
-      isTcpPingEnabled({ statusCheckEnabled: true, disableTcpPing: true }),
+      supportsMetrics({ connectionType: "ssh", authType: "none" }, ssh),
+    ).toBe(false);
+    expect(
+      supportsMetrics({ connectionType: "ssh", authType: "opkssh" }, ssh),
     ).toBe(false);
   });
 });
 
-describe("parseStatusHostIds", () => {
-  it("distinguishes an unrestricted request from an empty host set", () => {
-    expect(parseStatusHostIds(undefined)).toBeNull();
-    expect(parseStatusHostIds("")).toEqual(new Set());
-  });
-
-  it("keeps only valid positive host IDs", () => {
-    expect(parseStatusHostIds("7,2,7,-1,nope,1.5")).toEqual(new Set([7, 2]));
-  });
-});
-
-describe("createConnectionLog", () => {
-  it("builds a log entry without id/timestamp", () => {
-    const entry = createConnectionLog("info", "connection", "Connecting", {
+describe("connectionLog", () => {
+  it("builds a log entry without id or timestamp", () => {
+    const entry = connectionLog("info", "connection", "Connecting", {
       hostId: 1,
     });
     expect(entry).toEqual({
@@ -85,61 +56,32 @@ describe("createConnectionLog", () => {
       message: "Connecting",
       details: { hostId: 1 },
     });
-    expect("id" in entry).toBe(false);
-    expect("timestamp" in entry).toBe(false);
   });
 });
 
-describe("tcpPingThroughJumpHost", () => {
-  it("reports the final destination online when forwarding succeeds", async () => {
-    const stream = { destroy: vi.fn() };
-    const jumpClient = {
-      end: vi.fn(),
-      forwardOut: vi.fn((_src, _srcPort, host, port, callback) => {
-        expect(host).toBe("private.example");
-        expect(port).toBe(22);
-        callback(undefined, stream);
-      }),
-    } as unknown as Pick<Client, "forwardOut" | "end">;
+describe("sudoPasswordOf", () => {
+  const host = (extra: Partial<MetricsHost>) =>
+    ({
+      id: 1,
+      ip: "h",
+      port: 22,
+      username: "u",
+      userId: "o",
+      ...extra,
+    }) as MetricsHost;
 
-    await expect(
-      tcpPingThroughJumpHost(jumpClient, "private.example", 22),
-    ).resolves.toBe(true);
-    expect(stream.destroy).toHaveBeenCalledOnce();
-    expect(jumpClient.end).toHaveBeenCalledOnce();
+  it("prefers the host's sudo password", () => {
+    expect(
+      sudoPasswordOf(
+        host({ sudoPassword: "a", terminalConfig: { sudoPassword: "b" } }),
+      ),
+    ).toBe("a");
   });
 
-  it("reports the final destination offline when forwarding fails", async () => {
-    const jumpClient = {
-      end: vi.fn(),
-      forwardOut: vi.fn((_src, _srcPort, _host, _port, callback) => {
-        callback(new Error("Connection refused"));
-      }),
-    } as unknown as Pick<Client, "forwardOut" | "end">;
-
-    await expect(
-      tcpPingThroughJumpHost(jumpClient, "private.example", 22),
-    ).resolves.toBe(false);
-    expect(jumpClient.end).toHaveBeenCalledOnce();
-  });
-
-  it("reports the final destination offline when forwarding times out", async () => {
-    vi.useFakeTimers();
-    const jumpClient = {
-      end: vi.fn(),
-      forwardOut: vi.fn(),
-    } as unknown as Pick<Client, "forwardOut" | "end">;
-
-    const result = tcpPingThroughJumpHost(
-      jumpClient,
-      "private.example",
-      22,
-      5000,
-    );
-    await vi.advanceTimersByTimeAsync(5000);
-
-    await expect(result).resolves.toBe(false);
-    expect(jumpClient.end).toHaveBeenCalledOnce();
-    vi.useRealTimers();
+  it("falls back to the terminal config", () => {
+    expect(
+      sudoPasswordOf(host({ terminalConfig: { sudoPassword: "b" } })),
+    ).toBe("b");
+    expect(sudoPasswordOf(host({}))).toBeUndefined();
   });
 });

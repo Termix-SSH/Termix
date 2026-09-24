@@ -240,7 +240,9 @@
     "noQuickActions": "Még nincsenek gyors intézkedések.",
     "buttonLabel": "Gomb felirata",
     "selectSnippetPlaceholder": "Válasszon részletet...",
-    "addActionBtn": "Művelet hozzáadása"
+    "addActionBtn": "Művelet hozzáadása",
+    "hostNotFound": "Nem található gazdagép",
+    "loadingHost": "Gazdagép betöltése..."
   },
   "onboarding": {
     "feature_metrics": "Metrikák és riasztások",
@@ -255,6 +257,41 @@
     "noData": "Nincsenek elérhető adatok",
     "showCurrentValue": "Aktuális érték megjelenítése",
     "chartMetric": "Metrika",
-    "metricRange": "Hatótávolság"
+    "metricRange": "Hatótávolság",
+    "host": "Házigazda",
+    "loading": "Terhelés...",
+    "metricCpu": "CPU",
+    "metricDisk": "Korong",
+    "metricHostname": "Gazdagépnév",
+    "metricKernel": "Kernel",
+    "metricMemory": "Memória",
+    "metricNetwork": "Hálózat",
+    "metricOs": "operációs rendszer",
+    "metricProcesses": "Folyamatok",
+    "metricProcessesRunning": "futás",
+    "metricProcessesTotal": "teljes",
+    "metricUptime": "Üzemidő",
+    "metricsNotAvailable": "Mutatók nem állnak rendelkezésre",
+    "noHostSelected": "Nincs kiválasztva gazdagép",
+    "selectHost": "Válasszon egy hosztot..."
+  },
+  "dashboard": {
+    "cpu": "CPU",
+    "ram": "RAM"
+  },
+  "dashboardTab": {
+    "disk": "Korong"
+  },
+  "newUi": {
+    "sidebar": {
+      "snippets": {
+        "cancel": "Mégsem",
+        "confirmRunButton": "Fut",
+        "confirmRunMessage": "Futtassa a \"{{name}} \" programot?"
+      }
+    }
+  },
+  "terminal": {
+    "connected": "Csatlakoztatva"
   }
 }

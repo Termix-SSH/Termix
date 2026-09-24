@@ -1,5 +1,3 @@
-import type { GpuDevice } from "@/types/stats-widgets";
-
 export interface GpuHistory {
   utilization: number[];
   memory: number[];
@@ -29,3 +27,4 @@ export function appendGpuHistories(
   }
   return next;
 }
+import { type GpuDevice } from "../../shared/stats-widgets.js";

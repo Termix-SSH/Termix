@@ -89,7 +89,7 @@ import { shell } from "@/plugin-host/shell-bridge";
 import type { TabShellCallbacks } from "@/shell/tab-registry";
 
 export function statusCheckEnabled(host: Host): boolean {
-  return host.statsConfig?.statusCheckEnabled !== false;
+  return host.statusCheckEnabled !== false;
 }
 
 export function buildStatusTooltip(

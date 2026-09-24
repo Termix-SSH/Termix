@@ -28,6 +28,7 @@ import { invokeAction } from "@/shell/action-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { usePluginComponent } from "./component-registry";
+import { useOptionalHostStatusEntry } from "@/lib/ServerStatusContext";
 
 /**
  * Core permission groups, mirroring RESERVED_PERMISSION_PREFIXES in the SDK
@@ -284,6 +285,15 @@ export const pluginHostBridge: PluginHostBridge = {
   ],
 
   usePluginComponent: (id) => usePluginComponent(id),
+
+  useHostStatus: (hostId) => {
+    const entry = useOptionalHostStatusEntry(hostId);
+    if (!entry) return null;
+    return {
+      status: entry.status === "degraded" ? "unknown" : entry.status,
+      ...(entry.reason ? { reason: entry.reason } : {}),
+    };
+  },
 };
 
 /** Installs the bridge. Idempotent. */
