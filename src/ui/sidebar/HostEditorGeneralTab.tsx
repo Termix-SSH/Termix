@@ -190,45 +190,6 @@ export function HostEditorGeneralTab({
                 onChange={(e) => setField("name", e.target.value)}
               />
             </div>
-            {protocols.enableSsh && !simpleMode && (
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hosts.macAddress")}
-                  </label>
-                  <a
-                    href="https://docs.termix.site/features/networking/wake-on-lan"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-accent-brand hover:underline"
-                  >
-                    {t("hosts.docsLink")}
-                  </a>
-                </div>
-                <Input
-                  placeholder="AA:BB:CC:DD:EE:FF"
-                  value={form.macAddress}
-                  onChange={(e) => setField("macAddress", e.target.value)}
-                />
-              </div>
-            )}
-            {protocols.enableSsh && !simpleMode && form.macAddress && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("hosts.wolBroadcastAddress")}
-                </label>
-                <Input
-                  placeholder="192.168.1.255"
-                  value={form.wolBroadcastAddress}
-                  onChange={(e) =>
-                    setField("wolBroadcastAddress", e.target.value)
-                  }
-                />
-                <p className="text-[10px] text-muted-foreground/60">
-                  {t("hosts.wolBroadcastAddressDesc")}
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </SectionCard>

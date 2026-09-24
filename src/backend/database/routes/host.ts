@@ -227,8 +227,6 @@ router.post(
       connectionOrigin,
       portKnockSequence,
       overrideCredentialUsername,
-      macAddress,
-      wolBroadcastAddress,
       enableSsh,
       sshPort,
       rdpAuthType,
@@ -358,8 +356,6 @@ router.post(
         connectionOrigin === "local" || connectionOrigin === "remote"
           ? connectionOrigin
           : null,
-      macAddress: macAddress || null,
-      wolBroadcastAddress: wolBroadcastAddress || null,
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
@@ -908,8 +904,6 @@ router.put(
       connectionOrigin,
       portKnockSequence,
       overrideCredentialUsername,
-      macAddress,
-      wolBroadcastAddress,
       enableSsh,
       sshPort,
       rdpAuthType,
@@ -1040,8 +1034,6 @@ router.put(
         connectionOrigin === "local" || connectionOrigin === "remote"
           ? connectionOrigin
           : null,
-      macAddress: macAddress || null,
-      wolBroadcastAddress: wolBroadcastAddress || null,
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,

@@ -126,15 +126,6 @@ export async function updateSSHHost(
   }
 }
 
-export async function wakeOnLan(hostId: number): Promise<{ success: boolean }> {
-  try {
-    const response = await sshHostApi.post(`/db/host/${hostId}/wake`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "wake on LAN");
-  }
-}
-
 export async function bulkImportSSHHosts(
   hosts: SSHHostData[],
   overwrite = false,

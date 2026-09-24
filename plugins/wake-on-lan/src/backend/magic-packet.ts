@@ -20,7 +20,7 @@ export function isValidMac(mac: string): boolean {
   return MAC_REGEX.test(mac);
 }
 
-export function sendWakeOnLan(
+export function sendMagicPacket(
   mac: string,
   broadcastAddress = "255.255.255.255",
 ): Promise<void> {

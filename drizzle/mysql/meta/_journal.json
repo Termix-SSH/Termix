@@ -344,6 +344,13 @@
       "when": 1790278287918,
       "tag": "0048_hard_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "5",
+      "when": 1790282598229,
+      "tag": "0049_quiet_blacklash",
+      "breakpoints": true
     }
   ]
 }

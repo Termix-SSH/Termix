@@ -1340,7 +1340,6 @@ export {
   getSSHHosts,
   createSSHHost,
   updateSSHHost,
-  wakeOnLan,
   bulkImportSSHHosts,
   importSSHConfigHosts,
   discoverProxmoxGuests,

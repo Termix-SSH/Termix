@@ -1,0 +1,62 @@
+{
+  "id": "wake-on-lan",
+  "name": "Wake-on-LAN",
+  "version": "1.0.0",
+  "description": "Wake a sleeping host by sending a Wake-on-LAN magic packet to its MAC address.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Networking",
+  "icon": "Zap",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "network:broadcast",
+    "network:serve",
+    "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "wake-on-lan.send",
+      "version": "1.0.0",
+      "permission": "wake-on-lan.send"
+    }
+  ],
+  "contributes": {
+    "permissions": [
+      {
+        "name": "send",
+        "titleKey": "permissions.send.title",
+        "descriptionKey": "permissions.send.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "fields": [
+          {
+            "key": "macAddress",
+            "type": "string",
+            "labelKey": "settings.host.macAddress.label",
+            "descriptionKey": "settings.host.macAddress.description",
+            "placeholderKey": "settings.host.macAddress.placeholder"
+          },
+          {
+            "key": "broadcastAddress",
+            "type": "string",
+            "labelKey": "settings.host.broadcastAddress.label",
+            "descriptionKey": "settings.host.broadcastAddress.description",
+            "placeholderKey": "settings.host.broadcastAddress.placeholder"
+          }
+        ]
+      }
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

@@ -596,7 +596,6 @@ export function SidebarTree({
         tags: host.tags ?? [],
         pin: host.pin ?? false,
         notes: host.notes,
-        macAddress: host.macAddress,
         // Key material is never sent to the frontend, so a cloned key-auth
         // host would have authType "key" with no key — unusable. Reset to
         // password so the clone is in a connectable (editable) state.

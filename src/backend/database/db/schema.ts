@@ -325,8 +325,6 @@ export const hosts = sqliteTable(
     // Ignored for rdp/vnc/telnet, which always require the remote server.
     connectionOrigin: text("connection_origin"),
 
-    macAddress: text("mac_address"),
-    wolBroadcastAddress: text("wol_broadcast_address"),
     portKnockSequence: text("port_knock_sequence"),
 
     hostKeyFingerprint: text("host_key_fingerprint"),

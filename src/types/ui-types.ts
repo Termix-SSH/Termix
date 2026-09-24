@@ -48,8 +48,6 @@ export type Host = {
   keyPassword?: string;
   keyType?: string;
   notes?: string;
-  macAddress?: string;
-  wolBroadcastAddress?: string;
   pin?: boolean;
   sortOrder?: number | null;
 

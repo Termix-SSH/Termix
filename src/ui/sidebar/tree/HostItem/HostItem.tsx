@@ -22,7 +22,6 @@ import {
   Terminal,
   Trash2,
   Users,
-  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import { toast } from "sonner";
-import { getHostPassword, wakeOnLan } from "@/main-axios";
+import { getHostPassword } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
 import type {
   HostDensity,
@@ -366,16 +365,6 @@ export function HostItem({
     }
   }
 
-  async function handleWakeOnLan(e: MouseEvent) {
-    e.stopPropagation();
-    try {
-      await wakeOnLan(Number(host.id));
-      toast.success(t("hosts.wakeOnLanSuccess", { name: host.name }));
-    } catch {
-      toast.error(t("hosts.wakeOnLanError"));
-    }
-  }
-
   if (query && !hostMatchesQuery(host, query)) return null;
 
   const depthStyle =
@@ -506,15 +495,6 @@ export function HostItem({
         );
         return separator ? [separator, button] : button;
       })}
-      {host.macAddress && (
-        <button
-          title={t("hosts.wakeOnLanAction")}
-          onClick={handleWakeOnLan}
-          className={trayButtonClass}
-        >
-          <Zap className="size-3.5" />
-        </button>
-      )}
     </>
   );
 
@@ -704,12 +684,6 @@ export function HostItem({
               </DropdownMenuItem>
             );
           })}
-          {host.macAddress && (
-            <DropdownMenuItem onClick={handleWakeOnLan}>
-              <Zap className="size-3.5 mr-2" />
-              {t("hosts.wakeOnLanAction")}
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={(e) => {

@@ -36,7 +36,6 @@ vi.mock("@/hooks/use-status-color-scheme", () => ({
 
 vi.mock("@/main-axios", () => ({
   getHostPassword: vi.fn(),
-  wakeOnLan: vi.fn(),
 }));
 
 import { HostItem } from "../../../../sidebar/tree/HostItem/HostItem";
@@ -64,7 +63,6 @@ const baseHost: Host = {
   enableRdp: true,
   enableVnc: true,
   enableTelnet: true,
-  macAddress: "aa:bb:cc:dd:ee:ff",
   quickActions: [],
 } as unknown as Host;
 
@@ -140,7 +138,6 @@ describe("HostItem density parity", () => {
       0,
     );
     expect(screen.getAllByText("hosts.shareHost").length).toBeGreaterThan(0);
-    expect(screen.getByText("hosts.wakeOnLanAction")).toBeTruthy();
   });
 
   it.each(["comfortable", "compact"] as const)(
@@ -174,14 +171,6 @@ describe("HostItem density parity", () => {
       } finally {
         disposers.forEach((dispose) => dispose());
       }
-    },
-  );
-
-  it.each(["comfortable", "compact"] as const)(
-    "exposes the wake-on-LAN button when a MAC address is set, in %s density",
-    (density) => {
-      renderHostItem(density);
-      expect(screen.getByTitle("hosts.wakeOnLanAction")).toBeTruthy();
     },
   );
 

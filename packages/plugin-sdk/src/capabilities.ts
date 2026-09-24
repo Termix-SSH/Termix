@@ -51,6 +51,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("credentials:use", "medium"),
   entry("network:outbound", "medium"),
   entry("network:serve", "medium"),
+  entry("network:broadcast", "medium"),
   entry("users:read", "medium"),
   entry("events:core", "medium"),
   entry("notify:send", "medium"),

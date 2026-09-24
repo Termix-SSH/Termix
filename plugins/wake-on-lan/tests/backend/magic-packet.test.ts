@@ -15,8 +15,8 @@ import dgram from "dgram";
 import {
   isValidMac,
   buildMagicPacket,
-  sendWakeOnLan,
-} from "../../utils/wake-on-lan.js";
+  sendMagicPacket,
+} from "../../src/backend/magic-packet.js";
 
 describe("isValidMac", () => {
   it("accepts colon-separated MAC addresses", () => {
@@ -67,7 +67,7 @@ describe("buildMagicPacket", () => {
   });
 });
 
-describe("sendWakeOnLan", () => {
+describe("sendMagicPacket", () => {
   let mockSocket: ReturnType<typeof dgram.createSocket>;
 
   beforeEach(() => {
@@ -89,13 +89,13 @@ describe("sendWakeOnLan", () => {
   });
 
   it("rejects on invalid MAC address", async () => {
-    await expect(sendWakeOnLan("not-a-mac")).rejects.toThrow(
+    await expect(sendMagicPacket("not-a-mac")).rejects.toThrow(
       "Invalid MAC address",
     );
   });
 
   it("sends to 255.255.255.255 by default", async () => {
-    await sendWakeOnLan("aa:bb:cc:dd:ee:ff");
+    await sendMagicPacket("aa:bb:cc:dd:ee:ff");
     expect(mockSocket.send).toHaveBeenCalledWith(
       expect.any(Buffer),
       0,
@@ -107,7 +107,7 @@ describe("sendWakeOnLan", () => {
   });
 
   it("sends to a custom broadcast address when provided", async () => {
-    await sendWakeOnLan("aa:bb:cc:dd:ee:ff", "192.168.1.255");
+    await sendMagicPacket("aa:bb:cc:dd:ee:ff", "192.168.1.255");
     expect(mockSocket.send).toHaveBeenCalledWith(
       expect.any(Buffer),
       0,

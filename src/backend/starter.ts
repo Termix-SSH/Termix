@@ -401,6 +401,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runAiSettingsMigration } =
         await import("./utils/crypto-migration/ai-settings-migration.js");
       await runAiSettingsMigration();
+
+      const { runWakeOnLanSettingsMigration } =
+        await import("./utils/crypto-migration/wake-on-lan-settings-migration.js");
+      await runWakeOnLanSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

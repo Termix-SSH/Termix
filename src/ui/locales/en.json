@@ -570,9 +570,6 @@
     "secureShell": "Secure Shell",
     "addressIp": "Address / IP",
     "friendlyName": "Friendly Name",
-    "macAddress": "MAC Address",
-    "wolBroadcastAddress": "WoL Broadcast Address",
-    "wolBroadcastAddressDesc": "Optional directed broadcast for Docker/routed networks (e.g. 192.168.1.255). Leave empty to use 255.255.255.255.",
     "folderAndAdvanced": "Folder & Advanced",
     "showAdvancedSettings": "Show advanced settings",
     "hideAdvancedSettings": "Hide advanced settings",
@@ -971,9 +968,6 @@
     "remoteDesktopUrlCopied": "Remote Desktop URL copied",
     "expandActions": "Expand actions",
     "collapseActions": "Collapse actions",
-    "wakeOnLanAction": "Wake on LAN",
-    "wakeOnLanSuccess": "Magic packet sent to {{name}}",
-    "wakeOnLanError": "Failed to send magic packet",
     "cloneHostAction": "Clone Host",
     "copyAddress": "Copy Address",
     "copyLink": "Copy Link",
@@ -2795,6 +2789,10 @@
       "network:serve": {
         "title": "Accept connections",
         "consequence": "It opens a port on the Termix server."
+      },
+      "network:broadcast": {
+        "title": "Send network broadcasts",
+        "consequence": "It can send packets to devices on the local network, such as a Wake-on-LAN signal."
       },
       "users:read": {
         "title": "See usernames and roles",

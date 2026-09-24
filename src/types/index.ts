@@ -238,8 +238,6 @@ export type Host = {
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
 
-  macAddress?: string;
-  wolBroadcastAddress?: string;
   portKnockSequence?: Array<{
     port: number;
     protocol?: "tcp" | "udp";
@@ -392,8 +390,6 @@ export interface HostData {
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
 
-  macAddress?: string;
-  wolBroadcastAddress?: string;
   portKnockSequence?: Array<{
     port: number;
     protocol?: "tcp" | "udp";

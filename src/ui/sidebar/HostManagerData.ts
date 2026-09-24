@@ -85,8 +85,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     notes: h.notes,
     pin: h.pin ?? false,
     sortOrder: h.sortOrder ?? null,
-    macAddress: h.macAddress,
-    wolBroadcastAddress: h.wolBroadcastAddress,
     connectionOrigin: h.connectionOrigin ?? null,
     enableSsh: h.enableSsh != null ? h.enableSsh : isSshHost,
     enableTerminal:
