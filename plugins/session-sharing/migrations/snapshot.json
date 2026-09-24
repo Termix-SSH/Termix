@@ -1,0 +1,223 @@
+{
+  "version": 1,
+  "tables": {
+    "shares": {
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "length": 255,
+          "primaryKey": true,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "ownerUserId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "protocol": {
+          "type": "text",
+          "notNull": true
+        },
+        "sessionId": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "tabInstanceId": {
+          "type": "text"
+        },
+        "shareType": {
+          "type": "text",
+          "notNull": true
+        },
+        "targetUserId": {
+          "type": "varchar",
+          "length": 255
+        },
+        "linkToken": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
+        "permissionLevel": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "read-only"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "expiresAt": {
+          "type": "text",
+          "notNull": true
+        },
+        "revokedAt": {
+          "type": "text"
+        },
+        "lastJoinedAt": {
+          "type": "text"
+        },
+        "joinCount": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 0
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_session_shares_session_id",
+          "columns": ["sessionId"]
+        },
+        {
+          "name": "idx_session_shares_host_id",
+          "columns": ["hostId"]
+        }
+      ],
+      "adopts": "session_shares"
+    },
+    "share_participants": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "shareId": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "userId": {
+          "type": "varchar",
+          "length": 255
+        },
+        "guestLabel": {
+          "type": "text"
+        },
+        "joinedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "leftAt": {
+          "type": "text"
+        }
+      },
+      "indexes": [],
+      "adopts": "session_share_participants"
+    },
+    "rooms": {
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "length": 255,
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "ownerUserId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "persistent": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "presenterUserId": {
+          "type": "varchar",
+          "length": 255
+        },
+        "stageProtocol": {
+          "type": "text"
+        },
+        "stageHostId": {
+          "type": "integer"
+        },
+        "stageShareId": {
+          "type": "varchar",
+          "length": 255
+        },
+        "guestLinkToken": {
+          "type": "varchar",
+          "length": 255
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "endedAt": {
+          "type": "text"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_collab_rooms_guest_token",
+          "columns": ["guestLinkToken"],
+          "unique": true
+        },
+        {
+          "name": "idx_collab_rooms_owner",
+          "columns": ["ownerUserId"]
+        }
+      ],
+      "adopts": "collab_rooms"
+    },
+    "room_members": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "roomId": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "roomRole": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "member"
+        },
+        "addedBy": {
+          "type": "varchar",
+          "length": 255
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_collab_room_members_room_user",
+          "columns": ["roomId", "userId"],
+          "unique": true
+        },
+        {
+          "name": "idx_collab_room_members_user",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "collab_room_members"
+    }
+  }
+}

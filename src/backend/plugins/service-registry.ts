@@ -42,6 +42,11 @@ import type { PluginManifest, PluginServiceRequire } from "./manifest.js";
 
 export interface ServiceRegistration {
   service: string;
+  /**
+   * The provider's name, for a service several plugins provide side by side
+   * (sessions.live, keyed by session type). Empty for the one unnamed provider.
+   */
+  name: string;
   version: string;
   permission: string;
   /** The plugin that provided it. */
@@ -57,9 +62,10 @@ export interface ServiceRegistration {
   generation: number;
 }
 
-const services = new Map<string, ServiceRegistration>();
+/** service -> provider name ("" when unnamed) -> registration. */
+const services = new Map<string, Map<string, ServiceRegistration>>();
 /**
- * What a service looked like before it was revoked.
+ * What a provider looked like before it was revoked, by the same two keys.
  *
  * A handle taken while the provider was up must keep throwing a named error
  * after it goes away, rather than degrading to "undefined is not a function",
@@ -67,6 +73,14 @@ const services = new Map<string, ServiceRegistration>();
  */
 const retired = new Map<string, { pluginId: string; methods: Set<string> }>();
 let generationCounter = 0;
+
+function retiredKey(service: string, name: string): string {
+  return `${service}#${name}`;
+}
+
+function lookup(service: string, name = ""): ServiceRegistration | undefined {
+  return services.get(service)?.get(name);
+}
 
 /** Thrown when the provider went away while a consumer still held a handle. */
 export class PluginServiceUnavailableError extends Error {
@@ -115,22 +129,31 @@ export class PluginServiceActorError extends Error {
 }
 
 export function provideService(
-  registration: Omit<ServiceRegistration, "generation">,
+  registration: Omit<ServiceRegistration, "generation" | "name"> & {
+    name?: string;
+  },
 ): ServiceRegistration {
-  const existing = services.get(registration.service);
+  const name = registration.name ?? "";
+  const existing = lookup(registration.service, name);
   if (existing) {
     pluginLogger.warn(
-      `Service "${registration.service}" is already provided by ${existing.pluginId} and is being replaced by ${registration.pluginId}`,
+      `Service "${registration.service}"${name ? ` (${name})` : ""} is already provided by ${existing.pluginId} and is being replaced by ${registration.pluginId}`,
       { operation: "plugin_service_registry" },
     );
   }
 
   const entry: ServiceRegistration = {
     ...registration,
+    name,
     generation: ++generationCounter,
   };
-  services.set(registration.service, entry);
-  retired.delete(registration.service);
+  let providers = services.get(registration.service);
+  if (!providers) {
+    providers = new Map();
+    services.set(registration.service, providers);
+  }
+  providers.set(name, entry);
+  retired.delete(retiredKey(registration.service, name));
   return entry;
 }
 
@@ -143,13 +166,14 @@ export function revokeService(
   service: string,
   registration?: ServiceRegistration,
 ): boolean {
-  const current = services.get(service);
+  const name = registration?.name ?? "";
+  const current = lookup(service, name);
   if (!current) return false;
   if (registration && current.generation !== registration.generation) {
     return false;
   }
 
-  retired.set(service, {
+  retired.set(retiredKey(service, name), {
     pluginId: current.pluginId,
     methods: new Set(
       Object.keys(current.implementation).filter(
@@ -157,13 +181,22 @@ export function revokeService(
       ),
     ),
   });
-  return services.delete(service);
+  const providers = services.get(service)!;
+  providers.delete(name);
+  if (providers.size === 0) services.delete(service);
+  return true;
 }
 
 export function getRegistration(
   service: string,
+  name = "",
 ): ServiceRegistration | undefined {
-  return services.get(service);
+  return lookup(service, name);
+}
+
+/** The names of every provider of a service right now ("" when unnamed). */
+export function listProviderNames(service: string): string[] {
+  return [...(services.get(service)?.keys() ?? [])];
 }
 
 /**
@@ -178,15 +211,16 @@ export function getRegistration(
 export function getServiceImplementation<T extends object>(
   service: string,
   versionRange: string,
+  name = "",
 ): T | undefined {
-  const registration = services.get(service);
+  const registration = lookup(service, name);
   if (!registration) return undefined;
   if (!semver.satisfies(registration.version, versionRange)) return undefined;
   return registration.implementation as T;
 }
 
 export function listServices(): ServiceRegistration[] {
-  return [...services.values()];
+  return [...services.values()].flatMap((providers) => [...providers.values()]);
 }
 
 /** Test seam. */
@@ -214,7 +248,13 @@ export function resolveRequirements(
   const missingOptional: string[] = [];
 
   for (const requirement of manifest.requires ?? []) {
-    const registration = services.get(requirement.service);
+    // Any one provider satisfies it; a consumer of a named service picks the
+    // provider per call.
+    const providers = [...(services.get(requirement.service)?.values() ?? [])];
+    const registration =
+      providers.find((candidate) =>
+        semver.satisfies(candidate.version, requirement.versionRange),
+      ) ?? providers[0];
 
     if (!registration) {
       recordUnsatisfied(
@@ -292,6 +332,7 @@ export function createServiceHandle<T extends object>(
   service: string,
   consumerPluginId: string,
   context: ServiceCallContext,
+  name = "",
 ): T {
   const target = Object.create(null) as T;
 
@@ -301,10 +342,12 @@ export function createServiceHandle<T extends object>(
 
       if (property === "asUser") {
         return (userId: string) =>
-          createServiceHandle<T>(service, consumerPluginId, {
-            ...context,
-            resolveUserId: () => userId,
-          });
+          createServiceHandle<T>(
+            service,
+            consumerPluginId,
+            { ...context, resolveUserId: () => userId },
+            name,
+          );
       }
 
       // Resolved at call time, not here: the provider may have gone away
@@ -312,9 +355,9 @@ export function createServiceHandle<T extends object>(
       // must keep throwing the typed error rather than degrading to
       // `undefined is not a function`, which tells a consumer nothing about
       // why its dependency vanished.
-      const registration = services.get(service);
+      const registration = lookup(service, name);
       if (!registration) {
-        const gone = retired.get(service);
+        const gone = retired.get(retiredKey(service, name));
         if (!gone?.methods.has(property)) return undefined;
         return () => {
           throw new PluginServiceUnavailableError(service, gone.pluginId);
@@ -332,17 +375,18 @@ export function createServiceHandle<T extends object>(
           consumerPluginId,
           context,
           registration.generation,
+          name,
         );
     },
 
     has(_target, property) {
-      const registration = services.get(service);
+      const registration = lookup(service, name);
       if (!registration || typeof property !== "string") return false;
       return typeof registration.implementation[property] === "function";
     },
 
     ownKeys() {
-      const registration = services.get(service);
+      const registration = lookup(service, name);
       if (!registration) return [];
       return Object.keys(registration.implementation).filter(
         (key) => typeof registration.implementation[key] === "function",
@@ -350,7 +394,7 @@ export function createServiceHandle<T extends object>(
     },
 
     getOwnPropertyDescriptor(_target, property) {
-      const registration = services.get(service);
+      const registration = lookup(service, name);
       if (!registration || typeof property !== "string") return undefined;
       if (typeof registration.implementation[property] !== "function") {
         return undefined;
@@ -367,8 +411,9 @@ async function invokeGuarded(
   consumerPluginId: string,
   context: ServiceCallContext,
   expectedGeneration: number,
+  name: string,
 ): Promise<unknown> {
-  const registration = services.get(service);
+  const registration = lookup(service, name);
 
   // Re-checked here rather than trusted from the get trap: a call is async and
   // the provider can be disabled between resolving the method and running it.

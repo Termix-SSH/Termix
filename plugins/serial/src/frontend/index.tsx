@@ -73,9 +73,6 @@ export function activate(app: TermixApp): void {
     icon: Usb,
     titleKey: "nav.serial",
     session: true,
-    // A physical device attached to this machine, not a remote connection
-    // another user could join.
-    shareable: false,
     // Reconnecting to a COM port automatically after a restart is not a
     // workflow anyone asked for, and there's no host to restore against
     // anyway, so a serial tab is a local, ephemeral session like the

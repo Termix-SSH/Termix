@@ -55,10 +55,6 @@ import {
   type BrandingSettings,
 } from "@/api/settings-api";
 import {
-  getSessionSharingGloballyEnabled,
-  updateSessionSharingGloballyEnabled,
-} from "@/api/session-sharing-api";
-import {
   getAcmeSslSettings,
   updateAcmeSslSettings,
   requestAcmeCertificate,
@@ -148,8 +144,6 @@ export function AdminSettingsPanel({
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [oidcSilentLoginDefaultLocked, setOidcSilentLoginDefaultLocked] =
     useState(false);
-  const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
-    useState(true);
   const [stepCaPrivateEndpoints, setStepCaPrivateEndpoints] = useState<
     string[]
   >([]);
@@ -361,7 +355,6 @@ export function AdminSettingsPanel({
         secondFactorExternal,
         oidcSilent,
         analytics,
-        sessionSharingEnabled,
         notificationEndpoints,
         stepCaEndpoints,
         secretSourceEndpoints,
@@ -378,7 +371,6 @@ export function AdminSettingsPanel({
         getSecondFactorAfterExternalLogin(),
         getOidcSilentLoginDefault(),
         getAnalyticsEnabled(),
-        getSessionSharingGloballyEnabled(),
         getNotificationPrivateEndpoints(),
         getStepCaPrivateEndpoints(),
         getSecretSourcePrivateEndpoints(),
@@ -417,9 +409,6 @@ export function AdminSettingsPanel({
       if (analytics.status === "fulfilled") {
         setAnalyticsEnabled(analytics.value.enabled);
         setAnalyticsLocked(analytics.value.locked ?? false);
-      }
-      if (sessionSharingEnabled.status === "fulfilled") {
-        setSessionSharingGloballyEnabled(sessionSharingEnabled.value.enabled);
       }
       if (stepCaEndpoints.status === "fulfilled") {
         setStepCaPrivateEndpoints(stepCaEndpoints.value);
@@ -550,17 +539,6 @@ export function AdminSettingsPanel({
     } catch {
       setAnalyticsEnabled(!newVal);
       toast.error(t("admin.updateAnalyticsFailed"));
-    }
-  }
-
-  async function handleToggleSessionSharingGloballyEnabled() {
-    const newVal = !sessionSharingGloballyEnabled;
-    setSessionSharingGloballyEnabled(newVal);
-    try {
-      await updateSessionSharingGloballyEnabled(newVal);
-    } catch {
-      setSessionSharingGloballyEnabled(!newVal);
-      toast.error(t("admin.updateSessionSharingFailed"));
     }
   }
 
@@ -1088,7 +1066,6 @@ export function AdminSettingsPanel({
         analyticsEnabled={analyticsEnabled}
         analyticsLocked={analyticsLocked}
         handleToggleAnalytics={handleToggleAnalytics}
-        sessionSharingGloballyEnabled={sessionSharingGloballyEnabled}
         notificationPrivateEndpoints={notificationPrivateEndpoints}
         stepCaPrivateEndpoints={stepCaPrivateEndpoints}
         onSaveStepCaPrivateEndpoints={handleSaveStepCaPrivateEndpoints}
@@ -1101,9 +1078,6 @@ export function AdminSettingsPanel({
         handleSaveStepCaSettings={handleSaveStepCaSettings}
         onSaveNotificationPrivateEndpoints={
           handleSaveNotificationPrivateEndpoints
-        }
-        handleToggleSessionSharingGloballyEnabled={
-          handleToggleSessionSharingGloballyEnabled
         }
         allowRegistration={allowRegistration}
         handleToggleRegistration={handleToggleRegistration}

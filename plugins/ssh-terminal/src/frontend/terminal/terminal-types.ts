@@ -33,11 +33,4 @@ export interface TerminalHandle {
   notifyResize: () => void;
   refresh: () => void;
   getApplicationCursorKeysMode: () => boolean;
-  /** What the shell's share action needs, or null while there is nothing to share. */
-  getShareTarget: () => {
-    hostId: number;
-    sessionId: string;
-    protocol: "ssh";
-    tabInstanceId?: string;
-  } | null;
 }

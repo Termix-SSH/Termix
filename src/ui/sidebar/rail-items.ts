@@ -10,7 +10,6 @@ import {
   Settings,
   User,
   Zap,
-  Presentation,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
@@ -89,12 +88,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.connections",
     separatorAfter: true,
     rightDockable: true,
-  },
-  {
-    id: "collab",
-    icon: Presentation,
-    labelKey: "nav.collab",
-    separatorAfter: true,
   },
   {
     id: "quick-connect",

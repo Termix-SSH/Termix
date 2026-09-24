@@ -2,6 +2,9 @@ import { authApi } from "@/main-axios";
 import { createTtlRequestCache } from "@/lib/ttl-request-cache";
 import type { TerminalTheme } from "@/lib/terminal-themes";
 import type { CustomKeybinding } from "@/types/keybindings";
+import { invokeAction, isActionRegistered } from "@/shell/action-registry";
+
+const SHARED_WITH_ME_ACTION = "sessions.sharedWithMe";
 
 // OPEN TABS API
 // ============================================================================
@@ -84,10 +87,21 @@ export async function addOpenTab(tab: OpenTabUpsertPayload): Promise<void> {
   await authApi.post("/open-tabs", tab);
 }
 
+/**
+ * The caller's live sessions, plus sessions other users shared with them,
+ * which the session sharing plugin answers through an action (none while it
+ * is off).
+ */
 export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
   return activeSessionsCache.get(async () => {
-    const response = await authApi.get("/open-tabs/active-sessions");
-    return Array.isArray(response.data) ? response.data : [];
+    const [response, shared] = await Promise.all([
+      authApi.get("/open-tabs/active-sessions"),
+      isActionRegistered(SHARED_WITH_ME_ACTION)
+        ? invokeAction(SHARED_WITH_ME_ACTION).catch(() => [])
+        : Promise.resolve([]),
+    ]);
+    const own = Array.isArray(response.data) ? response.data : [];
+    return Array.isArray(shared) ? [...own, ...shared] : own;
   });
 }
 

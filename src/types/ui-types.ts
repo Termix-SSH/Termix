@@ -58,7 +58,6 @@ export type Host = {
   enableTerminal: boolean;
   enableCommandHistory: boolean;
   enableSessionLogging?: boolean;
-  allowSessionSharing?: boolean;
   /** Stable identity across a desktop/server sync pair. */
   syncId?: string | null;
   terminalConfig?: Partial<TerminalConfig>;
@@ -279,7 +278,6 @@ export type KnownTabType =
   | "ssh-tools"
   | "automations"
   | "ai"
-  | "collab"
   | "split-screen";
 
 /**
@@ -309,8 +307,6 @@ export type Tab = {
   initialPath?: string;
   /** Payload owned by the tab's plugin, e.g. which fleet or endpoint it shows. */
   data?: Record<string, unknown>;
-  /** Which collab room a collab tab is showing. */
-  collabRoomId?: string;
   /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
   splitConfig?: SplitTabConfig;
   /** Hides this session from the top-level tab bar while it belongs to a split tab. */
@@ -326,15 +322,7 @@ export type Tab = {
     notifyResize?: () => void;
     refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
-    openShareModal?: () => void;
-    canShare?: () => boolean;
     openFileManager?: () => void;
-    getShareTarget?: () => {
-      hostId: number;
-      sessionId: string;
-      protocol: "ssh";
-      tabInstanceId?: string;
-    } | null;
     focus?: () => void;
   } | null>;
 };

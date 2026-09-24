@@ -27,7 +27,8 @@
     {
       "service": "sessions.live",
       "version": "1.0.0",
-      "permission": "ssh-terminal.sessions"
+      "permission": "ssh-terminal.sessions",
+      "names": ["ssh"]
     },
     {
       "service": "terminal.history",

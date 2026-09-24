@@ -99,6 +99,7 @@ export const tabsApi = {
   openTab: shell.openTab,
   openSingletonTab: shell.openSingletonTab,
   closeTab: shell.closeTab,
+  openRailView: shell.openRailView,
   getLayout: () => layoutProvider?.getLayout() ?? null,
   applyLayout: (layout: Layout, options?: { name?: string }) =>
     layoutProvider

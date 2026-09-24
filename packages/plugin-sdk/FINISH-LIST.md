@@ -144,21 +144,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   to ask Electron's main process for something, extend
   `BACKEND_REQUEST_HANDLERS` there rather than building a parallel channel.
   No owner needed unless a second caller appears.
-- **B9 (ssh-terminal):** session sharing has no provider yet. The terminal
-  consumes `sessions.sharing` v1 (member joins through `authorizeJoin` and
-  `recordJoin`, collab room events through `subscribeRoom`/`unsubscribeRoom`)
-  and reads guest link resolution from `ctx.registry` as
-  `sessions.sharing.guests` (`resolve`, `recordJoin`), all typed in
-  `plugins/ssh-terminal/src/backend/services.ts`. Until something provides
-  them, share-link and room guests are refused and in-app joins fail. Core's
-  session-sharing, collab and open-tabs code reach the terminal through
-  `sessions.live` already. Owner: B12, which provides both from the
-  session-sharing plugin (the lookups are the old code in
-  `hosts/session-sharing` and `hosts/collab`: share repo, room repo, guest
-  rate limit, `canJoinRoomStageShare`, `session_sharing_globally_enabled`,
-  host `allowSessionSharing`, `getAuditUsername` for labels, `collabRoomHub`).
-  B12 also moves `eventsWsPath` in `collab/routes.ts` and the share dialog the
-  shell opens from a tab's `getShareTarget()`.
 - **B9 (ssh-terminal), for D2:** the terminal socket is a public route with
   `optionalAuth`, because share-link and room guests authenticate inside the
   handler with their token. Guest auth itself is unchanged; review it with the
@@ -270,6 +255,34 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   section. Owner: whoever designs the 3.0.0 install flow (prebuild-per-platform
   packaging, or a documented "avoid native code" rule for community plugins).
 
+- **B12 (session-sharing):** the remote desktop side of sharing has no
+  provider yet. Session sharing reaches rdp, vnc and telnet sessions through
+  `sessions.live` named providers `rdp`, `vnc` and `telnet`, each with
+  `getSession(sessionId)` (id, userId as the session's owner, hostId,
+  hostName, isConnected, createdAt, tabInstanceId) and
+  `createViewerToken(sessionId, readOnly)`, typed in
+  `plugins/session-sharing/src/backend/live.ts`. Until remote-desktop provides
+  them, sharing or presenting an RDP/VNC/Telnet session is refused and those
+  links resolve 404. B14 also drops `createJoinToken`/`getSessionInfo` from
+  its `remote-desktop.sessions` registry entry, which core no longer reads.
+  Owner: B14.
+- **B12 (session-sharing):** `allow_session_sharing` is still a live `ssh_data`
+  column. The copy into the plugin's host setting shipped
+  (`session-sharing-settings-migration.ts`) and nothing in core reads or
+  writes it any more; drop it in lockstep (`schema.ts`, `db/index.ts`, a
+  drizzle migration per dialect, `schema:generate`). Owner: D0.
+- **B12 (session-sharing):** the legacy `session_sharing_globally_enabled`
+  settings row is left in place for a release; nothing reads it. Delete it in
+  3.0.0. Owner: D0 to decide.
+- **B12 (session-sharing):** room audit lines go through `ctx.audit.record`,
+  which records the actor but not the request's IP address and user agent the
+  old `logAudit` calls carried. Adding those to `ctx.audit.record` would
+  restore them. Owner: D1.
+- **B12 (session-sharing):** the share button lives in the terminal and remote
+  desktop toolbars now; the tab bar's share button is gone, so a host with the
+  terminal toolbar switched off has no share button. A generic tab-menu slot
+  would bring it back if that matters. Owner: D1, if wanted.
+
 ## Manual checks after 2.9.0
 
 - SSH terminal: password auth, key auth (and an encrypted key's passphrase
@@ -278,3 +291,7 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   page reload (session reattach), and the local terminal in the desktop app.
 - Serial: the Electron backend path against a real device path/COM port, and
   the Web Serial browser picker in Chrome or Edge.
+- Session sharing: a link share (read-only and read-write) opened in a private
+  window, a user share joined from Active Connections, revoke and "end for
+  everyone", and a collab room with two members, control hand-off, a guest
+  link, rotate and end.

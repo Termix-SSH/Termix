@@ -10,7 +10,6 @@ import {
   Fingerprint,
   Hammer,
   ScrollText,
-  Presentation,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,12 +27,6 @@ import {
 } from "@/lib/adaptive-resource-budget";
 
 // Heavy tab surfaces — keep out of the AppShell critical path.
-const CollabRoomTab = lazy(() =>
-  import("@/features/collab/CollabRoomTab").then((m) => ({
-    default: m.CollabRoomTab,
-  })),
-);
-
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
     default: m.DashboardTab,
@@ -129,8 +122,6 @@ export function tabIcon(type: TabType) {
       return <Settings className="size-3.5" />;
     case "homepage":
       return <LayoutGrid className="size-3.5" />;
-    case "collab":
-      return <Presentation className="size-3.5" />;
     case "termix-id":
       return <Fingerprint className="size-3.5" />;
     case "session-logs":
@@ -230,11 +221,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
 
     case "homepage":
       return withTabSuspense(<HomepageCanvas />);
-
-    case "collab":
-      return withTabSuspense(
-        <CollabRoomTab roomId={tab.collabRoomId} isVisible={isVisible} />,
-      );
 
     case "termix-id":
       return withTabSuspense(

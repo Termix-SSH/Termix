@@ -145,7 +145,11 @@ const swaggerOptions: SwaggerJSDocOptions = {
       },
       {
         name: "Session Sharing",
-        description: "Live terminal session collaboration",
+        description: "Share live sessions by link or with another user",
+      },
+      {
+        name: "Collab",
+        description: "Collaboration rooms that present a live session",
       },
       {
         name: "Session Logs",

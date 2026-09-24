@@ -1810,15 +1810,6 @@ export function HostEditor({
                       onChange={(v) => setField("enableSessionLogging", v)}
                     />
                   </SettingRow>
-                  <SettingRow
-                    label={t("hosts.allowSessionSharing")}
-                    description={t("hosts.allowSessionSharingDesc")}
-                  >
-                    <FakeSwitch
-                      checked={form.allowSessionSharing}
-                      onChange={(v) => setField("allowSessionSharing", v)}
-                    />
-                  </SettingRow>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {t("hosts.localEchoLabel")}

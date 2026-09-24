@@ -435,7 +435,7 @@ export function createPluginContext(
     },
 
     services: {
-      provide: (service, implementation) => {
+      provide: (service, implementation, options) => {
         // Declared AND provided: a plugin cannot publish a service its
         // manifest never mentioned.
         const entry = manifest.provides?.find(
@@ -446,9 +446,16 @@ export function createPluginContext(
             `Plugin ${pluginId} cannot provide service "${service}": it is not declared in the manifest's provides array`,
           );
         }
+        const name = options?.name ?? "";
+        if (entry.names ? !entry.names.includes(name) : name !== "") {
+          throw new Error(
+            `Plugin ${pluginId} cannot provide service "${service}" as "${name}": the manifest's provides[].names does not list it`,
+          );
+        }
 
         const registration = serviceRegistry.provideService({
           service,
+          name,
           version: entry.version,
           permission: entry.permission,
           pluginId,
@@ -463,14 +470,21 @@ export function createPluginContext(
       },
 
       get: (service, options) =>
-        serviceRegistry.createServiceHandle(service, pluginId, {
-          // A caller-supplied userId is only honoured when it matches the
-          // actor; otherwise the ambient actor wins. A plugin cannot widen
-          // its reach by naming someone else here.
-          resolveUserId: () => options?.userId ?? getActor(),
-          hasPermission: checkPermission,
-          audit: (entry) => writeServiceAudit(entry),
-        }),
+        serviceRegistry.createServiceHandle(
+          service,
+          pluginId,
+          {
+            // A caller-supplied userId is only honoured when it matches the
+            // actor; otherwise the ambient actor wins. A plugin cannot widen
+            // its reach by naming someone else here.
+            resolveUserId: () => options?.userId ?? getActor(),
+            hasPermission: checkPermission,
+            audit: (entry) => writeServiceAudit(entry),
+          },
+          options?.provider ?? "",
+        ),
+
+      providers: (service) => serviceRegistry.listProviderNames(service),
     },
 
     secrets: {

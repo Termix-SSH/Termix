@@ -135,16 +135,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     table: "session_recordings",
     columns: "host_id",
   },
-  {
-    name: "idx_session_shares_session_id",
-    table: "session_shares",
-    columns: "session_id",
-  },
-  {
-    name: "idx_session_shares_host_id",
-    table: "session_shares",
-    columns: "host_id",
-  },
 
   // Automations.
   {

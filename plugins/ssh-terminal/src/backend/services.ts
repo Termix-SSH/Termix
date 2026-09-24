@@ -1,11 +1,13 @@
 /**
  * The services this plugin provides and consumes.
  *
- * Provided: "sessions.live" (live SSH sessions, for session sharing, collab
- * and recording) and "terminal.history" (command history, for the AI
- * assistant). Consumed, all optional: "tmux.sessions" (B10),
- * "sessions.sharing" (B12) and "recordings.writer" (B13). The terminal keeps
- * working without any of them: no tmux attach, no shared joins, no recording.
+ * Provided: "sessions.live" as its "ssh" provider (live SSH sessions, for
+ * session sharing, collab rooms and recording; remote desktop provides the
+ * other session types) and "terminal.history" (command history, for the AI
+ * assistant). Consumed, all optional: "tmux.sessions" (tmux-monitor),
+ * "sessions.sharing" (session-sharing) and "recordings.writer" (B13). The
+ * terminal keeps working without any of them: no tmux attach, no shared
+ * joins, no recording.
  */
 
 export interface LiveSessionInfo {

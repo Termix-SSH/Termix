@@ -45,7 +45,6 @@ import {
   ConnectionLogProvider,
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { SSHHost } from "@/types";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import { resolveConnectionDefaults } from "@/lib/connection-defaults";
@@ -68,8 +67,6 @@ export type GuacamoleQuickHost = GuacamoleAppInnerProps["hostConfig"] & {
 export interface GuacamoleAppHandle {
   disconnect: () => void;
   isConnected: () => boolean;
-  openShareModal: () => void;
-  canShare: () => boolean;
   /** Reconnects, from the tab bar's refresh. */
   refresh: () => void;
 }
@@ -202,7 +199,6 @@ const GuacamoleAppInner = React.forwardRef<
     id: string;
     origin: ConnectionOrigin;
   } | null>(null);
-  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isDisplayReady, setIsDisplayReady] = useState(false);
@@ -299,8 +295,6 @@ const GuacamoleAppInner = React.forwardRef<
   useImperativeHandle(ref, () => ({
     disconnect: () => displayRef.current?.disconnect(),
     isConnected: () => displayRef.current?.isConnected() === true,
-    openShareModal: () => setShareModalOpen(true),
-    canShare: () => guacamoleConnectionId !== null,
     refresh: () => reconnectRef.current(),
   }));
 
@@ -649,16 +643,16 @@ const GuacamoleAppInner = React.forwardRef<
           onTouchModeChange={setTouchMode}
           zoom={displayZoom}
           onHide={() => setToolbarHidden(true)}
-        />
-      )}
-      {shareModalOpen && guacamoleConnectionId && (
-        <ShareSessionModal
-          open={shareModalOpen}
-          onClose={() => setShareModalOpen(false)}
-          hostId={hostId}
-          sessionId={guacamoleConnectionId}
-          protocol={resolvedProtocol}
-          tabInstanceId={tabId}
+          slotContext={
+            typeof hostId === "number"
+              ? {
+                  hostId,
+                  sessionId: guacamoleConnectionId,
+                  protocol: resolvedProtocol,
+                  tabInstanceId: tabId,
+                }
+              : undefined
+          }
         />
       )}
     </div>

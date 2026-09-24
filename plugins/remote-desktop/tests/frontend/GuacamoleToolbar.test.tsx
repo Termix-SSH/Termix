@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { GuacamoleToolbar } from "../../src/frontend/GuacamoleToolbar.js";
 import type { GuacamoleDisplayHandle } from "../../src/frontend/GuacamoleDisplay.js";
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 

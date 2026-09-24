@@ -12,8 +12,8 @@ import {
  * exist for anyone, regardless of what any user has enabled. It defaults to
  * false so upgrading an existing install turns nothing on by surprise.
  *
- * Mirrors the shape of isSharingEnabledForHost in the session-sharing routes,
- * where the global also wins over the per-entity setting.
+ * Mirrors session sharing's own check, where the global also wins over the
+ * per-host setting.
  */
 
 export const AI_GLOBAL_ENABLED_KEY = "ai_globally_enabled";

@@ -32,6 +32,7 @@ import type {
   GuacamoleTouchMode,
 } from "./GuacamoleDisplay.tsx";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { ActionSlot } from "@termix/plugin-sdk/ui";
 import { cn } from "@/lib/utils";
 import {
   detectRuntimeMetaKeyFamily,
@@ -50,6 +51,19 @@ interface GuacamoleToolbarProps {
   zoom?: number;
   onHide?: () => void;
   metaKeyFamily?: MetaKeyFamily;
+  /** Handed to "remote-desktop.toolbar" actions (the share button). */
+  slotContext?: RemoteDesktopToolbarContext;
+}
+
+export const REMOTE_DESKTOP_TOOLBAR_SLOT = "remote-desktop.toolbar";
+
+/** What a "remote-desktop.toolbar" action is invoked with. */
+export interface RemoteDesktopToolbarContext {
+  hostId: number;
+  /** guacd's connection id, once the session is up. */
+  sessionId: string | null;
+  protocol: "rdp" | "vnc" | "telnet";
+  tabInstanceId?: string;
 }
 
 const MODIFIER_KEYSYMS = {
@@ -140,6 +154,7 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
   zoom = 1,
   onHide,
   metaKeyFamily,
+  slotContext,
 }) => {
   const { t } = useTranslation();
   const meta = metaKeyLabels(
@@ -573,6 +588,16 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                 </TipIconBtn>
               </div>
             </div>
+
+            {slotContext && (
+              <ActionSlot
+                slotId={REMOTE_DESKTOP_TOOLBAR_SLOT}
+                className={cn(BTN_ICON)}
+                hideLabels
+                when={{ ...slotContext }}
+                context={() => [slotContext]}
+              />
+            )}
 
             {/* Collapse */}
             <div className="w-px h-5 bg-border mx-0.5 shrink-0" />

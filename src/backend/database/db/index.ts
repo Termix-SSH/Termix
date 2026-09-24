@@ -500,69 +500,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
     );
 
-    CREATE TABLE IF NOT EXISTS session_shares (
-        id TEXT PRIMARY KEY,
-        host_id INTEGER NOT NULL,
-        owner_user_id TEXT NOT NULL,
-        protocol TEXT NOT NULL,
-        session_id TEXT NOT NULL,
-        tab_instance_id TEXT,
-        share_type TEXT NOT NULL,
-        target_user_id TEXT,
-        link_token TEXT UNIQUE,
-        permission_level TEXT NOT NULL DEFAULT 'read-only',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expires_at TEXT NOT NULL,
-        revoked_at TEXT,
-        last_joined_at TEXT,
-        join_count INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-        FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS session_share_participants (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        share_id TEXT NOT NULL,
-        user_id TEXT,
-        guest_label TEXT,
-        joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        left_at TEXT,
-        FOREIGN KEY (share_id) REFERENCES session_shares (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS collab_rooms (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        owner_user_id TEXT NOT NULL,
-        persistent INTEGER NOT NULL DEFAULT 0,
-        presenter_user_id TEXT,
-        stage_protocol TEXT,
-        stage_host_id INTEGER,
-        stage_share_id TEXT,
-        guest_link_token TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        ended_at TEXT,
-        FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (presenter_user_id) REFERENCES users (id) ON DELETE SET NULL,
-        FOREIGN KEY (stage_host_id) REFERENCES ssh_data (id) ON DELETE SET NULL,
-        FOREIGN KEY (stage_share_id) REFERENCES session_shares (id) ON DELETE SET NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS collab_room_members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        room_role TEXT NOT NULL DEFAULT 'member',
-        added_by TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE (room_id, user_id),
-        FOREIGN KEY (room_id) REFERENCES collab_rooms (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (added_by) REFERENCES users (id) ON DELETE SET NULL
-    );
-
     CREATE TABLE IF NOT EXISTS secret_sources (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -2060,10 +1997,6 @@ const migrateSchema = () => {
   }
 
   addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
-  addColumnIfNotExists("collab_rooms", "guest_link_token", "TEXT");
-  sqlite.exec(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_collab_rooms_guest_token ON collab_rooms (guest_link_token)",
-  );
 
   try {
     const usersTableInfo = sqlite.prepare("PRAGMA table_info(users)").all() as Array<{

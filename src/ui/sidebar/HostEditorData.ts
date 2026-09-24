@@ -199,7 +199,6 @@ export function createHostEditorForm(
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
     enableAiAssistant: host?.enableAiAssistant ?? false,
-    allowSessionSharing: host?.allowSessionSharing ?? true,
     enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
     proxmoxConfig:
       ((proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? {
@@ -509,7 +508,6 @@ export function buildHostEditorPayload(
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableTerminalToolbar: form.enableTerminalToolbar,
     enableAiAssistant: form.enableAiAssistant,
-    allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
     proxmoxConfig:
       form.enableProxmox || form.proxmoxConfig?.source

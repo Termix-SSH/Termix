@@ -22,6 +22,7 @@ const {
   createServiceHandle,
   getRegistration,
   getServiceImplementation,
+  listProviderNames,
   listServices,
   provideService,
   resolveRequirements,
@@ -97,6 +98,94 @@ describe("service registry", () => {
     expect(
       getServiceImplementation("testplugin.greet", "^2.0.0"),
     ).toBeUndefined();
+  });
+
+  describe("named providers", () => {
+    it("keeps several providers of one service side by side", () => {
+      const ssh = register({
+        name: "ssh",
+        implementation: { kind: async () => "ssh" },
+      });
+      const rdp = register({
+        name: "rdp",
+        pluginId: "other-plugin",
+        implementation: { kind: async () => "rdp" },
+      });
+
+      expect(listProviderNames("testplugin.greet").sort()).toEqual([
+        "rdp",
+        "ssh",
+      ]);
+      expect(getRegistration("testplugin.greet", "ssh")).toBe(ssh);
+      expect(getRegistration("testplugin.greet", "rdp")).toBe(rdp);
+      expect(getRegistration("testplugin.greet")).toBeUndefined();
+      expect(listServices()).toHaveLength(2);
+    });
+
+    it("hands core a named implementation only by its name", () => {
+      const ssh = register({ name: "ssh" });
+      expect(
+        getServiceImplementation("testplugin.greet", "^1.0.0", "ssh"),
+      ).toBe(ssh.implementation);
+      expect(
+        getServiceImplementation("testplugin.greet", "^1.0.0"),
+      ).toBeUndefined();
+    });
+
+    it("revokes one provider and leaves the other", () => {
+      const ssh = register({ name: "ssh" });
+      const rdp = register({ name: "rdp" });
+
+      expect(revokeService("testplugin.greet", ssh)).toBe(true);
+      expect(getRegistration("testplugin.greet", "ssh")).toBeUndefined();
+      expect(getRegistration("testplugin.greet", "rdp")).toBe(rdp);
+    });
+
+    it("routes a named handle to its provider and fails typed once it goes", async () => {
+      const ssh = register({
+        name: "ssh",
+        implementation: { hello: async () => "from ssh" },
+      });
+      register({
+        name: "rdp",
+        implementation: { hello: async () => "from rdp" },
+      });
+      const context = {
+        resolveUserId: () => "user-1",
+        hasPermission: async () => true,
+        audit: () => {},
+      };
+      const handle = createServiceHandle<{ hello: () => Promise<string> }>(
+        "testplugin.greet",
+        "consumer-plugin",
+        context,
+        "ssh",
+      );
+      const unnamed = createServiceHandle<{ hello?: () => Promise<string> }>(
+        "testplugin.greet",
+        "consumer-plugin",
+        context,
+      );
+
+      await expect(handle.hello()).resolves.toBe("from ssh");
+      expect("hello" in unnamed).toBe(false);
+
+      revokeService("testplugin.greet", ssh);
+      expect(() => handle.hello()).toThrow(PluginServiceUnavailableError);
+    });
+
+    it("satisfies a requirement with any compatible provider", () => {
+      register({ name: "rdp", version: "2.0.0" });
+      register({ name: "ssh", version: "1.2.0" });
+
+      expect(
+        resolveRequirements(
+          manifestRequiring([
+            { service: "testplugin.greet", versionRange: "^1.0.0" },
+          ]),
+        ).satisfied,
+      ).toBe(true);
+    });
   });
 
   describe("resolution", () => {

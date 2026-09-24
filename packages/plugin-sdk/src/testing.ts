@@ -57,6 +57,11 @@ export interface FakeContextOptions {
    * when omitted every check passes, so tests that do not care stay simple.
    */
   permissions?: string[];
+  /**
+   * Services other plugins provide, for testing a consumer. Keyed by service
+   * name, or "<service>#<provider>" for a named provider.
+   */
+  services?: Record<string, object>;
   /** Hosts ctx.hosts.list/get/checkAccess answer with. */
   hosts?: PluginHostSummary[];
   /** Users and roles ctx.hosts.listUsers/listRoles answer with. */
@@ -132,7 +137,7 @@ export interface FakePluginContext {
   }>;
   /** Changes the acting user, as core's request middleware would. */
   setActor: (userId: string | undefined) => void;
-  /** Implementations provided through ctx.services.provide, by service name. */
+  /** Provided or seeded services, by name or "<service>#<provider>". */
   services: Map<string, object>;
 }
 
@@ -210,7 +215,11 @@ export function createFakeContext(
   );
   const hostRecordsById = new Map<number, PluginHostRecord>();
   let nextHostId = Math.max(0, ...(options.hosts ?? []).map((h) => h.id)) + 1;
-  const services = new Map<string, object>();
+  const services = new Map<string, object>(
+    Object.entries(options.services ?? {}),
+  );
+  const serviceKey = (service: string, name?: string) =>
+    name ? `${service}#${name}` : service;
   const registryProviders = new Map<string, unknown>();
   const auth: FakeAuthRegistrations = {
     sshAuthProviders: [],
@@ -349,18 +358,23 @@ export function createFakeContext(
     },
 
     services: {
-      provide: (service, implementation) => {
-        services.set(service, implementation);
+      provide: (service, implementation, provideOptions) => {
+        services.set(serviceKey(service, provideOptions?.name), implementation);
       },
-      // Only services this same context provided. A test of a consumer
-      // should provide a stub first.
-      get: (service) => {
-        const implementation = services.get(service);
-        if (!implementation) {
-          throw new Error(`No service "${service}" was provided in this test`);
-        }
-        return implementation as never;
-      },
+      // What this context provided or the test seeded through `services`.
+      // Like the real handle, a missing provider is an empty object, which a
+      // consumer's `"method" in handle` probe reads as absent.
+      get: (service, getOptions) =>
+        (services.get(serviceKey(service, getOptions?.provider)) ??
+          {}) as never,
+      providers: (service) =>
+        [...services.keys()].flatMap((key) =>
+          key === service
+            ? [""]
+            : key.startsWith(`${service}#`)
+              ? [key.slice(service.length + 1)]
+              : [],
+        ),
     },
 
     secrets: {
@@ -680,6 +694,8 @@ export interface MockContextOptions {
   permissions?: string[];
   /** Hosts ctx.hosts.list/get/checkAccess serve. See FakeContextOptions. */
   hosts?: PluginHostSummary[];
+  /** Other plugins' services. See FakeContextOptions. */
+  services?: Record<string, object>;
   /** Hosts ctx.ssh.resolveHost serves. See FakeContextOptions. */
   sshHosts?: PluginSshHost[];
 }
@@ -717,6 +733,7 @@ export function createMockCtx(
     permissions: options.permissions,
     hosts: options.hosts,
     sshHosts: options.sshHosts,
+    services: options.services,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -1018,7 +1035,7 @@ export async function createTestDb(
   const sqlite = new Database(":memory:") as TestSqlite;
   sqlite.exec("PRAGMA foreign_keys = ON");
   sqlite.exec(
-    "CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL DEFAULT '')",
+    "CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL DEFAULT '', is_admin INTEGER NOT NULL DEFAULT 0)",
   );
   sqlite.exec("CREATE TABLE ssh_data (id INTEGER PRIMARY KEY AUTOINCREMENT)");
   sqlite.exec(
@@ -1059,7 +1076,11 @@ export async function createTestDb(
   if (!options.skipMigrations) await migrate();
 
   const refs = {
-    users: builder.buildRefTable("users", { id: "text", username: "text" }),
+    users: builder.buildRefTable("users", {
+      id: "text",
+      username: "text",
+      isAdmin: "boolean",
+    }),
     hosts: builder.buildRefTable("ssh_data", { id: "integer" }),
     roles: builder.buildRefTable("roles", {
       id: "integer",

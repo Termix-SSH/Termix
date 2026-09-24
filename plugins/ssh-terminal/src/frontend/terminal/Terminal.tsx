@@ -784,8 +784,30 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         openSidePanel: (panelId, props) =>
           setDock({ id: panelId, props: props ?? {} }),
         runCommand: handleRunCommandInTerminal,
+        getShareTarget: () =>
+          isConnected &&
+          !isQuickConnect &&
+          !hostConfig.joinShareId &&
+          typeof hostConfig.id === "number" &&
+          sessionIdRef.current
+            ? {
+                hostId: hostConfig.id,
+                sessionId: sessionIdRef.current,
+                protocol: "ssh" as const,
+                tabInstanceId: hostConfig.instanceId,
+              }
+            : null,
       }),
-      [host, terminal, handleRunCommandInTerminal],
+      [
+        host,
+        terminal,
+        handleRunCommandInTerminal,
+        isConnected,
+        isQuickConnect,
+        hostConfig.joinShareId,
+        hostConfig.id,
+        hostConfig.instanceId,
+      ],
     );
 
     const overlayProps = useMemo<TerminalOverlayProps>(
@@ -1423,27 +1445,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             onOpenFileManager?.("/");
           }
         },
-        getShareTarget: () =>
-          isConnected &&
-          !isQuickConnect &&
-          !hostConfig.joinShareId &&
-          typeof hostConfig.id === "number" &&
-          sessionIdRef.current
-            ? {
-                hostId: hostConfig.id,
-                sessionId: sessionIdRef.current,
-                protocol: "ssh" as const,
-                tabInstanceId: hostConfig.instanceId,
-              }
-            : null,
       }),
-      [
-        isConnected,
-        terminal,
-        isQuickConnect,
-        hostConfig.joinShareId,
-        hostConfig.id,
-      ],
+      [isConnected, terminal],
     );
 
     function getCopyOnSelect() {

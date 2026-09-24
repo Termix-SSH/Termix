@@ -29,8 +29,6 @@ describe("bootstrap creates the tables the removed probes covered", () => {
     "audit_logs",
     "session_recordings",
     "api_keys",
-    "session_shares",
-    "session_share_participants",
   ];
 
   beforeEach(() => {

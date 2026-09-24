@@ -25,8 +25,7 @@ export type CoreRailView =
   | "connections"
   | "session-logs"
   | "user-profile"
-  | "admin-settings"
-  | "collab";
+  | "admin-settings";
 
 export type RailView = CoreRailView | (string & {});
 

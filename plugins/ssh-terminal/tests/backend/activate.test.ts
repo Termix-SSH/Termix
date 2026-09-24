@@ -30,9 +30,11 @@ describe("ssh-terminal activate", () => {
     expect(server.mock.wsRoutes).toEqual([{ path: "/terminal", raw: false }]);
   });
 
-  it("provides sessions.live and terminal.history", async () => {
+  it("provides sessions.live as ssh and terminal.history", async () => {
     server = await startServer();
-    const live = server.mock.services.get("sessions.live") as LiveSessionsV1;
+    const live = server.mock.services.get(
+      "sessions.live#ssh",
+    ) as LiveSessionsV1;
     expect(live.getSession("missing")).toBeNull();
     expect(live.listForUser("user-1")).toEqual([]);
     expect(live.write("missing", "ls\r")).toBe(false);
@@ -52,7 +54,9 @@ describe("ssh-terminal activate", () => {
 
   it("keeps a plugin caller to its own actor's sessions", async () => {
     server = await startServer();
-    const live = server.mock.services.get("sessions.live") as LiveSessionsV1;
+    const live = server.mock.services.get(
+      "sessions.live#ssh",
+    ) as LiveSessionsV1;
     const other = await server.mock.ctx.asUser("user-2", async () =>
       live.listForUser("user-1"),
     );
@@ -61,7 +65,9 @@ describe("ssh-terminal activate", () => {
 
   it("uses the admin session timeout for detached sessions", async () => {
     server = await startServer({ settings: { sessionTimeoutMinutes: 90 } });
-    const live = server.mock.services.get("sessions.live") as LiveSessionsV1;
+    const live = server.mock.services.get(
+      "sessions.live#ssh",
+    ) as LiveSessionsV1;
     expect(live.idleTimeoutMinutes()).toBe(90);
   });
 

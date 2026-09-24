@@ -27,6 +27,7 @@ import {
 } from "./HostEditorGuacamoleTabs";
 import { getGuacamoleTokenFromHost } from "./guacamole-api";
 import { quickConnectGuacHost } from "./quick-connect-guac-host";
+import { REMOTE_DESKTOP_TOOLBAR_SLOT } from "./GuacamoleToolbar.tsx";
 
 type Protocol = "rdp" | "vnc" | "telnet";
 
@@ -219,6 +220,12 @@ export function activate(app: TermixApp): void {
     >,
   });
   if (app.guest) return;
+
+  // The share button lives here, contributed by session sharing.
+  app.declareActionSlot({
+    id: REMOTE_DESKTOP_TOOLBAR_SLOT,
+    accepts: ["button"],
+  });
 
   // Mints a token for presenting a host in a collab room.
   app.registerAction(

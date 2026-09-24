@@ -367,6 +367,14 @@ Anonymous shared-session and collab pages have no session. They load only
 plugins whose manifest sets `contributes.guest: true`, from the public
 `GET /plugins/public`, and `app.guest` is true there.
 
+**B12** made those pages generic. A guest plugin lists the `?view=` names it
+serves anonymously in `contributes.guestViews` (which needs `guest: true`),
+and `/plugins/public` returns them. `src/main.tsx` asks for that list when a
+URL carries `?view=`: a guest view starts the guest runtime and renders the
+tab type whose `standalone`/`standaloneViews` claims it, anything else goes
+through the signed-in full-screen gate as before. The shell no longer knows
+`?view=shared` or `?view=collab-guest`; session-sharing declares both.
+
 The login screen runs a smaller pass before anyone signs in: it activates only
 enabled plugins that contribute `loginMethods` or `secondFactors`, listed by
 the public `GET /plugins/public-manifest`. They stay active after login, and
@@ -426,7 +434,7 @@ boundary and Suspense.
 | `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method and a second factor challenge (plus an optional `enrollment` section)                                                  |
 | `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                         |
 | `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                 |
-| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces                                                                                                                     |
+| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                    |
 | `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                         |
 
 Hooks: `useTranslation` (the plugin's namespace), `usePermission` (a short
@@ -445,7 +453,14 @@ Slots core owns: `terminal.toolbar`, `terminal.toolbarStatus`,
 renamed `terminal.dock` to `terminal.sidePanel` and added the status slot,
 where host-metrics puts its CPU, memory and disk bars), `onboarding.steps`, `onboarding.features`,
 `onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`
-and `session.remoteDisplay`. `host-metrics.managers` (component slot,
+and `shell.overlay`. **B12** added `shell.overlay`, a component slot the
+shell renders once at its root for always-mounted plugin UI: session-sharing
+keeps its share dialog and its room-invite watcher there.
+`session.remoteDisplay` moved to session-sharing, which declares it and draws
+whatever remote desktop contributes to it in rooms and share links.
+`remote-desktop.toolbar` (button slot, **B12**) is remote desktop's own,
+invoked with `{ hostId, sessionId, protocol, tabInstanceId }`.
+`host-metrics.managers` (component slot,
 **B3**) is host-metrics's own: tailscale contributes its manager card there
 instead of host-metrics knowing tailscale exists, and host-metrics works with
 or without tailscale enabled. Cross-plugin frontend calls go through actions:
@@ -474,7 +489,7 @@ tools act on the last one focused; `PanelProps.targetTab` hands a panel that
 tab), `ownBackground` (the shell leaves the frame transparent) and
 `multiInstance` (each open is a new tab). `TabHandle` documents what a session
 tab puts on `handleRef`: focus, reconnect, disconnect and, for sharing,
-`getShareTarget()`, which the shell's own share dialog uses. These replaced
+`getShareTarget()` for sharing. These replaced
 every check of the `terminal` and `local-terminal` tab types in the shell.
 
 **B2** added a live-terminal-session surface, for a plugin that needs to push
@@ -598,12 +613,34 @@ who has no user, cannot make one. Guest link resolution is therefore
 published on `ctx.registry` as `sessions.sharing.guests` instead: the token is
 the authority there.
 
-**Core consuming a plugin service.** Session sharing, collab and the open
-tabs route are still core and reach live terminal sessions through
-`getServiceImplementation(service, range)` in `service-registry.ts`
+**Core consuming a plugin service.** The open tabs route is still core and
+lists the caller's own terminal sessions through
+`getServiceImplementation(service, range, name?)` in `service-registry.ts`
 (`hosts/live-terminal-sessions.ts` wraps it). Core already authorized the
 request, so this skips the per-call check and returns the same object
 plugins get, or undefined while no compatible provider runs.
+
+**Named providers (B12).** A service several plugins provide side by side is
+keyed by a provider name. The manifest lists the names in
+`provides[].names`, `ctx.services.provide(service, impl, { name })` refuses
+any other, `ctx.services.get(service, { provider })` reaches one, and
+`ctx.services.providers(service)` lists the running ones. A requirement is
+satisfied by any compatible provider. `sessions.live` is the first: keyed by
+session type, ssh-terminal provides `ssh` and remote desktop provides `rdp`,
+`vnc` and `telnet` (B14), with `createViewerToken(sessionId, readOnly)` for
+a viewer. A consumer with no actor, such as a public guest route, calls it
+through `ctx.asUser(<share owner>)`.
+
+**Session sharing (B12)** is the session-sharing plugin. It provides
+`sessions.sharing` (member joins, room events) and `sessions.sharing.guests`,
+adopts `session_shares`, `session_share_participants`, `collab_rooms` and
+`collab_room_members`, and reaches sessions only through `sessions.live`. Its
+two public routes, `/resolve/:linkToken` and `/guest/:token`, check the token
+themselves and are rate limited per IP. The share button is a contribution to
+`terminal.toolbar` and `remote-desktop.toolbar`; the tab bar's share entry and
+the `shareable`, `canShare`, `openShareModal` and `getShareTarget` members of
+`TabOptions`/`TabHandle` are gone. Core's active connections list gets the
+sessions shared with a user from the `sessions.sharedWithMe` action.
 
 ### 10. Lifecycle
 
@@ -638,7 +675,7 @@ not care about the gates, `createTestDb(pluginDir)` for a real database, and
 `renderWithApp(plugin, options)` for frontend tests.
 
 `createTestDb(pluginDir, { before })` opens an in-memory SQLite with stub
-`users`, `ssh_data`, `roles` and `user_roles` tables and foreign keys on, runs
+`users` (with `is_admin`, **B12**), `ssh_data`, `roles` and `user_roles` tables and foreign keys on, runs
 `before` (seed a legacy table there to test an adoption), then applies the
 plugin's own `migrations/sqlite` with the runner's splitter. `ctx.db.refs()`
 against this database returns the same four, built by `buildRefTable`, which
@@ -653,7 +690,10 @@ against the real schema's property names works unchanged in a test. Pass its
 and `hosts` (`PluginHostSummary[]`, what `ctx.hosts.list/get/checkAccess`
 serve - **B8** added this option, since it existed on `createFakeContext`
 already but was not forwarded), and returns `setActor(userId)` for a test
-middleware and `services` for what the plugin provided. **B8** also gave
+middleware and `services` for what the plugin provided. **B12** added a
+`services` option seeding other plugins' services for a consumer's test,
+keyed `<service>` or `<service>#<provider>`, and the doubles now answer a
+missing service with an empty handle, like the runtime, instead of throwing. **B8** also gave
 `ctx.registry` on both doubles a real in-memory backing (it was a no-op stub
 before), so `provide`/`consume`/`revoke` round-trip the way the real registry
 does. `plugins/workspaces/tests/backend/helpers.ts` is the worked example.
@@ -1068,7 +1108,10 @@ Cross-field rules the JSON schema cannot express, checked by `parseManifest`:
 `contributes.panels` and `contributes.dashboardCards` (each `{ id, titleKey,
 icon? }`) declare the views a plugin owns besides its tabs; the app object
 refuses to register a view the manifest does not declare. `contributes.guest`
-opts a plugin into anonymous guest pages. Action contributions and slots
+opts a plugin into anonymous guest pages, and `contributes.guestViews` names
+the `?view=` pages it serves there. `provides[].names` lists the named
+providers a plugin registers for a service keyed by provider (see Cross-plugin
+use). Action contributions and slots
 accept the kinds `button` and `component`.
 
 `contributes.auth` lists the ids a plugin registers through `ctx.auth`. A
@@ -1148,7 +1191,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.events.emit` / `.on`                        | `events:core` for core topics        | **A1**                  |
 | `ctx.kv.get/set/delete/list`                     | `kv:own`                             | **A1**                  |
 | `ctx.registry.*`                                 | none                                 | **A1**                  |
-| `ctx.services.provide` / `.get`                  | per-service RBAC                     | **A1**                  |
+| `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                     | **A1**, named **B12**   |
 | `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1**                  |
 | `ctx.disposables.add`                            | none                                 | **A1**                  |
 | `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1**                  |

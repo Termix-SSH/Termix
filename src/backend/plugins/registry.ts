@@ -7,8 +7,8 @@
  *   - core registers the SSH connection pool as "ssh.transport" at boot, so
  *     everything that needs a pooled connection resolves a provider rather
  *     than importing the pool directly.
- *   - the ssh-terminal plugin publishes "terminal.sessions" so collab and
- *     session-sharing can reach live sessions without importing a plugin.
+ *   - the session-sharing plugin publishes "sessions.sharing.guests", guest
+ *     link resolution for the terminal, keyed by a token rather than a user.
  *
  * Deliberately NOT reachable from a worker plugin's ctx. Values here are live
  * objects -- pools, session managers, sockets -- and handing one across the

@@ -222,7 +222,6 @@ export type Host = {
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
   enableAiAssistant: boolean;
-  allowSessionSharing?: boolean;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
   showTunnelInSidebar: boolean;
@@ -384,7 +383,6 @@ export interface HostData {
   enableTmuxMonitor?: boolean;
   enableTerminalToolbar?: boolean;
   enableAiAssistant?: boolean;
-  allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   enableProxmoxStats?: boolean;
   proxmoxStatsConfig?: ProxmoxStatsConfig | Record<string, unknown> | null;

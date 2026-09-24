@@ -61,8 +61,6 @@ export interface TabTypeDef {
   persistent?: boolean;
   singleton?: boolean;
   session?: boolean;
-  /** Whether a session tab offers "Share session". Default true. */
-  shareable?: boolean;
   hostless?: boolean;
   restore?: (host: Host) => boolean;
   activityTypes?: string[];
@@ -115,11 +113,6 @@ export function isPersistentTabType(type: string): boolean {
 
 export function isSessionTabType(type: string): boolean {
   return CORE_SESSION.has(type) || !!registry.get(type)?.session;
-}
-
-/** Whether a session tab of this type offers "Share session". Default true. */
-export function isShareableTabType(type: string): boolean {
-  return registry.get(type)?.shareable !== false;
 }
 
 export function isHostlessTabType(type: string): boolean {

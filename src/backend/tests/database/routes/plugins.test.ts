@@ -204,7 +204,7 @@ describe("plugins route", () => {
           id: "guest-plugin",
           manifestJson: JSON.stringify({
             capabilities: ["hosts:read"],
-            contributes: { guest: true },
+            contributes: { guest: true, guestViews: ["shared"] },
           }),
         }),
       );
@@ -225,7 +225,10 @@ describe("plugins route", () => {
       expect(body.map((plugin: { id: string }) => plugin.id)).toEqual([
         "guest-plugin",
       ]);
-      expect(body[0].contributes).toEqual({ guest: true });
+      expect(body[0].contributes).toEqual({
+        guest: true,
+        guestViews: ["shared"],
+      });
       expect(body[0]).not.toHaveProperty("capabilities");
       expect(body[0]).not.toHaveProperty("lastError");
     });

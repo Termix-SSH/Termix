@@ -39,8 +39,6 @@ import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
 import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
-import { SessionShareRepository } from "./session-share-repository.js";
-import { CollabRoomRepository } from "./collab-room-repository.js";
 import { SecretSourceRepository } from "./secret-source-repository.js";
 import { CredentialAccessRepository } from "./credential-access-repository.js";
 import { SharedCredentialSecretsRepository } from "./shared-credential-secrets-repository.js";
@@ -413,20 +411,6 @@ export function createCurrentSessionRepository(): SessionRepository {
   return new SessionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("session_repository_write"),
-  );
-}
-
-export function createCurrentCollabRoomRepository(): CollabRoomRepository {
-  return new CollabRoomRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("collab_room_repository_write"),
-  );
-}
-
-export function createCurrentSessionShareRepository(): SessionShareRepository {
-  return new SessionShareRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("session_share_repository_write"),
   );
 }
 

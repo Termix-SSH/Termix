@@ -1,19 +1,7 @@
 {
   "$comment": "Literals src/ui may still spell that name a plugin id or a plugin-owned view. Each is data, not knowledge of a plugin. Checked by scripts/check-shell-plugin-ids.cjs; D1 and Phase B empty it.",
   "files": {
-    "src/ui/api/collab-api.ts": {
-      "literals": ["rdp", "telnet", "vnc"],
-      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
-    },
     "src/ui/api/session-log-api.ts": {
-      "literals": ["rdp", "telnet", "vnc"],
-      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
-    },
-    "src/ui/api/session-sharing-api.ts": {
-      "literals": ["rdp", "telnet", "vnc"],
-      "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
-    },
-    "src/ui/features/collab/CollabRoomTab.tsx": {
       "literals": ["rdp", "telnet", "vnc"],
       "reason": "Host protocol value (connectionType, enableRdp, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableTelnet, session protocol), a host column until Phase B moves it. Host protocol value (connectionType, enableVnc, session protocol), a host column until Phase B moves it."
     },

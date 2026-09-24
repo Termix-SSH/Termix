@@ -153,7 +153,8 @@ export async function activate(ctx: PluginContext) {
     },
     idleTimeoutMinutes: () => timeoutMinutes,
   };
-  ctx.services.provide("sessions.live", liveSessions);
+  // sessions.live is keyed by session type; remote desktop provides the others.
+  ctx.services.provide("sessions.live", liveSessions, { name: "ssh" });
 
   const terminalHistory: TerminalHistoryV1 = {
     list: async (hostId, limit = 200) => {

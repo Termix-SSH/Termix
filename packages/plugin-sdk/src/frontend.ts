@@ -96,7 +96,7 @@ export interface ShellApi {
 
 export interface TabsApi extends Pick<
   ShellApi,
-  "openTab" | "openSingletonTab" | "closeTab"
+  "openTab" | "openSingletonTab" | "closeTab" | "openRailView"
 > {
   /** The current tabs and split layout, or null before the shell mounts. */
   getLayout: () => ShellLayout | null;
@@ -187,16 +187,6 @@ export interface TabHandle {
   paste?: (text: string) => void;
   refresh?: () => void;
   notifyResize?: () => void;
-  /** A tab that shows its own share dialog. */
-  canShare?: () => boolean;
-  openShareModal?: () => void;
-  /** A tab whose session the shell's share dialog can share. */
-  getShareTarget?: () => {
-    hostId: number;
-    sessionId: string;
-    protocol: "ssh";
-    tabInstanceId?: string;
-  } | null;
   [key: string]: unknown;
 }
 
@@ -232,12 +222,6 @@ export interface TabOptions {
   singleton?: boolean;
   /** A live session: asks before closing and can be refreshed. */
   session?: boolean;
-  /**
-   * Whether a session tab offers "Share session". Default true. A plugin
-   * whose ref does not implement session sharing (a local device, not a
-   * remote connection another user could join) sets this false.
-   */
-  shareable?: boolean;
   /** Restorable without a host. */
   hostless?: boolean;
   /** Decides whether a saved tab for this host may be restored. */

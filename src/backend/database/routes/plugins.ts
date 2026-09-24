@@ -54,7 +54,8 @@ const requireManagePlugins = permissionManager.requirePermission(
  *       No auth. A shared-session or collab guest link has no session, yet its
  *       page still draws surfaces a plugin provides (a remote desktop stream).
  *       Returns only enabled plugins whose manifest sets contributes.guest,
- *       with the fields the browser loader needs and nothing operational.
+ *       with the fields the browser loader needs and nothing operational,
+ *       plus the ?view= names each serves to guests (contributes.guestViews).
  *     tags:
  *       - Plugins
  *     responses:
@@ -69,7 +70,7 @@ router.get("/public", async (_req: Request, res: Response) => {
       if (record.state !== "enabled") return [];
       const loaded = loader.get(record.id);
       let manifest: {
-        contributes?: { guest?: boolean };
+        contributes?: { guest?: boolean; guestViews?: string[] };
         dependencies?: Record<string, string>;
         optionalDependencies?: Record<string, string>;
       };
@@ -86,7 +87,10 @@ router.get("/public", async (_req: Request, res: Response) => {
           version: record.version,
           enabled: true,
           state: loaded?.state ?? record.state,
-          contributes: { guest: true },
+          contributes: {
+            guest: true,
+            guestViews: manifest.contributes.guestViews ?? [],
+          },
           dependencies: manifest.dependencies ?? {},
           optionalDependencies: manifest.optionalDependencies ?? {},
           ...describePluginFrontend(loaded),

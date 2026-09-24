@@ -901,6 +901,7 @@ describe("TerminalToolbar Phase 1", () => {
         sessionId: () => null,
         openSidePanel: vi.fn(),
         runCommand: vi.fn(),
+        getShareTarget: () => null,
       };
       renderToolbar({ slotApi });
       await userEvent.click(

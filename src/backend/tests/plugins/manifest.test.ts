@@ -589,6 +589,19 @@ describe("panels, dashboard cards and guest pages", () => {
     expect(errors).toMatch(/dashboardCards\[0\]\.titleKey/);
   });
 
+  it("accepts guest views on a guest plugin and refuses them otherwise", () => {
+    expect(
+      validateManifest(
+        base({ contributes: { guest: true, guestViews: ["shared"] } }),
+      ),
+    ).toEqual([]);
+    const errors = validateManifest(
+      base({ contributes: { guestViews: ["Shared View"] } }),
+    ).join();
+    expect(errors).toMatch(/contributes\.guestViews entries must be/);
+    expect(errors).toMatch(/needs "contributes\.guest"/);
+  });
+
   it("rejects an unknown field inside a view and a non-boolean guest", () => {
     const errors = validateManifest(
       base({
@@ -600,5 +613,43 @@ describe("panels, dashboard cards and guest pages", () => {
     ).join();
     expect(errors).toMatch(/Unknown field "width"/);
     expect(errors).toMatch(/contributes\.guest" must be a boolean/);
+  });
+});
+
+describe("named service providers", () => {
+  const provides = (names: unknown) => [
+    {
+      service: "sample.live",
+      version: "1.0.0",
+      permission: "sample-plugin.use",
+      names,
+    },
+  ];
+  const permissions = {
+    permissions: [
+      {
+        name: "use",
+        titleKey: "permissions.use.title",
+        descriptionKey: "permissions.use.description",
+      },
+    ],
+  };
+
+  it("accepts a list of provider names", () => {
+    expect(
+      validateManifest(
+        base({ provides: provides(["ssh", "rdp"]), contributes: permissions }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("refuses an empty, duplicated or malformed list", () => {
+    for (const names of [[], ["ssh", "ssh"], ["SSH"], "ssh"]) {
+      expect(
+        validateManifest(
+          base({ provides: provides(names), contributes: permissions }),
+        ).join(),
+      ).toMatch(/provides\[0\]\.names/);
+    }
   });
 });

@@ -49,14 +49,13 @@ describe("RAIL_ITEMS", () => {
     // the settings toggles, the sidebar titles and the mobile bar all read
     // from this one list.
     // "sftp" moved to the file-manager plugin's own registerRailItem,
-    // "port-forwarding" to the tunnels plugin's, and "serial" to the serial
-    // plugin's.
+    // "port-forwarding" to the tunnels plugin's, "serial" to the serial
+    // plugin's, and "collab" to the session-sharing plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
       "termix-id",
       "connections",
-      "collab",
       "quick-connect",
       "ssh-tools",
       "macros",

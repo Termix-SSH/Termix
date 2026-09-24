@@ -369,6 +369,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runTmuxMonitorSettingsMigration } =
         await import("./utils/crypto-migration/tmux-monitor-settings-migration.js");
       await runTmuxMonitorSettingsMigration();
+
+      const { runSessionSharingSettingsMigration } =
+        await import("./utils/crypto-migration/session-sharing-settings-migration.js");
+      await runSessionSharingSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

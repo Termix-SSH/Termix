@@ -281,6 +281,13 @@
       "when": 1790220944905,
       "tag": "0039_condemned_shiva",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "5",
+      "when": 1790224430728,
+      "tag": "0040_misty_skin",
+      "breakpoints": true
     }
   ]
 }

@@ -60,6 +60,12 @@
         "editorTab": "telnet"
       }
     ],
+    "actionSlots": [
+      {
+        "id": "remote-desktop.toolbar",
+        "accepts": ["button"]
+      }
+    ],
     "guest": true
   },
   "locales": "locales",

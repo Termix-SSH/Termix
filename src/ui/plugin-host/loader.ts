@@ -350,6 +350,26 @@ async function fetchGuestPlugins(): Promise<PluginSummary[]> {
   return Array.isArray(body) ? (body as PluginSummary[]) : [];
 }
 
+let guestViewsRequest: Promise<string[]> | null = null;
+
+/**
+ * The `?view=` names enabled guest plugins serve to anonymous pages, so the
+ * entry point can tell a guest link from a signed-in full-screen view
+ * without knowing any plugin.
+ */
+export function fetchGuestViews(): Promise<string[]> {
+  guestViewsRequest ??= fetchGuestPlugins()
+    .then((plugins) =>
+      plugins.flatMap(
+        (plugin) =>
+          (plugin.contributes as { guestViews?: string[] } | undefined)
+            ?.guestViews ?? [],
+      ),
+    )
+    .catch(() => []);
+  return guestViewsRequest;
+}
+
 async function fetchPreLoginPlugins(): Promise<PluginSummary[]> {
   const response = await fetch(getBackendUrl("/plugins/public-manifest"));
   if (!response.ok) return [];

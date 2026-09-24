@@ -24,7 +24,7 @@ import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
-import { startPluginRuntime } from "@/plugin-host/loader";
+import { fetchGuestViews, startPluginRuntime } from "@/plugin-host/loader";
 import { standaloneViewFor } from "@/shell/tab-registry";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 
@@ -45,14 +45,6 @@ const ElectronVersionCheck = lazy(() =>
     default: module.ElectronVersionCheck,
   })),
 );
-
-// Anonymous guest view for shared terminal/RDP/VNC/Telnet sessions (?view=shared&token=<linkToken>).
-// Rendered outside FullscreenAppGate since guests never have a JWT/cookie to verify.
-const SharedSessionView = lazy(
-  () => import("@/features/session-sharing/SharedSessionView"),
-);
-// Anonymous guest view for collab rooms (?view=collab-guest&token=<guestLinkToken>).
-const CollabGuestView = lazy(() => import("@/features/collab/CollabGuestView"));
 
 type Phase =
   "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
@@ -375,17 +367,49 @@ function App() {
 }
 
 /**
- * Guest links draw surfaces plugins provide (a remote desktop stream), so the
- * guest-capable plugins load first, without a session.
+ * An anonymous guest link (a shared session, a collab room). The view comes
+ * from a guest plugin's standalone tab view, so the guest-capable plugins
+ * load first, without a session.
  */
-function GuestPlugins({ children }: { children: React.ReactNode }) {
+function GuestView({ view }: { view: string }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     startPluginRuntime({ guest: true })
       .catch(() => {})
       .finally(() => setReady(true));
   }, []);
-  return ready ? <>{children}</> : null;
+  if (!ready) return null;
+  const def = standaloneViewFor(view);
+  if (!def?.standalone) {
+    return <PluginViewPlaceholder kind="tab" viewId={view} />;
+  }
+  const Standalone = def.standalone;
+  return (
+    <Standalone
+      view={view}
+      params={new URLSearchParams(window.location.search)}
+    />
+  );
+}
+
+/**
+ * Picks between a guest link and a signed-in full-screen view. Guests never
+ * have a JWT or cookie to verify, so a guest view skips FullscreenAppGate.
+ */
+function ViewRouter({ view }: { view: string }) {
+  const [guestViews, setGuestViews] = useState<string[] | null>(null);
+  useEffect(() => {
+    void fetchGuestViews().then(setGuestViews);
+  }, []);
+  if (!guestViews) return null;
+  if (guestViews.includes(view)) return <GuestView view={view} />;
+  return (
+    <UiPreferencesProvider>
+      <ConnectionDefaultsProvider>
+        <FullscreenAppGate />
+      </ConnectionDefaultsProvider>
+    </UiPreferencesProvider>
+  );
 }
 
 function RootApp() {
@@ -394,37 +418,12 @@ function RootApp() {
   useServiceWorker();
 
   const searchParams = new URLSearchParams(window.location.search);
-  const isFullscreen = searchParams.has("view");
+  const view = searchParams.get("view");
 
-  // Anonymous guests have no cookie/JWT at all, so this bypasses FullscreenAppGate's
-  // auth check entirely rather than waiting on a getUserInfo() call that would always fail.
-  if (searchParams.get("view") === "shared") {
+  if (view !== null) {
     return (
       <Suspense fallback={null}>
-        <GuestPlugins>
-          <SharedSessionView />
-        </GuestPlugins>
-      </Suspense>
-    );
-  }
-  if (searchParams.get("view") === "collab-guest") {
-    return (
-      <Suspense fallback={null}>
-        <GuestPlugins>
-          <CollabGuestView />
-        </GuestPlugins>
-      </Suspense>
-    );
-  }
-
-  if (isFullscreen) {
-    return (
-      <Suspense fallback={null}>
-        <UiPreferencesProvider>
-          <ConnectionDefaultsProvider>
-            <FullscreenAppGate />
-          </ConnectionDefaultsProvider>
-        </UiPreferencesProvider>
+        <ViewRouter view={view} />
       </Suspense>
     );
   }

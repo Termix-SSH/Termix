@@ -29,6 +29,16 @@ export interface TerminalSlotApi {
   openSidePanel: (panelId: string, props?: Record<string, unknown>) => void;
   /** Types a command into the session and runs it. */
   runCommand: (command: string) => void;
+  /**
+   * What sharing this session needs, or null while there is nothing to share
+   * (not connected yet, a quick connect, or a session joined from a share).
+   */
+  getShareTarget: () => {
+    hostId: number;
+    sessionId: string;
+    protocol: "ssh";
+    tabInstanceId?: string;
+  } | null;
 }
 
 export interface TerminalToolbarStatusProps {

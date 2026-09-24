@@ -27,10 +27,9 @@ import {
   Minimize2,
   FolderOpen,
   PanelRight,
-  Share2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
-import { isSessionTabType, isShareableTabType } from "@/shell/tab-registry";
+import { isSessionTabType } from "@/shell/tab-registry";
 import { isElectron } from "@/lib/electron";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
@@ -41,11 +40,6 @@ import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
  */
 function isConnectionTab(type: TabType): boolean {
   return isSessionTabType(type);
-}
-
-/** Connection tabs that also offer "Share session". */
-function isShareableConnectionTab(type: TabType): boolean {
-  return isConnectionTab(type) && isShareableTabType(type);
 }
 
 export function TabBar({
@@ -63,7 +57,6 @@ export function TabBar({
   onRemoveFromSplit,
   onRenameTab,
   onOpenFileManager,
-  onOpenShare,
   isAppFullscreen,
   onToggleAppFullscreen,
   rightDockOpen,
@@ -84,7 +77,6 @@ export function TabBar({
   onRemoveFromSplit: (tabId: string) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
   onOpenFileManager?: (tabId: string) => void;
-  onOpenShare?: (tabId: string) => void;
   isAppFullscreen: boolean;
   onToggleAppFullscreen: () => void;
   rightDockOpen?: boolean;
@@ -470,19 +462,6 @@ export function TabBar({
                         className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
                       >
                         <RefreshCw className="size-3" />
-                      </button>
-                    )}
-                    {isShareableConnectionTab(tab.type) && onOpenShare && (
-                      <button
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenShare(tab.id);
-                        }}
-                        title={t("sessionSharing.shareButton")}
-                        className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-                      >
-                        <Share2 className="size-3" />
                       </button>
                     )}
                     <button

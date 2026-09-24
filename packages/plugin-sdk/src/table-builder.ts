@@ -104,15 +104,17 @@ export function buildTable(
  */
 export function buildRefTable(
   name: string,
-  columns: Record<string, "text" | "integer">,
+  columns: Record<string, "text" | "integer" | "boolean">,
 ): unknown {
   const built: Record<string, unknown> = {};
   for (const [property, type] of Object.entries(columns)) {
     const columnSqlName = columnName(property);
     built[property] =
-      type === "integer"
-        ? sqliteInteger(columnSqlName)
-        : sqliteText(columnSqlName);
+      type === "boolean"
+        ? sqliteInteger(columnSqlName, { mode: "boolean" })
+        : type === "integer"
+          ? sqliteInteger(columnSqlName)
+          : sqliteText(columnSqlName);
   }
   return sqliteTable(name, built as never);
 }

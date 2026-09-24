@@ -260,6 +260,13 @@
       "when": 1790220943638,
       "tag": "0036_classy_nighthawk",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1790224429343,
+      "tag": "0037_burly_enchantress",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,21 @@
+{
+  "name": "@termix-plugin/session-sharing",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "react-xtermjs": "^1.0.10",
+    "redis": "^6.2.1"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*"
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "id": "session-sharing",
+  "name": "Session Sharing",
+  "version": "1.0.0",
+  "description": "Share a live terminal or remote desktop session by link or with another user, and present sessions to a group in collaboration rooms.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Productivity",
+  "icon": "Presentation",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["hosts:read", "db:own", "network:serve", "ui:surface"],
+  "dependencies": {
+    "ssh-terminal": "^1.0.0"
+  },
+  "optionalDependencies": {
+    "remote-desktop": "^1.0.0"
+  },
+  "provides": [
+    {
+      "service": "sessions.sharing",
+      "version": "1.0.0",
+      "permission": "session-sharing.use"
+    }
+  ],
+  "requires": [
+    {
+      "service": "sessions.live",
+      "versionRange": "^1.0.0"
+    }
+  ],
+  "contributes": {
+    "guest": true,
+    "guestViews": ["shared", "collab-guest"],
+    "tabs": [
+      {
+        "id": "collab",
+        "titleKey": "nav.collab",
+        "icon": "Presentation",
+        "openFrom": ["rail"]
+      }
+    ],
+    "actions": [
+      {
+        "id": "session-sharing.share",
+        "titleKey": "sessionSharing.shareButton",
+        "handler": "share",
+        "permission": "session-sharing.use"
+      },
+      {
+        "id": "sessions.sharedWithMe",
+        "titleKey": "sessionSharing.sharedWithMe",
+        "handler": "sharedWithMe",
+        "permission": "session-sharing.use"
+      }
+    ],
+    "actionSlots": [
+      {
+        "id": "session.remoteDisplay",
+        "accepts": ["component"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "globallyEnabled",
+          "type": "boolean",
+          "labelKey": "settings.admin.globallyEnabled.label",
+          "descriptionKey": "settings.admin.globallyEnabled.description",
+          "default": true
+        }
+      ],
+      "host": {
+        "fields": [
+          {
+            "key": "allowSessionSharing",
+            "type": "boolean",
+            "labelKey": "settings.host.allowSessionSharing.label",
+            "descriptionKey": "settings.host.allowSessionSharing.description",
+            "default": true
+          }
+        ]
+      }
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

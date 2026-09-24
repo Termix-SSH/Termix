@@ -3,10 +3,7 @@ import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { liveTerminalSessions } from "../../hosts/live-terminal-sessions.js";
-import {
-  createCurrentOpenTabRepository,
-  createCurrentSessionShareRepository,
-} from "../repositories/factory.js";
+import { createCurrentOpenTabRepository } from "../repositories/factory.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -298,14 +295,14 @@ router.get(
  *   get:
  *     summary: Get all active backend sessions for the current user
  *     description: >
- *       Returns live terminal sessions from the session manager, both sessions the
- *       caller owns and SSH sessions shared to the caller by another user (via
- *       an in-app session share). Used by the Active Connections panel and tab restore logic.
+ *       Returns the live terminal sessions the caller owns. Sessions other
+ *       users shared with the caller come from the session sharing plugin.
+ *       Used by the Active Connections panel and tab restore logic.
  *     tags:
  *       - Open Tabs
  *     responses:
  *       200:
- *         description: List of active sessions (own and shared-with-me).
+ *         description: List of the caller's active sessions.
  *         content:
  *           application/json:
  *             schema:
@@ -356,28 +353,6 @@ router.get(
         permissionLevel: null as string | null,
         shareId: null as string | null,
       }));
-
-      const sharedWithMe =
-        await createCurrentSessionShareRepository().findSharesTargetingUser(
-          userId,
-        );
-      for (const share of sharedWithMe) {
-        if (share.protocol !== "ssh") continue;
-        const sharedSession = liveTerminalSessions.getSession(share.sessionId);
-        if (!sharedSession || !sharedSession.isConnected) continue;
-        result.push({
-          sessionId: sharedSession.id,
-          hostId: sharedSession.hostId,
-          hostName: sharedSession.hostName,
-          tabInstanceId: sharedSession.tabInstanceId,
-          isConnected: sharedSession.isConnected,
-          createdAt: sharedSession.createdAt,
-          isOwnSession: false,
-          sharedByUsername: share.ownerUsername,
-          permissionLevel: share.permissionLevel,
-          shareId: share.id,
-        });
-      }
 
       return res.json(result);
     } catch (e) {

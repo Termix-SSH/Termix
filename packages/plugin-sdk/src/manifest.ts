@@ -145,6 +145,12 @@ export interface PluginServiceProvide {
   version: string;
   /** The role permission a calling user needs. */
   permission: string;
+  /**
+   * Named providers this plugin registers, for a service several plugins
+   * provide side by side (sessions.live, keyed by session type). Omitted, the
+   * plugin provides it once, unnamed.
+   */
+  names?: string[];
 }
 
 export interface PluginServiceRequire {
@@ -256,6 +262,11 @@ export interface PluginContributions {
    * collab links), where it is activated with app.guest set.
    */
   guest?: boolean;
+  /**
+   * `?view=` names an anonymous guest page may open. Each must be served by a
+   * tab's `standalone` component. Needs `guest: true`.
+   */
+  guestViews?: string[];
   actions?: PluginActionContribution[];
   actionSlots?: PluginActionSlot[];
   permissions?: PluginPermissionContribution[];
@@ -348,6 +359,7 @@ const ALLOWED_CONTRIBUTES = new Set([
   "panels",
   "dashboardCards",
   "guest",
+  "guestViews",
   "actions",
   "actionSlots",
   "permissions",
@@ -598,7 +610,12 @@ function validateProvides(provides: unknown, errors: string[]): void {
       errors.push(`${where} must be an object`);
       return;
     }
-    rejectUnknown(raw, ["service", "version", "permission"], where, errors);
+    rejectUnknown(
+      raw,
+      ["service", "version", "permission", "names"],
+      where,
+      errors,
+    );
 
     if (typeof raw.service !== "string" || !SERVICE_PATTERN.test(raw.service)) {
       errors.push(`${where}.service must be a dotted lowercase name`);
@@ -613,7 +630,28 @@ function validateProvides(provides: unknown, errors: string[]): void {
       errors.push(`${where}.version must be valid semver`);
     }
     requireString(raw.permission, `${where}.permission`, errors);
+    if (raw.names !== undefined) {
+      validateNameList(raw.names, `${where}.names`, errors);
+    }
   });
+}
+
+const PROVIDER_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
+
+function validateNameList(value: unknown, where: string, errors: string[]) {
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`${where} must be a non-empty array`);
+    return;
+  }
+  const seen = new Set<string>();
+  for (const name of value) {
+    if (typeof name !== "string" || !PROVIDER_NAME_PATTERN.test(name)) {
+      errors.push(`${where} entries must be lowercase names`);
+      continue;
+    }
+    if (seen.has(name)) errors.push(`${where} duplicates "${name}"`);
+    seen.add(name);
+  }
 }
 
 function validateRequires(requires: unknown, errors: string[]): void {
@@ -720,6 +758,12 @@ function validateContributes(
     typeof contributes.guest !== "boolean"
   ) {
     errors.push('Field "contributes.guest" must be a boolean');
+  }
+  if (contributes.guestViews !== undefined) {
+    validateNameList(contributes.guestViews, "contributes.guestViews", errors);
+    if (contributes.guest !== true) {
+      errors.push('Field "contributes.guestViews" needs "contributes.guest"');
+    }
   }
   validatePermissions(contributes.permissions, pluginId, errors);
   validateActions(contributes.actions, errors);

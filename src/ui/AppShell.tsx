@@ -30,6 +30,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { resetPermissionsCache } from "@/hooks/use-permissions";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { AppRail, type RailView } from "@/sidebar/AppRail";
+import { ComponentSlot } from "@/shell/ActionSlot";
 import {
   isCoreRailView,
   railItemLabel,
@@ -81,26 +82,9 @@ const AlertManager = lazy(() =>
 const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
 );
-const CollabPanel = lazy(() =>
-  import("@/sidebar/CollabPanel").then((m) => ({ default: m.CollabPanel })),
-);
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
-
-const ShareSessionModal = lazy(() =>
-  import("@/features/session-sharing/ShareSessionModal").then((m) => ({
-    default: m.ShareSessionModal,
-  })),
-);
-
-/** What a session tab's handle gives the shell's share dialog. */
-interface ShareTarget {
-  hostId: number;
-  sessionId: string;
-  protocol: "ssh";
-  tabInstanceId?: string;
-}
 
 const SessionLogsPanel = lazy(() =>
   import("@/sidebar/SessionLogsPanel").then((m) => ({
@@ -614,7 +598,6 @@ export function AppShell({
   // Once those panels can themselves be the active tab, activeTabId points at
   // the panel and the lookup misses, so remember the last terminal instead.
   const [lastTerminalTabId, setLastTerminalTabId] = useState(activeTabId);
-  const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   useEffect(() => {
     const active = tabs.find((t) => t.id === activeTabId);
     if (active && getTabType(active.type)?.commandTarget) {
@@ -1554,7 +1537,6 @@ export function AppShell({
       initialPath?: string;
       joinSharedSessionId?: string | null;
       joinShareId?: string | null;
-      collabRoomId?: string;
     },
     options?: {
       data?: Record<string, unknown>;
@@ -1616,7 +1598,6 @@ export function AppShell({
             joinShareId,
             initialFilePath,
             initialPath,
-            collabRoomId: restore?.collabRoomId,
           },
         ];
       }
@@ -1654,7 +1635,6 @@ export function AppShell({
           joinShareId,
           initialFilePath,
           initialPath,
-          collabRoomId: restore?.collabRoomId,
           data: options?.data,
         },
       ];
@@ -1728,52 +1708,6 @@ export function AppShell({
     setActiveTabId(id);
     return id;
   }
-
-  // Invite awareness: rooms are discovered by polling, so a room that has
-  // never been shown to this browser gets one toast with an Open action.
-  useEffect(() => {
-    const SEEN_KEY = "termix:collab-rooms-seen";
-    let cancelled = false;
-    const check = async () => {
-      try {
-        const { listCollabRooms } = await import("@/api/collab-api");
-        const { rooms = [] } = await listCollabRooms();
-        if (cancelled) return;
-        let seen: string[] = [];
-        try {
-          seen = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]");
-        } catch {
-          seen = [];
-        }
-        const seenSet = new Set(seen);
-        const fresh = rooms.filter((room) => !seenSet.has(room.id));
-        if (fresh.length === 0) return;
-        localStorage.setItem(
-          SEEN_KEY,
-          JSON.stringify([...seenSet, ...fresh.map((room) => room.id)]),
-        );
-        // The first poll after login only records what already exists.
-        if (seen.length === 0) return;
-        for (const room of fresh) {
-          if (room.ownerUserId === userId) continue;
-          toast(t("collab.invitedTo", { name: room.name }), {
-            action: {
-              label: t("collab.openRoom"),
-              onClick: () => setRailView("collab"),
-            },
-          });
-        }
-      } catch {
-        /* next poll */
-      }
-    };
-    void check();
-    const timer = setInterval(() => void check(), 60_000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, []);
 
   const openSingletonTab = useCallback(
     // `host` optionally preselects a host for a singleton plugin tab.
@@ -1960,24 +1894,6 @@ export function AppShell({
     // Session tabs expose one or the other on their handle.
     if (handle.reconnect) handle.reconnect();
     else handle.refresh?.();
-  }
-
-  function openShareForTab(id: string) {
-    const tab = tabs.find((t) => t.id === id);
-    if (!tab) return;
-    const ref = tab.terminalRef?.current as TabHandle | null | undefined;
-    // A session tab either opens its own share dialog or hands over what
-    // the shell's dialog needs.
-    const target = (
-      ref?.getShareTarget as (() => ShareTarget | null) | undefined
-    )?.();
-    if (target) {
-      setShareTarget(target);
-    } else if (ref?.canShare?.()) {
-      ref.openShareModal?.();
-    } else {
-      toast.error(t("sessionSharing.notReadyToShare"));
-    }
   }
 
   function closeTab(id: string) {
@@ -2609,58 +2525,6 @@ export function AppShell({
           </div>
         )}
 
-        {railView === "collab" && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <CollabPanel
-              onOpenRoom={(room) => {
-                const roomHost: Host = {
-                  id: `collab-${room.id}`,
-                  name: room.name,
-                  username: "",
-                  ip: "",
-                  port: 0,
-                  folder: "",
-                  online: false,
-                  cpu: null,
-                  ram: null,
-                  lastAccess: new Date().toISOString(),
-                  authType: "none",
-                  enableTerminal: false,
-                  enableCommandHistory: false,
-                  enableTunnel: false,
-                  enableFileManager: false,
-                  enableDocker: false,
-                  enableProxmox: false,
-                  enableProxmoxStats: false,
-                  enableTmuxMonitor: false,
-                  enableTerminalToolbar: false,
-                  enableAiAssistant: false,
-                  enableSsh: false,
-                  enableRdp: false,
-                  enableVnc: false,
-                  enableTelnet: false,
-                  sshPort: 22,
-                  rdpPort: 3389,
-                  vncPort: 5900,
-                  telnetPort: 23,
-                  serverTunnels: [],
-                  quickActions: [],
-                };
-                openTab(roomHost, "collab", {
-                  instanceId:
-                    typeof crypto.randomUUID === "function"
-                      ? crypto.randomUUID()
-                      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-                  restoredSessionId: null,
-                  savedLabel: room.name,
-                  collabRoomId: room.id,
-                });
-                if (isMobile) setSidebarOpen(false);
-              }}
-            />
-          </div>
-        )}
-
         {railView === "session-logs" && (
           <div className="relative flex-1 min-h-0 flex flex-col">
             <SessionLogsPanel />
@@ -2921,7 +2785,6 @@ export function AppShell({
                     void invokeAction("files.openHost", targetTab.host);
                   }
                 }}
-                onOpenShare={openShareForTab}
                 isAppFullscreen={isAppFullscreen}
                 onToggleAppFullscreen={toggleAppFullscreen}
                 rightDockOpen={rightRailView !== null}
@@ -3046,18 +2909,7 @@ export function AppShell({
         </div>
       </div>
 
-      {shareTarget && (
-        <Suspense fallback={null}>
-          <ShareSessionModal
-            open
-            onClose={() => setShareTarget(null)}
-            hostId={shareTarget.hostId}
-            sessionId={shareTarget.sessionId}
-            protocol={shareTarget.protocol}
-            tabInstanceId={shareTarget.tabInstanceId}
-          />
-        </Suspense>
-      )}
+      <ComponentSlot slotId="shell.overlay" />
 
       {commandPaletteOpen && (
         <Suspense fallback={null}>

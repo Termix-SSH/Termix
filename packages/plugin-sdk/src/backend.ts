@@ -179,8 +179,23 @@ export interface PluginRegistry {
 }
 
 export interface PluginServices {
-  provide: <T extends object>(service: string, implementation: T) => void;
-  get: <T extends object>(service: string, options?: { userId?: string }) => T;
+  /**
+   * `name` registers one of several providers of the same service, for a
+   * service keyed by something the caller picks (sessions.live by session
+   * type). It must be listed in the manifest's `provides[].names`.
+   */
+  provide: <T extends object>(
+    service: string,
+    implementation: T,
+    options?: { name?: string },
+  ) => void;
+  /** `provider` picks a named provider; omitted, the unnamed one. */
+  get: <T extends object>(
+    service: string,
+    options?: { userId?: string; provider?: string },
+  ) => T;
+  /** Names of the providers running now ("" for an unnamed one). */
+  providers: (service: string) => string[];
 }
 
 export interface PluginSecrets {

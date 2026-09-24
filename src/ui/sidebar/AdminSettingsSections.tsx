@@ -27,7 +27,6 @@ type GeneralSettingsSectionProps = {
   analyticsEnabled: boolean;
   analyticsLocked: boolean;
   handleToggleAnalytics: () => void;
-  sessionSharingGloballyEnabled: boolean;
   notificationPrivateEndpoints: string[];
   onSaveNotificationPrivateEndpoints: (hosts: string[]) => void;
   stepCaPrivateEndpoints: string[];
@@ -39,7 +38,6 @@ type GeneralSettingsSectionProps = {
     SetStateAction<{ caUrl: string; fingerprint: string; provisioner: string }>
   >;
   handleSaveStepCaSettings: () => void;
-  handleToggleSessionSharingGloballyEnabled: () => void;
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
   allowPasswordLogin: boolean;
@@ -77,7 +75,6 @@ export function AdminGeneralSettingsSection({
   analyticsEnabled,
   analyticsLocked,
   handleToggleAnalytics,
-  sessionSharingGloballyEnabled,
   notificationPrivateEndpoints,
   onSaveNotificationPrivateEndpoints,
   stepCaPrivateEndpoints,
@@ -87,7 +84,6 @@ export function AdminGeneralSettingsSection({
   stepCaSettings,
   setStepCaSettings,
   handleSaveStepCaSettings,
-  handleToggleSessionSharingGloballyEnabled,
   allowRegistration,
   handleToggleRegistration,
   allowPasswordLogin,
@@ -140,15 +136,6 @@ export function AdminGeneralSettingsSection({
             on={analyticsEnabled}
             onToggle={handleToggleAnalytics}
             disabled={analyticsLocked}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t("admin.sessionSharingGloballyEnabled")}
-          description={t("admin.sessionSharingGloballyEnabledDesc")}
-        >
-          <AdminToggle
-            on={sessionSharingGloballyEnabled}
-            onToggle={handleToggleSessionSharingGloballyEnabled}
           />
         </SettingRow>
         <div className="flex flex-col gap-1.5 py-2">
