@@ -1,44 +1,24 @@
-import { useState, useEffect } from "react";
 import { Box } from "lucide-react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { useHost, useTranslation } from "@termix/plugin-sdk/frontend";
+import { WidgetTitle } from "@termix/plugin-sdk/ui";
 import { DockerWidgetEditForm } from "./DockerWidgetEditForm";
-import type {
-  DockerWidgetConfig,
-  WidgetComponentProps,
-  WidgetTypeDefinition,
-} from "@/types/homepage-types";
-import { GRID_SIZE } from "@/types/homepage-types";
-import { getSSHHosts } from "@/api/ssh-host-management-api";
-import type { SSHHostWithStatus } from "@/main-axios";
 import { DockerManager } from "./DockerManager";
-import type { SSHHost } from "@/types/index";
-import { WidgetTitle } from "@/features/homepage/widgets/WidgetTitle";
+import {
+  GRID_SIZE,
+  type DockerWidgetConfig,
+  type WidgetComponentProps,
+  type WidgetDefinition,
+} from "./homepage";
+import { dockerEnabled, hostTitle, toDockerHost } from "./types";
 
 function DockerWidget({
   widget,
   config,
 }: WidgetComponentProps<DockerWidgetConfig>) {
   const { t } = useTranslation();
-  const [host, setHost] = useState<SSHHostWithStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const record = useHost(config.hostId || undefined);
 
-  useEffect(() => {
-    if (!config.hostId) {
-      setLoading(false);
-      return;
-    }
-    getSSHHosts()
-      .then((hosts) => {
-        const found = hosts.find(
-          (h) => h.id === config.hostId && h.enableDocker,
-        );
-        setHost(found ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [config.hostId]);
-
-  if (!config.hostId) {
+  if (!config.hostId || !record || !dockerEnabled(record)) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full gap-2 text-muted-foreground/60">
         <Box size={20} />
@@ -47,22 +27,7 @@ function DockerWidget({
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground/60">
-        {t("homepage.loading")}
-      </div>
-    );
-  }
-
-  if (!host) {
-    return (
-      <div className="flex items-center justify-center w-full h-full text-xs text-muted-foreground/60">
-        {t("homepage.widgetNoHostSelected")}
-      </div>
-    );
-  }
-
+  const host = toDockerHost(record as unknown as Record<string, unknown>);
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
       <WidgetTitle title={widget.title} icon={<Box size={11} />} />
@@ -71,8 +36,8 @@ function DockerWidget({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <DockerManager
-          hostConfig={host as unknown as SSHHost}
-          title={host.name || host.ip}
+          host={host}
+          title={hostTitle(host)}
           isVisible={true}
           isTopbarOpen={false}
           embedded={true}
@@ -83,7 +48,7 @@ function DockerWidget({
 }
 
 /** Registered by the plugin while it runs. */
-export const dockerWidget: WidgetTypeDefinition<DockerWidgetConfig> = {
+export const dockerWidget: WidgetDefinition<DockerWidgetConfig> = {
   id: "docker_widget",
   name: "Docker Manager",
   description: "Embedded Docker container manager for a configured host",

@@ -19,8 +19,19 @@
     "credentials:use",
     "ssh:connect",
     "network:serve",
-    "audit:read",
     "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "docker.containers",
+      "version": "1.0.0",
+      "permission": "docker.use"
+    },
+    {
+      "service": "docker.events",
+      "version": "1.0.0",
+      "permission": "docker.use"
+    }
   ],
   "contributes": {
     "tabs": [
@@ -31,10 +42,39 @@
         "openFrom": ["host-context-menu", "palette"]
       }
     ],
-    "hostCapability": {
-      "key": "enableDocker",
-      "labelKey": "hosts.dockerIntegration",
-      "editorTab": "docker"
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "enableKey": "enableDocker",
+        "enableLabelKey": "settings.host.enable.label",
+        "fields": [
+          {
+            "key": "containerRuntime",
+            "type": "select",
+            "labelKey": "settings.host.containerRuntime.label",
+            "descriptionKey": "settings.host.containerRuntime.description",
+            "requires": "enableDocker",
+            "default": "docker",
+            "options": [
+              {
+                "value": "docker",
+                "labelKey": "settings.host.containerRuntime.docker"
+              },
+              {
+                "value": "podman",
+                "labelKey": "settings.host.containerRuntime.podman"
+              }
+            ]
+          }
+        ]
+      }
     }
   },
   "locales": "locales",

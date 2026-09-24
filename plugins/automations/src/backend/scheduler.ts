@@ -4,7 +4,7 @@ import { DataCrypto } from "../../../../src/backend/utils/data-crypto.js";
 import { statsLogger } from "../../../../src/backend/utils/logger.js";
 import { computeNextDueAt } from "./cron.js";
 import { hasDwelled, isCoolingDown } from "./conditions.js";
-import { pollDockerEvents } from "./docker-watcher.js";
+import { reconcileDockerWatch, resetDockerWatcher } from "./docker-watcher.js";
 import { AutomationEngine } from "./engine.js";
 import { reconcileHeadlessViewers } from "./headless-viewer.js";
 import {
@@ -57,6 +57,7 @@ export function stopAutomationScheduler(): void {
   tickTimer = null;
   startupTimer = null;
   unsubscribeAutomationTriggers();
+  resetDockerWatcher();
 }
 
 /** Exposed for tests; the interval calls this. */
@@ -69,7 +70,7 @@ export async function tick(now: Date = new Date()): Promise<void> {
     await reconcileHeadlessViewers().catch(() => undefined);
     await runDueSchedules(now);
     await recheckOpenBreaches(now);
-    await pollDockerEvents(now.getTime()).catch(() => undefined);
+    await reconcileDockerWatch(now.getTime()).catch(() => undefined);
     await pruneIfDue(now);
   } catch (error) {
     statsLogger.warn("Automation scheduler tick failed", {

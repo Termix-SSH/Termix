@@ -393,6 +393,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runHostMetricsSettingsMigration } =
         await import("./utils/crypto-migration/host-metrics-settings-migration.js");
       await runHostMetricsSettingsMigration();
+
+      const { runDockerSettingsMigration } =
+        await import("./utils/crypto-migration/docker-settings-migration.js");
+      await runDockerSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

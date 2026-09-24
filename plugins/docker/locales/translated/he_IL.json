@@ -99,18 +99,21 @@
   "nav": {
     "docker": "דוקר"
   },
-  "hosts": {
-    "tabDocker": "דוקר",
-    "dockerIntegration": "אינטגרציה עם Docker",
-    "enableDockerMonitor": "הפעל את Docker",
-    "enableDockerMonitorDesc": "ניטור וניהול של מכולות במארח זה באמצעות Docker",
-    "containerRuntime": "זמן ריצה של המכולה",
-    "containerRuntimeDesc": "בחר את ממשק שורת הפקודה (CLI) המשמש לניהול מכולות במארח זה",
-    "containerRuntimeDocker": "דוקר",
-    "containerRuntimePodman": "פודמן"
-  },
   "onboarding": {
     "feature_docker": "דוקר",
     "feature_docker_desc": "ראה קונטיינרים, קרא יומני רישום וצפה בסטטיסטיקות על כל מארח שמפעיל את Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "הפעל את Docker"
+      },
+      "containerRuntime": {
+        "label": "זמן ריצה של המכולה",
+        "description": "בחר את ממשק שורת הפקודה (CLI) המשמש לניהול מכולות במארח זה",
+        "docker": "דוקר",
+        "podman": "פודמן"
+      }
+    }
   }
 }

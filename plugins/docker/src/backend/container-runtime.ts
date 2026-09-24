@@ -4,33 +4,6 @@ export function normalizeContainerRuntime(value: unknown): ContainerRuntime {
   return value === "podman" ? "podman" : "docker";
 }
 
-export function getContainerRuntimeConfig(raw: unknown): {
-  runtime: ContainerRuntime;
-} {
-  if (!raw) {
-    return { runtime: "docker" };
-  }
-
-  let config: unknown = raw;
-  if (typeof raw === "string") {
-    try {
-      config = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      return { runtime: "docker" };
-    }
-  }
-
-  if (!config || typeof config !== "object") {
-    return { runtime: "docker" };
-  }
-
-  return {
-    runtime: normalizeContainerRuntime(
-      (config as Record<string, unknown>).runtime,
-    ),
-  };
-}
-
 /**
  * Non-interactive SSH shells don't source ~/.zprofile or ~/.bash_profile,
  * so PATH additions from installers like Homebrew or OrbStack are missing.

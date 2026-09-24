@@ -22,7 +22,6 @@ export type WidgetTypeId =
   | "ssh_terminal"
   | "quick_connect"
   | "file_manager_widget"
-  | "docker_widget"
   | "tunnel_widget"
   | "calendar"
   | "countdown"
@@ -35,7 +34,6 @@ export type WidgetTypeId =
   | "dashboard_links"
   | "search_links"
   | "link_tree"
-  | "docker_activity"
   | "ssh_quick_connect"
   | (string & {});
 
@@ -210,10 +208,6 @@ export interface SystemOverviewConfig {
 }
 
 export interface FileManagerWidgetConfig {
-  hostId: number;
-}
-
-export interface DockerWidgetConfig {
   hostId: number;
 }
 

@@ -100,10 +100,6 @@ export type Host = {
   scpLegacy?: boolean;
   defaultPath?: string;
 
-  enableDocker: boolean;
-  dockerConfig?: {
-    runtime?: "docker" | "podman";
-  } | null;
   enableWebUi?: boolean;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;

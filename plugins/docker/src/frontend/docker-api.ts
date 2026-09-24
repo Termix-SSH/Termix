@@ -1,345 +1,170 @@
-import axios from "axios";
-import { dockerApi, handleApiError } from "@/main-axios";
+import { useMemo } from "react";
+import {
+  usePluginApi,
+  type PluginApiClient,
+} from "@termix/plugin-sdk/frontend";
+import type { ConnectionStage } from "@termix/plugin-sdk/ui";
 import type {
   DockerContainer,
   DockerLogOptions,
   DockerStats,
   DockerValidation,
-} from "@/types/index";
+} from "./types";
 
-type ApiConnectionLog = {
+export interface ApiConnectionLog {
   type: "info" | "success" | "warning" | "error";
-  stage: string;
+  stage: ConnectionStage;
   message: string;
-  details?: Record<string, unknown>;
-};
+  details?: string;
+}
 
-type ConnectErrorResponse = {
-  error?: string;
-  message?: string;
-  connectionLogs?: ApiConnectionLog[];
-  requires_totp?: boolean;
-  requires_warpgate?: boolean;
-  sessionId?: string;
-  prompt?: string;
-  url?: string;
-  securityKey?: string;
+/** One step of a connect: connected, a prompt to answer, or auth needed. */
+export interface ConnectResult {
+  success?: boolean;
   status?: string;
   reason?: string;
-};
-
-export async function connectDockerSession(
-  sessionId: string,
-  hostId: number,
-  config?: {
-    userProvidedPassword?: string;
-    userProvidedSshKey?: string;
-    userProvidedKeyPassword?: string;
-    forceKeyboardInteractive?: boolean;
-    useSocks5?: boolean;
-    socks5Host?: string;
-    socks5Port?: number;
-    socks5Username?: string;
-    socks5Password?: string;
-    socks5ProxyChain?: unknown;
-  },
-): Promise<{
-  success?: boolean;
   message?: string;
   requires_totp?: boolean;
   prompt?: string;
   isPassword?: boolean;
-  status?: string;
-  reason?: string;
-  connectionLogs?: ApiConnectionLog[];
+  retry?: boolean;
   requires_warpgate?: boolean;
-  url?: string;
+  url?: string | null;
   securityKey?: string;
-}> {
-  try {
-    const response = await dockerApi.post("/ssh/connect", {
-      sessionId,
-      hostId,
-      ...config,
-    });
-    return response.data;
-  } catch (error: unknown) {
-    if (
-      axios.isAxiosError<ConnectErrorResponse>(error) &&
-      error.response?.data?.status === "auth_required"
-    ) {
-      return error.response.data;
+  connectionLogs?: ApiConnectionLog[];
+}
+
+/** An API failure carrying the server's message and connection logs. */
+export class DockerApiError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly connectionLogs?: ApiConnectionLog[],
+  ) {
+    super(message);
+    this.name = "DockerApiError";
+  }
+}
+
+function apiError(error: unknown, action: string): DockerApiError {
+  const response = (
+    error as {
+      response?: {
+        status?: number;
+        data?: {
+          error?: string;
+          message?: string;
+          connectionLogs?: ApiConnectionLog[];
+        };
+      };
     }
-    if (
-      axios.isAxiosError<ConnectErrorResponse>(error) &&
-      error.response?.data?.requires_totp
-    ) {
-      return error.response.data;
-    }
-    if (
-      axios.isAxiosError<ConnectErrorResponse>(error) &&
-      error.response?.data?.requires_warpgate
-    ) {
-      return error.response.data;
-    }
-    if (
-      axios.isAxiosError<ConnectErrorResponse>(error) &&
-      error.response?.data?.connectionLogs
-    ) {
-      const data = error.response.data;
-      const errorWithLogs = new Error(
-        data.error || data.message || error.message,
-      );
-      Object.assign(errorWithLogs, {
-        connectionLogs: data.connectionLogs,
-      });
-      throw errorWithLogs;
-    }
-    throw handleApiError(error, "connect to Docker SSH session");
-  }
+  )?.response;
+  const data = response?.data;
+  const message =
+    data?.error ||
+    data?.message ||
+    (error instanceof Error ? error.message : `Failed to ${action}`);
+  return new DockerApiError(message, response?.status, data?.connectionLogs);
 }
 
-export async function verifyDockerTOTP(
-  sessionId: string,
-  totpCode: string,
-): Promise<{ status: string; message: string }> {
+async function call<T>(
+  action: string,
+  request: () => Promise<{ data: T }>,
+): Promise<T> {
   try {
-    const response = await dockerApi.post("/ssh/connect-totp", {
-      sessionId,
-      totpCode,
-    });
-    return response.data;
+    return (await request()).data;
   } catch (error) {
-    throw handleApiError(error, "verify Docker TOTP");
+    throw apiError(error, action);
   }
 }
 
-export async function verifyDockerWarpgate(
-  sessionId: string,
-): Promise<{ status: string; message: string }> {
-  try {
-    const response = await dockerApi.post("/ssh/connect-warpgate", {
-      sessionId,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "verify Docker Warpgate");
-  }
-}
+export type ContainerAction =
+  "start" | "stop" | "restart" | "pause" | "unpause";
 
-export async function disconnectDockerSession(
-  sessionId: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await dockerApi.post("/ssh/disconnect", {
-      sessionId,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "disconnect from Docker SSH session");
-  }
-}
-
-export async function keepaliveDockerSession(
-  sessionId: string,
-): Promise<{ success: boolean }> {
-  try {
-    const response = await dockerApi.post("/ssh/keepalive", {
-      sessionId,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "keepalive Docker SSH session");
-  }
-}
-
-export async function getDockerSessionStatus(
-  sessionId: string,
-): Promise<{ success: boolean; connected: boolean }> {
-  try {
-    const response = await dockerApi.get("/ssh/status", {
-      params: { sessionId },
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "get Docker session status");
-  }
-}
-
-export async function validateDockerAvailability(
-  sessionId: string,
-): Promise<DockerValidation> {
-  try {
-    const response = await dockerApi.get(`/validate/${sessionId}`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "validate Docker availability");
-  }
-}
-
-export async function listDockerContainers(
-  sessionId: string,
-  all: boolean = true,
-): Promise<DockerContainer[]> {
-  try {
-    const response = await dockerApi.get(`/containers/${sessionId}`, {
-      params: { all },
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "list Docker containers");
-  }
-}
-
-export async function getDockerContainerDetails(
-  sessionId: string,
-  containerId: string,
-): Promise<DockerContainer> {
-  try {
-    const response = await dockerApi.get(
-      `/containers/${sessionId}/${containerId}`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "get Docker container details");
-  }
-}
-
-export async function startDockerContainer(
-  sessionId: string,
-  containerId: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await dockerApi.post(
-      `/containers/${sessionId}/${containerId}/start`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "start Docker container");
-  }
-}
-
-export async function stopDockerContainer(
-  sessionId: string,
-  containerId: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await dockerApi.post(
-      `/containers/${sessionId}/${containerId}/stop`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "stop Docker container");
-  }
-}
-
-export async function restartDockerContainer(
-  sessionId: string,
-  containerId: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await dockerApi.post(
-      `/containers/${sessionId}/${containerId}/restart`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "restart Docker container");
-  }
-}
-
-export async function pauseDockerContainer(
-  sessionId: string,
-  containerId: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await dockerApi.post(
-      `/containers/${sessionId}/${containerId}/pause`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "pause Docker container");
-  }
-}
-
-export async function unpauseDockerContainer(
-  sessionId: string,
-  containerId: string,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await dockerApi.post(
-      `/containers/${sessionId}/${containerId}/unpause`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "unpause Docker container");
-  }
-}
-
-export async function removeDockerContainer(
-  sessionId: string,
-  containerId: string,
-  force: boolean = false,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const response = await dockerApi.delete(
-      `/containers/${sessionId}/${containerId}/remove`,
-      {
-        params: { force },
+export function createDockerApi(api: PluginApiClient) {
+  return {
+    connect: (
+      sessionId: string,
+      hostId: number,
+      credentials?: {
+        userProvidedPassword?: string;
+        userProvidedSshKey?: string;
+        userProvidedKeyPassword?: string;
       },
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "remove Docker container");
-  }
+    ) =>
+      call<ConnectResult>("connect to Docker", () =>
+        api.post("/ssh/connect", { sessionId, hostId, ...credentials }),
+      ),
+
+    answerTotp: (sessionId: string, totpCode: string) =>
+      call<ConnectResult>("verify the code", () =>
+        api.post("/ssh/connect-totp", { sessionId, totpCode }),
+      ),
+
+    continueWarpgate: (sessionId: string) =>
+      call<ConnectResult>("complete Warpgate authentication", () =>
+        api.post("/ssh/connect-warpgate", { sessionId }),
+      ),
+
+    disconnect: (sessionId: string) =>
+      call("disconnect from Docker", () =>
+        api.post("/ssh/disconnect", { sessionId }),
+      ),
+
+    keepalive: (sessionId: string) =>
+      call("keep the Docker session alive", () =>
+        api.post("/ssh/keepalive", { sessionId }),
+      ),
+
+    validate: (sessionId: string) =>
+      call<DockerValidation>("validate Docker", () =>
+        api.get(`/validate/${sessionId}`),
+      ),
+
+    listContainers: (sessionId: string, all = true) =>
+      call<DockerContainer[]>("list containers", () =>
+        api.get(`/containers/${sessionId}`, { params: { all } }),
+      ),
+
+    containerAction: (
+      sessionId: string,
+      containerId: string,
+      action: ContainerAction,
+    ) =>
+      call<{ success: boolean; message: string }>(
+        `${action} the container`,
+        () => api.post(`/containers/${sessionId}/${containerId}/${action}`),
+      ),
+
+    removeContainer: (sessionId: string, containerId: string, force = false) =>
+      call<{ success: boolean; message: string }>("remove the container", () =>
+        api.delete(`/containers/${sessionId}/${containerId}/remove`, {
+          params: { force },
+        }),
+      ),
+
+    logs: (
+      sessionId: string,
+      containerId: string,
+      options?: DockerLogOptions,
+    ) =>
+      call<{ logs: string }>("load container logs", () =>
+        api.get(`/containers/${sessionId}/${containerId}/logs`, {
+          params: options,
+        }),
+      ),
+
+    stats: (sessionId: string, containerId: string) =>
+      call<DockerStats>("load container stats", () =>
+        api.get(`/containers/${sessionId}/${containerId}/stats`),
+      ),
+  };
 }
 
-export async function getContainerLogs(
-  sessionId: string,
-  containerId: string,
-  options?: DockerLogOptions,
-): Promise<{ logs: string }> {
-  try {
-    const response = await dockerApi.get(
-      `/containers/${sessionId}/${containerId}/logs`,
-      {
-        params: options,
-      },
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "get container logs");
-  }
-}
+export type DockerApi = ReturnType<typeof createDockerApi>;
 
-export async function downloadContainerLogs(
-  sessionId: string,
-  containerId: string,
-  options?: DockerLogOptions,
-): Promise<Blob> {
-  try {
-    const response = await dockerApi.get(
-      `/containers/${sessionId}/${containerId}/logs`,
-      {
-        params: { ...options, download: true },
-        responseType: "blob",
-      },
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "download container logs");
-  }
-}
-
-export async function getContainerStats(
-  sessionId: string,
-  containerId: string,
-): Promise<DockerStats> {
-  try {
-    const response = await dockerApi.get(
-      `/containers/${sessionId}/${containerId}/stats`,
-    );
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "get container stats");
-  }
+/** The Docker API on this plugin's own client. */
+export function useDockerApi(): DockerApi {
+  const api = usePluginApi();
+  return useMemo(() => createDockerApi(api), [api]);
 }

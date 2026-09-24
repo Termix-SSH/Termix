@@ -199,7 +199,6 @@ router.post(
       enableTunnel,
       enableFileManager,
       scpLegacy,
-      enableDocker,
       enableProxmox,
       enableTmuxMonitor,
       enableTerminalToolbar,
@@ -215,7 +214,6 @@ router.post(
       quickActions,
       statusCheckEnabled,
       statusCheckInterval,
-      dockerConfig,
       proxmoxConfig,
       enableProxmoxStats,
       proxmoxStatsConfig,
@@ -332,7 +330,6 @@ router.post(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       scpLegacy: scpLegacy ? 1 : 0,
-      enableDocker: enableDocker ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
       enableAiAssistant: enableAiAssistant ? 1 : 0,
@@ -344,11 +341,6 @@ router.post(
       defaultPath: defaultPath || null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
-      dockerConfig: dockerConfig
-        ? typeof dockerConfig === "string"
-          ? dockerConfig
-          : JSON.stringify(dockerConfig)
-        : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
           ? terminalConfig
@@ -764,7 +756,6 @@ router.post(
         enableTerminal: true,
         enableTunnel: false,
         enableFileManager: true,
-        enableDocker: false,
         enableWebUi: false,
         enableTmuxMonitor: false,
         enableTerminalToolbar: true,
@@ -895,7 +886,6 @@ router.put(
       enableTunnel,
       enableFileManager,
       scpLegacy,
-      enableDocker,
       enableProxmox,
       enableTmuxMonitor,
       enableTerminalToolbar,
@@ -911,7 +901,6 @@ router.put(
       quickActions,
       statusCheckEnabled,
       statusCheckInterval,
-      dockerConfig,
       proxmoxConfig,
       enableProxmoxStats,
       proxmoxStatsConfig,
@@ -1029,7 +1018,6 @@ router.put(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       scpLegacy: scpLegacy ? 1 : 0,
-      enableDocker: enableDocker ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
       enableAiAssistant: enableAiAssistant ? 1 : 0,
@@ -1041,11 +1029,6 @@ router.put(
       defaultPath: defaultPath || null,
       statusCheckEnabled: statusCheckEnabled === false ? 0 : 1,
       statusCheckInterval: normalizeStatusInterval(statusCheckInterval),
-      dockerConfig: dockerConfig
-        ? typeof dockerConfig === "string"
-          ? dockerConfig
-          : JSON.stringify(dockerConfig)
-        : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
           ? terminalConfig
@@ -2099,7 +2082,6 @@ router.get(
             enableTunnel: !!resolvedHost.enableTunnel,
             enableFileManager: resolvedHost.enableFileManager !== false,
             scpLegacy: !!resolvedHost.scpLegacy,
-            enableDocker: !!resolvedHost.enableDocker,
             enableWebUi: !!webEndpointSettings?.enableWebUi,
             enableProxmox: !!proxmoxSettings?.enableProxmox,
             enableProxmoxStats: !!proxmoxSettings?.enableProxmoxStats,
@@ -2123,9 +2105,6 @@ router.get(
               ? JSON.parse(resolvedHost.quickActions as string)
               : null,
             webUiConfig: webEndpointSettings?.webUiConfig ?? { endpoints: [] },
-            dockerConfig: resolvedHost.dockerConfig
-              ? JSON.parse(resolvedHost.dockerConfig as string)
-              : null,
             proxmoxConfig: proxmoxSettings?.proxmoxConfig ?? null,
             proxmoxStatsConfig: proxmoxSettings?.proxmoxStatsConfig ?? null,
             terminalConfig: resolvedHost.terminalConfig
@@ -2260,7 +2239,6 @@ router.get(
               enableCommandHistory: resolvedHost.enableCommandHistory !== false,
               enableTunnel: !!resolvedHost.enableTunnel,
               enableFileManager: resolvedHost.enableFileManager !== false,
-              enableDocker: !!resolvedHost.enableDocker,
               enableWebUi: !!webEndpointSettings?.enableWebUi,
               enableProxmox: !!proxmoxSettings?.enableProxmox,
               enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
@@ -2288,9 +2266,6 @@ router.get(
               webUiConfig: webEndpointSettings?.webUiConfig ?? {
                 endpoints: [],
               },
-              dockerConfig: resolvedHost.dockerConfig
-                ? JSON.parse(resolvedHost.dockerConfig as string)
-                : null,
               proxmoxConfig: proxmoxSettings?.proxmoxConfig ?? null,
               terminalConfig: resolvedHost.terminalConfig
                 ? JSON.parse(resolvedHost.terminalConfig as string)

@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Buruh pelabuhan"
   },
-  "hosts": {
-    "tabDocker": "Buruh pelabuhan",
-    "dockerIntegration": "Integrasi Docker",
-    "enableDockerMonitor": "Aktifkan Docker",
-    "enableDockerMonitorDesc": "Pantau dan kelola kontainer di host ini melalui Docker.",
-    "containerRuntime": "Lingkungan Eksekusi Kontainer",
-    "containerRuntimeDesc": "Pilih CLI yang digunakan untuk manajemen kontainer pada host ini.",
-    "containerRuntimeDocker": "Buruh pelabuhan",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Buruh pelabuhan",
     "feature_docker_desc": "Lihat kontainer, baca log, dan pantau statistik pada host mana pun yang menjalankan Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktifkan Docker"
+      },
+      "containerRuntime": {
+        "label": "Lingkungan Eksekusi Kontainer",
+        "description": "Pilih CLI yang digunakan untuk manajemen kontainer pada host ini.",
+        "docker": "Buruh pelabuhan",
+        "podman": "Podman"
+      }
+    }
   }
 }

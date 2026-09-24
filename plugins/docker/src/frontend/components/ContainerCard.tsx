@@ -1,7 +1,7 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage } from "../error-message";
+import { Button, Card, useConfirmation } from "@termix/plugin-sdk/ui";
+import type { DockerContainer } from "../types";
 import React from "react";
-import { Card } from "@/components/card.tsx";
-import { Button } from "@/components/button.tsx";
 import {
   Box,
   Play,
@@ -14,16 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { DockerContainer } from "@/types";
-import {
-  startDockerContainer,
-  stopDockerContainer,
-  restartDockerContainer,
-  pauseDockerContainer,
-  unpauseDockerContainer,
-  removeDockerContainer,
-} from "../docker-api";
-import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { useDockerApi } from "../docker-api";
 
 interface ContainerCardProps {
   container: DockerContainer;
@@ -61,6 +52,7 @@ export function ContainerCard({
 }: ContainerCardProps): React.ReactElement {
   const { t } = useTranslation();
   const { confirmWithToast } = useConfirmation();
+  const docker = useDockerApi();
   const [isStarting, setIsStarting] = React.useState(false);
   const [isStopping, setIsStopping] = React.useState(false);
   const [isRestarting, setIsRestarting] = React.useState(false);
@@ -82,7 +74,7 @@ export function ContainerCard({
     e.stopPropagation();
     setIsStarting(true);
     try {
-      await startDockerContainer(sessionId, container.id);
+      await docker.containerAction(sessionId, container.id, "start");
       toast.success(t("docker.containerStarted", { name: containerName }));
       onRefresh?.();
     } catch (err) {
@@ -100,7 +92,7 @@ export function ContainerCard({
     e.stopPropagation();
     setIsStopping(true);
     try {
-      await stopDockerContainer(sessionId, container.id);
+      await docker.containerAction(sessionId, container.id, "stop");
       toast.success(t("docker.containerStopped", { name: containerName }));
       onRefresh?.();
     } catch (err) {
@@ -118,7 +110,7 @@ export function ContainerCard({
     e.stopPropagation();
     setIsRestarting(true);
     try {
-      await restartDockerContainer(sessionId, container.id);
+      await docker.containerAction(sessionId, container.id, "restart");
       toast.success(t("docker.containerRestarted", { name: containerName }));
       onRefresh?.();
     } catch (err) {
@@ -137,10 +129,10 @@ export function ContainerCard({
     setIsPausing(true);
     try {
       if (container.state === "paused") {
-        await unpauseDockerContainer(sessionId, container.id);
+        await docker.containerAction(sessionId, container.id, "unpause");
         toast.success(t("docker.containerUnpaused", { name: containerName }));
       } else {
-        await pauseDockerContainer(sessionId, container.id);
+        await docker.containerAction(sessionId, container.id, "pause");
         toast.success(t("docker.containerPaused", { name: containerName }));
       }
       onRefresh?.();
@@ -166,7 +158,7 @@ export function ContainerCard({
       async () => {
         setIsRemoving(true);
         try {
-          await removeDockerContainer(
+          await docker.removeContainer(
             sessionId,
             container.id,
             container.state === "running",

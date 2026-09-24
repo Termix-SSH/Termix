@@ -174,7 +174,6 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableTerminal?: unknown;
   enableTunnel?: unknown;
   enableFileManager?: unknown;
-  enableDocker?: unknown;
   enableWebUi?: unknown;
   enableProxmox?: unknown;
   enableTmuxMonitor?: unknown;
@@ -193,7 +192,6 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   quickActions?: unknown;
   statusCheckEnabled?: unknown;
   statusCheckInterval?: unknown;
-  dockerConfig?: unknown;
   webUiConfig?: unknown;
   proxmoxConfig?: unknown;
   enableProxmoxStats?: unknown;
@@ -340,7 +338,6 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableTerminal",
   "enableTunnel",
   "enableFileManager",
-  "enableDocker",
   "enableTmuxMonitor",
   "enableTerminalToolbar",
   "enableAiAssistant",
@@ -437,7 +434,6 @@ export function transformHostResponse(
     enableTerminal: !!host.enableTerminal,
     enableTunnel: !!host.enableTunnel,
     enableFileManager: host.enableFileManager !== false,
-    enableDocker: !!host.enableDocker,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
     enableTerminalToolbar: host.enableTerminalToolbar !== false,
     enableAiAssistant: !!host.enableAiAssistant,
@@ -467,9 +463,6 @@ export function transformHostResponse(
         : null,
     terminalConfig: host.terminalConfig
       ? JSON.parse(host.terminalConfig as string)
-      : undefined,
-    dockerConfig: host.dockerConfig
-      ? JSON.parse(host.dockerConfig as string)
       : undefined,
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     useWarpgate: !!host.useWarpgate,

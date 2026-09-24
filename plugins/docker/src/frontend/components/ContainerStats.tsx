@@ -1,4 +1,6 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage } from "../error-message";
+import { SectionCard, useAdaptivePolling } from "@termix/plugin-sdk/ui";
+import type { DockerStats } from "../types";
 import React from "react";
 import {
   Activity,
@@ -9,12 +11,9 @@ import {
   Network,
   RefreshCw,
 } from "lucide-react";
-import type { DockerStats } from "@/types";
-import { getContainerStats } from "../docker-api";
+import { useDockerApi } from "../docker-api";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { SectionCard } from "@/components/section-card";
 import { DockerBadge } from "./ContainerCard.tsx";
-import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
 
 interface ContainerStatsProps {
   sessionId: string;
@@ -30,6 +29,7 @@ export function ContainerStats({
   containerState,
 }: ContainerStatsProps): React.ReactElement {
   const { t } = useTranslation();
+  const docker = useDockerApi();
   const [stats, setStats] = React.useState<DockerStats | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -41,7 +41,7 @@ export function ContainerStats({
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getContainerStats(sessionId, containerId);
+      const data = await docker.stats(sessionId, containerId);
       const previous = statsRef.current;
       const changed =
         !previous ||
@@ -58,7 +58,7 @@ export function ContainerStats({
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, containerId, containerState, t]);
+  }, [sessionId, containerId, containerState, t, docker]);
 
   useAdaptivePolling(
     fetchStats,
@@ -246,7 +246,7 @@ export function ContainerStats({
             </span>
             <DockerBadge
               state={
-                containerState as import("@/types").DockerContainer["state"]
+                containerState as import("../types").DockerContainer["state"]
               }
             />
           </div>

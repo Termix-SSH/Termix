@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker-integrasie",
-    "enableDockerMonitor": "Aktiveer Docker",
-    "enableDockerMonitorDesc": "Monitor en bestuur houers op hierdie gasheer via Docker",
-    "containerRuntime": "Houerlooptyd",
-    "containerRuntimeDesc": "Kies die CLI wat vir houerbestuur op hierdie gasheer gebruik word",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "Sien houers, lees logs en kyk na statistieke op enige gasheer wat Docker gebruik."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktiveer Docker"
+      },
+      "containerRuntime": {
+        "label": "Houerlooptyd",
+        "description": "Kies die CLI wat vir houerbestuur op hierdie gasheer gebruik word",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

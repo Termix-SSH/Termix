@@ -327,7 +327,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         enable_tunnel INTEGER NOT NULL DEFAULT 1,
         tunnel_connections TEXT,
         enable_file_manager INTEGER NOT NULL DEFAULT 1,
-        enable_docker INTEGER NOT NULL DEFAULT 0,
         enable_web_ui INTEGER NOT NULL DEFAULT 0,
         default_path TEXT,
         autostart_password TEXT,
@@ -336,7 +335,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         force_keyboard_interactive TEXT,
         status_check_enabled INTEGER NOT NULL DEFAULT 1,
         status_check_interval INTEGER,
-        docker_config TEXT,
         web_ui_config TEXT,
         terminal_config TEXT,
         notes TEXT,
@@ -1075,12 +1073,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "status_check_interval", "INTEGER");
   addColumnIfNotExists("ssh_data", "terminal_config", "TEXT");
   addColumnIfNotExists("ssh_data", "quick_actions", "TEXT");
-  addColumnIfNotExists(
-    "ssh_data",
-    "enable_docker",
-    "INTEGER NOT NULL DEFAULT 0",
-  );
-  addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
   addColumnIfNotExists(
     "ssh_data",
     "enable_web_ui",

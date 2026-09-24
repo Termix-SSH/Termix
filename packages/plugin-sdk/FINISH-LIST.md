@@ -80,7 +80,8 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   columns, so none of them can see a plugin's host settings. For tunnels the
   "Tunnel" filter and the bulk enable/disable entries were removed, and the
   export's "Tunnels" group became "Proxy" (SOCKS5 fields only) since
-  `tunnelConnections` there is now stale. Bringing these back needs a way for
+  `tunnelConnections` there is now stale. **B15** removed the "Docker" filter
+  and the bulk Docker toggles the same way. Bringing these back needs a way for
   core to read and write host-scope plugin settings generically (keyed off
   `contributes.settings.host` or `hostCapability`) rather than per column.
   Owner: D1.
@@ -88,9 +89,9 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `logActivity` is a core `@/main-axios` call and the plugin imports nothing
   from `@/`. Old "tunnel" entries still reopen the tab through the plugin's
   `activityTypes`. An `app.logActivity` (or equivalent bridge member) would
-  restore it for this plugin and let docker and file-manager drop their own
-  `@/main-axios` import for it too (host-metrics uses the `logActivity` the
-  ui entry exports). Owner: D1.
+  restore it for this plugin and let file-manager drop its own
+  `@/main-axios` import for it too (host-metrics and docker use the
+  `logActivity` the ui entry exports). Owner: D1.
 - **B7 (tunnels):** on the desktop app, tunnel statuses from a connected
   remote server are no longer merged into the tab: the old code polled the
   remote tunnel service through `getRemoteTunnelApi()`, and the SDK has no
@@ -289,7 +290,8 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   Their drizzle migrations are `SELECT 1;` on purpose (the copy runs after
   drizzle on Postgres and MySQL). Drop them physically in 3.0.0, once every
   install has booted 2.9.0. The legacy `guac_enabled` and `guac_url` rows in
-  `settings` are left too. Owner: 3.0.0.
+  `settings` are left too. **B15** did the same with `ssh_data.enable_docker`
+  and `docker_config` (copied by `docker-settings-migration.ts`). Owner: 3.0.0.
 - **B14, found in B5 (proxmox):** `drizzle/postgres/0036_redundant_ender_wiggin.sql`
   and `drizzle/mysql/0035_clumsy_leech.sql` really `DROP COLUMN` the four
   proxmox host columns. On Postgres and MySQL that runs at boot before
@@ -371,6 +373,31 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   gets "tunnels.start is not a function". Same cause as the tunnels line
   above: since B12 `ctx.services.get` hands back an empty handle instead of
   throwing, so the step has to check `typeof start`. Owner: B17 or D0.
+- **B15 (docker), for D2:** the console socket `/plugin-ws/docker/console`
+  is a public route with `optionalAuth`. The handler refuses a socket with no
+  signed-in user or without `docker.use` and checks the data key per connect
+  message, but review it with the rest of the public routes.
+- **B15 (docker):** `ssh_data.show_docker_in_sidebar` (and its siblings for
+  terminal, files, tunnels and server stats) are dead columns nothing reads;
+  only the raw database export still copies them. Drop them the B14 way.
+  Owner: D0.
+- **B15 (docker):** the Docker manager's card or table layout is still an
+  override on core's Appearance presets (`types/ui-preferences.ts` declares a
+  `docker` area, as it does `hostMetrics`), reached through the ui entry's
+  `useAreaPreferences` and `useUiPreferencesContext`. A plugin cannot declare
+  its own area yet. Owner: D1.
+- **B15 (docker):** the raw SQLite database import (`database.ts`) no longer
+  brings `enable_docker` across, the same gap every earlier column move left
+  there: it writes host rows only and never plugin settings. Owner: D1, with
+  the generic host-settings export and import.
+- **B15 (docker), for B18:** the AI assistant's `list_hosts`/`get_host`
+  tools still report `enableDocker` from the host row, which no longer has
+  the column, so it always reads null. Read `pluginSettings.docker` or ask the
+  `docker.containers` service instead. Owner: B18.
+- **B15 (docker), for B17:** automations' `docker-watcher.ts` still reads its
+  own rules through core's automation repository and types by relative
+  import; only the Docker side is on the SDK (`docker.containers` for the
+  step, `docker.events` for the trigger). Owner: B17.
 
 ## Manual checks after 2.9.0
 
@@ -411,3 +438,9 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   that only had `connection_type = rdp` comes up as RDP with SSH off; RDP user
   defaults apply to a saved host; Quick Connect over RDP and VNC; the desktop
   app with a host on the remote server and one on This device.
+- Docker: a 2.8 host with Docker on (and one on Podman) keeps its switch and
+  runtime; list, start, stop, logs, stats and the console on a Linux host;
+  TOTP (including a wrong code first) and Warpgate on the connect; a host
+  with no stored password asks for credentials; the homepage Docker widget;
+  an automation Docker step and a `docker_event` trigger; disable Docker with
+  a console open, then enable it and open another.

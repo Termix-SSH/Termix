@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Докер"
   },
-  "hosts": {
-    "tabDocker": "Докер",
-    "dockerIntegration": "Интеграция на Docker",
-    "enableDockerMonitor": "Активиране на Докер",
-    "enableDockerMonitorDesc": "Наблюдавайте и управлявайте контейнери на този хост чрез Docker",
-    "containerRuntime": "Изпълнение на контейнера",
-    "containerRuntimeDesc": "Изберете CLI, използван за управление на контейнери на този хост",
-    "containerRuntimeDocker": "Докер",
-    "containerRuntimePodman": "Подман"
-  },
   "onboarding": {
     "feature_docker": "Докер",
     "feature_docker_desc": "Вижте контейнери, прочетете лог файлове и наблюдавайте статистики на всеки хост, на който работи Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Активиране на Докер"
+      },
+      "containerRuntime": {
+        "label": "Изпълнение на контейнера",
+        "description": "Изберете CLI, използван за управление на контейнери на този хост",
+        "docker": "Докер",
+        "podman": "Подман"
+      }
+    }
   }
 }

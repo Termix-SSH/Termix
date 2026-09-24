@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker-Integration",
-    "enableDockerMonitor": "Docker aktivieren",
-    "enableDockerMonitorDesc": "Container auf diesem Host über Docker überwachen und verwalten",
-    "containerRuntime": "Container-Runtime",
-    "containerRuntimeDesc": "Wählen Sie die CLI für die Container-Verwaltung auf diesem Host",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "Container anzeigen, Protokolle lesen und Statistiken auf jedem Host, auf dem Docker ausgeführt wird, einsehen."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Docker aktivieren"
+      },
+      "containerRuntime": {
+        "label": "Container-Runtime",
+        "description": "Wählen Sie die CLI für die Container-Verwaltung auf diesem Host",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

@@ -770,12 +770,6 @@ function initializeApiInstances() {
   // RBAC API (port 30001)
   rbacApi = createApiInstance(getApiUrl("", 30001), "RBAC");
 
-  // Docker Management API - the docker plugin, mounted on the main backend.
-  dockerApi = createApiInstance(
-    getApiUrl("/plugin-api/docker/docker", 30001),
-    "DOCKER",
-  );
-
   // Tmux Monitor API (port 30010) --- tmux-monitor ---
   tmuxMonitorApi = createApiInstance(
     getApiUrl("/tmux_monitor", 30010),
@@ -802,9 +796,6 @@ export let dashboardApi: AxiosInstance;
 
 // RBAC API (port 30001)
 export let rbacApi: AxiosInstance;
-
-// Docker Management API (docker plugin)
-export let dockerApi: AxiosInstance;
 
 // Tmux Monitor API (port 30010) --- tmux-monitor ---
 export let tmuxMonitorApi: AxiosInstance;

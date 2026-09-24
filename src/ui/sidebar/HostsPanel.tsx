@@ -152,8 +152,7 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
   }
   if (filters.features.length > 0) {
     const ok =
-      (filters.features.includes("fileManager") && host.enableFileManager) ||
-      (filters.features.includes("docker") && host.enableDocker);
+      filters.features.includes("fileManager") && host.enableFileManager;
     if (!ok) return false;
   }
   if (filters.tags.length > 0) {
@@ -355,7 +354,6 @@ export function HostsPanel({
             enableTerminal: true,
             enableTunnel: false,
             enableFileManager: true,
-            enableDocker: false,
             defaultPath: "/var/www",
           },
           {
@@ -373,7 +371,6 @@ export function HostsPanel({
             enableTerminal: true,
             enableTunnel: true,
             enableFileManager: false,
-            enableDocker: false,
           },
         ],
       },
@@ -780,23 +777,20 @@ export function HostsPanel({
                   <DropdownMenuLabel>
                     {t("hosts.filterFeaturesGroup")}
                   </DropdownMenuLabel>
-                  {(
-                    [
-                      ["fileManager", "FileManager"],
-                      ["docker", "Docker"],
-                    ] as const
-                  ).map(([val, key]) => (
-                    <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.features.includes(val)}
-                      onCheckedChange={() =>
-                        handleFilterToggle("features", val)
-                      }
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      {t(`hosts.filterFeature${key}`)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
+                  {([["fileManager", "FileManager"]] as const).map(
+                    ([val, key]) => (
+                      <DropdownMenuCheckboxItem
+                        key={val}
+                        checked={filterState.features.includes(val)}
+                        onCheckedChange={() =>
+                          handleFilterToggle("features", val)
+                        }
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        {t(`hosts.filterFeature${key}`)}
+                      </DropdownMenuCheckboxItem>
+                    ),
+                  )}
                   {allTags.length > 0 && (
                     <>
                       <DropdownMenuSeparator />

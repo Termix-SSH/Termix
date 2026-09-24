@@ -265,9 +265,6 @@ export const hosts = pgTable(
       .notNull()
       .default(true),
     scpLegacy: boolean("scp_legacy").notNull().default(false),
-    enableDocker: boolean("enable_docker")
-      .notNull()
-      .default(false),
     enableWebUi: boolean("enable_web_ui")
       .notNull()
       .default(false),
@@ -300,7 +297,6 @@ export const hosts = pgTable(
       .notNull()
       .default(true),
     statusCheckInterval: integer("status_check_interval"),
-    dockerConfig: text("docker_config"),
     webUiConfig: text("web_ui_config"),
     terminalConfig: text("terminal_config"),
     quickActions: text("quick_actions"),

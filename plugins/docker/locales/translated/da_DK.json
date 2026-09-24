@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker-integration",
-    "enableDockerMonitor": "Aktivér Docker",
-    "enableDockerMonitorDesc": "Overvåg og administrer containere på denne vært via Docker",
-    "containerRuntime": "Containerkørselstid",
-    "containerRuntimeDesc": "Vælg den CLI, der bruges til containeradministration på denne vært",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "Se containere, læs logfiler og se statistikker på enhver vært, der kører Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktivér Docker"
+      },
+      "containerRuntime": {
+        "label": "Containerkørselstid",
+        "description": "Vælg den CLI, der bruges til containeradministration på denne vært",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

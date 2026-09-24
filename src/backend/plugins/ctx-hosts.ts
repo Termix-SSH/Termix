@@ -85,7 +85,6 @@ function toRecord(host: Record<string, unknown>): PluginHostRecord {
     enableTerminal: (host.enableTerminal as boolean | null) ?? null,
     enableFileManager: (host.enableFileManager as boolean | null) ?? null,
     enableTunnel: (host.enableTunnel as boolean | null) ?? null,
-    enableDocker: (host.enableDocker as boolean | null) ?? null,
     createdAt: (host.createdAt as string | null) ?? null,
     updatedAt: (host.updatedAt as string | null) ?? null,
     ...host,

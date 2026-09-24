@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker 集成",
-    "enableDockerMonitor": "启用 Docker",
-    "enableDockerMonitorDesc": "通过 Docker 监控和管理此主机上的容器",
-    "containerRuntime": "容器运行时",
-    "containerRuntimeDesc": "选择此主机上用于容器管理的 CLI",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "在任何运行 Docker 的主机上查看容器、读取日志及监控运行状态。"
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "启用 Docker"
+      },
+      "containerRuntime": {
+        "label": "容器运行时",
+        "description": "选择此主机上用于容器管理的 CLI",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

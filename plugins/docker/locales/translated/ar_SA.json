@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "تكامل Docker",
-    "enableDockerMonitor": "تمكين Docker",
-    "enableDockerMonitorDesc": "مراقبة وإدارة الحاويات على هذا المضيف عبر Docker",
-    "containerRuntime": "بيئة تشغيل الحاويات",
-    "containerRuntimeDesc": "اختر واجهة سطر الأوامر المستخدمة لإدارة الحاويات على هذا المضيف",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "عامل ميناء",
     "feature_docker_desc": "اطلع على الحاويات، واقرأ السجلات، وراقب الإحصائيات على أي مضيف يعمل بنظام Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "تمكين Docker"
+      },
+      "containerRuntime": {
+        "label": "بيئة تشغيل الحاويات",
+        "description": "اختر واجهة سطر الأوامر المستخدمة لإدارة الحاويات على هذا المضيف",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

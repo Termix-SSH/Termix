@@ -163,23 +163,13 @@ export function createHostEditorForm(
       host?.enableCommandHistory ?? d?.enableCommandHistory ?? true,
     enableFileManager: host?.enableFileManager ?? false,
     scpLegacy: host?.scpLegacy ?? false,
-    enableDocker: host?.enableDocker ?? false,
-    dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
     enableAiAssistant: host?.enableAiAssistant ?? false,
     enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
+    // The proxmox tab fills in its own defaults when this is unset.
     proxmoxConfig:
-      ((proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? {
-        defaultCredentialId: null,
-        defaultAuthType: "password",
-        windowsPatterns: "win, windows",
-        dockerPatterns: "docker",
-        preferredPrefixes: "10., 192.168.",
-        autoSyncEnabled: false,
-        syncIntervalMinutes: 15,
-        markMissingGuests: true,
-      }) as Host["proxmoxConfig"],
+      (proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
     enableProxmoxStats:
       (proxmoxSettings.enableProxmoxStats as boolean) ?? false,
     proxmoxStatsConfig:
@@ -436,8 +426,6 @@ export function buildHostEditorPayload(
     enableCommandHistory: form.enableCommandHistory,
     enableFileManager: form.enableFileManager,
     scpLegacy: form.scpLegacy,
-    enableDocker: form.enableDocker,
-    dockerConfig: form.enableDocker ? form.dockerConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableTerminalToolbar: form.enableTerminalToolbar,
     enableAiAssistant: form.enableAiAssistant,

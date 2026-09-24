@@ -95,8 +95,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     enableCommandHistory: h.enableCommandHistory ?? true,
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? true,
-    enableDocker: h.enableDocker ?? false,
-    dockerConfig: h.dockerConfig ?? null,
     enableWebUi: h.enableWebUi ?? false,
     enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
     enableProxmoxStats:

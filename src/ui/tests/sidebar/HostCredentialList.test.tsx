@@ -49,7 +49,6 @@ function makeHost(overrides: Partial<Host>): Host {
     enableTunnel: false,
     serverTunnels: [],
     enableFileManager: true,
-    enableDocker: false,
     enableProxmox: false,
     enableProxmoxStats: false,
     enableTmuxMonitor: false,

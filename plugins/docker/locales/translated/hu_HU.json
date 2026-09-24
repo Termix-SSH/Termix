@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Dokkmunkás"
   },
-  "hosts": {
-    "tabDocker": "Dokkmunkás",
-    "dockerIntegration": "Docker-integráció",
-    "enableDockerMonitor": "Docker engedélyezése",
-    "enableDockerMonitorDesc": "Dockeren keresztül figyelheti és kezelheti a konténereket ezen a gazdagépen",
-    "containerRuntime": "Konténer futásideje",
-    "containerRuntimeDesc": "Válassza ki a gazdagépen a konténerkezeléshez használt parancssori felületet",
-    "containerRuntimeDocker": "Dokkmunkás",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Dokkmunkás",
     "feature_docker_desc": "Tekintsd meg a konténereket, olvasd el a naplókat és figyeld a statisztikákat bármelyik Dockert futtató gazdagépen."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Docker engedélyezése"
+      },
+      "containerRuntime": {
+        "label": "Konténer futásideje",
+        "description": "Válassza ki a gazdagépen a konténerkezeléshez használt parancssori felületet",
+        "docker": "Dokkmunkás",
+        "podman": "Podman"
+      }
+    }
   }
 }

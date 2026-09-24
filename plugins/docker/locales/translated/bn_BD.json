@@ -99,18 +99,21 @@
   "nav": {
     "docker": "ডকার"
   },
-  "hosts": {
-    "tabDocker": "ডকার",
-    "dockerIntegration": "ডকার ইন্টিগ্রেশন",
-    "enableDockerMonitor": "ডকার সক্রিয় করুন",
-    "enableDockerMonitorDesc": "ডকারের মাধ্যমে এই হোস্টে কন্টেইনারগুলি নিরীক্ষণ ও পরিচালনা করুন।",
-    "containerRuntime": "কন্টেইনার রানটাইম",
-    "containerRuntimeDesc": "এই হোস্টে কন্টেইনার ব্যবস্থাপনার জন্য ব্যবহৃত CLI নির্বাচন করুন",
-    "containerRuntimeDocker": "ডকার",
-    "containerRuntimePodman": "পডম্যান"
-  },
   "onboarding": {
     "feature_docker": "ডকার",
     "feature_docker_desc": "ডকার চালিত যেকোনো হোস্টে কন্টেইনার দেখুন, লগ পড়ুন এবং পরিসংখ্যান পর্যবেক্ষণ করুন।"
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "ডকার সক্রিয় করুন"
+      },
+      "containerRuntime": {
+        "label": "কন্টেইনার রানটাইম",
+        "description": "এই হোস্টে কন্টেইনার ব্যবস্থাপনার জন্য ব্যবহৃত CLI নির্বাচন করুন",
+        "docker": "ডকার",
+        "podman": "পডম্যান"
+      }
+    }
   }
 }

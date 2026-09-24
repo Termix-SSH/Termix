@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Tích hợp Docker",
-    "enableDockerMonitor": "Bật Docker",
-    "enableDockerMonitorDesc": "Giám sát và quản lý container trên máy chủ này qua Docker",
-    "containerRuntime": "Môi trường chạy container",
-    "containerRuntimeDesc": "Chọn CLI dùng để quản lý container trên máy chủ này",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "Xem các container, đọc nhật ký và theo dõi số liệu thống kê trên bất kỳ máy chủ nào đang chạy Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Bật Docker"
+      },
+      "containerRuntime": {
+        "label": "Môi trường chạy container",
+        "description": "Chọn CLI dùng để quản lý container trên máy chủ này",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

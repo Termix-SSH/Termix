@@ -36,6 +36,11 @@ describe(`${manifest.id} activate`, () => {
     for (const id of rendered.registered.dashboardCards()) {
       expect(cards).toContain(id);
     }
+    // Host settings render from the manifest; there is no editor tab.
+    expect(rendered.registered.hostEditorSections()).toEqual([]);
+    expect(rendered.registered.hostActions()).toEqual([
+      expect.objectContaining({ id: "docker", tabType: "docker" }),
+    ]);
   });
 
   it("removes everything it registered on deactivate", async () => {

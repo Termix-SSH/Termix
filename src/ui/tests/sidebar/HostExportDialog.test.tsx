@@ -50,7 +50,6 @@ function sshHost(
     enableCommandHistory: false,
     enableTunnel: false,
     enableFileManager: false,
-    enableDocker: false,
     enableTmuxMonitor: false,
     enableTerminalToolbar: true,
     enableAiAssistant: false,

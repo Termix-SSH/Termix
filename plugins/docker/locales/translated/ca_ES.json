@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Integració de Docker",
-    "enableDockerMonitor": "Activa Docker",
-    "enableDockerMonitorDesc": "Supervisar i gestionar els contenidors d'aquest amfitrió mitjançant Docker",
-    "containerRuntime": "Temps d'execució del contenidor",
-    "containerRuntimeDesc": "Trieu la CLI utilitzada per a la gestió de contenidors en aquest amfitrió",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "Veure contenidors, llegir registres i observar estadístiques de qualsevol host que executi Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activa Docker"
+      },
+      "containerRuntime": {
+        "label": "Temps d'execució del contenidor",
+        "description": "Trieu la CLI utilitzada per a la gestió de contenidors en aquest amfitrió",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

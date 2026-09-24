@@ -2,21 +2,20 @@ import type { ComponentType } from "react";
 import { Box } from "lucide-react";
 import type {
   HomepageWidgetContribution,
-  HostEditorSectionProps,
   StandaloneViewProps,
   TabProps,
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import type { SSHHost } from "@/types";
 import { DockerManager } from "./DockerManager";
 import DockerApp from "./DockerApp";
-import { HostDockerTab } from "./HostDockerTab";
 import { dockerWidget } from "./DockerWidget";
+import { dockerEnabled, toDockerHost } from "./types";
 
-function DockerTab({ sshHost, label, isVisible }: TabProps) {
+function DockerTab({ host, sshHost, label, isVisible }: TabProps) {
+  const record = (host ?? sshHost) as Record<string, unknown> | undefined;
   return (
     <DockerManager
-      hostConfig={sshHost as unknown as SSHHost}
+      host={record ? toDockerHost(record) : undefined}
       title={label}
       isVisible={isVisible}
       isTopbarOpen={false}
@@ -29,16 +28,13 @@ function DockerStandalone({ hostId }: StandaloneViewProps) {
   return <DockerApp hostId={hostId} />;
 }
 
-function DockerHostSection({ form, setField }: HostEditorSectionProps) {
-  return (
-    <HostDockerTab
-      form={form}
-      setField={setField as Parameters<typeof HostDockerTab>[0]["setField"]}
-    />
-  );
-}
-
 export function activate(app: TermixApp): void {
+  // Host actions filter synchronously, so the permission is read once here.
+  let canUse = true;
+  void app.hasPermission("use").then((allowed) => {
+    canUse = allowed;
+  });
+
   app.registerTab("docker", DockerTab, {
     icon: Box,
     titleKey: "nav.docker",
@@ -58,16 +54,7 @@ export function activate(app: TermixApp): void {
     order: 30,
     tabType: "docker",
     copyUrlView: "docker",
-    when: (host) => !!host.enableSsh && !!host.enableDocker,
-  });
-
-  app.registerHostEditorSection({
-    id: "docker",
-    group: "ssh",
-    titleKey: "hosts.tabDocker",
-    icon: Box,
-    order: 30,
-    component: DockerHostSection,
+    when: (host) => canUse && !!host.enableSsh && dockerEnabled(host),
   });
 
   app.registerHomepageWidget(

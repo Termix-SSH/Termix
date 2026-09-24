@@ -99,18 +99,21 @@
   "nav": {
     "docker": "ด็อกเกอร์"
   },
-  "hosts": {
-    "tabDocker": "ด็อกเกอร์",
-    "dockerIntegration": "การผสานรวม Docker",
-    "enableDockerMonitor": "เปิดใช้งาน Docker",
-    "enableDockerMonitorDesc": "ตรวจสอบและจัดการคอนเทนเนอร์บนโฮสต์นี้ผ่าน Docker",
-    "containerRuntime": "รันไทม์คอนเทนเนอร์",
-    "containerRuntimeDesc": "เลือก CLI ที่ใช้สำหรับการจัดการคอนเทนเนอร์บนโฮสต์นี้",
-    "containerRuntimeDocker": "ด็อกเกอร์",
-    "containerRuntimePodman": "พอดแมน"
-  },
   "onboarding": {
     "feature_docker": "ด็อกเกอร์",
     "feature_docker_desc": "ดูคอนเทนเนอร์ อ่านบันทึก และตรวจสอบสถิติบนโฮสต์ใดก็ได้ที่ใช้งาน Docker"
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "เปิดใช้งาน Docker"
+      },
+      "containerRuntime": {
+        "label": "รันไทม์คอนเทนเนอร์",
+        "description": "เลือก CLI ที่ใช้สำหรับการจัดการคอนเทนเนอร์บนโฮสต์นี้",
+        "docker": "ด็อกเกอร์",
+        "podman": "พอดแมน"
+      }
+    }
   }
 }

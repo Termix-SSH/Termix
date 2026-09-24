@@ -2,14 +2,11 @@ import {
   DEFAULT_STEP_TIMEOUT_MS,
   type Step,
 } from "../../../../../src/types/automations.js";
-import {
-  execCommand,
-  execElevated,
-  shellSingleQuote,
-} from "@termix/plugin-sdk/host-commands";
+import { execCommand, execElevated } from "@termix/plugin-sdk/host-commands";
 import { withSshConnection } from "../ssh.js";
 import { createCurrentNotificationChannelRepository } from "../../../../../src/backend/database/repositories/factory.js";
 import { getSnippet, resolveSnippetCommandFor } from "../snippets.js";
+import { runDockerAction } from "../docker.js";
 import { runTunnelAction } from "../tunnels.js";
 import { sendAutomationNotification } from "../notify.js";
 import { automationFetch } from "../http.js";
@@ -227,11 +224,15 @@ async function runDocker(
       };
     }
 
-    // The Docker HTTP routes are tied to an interactive session, so run the
-    // equivalent command over the same pooled SSH connection everything else
-    // uses. The container name is quoted because it comes from a template.
-    const command = `docker ${step.action} ${shellSingleQuote(container)}`;
-    return execOnHost(target.host, command, false, context, step.timeoutMs);
+    const result = await runDockerAction(
+      context.userId,
+      target.id,
+      container,
+      step.action,
+    );
+    return result.ok
+      ? { output: `Container ${container}: ${step.action} done` }
+      : { output: "", error: result.error };
   });
 }
 

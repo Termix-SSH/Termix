@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker統合",
-    "enableDockerMonitor": "Docker有効化",
-    "enableDockerMonitorDesc": "Docker経由でこのホスト上のコンテナを監視・管理します。",
-    "containerRuntime": "コンテナランタイム",
-    "containerRuntimeDesc": "このホストのコンテナ管理に使用するCLIを選択します。",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "ドッカー",
     "feature_docker_desc": "Dockerを実行している任意のホスト上で、コンテナの表示、ログの読み取り、統計情報の監視が可能です。"
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Docker有効化"
+      },
+      "containerRuntime": {
+        "label": "コンテナランタイム",
+        "description": "このホストのコンテナ管理に使用するCLIを選択します。",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

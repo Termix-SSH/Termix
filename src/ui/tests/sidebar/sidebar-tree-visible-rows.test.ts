@@ -28,7 +28,6 @@ function host(id: string, name: string): Host {
     enableTerminal: true,
     enableTunnel: false,
     enableFileManager: true,
-    enableDocker: false,
     quickActions: [],
   } as Host;
 }

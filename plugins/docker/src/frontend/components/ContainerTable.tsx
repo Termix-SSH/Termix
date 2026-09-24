@@ -1,11 +1,11 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage } from "../error-message";
+import { Button } from "@termix/plugin-sdk/ui";
+import type { DockerContainer } from "../types";
 import React from "react";
 import { Box, List, Play, RefreshCw, Square, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { Button } from "@/components/button.tsx";
-import type { DockerContainer } from "@/types";
-import { startDockerContainer, stopDockerContainer } from "../docker-api";
+import { useDockerApi } from "../docker-api";
 import { DockerBadge } from "./ContainerCard.tsx";
 
 type DetailTab = "logs" | "stats" | "console";
@@ -30,6 +30,7 @@ export function ContainerTable({
   statusFilter = "all",
 }: ContainerTableProps): React.ReactElement {
   const { t } = useTranslation();
+  const docker = useDockerApi();
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
   const filtered = React.useMemo(() => {
@@ -56,10 +57,10 @@ export function ContainerTable({
     setPendingId(container.id);
     try {
       if (container.state === "running") {
-        await stopDockerContainer(sessionId, container.id);
+        await docker.containerAction(sessionId, container.id, "stop");
         toast.success(t("docker.containerStopped", { name: containerName }));
       } else {
-        await startDockerContainer(sessionId, container.id);
+        await docker.containerAction(sessionId, container.id, "start");
         toast.success(t("docker.containerStarted", { name: containerName }));
       }
       onRefresh?.();

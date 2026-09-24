@@ -257,9 +257,6 @@ export const hosts = sqliteTable(
       .notNull()
       .default(true),
     scpLegacy: integer("scp_legacy", { mode: "boolean" }).notNull().default(false),
-    enableDocker: integer("enable_docker", { mode: "boolean" })
-      .notNull()
-      .default(false),
     enableWebUi: integer("enable_web_ui", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -292,7 +289,6 @@ export const hosts = sqliteTable(
       .notNull()
       .default(true),
     statusCheckInterval: integer("status_check_interval"),
-    dockerConfig: text("docker_config"),
     webUiConfig: text("web_ui_config"),
     terminalConfig: text("terminal_config"),
     quickActions: text("quick_actions"),

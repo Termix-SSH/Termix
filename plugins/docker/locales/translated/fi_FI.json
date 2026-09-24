@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Satamatyöläinen"
   },
-  "hosts": {
-    "tabDocker": "Satamatyöläinen",
-    "dockerIntegration": "Docker-integraatio",
-    "enableDockerMonitor": "Ota Docker käyttöön",
-    "enableDockerMonitorDesc": "Valvo ja hallinnoi tämän isännän säilöjä Dockerin kautta",
-    "containerRuntime": "Säilön suoritusaika",
-    "containerRuntimeDesc": "Valitse CLI, jota käytetään säilön hallintaan tässä isännässä",
-    "containerRuntimeDocker": "Satamatyöläinen",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Satamatyöläinen",
     "feature_docker_desc": "Katso säilöjä, lue lokeja ja seuraa tilastoja millä tahansa Dockeria käyttävällä isännällä."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Ota Docker käyttöön"
+      },
+      "containerRuntime": {
+        "label": "Säilön suoritusaika",
+        "description": "Valitse CLI, jota käytetään säilön hallintaan tässä isännässä",
+        "docker": "Satamatyöläinen",
+        "podman": "Podman"
+      }
+    }
   }
 }

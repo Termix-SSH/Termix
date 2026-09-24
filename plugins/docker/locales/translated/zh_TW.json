@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker 整合",
-    "enableDockerMonitor": "啟用 Docker",
-    "enableDockerMonitorDesc": "透過 Docker 監控及管理此主機上的容器",
-    "containerRuntime": "容器執行環境",
-    "containerRuntimeDesc": "選擇用於此主機容器管理的 CLI",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "查看執行 Docker 的任何主機上的容器、讀取日誌和查看統計資料。"
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "啟用 Docker"
+      },
+      "containerRuntime": {
+        "label": "容器執行環境",
+        "description": "選擇用於此主機容器管理的 CLI",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

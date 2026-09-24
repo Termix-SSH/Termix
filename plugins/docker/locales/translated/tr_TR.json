@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker Entegrasyonu",
-    "enableDockerMonitor": "Docker'ı Etkinleştir",
-    "enableDockerMonitorDesc": "Docker aracılığıyla bu ana bilgisayardaki kapsayıcıları izle ve yönet",
-    "containerRuntime": "Kapsayıcı Çalışma Zamanı",
-    "containerRuntimeDesc": "Bu ana bilgisayarda kapsayıcı yönetimi için kullanılan CLI'yi seçin",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Liman işçisi",
     "feature_docker_desc": "Docker çalıştıran herhangi bir sunucudaki konteynerleri görüntüleyin, günlükleri okuyun ve istatistikleri izleyin."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Docker'ı Etkinleştir"
+      },
+      "containerRuntime": {
+        "label": "Kapsayıcı Çalışma Zamanı",
+        "description": "Bu ana bilgisayarda kapsayıcı yönetimi için kullanılan CLI'yi seçin",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

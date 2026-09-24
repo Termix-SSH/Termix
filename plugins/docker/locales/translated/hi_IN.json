@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker एकीकरण",
-    "enableDockerMonitor": "Docker सक्षम करें",
-    "enableDockerMonitorDesc": "इस होस्ट पर Docker के माध्यम से कंटेनरों की निगरानी और प्रबंधन करें",
-    "containerRuntime": "कंटेनर रनटाइम",
-    "containerRuntimeDesc": "इस होस्ट पर कंटेनर प्रबंधन के लिए उपयोग किए जाने वाले CLI को चुनें",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "डाक में काम करनेवाला मज़दूर",
     "feature_docker_desc": "डॉकर चलाने वाले किसी भी होस्ट पर कंटेनर देखें, लॉग पढ़ें और आंकड़े देखें।"
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Docker सक्षम करें"
+      },
+      "containerRuntime": {
+        "label": "कंटेनर रनटाइम",
+        "description": "इस होस्ट पर कंटेनर प्रबंधन के लिए उपयोग किए जाने वाले CLI को चुनें",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

@@ -487,7 +487,6 @@ export interface PluginHostRecord {
   enableTerminal?: boolean | null;
   enableFileManager?: boolean | null;
   enableTunnel?: boolean | null;
-  enableDocker?: boolean | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   [key: string]: unknown;

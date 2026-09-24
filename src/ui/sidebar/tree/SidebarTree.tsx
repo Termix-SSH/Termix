@@ -11,7 +11,6 @@ import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
 import {
-  Box,
   Boxes,
   ChevronDown,
   Download,
@@ -612,7 +611,6 @@ export function SidebarTree({
         enableTerminal: host.enableTerminal,
         enableTunnel: host.enableTunnel,
         enableFileManager: host.enableFileManager,
-        enableDocker: host.enableDocker,
         sshPort: host.sshPort,
         rdpUser: host.rdpUser ?? null,
         rdpPassword: host.rdpPassword ?? null,
@@ -1172,18 +1170,6 @@ export function SidebarTree({
                     field: "enableFileManager",
                     value: false,
                     icon: FolderSearch,
-                  },
-                  {
-                    labelKey: "hosts.enableDockerFeature",
-                    field: "enableDocker",
-                    value: true,
-                    icon: Box,
-                  },
-                  {
-                    labelKey: "hosts.disableDockerFeature",
-                    field: "enableDocker",
-                    value: false,
-                    icon: Box,
                   },
                   {
                     labelKey: "hosts.enableProxmoxFeature",

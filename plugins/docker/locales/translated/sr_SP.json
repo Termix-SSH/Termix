@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Докер"
   },
-  "hosts": {
-    "tabDocker": "Докер",
-    "dockerIntegration": "Интеграција Докера",
-    "enableDockerMonitor": "Омогући Докер",
-    "enableDockerMonitorDesc": "Пратите и управљајте контејнерима на овом хосту путем Докера",
-    "containerRuntime": "Време извршавања контејнера",
-    "containerRuntimeDesc": "Изаберите CLI који се користи за управљање контејнерима на овом хосту",
-    "containerRuntimeDocker": "Докер",
-    "containerRuntimePodman": "Подман"
-  },
   "onboarding": {
     "feature_docker": "Докер",
     "feature_docker_desc": "Погледајте контејнере, читајте логове и пратите статистику на било ком хосту који користи Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Омогући Докер"
+      },
+      "containerRuntime": {
+        "label": "Време извршавања контејнера",
+        "description": "Изаберите CLI који се користи за управљање контејнерима на овом хосту",
+        "docker": "Докер",
+        "podman": "Подман"
+      }
+    }
   }
 }

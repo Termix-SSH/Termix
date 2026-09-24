@@ -61,7 +61,6 @@ const baseHost: Host = {
   enableCommandHistory: true,
   enableTunnel: true,
   enableFileManager: true,
-  enableDocker: true,
   enableRdp: true,
   enableVnc: true,
   enableTelnet: true,

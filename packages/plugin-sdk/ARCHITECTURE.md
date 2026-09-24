@@ -248,9 +248,17 @@ not merely unrouted: a terminal session must not outlive the plugin that owns it
 authenticated it, for a library that insists on owning its own WebSocketServer.
 guacamole-lite is why it exists. Three routes are public because they
 authenticate themselves in a way core cannot: the terminal (a share-link guest
-arrives with a share token), the Docker console (per-message auth), and the
+arrives with a share token), the Docker console (it refuses a socket without a signed-in user holding
+`docker.use`, and re-checks the data key per message), and the
 Guacamole display (a single-use encrypted connection token in the query, minted
 by an authenticated route).
+
+**B15** moved the Docker console off `ctx.ws.upgrade` and its own
+`WebSocketServer` onto `ctx.ws.route` with `public` and `optionalAuth`: core
+resolves the caller's token, the handler closes a socket without a user or
+without `docker.use`, and it checks `isDataUnlocked()` on every connect
+message. Nothing is left at module scope, so disable, enable while a console
+is open closes it and the next enable serves new ones.
 
 **B9** added `optionalAuth` for a public route: core still verifies a token
 when the client sent one and hands the handler that user, else an empty id.
@@ -348,7 +356,9 @@ plugin id in `src/ui` outside tests, apart from the entries in
 `scripts/shell-plugin-id-allowlist.json`, each with a reason (host data like
 the `docker` runtime name, which Phase B moves). **B14** removed the `rdp`,
 `vnc` and `telnet` entries: the shell learns those protocols from
-`app.registerHostProtocol`.
+`app.registerHostProtocol`. **B15** removed both `docker` entries: the Hosts
+panel's Docker filter and the bulk Docker toggles went with the column, and
+the host editor no longer carries a Proxmox default that spelled `docker`.
 
 #### The loader
 
@@ -581,7 +591,10 @@ stopgap in the right place: D1 turns them into typed bridge members.
 **B16** added `LineChart`, `useAdaptivePolling`, `useAreaPreferences` (the
 Appearance density and chart options), and the homepage widget pieces
 `WidgetTitle` and `runVisibleInterval`, for host-metrics's cards and its
-metrics chart widget. The frontend SDK gained `useHostStatus(hostId)`: core's
+metrics chart widget. **B15** added `useUiPreferencesContext`, whose `setOverride` the
+Docker manager uses to remember the card or table layout the user picked.
+The `docker` and `hostMetrics` areas are still declared in core's
+`types/ui-preferences.ts`; a plugin cannot contribute its own area yet. The frontend SDK gained `useHostStatus(hostId)`: core's
 status for a host, from the shell's own polling, or null outside the shell.
 **B14** added `buildOriginWsUrl`, `getBasePath`, `resolveRemoteHostId` and the
 `ConnectionStage` type, for remote desktop's display socket and its remote
@@ -671,6 +684,17 @@ is running and the host's switch is on, and writes the row as the session's
 user. Recording files live
 under `ctx.files.dataDir()/session_logs/<user>/<session>.cast`. Retention
 (`retentionDays`, an admin setting) runs a sweep at boot and every 24 hours.
+
+**B15**'s docker plugin provides `docker.containers` (`listContainers`,
+`action`) and `docker.events` (`subscribe(hostId, listener)`), both gated on
+`docker.use`. The service name needs a dot, so the plain `docker` the step
+was sketched with became `docker.containers`. `docker.events` polls each
+subscribed host about once a minute as the subscribing user and diffs the
+snapshots; a subscription is idempotent, which is how automations picks it
+back up after docker is disabled and enabled again (it re-subscribes every
+watched host each minute). Automations uses both as optional services: its
+Docker step goes through `action`, and its `docker_event` trigger through
+`subscribe`.
 
 A service call runs a permission check for its actor, so a share-link guest,
 who has no user, cannot make one. Guest link resolution is therefore
@@ -801,6 +825,11 @@ missing service with an empty handle, like the runtime, instead of throwing. **B
 `ctx.registry` on both doubles a real in-memory backing (it was a no-op stub
 before), so `provide`/`consume`/`revoke` round-trip the way the real registry
 does. `plugins/workspaces/tests/backend/helpers.ts` is the worked example.
+
+The doubles' `wsRoutes` (**B15**) record each route's `handler` (or the
+`upgrade` callback) and `options`, so a test can hand a route a fake socket;
+docker's `tests/backend/console.test.ts` opens a console, disposes the plugin
+and activates it again that way.
 
 `renderWithApp` also takes `api` (a stub for `app.api` and `usePluginApi()`),
 `layout` (what `app.tabs.getLayout()` returns) and `ready` (fire
@@ -1366,8 +1395,14 @@ connect pipeline instead of importing ssh2 helpers from core:
   a chain has no single resolved host of its own.
 - `prepare(host, { client, purpose })`, `openTransport`,
   `classifyKeyboardInteractive` and `autoResponses` are the lower level for a
-  transport with its own prompt flow (docker's console, host metrics, **B6**'s
-  interactive file-manager connect with its TOTP/Warpgate parking flow).
+  transport with its own prompt flow (**B6**'s interactive file-manager
+  connect with its TOTP/Warpgate parking flow).
+- **B15** showed the higher level covers a multi-request HTTP handshake too:
+  the Docker panel passes `connect` a `prompt` channel whose `ask` answers the
+  waiting request with what to ask (a code, a Warpgate sign-in, credentials)
+  and resolves when the next request (`connect-totp`, `connect-warpgate`)
+  brings the answer. A retry TOTP round re-asks instead of failing. docker
+  has no auth code of its own left.
 - `requiresSecret(authType)` and `supportsBackground(authType)` ask the
   provider.
 - **B6** added `"file-manager"` and `"file-transfer"` to `PluginSshPurpose`
@@ -2050,8 +2085,8 @@ Then, with the app running:
 ## Legacy core imports: the debt D1 removes
 
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
-(B2), remote-desktop (B14) and host-metrics (B16), which import nothing from
-core. The others still reach core by relative
+(B2), remote-desktop (B14), docker (B15) and host-metrics (B16), which import
+nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
 and rewrites to the compiled output path (`../../../backend/backend/...`, or
@@ -2078,8 +2113,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 84 files  | D1         |
-| A plugin importing core by relative path         | Warning   | 29 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 70 files  | D1         |
+| A plugin importing core by relative path         | Warning   | 24 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 1 file    | B18        |
 
 A warning does not fail a build, so the counts are held by
@@ -2119,8 +2154,10 @@ Known specifics:
   command history panel into ssh-terminal, which imports nothing from core.
   The file manager's terminal window renders the `terminal.view` component
   instead of importing the core terminal.
-- Host data columns (`enableDocker` and so on) stay in core types until
-  Phase B moves them. Only UI branches on them left the shell. **B14** moved
+- Host data columns (`enableFileManager` and so on) stay in core types until
+  Phase B moves them. Only UI branches on them left the shell. **B15** moved
+  docker's `enableDocker` and `docker_config` (now `containerRuntime`) into
+  its host settings. **B14** moved
   remote desktop's (`enableRdp`, `enableVnc`, `enableTelnet`, the three ports,
   `rdpSecurity`, `rdpIgnoreCert`, `guacamoleConfig`) into its host settings;
   the protocol logins stay core host fields.

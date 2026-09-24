@@ -1,15 +1,17 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage } from "../error-message";
+import {
+  Button,
+  Input,
+  Select2,
+  Separator,
+  useAdaptivePolling,
+} from "@termix/plugin-sdk/ui";
+import type { DockerLogOptions } from "../types";
 import React from "react";
-import { Button } from "@/components/button.tsx";
-import { Input } from "@/components/input.tsx";
-import { Separator } from "@/components/separator.tsx";
 import { Download, RefreshCw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { DockerLogOptions } from "@/types";
-import { getContainerLogs, downloadContainerLogs } from "../docker-api";
-import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
-import { Select2 } from "@/components/select2";
+import { useDockerApi } from "../docker-api";
 
 interface LogViewerProps {
   sessionId: string;
@@ -60,6 +62,7 @@ export function LogViewer({
   containerName,
 }: LogViewerProps): React.ReactElement {
   const { t } = useTranslation();
+  const docker = useDockerApi();
   const [rawLogs, setRawLogs] = React.useState<string[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isDownloading, setIsDownloading] = React.useState(false);
@@ -78,7 +81,7 @@ export function LogViewer({
         tail: tailLines === "all" ? undefined : parseInt(tailLines, 10),
         timestamps: showTimestamps,
       };
-      const data = await getContainerLogs(sessionId, containerId, options);
+      const data = await docker.logs(sessionId, containerId, options);
       const next = data.logs.split("\n").filter(Boolean);
       const changed =
         next.length !== rawLogsRef.current.length ||
@@ -89,11 +92,13 @@ export function LogViewer({
       }
       return changed;
     } catch (error) {
-      toast.error(`Failed to fetch logs: ${getErrorMessage(error)}`);
+      toast.error(
+        t("docker.failedToFetchLogs", { error: getErrorMessage(error) }),
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, containerId, tailLines, showTimestamps]);
+  }, [sessionId, containerId, tailLines, showTimestamps, docker, t]);
 
   React.useEffect(() => {
     fetchLogs();
@@ -120,9 +125,10 @@ export function LogViewer({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const blob = await downloadContainerLogs(sessionId, containerId, {
+      const data = await docker.logs(sessionId, containerId, {
         timestamps: showTimestamps,
       });
+      const blob = new Blob([data.logs], { type: "text/plain" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -133,7 +139,9 @@ export function LogViewer({
       document.body.removeChild(a);
       toast.success(t("docker.logsDownloaded"));
     } catch (error) {
-      toast.error(`Failed to download logs: ${getErrorMessage(error)}`);
+      toast.error(
+        t("docker.failedToDownloadLogs", { error: getErrorMessage(error) }),
+      );
     } finally {
       setIsDownloading(false);
     }

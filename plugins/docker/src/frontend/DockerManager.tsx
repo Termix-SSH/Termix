@@ -1,10 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React from "react";
-import { Separator } from "@/components/separator.tsx";
-import { Alert, AlertDescription } from "@/components/alert.tsx";
-import { Button } from "@/components/button.tsx";
-import { Card } from "@/components/card.tsx";
-import { Input } from "@/components/input.tsx";
 import {
   AlertCircle,
   Box,
@@ -14,44 +9,46 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-
 import {
-  useTranslation,
   useConnectionRetry,
+  useHost,
+  useTranslation,
 } from "@termix/plugin-sdk/frontend";
-import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
-import { logActivity, getSSHHosts } from "@/main-axios";
 import {
-  connectDockerSession,
-  disconnectDockerSession,
-  listDockerContainers,
-  validateDockerAvailability,
-  keepaliveDockerSession,
-  verifyDockerTOTP,
-  verifyDockerWarpgate,
-} from "./docker-api";
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  ConnectionLogProvider,
+  ConnectionScreen,
+  Input,
+  SSHAuthDialog,
+  Select2,
+  Separator,
+  TOTPDialog,
+  WarpgateDialog,
+  logActivity,
+  useAdaptivePolling,
+  useAreaPreferences,
+  useConnectionLog,
+  useTabsSafe,
+  useUiPreferencesContext,
+} from "@termix/plugin-sdk/ui";
+import { DockerApiError, useDockerApi, type ConnectResult } from "./docker-api";
+import {
+  dockerEnabled,
+  hostTitle,
+  toDockerHost,
+  type DockerContainer,
+  type DockerHost,
+  type DockerValidation,
+} from "./types";
 import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerTable } from "./components/ContainerTable.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
-import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
-import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
-import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
-import { useTabsSafe } from "@/shell/TabContext.tsx";
-import {
-  useAreaPreferences,
-  useUiPreferencesContext,
-} from "@/contexts/UiPreferencesContext";
-import {
-  ConnectionLogProvider,
-  useConnectionLog,
-} from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
-import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
-import type { LogEntry } from "@/types/connection-log.ts";
-import { Select2 } from "@/components/select2";
 
 interface DockerManagerProps {
-  hostConfig?: SSHHost;
+  host?: DockerHost;
   title?: string;
   isVisible?: boolean;
   isTopbarOpen?: boolean;
@@ -59,15 +56,21 @@ interface DockerManagerProps {
   onClose?: () => void;
 }
 
-type ConnectionLogInput = Omit<LogEntry, "id" | "timestamp">;
+interface PromptState {
+  kind: "totp" | "warpgate";
+  sessionId: string;
+  prompt?: string;
+  isPassword?: boolean;
+  url?: string;
+  securityKey?: string;
+}
 
-interface DockerConnectionError {
-  message?: string;
-  connectionLogs?: ConnectionLogInput[];
+function newSessionId(): string {
+  return `docker-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function DockerManagerInner({
-  hostConfig,
+  host,
   title,
   isVisible = true,
   isTopbarOpen = true,
@@ -75,11 +78,24 @@ function DockerManagerInner({
   onClose,
 }: DockerManagerProps): React.ReactElement {
   const { t } = useTranslation();
+  const docker = useDockerApi();
   const { addLog, setLogs, clearLogs } = useConnectionLog();
   const { currentTab, removeTab } = useTabsSafe();
   const dockerPrefs = useAreaPreferences("docker");
   const uiPrefsCtx = useUiPreferencesContext();
-  const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
+
+  // The shell's host list keeps the host current after an edit; a
+  // standalone window has no shell, so it keeps the host it was given.
+  const liveRecord = useHost(host?.id);
+  const currentHost = React.useMemo(
+    () =>
+      liveRecord
+        ? toDockerHost(liveRecord as unknown as Record<string, unknown>)
+        : host,
+    [liveRecord, host],
+  );
+  const enabled = dockerEnabled(currentHost);
+
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [containers, setContainers] = React.useState<DockerContainer[]>([]);
   const containersSignatureRef = React.useRef("");
@@ -105,23 +121,14 @@ function DockerManagerInner({
     React.useState<DockerValidation | null>(null);
   const [isValidating, setIsValidating] = React.useState(false);
   // Initial view follows the interface preset; switching it afterwards is a
-  // per-session choice, same as before.
+  // per-session choice.
   const [viewMode, setViewMode] = React.useState<"list" | "detail">(
     dockerPrefs.viewMode,
   );
   const [isLoadingContainers, setIsLoadingContainers] = React.useState(false);
   const [hasLoadedContainersOnce, setHasLoadedContainersOnce] =
     React.useState(false);
-  const [totpRequired, setTotpRequired] = React.useState(false);
-  const [totpSessionId, setTotpSessionId] = React.useState<string | null>(null);
-  const [totpPrompt, setTotpPrompt] = React.useState<string>("");
-  const [warpgateRequired, setWarpgateRequired] = React.useState(false);
-  const [warpgateSessionId, setWarpgateSessionId] = React.useState<
-    string | null
-  >(null);
-  const [warpgateUrl, setWarpgateUrl] = React.useState<string>("");
-  const [warpgateSecurityKey, setWarpgateSecurityKey] =
-    React.useState<string>("");
+  const [prompt, setPrompt] = React.useState<PromptState | null>(null);
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
   const [authReason, setAuthReason] = React.useState<
     "no_keyboard" | "auth_failed" | "timeout"
@@ -131,214 +138,168 @@ function DockerManagerInner({
   const [retryCount, setRetryCount] = React.useState(0);
 
   const activityLoggedRef = React.useRef(false);
-  const activityLoggingRef = React.useRef(false);
 
-  const logDockerActivity = async () => {
-    if (
-      !currentHostConfig?.id ||
-      activityLoggedRef.current ||
-      activityLoggingRef.current
-    ) {
-      return;
-    }
-
-    activityLoggingRef.current = true;
+  const logDockerActivity = () => {
+    if (!currentHost?.id || activityLoggedRef.current) return;
     activityLoggedRef.current = true;
-
-    try {
-      const hostName =
-        currentHostConfig.name ||
-        `${currentHostConfig.username}@${currentHostConfig.ip}`;
-      await logActivity("docker", currentHostConfig.id, hostName);
-    } catch (err) {
-      console.warn("Failed to log docker activity:", err);
+    logActivity("docker", currentHost.id, hostTitle(currentHost)).catch(() => {
       activityLoggedRef.current = false;
-    } finally {
-      activityLoggingRef.current = false;
-    }
+    });
   };
 
   React.useEffect(() => {
-    if (hostConfig?.id !== currentHostConfig?.id) {
-      setCurrentHostConfig(hostConfig);
-      setContainers([]);
-      setSelectedContainer(null);
-      setSessionId(null);
-      setDockerValidation(null);
-      setViewMode("list");
+    setContainers([]);
+    setSelectedContainer(null);
+    setSessionId(null);
+    setDockerValidation(null);
+    setViewMode("list");
+  }, [host?.id]);
+
+  const retryRef = React.useRef<ReturnType<typeof useConnectionRetry> | null>(
+    null,
+  );
+
+  const validate = async (sid: string, clearAfter: boolean) => {
+    setSessionId(sid);
+    setIsValidating(true);
+    try {
+      const validation = await docker.validate(sid);
+      setDockerValidation(validation);
+      if (!validation.available) {
+        addLog({
+          type: "error",
+          stage: "validation",
+          message: validation.error || t("docker.error"),
+          details: validation.code
+            ? `Error code: ${validation.code}`
+            : undefined,
+        });
+        retryRef.current?.markFailed();
+      } else {
+        logDockerActivity();
+        if (clearAfter) setTimeout(() => clearLogs(), 1000);
+        retryRef.current?.markConnected();
+      }
+    } finally {
+      setIsValidating(false);
     }
-  }, [hostConfig?.id]);
+  };
 
-  React.useEffect(() => {
-    const fetchLatestHostConfig = async () => {
-      if (hostConfig?.id) {
-        try {
-          const hosts = await getSSHHosts();
-          const updatedHost = hosts.find((h) => h.id === hostConfig.id);
-          if (updatedHost) {
-            setCurrentHostConfig(updatedHost);
-          }
-        } catch {
-          // Silently handle error
-        }
+  /** Acts on one step of a connect, whichever request it answered. */
+  const applyConnectResult = async (
+    sid: string,
+    result: ConnectResult,
+    clearAfter: boolean,
+  ) => {
+    if (result.connectionLogs) setLogs(result.connectionLogs);
+
+    if (result.requires_warpgate) {
+      setPrompt({
+        kind: "warpgate",
+        sessionId: sid,
+        url: result.url || "",
+        securityKey: result.securityKey || "",
+      });
+      return;
+    }
+    if (result.requires_totp) {
+      if (result.retry) {
+        addLog({
+          type: "error",
+          stage: "auth",
+          message: t("docker.totpVerificationFailed"),
+        });
       }
-    };
+      setPrompt({
+        kind: "totp",
+        sessionId: sid,
+        prompt: result.prompt || t("docker.verificationCodePrompt"),
+        isPassword: result.isPassword,
+      });
+      return;
+    }
+    if (result.status === "auth_required") {
+      setAuthReason(
+        result.reason === "no_keyboard" ? "no_keyboard" : "auth_failed",
+      );
+      setShowAuthDialog(true);
+      return;
+    }
+    setPrompt(null);
+    await validate(sid, clearAfter);
+  };
 
-    fetchLatestHostConfig();
+  const reportFailure = (error: unknown, fallback: string) => {
+    if (error instanceof DockerApiError && error.connectionLogs?.length) {
+      setLogs(error.connectionLogs);
+    } else {
+      addLog({
+        type: "error",
+        stage: "connection",
+        message: error instanceof Error ? error.message : fallback,
+      });
+    }
+    retryRef.current?.markFailed();
+  };
 
-    const handleHostsChanged = async () => {
-      if (hostConfig?.id) {
-        try {
-          const hosts = await getSSHHosts();
-          const updatedHost = hosts.find((h) => h.id === hostConfig.id);
-          if (updatedHost) {
-            setCurrentHostConfig(updatedHost);
-          }
-        } catch {
-          // Silently handle error
-        }
-      }
-    };
-
-    window.addEventListener("ssh-hosts:changed", handleHostsChanged);
-    return () =>
-      window.removeEventListener("ssh-hosts:changed", handleHostsChanged);
-  }, [hostConfig?.id]);
+  const connect = async (credentials?: {
+    userProvidedPassword?: string;
+    userProvidedSshKey?: string;
+    userProvidedKeyPassword?: string;
+  }) => {
+    if (!currentHost?.id) return;
+    const sid = newSessionId();
+    setIsConnecting(true);
+    try {
+      const result = await docker.connect(sid, currentHost.id, credentials);
+      await applyConnectResult(sid, result, !credentials);
+    } catch (error) {
+      reportFailure(error, t("docker.connectionFailed"));
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const initializingRef = React.useRef(false);
 
   React.useEffect(() => {
-    const initSession = async () => {
-      if (!currentHostConfig?.id || !currentHostConfig.enableDocker) {
-        return;
-      }
-
-      if (initializingRef.current) return;
-      initializingRef.current = true;
-
-      if (sessionId) {
-        initializingRef.current = false;
-        return;
-      }
-
-      setIsConnecting(true);
-      clearLogs();
-      const sid = `docker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      try {
-        const result = await connectDockerSession(sid, currentHostConfig.id, {
-          useSocks5: currentHostConfig.useSocks5,
-          socks5Host: currentHostConfig.socks5Host,
-          socks5Port: currentHostConfig.socks5Port,
-          socks5Username: currentHostConfig.socks5Username,
-          socks5Password: currentHostConfig.socks5Password,
-          socks5ProxyChain: currentHostConfig.socks5ProxyChain,
-        });
-
-        if (result?.requires_warpgate) {
-          setWarpgateRequired(true);
-          setWarpgateSessionId(sid);
-          setWarpgateUrl(result.url || "");
-          setWarpgateSecurityKey(result.securityKey || "");
-          setIsConnecting(false);
-          return;
-        }
-
-        if (result?.requires_totp) {
-          setTotpRequired(true);
-          setTotpSessionId(sid);
-          setTotpPrompt(result.prompt || t("docker.verificationCodePrompt"));
-          setIsConnecting(false);
-          return;
-        }
-
-        if (result?.status === "auth_required") {
-          setShowAuthDialog(true);
-          setAuthReason(
-            result.reason === "no_keyboard" ? "no_keyboard" : "auth_failed",
-          );
-          setIsConnecting(false);
-          return;
-        }
-
-        setSessionId(sid);
-
-        setIsValidating(true);
-        const validation = await validateDockerAvailability(sid);
-        setDockerValidation(validation);
-        setIsValidating(false);
-
-        if (!validation.available) {
-          addLog({
-            type: "error",
-            stage: "validation",
-            message: validation.error || t("docker.error"),
-            details: validation.code
-              ? `Error code: ${validation.code}`
-              : undefined,
-          });
-          dockerConnectRetryRef.current.markFailed();
-        } else {
-          logDockerActivity();
-          setTimeout(() => clearLogs(), 1000);
-          dockerConnectRetryRef.current.markConnected();
-        }
-      } catch (error) {
-        const dockerError = error as DockerConnectionError;
-        setIsConnecting(false);
-        setIsValidating(false);
-
-        if (Array.isArray(dockerError.connectionLogs)) {
-          setLogs(dockerError.connectionLogs);
-        } else {
-          addLog({
-            type: "error",
-            stage: "connection",
-            message: dockerError.message || t("docker.connectionFailed"),
-          });
-        }
-        dockerConnectRetryRef.current.markFailed();
-      } finally {
-        setIsConnecting(false);
-      }
-    };
-
-    initSession();
+    if (!currentHost?.id || !enabled) return;
+    if (initializingRef.current || sessionId) return;
+    initializingRef.current = true;
+    clearLogs();
+    void connect();
 
     return () => {
       initializingRef.current = false;
-      if (sessionId) {
-        disconnectDockerSession(sessionId).catch(() => {
-          // Silently handle disconnect errors
-        });
-      }
     };
-  }, [currentHostConfig?.id, currentHostConfig?.enableDocker, retryCount]);
+  }, [currentHost?.id, enabled, retryCount]);
+
+  React.useEffect(() => {
+    if (!sessionId) return;
+    return () => {
+      docker.disconnect(sessionId).catch(() => {});
+    };
+  }, [sessionId]);
 
   React.useEffect(() => {
     if (!sessionId || !isVisible) return;
-
     const keepalive = setInterval(
       () => {
-        keepaliveDockerSession(sessionId).catch(() => {
-          // Silently handle keepalive errors
-        });
+        docker.keepalive(sessionId).catch(() => {});
       },
       10 * 60 * 1000,
     );
-
     return () => clearInterval(keepalive);
   }, [sessionId, isVisible]);
 
   const refreshContainers = React.useCallback(async () => {
     if (!sessionId) return;
     try {
-      const data = await listDockerContainers(sessionId, true);
-      setContainers(data);
+      setContainers(await docker.listContainers(sessionId, true));
     } catch {
-      // Silently handle polling errors
+      // the next poll tries again
     }
-  }, [sessionId]);
+  }, [sessionId, docker]);
 
   React.useEffect(() => {
     setHasLoadedContainersOnce(false);
@@ -350,7 +311,7 @@ function DockerManagerInner({
       setIsLoadingContainers((loading) =>
         hasLoadedContainersOnce ? loading : true,
       );
-      const data = await listDockerContainers(sessionId, true);
+      const data = await docker.listContainers(sessionId, true);
       const signature = JSON.stringify(data);
       const changed = signature !== containersSignatureRef.current;
       containersSignatureRef.current = signature;
@@ -378,124 +339,48 @@ function DockerManagerInner({
     setSelectedContainer(null);
   }, []);
 
-  const handleTotpSubmit = async (code: string) => {
-    if (!totpSessionId || !code) return;
-
-    try {
-      setIsConnecting(true);
-      const result = await verifyDockerTOTP(totpSessionId, code);
-
-      if (result?.status === "success") {
-        setTotpRequired(false);
-        setTotpPrompt("");
-        setSessionId(totpSessionId);
-        setTotpSessionId(null);
-
-        setIsValidating(true);
-        const validation = await validateDockerAvailability(totpSessionId);
-        setDockerValidation(validation);
-        setIsValidating(false);
-
-        if (!validation.available) {
-          addLog({
-            type: "error",
-            stage: "validation",
-            message: validation.error || t("docker.error"),
-            details: validation.code
-              ? `Error code: ${validation.code}`
-              : undefined,
-          });
-          dockerConnectRetryRef.current.markFailed();
-        } else {
-          logDockerActivity();
-          dockerConnectRetryRef.current.markConnected();
-        }
-      }
-    } catch (error) {
-      console.error("TOTP verification failed:", error);
-      addLog({
-        type: "error",
-        stage: "auth",
-        message: t("docker.totpVerificationFailed"),
-      });
-      dockerConnectRetryRef.current.markFailed();
-    } finally {
-      setIsConnecting(false);
-    }
+  const closeTab = () => {
+    if (currentTab !== null) removeTab(currentTab);
   };
 
-  const handleTotpCancel = () => {
-    setTotpRequired(false);
-    setTotpSessionId(null);
-    setTotpPrompt("");
-    setIsConnecting(false);
-    if (currentTab !== null) {
-      removeTab(currentTab);
+  const handleTotpSubmit = async (code: string) => {
+    if (!prompt || prompt.kind !== "totp" || !code) return;
+    const sid = prompt.sessionId;
+    setPrompt(null);
+    setIsConnecting(true);
+    try {
+      await applyConnectResult(sid, await docker.answerTotp(sid, code), false);
+    } catch (error) {
+      reportFailure(error, t("docker.totpVerificationFailed"));
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   const handleWarpgateContinue = async () => {
-    if (!warpgateSessionId) return;
-
+    if (!prompt || prompt.kind !== "warpgate") return;
+    const sid = prompt.sessionId;
+    setPrompt(null);
+    setIsConnecting(true);
     try {
-      setIsConnecting(true);
-      const result = await verifyDockerWarpgate(warpgateSessionId);
-
-      if (result?.status === "success") {
-        setWarpgateRequired(false);
-        setWarpgateUrl("");
-        setWarpgateSecurityKey("");
-        setSessionId(warpgateSessionId);
-        setWarpgateSessionId(null);
-
-        setIsValidating(true);
-        const validation = await validateDockerAvailability(warpgateSessionId);
-        setDockerValidation(validation);
-        setIsValidating(false);
-
-        if (!validation.available) {
-          addLog({
-            type: "error",
-            stage: "validation",
-            message: validation.error || t("docker.error"),
-            details: validation.code
-              ? `Error code: ${validation.code}`
-              : undefined,
-          });
-          dockerConnectRetryRef.current.markFailed();
-        } else {
-          logDockerActivity();
-          dockerConnectRetryRef.current.markConnected();
-        }
-      }
+      await applyConnectResult(sid, await docker.continueWarpgate(sid), false);
     } catch (error) {
-      console.error("Warpgate verification failed:", error);
-      addLog({
-        type: "error",
-        stage: "auth",
-        message: t("docker.warpgateVerificationFailed"),
-      });
-      dockerConnectRetryRef.current.markFailed();
+      reportFailure(error, t("docker.warpgateVerificationFailed"));
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const handleWarpgateCancel = () => {
-    setWarpgateRequired(false);
-    setWarpgateSessionId(null);
-    setWarpgateUrl("");
-    setWarpgateSecurityKey("");
+  const handlePromptCancel = () => {
+    const sid = prompt?.sessionId;
+    setPrompt(null);
     setIsConnecting(false);
-    if (currentTab !== null) {
-      removeTab(currentTab);
-    }
+    if (sid) docker.disconnect(sid).catch(() => {});
+    closeTab();
   };
 
   const handleWarpgateOpenUrl = () => {
-    if (warpgateUrl) {
-      window.open(warpgateUrl, "_blank", "noopener,noreferrer");
-    }
+    if (prompt?.url) window.open(prompt.url, "_blank", "noopener,noreferrer");
   };
 
   const handleAuthSubmit = async (credentials: {
@@ -503,75 +388,12 @@ function DockerManagerInner({
     sshKey?: string;
     keyPassword?: string;
   }) => {
-    if (!currentHostConfig?.id) return;
-
     setShowAuthDialog(false);
-    setIsConnecting(true);
-
-    const sid = `docker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    try {
-      const result = await connectDockerSession(sid, currentHostConfig.id, {
-        userProvidedPassword: credentials.password,
-        userProvidedSshKey: credentials.sshKey,
-        userProvidedKeyPassword: credentials.keyPassword,
-        useSocks5: currentHostConfig.useSocks5,
-        socks5Host: currentHostConfig.socks5Host,
-        socks5Port: currentHostConfig.socks5Port,
-        socks5Username: currentHostConfig.socks5Username,
-        socks5Password: currentHostConfig.socks5Password,
-        socks5ProxyChain: currentHostConfig.socks5ProxyChain,
-      });
-
-      if (result?.requires_warpgate) {
-        setWarpgateRequired(true);
-        setWarpgateSessionId(sid);
-        setWarpgateUrl(result.url || "");
-        setWarpgateSecurityKey(result.securityKey || "N/A");
-        setIsConnecting(false);
-        return;
-      }
-
-      if (result?.requires_totp) {
-        setTotpRequired(true);
-        setTotpSessionId(sid);
-        setTotpPrompt(result.prompt || t("docker.verificationCodePrompt"));
-        setIsConnecting(false);
-        return;
-      }
-
-      if (result?.status === "auth_required") {
-        setShowAuthDialog(true);
-        setAuthReason("auth_failed");
-        setIsConnecting(false);
-        return;
-      }
-
-      setSessionId(sid);
-
-      setIsValidating(true);
-      const validation = await validateDockerAvailability(sid);
-      setDockerValidation(validation);
-      setIsValidating(false);
-
-      if (!validation.available) {
-        dockerConnectRetryRef.current.markFailed();
-      } else {
-        logDockerActivity();
-        dockerConnectRetryRef.current.markConnected();
-      }
-    } catch (error) {
-      setIsConnecting(false);
-      setIsValidating(false);
-      addLog({
-        type: "error",
-        stage: "connection",
-        message: error?.message || t("docker.connectionFailed"),
-      });
-      dockerConnectRetryRef.current.markFailed();
-    } finally {
-      setIsConnecting(false);
-    }
+    await connect({
+      userProvidedPassword: credentials.password,
+      userProvidedSshKey: credentials.sshKey,
+      userProvidedKeyPassword: credentials.keyPassword,
+    });
   };
 
   const handleAuthCancel = () => {
@@ -592,15 +414,10 @@ function DockerManagerInner({
     connect: () => {
       handleRetry();
     },
-    enabled:
-      !!currentHostConfig?.enableDocker &&
-      !totpRequired &&
-      !warpgateRequired &&
-      !showAuthDialog,
+    enabled: enabled && !prompt && !showAuthDialog,
     autoStart: false,
   });
-  const dockerConnectRetryRef = React.useRef(dockerConnectRetry);
-  dockerConnectRetryRef.current = dockerConnectRetry;
+  retryRef.current = dockerConnectRetry;
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
   const leftMarginPx = 8;
@@ -619,9 +436,9 @@ function DockerManagerInner({
 
   const containerClass = embedded
     ? "h-full w-full text-foreground overflow-hidden bg-transparent"
-    : "bg-canvas text-foreground rounded-lg border-2 border-edge overflow-hidden";
+    : "bg-canvas text-foreground border-2 border-edge overflow-hidden";
 
-  if (!currentHostConfig?.enableDocker) {
+  if (!enabled) {
     return (
       <div style={wrapperStyle} className={`${containerClass} relative`}>
         <div className="h-full w-full flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -649,6 +466,40 @@ function DockerManagerInner({
     );
   }
 
+  const dialogs = (
+    <>
+      <TOTPDialog
+        isOpen={prompt?.kind === "totp"}
+        prompt={prompt?.prompt ?? ""}
+        mode={prompt?.isPassword ? "password" : "totp"}
+        onSubmit={handleTotpSubmit}
+        onCancel={handlePromptCancel}
+      />
+      <WarpgateDialog
+        isOpen={prompt?.kind === "warpgate"}
+        url={prompt?.url ?? ""}
+        securityKey={prompt?.securityKey ?? ""}
+        onContinue={handleWarpgateContinue}
+        onCancel={handlePromptCancel}
+        onOpenUrl={handleWarpgateOpenUrl}
+      />
+      {currentHost && (
+        <SSHAuthDialog
+          isOpen={showAuthDialog}
+          reason={authReason}
+          onSubmit={handleAuthSubmit}
+          onCancel={handleAuthCancel}
+          hostInfo={{
+            ip: currentHost.ip,
+            port: currentHost.port,
+            username: currentHost.username ?? "",
+            name: currentHost.name,
+          }}
+        />
+      )}
+    </>
+  );
+
   if (isConnecting || isValidating) {
     return (
       <div style={wrapperStyle} className={`${containerClass} relative`}>
@@ -662,6 +513,7 @@ function DockerManagerInner({
           nextRetryInMs={dockerConnectRetry.nextRetryInMs}
           onManualRetry={dockerConnectRetry.retryNow}
         />
+        {dialogs}
       </div>
     );
   }
@@ -689,12 +541,12 @@ function DockerManagerInner({
         {viewMode === "detail" &&
         sessionId &&
         selectedContainer &&
-        currentHostConfig ? (
+        currentHost ? (
           <ContainerDetail
             sessionId={sessionId}
             containerId={selectedContainer}
             containers={containers}
-            hostConfig={currentHostConfig}
+            hostConfig={currentHost}
             onBack={handleBack}
             initialTab={detailInitialTab}
           />
@@ -833,34 +685,7 @@ function DockerManagerInner({
           </div>
         )}
       </div>
-      <TOTPDialog
-        isOpen={totpRequired}
-        prompt={totpPrompt}
-        onSubmit={handleTotpSubmit}
-        onCancel={handleTotpCancel}
-      />
-      <WarpgateDialog
-        isOpen={warpgateRequired}
-        url={warpgateUrl}
-        securityKey={warpgateSecurityKey}
-        onContinue={handleWarpgateContinue}
-        onCancel={handleWarpgateCancel}
-        onOpenUrl={handleWarpgateOpenUrl}
-      />
-      {currentHostConfig && (
-        <SSHAuthDialog
-          isOpen={showAuthDialog}
-          reason={authReason}
-          onSubmit={handleAuthSubmit}
-          onCancel={handleAuthCancel}
-          hostInfo={{
-            ip: currentHostConfig.ip,
-            port: currentHostConfig.port,
-            username: currentHostConfig.username,
-            name: currentHostConfig.name,
-          }}
-        />
-      )}
+      {dialogs}
       <ConnectionScreen
         status={dockerConnectRetry.status}
         message={t("docker.connecting")}

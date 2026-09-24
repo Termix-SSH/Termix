@@ -17,7 +17,24 @@ import type {
 import type { TermixApp } from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
-import type { PluginMiddleware, PluginRouterOptions } from "./backend.js";
+import type {
+  PluginMiddleware,
+  PluginRouterOptions,
+  PluginWebSocketHandler,
+  PluginWebSockets,
+  PluginWebSocketOptions,
+} from "./backend.js";
+
+/** A ctx.ws registration as the test doubles record it. */
+export interface FakeWsRoute {
+  path: string;
+  raw: boolean;
+  /** For ctx.ws.route. */
+  handler?: PluginWebSocketHandler;
+  /** For ctx.ws.upgrade. */
+  upgrade?: Parameters<PluginWebSockets["upgrade"]>[1];
+  options?: PluginWebSocketOptions;
+}
 import type {
   PluginLoginMethod,
   PluginSecondFactor,
@@ -115,8 +132,11 @@ export interface FakePluginContext {
   syncEntities: SyncEntityRegistration[];
   /** Tombstones recorded through ctx.sync.recordTombstone, in order. */
   tombstones: Array<{ userId: string; entityType: string; syncId: string }>;
-  /** WebSocket routes registered through ctx.ws, in order. */
-  wsRoutes: Array<{ path: string; raw: boolean }>;
+  /**
+   * WebSocket routes registered through ctx.ws, in order, with the handler
+   * and options, so a test can hand a route a fake socket.
+   */
+  wsRoutes: FakeWsRoute[];
   /** Router options passed to ctx.http.router, in order. */
   httpRouters: Array<PluginRouterOptions | undefined>;
   /** Backing store behind ctx.settings, keyed "<scope>:<scopeId>:<key>". */
@@ -237,7 +257,7 @@ export function createFakeContext(
     entityType: string;
     syncId: string;
   }> = [];
-  const wsRoutes: Array<{ path: string; raw: boolean }> = [];
+  const wsRoutes: FakeWsRoute[] = [];
   const httpRouters: Array<PluginRouterOptions | undefined> = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   const settings = new Map<string, unknown>();
@@ -466,11 +486,16 @@ export function createFakeContext(
     },
 
     ws: {
-      route: (path) => {
-        wsRoutes.push({ path, raw: false });
+      route: (path, handler, wsOptions) => {
+        wsRoutes.push({ path, raw: false, handler, options: wsOptions });
       },
-      upgrade: (path) => {
-        wsRoutes.push({ path, raw: true });
+      upgrade: (path, handler, wsOptions) => {
+        wsRoutes.push({
+          path,
+          raw: true,
+          upgrade: handler,
+          options: wsOptions,
+        });
       },
     },
 

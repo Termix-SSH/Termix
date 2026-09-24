@@ -1,39 +1,42 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage } from "../error-message";
+import {
+  Button,
+  Card,
+  CardContent,
+  ConnectionLogProvider,
+  ConnectionScreen,
+  DEFAULT_TERMINAL_CONFIG,
+  RobustClipboardProvider,
+  Select2,
+  TERMINAL_FONTS,
+  copyToClipboard,
+  ensureTerminalFontsLoaded,
+  isElectron,
+  pluginWsUrl,
+  readFromClipboard,
+  resolveConnectionOrigin,
+  resolveTermixThemeColors,
+  useAppTheme as useTheme,
+  useConnectionLog,
+} from "@termix/plugin-sdk/ui";
+import type { DockerHost } from "../types";
 import React from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
-import { RobustClipboardProvider } from "@/lib/clipboard-provider";
-import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { Button } from "@/components/button.tsx";
-import { Select2 } from "@/components/select2";
-import { Card, CardContent } from "@/components/card.tsx";
-import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
-import { pluginWsUrl } from "@/lib/plugin-transport";
 import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
-import type { SSHHost } from "@/types";
-import { isElectron } from "@/main-axios.ts";
 import {
   useTranslation,
   useConnectionRetry,
 } from "@termix/plugin-sdk/frontend";
-import { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
-import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
-import { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
-import { useTheme } from "@/components/theme-provider";
-import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
-import {
-  ConnectionLogProvider,
-  useConnectionLog,
-} from "@/ssh/connection-log/ConnectionLogContext.tsx";
 
 interface ConsoleTerminalProps {
   containerId: string;
   containerName: string;
   containerState: string;
-  hostConfig: SSHHost;
+  hostConfig: DockerHost;
 }
 
 export function ConsoleTerminal(
@@ -58,7 +61,12 @@ function ConsoleTerminalInner({
   const { addLog, clearLogs } = useConnectionLog();
 
   const terminalConfig = React.useMemo(
-    () => ({ ...DEFAULT_TERMINAL_CONFIG, ...hostConfig.terminalConfig }),
+    () => ({
+      ...DEFAULT_TERMINAL_CONFIG,
+      ...(hostConfig.terminalConfig as Partial<
+        typeof DEFAULT_TERMINAL_CONFIG
+      > | null),
+    }),
     [hostConfig.terminalConfig],
   );
 
@@ -321,7 +329,11 @@ function ConsoleTerminalInner({
           JSON.stringify({
             type: "connect",
             data: {
-              hostConfig,
+              hostConfig: {
+                id: hostConfig.id,
+                syncId: hostConfig.syncId ?? null,
+                ip: hostConfig.ip,
+              },
               containerId,
               shell: selectedShell,
               cols,

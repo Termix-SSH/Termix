@@ -323,6 +323,13 @@
       "when": 1790266402403,
       "tag": "0045_thankful_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1790268465907,
+      "tag": "0046_small_white_tiger",
+      "breakpoints": true
     }
   ]
 }

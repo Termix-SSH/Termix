@@ -85,7 +85,10 @@ export * from "@/components/sheet";
 export { useConfirmation } from "@/hooks/use-confirmation";
 export { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 // Per-area display density and chart options the user picked in Appearance.
-export { useAreaPreferences } from "@/contexts/UiPreferencesContext";
+export {
+  useAreaPreferences,
+  useUiPreferencesContext,
+} from "@/contexts/UiPreferencesContext";
 // Homepage widget pieces, for plugins that register a widget.
 export { WidgetTitle } from "@/features/homepage/widgets/WidgetTitle";
 export { runVisibleInterval } from "@/features/homepage/use-visible-interval";

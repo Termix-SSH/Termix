@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docher"
   },
-  "hosts": {
-    "tabDocker": "Docher",
-    "dockerIntegration": "Integrare Docker",
-    "enableDockerMonitor": "Activează Docker",
-    "enableDockerMonitorDesc": "Monitorizați și gestionați containerele de pe această gazdă prin Docker",
-    "containerRuntime": "Runtime de container",
-    "containerRuntimeDesc": "Alegeți interfața CLI utilizată pentru gestionarea containerelor pe această gazdă",
-    "containerRuntimeDocker": "Docher",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docher",
     "feature_docker_desc": "Vizualizați containere, citiți jurnale și urmăriți statistici pe orice gazdă care rulează Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Activează Docker"
+      },
+      "containerRuntime": {
+        "label": "Runtime de container",
+        "description": "Alegeți interfața CLI utilizată pentru gestionarea containerelor pe această gazdă",
+        "docker": "Docher",
+        "podman": "Podman"
+      }
+    }
   }
 }

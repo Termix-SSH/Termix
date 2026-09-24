@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Docker"
   },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Интеграция Docker",
-    "enableDockerMonitor": "Включить Docker",
-    "enableDockerMonitorDesc": "Отслеживать и управлять контейнерами на этом хосте через Docker",
-    "containerRuntime": "Среда выполнения контейнеров",
-    "containerRuntimeDesc": "Выберите CLI, используемый для управления контейнерами на этом хосте",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Docker",
     "feature_docker_desc": "Просматривайте контейнеры, читайте журналы и отслеживайте статистику на любом хосте, где запущен Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Включить Docker"
+      },
+      "containerRuntime": {
+        "label": "Среда выполнения контейнеров",
+        "description": "Выберите CLI, используемый для управления контейнерами на этом хосте",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

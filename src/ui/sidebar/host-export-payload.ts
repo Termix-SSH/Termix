@@ -44,7 +44,6 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
     "enableTerminalToolbar",
     "enableAiAssistant",
     "enableFileManager",
-    "enableDocker",
     "enableWebUi",
     "enableProxmox",
     "enableTmuxMonitor",
@@ -59,7 +58,6 @@ export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   advanced: [
     "statusCheckEnabled",
     "statusCheckInterval",
-    "dockerConfig",
     "webUiConfig",
     "proxmoxConfig",
     "terminalConfig",

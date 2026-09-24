@@ -1,8 +1,8 @@
+import { ConnectionScreen, FullScreenAppWrapper } from "@termix/plugin-sdk/ui";
 import React from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { DockerManager } from "./DockerManager.tsx";
-import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
-import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+import { toDockerHost } from "./types";
 
 interface DockerAppProps {
   hostId?: string;
@@ -37,7 +37,9 @@ const DockerApp: React.FC<DockerAppProps> = ({ hostId }) => {
 
         return (
           <DockerManager
-            hostConfig={hostConfig}
+            host={toDockerHost(
+              hostConfig as unknown as Record<string, unknown>,
+            )}
             title={hostConfig.name || `${hostConfig.username}@${hostConfig.ip}`}
             isVisible={true}
             isTopbarOpen={false}

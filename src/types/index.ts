@@ -157,7 +157,6 @@ export interface HostFeatureFlags {
   enableTerminal: boolean; // SSH, Telnet only
   enableTunnel: boolean; // SSH only
   enableFileManager: boolean; // SSH only
-  enableDocker: boolean; // SSH only
   enableTmuxMonitor: boolean; // SSH only
   enableTerminalToolbar: boolean; // SSH, RDP, VNC, and Telnet
   enableAiAssistant: boolean; // SSH only
@@ -216,7 +215,6 @@ export type Host = {
   enableTunnel: boolean;
   enableFileManager: boolean;
   scpLegacy?: boolean;
-  enableDocker: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
   enableAiAssistant: boolean;
@@ -253,7 +251,6 @@ export type Host = {
   /** "ssh", or the id of the plugin protocol a host without SSH uses. */
   connectionType?: string;
   domain?: string;
-  dockerConfig?: Record<string, unknown> | null;
   enableWebUi?: boolean;
   webUiConfig?: WebUiConfig | null;
 
@@ -368,7 +365,6 @@ export interface HostData {
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   scpLegacy?: boolean;
-  enableDocker?: boolean;
   enableProxmox?: boolean;
   enableTmuxMonitor?: boolean;
   enableTerminalToolbar?: boolean;
@@ -410,7 +406,6 @@ export interface HostData {
   /** "ssh", or the id of the plugin protocol a host without SSH uses. */
   connectionType?: string;
   domain?: string;
-  dockerConfig?: Record<string, unknown> | null;
   enableWebUi?: boolean;
   webUiConfig?: WebUiConfig | null;
 
@@ -1005,52 +1000,3 @@ export interface RestoreRequestBody {
 // ============================================================================
 // DOCKER TYPES
 // ============================================================================
-
-export interface DockerContainer {
-  id: string;
-  name: string;
-  image: string;
-  status: string;
-  state:
-    | "created"
-    | "running"
-    | "paused"
-    | "restarting"
-    | "removing"
-    | "exited"
-    | "dead";
-  ports: string;
-  created: string;
-  command?: string;
-  labels?: Record<string, string>;
-  networks?: string[];
-  mounts?: string[];
-}
-
-export interface DockerStats {
-  cpu: string;
-  memoryUsed: string;
-  memoryLimit: string;
-  memoryPercent: string;
-  netInput: string;
-  netOutput: string;
-  blockRead: string;
-  blockWrite: string;
-  pids?: string;
-}
-
-export interface DockerLogOptions {
-  tail?: number;
-  timestamps?: boolean;
-  since?: string;
-  until?: string;
-  follow?: boolean;
-}
-
-export interface DockerValidation {
-  available: boolean;
-  version?: string;
-  runtime?: "docker" | "podman";
-  error?: string;
-  code?: string;
-}

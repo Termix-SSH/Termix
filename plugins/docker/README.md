@@ -4,6 +4,18 @@ Container management over SSH: list, inspect, start, stop and view logs for Dock
 
 Bundled with Termix and enabled by default.
 
+## Services
+
+- `docker.containers` 1.0.0: `listContainers(hostId, { all? })` and
+  `action(hostId, container, "start" | "stop" | "restart" | "pause" |
+"unpause" | "remove")`, run over a pooled SSH connection as the caller.
+- `docker.events` 1.0.0: `subscribe(hostId, listener)` calls the listener
+  with `{ hostId, container, event }` when a container exits, starts,
+  restarts or turns unhealthy, polled about once a minute as the caller.
+  Subscribing the same listener again is a no-op.
+
+Both need `docker.use`.
+
 ## Layout
 
     manifest.json        id, capabilities and what this plugin contributes

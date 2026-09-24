@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Hamnarbetare"
   },
-  "hosts": {
-    "tabDocker": "Hamnarbetare",
-    "dockerIntegration": "Docker-integration",
-    "enableDockerMonitor": "Aktivera Docker",
-    "enableDockerMonitorDesc": "Övervaka och hantera containrar på den här värden via Docker",
-    "containerRuntime": "Containerkörningstid",
-    "containerRuntimeDesc": "Välj det CRI som används för containerhantering på den här värden",
-    "containerRuntimeDocker": "Hamnarbetare",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Hamnarbetare",
     "feature_docker_desc": "Se containrar, läs loggar och titta på statistik för alla värdar som kör Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktivera Docker"
+      },
+      "containerRuntime": {
+        "label": "Containerkörningstid",
+        "description": "Välj det CRI som används för containerhantering på den här värden",
+        "docker": "Hamnarbetare",
+        "podman": "Podman"
+      }
+    }
   }
 }

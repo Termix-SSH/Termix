@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Докер"
   },
-  "hosts": {
-    "tabDocker": "Докер",
-    "dockerIntegration": "Інтеграція Docker",
-    "enableDockerMonitor": "Увімкнути Докер",
-    "enableDockerMonitorDesc": "Моніторинг та керування контейнерами на цьому хості через Docker",
-    "containerRuntime": "Середовище виконання контейнера",
-    "containerRuntimeDesc": "Виберіть інтерфейс командного рядка, який використовується для керування контейнерами на цьому хості",
-    "containerRuntimeDocker": "Докер",
-    "containerRuntimePodman": "Подман"
-  },
   "onboarding": {
     "feature_docker": "Докер",
     "feature_docker_desc": "Переглядайте контейнери, читайте журнали та переглядайте статистику на будь-якому хості, на якому працює Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Увімкнути Докер"
+      },
+      "containerRuntime": {
+        "label": "Середовище виконання контейнера",
+        "description": "Виберіть інтерфейс командного рядка, який використовується для керування контейнерами на цьому хості",
+        "docker": "Докер",
+        "podman": "Подман"
+      }
+    }
   }
 }

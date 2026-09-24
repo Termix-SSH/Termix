@@ -2,6 +2,7 @@ import type { PluginContext } from "@termix/plugin-sdk/backend";
 import { setPluginSsh } from "./ssh.js";
 import { setPluginServices } from "./snippets.js";
 import { setTunnelServices } from "./tunnels.js";
+import { setDockerServices } from "./docker.js";
 import { startAutomationsService, stopAutomationsService } from "./routes.js";
 import {
   startAutomationScheduler,
@@ -23,6 +24,8 @@ export async function activate(ctx: PluginContext) {
   ctx.disposables.add(() => setPluginServices(null));
   setTunnelServices(ctx.services);
   ctx.disposables.add(() => setTunnelServices(null));
+  setDockerServices(ctx.services);
+  ctx.disposables.add(() => setDockerServices(null));
 
   // Nothing arrives here while the tunnels plugin is off, which is the whole
   // of the optional dependency.

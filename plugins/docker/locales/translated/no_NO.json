@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Dokker"
   },
-  "hosts": {
-    "tabDocker": "Dokker",
-    "dockerIntegration": "Docker-integrasjon",
-    "enableDockerMonitor": "Aktiver Docker",
-    "enableDockerMonitorDesc": "Overvåk og administrer containere på denne verten via Docker",
-    "containerRuntime": "Containerkjøringstid",
-    "containerRuntimeDesc": "Velg CRI-et som brukes for containeradministrasjon på denne verten",
-    "containerRuntimeDocker": "Dokker",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Dokker",
     "feature_docker_desc": "Se containere, les logger og se statistikk på alle verter som kjører Docker."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Aktiver Docker"
+      },
+      "containerRuntime": {
+        "label": "Containerkjøringstid",
+        "description": "Velg CRI-et som brukes for containeradministrasjon på denne verten",
+        "docker": "Dokker",
+        "podman": "Podman"
+      }
+    }
   }
 }

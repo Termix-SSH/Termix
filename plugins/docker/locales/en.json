@@ -100,20 +100,12 @@
     "stats": "Stats",
     "consoleTab": "Console",
     "startContainerToAccess": "Start the container to access the console",
-    "noHostSelected": "No host selected"
+    "noHostSelected": "No host selected",
+    "failedToFetchLogs": "Failed to fetch logs: {{error}}",
+    "failedToDownloadLogs": "Failed to download logs: {{error}}"
   },
   "nav": {
     "docker": "Docker"
-  },
-  "hosts": {
-    "tabDocker": "Docker",
-    "dockerIntegration": "Docker Integration",
-    "enableDockerMonitor": "Enable Docker",
-    "enableDockerMonitorDesc": "Monitor and manage containers on this host via Docker",
-    "containerRuntime": "Container Runtime",
-    "containerRuntimeDesc": "Choose the CLI used for container management on this host",
-    "containerRuntimeDocker": "Docker",
-    "containerRuntimePodman": "Podman"
   },
   "onboarding": {
     "feature_docker": "Docker",
@@ -121,5 +113,24 @@
   },
   "terminal": {
     "retry": "Retry"
+  },
+  "permissions": {
+    "use": {
+      "title": "Use Docker",
+      "description": "Open the Docker manager and container consoles on hosts with Docker enabled."
+    }
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Enable Docker"
+      },
+      "containerRuntime": {
+        "label": "Container Runtime",
+        "description": "Choose the CLI used for container management on this host",
+        "docker": "Docker",
+        "podman": "Podman"
+      }
+    }
   }
 }

@@ -1,7 +1,6 @@
+import { Button, Card, Separator } from "@termix/plugin-sdk/ui";
+import type { DockerContainer, DockerHost } from "../types";
 import React from "react";
-import { Button } from "@/components/button.tsx";
-import { Card } from "@/components/card.tsx";
-import { Separator } from "@/components/separator.tsx";
 import {
   Activity,
   ArrowLeft,
@@ -11,7 +10,6 @@ import {
   Terminal,
 } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { DockerContainer, SSHHost } from "@/types";
 import { LogViewer } from "./LogViewer.tsx";
 import { ContainerStats } from "./ContainerStats.tsx";
 import { ConsoleTerminal } from "./ConsoleTerminal.tsx";
@@ -23,7 +21,7 @@ interface ContainerDetailProps {
   sessionId: string;
   containerId: string;
   containers: DockerContainer[];
-  hostConfig: SSHHost;
+  hostConfig: DockerHost;
   onBack: () => void;
   initialTab?: DetailTab;
 }

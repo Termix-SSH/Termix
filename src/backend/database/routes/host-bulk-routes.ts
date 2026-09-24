@@ -284,8 +284,6 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableTunnel = updates.enableTunnel;
         if (typeof updates.enableFileManager === "boolean")
           simpleUpdates.enableFileManager = updates.enableFileManager;
-        if (typeof updates.enableDocker === "boolean")
-          simpleUpdates.enableDocker = updates.enableDocker;
         if (typeof updates.enableTmuxMonitor === "boolean")
           simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
         if (typeof updates.enableTerminalToolbar === "boolean")
@@ -751,7 +749,6 @@ export function registerHostBulkRoutes(
             enableTerminal: hostData.enableTerminal !== false,
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
-            enableDocker: hostData.enableDocker || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
             enableAiAssistant: hostData.enableAiAssistant || false,
@@ -771,9 +768,6 @@ export function registerHostBulkRoutes(
               ? JSON.stringify(hostData.quickActions)
               : null,
             ...importedStatusCheck(hostData as Record<string, unknown>),
-            dockerConfig: hostData.dockerConfig
-              ? JSON.stringify(hostData.dockerConfig)
-              : null,
             terminalConfig: hostData.terminalConfig
               ? JSON.stringify(hostData.terminalConfig)
               : null,
@@ -1016,7 +1010,6 @@ export function registerHostBulkRoutes(
             enableTerminal: true,
             enableTunnel: true,
             enableFileManager: true,
-            enableDocker: false,
             enableTmuxMonitor: false,
             enableTerminalToolbar: true,
             enableAiAssistant: false,
@@ -1034,7 +1027,6 @@ export function registerHostBulkRoutes(
             quickActions: null,
             statusCheckEnabled: true,
             statusCheckInterval: null,
-            dockerConfig: null,
             terminalConfig: null,
             forceKeyboardInteractive: "false",
             notes: null,

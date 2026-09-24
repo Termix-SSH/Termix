@@ -99,18 +99,21 @@
   "nav": {
     "docker": "Přístavní dělník"
   },
-  "hosts": {
-    "tabDocker": "Přístavní dělník",
-    "dockerIntegration": "Integrace Dockeru",
-    "enableDockerMonitor": "Povolit Docker",
-    "enableDockerMonitorDesc": "Monitorování a správa kontejnerů na tomto hostiteli pomocí Dockeru",
-    "containerRuntime": "Běh kontejneru",
-    "containerRuntimeDesc": "Vyberte rozhraní CLI používané pro správu kontejnerů na tomto hostiteli",
-    "containerRuntimeDocker": "Přístavní dělník",
-    "containerRuntimePodman": "Podman"
-  },
   "onboarding": {
     "feature_docker": "Přístavní dělník",
     "feature_docker_desc": "Zobrazujte kontejnery, čtěte protokoly a sledujte statistiky na jakémkoli hostiteli s Dockerem."
+  },
+  "settings": {
+    "host": {
+      "enable": {
+        "label": "Povolit Docker"
+      },
+      "containerRuntime": {
+        "label": "Běh kontejneru",
+        "description": "Vyberte rozhraní CLI používané pro správu kontejnerů na tomto hostiteli",
+        "docker": "Přístavní dělník",
+        "podman": "Podman"
+      }
+    }
   }
 }
