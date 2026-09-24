@@ -21,7 +21,6 @@ const mainAxios = vi.hoisted(() => ({
   initiatePasswordReset: vi.fn(),
   verifyPasswordResetCode: vi.fn(),
   completePasswordReset: vi.fn(),
-  getOIDCAuthorizeUrl: vi.fn(),
   isElectron: vi.fn(),
   getCurrentToken: vi.fn(),
   getOidcSilentLoginDefault: vi.fn(),
@@ -29,13 +28,7 @@ const mainAxios = vi.hoisted(() => ({
   requestTrustedProxyLogin: vi.fn(),
 }));
 
-const ssoProviderApi = vi.hoisted(() => ({
-  getSSOProviders: vi.fn(),
-  ldapLogin: vi.fn(),
-}));
-
 vi.mock("@/main-axios", () => mainAxios);
-vi.mock("@/api/sso-provider-api", () => ssoProviderApi);
 vi.mock("@/i18n/i18n", () => ({
   changeAppLanguage: vi.fn(async (code: string) => code),
   normalizeLanguageCode: vi.fn((code: string | null) => code || "en"),
@@ -102,7 +95,6 @@ beforeEach(() => {
     enabled: false,
     success: false,
   });
-  ssoProviderApi.getSSOProviders.mockResolvedValue([]);
 });
 
 afterEach(() => {

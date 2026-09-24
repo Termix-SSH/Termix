@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Accedi con {{name}}",
+  "loading": "Caricamento in corso...",
+  "requiredField": "Questo campo è obbligatorio",
+  "username": "Nome utente LDAP",
+  "password": "Password LDAP",
+  "signIn": "Accedi",
+  "providers": {
+    "docsLink": "Visualizza documentazione",
+    "name": "Nome visualizzato",
+    "enabled": "Abilitato",
+    "saving": "Salvataggio in corso...",
+    "saved": "Salvato",
+    "saveFailed": "Salvataggio non riuscito",
+    "deleted": "Eliminato",
+    "deleteFailed": "Eliminazione non riuscita",
+    "cancel": "Annulla"
+  },
+  "fields": {
+    "host": "Host LDAP",
+    "port": "Porta",
+    "useTls": "Usa TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Password di bind",
+    "userSearchBase": "Base di ricerca utenti",
+    "userSearchFilter": "Filtro di ricerca utenti",
+    "usernameAttr": "Attributo nome utente",
+    "displayNameAttr": "Attributo nome visualizzato",
+    "groupSearchBase": "Base di ricerca gruppi",
+    "adminGroup": "Gruppo amministratori",
+    "allowedUsers": "Utenti autorizzati"
+  }
+}

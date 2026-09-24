@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Log ind med {{name}}",
+  "loading": "Indlæser...",
+  "providers": {
+    "docsLink": "Se dokumenter",
+    "none": "Ingen SSO-udbydere er konfigureret.",
+    "add": "Tilføj udbyder",
+    "edit": "Rediger udbyder",
+    "delete": "Slet udbyder",
+    "deleteConfirm": "Vil du slette denne udbyder? Tilknyttede brugere vil ikke kunne logge ind.",
+    "name": "Vist navn",
+    "type": "Udbydertype",
+    "enabled": "Aktiveret",
+    "save": "Gem udbyder",
+    "saving": "Gemmer...",
+    "saved": "Gemt",
+    "saveFailed": "Kunne ikke gemme",
+    "deleted": "Slettet",
+    "deleteFailed": "Kunne ikke slette",
+    "cancel": "Ophæve"
+  },
+  "fields": {
+    "clientId": "Klient-ID",
+    "clientSecret": "Klienthemmelighed",
+    "issuerUrl": "Udsteders URL",
+    "authUrl": "Autorisations-URL",
+    "tokenUrl": "Token-URL",
+    "userIdentifier": "Brugeridentifikatorsti",
+    "displayName": "Sti til visningsnavn",
+    "scopes": "Omfang",
+    "userinfoUrl": "Tilsidesæt brugerinfo-URL",
+    "groupClaim": "Gruppekrav",
+    "groupClaimDesc": "Valgfrit. Kravsstien, der indeholder brugerens grupper. Standardindstillingen er grupper, roller og derefter gruppe. Brug dette til udbydere med et brugerdefineret krav (f.eks. Zitadel).",
+    "allowedUsers": "Tilladte brugere",
+    "allowedUsersDesc": "Én e-mail pr. linje. Lad feltet stå tomt for at tillade alle.",
+    "adminGroup": "Admingruppe",
+    "adminGroupDesc": "Brugere i denne gruppe har administratorrettigheder. Lad feltet stå tomt for at deaktivere gruppesynkronisering.",
+    "caCert": "Brugerdefineret CA-certifikat",
+    "caCertDesc": "Valgfrit. PEM-kodet CA-certifikat til OIDC-udbydere, der bruger en privat eller selvsigneret CA. Lad feltet stå tomt for at bruge systemets tillidslager."
+  }
+}

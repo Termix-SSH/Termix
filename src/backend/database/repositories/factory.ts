@@ -37,7 +37,6 @@ import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-re
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
 import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
-import { SsoProviderRepository } from "./sso-provider-repository.js";
 import { TermixIdentityCaRepository } from "./termix-identity-ca-repository.js";
 import { TermixIdentityRepository } from "./termix-identity-repository.js";
 import { TrustedDeviceRepository } from "./trusted-device-repository.js";
@@ -357,13 +356,6 @@ export function createCurrentSshCredentialUsageRepository(): SshCredentialUsageR
   return new SshCredentialUsageRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("ssh_credential_usage_repository_write"),
-  );
-}
-
-export function createCurrentSsoProviderRepository(): SsoProviderRepository {
-  return new SsoProviderRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("sso_provider_repository_write"),
   );
 }
 

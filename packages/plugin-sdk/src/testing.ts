@@ -25,6 +25,13 @@ import type {
   PluginWebSocketOptions,
 } from "./backend.js";
 
+/** The bits of an express Response the fake completeRedirectLogin uses. */
+interface FakeResponse {
+  status: (code: number) => FakeResponse;
+  json: (body: unknown) => unknown;
+  redirect: (url: string) => unknown;
+}
+
 /** A ctx.ws registration as the test doubles record it. */
 export interface FakeWsRoute {
   path: string;
@@ -37,6 +44,8 @@ export interface FakeWsRoute {
 }
 import type {
   PluginLoginMethod,
+  PluginLoginRequest,
+  PluginVerifiedIdentity,
   PluginSecondFactor,
   PluginSshAuthProvider,
   PluginSshConnectOptions,
@@ -123,6 +132,12 @@ export interface FakeContextOptions {
    * proxy login on, password login off), with this message and a 409.
    */
   refuseEnrollment?: string;
+  /** What ctx.http.baseUrl answers. Defaults to "https://termix.test". */
+  baseUrl?: string;
+  /** What ctx.auth.countLinkedUsers answers, by provider. Defaults to 0. */
+  linkedUsers?: Record<string, number>;
+  /** Failures before ctx.auth.loginRateLimit locks a key. Defaults to 5. */
+  loginAttemptLimit?: number;
 }
 
 export interface FakeAuthRegistrations {
@@ -136,6 +151,19 @@ export interface FakeAuthRegistrations {
     string,
     (userId: string, reference: string) => Promise<string>
   >;
+  /** Identities handed to ctx.auth.completeRedirectLogin, in order. */
+  completedLogins: Array<{
+    methodId: string;
+    identity: PluginVerifiedIdentity;
+  }>;
+  /** Every ctx.auth.revokeSessions call, in order. */
+  revokedSessions: Array<{
+    providerId?: number | null;
+    sub?: string | null;
+    sid?: string | null;
+  }>;
+  /** Failures recorded through ctx.auth.loginRateLimit, by "<ip>|<key>". */
+  loginFailures: Map<string, number>;
 }
 
 export interface FakePluginContext {
@@ -347,6 +375,9 @@ export function createFakeContext(
     secondFactors: [],
     enrollments: new Set(),
     secretResolvers: new Map(),
+    completedLogins: [],
+    revokedSessions: [],
+    loginFailures: new Map(),
   };
   const sshClient = options.sshClient ?? {};
   let actor = options.actor;
@@ -531,6 +562,7 @@ export function createFakeContext(
         httpRouters.push(routerOptions);
         return (options.router ? options.router() : undefined) as never;
       },
+      baseUrl: () => options.baseUrl ?? "https://termix.test",
     },
 
     ws: {
@@ -801,6 +833,56 @@ export function createFakeContext(
       removeEnrollment: async (userId, factorId) => {
         auth.enrollments.delete(`${userId}:${factorId}`);
       },
+      // Stands in for core's pipeline: answers with the identity as JSON, or
+      // redirects back with the error the way core does.
+      completeRedirectLogin: async (methodId, req, res) => {
+        const response = res as FakeResponse;
+        const method = auth.loginMethods.find(
+          (candidate) => candidate.id === methodId,
+        );
+        if (!method?.callback) {
+          throw new Error(`No registered redirect method "${methodId}"`);
+        }
+        try {
+          const identity = await method.callback(req as PluginLoginRequest);
+          auth.completedLogins.push({ methodId, identity });
+          response.status(200).json({ completed: methodId, identity });
+        } catch (error) {
+          const returnTo = (error as { returnTo?: string }).returnTo;
+          const message = (error as Error).message;
+          if (returnTo) {
+            const url = new URL(returnTo);
+            url.searchParams.set(
+              "error",
+              (error as { code?: string }).code ?? message,
+            );
+            response.redirect(url.toString());
+            return;
+          }
+          response
+            .status((error as { status?: number }).status ?? 500)
+            .json({ error: message });
+        }
+      },
+      revokeSessions: async (match) => {
+        if (!match.sub && !match.sid) return 0;
+        auth.revokedSessions.push(match);
+        return 1;
+      },
+      loginRateLimit: {
+        isLocked: async (ip, key) => {
+          const failures = auth.loginFailures.get(`${ip}|${key}`) ?? 0;
+          return failures >= (options.loginAttemptLimit ?? 5)
+            ? { locked: true, remainingTime: 60 }
+            : { locked: false };
+        },
+        recordFailure: async (ip, key) => {
+          const id = `${ip}|${key}`;
+          auth.loginFailures.set(id, (auth.loginFailures.get(id) ?? 0) + 1);
+        },
+      },
+      countLinkedUsers: async (provider) =>
+        options.linkedUsers?.[provider] ?? 0,
     },
 
     desktop: {
@@ -943,6 +1025,12 @@ export interface MockContextOptions {
   fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
   /** See FakeContextOptions. */
   refuseEnrollment?: string;
+  /** See FakeContextOptions. */
+  baseUrl?: string;
+  /** See FakeContextOptions. */
+  linkedUsers?: Record<string, number>;
+  /** See FakeContextOptions. */
+  loginAttemptLimit?: number;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -986,6 +1074,9 @@ export function createMockCtx(
     notificationChannels: options.notificationChannels,
     fetch: options.fetch,
     refuseEnrollment: options.refuseEnrollment,
+    baseUrl: options.baseUrl,
+    linkedUsers: options.linkedUsers,
+    loginAttemptLimit: options.loginAttemptLimit,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -1078,6 +1169,7 @@ export function createMockCtx(
         require("network:serve");
         return ctx.http.router(routerOptions);
       },
+      baseUrl: (req) => ctx.http.baseUrl(req),
     },
 
     ws: {
@@ -1232,6 +1324,28 @@ export function createMockCtx(
       removeEnrollment: async (userId, factorId) => {
         require("auth:provide");
         return ctx.auth.removeEnrollment(userId, factorId);
+      },
+      completeRedirectLogin: async (methodId, req, res) => {
+        require("auth:provide");
+        return ctx.auth.completeRedirectLogin(methodId, req, res);
+      },
+      revokeSessions: async (match) => {
+        require("auth:provide");
+        return ctx.auth.revokeSessions(match);
+      },
+      loginRateLimit: {
+        isLocked: async (ip, key) => {
+          require("auth:provide");
+          return ctx.auth.loginRateLimit.isLocked(ip, key);
+        },
+        recordFailure: async (ip, key) => {
+          require("auth:provide");
+          return ctx.auth.loginRateLimit.recordFailure(ip, key);
+        },
+      },
+      countLinkedUsers: async (provider) => {
+        require("auth:provide");
+        return ctx.auth.countLinkedUsers(provider);
       },
     },
 

@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Masuk dengan {{name}}",
+  "loading": "Memuat...",
+  "providers": {
+    "docsLink": "Lihat dokumen",
+    "none": "Tidak ada penyedia SSO yang dikonfigurasi.",
+    "add": "Tambahkan Penyedia",
+    "edit": "Edit Penyedia",
+    "delete": "Hapus Penyedia",
+    "deleteConfirm": "Hapus penyedia ini? Pengguna terkait tidak akan dapat masuk.",
+    "name": "Nama Tampilan",
+    "type": "Jenis Penyedia",
+    "enabled": "Diaktifkan",
+    "save": "Simpan Penyedia",
+    "saving": "Penghematan...",
+    "saved": "Tersimpan",
+    "saveFailed": "Gagal menyimpan",
+    "deleted": "Dihapus",
+    "deleteFailed": "Gagal menghapus",
+    "cancel": "Membatalkan"
+  },
+  "fields": {
+    "clientId": "ID Klien",
+    "clientSecret": "Rahasia Klien",
+    "issuerUrl": "URL Penerbit",
+    "authUrl": "URL Otorisasi",
+    "tokenUrl": "URL Token",
+    "userIdentifier": "Jalur Pengidentifikasi Pengguna",
+    "displayName": "Jalur Nama Tampilan",
+    "scopes": "Lingkup",
+    "userinfoUrl": "Ganti URL Informasi Pengguna",
+    "groupClaim": "Klaim Kelompok",
+    "groupClaimDesc": "Opsional. Jalur klaim yang berisi grup pengguna. Secara default berupa grup, peran, lalu grup. Gunakan ini untuk penyedia dengan klaim khusus (misalnya Zitadel).",
+    "allowedUsers": "Pengguna yang Diizinkan",
+    "allowedUsersDesc": "Satu email per baris. Biarkan kosong untuk mengizinkan semua email.",
+    "adminGroup": "Grup Admin",
+    "adminGroupDesc": "Pengguna dalam grup ini diberikan hak admin. Biarkan kosong untuk menonaktifkan sinkronisasi grup.",
+    "caCert": "Sertifikat CA Kustom",
+    "caCertDesc": "Opsional. Sertifikat CA berkode PEM untuk penyedia OIDC yang menggunakan CA pribadi atau yang ditandatangani sendiri. Biarkan kosong untuk menggunakan penyimpanan kepercayaan sistem."
+  }
+}

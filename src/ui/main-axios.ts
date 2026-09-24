@@ -60,7 +60,6 @@ import {
   type LogContext,
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
-import { asHttpError } from "@/lib/http-error";
 import { getDeviceId } from "@/lib/device-id";
 
 export type ServerStatus = {
@@ -107,10 +106,6 @@ export interface RemoteSyncUserInfo extends UserInfo {
 
 interface UserCount {
   count: number;
-}
-
-interface OIDCAuthorize {
-  auth_url: string;
 }
 
 type ElectronApi = {
@@ -1561,29 +1556,6 @@ export async function getPasswordLoginAllowed(): Promise<{
   }
 }
 
-export async function getOIDCConfig(): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/users/oidc-config");
-    return response.data;
-  } catch (error: unknown) {
-    const httpError = asHttpError(error);
-    console.warn(
-      "Failed to fetch OIDC config:",
-      httpError.response?.data?.error || httpError.message,
-    );
-    return null;
-  }
-}
-
-export async function getAdminOIDCConfig(): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/users/oidc-config/admin");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch admin OIDC config");
-  }
-}
-
 export async function getSetupRequired(): Promise<{ setup_required: boolean }> {
   try {
     const response = await authApi.get("/users/setup-required");
@@ -1720,22 +1692,6 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   }
 }
 
-export async function getOIDCAuthorizeUrl(
-  rememberMe = false,
-  desktopCallbackPort?: number,
-  providerId?: number,
-  appCallbackUrl?: string,
-): Promise<OIDCAuthorize> {
-  try {
-    const response = await authApi.get("/users/oidc/authorize", {
-      params: { rememberMe, desktopCallbackPort, providerId, appCallbackUrl },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "get OIDC authorize URL");
-  }
-}
-
 // ============================================================================
 export {
   getUserList,
@@ -1759,8 +1715,6 @@ export {
   updatePasswordLoginAllowed,
   getPasswordResetAllowed,
   updatePasswordResetAllowed,
-  updateOIDCConfig,
-  disableOIDCConfig,
   adminResetUserPassword,
   adminExportUserData,
   type ApiKey,

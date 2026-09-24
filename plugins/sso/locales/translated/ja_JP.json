@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "{{name}}でログイン",
+  "loading": "読み込み中...",
+  "providers": {
+    "docsLink": "ドキュメントを表示",
+    "none": "SSOプロバイダーが設定されていません。",
+    "add": "追加",
+    "edit": "編集",
+    "delete": "削除",
+    "deleteConfirm": "このプロバイダーを削除しますか？関連付けられているユーザーはログインできなくなります。",
+    "name": "表示名",
+    "type": "プロバイダータイプ",
+    "enabled": "有効",
+    "save": "保存",
+    "saving": "保存中...",
+    "saved": "保存しました",
+    "saveFailed": "保存に失敗しました",
+    "deleted": "削除しました",
+    "deleteFailed": "削除に失敗しました",
+    "cancel": "キャンセル"
+  },
+  "fields": {
+    "clientId": "クライアントID",
+    "clientSecret": "クライアントシークレット",
+    "issuerUrl": "発行者URL",
+    "authUrl": "認証URL",
+    "tokenUrl": "トークンURL",
+    "userIdentifier": "ユーザー識別子パス",
+    "displayName": "表示名パス",
+    "scopes": "スコープ",
+    "userinfoUrl": "Userinfo URLの上書き",
+    "groupClaim": "グループクレーム",
+    "groupClaimDesc": "オプション。ユーザーのグループを含むクレームパス。デフォルトは groups, roles, group の順。カスタムクレームを使うプロバイダー用 (例: Zitadel)。",
+    "allowedUsers": "許可ユーザー",
+    "allowedUsersDesc": "1行に1つのメールアドレス。空の場合は全員許可。",
+    "adminGroup": "管理者グループ",
+    "adminGroupDesc": "このグループのユーザーは管理者権限が付与されます。空にするとグループ同期は無効です。",
+    "caCert": "カスタムCA証明書",
+    "caCertDesc": "オプション。プライベートまたは自己署名CAを使用するOIDCプロバイダー用のPEMエンコードCA証明書。空の場合はシステムの信頼ストアを使用。"
+  }
+}

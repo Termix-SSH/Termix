@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "使用{{name}}登录",
+  "loading": "加载中...",
+  "requiredField": "此字段为必填项",
+  "username": "LDAP 用户名",
+  "password": "LDAP 密码",
+  "signIn": "登录",
+  "providers": {
+    "docsLink": "查看文档",
+    "name": "显示名称",
+    "enabled": "已启用",
+    "saving": "保存中...",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "deleted": "已删除",
+    "deleteFailed": "删除失败",
+    "cancel": "取消"
+  },
+  "fields": {
+    "host": "LDAP 主机",
+    "port": "端口",
+    "useTls": "使用 TLS (LDAPS)",
+    "bindDn": "绑定 DN",
+    "bindPassword": "绑定密码",
+    "userSearchBase": "用户搜索基准",
+    "userSearchFilter": "用户搜索过滤器",
+    "usernameAttr": "用户名属性",
+    "displayNameAttr": "显示名称属性",
+    "groupSearchBase": "群组搜索基准",
+    "adminGroup": "管理员群组",
+    "allowedUsers": "允许的用户"
+  }
+}

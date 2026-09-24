@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Увійти за допомогою {{name}}",
+  "loading": "Завантаження...",
+  "requiredField": "Це поле обов'язкове",
+  "username": "Ім'я користувача LDAP",
+  "password": "Пароль LDAP",
+  "signIn": "Увійти",
+  "providers": {
+    "docsLink": "Переглянути документи",
+    "name": "Відображуване ім'я",
+    "enabled": "Увімкнено",
+    "saving": "Збереження...",
+    "saved": "Збережено",
+    "saveFailed": "Не вдалося зберегти",
+    "deleted": "Видалено",
+    "deleteFailed": "Не вдалося видалити",
+    "cancel": "Скасувати"
+  },
+  "fields": {
+    "host": "Хост LDAP",
+    "port": "Порт",
+    "useTls": "Використовувати TLS (LDAPS)",
+    "bindDn": "Прив'язане DN",
+    "bindPassword": "Прив’язати пароль",
+    "userSearchBase": "База пошуку користувачів",
+    "userSearchFilter": "Фільтр пошуку користувачів",
+    "usernameAttr": "Атрибут імені користувача",
+    "displayNameAttr": "Атрибут відображуваного імені",
+    "groupSearchBase": "База групового пошуку",
+    "adminGroup": "Група адміністраторів",
+    "allowedUsers": "Дозволені користувачі"
+  }
+}

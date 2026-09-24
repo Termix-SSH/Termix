@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Logg inn med {{name}}",
+  "loading": "Laster inn...",
+  "providers": {
+    "docsLink": "Vis dokumenter",
+    "none": "Ingen SSO-leverandører er konfigurert.",
+    "add": "Legg til leverandør",
+    "edit": "Rediger leverandør",
+    "delete": "Slett leverandør",
+    "deleteConfirm": "Vil du slette denne leverandøren? Tilknyttede brukere vil ikke kunne logge inn.",
+    "name": "Visningsnavn",
+    "type": "Leverandørtype",
+    "enabled": "Aktivert",
+    "save": "Lagre leverandør",
+    "saving": "Lagrer...",
+    "saved": "Lagret",
+    "saveFailed": "Kunne ikke lagre",
+    "deleted": "Slettet",
+    "deleteFailed": "Kunne ikke slette",
+    "cancel": "Kansellere"
+  },
+  "fields": {
+    "clientId": "Klient-ID",
+    "clientSecret": "Klienthemmelighet",
+    "issuerUrl": "Utsteder-URL",
+    "authUrl": "Autorisasjons-URL",
+    "tokenUrl": "Token-URL",
+    "userIdentifier": "Brukeridentifikatorsti",
+    "displayName": "Sti til visningsnavn",
+    "scopes": "Omfang",
+    "userinfoUrl": "Overstyr brukerinfo-URL",
+    "groupClaim": "Gruppekrav",
+    "groupClaimDesc": "Valgfritt. Kravbanen som inneholder brukerens grupper. Standardinnstillingen er grupper, roller og deretter gruppe. Bruk dette for leverandører med et tilpasset krav (f.eks. Zitadel).",
+    "allowedUsers": "Tillatte brukere",
+    "allowedUsersDesc": "Én e-post per linje. La stå tomt for å tillate alle.",
+    "adminGroup": "Admingruppe",
+    "adminGroupDesc": "Brukere i denne gruppen har administratorrettigheter. La feltet stå tomt for å deaktivere gruppesynkronisering.",
+    "caCert": "Tilpasset CA-sertifikat",
+    "caCertDesc": "Valgfritt. PEM-kodet CA-sertifikat for OIDC-leverandører som bruker en privat eller selvsignert CA. La stå tomt for å bruke systemets klareringslager."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "{{name}} से लॉगिन करें",
+  "loading": "लोड हो रहा है...",
+  "requiredField": "यह फ़ील्ड आवश्यक है",
+  "username": "LDAP उपयोगकर्ता नाम",
+  "password": "LDAP पासवर्ड",
+  "signIn": "साइन इन करें",
+  "providers": {
+    "docsLink": "दस्तावेज़ देखें",
+    "name": "प्रदर्शन नाम",
+    "enabled": "सक्षम",
+    "saving": "सहेजा जा रहा है...",
+    "saved": "सहेजा गया",
+    "saveFailed": "सहेजने में विफल",
+    "deleted": "हटाया गया",
+    "deleteFailed": "हटाने में विफल",
+    "cancel": "रद्द करें"
+  },
+  "fields": {
+    "host": "LDAP होस्ट",
+    "port": "पोर्ट",
+    "useTls": "TLS (LDAPS) का उपयोग करें",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind पासवर्ड",
+    "userSearchBase": "उपयोगकर्ता खोज आधार",
+    "userSearchFilter": "उपयोगकर्ता खोज फ़िल्टर",
+    "usernameAttr": "उपयोगकर्ता नाम विशेषता",
+    "displayNameAttr": "प्रदर्शन नाम विशेषता",
+    "groupSearchBase": "समूह खोज आधार",
+    "adminGroup": "एडमिन समूह",
+    "allowedUsers": "अनुमत उपयोगकर्ता"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Teken aan met {{name}}",
+  "loading": "Laai tans...",
+  "requiredField": "Hierdie veld is verpligtend",
+  "username": "LDAP-gebruikersnaam",
+  "password": "LDAP-wagwoord",
+  "signIn": "Aanmeld",
+  "providers": {
+    "docsLink": "Bekyk dokumente",
+    "name": "Vertoonnaam",
+    "enabled": "Geaktiveer",
+    "saving": "Stoor...",
+    "saved": "Gestoor",
+    "saveFailed": "Kon nie stoor nie",
+    "deleted": "Verwyder",
+    "deleteFailed": "Kon nie verwyder nie",
+    "cancel": "Kanselleer"
+  },
+  "fields": {
+    "host": "LDAP-gasheer",
+    "port": "Hawe",
+    "useTls": "Gebruik TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind Wagwoord",
+    "userSearchBase": "Gebruikersoekbasis",
+    "userSearchFilter": "Gebruikersoekfilter",
+    "usernameAttr": "Gebruikersnaam-kenmerk",
+    "displayNameAttr": "Vertoonnaam-kenmerk",
+    "groupSearchBase": "Groepsoekbasis",
+    "adminGroup": "Admingroep",
+    "allowedUsers": "Toegelate Gebruikers"
+  }
+}

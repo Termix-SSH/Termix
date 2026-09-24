@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Logg inn med {{name}}",
+  "loading": "Laster inn...",
+  "requiredField": "Dette feltet er obligatorisk",
+  "username": "LDAP-brukernavn",
+  "password": "LDAP-passord",
+  "signIn": "Logg inn",
+  "providers": {
+    "docsLink": "Vis dokumenter",
+    "name": "Visningsnavn",
+    "enabled": "Aktivert",
+    "saving": "Lagrer...",
+    "saved": "Lagret",
+    "saveFailed": "Kunne ikke lagre",
+    "deleted": "Slettet",
+    "deleteFailed": "Kunne ikke slette",
+    "cancel": "Kansellere"
+  },
+  "fields": {
+    "host": "LDAP-vert",
+    "port": "Havn",
+    "useTls": "Bruk TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind passord",
+    "userSearchBase": "Brukersøkbase",
+    "userSearchFilter": "Brukersøkfilter",
+    "usernameAttr": "Brukernavnattributt",
+    "displayNameAttr": "Visningsnavnattributt",
+    "groupSearchBase": "Gruppesøkbase",
+    "adminGroup": "Admingruppe",
+    "allowedUsers": "Tillatte brukere"
+  }
+}

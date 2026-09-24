@@ -1,0 +1,59 @@
+{
+  "loginWithSso": "Sign in with SSO",
+  "loginWithProvider": "Login with {{name}}",
+  "loading": "Loading...",
+  "permissions": {
+    "manage": {
+      "title": "Manage SSO providers",
+      "description": "Add, change and remove the SSO providers people can sign in with."
+    }
+  },
+  "providers": {
+    "docsLink": "View docs",
+    "none": "No SSO providers configured.",
+    "add": "Add Provider",
+    "edit": "Edit Provider",
+    "delete": "Delete Provider",
+    "deleteConfirm": "Delete this provider? Associated users will be unable to login.",
+    "name": "Display Name",
+    "namePlaceholder": "My SSO provider",
+    "nameRequired": "A display name is required",
+    "type": "Provider Type",
+    "enabled": "Enabled",
+    "save": "Save Provider",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "saveFailed": "Failed to save",
+    "deleted": "Deleted",
+    "deleteFailed": "Failed to delete",
+    "loadFailed": "Failed to load SSO providers",
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copied": "Copied",
+    "redirectUri": "Redirect URI",
+    "redirectUriDesc": "Register this URL as the redirect or callback URL in your identity provider.",
+    "legacyCallback": "Keep the old redirect URI",
+    "legacyCallbackDesc": "This provider was set up before Termix 2.9 and still uses the old redirect URI, which keeps working. To move to the new one, add {{uri}} in your identity provider first, then turn this off.",
+    "authorizationUrl": "Authorization URL: {{url}}"
+  },
+  "fields": {
+    "clientId": "Client ID",
+    "clientSecret": "Client Secret",
+    "secretKeep": "A secret is saved. Leave this empty to keep it.",
+    "issuerUrl": "Issuer URL",
+    "authUrl": "Authorization URL",
+    "tokenUrl": "Token URL",
+    "userIdentifier": "User Identifier Path",
+    "displayName": "Display Name Path",
+    "scopes": "Scopes",
+    "userinfoUrl": "Override Userinfo URL",
+    "groupClaim": "Group Claim",
+    "groupClaimDesc": "Optional. The claim path that contains the user's groups. Defaults to groups, roles, then group. Use this for providers with a custom claim (e.g. Zitadel).",
+    "allowedUsers": "Allowed Users",
+    "allowedUsersDesc": "One email per line. Leave empty to allow all.",
+    "adminGroup": "Admin Group",
+    "adminGroupDesc": "Users in this group are granted admin. Leave empty to disable group sync.",
+    "caCert": "Custom CA Certificate",
+    "caCertDesc": "Optional. PEM-encoded CA certificate for OIDC providers using a private or self-signed CA. Leave empty to use the system trust store."
+  }
+}

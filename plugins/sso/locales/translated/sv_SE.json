@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Logga in med {{name}}",
+  "loading": "Belastning...",
+  "providers": {
+    "docsLink": "Visa dokument",
+    "none": "Inga SSO-leverantörer har konfigurerats.",
+    "add": "Lägg till leverantör",
+    "edit": "Redigera leverantör",
+    "delete": "Ta bort leverantör",
+    "deleteConfirm": "Vill du ta bort den här leverantören? Associerade användare kommer inte att kunna logga in.",
+    "name": "Visningsnamn",
+    "type": "Leverantörstyp",
+    "enabled": "Aktiverad",
+    "save": "Spara leverantör",
+    "saving": "Sparande...",
+    "saved": "Sparad",
+    "saveFailed": "Misslyckades med att spara",
+    "deleted": "Borttagen",
+    "deleteFailed": "Misslyckades med att radera",
+    "cancel": "Avboka"
+  },
+  "fields": {
+    "clientId": "Klient-ID",
+    "clientSecret": "Klienthemlighet",
+    "issuerUrl": "Utgivarens URL",
+    "authUrl": "Auktoriserings-URL",
+    "tokenUrl": "Token-URL",
+    "userIdentifier": "Användaridentifierarens sökväg",
+    "displayName": "Sökväg för visningsnamn",
+    "scopes": "Omfattningar",
+    "userinfoUrl": "Åsidosätt användarinformations-URL",
+    "groupClaim": "Gruppanspråk",
+    "groupClaimDesc": "Valfritt. Anspråkssökvägen som innehåller användarens grupper. Standardinställningen är grupper, roller och sedan grupp. Använd detta för leverantörer med ett anpassat anspråk (t.ex. Zitadel).",
+    "allowedUsers": "Tillåtna användare",
+    "allowedUsersDesc": "Ett e-postmeddelande per rad. Lämna tomt för att tillåta alla.",
+    "adminGroup": "Administratörsgrupp",
+    "adminGroupDesc": "Användare i den här gruppen har administratörsrättigheter. Lämna tomt för att inaktivera gruppsynkronisering.",
+    "caCert": "Anpassat CA-certifikat",
+    "caCertDesc": "Valfritt. PEM-kodat CA-certifikat för OIDC-leverantörer som använder en privat eller självsignerad CA. Lämna tomt för att använda systemets förtroendearkiv."
+  }
+}

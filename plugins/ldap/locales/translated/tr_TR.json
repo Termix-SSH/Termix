@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "{{name}} ile giriş yap",
+  "loading": "Yükleniyor...",
+  "requiredField": "Bu alan zorunludur",
+  "username": "LDAP Kullanıcı Adı",
+  "password": "LDAP Parolası",
+  "signIn": "Oturum Aç",
+  "providers": {
+    "docsLink": "Belgeleri görüntüle",
+    "name": "Görünen Ad",
+    "enabled": "Etkin",
+    "saving": "Kaydediliyor...",
+    "saved": "Kaydedildi",
+    "saveFailed": "Kaydedilemedi",
+    "deleted": "Silindi",
+    "deleteFailed": "Silinemedi",
+    "cancel": "İptal"
+  },
+  "fields": {
+    "host": "LDAP Sunucusu",
+    "port": "Port",
+    "useTls": "TLS Kullan (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind Parolası",
+    "userSearchBase": "Kullanıcı Arama Tabanı",
+    "userSearchFilter": "Kullanıcı Arama Süzgeci",
+    "usernameAttr": "Kullanıcı Adı Özniteliği",
+    "displayNameAttr": "Görünen Ad Özniteliği",
+    "groupSearchBase": "Grup Arama Tabanı",
+    "adminGroup": "Yönetici Grubu",
+    "allowedUsers": "İzin Verilen Kullanıcılar"
+  }
+}

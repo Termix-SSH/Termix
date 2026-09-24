@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Bejelentkezés {{name}} használatával",
+  "loading": "Terhelés...",
+  "providers": {
+    "docsLink": "Dokumentumok megtekintése",
+    "none": "Nincsenek konfigurálva SSO-szolgáltatók.",
+    "add": "Szolgáltató hozzáadása",
+    "edit": "Szolgáltató szerkesztése",
+    "delete": "Szolgáltató törlése",
+    "deleteConfirm": "Törli ezt a szolgáltatót? A társított felhasználók nem fognak tudni bejelentkezni.",
+    "name": "Megjelenített név",
+    "type": "Szolgáltató típusa",
+    "enabled": "Engedélyezve",
+    "save": "Szolgáltató mentése",
+    "saving": "Megtakarítás...",
+    "saved": "Mentett",
+    "saveFailed": "Nem sikerült menteni",
+    "deleted": "Törölt",
+    "deleteFailed": "Nem sikerült törölni",
+    "cancel": "Mégsem"
+  },
+  "fields": {
+    "clientId": "Ügyfél-azonosító",
+    "clientSecret": "Ügyféltitkos kód",
+    "issuerUrl": "Kibocsátó URL-címe",
+    "authUrl": "Engedélyezési URL",
+    "tokenUrl": "Token URL",
+    "userIdentifier": "Felhasználói azonosító útvonala",
+    "displayName": "Megjelenített név útvonala",
+    "scopes": "Hatókör",
+    "userinfoUrl": "Felhasználói adatok URL-címének felülbírálása",
+    "groupClaim": "Csoportos követelés",
+    "groupClaimDesc": "Opcionális. A felhasználó csoportjait tartalmazó igénylési útvonal. Alapértelmezés szerint csoportok, szerepkörök, majd csoport. Ezt egyéni igényléssel rendelkező szolgáltatóknál használja (pl. Zitadel).",
+    "allowedUsers": "Engedélyezett felhasználók",
+    "allowedUsersDesc": "Egy e-mail cím soronként. Hagyja üresen, ha az összeset engedélyezi.",
+    "adminGroup": "Adminisztrátori csoport",
+    "adminGroupDesc": "A csoport felhasználói adminisztrátori jogosultsággal rendelkeznek. Hagyja üresen a csoport szinkronizálásának letiltásához.",
+    "caCert": "Egyéni CA tanúsítvány",
+    "caCertDesc": "Opcionális. PEM-kódolású CA-tanúsítvány OIDC-szolgáltatók számára, privát vagy önaláírt CA-t használva. Hagyja üresen a rendszer megbízható tárolójának használatához."
+  }
+}

@@ -330,24 +330,4 @@ export async function updatePasswordResetAllowed(
   }
 }
 
-export async function updateOIDCConfig(
-  config: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/users/oidc-config", config);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "update OIDC config");
-  }
-}
-
-export async function disableOIDCConfig(): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.delete("/users/oidc-config");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "disable OIDC config");
-  }
-}
-
 // ============================================================================

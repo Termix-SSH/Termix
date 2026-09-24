@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Masuk dengan {{name}}",
+  "loading": "Memuat...",
+  "requiredField": "Kolom ini wajib diisi.",
+  "username": "Nama Pengguna LDAP",
+  "password": "Kata Sandi LDAP",
+  "signIn": "Masuk",
+  "providers": {
+    "docsLink": "Lihat dokumen",
+    "name": "Nama Tampilan",
+    "enabled": "Diaktifkan",
+    "saving": "Penghematan...",
+    "saved": "Tersimpan",
+    "saveFailed": "Gagal menyimpan",
+    "deleted": "Dihapus",
+    "deleteFailed": "Gagal menghapus",
+    "cancel": "Membatalkan"
+  },
+  "fields": {
+    "host": "Host LDAP",
+    "port": "Pelabuhan",
+    "useTls": "Gunakan TLS (LDAPS)",
+    "bindDn": "Ikat DN",
+    "bindPassword": "Kata Sandi Terikat",
+    "userSearchBase": "Basis Pencarian Pengguna",
+    "userSearchFilter": "Filter Pencarian Pengguna",
+    "usernameAttr": "Atribut Nama Pengguna",
+    "displayNameAttr": "Atribut Nama Tampilan",
+    "groupSearchBase": "Basis Pencarian Grup",
+    "adminGroup": "Grup Admin",
+    "allowedUsers": "Pengguna yang Diizinkan"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Se connecter avec {{name}}",
+  "loading": "Chargement...",
+  "requiredField": "Ce champ est obligatoire",
+  "username": "Nom d'utilisateur LDAP",
+  "password": "Mot de passe LDAP",
+  "signIn": "Se connecter",
+  "providers": {
+    "docsLink": "Documentation",
+    "name": "Nom d’affichage",
+    "enabled": "Activé",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré",
+    "saveFailed": "Échec de l'enregistrement",
+    "deleted": "Supprimé",
+    "deleteFailed": "Échec de la suppression",
+    "cancel": "Annuler"
+  },
+  "fields": {
+    "host": "Hôte LDAP",
+    "port": "Port",
+    "useTls": "Utiliser TLS (LDAPS)",
+    "bindDn": "DN de liaison",
+    "bindPassword": "Mot de passe de liaison",
+    "userSearchBase": "Base de recherche utilisateur",
+    "userSearchFilter": "Filtre de recherche utilisateur",
+    "usernameAttr": "Attribut de nom d’utilisateur",
+    "displayNameAttr": "Attribut de nom d’affichage",
+    "groupSearchBase": "Base de recherche de groupe",
+    "adminGroup": "Groupe admin",
+    "allowedUsers": "Utilisateurs autorisés"
+  }
+}

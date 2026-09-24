@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Войти через {{name}}",
+  "loading": "Загрузка...",
+  "requiredField": "Обязательное поле",
+  "username": "Имя пользователя LDAP",
+  "password": "Пароль LDAP",
+  "signIn": "Войти",
+  "providers": {
+    "docsLink": "Документация",
+    "name": "Отображаемое имя",
+    "enabled": "Включено",
+    "saving": "Сохранение...",
+    "saved": "Сохранено",
+    "saveFailed": "Не удалось сохранить",
+    "deleted": "Удалено",
+    "deleteFailed": "Не удалось удалить",
+    "cancel": "Отмена"
+  },
+  "fields": {
+    "host": "LDAP-сервер",
+    "port": "Порт",
+    "useTls": "Использовать TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Пароль привязки",
+    "userSearchBase": "База поиска пользователей",
+    "userSearchFilter": "Фильтр поиска пользователей",
+    "usernameAttr": "Атрибут имени пользователя",
+    "displayNameAttr": "Атрибут отображаемого имени",
+    "groupSearchBase": "База поиска групп",
+    "adminGroup": "Группа администраторов",
+    "allowedUsers": "Разрешенные пользователи"
+  }
+}

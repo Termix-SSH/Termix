@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "使用 {{name}} 登入",
+  "loading": "載入中...",
+  "requiredField": "此欄位為必填",
+  "username": "LDAP 使用者名稱",
+  "password": "LDAP 密碼",
+  "signIn": "登入",
+  "providers": {
+    "docsLink": "檢視文件",
+    "name": "顯示名稱",
+    "enabled": "已啟用",
+    "saving": "儲存中...",
+    "saved": "已儲存",
+    "saveFailed": "儲存失敗",
+    "deleted": "已刪除",
+    "deleteFailed": "刪除失敗",
+    "cancel": "取消"
+  },
+  "fields": {
+    "host": "LDAP 主機",
+    "port": "連接埠",
+    "useTls": "使用 TLS (LDAPS)",
+    "bindDn": "綁定 DN",
+    "bindPassword": "綁定密碼",
+    "userSearchBase": "使用者搜尋基底",
+    "userSearchFilter": "使用者搜尋篩選器",
+    "usernameAttr": "使用者名稱屬性",
+    "displayNameAttr": "顯示名稱屬性",
+    "groupSearchBase": "群組搜尋基底",
+    "adminGroup": "管理員群組",
+    "allowedUsers": "允許的使用者"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Teken aan met {{name}}",
+  "loading": "Laai tans...",
+  "providers": {
+    "docsLink": "Bekyk dokumente",
+    "none": "Geen SSO-verskaffers gekonfigureer nie.",
+    "add": "Voeg Verskaffer by",
+    "edit": "Wysig Verskaffer",
+    "delete": "Vee Verskaffer uit",
+    "deleteConfirm": "Vee hierdie verskaffer uit? Geassosieerde gebruikers sal nie kan aanmeld nie.",
+    "name": "Vertoonnaam",
+    "type": "Verskaffertipe",
+    "enabled": "Geaktiveer",
+    "save": "Stoor Verskaffer",
+    "saving": "Stoor...",
+    "saved": "Gestoor",
+    "saveFailed": "Kon nie stoor nie",
+    "deleted": "Verwyder",
+    "deleteFailed": "Kon nie verwyder nie",
+    "cancel": "Kanselleer"
+  },
+  "fields": {
+    "clientId": "Kliënt-ID",
+    "clientSecret": "Kliëntgeheim",
+    "issuerUrl": "Uitreiker-URL",
+    "authUrl": "Magtigings-URL",
+    "tokenUrl": "Teken-URL",
+    "userIdentifier": "Gebruikersidentifiseerderpad",
+    "displayName": "Vertoonnaampad",
+    "scopes": "Omvangsgebiede",
+    "userinfoUrl": "Oorskryf Gebruikersinligting URL",
+    "groupClaim": "Groep Eis",
+    "groupClaimDesc": "Opsioneel. Die eispad wat die gebruiker se groepe bevat. Standaard is groepe, rolle, dan groep. Gebruik dit vir verskaffers met 'n persoonlike eis (bv. Zitadel).",
+    "allowedUsers": "Toegelate Gebruikers",
+    "allowedUsersDesc": "Een e-pos per reël. Los leeg om alles toe te laat.",
+    "adminGroup": "Admingroep",
+    "adminGroupDesc": "Gebruikers in hierdie groep kry administrasie. Los leeg om groepsinchronisasie te deaktiveer.",
+    "caCert": "Pasgemaakte CA-sertifikaat",
+    "caCertDesc": "Opsioneel. PEM-geënkodeerde CA-sertifikaat vir OIDC-verskaffers wat 'n private of selfgetekende CA gebruik. Los leeg om die stelselvertrouensberging te gebruik."
+  }
+}

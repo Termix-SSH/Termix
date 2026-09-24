@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "{{name}}でログイン",
+  "loading": "読み込み中...",
+  "requiredField": "この項目は必須です",
+  "username": "LDAPユーザー名",
+  "password": "LDAPパスワード",
+  "signIn": "サインイン",
+  "providers": {
+    "docsLink": "ドキュメントを表示",
+    "name": "表示名",
+    "enabled": "有効",
+    "saving": "保存中...",
+    "saved": "保存しました",
+    "saveFailed": "保存に失敗しました",
+    "deleted": "削除しました",
+    "deleteFailed": "削除に失敗しました",
+    "cancel": "キャンセル"
+  },
+  "fields": {
+    "host": "LDAPホスト",
+    "port": "ポート",
+    "useTls": "TLS (LDAPS) を使用",
+    "bindDn": "バインドDN",
+    "bindPassword": "バインドパスワード",
+    "userSearchBase": "ユーザー検索ベース",
+    "userSearchFilter": "ユーザー検索フィルター",
+    "usernameAttr": "ユーザー名属性",
+    "displayNameAttr": "表示名属性",
+    "groupSearchBase": "グループ検索ベース",
+    "adminGroup": "管理者グループ",
+    "allowedUsers": "許可ユーザー"
+  }
+}

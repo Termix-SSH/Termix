@@ -116,9 +116,9 @@ beforeEach(() => {
     },
     {
       id: "oidc",
-      pluginId: "core",
+      pluginId: "sso",
       kind: "redirect",
-      labelKey: "auth.loginWithSso",
+      labelKey: "loginWithSso",
       instances: [{ id: "3", label: "Keycloak" }],
     },
     {
@@ -149,10 +149,10 @@ async function openExternalTab() {
 }
 
 describe("login methods on the login screen", () => {
-  it("lists every enabled method, core and plugin", async () => {
+  it("lists every enabled method", async () => {
     await openExternalTab();
+    // A redirect method whose plugin UI is not loaded gets a plain button.
     expect(screen.getByText("auth.loginWithProvider:Keycloak")).toBeTruthy();
-    // A plugin redirect method with no UI of its own gets a plain button.
     expect(screen.getByText("auth.loginWithProvider:Corp")).toBeTruthy();
   });
 

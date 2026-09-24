@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Kirjaudu sisään tunnuksella {{name}}",
+  "loading": "Ladataan...",
+  "providers": {
+    "docsLink": "Näytä dokumentit",
+    "none": "SSO-palveluntarjoajia ei ole määritetty.",
+    "add": "Lisää palveluntarjoaja",
+    "edit": "Muokkaa palveluntarjoajaa",
+    "delete": "Poista palveluntarjoaja",
+    "deleteConfirm": "Poistetaanko tämä palveluntarjoaja? Liitännäiset käyttäjät eivät voi kirjautua sisään.",
+    "name": "Näyttönimi",
+    "type": "Palveluntarjoajan tyyppi",
+    "enabled": "Käytössä",
+    "save": "Tallenna palveluntarjoaja",
+    "saving": "Tallennetaan...",
+    "saved": "Tallennettu",
+    "saveFailed": "Tallennus epäonnistui",
+    "deleted": "Poistettu",
+    "deleteFailed": "Poistaminen epäonnistui",
+    "cancel": "Peruuttaa"
+  },
+  "fields": {
+    "clientId": "Asiakastunnus",
+    "clientSecret": "Asiakkaan salaisuus",
+    "issuerUrl": "Liikkeeseenlaskijan URL-osoite",
+    "authUrl": "Valtuutus-URL-osoite",
+    "tokenUrl": "Tunnuksen URL-osoite",
+    "userIdentifier": "Käyttäjätunnisteen polku",
+    "displayName": "Näyttönimen polku",
+    "scopes": "Laajuusalueet",
+    "userinfoUrl": "Käyttäjätietojen URL-osoitteen ohitus",
+    "groupClaim": "Ryhmävaatimus",
+    "groupClaimDesc": "Valinnainen. Vaatimuspolku, joka sisältää käyttäjän ryhmät. Oletusarvo on ryhmät, roolit ja lopuksi ryhmä. Käytä tätä palveluntarjoajille, joilla on mukautettu vaatimus (esim. Zitadel).",
+    "allowedUsers": "Sallitut käyttäjät",
+    "allowedUsersDesc": "Yksi sähköpostiosoite riviä kohden. Jätä tyhjäksi salliaksesi kaikki.",
+    "adminGroup": "Hallintaryhmä",
+    "adminGroupDesc": "Tämän ryhmän käyttäjille on myönnetty järjestelmänvalvojan oikeudet. Jätä tyhjäksi, jos haluat poistaa ryhmän synkronoinnin käytöstä.",
+    "caCert": "Mukautettu CA-varmenne",
+    "caCertDesc": "Valinnainen. PEM-koodattu CA-varmenne OIDC-palveluntarjoajille, jotka käyttävät yksityistä tai itse allekirjoitettua CA:ta. Jätä tyhjäksi, jos haluat käyttää järjestelmän luotettavuussäilöä."
+  }
+}

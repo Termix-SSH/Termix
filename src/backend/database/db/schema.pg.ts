@@ -50,21 +50,6 @@ export const settings = pgTable("settings", {
   value: text("value").notNull(),
 });
 
-export const ssoProviders = pgTable("sso_providers", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  type: text("type").notNull(),
-  enabled: boolean("enabled").notNull().default(true),
-  displayOrder: integer("display_order").notNull().default(0),
-  config: text("config").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const sessions = pgTable(
   "sessions",
   {

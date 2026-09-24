@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Zaloguj się za pomocą {{name}}",
+  "loading": "Ładowanie...",
+  "providers": {
+    "docsLink": "Zobacz dokumentację",
+    "none": "Nie skonfigurowano dostawców SSO.",
+    "add": "Dodaj dostawcę",
+    "edit": "Edytuj dostawcę",
+    "delete": "Usuń dostawcę",
+    "deleteConfirm": "Usunąć tego dostawcę? Powiązani użytkownicy nie będą mogli się zalogować.",
+    "name": "Nazwa wyświetlana",
+    "type": "Typ dostawcy",
+    "enabled": "Włączone",
+    "save": "Zapisz dostawcę",
+    "saving": "Zapisywanie...",
+    "saved": "Zapisano",
+    "saveFailed": "Nie udało się zapisać",
+    "deleted": "Usunięto",
+    "deleteFailed": "Nie udało się usunąć",
+    "cancel": "Anuluj"
+  },
+  "fields": {
+    "clientId": "Identyfikator klienta",
+    "clientSecret": "Sekret klienta",
+    "issuerUrl": "Adres URL wystawcy",
+    "authUrl": "Adres URL autoryzacji",
+    "tokenUrl": "Adres URL tokena",
+    "userIdentifier": "Ścieżka identyfikatora użytkownika",
+    "displayName": "Ścieżka nazwy wyświetlanej",
+    "scopes": "Zakresy",
+    "userinfoUrl": "Zastąp adres URL informacji o użytkowniku",
+    "groupClaim": "Claim grupy",
+    "groupClaimDesc": "Opcjonalnie. Ścieżka claimu zawierającego grupy użytkownika. Domyślnie: groups, roles, potem group. Użyj tego dla dostawców z niestandardowym claimem (np. Zitadel).",
+    "allowedUsers": "Dozwoleni użytkownicy",
+    "allowedUsersDesc": "Jeden adres e-mail w każdym wierszu. Pozostaw puste, aby zezwolić na wszystkie.",
+    "adminGroup": "Grupa administratorów",
+    "adminGroupDesc": "Użytkownicy w tej grupie otrzymują uprawnienia administratora. Pozostaw puste, aby wyłączyć synchronizację grupy.",
+    "caCert": "Niestandardowy certyfikat CA",
+    "caCertDesc": "Opcjonalnie. Certyfikat CA w formacie PEM dla dostawców OIDC korzystających z prywatnego lub samopodpisanego CA. Pozostaw puste, aby użyć systemowego magazynu zaufanych certyfikatów."
+  }
+}

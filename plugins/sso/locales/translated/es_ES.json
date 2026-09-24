@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Iniciar sesión con {{name}}",
+  "loading": "Cargando...",
+  "providers": {
+    "docsLink": "Ver documentación",
+    "none": "No hay proveedores SSO configurados.",
+    "add": "Añadir proveedor",
+    "edit": "Editar proveedor",
+    "delete": "Eliminar proveedor",
+    "deleteConfirm": "¿Eliminar este proveedor? Los usuarios asociados no podrán iniciar sesión.",
+    "name": "Nombre visible",
+    "type": "Tipo de proveedor",
+    "enabled": "Activado",
+    "save": "Guardar proveedor",
+    "saving": "Guardando...",
+    "saved": "Guardado",
+    "saveFailed": "Error al guardar",
+    "deleted": "Eliminado",
+    "deleteFailed": "Error al eliminar",
+    "cancel": "Cancelar"
+  },
+  "fields": {
+    "clientId": "ID de cliente",
+    "clientSecret": "Secreto de cliente",
+    "issuerUrl": "URL del emisor",
+    "authUrl": "URL de autorización",
+    "tokenUrl": "URL del token",
+    "userIdentifier": "Ruta del identificador de usuario",
+    "displayName": "Ruta del nombre para mostrar",
+    "scopes": "Ámbitos",
+    "userinfoUrl": "Sobrescribir URL de Userinfo",
+    "groupClaim": "Claim de grupo",
+    "groupClaimDesc": "Opcional. La ruta del claim que contiene los grupos del usuario. Por defecto, se usan 'groups', 'roles' y luego 'group'. Úselo para proveedores con un claim personalizado (p. ej. Zitadel).",
+    "allowedUsers": "Usuarios permitidos",
+    "allowedUsersDesc": "Un correo electrónico por línea. Déjelo vacío para permitir todos.",
+    "adminGroup": "Grupo de administradores",
+    "adminGroupDesc": "Los usuarios de este grupo reciben permisos de administrador. Déjelo vacío para desactivar la sincronización de grupos.",
+    "caCert": "Certificado CA personalizado",
+    "caCertDesc": "Opcional. Certificado CA codificado en PEM para proveedores OIDC que utilicen una CA privada o autofirmada. Déjelo vacío para usar el almacén de confianza del sistema."
+  }
+}

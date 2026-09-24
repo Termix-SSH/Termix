@@ -5,9 +5,7 @@ import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
-import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
-import { isOidcTokenCallback } from "../../utils/oidc-desktop-callback.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
   isLoopbackRequest,
@@ -17,12 +15,6 @@ import {
 } from "./desktop-auto-session.js";
 import { shouldShowDonationModal } from "./donation-modal-utils.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
-import {
-  getOIDCConfigFromEnv,
-  loadProviderConfig,
-  resolveProviderByIssuer,
-  validateLogoutToken,
-} from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
@@ -32,15 +24,13 @@ import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
-import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
-import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
-import { registerAuthRoutes } from "./auth-routes.js";
+import { listExternalLoginMethods, registerAuthRoutes } from "./auth-routes.js";
+import { registerAuthCompatRoutes } from "./auth-compat-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
   createCurrentRoleRepository,
-  createCurrentSsoProviderRepository,
   createCurrentUserAuthRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
@@ -54,18 +44,7 @@ import {
 
 import { getPasswordLoginStatus } from "../../auth/core-auth.js";
 import { verifyPasswordLogin } from "../../auth/builtin-login-methods.js";
-import {
-  redirectWithLoginError,
-  respondWithLogin,
-  respondWithRedirectLogin,
-  sendLoginError,
-} from "../../auth/login-pipeline.js";
-import {
-  handleOidcCallback,
-  RedirectLoginError,
-  startOidcLogin,
-} from "../../auth/legacy/oidc-login.js";
-import { LoginMethodError } from "../../auth/types.js";
+import { respondWithLogin, sendLoginError } from "../../auth/login-pipeline.js";
 import {
   isNativeAppRequest,
   syncSharedCredentialsForUserRoles,
@@ -299,365 +278,6 @@ router.post("/create", async (req, res) => {
 
 /**
  * @openapi
- * /users/oidc-config:
- *   post:
- *     summary: Configure OIDC provider
- *     description: Creates or updates the OIDC provider configuration.
- *     tags:
- *       - Users
- *     responses:
- *       200:
- *         description: OIDC configuration updated.
- *       403:
- *         description: Not authorized.
- *       500:
- *         description: Failed to update OIDC config.
- */
-router.post("/oidc-config", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  try {
-    const user = await requireCurrentAdmin(userId);
-    if (!user) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    const {
-      client_id,
-      client_secret,
-      issuer_url,
-      authorization_url,
-      token_url,
-      userinfo_url,
-      identifier_path,
-      name_path,
-      scopes,
-      allowed_users,
-      admin_group,
-      group_claim,
-    } = req.body;
-
-    const isDisableRequest =
-      (client_id === "" || client_id === null || client_id === undefined) &&
-      (client_secret === "" ||
-        client_secret === null ||
-        client_secret === undefined) &&
-      (issuer_url === "" || issuer_url === null || issuer_url === undefined) &&
-      (authorization_url === "" ||
-        authorization_url === null ||
-        authorization_url === undefined) &&
-      (token_url === "" || token_url === null || token_url === undefined);
-
-    const isEnableRequest =
-      isNonEmptyString(client_id) &&
-      isNonEmptyString(client_secret) &&
-      isNonEmptyString(issuer_url) &&
-      isNonEmptyString(authorization_url) &&
-      isNonEmptyString(token_url) &&
-      isNonEmptyString(identifier_path) &&
-      isNonEmptyString(name_path);
-
-    if (!isDisableRequest && !isEnableRequest) {
-      authLogger.warn(
-        "OIDC validation failed - neither disable nor enable request",
-        {
-          operation: "oidc_config_update",
-          userId,
-          isDisableRequest,
-          isEnableRequest,
-        },
-      );
-      return res
-        .status(400)
-        .json({ error: "All OIDC configuration fields are required" });
-    }
-
-    const settingsRepository = createCurrentSettingsRepository();
-
-    if (isDisableRequest) {
-      await settingsRepository.delete("oidc_config");
-      authLogger.info("OIDC configuration disabled", {
-        operation: "oidc_disable",
-        userId,
-      });
-      res.json({ message: "OIDC configuration disabled" });
-    } else {
-      const config = {
-        client_id,
-        client_secret,
-        issuer_url,
-        authorization_url,
-        token_url,
-        userinfo_url: userinfo_url || "",
-        identifier_path,
-        name_path,
-        scopes: scopes || "openid email profile",
-        allowed_users: allowed_users || "",
-        admin_group: admin_group || "",
-        group_claim: group_claim || "",
-      };
-
-      let encryptedConfig;
-      try {
-        const adminDataKey = DataCrypto.getUserDataKey(userId);
-        if (adminDataKey) {
-          const configWithId = { ...config, id: `oidc-config-${userId}` };
-          encryptedConfig = DataCrypto.encryptRecord(
-            "settings",
-            configWithId,
-            userId,
-            adminDataKey,
-          );
-        } else {
-          encryptedConfig = {
-            ...config,
-            client_secret: `encrypted:${Buffer.from(client_secret).toString("base64")}`,
-          };
-          authLogger.warn(
-            "OIDC configuration stored with basic encoding - admin should re-save with password",
-            {
-              operation: "oidc_config_basic_encoding",
-              userId,
-            },
-          );
-        }
-      } catch (encryptError) {
-        authLogger.error(
-          "Failed to encrypt OIDC configuration, storing with basic encoding",
-          encryptError,
-          {
-            operation: "oidc_config_encrypt_failed",
-            userId,
-          },
-        );
-        encryptedConfig = {
-          ...config,
-          client_secret: `encoded:${Buffer.from(client_secret).toString("base64")}`,
-        };
-      }
-
-      await settingsRepository.set(
-        "oidc_config",
-        JSON.stringify(encryptedConfig),
-      );
-      authLogger.info("OIDC configuration updated", {
-        operation: "oidc_update",
-        userId,
-        hasUserinfoUrl: !!userinfo_url,
-      });
-      res.json({ message: "OIDC configuration updated" });
-    }
-  } catch (err) {
-    authLogger.error("Failed to update OIDC config", err);
-    res.status(500).json({ error: "Failed to update OIDC config" });
-  }
-});
-
-/**
- * @openapi
- * /users/oidc-config:
- *   delete:
- *     summary: Disable OIDC configuration
- *     description: Disables the OIDC provider configuration.
- *     tags:
- *       - Users
- *     responses:
- *       200:
- *         description: OIDC configuration disabled.
- *       403:
- *         description: Not authorized.
- *       500:
- *         description: Failed to disable OIDC config.
- */
-router.delete("/oidc-config", authenticateJWT, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  try {
-    const user = await requireCurrentAdmin(userId);
-    if (!user) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    await createCurrentSettingsRepository().delete("oidc_config");
-    authLogger.success("OIDC configuration disabled", {
-      operation: "oidc_disable",
-      userId,
-    });
-    res.json({ message: "OIDC configuration disabled" });
-  } catch (err) {
-    authLogger.error("Failed to disable OIDC config", err);
-    res.status(500).json({ error: "Failed to disable OIDC config" });
-  }
-});
-
-/**
- * @openapi
- * /users/oidc-config:
- *   get:
- *     summary: Get OIDC configuration
- *     description: Returns the public OIDC configuration.
- *     tags:
- *       - Users
- *     responses:
- *       200:
- *         description: Public OIDC configuration.
- *       500:
- *         description: Failed to get OIDC config.
- */
-router.get("/oidc-config", async (_req, res) => {
-  try {
-    const providerResult = await loadProviderConfig(undefined);
-    if (!providerResult) {
-      return res.json(null);
-    }
-    const { config } = providerResult;
-    return res.json({
-      client_id: config.client_id,
-      issuer_url: config.issuer_url,
-      authorization_url: config.authorization_url,
-      scopes: config.scopes,
-    });
-  } catch (err) {
-    authLogger.error("Failed to get OIDC config", err);
-    res.status(500).json({ error: "Failed to get OIDC config" });
-  }
-});
-
-/**
- * @openapi
- * /users/oidc-config/admin:
- *   get:
- *     summary: Get OIDC configuration for admin
- *     description: Returns the full OIDC configuration for an admin.
- *     tags:
- *       - Users
- *     responses:
- *       200:
- *         description: Full OIDC configuration.
- *       500:
- *         description: Failed to get OIDC config for admin.
- */
-router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  try {
-    const value = await createCurrentSettingsRepository().get("oidc_config");
-    if (!value) {
-      const envConfig = getOIDCConfigFromEnv();
-      return res.json(envConfig);
-    }
-
-    let config = JSON.parse(value);
-
-    if (config.client_secret?.startsWith("encrypted:")) {
-      try {
-        const adminDataKey = DataCrypto.getUserDataKey(userId);
-        if (adminDataKey) {
-          config = DataCrypto.decryptRecord(
-            "settings",
-            config,
-            userId,
-            adminDataKey,
-          );
-        } else {
-          config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
-        }
-      } catch {
-        authLogger.warn("Failed to decrypt OIDC config for admin", {
-          operation: "oidc_config_decrypt_failed",
-          userId,
-        });
-        config.client_secret = "[ENCRYPTED - DECRYPTION FAILED]";
-      }
-    } else if (config.client_secret?.startsWith("encoded:")) {
-      try {
-        const decoded = Buffer.from(
-          config.client_secret.substring(8),
-          "base64",
-        ).toString("utf8");
-        config.client_secret = decoded;
-      } catch {
-        authLogger.warn("Failed to decode OIDC config for admin", {
-          operation: "oidc_config_decode_failed",
-          userId,
-        });
-        config.client_secret = "[ENCODING ERROR]";
-      }
-    }
-
-    res.json(config);
-  } catch (err) {
-    authLogger.error("Failed to get OIDC config for admin", err);
-    res.status(500).json({ error: "Failed to get OIDC config for admin" });
-  }
-});
-
-/**
- * @openapi
- * /users/oidc/authorize:
- *   get:
- *     summary: Get OIDC authorization URL
- *     description: Returns the OIDC authorization URL.
- *     tags:
- *       - Users
- *     parameters:
- *       - in: query
- *         name: rememberMe
- *         schema:
- *           type: boolean
- *         description: Whether to extend the session to 30 days instead of 2 hours.
- *     responses:
- *       200:
- *         description: OIDC authorization URL.
- *       404:
- *         description: OIDC not configured.
- *       500:
- *         description: Failed to generate authorization URL.
- */
-router.get("/oidc/authorize", async (req, res) => {
-  try {
-    res.json(await startOidcLogin(req));
-  } catch (err) {
-    if (err instanceof LoginMethodError) {
-      return res.status(err.status).json({ error: err.message });
-    }
-    authLogger.error("Failed to generate OIDC auth URL", err);
-    res.status(500).json({ error: "Failed to generate authorization URL" });
-  }
-});
-
-/**
- * @openapi
- * /users/oidc/callback:
- *   get:
- *     summary: OIDC callback
- *     description: Handles the OIDC callback, exchanges the code for a token, and creates or logs in the user.
- *     tags:
- *       - Users
- *     responses:
- *       302:
- *         description: Redirects to the frontend with a success or error message.
- *       400:
- *         description: Code and state are required.
- */
-router.get("/oidc/callback", async (req, res) => {
-  let identity;
-  try {
-    identity = await handleOidcCallback(req);
-  } catch (error) {
-    if (error instanceof RedirectLoginError) {
-      return redirectWithLoginError(res, error.returnTo, error);
-    }
-    return sendLoginError(res, error);
-  }
-  await respondWithRedirectLogin(
-    req,
-    res,
-    identity,
-    { methodId: "oidc", rememberMe: !!identity.rememberMe },
-    isOidcTokenCallback,
-  );
-});
-
-/**
- * @openapi
  * /users/proxy-login:
  *   post:
  *     summary: Trusted proxy login
@@ -728,17 +348,11 @@ router.post("/proxy-login", async (req, res) => {
   }
 
   try {
-    const [legacyOidc, enabledProviders, userRecord] = await Promise.all([
-      createCurrentSettingsRepository().get("oidc_config"),
-      createCurrentSsoProviderRepository().listEnabled(),
+    const [externalMethods, userRecord] = await Promise.all([
+      listExternalLoginMethods(),
       createCurrentUserRepository().findByUsername(username),
     ]);
-    const hasOidc =
-      Boolean(getOIDCConfigFromEnv() || legacyOidc) ||
-      enabledProviders.some((provider) =>
-        ["oidc", "github", "google"].includes(provider.type),
-      );
-    if (hasOidc) {
+    if (externalMethods.length > 0) {
       return res
         .status(409)
         .json({ error: "Proxy authentication cannot be used with OIDC" });
@@ -928,84 +542,6 @@ router.post("/logout", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Logout failed", err);
     return res.status(500).json({ error: "Logout failed" });
-  }
-});
-
-const seenLogoutJti = new Map<string, number>();
-const LOGOUT_JTI_TTL_MS = 5 * 60 * 1000;
-
-function pruneLogoutJti(now: number): void {
-  for (const [key, expiry] of seenLogoutJti) {
-    if (expiry <= now) seenLogoutJti.delete(key);
-  }
-}
-
-function isReplayedJti(jti: string): boolean {
-  const now = Date.now();
-  pruneLogoutJti(now);
-  return seenLogoutJti.has(jti);
-}
-
-function markLogoutJti(jti: string): void {
-  const now = Date.now();
-  pruneLogoutJti(now);
-  seenLogoutJti.set(jti, now + LOGOUT_JTI_TTL_MS);
-}
-
-router.post("/oidc/backchannel-logout", async (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-
-  try {
-    const logoutToken = (req.body as Record<string, unknown> | undefined)
-      ?.logout_token;
-    if (typeof logoutToken !== "string" || !logoutToken) {
-      return res.status(400).json({ error: "missing logout_token" });
-    }
-
-    let issuer: string | null = null;
-    try {
-      const parts = logoutToken.split(".");
-      if (parts.length === 3) {
-        const claims = JSON.parse(Buffer.from(parts[1], "base64").toString());
-        issuer = typeof claims.iss === "string" ? claims.iss : null;
-      }
-    } catch {
-      issuer = null;
-    }
-
-    if (!issuer) {
-      return res.status(400).json({ error: "invalid logout_token" });
-    }
-
-    const provider = await resolveProviderByIssuer(issuer);
-    if (!provider) {
-      authLogger.warn("Back-channel logout for unknown issuer", { issuer });
-      return res.status(400).json({ error: "unknown issuer" });
-    }
-
-    const claims = await validateLogoutToken(logoutToken, provider.config);
-
-    if (claims.jti && isReplayedJti(claims.jti)) {
-      return res.status(200).json({ ok: true });
-    }
-
-    try {
-      await authManager.revokeSessionsByOidc({
-        ssoProviderId: provider.providerDbId,
-        sub: claims.sub,
-        sid: claims.sid,
-      });
-    } catch (err) {
-      authLogger.error("OIDC back-channel session revocation failed", err);
-      return res.status(500).json({ error: "logout processing failed" });
-    }
-
-    markLogoutJti(claims.jti);
-
-    return res.status(200).json({ ok: true });
-  } catch (err) {
-    authLogger.error("OIDC back-channel logout failed", err);
-    return res.status(400).json({ error: "invalid logout_token" });
   }
 });
 
@@ -2117,8 +1653,7 @@ registerAcmeSSLRoutes(router, authenticateJWT);
 registerUserApiKeyRoutes(router, requireAdmin);
 registerBrandingRoutes(router, requireAdmin);
 
-registerSSOProviderRoutes(router);
-registerLDAPAuthRoutes(router);
 registerAuthRoutes(router);
+registerAuthCompatRoutes(router);
 
 export default router;

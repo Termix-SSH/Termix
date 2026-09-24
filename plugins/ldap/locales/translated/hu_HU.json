@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Bejelentkezés {{name}} használatával",
+  "loading": "Terhelés...",
+  "requiredField": "Ez a mező kötelező",
+  "username": "LDAP felhasználónév",
+  "password": "LDAP jelszó",
+  "signIn": "Bejelentkezés",
+  "providers": {
+    "docsLink": "Dokumentumok megtekintése",
+    "name": "Megjelenített név",
+    "enabled": "Engedélyezve",
+    "saving": "Megtakarítás...",
+    "saved": "Mentett",
+    "saveFailed": "Nem sikerült menteni",
+    "deleted": "Törölt",
+    "deleteFailed": "Nem sikerült törölni",
+    "cancel": "Mégsem"
+  },
+  "fields": {
+    "host": "LDAP-gazdagép",
+    "port": "Kikötő",
+    "useTls": "TLS (LDAPS) használata",
+    "bindDn": "Kötési DN",
+    "bindPassword": "Jelszó kötése",
+    "userSearchBase": "Felhasználói keresési bázis",
+    "userSearchFilter": "Felhasználói keresési szűrő",
+    "usernameAttr": "Felhasználónév attribútum",
+    "displayNameAttr": "Megjelenített név attribútum",
+    "groupSearchBase": "Csoportkeresési bázis",
+    "adminGroup": "Adminisztrátori csoport",
+    "allowedUsers": "Engedélyezett felhasználók"
+  }
+}

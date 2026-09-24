@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "{{name}} ile giriş yap",
+  "loading": "Yükleniyor...",
+  "providers": {
+    "docsLink": "Belgeleri görüntüle",
+    "none": "Hiçbir SSO sağlayıcısı yapılandırılmamış.",
+    "add": "Sağlayıcı Ekle",
+    "edit": "Sağlayıcıyı Düzenle",
+    "delete": "Sağlayıcıyı Sil",
+    "deleteConfirm": "Bu sağlayıcı silinsin mi? İlişkili kullanıcılar oturum açamaz.",
+    "name": "Görünen Ad",
+    "type": "Sağlayıcı Türü",
+    "enabled": "Etkin",
+    "save": "Sağlayıcıyı Kaydet",
+    "saving": "Kaydediliyor...",
+    "saved": "Kaydedildi",
+    "saveFailed": "Kaydedilemedi",
+    "deleted": "Silindi",
+    "deleteFailed": "Silinemedi",
+    "cancel": "İptal"
+  },
+  "fields": {
+    "clientId": "İstemci Kimliği",
+    "clientSecret": "İstemci Sırrı",
+    "issuerUrl": "Sağlayıcı URL'si",
+    "authUrl": "Yetkilendirme URL'si",
+    "tokenUrl": "Belirteç URL'si",
+    "userIdentifier": "Kullanıcı Tanımlayıcı Yolu",
+    "displayName": "Görünen Ad Yolu",
+    "scopes": "Kapsamlar",
+    "userinfoUrl": "Userinfo URL'sini Geçersiz Kıl",
+    "groupClaim": "Grup Talebi",
+    "groupClaimDesc": "İsteğe bağlı. Kullanıcının gruplarını içeren talep yolu. Varsayılan olarak groups, roles, ardından group kullanılır. Özel talep kullanan sağlayıcılar için bunu kullanın (örn. Zitadel).",
+    "allowedUsers": "İzin Verilen Kullanıcılar",
+    "allowedUsersDesc": "Her satıra bir e-posta. Tümüne izin vermek için boş bırakın.",
+    "adminGroup": "Yönetici Grubu",
+    "adminGroupDesc": "Bu gruptaki kullanıcılara yönetici yetkisi verilir. Grup eşitlemeyi devre dışı bırakmak için boş bırakın.",
+    "caCert": "Özel CA Sertifikası",
+    "caCertDesc": "İsteğe bağlı. Özel veya kendinden imzalı CA kullanan OIDC sağlayıcıları için PEM kodlu CA sertifikası. Sistem güven deposunu kullanmak için boş bırakın."
+  }
+}

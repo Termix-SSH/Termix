@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Anmeldung mit {{name}}",
+  "loading": "Laden...",
+  "providers": {
+    "docsLink": "Dokumentation anzeigen",
+    "none": "Keine SSO-Anbieter konfiguriert.",
+    "add": "Anbieter hinzufügen",
+    "edit": "Anbieter bearbeiten",
+    "delete": "Anbieter löschen",
+    "deleteConfirm": "Diesen Anbieter löschen? Zugehörige Benutzer können sich nicht mehr anmelden.",
+    "name": "Anzeigename",
+    "type": "Anbietertyp",
+    "enabled": "Aktiviert",
+    "save": "Anbieter speichern",
+    "saving": "Speichern...",
+    "saved": "Gespeichert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "deleted": "Gelöscht",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "cancel": "Abbrechen"
+  },
+  "fields": {
+    "clientId": "Client-ID",
+    "clientSecret": "Client-Secret",
+    "issuerUrl": "Issuer-URL",
+    "authUrl": "Autorisierungs-URL",
+    "tokenUrl": "Token-URL",
+    "userIdentifier": "Benutzerkennungspfad",
+    "displayName": "Anzeigename-Pfad",
+    "scopes": "Scopes",
+    "userinfoUrl": "Userinfo-URL überschreiben",
+    "groupClaim": "Gruppen-Claim",
+    "groupClaimDesc": "Optional. Der Claim-Pfad, der die Gruppen des Benutzers enthält. Standardmäßig groups, roles, dann group. Verwenden Sie dies für Anbieter mit einem benutzerdefinierten Claim (z. B. Zitadel).",
+    "allowedUsers": "Zugelassene Benutzer",
+    "allowedUsersDesc": "Eine E-Mail pro Zeile. Leer lassen, um alle zuzulassen.",
+    "adminGroup": "Admin-Gruppe",
+    "adminGroupDesc": "Benutzer in dieser Gruppe erhalten Admin-Berechtigungen. Leer lassen, um die Gruppensynchronisierung zu deaktivieren.",
+    "caCert": "Benutzerdefiniertes CA-Zertifikat",
+    "caCertDesc": "Optional. PEM-kodiertes CA-Zertifikat für OIDC-Anbieter, die eine private oder selbstsignierte Zertifizierungsstelle verwenden. Leer lassen, um den System-Vertrauensspeicher zu verwenden."
+  }
+}

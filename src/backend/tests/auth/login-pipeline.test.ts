@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import bcrypt from "bcryptjs";
 import {
   createAuthState,
@@ -463,6 +463,19 @@ describe("external identities", () => {
     legacyIdentifier: "sub-1",
     ssoProviderId: 3,
   };
+
+  // The sso plugin's method, which marks itself external.
+  let disposeOidc: () => void = () => {};
+  beforeEach(() => {
+    disposeOidc = registerLoginMethod({
+      id: "oidc",
+      pluginId: "sso",
+      labelKey: "loginWithSso",
+      kind: "redirect",
+      external: true,
+    });
+  });
+  afterEach(() => disposeOidc());
 
   it("provisions the first user as admin and links the identity", async () => {
     const result = await runLogin(fakeRequest() as never, external, {

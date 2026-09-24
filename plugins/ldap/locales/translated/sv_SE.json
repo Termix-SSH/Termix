@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Logga in med {{name}}",
+  "loading": "Belastning...",
+  "requiredField": "Detta fält är obligatoriskt",
+  "username": "LDAP-användarnamn",
+  "password": "LDAP-lösenord",
+  "signIn": "Logga in",
+  "providers": {
+    "docsLink": "Visa dokument",
+    "name": "Visningsnamn",
+    "enabled": "Aktiverad",
+    "saving": "Sparande...",
+    "saved": "Sparad",
+    "saveFailed": "Misslyckades med att spara",
+    "deleted": "Borttagen",
+    "deleteFailed": "Misslyckades med att radera",
+    "cancel": "Avboka"
+  },
+  "fields": {
+    "host": "LDAP-värd",
+    "port": "Hamn",
+    "useTls": "Använd TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind lösenord",
+    "userSearchBase": "Användarsökningsbas",
+    "userSearchFilter": "Användarsökningsfilter",
+    "usernameAttr": "Användarnamnsattribut",
+    "displayNameAttr": "Attribut för visningsnamn",
+    "groupSearchBase": "Gruppsökningsbas",
+    "adminGroup": "Administratörsgrupp",
+    "allowedUsers": "Tillåtna användare"
+  }
+}

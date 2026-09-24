@@ -1,0 +1,19 @@
+{
+  "name": "@termix-plugin/sso",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "jose": "^6.2.12",
+    "undici": "^8.10.2"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*"
+  }
+}

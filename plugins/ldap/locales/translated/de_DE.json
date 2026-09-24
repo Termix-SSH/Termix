@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Anmeldung mit {{name}}",
+  "loading": "Laden...",
+  "requiredField": "Dieses Feld ist erforderlich",
+  "username": "LDAP-Benutzername",
+  "password": "LDAP-Passwort",
+  "signIn": "Anmelden",
+  "providers": {
+    "docsLink": "Dokumentation anzeigen",
+    "name": "Anzeigename",
+    "enabled": "Aktiviert",
+    "saving": "Speichern...",
+    "saved": "Gespeichert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "deleted": "Gelöscht",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "cancel": "Abbrechen"
+  },
+  "fields": {
+    "host": "LDAP-Host",
+    "port": "Port",
+    "useTls": "TLS verwenden (LDAPS)",
+    "bindDn": "Bind-DN",
+    "bindPassword": "Bind-Passwort",
+    "userSearchBase": "Benutzer-Suchbasis",
+    "userSearchFilter": "Benutzersuchfilter",
+    "usernameAttr": "Benutzernamen-Attribut",
+    "displayNameAttr": "Anzeigename-Attribut",
+    "groupSearchBase": "Gruppen-Suchbasis",
+    "adminGroup": "Admin-Gruppe",
+    "allowedUsers": "Erlaubte Benutzer"
+  }
+}

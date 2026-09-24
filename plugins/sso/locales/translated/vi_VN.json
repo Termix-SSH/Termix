@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Đăng nhập bằng {{name}}",
+  "loading": "Đang tải...",
+  "providers": {
+    "docsLink": "Xem tài liệu",
+    "none": "Chưa có nhà cung cấp SSO.",
+    "add": "Thêm nhà cung cấp",
+    "edit": "Chỉnh sửa nhà cung cấp",
+    "delete": "Xóa nhà cung cấp",
+    "deleteConfirm": "Xóa nhà cung cấp này? Người dùng liên kết sẽ không thể đăng nhập.",
+    "name": "Tên hiển thị",
+    "type": "Loại nhà cung cấp",
+    "enabled": "Đã bật",
+    "save": "Lưu nhà cung cấp",
+    "saving": "Đang lưu...",
+    "saved": "Đã lưu",
+    "saveFailed": "Không thể lưu",
+    "deleted": "Đã xóa",
+    "deleteFailed": "Không thể xóa",
+    "cancel": "Hủy"
+  },
+  "fields": {
+    "clientId": "Client ID",
+    "clientSecret": "Client Secret",
+    "issuerUrl": "Issuer URL",
+    "authUrl": "URL ủy quyền",
+    "tokenUrl": "Token URL",
+    "userIdentifier": "Đường dẫn định danh người dùng",
+    "displayName": "Đường dẫn tên hiển thị",
+    "scopes": "Phạm vi",
+    "userinfoUrl": "Ghi đè URL Userinfo",
+    "groupClaim": "Group Claim",
+    "groupClaimDesc": "Tùy chọn. Đường dẫn claim chứa các nhóm của người dùng. Mặc định là groups, roles, rồi group. Sử dụng cho các nhà cung cấp có claim tùy chỉnh (ví dụ: Zitadel).",
+    "allowedUsers": "Người dùng được phép",
+    "allowedUsersDesc": "Mỗi email một dòng. Để trống để cho phép tất cả.",
+    "adminGroup": "Nhóm Admin",
+    "adminGroupDesc": "Người dùng trong nhóm này được cấp quyền admin. Để trống để tắt đồng bộ nhóm.",
+    "caCert": "Chứng chỉ CA tùy chỉnh",
+    "caCertDesc": "Tùy chọn. Chứng chỉ CA mã hóa PEM cho các nhà cung cấp OIDC sử dụng CA riêng hoặc tự ký. Để trống để sử dụng kho tin cậy hệ thống."
+  }
+}

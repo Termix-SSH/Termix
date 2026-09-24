@@ -18,7 +18,12 @@ import {
   verifySecondFactorAndRespond,
   evaluateSecondFactors,
 } from "../../auth/login-pipeline.js";
-import { getLoginMethod, listLoginMethods } from "../../auth/registry.js";
+import {
+  getLoginMethod,
+  listLoginMethods,
+  type LoginMethod,
+} from "../../auth/registry.js";
+import { isTrustedProxyAuthEnabled } from "../../utils/trusted-proxy-auth.js";
 import { LoginMethodError, type VerifiedIdentity } from "../../auth/types.js";
 
 export interface PublicLoginMethod {
@@ -28,6 +33,59 @@ export interface PublicLoginMethod {
   labelKey: string;
   icon?: string;
   instances: Array<{ id: string; label: string }>;
+}
+
+async function enabledInstances(method: LoginMethod) {
+  return (await method.describe!()).filter((instance) => instance.enabled);
+}
+
+/** External methods with at least one enabled instance. */
+export async function listExternalLoginMethods(): Promise<LoginMethod[]> {
+  ensureCoreLoginProviders();
+  const found: LoginMethod[] = [];
+  for (const method of listLoginMethods()) {
+    if (!method.external) continue;
+    if (!method.describe) {
+      found.push(method);
+      continue;
+    }
+    try {
+      if ((await enabledInstances(method)).length > 0) found.push(method);
+    } catch {
+      // A method that cannot describe itself signs nobody in.
+    }
+  }
+  return found;
+}
+
+/** The 2.8 `GET /users/sso-providers` shape, built from external methods. */
+export async function listLegacySsoProviders(): Promise<
+  Array<{
+    id: number | string;
+    name: string;
+    type: string;
+    displayOrder: number;
+  }>
+> {
+  const providers: Array<{
+    id: number | string;
+    name: string;
+    type: string;
+    displayOrder: number;
+  }> = [];
+  for (const method of await listExternalLoginMethods()) {
+    if (!method.describe) continue;
+    for (const instance of await enabledInstances(method)) {
+      const numeric = Number(instance.id);
+      providers.push({
+        id: Number.isInteger(numeric) ? numeric : instance.id,
+        name: instance.label,
+        type: instance.type ?? method.id,
+        displayOrder: providers.length,
+      });
+    }
+  }
+  return providers;
 }
 
 /** What the login screen may know: ids, labels and enabled instances. */
@@ -68,14 +126,109 @@ function instanceParam(req: Request): string | null {
   return typeof value === "string" && value ? value : null;
 }
 
-function methodOr404(req: Request, res: Response) {
+/**
+ * Trusted proxy login and external methods don't mix: the proxy already
+ * decided who the user is.
+ */
+function refusedByTrustedProxy(method: LoginMethod, res: Response): boolean {
+  if (!method.external || !isTrustedProxyAuthEnabled()) return false;
+  res.status(409).json({
+    error:
+      "External login is disabled while trusted proxy authentication is enabled",
+  });
+  return true;
+}
+
+function methodOr404(req: Request, res: Response, id?: string) {
   ensureCoreLoginProviders();
-  const method = getLoginMethod(String(req.params.methodId));
+  const method = getLoginMethod(id ?? String(req.params.methodId));
   if (!method) {
     res.status(404).json({ error: "Unknown login method" });
     return null;
   }
+  if (refusedByTrustedProxy(method, res)) return null;
   return method;
+}
+
+/**
+ * A redirect method's callback, for core's route and for a plugin's own
+ * public route through ctx.auth.completeRedirectLogin.
+ */
+export async function handleRedirectCallback(
+  method: LoginMethod,
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (refusedByTrustedProxy(method, res)) return;
+  if (!method.callback) {
+    res.status(400).json({ error: "Not a redirect login method" });
+    return;
+  }
+  let identity: VerifiedIdentity;
+  try {
+    identity = await method.callback(req as never);
+  } catch (error) {
+    const returnTo = (error as { returnTo?: string }).returnTo;
+    if (returnTo) return redirectWithLoginError(res, returnTo, error);
+    sendLoginError(res, error);
+    return;
+  }
+  await respondWithRedirectLogin(
+    req,
+    res,
+    identity,
+    { methodId: method.id, rememberMe: !!identity.rememberMe },
+    isOidcTokenCallback,
+  );
+}
+
+/** Starts a redirect method, answering with its URL. */
+export async function startRedirectLogin(
+  req: Request,
+  res: Response,
+  methodId: string,
+  instanceId: string | null,
+): Promise<void> {
+  const method = methodOr404(req, res, methodId);
+  if (!method) return;
+  if (method.kind !== "redirect" || !method.start) {
+    res.status(400).json({ error: "Not a redirect login method" });
+    return;
+  }
+  try {
+    const result = await method.start(req as never, instanceId);
+    // auth_url is the name 2.8 clients read.
+    res.json({ ...result, auth_url: result.redirectUrl });
+  } catch (error) {
+    sendLoginError(res, error);
+  }
+}
+
+/** Runs a form method and answers with a session or a second-factor step. */
+export async function verifyFormLogin(
+  req: Request,
+  res: Response,
+  methodId: string,
+  instanceId: string | null,
+): Promise<void> {
+  const method = methodOr404(req, res, methodId);
+  if (!method) return;
+  if (method.kind !== "form" || !method.verify) {
+    res.status(400).json({ error: "Not a form login method" });
+    return;
+  }
+  try {
+    const identity = await method.verify(req as never, instanceId);
+    await respondWithLogin(req, res, identity, {
+      methodId: method.id,
+      rememberMe: !!identity.rememberMe || !!req.body?.rememberMe,
+    });
+  } catch (error) {
+    if (!(error instanceof LoginMethodError)) {
+      authLogger.error("Form login failed", error, { methodId: method.id });
+    }
+    sendLoginError(res, error);
+  }
 }
 
 export function registerAuthRoutes(router: Router): void {
@@ -243,40 +396,19 @@ export function registerAuthRoutes(router: Router): void {
    *       404:
    *         description: Unknown login method.
    */
-  router.get("/auth/:methodId/start", async (req, res) => {
-    const method = methodOr404(req, res);
-    if (!method) return;
-    if (method.kind !== "redirect" || !method.start) {
-      return res.status(400).json({ error: "Not a redirect login method" });
-    }
-    try {
-      res.json(await method.start(req as never, instanceParam(req)));
-    } catch (error) {
-      sendLoginError(res, error);
-    }
-  });
+  router.get("/auth/:methodId/start", (req, res) =>
+    startRedirectLogin(
+      req,
+      res,
+      String(req.params.methodId),
+      instanceParam(req),
+    ),
+  );
 
   const callback = async (req: Request, res: Response) => {
     const method = methodOr404(req, res);
     if (!method) return;
-    if (!method.callback) {
-      return res.status(400).json({ error: "Not a redirect login method" });
-    }
-    let identity: VerifiedIdentity;
-    try {
-      identity = await method.callback(req as never);
-    } catch (error) {
-      const returnTo = (error as { returnTo?: string }).returnTo;
-      if (returnTo) return redirectWithLoginError(res, returnTo, error);
-      return sendLoginError(res, error);
-    }
-    await respondWithRedirectLogin(
-      req,
-      res,
-      identity,
-      { methodId: method.id, rememberMe: !!identity.rememberMe },
-      isOidcTokenCallback,
-    );
+    await handleRedirectCallback(method, req, res);
   };
 
   /**
@@ -336,23 +468,7 @@ export function registerAuthRoutes(router: Router): void {
    *       404:
    *         description: Unknown login method.
    */
-  router.post("/auth/:methodId/verify", async (req, res) => {
-    const method = methodOr404(req, res);
-    if (!method) return;
-    if (method.kind !== "form" || !method.verify) {
-      return res.status(400).json({ error: "Not a form login method" });
-    }
-    try {
-      const identity = await method.verify(req as never, instanceParam(req));
-      await respondWithLogin(req, res, identity, {
-        methodId: method.id,
-        rememberMe: !!identity.rememberMe || !!req.body?.rememberMe,
-      });
-    } catch (error) {
-      if (!(error instanceof LoginMethodError)) {
-        authLogger.error("Form login failed", error, { methodId: method.id });
-      }
-      sendLoginError(res, error);
-    }
-  });
+  router.post("/auth/:methodId/verify", (req, res) =>
+    verifyFormLogin(req, res, String(req.params.methodId), instanceParam(req)),
+  );
 }

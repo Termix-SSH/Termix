@@ -94,6 +94,12 @@ export function fakeFactory(state: AuthState) {
           email: input.email ?? null,
         });
       },
+      countUsersForProvider: async (providerId: string) =>
+        new Set(
+          state.identities
+            .filter((row) => row.providerId === providerId)
+            .map((row) => row.userId),
+        ).size,
       listSecondFactors: async (userId: string) =>
         state.factors.filter((row) => row.userId === userId),
       hasSecondFactor: async (userId: string) =>
@@ -179,9 +185,6 @@ export function fakeFactory(state: AuthState) {
     createCurrentTrustedDeviceRepository: () => ({
       deleteByUserId: async () => {},
     }),
-    createCurrentSsoProviderRepository: () => ({
-      listEnabledPublic: async () => [],
-    }),
   };
 }
 
@@ -202,6 +205,7 @@ export function fakeAuthManager(state: AuthState) {
     }),
     authenticateUser: vi.fn(async () => true),
     authenticateOIDCUser: vi.fn(async () => true),
+    revokeSessionsByOidc: vi.fn(async () => 1),
     unlockWithSystemKey: vi.fn(async () => true),
     registerOIDCUser: vi.fn(async () => {}),
     isTrustedDevice: vi.fn(async (userId: string, fingerprint: string) =>

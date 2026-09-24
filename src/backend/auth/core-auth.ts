@@ -6,7 +6,6 @@ import { getCurrentSettingValue } from "../database/repositories/factory.js";
 import { authLogger } from "../utils/logger.js";
 import { isTrustedProxyAuthEnabled } from "../utils/trusted-proxy-auth.js";
 import { registerPasswordLoginMethod } from "./builtin-login-methods.js";
-import { registerLegacyLoginProviders } from "./legacy-providers.js";
 import { listLoginMethods } from "./registry.js";
 import { LoginMethodError } from "./types.js";
 
@@ -17,7 +16,6 @@ export function ensureCoreLoginProviders(): void {
   if (registered) return;
   registered = true;
   registerPasswordLoginMethod();
-  registerLegacyLoginProviders();
 }
 
 /** Test helper. */

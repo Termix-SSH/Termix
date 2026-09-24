@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Se connecter avec {{name}}",
+  "loading": "Chargement...",
+  "providers": {
+    "docsLink": "Documentation",
+    "none": "Aucun fournisseur SSO configuré.",
+    "add": "Ajouter un fournisseur",
+    "edit": "Modifier le fournisseur",
+    "delete": "Supprimer le fournisseur",
+    "deleteConfirm": "Supprimer ce fournisseur ? Les utilisateurs associés ne pourront plus se connecter.",
+    "name": "Nom d’affichage",
+    "type": "Type de fournisseur",
+    "enabled": "Activé",
+    "save": "Enregistrer le fournisseur",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré",
+    "saveFailed": "Échec de l'enregistrement",
+    "deleted": "Supprimé",
+    "deleteFailed": "Échec de la suppression",
+    "cancel": "Annuler"
+  },
+  "fields": {
+    "clientId": "ID client",
+    "clientSecret": "Secret client",
+    "issuerUrl": "URL de l'émetteur",
+    "authUrl": "URL d'autorisation",
+    "tokenUrl": "URL du jeton",
+    "userIdentifier": "Chemin de l'identifiant utilisateur",
+    "displayName": "Chemin du nom affiché",
+    "scopes": "Scopes",
+    "userinfoUrl": "URL Userinfo personnalisée",
+    "groupClaim": "Revendication de groupe",
+    "groupClaimDesc": "Facultatif. Chemin de la revendication contenant les groupes de l'utilisateur. Par défaut : groups, roles, puis group. Utilisez ce champ pour les fournisseurs avec une revendication personnalisée (ex. Zitadel).",
+    "allowedUsers": "Utilisateurs autorisés",
+    "allowedUsersDesc": "Une adresse e-mail par ligne. Laissez vide pour autoriser tout le monde.",
+    "adminGroup": "Groupe administrateur",
+    "adminGroupDesc": "Les utilisateurs de ce groupe ont les droits administrateur. Laissez vide pour désactiver la synchronisation de groupe.",
+    "caCert": "Certificat CA personnalisé",
+    "caCertDesc": "Facultatif. Certificat CA au format PEM pour les fournisseurs OIDC utilisant une CA privée ou auto-signée. Laissez vide pour utiliser le magasin de confiance du système."
+  }
+}

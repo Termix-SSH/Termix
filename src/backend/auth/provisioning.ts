@@ -22,7 +22,7 @@ import {
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
 import type { UserRecord } from "../database/repositories/user-repository.js";
-import { isOIDCUserAllowed } from "../database/routes/user-oidc-utils.js";
+import { isExternalUserAllowed } from "./allowed-users.js";
 import { LoginMethodError, type VerifiedIdentity } from "./types.js";
 
 type ExternalIdentity = Extract<VerifiedIdentity, { kind: "external" }>;
@@ -64,9 +64,9 @@ function isAllowed(identity: ExternalIdentity): boolean {
   if (!identity.allowedUsers) return true;
   const email = identity.email ?? undefined;
   return (
-    isOIDCUserAllowed(identity.allowedUsers, identity.subject, email) ||
+    isExternalUserAllowed(identity.allowedUsers, identity.subject, email) ||
     (!!identity.legacyIdentifier &&
-      isOIDCUserAllowed(
+      isExternalUserAllowed(
         identity.allowedUsers,
         identity.legacyIdentifier,
         email,

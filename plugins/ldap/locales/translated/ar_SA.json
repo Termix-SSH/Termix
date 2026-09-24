@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "تسجيل الدخول باستخدام {{name}}",
+  "loading": "جارٍ التحميل...",
+  "requiredField": "هذا الحقل مطلوب",
+  "username": "اسم مستخدم LDAP",
+  "password": "كلمة مرور LDAP",
+  "signIn": "تسجيل الدخول",
+  "providers": {
+    "docsLink": "عرض المستندات",
+    "name": "الاسم المعروض",
+    "enabled": "مُمكّن",
+    "saving": "جارٍ الحفظ...",
+    "saved": "محفوظ",
+    "saveFailed": "فشل في الحفظ",
+    "deleted": "محذوف",
+    "deleteFailed": "فشل في الحذف",
+    "cancel": "إلغاء"
+  },
+  "fields": {
+    "host": "مضيف LDAP",
+    "port": "المنفذ",
+    "useTls": "استخدام TLS (LDAPS)",
+    "bindDn": "اسم مميز للربط",
+    "bindPassword": "كلمة مرور الارتباط",
+    "userSearchBase": "قاعدة بحث المستخدمين",
+    "userSearchFilter": "مرشح بحث المستخدمين",
+    "usernameAttr": "سمة اسم المستخدم",
+    "displayNameAttr": "سمة اسم العرض",
+    "groupSearchBase": "قاعدة بحث المجموعات",
+    "adminGroup": "مجموعة المديرين",
+    "allowedUsers": "المستخدمون المسموح بهم"
+  }
+}

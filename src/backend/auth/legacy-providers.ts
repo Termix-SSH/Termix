@@ -16,7 +16,6 @@ import type {
   SshAuthProvider,
   SshConnectHost,
 } from "../hosts/connect/types.js";
-import { registerLoginMethod, type LoginMethod } from "./registry.js";
 
 const OPKSSH_REQUIRED_MESSAGE =
   "OPKSSH authentication required. Please open a Terminal connection to this host first to complete browser-based authentication. Your session will be cached for 24 hours.";
@@ -263,77 +262,7 @@ export function registerLegacySshAuthProviders(): void {
   });
 }
 
-// Login methods and second factors -------------------------------------------
-
-async function listPublicProviders(types: string[]) {
-  const { listPublicSsoProviders } =
-    await import("../database/routes/sso-provider-routes.js");
-  return (await listPublicSsoProviders()).filter((provider) =>
-    types.includes(provider.type),
-  );
-}
-
-const oidcLoginMethod: LoginMethod = {
-  id: "oidc",
-  pluginId: "core",
-  labelKey: "auth.loginWithSso",
-  icon: "key-round",
-  kind: "redirect",
-  external: true,
-  describe: async () =>
-    (await listPublicProviders(["oidc", "github", "google"])).map(
-      (provider) => ({
-        id: String(provider.id),
-        label: provider.name,
-        enabled: true,
-      }),
-    ),
-  start: async (request, instanceId) => {
-    const { startOidcLogin } = await import("./legacy/oidc-login.js");
-    // Instance "0" is the provider synthesized from environment variables.
-    const result = await startOidcLogin(request as never, {
-      providerId: instanceId && instanceId !== "0" ? instanceId : undefined,
-    });
-    return { redirectUrl: result.auth_url };
-  },
-  callback: async (request) => {
-    const { handleOidcCallback } = await import("./legacy/oidc-login.js");
-    return handleOidcCallback(request as never);
-  },
-};
-
-const ldapLoginMethod: LoginMethod = {
-  id: "ldap",
-  pluginId: "core",
-  labelKey: "auth.loginWithLdap",
-  icon: "server",
-  kind: "form",
-  external: true,
-  describe: async () =>
-    (await listPublicProviders(["ldap"])).map((provider) => ({
-      id: String(provider.id),
-      label: provider.name,
-      enabled: true,
-    })),
-  verify: async (request, instanceId) => {
-    const { verifyLdapLogin } = await import("./legacy/ldap-login.js");
-    const body = { ...request.body };
-    if (instanceId && !body.providerId) body.providerId = Number(instanceId);
-    return verifyLdapLogin({ body, ip: request.ip });
-  },
-};
-
-let loginRegistered = false;
-
-export function registerLegacyLoginProviders(): void {
-  if (loginRegistered) return;
-  loginRegistered = true;
-  registerLoginMethod(oidcLoginMethod);
-  registerLoginMethod(ldapLoginMethod);
-}
-
 /** Test helper. */
 export function resetLegacyProvidersForTests(): void {
   sshRegistered = false;
-  loginRegistered = false;
 }

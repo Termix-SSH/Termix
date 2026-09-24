@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Đăng nhập bằng {{name}}",
+  "loading": "Đang tải...",
+  "requiredField": "Trường này là bắt buộc",
+  "username": "Tên người dùng LDAP",
+  "password": "Mật khẩu LDAP",
+  "signIn": "Đăng nhập",
+  "providers": {
+    "docsLink": "Xem tài liệu",
+    "name": "Tên hiển thị",
+    "enabled": "Đã bật",
+    "saving": "Đang lưu...",
+    "saved": "Đã lưu",
+    "saveFailed": "Không thể lưu",
+    "deleted": "Đã xóa",
+    "deleteFailed": "Không thể xóa",
+    "cancel": "Hủy"
+  },
+  "fields": {
+    "host": "Máy chủ LDAP",
+    "port": "Cổng",
+    "useTls": "Dùng TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Mật khẩu Bind",
+    "userSearchBase": "Cơ sở tìm kiếm người dùng",
+    "userSearchFilter": "Bộ lọc tìm kiếm người dùng",
+    "usernameAttr": "Thuộc tính tên người dùng",
+    "displayNameAttr": "Thuộc tính tên hiển thị",
+    "groupSearchBase": "Cơ sở tìm kiếm nhóm",
+    "adminGroup": "Nhóm quản trị",
+    "allowedUsers": "Người dùng được phép"
+  }
+}

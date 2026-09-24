@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "התחברות באמצעות {{name}}",
+  "loading": "טְעִינָה...",
+  "requiredField": "שדה זה נדרש",
+  "username": "שם משתמש LDAP",
+  "password": "סיסמת LDAP",
+  "signIn": "כניסה",
+  "providers": {
+    "docsLink": "הצג מסמכים",
+    "name": "שם תצוגה",
+    "enabled": "מופעל",
+    "saving": "חִסָכוֹן...",
+    "saved": "נשמר",
+    "saveFailed": "השמירה נכשלה",
+    "deleted": "נמחק",
+    "deleteFailed": "המחיקה נכשלה",
+    "cancel": "לְבַטֵל"
+  },
+  "fields": {
+    "host": "מארח LDAP",
+    "port": "נָמָל",
+    "useTls": "השתמש ב-TLS (LDAPS)",
+    "bindDn": "קשר DN",
+    "bindPassword": "קשירת סיסמה",
+    "userSearchBase": "בסיס חיפוש משתמשים",
+    "userSearchFilter": "מסנן חיפוש משתמשים",
+    "usernameAttr": "מאפיין שם משתמש",
+    "displayNameAttr": "מאפיין שם תצוגה",
+    "groupSearchBase": "בסיס חיפוש קבוצתי",
+    "adminGroup": "קבוצת ניהול",
+    "allowedUsers": "משתמשים מורשים"
+  }
+}

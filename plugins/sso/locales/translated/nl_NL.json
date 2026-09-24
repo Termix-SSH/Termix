@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Inloggen met {{name}}",
+  "loading": "Laden...",
+  "providers": {
+    "docsLink": "Documenten bekijken",
+    "none": "Er zijn geen SSO-providers geconfigureerd.",
+    "add": "Aanbieder toevoegen",
+    "edit": "Bewerk provider",
+    "delete": "Provider verwijderen",
+    "deleteConfirm": "Deze provider verwijderen? Gekoppelde gebruikers kunnen dan niet meer inloggen.",
+    "name": "Weergavenaam",
+    "type": "Aanbiedertype",
+    "enabled": "Ingeschakeld",
+    "save": "Aanbieder opslaan",
+    "saving": "Besparing...",
+    "saved": "Opgeslagen",
+    "saveFailed": "Opslaan mislukt",
+    "deleted": "Verwijderd",
+    "deleteFailed": "Verwijderen mislukt",
+    "cancel": "Annuleren"
+  },
+  "fields": {
+    "clientId": "Klant-ID",
+    "clientSecret": "Klantgeheim",
+    "issuerUrl": "URL van de uitgever",
+    "authUrl": "Autorisatie-URL",
+    "tokenUrl": "Token-URL",
+    "userIdentifier": "Gebruikersidentificatiepad",
+    "displayName": "Weergavenaam Pad",
+    "scopes": "Scopes",
+    "userinfoUrl": "Gebruikersinfo-URL overschrijven",
+    "groupClaim": "Groepsclaim",
+    "groupClaimDesc": "Optioneel. Het pad naar de claim dat de groepen van de gebruiker bevat. Standaard is dit: groepen, rollen, vervolgens groep. Gebruik dit voor providers met een aangepaste claim (bijv. Zitadel).",
+    "allowedUsers": "Toegestane gebruikers",
+    "allowedUsersDesc": "Eén e-mailadres per regel. Laat dit veld leeg om alle e-mailadressen toe te staan.",
+    "adminGroup": "Beheerdersgroep",
+    "adminGroupDesc": "Gebruikers in deze groep hebben beheerdersrechten. Laat dit veld leeg om groepssynchronisatie uit te schakelen.",
+    "caCert": "Aangepast CA-certificaat",
+    "caCertDesc": "Optioneel. PEM-gecodeerd CA-certificaat voor OIDC-providers die gebruikmaken van een privé- of zelfondertekende CA. Laat dit veld leeg om het systeemvertrouwensarchief te gebruiken."
+  }
+}

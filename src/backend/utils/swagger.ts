@@ -164,10 +164,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "API key management",
       },
       {
-        name: "SSO",
-        description: "Single sign-on provider configuration",
-      },
-      {
         name: "Vault",
         description: "HashiCorp Vault SSH signing profiles",
       },

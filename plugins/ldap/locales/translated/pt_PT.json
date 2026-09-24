@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Iniciar sessão com {{name}}",
+  "loading": "A carregar...",
+  "requiredField": "Este campo é obrigatório",
+  "username": "Nome de utilizador LDAP",
+  "password": "Palavra-passe LDAP",
+  "signIn": "Iniciar sessão",
+  "providers": {
+    "docsLink": "Ver docs",
+    "name": "Nome de apresentação",
+    "enabled": "Ativado",
+    "saving": "A guardar...",
+    "saved": "Guardado",
+    "saveFailed": "Falha ao guardar",
+    "deleted": "Eliminado",
+    "deleteFailed": "Falha ao eliminar",
+    "cancel": "Cancelar"
+  },
+  "fields": {
+    "host": "Servidor LDAP",
+    "port": "Porta",
+    "useTls": "Usar TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Palavra-passe de Bind",
+    "userSearchBase": "Base de pesquisa de utilizadores",
+    "userSearchFilter": "Filtro de pesquisa de utilizadores",
+    "usernameAttr": "Atributo de nome de utilizador",
+    "displayNameAttr": "Atributo de nome de apresentação",
+    "groupSearchBase": "Base de pesquisa de grupos",
+    "adminGroup": "Grupo de administradores",
+    "allowedUsers": "Utilizadores permitidos"
+  }
+}

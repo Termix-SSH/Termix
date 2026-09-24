@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "เข้าสู่ระบบด้วย {{name}}",
+  "loading": "กำลังโหลด...",
+  "requiredField": "ช่องนี้จำเป็นต้องกรอก",
+  "username": "ชื่อผู้ใช้ LDAP",
+  "password": "รหัสผ่าน LDAP",
+  "signIn": "เข้าสู่ระบบ",
+  "providers": {
+    "docsLink": "ดูเอกสาร",
+    "name": "ชื่อที่แสดง",
+    "enabled": "เปิดใช้งาน",
+    "saving": "ประหยัด...",
+    "saved": "บันทึกแล้ว",
+    "saveFailed": "บันทึกไม่สำเร็จ",
+    "deleted": "ลบแล้ว",
+    "deleteFailed": "ลบไม่สำเร็จ",
+    "cancel": "ยกเลิก"
+  },
+  "fields": {
+    "host": "โฮสต์ LDAP",
+    "port": "ท่าเรือ",
+    "useTls": "ใช้ TLS (LDAPS)",
+    "bindDn": "ผูก DN",
+    "bindPassword": "รหัสผ่านผูกมัด",
+    "userSearchBase": "ฐานการค้นหาผู้ใช้",
+    "userSearchFilter": "ตัวกรองการค้นหาผู้ใช้",
+    "usernameAttr": "คุณลักษณะชื่อผู้ใช้",
+    "displayNameAttr": "คุณลักษณะชื่อที่แสดง",
+    "groupSearchBase": "ฐานการค้นหากลุ่ม",
+    "adminGroup": "กลุ่มผู้ดูแลระบบ",
+    "allowedUsers": "ผู้ใช้ที่ได้รับอนุญาต"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Přihlaste se pomocí {{name}}",
+  "loading": "Načítání...",
+  "requiredField": "Toto pole je povinné",
+  "username": "Uživatelské jméno LDAP",
+  "password": "Heslo LDAP",
+  "signIn": "Přihlásit se",
+  "providers": {
+    "docsLink": "Zobrazit dokumenty",
+    "name": "Zobrazovaný název",
+    "enabled": "Povoleno",
+    "saving": "Ukládání...",
+    "saved": "Uloženo",
+    "saveFailed": "Uložení se nezdařilo",
+    "deleted": "Smazáno",
+    "deleteFailed": "Nepodařilo se smazat",
+    "cancel": "Zrušit"
+  },
+  "fields": {
+    "host": "Hostitel LDAP",
+    "port": "Přístav",
+    "useTls": "Používejte TLS (LDAPS)",
+    "bindDn": "Vázat DN",
+    "bindPassword": "Vázat heslo",
+    "userSearchBase": "Vyhledávací báze uživatelů",
+    "userSearchFilter": "Filtr vyhledávání uživatelů",
+    "usernameAttr": "Atribut uživatelského jména",
+    "displayNameAttr": "Atribut zobrazovaného názvu",
+    "groupSearchBase": "Základna pro vyhledávání skupin",
+    "adminGroup": "Skupina administrátorů",
+    "allowedUsers": "Povolení uživatelé"
+  }
+}

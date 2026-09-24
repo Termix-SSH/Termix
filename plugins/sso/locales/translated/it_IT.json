@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Accedi con {{name}}",
+  "loading": "Caricamento in corso...",
+  "providers": {
+    "docsLink": "Visualizza documentazione",
+    "none": "Nessun provider SSO configurato.",
+    "add": "Aggiungi provider",
+    "edit": "Modifica provider",
+    "delete": "Elimina provider",
+    "deleteConfirm": "Eliminare questo provider? Gli utenti associati non potranno più accedere.",
+    "name": "Nome visualizzato",
+    "type": "Tipo provider",
+    "enabled": "Abilitato",
+    "save": "Salva provider",
+    "saving": "Salvataggio in corso...",
+    "saved": "Salvato",
+    "saveFailed": "Salvataggio non riuscito",
+    "deleted": "Eliminato",
+    "deleteFailed": "Eliminazione non riuscita",
+    "cancel": "Annulla"
+  },
+  "fields": {
+    "clientId": "ID client",
+    "clientSecret": "Segreto client",
+    "issuerUrl": "URL dell'emittente",
+    "authUrl": "URL di autorizzazione",
+    "tokenUrl": "URL token",
+    "userIdentifier": "Percorso identificatore utente",
+    "displayName": "Percorso nome visualizzato",
+    "scopes": "Ambiti",
+    "userinfoUrl": "Sovrascrivi URL Userinfo",
+    "groupClaim": "Attributo gruppo",
+    "groupClaimDesc": "Opzionale. Il percorso dell'attributo contenente i gruppi dell'utente. Il valore predefinito è groups, roles, quindi group. Da utilizzare per provider con un attributo personalizzato (es. Zitadel).",
+    "allowedUsers": "Utenti consentiti",
+    "allowedUsersDesc": "Un'email per riga. Lascia vuoto per consentire a tutti.",
+    "adminGroup": "Gruppo amministratori",
+    "adminGroupDesc": "Gli utenti di questo gruppo ottengono i diritti di amministratore. Lascia vuoto per disabilitare la sincronizzazione dei gruppi.",
+    "caCert": "Certificato CA personalizzato",
+    "caCertDesc": "Opzionale. Certificato CA in formato PEM per provider OIDC che utilizzano una CA privata o autofirmata. Lascia vuoto per usare l'archivio dei certificati attendibili di sistema."
+  }
+}

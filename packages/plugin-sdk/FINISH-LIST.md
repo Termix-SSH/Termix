@@ -465,6 +465,27 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   and `totp_backup_codes` stay in the database (dropped from `schema.ts`, the
   drizzle drop is a no-op) until 3.0.0 removes them, after the boot
   migration has run everywhere. Owner: 3.0.0.
+- **C2 (sso/ldap):** `users.is_oidc`, `oidc_identifier`, `sso_provider_id`
+  and the 2.8 per-user OIDC columns (`client_id`, `issuer_url`, ...), and
+  `sessions.sso_provider_id`, `oidc_sub`, `oidc_sid`, stay in core. Core
+  still reads `is_oidc`/`oidc_identifier` for account linking, `/users/me` and
+  the `$oidc.preferred_username` placeholder, and still writes them from an
+  identity's `legacy` field so a downgrade works. Rename or drop them once
+  nothing needs the 2.8 shape. Owner: 3.0.0.
+- **C2 (sso/ldap):** `database/routes/auth-compat-routes.ts` keeps the 2.8
+  URLs (`/users/oidc/*`, `/users/oidc-config`, `/users/sso-providers`,
+  `/users/ldap/login`) and so names the `oidc`/`ldap` method ids and the sso
+  plugin's `/plugin-api/sso/` paths. Keep until identity providers have moved
+  to the new redirect URI and Termix-Mobile uses `/users/auth/*`. Owner:
+  3.0.0.
+- **C2 (sso):** the `oidc_auto_provision` and `oidc_silent_login_default`
+  settings, their routes and admin toggles are generic (every external
+  method, every redirect method) but still carry OIDC in their names and
+  i18n. Rename with a settings migration if wanted. Owner: D0.
+- **Unrelated, found in C2:** `node scripts/check-shell-plugin-ids.cjs`
+  fails on `src/ui/lib/host-to-ssh-host.ts` naming `"web-endpoint"`
+  (`h.pluginSettings?.["web-endpoint"]`). The file is untouched since before
+  C2. Owner: D0.
 
 ## Manual checks after 2.9.0
 
@@ -539,3 +560,15 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   plugin and a TOTP user's login is refused until an admin resets their
   factors; register a passkey, sign in with it with and without a PIN (no
   PIN still asks for TOTP), delete it; existing 2.8 passkeys still sign in.
+- SSO and LDAP: on a 2.8 database every SSO provider and LDAP directory is
+  there, in Settings > Plugins > Single sign-on and > LDAP; an existing
+  provider still signs in through its identity provider without changing
+  anything there (its redirect URI shows `/users/oidc/callback`); add the
+  new redirect URI at the provider, switch it over and sign in again; a new
+  provider, GitHub and Google; an existing SSO user and an existing LDAP
+  user land in their old accounts; the env-configured provider; admin group
+  and role map; back-channel logout from Keycloak ends the session; the
+  desktop app's system browser login and Termix-Mobile's login; silent
+  sign-in; a second factor after an external login with the admin setting
+  on and off; disable each plugin and its buttons go away and its URLs stop
+  signing anyone in, then enable it again.

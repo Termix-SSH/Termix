@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Inicia la sessió amb {{name}}",
+  "loading": "S'està carregant...",
+  "requiredField": "Aquest camp és obligatori",
+  "username": "Nom d'usuari LDAP",
+  "password": "Contrasenya LDAP",
+  "signIn": "Inicia la sessió",
+  "providers": {
+    "docsLink": "Veure documents",
+    "name": "Nom de visualització",
+    "enabled": "Activat",
+    "saving": "Desant...",
+    "saved": "Desat",
+    "saveFailed": "No s'ha pogut desar",
+    "deleted": "Suprimit",
+    "deleteFailed": "No s'ha pogut suprimir",
+    "cancel": "Cancel·la"
+  },
+  "fields": {
+    "host": "Amfitrió LDAP",
+    "port": "Port",
+    "useTls": "Utilitza TLS (LDAPS)",
+    "bindDn": "Vinculació de nom de domini",
+    "bindPassword": "Contrasenya de vinculació",
+    "userSearchBase": "Base de cerca d'usuaris",
+    "userSearchFilter": "Filtre de cerca d'usuaris",
+    "usernameAttr": "Atribut de nom d'usuari",
+    "displayNameAttr": "Atribut del nom de visualització",
+    "groupSearchBase": "Base de cerca de grups",
+    "adminGroup": "Grup d'administradors",
+    "allowedUsers": "Usuaris permesos"
+  }
+}

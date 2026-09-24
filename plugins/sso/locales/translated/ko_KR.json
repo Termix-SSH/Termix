@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "{{name}}으로 로그인",
+  "loading": "로딩 중...",
+  "providers": {
+    "docsLink": "문서 보기",
+    "none": "설정된 SSO 제공자가 없습니다.",
+    "add": "제공자 추가",
+    "edit": "제공자 편집",
+    "delete": "제공자 삭제",
+    "deleteConfirm": "이 제공자를 삭제하시겠습니까? 연결된 사용자는 로그인할 수 없습니다.",
+    "name": "표시 이름",
+    "type": "제공자 유형",
+    "enabled": "사용",
+    "save": "제공자 저장",
+    "saving": "저장 중...",
+    "saved": "저장됨",
+    "saveFailed": "저장 실패",
+    "deleted": "삭제됨",
+    "deleteFailed": "삭제 실패",
+    "cancel": "취소"
+  },
+  "fields": {
+    "clientId": "클라이언트 ID",
+    "clientSecret": "클라이언트 시크릿",
+    "issuerUrl": "Issuer URL",
+    "authUrl": "인증 URL",
+    "tokenUrl": "토큰 URL",
+    "userIdentifier": "사용자 식별자 경로",
+    "displayName": "표시 이름 경로",
+    "scopes": "스코프",
+    "userinfoUrl": "Userinfo URL 재정의",
+    "groupClaim": "그룹 클레임",
+    "groupClaimDesc": "선택 사항입니다. 사용자 그룹이 포함된 클레임 경로입니다. 기본값은 groups, roles, group 순서로 검색됩니다. 사용자 정의 클레임이 있는 제공자(예: Zitadel)의 경우 이 값을 사용하세요.",
+    "allowedUsers": "허용된 사용자",
+    "allowedUsersDesc": "한 줄에 이메일 하나씩 입력하세요. 비워두면 모두 허용됩니다.",
+    "adminGroup": "관리자 그룹",
+    "adminGroupDesc": "이 그룹의 사용자에게 관리자 권한이 부여됩니다. 비워두면 그룹 동기화가 비활성화됩니다.",
+    "caCert": "사용자 정의 CA 인증서",
+    "caCertDesc": "선택 사항입니다. 개인 또는 자체 서명 CA를 사용하는 OIDC 제공자를 위한 PEM 인코딩 CA 인증서입니다. 비워두면 시스템 신뢰 저장소가 사용됩니다."
+  }
+}

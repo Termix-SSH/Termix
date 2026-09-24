@@ -197,31 +197,18 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     });
 
     if (trustedProxyAuth.enabled) {
-      const {
-        createCurrentSettingsRepository,
-        createCurrentSsoProviderRepository,
-        createCurrentUserAuthRepository,
-        createCurrentUserRepository,
-      } = await import("./database/repositories/factory.js");
-      const [legacyOidc, providers, users, secondFactorUsers] =
-        await Promise.all([
-          createCurrentSettingsRepository().get("oidc_config"),
-          createCurrentSsoProviderRepository().listEnabled(),
-          createCurrentUserRepository().listAll(),
-          createCurrentUserAuthRepository().listUserIdsWithSecondFactors(),
-        ]);
-      const conflictingProvider = providers.some((provider) =>
-        ["oidc", "github", "google"].includes(provider.type),
-      );
+      // Enabled external login methods are refused at runtime instead: their
+      // plugins are not running yet at this point.
+      const { createCurrentUserAuthRepository, createCurrentUserRepository } =
+        await import("./database/repositories/factory.js");
+      const [users, secondFactorUsers] = await Promise.all([
+        createCurrentUserRepository().listAll(),
+        createCurrentUserAuthRepository().listUserIdsWithSecondFactors(),
+      ]);
       const conflictingUser = users.some(
         (user) => user.isOidc || secondFactorUsers.has(user.id),
       );
-      if (
-        legacyOidc ||
-        process.env.OIDC_CLIENT_ID ||
-        conflictingProvider ||
-        conflictingUser
-      ) {
+      if (process.env.OIDC_CLIENT_ID || conflictingUser) {
         throw new Error(
           "Trusted proxy authentication cannot start while OIDC or a second factor is enabled",
         );

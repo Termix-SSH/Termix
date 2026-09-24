@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "使用{{name}}登录",
+  "loading": "加载中...",
+  "providers": {
+    "docsLink": "查看文档",
+    "none": "未配置 SSO 提供商。",
+    "add": "添加提供商",
+    "edit": "编辑提供商",
+    "delete": "删除提供商",
+    "deleteConfirm": "删除此提供商？关联用户将无法登录。",
+    "name": "显示名称",
+    "type": "提供商类型",
+    "enabled": "已启用",
+    "save": "保存提供商",
+    "saving": "保存中...",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "deleted": "已删除",
+    "deleteFailed": "删除失败",
+    "cancel": "取消"
+  },
+  "fields": {
+    "clientId": "客户端 ID",
+    "clientSecret": "客户端密钥",
+    "issuerUrl": "颁发者 URL",
+    "authUrl": "授权 URL",
+    "tokenUrl": "令牌 URL",
+    "userIdentifier": "用户标识符路径",
+    "displayName": "显示名称路径",
+    "scopes": "作用域",
+    "userinfoUrl": "覆盖 Userinfo URL",
+    "groupClaim": "组声明",
+    "groupClaimDesc": "可选。包含用户组的声明路径。默认依次使用 groups、roles、group。用于具有自定义声明的提供商（如 Zitadel）。",
+    "allowedUsers": "允许的用户",
+    "allowedUsersDesc": "每行一个邮箱。留空表示允许所有用户。",
+    "adminGroup": "管理员组",
+    "adminGroupDesc": "此组的用户将被授予管理员权限。留空可禁用组同步。",
+    "caCert": "自定义 CA 证书",
+    "caCertDesc": "可选。PEM 编码的 CA 证书，用于使用私有或自签名 CA 的 OIDC 提供商。留空则使用系统信任存储。"
+  }
+}

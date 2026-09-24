@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Kirjaudu sisään tunnuksella {{name}}",
+  "loading": "Ladataan...",
+  "requiredField": "Tämä kenttä on pakollinen",
+  "username": "LDAP-käyttäjätunnus",
+  "password": "LDAP-salasana",
+  "signIn": "Kirjaudu sisään",
+  "providers": {
+    "docsLink": "Näytä dokumentit",
+    "name": "Näyttönimi",
+    "enabled": "Käytössä",
+    "saving": "Tallennetaan...",
+    "saved": "Tallennettu",
+    "saveFailed": "Tallennus epäonnistui",
+    "deleted": "Poistettu",
+    "deleteFailed": "Poistaminen epäonnistui",
+    "cancel": "Peruuttaa"
+  },
+  "fields": {
+    "host": "LDAP-isäntä",
+    "port": "Portti",
+    "useTls": "Käytä TLS:ää (LDAPS)",
+    "bindDn": "Sido DN",
+    "bindPassword": "Sido salasana",
+    "userSearchBase": "Käyttäjähakupohja",
+    "userSearchFilter": "Käyttäjän hakusuodatin",
+    "usernameAttr": "Käyttäjätunnusattribuutti",
+    "displayNameAttr": "Näyttönimen attribuutti",
+    "groupSearchBase": "Ryhmän hakukanta",
+    "adminGroup": "Hallintaryhmä",
+    "allowedUsers": "Sallitut käyttäjät"
+  }
+}

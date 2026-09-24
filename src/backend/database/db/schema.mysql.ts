@@ -49,21 +49,6 @@ export const settings = mysqlTable("settings", {
   value: text("value").notNull(),
 });
 
-export const ssoProviders = mysqlTable("sso_providers", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  type: text("type").notNull(),
-  enabled: boolean("enabled").notNull().default(true),
-  displayOrder: int("display_order").notNull().default(0),
-  config: text("config").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-
 export const sessions = mysqlTable(
   "sessions",
   {

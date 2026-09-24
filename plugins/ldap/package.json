@@ -1,0 +1,19 @@
+{
+  "name": "@termix-plugin/ldap",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "ldapjs": "^3.0.7"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*",
+    "@types/ldapjs": "^3.0.6"
+  }
+}

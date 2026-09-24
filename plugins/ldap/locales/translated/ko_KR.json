@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "{{name}}으로 로그인",
+  "loading": "로딩 중...",
+  "requiredField": "필수 입력란입니다",
+  "username": "LDAP 사용자 이름",
+  "password": "LDAP 비밀번호",
+  "signIn": "로그인",
+  "providers": {
+    "docsLink": "문서 보기",
+    "name": "표시 이름",
+    "enabled": "사용",
+    "saving": "저장 중...",
+    "saved": "저장됨",
+    "saveFailed": "저장 실패",
+    "deleted": "삭제됨",
+    "deleteFailed": "삭제 실패",
+    "cancel": "취소"
+  },
+  "fields": {
+    "host": "LDAP 호스트",
+    "port": "포트",
+    "useTls": "TLS 사용 (LDAPS)",
+    "bindDn": "바인딩 DN",
+    "bindPassword": "바인딩 암호",
+    "userSearchBase": "사용자 검색 기준",
+    "userSearchFilter": "사용자 검색 필터",
+    "usernameAttr": "사용자 이름 속성",
+    "displayNameAttr": "표시 이름 속성",
+    "groupSearchBase": "그룹 검색 기준",
+    "adminGroup": "관리자 그룹",
+    "allowedUsers": "허용 사용자"
+  }
+}

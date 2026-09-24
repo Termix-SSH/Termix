@@ -20,6 +20,7 @@
  */
 
 import { pluginLogger } from "../utils/logger.js";
+import { getRequestBaseUrlWithForceHTTPS } from "../utils/request-origin.js";
 import { pluginEvents } from "./events.js";
 import * as registry from "./registry.js";
 import * as serviceRegistry from "./service-registry.js";
@@ -683,6 +684,10 @@ export function createPluginContext(
         );
         return router as never;
       },
+      baseUrl: (req) =>
+        getRequestBaseUrlWithForceHTTPS(
+          req as Parameters<typeof getRequestBaseUrlWithForceHTTPS>[0],
+        ),
     },
 
     ws: {

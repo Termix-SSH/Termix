@@ -58,12 +58,6 @@ import {
   type AcmeSettings,
 } from "@/api/acme-ssl-api";
 import {
-  getAdminSSOProviders,
-  updateSSOProvider,
-  deleteSSOProvider,
-} from "@/api/sso-provider-api";
-import type { SSOProvider } from "@/types/index";
-import {
   type ApiKey,
   type CreatedApiKey,
   type Role,
@@ -85,10 +79,8 @@ import {
   AdminDatabaseSection,
   AdminGeneralSettingsSection,
   AdminHostDefaultsSection,
-  AdminSSOSection,
   AdminSSLSection,
 } from "./AdminSettingsSections";
-import { SSOProviderDialog } from "./SSOProviderDialog";
 import { AdminApiKeysSection } from "./AdminApiKeysSection";
 import { AdminAuditLogSection } from "./AdminAuditLogSection";
 import {
@@ -168,15 +160,11 @@ export function AdminSettingsPanel({
   const [brandingSaving, setBrandingSaving] = useState(false);
   const { applyBranding } = useBranding();
 
-  // SSO / auto-provision state
+  // External login state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
   const [secondFactorAfterExternalLogin, setSecondFactorAfterExternalLogin] =
     useState(false);
   const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
-  const [ssoProviders, setSsoProviders] = useState<SSOProvider[]>([]);
-  const [ssoDialogOpen, setSsoDialogOpen] = useState(false);
-  const [ssoDialogProvider, setSsoDialogProvider] =
-    useState<SSOProvider | null>(null);
 
   // Create user dialog
   const [createUserOpen, setCreateUserOpen] = useState(false);
@@ -259,7 +247,6 @@ export function AdminSettingsPanel({
     loadRoles();
     loadApiKeys();
     loadGeneralSettings();
-    loadSSOProviders();
   }, []);
 
   // Debounced so typing in the search box does not fire a request per keystroke.
@@ -412,15 +399,6 @@ export function AdminSettingsPanel({
     getAcmeSslSettings()
       .then((s) => setAcmeSettings(s))
       .catch(() => {});
-  }
-
-  async function loadSSOProviders() {
-    try {
-      const providers = await getAdminSSOProviders();
-      setSsoProviders(providers);
-    } catch {
-      // non-fatal
-    }
   }
 
   function toggle(id: AdminSection) {
@@ -627,43 +605,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  function handleAddProvider() {
-    setSsoDialogProvider(null);
-    setSsoDialogOpen(true);
-  }
-
-  function handleEditProvider(provider: SSOProvider) {
-    setSsoDialogProvider(provider);
-    setSsoDialogOpen(true);
-  }
-
-  async function handleDeleteProvider(id: number) {
-    if (!window.confirm(t("admin.ssoDeleteConfirm"))) return;
-    try {
-      await deleteSSOProvider(id);
-      setSsoProviders((prev) => prev.filter((p) => p.id !== id));
-      toast.success(t("common.deleted"));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("common.deleteFailed")));
-    }
-  }
-
-  async function handleToggleProviderEnabled(id: number, enabled: boolean) {
-    const provider = ssoProviders.find((p) => p.id === id);
-    if (!provider) return;
-    setSsoProviders((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, enabled } : p)),
-    );
-    try {
-      await updateSSOProvider(id, { enabled });
-    } catch (e) {
-      setSsoProviders((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, enabled: !enabled } : p)),
-      );
-      toast.error(apiErrorMessage(e, t("common.saveFailed")));
-    }
-  }
-
   async function handleSaveAcmeSettings() {
     try {
       const payload: Parameters<typeof updateAcmeSslSettings>[0] = {
@@ -734,18 +675,6 @@ export function AdminSettingsPanel({
     } finally {
       setManualUploading(false);
     }
-  }
-
-  function handleProviderSaved(saved: SSOProvider) {
-    setSsoProviders((prev) => {
-      const idx = prev.findIndex((p) => p.id === saved.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = saved;
-        return next;
-      }
-      return [...prev, saved];
-    });
   }
 
   async function handleCreateUser() {
@@ -1041,23 +970,6 @@ export function AdminSettingsPanel({
         handleSaveMonitoring={handleSaveMonitoring}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}
-      />
-
-      <AdminSSOSection
-        open={openSections.has("sso")}
-        onToggle={() => toggle("sso")}
-        providers={ssoProviders}
-        onAddProvider={handleAddProvider}
-        onEditProvider={handleEditProvider}
-        onDeleteProvider={handleDeleteProvider}
-        onToggleEnabled={handleToggleProviderEnabled}
-      />
-
-      <SSOProviderDialog
-        open={ssoDialogOpen}
-        onOpenChange={setSsoDialogOpen}
-        provider={ssoDialogProvider}
-        onSaved={handleProviderSaved}
       />
 
       <AdminUsersSection

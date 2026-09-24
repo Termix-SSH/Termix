@@ -999,11 +999,11 @@ auto-session and trusted devices, plus the base SSH auth types password, key,
 stored credential, agent and none. Every other login method, second factor and
 SSH auth method is a plugin through `ctx.auth`.
 
-In 2.9.0, OIDC (and GitHub, Google), LDAP, OPKSSH, Step-CA, Vault, Tailscale
-and Warpgate still live in core. They register through the same interfaces
-from `src/backend/auth/legacy-providers.ts` and
-`src/ui/auth/legacy-auth-ui.tsx` with `pluginId: "core"`. Phase C moves each
-one into its plugin by moving its block out of those two files; D1 deletes them.
+In 2.9.0, OPKSSH, Step-CA, Vault, Tailscale and Warpgate still live in core.
+They register through the same interfaces from
+`src/backend/auth/legacy-providers.ts` and `src/ui/auth/legacy-auth-ui.tsx`
+with `pluginId: "core"`. Phase C moves each one into its plugin by moving its
+block out of those two files; D1 deletes them.
 Nothing else in core branches on those type names.
 
 **C1** moved TOTP and passkeys out:
@@ -1042,6 +1042,52 @@ Nothing else in core branches on those type names.
   `/users/admin/totp/disable` is gone; the generic admin reset covers it.
   `AuthManager.unlockWithSystemKey` (was `authenticateWebAuthnUser`) opens
   the data key for any identity that carries no password.
+
+**C2** moved external logins out:
+
+- `sso` registers the `oidc` login method: OIDC, GitHub and Google, one
+  button per enabled provider (the method's instances), plus the provider
+  configured through the `OIDC_*` environment variables as instance `0`. It
+  adopts `sso_providers` as `p_sso_providers`, ignoring any `ldap` rows left
+  in it. Its public routes are `/plugin-api/sso/start` (sends the browser to
+  the provider), `/callback` (GET and POST), `/backchannel-logout` and
+  `/config`; provider management is `/plugin-api/sso/providers`, gated on
+  `sso.manage`, and renders as the custom `providers` field on the plugin's
+  admin settings page. Login state (nonce, PKCE verifier, return address)
+  lives in `ctx.kv` for ten minutes.
+- The redirect URI is `<base>/plugin-api/sso/callback`. Providers that
+  existed before 2.9 keep sending `<base>/users/oidc/callback`, the URI their
+  identity provider was registered with, because the sso plugin's second
+  migration sets `legacy_callback` on every adopted row; the env provider
+  always does. Core answers that old URL with a 308 to the plugin's callback,
+  and the token exchange sends the same redirect URI the authorize request
+  did, so strict providers accept it. The admin page shows each provider's
+  URI and switches it to the new one once the admin has registered that.
+  `/users/oidc/backchannel-logout` is a 308 to the plugin as well.
+- `ldap` registers the `ldap` form method, one form per directory, in its own
+  `p_ldap_providers`. `utils/crypto-migration/ldap-provider-migration.ts`
+  copies the 2.8 LDAP rows out of `sso_providers` (adopted or not) with their
+  ids and deletes them there. It runs from the loader whenever a plugin's
+  migrations applied something (`plugin-data-moves.ts`), so the rows are in
+  place before the ldap plugin first activates, at boot or when it is enabled
+  later. LDAP identities are stored under provider `ldap:<id>` so their ids
+  can never clash with SSO ones; `external-identity-migration.ts` writes them
+  that way and the LDAP migration renames any bare ones.
+- Both return 2.8's `users.oidc_identifier` value in `legacy`, so pre-2.9
+  accounts are found and new ones keep the column filled. The sso plugin
+  passes its group role map as `roles` and the id token's `sub`/`sid` as
+  `logoutClaims`; `/backchannel-logout` ends those sessions with
+  `ctx.auth.revokeSessions`. LDAP counts failed binds with
+  `ctx.auth.loginRateLimit`, the limiter password login uses.
+- Core keeps provisioning (the allowed-users matcher is
+  `auth/allowed-users.ts`), `oidc_auto_provision`, silent sign-in (it starts
+  the first redirect method), account linking and the trusted proxy rule:
+  every `external` method is refused while trusted proxy login is on, and
+  `/users/proxy-login` refuses while any external method lists an instance.
+  The 2.8 client routes `/users/oidc/authorize`, `/users/oidc-config` (307 to
+  `/plugin-api/sso/config`), `/users/sso-providers` and `/users/ldap/login`
+  live in `database/routes/auth-compat-routes.ts` and only forward to the
+  registered methods, so with the plugins off they answer 404.
 
 #### One SSH connect pipeline
 
@@ -1171,10 +1217,25 @@ or an external identity. Core then:
 Routes, all under `/users/auth`: `GET methods` (public), `GET :methodId/start`,
 `GET|POST :methodId/callback`, `POST :methodId/verify`,
 `POST second-factor/:factorId/challenge`, `POST second-factor/:factorId/verify`.
-A redirect method's provider must send the browser back to
-`/users/auth/<methodId>/callback`. The older routes (`/users/login`,
+A redirect method's provider sends the browser back to
+`/users/auth/<methodId>/callback`, or to a public route of the plugin's own
+that calls `ctx.auth.completeRedirectLogin(methodId, req, res)`, which runs
+the same callback and pipeline (**C2**, for a URL that has to stay stable in
+the provider's configuration). The older routes (`/users/login`,
 `/users/oidc/*`, `/users/ldap/login`) are thin wrappers over the same
-pipeline. `/users/totp/verify-login` stays for 2.8 clients: it answers with
+pipeline.
+
+**Identity extras (C2).** An external identity may also carry `roles`
+(`{ desired, managed }`: core adds the desired roles and removes managed ones
+the user no longer maps to), `logoutClaims` (`providerId`, `sub`, `sid`,
+stored on the session for `ctx.auth.revokeSessions`), `legacy` (the 2.8
+`oidc_identifier` and `sso_provider_id`, only for a plugin that took over a
+2.8 method) and `rateLimitKey` (cleared on success; keys are kept apart per
+plugin). Core copies only these documented fields, so a plugin cannot set
+core-only ones. `ctx.auth.countLinkedUsers(provider)` answers how many users
+sign in through a provider, for refusing to delete one still in use.
+`ctx.http.baseUrl(req)` is the install's public URL (origin plus base path,
+honouring `OIDC_FORCE_HTTPS`) for building callback URLs. `/users/totp/verify-login` stays for 2.8 clients: it answers with
 the factor named in `factor`, or the user's first required factor, and core
 never names one itself.
 
@@ -1562,6 +1623,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)              | **A9**, lazy **B16**    |
 | `ctx.sync.registerEntity`                        | none                                 | **A3**                  |
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4**                  |
+| `ctx.http.baseUrl(req)`                          | none                                 | **C2**                  |
 | `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5**                  |
 | `ctx.capabilities.has` / `.require`              | the capability itself                | **B11**                 |
 | `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4**, **B5**, **B18** |
@@ -1570,6 +1632,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
 | `ctx.notify.channels` / `.send`                  | `notify:send`                        | **B17**                 |
 | `ctx.auth.*`                                     | `auth:provide`                       | **A8**                  |
+| `ctx.auth.completeRedirectLogin` and the rest    | `auth:provide`                       | **C2**                  |
 | `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
 | `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)       | **B14**                 |
 | `ctx.credentials.resolveHostProtocol`            | `credentials:read`                   | **B14**                 |
@@ -2361,8 +2424,8 @@ Then, with the app running:
 
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
-(B17), ai (B18), homepage (B19), totp and webauthn (C1), which import
-nothing from core. The others still reach core by relative
+(B17), ai (B18), homepage (B19), totp and webauthn (C1), sso and ldap (C2),
+which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
 and rewrites to the compiled output path (`../../../backend/backend/...`, or

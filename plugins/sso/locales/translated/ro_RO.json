@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Autentificare cu {{name}}",
+  "loading": "Încărcare...",
+  "providers": {
+    "docsLink": "Vizualizați documentele",
+    "none": "Nu sunt configurați furnizori SSO.",
+    "add": "Adăugați furnizor",
+    "edit": "Editați furnizorul",
+    "delete": "Ștergeți furnizorul",
+    "deleteConfirm": "Ștergeți acest furnizor? Utilizatorii asociați nu se vor putea conecta.",
+    "name": "Numele de afișare",
+    "type": "Tipul furnizorului",
+    "enabled": "Activat",
+    "save": "Salvați furnizorul",
+    "saving": "Economisire...",
+    "saved": "Salvat",
+    "saveFailed": "Salvarea nu a reușit",
+    "deleted": "Șters",
+    "deleteFailed": "Ștergerea nu a reușit",
+    "cancel": "Anula"
+  },
+  "fields": {
+    "clientId": "ID client",
+    "clientSecret": "Secretul clientului",
+    "issuerUrl": "URL-ul emitentului",
+    "authUrl": "URL de autorizare",
+    "tokenUrl": "Adresa URL a jetonului",
+    "userIdentifier": "Calea de identificare a utilizatorului",
+    "displayName": "Calea numelui afișat",
+    "scopes": "Scopuri",
+    "userinfoUrl": "Suprascrieți adresa URL a informațiilor utilizatorului",
+    "groupClaim": "Revendicare de grup",
+    "groupClaimDesc": "Opțional. Calea de revendicare care conține grupurile utilizatorului. Implicit, se utilizează grupuri, roluri, apoi grup. Folosiți această opțiune pentru furnizorii cu o revendicare personalizată (de exemplu, Zitadel).",
+    "allowedUsers": "Utilizatori permiși",
+    "allowedUsersDesc": "Un e-mail pe rând. Lăsați necompletat pentru a permite accesul tuturor.",
+    "adminGroup": "Grup de administratori",
+    "adminGroupDesc": "Utilizatorii din acest grup au drepturi de administrator. Lăsați câmpul gol pentru a dezactiva sincronizarea grupului.",
+    "caCert": "Certificat CA personalizat",
+    "caCertDesc": "Opțional. Certificat CA codificat PEM pentru furnizorii OIDC care utilizează un CA privat sau autosemnat. Lăsați câmpul gol pentru a utiliza depozitul de încredere al sistemului."
+  }
+}

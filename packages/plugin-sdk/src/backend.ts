@@ -313,6 +313,12 @@ export interface PluginHttp {
    * on deactivate.
    */
   router: <T = unknown>(options?: PluginRouterOptions) => T;
+  /**
+   * The public base URL a request came in on: origin plus the install's base
+   * path, no trailing slash. Honours forwarded headers from a trusted proxy,
+   * BASE_PATH and OIDC_FORCE_HTTPS. For building absolute callback URLs.
+   */
+  baseUrl: (req: unknown) => string;
 }
 
 /**
@@ -1102,6 +1108,33 @@ export type PluginVerifiedIdentity =
       /** Redirect methods: where the browser goes back to. */
       returnTo?: string;
       rememberMe?: boolean;
+      /**
+       * Provider groups mapped to Termix roles. Core adds the desired roles
+       * and removes managed roles the user no longer maps to, on every login.
+       * Roles outside `managed` are never touched.
+       */
+      roles?: { desired: string[]; managed: string[] };
+      /**
+       * Stored on the session so `ctx.auth.revokeSessions` can find it later,
+       * for an identity provider's back-channel logout.
+       */
+      logoutClaims?: {
+        providerId?: number | null;
+        sub?: string | null;
+        sid?: string | null;
+      };
+      /**
+       * The values a 2.8 install kept on the user row (`oidc_identifier`,
+       * `sso_provider_id`). Only for a plugin that took over a 2.8 login
+       * method: core finds pre-2.9 accounts by `identifier` and keeps writing
+       * both for new users so a downgrade still works.
+       */
+      legacy?: { identifier: string; providerRowId?: number | null };
+      /**
+       * The key this attempt was counted under with
+       * `ctx.auth.loginRateLimit.recordFailure`. Cleared on success.
+       */
+      rateLimitKey?: string;
     };
 
 /** Request shape a login method sees. Structural, like PluginRequestLike. */
@@ -1118,6 +1151,11 @@ export interface PluginLoginInstance {
   id: string;
   label: string;
   enabled: boolean;
+  /**
+   * Provider type shown to 2.8 clients by the old `GET /users/sso-providers`
+   * route ("oidc", "github", "google", "ldap"). Leave unset otherwise.
+   */
+  type?: string;
 }
 
 export interface PluginLoginMethod {
@@ -1184,6 +1222,46 @@ export interface PluginAuth {
    */
   recordEnrollment: (userId: string, factorId: string) => Promise<void>;
   removeEnrollment: (userId: string, factorId: string) => Promise<void>;
+  /**
+   * Finishes a redirect login from one of this plugin's own public routes:
+   * runs the registered method's `callback`, then core finds or provisions
+   * the user, runs second factors and redirects the browser back with a
+   * session, exactly like `/users/auth/<methodId>/callback`. The method must
+   * be one this plugin registered.
+   */
+  completeRedirectLogin: (
+    methodId: string,
+    req: unknown,
+    res: unknown,
+  ) => Promise<void>;
+  /**
+   * Revokes sessions whose login carried matching `logoutClaims`, for a
+   * back-channel logout. Needs `sub` or `sid`; `providerId` narrows it.
+   * Returns how many sessions ended.
+   */
+  revokeSessions: (match: {
+    providerId?: number | null;
+    sub?: string | null;
+    sid?: string | null;
+  }) => Promise<number>;
+  /**
+   * Core's login rate limiter, the one password login uses. Keys are kept
+   * apart per plugin. Put the key in the identity's `rateLimitKey` so a
+   * successful login clears it.
+   */
+  loginRateLimit: {
+    isLocked: (
+      ip: string,
+      key: string,
+    ) => Promise<{ locked: boolean; remainingTime?: number }>;
+    recordFailure: (ip: string, key: string) => Promise<void>;
+  };
+  /**
+   * How many users are linked to an external identity from `provider` (the
+   * `provider` of the identities this plugin returns). For refusing to
+   * delete a provider people still sign in with.
+   */
+  countLinkedUsers: (provider: string) => Promise<number>;
 }
 
 export interface PluginOpenIsolatedWindowRequest {

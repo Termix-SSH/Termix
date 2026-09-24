@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Přihlaste se pomocí {{name}}",
+  "loading": "Načítání...",
+  "providers": {
+    "docsLink": "Zobrazit dokumenty",
+    "none": "Nejsou nakonfigurováni žádní poskytovatelé jednotného přihlašování (SSO).",
+    "add": "Přidat poskytovatele",
+    "edit": "Upravit poskytovatele",
+    "delete": "Smazat poskytovatele",
+    "deleteConfirm": "Smazat tohoto poskytovatele? Přidružení uživatelé se nebudou moci přihlásit.",
+    "name": "Zobrazovaný název",
+    "type": "Typ poskytovatele",
+    "enabled": "Povoleno",
+    "save": "Uložit poskytovatele",
+    "saving": "Ukládání...",
+    "saved": "Uloženo",
+    "saveFailed": "Uložení se nezdařilo",
+    "deleted": "Smazáno",
+    "deleteFailed": "Nepodařilo se smazat",
+    "cancel": "Zrušit"
+  },
+  "fields": {
+    "clientId": "ID klienta",
+    "clientSecret": "Tajemství klienta",
+    "issuerUrl": "URL vydavatele",
+    "authUrl": "Autorizační URL",
+    "tokenUrl": "URL tokenu",
+    "userIdentifier": "Cesta k identifikátoru uživatele",
+    "displayName": "Cesta k zobrazovanému názvu",
+    "scopes": "Rozsahy",
+    "userinfoUrl": "Přepsat URL s uživatelskými informacemi",
+    "groupClaim": "Skupinový nárok",
+    "groupClaimDesc": "Volitelné. Cesta k deklaraci identity, která obsahuje skupiny uživatele. Výchozí nastavení je skupiny, role a poté skupina. Použijte pro poskytovatele s vlastní deklarací identity (např. Zitadel).",
+    "allowedUsers": "Povolení uživatelé",
+    "allowedUsersDesc": "Jeden e-mail na řádek. Pro povolení všech ponechte prázdné.",
+    "adminGroup": "Skupina administrátorů",
+    "adminGroupDesc": "Uživatelé v této skupině mají oprávnění k administraci. Pro deaktivaci synchronizace skupiny ponechte pole prázdné.",
+    "caCert": "Vlastní certifikát certifikační autority",
+    "caCertDesc": "Volitelné. Certifikát certifikační autority s kódováním PEM pro poskytovatele OIDC používající soukromou nebo samopodepsanou certifikační autoritu. Pro použití systémového úložiště důvěryhodných certifikátů ponechte pole prázdné."
+  }
+}

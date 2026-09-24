@@ -1,23 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getDesktopOidcCallbackUrl,
-  isOidcTokenCallback,
-} from "../../utils/oidc-desktop-callback.js";
-
-describe("getDesktopOidcCallbackUrl", () => {
-  it("uses localhost so browsers do not upgrade the loopback callback", () => {
-    expect(getDesktopOidcCallbackUrl("17850")).toBe(
-      "http://localhost:17850/oidc-callback",
-    );
-  });
-
-  it.each(["", "0", "65536", "17850/path", ["17850"]])(
-    "rejects invalid callback port %j",
-    (port) => {
-      expect(getDesktopOidcCallbackUrl(port)).toBeNull();
-    },
-  );
-});
+import { isOidcTokenCallback } from "../../utils/oidc-desktop-callback.js";
 
 describe("isOidcTokenCallback", () => {
   it.each([

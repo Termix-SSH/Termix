@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Влезте с {{name}}",
+  "loading": "Зареждане...",
+  "requiredField": "Това поле е задължително",
+  "username": "Потребителско име на LDAP",
+  "password": "LDAP парола",
+  "signIn": "Вход",
+  "providers": {
+    "docsLink": "Преглед на документи",
+    "name": "Показвано име",
+    "enabled": "Активирано",
+    "saving": "Запазване...",
+    "saved": "Запазено",
+    "saveFailed": "Запазването не бе успешно",
+    "deleted": "Изтрито",
+    "deleteFailed": "Изтриването не бе успешно",
+    "cancel": "Отказ"
+  },
+  "fields": {
+    "host": "LDAP хост",
+    "port": "Порт",
+    "useTls": "Използвайте TLS (LDAPS)",
+    "bindDn": "Обвързване DN",
+    "bindPassword": "Свързване на парола",
+    "userSearchBase": "База за търсене на потребители",
+    "userSearchFilter": "Филтър за търсене на потребители",
+    "usernameAttr": "Атрибут на потребителското име",
+    "displayNameAttr": "Атрибут за показвано име",
+    "groupSearchBase": "База за групово търсене",
+    "adminGroup": "Административна група",
+    "allowedUsers": "Разрешени потребители"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "使用 {{name}} 登入",
+  "loading": "載入中...",
+  "providers": {
+    "docsLink": "檢視文件",
+    "none": "尚未設定 SSO 提供者。",
+    "add": "新增提供者",
+    "edit": "編輯提供者",
+    "delete": "刪除提供者",
+    "deleteConfirm": "刪除此提供者？相關使用者將無法登入。",
+    "name": "顯示名稱",
+    "type": "提供者類型",
+    "enabled": "已啟用",
+    "save": "儲存提供者",
+    "saving": "儲存中...",
+    "saved": "已儲存",
+    "saveFailed": "儲存失敗",
+    "deleted": "已刪除",
+    "deleteFailed": "刪除失敗",
+    "cancel": "取消"
+  },
+  "fields": {
+    "clientId": "用戶端 ID",
+    "clientSecret": "用戶端密鑰",
+    "issuerUrl": "發行者 URL",
+    "authUrl": "授權 URL",
+    "tokenUrl": "權杖 URL",
+    "userIdentifier": "使用者識別碼路徑",
+    "displayName": "顯示名稱路徑",
+    "scopes": "範圍",
+    "userinfoUrl": "覆寫使用者資訊 URL",
+    "groupClaim": "群組宣告",
+    "groupClaimDesc": "選用。包含使用者群組的宣告路徑。預設為 groups、roles、group。用於自訂宣告的提供者（例如 Zitadel）。",
+    "allowedUsers": "允許的使用者",
+    "allowedUsersDesc": "每行一個電子郵件。留空以允許全部。",
+    "adminGroup": "管理員群組",
+    "adminGroupDesc": "此群組中的使用者將被授予管理員權限。留空以停用群組同步。",
+    "caCert": "自訂 CA 憑證",
+    "caCertDesc": "選用。PEM 編碼的 CA 憑證，用於使用私有或自簽 CA 的 OIDC 提供者。留空以使用系統信任儲存區。"
+  }
+}

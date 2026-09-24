@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Σύνδεση με {{name}}",
+  "loading": "Φόρτωση...",
+  "requiredField": "Αυτό το πεδίο είναι υποχρεωτικό",
+  "username": "Όνομα χρήστη LDAP",
+  "password": "Κωδικός πρόσβασης LDAP",
+  "signIn": "Σύνδεση",
+  "providers": {
+    "docsLink": "Προβολή εγγράφων",
+    "name": "Εμφανιζόμενο όνομα",
+    "enabled": "Ενεργοποιημένο",
+    "saving": "Οικονομία...",
+    "saved": "Αποθηκεύτηκε",
+    "saveFailed": "Η αποθήκευση απέτυχε",
+    "deleted": "Διαγράφηκε",
+    "deleteFailed": "Η διαγραφή απέτυχε",
+    "cancel": "Ματαίωση"
+  },
+  "fields": {
+    "host": "Κεντρικός υπολογιστής LDAP",
+    "port": "Λιμάνι",
+    "useTls": "Χρήση TLS (LDAPS)",
+    "bindDn": "Σύνδεση DN",
+    "bindPassword": "Σύνδεση κωδικού πρόσβασης",
+    "userSearchBase": "Βάση αναζήτησης χρηστών",
+    "userSearchFilter": "Φίλτρο αναζήτησης χρήστη",
+    "usernameAttr": "Χαρακτηριστικό ονόματος χρήστη",
+    "displayNameAttr": "Χαρακτηριστικό ονόματος εμφάνισης",
+    "groupSearchBase": "Βάση αναζήτησης ομάδας",
+    "adminGroup": "Ομάδα Διαχειριστών",
+    "allowedUsers": "Επιτρεπόμενοι χρήστες"
+  }
+}

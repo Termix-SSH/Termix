@@ -675,17 +675,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    CREATE TABLE IF NOT EXISTS sso_providers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        display_order INTEGER NOT NULL DEFAULT 0,
-        config TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
 `);
 
   // Expired open tabs are dropped when the tab list is read, against the
@@ -1876,40 +1865,6 @@ const migrateSchema = () => {
     databaseLogger.warn("Failed to migrate users table legacy OIDC columns", {
       operation: "schema_migration",
       error: migrationError,
-    });
-  }
-
-  // Migrate legacy single oidc_config settings blob into sso_providers table
-  try {
-    const migrationDone = getRawSettingValue("sso_migration_v1");
-    if (!migrationDone) {
-      const providerCount = (
-        sqlite.prepare("SELECT COUNT(*) as c FROM sso_providers").get() as {
-          c: number;
-        }
-      ).c;
-      if (providerCount === 0) {
-        const legacyConfig = getRawSettingValue("oidc_config");
-        if (legacyConfig) {
-          sqlite
-            .prepare(
-              "INSERT INTO sso_providers (name, type, enabled, display_order, config) VALUES (?, 'oidc', 1, 0, ?)",
-            )
-            .run("OIDC", legacyConfig);
-          databaseLogger.info(
-            "Migrated legacy oidc_config into sso_providers table",
-            {
-              operation: "sso_migration_v1",
-            },
-          );
-        }
-      }
-      setRawSettingValue("sso_migration_v1", "true");
-    }
-  } catch (e) {
-    databaseLogger.warn("Failed to run SSO migration v1", {
-      operation: "sso_migration_v1",
-      error: e,
     });
   }
 

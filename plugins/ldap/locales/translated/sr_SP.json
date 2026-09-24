@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Пријавите се са {{name}}",
+  "loading": "Учитавање...",
+  "requiredField": "Ово поље је обавезно",
+  "username": "LDAP корисничко име",
+  "password": "LDAP лозинка",
+  "signIn": "Пријавите се",
+  "providers": {
+    "docsLink": "Прикажи документе",
+    "name": "Приказано име",
+    "enabled": "Омогућено",
+    "saving": "Чување...",
+    "saved": "Сачувано",
+    "saveFailed": "Чување није успело",
+    "deleted": "Избрисано",
+    "deleteFailed": "Брисање није успело",
+    "cancel": "Откажи"
+  },
+  "fields": {
+    "host": "LDAP хост",
+    "port": "Лука",
+    "useTls": "Користите TLS (LDAPS)",
+    "bindDn": "Повезивање DN-а",
+    "bindPassword": "Повезивање лозинке",
+    "userSearchBase": "База претраге корисника",
+    "userSearchFilter": "Филтер за претрагу корисника",
+    "usernameAttr": "Атрибут корисничког имена",
+    "displayNameAttr": "Атрибут приказаног имена",
+    "groupSearchBase": "База групне претраге",
+    "adminGroup": "Администраторска група",
+    "allowedUsers": "Дозвољени корисници"
+  }
+}

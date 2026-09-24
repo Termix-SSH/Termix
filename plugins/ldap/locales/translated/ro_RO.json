@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Autentificare cu {{name}}",
+  "loading": "Încărcare...",
+  "requiredField": "Acest câmp este obligatoriu",
+  "username": "Nume de utilizator LDAP",
+  "password": "Parolă LDAP",
+  "signIn": "Conectare",
+  "providers": {
+    "docsLink": "Vizualizați documentele",
+    "name": "Numele de afișare",
+    "enabled": "Activat",
+    "saving": "Economisire...",
+    "saved": "Salvat",
+    "saveFailed": "Salvarea nu a reușit",
+    "deleted": "Șters",
+    "deleteFailed": "Ștergerea nu a reușit",
+    "cancel": "Anula"
+  },
+  "fields": {
+    "host": "Gazdă LDAP",
+    "port": "Port",
+    "useTls": "Utilizați TLS (LDAPS)",
+    "bindDn": "Legați DN-ul",
+    "bindPassword": "Parolă de legare",
+    "userSearchBase": "Baza de căutare a utilizatorilor",
+    "userSearchFilter": "Filtru de căutare utilizator",
+    "usernameAttr": "Atribut nume utilizator",
+    "displayNameAttr": "Atributul numelui afișat",
+    "groupSearchBase": "Baza de căutare a grupului",
+    "adminGroup": "Grup de administratori",
+    "allowedUsers": "Utilizatori permiși"
+  }
+}

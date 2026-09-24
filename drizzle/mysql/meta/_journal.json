@@ -365,6 +365,13 @@
       "when": 1790285910582,
       "tag": "0051_icy_hercules",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "5",
+      "when": 1790287990810,
+      "tag": "0052_illegal_gladiator",
+      "breakpoints": true
     }
   ]
 }

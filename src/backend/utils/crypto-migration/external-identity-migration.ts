@@ -4,7 +4,8 @@
  * users.oidc_identifier packed provider and subject into one string:
  * "ldap:<provider>:<id>", "github:<provider>:<id>", or a bare OIDC subject
  * whose provider was users.sso_provider_id. Each becomes a
- * user_external_identities row. TOTP enrolment moves in totp-migration.ts.
+ * user_external_identities row; LDAP ones under provider "ldap:<provider>",
+ * the id the ldap plugin signs in with. TOTP enrolment moves in totp-migration.ts.
  *
  * Lossless: the old column is left as it is. Idempotent: rows that already
  * exist are skipped, so it runs on every boot.
@@ -16,7 +17,7 @@ import {
   createCurrentUserRepository,
 } from "../../database/repositories/factory.js";
 
-/** Matches LEGACY_OIDC_PROVIDER_ID in auth/legacy/oidc-login.ts. */
+/** The provider id the sso plugin gives its env-configured provider. */
 const LEGACY_OIDC_PROVIDER_ID = "legacy-oidc";
 
 export interface ExternalIdentityMigrationResult {
@@ -34,11 +35,16 @@ export function parseLegacyIdentifier(
   const prefixed = /^(ldap|github):([^:]+):(.+)$/.exec(identifier);
   if (prefixed) {
     const provider = prefixed[2];
+    const missing = provider === "null" || provider === "undefined";
+    // LDAP providers moved to their own table in 2.9 and their identities
+    // carry the "ldap:" prefix so their ids cannot clash with SSO ones.
+    if (prefixed[1] === "ldap") {
+      return missing
+        ? null
+        : { providerId: `ldap:${provider}`, subject: prefixed[3] };
+    }
     return {
-      providerId:
-        provider === "null" || provider === "undefined"
-          ? LEGACY_OIDC_PROVIDER_ID
-          : provider,
+      providerId: missing ? LEGACY_OIDC_PROVIDER_ID : provider,
       subject: prefixed[3],
     };
   }

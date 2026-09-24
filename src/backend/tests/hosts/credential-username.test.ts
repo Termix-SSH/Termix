@@ -110,8 +110,10 @@ describe("expandOidcUsername", () => {
           ssoProviderId: 1,
         }),
       }),
-      createCurrentSsoProviderRepository: () => ({
-        findById: async () => ({ type: "ldap" }),
+      createCurrentUserAuthRepository: () => ({
+        listIdentitiesForUser: async () => [
+          { providerId: "ldap:1", subject: "jdoe" },
+        ],
       }),
     }));
 
@@ -128,8 +130,10 @@ describe("expandOidcUsername", () => {
           ssoProviderId: 1,
         }),
       }),
-      createCurrentSsoProviderRepository: () => ({
-        findById: async () => ({ type: "oidc" }),
+      createCurrentUserAuthRepository: () => ({
+        listIdentitiesForUser: async () => [
+          { providerId: "1", subject: "ldap:1:admin" },
+        ],
       }),
     }));
 
@@ -148,8 +152,10 @@ describe("expandOidcUsername", () => {
           ssoProviderId: 5,
         }),
       }),
-      createCurrentSsoProviderRepository: () => ({
-        findById: async () => ({ type: "ldap" }),
+      createCurrentUserAuthRepository: () => ({
+        listIdentitiesForUser: async () => [
+          { providerId: "ldap:5", subject: "admin" },
+        ],
       }),
     }));
 

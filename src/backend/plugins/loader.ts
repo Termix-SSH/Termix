@@ -343,7 +343,13 @@ export class PluginLoader {
       // than leave it half-running against a schema that is not there. A
       // throw here lands in the catch below, which fails this plugin only.
       const { migratePlugin } = await import("./data.js");
-      await migratePlugin(plugin.id, plugin.dir);
+      const applied = await migratePlugin(plugin.id, plugin.dir);
+      // A new table may be where core data is waiting to move.
+      if (applied.length > 0) {
+        const { runPluginDataMoves } =
+          await import("../utils/crypto-migration/plugin-data-moves.js");
+        await runPluginDataMoves();
+      }
 
       const handle = createPluginHandle(plugin.id, { activate, deactivate });
       const ctx = createPluginContext(plugin.manifest, handle);

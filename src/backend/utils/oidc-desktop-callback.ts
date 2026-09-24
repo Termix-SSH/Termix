@@ -1,14 +1,10 @@
 const CALLBACK_PATH = "/oidc-callback";
 
-export function getDesktopOidcCallbackUrl(value: unknown): string | null {
-  if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
-
-  const port = Number(value);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
-
-  return `http://localhost:${port}${CALLBACK_PATH}`;
-}
-
+/**
+ * Whether a redirect login's return address is the desktop app's loopback
+ * listener or the mobile app's scheme, which get the token in the URL
+ * because they cannot read a cookie.
+ */
 export function isOidcTokenCallback(value: string): boolean {
   if (value.startsWith("termix-mobile:")) return true;
 

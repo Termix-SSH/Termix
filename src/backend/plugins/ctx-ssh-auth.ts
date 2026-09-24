@@ -8,6 +8,7 @@
 
 import type {
   PluginAuth,
+  PluginVerifiedIdentity,
   PluginSsh,
   PluginSshConnectOptions,
   PluginSshHost,
@@ -28,7 +29,12 @@ import {
 } from "../hosts/connect/auth-provider-registry.js";
 import { classifyKeyboardInteractive } from "../hosts/connect/keyboard-interactive.js";
 import { ensureCoreSshAuthProviders } from "../hosts/connect/core-providers.js";
-import { registerLoginMethod, registerSecondFactor } from "../auth/registry.js";
+import {
+  getLoginMethod,
+  registerLoginMethod,
+  registerSecondFactor,
+} from "../auth/registry.js";
+import type { VerifiedIdentity } from "../auth/types.js";
 import type {
   MutableConnectConfig,
   SshAuthProvider,
@@ -392,6 +398,60 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
   };
 }
 
+/**
+ * Turns what a plugin method returned into core's identity. Only the fields
+ * the SDK documents are copied, so a plugin cannot set core-only extras, and
+ * its rate limit key is kept apart from core's and other plugins'.
+ */
+export function toCoreIdentity(
+  pluginId: string,
+  identity: PluginVerifiedIdentity,
+): VerifiedIdentity {
+  if (identity.kind === "user") {
+    return {
+      kind: "user",
+      userId: identity.userId,
+      mfaSatisfied: identity.mfaSatisfied,
+      password: identity.password,
+      returnTo: identity.returnTo,
+      rememberMe: identity.rememberMe,
+    };
+  }
+  return {
+    kind: "external",
+    provider: identity.provider,
+    subject: identity.subject,
+    email: identity.email,
+    name: identity.name,
+    groups: identity.groups,
+    isAdmin: identity.isAdmin,
+    allowedUsers: identity.allowedUsers,
+    mfaSatisfied: identity.mfaSatisfied,
+    returnTo: identity.returnTo,
+    rememberMe: identity.rememberMe,
+    legacyIdentifier: identity.legacy?.identifier,
+    ssoProviderId:
+      identity.logoutClaims?.providerId ??
+      identity.legacy?.providerRowId ??
+      null,
+    oidcSub: identity.logoutClaims?.sub ?? null,
+    oidcSid: identity.logoutClaims?.sid ?? null,
+    roleSync: identity.roles
+      ? {
+          desired: [...identity.roles.desired],
+          managed: [...identity.roles.managed],
+        }
+      : undefined,
+    rateLimitUsername: identity.rateLimitKey
+      ? rateLimitKeyFor(pluginId, identity.rateLimitKey)
+      : undefined,
+  };
+}
+
+function rateLimitKeyFor(pluginId: string, key: string): string {
+  return `plugin:${pluginId}:${key}`;
+}
+
 export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
   const pluginId = manifest.id;
   const declared = manifest.capabilities;
@@ -477,13 +537,16 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
           callback: method.callback
             ? async (...args) => {
                 await granted();
-                return method.callback!(...args);
+                return toCoreIdentity(
+                  pluginId,
+                  await method.callback!(...args),
+                );
               }
             : undefined,
           verify: method.verify
             ? async (...args) => {
                 await granted();
-                return method.verify!(...args);
+                return toCoreIdentity(pluginId, await method.verify!(...args));
               }
             : undefined,
         });
@@ -549,6 +612,62 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       await audit("auth_factor_removed", `${factorId} for ${userId}`, {
         success: true,
       });
+    },
+
+    completeRedirectLogin: async (methodId, req, res) => {
+      requireDeclared(contributes.loginMethods, methodId, "loginMethods");
+      await granted();
+      const method = getLoginMethod(methodId);
+      if (!method || method.pluginId !== pluginId) {
+        throw new Error(
+          `Plugin ${pluginId} has no registered login method "${methodId}"`,
+        );
+      }
+      const { handleRedirectCallback } =
+        await import("../database/routes/auth-routes.js");
+      await handleRedirectCallback(method, req as never, res as never);
+    },
+
+    revokeSessions: async (match) => {
+      await granted();
+      if (!match.sub && !match.sid) return 0;
+      const { AuthManager } = await import("../utils/auth-manager.js");
+      const revoked = await AuthManager.getInstance().revokeSessionsByOidc({
+        ssoProviderId: match.providerId ?? null,
+        sub: match.sub ?? null,
+        sid: match.sid ?? null,
+      });
+      await audit(
+        "auth_sessions_revoked",
+        `${revoked} session(s) for provider ${match.providerId ?? "none"}`,
+        { success: true },
+      );
+      return revoked;
+    },
+
+    loginRateLimit: {
+      isLocked: async (ip, key) => {
+        await granted();
+        const { loginRateLimiter } =
+          await import("../utils/login-rate-limiter.js");
+        return loginRateLimiter.isLocked(ip, rateLimitKeyFor(pluginId, key));
+      },
+      recordFailure: async (ip, key) => {
+        await granted();
+        const { loginRateLimiter } =
+          await import("../utils/login-rate-limiter.js");
+        loginRateLimiter.recordFailedAttempt(
+          ip,
+          rateLimitKeyFor(pluginId, key),
+        );
+      },
+    },
+
+    countLinkedUsers: async (provider) => {
+      await granted();
+      const { createCurrentUserAuthRepository } =
+        await import("../database/repositories/factory.js");
+      return createCurrentUserAuthRepository().countUsersForProvider(provider);
     },
   };
 }

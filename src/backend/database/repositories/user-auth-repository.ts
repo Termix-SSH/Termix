@@ -54,6 +54,14 @@ export class UserAuthRepository {
       .where(eq(userExternalIdentities.userId, userId));
   }
 
+  async countUsersForProvider(providerId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .select({ userId: userExternalIdentities.userId })
+      .from(userExternalIdentities)
+      .where(eq(userExternalIdentities.providerId, providerId));
+    return new Set(rows.map((row) => row.userId)).size;
+  }
+
   async listAllIdentities(): Promise<UserExternalIdentityRecord[]> {
     return this.context.drizzle.select().from(userExternalIdentities);
   }

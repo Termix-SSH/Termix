@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Iniciar sessão com {{name}}",
+  "loading": "A carregar...",
+  "providers": {
+    "docsLink": "Ver docs",
+    "none": "Nenhum provedor de SSO configurado.",
+    "add": "Adicionar Provedor",
+    "edit": "Editar Provedor",
+    "delete": "Eliminar Provedor",
+    "deleteConfirm": "Eliminar este provedor? Os utilizadores associados não poderão iniciar sessão.",
+    "name": "Nome de apresentação",
+    "type": "Tipo de Provedor",
+    "enabled": "Ativado",
+    "save": "Guardar Provedor",
+    "saving": "A guardar...",
+    "saved": "Guardado",
+    "saveFailed": "Falha ao guardar",
+    "deleted": "Eliminado",
+    "deleteFailed": "Falha ao eliminar",
+    "cancel": "Cancelar"
+  },
+  "fields": {
+    "clientId": "ID do cliente",
+    "clientSecret": "Segredo do cliente",
+    "issuerUrl": "URL do emissor",
+    "authUrl": "URL de autorização",
+    "tokenUrl": "URL do token",
+    "userIdentifier": "Caminho do identificador do utilizador",
+    "displayName": "Caminho do nome de exibição",
+    "scopes": "Âmbitos",
+    "userinfoUrl": "Substituir URL do Userinfo",
+    "groupClaim": "Atributo de grupo",
+    "groupClaimDesc": "Opcional. O caminho do atributo que contém os grupos do utilizador. Predefinido para groups, roles e depois group. Utilize para fornecedores com um atributo personalizado (ex.: Zitadel).",
+    "allowedUsers": "Utilizadores permitidos",
+    "allowedUsersDesc": "Um email por linha. Deixe em branco para permitir todos.",
+    "adminGroup": "Grupo de administração",
+    "adminGroupDesc": "Os utilizadores neste grupo recebem privilégios de administrador. Deixe em branco para desativar a sincronização de grupos.",
+    "caCert": "Certificado CA personalizado",
+    "caCertDesc": "Opcional. Certificado CA codificado em PEM para fornecedores OIDC que utilizam uma CA privada ou autoassinada. Deixe em branco para utilizar o repositório de confiança do sistema."
+  }
+}

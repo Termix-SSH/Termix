@@ -1,0 +1,41 @@
+{
+  "loginWithProvider": "Inicia la sessió amb {{name}}",
+  "loading": "S'està carregant...",
+  "providers": {
+    "docsLink": "Veure documents",
+    "none": "No hi ha cap proveïdor d'SSO configurat.",
+    "add": "Afegeix un proveïdor",
+    "edit": "Edita el proveïdor",
+    "delete": "Suprimeix el proveïdor",
+    "deleteConfirm": "Voleu suprimir aquest proveïdor? Els usuaris associats no podran iniciar la sessió.",
+    "name": "Nom de visualització",
+    "type": "Tipus de proveïdor",
+    "enabled": "Activat",
+    "save": "Desa el proveïdor",
+    "saving": "Desant...",
+    "saved": "Desat",
+    "saveFailed": "No s'ha pogut desar",
+    "deleted": "Suprimit",
+    "deleteFailed": "No s'ha pogut suprimir",
+    "cancel": "Cancel·la"
+  },
+  "fields": {
+    "clientId": "ID de client",
+    "clientSecret": "Secret del client",
+    "issuerUrl": "URL de l'emissor",
+    "authUrl": "URL d'autorització",
+    "tokenUrl": "URL del testimoni",
+    "userIdentifier": "Ruta d'identificació d'usuari",
+    "displayName": "Camí del nom de visualització",
+    "scopes": "Àmbits",
+    "userinfoUrl": "Substitueix l'URL d'informació de l'usuari",
+    "groupClaim": "Reclamació de grup",
+    "groupClaimDesc": "Opcional. La ruta de reclamació que conté els grups de l'usuari. Per defecte, s'utilitzen grups, rols i, a continuació, grup. Feu servir això per a proveïdors amb una reclamació personalitzada (per exemple, Zitadel).",
+    "allowedUsers": "Usuaris permesos",
+    "allowedUsersDesc": "Un correu electrònic per línia. Deixeu-ho en blanc per permetre-ho tot.",
+    "adminGroup": "Grup d'administradors",
+    "adminGroupDesc": "Els usuaris d'aquest grup tenen dret d'administrador. Deixeu-ho en blanc per desactivar la sincronització del grup.",
+    "caCert": "Certificat CA personalitzat",
+    "caCertDesc": "Opcional. Certificat CA codificat amb PEM per a proveïdors OIDC que utilitzen una CA privada o autosignada. Deixeu-ho en blanc per utilitzar el magatzem de confiança del sistema."
+  }
+}

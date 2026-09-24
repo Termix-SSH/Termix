@@ -328,7 +328,6 @@ export type DashboardCardConfig = {
 
 export type AdminSection =
   | "general"
-  | "sso"
   | "users"
   | "sessions"
   | "roles"

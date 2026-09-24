@@ -1,0 +1,49 @@
+{
+  "id": "ldap",
+  "name": "LDAP",
+  "version": "1.0.0",
+  "description": "Sign in with a username and password checked against an LDAP or Active Directory server.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "Server",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "secrets:own",
+    "network:serve",
+    "auth:provide",
+    "ui:surface"
+  ],
+  "contributes": {
+    "auth": {
+      "loginMethods": ["ldap"]
+    },
+    "permissions": [
+      {
+        "name": "manage",
+        "titleKey": "permissions.manage.title",
+        "descriptionKey": "permissions.manage.description",
+        "defaultRoles": ["admin"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "providers",
+          "type": "custom",
+          "component": "providers",
+          "permission": "manage"
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

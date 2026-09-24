@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "Inloggen met {{name}}",
+  "loading": "Laden...",
+  "requiredField": "Dit veld is verplicht.",
+  "username": "LDAP-gebruikersnaam",
+  "password": "LDAP-wachtwoord",
+  "signIn": "Inloggen",
+  "providers": {
+    "docsLink": "Documenten bekijken",
+    "name": "Weergavenaam",
+    "enabled": "Ingeschakeld",
+    "saving": "Besparing...",
+    "saved": "Opgeslagen",
+    "saveFailed": "Opslaan mislukt",
+    "deleted": "Verwijderd",
+    "deleteFailed": "Verwijderen mislukt",
+    "cancel": "Annuleren"
+  },
+  "fields": {
+    "host": "LDAP-host",
+    "port": "Haven",
+    "useTls": "Gebruik TLS (LDAPS)",
+    "bindDn": "Bind DN",
+    "bindPassword": "Bind wachtwoord",
+    "userSearchBase": "Gebruikerszoekbasis",
+    "userSearchFilter": "Gebruikerszoekfilter",
+    "usernameAttr": "Gebruikersnaamkenmerk",
+    "displayNameAttr": "Weergavenaamkenmerk",
+    "groupSearchBase": "Groepszoekbasis",
+    "adminGroup": "Beheerdersgroep",
+    "allowedUsers": "Toegestane gebruikers"
+  }
+}

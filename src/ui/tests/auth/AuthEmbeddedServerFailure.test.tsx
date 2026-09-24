@@ -31,14 +31,8 @@ vi.mock("@/main-axios", () => ({
   initiatePasswordReset: vi.fn(),
   verifyPasswordResetCode: vi.fn(),
   completePasswordReset: vi.fn(),
-  getOIDCAuthorizeUrl: vi.fn(),
   getCurrentToken: vi.fn().mockReturnValue(null),
   requestTrustedProxyLogin: vi.fn(),
-}));
-
-vi.mock("@/api/sso-provider-api", () => ({
-  getSSOProviders: vi.fn().mockResolvedValue([]),
-  ldapLogin: vi.fn(),
 }));
 
 import { Auth } from "@/auth/Auth";

@@ -47,7 +47,7 @@ beforeEach(() => {
 describe("parseLegacyIdentifier", () => {
   it("splits the prefixed forms and keeps bare subjects on their provider", () => {
     expect(parseLegacyIdentifier("ldap:4:bob", null)).toEqual({
-      providerId: "4",
+      providerId: "ldap:4",
       subject: "bob",
     });
     expect(parseLegacyIdentifier("github:7:42", null)).toEqual({
@@ -55,7 +55,7 @@ describe("parseLegacyIdentifier", () => {
       subject: "42",
     });
     expect(parseLegacyIdentifier("ldap:4:cn=a:b", null)).toEqual({
-      providerId: "4",
+      providerId: "ldap:4",
       subject: "cn=a:b",
     });
     expect(parseLegacyIdentifier("sub-123", 3)).toEqual({
@@ -94,7 +94,7 @@ describe("runExternalIdentityMigration", () => {
         subject,
       })),
     ).toEqual([
-      { userId: "ldap-user", providerId: "4", subject: "bob" },
+      { userId: "ldap-user", providerId: "ldap:4", subject: "bob" },
       { userId: "gh-user", providerId: "7", subject: "42" },
       { userId: "oidc-user", providerId: "3", subject: "sub-123" },
       {

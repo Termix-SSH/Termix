@@ -1,0 +1,33 @@
+{
+  "loginWithProvider": "{{name}} দিয়ে লগইন করুন",
+  "loading": "লোড হচ্ছে...",
+  "requiredField": "এই ক্ষেত্রটি আবশ্যক",
+  "username": "LDAP ব্যবহারকারীর নাম",
+  "password": "এলডিএপি পাসওয়ার্ড",
+  "signIn": "সাইন ইন করুন",
+  "providers": {
+    "docsLink": "নথি দেখুন",
+    "name": "প্রদর্শনের নাম",
+    "enabled": "সক্ষম করা হয়েছে",
+    "saving": "সঞ্চয়...",
+    "saved": "সংরক্ষিত",
+    "saveFailed": "সংরক্ষণ করতে ব্যর্থ হয়েছে",
+    "deleted": "মুছে ফেলা হয়েছে",
+    "deleteFailed": "মুছে ফেলতে ব্যর্থ হয়েছে",
+    "cancel": "বাতিল করুন"
+  },
+  "fields": {
+    "host": "এলডিএপি হোস্ট",
+    "port": "বন্দর",
+    "useTls": "TLS (LDAPS) ব্যবহার করুন",
+    "bindDn": "ডিএনকে আবদ্ধ করুন",
+    "bindPassword": "পাসওয়ার্ড সংযুক্ত করুন",
+    "userSearchBase": "ব্যবহারকারী অনুসন্ধান ভিত্তি",
+    "userSearchFilter": "ব্যবহারকারী অনুসন্ধান ফিল্টার",
+    "usernameAttr": "ব্যবহারকারীর নাম অ্যাট্রিবিউট",
+    "displayNameAttr": "ডিসপ্লে নেম অ্যাট্রিবিউট",
+    "groupSearchBase": "গ্রুপ অনুসন্ধান ভিত্তি",
+    "adminGroup": "অ্যাডমিন গ্রুপ",
+    "allowedUsers": "অনুমোদিত ব্যবহারকারী"
+  }
+}
