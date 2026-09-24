@@ -7,7 +7,7 @@ import {
   type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import { GRID_SIZE } from "@/types/homepage-types";
+import { GRID_SIZE } from "./homepage/homepage.js";
 import { FileManager } from "./FileManager.tsx";
 import FileManagerApp from "./FileManagerApp.tsx";
 import { SftpTransferTab } from "./SftpTransferTab.tsx";

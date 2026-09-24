@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "tables": {
+    "homepage_items": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "typeId": {
+          "type": "text",
+          "notNull": true
+        },
+        "title": {
+          "type": "text"
+        },
+        "config": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "{}"
+        },
+        "folderId": {
+          "type": "integer"
+        },
+        "syncId": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_homepage_items_user_id",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "homepage_items"
+    },
+    "homepage_layouts": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true,
+          "unique": true
+        },
+        "layout": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "{}"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [],
+      "adopts": "homepage_layouts"
+    },
+    "dashboard_service_links": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "label": {
+          "type": "text",
+          "notNull": true
+        },
+        "url": {
+          "type": "text",
+          "notNull": true
+        },
+        "order": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 0
+        },
+        "syncId": {
+          "type": "varchar",
+          "length": 255,
+          "unique": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_dashboard_service_links_user_id",
+          "columns": ["userId"]
+        }
+      ],
+      "adopts": "dashboard_service_links"
+    }
+  }
+}

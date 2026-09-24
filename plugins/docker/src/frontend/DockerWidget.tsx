@@ -22,7 +22,7 @@ function DockerWidget({
     return (
       <div className="flex flex-col items-center justify-center w-full h-full gap-2 text-muted-foreground/60">
         <Box size={20} />
-        <span className="text-xs">{t("homepage.widgetNoHostSelected")}</span>
+        <span className="text-xs">{t("common.noHostConfigured")}</span>
       </div>
     );
   }

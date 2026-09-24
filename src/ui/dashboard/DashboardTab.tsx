@@ -1,20 +1,19 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { enabledHostProtocols, protocolPort } from "@/sidebar/host-protocols";
 import { ComponentSlot } from "@/shell/ActionSlot";
+import { useActionSlot } from "@/hooks/use-action-slot";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
 import { Separator } from "@/components/separator";
 import {
   Activity,
-  Check,
   Database,
   ExternalLink,
   GripHorizontal,
   GripVertical,
   KeyRound,
   LayoutDashboard,
-  Link,
   Network,
   Plus,
   Server,
@@ -39,12 +38,9 @@ import {
   getCredentials,
   resetRecentActivity,
   getUserInfo,
-  getServiceLinks,
-  createServiceLink,
-  deleteServiceLink,
   isElectron,
 } from "@/main-axios";
-import type { RecentActivityItem, ServiceLink } from "@/main-axios";
+import type { RecentActivityItem } from "@/main-axios";
 import { useTranslation } from "react-i18next";
 import {
   getRegisteredDashboardCard,
@@ -58,16 +54,6 @@ import {
   hostActionsFor,
   listHostActions,
 } from "@/sidebar/host-contributions";
-import { HomepagePreviewCard } from "@/dashboard/cards/HomepagePreviewCard";
-import { HomepageCanvas } from "@/features/homepage/HomepageCanvas";
-
-// Side-effect imports so homepage widgets register themselves
-import "@/features/homepage/widgets/ServiceLinkWidget";
-import "@/features/homepage/widgets/ClockWidget";
-import "@/features/homepage/widgets/NotesWidget";
-import "@/features/homepage/widgets/BookmarkListWidget";
-import "@/features/homepage/widgets/HostStatusWidget";
-import "@/features/homepage/widgets/FolderWidget";
 import {
   useStatusColorScheme,
   getStatusClasses,
@@ -75,10 +61,6 @@ import {
 import { useServerStatus } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
-import {
-  isValidServiceLinkUrl,
-  normalizeServiceLinkUrl,
-} from "@/lib/service-link-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,8 +122,6 @@ const CORE_CARD_IDS = new Set<string>([
   "quick_actions",
   "host_status",
   "recent_activity",
-  "service_links",
-  "homepage_preview",
 ]);
 
 /**
@@ -645,131 +625,6 @@ function RecentActivityCard({
   );
 }
 
-function ServiceLinksCard({
-  links,
-  onAdd,
-  onDelete,
-}: {
-  links: ServiceLink[];
-  onAdd: (label: string, url: string) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [label, setLabel] = useState("");
-  const [url, setUrl] = useState("");
-  const [urlError, setUrlError] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = async () => {
-    const normalizedUrl = normalizeServiceLinkUrl(url);
-    if (!isValidServiceLinkUrl(normalizedUrl)) {
-      setUrlError(true);
-      setAddError("");
-      return;
-    }
-    setUrlError(false);
-    setAddError("");
-    setAdding(true);
-    try {
-      await onAdd(label.trim(), normalizedUrl);
-      setLabel("");
-      setUrl("");
-    } catch (error) {
-      setAddError(
-        error instanceof Error
-          ? error.message
-          : t("dashboardTab.serviceLinksAddFailed"),
-      );
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  return (
-    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
-        <Link className="size-3.5 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.serviceLinksTitle")}
-        </span>
-      </div>
-      <div className="flex flex-col overflow-auto flex-1">
-        {links.length === 0 && (
-          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-4">
-            {t("dashboardTab.serviceLinksEmpty")}
-          </div>
-        )}
-        {links.map((link) => (
-          <div
-            key={link.id}
-            className="flex items-center justify-between px-4 py-2 border-b border-border last:border-0 group/link"
-          >
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="flex items-center gap-2 min-w-0 flex-1 hover:text-accent-brand transition-colors"
-            >
-              <ExternalLink className="size-3 text-muted-foreground shrink-0" />
-              <span className="text-xs font-semibold truncate">
-                {link.label}
-              </span>
-              <span className="text-[10px] text-muted-foreground truncate">
-                {link.url}
-              </span>
-            </a>
-            <button
-              onClick={() => onDelete(link.id)}
-              className="ml-2 opacity-0 group-hover/link:opacity-100 transition-opacity size-5 flex items-center justify-center hover:text-destructive"
-            >
-              <Trash2 className="size-3" />
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-2 px-4 py-2 border-t border-border shrink-0">
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder={t("dashboardTab.serviceLinksLabelPlaceholder")}
-          className="flex-1 min-w-0 text-xs bg-transparent border border-border px-2 py-1 focus:outline-none focus:border-accent-brand/60"
-        />
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setUrlError(false);
-            setAddError("");
-          }}
-          placeholder={t("dashboardTab.serviceLinksUrlPlaceholder")}
-          className={`flex-[2] min-w-0 text-xs bg-transparent border px-2 py-1 focus:outline-none ${urlError ? "border-destructive" : "border-border focus:border-accent-brand/60"}`}
-        />
-        <Button
-          size="sm"
-          className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white h-6 px-2 shrink-0"
-          onClick={handleAdd}
-          disabled={!label.trim() || !url.trim() || adding}
-        >
-          {t("dashboardTab.serviceLinksAdd")}
-        </Button>
-      </div>
-      {urlError && (
-        <div className="px-4 pb-2 text-[10px] text-destructive shrink-0">
-          {t("dashboardTab.serviceLinksInvalidUrl")}
-        </div>
-      )}
-      {addError && (
-        <div className="px-4 pb-2 text-[10px] text-destructive shrink-0">
-          {addError}
-        </div>
-      )}
-    </Card>
-  );
-}
-
 // ─── CardItem ─────────────────────────────────────────────────────────────────
 
 function CardItem({
@@ -794,9 +649,6 @@ function CardItem({
   activity,
   onClearActivity,
   isAdmin,
-  serviceLinks,
-  onAddServiceLink,
-  onDeleteServiceLink,
   statusLoading,
   isVisible = true,
 }: {
@@ -821,9 +673,6 @@ function CardItem({
   activity: RecentActivityItem[];
   onClearActivity: () => void;
   isAdmin: boolean;
-  serviceLinks: ServiceLink[];
-  onAddServiceLink: (label: string, url: string) => Promise<void>;
-  onDeleteServiceLink: (id: number) => Promise<void>;
   statusLoading?: boolean;
   isVisible?: boolean;
 }) {
@@ -924,18 +773,6 @@ function CardItem({
             id={slot.id}
             isVisible={isVisible}
             onOpenSingletonTab={onOpenSingletonTab}
-          />
-        )}
-        {slot.id === "service_links" && (
-          <ServiceLinksCard
-            links={serviceLinks}
-            onAdd={onAddServiceLink}
-            onDelete={onDeleteServiceLink}
-          />
-        )}
-        {slot.id === "homepage_preview" && (
-          <HomepagePreviewCard
-            onOpenFullscreen={() => onOpenSingletonTab("homepage")}
           />
         )}
       </div>
@@ -1049,9 +886,6 @@ type PanelColumnProps = {
   onClearActivity: () => void;
   cardLabels: Record<DashboardCardId, string>;
   isAdmin: boolean;
-  serviceLinks: ServiceLink[];
-  onAddServiceLink: (label: string, url: string) => Promise<void>;
-  onDeleteServiceLink: (id: number) => Promise<void>;
   statusLoading: boolean;
   isVisible?: boolean;
 };
@@ -1081,9 +915,6 @@ function PanelColumn({
   onClearActivity,
   cardLabels,
   isAdmin,
-  serviceLinks,
-  onAddServiceLink,
-  onDeleteServiceLink,
   statusLoading,
   isVisible = true,
 }: PanelColumnProps) {
@@ -1138,9 +969,6 @@ function PanelColumn({
             activity={activity}
             onClearActivity={onClearActivity}
             isAdmin={isAdmin}
-            serviceLinks={serviceLinks}
-            onAddServiceLink={onAddServiceLink}
-            onDeleteServiceLink={onDeleteServiceLink}
             statusLoading={statusLoading}
             isVisible={isVisible}
           />
@@ -1237,26 +1065,23 @@ export function DashboardTab({
     return () => window.removeEventListener("dashboardSlotsChanged", handler);
   }, []);
 
-  const [homepageLinkCopied, setHomepageLinkCopied] = useState(false);
+  // A plugin's own view next to the dashboard, e.g. the homepage plugin's
+  // canvas preview. Only one is offered today; "dashboard" always exists.
+  const secondaryViews = useActionSlot("dashboard.secondaryView");
+  const secondaryView = secondaryViews[0];
 
-  const handleCopyHomepageLink = () => {
-    navigator.clipboard
-      .writeText(`${window.location.origin}?view=homepage`)
-      .catch(() => {});
-    setHomepageLinkCopied(true);
-    setTimeout(() => setHomepageLinkCopied(false), 1500);
-  };
-
-  const [dashboardView, setDashboardView] = useState<"dashboard" | "homepage">(
-    () => {
-      try {
-        return (localStorage.getItem("dashboardView") ?? "dashboard") as
-          "dashboard" | "homepage";
-      } catch {
-        return "dashboard";
-      }
-    },
-  );
+  const [dashboardView, setDashboardView] = useState<string>(() => {
+    try {
+      return localStorage.getItem("dashboardView") ?? "dashboard";
+    } catch {
+      return "dashboard";
+    }
+  });
+  // Falls back to the dashboard when the view a plugin contributed is off.
+  const isDashboardView =
+    dashboardView === "dashboard" ||
+    !secondaryView ||
+    dashboardView !== secondaryView.actionId;
 
   useEffect(() => {
     try {
@@ -1398,24 +1223,6 @@ export function DashboardTab({
     }
   };
 
-  const [serviceLinks, setServiceLinks] = useState<ServiceLink[]>([]);
-
-  useEffect(() => {
-    getServiceLinks()
-      .then(setServiceLinks)
-      .catch(() => {});
-  }, []);
-
-  const handleAddServiceLink = async (label: string, url: string) => {
-    const created = await createServiceLink(label, url);
-    setServiceLinks((prev) => [...prev, created]);
-  };
-
-  const handleDeleteServiceLink = async (id: number) => {
-    await deleteServiceLink(id);
-    setServiceLinks((prev) => prev.filter((l) => l.id !== id));
-  };
-
   const todayLabel = new Date().toLocaleDateString(i18n.language, {
     weekday: "long",
     month: "long",
@@ -1438,8 +1245,6 @@ export function DashboardTab({
     quick_actions: t("dashboard.quickActions"),
     host_status: t("dashboardTab.hostStatus"),
     recent_activity: t("dashboard.recentActivity"),
-    service_links: t("dashboard.serviceLinks"),
-    homepage_preview: t("dashboard.homepagePreview"),
     ...Object.fromEntries(
       registeredCards.map((card) => [card.id, t(card.titleKey)]),
     ),
@@ -1514,11 +1319,7 @@ export function DashboardTab({
           : 0;
       const defaultHeight: number | null =
         getRegisteredDashboardCard(id)?.defaultHeight ??
-        (id === "host_status" || id === "recent_activity"
-          ? null
-          : id === "service_links"
-            ? 200
-            : 150);
+        (id === "host_status" || id === "recent_activity" ? null : 150);
       const key = `${id}_${Date.now()}`;
       return [
         ...prev,
@@ -1557,9 +1358,6 @@ export function DashboardTab({
     onOpenTab,
     cardLabels,
     isAdmin,
-    serviceLinks,
-    onAddServiceLink: handleAddServiceLink,
-    onDeleteServiceLink: handleDeleteServiceLink,
     statusLoading,
     isVisible,
   };
@@ -1705,13 +1503,6 @@ export function DashboardTab({
                   onOpenSingletonTab={onOpenSingletonTab}
                 />
               )}
-              {slot.id === "service_links" && (
-                <ServiceLinksCard
-                  links={serviceLinks}
-                  onAdd={handleAddServiceLink}
-                  onDelete={handleDeleteServiceLink}
-                />
-              )}
             </div>
           ))}
         </div>
@@ -1726,18 +1517,20 @@ export function DashboardTab({
           <div className="flex items-center gap-0 bg-muted/40 border border-border p-0.5">
             <button
               onClick={() => setDashboardView("dashboard")}
-              className={`px-3 py-1 text-sm font-medium transition-colors ${dashboardView === "dashboard" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-1 text-sm font-medium transition-colors ${isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
               {t("dashboard.title")}
             </button>
-            <button
-              onClick={() => setDashboardView("homepage")}
-              className={`px-3 py-1 text-sm font-medium transition-colors ${dashboardView === "homepage" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {t("nav.homepage")}
-            </button>
+            {secondaryView && (
+              <button
+                onClick={() => setDashboardView(secondaryView.actionId)}
+                className={`px-3 py-1 text-sm font-medium transition-colors ${!isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {t(secondaryView.titleKey)}
+              </button>
+            )}
           </div>
-          {dashboardView === "dashboard" && (
+          {isDashboardView && (
             <p className="text-xs text-muted-foreground hidden sm:block">
               {todayLabel}
             </p>
@@ -1824,7 +1617,7 @@ export function DashboardTab({
               {t("dashboard.donate")}
             </a>
           </Button>
-          {dashboardView === "dashboard" && (
+          {isDashboardView && (
             <>
               <Separator orientation="vertical" className="mx-1 h-5" />
               {editMode ? (
@@ -1860,43 +1653,9 @@ export function DashboardTab({
         </div>
       </Card>
 
-      {dashboardView === "homepage" ? (
+      {!isDashboardView && secondaryView?.component ? (
         <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col">
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 bg-muted/20">
-            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-widest font-semibold">
-              {t("nav.homepage")}
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                onClick={handleCopyHomepageLink}
-              >
-                {homepageLinkCopied ? (
-                  <>
-                    <Check size={10} className="text-accent-brand" />
-                    <span className="text-accent-brand">
-                      {t("homepage.linkCopied")}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Link size={10} />
-                    {t("homepage.copyLink")}
-                  </>
-                )}
-              </button>
-              <button
-                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                onClick={() => onOpenSingletonTab("homepage")}
-              >
-                <ExternalLink size={10} />
-                {t("homepage.openFullView")}
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <HomepageCanvas />
-          </div>
+          <secondaryView.component onOpenSingletonTab={onOpenSingletonTab} />
         </div>
       ) : (
         <>

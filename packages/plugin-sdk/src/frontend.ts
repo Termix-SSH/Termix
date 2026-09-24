@@ -372,11 +372,15 @@ export interface DashboardCardContribution {
   id: string;
   titleKey: string;
   defaultHeight?: number;
+  /** Which column a preset places this card in by default. Defaults to "main". */
+  defaultPanel?: "main" | "side";
   component: ComponentType<DashboardCardProps>;
 }
 
 export interface HomepageWidgetContribution<C = Record<string, unknown>> {
   id: string;
+  /** Set by core to the registering plugin's id; a plugin never sets this itself. */
+  pluginId?: string;
   name: string;
   description: string;
   category: "links" | "info" | "system" | "monitoring";
@@ -701,6 +705,19 @@ export interface PluginHostBridge {
   ) => ComponentType<Record<string, unknown>> | undefined;
   hostProtocols: (host: PluginHostRecord) => string[];
   useHostStatus: (hostId: number | undefined) => HostStatusInfo | null;
+  useHostActions: () => HostActionContribution[];
+  useActivityTypes: () => string[];
+  activityTarget: (type: string) => ActivityTargetInfo | undefined;
+  useHomepageWidgetTypes: () => HomepageWidgetContribution[];
+  homepageWidgetType: (id: string) => HomepageWidgetContribution | undefined;
+}
+
+/** What a recent-activity entry opens and how it is labelled. */
+export interface ActivityTargetInfo {
+  icon?: IconComponent;
+  /** Tab type the entry reopens. */
+  tab: string;
+  titleKey?: string;
 }
 
 /**
@@ -845,6 +862,50 @@ export function useSlotContributions(
   context?: Record<string, unknown>,
 ): SlotContribution[] {
   return requireHost().useSlotContributions(slotId, context);
+}
+
+/**
+ * Every host action any running plugin (and core) registered with
+ * registerHostAction, for a plugin that offers a picker over "what can I do
+ * with this host" without knowing which plugin provides each one - a quick
+ * connect widget, say. Reactive: it re-renders as plugins enable and disable.
+ */
+export function useHostActions(): HostActionContribution[] {
+  return requireHost().useHostActions();
+}
+
+/**
+ * Recent-activity types every registered tab claims (registerTab's
+ * activityTypes), core's and plugins'. For a filter that lists what a user
+ * can pick, without knowing which plugin owns each activity type.
+ */
+export function useActivityTypes(): string[] {
+  return requireHost().useActivityTypes();
+}
+
+/**
+ * What a recent-activity entry of this type opens and how it is labelled -
+ * the tab type claiming it through registerTab's activityTypes, core's or a
+ * plugin's. undefined for a type nothing claims (its plugin is gone).
+ */
+export function activityTarget(type: string): ActivityTargetInfo | undefined {
+  return requireHost().activityTarget(type);
+}
+
+/**
+ * Every homepage widget type any running plugin registered with
+ * registerHomepageWidget, for the homepage plugin's own canvas and add-widget
+ * menu. Reactive: it re-renders as plugins enable and disable.
+ */
+export function useHomepageWidgetTypes(): HomepageWidgetContribution[] {
+  return requireHost().useHomepageWidgetTypes();
+}
+
+/** A single registered homepage widget type, by id, or undefined if none. */
+export function homepageWidgetType(
+  id: string,
+): HomepageWidgetContribution | undefined {
+  return requireHost().homepageWidgetType(id);
 }
 
 /**

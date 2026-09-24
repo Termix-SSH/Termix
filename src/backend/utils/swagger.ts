@@ -26,10 +26,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
         url: "http://localhost:30004",
         description: "SSH file manager server",
       },
-      {
-        url: "http://localhost:30006",
-        description: "Dashboard server",
-      },
     ],
     components: {
       securitySchemes: {

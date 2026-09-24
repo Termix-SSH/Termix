@@ -317,14 +317,14 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // plugins/ssh-terminal, plugins/docker, plugins/host-metrics,
     // plugins/file-manager and plugins/tmux-monitor.
     // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
-    // Network Topology, Workspaces, Web Endpoint, Tunnels, Serial) is absent
-    // for the same reason: each one serves its routes under /plugin-api/<id>/
-    // (or a WS route under /plugin-ws/<id>/) through ctx on activate, so
-    // disabling it answers 503 instead of leaving a dead import here.
+    // Network Topology, Workspaces, Web Endpoint, Tunnels, Serial, Homepage)
+    // is absent for the same reason: each one serves its routes under
+    // /plugin-api/<id>/ (or a WS route under /plugin-ws/<id>/) through ctx on
+    // activate, so disabling it answers 503 instead of leaving a dead import
+    // here. The dashboard's own uptime and recent-activity routes are core
+    // and are mounted on the main server in database.ts.
     // Automations' scheduler and tunnel autostart also start from their own
     // activate() rather than here.
-    await import("./services/dashboard.js");
-    await import("./services/homepage.js");
 
     // Initialize log level from database settings
     const { getCurrentSettingValue } =

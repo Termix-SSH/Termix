@@ -8,10 +8,7 @@ import { NotificationChannelRepository } from "./notification-channel-repository
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
-import { DashboardServiceLinkRepository } from "./dashboard-service-link-repository.js";
 import { DismissedAlertRepository } from "./dismissed-alert-repository.js";
-import { HomepageItemRepository } from "./homepage-item-repository.js";
-import { HomepageLayoutRepository } from "./homepage-layout-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
@@ -167,13 +164,6 @@ export function createCurrentCredentialRepository(): CredentialRepository {
   );
 }
 
-export function createCurrentDashboardServiceLinkRepository(): DashboardServiceLinkRepository {
-  return new DashboardServiceLinkRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("dashboard_service_link_repository_write"),
-  );
-}
-
 export function createCurrentSyncTombstoneRepository(): SyncTombstoneRepository {
   return new SyncTombstoneRepository(
     createCurrentRepositoryContext(),
@@ -189,20 +179,7 @@ export function createCurrentDismissedAlertRepository(): DismissedAlertRepositor
 }
 
 // File manager recent/pinned/shortcuts moved to the file-manager plugin.
-
-export function createCurrentHomepageItemRepository(): HomepageItemRepository {
-  return new HomepageItemRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("homepage_item_repository_write"),
-  );
-}
-
-export function createCurrentHomepageLayoutRepository(): HomepageLayoutRepository {
-  return new HomepageLayoutRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("homepage_layout_repository_write"),
-  );
-}
+// Homepage items/layout and dashboard service links moved to the homepage plugin.
 
 export function createCurrentHostFolderRepository(): HostFolderRepository {
   return new HostFolderRepository(

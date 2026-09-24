@@ -319,8 +319,6 @@ export type DashboardCardId =
   | "quick_actions"
   | "host_status"
   | "recent_activity"
-  | "service_links"
-  | "homepage_preview"
   | (string & {});
 
 export type DashboardCardConfig = {

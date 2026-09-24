@@ -23,7 +23,7 @@ import {
   registerDashboardCard,
   type DashboardCardRenderProps,
 } from "@/dashboard/dashboard-cards-registry";
-import { registerWidget } from "@/features/homepage/widgets/WidgetRegistry";
+import { registerHomepageWidgetType } from "./homepage-widget-registry";
 import { registerSettingsComponent } from "@/settings/settings-components";
 import {
   declareActionSlot,
@@ -33,7 +33,7 @@ import {
 } from "@/shell/action-registry";
 import { pluginApiFor, pluginFetch, pluginWsUrl } from "@/lib/plugin-transport";
 import { registerPluginComponent } from "./component-registry";
-import type { WidgetTypeDefinition } from "@/types/homepage-types";
+import type { RegisteredHomepageWidget } from "./homepage-widget-registry";
 import type { LucideIcon } from "lucide-react";
 import {
   registerLoginMethod,
@@ -265,6 +265,7 @@ export function createPluginApp(
           pluginId,
           titleKey: key(card.titleKey),
           defaultHeight: card.defaultHeight,
+          defaultPanel: card.defaultPanel,
           component: scoped(
             card.component as unknown as ComponentType<DashboardCardRenderProps>,
           ),
@@ -274,13 +275,14 @@ export function createPluginApp(
 
     registerHomepageWidget(widget) {
       return track(
-        registerWidget({
+        registerHomepageWidgetType({
           ...widget,
+          pluginId,
           component: scoped(widget.component),
           editFormComponent: widget.editFormComponent
             ? scoped(widget.editFormComponent)
             : undefined,
-        } as unknown as WidgetTypeDefinition),
+        } as unknown as RegisteredHomepageWidget),
       );
     },
 

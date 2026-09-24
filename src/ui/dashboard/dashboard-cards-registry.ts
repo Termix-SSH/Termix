@@ -19,6 +19,8 @@ export interface RegisteredDashboardCard {
   pluginId?: string;
   titleKey: string;
   defaultHeight?: number;
+  /** Which column a preset places this card in by default. Defaults to "main". */
+  defaultPanel?: "main" | "side";
   component: ComponentType<DashboardCardRenderProps>;
 }
 

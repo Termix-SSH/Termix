@@ -34,8 +34,6 @@ describe("isValidEntityType", () => {
       "sshCredentials",
       "sshFolders",
       "vaultProfiles",
-      "dashboardServiceLinks",
-      "homepageItems",
       "userPreferences",
     ]) {
       expect(isValidEntityType(type)).toBe(true);

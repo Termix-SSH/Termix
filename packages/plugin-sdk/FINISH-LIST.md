@@ -404,10 +404,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   ever is not, the run now fails on its first SSH step instead of being
   skipped silently. Owner: none unless a background "is this user unlocked"
   check is added to the SDK.
-- **B18 (ai), for B19:** the assistant's `list_homepage_items` tool calls
-  the optional `homepage.items` v1 service, `list(): Promise<Array<{ id,
-typeId, title }>>`, as the acting user. Until B19 provides it the tool is
-  not offered to the model. Owner: B19.
 - **B18 (ai):** the "allow read-only diagnostic commands" user setting only
   adds a line to the system prompt. No tool runs a command directly;
   `tools/command-allowlist.ts` (`isReadOnlyCommand`) is tested but unused, so
@@ -432,6 +428,28 @@ typeId, title }>>`, as the acting user. Until B19 provides it the tool is
   Owner: D1.
 - **B18:** tunnels builds its own SSE URL off the axios base instead of the
   new `app.fetch`. Owner: D1.
+
+- **Pre-existing, found in B19:** `createMockCtx`'s `wsRoutes` double (B15)
+  records `{ path, raw, handler, options }` per route, but
+  `plugins/serial/tests/backend/activate.test.ts`,
+  `plugins/ssh-terminal/tests/backend/activate.test.ts` and
+  `plugins/tunnels/tests/backend/activate.test.ts` still assert the old
+  two-field shape (`{ path, raw }`) and fail on `toEqual`. Not touched by
+  this step; update each assertion to match or to check only the fields it
+  cares about. Owner: D0.
+- **Pre-existing, found in B19:** `src/backend/hosts/file-manager/` (21
+  files) is dead code left over from before the file-manager plugin (B6):
+  nothing in `src/backend/starter.ts` or elsewhere imports
+  `hosts/file-manager/index.ts`, so its own port (30004, still listed in
+  `src/backend/utils/swagger.ts`'s server list) never actually starts and
+  its `axios.post("http://localhost:30006/activity/log", ...)` calls (now a
+  dead port after this step) never run. Delete the directory once confirmed
+  nothing else references it. Owner: D0.
+- **Pre-existing, found in B19:** `src/ui/main-axios.ts`'s `tmuxMonitorApi`
+  still points at `getApiUrl("/tmux_monitor", 30010)`, a port tmux-monitor's
+  own B10 step moved off of (per `plugins/tmux-monitor/CHANGELOG.md`) without
+  updating this frontend constant to `/plugin-api/tmux-monitor`. Not
+  something this step touched or verified further. Owner: D0.
 
 ## Manual checks after 2.9.0
 
@@ -489,3 +507,13 @@ typeId, title }>>`, as the acting user. Until B19 provides it the tool is
   skipped and the others keep running, then enable it again; the AI
   assistant lists and creates automations, and says they are unavailable
   with automations off.
+- Homepage: on a 2.8 database every widget, its layout and every service
+  link are there; add, move, resize, edit and delete a widget of each type;
+  the favicon, RSS, ping and custom API widgets against a real remote URL,
+  and each refuses a private/loopback target; the dashboard's Service
+  Links and Homepage Preview cards; the Dashboard/Homepage toggle and its
+  copy-link and open-full-view buttons; `?view=homepage`; docker's, tunnels'
+  and file-manager's own homepage widgets still work with the homepage
+  plugin disabled; the AI assistant lists homepage items and says
+  unavailable with homepage off; disable homepage in admin (the tab, its
+  dashboard cards and the toggle disappear) then enable it again.

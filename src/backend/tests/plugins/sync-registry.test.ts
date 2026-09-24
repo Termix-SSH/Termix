@@ -96,13 +96,15 @@ describe("core sync entities", () => {
     registerCoreSyncEntities();
   });
 
-  // The frozen array also lists networkTopology and snippets/snippetFolders,
-  // now registered by the network-topology and snippets plugins rather than
-  // core.
+  // The frozen array also lists networkTopology, snippets/snippetFolders and
+  // dashboardServiceLinks/homepageItems, now registered by the
+  // network-topology, snippets and homepage plugins rather than core.
   const PLUGIN_OWNED_TYPES = new Set([
     "networkTopology",
     "snippets",
     "snippetFolders",
+    "dashboardServiceLinks",
+    "homepageItems",
   ]);
 
   it("registers every core-owned entity the Electron client knows about", () => {

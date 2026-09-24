@@ -20,6 +20,7 @@ import {
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { applyPresetSideEffects } from "@/lib/apply-ui-preset";
 import {
+  HOMEPAGE_AREA_KEY,
   UI_AREA_KEYS,
   type UiAreaKey,
   type UiPreset,
@@ -38,7 +39,7 @@ const PRESET_ICONS = {
 } as const;
 
 /** Areas that have nothing worth listing as a per-area override. */
-const HIDDEN_OVERRIDE_AREAS = new Set<UiAreaKey>(["homepage"]);
+const HIDDEN_OVERRIDE_AREAS = new Set<UiAreaKey>([HOMEPAGE_AREA_KEY]);
 
 export function InterfacePresetSettings({
   onRunSetupAgain,

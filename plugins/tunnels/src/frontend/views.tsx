@@ -81,15 +81,15 @@ export function TunnelWidget({
     </div>
   );
 
-  if (!config.hostId) return placeholder(t("homepage.widgetNoHostSelected"));
-  if (!loaded) return placeholder(t("homepage.loading"));
+  if (!config.hostId) return placeholder(t("common.noHostConfigured"));
+  if (!loaded) return placeholder(t("common.loading"));
 
   const host = hosts.find(
     (candidate) =>
       String(candidate.id) === String(config.hostId) &&
       hostTunnelSettings(candidate).enabled,
   );
-  if (!host) return placeholder(t("homepage.widgetNoHostSelected"));
+  if (!host) return placeholder(t("common.noHostConfigured"));
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
@@ -130,7 +130,7 @@ export function TunnelWidgetEditForm({
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-muted-foreground">
-        {t("homepage.host")}
+        {t("common.host")}
       </label>
       <Select2
         value={config.hostId || ""}
@@ -139,7 +139,7 @@ export function TunnelWidgetEditForm({
         }
         className="h-8 text-xs border border-border bg-background px-2"
       >
-        <option value="">{t("homepage.selectHost")}</option>
+        <option value="">{t("common.selectHost")}</option>
         {options.map((host) => (
           <option key={host.id} value={host.id}>
             {host.name || host.ip}

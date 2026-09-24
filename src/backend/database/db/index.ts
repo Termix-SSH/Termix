@@ -883,17 +883,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "terminal_defaults", "TEXT");
   addColumnIfNotExists("user_preferences", "terminal_macros", "TEXT");
 
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS dashboard_service_links (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      label TEXT NOT NULL,
-      url TEXT NOT NULL,
-      "order" INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
   addColumnIfNotExists("users", "is_oidc", "INTEGER NOT NULL DEFAULT 0");
@@ -2024,52 +2013,6 @@ const migrateSchema = () => {
   // --- alerts end ---
 
 
-  // --- homepage begin ---
-  try {
-    sqlite.prepare("SELECT id FROM homepage_items LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS homepage_items (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          type_id TEXT NOT NULL,
-          title TEXT,
-          config TEXT NOT NULL DEFAULT '{}',
-          folder_id INTEGER,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create homepage_items table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM homepage_layouts LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS homepage_layouts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-          layout TEXT NOT NULL DEFAULT '{}',
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create homepage_layouts table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-  // --- homepage end ---
-
   // --- sync begin ---
   // Stable per-row identity used to match rows across two independently-
   // seeded databases (the embedded desktop backend and a connected remote
@@ -2086,23 +2029,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("snippets", "sync_id", "TEXT");
   addColumnIfNotExists("snippet_folders", "sync_id", "TEXT");
   addColumnIfNotExists("vault_profiles", "sync_id", "TEXT");
-  addColumnIfNotExists("dashboard_service_links", "sync_id", "TEXT");
-  // SQLite also rejects NOT NULL DEFAULT CURRENT_TIMESTAMP here for the same
-  // "non-constant default" reason -- add nullable, then backfill from
-  // created_at below and rely on the repository layer to keep it current.
-  addColumnIfNotExists("dashboard_service_links", "updated_at", "TEXT");
-  try {
-    sqlite.exec(
-      "UPDATE dashboard_service_links SET updated_at = created_at WHERE updated_at IS NULL",
-    );
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    databaseLogger.warn(
-      `Failed to backfill dashboard_service_links.updated_at: ${message}`,
-      { operation: "schema_migration", table: "dashboard_service_links" },
-    );
-  }
-  addColumnIfNotExists("homepage_items", "sync_id", "TEXT");
 
   // Plugin runtime: lastError reports why a plugin is blocked or failed, and
   // grants record whether a capability came from an admin or from bundling.
@@ -2121,8 +2047,6 @@ const migrateSchema = () => {
     "snippets",
     "snippet_folders",
     "vault_profiles",
-    "dashboard_service_links",
-    "homepage_items",
   ];
 
   for (const table of syncIdTables) {

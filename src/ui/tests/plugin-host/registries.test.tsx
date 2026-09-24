@@ -3,6 +3,10 @@ import { useState } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Puzzle } from "lucide-react";
 import {
+  homepageWidgetType,
+  useActivityTypes,
+  useHomepageWidgetTypes,
+  useHostActions,
   usePermission,
   useTranslation,
   type TermixApp,
@@ -35,6 +39,7 @@ import { resetRegisteredRailItems } from "@/sidebar/rail-items";
 import { resetTabTypes } from "@/shell/tab-registry";
 import { resetPanels } from "@/shell/panel-registry";
 import { resetDashboardCards } from "@/dashboard/dashboard-cards-registry";
+import { resetHomepageWidgetTypes } from "@/plugin-host/homepage-widget-registry";
 import { resetSettingsComponents } from "@/settings/settings-components";
 import { resetActionRegistry } from "@/shell/action-registry";
 import { resetPluginStore } from "@/plugin-host/plugin-store";
@@ -82,9 +87,11 @@ function activate(app: TermixApp) {
     titleKey: "title",
   });
   app.registerPanel("fixture-panel", () => <Counter />);
-  app.registerTab("fixture-tab", ({ host }) => (
-    <span>tab for {host?.name ?? "nobody"}</span>
-  ));
+  app.registerTab(
+    "fixture-tab",
+    ({ host }) => <span>tab for {host?.name ?? "nobody"}</span>,
+    { activityTypes: ["fixture_activity"] },
+  );
   app.registerHostEditorSection({
     id: "fixture-section",
     group: "ssh",
@@ -125,6 +132,17 @@ function activate(app: TermixApp) {
     ),
   });
   app.registerSettingsComponent("probe", PermissionProbe);
+  app.registerHomepageWidget({
+    id: "fixture-widget",
+    name: "Fixture Widget",
+    description: "A fixture widget",
+    category: "info",
+    icon: <Puzzle size={14} />,
+    defaultConfig: {},
+    defaultSize: { w: 4, h: 4 },
+    minSize: { w: 2, h: 2 },
+    component: () => <span>fixture widget</span>,
+  });
 }
 
 let rendered: RenderedPluginApp | null = null;
@@ -150,6 +168,7 @@ afterEach(async () => {
   resetHostEditorSections();
   resetPaletteEntries();
   resetPluginStore();
+  resetHomepageWidgetTypes();
 });
 
 const host = (overrides: Partial<Host> = {}) =>
@@ -257,6 +276,37 @@ describe("registries through the app object", () => {
       "fixture-connect",
     );
     expect(resolveHostTabType(on)).toBe("fixture-tab");
+  });
+
+  it("exposes registered host actions through the SDK's useHostActions", async () => {
+    await mount();
+    function Probe() {
+      const actions = useHostActions();
+      return <span>{actions.map((a) => a.id).join(",")}</span>;
+    }
+    render(<Probe />);
+    expect(await screen.findByText("fixture-connect")).toBeTruthy();
+  });
+
+  it("exposes a registered tab's activityTypes through useActivityTypes", async () => {
+    await mount();
+    function Probe() {
+      const types = useActivityTypes();
+      return <span>{types.join(",")}</span>;
+    }
+    render(<Probe />);
+    expect(await screen.findByText(/fixture_activity/)).toBeTruthy();
+  });
+
+  it("registers a homepage widget type readable through the SDK", async () => {
+    await mount();
+    expect(homepageWidgetType("fixture-widget")?.name).toBe("Fixture Widget");
+    function Probe() {
+      const types = useHomepageWidgetTypes();
+      return <span>{types.map((w) => w.id).join(",")}</span>;
+    }
+    render(<Probe />);
+    expect(await screen.findByText("fixture-widget")).toBeTruthy();
   });
 
   it("offers a per-host palette entry that runs against the shell", async () => {

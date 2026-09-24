@@ -16,7 +16,7 @@ export function DockerWidgetEditForm({
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-muted-foreground">
-        {t("homepage.host")}
+        {t("common.host")}
       </label>
       <Select2
         value={config.hostId || ""}
@@ -25,7 +25,7 @@ export function DockerWidgetEditForm({
         }
         className="h-8 text-xs border border-border bg-background px-2"
       >
-        <option value="">{t("homepage.selectHost")}</option>
+        <option value="">{t("common.selectHost")}</option>
         {options.map((host) => (
           <option key={host.id} value={host.id}>
             {host.name || host.ip}

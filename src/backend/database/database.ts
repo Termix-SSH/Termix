@@ -22,6 +22,7 @@ import vaultRoutes from "./routes/vault.js";
 import secretSourceRoutes from "./routes/secret-sources.js";
 import notificationChannelsRoutes from "./routes/notification-channels-routes.js";
 import syncRoutes from "./routes/sync.js";
+import dashboardRoutes from "./routes/dashboard-routes.js";
 import { mountPluginApi } from "./routes/plugin-api-routes.js";
 import { attachPluginWebSockets } from "../plugins/ws.js";
 import pluginRoutes from "./routes/plugins.js";
@@ -1807,6 +1808,7 @@ app.use("/vault", vaultRoutes);
 app.use("/secret-sources", secretSourceRoutes);
 app.use("/", notificationChannelsRoutes);
 app.use("/sync", syncRoutes);
+app.use("/dashboard", dashboardRoutes);
 app.use("/plugins", pluginRoutes);
 app.use(
   "/plugin-assets",

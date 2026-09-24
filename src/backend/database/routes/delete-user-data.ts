@@ -4,10 +4,7 @@ import {
   createCurrentApiKeyRepository,
   createCurrentAuditLogRepository,
   createCurrentCredentialRepository,
-  createCurrentDashboardServiceLinkRepository,
   createCurrentDismissedAlertRepository,
-  createCurrentHomepageItemRepository,
-  createCurrentHomepageLayoutRepository,
   createCurrentHostFolderRepository,
   createCurrentHostRepository,
   createCurrentHostSidebarPreferenceRepository,
@@ -97,9 +94,10 @@ export async function deleteUserAndRelatedData(
     await createCurrentHostRepository().deleteByUserId(userId);
     await createCurrentCredentialRepository().deleteByUserId(userId);
 
-    await createCurrentDashboardServiceLinkRepository().deleteByUserId(userId);
-    await createCurrentHomepageItemRepository().deleteByUserId(userId);
-    await createCurrentHomepageLayoutRepository().deleteByUserId(userId);
+    // homepage_items, homepage_layouts and dashboard_service_links cascade on
+    // the user's refUser() foreign key, as the homepage plugin's adopted
+    // tables.
+
     await createCurrentOpksshTokenRepository().deleteByUserId(userId);
     await createCurrentVaultTokenRepository().deleteByUserId(userId);
     await createCurrentVaultProfileRepository().deleteByUserId(userId);

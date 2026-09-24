@@ -916,22 +916,7 @@ export const uiPreferences = mysqlTable("ui_preferences", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
-export const dashboardServiceLinks = mysqlTable("dashboard_service_links", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
-  url: text("url").notNull(),
-  order: int("order").notNull().default(0),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+// dashboard_service_links moved to the homepage plugin (p_homepage_dashboard_service_links).
 
 // --- termix-id begin ---
 // A user claims a unique public handle. Their published SSH public keys are
@@ -1023,42 +1008,8 @@ export const notificationChannels = mysqlTable("notification_channels", {
 // --- alerts end ---
 
 
-// --- homepage begin ---
-export const homepageItems = mysqlTable(
-  "homepage_items",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    typeId: text("type_id").notNull(),
-    title: text("title"),
-    config: text("config").notNull().default("{}"),
-    folderId: int("folder_id"),
-    syncId: varchar("sync_id", { length: 255 }).unique(),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  (table) => [index("idx_homepage_items_user_id").on(table.userId)],
-);
-
-export const homepageLayouts = mysqlTable("homepage_layouts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
-  // JSON: { entries: HomepageLayoutEntry[], pan: {x,y}, zoom: number }
-  layout: text("layout").notNull().default("{}"),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-// --- homepage end ---
+// homepage_items and homepage_layouts moved to the homepage plugin
+// (p_homepage_homepage_items, p_homepage_homepage_layouts).
 
 
 

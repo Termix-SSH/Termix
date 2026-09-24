@@ -1,0 +1,52 @@
+{
+  "id": "homepage",
+  "name": "Homepage",
+  "version": "1.0.0",
+  "description": "A customizable widget canvas and dashboard service links for your servers and services.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Productivity",
+  "icon": "LayoutGrid",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["db:own", "network:serve", "network:outbound", "ui:surface"],
+  "provides": [
+    {
+      "service": "homepage.items",
+      "version": "1.0.0",
+      "permission": "homepage.use"
+    }
+  ],
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "homepage",
+        "titleKey": "nav.homepage",
+        "icon": "LayoutGrid",
+        "openFrom": ["palette"]
+      }
+    ],
+    "dashboardCards": [
+      { "id": "service_links", "titleKey": "dashboard.serviceLinks" },
+      { "id": "homepage_preview", "titleKey": "dashboard.homepagePreview" }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "actionSlots": [
+      { "id": "dashboard.secondaryView", "accepts": ["component"] }
+    ]
+  }
+}

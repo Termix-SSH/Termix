@@ -74,6 +74,7 @@ export { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
 // Components other plugins offer by id (app.registerComponent), rendered with
 // a fallback while their plugin is off.
 export { PluginComponent } from "@/plugin-host/component-registry";
+export { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 
 // More primitives and hooks.
 export { cn } from "@/lib/utils";
@@ -90,8 +91,8 @@ export {
   useUiPreferencesContext,
 } from "@/contexts/UiPreferencesContext";
 // Homepage widget pieces, for plugins that register a widget.
-export { WidgetTitle } from "@/features/homepage/widgets/WidgetTitle";
-export { runVisibleInterval } from "@/features/homepage/use-visible-interval";
+export { WidgetTitle } from "@/lib/widget-title";
+export { runVisibleInterval } from "@/lib/visible-interval";
 export { useIsMobile } from "@/hooks/use-mobile";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
 export { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog";
@@ -138,7 +139,18 @@ export { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 // password for sudo autofill, the open tab record, the user's keybindings and
 // host terminal options.
 export { getCookie } from "@/main-axios";
-export { logActivity } from "@/api/dashboard-api";
+export {
+  logActivity,
+  getRecentActivity,
+  getUptime,
+  type RecentActivityItem,
+  type UptimeInfo,
+} from "@/api/dashboard-api";
+export {
+  getVersionInfo,
+  getDatabaseHealth,
+  type VersionInfo,
+} from "@/api/system-status-api";
 export { getHostPassword } from "@/api/credentials-api";
 export {
   patchOpenTab,

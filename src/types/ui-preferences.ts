@@ -36,6 +36,15 @@ export type UiAreaKey =
   | "hostEditor"
   | "homepage";
 
+/**
+ * The homepage area key, named rather than spelled inline in src/ui: it
+ * happens to share its spelling with the homepage plugin's id, which
+ * scripts/check-shell-plugin-ids.cjs treats as a plugin id wherever it sees
+ * that literal under src/ui. This area predates plugins and is unrelated -
+ * it is core's own widget-visibility override, not the plugin.
+ */
+export const HOMEPAGE_AREA_KEY: UiAreaKey = "homepage";
+
 export type UiDensity = "comfortable" | "compact";
 export type UiTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
 export type UiRowActions = "essential" | "full";

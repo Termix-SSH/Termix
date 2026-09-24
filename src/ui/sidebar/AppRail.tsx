@@ -28,11 +28,6 @@ export type CoreRailView =
 
 export type RailView = CoreRailView | (string & {});
 
-export type HideableRailView =
-  | Exclude<CoreRailView, "user-profile" | "admin-settings">
-  | "homepage"
-  | (string & {});
-
 type RailItem =
   | {
       kind?: undefined;

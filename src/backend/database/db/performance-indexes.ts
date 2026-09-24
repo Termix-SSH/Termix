@@ -114,11 +114,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "user_id",
   },
   {
-    name: "idx_homepage_items_user_id",
-    table: "homepage_items",
-    columns: "user_id",
-  },
-  {
     name: "idx_dismissed_alerts_user_id",
     table: "dismissed_alerts",
     columns: "user_id",

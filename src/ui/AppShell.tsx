@@ -1752,7 +1752,6 @@ export function AppShell({
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.hostManager"),
         sftp: t("nav.sftp"),
-        homepage: t("nav.homepage"),
       };
       // A plugin tab names itself; promoted rail panels reuse the rail's own
       // label so the two stay in sync.

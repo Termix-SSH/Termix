@@ -16,8 +16,6 @@ import {
   sshCredentials,
   sshFolders,
   vaultProfiles,
-  dashboardServiceLinks,
-  homepageItems,
   userPreferences,
 } from "../db/schema.js";
 import {
@@ -104,17 +102,8 @@ export function registerCoreSyncEntities(): void {
     encryptedFields: ["ssh_data"],
   });
 
-  registerEntity(CORE_OWNER, {
-    type: "dashboardServiceLinks",
-    table: dashboardServiceLinks,
-    order: 70,
-  });
-
-  registerEntity(CORE_OWNER, {
-    type: "homepageItems",
-    table: homepageItems,
-    order: 80,
-  });
+  // dashboardServiceLinks (order 70) and homepageItems (order 80) moved to
+  // the homepage plugin, which registers them itself at activation.
 
   registerEntity(CORE_OWNER, {
     type: "userPreferences",

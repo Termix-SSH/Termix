@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { enabledHostProtocols } from "@/sidebar/host-protocols";
+import { useHostActions } from "@/sidebar/host-contributions";
+import { tabTypeForActivity, useTabTypes } from "@/shell/tab-registry";
+import {
+  getHomepageWidgetType,
+  useHomepageWidgetTypes,
+} from "./homepage-widget-registry";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   __setPluginHost,
+  type HomepageWidgetContribution,
+  type HostActionContribution,
   type PluginHostBridge,
   type PluginHostRecord,
   type SettingsScope,
@@ -294,6 +302,29 @@ export const pluginHostBridge: PluginHostBridge = {
       ...(entry.reason ? { reason: entry.reason } : {}),
     };
   },
+
+  useHostActions: () => useHostActions() as unknown as HostActionContribution[],
+
+  useActivityTypes: () => {
+    const defs = useTabTypes();
+    const types = new Set(["file_manager"]);
+    for (const def of defs) {
+      for (const type of def.activityTypes ?? []) types.add(type);
+    }
+    return [...types];
+  },
+
+  activityTarget: (type) => {
+    const def = tabTypeForActivity(type);
+    if (!def) return undefined;
+    return { icon: def.icon, tab: def.id, titleKey: def.titleKey };
+  },
+
+  useHomepageWidgetTypes: () =>
+    useHomepageWidgetTypes() as unknown as HomepageWidgetContribution[],
+  homepageWidgetType: (id) =>
+    getHomepageWidgetType(id) as unknown as
+      HomepageWidgetContribution | undefined,
 };
 
 /** Installs the bridge. Idempotent. */

@@ -2,7 +2,6 @@
 import {
   Braces,
   LayoutDashboard,
-  LayoutGrid,
   LayoutPanelLeft,
   Server,
   Settings,
@@ -29,11 +28,6 @@ import {
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
     default: m.DashboardTab,
-  })),
-);
-const HomepageCanvas = lazy(() =>
-  import("@/features/homepage/HomepageCanvas").then((m) => ({
-    default: m.HomepageCanvas,
   })),
 );
 // Rail panels promoted to full tabs.
@@ -114,8 +108,6 @@ export function tabIcon(type: TabType) {
       return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
-    case "homepage":
-      return <LayoutGrid className="size-3.5" />;
     case "termix-id":
       return <Fingerprint className="size-3.5" />;
     case "macros":
@@ -210,9 +202,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
           isVisible={isVisible}
         />,
       );
-
-    case "homepage":
-      return withTabSuspense(<HomepageCanvas />);
 
     case "termix-id":
       return withTabSuspense(

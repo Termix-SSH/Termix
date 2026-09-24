@@ -1,5 +1,4 @@
-import { dashboardApi, handleApiError } from "@/main-axios";
-import { normalizeServiceLinkUrl } from "@/lib/service-link-url";
+import { authApi, handleApiError } from "@/main-axios";
 
 // DASHBOARD API
 // ============================================================================
@@ -22,7 +21,7 @@ export interface RecentActivityItem {
 
 export async function getUptime(): Promise<UptimeInfo> {
   try {
-    const response = await dashboardApi.get("/uptime");
+    const response = await authApi.get("/dashboard/uptime");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch uptime");
@@ -33,7 +32,7 @@ export async function getRecentActivity(
   limit?: number,
 ): Promise<RecentActivityItem[]> {
   try {
-    const response = await dashboardApi.get("/activity/recent", {
+    const response = await authApi.get("/dashboard/activity/recent", {
       params: { limit },
     });
     return response.data;
@@ -48,7 +47,7 @@ export async function logActivity(
   hostName: string,
 ): Promise<{ message: string; id: number | string }> {
   try {
-    const response = await dashboardApi.post("/activity/log", {
+    const response = await authApi.post("/dashboard/activity/log", {
       type,
       hostId,
       hostName,
@@ -61,71 +60,9 @@ export async function logActivity(
 
 export async function resetRecentActivity(): Promise<{ message: string }> {
   try {
-    const response = await dashboardApi.delete("/activity/reset");
+    const response = await authApi.delete("/dashboard/activity/reset");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "reset recent activity");
-  }
-}
-
-export interface ServiceLink {
-  id: number;
-  userId: string;
-  label: string;
-  url: string;
-  order: number;
-  createdAt: string;
-}
-
-export async function getServiceLinks(): Promise<ServiceLink[]> {
-  try {
-    const response = await dashboardApi.get("/service-links");
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "fetch service links");
-  }
-}
-
-export async function createServiceLink(
-  label: string,
-  url: string,
-): Promise<ServiceLink> {
-  try {
-    const response = await dashboardApi.post("/service-links", {
-      label,
-      url: normalizeServiceLinkUrl(url),
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "create service link");
-  }
-}
-
-export async function deleteServiceLink(
-  id: number,
-): Promise<{ message: string }> {
-  try {
-    const response = await dashboardApi.delete(`/service-links/${id}`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "delete service link");
-  }
-}
-
-export async function updateServiceLink(
-  id: number,
-  updates: { label?: string; url?: string },
-): Promise<ServiceLink> {
-  try {
-    const response = await dashboardApi.put(`/service-links/${id}`, {
-      ...updates,
-      url:
-        updates.url !== undefined
-          ? normalizeServiceLinkUrl(updates.url)
-          : undefined,
-    });
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "update service link");
   }
 }

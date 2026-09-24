@@ -32,14 +32,6 @@ const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
 );
 
-// Full-screen apps opened via query params (e.g. from external links or
-// Electron). Plugin views register a standalone component with their tab.
-const HomepageApp = lazy(() =>
-  import("@/features/homepage/HomepageApp").then((m) => ({
-    default: m.default,
-  })),
-);
-
 const ElectronVersionCheck = lazy(() =>
   import("@/user/ElectronVersionCheck").then((module) => ({
     default: module.ElectronVersionCheck,
@@ -59,8 +51,6 @@ function FullscreenApp() {
   const hostId = searchParams.get("hostId");
 
   switch (view) {
-    case "homepage":
-      return <HomepageApp />;
     default: {
       const def = view ? standaloneViewFor(view) : undefined;
       if (!def?.standalone) {

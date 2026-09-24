@@ -478,11 +478,17 @@ Slots core owns: `terminal.toolbar`, `terminal.toolbarStatus`,
 renamed `terminal.dock` to `terminal.sidePanel` and added the status slot,
 where host-metrics puts its CPU, memory and disk bars), `onboarding.steps`, `onboarding.features`,
 `onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`,
-`shell.overlay`, `dashboard.hostMetrics` and `homepage.hostMetrics`. **B16**
-added the last two, component slots in the dashboard's host status card
-(`{ hostId, online }`, one per host row) and the homepage's host status widget
-(`{ hostId, shownMetrics, online }`): core draws the status and a plugin draws
-the numbers, so core no longer calls the metrics API. **B12** added `shell.overlay`, a component slot the
+`shell.overlay`, `dashboard.hostMetrics`, `homepage.hostMetrics` and
+`dashboard.secondaryView`. **B16** added the middle two, component slots in
+the dashboard's host status card (`{ hostId, online }`, one per host row) and
+the homepage's host status widget (`{ hostId, shownMetrics, online }`): core
+draws the status and a plugin draws the numbers, so core no longer calls the
+metrics API. **B19** added `dashboard.secondaryView` (component slot, one
+contribution rendered at a time, `titleKey` names its tab): the dashboard's
+"Dashboard / <plugin>" toggle renders whatever is contributed instead of
+knowing about the homepage plugin by name, so the toggle disappears with no
+contributor and would show a second plugin's view the same way if one ever
+claimed it too. **B12** added `shell.overlay`, a component slot the
 shell renders once at its root for always-mounted plugin UI: session-sharing
 keeps its share dialog and its room-invite watcher there.
 `session.remoteDisplay` moved to session-sharing, which declares it and draws
@@ -591,8 +597,9 @@ connection helpers (`isElectron`, `resolveConnectionOrigin`, `pluginWsUrl`,
 stopgap in the right place: D1 turns them into typed bridge members.
 **B16** added `LineChart`, `useAdaptivePolling`, `useAreaPreferences` (the
 Appearance density and chart options), and the homepage widget pieces
-`WidgetTitle` and `runVisibleInterval`, for host-metrics's cards and its
-metrics chart widget. **B15** added `useUiPreferencesContext`, whose `setOverride` the
+`WidgetTitle` and `runVisibleInterval` (moved to `src/ui/lib/` in **B19**,
+once a plugin rather than a core feature became their biggest caller), for
+host-metrics's cards and its metrics chart widget. **B15** added `useUiPreferencesContext`, whose `setOverride` the
 Docker manager uses to remember the card or table layout the user picked.
 The `docker` and `hostMetrics` areas are still declared in core's
 `types/ui-preferences.ts`; a plugin cannot contribute its own area yet. The frontend SDK gained `useHostStatus(hostId)`: core's
@@ -605,6 +612,11 @@ host lookup. **B17** added `NotificationChannelDialog` and the channel API
 so a plugin that manages them shows core's dialog. `useConnectionDefaults` now carries terminal defaults only; the
 RDP half became remote desktop's user settings. Publishing its
 `.d.ts` for plugins outside this repo is a follow-up for the repo split.
+**B19** added `PluginViewPlaceholder`, for the homepage plugin's widget
+shell to render in place of a widget type whose owning plugin (docker,
+tunnels, host-metrics, file-manager) is off, and moved `WidgetTitle` and
+`runVisibleInterval` here from the deleted homepage feature directory
+(above), unchanged for their existing callers.
 
 #### Strings
 
@@ -779,7 +791,7 @@ as `allowPrivateHosts`, and runs approved commands through
 else from optional services: `snippets.access`, `fleets.access`,
 `automations.access`, `workspaces.saved`, `network-topology.graph`,
 `terminal.history` and `homepage.items` v1 (`list()`, which the homepage
-plugin provides from B19). A tool names the service it needs, and a tool
+plugin provides, B19). A tool names the service it needs, and a tool
 whose service has no running provider is not offered to the model at all. B18
 made the write methods of `snippets.access` and `fleets.access` check the
 same permission their routes do (`snippets.create`/`edit`/`delete`,
@@ -790,6 +802,48 @@ and `allowReadOnlyCommands` plus a custom `providers` field, and the host
 `terminal.sidePanel` appear. `ai-settings-migration.ts` moves the 2.8 values
 and keys. The shell knows nothing about it: availability is the plugin being
 enabled, `ai.use`, and those settings.
+
+**Homepage (B19)** is the widget canvas and the dashboard's service links.
+It imports nothing from core. It adopts `homepage_items`, `homepage_layouts`
+and `dashboard_service_links`, keeping the legacy sync wire names
+(`homepageItems`, `dashboardServiceLinks`). Its outbound routes (favicon, RSS,
+ping, proxy widgets) all go through `ctx.fetch`, so they keep the SSRF
+guard every other outbound call gets. It provides `homepage.items` v1
+(`list()`), which the AI assistant reads as an optional service. Core's own
+uptime, recent-activity and database-health routes are unrelated to the
+canvas and stayed on the main server (`database/routes/dashboard-routes.ts`,
+mounted at `/dashboard`); only the widget canvas and the service-links table
+left with this plugin. The two ports it used to run on (30006 dashboard,
+30012 homepage) are gone.
+
+Both dashboard cards (`service_links`, `homepage_preview`) and the
+`?view=homepage` full-screen link are the plugin's own, registered through
+`registerDashboardCard`/`registerTab`. `registerDashboardCard` gained
+`defaultPanel` (`"main"` or `"side"`), so a preset that lays out cards for a
+new user reads a plugin's own card's height and panel from the registry
+(`service_links` asks for the side column) instead of a core file having to
+spell every plugin's card id and its layout by hand. The dashboard's "Dashboard / Homepage"
+toggle is generic: it renders whatever a plugin contributes to a new
+`dashboard.secondaryView` action slot (component kind, `titleKey` for the tab
+label), so core carries no homepage-specific header or copy-link button of
+its own. A widget any plugin registers with `app.registerHomepageWidget`
+still goes into a registry core owns (`src/ui/plugin-host/homepage-widget-registry.ts`),
+the same as `dashboard-cards-registry.ts`, so docker's, tunnels', file-manager's
+and host-metrics's own homepage widgets keep working with homepage disabled;
+only the canvas that renders them is gone. The frontend SDK gained
+`useHostActions()` (every host action any plugin registered, for a widget
+that offers a picker over what it can do with a host, such as Quick
+Connect), `useActivityTypes()` and `activityTarget(type)` (the recent-activity
+type list and its icon/tab/label, for a filter or an activity feed widget),
+and `useHomepageWidgetTypes()`/`homepageWidgetType(id)` (the read side of
+`registerHomepageWidget`, for the canvas and its add-widget menu).
+`@termix/plugin-sdk/ui` gained `PluginViewPlaceholder`, and `WidgetTitle` and
+`runVisibleInterval` moved from the homepage feature directory to
+`src/ui/lib/` now that a plugin, not a core feature, is their biggest
+caller. The shared `host`/`selectHost`/`noHostConfigured`/`loading` strings
+several widget-owning plugins relied on through the `homepage` namespace's
+core fallback moved to core's `common.*`, which is what that fallback is
+actually for.
 
 #### Host status is core
 
@@ -2187,7 +2241,7 @@ Then, with the app running:
 
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
-(B17) and ai (B18), which import
+(B17), ai (B18) and homepage (B19), which import
 nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
@@ -2215,7 +2269,7 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 55 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 53 files  | D1         |
 | A plugin importing core by relative path         | Warning   | 4 files   | D1         |
 | A plugin importing another plugin's source       | Warning   | 0 files   | -          |
 
