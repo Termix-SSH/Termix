@@ -60,6 +60,7 @@ const PLUGIN_PURPOSES = new Set<SshConnectPurpose>([
   "file-manager",
   "file-transfer",
   "terminal",
+  "tmux",
 ]);
 
 function purposeOf(options?: PluginSshConnectOptions): SshConnectPurpose {

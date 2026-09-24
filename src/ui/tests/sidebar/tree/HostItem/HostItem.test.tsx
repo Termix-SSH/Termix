@@ -60,7 +60,6 @@ const baseHost: Host = {
   enableTerminal: true,
   enableCommandHistory: true,
   enableTunnel: true,
-  enableTmuxMonitor: true,
   enableFileManager: true,
   enableDocker: true,
   enableRdp: true,
@@ -219,18 +218,31 @@ describe("HostItem density parity", () => {
   });
 
   it("learns repeated local actions and preloads the preferred host tool", () => {
-    renderHostItem("comfortable");
-    const tmuxButton = screen.getByTitle("Tmux Monitor");
-    fireEvent.click(tmuxButton);
-    fireEvent.click(tmuxButton);
-    fireEvent.click(tmuxButton);
+    const Icon = (() => null) as never;
+    const dispose = registerHostAction({
+      id: "tmux_monitor",
+      titleKey: "Tmux Monitor",
+      icon: Icon,
+      kind: "open",
+      tabType: "tmux_monitor",
+      when: () => true,
+    });
+    try {
+      renderHostItem("comfortable");
+      const tmuxButton = screen.getByTitle("Tmux Monitor");
+      fireEvent.click(tmuxButton);
+      fireEvent.click(tmuxButton);
+      fireEvent.click(tmuxButton);
 
-    const hostRow = screen.getByText("web-01").closest(".cursor-pointer");
-    expect(hostRow).toBeTruthy();
-    fireEvent.pointerEnter(hostRow!);
+      const hostRow = screen.getByText("web-01").closest(".cursor-pointer");
+      expect(hostRow).toBeTruthy();
+      fireEvent.pointerEnter(hostRow!);
 
-    // No plugin registered a connect action, so only the learned tool preloads.
-    expect(preloadTabSurfaceMock).not.toHaveBeenCalledWith("");
-    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("tmux_monitor");
+      // No plugin registered a connect action, so only the learned tool preloads.
+      expect(preloadTabSurfaceMock).not.toHaveBeenCalledWith("");
+      expect(preloadTabSurfaceMock).toHaveBeenCalledWith("tmux_monitor");
+    } finally {
+      dispose();
+    }
   });
 });

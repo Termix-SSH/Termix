@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "tables": {
+    "session_tags": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "sessionName": {
+          "type": "text",
+          "notNull": true
+        },
+        "tag": {
+          "type": "text",
+          "notNull": true
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [],
+      "adopts": "tmux_session_tags"
+    }
+  }
+}

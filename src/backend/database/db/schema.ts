@@ -1203,23 +1203,6 @@ export const termixIdentityCa = sqliteTable("termix_identity_ca", {
 });
 // --- termix-id end ---
 
-// --- tmux-monitor begin ---
-export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  sessionName: text("session_name").notNull(),
-  tag: text("tag").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// --- tmux-monitor end ---
-
 // --- metrics-history begin ---
 export const hostMetricsHistory = sqliteTable("host_metrics_history", {
   id: integer("id").primaryKey({ autoIncrement: true }),

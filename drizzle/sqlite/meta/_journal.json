@@ -253,6 +253,13 @@
       "when": 1790208809221,
       "tag": "0035_striped_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1790220943638,
+      "tag": "0036_classy_nighthawk",
+      "breakpoints": true
     }
   ]
 }

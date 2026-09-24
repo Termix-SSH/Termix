@@ -612,7 +612,8 @@ export type PluginSshPurpose =
   | "tunnel"
   | "file-manager"
   | "file-transfer"
-  | "terminal";
+  | "terminal"
+  | "tmux";
 
 export type PluginSshAuthOutcome =
   | { status: "ready" }

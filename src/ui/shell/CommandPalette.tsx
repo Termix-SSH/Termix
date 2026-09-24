@@ -20,7 +20,6 @@ import {
   Search,
   User,
   KeyRound,
-  Layers, // --- tmux-monitor ---
   Clock,
   Folder,
   Pencil,
@@ -55,26 +54,6 @@ interface CommandPaletteProps {
   onOpenTab: (type: TabType, label?: string, pendingEvent?: string) => void;
   /** Opens a sidebar panel. Kept separate from onOpenTab, which is TabType-shaped. */
   onOpenPanel?: (view: string) => void;
-}
-
-/** Core per-host tools. Plugins add theirs as host actions. */
-function getSshActions(host: Host): {
-  type: TabType;
-  icon: React.ElementType;
-  label: string;
-}[] {
-  return [
-    // --- tmux-monitor --- opt-in per host, off by default
-    host.enableTmuxMonitor && {
-      type: "tmux_monitor",
-      icon: Layers,
-      label: "Tmux Monitor",
-    },
-  ].filter(Boolean) as {
-    type: TabType;
-    icon: React.ElementType;
-    label: string;
-  }[];
 }
 
 export function CommandPalette({
@@ -535,24 +514,6 @@ export function CommandPalette({
                             </span>
                           </div>
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {host.enableSsh &&
-                              getSshActions(host).map(
-                                ({ type, icon: Icon, label }) => (
-                                  <button
-                                    key={type}
-                                    title={label}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAction(() =>
-                                        onOpenTab(type, host.name),
-                                      );
-                                    }}
-                                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                                  >
-                                    <Icon className="size-3.5" />
-                                  </button>
-                                ),
-                              )}
                             {hostActionsFor(hostActions, host).map((action) => {
                               const Icon = action.icon;
                               const label =

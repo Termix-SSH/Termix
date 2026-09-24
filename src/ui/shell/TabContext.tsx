@@ -146,9 +146,12 @@ export function TabProvider({ children }: TabProviderProps) {
 
   const addTab = useCallback(
     (tabData: Omit<Tab, "id">): number => {
-      // --- tmux-monitor --- (tmux_monitor is a singleton tab like ssh_manager:
-      // re-opening focuses the existing tab instead of adding a duplicate)
-      if (tabData.type === "ssh_manager" || tabData.type === "tmux_monitor") {
+      // A singleton tab: re-opening focuses the existing tab instead of
+      // adding a duplicate.
+      if (
+        tabData.type === "ssh_manager" ||
+        getTabType(tabData.type)?.singleton
+      ) {
         const existingTab = tabs.find((t) => t.type === tabData.type);
         if (existingTab) {
           setTabs((prev) =>
@@ -179,11 +182,12 @@ export function TabProvider({ children }: TabProviderProps) {
       const isCommandTarget = !!getTabType(tabData.type)?.commandTarget;
       const needsUniqueTitle =
         isCommandTarget || tabData.type === "file_manager";
+      const singletonTitleKey = getTabType(tabData.type)?.singleton
+        ? getTabType(tabData.type)?.titleKey
+        : undefined;
       const effectiveTitle = needsUniqueTitle
         ? computeUniqueTitle(tabData.type, tabData.title)
-        : tabData.type === "tmux_monitor" // --- tmux-monitor ---
-          ? tabData.title || t("nav.tmuxMonitor")
-          : tabData.title || "";
+        : tabData.title || (singletonTitleKey ? t(singletonTitleKey) : "");
       const newTab: Tab = {
         ...tabData,
         id,
@@ -204,7 +208,7 @@ export function TabProvider({ children }: TabProviderProps) {
       setAllSplitScreenTab((prev) => prev.filter((tid) => tid !== id));
       return id;
     },
-    [computeUniqueTitle, tabs, t], // --- tmux-monitor --- (added t)
+    [computeUniqueTitle, tabs, t],
   );
 
   const pendingCurrentTabRef = useRef<number | null>(null);

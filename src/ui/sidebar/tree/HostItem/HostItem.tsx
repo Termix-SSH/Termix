@@ -11,7 +11,6 @@ import {
   GripVertical,
   Key,
   KeyRound,
-  Layers, // --- tmux-monitor ---
   Link,
   MemoryStick,
   MoreHorizontal,
@@ -111,33 +110,6 @@ export function buildStatusTooltip(
   if (host.enableTelnet) protocols.push("Telnet");
   if (protocols.length === 0) return statusLabel;
   return `${protocols.join(", ")}: ${statusLabel}`;
-}
-
-/**
- * Core's own per-host tools. Ways to connect and plugin tools (terminal,
- * remote desktop, Docker, metrics) are host actions plugins register.
- */
-export function getSshActions(host: Host): {
-  type: TabType;
-  icon: typeof Terminal;
-  label: string;
-  order: number;
-}[] {
-  return [
-    // --- tmux-monitor --- opt-in per host, off by default
-    host.enableSsh &&
-      host.enableTmuxMonitor && {
-        type: "tmux_monitor" as TabType,
-        icon: Layers,
-        label: "Tmux Monitor",
-        order: 70,
-      },
-  ].filter(Boolean) as {
-    type: TabType;
-    icon: typeof Terminal;
-    label: string;
-    order: number;
-  }[];
 }
 
 /** Plugin actions sort by order; connect actions default to the end. */
@@ -411,13 +383,9 @@ export function HostItem({
   const trayButtonClass =
     "flex items-center justify-center size-[22.75px] text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
 
-  const sshActions = getSshActions(host);
-  const availableActions: TabType[] = [
-    ...sshActions.map(({ type }) => type),
-    ...pluginActions.flatMap((action) =>
-      action.tabType ? [action.tabType] : [],
-    ),
-  ];
+  const availableActions: TabType[] = pluginActions.flatMap((action) =>
+    action.tabType ? [action.tabType] : [],
+  );
   // Empty when no running plugin can connect to this host.
   const defaultAction: TabType =
     defaultConnectAction(allHostActions, host)?.tabType ?? "";
@@ -450,19 +418,8 @@ export function HostItem({
     else if (action.tabType) openHostTab(action.tabType);
   };
 
-  /** Core tools and plugin actions in one row, in order. */
+  /** Plugin actions in row order. */
   const rowEntries = [
-    ...sshActions.map((action) => ({
-      key: action.type,
-      order: action.order,
-      icon: action.icon,
-      label: action.label,
-      tabType: action.type as string | undefined,
-      tray: true,
-      items: undefined as
-        { id: string; label: string; run: () => void }[] | undefined,
-      run: () => openHostTab(action.type),
-    })),
     ...pluginActions.map((action) => {
       const items = action.items?.(host);
       return {
@@ -799,20 +756,6 @@ export function HostItem({
               {t("hosts.copyLink")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {host.enableSsh && host.enableTmuxMonitor && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    writeClipboardText(
-                      `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
-                    );
-                    toast.success(t("hosts.tmuxMonitorUrlCopied"));
-                  }}
-                >
-                  <Layers className="size-3.5 mr-2" />
-                  {t("hosts.copyTmuxMonitorUrlAction")}
-                </DropdownMenuItem>
-              )}
               {pluginActions
                 .filter((action) => action.copyUrlView)
                 .map((action) => {
@@ -1015,13 +958,12 @@ export function HostItem({
         // reachable. If the host only exposes a single action, just launch it.
         if (isTouchOnly) {
           e.stopPropagation();
-          const actionCount = getSshActions(host).length;
           const otherProtocols = [
             host.enableRdp,
             host.enableVnc,
             host.enableTelnet,
           ].filter(Boolean).length;
-          if (actionCount + otherProtocols <= 1) {
+          if (otherProtocols <= 1) {
             openHostTab(defaultAction);
           } else {
             onTrayOpenChange?.(!isTrayOpen);

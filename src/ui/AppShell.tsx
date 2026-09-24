@@ -1699,11 +1699,6 @@ export function AppShell({
   ) {
     const type = resolveHostTabType(host, preferredType);
     if (!type) return;
-    // --- tmux-monitor --- singleton tab, not a per-host tab
-    if (type === "tmux_monitor") {
-      openSingletonTab(type, undefined, host);
-      return;
-    }
     openTab(host, type, undefined, options);
   }
 
@@ -1842,8 +1837,7 @@ export function AppShell({
   }, []);
 
   const openSingletonTab = useCallback(
-    // --- tmux-monitor --- (added optional `host` so tmux_monitor can open
-    // with a preselected host; existing callers are unaffected)
+    // `host` optionally preselects a host for a singleton plugin tab.
     function openSingletonTab(
       type: TabType,
       pendingEvent?: string,
@@ -1890,7 +1884,6 @@ export function AppShell({
       const singletonLabels: Partial<Record<TabType, string>> = {
         "host-manager": t("nav.hostManager"),
         sftp: t("nav.sftp"),
-        tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
         homepage: t("nav.homepage"),
       };
       // A plugin tab names itself; promoted rail panels reuse the rail's own
@@ -3157,8 +3150,8 @@ export function AppShell({
                 openSingletonTab(type, pendingEvent);
               } else if (getTabType(type)?.multiInstance) {
                 openMultiInstanceTab(type);
-              } else if (type === "tmux_monitor") {
-                // --- tmux-monitor --- singleton tab, optionally preselecting a host
+              } else if (getTabType(type)?.singleton) {
+                // A singleton plugin tab, optionally preselecting a host.
                 openSingletonTab(
                   type,
                   undefined,

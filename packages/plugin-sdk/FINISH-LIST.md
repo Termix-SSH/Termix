@@ -163,14 +163,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `optionalAuth`, because share-link and room guests authenticate inside the
   handler with their token. Guest auth itself is unchanged; review it with the
   rest of the public routes.
-- **B9 (ssh-terminal):** tmux has no provider yet. The terminal calls the
-  optional `tmux.sessions` v1 (`detect`, `attachOrCreate`, `waitForSession`)
-  and skips tmux attach without it (auto-tmux, the tmux monitor's attach, the
-  session picker). The toolbar's old host action list only ever held the
-  Tmux Monitor button, which is gone with it. `TmuxSessionPicker` lives in
-  ssh-terminal now. Owner: B10, which provides the service (the helpers are
-  `hosts/tmux/helper.ts`) and contributes its toolbar button to
-  `terminal.toolbar`.
 - **B9 (ssh-terminal):** recording has no provider yet. The terminal calls the
   optional `recordings.writer` v1 `open(meta)` and gets a sink with
   `append(chunk)` (one call per 300 ms batch, the first starting with the
@@ -225,6 +217,36 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   fails on `src/ui/lib/host-to-ssh-host.ts` spelling `web-endpoint` (the
   `pluginSettings` lookup B8 added). Not allowlisted and not introduced here.
   Owner: D0 (read it through a registry or allowlist it with a reason).
+- **B10 (tmux-monitor):** `enable_tmux_monitor` is still a live `ssh_data`
+  column; only the copy-into-plugin-settings migration shipped
+  (`tmux-monitor-settings-migration.ts`), the same as B6/B7's own columns.
+  Every core read site (`host.ts`, `host-normalizers.ts`,
+  `host-bulk-routes.ts`, `database.ts`'s encrypt/decrypt round trip) still
+  reads the column directly. Dropping it in lockstep (`schema.ts`,
+  `db/index.ts`, a drizzle migration per dialect, `schema:generate`) is the
+  same follow-up the B6/B7/B8 lines above describe. Owner: a dedicated
+  follow-up step, or D0.
+- **B10 (tmux-monitor):** `terminalToolbar.openTmuxMonitor` and
+  `terminalToolbar.tmuxDetach` are dead locale keys (nothing calls
+  `t("terminalToolbar.openTmuxMonitor")` or `t("terminalToolbar.tmuxDetach")`
+  anywhere in the tree; the terminal's own live detach button uses
+  `terminalToolbar.detachTmux`/`detachTmuxDescription` instead). Pre-existing,
+  not introduced by this step; sibling dead keys
+  (`copyTerminalUrlAction`/`copyDockerUrlAction`/`copyHostMetricsUrlAction`,
+  `terminalUrlCopied`/`dockerUrlCopied`/`hostMetricsUrlCopied`) are the same
+  vintage, from before the generic `hosts.copiedToClipboard`/
+  `copyViewUrlAction` replaced them. Owner: whoever next cleans up
+  `src/ui/locales/en.json`, or D0.
+- **B10 (tmux-monitor):** no plugin contributes an "Open Tmux Monitor" (or
+  "Open Docker" / "Open Tunnel" / "Open Host Metrics") quick link into
+  `terminal.toolbar` today; that whole quick-link row was dropped when the
+  toolbar was rebuilt as a generic action slot (`ai` is the only real
+  `terminal.toolbar` contributor, for its assistant button) and never
+  replaced per-feature. Adding tmux-monitor's own link is straightforward
+  (`app.registerSlotContribution("terminal.toolbar", ...)` plus
+  `app.registerAction` opening the singleton tab) but is a shared gap across
+  four plugins, not specific to this step. Owner: D1, or whoever revisits the
+  toolbar's quick-link row.
 
 ## Manual checks after 2.9.0
 

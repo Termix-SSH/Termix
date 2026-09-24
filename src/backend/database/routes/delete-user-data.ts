@@ -28,7 +28,6 @@ import {
   createCurrentSshCredentialUsageRepository,
   createCurrentTermixIdentityCaRepository,
   createCurrentTermixIdentityRepository,
-  createCurrentTmuxSessionTagRepository,
   createCurrentTrustedDeviceRepository,
   createCurrentUserPreferenceRepository,
   createCurrentUserRepository,
@@ -112,7 +111,6 @@ export async function deleteUserAndRelatedData(
     await createCurrentSecretSourceRepository().deleteByUserId(userId);
     await createCurrentTermixIdentityCaRepository().deleteByUserId(userId);
     await createCurrentTermixIdentityRepository().deleteByUserId(userId);
-    await createCurrentTmuxSessionTagRepository().deleteByUserId(userId);
     await createCurrentOpenTabRepository().deleteByUserId(userId);
     await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 

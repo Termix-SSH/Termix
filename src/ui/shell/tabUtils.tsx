@@ -8,7 +8,6 @@ import {
   Settings,
   Usb,
   User,
-  Layers, // --- tmux-monitor ---
   Fingerprint,
   Hammer,
   ScrollText,
@@ -37,11 +36,6 @@ const CollabRoomTab = lazy(() =>
   })),
 );
 
-const loadTmuxMonitor = () =>
-  import("@/features/tmux-monitor/TmuxMonitor").then((m) => ({
-    default: m.TmuxMonitor,
-  }));
-const TmuxMonitor = lazy(loadTmuxMonitor);
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
     default: m.DashboardTab,
@@ -73,13 +67,9 @@ const MacrosPanel = lazy(() =>
 const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
 );
-const tabSurfaceLoaders: Partial<Record<TabType, () => Promise<unknown>>> = {
-  tmux_monitor: loadTmuxMonitor,
-};
-
 /** Download a likely next tab without starting a connection or mounting UI. */
 export function preloadTabSurface(type: TabType): void {
-  const loader = tabSurfaceLoaders[type] ?? getTabType(type)?.preload;
+  const loader = getTabType(type)?.preload;
   if (loader) runAdaptiveBackgroundTask("module", `tab:${type}`, loader);
 }
 
@@ -144,9 +134,6 @@ export function tabIcon(type: TabType) {
       return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
-    // --- tmux-monitor ---
-    case "tmux_monitor":
-      return <Layers className="size-3.5" />;
     case "serial":
       return <Usb className="size-3.5" />;
     case "homepage":
@@ -239,7 +226,6 @@ export interface TabRenderContext {
 
 export function renderTabContent(tab: Tab, context: TabRenderContext) {
   const { shell, isVisible = true, isFocusedPane = true, panelProps } = context;
-  const { host } = tab;
 
   switch (tab.type) {
     case "dashboard":
@@ -247,15 +233,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
         <DashboardTab
           onOpenSingletonTab={(type) => shell.openSingletonTab(type)}
           onOpenTab={(host, type) => shell.openTab(host, type)}
-          isVisible={isVisible}
-        />,
-      );
-
-    // --- tmux-monitor ---
-    case "tmux_monitor":
-      return withTabSuspense(
-        <TmuxMonitor
-          initialHostId={host ? parseInt(host.id, 10) : undefined}
           isVisible={isVisible}
         />,
       );

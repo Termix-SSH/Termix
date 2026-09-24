@@ -25,7 +25,6 @@ import {
 import {
   Globe,
   Info,
-  Layers, // --- tmux-monitor ---
   Palette,
   Pencil,
   Plus,
@@ -2060,35 +2059,6 @@ export function HostEditor({
                       />
                     </div>
                   </div>
-                </div>
-              </SectionCard>
-              {/* --- tmux-monitor --- */}
-              <SectionCard
-                title={t("tmuxMonitor.title")}
-                icon={<Layers className="size-3.5" />}
-              >
-                <div className="flex flex-col gap-4 py-3">
-                  <SettingRow
-                    label={t("hosts.enableTmuxMonitor")}
-                    description={
-                      <>
-                        {t("hosts.enableTmuxMonitorDesc")}{" "}
-                        <a
-                          href="https://docs.termix.site/features/terminal/tmux"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </>
-                    }
-                  >
-                    <FakeSwitch
-                      checked={form.enableTmuxMonitor}
-                      onChange={(v) => setField("enableTmuxMonitor", v)}
-                    />
-                  </SettingRow>
                 </div>
               </SectionCard>
             </>

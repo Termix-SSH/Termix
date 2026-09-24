@@ -1204,23 +1204,6 @@ export const termixIdentityCa = mysqlTable("termix_identity_ca", {
 });
 // --- termix-id end ---
 
-// --- tmux-monitor begin ---
-export const tmuxSessionTags = mysqlTable("tmux_session_tags", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  sessionName: text("session_name").notNull(),
-  tag: text("tag").notNull(),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-// --- tmux-monitor end ---
-
 // --- metrics-history begin ---
 export const hostMetricsHistory = mysqlTable("host_metrics_history", {
   id: int("id").autoincrement().primaryKey(),

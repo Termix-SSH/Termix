@@ -1,0 +1,64 @@
+{
+  "id": "tmux-monitor",
+  "name": "Tmux Monitor",
+  "version": "1.0.0",
+  "description": "Browse and control tmux sessions, windows and panes across your hosts.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Terminal",
+  "icon": "Layers",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "hosts:read",
+    "credentials:use",
+    "ssh:connect",
+    "db:own",
+    "network:serve",
+    "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "tmux.sessions",
+      "version": "1.0.0",
+      "permission": "tmux-monitor.use"
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "tmux_monitor",
+        "titleKey": "nav.tmuxMonitor",
+        "icon": "Layers",
+        "openFrom": ["host-context-menu", "palette"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "host": {
+        "enableKey": "enableTmuxMonitor",
+        "enableLabelKey": "settings.host.enable.label",
+        "fields": []
+      }
+    },
+    "hostCapability": {
+      "key": "enableTmuxMonitor",
+      "labelKey": "hosts.tabTmuxMonitor",
+      "editorTab": "tmux-monitor"
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

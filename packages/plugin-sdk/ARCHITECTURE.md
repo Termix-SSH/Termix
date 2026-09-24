@@ -505,14 +505,16 @@ skipped, and it stays in the next snapshot (`isUnregisteredPluginTabType` in
 `src/ui/plugin-host/sdk-ui.ts`. Adding to it is a contract change; removing
 from it is a breaking one. Today it exports: alert, alert-dialog, badge,
 button, card, checkbox, dialog, dropdown-menu, input, label, password-input,
-select, select2, separator, switch, textarea, tooltip, sheet, section-card,
-metric-card, charts, the card grid, `ConnectionScreen` and the connection
-status helpers, `SnippetVariablesDialog`, `FullScreenAppWrapper`, the
-connection log context, `TOTPDialog`, `SSHAuthDialog`, `WarpgateDialog`,
-`PassphraseDialog`, `OPKSSHDialog` (until opkssh moves in Phase C),
-`HostKeyVerificationDialog`, `useTabs`/`useTabsSafe`, `ActionSlot`,
-`ComponentSlot`, `PluginComponent` and `FOLDER_COLORS` (the colour swatches
-folders and workspaces pick from).
+popover, scroll-area, select, select2, separator, skeleton, switch, textarea,
+tooltip, sheet, section-card, metric-card, charts, the card grid,
+`ConnectionScreen` and the connection status helpers,
+`SnippetVariablesDialog`, `FullScreenAppWrapper`, the connection log context,
+`TOTPDialog`, `SSHAuthDialog`, `WarpgateDialog`, `PassphraseDialog`,
+`OPKSSHDialog` (until opkssh moves in Phase C), `HostKeyVerificationDialog`,
+`useTabs`/`useTabsSafe`, `ActionSlot`, `ComponentSlot`, `PluginComponent` and
+`FOLDER_COLORS` (the colour swatches folders and workspaces pick from).
+**B10** added `popover`, `scroll-area` and `skeleton` for the tmux-monitor
+plugin's session tree and its new-session/kill popovers.
 
 **B9** added what a terminal-like surface needs from the shell: `cn`,
 `useConfirmation`, `useIsMobile`, `runAdaptivePolling`; the terminal look
@@ -1186,6 +1188,9 @@ connect pipeline instead of importing ssh2 helpers from core:
   since the file-manager plugin's interactive connect route and its dedicated
   transfer sessions both need their own keepalive/timeout defaults rather than
   falling back to the generic `"plugin"` purpose.
+- **B10** added `"tmux"` to `PluginSshPurpose` the same way (core's
+  `SshConnectPurpose` already had it), for the tmux-monitor plugin's pooled
+  connection and the `tmux.sessions` service it provides to the terminal.
 - **B9** added what an interactive transport needs, for the terminal:
   `resolveHost(hostId, { syncId? })` (the host with secrets, by sync id first,
   audited), the `"terminal"` purpose, `interactive` and `hostKeySocket` on

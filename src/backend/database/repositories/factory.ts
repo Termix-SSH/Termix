@@ -53,7 +53,6 @@ import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
 import { SsoProviderRepository } from "./sso-provider-repository.js";
 import { TermixIdentityCaRepository } from "./termix-identity-ca-repository.js";
 import { TermixIdentityRepository } from "./termix-identity-repository.js";
-import { TmuxSessionTagRepository } from "./tmux-session-tag-repository.js";
 import { TrustedDeviceRepository } from "./trusted-device-repository.js";
 import { UserDataExportRepository } from "./user-data-export-repository.js";
 import { UserPreferenceRepository } from "./user-preference-repository.js";
@@ -482,14 +481,8 @@ export function createCurrentTermixIdentityRepository(): TermixIdentityRepositor
   );
 }
 
-export function createCurrentTmuxSessionTagRepository(): TmuxSessionTagRepository {
-  return new TmuxSessionTagRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("tmux_session_tag_repository_write"),
-  );
-}
-
 // transfer_recent moved to the file-manager plugin.
+// tmux_session_tags moved to the tmux-monitor plugin.
 
 export function createCurrentTrustedDeviceRepository(): TrustedDeviceRepository {
   return new TrustedDeviceRepository(

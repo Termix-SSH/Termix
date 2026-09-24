@@ -1205,23 +1205,6 @@ export const termixIdentityCa = pgTable("termix_identity_ca", {
 });
 // --- termix-id end ---
 
-// --- tmux-monitor begin ---
-export const tmuxSessionTags = pgTable("tmux_session_tags", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  sessionName: text("session_name").notNull(),
-  tag: text("tag").notNull(),
-  createdAt: varchar("created_at", { length: 255 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// --- tmux-monitor end ---
-
 // --- metrics-history begin ---
 export const hostMetricsHistory = pgTable("host_metrics_history", {
   id: serial("id").primaryKey(),
