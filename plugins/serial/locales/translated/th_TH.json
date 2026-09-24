@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "ซีเรียล",
+    "portLabel": "ท่าเรือ",
+    "portPlaceholder": "/dev/ttyUSB0 หรือ COM3",
+    "baudRateLabel": "อัตราบิต",
+    "dataBitsLabel": "ข้อมูล",
+    "stopBitsLabel": "หยุด",
+    "parityLabel": "ความเท่าเทียมกัน",
+    "parityNone": "ไม่มี",
+    "parityEven": "สม่ำเสมอ",
+    "parityOdd": "แปลก",
+    "connect": "เชื่อมต่อกับพอร์ตอนุกรม",
+    "disconnect": "ตัดการเชื่อมต่อ",
+    "refreshPorts": "พอร์ตรีเฟรช",
+    "connected": "เชื่อมต่อกับ {{path}} ที่ความเร็ว {{baud}} บอด",
+    "disconnected": "พอร์ตอนุกรมถูกตัดการเชื่อมต่อ",
+    "connectionError": "ไม่สามารถเปิดพอร์ตอนุกรมได้",
+    "wsError": "ข้อผิดพลาด WebSocket",
+    "errorNoServerUrl": "ไม่ได้กำหนดค่า URL เซิร์ฟเวอร์",
+    "notSupportedTitle": "ไม่รองรับหมายเลขซีเรียล",
+    "notSupported": "การเชื่อมต่อแบบอนุกรมจำเป็นต้องใช้เบราว์เซอร์ที่รองรับ Web Serial API (Chrome, Edge หรือ Firefox เวอร์ชัน 151 ขึ้นไป) หรือแอปพลิเคชัน Termix บนเดสก์ท็อป",
+    "hideHint": "คุณสามารถซ่อนแท็บ Serial ได้ที่ โปรไฟล์ผู้ใช้ > ลักษณะที่ปรากฏ > แถบด้านข้าง > การนำทาง",
+    "browserPickerHint": "คลิก \"เชื่อมต่อ\" แล้วเบราว์เซอร์ของคุณจะเปิดตัวเลือกพอร์ตเพื่อเลือกอุปกรณ์"
+  },
+  "nav": {
+    "serial": "ซีเรียล"
+  }
+}

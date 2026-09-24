@@ -26,7 +26,7 @@ import * as serviceRegistry from "./service-registry.js";
 import type { ServiceRegistration } from "./service-registry.js";
 import * as secretRegistry from "./secret-registry.js";
 import type { SecretRegistration } from "./secret-registry.js";
-import { assertCapability } from "./permissions.js";
+import { assertCapability, hasCapability } from "./permissions.js";
 import { getActor, runAsActor } from "./actor.js";
 import { DisposableBag } from "./disposables.js";
 import {
@@ -321,6 +321,27 @@ export function createPluginContext(
       details: () => "opened an isolated Electron window",
     },
   );
+
+  const capabilitiesRequire = async (capability: string) => {
+    try {
+      await assertCapability(pluginId, capability, declared);
+    } catch (error) {
+      await writeAudit(
+        manifest,
+        { action: "capability_require", details: () => capability },
+        {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      );
+      throw error;
+    }
+    await writeAudit(
+      manifest,
+      { action: "capability_require", details: () => capability },
+      { success: true },
+    );
+  };
 
   return {
     pluginId,
@@ -624,6 +645,11 @@ export function createPluginContext(
       },
 
       require: (permission) => createRbacMiddleware(manifest, permission),
+    },
+
+    capabilities: {
+      has: (capability) => hasCapability(pluginId, capability, declared),
+      require: capabilitiesRequire,
     },
 
     disposables: {

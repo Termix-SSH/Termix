@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Serial",
+    "portLabel": "Port",
+    "portPlaceholder": "/dev/ttyUSB0 sau COM3",
+    "baudRateLabel": "Rată de baud",
+    "dataBitsLabel": "Date",
+    "stopBitsLabel": "Stop",
+    "parityLabel": "Paritate",
+    "parityNone": "Nici unul",
+    "parityEven": "Chiar",
+    "parityOdd": "Ciudat",
+    "connect": "Conectare la serial",
+    "disconnect": "Deconecta",
+    "refreshPorts": "Reîmprospătați porturile",
+    "connected": "Conectat la {{path}} la {{baud}} baud",
+    "disconnected": "Portul serial deconectat",
+    "connectionError": "Nu s-a putut deschide portul serial",
+    "wsError": "Eroare WebSocket",
+    "errorNoServerUrl": "Nu este configurată nicio adresă URL a serverului",
+    "notSupportedTitle": "Număr de serie neacceptat",
+    "notSupported": "Conexiunile seriale necesită un browser cu suport Web Serial API (Chrome, Edge sau Firefox 151+) sau aplicația desktop Termix.",
+    "hideHint": "Puteți ascunde fila Serial din Profil utilizator > Aspect > Bara laterală > Navigare.",
+    "browserPickerHint": "Faceți clic pe Conectare și browserul dvs. va deschide un selector de porturi pentru a alege dispozitivul."
+  },
+  "nav": {
+    "serial": "Serial"
+  }
+}

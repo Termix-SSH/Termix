@@ -1111,6 +1111,21 @@ export interface PluginAudit {
   }) => Promise<void>;
 }
 
+/**
+ * A generic capability check, for a privileged action that has no dedicated
+ * ctx method to wrap it: a plugin bundling its own native dependency to touch
+ * hardware (a serial port, a USB device) is the first caller. Core cannot
+ * mediate that access the way it mediates ctx.ssh or ctx.db, so the
+ * capability here is a declared, reviewable, audited statement of intent
+ * rather than a technical gate, matching credentials:read and process:spawn.
+ */
+export interface PluginCapabilities {
+  /** Whether this plugin currently holds `capability`. Not audited: for deciding whether to offer something, not for gating an action. */
+  has: (capability: string) => Promise<boolean>;
+  /** Throws PluginCapabilityError if this plugin does not hold `capability`. Audited like every guarded ctx method. */
+  require: (capability: string) => Promise<void>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -1127,6 +1142,8 @@ export interface PluginContext {
   readonly rbac: PluginRbac;
   readonly settings: PluginSettings;
   readonly disposables: PluginDisposables;
+  /** A generic capability check, for privileged code no ctx method wraps. */
+  readonly capabilities: PluginCapabilities;
   /** Hosts the actor can see, and host-sharing operations. Needs hosts:read / hosts:write. */
   readonly hosts: PluginHosts;
   /** SSH through core's connect pipeline. Needs ssh:connect and credentials:use. */

@@ -19,7 +19,6 @@ import { getTabType } from "./tab-registry";
  * not a meaningful part of an arrangement.
  */
 const CORE_CAPTURABLE = new Set([
-  "serial",
   "homepage",
   "termix-id",
   "session-logs",
@@ -52,10 +51,7 @@ const CORE_UNSAVED = new Set([
  */
 export function isUnregisteredPluginTabType(type: string): boolean {
   return (
-    !CORE_UNSAVED.has(type) &&
-    !CORE_CAPTURABLE.has(type) &&
-    type !== "serial" &&
-    !getTabType(type)
+    !CORE_UNSAVED.has(type) && !CORE_CAPTURABLE.has(type) && !getTabType(type)
   );
 }
 
@@ -94,14 +90,13 @@ export function buildLayoutTabSnapshots(
   const snapshots: WorkspaceTabSnapshot[] = capturable.map((tab) => ({
     slotId: slotIdByTabId.get(tab.id)!,
     type: tab.type,
-    hostSyncId: tab.type === "serial" ? null : (tab.host?.syncId ?? null),
+    hostSyncId: tab.host?.syncId ?? null,
     hostNameSnapshot: tab.host?.name ?? null,
     label: tab.label,
     customLabel: tab.customLabel,
     initialFilePath: tab.initialFilePath,
     initialPath: tab.initialPath,
     data: tab.data,
-    serialConfig: tab.type === "serial" ? tab.serialConfig : undefined,
   }));
 
   return { snapshots, slotIdByTabId };
@@ -139,14 +134,9 @@ export function resolveLayoutTabTarget(
   snapshot: WorkspaceTabSnapshot,
   allHosts: Host[],
 ):
-  | { kind: "serial" }
   | { kind: "singleton"; host?: Host }
   | { kind: "host"; host: Host }
   | { kind: "skip" } {
-  if (snapshot.type === "serial") {
-    return snapshot.serialConfig ? { kind: "serial" } : { kind: "skip" };
-  }
-
   let host: Host | undefined;
   if (snapshot.hostSyncId) {
     host = allHosts.find((h) => h.syncId === snapshot.hostSyncId);

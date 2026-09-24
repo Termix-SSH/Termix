@@ -1,0 +1,38 @@
+{
+  "id": "serial",
+  "name": "Serial",
+  "version": "1.0.0",
+  "description": "Serial console access over a locally attached device.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Terminal",
+  "icon": "Usb",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": ["network:serve", "device:serial", "ui:surface"],
+  "nativeDependencies": ["serialport"],
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "serial",
+        "titleKey": "nav.serial",
+        "icon": "Usb",
+        "openFrom": ["rail"]
+      }
+    ],
+    "panels": [
+      {
+        "id": "serial",
+        "titleKey": "nav.serial",
+        "icon": "Usb"
+      }
+    ]
+  }
+}

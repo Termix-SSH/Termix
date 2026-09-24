@@ -709,7 +709,6 @@
     "hostManager": "Host Manager",
     "credentials": "Credentials",
     "connections": "Connections",
-    "serial": "Serial",
     "keepSideMenuOpen": "Keep Menu Open",
     "collapseSideMenu": "Collapse Menu",
     "roleAdministrator": "Administrator",
@@ -3092,30 +3091,6 @@
     "openProxmoxStats": "Open Proxmox Stats",
     "openTmuxMonitor": "Open Tmux Monitor"
   },
-  "serial": {
-    "title": "Serial",
-    "portLabel": "Port",
-    "portPlaceholder": "/dev/ttyUSB0 or COM3",
-    "baudRateLabel": "Baud Rate",
-    "dataBitsLabel": "Data",
-    "stopBitsLabel": "Stop",
-    "parityLabel": "Parity",
-    "parityNone": "None",
-    "parityEven": "Even",
-    "parityOdd": "Odd",
-    "connect": "Connect to Serial",
-    "disconnect": "Disconnect",
-    "refreshPorts": "Refresh ports",
-    "connected": "Connected to {{path}} at {{baud}} baud",
-    "disconnected": "Serial port disconnected",
-    "connectionError": "Failed to open serial port",
-    "wsError": "WebSocket error",
-    "errorNoServerUrl": "No server URL configured",
-    "notSupportedTitle": "Serial Not Supported",
-    "notSupported": "Serial connections require a browser with Web Serial API support (Chrome, Edge, or Firefox 151+), or the Termix desktop app.",
-    "hideHint": "You can hide the Serial tab under User Profile > Appearance > Sidebar > Navigation.",
-    "browserPickerHint": "Click Connect and your browser will open a port picker to choose the device."
-  },
   "alerts": {
     "addChannel": "Add Channel",
     "editChannel": "Edit Channel",
@@ -3255,6 +3230,10 @@
       "system:tls": {
         "title": "Manage certificates",
         "consequence": "It can request and replace the server certificate."
+      },
+      "device:serial": {
+        "title": "Access serial and USB devices",
+        "consequence": "It can open a physical serial port on the machine running Termix."
       },
       "hosts:write": {
         "title": "Create and change hosts",

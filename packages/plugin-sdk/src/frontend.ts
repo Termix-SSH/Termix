@@ -232,6 +232,12 @@ export interface TabOptions {
   singleton?: boolean;
   /** A live session: asks before closing and can be refreshed. */
   session?: boolean;
+  /**
+   * Whether a session tab offers "Share session". Default true. A plugin
+   * whose ref does not implement session sharing (a local device, not a
+   * remote connection another user could join) sets this false.
+   */
+  shareable?: boolean;
   /** Restorable without a host. */
   hostless?: boolean;
   /** Decides whether a saved tab for this host may be restored. */

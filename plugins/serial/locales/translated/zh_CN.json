@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "串口",
+    "portLabel": "端口",
+    "portPlaceholder": "/dev/ttyUSB0 或 COM3",
+    "baudRateLabel": "波特率",
+    "dataBitsLabel": "数据",
+    "stopBitsLabel": "停止位",
+    "parityLabel": "奇偶校验",
+    "parityNone": "无",
+    "parityEven": "偶校验",
+    "parityOdd": "奇校验",
+    "connect": "连接串口",
+    "disconnect": "断开",
+    "refreshPorts": "刷新端口",
+    "connected": "已连接到 {{path}}，波特率 {{baud}}",
+    "disconnected": "串口已断开",
+    "connectionError": "打开串口失败",
+    "wsError": "WebSocket 错误",
+    "errorNoServerUrl": "未配置服务器 URL",
+    "notSupportedTitle": "不支持串口",
+    "notSupported": "串口连接需要支持 Web Serial API 的浏览器（Chrome、Edge 或 Firefox 151+），或者 Termix 桌面应用。",
+    "hideHint": "您可以在用户资料 > 外观 > 侧边栏 > 导航中隐藏串口标签页。",
+    "browserPickerHint": "点击连接，您的浏览器将打开端口选择器以选择设备。"
+  },
+  "nav": {
+    "serial": "串口"
+  }
+}

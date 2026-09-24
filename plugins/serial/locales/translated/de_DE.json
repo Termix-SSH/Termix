@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Seriell",
+    "portLabel": "Port",
+    "portPlaceholder": "/dev/ttyUSB0 oder COM3",
+    "baudRateLabel": "Baudrate",
+    "dataBitsLabel": "Daten",
+    "stopBitsLabel": "Stop",
+    "parityLabel": "Parität",
+    "parityNone": "Keine",
+    "parityEven": "Gerade",
+    "parityOdd": "Ungerade",
+    "connect": "Mit Seriell verbinden",
+    "disconnect": "Trennen",
+    "refreshPorts": "Ports aktualisieren",
+    "connected": "Verbunden mit {{path}} bei {{baud}} Baud",
+    "disconnected": "Serielle Schnittstelle getrennt",
+    "connectionError": "Fehler beim Öffnen der seriellen Schnittstelle",
+    "wsError": "WebSocket-Fehler",
+    "errorNoServerUrl": "Keine Server-URL konfiguriert",
+    "notSupportedTitle": "Seriell nicht unterstützt",
+    "notSupported": "Serielle Verbindungen erfordern einen Browser mit Web Serial API-Unterstützung (Chrome, Edge oder Firefox 151+) oder die Termix-Desktop-App.",
+    "hideHint": "Sie können den Seriell-Tab unter Benutzerprofil > Erscheinungsbild > Seitenleiste > Navigation ausblenden.",
+    "browserPickerHint": "Klicken Sie auf Verbinden, und Ihr Browser öffnet eine Port-Auswahl, um das Gerät auszuwählen."
+  },
+  "nav": {
+    "serial": "Seriell"
+  }
+}

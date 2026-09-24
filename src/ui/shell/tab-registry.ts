@@ -61,6 +61,8 @@ export interface TabTypeDef {
   persistent?: boolean;
   singleton?: boolean;
   session?: boolean;
+  /** Whether a session tab offers "Share session". Default true. */
+  shareable?: boolean;
   hostless?: boolean;
   restore?: (host: Host) => boolean;
   activityTypes?: string[];
@@ -91,7 +93,7 @@ export const resetTabTypes = registry.reset;
 /** Core tab types that are saved and reopened after login. */
 const CORE_PERSISTENT = new Set<string>();
 /** Core tab types that hold a live session (close confirm, refresh). */
-const CORE_SESSION = new Set(["serial"]);
+const CORE_SESSION = new Set<string>();
 /** Core tab types that restore without a host. */
 const CORE_HOSTLESS = new Set(["dashboard"]);
 
@@ -113,6 +115,11 @@ export function isPersistentTabType(type: string): boolean {
 
 export function isSessionTabType(type: string): boolean {
   return CORE_SESSION.has(type) || !!registry.get(type)?.session;
+}
+
+/** Whether a session tab of this type offers "Share session". Default true. */
+export function isShareableTabType(type: string): boolean {
+  return registry.get(type)?.shareable !== false;
 }
 
 export function isHostlessTabType(type: string): boolean {

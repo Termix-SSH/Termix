@@ -21,7 +21,6 @@ export type CoreRailView =
   | "credentials"
   | "termix-id"
   | "quick-connect"
-  | "serial"
   | ToolsTab
   | "connections"
   | "session-logs"

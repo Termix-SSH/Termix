@@ -66,9 +66,6 @@ const QuickConnectPanel = lazy(() =>
     default: m.QuickConnectPanel,
   })),
 );
-const SerialPanel = lazy(() =>
-  import("@/sidebar/SerialPanel").then((m) => ({ default: m.SerialPanel })),
-);
 const SplitScreenPanel = lazy(() =>
   import("@/sidebar/SplitScreenPanel").then((m) => ({
     default: m.SplitScreenPanel,
@@ -146,7 +143,6 @@ import type {
   HostFolder,
   ThemeId,
   FontSizeId,
-  SerialConfig,
   WorkspacePayload,
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
@@ -1263,12 +1259,6 @@ export function AppShell({
         continue;
       }
 
-      if (target.kind === "serial" && snapshot.serialConfig) {
-        const newTabId = openSerialTab(snapshot.serialConfig);
-        slotIdToNewTabId.set(snapshot.slotId, newTabId);
-        continue;
-      }
-
       if (target.kind === "singleton") {
         openSingletonTab(
           snapshot.type,
@@ -1562,7 +1552,6 @@ export function AppShell({
       savedLabel?: string;
       initialFilePath?: string;
       initialPath?: string;
-      serialConfig?: SerialConfig;
       joinSharedSessionId?: string | null;
       joinShareId?: string | null;
       collabRoomId?: string;
@@ -1600,7 +1589,6 @@ export function AppShell({
     const savedLabel = restore?.savedLabel;
     const initialFilePath = restore?.initialFilePath;
     const initialPath = restore?.initialPath;
-    const serialConfig = restore?.serialConfig;
     const joinSharedSessionId = restore?.joinSharedSessionId ?? null;
     const joinShareId = restore?.joinShareId ?? null;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
@@ -1628,7 +1616,6 @@ export function AppShell({
             joinShareId,
             initialFilePath,
             initialPath,
-            serialConfig,
             collabRoomId: restore?.collabRoomId,
           },
         ];
@@ -1667,7 +1654,6 @@ export function AppShell({
           joinShareId,
           initialFilePath,
           initialPath,
-          serialConfig,
           collabRoomId: restore?.collabRoomId,
           data: options?.data,
         },
@@ -1716,53 +1702,6 @@ export function AppShell({
     },
     [loadHosts, t],
   );
-
-  function openSerialTab(config: SerialConfig): string {
-    const pseudoHost: Host = {
-      id: `serial-${Date.now()}`,
-      name: config.path
-        ? `${config.path} (${config.baudRate})`
-        : `Serial (${config.baudRate})`,
-      username: "",
-      ip: "",
-      port: 0,
-      folder: "",
-      online: false,
-      cpu: null,
-      ram: null,
-      lastAccess: new Date().toISOString(),
-      authType: "none",
-      enableTerminal: false,
-      enableCommandHistory: false,
-      enableTunnel: false,
-      enableFileManager: false,
-      enableDocker: false,
-      enableProxmox: false,
-      enableProxmoxStats: false,
-      enableTmuxMonitor: false,
-      enableTerminalToolbar: false,
-      enableAiAssistant: false,
-      enableSsh: false,
-      enableRdp: false,
-      enableVnc: false,
-      enableTelnet: false,
-      sshPort: 22,
-      rdpPort: 3389,
-      vncPort: 5900,
-      telnetPort: 23,
-      serverTunnels: [],
-      quickActions: [],
-    };
-    const instanceId =
-      typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-    return openTab(pseudoHost, "serial", {
-      instanceId,
-      restoredSessionId: null,
-      serialConfig: config,
-    });
-  }
 
   /** A tab type that opens a fresh tab every time (a local shell). */
   function openMultiInstanceTab(type: TabType): string {
@@ -2498,15 +2437,6 @@ export function AppShell({
           <div className="flex flex-col flex-1 min-h-0">
             <TermixIdPanel />
           </div>
-        )}
-
-        {railView === "serial" && (
-          <SerialPanel
-            onConnect={(config) => {
-              openSerialTab(config);
-              if (isMobile) setSidebarOpen(false);
-            }}
-          />
         )}
 
         {railView === "quick-connect" && (

@@ -7,16 +7,24 @@ import {
 } from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
-import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
-import { isElectron } from "@/lib/electron";
-import { websocketAuthProtocols } from "@/lib/ws-auth";
-import { useTheme } from "@/components/theme-provider";
-import { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
-import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
-import { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
-import type { SerialConfig } from "@/types/ui-types";
-import type { SerialHandle } from "./serial-types";
+import { useTranslation, useTheme } from "@termix/plugin-sdk/frontend";
+import type { SerialConfig, SerialHandle } from "./types.js";
+import { isElectron } from "./electron.js";
+import { resolveSerialWsUrl } from "./transport.js";
+
+const XTERM_THEME: Record<"light" | "dark", Record<string, string>> = {
+  dark: {
+    background: "#0b0e14",
+    foreground: "#d4d7de",
+    cursor: "#d4d7de",
+  },
+  light: {
+    background: "#ffffff",
+    foreground: "#1a1a1a",
+    cursor: "#1a1a1a",
+  },
+};
 
 type WebSerialPort = {
   open(options: {
@@ -60,51 +68,15 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
     [terminal],
   );
 
-  // ── Theme sync ─────────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!terminal) return;
-    const themeColors = resolveTermixThemeColors("termix", appTheme);
-    const fontConfig = TERMINAL_FONTS.find(
-      (f) => f.value === DEFAULT_TERMINAL_CONFIG.fontFamily,
-    );
-    ensureTerminalFontsLoaded(fontConfig?.value ?? TERMINAL_FONTS[0].value);
-    terminal.options.theme = {
-      background: themeColors.background,
-      foreground: themeColors.foreground,
-      cursor: themeColors.cursor,
-      cursorAccent: themeColors.cursorAccent,
-      selectionBackground: themeColors.selectionBackground,
-      selectionForeground: themeColors.selectionForeground,
-      black: themeColors.black,
-      red: themeColors.red,
-      green: themeColors.green,
-      yellow: themeColors.yellow,
-      blue: themeColors.blue,
-      magenta: themeColors.magenta,
-      cyan: themeColors.cyan,
-      white: themeColors.white,
-      brightBlack: themeColors.brightBlack,
-      brightRed: themeColors.brightRed,
-      brightGreen: themeColors.brightGreen,
-      brightYellow: themeColors.brightYellow,
-      brightBlue: themeColors.brightBlue,
-      brightMagenta: themeColors.brightMagenta,
-      brightCyan: themeColors.brightCyan,
-      brightWhite: themeColors.brightWhite,
-    };
+    terminal.options.theme = XTERM_THEME[appTheme];
     terminal.options.fontFamily =
-      fontConfig?.fallback ?? TERMINAL_FONTS[0].fallback;
-    terminal.options.fontSize = DEFAULT_TERMINAL_CONFIG.fontSize;
+      '"SF Mono", Consolas, "Liberation Mono", monospace';
+    terminal.options.fontSize = 14;
   }, [terminal, appTheme]);
 
   // ── WebSocket (Electron) path ──────────────────────────────────────────
-
-  const buildWsUrl = useCallback(() => {
-    // Serial is always local -- the device is physically attached to this
-    // desktop machine, so it never routes through a remote server.
-    return "ws://127.0.0.1:30011";
-  }, []);
 
   const disconnectWs = useCallback(() => {
     if (wsRef.current) {
@@ -115,18 +87,15 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
     connectedRef.current = false;
   }, []);
 
-  const connectWs = useCallback(() => {
+  const connectWs = useCallback(async () => {
     disconnectWs();
-    const url = buildWsUrl();
-    if (!url) {
+    const target = await resolveSerialWsUrl();
+    if (!target) {
       write(`\r\n\x1b[31m${t("serial.errorNoServerUrl")}\x1b[0m\r\n`);
       return;
     }
 
-    const ws = new WebSocket(
-      url,
-      websocketAuthProtocols(localStorage.getItem("jwt")),
-    );
+    const ws = new WebSocket(target.url, target.protocols);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -171,7 +140,7 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
     ws.onerror = () => {
       write(`\r\n\x1b[31m${t("serial.wsError")}\x1b[0m\r\n`);
     };
-  }, [buildWsUrl, config, disconnectWs, t, write]);
+  }, [config, disconnectWs, t, write]);
 
   // ── Web Serial API path ────────────────────────────────────────────────
 
@@ -252,7 +221,7 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
     if (useWebSerial) {
       connectWebSerial();
     } else {
-      connectWs();
+      void connectWs();
     }
   }, [useWebSerial, connectWebSerial, connectWs]);
 
@@ -267,9 +236,15 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
     }
   }, [useWebSerial, disconnectWebSerial, disconnectWs]);
 
+  const reconnect = useCallback(() => {
+    disconnect();
+    connect();
+  }, [disconnect, connect]);
+
   useImperativeHandle(ref, () => ({
     connect,
     disconnect,
+    reconnect,
     isConnected: () => connectedRef.current,
     sendInput: (data: string) => {
       if (useWebSerial) {
@@ -289,8 +264,8 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
     const fitAddon = new FitAddon();
     fitAddonRef.current = fitAddon;
     terminal.loadAddon(fitAddon);
-    terminal.options.cursorBlink = DEFAULT_TERMINAL_CONFIG.cursorBlink;
-    terminal.options.scrollback = DEFAULT_TERMINAL_CONFIG.scrollback;
+    terminal.options.cursorBlink = true;
+    terminal.options.scrollback = 10000;
 
     terminal.onData((data) => {
       if (!connectedRef.current) return;

@@ -298,6 +298,15 @@ export interface PluginManifest {
   /** Locales directory, relative to the plugin root. */
   locales?: string;
   platforms?: string[];
+  /**
+   * Bare npm package names carrying a native (.node) binding. The CLI build
+   * never bundles them: they stay a real dependency in the plugin's own
+   * package.json and are resolved from node_modules at runtime instead,
+   * because esbuild bundling a native addon breaks the relative path it uses
+   * to locate its compiled binary. See ARCHITECTURE.md under "native
+   * dependencies".
+   */
+  nativeDependencies?: string[];
 }
 
 export const DEFAULT_BACKEND_ENTRY = "dist/backend.js";
@@ -331,6 +340,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   "frontend",
   "locales",
   "platforms",
+  "nativeDependencies",
 ]);
 
 const ALLOWED_CONTRIBUTES = new Set([
@@ -441,6 +451,7 @@ export function validateManifest(manifest: unknown): string[] {
   validateCategory(m.category, errors);
   validateCapabilities(m.capabilities, errors);
   validatePlatforms(m.platforms, errors);
+  validateNativeDependencies(m.nativeDependencies, errors);
   validateDependencyMap(m.dependencies, "dependencies", errors);
   validateDependencyMap(m.optionalDependencies, "optionalDependencies", errors);
   validateProvides(m.provides, errors);
@@ -531,6 +542,21 @@ function validatePlatforms(platforms: unknown, errors: string[]): void {
       errors.push(
         `platforms[${index}] must be one of: ${PLUGIN_PLATFORMS.join(", ")}, got: ${JSON.stringify(platform)}`,
       );
+    }
+  });
+}
+
+function validateNativeDependencies(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(
+      'Field "nativeDependencies" must be a non-empty array when present',
+    );
+    return;
+  }
+  value.forEach((entry, index) => {
+    if (typeof entry !== "string" || entry.length === 0) {
+      errors.push(`nativeDependencies[${index}] must be a non-empty string`);
     }
   });
 }

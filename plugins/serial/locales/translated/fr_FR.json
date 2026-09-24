@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Série",
+    "portLabel": "Port",
+    "portPlaceholder": "/dev/ttyUSB0 or COM3",
+    "baudRateLabel": "Débit en bauds",
+    "dataBitsLabel": "Données",
+    "stopBitsLabel": "Stop",
+    "parityLabel": "Parité",
+    "parityNone": "Aucune",
+    "parityEven": "Paire",
+    "parityOdd": "Impaire",
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "refreshPorts": "Actualiser les ports",
+    "connected": "Connecté à {{path}} à {{baud}} bauds",
+    "disconnected": "Port série déconnecté",
+    "connectionError": "Échec de l'ouverture du port série",
+    "wsError": "Erreur WebSocket",
+    "errorNoServerUrl": "Aucune URL de serveur configurée",
+    "notSupportedTitle": "Port série non pris en charge",
+    "notSupported": "Les connexions série nécessitent un navigateur prenant en charge l'API Web Serial (Chrome, Edge, ou Firefox 151+), ou l'application de bureau Termix.",
+    "hideHint": "Vous pouvez masquer l'onglet Série sous Profil utilisateur > Apparence > Barre latérale > Navigation.",
+    "browserPickerHint": "Cliquez sur Connexion et votre navigateur ouvrira un sélecteur de port pour choisir le périphérique."
+  },
+  "nav": {
+    "serial": "Série"
+  }
+}

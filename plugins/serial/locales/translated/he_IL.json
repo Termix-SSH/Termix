@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "סִדרָתִי",
+    "portLabel": "נָמָל",
+    "portPlaceholder": "/dev/ttyUSB0 או COM3",
+    "baudRateLabel": "קצב באוד",
+    "dataBitsLabel": "נְתוּנִים",
+    "stopBitsLabel": "לְהַפְסִיק",
+    "parityLabel": "שִׁוּוּי",
+    "parityNone": "אַף לֹא אֶחָד",
+    "parityEven": "אֲפִילוּ",
+    "parityOdd": "מְשׁוּנֶה",
+    "connect": "חיבור סריאלי",
+    "disconnect": "לְנַתֵק",
+    "refreshPorts": "רענון פורטים",
+    "connected": "מחובר ל- {{path}} ב- {{baud}} באוד",
+    "disconnected": "יציאה טורית מנותקת",
+    "connectionError": "נכשלה פתיחת הפורט הטורי",
+    "wsError": "שגיאת WebSocket",
+    "errorNoServerUrl": "לא הוגדרה כתובת URL של שרת",
+    "notSupportedTitle": "סריאלי לא נתמך",
+    "notSupported": "חיבורים טוריים דורשים דפדפן עם תמיכה ב-Web Serial API (Chrome, Edge או Firefox 151+), או את אפליקציית שולחן העבודה Termix.",
+    "hideHint": "ניתן להסתיר את הכרטיסייה 'סדרתי' תחת פרופיל משתמש > מראה > סרגל צד > ניווט.",
+    "browserPickerHint": "לחץ על התחבר והדפדפן שלך יפתח בורר פורטים לבחירת המכשיר."
+  },
+  "nav": {
+    "serial": "סִדרָתִי"
+  }
+}

@@ -37,6 +37,7 @@ export async function validate({ cwd }) {
   }
 
   problems.push(...validateMigrations(cwd, raw.id ?? path.basename(cwd)));
+  problems.push(...validateNativeDependencies(cwd, raw));
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  ${problem}`);
@@ -44,6 +45,33 @@ export async function validate({ cwd }) {
   }
 
   console.log(`ok  ${raw.id ?? path.basename(cwd)}`);
+}
+
+/**
+ * A native dependency has to actually be a real dependency of the plugin, or
+ * the build's external declaration points at nothing node_modules can
+ * resolve at runtime.
+ */
+function validateNativeDependencies(cwd, raw) {
+  const problems = [];
+  const nativeDependencies = raw.nativeDependencies ?? [];
+  if (nativeDependencies.length === 0) return problems;
+
+  const pkgPath = path.join(cwd, "package.json");
+  const pkg = fs.existsSync(pkgPath)
+    ? JSON.parse(fs.readFileSync(pkgPath, "utf8"))
+    : {};
+  const deps = { ...pkg.dependencies };
+
+  for (const name of nativeDependencies) {
+    if (!(name in deps)) {
+      problems.push(
+        `nativeDependencies names "${name}", which is not in this plugin's own package.json dependencies`,
+      );
+    }
+  }
+
+  return problems;
 }
 
 const DIALECTS = ["sqlite", "postgres", "mysql"];

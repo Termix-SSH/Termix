@@ -57,16 +57,6 @@ describe("resolveConnectionOrigin", () => {
     ).resolves.toBe("local");
   });
 
-  it("always resolves serial to local, even with a remote override", async () => {
-    win.IS_ELECTRON = true;
-    await expect(
-      resolveConnectionOrigin({
-        connectionType: "serial",
-        connectionOrigin: "remote",
-      }),
-    ).resolves.toBe("local");
-  });
-
   it("resolves to local outside Electron regardless of connectionType", async () => {
     await expect(
       resolveConnectionOrigin({

@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Serial",
+    "portLabel": "Porta",
+    "portPlaceholder": "/dev/ttyUSB0 ou COM3",
+    "baudRateLabel": "Taxa Baud",
+    "dataBitsLabel": "Dados",
+    "stopBitsLabel": "Stop",
+    "parityLabel": "Paridade",
+    "parityNone": "Nenhuma",
+    "parityEven": "Par",
+    "parityOdd": "Ímpar",
+    "connect": "Ligar à Serial",
+    "disconnect": "Desligar",
+    "refreshPorts": "Atualizar portas",
+    "connected": "Ligado a {{path}} a {{baud}} baud",
+    "disconnected": "Porta série desligada",
+    "connectionError": "Falha ao abrir a porta série",
+    "wsError": "Erro de WebSocket",
+    "errorNoServerUrl": "Nenhum URL de servidor configurado",
+    "notSupportedTitle": "Série não suportada",
+    "notSupported": "As ligações série requerem um navegador com suporte à Web Serial API (Chrome, Edge ou Firefox 151+) ou a aplicação de ambiente de trabalho Termix.",
+    "hideHint": "Pode ocultar o separador Série em Perfil do Utilizador > Aparência > Barra Lateral > Navegação.",
+    "browserPickerHint": "Clique em Ligar e o seu navegador abrirá um seletor de porta para escolher o dispositivo."
+  },
+  "nav": {
+    "serial": "Serial"
+  }
+}

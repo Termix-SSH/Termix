@@ -103,6 +103,7 @@
           "users:write",
           "auth:provide",
           "system:tls",
+          "device:serial",
           "hosts:write",
           "credentials:use",
           "network:outbound",
@@ -741,6 +742,15 @@
       "items": {
         "type": "string",
         "enum": ["linux", "win32", "darwin"]
+      }
+    },
+    "nativeDependencies": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Bare npm package names this plugin depends on that carry a native (.node) binding. The build never bundles them: they stay a real dependency in the plugin's own package.json and are resolved from node_modules at runtime, the same as a host-provided package, so the compiled native binary is never copied into the JS bundle.",
+      "items": {
+        "type": "string",
+        "minLength": 1
       }
     }
   },

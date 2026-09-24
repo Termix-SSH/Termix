@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Серијски",
+    "portLabel": "Лука",
+    "portPlaceholder": "/dev/ttyUSB0 или COM3",
+    "baudRateLabel": "Брзина преноса података",
+    "dataBitsLabel": "Подаци",
+    "stopBitsLabel": "Заустави",
+    "parityLabel": "Паритет",
+    "parityNone": "Ниједан",
+    "parityEven": "Чак",
+    "parityOdd": "Чудно",
+    "connect": "Повежи се са серијским",
+    "disconnect": "Прекини везу",
+    "refreshPorts": "Освежи портове",
+    "connected": "Повезано са {{path}} брзином {{baud}} бауда",
+    "disconnected": "Серијски порт је искључен",
+    "connectionError": "Отварање серијског порта није успело",
+    "wsError": "Грешка WebSocket-а",
+    "errorNoServerUrl": "Није конфигурисан URL сервера",
+    "notSupportedTitle": "Серијски број није подржан",
+    "notSupported": "Серијске везе захтевају прегледач са подршком за Web Serial API (Chrome, Edge или Firefox 151+) или Termix десктоп апликацију.",
+    "hideHint": "Картицу Серијски број можете сакрити под Кориснички профил > Изглед > Бочна трака > Навигација.",
+    "browserPickerHint": "Кликните на Повежи се и ваш прегледач ће отворити бирач портова за избор уређаја."
+  },
+  "nav": {
+    "serial": "Серијски"
+  }
+}

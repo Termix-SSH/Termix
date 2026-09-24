@@ -8,7 +8,6 @@ import {
   ScrollText,
   Server,
   Settings,
-  Usb,
   User,
   Zap,
   Presentation,
@@ -104,7 +103,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
     mobilePrimary: true,
   },
-  { id: "serial", icon: Usb, labelKey: "nav.serial", separatorAfter: true },
   {
     id: "ssh-tools",
     icon: Hammer,
@@ -122,7 +120,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     promotable: true,
     rightDockable: true,
   },
-
   {
     id: "session-logs",
     icon: ScrollText,

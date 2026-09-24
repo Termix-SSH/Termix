@@ -247,6 +247,28 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `app.registerAction` opening the singleton tab) but is a shared gap across
   four plugins, not specific to this step. Owner: D1, or whoever revisits the
   toolbar's quick-link row.
+- **B11 (serial):** `plugins/serial/src/frontend/Serial.tsx` uses a small
+  hardcoded light/dark xterm palette and a generic monospace font stack
+  instead of the app's real terminal theme system
+  (`resolveTermixThemeColors`, `DEFAULT_TERMINAL_CONFIG`, `TERMINAL_FONTS`,
+  font loading), which is still core-only (`src/ui/features/terminal/`,
+  `src/ui/lib/terminal-themes.ts`) and not yet exposed through the SDK. The
+  serial console therefore does not match a user's chosen terminal theme or
+  font. Promoting that system into `@termix/plugin-sdk/ui` is really
+  ssh-terminal's own Phase B step's call to make (it is the plugin that
+  currently owns the terminal component itself, per the "Known specifics"
+  note above), so this line just points at the gap rather than building a
+  premature shared surface for one caller. Owner: ssh-terminal's own Phase B
+  step, or D1.
+- **B11 (serial):** shipping a plugin's own native dependency (`serialport`)
+  works for this repo's three bundled deployments only because they all
+  install the whole npm workspace at once and copy/rebuild one shared
+  `node_modules` - see "Native dependencies" in ARCHITECTURE.md for the full
+  reasoning. A community plugin installed later from a tarball has no such
+  shared `node_modules` to land in, so it cannot ship a native dependency the
+  same way. No fix attempted here; the honest workarounds are listed in that
+  section. Owner: whoever designs the 3.0.0 install flow (prebuild-per-platform
+  packaging, or a documented "avoid native code" rule for community plugins).
 
 ## Manual checks after 2.9.0
 
@@ -254,3 +276,5 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   prompt), TOTP keyboard-interactive, a jump host, Warpgate, split view,
   snippets sent to a terminal, reconnect after a network drop and after a
   page reload (session reattach), and the local terminal in the desktop app.
+- Serial: the Electron backend path against a real device path/COM port, and
+  the Web Serial browser picker in Chrome or Edge.

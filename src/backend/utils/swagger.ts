@@ -30,10 +30,6 @@ const swaggerOptions: SwaggerJSDocOptions = {
         url: "http://localhost:30006",
         description: "Dashboard server",
       },
-      {
-        url: "http://localhost:30011",
-        description: "Serial connection server",
-      },
     ],
     components: {
       securitySchemes: {

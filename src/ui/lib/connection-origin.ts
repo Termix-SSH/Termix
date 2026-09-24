@@ -11,13 +11,15 @@ interface OriginResolvableHost {
 const GUACAMOLE_CONNECTION_TYPES = new Set(["rdp", "vnc", "telnet"]);
 
 /**
- * Resolves which backend a given host's interactive connection (SSH,
- * Docker console, Serial, RDP/VNC/Telnet) should dial: the desktop app's
- * embedded local backend, or a connected remote sync server.
+ * Resolves which backend a given host's interactive connection (SSH, Docker
+ * console, RDP/VNC/Telnet) should dial: the desktop app's embedded local
+ * backend, or a connected remote sync server. A plugin whose connection is
+ * always local regardless of this setting (serial: the hardware is
+ * physically attached to this desktop machine) skips this helper entirely
+ * and calls app.wsUrl() without an origin option, which defaults to "local".
  *
- * Serial always resolves to "local" -- the hardware is physically attached
- * to this desktop machine. Everything else follows the host's own override
- * if set, falling back to the desktop-wide default.
+ * Everything else follows the host's own override if set, falling back to
+ * the desktop-wide default.
  *
  * RDP/VNC/Telnet are the exception to that fallback: left on Default they
  * resolve to "remote" rather than following the desktop-wide setting. They
@@ -30,9 +32,6 @@ const GUACAMOLE_CONNECTION_TYPES = new Set(["rdp", "vnc", "telnet"]);
 export async function resolveConnectionOrigin(
   host: OriginResolvableHost,
 ): Promise<ConnectionOrigin> {
-  if (host.connectionType === "serial") {
-    return "local";
-  }
   if (!isElectron()) {
     return "local";
   }

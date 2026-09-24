@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "منفذ تسلسلي",
+    "portLabel": "المنفذ",
+    "portPlaceholder": "/dev/ttyUSB0 or COM3",
+    "baudRateLabel": "معدل الباود",
+    "dataBitsLabel": "البيانات",
+    "stopBitsLabel": "التوقف",
+    "parityLabel": "التكافؤ",
+    "parityNone": "بلا",
+    "parityEven": "زوجي",
+    "parityOdd": "فردي",
+    "connect": "اتصال",
+    "disconnect": "قطع الاتصال",
+    "refreshPorts": "تحديث المنافذ",
+    "connected": "متصل بـ {{path}} بسرعة {{baud}} باود",
+    "disconnected": "تم قطع الاتصال بالمنفذ التسلسلي",
+    "connectionError": "فشل في فتح المنفذ التسلسلي",
+    "wsError": "خطأ في WebSocket",
+    "errorNoServerUrl": "لم يتم تكوين عنوان URL للخادم",
+    "notSupportedTitle": "المنفذ التسلسلي غير مدعوم",
+    "notSupported": "تتطلب الاتصالات التسلسلية متصفحًا يدعم Web Serial API (Chrome، أو Edge، أو Firefox 151+)، أو تطبيق Termix لسطح المكتب.",
+    "hideHint": "يمكنك إخفاء تبويب المنفذ التسلسلي من الملف الشخصي > المظهر > الشريط الجانبي > التنقل.",
+    "browserPickerHint": "انقر على Connect وسيفتح متصفحك نافذة اختيار المنفذ لتحديد الجهاز."
+  },
+  "nav": {
+    "serial": "تسلسلي"
+  }
+}

@@ -45,6 +45,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("users:write", "high"),
   entry("auth:provide", "high"),
   entry("system:tls", "high"),
+  entry("device:serial", "high"),
 
   entry("hosts:write", "medium"),
   entry("credentials:use", "medium"),

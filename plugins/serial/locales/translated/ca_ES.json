@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Sèrie",
+    "portLabel": "Port",
+    "portPlaceholder": "/dev/ttyUSB0 o COM3",
+    "baudRateLabel": "velocitat de bauds",
+    "dataBitsLabel": "Dades",
+    "stopBitsLabel": "Atura",
+    "parityLabel": "Paritat",
+    "parityNone": "Cap",
+    "parityEven": "Fins i tot",
+    "parityOdd": "Estrany",
+    "connect": "Connecta't al serial",
+    "disconnect": "Desconnecta",
+    "refreshPorts": "Actualitza els ports",
+    "connected": "Connectat a {{path}} a {{baud}} baud",
+    "disconnected": "Port sèrie desconnectat",
+    "connectionError": "No s'ha pogut obrir el port sèrie",
+    "wsError": "Error de WebSocket",
+    "errorNoServerUrl": "No s'ha configurat cap URL del servidor",
+    "notSupportedTitle": "Número de sèrie no compatible",
+    "notSupported": "Les connexions en sèrie requereixen un navegador compatible amb l'API Web Serial (Chrome, Edge o Firefox 151+) o l'aplicació d'escriptori Termix.",
+    "hideHint": "Podeu amagar la pestanya Sèrie a Perfil d'usuari > Aparença > Barra lateral > Navegació.",
+    "browserPickerHint": "Feu clic a Connecta i el navegador obrirà un selector de ports per triar el dispositiu."
+  },
+  "nav": {
+    "serial": "Sèrie"
+  }
+}

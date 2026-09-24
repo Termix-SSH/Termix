@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
 import { RefreshCw, Usb, TriangleAlert } from "lucide-react";
-import { Input } from "@/components/input";
-import { isElectron } from "@/lib/electron";
-import { websocketAuthProtocols } from "@/lib/ws-auth";
-import type { SerialConfig } from "@/types/ui-types";
-import { Select2 } from "@/components/select2";
+import { Input, Select2 } from "@termix/plugin-sdk/ui";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
+import type { SerialConfig } from "./types.js";
+import { isElectron } from "./electron.js";
+import { resolveSerialWsUrl } from "./transport.js";
 
 const BAUD_RATES = [
   300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800,
@@ -33,25 +32,16 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
   const [availablePorts, setAvailablePorts] = useState<string[]>([]);
   const [loadingPorts, setLoadingPorts] = useState(false);
 
-  const buildWsUrl = () => {
-    // Serial is always local -- the device is physically attached to this
-    // desktop machine, so it never routes through a remote server.
-    return "ws://127.0.0.1:30011";
-  };
-
-  const refreshPorts = useCallback(() => {
+  const refreshPorts = useCallback(async () => {
     if (!isElectron()) return;
     setLoadingPorts(true);
-    const url = buildWsUrl();
-    if (!url) {
+    const target = await resolveSerialWsUrl();
+    if (!target) {
       setLoadingPorts(false);
       return;
     }
 
-    const ws = new WebSocket(
-      url,
-      websocketAuthProtocols(localStorage.getItem("jwt")),
-    );
+    const ws = new WebSocket(target.url, target.protocols);
     ws.onopen = () => ws.send(JSON.stringify({ type: "list_ports" }));
     ws.onmessage = (ev) => {
       try {
@@ -62,7 +52,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
         if (msg.type === "ports_list" && Array.isArray(msg.data)) {
           const paths = msg.data.map((p) => p.path);
           setAvailablePorts(paths);
-          if (!path && paths.length > 0) setPath(paths[0]);
+          setPath((current) => current || (paths[0] ?? current));
         }
       } catch {
         // ignore
@@ -72,10 +62,10 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
       }
     };
     ws.onerror = () => setLoadingPorts(false);
-  }, [path]);
+  }, []);
 
   useEffect(() => {
-    if (isElectron()) refreshPorts();
+    if (isElectron()) void refreshPorts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -218,7 +208,7 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
               {t("serial.portLabel")}
             </label>
             <button
-              onClick={refreshPorts}
+              onClick={() => void refreshPorts()}
               className="text-muted-foreground hover:text-foreground transition-colors"
               title={t("serial.refreshPorts")}
             >

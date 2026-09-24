@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "सीरियल",
+    "portLabel": "पोर्ट",
+    "portPlaceholder": "/dev/ttyUSB0 or COM3",
+    "baudRateLabel": "बॉड दर",
+    "dataBitsLabel": "डेटा",
+    "stopBitsLabel": "स्टॉप",
+    "parityLabel": "पैरिटी",
+    "parityNone": "कोई नहीं",
+    "parityEven": "सम",
+    "parityOdd": "विषम",
+    "connect": "सीरियल कनेक्ट करें",
+    "disconnect": "डिस्कनेक्ट करें",
+    "refreshPorts": "पोर्ट रीफ़्रेश करें",
+    "connected": "{{path}} से {{baud}} बॉड पर कनेक्टेड",
+    "disconnected": "सीरियल पोर्ट डिस्कनेक्ट हो गया",
+    "connectionError": "सीरियल पोर्ट खोलने में विफल",
+    "wsError": "WebSocket त्रुटि",
+    "errorNoServerUrl": "कोई सर्वर URL कॉन्फ़िगर नहीं है",
+    "notSupportedTitle": "सीरियल समर्थित नहीं",
+    "notSupported": "सीरियल कनेक्शन के लिए Web Serial API समर्थन वाले ब्राउज़र (Chrome, Edge, या Firefox 151+) या Termix डेस्कटॉप ऐप की आवश्यकता है।",
+    "hideHint": "आप सीरियल टैब को User Profile > Appearance > Sidebar > Navigation में छिपा सकते हैं।",
+    "browserPickerHint": "Connect पर क्लिक करें और आपका ब्राउज़र डिवाइस चुनने के लिए एक पोर्ट पिकर खोलेगा।"
+  },
+  "nav": {
+    "serial": "सीरियल"
+  }
+}

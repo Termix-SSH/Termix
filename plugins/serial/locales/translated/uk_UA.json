@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Серійний",
+    "portLabel": "Порт",
+    "portPlaceholder": "/dev/ttyUSB0 або COM3",
+    "baudRateLabel": "Швидкість передачі даних",
+    "dataBitsLabel": "Дані",
+    "stopBitsLabel": "СТІЙ",
+    "parityLabel": "Паритет",
+    "parityNone": "Жоден",
+    "parityEven": "Навіть",
+    "parityOdd": "Дивний",
+    "connect": "Підключення до послідовного порту",
+    "disconnect": "Відключитися",
+    "refreshPorts": "Оновити порти",
+    "connected": "Підключено до {{path}} зі швидкістю {{baud}} бод",
+    "disconnected": "Послідовний порт відключено",
+    "connectionError": "Не вдалося відкрити послідовний порт",
+    "wsError": "Помилка WebSocket",
+    "errorNoServerUrl": "URL-адреса сервера не налаштована",
+    "notSupportedTitle": "Серійний номер не підтримується",
+    "notSupported": "Для послідовних з’єднань потрібен браузер із підтримкою Web Serial API (Chrome, Edge або Firefox 151+) або настільний додаток Termix.",
+    "hideHint": "Ви можете приховати вкладку «Серійний номер» у розділі «Профіль користувача» > «Зовнішній вигляд» > «Бічна панель» > «Навігація».",
+    "browserPickerHint": "Натисніть «Підключитися», і ваш браузер відкриє вибір порту для вибору пристрою."
+  },
+  "nav": {
+    "serial": "Серійний"
+  }
+}

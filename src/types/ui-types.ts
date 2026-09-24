@@ -292,14 +292,6 @@ export type KnownTabType =
  */
 export type TabType = KnownTabType | (string & {});
 
-export type SerialConfig = {
-  path: string;
-  baudRate: number;
-  dataBits: 5 | 6 | 7 | 8;
-  stopBits: 1 | 2;
-  parity: "none" | "even" | "odd";
-};
-
 export type Tab = {
   id: string;
   instanceId: string;
@@ -319,7 +311,6 @@ export type Tab = {
   data?: Record<string, unknown>;
   /** Which collab room a collab tab is showing. */
   collabRoomId?: string;
-  serialConfig?: SerialConfig;
   /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
   splitConfig?: SplitTabConfig;
   /** Hides this session from the top-level tab bar while it belongs to a split tab. */
@@ -423,7 +414,7 @@ export type WorkspaceTabSnapshot = {
   /** Stable key within the saved tab list, not the live Tab.id (which is regenerated on every open). */
   slotId: string;
   type: TabType;
-  /** Set for host-bound tab types, resolved by Host.syncId on apply. Never set for "serial". */
+  /** Set for host-bound tab types, resolved by Host.syncId on apply. */
   hostSyncId?: string | null;
   /** Denormalized snapshot for display and graceful-skip messaging if the host is later deleted. */
   hostNameSnapshot?: string | null;
@@ -435,8 +426,6 @@ export type WorkspaceTabSnapshot = {
   fleetId?: number;
   /** The tab's plugin payload. */
   data?: Record<string, unknown>;
-  /** Only present when type === "serial". Fully self-contained, no host resolution needed. */
-  serialConfig?: SerialConfig;
 };
 
 /** One dock's arrangement. `view` is a RailView, or null when the dock is closed. */

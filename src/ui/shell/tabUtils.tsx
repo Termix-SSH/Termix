@@ -6,7 +6,6 @@ import {
   LayoutPanelLeft,
   Server,
   Settings,
-  Usb,
   User,
   Fingerprint,
   Hammer,
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import type { SerialHandle } from "@/features/serial/serial-types";
 import type { Tab, TabType } from "@/types/ui-types";
 import { hostToSSHHost } from "@/lib/host-to-ssh-host";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
@@ -44,11 +42,6 @@ const DashboardTab = lazy(() =>
 const HomepageCanvas = lazy(() =>
   import("@/features/homepage/HomepageCanvas").then((m) => ({
     default: m.HomepageCanvas,
-  })),
-);
-const Serial = lazy(() =>
-  import("@/features/serial/Serial").then((m) => ({
-    default: m.Serial,
   })),
 );
 // Rail panels promoted to full tabs.
@@ -134,8 +127,6 @@ export function tabIcon(type: TabType) {
       return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
-    case "serial":
-      return <Usb className="size-3.5" />;
     case "homepage":
       return <LayoutGrid className="size-3.5" />;
     case "collab":
@@ -234,18 +225,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
           onOpenSingletonTab={(type) => shell.openSingletonTab(type)}
           onOpenTab={(host, type) => shell.openTab(host, type)}
           isVisible={isVisible}
-        />,
-      );
-
-    case "serial":
-      if (!tab.serialConfig)
-        return <EmptyState icon={Usb} messageKey="serial.notSupportedTitle" />;
-      return withTabSuspense(
-        <Serial
-          ref={tab.terminalRef as React.Ref<SerialHandle>}
-          config={tab.serialConfig}
-          isVisible={isVisible}
-          instanceId={tab.instanceId}
         />,
       );
 

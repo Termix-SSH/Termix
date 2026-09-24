@@ -406,6 +406,13 @@ export function createFakeContext(
         }) as PluginMiddleware,
     },
 
+    // Nothing here is capability-checked, per the module doc; createMockCtx
+    // gates this against options.capabilities.
+    capabilities: {
+      has: async () => true,
+      require: async () => {},
+    },
+
     settings: {
       get: async (key) =>
         settings.get(settingsKey("admin", undefined, key)) as never,
@@ -934,6 +941,13 @@ export function createMockCtx(
       openIsolatedWindow: async (request) => {
         require("desktop:window");
         return ctx.desktop.openIsolatedWindow(request);
+      },
+    },
+
+    capabilities: {
+      has: async (capability) => granted.has(capability),
+      require: async (capability) => {
+        require(capability);
       },
     },
   };

@@ -128,34 +128,6 @@ describe("buildWorkspaceTabSnapshots", () => {
     expect(snapshots).toHaveLength(1);
     expect(snapshots[0].type).toBe("terminal");
   });
-
-  it("captures serialConfig only for serial tabs", () => {
-    const tabs: Tab[] = [
-      makeTab({
-        id: "t1",
-        type: "serial",
-        serialConfig: {
-          path: "/dev/ttyUSB0",
-          baudRate: 9600,
-          dataBits: 8,
-          stopBits: 1,
-          parity: "none",
-        },
-      }),
-      makeTab({ id: "t2", type: "terminal", host: makeHost() }),
-    ];
-
-    const { snapshots } = buildWorkspaceTabSnapshots(tabs);
-    expect(snapshots[0].serialConfig).toEqual({
-      path: "/dev/ttyUSB0",
-      baudRate: 9600,
-      dataBits: 8,
-      stopBits: 1,
-      parity: "none",
-    });
-    expect(snapshots[0].hostSyncId).toBeNull();
-    expect(snapshots[1].serialConfig).toBeUndefined();
-  });
 });
 
 describe("remapSlotIds", () => {
@@ -174,35 +146,6 @@ describe("remapSlotIds", () => {
 
 describe("resolveWorkspaceTabTarget", () => {
   const hosts: Host[] = [makeHost({ id: "1", syncId: "sync-web-01" })];
-
-  it("resolves a serial snapshot with a config as 'serial'", () => {
-    const snapshot: WorkspaceTabSnapshot = {
-      slotId: "s1",
-      type: "serial",
-      label: "Serial",
-      serialConfig: {
-        path: "/dev/ttyUSB0",
-        baudRate: 9600,
-        dataBits: 8,
-        stopBits: 1,
-        parity: "none",
-      },
-    };
-    expect(resolveWorkspaceTabTarget(snapshot, hosts)).toEqual({
-      kind: "serial",
-    });
-  });
-
-  it("skips a serial snapshot missing its config", () => {
-    const snapshot: WorkspaceTabSnapshot = {
-      slotId: "s1",
-      type: "serial",
-      label: "Serial",
-    };
-    expect(resolveWorkspaceTabTarget(snapshot, hosts)).toEqual({
-      kind: "skip",
-    });
-  });
 
   it("resolves a host-bound snapshot by matching syncId", () => {
     const snapshot: WorkspaceTabSnapshot = {
@@ -253,7 +196,7 @@ describe("resolveWorkspaceTabTarget", () => {
     expect((result as { host?: Host }).host?.syncId).toBe("sync-web-01");
   });
 
-  it("skips a non-singleton, non-serial, non-plugin type with no resolvable host", () => {
+  it("skips a non-singleton, non-plugin type with no resolvable host", () => {
     const snapshot: WorkspaceTabSnapshot = {
       slotId: "s1",
       type: "host-manager",

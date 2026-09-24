@@ -309,12 +309,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     // plugins/ssh-terminal, plugins/docker, plugins/host-metrics,
     // plugins/file-manager and plugins/tmux-monitor.
     // Every other plugin (AI, Proxmox, Remote Desktop, Fleets, Automations,
-    // Network Topology, Workspaces, Web Endpoint, Tunnels) is absent for the
-    // same reason: each one serves its routes under /plugin-api/<id>/ through
-    // ctx.http on activate, so disabling it answers 503 instead of leaving a
-    // dead import here. Automations' scheduler and tunnel autostart also
-    // start from their own activate() rather than here.
-    await import("./hosts/serial.js");
+    // Network Topology, Workspaces, Web Endpoint, Tunnels, Serial) is absent
+    // for the same reason: each one serves its routes under /plugin-api/<id>/
+    // (or a WS route under /plugin-ws/<id>/) through ctx on activate, so
+    // disabling it answers 503 instead of leaving a dead import here.
+    // Automations' scheduler and tunnel autostart also start from their own
+    // activate() rather than here.
     await import("./services/dashboard.js");
     await import("./services/homepage.js");
 

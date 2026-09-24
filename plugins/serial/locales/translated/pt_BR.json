@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Serial",
+    "portLabel": "Porta",
+    "portPlaceholder": "/dev/ttyUSB0 ou COM3",
+    "baudRateLabel": "Taxa de transmissão (Baud rate)",
+    "dataBitsLabel": "Dados",
+    "stopBitsLabel": "Parar",
+    "parityLabel": "Paridade",
+    "parityNone": "Nenhum",
+    "parityEven": "Até",
+    "parityOdd": "Chance",
+    "connect": "Conectar à porta serial",
+    "disconnect": "Desconectar",
+    "refreshPorts": "Atualizar portas",
+    "connected": "Conectado a {{path}} na taxa de transmissão de {{baud}}",
+    "disconnected": "Porta serial desconectada",
+    "connectionError": "Falha ao abrir a porta serial",
+    "wsError": "Erro no WebSocket",
+    "errorNoServerUrl": "Nenhuma URL de servidor configurada",
+    "notSupportedTitle": "Serial não suportado",
+    "notSupported": "As conexões seriais exigem um navegador com suporte à API Web Serial (Chrome, Edge ou Firefox 151+) ou o aplicativo Termix para desktop.",
+    "hideHint": "Você pode ocultar a guia Serial em Perfil do Usuário > Aparência > Barra lateral > Navegação.",
+    "browserPickerHint": "Clique em Conectar e seu navegador abrirá um seletor de portas para que você escolha o dispositivo."
+  },
+  "nav": {
+    "serial": "Serial"
+  }
+}

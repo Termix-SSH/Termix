@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Port szeregowy",
+    "portLabel": "Port",
+    "portPlaceholder": "/dev/ttyUSB0 lub COM3",
+    "baudRateLabel": "Szybkość transmisji",
+    "dataBitsLabel": "Dane",
+    "stopBitsLabel": "Stop",
+    "parityLabel": "Parzystość",
+    "parityNone": "Brak",
+    "parityEven": "Parzysta",
+    "parityOdd": "Nieparzysta",
+    "connect": "Połącz z portem szeregowym",
+    "disconnect": "Odłącz",
+    "refreshPorts": "Odśwież porty",
+    "connected": "Połączono z {{path}} z szybkością {{baud}} bodów",
+    "disconnected": "Port szeregowy rozłączony",
+    "connectionError": "Nie udało się otworzyć portu szeregowego",
+    "wsError": "Błąd WebSocket",
+    "errorNoServerUrl": "Brak skonfigurowanego adresu URL serwera",
+    "notSupportedTitle": "Port szeregowy nieobsługiwany",
+    "notSupported": "Połączenia szeregowe wymagają przeglądarki obsługującej Web Serial API (Chrome, Edge lub Firefox 151+) albo aplikacji desktopowej Termix.",
+    "hideHint": "Kartę Port szeregowy można ukryć w: Profil użytkownika > Wygląd > Pasek boczny > Nawigacja.",
+    "browserPickerHint": "Kliknij Połącz, a przeglądarka otworzy okno wyboru portu, w którym wskażesz urządzenie."
+  },
+  "nav": {
+    "serial": "Port szeregowy"
+  }
+}

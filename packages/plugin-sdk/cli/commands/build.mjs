@@ -52,7 +52,12 @@ export async function build({ cwd }) {
     target: "node22",
     sourcemap: true,
     logLevel: "warning",
-    external: BACKEND_EXTERNALS,
+    // A native dependency's compiled .node binary is resolved by the
+    // package's own relative paths, which break once esbuild inlines its JS
+    // elsewhere. Declaring it in nativeDependencies keeps it a real
+    // node_modules import instead, resolved at runtime like a host-provided
+    // package.
+    external: [...BACKEND_EXTERNALS, ...(manifest.nativeDependencies ?? [])],
     plugins: [legacyCoreImports({ pluginId, platform: "node" })],
   });
 

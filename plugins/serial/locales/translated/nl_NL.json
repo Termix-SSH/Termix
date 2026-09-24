@@ -1,0 +1,29 @@
+{
+  "serial": {
+    "title": "Serieel",
+    "portLabel": "Haven",
+    "portPlaceholder": "/dev/ttyUSB0 of COM3",
+    "baudRateLabel": "Baudrate",
+    "dataBitsLabel": "Gegevens",
+    "stopBitsLabel": "Stop",
+    "parityLabel": "Pariteit",
+    "parityNone": "Geen",
+    "parityEven": "Zelfs",
+    "parityOdd": "Vreemd",
+    "connect": "Verbinden via serieel",
+    "disconnect": "Verbinding verbreken",
+    "refreshPorts": "Vernieuw poorten",
+    "connected": "Verbonden met {{path}} met {{baud}} baud",
+    "disconnected": "Seriële poort losgekoppeld",
+    "connectionError": "Het openen van de seriële poort is mislukt.",
+    "wsError": "WebSocket-fout",
+    "errorNoServerUrl": "Geen server-URL geconfigureerd",
+    "notSupportedTitle": "Serienummer niet ondersteund",
+    "notSupported": "Voor seriële verbindingen is een browser met Web Serial API-ondersteuning vereist (Chrome, Edge of Firefox 151+), of de Termix-desktopapp.",
+    "hideHint": "Je kunt het tabblad 'Serienummer' verbergen via Gebruikersprofiel > Uiterlijk > Zijbalk > Navigatie.",
+    "browserPickerHint": "Klik op Verbinden en uw browser opent een poortkiezer waarmee u het apparaat kunt selecteren."
+  },
+  "nav": {
+    "serial": "Serieel"
+  }
+}

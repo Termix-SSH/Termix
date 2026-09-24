@@ -30,17 +30,22 @@ import {
   Share2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
-import { isSessionTabType } from "@/shell/tab-registry";
+import { isSessionTabType, isShareableTabType } from "@/shell/tab-registry";
 import { isElectron } from "@/lib/electron";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
 
 /**
- * Tabs holding a live connection that can be refreshed and shared: the
- * registered session tabs. Serial sessions are not shareable.
+ * Tabs holding a live connection that can be refreshed: the registered
+ * session tabs.
  */
 function isConnectionTab(type: TabType): boolean {
-  return type !== "serial" && isSessionTabType(type);
+  return isSessionTabType(type);
+}
+
+/** Connection tabs that also offer "Share session". */
+function isShareableConnectionTab(type: TabType): boolean {
+  return isConnectionTab(type) && isShareableTabType(type);
 }
 
 export function TabBar({
@@ -467,7 +472,7 @@ export function TabBar({
                         <RefreshCw className="size-3" />
                       </button>
                     )}
-                    {isConnectionTab(tab.type) && onOpenShare && (
+                    {isShareableConnectionTab(tab.type) && onOpenShare && (
                       <button
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {

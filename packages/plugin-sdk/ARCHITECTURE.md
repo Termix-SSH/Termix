@@ -1031,6 +1031,7 @@ not do.
   "frontend": "dist/frontend.js", // default
   "locales": "locales", // default
   "platforms": ["linux", "win32", "darwin"], // optional
+  "nativeDependencies": ["serialport"], // optional, see "Native dependencies"
 }
 ```
 
@@ -1104,6 +1105,7 @@ deciding, not the mechanism.
 | `users:write`        | high     | Create and change user accounts                                |
 | `auth:provide`       | high     | Add a login method, second factor or SSH auth type             |
 | `system:tls`         | high     | Request and replace the server certificate                     |
+| `device:serial`      | high     | Open a physical serial or USB device on the Termix server      |
 | `hosts:write`        | medium   | Create and change hosts                                        |
 | `credentials:use`    | medium   | Connect using a host's stored credentials, without seeing them |
 | `network:outbound`   | medium   | Make outbound requests                                         |
@@ -1156,6 +1158,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.sync.registerEntity`                        | none                                 | **A3**                  |
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4**                  |
 | `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5**                  |
+| `ctx.capabilities.has` / `.require`              | the capability itself                | **B11**                 |
 | `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4**, extended **B5** |
 | `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8**                  |
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
@@ -1164,6 +1167,20 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
 | `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
 | `ctx.fetch`                                      | `network:outbound`                   | B                       |
+
+**B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
+generic check for a capability no other ctx member wraps. Unlike every other
+row above, the capability it checks is not fixed at the call site: the
+plugin names it. That is right for exactly one kind of caller - privileged
+code core cannot mediate through its own primitives, because it is not core's
+to mediate. The serial plugin bundling `serialport` and opening an OS device
+file is the first: there is no `ctx.serial.open()` for core to gate, because
+the whole point is that the plugin talks to the hardware directly. `has`
+answers without an audit line, for deciding whether to offer something;
+`require` throws `PluginCapabilityError` and audits like a guarded member. A
+plugin reaching for this first checks whether its need is actually one of the
+rows above - `device:serial` is not a general "trust me" capability, it is
+specifically for code a dedicated ctx member cannot cover.
 
 `ctx.ssh` was pulled forward from B so plugin transports go through core's
 connect pipeline instead of importing ssh2 helpers from core:
@@ -1428,6 +1445,70 @@ import map (see UI). Everything else, including `lucide-react`, `axios`,
 it.
 
 The lists live in `packages/plugin-sdk/cli/lib/externals.mjs`.
+
+### Native dependencies
+
+A package with a compiled `.node` binding (`serialport`, `better-sqlite3`,
+`node-pty`) cannot be bundled the way an ordinary npm dependency is. esbuild
+would inline its JS, but the binding is loaded through a path computed
+relative to the original package's own directory, which breaks once that JS
+moves into `dist/backend.js` somewhere else entirely. It also cannot go on
+the host-provided list above: that list is for packages every plugin shares
+one instance of, and a serial port binding is one plugin's business, not
+core's.
+
+**B11** (the serial plugin, the first bundled plugin with a native
+dependency) resolved this by declaring the package in the manifest's
+`nativeDependencies` array (`["serialport"]`) as well as a real dependency in
+the plugin's own `package.json`. `termix-plugin build` adds every entry to
+esbuild's `external` list for that plugin alone, so the compiled bundle keeps
+a plain `import { SerialPort } from "serialport"` instead of inlining it, and
+`termix-plugin validate` checks the name is actually declared in the
+plugin's own `dependencies`.
+
+At runtime that import is a bare specifier Node resolves by walking up from
+wherever `dist/backend.js` is loaded, through `dist/plugins/serial/`,
+`dist/plugins/`, `dist/`, to the repo (or image) root. **The three
+deployments this repo builds all end up with the package there because of
+how npm workspaces already install it**, not because of anything specific to
+native code:
+
+- **Dev and CI.** `npm install` at the repo root installs every workspace's
+  own dependencies, including a plugin's, and hoists them into the root
+  `node_modules` unless a version conflict forces one to stay nested. Nothing
+  about `serialport` is special here; it lands exactly where any of this
+  plugin's other dependencies would.
+- **Docker.** The image's `npm ci` runs once at the repo root over the whole
+  workspace and produces one `node_modules`, which is copied into the final
+  image wholesale (`docker/Dockerfile`'s `production-deps` stage). Its native
+  binding compiles against the image's own `node:26-slim` toolchain
+  (`python3 make g++`, already installed for `better-sqlite3`), once per
+  target architecture under `docker buildx`, so linux x64 and arm64 each get
+  a binary actually built for that machine rather than a cross-compiled one.
+- **Electron.** `electron-builder.json`'s `asarUnpack` already unpacks all of
+  `node_modules` (not a curated subset), and `npm run electron:rebuild` runs
+  `electron-rebuild` over the same hoisted `node_modules`, rebuilding
+  `@serialport/bindings-cpp` against Electron's ABI by name, exactly as it
+  already did for `better-sqlite3` and `node-pty`. Nothing in that script
+  changed: a package's native binding gets rebuilt because the script names
+  it, not because of which `package.json` declared the package as a
+  dependency.
+
+None of this required a new packaging mechanism, which is the honest reason
+it was chosen over shipping the plugin its own `node_modules`: this repo's
+build already treats the whole workspace as one `node_modules`, so a
+native dependency declared in a plugin's `package.json` rides along for
+free. A **community plugin installed from a tarball has none of this**: there
+is no repo-root `npm install` to hoist its dependency into, no shared
+`node_modules` its bundle can walk up to. Shipping a native dependency in a
+plugin nobody's build system already vendors is an open problem this step
+does not solve - see `packages/plugin-sdk/FINISH-LIST.md`. A community plugin
+author who hits this today has three honest options, worst to best: ask the
+person installing it to `npm install` the native package into the server's
+own `node_modules` by hand (fragile, easy to get wrong on upgrade); avoid a
+native dependency and reach for a WASM build of the same functionality if one
+exists; or wait for prebuild-per-platform packaging support, which is not
+built yet.
 
 ---
 
@@ -1797,11 +1878,12 @@ Known specifics:
   an `optionalDependency` (added in A2; it previously declared nothing, and
   the loader had no reason to order the two).
 - Core feature servers that are not plugins yet still own ports: dashboard
-  30006, tmux 30010, serial 30011 and homepage 30012. Each keeps its nginx
-  block until its own Phase B step. No plugin owns a port any more (A4).
-  **B6** moved file-manager off port 30004 onto `/plugin-api/file-manager/`,
-  and **B7** moved tunnels off port 30003 onto `/plugin-api/tunnels/` and
-  `/plugin-ws/tunnels/c2s/stream`.
+  30006 and homepage 30012. Each keeps its nginx block until its own Phase B
+  step. No plugin owns a port any more (A4). **B6** moved file-manager off
+  port 30004 onto `/plugin-api/file-manager/`, **B7** moved tunnels off port
+  30003 onto `/plugin-api/tunnels/` and `/plugin-ws/tunnels/c2s/stream`,
+  **B10** moved tmux monitoring off port 30010, and **B11** moved serial off
+  port 30011 onto `/plugin-ws/serial/console`.
 - **B9** moved the terminal, its session manager, the local terminal and the
   command history panel into ssh-terminal, which imports nothing from core.
   The file manager's terminal window renders the `terminal.view` component
