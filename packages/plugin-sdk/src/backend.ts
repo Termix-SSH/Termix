@@ -477,7 +477,6 @@ export interface PluginHostRecord {
   folder: string | null;
   jumpHosts?: unknown;
   enableSsh?: boolean | null;
-  enableRdp?: boolean | null;
   enableTerminal?: boolean | null;
   enableFileManager?: boolean | null;
   enableTunnel?: boolean | null;
@@ -487,7 +486,11 @@ export interface PluginHostRecord {
   [key: string]: unknown;
 }
 
-/** Fields a plugin may set when creating a host it will own or manage. */
+/**
+ * Fields a plugin may set when creating a host it will own or manage. Fields
+ * that belong to another plugin's host settings (enableRdp, rdpPort) are
+ * handed to that plugin's host import normalizer, as on a bulk import.
+ */
 export type PluginHostCreateInput = Partial<
   Omit<PluginHostRecord, "id" | "userId">
 > & {
@@ -1116,10 +1119,69 @@ export interface PluginOpenIsolatedWindowRequest {
  * Electron only: rejects when the server is not running embedded in the
  * desktop app. Needs desktop:window.
  */
+export interface PluginNativeRdpRequest {
+  host: string;
+  port?: number;
+  username?: string;
+  domain?: string;
+}
+
 export interface PluginDesktop {
   openIsolatedWindow: (
     request: PluginOpenIsolatedWindowRequest,
   ) => Promise<{ success: true }>;
+  /**
+   * Opens the operating system's own RDP client (mstsc on Windows) for a
+   * host. The password is never passed; the client asks for it. Windows
+   * desktop app only.
+   */
+  launchNativeRdp: (
+    request: PluginNativeRdpRequest,
+  ) => Promise<{ success: boolean; error?: string }>;
+  /** Whether the server runs embedded in the desktop app, so the calls above can work. */
+  available: () => boolean;
+}
+
+/** A host protocol whose credentials core keeps next to the host. */
+export type PluginHostProtocol = "rdp" | "vnc" | "telnet";
+
+/**
+ * What a plugin needs to hand a host's protocol login to something core
+ * does not run (guacd): the address and the plaintext credentials the acting
+ * user is allowed to use. A shared recipient gets the owner's shared
+ * snapshot or their own override, never the owner's raw secret.
+ */
+export interface PluginProtocolTarget {
+  host: {
+    id: number;
+    name: string | null;
+    ip: string;
+    /** The host's SSH port, the old fallback when no protocol port is set. */
+    port: number;
+    ownerUserId: string;
+    jumpHosts: Array<{ hostId: number }>;
+  };
+  /** True when the acting user is not the owner. */
+  shared: boolean;
+  auth: {
+    /** "direct", "credential", or "none" when the user is asked at connect time. */
+    authType: string;
+    username: string;
+    password: string;
+    domain: string;
+  };
+}
+
+/**
+ * Plaintext host credentials, for a plugin that has to hand them to another
+ * program. Needs credentials:read, and every call is audited.
+ */
+export interface PluginCredentials {
+  /** Null when the host does not exist or the acting user cannot connect to it. */
+  resolveHostProtocol: (
+    hostId: number,
+    protocol: PluginHostProtocol,
+  ) => Promise<PluginProtocolTarget | null>;
 }
 
 /**
@@ -1145,7 +1207,7 @@ export interface PluginAudit {
  * hardware (a serial port, a USB device) is the first caller. Core cannot
  * mediate that access the way it mediates ctx.ssh or ctx.db, so the
  * capability here is a declared, reviewable, audited statement of intent
- * rather than a technical gate, matching credentials:read and process:spawn.
+ * rather than a technical gate, matching process:spawn.
  */
 export interface PluginCapabilities {
   /** Whether this plugin currently holds `capability`. Not audited: for deciding whether to offer something, not for gating an action. */
@@ -1181,6 +1243,8 @@ export interface PluginContext {
   readonly auth: PluginAuth;
   /** Opens Electron windows outside the main renderer. Needs desktop:window. */
   readonly desktop: PluginDesktop;
+  /** Plaintext host protocol credentials. Needs credentials:read. */
+  readonly credentials: PluginCredentials;
   /** Audit lines under the plugin's own action names. */
   readonly audit: PluginAudit;
 

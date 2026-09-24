@@ -61,6 +61,21 @@ describe("syncHostPluginsTab", () => {
     expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeDefined();
   });
 
+  it("registers nothing for a plugin whose host fields are all hidden", () => {
+    const own = plugin({
+      contributes: {
+        settings: {
+          host: {
+            fields: [
+              { key: "port", type: "number", labelKey: "p", hidden: true },
+            ],
+          },
+        },
+      },
+    } as Partial<PluginSummary>);
+    expect(syncHostPluginsTab([own])).toBe(false);
+  });
+
   it("registers nothing when no plugin contributes", () => {
     expect(syncHostPluginsTab([])).toBe(false);
     expect(getHostEditorSection(HOST_PLUGINS_TAB_ID)).toBeUndefined();
@@ -98,6 +113,32 @@ describe("syncHostPluginsTab", () => {
     });
 
     expect(syncHostPluginsTab([bare])).toBe(true);
+  });
+});
+
+describe("HostPluginSections hidden fields", () => {
+  it("does not draw a field the plugin edits itself", () => {
+    const own = plugin({
+      contributes: {
+        settings: {
+          host: {
+            fields: [
+              { key: "shown", type: "string", labelKey: "shown.label" },
+              {
+                key: "secretish",
+                type: "string",
+                labelKey: "hidden.label",
+                hidden: true,
+              },
+            ],
+          },
+        },
+      },
+    } as Partial<PluginSummary>);
+    render(
+      <HostPluginSections plugins={[own]} values={{}} setValue={() => {}} />,
+    );
+    expect(screen.queryByText("hidden.label")).toBeNull();
   });
 });
 

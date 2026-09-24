@@ -204,11 +204,75 @@
       "fontName": "Название шрифта",
       "fontSize": "Размер шрифта",
       "colorScheme": "Цветовая схема",
-      "backspaceKey": "Клавиша Backspace"
-    }
+      "backspaceKey": "Клавиша Backspace",
+      "colorDepth": "Глубина цвета",
+      "resizeMethod": "Метод изменения размера"
+    },
+    "remoteDesktop": "Удаленный рабочий стол",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Виртуальная сеть",
+    "unencryptedShell": "Незашифрованная оболочка"
   },
   "onboarding": {
     "feature_desktop": "Удаленный рабочий стол",
     "feature_desktop_desc": "Открывайте сеансы RDP, VNC и Telnet во вкладке, как и SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Глубина цвета"
+      },
+      "resizeMethod": {
+        "label": "Метод изменения размера"
+      },
+      "resizeDisplayUpdate": "Обновление дисплея",
+      "resizeReconnect": "Переподключитесь",
+      "inherit": "Наследовать",
+      "on": "На",
+      "off": "Выключенный",
+      "forceLossless": {
+        "label": "Принудительно без потерь",
+        "description": "Принудительное кодирование изображений без потерь (более высокое качество, больший расход трафика)"
+      },
+      "enableWallpaper": {
+        "label": "Обои",
+        "description": "Показывать обои рабочего стола (отключение повышает производительность)"
+      },
+      "enableFontSmoothing": {
+        "label": "Сглаживание шрифтов",
+        "description": "Включить рендеринг шрифтов ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Композиция рабочего стола",
+        "description": "Включить эффекты Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Отключить звук",
+        "description": "Отключить весь звук в удаленном сеансе"
+      },
+      "enablePrinting": {
+        "label": "Включить печать",
+        "description": "Перенаправлять локальные принтеры в удаленный сеанс"
+      },
+      "enableDrive": {
+        "label": "Включить перенаправление дисков",
+        "description": "Подключать локальную папку как диск в удаленном сеансе"
+      },
+      "disableCopy": {
+        "label": "Отключить копирование",
+        "description": "Запретить копирование текста из удаленного сеанса"
+      },
+      "disablePaste": {
+        "label": "Отключить вставку",
+        "description": "Запретить вставку текста в удаленный сеанс"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL guacd"
+      }
+    }
   }
 }

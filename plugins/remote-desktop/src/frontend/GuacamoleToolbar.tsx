@@ -26,14 +26,14 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/tooltip.tsx";
+} from "@termix/plugin-sdk/ui";
 import type {
   GuacamoleDisplayHandle,
   GuacamoleTouchMode,
 } from "./GuacamoleDisplay.tsx";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { ActionSlot } from "@termix/plugin-sdk/ui";
-import { cn } from "@/lib/utils";
+import { cn } from "@termix/plugin-sdk/ui";
 import {
   detectRuntimeMetaKeyFamily,
   metaKeyLabels,

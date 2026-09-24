@@ -112,7 +112,16 @@ export {
   type ConnectionOrigin,
 } from "@/lib/connection-origin";
 export { pluginWsUrl } from "@/lib/plugin-transport";
-export { hydrateLocalSharedHostAuth } from "@/lib/remote-server-api";
+export {
+  buildOriginWsUrl,
+  type WebSocketConnectionTarget,
+} from "@/lib/connection-origin";
+export { getBasePath } from "@/lib/base-path";
+export type { ConnectionStage } from "@/types/connection-log";
+export {
+  hydrateLocalSharedHostAuth,
+  resolveRemoteHostId,
+} from "@/lib/remote-server-api";
 export { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 
 // Core APIs a terminal-like surface calls: recent activity, the host's stored

@@ -16,15 +16,33 @@
   },
   "capabilities": [
     "hosts:read",
+    "credentials:read",
     "credentials:use",
     "ssh:connect",
     "network:serve",
-    "audit:read",
+    "desktop:window",
     "ui:surface"
+  ],
+  "optionalDependencies": {
+    "session-recording": "^1.0.0",
+    "tunnels": "^1.0.0"
+  },
+  "provides": [
+    {
+      "service": "sessions.live",
+      "version": "1.0.0",
+      "permission": "remote-desktop.sessions",
+      "names": ["rdp", "vnc", "telnet"]
+    }
   ],
   "requires": [
     {
       "service": "recordings.writer",
+      "versionRange": "^1.1.0",
+      "optional": true
+    },
+    {
+      "service": "tunnels.access",
       "versionRange": "^1.0.0",
       "optional": true
     }
@@ -50,30 +68,369 @@
         "openFrom": ["host-context-menu", "palette"]
       }
     ],
-    "hostCapability": [
-      {
-        "key": "enableRdp",
-        "labelKey": "hosts.tabRdp",
-        "editorTab": "rdp"
-      },
-      {
-        "key": "enableVnc",
-        "labelKey": "hosts.tabVnc",
-        "editorTab": "vnc"
-      },
-      {
-        "key": "enableTelnet",
-        "labelKey": "hosts.tabTelnet",
-        "editorTab": "telnet"
-      }
-    ],
     "actionSlots": [
       {
         "id": "remote-desktop.toolbar",
         "accepts": ["button"]
       }
     ],
-    "guest": true
+    "guest": true,
+    "permissions": [
+      {
+        "name": "sessions",
+        "titleKey": "permissions.sessions.title",
+        "descriptionKey": "permissions.sessions.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "enabled",
+          "type": "boolean",
+          "labelKey": "settings.admin.enabled.label",
+          "descriptionKey": "settings.admin.enabled.description",
+          "default": true
+        },
+        {
+          "key": "guacdUrl",
+          "type": "string",
+          "labelKey": "settings.admin.guacdUrl.label",
+          "descriptionKey": "settings.admin.guacdUrl.description",
+          "placeholderKey": "settings.admin.guacdUrl.placeholder",
+          "requires": "enabled",
+          "default": ""
+        }
+      ],
+      "user": [
+        {
+          "key": "colorDepth",
+          "type": "select",
+          "labelKey": "settings.user.colorDepth.label",
+          "descriptionKey": "settings.user.colorDepth.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "16",
+              "labelKey": "settings.user.colorDepth16"
+            },
+            {
+              "value": "24",
+              "labelKey": "settings.user.colorDepth24"
+            },
+            {
+              "value": "32",
+              "labelKey": "settings.user.colorDepth32"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "resizeMethod",
+          "type": "select",
+          "labelKey": "settings.user.resizeMethod.label",
+          "descriptionKey": "settings.user.resizeMethod.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "display-update",
+              "labelKey": "settings.user.resizeDisplayUpdate"
+            },
+            {
+              "value": "reconnect",
+              "labelKey": "settings.user.resizeReconnect"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "forceLossless",
+          "type": "select",
+          "labelKey": "settings.user.forceLossless.label",
+          "descriptionKey": "settings.user.forceLossless.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "enableWallpaper",
+          "type": "select",
+          "labelKey": "settings.user.enableWallpaper.label",
+          "descriptionKey": "settings.user.enableWallpaper.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "enableFontSmoothing",
+          "type": "select",
+          "labelKey": "settings.user.enableFontSmoothing.label",
+          "descriptionKey": "settings.user.enableFontSmoothing.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "enableDesktopComposition",
+          "type": "select",
+          "labelKey": "settings.user.enableDesktopComposition.label",
+          "descriptionKey": "settings.user.enableDesktopComposition.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "disableAudio",
+          "type": "select",
+          "labelKey": "settings.user.disableAudio.label",
+          "descriptionKey": "settings.user.disableAudio.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "enablePrinting",
+          "type": "select",
+          "labelKey": "settings.user.enablePrinting.label",
+          "descriptionKey": "settings.user.enablePrinting.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "enableDrive",
+          "type": "select",
+          "labelKey": "settings.user.enableDrive.label",
+          "descriptionKey": "settings.user.enableDrive.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "disableCopy",
+          "type": "select",
+          "labelKey": "settings.user.disableCopy.label",
+          "descriptionKey": "settings.user.disableCopy.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        },
+        {
+          "key": "disablePaste",
+          "type": "select",
+          "labelKey": "settings.user.disablePaste.label",
+          "descriptionKey": "settings.user.disablePaste.description",
+          "group": "settings.user.group",
+          "options": [
+            {
+              "value": "inherit",
+              "labelKey": "settings.user.inherit"
+            },
+            {
+              "value": "on",
+              "labelKey": "settings.user.on"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.off"
+            }
+          ],
+          "default": "inherit"
+        }
+      ],
+      "host": {
+        "fields": [
+          {
+            "key": "enableRdp",
+            "type": "boolean",
+            "labelKey": "settings.host.enableRdp.label",
+            "default": false,
+            "hidden": true
+          },
+          {
+            "key": "enableVnc",
+            "type": "boolean",
+            "labelKey": "settings.host.enableVnc.label",
+            "default": false,
+            "hidden": true
+          },
+          {
+            "key": "enableTelnet",
+            "type": "boolean",
+            "labelKey": "settings.host.enableTelnet.label",
+            "default": false,
+            "hidden": true
+          },
+          {
+            "key": "rdpPort",
+            "type": "number",
+            "labelKey": "settings.host.rdpPort.label",
+            "min": 1,
+            "max": 65535,
+            "default": 3389,
+            "hidden": true
+          },
+          {
+            "key": "vncPort",
+            "type": "number",
+            "labelKey": "settings.host.vncPort.label",
+            "min": 1,
+            "max": 65535,
+            "default": 5900,
+            "hidden": true
+          },
+          {
+            "key": "telnetPort",
+            "type": "number",
+            "labelKey": "settings.host.telnetPort.label",
+            "min": 1,
+            "max": 65535,
+            "default": 23,
+            "hidden": true
+          },
+          {
+            "key": "rdpSecurity",
+            "type": "string",
+            "labelKey": "settings.host.rdpSecurity.label",
+            "default": "",
+            "hidden": true
+          },
+          {
+            "key": "rdpIgnoreCert",
+            "type": "boolean",
+            "labelKey": "settings.host.rdpIgnoreCert.label",
+            "default": false,
+            "hidden": true
+          },
+          {
+            "key": "guacamoleConfig",
+            "type": "json",
+            "labelKey": "settings.host.guacamoleConfig.label",
+            "default": {},
+            "hidden": true
+          },
+          {
+            "key": "enableToolbar",
+            "type": "boolean",
+            "labelKey": "settings.host.enableToolbar.label",
+            "descriptionKey": "settings.host.enableToolbar.description",
+            "default": true
+          }
+        ]
+      }
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

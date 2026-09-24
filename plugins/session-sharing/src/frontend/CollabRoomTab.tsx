@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  hostProtocols,
   useHosts,
   useTranslation,
   type PluginHostRecord,
@@ -64,12 +65,17 @@ import {
   type DirectoryRole,
 } from "./api";
 
+type SharedProtocol = "ssh" | "rdp" | "vnc" | "telnet";
+
+function isSharedProtocol(value: string): value is SharedProtocol {
+  return (
+    value === "ssh" || value === "rdp" || value === "vnc" || value === "telnet"
+  );
+}
+
 /** A host from the shell's list; the connection fields ride along by name. */
 type SSHHostWithStatus = PluginHostRecord & {
   enableSsh?: boolean;
-  enableRdp?: boolean;
-  enableVnc?: boolean;
-  enableTelnet?: boolean;
   connectionOrigin?: unknown;
 };
 
@@ -350,11 +356,13 @@ export function CollabRoomTab({
       }
       const response = await createRemoteSessionToken(
         Number(host.id),
-        await resolveConnectionOrigin({
-          connectionType: protocol,
-          connectionOrigin: host.connectionOrigin as
-            "local" | "remote" | undefined,
-        }),
+        await resolveConnectionOrigin(
+          {
+            connectionOrigin: host.connectionOrigin as
+              "local" | "remote" | undefined,
+          },
+          { defaultRemote: true },
+        ),
         protocol,
       );
       if (!response?.connectionId) {
@@ -780,11 +788,9 @@ export function CollabRoomTab({
               <CenteredNote text={t("collab.noHostsFound")} />
             )}
             {filteredHosts.map((host) => {
-              const protocols: Array<"ssh" | "rdp" | "vnc" | "telnet"> = [];
-              if (host.enableSsh) protocols.push("ssh");
-              if (host.enableRdp) protocols.push("rdp");
-              if (host.enableVnc) protocols.push("vnc");
-              if (host.enableTelnet) protocols.push("telnet");
+              const protocols = hostProtocols(
+                host as unknown as PluginHostRecord,
+              ).filter(isSharedProtocol);
               if (protocols.length === 0) return null;
               return (
                 <div

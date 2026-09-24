@@ -204,11 +204,75 @@
       "fontName": "Lettertipe Naam",
       "fontSize": "Lettergrootte",
       "colorScheme": "Kleurskema",
-      "backspaceKey": "Terugspasie-sleutel"
-    }
+      "backspaceKey": "Terugspasie-sleutel",
+      "colorDepth": "Kleurdiepte",
+      "resizeMethod": "Vergrootingsmetode"
+    },
+    "remoteDesktop": "Afstandslessenaar",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuele Netwerk",
+    "unencryptedShell": "Ongeënkripteerde dop"
   },
   "onboarding": {
     "feature_desktop": "Afstandlessenaar",
     "feature_desktop_desc": "Maak RDP-, VNC- en Telnet-sessies in 'n oortjie oop, dieselfde as SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Kleurdiepte"
+      },
+      "resizeMethod": {
+        "label": "Vergrootingsmetode"
+      },
+      "resizeDisplayUpdate": "Skermopdatering",
+      "resizeReconnect": "Herkoppel",
+      "inherit": "Erf",
+      "on": "Aan",
+      "off": "Af",
+      "forceLossless": {
+        "label": "Forseer verliesloos",
+        "description": "Forseer verlieslose beeldkodering (hoër gehalte, meer bandwydte)"
+      },
+      "enableWallpaper": {
+        "label": "Agtergrond",
+        "description": "Wys lessenaar agtergrond (deaktivering verbeter werkverrigting)"
+      },
+      "enableFontSmoothing": {
+        "label": "Lettertipe-gladmaak",
+        "description": "Aktiveer ClearType-lettertipe-weergawe"
+      },
+      "enableDesktopComposition": {
+        "label": "Komposisie op die lessenaar",
+        "description": "Aktiveer Aero-glaseffekte"
+      },
+      "disableAudio": {
+        "label": "Deaktiveer oudio",
+        "description": "Demp alle klank van die afstandsessie"
+      },
+      "enablePrinting": {
+        "label": "Aktiveer drukwerk",
+        "description": "Herlei plaaslike drukkers na die afgeleë sessie"
+      },
+      "enableDrive": {
+        "label": "Aktiveer dryfherleiding",
+        "description": "Karaktereer 'n plaaslike vouer as 'n skyf in die afstandsessie"
+      },
+      "disableCopy": {
+        "label": "Deaktiveer Kopieer",
+        "description": "Voorkom die kopiëring van teks vanaf die afgeleë sessie"
+      },
+      "disablePaste": {
+        "label": "Deaktiveer plak",
+        "description": "Voorkom die plak van teks in die afgeleë sessie"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd-URL"
+      }
+    }
   }
 }

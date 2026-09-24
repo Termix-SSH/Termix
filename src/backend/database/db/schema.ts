@@ -295,21 +295,13 @@ export const hosts = sqliteTable(
     quickActions: text("quick_actions"),
     notes: text("notes"),
     enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
-    enableRdp: integer("enable_rdp", { mode: "boolean" }).notNull().default(false),
-    enableVnc: integer("enable_vnc", { mode: "boolean" }).notNull().default(false),
-    enableTelnet: integer("enable_telnet", { mode: "boolean" }).notNull().default(false),
 
     sshPort: integer("ssh_port").default(22),
-    rdpPort: integer("rdp_port").default(3389),
-    vncPort: integer("vnc_port").default(5900),
-    telnetPort: integer("telnet_port").default(23),
 
     rdpCredentialId: integer("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     rdpUser: text("rdp_user"),
     rdpPassword: text("rdp_password"),
     rdpDomain: text("rdp_domain"),
-    rdpSecurity: text("rdp_security"),
-    rdpIgnoreCert: integer("rdp_ignore_cert", { mode: "boolean" }).default(false),
 
     vncCredentialId: integer("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     vncPassword: text("vnc_password"),
@@ -324,9 +316,6 @@ export const hosts = sqliteTable(
     telnetAuthType: text("telnet_auth_type"),
 
     domain: text("domain"),
-    security: text("security"),
-    ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
-    guacamoleConfig: text("guacamole_config"),
 
     useSocks5: integer("use_socks5", { mode: "boolean" }),
     socks5Host: text("socks5_host"),
@@ -889,7 +878,6 @@ export const userPreferences = sqliteTable("user_preferences", {
   customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
   terminalDefaults: text("terminal_defaults"),
-  rdpDefaults: text("rdp_defaults"),
   terminalMacros: text("terminal_macros"),
   updatedAt: text("updated_at")
     .notNull()

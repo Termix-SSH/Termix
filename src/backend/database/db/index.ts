@@ -19,7 +19,6 @@ import {
   assertDataDirIsNotMisconfigured,
   DataDirMisconfiguredError,
 } from "../../utils/data-dir-guard.js";
-import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
 import { resolveDatabaseDialect, type DatabaseDialect } from "./dialect.js";
 import { SYSTEM_ROLE_DEFAULTS } from "../../utils/permission-catalog.js";
 import { connectRemoteDatabase } from "./connect.js";
@@ -807,24 +806,6 @@ async function initializeCompleteDatabase(): Promise<void> {
       error: e,
     });
   }
-
-  try {
-    ensureRawSettingDefault("guac_enabled", "true");
-  } catch (e) {
-    databaseLogger.warn("Could not initialize guac_enabled setting", {
-      operation: "db_init",
-      error: e,
-    });
-  }
-
-  try {
-    ensureRawSettingDefault("guac_url", getDefaultGuacdUrl());
-  } catch (e) {
-    databaseLogger.warn("Could not initialize guac_url setting", {
-      operation: "db_init",
-      error: e,
-    });
-  }
 }
 
 const addColumnIfNotExists = (
@@ -948,7 +929,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "custom_themes", "TEXT");
   addColumnIfNotExists("user_preferences", "custom_keybindings", "TEXT");
   addColumnIfNotExists("user_preferences", "terminal_defaults", "TEXT");
-  addColumnIfNotExists("user_preferences", "rdp_defaults", "TEXT");
   addColumnIfNotExists("user_preferences", "terminal_macros", "TEXT");
 
   sqlite.exec(`
@@ -1164,9 +1144,6 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
   addColumnIfNotExists("ssh_data", "domain", "TEXT");
-  addColumnIfNotExists("ssh_data", "security", "TEXT");
-  addColumnIfNotExists("ssh_data", "ignore_cert", "INTEGER NOT NULL DEFAULT 0");
-  addColumnIfNotExists("ssh_data", "guacamole_config", "TEXT");
   addColumnIfNotExists("ssh_data", "notes", "TEXT");
 
   addColumnIfNotExists("ssh_data", "use_socks5", "INTEGER");
@@ -1554,9 +1531,6 @@ const migrateSchema = () => {
     { column: "show_server_stats_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0" },
     { column: "quick_actions", sql: "ALTER TABLE ssh_data ADD COLUMN quick_actions TEXT" },
     { column: "domain", sql: "ALTER TABLE ssh_data ADD COLUMN domain TEXT" },
-    { column: "security", sql: "ALTER TABLE ssh_data ADD COLUMN security TEXT" },
-    { column: "ignore_cert", sql: "ALTER TABLE ssh_data ADD COLUMN ignore_cert INTEGER NOT NULL DEFAULT 0" },
-    { column: "guacamole_config", sql: "ALTER TABLE ssh_data ADD COLUMN guacamole_config TEXT" },
     { column: "socks5_proxy_chain", sql: "ALTER TABLE ssh_data ADD COLUMN socks5_proxy_chain TEXT" },
     { column: "host_key_fingerprint", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_fingerprint TEXT" },
     { column: "host_key_type", sql: "ALTER TABLE ssh_data ADD COLUMN host_key_type TEXT" },
@@ -1567,18 +1541,10 @@ const migrateSchema = () => {
     { column: "mac_address", sql: "ALTER TABLE ssh_data ADD COLUMN mac_address TEXT" },
     { column: "port_knock_sequence", sql: "ALTER TABLE ssh_data ADD COLUMN port_knock_sequence TEXT" },
     { column: "enable_ssh", sql: "ALTER TABLE ssh_data ADD COLUMN enable_ssh INTEGER NOT NULL DEFAULT 1" },
-    { column: "enable_rdp", sql: "ALTER TABLE ssh_data ADD COLUMN enable_rdp INTEGER NOT NULL DEFAULT 0" },
-    { column: "enable_vnc", sql: "ALTER TABLE ssh_data ADD COLUMN enable_vnc INTEGER NOT NULL DEFAULT 0" },
-    { column: "enable_telnet", sql: "ALTER TABLE ssh_data ADD COLUMN enable_telnet INTEGER NOT NULL DEFAULT 0" },
     { column: "ssh_port", sql: "ALTER TABLE ssh_data ADD COLUMN ssh_port INTEGER DEFAULT 22" },
-    { column: "rdp_port", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_port INTEGER DEFAULT 3389" },
-    { column: "vnc_port", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_port INTEGER DEFAULT 5900" },
-    { column: "telnet_port", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_port INTEGER DEFAULT 23" },
     { column: "rdp_user", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_user TEXT" },
     { column: "rdp_password", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_password TEXT" },
     { column: "rdp_domain", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_domain TEXT" },
-    { column: "rdp_security", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_security TEXT" },
-    { column: "rdp_ignore_cert", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_ignore_cert INTEGER DEFAULT 0" },
     { column: "vnc_password", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_password TEXT" },
     { column: "vnc_user", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_user TEXT" },
     { column: "telnet_user", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_user TEXT" },

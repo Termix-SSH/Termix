@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   renderWithApp,
   type RenderedPluginApp,
@@ -45,9 +45,39 @@ describe(`${manifest.id} activate`, () => {
     expect(app.registered.panels()).toEqual([]);
     expect(app.registered.railItems()).toEqual([]);
     expect(app.registered.hostActions()).toEqual([]);
+    expect(app.registered.hostProtocols()).toEqual([]);
     expect(app.registered.hostEditorSections()).toEqual([]);
     expect(app.registered.dashboardCards()).toEqual([]);
     expect(app.registered.settingsComponents()).toEqual([]);
     expect(app.registered.actions()).toEqual([]);
+  });
+
+  it("adds RDP, VNC and Telnet as host protocols while turned on", async () => {
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      api: { get: async () => ({ data: { enabled: true } }) } as never,
+    });
+    await vi.waitFor(() =>
+      expect(rendered!.registered.hostProtocols().sort()).toEqual([
+        "rdp",
+        "telnet",
+        "vnc",
+      ]),
+    );
+    expect(rendered.registered.hostActions().map((a) => a.id)).toEqual(
+      expect.arrayContaining(["rdp", "vnc", "telnet"]),
+    );
+  });
+
+  it("offers no way in while an admin has turned it off", async () => {
+    rendered = await renderWithApp(plugin, {
+      manifest,
+      locales,
+      api: { get: async () => ({ data: { enabled: false } }) } as never,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(rendered.registered.hostProtocols()).toEqual([]);
+    expect(rendered.registered.hostActions()).toEqual([]);
   });
 });

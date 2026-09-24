@@ -204,11 +204,75 @@
       "fontName": "Tên phông chữ",
       "fontSize": "Cỡ chữ",
       "colorScheme": "Bảng màu",
-      "backspaceKey": "Phím Backspace"
-    }
+      "backspaceKey": "Phím Backspace",
+      "colorDepth": "Độ sâu màu",
+      "resizeMethod": "Phương thức thay đổi kích thước"
+    },
+    "remoteDesktop": "Máy tính từ xa",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Mạng ảo",
+    "unencryptedShell": "Shell không mã hóa"
   },
   "onboarding": {
     "feature_desktop": "Máy tính từ xa",
     "feature_desktop_desc": "Mở các phiên RDP, VNC và Telnet trong cùng một tab, tương tự như SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Độ sâu màu"
+      },
+      "resizeMethod": {
+        "label": "Phương thức thay đổi kích thước"
+      },
+      "resizeDisplayUpdate": "Cập nhật hiển thị",
+      "resizeReconnect": "Kết nối lại",
+      "inherit": "Kế thừa",
+      "on": "TRÊN",
+      "off": "Tắt",
+      "forceLossless": {
+        "label": "Ép buộc Lossless",
+        "description": "Ép buộc mã hóa ảnh không mất dữ liệu (chất lượng cao hơn, tốn băng thông)"
+      },
+      "enableWallpaper": {
+        "label": "Hình nền",
+        "description": "Hiển thị hình nền desktop (tắt để cải thiện hiệu suất)"
+      },
+      "enableFontSmoothing": {
+        "label": "Làm mịn phông chữ",
+        "description": "Bật kết xuất phông chữ ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Tổ hợp màn hình nền",
+        "description": "Bật hiệu ứng kính Aero"
+      },
+      "disableAudio": {
+        "label": "Tắt âm thanh",
+        "description": "Tắt tất cả âm thanh từ phiên từ xa"
+      },
+      "enablePrinting": {
+        "label": "Bật in",
+        "description": "Chuyển hướng máy in cục bộ đến phiên từ xa"
+      },
+      "enableDrive": {
+        "label": "Bật chuyển hướng ổ đĩa",
+        "description": "Ánh xạ thư mục cục bộ thành ổ đĩa trong phiên từ xa"
+      },
+      "disableCopy": {
+        "label": "Tắt sao chép",
+        "description": "Ngăn sao chép văn bản từ phiên từ xa"
+      },
+      "disablePaste": {
+        "label": "Tắt dán",
+        "description": "Ngăn dán văn bản vào phiên từ xa"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL guacd"
+      }
+    }
   }
 }

@@ -28,6 +28,7 @@ import {
 import { getPanel, listPanels } from "@/shell/panel-registry";
 import { listRegisteredRailItems } from "@/sidebar/rail-items";
 import { listHostActions } from "@/sidebar/host-contributions";
+import { listHostProtocols } from "@/sidebar/host-protocols";
 import {
   getHostEditorSection,
   hostEditorSectionList,
@@ -207,6 +208,8 @@ export async function renderPlugin(
           id: action.id,
           tabType: action.tabType,
         })),
+      hostProtocols: () =>
+        mine(listHostProtocols()).map((protocol) => protocol.id),
       hostEditorSections: () =>
         mine(hostEditorSectionList()).map((section) => section.id),
       dashboardCards: () =>

@@ -9,8 +9,6 @@ import type { Host } from "@/types/ui-types";
 import {
   Globe,
   LayoutGrid,
-  Monitor,
-  MousePointerClick,
   Plus,
   Tag,
   Terminal,
@@ -23,6 +21,7 @@ import { getSSHFolders, isElectron } from "@/main-axios";
 import { connectionOriginAppliesTo } from "./HostEditorData";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
 import { Select2 } from "@/components/select2";
+import { useHostProtocols } from "./host-protocols";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
   key: K,
@@ -48,6 +47,7 @@ export function HostEditorGeneralTab({
   simpleMode?: boolean;
 }) {
   const { t } = useTranslation();
+  const pluginProtocols = useHostProtocols();
 
   // Tracks which picker is shown, independent of whether a value is set yet
   // -- switching to "parent host" mode with nothing picked shouldn't bounce
@@ -116,35 +116,22 @@ export function HostEditorGeneralTab({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 py-3">
           {[
             {
-              proto: "enableSsh" as const,
+              proto: "enableSsh",
               label: t("hosts.tabSsh"),
               desc: t("hosts.secureShell"),
               icon: <Terminal className="size-4" />,
-              portField: "sshPort" as const,
             },
-            {
-              proto: "enableRdp" as const,
-              label: t("hosts.tabRdp"),
-              desc: t("hosts.remoteDesktop"),
-              icon: <Monitor className="size-4" />,
-              portField: "rdpPort" as const,
-            },
-            {
-              proto: "enableVnc" as const,
-              label: t("hosts.tabVnc"),
-              desc: t("hosts.virtualNetwork"),
-              icon: <MousePointerClick className="size-4" />,
-              portField: "vncPort" as const,
-            },
-            {
-              proto: "enableTelnet" as const,
-              label: t("hosts.tabTelnet"),
-              desc: t("hosts.unencryptedShell"),
-              icon: <Terminal className="size-4" />,
-              portField: "telnetPort" as const,
-            },
+            ...pluginProtocols.map((protocol) => {
+              const Icon = protocol.icon;
+              return {
+                proto: protocol.settingKey,
+                label: t(protocol.titleKey),
+                desc: protocol.descriptionKey ? t(protocol.descriptionKey) : "",
+                icon: <Icon className="size-4" />,
+              };
+            }),
           ].map(({ proto, label, desc, icon }) => {
-            const enabled = protocols[proto];
+            const enabled = !!protocols[proto];
             return (
               <div
                 key={proto}
@@ -245,15 +232,12 @@ export function HostEditorGeneralTab({
         </div>
       </SectionCard>
 
-      {!protocols.enableSsh &&
-        !protocols.enableRdp &&
-        !protocols.enableVnc &&
-        !protocols.enableTelnet && (
-          <div className="flex items-center gap-3 p-3 border border-border bg-muted/20 text-xs text-muted-foreground">
-            <Globe className="size-4 shrink-0 text-muted-foreground/40" />
-            <span>{t("hosts.enableAtLeastOneProtocol")}</span>
-          </div>
-        )}
+      {!Object.values(protocols).some(Boolean) && (
+        <div className="flex items-center gap-3 p-3 border border-border bg-muted/20 text-xs text-muted-foreground">
+          <Globe className="size-4 shrink-0 text-muted-foreground/40" />
+          <span>{t("hosts.enableAtLeastOneProtocol")}</span>
+        </div>
+      )}
 
       <SectionCard
         title={t("hosts.folderAndAdvanced")}
@@ -769,13 +753,7 @@ export function HostEditorGeneralTab({
           {isElectron() && connectionOriginAppliesTo(protocols) && (
             <SettingRow
               label={t("hosts.connectionOrigin")}
-              description={
-                protocols.enableRdp ||
-                protocols.enableVnc ||
-                protocols.enableTelnet
-                  ? `${t("hosts.connectionOriginDesc")} ${t("hosts.connectionOriginRemoteDesktopNote")}`
-                  : t("hosts.connectionOriginDesc")
-              }
+              description={t("hosts.connectionOriginDesc")}
             >
               <select
                 className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"

@@ -1,27 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Eye,
-  EyeOff,
-  FolderSearch,
-  Monitor,
-  MousePointerClick,
-  Terminal,
-} from "lucide-react";
+import { Eye, EyeOff, FolderSearch, Terminal } from "lucide-react";
 import { Input } from "@/components/input";
 import type { Host } from "@/types/ui-types";
 import { getCredentials } from "@/api/credentials-api";
 import { mapCredentials } from "./HostManagerData";
-import {
-  createQuickConnectHost,
-  type QuickConnectProtocol,
-} from "./quick-connect-host";
-
-const DEFAULT_PORTS: Record<QuickConnectProtocol, string> = {
-  ssh: "22",
-  rdp: "3389",
-  vnc: "5900",
-};
+import { createQuickConnectHost } from "./quick-connect-host";
+import { useHostProtocols } from "./host-protocols";
 import { Select2 } from "@/components/select2";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
 
@@ -32,7 +17,8 @@ interface QuickConnectPanelProps {
 export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
   const { t } = useTranslation();
   const [host, setHost] = useState("");
-  const [protocol, setProtocol] = useState<QuickConnectProtocol>("ssh");
+  // "ssh", or the id of a plugin protocol offered in Quick Connect.
+  const [protocol, setProtocol] = useState("ssh");
   const [port, setPort] = useState("22");
   const [domain, setDomain] = useState("");
   const [username, setUsername] = useState("root");
@@ -53,11 +39,17 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
       .catch(() => {});
   }, []);
 
-  const isDesktop = protocol !== "ssh";
+  const pluginProtocols = useHostProtocols().filter(
+    (entry) => entry.quickConnect,
+  );
+  const selected = pluginProtocols.find((entry) => entry.id === protocol);
+  const isDesktop = !!selected;
+  const defaultPort = (id: string) =>
+    String(pluginProtocols.find((entry) => entry.id === id)?.defaultPort ?? 22);
 
-  const switchProtocol = (next: QuickConnectProtocol) => {
+  const switchProtocol = (next: string) => {
     // Keep a port the user typed; only swap the protocol default.
-    if (port === DEFAULT_PORTS[protocol]) setPort(DEFAULT_PORTS[next]);
+    if (port === defaultPort(protocol)) setPort(defaultPort(next));
     setProtocol(next);
   };
 
@@ -67,13 +59,13 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
     if (!isDesktop && !username) return;
     const hostConfig = createQuickConnectHost({
       ip: host,
-      port: parseInt(port) || parseInt(DEFAULT_PORTS[protocol]),
+      port: parseInt(port) || parseInt(defaultPort(protocol)),
       username,
       authType: isDesktop ? "password" : authType,
       password,
       key: privateKey,
       credentialId,
-      protocol,
+      protocol: selected,
       domain: domain || undefined,
     });
     const target = type ?? resolveHostTabType(hostConfig);
@@ -90,19 +82,21 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             {t("newUi.sidebar.quickConnect.protocolLabel")}
           </label>
           <div className="flex gap-1">
-            {(["ssh", "rdp", "vnc"] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => switchProtocol(type)}
-                className={`flex-1 py-1 text-[10px] font-semibold border transition-colors uppercase ${
-                  protocol === type
-                    ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
+            {["ssh", ...pluginProtocols.map((entry) => entry.id)].map(
+              (type) => (
+                <button
+                  key={type}
+                  onClick={() => switchProtocol(type)}
+                  className={`flex-1 py-1 text-[10px] font-semibold border transition-colors uppercase ${
+                    protocol === type
+                      ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {type}
+                </button>
+              ),
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-1">
@@ -206,7 +200,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             </div>
           </div>
         )}
-        {isDesktop && protocol === "rdp" && (
+        {selected?.quickConnect?.showDomain && (
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.quickConnect.domainLabel")}
@@ -264,21 +258,15 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
           </div>
         )}
         <div className="flex flex-col gap-1.5 pt-1">
-          {isDesktop ? (
+          {selected ? (
             <button
-              onClick={() => connect(protocol)}
+              onClick={() => connect()}
               className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors"
             >
-              {protocol === "rdp" ? (
-                <Monitor className="size-3.5" />
-              ) : (
-                <MousePointerClick className="size-3.5" />
-              )}
-              {t(
-                protocol === "rdp"
-                  ? "newUi.sidebar.quickConnect.connectToRdp"
-                  : "newUi.sidebar.quickConnect.connectToVnc",
-              )}
+              <selected.icon className="size-3.5" />
+              {t("newUi.sidebar.quickConnect.connectWith", {
+                protocol: t(selected.titleKey),
+              })}
             </button>
           ) : (
             <>

@@ -21,6 +21,7 @@ const h = vi.hoisted(() => ({
   activities: [] as Array<Record<string, unknown>>,
   sessions: [] as number[],
   released: [] as number[],
+  importRows: [] as Array<{ hostId: number; row: Record<string, unknown> }>,
   roles: [] as Array<{
     id: number;
     name: string;
@@ -108,6 +109,14 @@ vi.mock("../../hosts/host-session-status.js", () => ({
       h.sessions.push(hostId);
       return () => h.released.push(hostId);
     },
+  },
+}));
+vi.mock("../../database/routes/host-plugin-settings.js", () => ({
+  applyPluginHostImportSettings: async (
+    hostId: number,
+    row: Record<string, unknown>,
+  ) => {
+    h.importRows.push({ hostId, row });
   },
 }));
 vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
@@ -325,6 +334,7 @@ describe("ctx.hosts", () => {
       port: 22,
       username: "root",
       authType: "password",
+      enableRdp: true,
     });
     expect(created).toMatchObject({
       id: 99,
@@ -332,6 +342,11 @@ describe("ctx.hosts", () => {
       userId: "user-1",
     });
     expect(h.created).toHaveLength(1);
+    // Another plugin's fields go through its import normalizer.
+    expect(h.importRows.at(-1)).toMatchObject({
+      hostId: 99,
+      row: { enableRdp: true },
+    });
   });
 
   it("updates a host once granted hosts:write", async () => {

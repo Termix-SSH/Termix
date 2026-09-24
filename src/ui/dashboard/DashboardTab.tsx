@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { enabledHostProtocols, protocolPort } from "@/sidebar/host-protocols";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/button";
@@ -316,15 +317,12 @@ function QuickActionsCard({
   const { t } = useTranslation();
   const pinnedHosts = hosts.filter((h) => h.pin);
   const getConnectionEndpoint = (host: Host) => {
+    const protocol = host.enableSsh ? undefined : enabledHostProtocols(host)[0];
     const port = host.enableSsh
       ? host.sshPort
-      : host.enableRdp
-        ? host.rdpPort
-        : host.enableVnc
-          ? host.vncPort
-          : host.enableTelnet
-            ? host.telnetPort
-            : host.port;
+      : protocol
+        ? protocolPort(host.pluginSettings, protocol)
+        : host.port;
     return `${host.ip}:${port ?? host.port}`;
   };
   const renderConnectionIcon = (host: Host) => {

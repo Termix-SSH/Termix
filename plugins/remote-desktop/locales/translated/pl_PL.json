@@ -204,11 +204,75 @@
       "fontName": "Nazwa czcionki",
       "fontSize": "Rozmiar czcionki",
       "colorScheme": "Schemat kolorów",
-      "backspaceKey": "Klawisz Backspace"
-    }
+      "backspaceKey": "Klawisz Backspace",
+      "colorDepth": "Głębia koloru",
+      "resizeMethod": "Metoda zmiany rozmiaru"
+    },
+    "remoteDesktop": "Pulpit zdalny",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Sieć wirtualna",
+    "unencryptedShell": "Niezaszyfrowana powłoka"
   },
   "onboarding": {
     "feature_desktop": "Zdalny pulpit",
     "feature_desktop_desc": "Otwieraj sesje RDP, VNC i Telnet w karcie, tak samo jak SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Głębia koloru"
+      },
+      "resizeMethod": {
+        "label": "Metoda zmiany rozmiaru"
+      },
+      "resizeDisplayUpdate": "Aktualizacja ekranu",
+      "resizeReconnect": "Połącz ponownie",
+      "inherit": "Dziedzicz",
+      "on": "Wł.",
+      "off": "Wył.",
+      "forceLossless": {
+        "label": "Wymuś bezstratność",
+        "description": "Wymuś bezstratne kodowanie obrazu (wyższa jakość, większa przepustowość)"
+      },
+      "enableWallpaper": {
+        "label": "Tapeta",
+        "description": "Pokaż tapetę pulpitu (wyłączenie poprawia wydajność)"
+      },
+      "enableFontSmoothing": {
+        "label": "Wygładzanie czcionek",
+        "description": "Włącz renderowanie czcionek ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Kompozycja pulpitu",
+        "description": "Włącz efekty Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Wyłącz dźwięk",
+        "description": "Wycisz cały dźwięk z sesji zdalnej"
+      },
+      "enablePrinting": {
+        "label": "Włącz drukowanie",
+        "description": "Przekieruj drukarki lokalne do sesji zdalnej"
+      },
+      "enableDrive": {
+        "label": "Włącz przekierowanie dysku",
+        "description": "Mapuj folder lokalny jako dysk w sesji zdalnej"
+      },
+      "disableCopy": {
+        "label": "Wyłącz kopiowanie",
+        "description": "Zapobiegaj kopiowaniu tekstu z sesji zdalnej"
+      },
+      "disablePaste": {
+        "label": "Wyłącz wklejanie",
+        "description": "Zapobiegaj wklejaniu tekstu do sesji zdalnej"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "Adres URL guacd"
+      }
+    }
   }
 }

@@ -204,11 +204,75 @@
       "fontName": "Όνομα γραμματοσειράς",
       "fontSize": "Μέγεθος γραμματοσειράς",
       "colorScheme": "Χρωματικό σχήμα",
-      "backspaceKey": "Πλήκτρο Backspace"
-    }
+      "backspaceKey": "Πλήκτρο Backspace",
+      "colorDepth": "Βάθος χρώματος",
+      "resizeMethod": "Μέθοδος αλλαγής μεγέθους"
+    },
+    "remoteDesktop": "Απομακρυσμένη επιφάνεια εργασίας",
+    "tabRdp": "ΠΑΑ",
+    "tabVnc": "VNC",
+    "tabTelnet": "Τέλνετ",
+    "virtualNetwork": "Εικονικό Δίκτυο",
+    "unencryptedShell": "Μη κρυπτογραφημένο κέλυφος"
   },
   "onboarding": {
     "feature_desktop": "Απομακρυσμένη επιφάνεια εργασίας",
     "feature_desktop_desc": "Ανοίξτε τις συνεδρίες RDP, VNC και Telnet σε μια καρτέλα, όπως και το SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Βάθος χρώματος"
+      },
+      "resizeMethod": {
+        "label": "Μέθοδος αλλαγής μεγέθους"
+      },
+      "resizeDisplayUpdate": "Ενημέρωση οθόνης",
+      "resizeReconnect": "Επανασύνδεση",
+      "inherit": "Κληρονομώ",
+      "on": "Επί",
+      "off": "Μακριά από",
+      "forceLossless": {
+        "label": "Δύναμη χωρίς απώλειες",
+        "description": "Επιβολή κωδικοποίησης εικόνας χωρίς απώλειες (υψηλότερη ποιότητα, μεγαλύτερο εύρος ζώνης)"
+      },
+      "enableWallpaper": {
+        "label": "Ταπετσαρία",
+        "description": "Εμφάνιση ταπετσαρίας επιφάνειας εργασίας (η απενεργοποίηση βελτιώνει την απόδοση)"
+      },
+      "enableFontSmoothing": {
+        "label": "Εξομάλυνση γραμματοσειράς",
+        "description": "Ενεργοποίηση απόδοσης γραμματοσειράς ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Σύνθεση επιφάνειας εργασίας",
+        "description": "Ενεργοποίηση εφέ Aero glass"
+      },
+      "disableAudio": {
+        "label": "Απενεργοποίηση ήχου",
+        "description": "Σίγαση όλου του ήχου από την απομακρυσμένη συνεδρία"
+      },
+      "enablePrinting": {
+        "label": "Ενεργοποίηση εκτύπωσης",
+        "description": "Ανακατεύθυνση τοπικών εκτυπωτών στην απομακρυσμένη συνεδρία"
+      },
+      "enableDrive": {
+        "label": "Ενεργοποίηση ανακατεύθυνσης μονάδας δίσκου",
+        "description": "Αντιστοίχιση τοπικού φακέλου ως μονάδας δίσκου στην απομακρυσμένη συνεδρία"
+      },
+      "disableCopy": {
+        "label": "Απενεργοποίηση αντιγραφής",
+        "description": "Αποτροπή αντιγραφής κειμένου από την απομακρυσμένη συνεδρία"
+      },
+      "disablePaste": {
+        "label": "Απενεργοποίηση επικόλλησης",
+        "description": "Αποτροπή επικόλλησης κειμένου στην απομακρυσμένη συνεδρία"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL guacd"
+      }
+    }
   }
 }

@@ -83,6 +83,24 @@ describe("contributes.settings", () => {
     expect(errors.join(" ")).toContain('Unknown field "wat"');
   });
 
+  it("accepts a hidden field and rejects a non-boolean hidden", () => {
+    expect(
+      validateManifest(
+        withSettings({
+          host: {
+            fields: [{ key: "a", type: "number", labelKey: "k", hidden: true }],
+          },
+        }),
+      ),
+    ).toEqual([]);
+    const errors = validateManifest(
+      withSettings({
+        admin: [{ key: "a", type: "string", labelKey: "k", hidden: "yes" }],
+      }),
+    );
+    expect(errors.join(" ")).toContain("hidden must be a boolean");
+  });
+
   it("rejects an unknown scope", () => {
     const errors = validateManifest(
       withSettings({ global: [{ key: "a", type: "string", labelKey: "k" }] }),

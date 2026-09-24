@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -274,6 +275,13 @@ export const pluginHostBridge: PluginHostBridge = {
   },
 
   useSlotContributions: (slotId, context) => useActionSlot(slotId, context),
+
+  hostProtocols: (record) => [
+    ...(record.enableSsh !== false ? ["ssh"] : []),
+    ...enabledHostProtocols(
+      record as { pluginSettings?: Record<string, Record<string, unknown>> },
+    ).map((protocol) => protocol.id),
+  ],
 
   usePluginComponent: (id) => usePluginComponent(id),
 };

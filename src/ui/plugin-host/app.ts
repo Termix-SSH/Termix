@@ -18,6 +18,7 @@ import {
   registerHostContextMenuItem,
 } from "@/sidebar/host-contributions";
 import { registerPaletteEntry } from "@/shell/palette-registry";
+import { registerHostProtocol } from "@/sidebar/host-protocols";
 import {
   registerDashboardCard,
   type DashboardCardRenderProps,
@@ -30,7 +31,7 @@ import {
   registerAction,
   registerSlotContribution,
 } from "@/shell/action-registry";
-import { pluginWsUrl } from "@/lib/plugin-transport";
+import { pluginApiFor, pluginWsUrl } from "@/lib/plugin-transport";
 import { registerPluginComponent } from "./component-registry";
 import type { WidgetTypeDefinition } from "@/types/homepage-types";
 import type { LucideIcon } from "lucide-react";
@@ -208,6 +209,19 @@ export function createPluginApp(
       );
     },
 
+    registerHostProtocol(protocol) {
+      return track(
+        registerHostProtocol({
+          ...protocol,
+          pluginId,
+          titleKey: key(protocol.titleKey),
+          descriptionKey: protocol.descriptionKey
+            ? key(protocol.descriptionKey)
+            : undefined,
+        }),
+      );
+    },
+
     registerHostBadge(badge) {
       return track(
         registerHostBadge({
@@ -367,6 +381,12 @@ export function createPluginApp(
       }
     },
     api: pluginHostBridge.getApi(pluginId),
+    apiFor: (origin) =>
+      pluginApiFor(
+        pluginId,
+        origin as never,
+        pluginHostBridge.getApi(pluginId) as never,
+      ) as unknown as TermixApp["api"],
     wsUrl: (path, options) =>
       pluginWsUrl(pluginId, path, options as never) as ReturnType<
         TermixApp["wsUrl"]

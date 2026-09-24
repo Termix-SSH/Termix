@@ -279,6 +279,12 @@ it, `group` is a section heading, and `permission` is who may write it: admin
 fields fall back to `admin.plugins.manage`, and a short name resolves against
 the plugin's own permissions exactly as `ctx.rbac` does.
 
+`hidden: true` (**B14**) keeps a field out of the generic form: it is stored,
+validated and encrypted like any other, but the plugin edits it in its own
+UI. Remote desktop's host options are hidden fields, edited in its RDP, VNC
+and Telnet host editor tabs, so they do not appear a second time in the
+Plugins tab.
+
 `type: "custom"` names a component the frontend registered, for the few things
 a schema cannot express (a device browser, a provider list). It is deliberately
 narrow: a plugin supplies data everywhere else, so it cannot ship its own form
@@ -339,8 +345,10 @@ A plugin frontend is a built ESM bundle, `dist/frontend.js`, exporting
 no imports from `plugins/`; everything a plugin shows goes through the `app`
 object. `scripts/check-shell-plugin-ids.cjs` (run by lint) fails on a quoted
 plugin id in `src/ui` outside tests, apart from the entries in
-`scripts/shell-plugin-id-allowlist.json`, each with a reason (host protocol
-data like `rdp`, which Phase B moves).
+`scripts/shell-plugin-id-allowlist.json`, each with a reason (host data like
+the `docker` runtime name, which Phase B moves). **B14** removed the `rdp`,
+`vnc` and `telnet` entries: the shell learns those protocols from
+`app.registerHostProtocol`.
 
 #### The loader
 
@@ -427,6 +435,7 @@ boundary and Suspense.
 | `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs                                                 |
 | `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`                                                       |
 | `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                                                                |
+| `registerHostProtocol`                              | A connection protocol next to SSH (**B14**): General tab switch, Hosts panel filter and grouping, Quick Connect, the host's primary type and port   |
 | `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                                                            |
 | `registerPaletteEntry`                              | A global or per-host command palette entry                                                                                                          |
 | `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                                                                |
@@ -437,6 +446,7 @@ boundary and Suspense.
 | `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                                                                      |
 | `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method and a second factor challenge (plus an optional `enrollment` section)                                                  |
 | `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                         |
+| `apiFor(origin)`                                    | The same client for a resolved connection origin: `"remote"` reaches the desktop app's connected server (**B14**)                                   |
 | `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                 |
 | `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                    |
 | `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                         |
@@ -504,6 +514,19 @@ their host info), `terminal.sendToActive(text, { run })` and
 its terminal tab wrapper populates from the core terminal ref it already
 holds. The snippets plugin's run/paste flow is the first caller.
 
+**Host protocols (B14).** `app.registerHostProtocol({ id, settingKey,
+portKey, defaultPort, titleKey, descriptionKey, icon, quickConnect })` adds a
+protocol next to SSH. Its switch and port are the plugin's own host settings,
+so core reads them from `host.pluginSettings[<plugin>]` and never knows the
+protocol by name: the General tab draws the switch and saves it into the
+plugin's settings, the Hosts panel filters and groups by it, HostItem counts
+it, Quick Connect offers it (with a domain field when asked), and a host with
+SSH off takes the first protocol switched on as its `connectionType` and its
+port. `hostProtocols(host)` from `@termix/plugin-sdk/frontend` lists what a
+host has on (`"ssh"` included), for a plugin such as session sharing that
+offers every protocol without knowing who owns it. Remote desktop registers
+`rdp`, `vnc` and `telnet`.
+
 #### View ownership
 
 Who owns a tab, panel or card comes from manifests, so it is known even for a
@@ -547,7 +570,11 @@ connection helpers (`isElectron`, `resolveConnectionOrigin`, `pluginWsUrl`,
 `hydrateLocalSharedHostAuth`, `useConnectionDefaults`); and a few core APIs
 (`logActivity`, `getHostPassword`, `patchOpenTab`, `getUserPreferences`,
 `parseCustomKeybindings`, `setHostAutoTmux`, `getCookie`). The APIs are a
-stopgap in the right place: D1 turns them into typed bridge members. Publishing its
+stopgap in the right place: D1 turns them into typed bridge members.
+**B14** added `buildOriginWsUrl`, `getBasePath`, `resolveRemoteHostId` and the
+`ConnectionStage` type, for remote desktop's display socket and its remote
+host lookup. `useConnectionDefaults` now carries terminal defaults only; the
+RDP half became remote desktop's user settings. Publishing its
 `.d.ts` for plugins outside this repo is a follow-up for the repo split.
 
 #### Strings
@@ -596,10 +623,12 @@ every enabled plugin that declares `contributes.settings.host`, it looks up
 `"<id>.hostImportNormalizer"` and, if the plugin registered one, calls it with
 the raw imported row and writes back whatever it returns (or nothing, for
 `null`). This is not part of the SDK's typed `ctx` surface - it is a plain
-`ctx.registry` convention, the same mechanism `remote-desktop.sessions`
-already uses, just with a name core's own code knows
-to look for. web-endpoint (`src/backend/host-import.ts`) is the first plugin
-to register one.
+`ctx.registry` convention, just with a name core's own code knows to look
+for. web-endpoint (`src/backend/host-import.ts`) is the first plugin to
+register one; remote desktop's (**B14**) also reads a Termix export's
+`pluginSettings` and the flat fields hosts had before 2.9.0. Host exports
+carry every plugin's host settings (secrets redacted) under `pluginSettings`,
+which is what makes the round trip work without core naming a plugin.
 
 **B9**'s terminal provides `sessions.live` (live SSH sessions: look up, end,
 remove a share's participants, hand a room share's control over, subscribe to
@@ -623,8 +652,11 @@ per-chunk itself), `persist(summary)` and `discard()` for a session that
 recorded nothing. `createFinished(input)` is the second half of the
 contract, for a caller that already wrote its own recording to disk and only
 needs the database row: remote-desktop's guacd recordings use it instead of
-importing the old repository directly, and without the plugin enabled a
-guacd recording still lands on disk but gets no row. Recording files live
+importing the old repository directly. **B14** added `enabledFor(hostId)`
+(version 1.1.0), because guacd has to be told to record before the session
+exists: remote desktop records an RDP or Telnet session only when the plugin
+is running and the host's switch is on, and writes the row as the session's
+user. Recording files live
 under `ctx.files.dataDir()/session_logs/<user>/<session>.cast`. Retention
 (`retentionDays`, an admin setting) runs a sweep at boot and every 24 hours.
 
@@ -647,8 +679,10 @@ any other, `ctx.services.get(service, { provider })` reaches one, and
 `ctx.services.providers(service)` lists the running ones. A requirement is
 satisfied by any compatible provider. `sessions.live` is the first: keyed by
 session type, ssh-terminal provides `ssh` and remote desktop provides `rdp`,
-`vnc` and `telnet` (B14), with `createViewerToken(sessionId, readOnly)` for
-a viewer. A consumer with no actor, such as a public guest route, calls it
+`vnc` and `telnet` (**B14** delivered them), with
+`createViewerToken(sessionId, readOnly)` for a viewer. A remote desktop
+session id is guacd's own connection id, and `ownerEndSession` closes it and
+every viewer joined to it. A consumer with no actor, such as a public guest route, calls it
 through `ctx.asUser(<share owner>)`.
 
 **Session sharing (B12)** is the session-sharing plugin. It provides
@@ -954,6 +988,19 @@ dropping a column before its data has moved loses it:
 A column that is still read anywhere in core is not ready to be dropped. Ship
 the copy and the switch first, and drop it in a later step if that is safer.
 
+**Order at boot (B14).** On Postgres and MySQL, core's drizzle migrations run
+while the database opens, and the copies into `plugin_settings` run later,
+after the plugins table exists. A real `DROP COLUMN` in step 4 therefore
+deletes the data before it is copied. So step 4 removes the column from
+`schema.ts`, the pg/mysql variants and the `db/index.ts` bootstrap, and the
+generated drizzle migration's `DROP COLUMN` statements are replaced with a
+comment and `SELECT 1;`, exactly as for an adopted table. The column stays in
+the database, unused, until 3.0.0 removes it. A copy reads it with raw SQL
+through `utils/crypto-migration/raw-rows.ts`, whose `selectRows` and
+`runStatement` work on all three engines: `getDb().all()` exists only on
+SQLite. Remote desktop's host options and `user_preferences.rdp_defaults` are
+the first columns handled this way.
+
 ---
 
 ## Manifest v2 reference
@@ -1230,6 +1277,8 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.notify.*`                                   | `notify:send`                        | A6                      |
 | `ctx.auth.*`                                     | `auth:provide`                       | **A8**                  |
 | `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
+| `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)       | **B14**                 |
+| `ctx.credentials.resolveHostProtocol`            | `credentials:read`                   | **B14**                 |
 | `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
 | `ctx.fetch`                                      | `network:outbound`                   | B                       |
 
@@ -1363,6 +1412,29 @@ share). Rejects outside the desktop app (`ELECTRON_EMBEDDED` unset, or no
 `process.send`). Each window gets its own non-persistent session, so it never
 shares cookies or storage with the main window or with another isolated
 window.
+
+**B14** added `ctx.desktop.launchNativeRdp({ host, port, username, domain })`
+over the same bridge (a second entry in `BACKEND_REQUEST_HANDLERS`,
+`launch-native-rdp`), which opens mstsc on Windows with a generated `.rdp`
+file that never carries the password, and `ctx.desktop.available()`, which
+says whether the server runs embedded in the desktop app. The renderer's own
+`openNativeRdp` IPC call is gone; the desktop app's frontend always asks its
+embedded backend, which is the one that can reach Electron.
+
+**B14** also added `ctx.credentials.resolveHostProtocol(hostId, protocol)`,
+the first member behind `credentials:read`. It returns the host's address,
+jump hosts and the plaintext RDP, VNC or Telnet login the acting user may use,
+for a plugin that has to hand them to another program (guacd). The logins
+stay in core next to the host: an owner gets the stored login or the stored
+credential it points at; a shared recipient gets only core's sharing
+resolution (the owner's shared snapshot or their own override), never the
+owner's raw secret; no connect access, or no host, is `null`. Every call is
+audited as `plugin_credentials_read`, allowed or refused.
+
+`ctx.hosts.create` (**B14**) hands the created row to every plugin's
+`hostImportNormalizer`, the same as a bulk import row, so a plugin creating a
+host can set another plugin's host settings (proxmox marks an imported
+Windows guest as RDP) without core naming either.
 
 ### The actor
 
@@ -1888,8 +1960,8 @@ Then, with the app running:
 
 ## Legacy core imports: the debt D1 removes
 
-The bundled plugins predate the SDK, apart from workspaces (A9) and snippets
-(B2), which import nothing from core. The others still reach core by relative
+The bundled plugins predate the SDK, apart from workspaces (A9), snippets
+(B2) and remote-desktop (B14), which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
 and rewrites to the compiled output path (`../../../backend/backend/...`, or
@@ -1916,8 +1988,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 130 files | D1         |
-| A plugin importing core by relative path         | Warning   | 66 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 120 files | D1         |
+| A plugin importing core by relative path         | Warning   | 63 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
 A warning does not fail a build, so the counts are held by
@@ -1957,6 +2029,13 @@ Known specifics:
   command history panel into ssh-terminal, which imports nothing from core.
   The file manager's terminal window renders the `terminal.view` component
   instead of importing the core terminal.
-- Host data columns (`enableDocker`, `enableRdp`, `guacamoleConfig` and so on)
-  stay in core types until Phase B moves them. Only UI branches on them left
-  the shell.
+- Host data columns (`enableDocker` and so on) stay in core types until
+  Phase B moves them. Only UI branches on them left the shell. **B14** moved
+  remote desktop's (`enableRdp`, `enableVnc`, `enableTelnet`, the three ports,
+  `rdpSecurity`, `rdpIgnoreCert`, `guacamoleConfig`) into its host settings;
+  the protocol logins stay core host fields.
+- **B14** moved remote desktop onto the SDK: it imports nothing from core,
+  owns no module state, and its guacamole-lite server is built in `activate`
+  with its own signal handlers removed (guacamole-lite installs SIGTERM and
+  SIGINT handlers in its constructor). guacd is always an external service,
+  so there is no `ctx.process`; its address is an admin setting.

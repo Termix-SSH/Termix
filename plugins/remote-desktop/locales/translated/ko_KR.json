@@ -204,11 +204,75 @@
       "fontName": "글꼴 이름",
       "fontSize": "글꼴 크기",
       "colorScheme": "색 구성표",
-      "backspaceKey": "백스페이스 키"
-    }
+      "backspaceKey": "백스페이스 키",
+      "colorDepth": "색 농도",
+      "resizeMethod": "크기 조정 방법"
+    },
+    "remoteDesktop": "원격 데스크톱",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "텔넷",
+    "virtualNetwork": "가상 네트워크",
+    "unencryptedShell": "암호화되지 않은 셸"
   },
   "onboarding": {
     "feature_desktop": "원격 데스크톱",
     "feature_desktop_desc": "SSH와 마찬가지로 RDP, VNC 및 Telnet 세션을 탭에서 열 수 있습니다."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "색 농도"
+      },
+      "resizeMethod": {
+        "label": "크기 조정 방법"
+      },
+      "resizeDisplayUpdate": "디스플레이 업데이트",
+      "resizeReconnect": "다시 연결",
+      "inherit": "상속하다",
+      "on": "~에",
+      "off": "끄다",
+      "forceLossless": {
+        "label": "무손실 강제",
+        "description": "무손실 이미지 인코딩 강제 (더 높은 품질, 더 많은 대역폭)"
+      },
+      "enableWallpaper": {
+        "label": "배경 화면",
+        "description": "바탕 화면 배경 표시 (비활성화 시 성능 향상)"
+      },
+      "enableFontSmoothing": {
+        "label": "글꼴 다듬기",
+        "description": "ClearType 글꼴 렌더링 사용"
+      },
+      "enableDesktopComposition": {
+        "label": "데스크톱 구성",
+        "description": "Aero 글래스 효과 활성화"
+      },
+      "disableAudio": {
+        "label": "오디오 비활성화",
+        "description": "원격 세션의 모든 오디오 음소거"
+      },
+      "enablePrinting": {
+        "label": "인쇄 활성화",
+        "description": "로컬 프린터를 원격 세션으로 리디렉션"
+      },
+      "enableDrive": {
+        "label": "드라이브 리디렉션 활성화",
+        "description": "로컬 폴더를 원격 세션에서 드라이브로 매핑"
+      },
+      "disableCopy": {
+        "label": "복사 비활성화",
+        "description": "원격 세션에서 텍스트 복사 방지"
+      },
+      "disablePaste": {
+        "label": "붙여넣기 비활성화",
+        "description": "원격 세션으로 텍스트 붙여넣기 방지"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }

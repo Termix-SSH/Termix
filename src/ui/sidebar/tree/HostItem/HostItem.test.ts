@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { registerHostProtocol } from "@/sidebar/host-protocols";
 import type { Host } from "@/types/ui-types";
 import {
   buildStatusTooltip,
@@ -69,25 +70,27 @@ describe("buildStatusTooltip", () => {
   });
 
   it("includes protocol names in the tooltip when protocols are enabled", () => {
+    const dispose = registerHostProtocol({
+      id: "demo-desktop",
+      pluginId: "demo",
+      settingKey: "enableDemo",
+      defaultPort: 3389,
+      titleKey: "Demo Desktop",
+      icon: () => null,
+    });
     const host = makeHost({
       enableSsh: true,
-      enableRdp: true,
-      enableVnc: false,
-      enableTelnet: false,
+      pluginSettings: { demo: { enableDemo: true } },
     });
     const tooltip = buildStatusTooltip(host, "online", t);
+    dispose();
     expect(tooltip).toContain("SSH");
-    expect(tooltip).toContain("RDP");
+    expect(tooltip).toContain("Demo Desktop");
     expect(tooltip).toContain("Available");
   });
 
   it("returns just the status label when no protocols are enabled", () => {
-    const host = makeHost({
-      enableSsh: false,
-      enableRdp: false,
-      enableVnc: false,
-      enableTelnet: false,
-    });
+    const host = makeHost({ enableSsh: false });
     const tooltip = buildStatusTooltip(host, "online", t);
     expect(tooltip).toBe("Available");
   });

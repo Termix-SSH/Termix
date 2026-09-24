@@ -204,11 +204,75 @@
       "fontName": "Fontin nimi",
       "fontSize": "Fonttikoko",
       "colorScheme": "Värimaailma",
-      "backspaceKey": "Askelpalautin-näppäin"
-    }
+      "backspaceKey": "Askelpalautin-näppäin",
+      "colorDepth": "Värisyvyys",
+      "resizeMethod": "Koon muuttamismenetelmä"
+    },
+    "remoteDesktop": "Etätyöpöytä",
+    "tabRdp": "Maaseudun kehittämisohjelma",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuaaliverkko",
+    "unencryptedShell": "Salaamaton kuori"
   },
   "onboarding": {
     "feature_desktop": "Etätyöpöytä",
     "feature_desktop_desc": "Avaa RDP-, VNC- ja Telnet-istunnot välilehdellä, samalla tavalla kuin SSH:ssa."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Värisyvyys"
+      },
+      "resizeMethod": {
+        "label": "Koon muuttamismenetelmä"
+      },
+      "resizeDisplayUpdate": "Näyttöpäivitys",
+      "resizeReconnect": "Yhdistä uudelleen",
+      "inherit": "Periä",
+      "on": "Päällä",
+      "off": "Pois",
+      "forceLossless": {
+        "label": "Pakota häviötön",
+        "description": "Pakota häviötön kuvan koodaus (korkeampi laatu, enemmän kaistanleveyttä)"
+      },
+      "enableWallpaper": {
+        "label": "Taustakuva",
+        "description": "Näytä työpöydän taustakuva (poistaminen käytöstä parantaa suorituskykyä)"
+      },
+      "enableFontSmoothing": {
+        "label": "Fontin pehmennys",
+        "description": "Ota ClearType-fonttien renderöinti käyttöön"
+      },
+      "enableDesktopComposition": {
+        "label": "Työpöydän sommittelu",
+        "description": "Ota Aero Glass -tehosteet käyttöön"
+      },
+      "disableAudio": {
+        "label": "Poista ääni käytöstä",
+        "description": "Mykistä kaikki etäistunnon äänet"
+      },
+      "enablePrinting": {
+        "label": "Ota tulostus käyttöön",
+        "description": "Ohjaa paikalliset tulostimet etäistuntoon"
+      },
+      "enableDrive": {
+        "label": "Ota aseman uudelleenohjaus käyttöön",
+        "description": "Yhdistä paikallinen kansio asemaksi etäistunnossa"
+      },
+      "disableCopy": {
+        "label": "Poista kopiointi käytöstä",
+        "description": "Estä tekstin kopioiminen etäistunnosta"
+      },
+      "disablePaste": {
+        "label": "Poista liittäminen käytöstä",
+        "description": "Estä tekstin liittäminen etäistuntoon"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd-URL-osoite"
+      }
+    }
   }
 }

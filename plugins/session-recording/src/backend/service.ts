@@ -5,6 +5,7 @@ import type { SessionRecordingRepository } from "./repository.js";
 
 /**
  * recordings.writer v1, the service ssh-terminal calls to record sessions.
+ * 1.1 added enabledFor, for a caller that records outside this plugin.
  *
  * One call per already-batched chunk (ssh-terminal coalesces on a 300ms
  * trailing edge, issue #1049): mkdir and writeFile on the first append,
@@ -22,6 +23,11 @@ export interface RecordingSink {
 }
 
 export interface RecordingsWriterV1 {
+  /**
+   * Whether the host's recording switch is on, for a caller that has to set
+   * up recording before a session exists (remote desktop tells guacd).
+   */
+  enabledFor: (hostId: number) => Promise<boolean>;
   /** Null when recording is off for this user or host. */
   open: (meta: {
     sessionId: string;
@@ -53,13 +59,15 @@ export function createRecordingsWriter(
   ctx: PluginContext,
   repository: SessionRecordingRepository,
 ): RecordingsWriterV1 {
+  const enabledFor = async (hostId: number) =>
+    (await ctx.settings.getHost<boolean>(hostId, "enableSessionRecording")) !==
+    false;
+
   return {
+    enabledFor,
+
     async open(meta) {
-      const enabled = await ctx.settings.getHost<boolean>(
-        meta.hostId,
-        "enableSessionRecording",
-      );
-      if (enabled === false) return null;
+      if (!(await enabledFor(meta.hostId))) return null;
 
       const dataDir = await ctx.files.dataDir();
       const dir = path.join(dataDir, "session_logs", meta.userId);

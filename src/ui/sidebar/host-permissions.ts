@@ -1,9 +1,9 @@
 import type { Host, SharePermissionLevel } from "@/types/ui-types";
 import {
-  AUTH_PROTOCOL_METADATA,
   isSupportedAuthOverrideProtocol,
   type AuthOverrideProtocol,
 } from "@/types/auth-protocols";
+import { listHostProtocols, protocolEnabled } from "./host-protocols";
 
 const LEVEL_RANK: Record<SharePermissionLevel, number> = {
   connect: 1,
@@ -36,10 +36,11 @@ export function canOverrideHostAuth(
   host: Host,
   protocol: AuthOverrideProtocol,
 ): boolean {
-  const enableField = AUTH_PROTOCOL_METADATA[protocol].enableField;
-  return (
-    !!host.isShared &&
-    isSupportedAuthOverrideProtocol(protocol) &&
-    !!host[enableField]
-  );
+  if (!host.isShared || !isSupportedAuthOverrideProtocol(protocol)) {
+    return false;
+  }
+  if (protocol === "ssh") return !!host.enableSsh;
+  // Other protocols are switched on in their plugin's host settings.
+  const plugin = listHostProtocols().find((entry) => entry.id === protocol);
+  return !!plugin && protocolEnabled(host.pluginSettings, plugin);
 }

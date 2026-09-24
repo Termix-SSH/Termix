@@ -73,7 +73,8 @@
       "fitToScreen": "Fit to screen",
       "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
       "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
-    }
+    },
+    "disabled": "Remote Desktop is turned off. An admin can turn it on in Settings."
   },
   "hosts": {
     "nativeRdpOpened": "Opened in Windows Remote Desktop",
@@ -204,11 +205,134 @@
       "fontName": "Font Name",
       "fontSize": "Font Size",
       "colorScheme": "Color Scheme",
-      "backspaceKey": "Backspace Key"
-    }
+      "backspaceKey": "Backspace Key",
+      "colorDepth": "Color Depth",
+      "resizeMethod": "Resize Method"
+    },
+    "remoteDesktop": "Remote Desktop",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtual Network",
+    "unencryptedShell": "Unencrypted shell",
+    "remoteDesktopNotes": "Notes",
+    "userDefaultsNote": "Settings left on their default use your Remote Desktop defaults from Settings.",
+    "connectionOriginNote": "On the desktop app, RDP, VNC and Telnet use the remote server unless the host is set to This device, which needs a guacd this machine can reach. Set one in the Remote Desktop settings, or per host under guacd Proxy."
   },
   "onboarding": {
     "feature_desktop": "Remote desktop",
     "feature_desktop_desc": "Open RDP, VNC and Telnet sessions in a tab, same as SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Color Depth",
+        "description": "Used for RDP hosts that leave it on their default."
+      },
+      "resizeMethod": {
+        "label": "Resize Method",
+        "description": "How the remote screen follows the window size."
+      },
+      "resizeDisplayUpdate": "Display Update",
+      "resizeReconnect": "Reconnect",
+      "inherit": "Inherit",
+      "on": "On",
+      "off": "Off",
+      "forceLossless": {
+        "label": "Force Lossless",
+        "description": "Force lossless image encoding (higher quality, more bandwidth)"
+      },
+      "enableWallpaper": {
+        "label": "Wallpaper",
+        "description": "Show desktop wallpaper (disabling improves performance)"
+      },
+      "enableFontSmoothing": {
+        "label": "Font Smoothing",
+        "description": "Enable ClearType font rendering"
+      },
+      "enableDesktopComposition": {
+        "label": "Desktop Composition",
+        "description": "Enable Aero glass effects"
+      },
+      "disableAudio": {
+        "label": "Disable Audio",
+        "description": "Mute all audio from the remote session"
+      },
+      "enablePrinting": {
+        "label": "Enable Printing",
+        "description": "Redirect local printers to the remote session"
+      },
+      "enableDrive": {
+        "label": "Enable Drive Redirection",
+        "description": "Map a local folder as a drive in the remote session"
+      },
+      "disableCopy": {
+        "label": "Disable Copy",
+        "description": "Prevent copying text from the remote session"
+      },
+      "disablePaste": {
+        "label": "Disable Paste",
+        "description": "Prevent pasting text into the remote session"
+      },
+      "group": "Remote Desktop defaults",
+      "colorDepth16": "16-bit",
+      "colorDepth24": "24-bit",
+      "colorDepth32": "32-bit"
+    },
+    "admin": {
+      "enabled": {
+        "label": "Enable Remote Desktop",
+        "description": "Allow RDP, VNC and Telnet connections through guacd."
+      },
+      "guacdUrl": {
+        "label": "guacd URL",
+        "description": "Where guacd listens, as host:port. The GUACD_URL, GUACD_HOST and GUACD_PORT environment variables override this.",
+        "placeholder": "guacd:4822"
+      }
+    },
+    "host": {
+      "enableRdp": {
+        "label": "RDP"
+      },
+      "enableVnc": {
+        "label": "VNC"
+      },
+      "enableTelnet": {
+        "label": "Telnet"
+      },
+      "rdpPort": {
+        "label": "RDP port"
+      },
+      "vncPort": {
+        "label": "VNC port"
+      },
+      "telnetPort": {
+        "label": "Telnet port"
+      },
+      "rdpSecurity": {
+        "label": "RDP security mode"
+      },
+      "rdpIgnoreCert": {
+        "label": "Ignore certificate errors"
+      },
+      "guacamoleConfig": {
+        "label": "guacd settings"
+      },
+      "enableToolbar": {
+        "label": "Remote desktop toolbar",
+        "description": "Show the toolbar in RDP, VNC and Telnet sessions."
+      }
+    }
+  },
+  "palette": {
+    "connectRdp": "Connect with RDP",
+    "connectVnc": "Connect with VNC",
+    "connectTelnet": "Connect with Telnet"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Share remote desktop sessions",
+      "description": "Let session sharing and collab rooms show this user's RDP, VNC and Telnet sessions to others."
+    }
   }
 }

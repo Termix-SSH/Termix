@@ -1,4 +1,3 @@
-import type { GuacamoleConfig } from "./guacamole-config.js";
 import type { TerminalConfig } from "./index.js";
 import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
@@ -152,14 +151,8 @@ export type Host = {
   quickActions: { name: string; snippetId: string }[];
 
   enableSsh: boolean;
-  enableRdp: boolean;
-  enableVnc: boolean;
-  enableTelnet: boolean;
 
   sshPort: number;
-  rdpPort: number;
-  vncPort: number;
-  telnetPort: number;
 
   rdpAuthType?: "direct" | "credential" | "none";
   rdpCredentialId?: string;
@@ -167,8 +160,6 @@ export type Host = {
   rdpPassword?: string;
   hasRdpPassword?: boolean;
   domain?: string;
-  security?: string;
-  ignoreCert?: boolean;
 
   vncAuthType?: "direct" | "credential";
   vncCredentialId?: string;
@@ -182,7 +173,6 @@ export type Host = {
   telnetPassword?: string;
   hasTelnetPassword?: boolean;
 
-  guacamoleConfig?: GuacamoleConfig;
   /** Host-scope plugin settings, keyed by plugin id. Secrets are redacted. */
   pluginSettings?: Record<string, Record<string, unknown>>;
   forceKeyboardInteractive?: boolean;

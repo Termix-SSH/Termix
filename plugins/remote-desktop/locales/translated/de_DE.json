@@ -204,11 +204,75 @@
       "fontName": "Schriftname",
       "fontSize": "Schriftgröße",
       "colorScheme": "Farbschema",
-      "backspaceKey": "Backspace-Taste"
-    }
+      "backspaceKey": "Backspace-Taste",
+      "colorDepth": "Farbtiefe",
+      "resizeMethod": "Skalierungsmethode"
+    },
+    "remoteDesktop": "Remotedesktop",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuelles Netzwerk",
+    "unencryptedShell": "Unverschlüsselte Shell"
   },
   "onboarding": {
     "feature_desktop": "Remote-Desktop",
     "feature_desktop_desc": "Öffnen Sie RDP-, VNC- und Telnet-Sitzungen in einem Tab, genau wie bei SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Farbtiefe"
+      },
+      "resizeMethod": {
+        "label": "Skalierungsmethode"
+      },
+      "resizeDisplayUpdate": "Anzeigeaktualisierung",
+      "resizeReconnect": "Wiederverbinden",
+      "inherit": "Erben",
+      "on": "An",
+      "off": "Aus",
+      "forceLossless": {
+        "label": "Verlustfreie Übertragung erzwingen",
+        "description": "Verlustfreie Bildcodierung erzwingen (höhere Qualität, mehr Bandbreite)"
+      },
+      "enableWallpaper": {
+        "label": "Hintergrundbild",
+        "description": "Desktop-Hintergrundbild anzeigen (Deaktivierung verbessert die Leistung)"
+      },
+      "enableFontSmoothing": {
+        "label": "Schriftglättung",
+        "description": "ClearType-Schriftdarstellung aktivieren"
+      },
+      "enableDesktopComposition": {
+        "label": "Desktopkomposition",
+        "description": "Aero-Glaseffekte aktivieren"
+      },
+      "disableAudio": {
+        "label": "Audio deaktivieren",
+        "description": "Gesamten Ton der Remote-Sitzung stummschalten"
+      },
+      "enablePrinting": {
+        "label": "Drucken aktivieren",
+        "description": "Lokale Drucker an die Remote-Sitzung umleiten"
+      },
+      "enableDrive": {
+        "label": "Laufwerksumleitung aktivieren",
+        "description": "Lokalen Ordner als Laufwerk in der Remote-Sitzung einbinden"
+      },
+      "disableCopy": {
+        "label": "Kopieren deaktivieren",
+        "description": "Kopieren von Text aus der entfernten Sitzung verhindern"
+      },
+      "disablePaste": {
+        "label": "Einfügen deaktivieren",
+        "description": "Einfügen von Text in die entfernte Sitzung verhindern"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd-URL"
+      }
+    }
   }
 }

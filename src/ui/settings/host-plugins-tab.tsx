@@ -20,6 +20,7 @@ import {
   HostPluginSections,
   type HostPluginSettings,
 } from "./HostPluginSections";
+import { hasVisibleFields } from "./settings-fields-util";
 
 export const HOST_PLUGINS_TAB_ID = "plugins";
 
@@ -38,7 +39,7 @@ export function syncHostPluginsTab(plugins: PluginSummary[]): boolean {
   const contributors = plugins.filter((plugin) => {
     if (!plugin.enabled) return false;
     const host = plugin.contributes?.settings?.host;
-    return !!host && (host.fields.length > 0 || !!host.enableKey);
+    return !!host && (hasVisibleFields(host.fields) || !!host.enableKey);
   });
 
   if (contributors.length === 0) {

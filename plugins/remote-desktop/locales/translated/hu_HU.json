@@ -204,11 +204,75 @@
       "fontName": "Betűtípus neve",
       "fontSize": "Betűméret",
       "colorScheme": "Színséma",
-      "backspaceKey": "Visszatörlés billentyű"
-    }
+      "backspaceKey": "Visszatörlés billentyű",
+      "colorDepth": "Színmélység",
+      "resizeMethod": "Átméretezési módszer"
+    },
+    "remoteDesktop": "Távoli asztal",
+    "tabRdp": "Vidékfejlesztési Program",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuális hálózat",
+    "unencryptedShell": "Titkosítatlan shell"
   },
   "onboarding": {
     "feature_desktop": "Távoli asztal",
     "feature_desktop_desc": "Nyisson meg RDP, VNC és Telnet munkameneteket egy lapon, ugyanúgy, mint az SSH-n."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Színmélység"
+      },
+      "resizeMethod": {
+        "label": "Átméretezési módszer"
+      },
+      "resizeDisplayUpdate": "Kijelzőfrissítés",
+      "resizeReconnect": "Újracsatlakozás",
+      "inherit": "Örököl",
+      "on": "On",
+      "off": "Le",
+      "forceLossless": {
+        "label": "Veszteségmentes erő",
+        "description": "Veszteségmentes képkódolás kényszerítése (jobb minőség, nagyobb sávszélesség)"
+      },
+      "enableWallpaper": {
+        "label": "Tapéta",
+        "description": "Asztali háttérkép megjelenítése (a letiltás javítja a teljesítményt)"
+      },
+      "enableFontSmoothing": {
+        "label": "Betűsimítás",
+        "description": "ClearType betűtípus-megjelenítés engedélyezése"
+      },
+      "enableDesktopComposition": {
+        "label": "Asztali kompozíció",
+        "description": "Aero Glass effektek engedélyezése"
+      },
+      "disableAudio": {
+        "label": "Hang letiltása",
+        "description": "Némítsa el az összes hangot a távoli munkamenetből"
+      },
+      "enablePrinting": {
+        "label": "Nyomtatás engedélyezése",
+        "description": "Helyi nyomtatók átirányítása a távoli munkamenetre"
+      },
+      "enableDrive": {
+        "label": "Meghajtó átirányításának engedélyezése",
+        "description": "Helyi mappa meghajtóként való leképezése a távoli munkamenetben"
+      },
+      "disableCopy": {
+        "label": "Másolás letiltása",
+        "description": "Szöveg másolásának megakadályozása a távoli munkamenetből"
+      },
+      "disablePaste": {
+        "label": "Beillesztés letiltása",
+        "description": "Szöveg beillesztésének megakadályozása a távoli munkamenetbe"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }

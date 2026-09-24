@@ -23,12 +23,7 @@ export function applyHostKeyTypeUpdate(
   }
 }
 
-const PROTOCOL_ENABLE_FIELDS = [
-  "enableSsh",
-  "enableRdp",
-  "enableVnc",
-  "enableTelnet",
-] as const;
+const PROTOCOL_ENABLE_FIELDS = ["enableSsh"] as const;
 
 export function normalizeProtocolEnableFields(
   values: Record<string, unknown>,
@@ -214,13 +209,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   portKnockSequence?: unknown;
   overrideCredentialUsername?: unknown;
   domain?: unknown;
-  security?: unknown;
-  ignoreCert?: unknown;
-  guacamoleConfig?: unknown;
   enableSsh: boolean;
-  enableRdp: boolean;
-  enableVnc: boolean;
-  enableTelnet: boolean;
 };
 
 export function normalizeImportedHost(
@@ -275,18 +264,6 @@ export function normalizeImportedHost(
       hostData.enableSsh === undefined
         ? connectionType === "ssh"
         : asBoolean(hostData.enableSsh),
-    enableRdp:
-      hostData.enableRdp === undefined
-        ? connectionType === "rdp"
-        : asBoolean(hostData.enableRdp),
-    enableVnc:
-      hostData.enableVnc === undefined
-        ? connectionType === "vnc"
-        : asBoolean(hostData.enableVnc),
-    enableTelnet:
-      hostData.enableTelnet === undefined
-        ? connectionType === "telnet"
-        : asBoolean(hostData.enableTelnet),
   };
 }
 
@@ -372,14 +349,8 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "showDockerInSidebar",
   "showServerStatsInSidebar",
   "enableSsh",
-  "enableRdp",
-  "enableVnc",
-  "enableTelnet",
   "sshPort",
-  "rdpPort",
   "rdpAuthType",
-  "vncPort",
-  "telnetPort",
   "defaultPath",
   "scpLegacy",
   "tunnelConnections",
@@ -472,31 +443,10 @@ export function transformHostResponse(
     showTunnelInSidebar: !!host.showTunnelInSidebar,
     showDockerInSidebar: !!host.showDockerInSidebar,
     showServerStatsInSidebar: !!host.showServerStatsInSidebar,
-    // Old hosts only had connection_type set; the per-protocol enable flags didn't exist yet.
-    // The schema defaults (enableSsh=true, others=false) wrongly mark every old host as SSH.
-    // Detect this migration case: if no non-SSH protocol is explicitly enabled AND
-    // connectionType is set to a non-SSH value, fall back to inferring from connectionType.
-    ...(() => {
-      const ct = host.connectionType;
-      const rdp = !!host.enableRdp;
-      const vnc = !!host.enableVnc;
-      const tel = !!host.enableTelnet;
-      const isMigratedNonSsh = !rdp && !vnc && !tel && ct && ct !== "ssh";
-      return {
-        enableSsh: isMigratedNonSsh ? false : !!host.enableSsh,
-        enableRdp: isMigratedNonSsh ? ct === "rdp" : rdp,
-        enableVnc: isMigratedNonSsh ? ct === "vnc" : vnc,
-        enableTelnet: isMigratedNonSsh ? ct === "telnet" : tel,
-      };
-    })(),
+    enableSsh: !!host.enableSsh,
     sshPort: host.sshPort ?? host.port ?? 22,
-    rdpPort: host.rdpPort ?? 3389,
-    vncPort: host.vncPort ?? 5900,
-    telnetPort: host.telnetPort ?? 23,
     rdpUser: host.rdpUser || undefined,
     rdpDomain: host.rdpDomain || undefined,
-    rdpSecurity: host.rdpSecurity || undefined,
-    rdpIgnoreCert: !!host.rdpIgnoreCert,
     vncUser: host.vncUser || undefined,
     telnetUser: host.telnetUser || undefined,
     tunnelConnections: host.tunnelConnections
@@ -524,10 +474,5 @@ export function transformHostResponse(
       ? JSON.parse(host.portKnockSequence as string)
       : [],
     domain: host.domain || undefined,
-    security: host.security || undefined,
-    ignoreCert: !!host.ignoreCert,
-    guacamoleConfig: host.guacamoleConfig
-      ? JSON.parse(host.guacamoleConfig as string)
-      : undefined,
   };
 }

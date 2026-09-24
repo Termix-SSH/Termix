@@ -204,11 +204,75 @@
       "fontName": "Име на шрифта",
       "fontSize": "Размер на шрифта",
       "colorScheme": "Цветова схема",
-      "backspaceKey": "Клавиш Backspace"
-    }
+      "backspaceKey": "Клавиш Backspace",
+      "colorDepth": "Дълбочина на цвета",
+      "resizeMethod": "Метод за преоразмеряване"
+    },
+    "remoteDesktop": "Отдалечен работен плот",
+    "tabRdp": "ПРСР",
+    "tabVnc": "VNC",
+    "tabTelnet": "Телнет",
+    "virtualNetwork": "Виртуална мрежа",
+    "unencryptedShell": "Некриптирана обвивка"
   },
   "onboarding": {
     "feature_desktop": "Отдалечен работен плот",
     "feature_desktop_desc": "Отваряне на RDP, VNC и Telnet сесии в раздел, както при SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Дълбочина на цвета"
+      },
+      "resizeMethod": {
+        "label": "Метод за преоразмеряване"
+      },
+      "resizeDisplayUpdate": "Актуализация на дисплея",
+      "resizeReconnect": "Свържете се отново",
+      "inherit": "Наследяване",
+      "on": "Включено",
+      "off": "Изключено",
+      "forceLossless": {
+        "label": "Принудително беззагубно",
+        "description": "Принудително кодиране на изображения без загуби (по-високо качество, по-голяма честотна лента)"
+      },
+      "enableWallpaper": {
+        "label": "Тапет",
+        "description": "Показване на тапет на работния плот (деактивирането му подобрява производителността)"
+      },
+      "enableFontSmoothing": {
+        "label": "Изглаждане на шрифта",
+        "description": "Активиране на рендирането на шрифтове ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Композиция на работния плот",
+        "description": "Активиране на ефектите на Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Деактивиране на звука",
+        "description": "Изключване на звука от отдалечената сесия"
+      },
+      "enablePrinting": {
+        "label": "Активиране на печат",
+        "description": "Пренасочване на локални принтери към отдалечена сесия"
+      },
+      "enableDrive": {
+        "label": "Активиране на пренасочване на устройството",
+        "description": "Карта на локална папка като устройство в отдалечена сесия"
+      },
+      "disableCopy": {
+        "label": "Деактивиране на копирането",
+        "description": "Предотвратяване на копирането на текст от отдалечената сесия"
+      },
+      "disablePaste": {
+        "label": "Деактивиране на поставянето",
+        "description": "Предотвратяване на поставянето на текст в отдалечената сесия"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL адрес на GUACD"
+      }
+    }
   }
 }

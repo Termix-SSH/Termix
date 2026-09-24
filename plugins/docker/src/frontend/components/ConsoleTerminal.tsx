@@ -300,7 +300,6 @@ function ConsoleTerminalInner({
 
       const origin = isElectronApp
         ? await resolveConnectionOrigin({
-            connectionType: "ssh",
             connectionOrigin: hostConfig.connectionOrigin,
           })
         : "local";

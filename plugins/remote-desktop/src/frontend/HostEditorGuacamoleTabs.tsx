@@ -1,8 +1,12 @@
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { Input } from "@/components/input";
-import { PasswordInput } from "@/components/password-input";
-import { FakeSwitch, SectionCard, SettingRow } from "@/components/section-card";
-import type { Host } from "@/types/ui-types";
+import {
+  FakeSwitch,
+  Input,
+  PasswordInput,
+  SectionCard,
+  Select2,
+  SettingRow,
+} from "@termix/plugin-sdk/ui";
 import {
   Activity,
   Copy,
@@ -16,13 +20,10 @@ import {
   Zap,
   Cpu,
 } from "lucide-react";
-import type { HostEditorForm } from "@/sidebar/HostEditorData";
-import { Select2 } from "@/components/select2";
+import type { RemoteDesktopForm, RemoteFormSetField } from "./remote-form";
 
-type HostEditorSetField = <K extends keyof HostEditorForm>(
-  key: K,
-  value: HostEditorForm[K],
-) => void;
+type HostEditorForm = RemoteDesktopForm;
+type HostEditorSetField = RemoteFormSetField;
 
 type GuacFieldSetter = (key: string, value: unknown) => void;
 
@@ -49,7 +50,7 @@ export function HostEditorRdpTab({
   form: HostEditorForm;
   setField: HostEditorSetField;
   setGuacField: GuacFieldSetter;
-  host?: Host | null;
+  host?: { macAddress?: string | null } | null;
   credentials?: { id: string; name: string; username: string }[];
 }) {
   const { t } = useTranslation();
@@ -984,7 +985,7 @@ export function HostEditorVncTab({
   form: HostEditorForm;
   setField: HostEditorSetField;
   setGuacField: GuacFieldSetter;
-  host?: Host | null;
+  host?: { macAddress?: string | null } | null;
   credentials?: { id: string; name: string; username: string }[];
 }) {
   const { t } = useTranslation();
@@ -1523,7 +1524,6 @@ export function HostEditorTelnetTab({
   form: HostEditorForm;
   setField: HostEditorSetField;
   setGuacField: GuacFieldSetter;
-  host?: Host | null;
   credentials?: { id: string; name: string; username: string }[];
 }) {
   const { t } = useTranslation();

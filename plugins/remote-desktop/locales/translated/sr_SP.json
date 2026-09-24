@@ -204,11 +204,75 @@
       "fontName": "Назив фонта",
       "fontSize": "Величина фонта",
       "colorScheme": "Шема боја",
-      "backspaceKey": "Тастер Backspace"
-    }
+      "backspaceKey": "Тастер Backspace",
+      "colorDepth": "Дубина боје",
+      "resizeMethod": "Метод промене величине"
+    },
+    "remoteDesktop": "Удаљена радна површина",
+    "tabRdp": "РДП",
+    "tabVnc": "VNC",
+    "tabTelnet": "Телнет",
+    "virtualNetwork": "Виртуелна мрежа",
+    "unencryptedShell": "Нешифрована љуска"
   },
   "onboarding": {
     "feature_desktop": "Удаљена радна површина",
     "feature_desktop_desc": "Отворите RDP, VNC и Telnet сесије у картици, исто као и SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Дубина боје"
+      },
+      "resizeMethod": {
+        "label": "Метод промене величине"
+      },
+      "resizeDisplayUpdate": "Ажурирање екрана",
+      "resizeReconnect": "Поново се повежите",
+      "inherit": "Наследи",
+      "on": "Укључено",
+      "off": "Искључено",
+      "forceLossless": {
+        "label": "Присилно без губитака",
+        "description": "Присилно кодирање слике без губитака (виши квалитет, већи пропусни опсег)"
+      },
+      "enableWallpaper": {
+        "label": "Позадина",
+        "description": "Прикажи позадину радне површине (онемогућавање побољшава перформансе)"
+      },
+      "enableFontSmoothing": {
+        "label": "Изглађивање фонта",
+        "description": "Омогући приказивање ClearType фонта"
+      },
+      "enableDesktopComposition": {
+        "label": "Композиција на радној површини",
+        "description": "Омогући ефекте Aero Glass-а"
+      },
+      "disableAudio": {
+        "label": "Онемогући звук",
+        "description": "Искључите сав звук из удаљене сесије"
+      },
+      "enablePrinting": {
+        "label": "Омогући штампање",
+        "description": "Преусмерите локалне штампаче на удаљену сесију"
+      },
+      "enableDrive": {
+        "label": "Омогући преусмеравање диска",
+        "description": "Мапирајте локалну фасциклу као диск у удаљеној сесији"
+      },
+      "disableCopy": {
+        "label": "Онемогући копирање",
+        "description": "Спречите копирање текста из удаљене сесије"
+      },
+      "disablePaste": {
+        "label": "Онемогући лепљење",
+        "description": "Спречите лепљење текста у удаљену сесију"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL адреса guacd-а"
+      }
+    }
   }
 }

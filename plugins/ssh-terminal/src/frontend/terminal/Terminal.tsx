@@ -1595,7 +1595,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       {
         const origin = isElectron()
           ? await resolveConnectionOrigin({
-              connectionType: "ssh",
               connectionOrigin: hostConfig.connectionOrigin as
                 "local" | "remote" | null | undefined,
             })

@@ -204,11 +204,75 @@
       "fontName": "ফন্টের নাম",
       "fontSize": "ফন্ট সাইজ",
       "colorScheme": "রঙের পরিকল্পনা",
-      "backspaceKey": "ব্যাকস্পেস কী"
-    }
+      "backspaceKey": "ব্যাকস্পেস কী",
+      "colorDepth": "রঙের গভীরতা",
+      "resizeMethod": "আকার পরিবর্তন পদ্ধতি"
+    },
+    "remoteDesktop": "রিমোট ডেস্কটপ",
+    "tabRdp": "আরডিপি",
+    "tabVnc": "ভিএনসি",
+    "tabTelnet": "টেলনেট",
+    "virtualNetwork": "ভার্চুয়াল নেটওয়ার্ক",
+    "unencryptedShell": "এনক্রিপ্টবিহীন শেল"
   },
   "onboarding": {
     "feature_desktop": "রিমোট ডেস্কটপ",
     "feature_desktop_desc": "SSH-এর মতোই একটি ট্যাবে RDP, VNC এবং Telnet সেশন খুলুন।"
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "রঙের গভীরতা"
+      },
+      "resizeMethod": {
+        "label": "আকার পরিবর্তন পদ্ধতি"
+      },
+      "resizeDisplayUpdate": "ডিসপ্লে আপডেট",
+      "resizeReconnect": "পুনরায় সংযোগ করুন",
+      "inherit": "উত্তরাধিকার সূত্রে",
+      "on": "চালু",
+      "off": "বন্ধ",
+      "forceLossless": {
+        "label": "বল ক্ষয়হীন",
+        "description": "লসলেস ইমেজ এনকোডিং বাধ্যতামূলক করুন (উচ্চতর গুণমান, বেশি ব্যান্ডউইথ)"
+      },
+      "enableWallpaper": {
+        "label": "ওয়ালপেপার",
+        "description": "ডেস্কটপ ওয়ালপেপার দেখান (এটি বন্ধ করলে পারফরম্যান্স উন্নত হয়)"
+      },
+      "enableFontSmoothing": {
+        "label": "ফন্ট মসৃণকরণ",
+        "description": "ক্লিয়ারটাইপ ফন্ট রেন্ডারিং সক্ষম করুন"
+      },
+      "enableDesktopComposition": {
+        "label": "ডেস্কটপ কম্পোজিশন",
+        "description": "এরো গ্লাস এফেক্টস সক্রিয় করুন"
+      },
+      "disableAudio": {
+        "label": "অডিও নিষ্ক্রিয় করুন",
+        "description": "রিমোট সেশন থেকে সমস্ত অডিও মিউট করুন"
+      },
+      "enablePrinting": {
+        "label": "প্রিন্টিং সক্ষম করুন",
+        "description": "স্থানীয় প্রিন্টারগুলিকে রিমোট সেশনে পুনঃনির্দেশিত করুন"
+      },
+      "enableDrive": {
+        "label": "ড্রাইভ পুনঃনির্দেশনা সক্ষম করুন",
+        "description": "রিমোট সেশনে একটি স্থানীয় ফোল্ডারকে ড্রাইভ হিসেবে ম্যাপ করুন।"
+      },
+      "disableCopy": {
+        "label": "কপি নিষ্ক্রিয় করুন",
+        "description": "রিমোট সেশন থেকে টেক্সট কপি করা প্রতিরোধ করুন"
+      },
+      "disablePaste": {
+        "label": "পেস্ট নিষ্ক্রিয় করুন",
+        "description": "রিমোট সেশনে টেক্সট পেস্ট করা প্রতিরোধ করুন"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }

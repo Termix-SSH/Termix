@@ -645,6 +645,7 @@ const isolatedWindows = createIsolatedWindows({
 // ctx.desktop.openIsolatedWindow is the one caller today.
 const BACKEND_REQUEST_HANDLERS = {
   "open-isolated-window": (payload) => isolatedWindows.open(payload),
+  "launch-native-rdp": (payload) => launchNativeRdp(payload),
 };
 
 async function handleBackendRequest(msg) {
@@ -1671,10 +1672,6 @@ ipcMain.handle("check-electron-update", async () => {
 ipcMain.handle("get-platform", () => {
   return process.platform;
 });
-
-ipcMain.handle("open-native-rdp", (_event, options) =>
-  launchNativeRdp(options),
-);
 
 ipcMain.handle("get-embedded-server-status", () => {
   return {

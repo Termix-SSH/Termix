@@ -204,11 +204,75 @@
       "fontName": "फ़ॉन्ट नाम",
       "fontSize": "फ़ॉन्ट आकार",
       "colorScheme": "रंग योजना",
-      "backspaceKey": "बैकस्पेस कुंजी"
-    }
+      "backspaceKey": "बैकस्पेस कुंजी",
+      "colorDepth": "रंग गहराई",
+      "resizeMethod": "रीसाइज़ विधि"
+    },
+    "remoteDesktop": "दूरस्थ डेस्कटॉप",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "वर्चुअल नेटवर्क",
+    "unencryptedShell": "अनएन्क्रिप्टेड शेल"
   },
   "onboarding": {
     "feature_desktop": "दूरवर्ती डेस्कटॉप",
     "feature_desktop_desc": "RDP, VNC और Telnet सेशन को SSH की तरह ही एक टैब में खोलें।"
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "रंग गहराई"
+      },
+      "resizeMethod": {
+        "label": "रीसाइज़ विधि"
+      },
+      "resizeDisplayUpdate": "डिस्प्ले अपडेट",
+      "resizeReconnect": "रिकनेक्ट",
+      "inherit": "इनहेरिट",
+      "on": "पर",
+      "off": "बंद",
+      "forceLossless": {
+        "label": "दोषरहित बाध्य करें",
+        "description": "दोषरहित छवि एन्कोडिंग बाध्य करें (उच्च गुणवत्ता, अधिक बैंडविड्थ)"
+      },
+      "enableWallpaper": {
+        "label": "वॉलपेपर",
+        "description": "डेस्कटॉप वॉलपेपर दिखाएं (अक्षम करने से प्रदर्शन बेहतर होता है)"
+      },
+      "enableFontSmoothing": {
+        "label": "फ़ॉन्ट स्मूथिंग",
+        "description": "ClearType फ़ॉन्ट रेंडरिंग सक्षम करें"
+      },
+      "enableDesktopComposition": {
+        "label": "डेस्कटॉप कंपोज़िशन",
+        "description": "Aero ग्लास प्रभाव सक्षम करें"
+      },
+      "disableAudio": {
+        "label": "ऑडियो अक्षम करें",
+        "description": "दूरस्थ सत्र से सभी ऑडियो म्यूट करें"
+      },
+      "enablePrinting": {
+        "label": "प्रिंटिंग सक्षम करें",
+        "description": "स्थानीय प्रिंटर को दूरस्थ सत्र में पुनर्निर्देशित करें"
+      },
+      "enableDrive": {
+        "label": "ड्राइव पुनर्निर्देशन सक्षम करें",
+        "description": "स्थानीय फ़ोल्डर को दूरस्थ सत्र में ड्राइव के रूप में मैप करें"
+      },
+      "disableCopy": {
+        "label": "कॉपी अक्षम करें",
+        "description": "रिमोट सत्र से टेक्स्ट कॉपी करना रोकें"
+      },
+      "disablePaste": {
+        "label": "पेस्ट अक्षम करें",
+        "description": "रिमोट सत्र में टेक्स्ट पेस्ट करना रोकें"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }

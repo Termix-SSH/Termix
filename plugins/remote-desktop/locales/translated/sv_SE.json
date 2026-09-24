@@ -204,11 +204,75 @@
       "fontName": "Typsnittsnamn",
       "fontSize": "Fontstorlek",
       "colorScheme": "Färgschema",
-      "backspaceKey": "Backstegstangenten"
-    }
+      "backspaceKey": "Backstegstangenten",
+      "colorDepth": "Färgdjup",
+      "resizeMethod": "Ändra storleksmetod"
+    },
+    "remoteDesktop": "Fjärrskrivbord",
+    "tabRdp": "Landsbygdsutveckling",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuellt nätverk",
+    "unencryptedShell": "Okrypterat skal"
   },
   "onboarding": {
     "feature_desktop": "Fjärrskrivbord",
     "feature_desktop_desc": "Öppna RDP-, VNC- och Telnet-sessioner i en flik, samma som med SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Färgdjup"
+      },
+      "resizeMethod": {
+        "label": "Ändra storleksmetod"
+      },
+      "resizeDisplayUpdate": "Uppdatering av displayen",
+      "resizeReconnect": "Återanslut",
+      "inherit": "Ärva",
+      "on": "På",
+      "off": "Av",
+      "forceLossless": {
+        "label": "Tvinga förlustfri",
+        "description": "Tvinga fram förlustfri bildkodning (högre kvalitet, mer bandbredd)"
+      },
+      "enableWallpaper": {
+        "label": "Tapet",
+        "description": "Visa skrivbordsbakgrund (inaktivering förbättrar prestandan)"
+      },
+      "enableFontSmoothing": {
+        "label": "Utjämning av teckensnitt",
+        "description": "Aktivera rendering av ClearType-teckensnitt"
+      },
+      "enableDesktopComposition": {
+        "label": "Skrivbordskomposition",
+        "description": "Aktivera Aero Glass-effekter"
+      },
+      "disableAudio": {
+        "label": "Inaktivera ljud",
+        "description": "Stäng av allt ljud från fjärrsessionen"
+      },
+      "enablePrinting": {
+        "label": "Aktivera utskrift",
+        "description": "Omdirigera lokala skrivare till fjärrsessionen"
+      },
+      "enableDrive": {
+        "label": "Aktivera omdirigering av kördata",
+        "description": "Mappa en lokal mapp som en enhet i fjärrsessionen"
+      },
+      "disableCopy": {
+        "label": "Inaktivera kopiering",
+        "description": "Förhindra kopiering av text från fjärrsessionen"
+      },
+      "disablePaste": {
+        "label": "Inaktivera inklistring",
+        "description": "Förhindra att text klistras in i fjärrsessionen"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd-URL"
+      }
+    }
   }
 }

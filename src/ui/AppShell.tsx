@@ -2497,13 +2497,7 @@ export function AppShell({
                   enableTerminalToolbar: false,
                   enableAiAssistant: false,
                   enableSsh: false,
-                  enableRdp: false,
-                  enableVnc: false,
-                  enableTelnet: false,
                   sshPort: 22,
-                  rdpPort: 3389,
-                  vncPort: 5900,
-                  telnetPort: 23,
                   serverTunnels: [],
                   quickActions: [],
                 };

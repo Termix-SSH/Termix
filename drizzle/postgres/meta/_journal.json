@@ -302,6 +302,13 @@
       "when": 1790225599928,
       "tag": "0042_strange_shocker",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790227893380,
+      "tag": "0043_melodic_terror",
+      "breakpoints": true
     }
   ]
 }

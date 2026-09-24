@@ -39,11 +39,10 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   customThemes: row?.customThemes ?? null,
   customKeybindings: row?.customKeybindings ?? null,
   terminalDefaults: row?.terminalDefaults ?? null,
-  rdpDefaults: row?.rdpDefaults ?? null,
   terminalMacros: row?.terminalMacros ?? null,
 });
 
-const connectionDefaultFields = ["terminalDefaults", "rdpDefaults"] as const;
+const connectionDefaultFields = ["terminalDefaults"] as const;
 
 export function validateDefaultsJson(value: string): boolean {
   if (value.length > 32_768) return false;
@@ -233,7 +232,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     customThemes,
     customKeybindings,
     terminalDefaults,
-    rdpDefaults,
     terminalMacros,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
@@ -256,7 +254,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     customThemes?: string | null;
     customKeybindings?: string | null;
     terminalDefaults?: string | null;
-    rdpDefaults?: string | null;
     terminalMacros?: string | null;
   };
   // showHostTags, hostTrayOnClick, compactHostView, statusColorScheme are no
@@ -289,7 +286,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     customThemes,
     customKeybindings,
     terminalDefaults,
-    rdpDefaults,
     terminalMacros,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
@@ -299,7 +295,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
 
   const connectionDefaults = {
     terminalDefaults,
-    rdpDefaults,
   };
   for (const key of connectionDefaultFields) {
     const value = connectionDefaults[key];
@@ -435,7 +430,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     updates.customKeybindings = customKeybindings;
   if (terminalDefaults !== undefined)
     updates.terminalDefaults = terminalDefaults;
-  if (rdpDefaults !== undefined) updates.rdpDefaults = rdpDefaults;
   if (terminalMacros !== undefined) updates.terminalMacros = terminalMacros;
 
   if (Object.keys(updates).length === 1) {

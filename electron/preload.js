@@ -30,7 +30,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getPlatform: () => ipcRenderer.invoke("get-platform"),
   getEmbeddedServerStatus: () =>
     ipcRenderer.invoke("get-embedded-server-status"),
-  openNativeRdp: (options) => ipcRenderer.invoke("open-native-rdp", options),
 
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   isElectron: true,

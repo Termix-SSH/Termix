@@ -17,7 +17,7 @@ import { SectionCard } from "@/components/section-card";
 import { PluginIcon } from "@/lib/plugin-icon";
 import { getPlugins, type PluginSummary } from "@/api/plugins-api";
 import { SettingsFieldRow } from "./SettingsFields";
-import { isFieldActive } from "./settings-fields-util";
+import { hasVisibleFields, isFieldActive } from "./settings-fields-util";
 
 /** Values for every plugin on one host: { [pluginId]: { [key]: value } }. */
 export type HostPluginSettings = Record<string, Record<string, unknown>>;
@@ -45,7 +45,7 @@ export function usePluginHostSections(): PluginSummary[] {
       plugins.filter((plugin) => {
         if (!plugin.enabled) return false;
         const host = plugin.contributes?.settings?.host;
-        return !!host && (host.fields.length > 0 || !!host.enableKey);
+        return !!host && (hasVisibleFields(host.fields) || !!host.enableKey);
       }),
     [plugins],
   );

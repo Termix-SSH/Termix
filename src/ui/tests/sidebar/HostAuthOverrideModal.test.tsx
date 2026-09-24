@@ -36,6 +36,7 @@ vi.mock("react-i18next", () => ({
 
 import { HostAuthOverrideModal } from "../../sidebar/HostAuthOverrideModal";
 import { canOverrideHostAuth } from "../../sidebar/host-permissions";
+import { registerHostProtocol } from "../../sidebar/host-protocols";
 
 const host = {
   id: "42",
@@ -238,9 +239,27 @@ describe("canOverrideHostAuth", () => {
     expect(
       canOverrideHostAuth({ ...host, enableSsh: false } as Host, "ssh"),
     ).toBe(false);
+    const dispose = registerHostProtocol({
+      id: "rdp",
+      pluginId: "demo",
+      settingKey: "enableRdp",
+      defaultPort: 3389,
+      titleKey: "rdp",
+      icon: () => null,
+    });
     expect(
-      canOverrideHostAuth({ ...host, enableRdp: true } as Host, "rdp"),
+      canOverrideHostAuth(
+        { ...host, pluginSettings: { demo: { enableRdp: true } } } as Host,
+        "rdp",
+      ),
     ).toBe(true);
     expect(canOverrideHostAuth(host, "rdp")).toBe(false);
+    dispose();
+    expect(
+      canOverrideHostAuth(
+        { ...host, pluginSettings: { demo: { enableRdp: true } } } as Host,
+        "rdp",
+      ),
+    ).toBe(false);
   });
 });

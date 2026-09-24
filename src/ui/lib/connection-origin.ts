@@ -4,11 +4,8 @@ import { websocketAuthProtocols } from "@/lib/ws-auth";
 export type ConnectionOrigin = "local" | "remote";
 
 interface OriginResolvableHost {
-  connectionType?: string | null;
   connectionOrigin?: ConnectionOrigin | null;
 }
-
-const GUACAMOLE_CONNECTION_TYPES = new Set(["rdp", "vnc", "telnet"]);
 
 /**
  * Resolves which backend a given host's interactive connection (SSH, Docker
@@ -21,16 +18,16 @@ const GUACAMOLE_CONNECTION_TYPES = new Set(["rdp", "vnc", "telnet"]);
  * Everything else follows the host's own override if set, falling back to
  * the desktop-wide default.
  *
- * RDP/VNC/Telnet are the exception to that fallback: left on Default they
- * resolve to "remote" rather than following the desktop-wide setting. They
- * need a guacd, which the desktop does not ship, so originating them here
- * only works once the user has pointed Termix at one of their own (the
- * global guacd URL setting, or a host's guacd Proxy override). Making that
- * opt-in per host keeps an upgrade from moving working connections onto a
- * guacd that isn't there -- see Termix-SSH/Support#1240.
+ * `defaultRemote` makes a host left on Default resolve to "remote" instead of
+ * following the desktop-wide setting. Remote desktop passes it: it needs a
+ * guacd, which the desktop does not ship, so originating it here only works
+ * once the user has pointed Termix at one of their own. Making that opt-in
+ * per host keeps an upgrade from moving working connections onto a guacd
+ * that isn't there -- see Termix-SSH/Support#1240.
  */
 export async function resolveConnectionOrigin(
   host: OriginResolvableHost,
+  options: { defaultRemote?: boolean } = {},
 ): Promise<ConnectionOrigin> {
   if (!isElectron()) {
     return "local";
@@ -38,7 +35,7 @@ export async function resolveConnectionOrigin(
   if (host.connectionOrigin === "local" || host.connectionOrigin === "remote") {
     return host.connectionOrigin;
   }
-  if (GUACAMOLE_CONNECTION_TYPES.has(host.connectionType ?? "")) {
+  if (options.defaultRemote) {
     return "remote";
   }
 

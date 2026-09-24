@@ -39,22 +39,19 @@ function snapshotRecordId(
   return `shared-${hostAccessId}-${targetUserId}-${protocol}`;
 }
 
-// Mirrors the connection-type migration fallback in transformHostResponse():
-// old hosts only set connectionType, the per-protocol enable flags came later.
+// SSH follows its own switch. The remote desktop protocols' switches are the
+// remote-desktop plugin's host settings, and the host editor clears a
+// protocol's login when it is switched off, so a snapshot is taken whenever
+// login data is present (see collectProtocolSnapshots).
 function enabledProtocols(
   host: HostResolutionHostRecord,
 ): Record<ShareProtocol, boolean> {
   const ct = host.connectionType;
-  const rdp = !!host.enableRdp;
-  const vnc = !!host.enableVnc;
-  const telnet = !!host.enableTelnet;
-  const isMigratedNonSsh = !rdp && !vnc && !telnet && !!ct && ct !== "ssh";
-
   return {
-    ssh: isMigratedNonSsh ? false : host.enableSsh !== false,
-    rdp: isMigratedNonSsh ? ct === "rdp" : rdp,
-    vnc: isMigratedNonSsh ? ct === "vnc" : vnc,
-    telnet: isMigratedNonSsh ? ct === "telnet" : telnet,
+    ssh: host.enableSsh !== false && (!ct || ct === "ssh"),
+    rdp: true,
+    vnc: true,
+    telnet: true,
   };
 }
 

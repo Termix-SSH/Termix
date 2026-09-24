@@ -32,6 +32,7 @@ export interface PluginSettingsField {
   permission?: string;
   group?: string;
   component?: string;
+  hidden?: boolean;
 }
 
 export interface PluginHostSettingsContribution {

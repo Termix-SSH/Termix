@@ -1,13 +1,18 @@
+import type { PluginApiClient, TermixApp } from "@termix/plugin-sdk/frontend";
 import {
-  authApi,
-  getRemoteGuacamoleApi,
-  handleApiError,
   isElectron,
-} from "@/main-axios";
-import type { AxiosInstance } from "axios";
-import type { GuacamoleConfig } from "@/types/guacamole-config";
-import { resolveRemoteHostId } from "@/lib/remote-server-api";
-import type { ConnectionOrigin } from "@/lib/connection-origin";
+  resolveRemoteHostId,
+  type ConnectionOrigin,
+} from "@termix/plugin-sdk/ui";
+import type { GuacamoleConfig } from "./guacamole-config";
+import { errorMessage } from "./host-remote";
+
+let app: Pick<TermixApp, "apiFor"> | null = null;
+
+/** Set in activate, cleared on deactivate. */
+export function setRemoteDesktopApp(next: Pick<TermixApp, "apiFor"> | null) {
+  app = next;
+}
 
 /**
  * Picks the backend that will actually serve this session, so the token and
@@ -24,9 +29,13 @@ import type { ConnectionOrigin } from "@/lib/connection-origin";
  * silently sent a missed call site to the remote server, which fails with a
  * bare network error on a desktop that has none configured.
  */
-function guacamoleApi(origin: ConnectionOrigin): AxiosInstance {
-  if (!isElectron()) return authApi;
-  return origin === "local" ? authApi : getRemoteGuacamoleApi();
+function guacamoleApi(origin: ConnectionOrigin): PluginApiClient {
+  if (!app) throw new Error("Remote Desktop is not active");
+  return app.apiFor(origin);
+}
+
+function apiError(error: unknown, action: string): Error {
+  return new Error(errorMessage(error, `Failed to ${action}`));
 }
 
 export interface GuacamoleTokenRequest {
@@ -50,18 +59,6 @@ export interface GuacamoleTokenResponse {
 type GuacamoleConfigSource = {
   guacamoleConfig?: string | Record<string, unknown> | null;
 };
-
-export function parseGuacamoleConfig(
-  config?: string | GuacamoleConfig | null,
-): GuacamoleConfig {
-  if (!config) return {};
-  if (typeof config !== "string") return config;
-  try {
-    return JSON.parse(config) as GuacamoleConfig;
-  } catch {
-    return {};
-  }
-}
 
 export function getGuacamoleDpi(
   source?: GuacamoleConfigSource,
@@ -174,8 +171,8 @@ export async function getGuacamoleToken(
   try {
     const guacParams = toGuacamoleParams(request.guacamoleConfig);
 
-    const response = await guacamoleApi(origin).post(
-      "/plugin-api/remote-desktop/token",
+    const response = await guacamoleApi(origin).post<GuacamoleTokenResponse>(
+      "/token",
       {
         type: request.protocol,
         hostname: request.hostname,
@@ -190,7 +187,7 @@ export async function getGuacamoleToken(
     );
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "get guacamole token");
+    throw apiError(error, "get a connection token");
   }
 }
 
@@ -204,6 +201,7 @@ export async function getGuacamoleTokenFromHost(
     domain?: string;
   },
   syncId?: string | null,
+  tabInstanceId?: string,
 ): Promise<GuacamoleTokenResponse> {
   try {
     // A locally-originated session is served by the embedded backend, which
@@ -216,10 +214,11 @@ export async function getGuacamoleTokenFromHost(
       throw new Error("The synced host does not exist on the remote server");
     }
     const targetHostId = remoteHostId ?? hostId;
-    const response = await guacamoleApi(origin).post(
-      `/plugin-api/remote-desktop/connect-host/${targetHostId}`,
+    const response = await guacamoleApi(origin).post<GuacamoleTokenResponse>(
+      `/connect-host/${targetHostId}`,
       {
         ...(protocol ? { protocol } : {}),
+        ...(tabInstanceId ? { tabInstanceId } : {}),
         ...(promptedCredentials?.username
           ? { promptedUsername: promptedCredentials.username }
           : {}),
@@ -233,15 +232,22 @@ export async function getGuacamoleTokenFromHost(
     );
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "get guacamole token from host");
+    throw apiError(error, "get a connection token");
   }
 }
 
-export async function getGuacdStatus(origin: ConnectionOrigin): Promise<{
+export interface RemoteDesktopStatus {
+  enabled: boolean;
   guacd: { status: string };
-}> {
-  const response = await guacamoleApi(origin).get(
-    "/plugin-api/remote-desktop/status",
+}
+
+/** `probe: false` skips dialing guacd, for a caller that only needs `enabled`. */
+export async function getGuacdStatus(
+  origin: ConnectionOrigin,
+  options: { probe?: boolean } = {},
+): Promise<RemoteDesktopStatus> {
+  const response = await guacamoleApi(origin).get<RemoteDesktopStatus>(
+    options.probe === false ? "/status?probe=0" : "/status",
   );
   return response.data;
 }
@@ -251,9 +257,34 @@ export async function getGuacamoleConnectionId(
   origin: ConnectionOrigin,
   signal?: AbortSignal,
 ): Promise<string | null> {
-  const response = await guacamoleApi(origin).get(
-    `/plugin-api/remote-desktop/connection/${encodeURIComponent(connectId)}`,
-    { signal },
-  );
+  const response = await guacamoleApi(origin).get<{
+    guacamoleConnectionId?: string | null;
+  }>(`/connection/${encodeURIComponent(connectId)}`, { signal });
   return response.data.guacamoleConnectionId ?? null;
+}
+
+export async function nativeRdpAvailable(): Promise<boolean> {
+  if (!isElectron()) return false;
+  try {
+    const response = await guacamoleApi("local").get<{ available: boolean }>(
+      "/native-rdp",
+    );
+    return response.data.available === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Always the embedded backend: it is the one that can reach Electron. */
+export async function openNativeRdp(request: {
+  host: string;
+  port?: number;
+  username?: string;
+  domain?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const response = await guacamoleApi("local").post<{
+    success: boolean;
+    error?: string;
+  }>("/native-rdp", request);
+  return response.data;
 }

@@ -29,9 +29,6 @@ function host(id: string, name: string): Host {
     enableTunnel: false,
     enableFileManager: true,
     enableDocker: false,
-    enableRdp: false,
-    enableVnc: false,
-    enableTelnet: false,
     quickActions: [],
   } as Host;
 }

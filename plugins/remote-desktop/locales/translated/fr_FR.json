@@ -204,11 +204,75 @@
       "fontName": "Nom de la police",
       "fontSize": "Taille de la police",
       "colorScheme": "Schéma de couleurs",
-      "backspaceKey": "Touche Backspace"
-    }
+      "backspaceKey": "Touche Backspace",
+      "colorDepth": "Profondeur de couleur",
+      "resizeMethod": "Méthode de redimensionnement"
+    },
+    "remoteDesktop": "Bureau à distance",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Réseau virtuel",
+    "unencryptedShell": "Shell non chiffré"
   },
   "onboarding": {
     "feature_desktop": "Bureau à distance",
     "feature_desktop_desc": "Ouvrez les sessions RDP, VNC et Telnet dans un onglet, de la même manière que SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Profondeur de couleur"
+      },
+      "resizeMethod": {
+        "label": "Méthode de redimensionnement"
+      },
+      "resizeDisplayUpdate": "Mise à jour de l'affichage",
+      "resizeReconnect": "Reconnect",
+      "inherit": "Hériter",
+      "on": "Sur",
+      "off": "Désactivé",
+      "forceLossless": {
+        "label": "Forcer sans perte",
+        "description": "Forcer l'encodage d'image sans perte (meilleure qualité, plus de bande passante)"
+      },
+      "enableWallpaper": {
+        "label": "Fond d'écran",
+        "description": "Afficher le fond d'écran du bureau (désactiver cette option améliore les performances)"
+      },
+      "enableFontSmoothing": {
+        "label": "Lissage des polices",
+        "description": "Activer le rendu des polices ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Composition du bureau",
+        "description": "Activer les effets Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Désactiver l'audio",
+        "description": "Couper tout le son de la session distante"
+      },
+      "enablePrinting": {
+        "label": "Activer l'impression",
+        "description": "Rediriger les imprimantes locales vers la session distante"
+      },
+      "enableDrive": {
+        "label": "Activer la redirection de lecteur",
+        "description": "Monter un dossier local en tant que lecteur dans la session distante"
+      },
+      "disableCopy": {
+        "label": "Désactiver la copie",
+        "description": "Empêcher la copie de texte depuis la session distante"
+      },
+      "disablePaste": {
+        "label": "Désactiver le collage",
+        "description": "Empêcher le collage de texte dans la session distante"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL guacd"
+      }
+    }
   }
 }

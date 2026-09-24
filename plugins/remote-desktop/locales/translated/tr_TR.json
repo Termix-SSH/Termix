@@ -204,11 +204,75 @@
       "fontName": "Yazı Tipi Adı",
       "fontSize": "Yazı Tipi Boyutu",
       "colorScheme": "Renk Şeması",
-      "backspaceKey": "Geri Silme Tuşu"
-    }
+      "backspaceKey": "Geri Silme Tuşu",
+      "colorDepth": "Renk Derinliği",
+      "resizeMethod": "Yeniden Boyutlandırma Yöntemi"
+    },
+    "remoteDesktop": "Uzak Masaüstü",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Sanal Ağ",
+    "unencryptedShell": "Şifrelenmemiş Shell"
   },
   "onboarding": {
     "feature_desktop": "Uzaktan masaüstü",
     "feature_desktop_desc": "SSH'de olduğu gibi, RDP, VNC ve Telnet oturumlarını da bir sekmede açın."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Renk Derinliği"
+      },
+      "resizeMethod": {
+        "label": "Yeniden Boyutlandırma Yöntemi"
+      },
+      "resizeDisplayUpdate": "Ekran Güncellemesi",
+      "resizeReconnect": "Yeniden bağlan",
+      "inherit": "Miras almak",
+      "on": "Açık",
+      "off": "Kapalı",
+      "forceLossless": {
+        "label": "Kayıpsız Zorla",
+        "description": "Kayıpsız görüntü kodlamasını zorla (daha yüksek kalite, daha fazla bant genişliği)"
+      },
+      "enableWallpaper": {
+        "label": "Duvar Kağıdı",
+        "description": "Masaüstü duvar kağıdını göster (devre dışı bırakmak performansı artırır)"
+      },
+      "enableFontSmoothing": {
+        "label": "Yazı Tipi Yumuşatma",
+        "description": "ClearType yazı tipi işlemeyi etkinleştir"
+      },
+      "enableDesktopComposition": {
+        "label": "Masaüstü Birleştirme",
+        "description": "Aero cam efektlerini etkinleştir"
+      },
+      "disableAudio": {
+        "label": "Sesi Devre Dışı Bırak",
+        "description": "Uzak oturumdaki tüm sesleri kapat"
+      },
+      "enablePrinting": {
+        "label": "Yazdırmayı Etkinleştir",
+        "description": "Yerel yazıcıları uzak oturuma yönlendir"
+      },
+      "enableDrive": {
+        "label": "Sürücü Yönlendirmesini Etkinleştir",
+        "description": "Yerel bir klasörü uzak oturumda sürücü olarak eşleştir"
+      },
+      "disableCopy": {
+        "label": "Kopyalamayı Devre Dışı Bırak",
+        "description": "Uzak oturumdan metin kopyalamayı engelle"
+      },
+      "disablePaste": {
+        "label": "Yapıştırmayı Devre Dışı Bırak",
+        "description": "Uzak oturuma metin yapıştırmayı engelle"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL'si"
+      }
+    }
   }
 }

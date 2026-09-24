@@ -1,12 +1,6 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { RequestHandler, Router } from "express";
-// Remote Desktop is a first-party plugin (plugins/remote-desktop); this goes
-// through the same in-core bridge its router is mounted behind, rather than
-// importing the plugin's TypeScript directly, since plugins/ is compiled
-// separately from src/backend/ and core cannot statically import across that
-// boundary. See guacamole-dispatch.ts and that plugin's README.
-import { restartGuacamoleService as restartGuacServer } from "../../hosts/guacamole-sessions.js";
 import {
   authLogger,
   getGlobalLogLevel,
@@ -30,10 +24,6 @@ import {
   createCurrentUserRepository,
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
-
-function getDefaultGuacUrl(): string {
-  return `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
-}
 
 export type HostDefaults = {
   useSocks5?: boolean;
@@ -66,119 +56,6 @@ export function registerUserSettingsRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
 ): void {
-  /**
-   * @openapi
-   * /users/guacamole-settings:
-   *   get:
-   *     summary: Get Guacamole settings
-   *     description: Returns current guacd enabled status and host:port URL. No authentication required.
-   *     tags:
-   *       - Users
-   *     responses:
-   *       200:
-   *         description: Guacamole settings.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 enabled:
-   *                   type: boolean
-   *                 url:
-   *                   type: string
-   *       500:
-   *         description: Failed to get guacamole settings.
-   */
-  router.get("/guacamole-settings", authenticateJWT, async (_req, res) => {
-    try {
-      const settings = createCurrentSettingsRepository();
-      const enabled = await settings.getBoolean("guac_enabled", true);
-      const url = await settings.get("guac_url");
-      res.json({
-        enabled,
-        url: url ?? getDefaultGuacUrl(),
-      });
-    } catch (err) {
-      authLogger.error("Failed to get guacamole settings", err);
-      res.status(500).json({ error: "Failed to get guacamole settings" });
-    }
-  });
-
-  /**
-   * @openapi
-   * /users/guacamole-settings:
-   *   patch:
-   *     summary: Update Guacamole settings
-   *     description: Admin-only. Updates guacd enabled status and/or host:port URL.
-   *     tags:
-   *       - Users
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               enabled:
-   *                 type: boolean
-   *               url:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Guacamole settings updated.
-   *       403:
-   *         description: Not authorized.
-   *       500:
-   *         description: Failed to update guacamole settings.
-   */
-  router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    try {
-      const actor = await getAdminActor(userId);
-      if (!actor) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-      const { enabled, url } = req.body;
-      const settings = createCurrentSettingsRepository();
-      if (typeof enabled === "boolean") {
-        await settings.set("guac_enabled", enabled ? "true" : "false");
-      }
-      if (typeof url === "string") {
-        await settings.set("guac_url", url);
-        try {
-          await restartGuacServer();
-        } catch (err) {
-          authLogger.error(
-            "Failed to restart guac server after URL update",
-            err,
-          );
-        }
-      }
-      const currentEnabled = await settings.getBoolean("guac_enabled", true);
-      const currentUrl = await settings.get("guac_url");
-
-      const { ipAddress, userAgent } = getRequestMeta(req);
-      await logAudit({
-        userId,
-        username: actor.username ?? userId,
-        action: "update_guacamole_settings",
-        resourceType: "setting",
-        details: JSON.stringify({ enabled, url }),
-        ipAddress,
-        userAgent,
-        success: true,
-      });
-
-      res.json({
-        enabled: currentEnabled,
-        url: currentUrl ?? getDefaultGuacUrl(),
-      });
-    } catch (err) {
-      authLogger.error("Failed to update guacamole settings", err);
-      res.status(500).json({ error: "Failed to update guacamole settings" });
-    }
-  });
-
   /**
    * @openapi
    * /users/log-level:

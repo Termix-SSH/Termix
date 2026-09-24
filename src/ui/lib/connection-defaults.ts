@@ -1,4 +1,3 @@
-import type { GuacamoleConfig } from "@/types/guacamole-config";
 import type { TerminalConfig } from "@/types";
 
 export type TerminalDefaults = Partial<
@@ -20,8 +19,6 @@ export type TerminalDefaults = Partial<
   >
 >;
 
-export type RemoteDesktopDefaults = Partial<GuacamoleConfig>;
-
 function parseObject<T extends object>(value?: string | null): Partial<T> {
   if (!value) return {};
   try {
@@ -36,12 +33,6 @@ function parseObject<T extends object>(value?: string | null): Partial<T> {
 
 export function parseTerminalDefaults(value?: string | null): TerminalDefaults {
   return parseObject<TerminalDefaults>(value);
-}
-
-export function parseRemoteDesktopDefaults(
-  value?: string | null,
-): RemoteDesktopDefaults {
-  return parseObject<RemoteDesktopDefaults>(value);
 }
 
 // Booleans have three states in the defaults UI: unset means the host decides.

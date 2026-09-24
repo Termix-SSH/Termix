@@ -109,16 +109,9 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     proxmoxStatsConfig:
       (proxmoxSettings.proxmoxStatsConfig as Host["proxmoxStatsConfig"]) ??
       null,
-    enableRdp: h.enableRdp != null ? h.enableRdp : h.connectionType === "rdp",
-    enableVnc: h.enableVnc != null ? h.enableVnc : h.connectionType === "vnc",
-    enableTelnet:
-      h.enableTelnet != null ? h.enableTelnet : h.connectionType === "telnet",
     sshPort:
       h.sshPort ??
       (h.connectionType === "ssh" || !h.connectionType ? h.port : 22),
-    rdpPort: h.rdpPort ?? (h.connectionType === "rdp" ? h.port : 3389),
-    vncPort: h.vncPort ?? (h.connectionType === "vnc" ? h.port : 5900),
-    telnetPort: h.telnetPort ?? (h.connectionType === "telnet" ? h.port : 23),
     rdpAuthType:
       (h.rdpAuthType as "direct" | "credential") ??
       (h.rdpCredentialId ? "credential" : "direct"),
@@ -128,8 +121,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     rdpPassword: h.rdpPassword ?? "",
     hasRdpPassword: !!host.hasRdpPassword || !!h.rdpPassword,
     domain: h.rdpDomain,
-    security: h.rdpSecurity,
-    ignoreCert: h.rdpIgnoreCert ?? false,
     vncAuthType:
       (h.vncAuthType as "direct" | "credential") ??
       (h.vncCredentialId ? "credential" : "direct"),
@@ -160,7 +151,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     hasSudoPassword:
       !!host.hasSudoPassword || !!parsedTerminalConfig?.sudoPassword,
     statsConfig: parseJson(h.statsConfig) as Host["statsConfig"],
-    guacamoleConfig: parseJson(h.guacamoleConfig),
     forceKeyboardInteractive: h.forceKeyboardInteractive ?? false,
     useSocks5: h.useSocks5,
     socks5Host: h.socks5Host,

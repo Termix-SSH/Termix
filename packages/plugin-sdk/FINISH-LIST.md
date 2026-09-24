@@ -161,11 +161,9 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   ssh-terminal host settings shipped (`ssh-terminal-settings-migration.ts`)
   and the terminal reads its settings, but core host routes, types, the
   export/import sample and `HostEditorData` still carry the columns.
-  `enable_terminal_toolbar` also drives the RDP/VNC/Telnet toolbar
-  (`remote-desktop/GuacamoleApp.tsx`), whose host editor switch stays in the
-  General tab, so remote-desktop needs its own host setting and copy first.
-  Then drop all three in lockstep. Owner: remote-desktop's step for its copy,
-  then D0.
+  **B14** gave remote desktop its own `enableToolbar` host setting, copied
+  from `enable_terminal_toolbar`, so nothing else holds the column up. Drop
+  all three the B14 way (see "Order at boot" in ARCHITECTURE.md). Owner: D0.
 - **B9 (ssh-terminal):** the legacy `settings` rows for the terminal
   (`terminal_session_timeout_minutes`, `terminal_session_persistence_enabled`,
   `command_history_enabled`, `touch_input_settings`, `terminal_image_*`) are
@@ -255,17 +253,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   section. Owner: whoever designs the 3.0.0 install flow (prebuild-per-platform
   packaging, or a documented "avoid native code" rule for community plugins).
 
-- **B12 (session-sharing):** the remote desktop side of sharing has no
-  provider yet. Session sharing reaches rdp, vnc and telnet sessions through
-  `sessions.live` named providers `rdp`, `vnc` and `telnet`, each with
-  `getSession(sessionId)` (id, userId as the session's owner, hostId,
-  hostName, isConnected, createdAt, tabInstanceId) and
-  `createViewerToken(sessionId, readOnly)`, typed in
-  `plugins/session-sharing/src/backend/live.ts`. Until remote-desktop provides
-  them, sharing or presenting an RDP/VNC/Telnet session is refused and those
-  links resolve 404. B14 also drops `createJoinToken`/`getSessionInfo` from
-  its `remote-desktop.sessions` registry entry, which core no longer reads.
-  Owner: B14.
 - **B12 (session-sharing):** `allow_session_sharing` is still a live `ssh_data`
   column. The copy into the plugin's host setting shipped
   (`session-sharing-settings-migration.ts`) and nothing in core reads or
@@ -291,9 +278,8 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   a real behaviour change from the old column default, made once here rather
   than silently. `ssh-terminal/src/backend/terminal-socket.ts` still reads
   `resolvedHostData?.enableSessionLogging ?? hostConfig.enableSessionLogging`
-  off the resolved SSH host instead of `ctx.settings.getHost`, and
-  `plugins/remote-desktop/src/backend/routes.ts`'s
-  `host.enableSessionLogging !== false` check, `HostEditorData.ts`,
+  off the resolved SSH host instead of `ctx.settings.getHost` (remote desktop
+  asks `recordings.writer.enabledFor` since B14), and `HostEditorData.ts`,
   `HostManagerData.ts`, `quick-connect-host.ts` and the export/import sample
   all still read the column directly. The General tab's checkbox was removed
   from `HostEditor.tsx` (the schema-driven Plugins group replaces it); the
@@ -301,14 +287,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   (`schema.ts`, `db/index.ts`, a drizzle migration per dialect,
   `schema:generate`) needs every one of those switched first. Owner: a
   dedicated follow-up step, or D0.
-- **B13 (session-recording):** `remote-desktop`'s guacd recordings now insert
-  through the optional `recordings.writer` service's `createFinished(input)`
-  (added alongside `open()`/`RecordingSink` for ssh-terminal's incremental
-  writer) instead of importing `createCurrentSessionRecordingRepository`
-  directly. Without the session-recording plugin enabled, a guacd recording
-  is still written to disk but gets no `session_recordings` row and so never
-  appears in the list - a warning is logged. Owner: none needed unless a
-  second consumer of `recordings.writer` appears.
 - **B13 (session-recording):** `accessId` (the legacy `access_id` column,
   referencing the now-core-only `host_access` table) is carried in the
   adopted table's shape as a plain unreferenced integer, since the SDK's
@@ -316,6 +294,56 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   table beyond `refUser()`/`refHost()`. Nothing has ever populated it (true
   in core before this step too). Owner: none needed unless a future step
   wants to actually use it.
+
+- **B14 (remote-desktop):** the moved columns stay in the database, unused:
+  `ssh_data.enable_rdp`, `enable_vnc`, `enable_telnet`, `rdp_port`,
+  `vnc_port`, `telnet_port`, `rdp_security`, `rdp_ignore_cert`, `security`,
+  `ignore_cert`, `guacamole_config`, and `user_preferences.rdp_defaults`.
+  Their drizzle migrations are `SELECT 1;` on purpose (the copy runs after
+  drizzle on Postgres and MySQL). Drop them physically in 3.0.0, once every
+  install has booted 2.9.0. The legacy `guac_enabled` and `guac_url` rows in
+  `settings` are left too. Owner: 3.0.0.
+- **B14, found in B5 (proxmox):** `drizzle/postgres/0036_redundant_ender_wiggin.sql`
+  and `drizzle/mysql/0035_clumsy_leech.sql` really `DROP COLUMN` the four
+  proxmox host columns. On Postgres and MySQL that runs at boot before
+  `runProxmoxSettingsMigration` copies them, so an upgrade there loses every
+  host's Proxmox settings. Since nothing has shipped, rewrite those two files
+  to the `SELECT 1;` pattern (keeping their journal entries). Owner: D0.
+- **B14, found in B5 to B13:** every earlier host-column copy
+  (`proxmox`, `file-manager`, `tunnels`, `web-endpoint`, `ssh-terminal`,
+  `tmux-monitor`, `session-sharing`, `session-recording` settings migrations)
+  reads the old columns with `getDb().all(sql...)`, which only exists on
+  SQLite. On Postgres and MySQL the call throws, the migration's catch logs a
+  warning and nothing is copied. Switch them to `selectRows` from
+  `utils/crypto-migration/raw-rows.ts`, which B14 added and uses. Owner: D0.
+- **B14, found in B13:** `session-recording-settings-migration.ts` writes
+  `row.enable_session_logging !== false`, but SQLite returns `0`, so a host
+  that had recording off migrates as on. Its test only uses real booleans.
+  Owner: D0.
+- **B14 (remote-desktop), for D2:** host payloads carry every plugin's host
+  settings after the sharing sanitizers, so a connect-level recipient now
+  receives remote desktop's `guacamoleConfig`, which can hold an RDP gateway
+  password in plain text. A view-level recipient saw it before B14 too.
+  Decide whether plugin host settings need a per-field sharing level, or make
+  the gateway password its own secret field. Owner: D2.
+- **B14 (remote-desktop):** core still holds some locale keys that look dead
+  after this step but may be built dynamically: `hosts.guac.noCredential`,
+  `authType*`, `recording*`, `saveHostFirst`, `sharingOptionsAfterSave`,
+  `permissionLevel`, `typeHeader`, `targetHeader`, `permissionHeader`,
+  `hosts.connectRdp/Vnc/Telnet`, `hosts.copy*UrlAction`, `hosts.telnet` and
+  `homepage.connType_*`. Owner: whoever next cleans up `src/ui/locales/en.json`,
+  or D0.
+- **Pre-existing, found in B14:** `npm run test -w plugins/web-endpoint`
+  fails "answers 503 while the tunnels plugin is not available": the route
+  expects `ctx.services.get` to throw for a missing service, but since B12
+  the runtime and the test doubles hand back an empty handle, so the route
+  calls an undefined `forward` and answers 500. Check `typeof forward` the
+  way remote desktop does. Owner: D0.
+- **Pre-existing, found in B14:** each plugin's own `typecheck` script
+  (`tsc -p tsconfig.json`) fails with the SDK's `tsconfig.plugin.json`
+  (node16 resolution wants `.js` on relative imports and cannot resolve
+  `@termix/plugin-sdk/ui`), workspaces included. `npm run type-check` covers
+  plugins through `tsconfig.plugins*.json` and passes. Owner: D0.
 
 ## Manual checks after 2.9.0
 
@@ -334,3 +362,15 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   off records nothing, retention prunes an old recording on schedule, a guacd
   RDP/VNC/Telnet recording still gets a row and plays back, and deleting a
   user anonymizes their recordings instead of removing them.
+- Remote desktop: an RDP, a VNC and a Telnet host; a host behind one jump
+  host (tunnels plugin on and off) and behind a chain of two; macOS Screen
+  Sharing over VNC with no username; RDP recording (and none with
+  session-recording off or the host's switch off); file transfer through the
+  RDP drive, drag and drop included; clipboard both ways; sharing an RDP
+  session by link (read-only and read-write) and presenting it in a collab
+  room; opening Windows Remote Desktop from the desktop app on Windows;
+  changing the guacd URL in admin settings without a restart; turning Remote
+  Desktop off in admin (actions disappear, connects answer 403); a 2.8 host
+  that only had `connection_type = rdp` comes up as RDP with SSH off; RDP user
+  defaults apply to a saved host; Quick Connect over RDP and VNC; the desktop
+  app with a host on the remote server and one on This device.

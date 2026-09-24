@@ -15,7 +15,7 @@ describe("resolveConnectionOrigin", () => {
   // Support#1240: these can now originate from the desktop, but only when a
   // host opts in. Left on Default they stay remote, so an upgrade never moves
   // an existing host onto a local guacd the user has not set up.
-  it("resolves rdp/vnc/telnet to remote when the host has no override", async () => {
+  it("resolves to remote with defaultRemote when the host has no override", async () => {
     win.IS_ELECTRON = true;
     win.electronAPI = {
       invoke: async (channel: string) =>
@@ -23,44 +23,42 @@ describe("resolveConnectionOrigin", () => {
           ? { defaultConnectionOrigin: "local" }
           : null,
     };
-    for (const connectionType of ["rdp", "vnc", "telnet"]) {
-      await expect(
-        resolveConnectionOrigin({ connectionType, connectionOrigin: null }),
-      ).resolves.toBe("remote");
-    }
-  });
-
-  it("honors an explicit local override for rdp/vnc/telnet", async () => {
-    win.IS_ELECTRON = true;
-    for (const connectionType of ["rdp", "vnc", "telnet"]) {
-      await expect(
-        resolveConnectionOrigin({ connectionType, connectionOrigin: "local" }),
-      ).resolves.toBe("local");
-    }
-  });
-
-  it("honors an explicit remote override for rdp/vnc/telnet", async () => {
-    win.IS_ELECTRON = true;
-    for (const connectionType of ["rdp", "vnc", "telnet"]) {
-      await expect(
-        resolveConnectionOrigin({ connectionType, connectionOrigin: "remote" }),
-      ).resolves.toBe("remote");
-    }
-  });
-
-  it("resolves rdp to local outside Electron, where there is only one backend", async () => {
     await expect(
-      resolveConnectionOrigin({
-        connectionType: "rdp",
-        connectionOrigin: null,
-      }),
+      resolveConnectionOrigin(
+        { connectionOrigin: null },
+        { defaultRemote: true },
+      ),
+    ).resolves.toBe("remote");
+  });
+
+  it("honors an explicit override over defaultRemote", async () => {
+    win.IS_ELECTRON = true;
+    await expect(
+      resolveConnectionOrigin(
+        { connectionOrigin: "local" },
+        { defaultRemote: true },
+      ),
+    ).resolves.toBe("local");
+    await expect(
+      resolveConnectionOrigin(
+        { connectionOrigin: "remote" },
+        { defaultRemote: true },
+      ),
+    ).resolves.toBe("remote");
+  });
+
+  it("resolves to local outside Electron even with defaultRemote", async () => {
+    await expect(
+      resolveConnectionOrigin(
+        { connectionOrigin: null },
+        { defaultRemote: true },
+      ),
     ).resolves.toBe("local");
   });
 
-  it("resolves to local outside Electron regardless of connectionType", async () => {
+  it("resolves to local outside Electron regardless of the host override", async () => {
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: "remote",
       }),
     ).resolves.toBe("local");
@@ -70,13 +68,11 @@ describe("resolveConnectionOrigin", () => {
     win.IS_ELECTRON = true;
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: "remote",
       }),
     ).resolves.toBe("remote");
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: "local",
       }),
     ).resolves.toBe("local");
@@ -94,7 +90,6 @@ describe("resolveConnectionOrigin", () => {
     };
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: null,
       }),
     ).resolves.toBe("remote");
@@ -109,7 +104,6 @@ describe("resolveConnectionOrigin", () => {
     };
     await expect(
       resolveConnectionOrigin({
-        connectionType: "ssh",
         connectionOrigin: null,
       }),
     ).resolves.toBe("local");

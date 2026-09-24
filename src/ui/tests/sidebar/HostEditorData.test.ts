@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { registerHostProtocol } from "../../sidebar/host-protocols";
 import {
   createHostEditorForm,
   buildHostEditorPayload,
@@ -568,53 +569,36 @@ describe("RDP/VNC/Telnet password persistence indicator", () => {
 describe("user connection defaults", () => {
   const defaults = {
     terminal: { fontSize: 18, cursorBlink: false },
-    rdp: { colorDepth: 24, disableCopy: true },
   };
 
   it("shows inherited values without persisting them as host overrides", () => {
     const host = {
       enableSsh: true,
-      enableRdp: true,
       terminalConfig: { autoTmux: true },
-      guacamoleConfig: { enableAudioInput: true },
-    } as Host;
+    } as unknown as Host;
     const form = createHostEditorForm(host, undefined, defaults);
 
     expect(form).toMatchObject({
       fontSize: 18,
       cursorBlink: false,
       inheritTerminalAppearance: true,
-      inheritRemoteDesktopDefaults: true,
-      guacamoleConfig: {
-        colorDepth: 24,
-        disableCopy: true,
-        enableAudioInput: true,
-      },
     });
 
-    const payload = buildHostEditorPayload(form, {
-      ...sshOnly,
-      enableRdp: true,
-    });
+    const payload = buildHostEditorPayload(form, sshOnly);
     expect(payload.terminalConfig).toMatchObject({ autoTmux: true });
     expect(payload.terminalConfig).not.toHaveProperty("fontSize");
-    expect(payload.guacamoleConfig).toEqual({ enableAudioInput: true });
   });
 
   it("keeps explicit host overrides above user defaults", () => {
     const host = {
       enableSsh: true,
-      enableRdp: true,
       terminalConfig: { fontSize: 12 },
-      guacamoleConfig: { colorDepth: 32 },
-    } as Host;
+    } as unknown as Host;
     const form = createHostEditorForm(host, undefined, defaults);
 
     expect(form).toMatchObject({
       fontSize: 12,
       inheritTerminalAppearance: false,
-      inheritRemoteDesktopDefaults: false,
-      guacamoleConfig: { colorDepth: 32, disableCopy: true },
     });
   });
 });
@@ -692,5 +676,31 @@ describe("macOS Option character defaults", () => {
   it("preserves an explicitly saved Meta preference", () => {
     const host = { terminalConfig: { macOptionIsMeta: true } } as Host;
     expect(createHostEditorForm(host).macOptionIsMeta).toBe(true);
+  });
+});
+
+describe("plugin protocols", () => {
+  it("uses the first protocol switched on as the host's type and port without SSH", () => {
+    const dispose = registerHostProtocol({
+      id: "demo-desktop",
+      pluginId: "demo",
+      settingKey: "enableDemo",
+      portKey: "demoPort",
+      defaultPort: 3389,
+      titleKey: "demo",
+      icon: () => null,
+    });
+    const form = {
+      ...createHostEditorForm(null),
+      pluginSettings: { demo: { demoPort: 3390 } },
+    };
+    const payload = buildHostEditorPayload(form, {
+      enableSsh: false,
+      enableDemo: true,
+    });
+    dispose();
+    expect(payload.connectionType).toBe("demo-desktop");
+    expect(payload.port).toBe(3390);
+    expect(payload.enableSsh).toBe(false);
   });
 });

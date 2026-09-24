@@ -1,19 +1,24 @@
-import type { Host } from "@/types/ui-types";
 import type { GuacamoleQuickHost } from "./GuacamoleApp";
+import {
+  hostRemoteOptions,
+  type Protocol,
+  type RemoteHostLogin,
+} from "./host-remote";
 
 /** The slice of a quick-connect host that GuacamoleApp mints a token from. */
-export function quickConnectGuacHost(host: Host): GuacamoleQuickHost {
+export function quickConnectGuacHost(
+  host: RemoteHostLogin,
+): GuacamoleQuickHost {
+  const options = hostRemoteOptions(host);
+  const connectionType: Protocol = options.enableVnc ? "vnc" : "rdp";
   return {
-    name: host.name,
-    ip: host.ip,
-    connectionType: host.enableVnc ? "vnc" : "rdp",
+    name: host.name ?? undefined,
+    ip: host.ip ?? "",
+    connectionType,
     domain: host.domain,
-    rdpPort: host.rdpPort,
-    vncPort: host.vncPort,
+    port: connectionType === "vnc" ? options.vncPort : options.rdpPort,
     rdpAuthType: host.rdpAuthType,
-    rdpUser: host.rdpUser,
-    rdpPassword: host.rdpPassword,
-    vncUser: host.vncUser,
-    vncPassword: host.vncPassword,
+    username: connectionType === "vnc" ? host.vncUser : host.rdpUser,
+    password: connectionType === "vnc" ? host.vncPassword : host.rdpPassword,
   };
 }

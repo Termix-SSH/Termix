@@ -33,8 +33,6 @@ import {
   updateGlobalMonitoringSettings,
   getLogLevel,
   updateLogLevel,
-  getGuacamoleSettings,
-  updateGuacamoleSettings,
   getOidcAutoProvision,
   updateOidcAutoProvision,
   getSecondFactorAfterExternalLogin,
@@ -137,8 +135,6 @@ export function AdminSettingsPanel({
   const [sessionTimeout, setSessionTimeout] = useState("24");
   const [statusInterval, setStatusInterval] = useState("60");
   const [metricsInterval, setMetricsInterval] = useState("30");
-  const [guacEnabled, setGuacEnabled] = useState(false);
-  const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
@@ -350,7 +346,6 @@ export function AdminSettingsPanel({
         timeout,
         monitoring,
         level,
-        guac,
         oidcProv,
         secondFactorExternal,
         oidcSilent,
@@ -366,7 +361,6 @@ export function AdminSettingsPanel({
         getSessionTimeout(),
         getGlobalMonitoringSettings(),
         getLogLevel(),
-        getGuacamoleSettings(),
         getOidcAutoProvision(),
         getSecondFactorAfterExternalLogin(),
         getOidcSilentLoginDefault(),
@@ -402,10 +396,6 @@ export function AdminSettingsPanel({
       }
 
       if (level.status === "fulfilled") setLogLevel(level.value.level);
-      if (guac.status === "fulfilled") {
-        setGuacEnabled(guac.value.enabled);
-        setGuacUrl(guac.value.url || "guacd:4822");
-      }
       if (analytics.status === "fulfilled") {
         setAnalyticsEnabled(analytics.value.enabled);
         setAnalyticsLocked(analytics.value.locked ?? false);
@@ -653,26 +643,6 @@ export function AdminSettingsPanel({
       toast.success(t("admin.monitoringSaved"));
     } catch {
       toast.error(t("admin.monitoringSaveFailed"));
-    }
-  }
-
-  async function handleSaveGuacamole() {
-    try {
-      await updateGuacamoleSettings({ enabled: guacEnabled, url: guacUrl });
-      toast.success(t("admin.remoteDesktopSaved"));
-    } catch {
-      toast.error(t("admin.remoteDesktopSaveFailed"));
-    }
-  }
-
-  async function handleToggleGuacamole() {
-    const newVal = !guacEnabled;
-    setGuacEnabled(newVal);
-    try {
-      await updateGuacamoleSettings({ enabled: newVal, url: guacUrl });
-    } catch {
-      setGuacEnabled(!newVal);
-      toast.error(t("admin.remoteDesktopUpdateFailed"));
     }
   }
 
@@ -1103,11 +1073,6 @@ export function AdminSettingsPanel({
         metricsInterval={metricsInterval}
         setMetricsInterval={setMetricsInterval}
         handleSaveMonitoring={handleSaveMonitoring}
-        guacEnabled={guacEnabled}
-        handleToggleGuacamole={handleToggleGuacamole}
-        guacUrl={guacUrl}
-        setGuacUrl={setGuacUrl}
-        handleSaveGuacamole={handleSaveGuacamole}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}
       />

@@ -204,11 +204,75 @@
       "fontName": "ชื่อแบบอักษร",
       "fontSize": "ขนาดตัวอักษร",
       "colorScheme": "โทนสี",
-      "backspaceKey": "ปุ่มลบ"
-    }
+      "backspaceKey": "ปุ่มลบ",
+      "colorDepth": "ความลึกของสี",
+      "resizeMethod": "วิธีการปรับขนาด"
+    },
+    "remoteDesktop": "รีโมทเดสก์ท็อป",
+    "tabRdp": "อาร์ดีพี",
+    "tabVnc": "วีเอ็นซี",
+    "tabTelnet": "เทลเน็ต",
+    "virtualNetwork": "เครือข่ายเสมือน",
+    "unencryptedShell": "เชลล์ที่ไม่ได้เข้ารหัส"
   },
   "onboarding": {
     "feature_desktop": "การเข้าถึงเดสก์ท็อประยะไกล",
     "feature_desktop_desc": "เปิดเซสชัน RDP, VNC และ Telnet ในแท็บเดียวกัน เหมือนกับการเปิด SSH"
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "ความลึกของสี"
+      },
+      "resizeMethod": {
+        "label": "วิธีการปรับขนาด"
+      },
+      "resizeDisplayUpdate": "อัปเดตการแสดงผล",
+      "resizeReconnect": "เชื่อมต่อใหม่",
+      "inherit": "สืบทอด",
+      "on": "บน",
+      "off": "ปิด",
+      "forceLossless": {
+        "label": "บังคับการสูญเสีย",
+        "description": "บังคับใช้การเข้ารหัสภาพแบบไม่สูญเสียคุณภาพ (คุณภาพสูงกว่า ใช้แบนด์วิดท์มากกว่า)"
+      },
+      "enableWallpaper": {
+        "label": "วอลเปเปอร์",
+        "description": "แสดงภาพพื้นหลังเดสก์ท็อป (การปิดใช้งานจะช่วยเพิ่มประสิทธิภาพ)"
+      },
+      "enableFontSmoothing": {
+        "label": "การปรับความเรียบของแบบอักษร",
+        "description": "เปิดใช้งานการแสดงผลฟอนต์ ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "การจัดองค์ประกอบเดสก์ท็อป",
+        "description": "เปิดใช้งานเอฟเฟกต์กระจก Aero"
+      },
+      "disableAudio": {
+        "label": "ปิดใช้งานเสียง",
+        "description": "ปิดเสียงทั้งหมดจากการเชื่อมต่อระยะไกล"
+      },
+      "enablePrinting": {
+        "label": "เปิดใช้งานการพิมพ์",
+        "description": "โอนย้ายเครื่องพิมพ์ในเครื่องไปยังเซสชันระยะไกล"
+      },
+      "enableDrive": {
+        "label": "เปิดใช้งานการเปลี่ยนเส้นทางไดรฟ์",
+        "description": "แมปโฟลเดอร์ในเครื่องเป็นไดรฟ์ในเซสชันระยะไกล"
+      },
+      "disableCopy": {
+        "label": "ปิดใช้งานการคัดลอก",
+        "description": "ป้องกันการคัดลอกข้อความจากเซสชันระยะไกล"
+      },
+      "disablePaste": {
+        "label": "ปิดใช้งานการวาง",
+        "description": "ป้องกันการวางข้อความลงในเซสชันระยะไกล"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL guacd"
+      }
+    }
   }
 }

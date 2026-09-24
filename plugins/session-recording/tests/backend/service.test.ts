@@ -171,4 +171,12 @@ describe("recordings.writer", () => {
 
     expect(row.id).toBeGreaterThan(0);
   });
+
+  it("enabledFor follows the host's recording switch", async () => {
+    const { mock, writer } = await setup();
+    await mock.ctx.settings.setHost(7, "enableSessionRecording", true);
+    await expect(writer.enabledFor(7)).resolves.toBe(true);
+    await mock.ctx.settings.setHost(7, "enableSessionRecording", false);
+    await expect(writer.enabledFor(7)).resolves.toBe(false);
+  });
 });

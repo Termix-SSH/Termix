@@ -68,7 +68,6 @@ import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../repositories/host-resolution-repository.js";
-import { AUTH_PROTOCOL_METADATA } from "../../../types/auth-protocols.js";
 import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
@@ -216,9 +215,6 @@ router.post(
       terminalConfig,
       forceKeyboardInteractive,
       domain,
-      security,
-      ignoreCert,
-      guacamoleConfig,
       notes,
       useSocks5,
       socks5Host,
@@ -232,20 +228,12 @@ router.post(
       macAddress,
       wolBroadcastAddress,
       enableSsh,
-      enableRdp,
-      enableVnc,
-      enableTelnet,
       sshPort,
-      rdpPort,
-      vncPort,
-      telnetPort,
       rdpAuthType,
       rdpCredentialId,
       rdpUser,
       rdpPassword,
       rdpDomain,
-      rdpSecurity,
-      rdpIgnoreCert,
       vncAuthType,
       vncCredentialId,
       vncPassword,
@@ -267,7 +255,7 @@ router.post(
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
-      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(isOptionalBoolean)
+      !isOptionalBoolean(enableSsh)
     ) {
       sshLogger.warn("Invalid SSH data input validation failed", {
         operation: "host_create",
@@ -364,9 +352,6 @@ router.post(
         : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       domain: domain || null,
-      security: security || null,
-      ignoreCert: ignoreCert ? 1 : 0,
-      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
       notes: notes || null,
       sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,
@@ -388,27 +373,22 @@ router.post(
         : null,
       ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
-      rdpPort: rdpPort || 3389,
-      vncPort: vncPort || 5900,
-      telnetPort: telnetPort || 23,
-      rdpAuthType: enableRdp ? rdpAuthType || null : null,
+      rdpAuthType: rdpAuthType || null,
       rdpCredentialId:
-        enableRdp && rdpAuthType === "credential" && rdpCredentialId
+        rdpAuthType === "credential" && rdpCredentialId
           ? rdpCredentialId
           : null,
       rdpUser: rdpUser || null,
       rdpDomain: rdpDomain || null,
-      rdpSecurity: rdpSecurity || null,
-      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
-      vncAuthType: enableVnc ? vncAuthType || null : null,
+      vncAuthType: vncAuthType || null,
       vncCredentialId:
-        enableVnc && vncAuthType === "credential" && vncCredentialId
+        vncAuthType === "credential" && vncCredentialId
           ? vncCredentialId
           : null,
       vncUser: vncUser || null,
-      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
+      telnetAuthType: telnetAuthType || null,
       telnetCredentialId:
-        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
+        telnetAuthType === "credential" && telnetCredentialId
           ? telnetCredentialId
           : null,
       telnetUser: telnetUser || null,
@@ -932,9 +912,6 @@ router.put(
       terminalConfig,
       forceKeyboardInteractive,
       domain,
-      security,
-      ignoreCert,
-      guacamoleConfig,
       notes,
       useSocks5,
       socks5Host,
@@ -948,20 +925,12 @@ router.put(
       macAddress,
       wolBroadcastAddress,
       enableSsh,
-      enableRdp,
-      enableVnc,
-      enableTelnet,
       sshPort,
-      rdpPort,
-      vncPort,
-      telnetPort,
       rdpAuthType,
       rdpCredentialId,
       rdpUser,
       rdpPassword,
       rdpDomain,
-      rdpSecurity,
-      rdpIgnoreCert,
       vncAuthType,
       vncCredentialId,
       vncPassword,
@@ -983,9 +952,7 @@ router.put(
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
       !isOptionalBoolean(shareSshAuth) ||
-      ![enableSsh, enableRdp, enableVnc, enableTelnet].every(
-        isOptionalBoolean,
-      ) ||
+      !isOptionalBoolean(enableSsh) ||
       !hostId
     ) {
       sshLogger.warn("Invalid SSH data input validation failed for update", {
@@ -1083,9 +1050,6 @@ router.put(
         : null,
       forceKeyboardInteractive: forceKeyboardInteractive ? "true" : "false",
       domain: domain || null,
-      security: security || null,
-      ignoreCert: ignoreCert ? 1 : 0,
-      guacamoleConfig: guacamoleConfig ? JSON.stringify(guacamoleConfig) : null,
       notes: notes || null,
       sudoPassword: sudoPassword || null,
       useSocks5: useSocks5 ? 1 : 0,
@@ -1107,27 +1071,22 @@ router.put(
         : null,
       ...normalizeProtocolEnableFields(hostData),
       sshPort: sshPort || port || 22,
-      rdpPort: rdpPort || 3389,
-      vncPort: vncPort || 5900,
-      telnetPort: telnetPort || 23,
-      rdpAuthType: enableRdp ? rdpAuthType || null : null,
+      rdpAuthType: rdpAuthType || null,
       rdpCredentialId:
-        enableRdp && rdpAuthType === "credential" && rdpCredentialId
+        rdpAuthType === "credential" && rdpCredentialId
           ? rdpCredentialId
           : null,
       rdpUser: rdpUser || null,
       rdpDomain: rdpDomain || null,
-      rdpSecurity: rdpSecurity || null,
-      rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
-      vncAuthType: enableVnc ? vncAuthType || null : null,
+      vncAuthType: vncAuthType || null,
       vncCredentialId:
-        enableVnc && vncAuthType === "credential" && vncCredentialId
+        vncAuthType === "credential" && vncCredentialId
           ? vncCredentialId
           : null,
       vncUser: vncUser || null,
-      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
+      telnetAuthType: telnetAuthType || null,
       telnetCredentialId:
-        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
+        telnetAuthType === "credential" && telnetCredentialId
           ? telnetCredentialId
           : null,
       telnetUser: telnetUser || null,
@@ -2085,9 +2044,7 @@ router.get(
 
       const exportedConnectionType =
         (resolvedHost.connectionType as string) || "ssh";
-      const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
-        exportedConnectionType,
-      );
+      const isRemoteDesktop = exportedConnectionType !== "ssh";
 
       const baseExportData = {
         exportId: resolvedHost.id,
@@ -2104,24 +2061,18 @@ router.get(
             : resolvedHost.tags || [],
         pin: !!resolvedHost.pin,
         notes: resolvedHost.notes || null,
+        // Every plugin's host settings, secrets redacted, for import to hand back.
+        pluginSettings: hostPluginSettings ?? {},
       };
 
       const exportData = isRemoteDesktop
         ? {
             ...baseExportData,
-            enableRdp: !!resolvedHost.enableRdp,
-            enableVnc: !!resolvedHost.enableVnc,
-            enableTelnet: !!resolvedHost.enableTelnet,
-            rdpPort: resolvedHost.rdpPort || 3389,
-            vncPort: resolvedHost.vncPort || 5900,
-            telnetPort: resolvedHost.telnetPort || 23,
             rdpAuthType: resolvedHost.rdpAuthType || null,
             rdpCredentialId: resolvedHost.rdpCredentialId || null,
             rdpUser: resolvedHost.rdpUser || null,
             rdpPassword: resolvedHost.rdpPassword || null,
             rdpDomain: resolvedHost.rdpDomain || null,
-            rdpSecurity: resolvedHost.rdpSecurity || null,
-            rdpIgnoreCert: !!resolvedHost.rdpIgnoreCert,
             vncAuthType: resolvedHost.vncAuthType || null,
             vncCredentialId: resolvedHost.vncCredentialId || null,
             vncUser: resolvedHost.vncUser || null,
@@ -2130,9 +2081,6 @@ router.get(
             telnetCredentialId: resolvedHost.telnetCredentialId || null,
             telnetUser: resolvedHost.telnetUser || null,
             telnetPassword: resolvedHost.telnetPassword || null,
-            guacamoleConfig: resolvedHost.guacamoleConfig
-              ? JSON.parse(resolvedHost.guacamoleConfig as string)
-              : null,
           }
         : {
             ...baseExportData,
@@ -2273,9 +2221,7 @@ router.get(
 
         const exportedConnectionType =
           (resolvedHost.connectionType as string) || "ssh";
-        const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
-          exportedConnectionType,
-        );
+        const isRemoteDesktop = exportedConnectionType !== "ssh";
 
         const baseExportData = {
           exportId: resolvedHost.id,
@@ -2292,17 +2238,14 @@ router.get(
               : resolvedHost.tags || [],
           pin: !!resolvedHost.pin,
           notes: resolvedHost.notes || null,
+          // Every plugin's host settings, secrets redacted, for import to hand back.
+          pluginSettings: hostPluginSettings ?? {},
         };
 
         const exportData = isRemoteDesktop
           ? {
               ...baseExportData,
               domain: resolvedHost.domain || null,
-              security: resolvedHost.security || null,
-              ignoreCert: !!resolvedHost.ignoreCert,
-              guacamoleConfig: resolvedHost.guacamoleConfig
-                ? JSON.parse(resolvedHost.guacamoleConfig as string)
-                : null,
             }
           : {
               ...baseExportData,
@@ -2638,8 +2581,9 @@ async function resolveHostCredentials(
           host.id,
           requestingUserId,
         );
+      // Whether a protocol is on is the remote-desktop plugin's host
+      // setting; the client only offers an override for one that is.
       for (const protocol of ["rdp", "vnc", "telnet"] as const) {
-        if (!host[AUTH_PROTOCOL_METADATA[protocol].enableField]) continue;
         authOverrides[protocol] = {
           credentialId: overrideCredentialIds[protocol],
           required: false,

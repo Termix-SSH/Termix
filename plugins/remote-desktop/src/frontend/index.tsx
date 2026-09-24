@@ -1,23 +1,21 @@
 import type { ComponentType, Ref } from "react";
-import i18next from "i18next";
-import { toast } from "sonner";
 import {
+  Info,
   MessagesSquare,
   Monitor,
   MonitorUp,
   MousePointerClick,
-  Settings,
 } from "lucide-react";
 import {
   useTranslation,
   type HostEditorSectionProps,
+  type PluginHostRecord,
   type StandaloneViewProps,
   type TabProps,
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import { FakeSwitch, SectionCard, SettingRow } from "@termix/plugin-sdk/ui";
-import type { Host } from "@/types/ui-types";
-import { isQuickConnectHost } from "@/sidebar/quick-connect-host";
+import { SectionCard, isElectron } from "@termix/plugin-sdk/ui";
+import { toast } from "sonner";
 import GuacamoleApp, { type GuacamoleAppHandle } from "./GuacamoleApp";
 import { GuacamoleDisplay } from "./GuacamoleDisplay";
 import {
@@ -25,48 +23,70 @@ import {
   HostEditorTelnetTab,
   HostEditorVncTab,
 } from "./HostEditorGuacamoleTabs";
-import { getGuacamoleTokenFromHost } from "./guacamole-api";
+import {
+  getGuacamoleTokenFromHost,
+  getGuacdStatus,
+  nativeRdpAvailable,
+  openNativeRdp,
+  setRemoteDesktopApp,
+} from "./guacamole-api";
 import { quickConnectGuacHost } from "./quick-connect-guac-host";
 import { REMOTE_DESKTOP_TOOLBAR_SLOT } from "./GuacamoleToolbar.tsx";
-
-type Protocol = "rdp" | "vnc" | "telnet";
+import {
+  DEFAULT_PORT,
+  ENABLE_KEY,
+  PORT_KEY,
+  hostRemoteOptions,
+  isQuickConnectHost,
+  protocolEnabled,
+  type Protocol,
+  type RemoteHostLogin,
+} from "./host-remote";
+import { remoteDesktopForm } from "./remote-form";
 
 const PROTOCOLS: {
   id: Protocol;
   titleKey: string;
+  descriptionKey: string;
+  paletteKey: string;
   icon: ComponentType<{ className?: string }>;
-  enableKey: "enableRdp" | "enableVnc" | "enableTelnet";
   priority: number;
   order: number;
+  quickConnect?: { showDomain?: boolean };
 }[] = [
   {
     id: "rdp",
     titleKey: "hosts.tabRdp",
+    descriptionKey: "hosts.remoteDesktop",
+    paletteKey: "palette.connectRdp",
     icon: Monitor,
-    enableKey: "enableRdp",
     priority: 50,
     order: 100,
+    quickConnect: { showDomain: true },
   },
   {
     id: "vnc",
     titleKey: "hosts.tabVnc",
+    descriptionKey: "hosts.virtualNetwork",
+    paletteKey: "palette.connectVnc",
     icon: MousePointerClick,
-    enableKey: "enableVnc",
     priority: 40,
     order: 110,
+    quickConnect: {},
   },
   {
     id: "telnet",
     titleKey: "hosts.tabTelnet",
+    descriptionKey: "hosts.unencryptedShell",
+    paletteKey: "palette.connectTelnet",
     icon: MessagesSquare,
-    enableKey: "enableTelnet",
     priority: 30,
     order: 120,
   },
 ];
 
 function RemoteDesktopTab({ tab, host, isVisible, handleRef }: TabProps) {
-  const shellHost = host as unknown as Host;
+  const record = host as unknown as RemoteHostLogin | undefined;
   return (
     <GuacamoleApp
       ref={handleRef as Ref<GuacamoleAppHandle>}
@@ -75,8 +95,8 @@ function RemoteDesktopTab({ tab, host, isVisible, handleRef }: TabProps) {
       protocol={tab.type as Protocol}
       isVisible={isVisible}
       quickConnectHost={
-        isQuickConnectHost(shellHost)
-          ? quickConnectGuacHost(shellHost)
+        record && isQuickConnectHost(record)
+          ? quickConnectGuacHost(record)
           : undefined
       }
     />
@@ -111,79 +131,65 @@ function RemoteDisplay({
   );
 }
 
-/** Applies one remote desktop field and stops inheriting user defaults. */
-function useGuacFieldSetter(
-  updateForm: HostEditorSectionProps["updateForm"],
-): (key: string, value: unknown) => void {
-  return (key, value) =>
-    updateForm((current) => ({
-      inheritRemoteDesktopDefaults: false,
-      guacamoleConfig: {
-        ...((current.guacamoleConfig as Record<string, unknown>) ?? {}),
-        [key]: value,
-      },
-    }));
+function SectionNotes({ protocol }: { protocol: Protocol }) {
+  const { t } = useTranslation();
+  return (
+    <SectionCard
+      title={t("hosts.remoteDesktopNotes")}
+      icon={<Info className="size-3.5" />}
+    >
+      <div className="flex flex-col gap-2 py-3 text-xs text-muted-foreground">
+        {protocol === "rdp" && <p>{t("hosts.userDefaultsNote")}</p>}
+        {isElectron() && <p>{t("hosts.connectionOriginNote")}</p>}
+      </div>
+    </SectionCard>
+  );
 }
 
 function RdpSection(props: HostEditorSectionProps) {
-  const { t } = useTranslation();
-  const setGuacField = useGuacFieldSetter(props.updateForm);
+  const { form, setField, setGuacField } = remoteDesktopForm(props);
   return (
     <>
-      <SectionCard
-        title={t("hosts.rdpDefaults", { defaultValue: "RDP defaults" })}
-        icon={<Settings className="size-3.5" />}
-      >
-        <SettingRow
-          label={t("hosts.useUserDefaults", {
-            defaultValue: "Use user defaults",
-          })}
-          description={t("hosts.useUserRdpDefaultsDesc", {
-            defaultValue:
-              "Inherit performance, redirection, and clipboard settings from User Profile.",
-          })}
-        >
-          <FakeSwitch
-            checked={!!props.form.inheritRemoteDesktopDefaults}
-            onChange={(value) =>
-              props.setField("inheritRemoteDesktopDefaults", value)
-            }
-          />
-        </SettingRow>
-      </SectionCard>
       <HostEditorRdpTab
-        form={props.form}
-        setField={props.setField as never}
-        setGuacField={setGuacField as never}
-        host={props.host as unknown as Host}
+        form={form}
+        setField={setField}
+        setGuacField={setGuacField}
+        host={props.host as { macAddress?: string | null } | undefined}
         credentials={props.credentials as never}
       />
+      <SectionNotes protocol="rdp" />
     </>
   );
 }
 
 function VncSection(props: HostEditorSectionProps) {
-  const setGuacField = useGuacFieldSetter(props.updateForm);
+  const { form, setField, setGuacField } = remoteDesktopForm(props);
   return (
-    <HostEditorVncTab
-      form={props.form}
-      setField={props.setField as never}
-      setGuacField={setGuacField as never}
-      host={props.host as unknown as Host}
-      credentials={props.credentials as never}
-    />
+    <>
+      <HostEditorVncTab
+        form={form}
+        setField={setField}
+        setGuacField={setGuacField}
+        host={props.host as { macAddress?: string | null } | undefined}
+        credentials={props.credentials as never}
+      />
+      <SectionNotes protocol="vnc" />
+    </>
   );
 }
 
 function TelnetSection(props: HostEditorSectionProps) {
-  const setGuacField = useGuacFieldSetter(props.updateForm);
+  const { form, setField, setGuacField } = remoteDesktopForm(props);
   return (
-    <HostEditorTelnetTab
-      form={props.form}
-      setField={props.setField as never}
-      setGuacField={setGuacField as never}
-      credentials={props.credentials as never}
-    />
+    <>
+      <HostEditorTelnetTab
+        form={form}
+        setField={setField}
+        setGuacField={setGuacField}
+        credentials={props.credentials as never}
+      />
+      <SectionNotes protocol="telnet" />
+    </>
   );
 }
 
@@ -193,23 +199,96 @@ const SECTIONS: Record<Protocol, ComponentType<HostEditorSectionProps>> = {
   telnet: TelnetSection,
 };
 
-async function openNativeRdp(host: Record<string, unknown>): Promise<void> {
-  const t = (key: string) => i18next.t(`remote-desktop:${key}`);
-  try {
-    const result = await window.electronAPI.openNativeRdp({
-      host: String(host.ip),
-      port: (host.rdpPort as number | undefined) ?? 3389,
-      username: host.rdpUser as string | undefined,
-      domain: host.domain as string | undefined,
+function registerNativeRdp(app: TermixApp): void {
+  let disposed = false;
+  app.onDispose(() => {
+    disposed = true;
+  });
+  void nativeRdpAvailable().then((available) => {
+    if (disposed || !available) return;
+    app.registerHostAction({
+      id: "rdp-native",
+      titleKey: "hosts.openNativeRdp",
+      icon: MonitorUp,
+      kind: "open",
+      order: 105,
+      when: (host) => protocolEnabled(host, "rdp"),
+      run: (host) => {
+        const record = host as unknown as RemoteHostLogin;
+        void openNativeRdp({
+          host: String(record.ip ?? ""),
+          port: hostRemoteOptions(record).rdpPort,
+          username: record.rdpUser,
+          domain: record.domain,
+        })
+          .then((result) => {
+            if (result.success) toast.success(app.t("hosts.nativeRdpOpened"));
+            else toast.error(result.error || app.t("hosts.nativeRdpFailed"));
+          })
+          .catch(() => toast.error(app.t("hosts.nativeRdpFailed")));
+      },
     });
-    if (result.success) toast.success(t("hosts.nativeRdpOpened"));
-    else toast.error(result.error || t("hosts.nativeRdpFailed"));
-  } catch {
-    toast.error(t("hosts.nativeRdpFailed"));
+  });
+}
+
+function registerHostSurfaces(app: TermixApp): void {
+  for (const protocol of PROTOCOLS) {
+    const when = (host: PluginHostRecord) => protocolEnabled(host, protocol.id);
+
+    app.registerHostProtocol({
+      id: protocol.id,
+      settingKey: ENABLE_KEY[protocol.id],
+      portKey: PORT_KEY[protocol.id],
+      defaultPort: DEFAULT_PORT[protocol.id],
+      titleKey: protocol.titleKey,
+      descriptionKey: protocol.descriptionKey,
+      icon: protocol.icon,
+      order: protocol.order,
+      quickConnect: protocol.quickConnect,
+    });
+
+    app.registerHostAction({
+      id: protocol.id,
+      titleKey: protocol.titleKey,
+      icon: protocol.icon,
+      kind: "connect",
+      priority: protocol.priority,
+      order: protocol.order,
+      tabType: protocol.id,
+      copyUrlView: protocol.id,
+      when,
+    });
+
+    app.registerPaletteEntry({
+      id: `remote-desktop.${protocol.id}`,
+      titleKey: protocol.paletteKey,
+      icon: protocol.icon,
+      keywords: [protocol.id],
+      scope: "host",
+      when: (host) => !!host && when(host),
+      run: (shell, host) => {
+        if (host) shell.openTab(host, protocol.id);
+      },
+    });
+
+    app.registerHostEditorSection({
+      id: protocol.id,
+      group: "top",
+      titleKey: protocol.titleKey,
+      icon: protocol.icon,
+      order: protocol.order / 5,
+      visible: (protocols) => !!protocols[ENABLE_KEY[protocol.id]],
+      component: SECTIONS[protocol.id],
+    });
   }
+
+  if (isElectron()) registerNativeRdp(app);
 }
 
 export function activate(app: TermixApp): void {
+  setRemoteDesktopApp(app);
+  app.onDispose(() => setRemoteDesktopApp(null));
+
   // Guest pages only draw shared streams.
   app.registerSlotContribution("session.remoteDisplay", {
     actionId: "remote-desktop.display",
@@ -253,57 +332,24 @@ export function activate(app: TermixApp): void {
       noHostMessageKey: "remoteDesktop.noHostSelected",
       persistent: true,
       session: true,
-      restore: (host) => !!host[protocol.enableKey],
+      restore: (host) => protocolEnabled(host, protocol.id),
       activityTypes: [protocol.id],
       standalone: RemoteDesktopStandalone,
       preload: () => import("./GuacamoleApp"),
     });
-
-    app.registerHostAction({
-      id: protocol.id,
-      titleKey: protocol.titleKey,
-      icon: protocol.icon,
-      kind: "connect",
-      priority: protocol.priority,
-      order: protocol.order,
-      tabType: protocol.id,
-      copyUrlView: protocol.id,
-      when: (host) => !!host[protocol.enableKey],
-    });
-
-    app.registerHostEditorSection({
-      id: protocol.id,
-      group: "top",
-      titleKey: protocol.titleKey,
-      icon: protocol.icon,
-      order: protocol.order / 5,
-      visible: (protocols) => !!protocols[protocol.enableKey],
-      component: SECTIONS[protocol.id],
-    });
   }
 
-  // The desktop app on Windows can hand RDP to the system client instead.
-  if (window.electronAPI?.isElectron) {
-    let disposed = false;
-    app.onDispose(() => {
-      disposed = true;
+  // An admin can turn Remote Desktop off; its ways in go with it.
+  let disposed = false;
+  app.onDispose(() => {
+    disposed = true;
+  });
+  void getGuacdStatus("local", { probe: false })
+    .then((status) => status.enabled !== false)
+    .catch(() => true)
+    .then((enabled) => {
+      if (!disposed && enabled) registerHostSurfaces(app);
     });
-    window.electronAPI
-      .getPlatform()
-      .then((platform: string) => {
-        if (disposed || platform !== "win32") return;
-        app.registerHostAction({
-          id: "rdp-native",
-          titleKey: "hosts.openNativeRdp",
-          icon: MonitorUp,
-          kind: "open",
-          order: 105,
-          when: (host) => !!host.enableRdp,
-          run: (host) => void openNativeRdp(host),
-        });
-      })
-      .catch(() => {});
-  }
 
   app.registerSlotContribution("onboarding.features", {
     actionId: "remote-desktop.feature",

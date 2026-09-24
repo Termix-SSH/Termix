@@ -317,6 +317,26 @@ export interface HostActionContribution {
   }[];
 }
 
+/**
+ * A connection protocol next to SSH, shown as a switch in the host editor's
+ * General tab and in host filters and Quick Connect. Its switch and port are
+ * this plugin's own host settings (declare both in contributes.settings.host).
+ */
+export interface HostProtocolContribution {
+  id: string;
+  /** Boolean host setting that turns the protocol on. */
+  settingKey: string;
+  /** Number host setting holding the port. */
+  portKey?: string;
+  defaultPort: number;
+  titleKey: string;
+  descriptionKey?: string;
+  icon: IconComponent;
+  order?: number;
+  /** Offer it in Quick Connect, optionally with a domain field. */
+  quickConnect?: { showDomain?: boolean };
+}
+
 export interface HostBadgeContribution {
   id: string;
   when: (host: PluginHostRecord) => boolean;
@@ -524,6 +544,7 @@ export interface TermixApp extends TermixAppInfo {
     section: HostEditorSectionContribution,
   ) => Disposer;
   registerHostAction: (action: HostActionContribution) => Disposer;
+  registerHostProtocol: (protocol: HostProtocolContribution) => Disposer;
   registerHostBadge: (badge: HostBadgeContribution) => Disposer;
   registerHostContextMenuItem: (
     item: HostContextMenuItemContribution,
@@ -574,6 +595,11 @@ export interface TermixApp extends TermixAppInfo {
 
   /** HTTP client for this plugin's /plugin-api/<id>/ routes. */
   api: PluginApiClient;
+  /**
+   * The same client for a resolved connection origin: "remote" reaches the
+   * desktop app's connected remote server, anything else is `api`.
+   */
+  apiFor: (origin?: unknown) => PluginApiClient;
   /** WebSocket URL and auth subprotocols for /plugin-ws/<id>/<path>. */
   wsUrl: (
     path: string,
@@ -668,6 +694,7 @@ export interface PluginHostBridge {
   usePluginComponent: (
     id: string,
   ) => ComponentType<Record<string, unknown>> | undefined;
+  hostProtocols: (host: PluginHostRecord) => string[];
 }
 
 let host: PluginHostBridge | null = null;
@@ -778,6 +805,15 @@ export function useSshAuthTypes(): {
  * next to its own. Same permission and `when` filtering as ComponentSlot;
  * `context` is what each contribution's `when` sees.
  */
+/**
+ * The connection protocols a host has switched on: "ssh" plus every protocol
+ * a running plugin registered with registerHostProtocol (RDP, VNC). Lets a
+ * plugin offer a protocol without knowing which plugin owns its settings.
+ */
+export function hostProtocols(record: PluginHostRecord): string[] {
+  return requireHost().hostProtocols(record);
+}
+
 export function useSlotContributions(
   slotId: string,
   context?: Record<string, unknown>,

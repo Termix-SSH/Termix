@@ -204,11 +204,75 @@
       "fontName": "Název písma",
       "fontSize": "Velikost písma",
       "colorScheme": "Barevné schéma",
-      "backspaceKey": "Klávesa Backspace"
-    }
+      "backspaceKey": "Klávesa Backspace",
+      "colorDepth": "Barevná hloubka",
+      "resizeMethod": "Metoda změny velikosti"
+    },
+    "remoteDesktop": "Vzdálená plocha",
+    "tabRdp": "PRV",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuální síť",
+    "unencryptedShell": "Nešifrovaný shell"
   },
   "onboarding": {
     "feature_desktop": "Vzdálená plocha",
     "feature_desktop_desc": "Otevírejte relace RDP, VNC a Telnet na kartě, stejně jako SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Barevná hloubka"
+      },
+      "resizeMethod": {
+        "label": "Metoda změny velikosti"
+      },
+      "resizeDisplayUpdate": "Aktualizace displeje",
+      "resizeReconnect": "Znovu se připojte",
+      "inherit": "Zdědit",
+      "on": "Na",
+      "off": "Vypnuto",
+      "forceLossless": {
+        "label": "Vynutit bezztrátové",
+        "description": "Vynucení bezztrátového kódování obrazu (vyšší kvalita, větší šířka pásma)"
+      },
+      "enableWallpaper": {
+        "label": "Tapeta",
+        "description": "Zobrazit tapetu plochy (zakázání zlepšuje výkon)"
+      },
+      "enableFontSmoothing": {
+        "label": "Vyhlazování písma",
+        "description": "Povolit vykreslování písma ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Složení plochy",
+        "description": "Povolit efekty Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Zakázat zvuk",
+        "description": "Ztlumit veškerý zvuk ze vzdálené relace"
+      },
+      "enablePrinting": {
+        "label": "Povolit tisk",
+        "description": "Přesměrování lokálních tiskáren na vzdálenou relaci"
+      },
+      "enableDrive": {
+        "label": "Povolit přesměrování disku",
+        "description": "Namapování lokální složky jako jednotky ve vzdálené relaci"
+      },
+      "disableCopy": {
+        "label": "Zakázat kopírování",
+        "description": "Zabránit kopírování textu ze vzdálené relace"
+      },
+      "disablePaste": {
+        "label": "Zakázat vkládání",
+        "description": "Zabránit vkládání textu do vzdálené relace"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL GUACD"
+      }
+    }
   }
 }

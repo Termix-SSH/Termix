@@ -121,3 +121,50 @@ describe("ctx.desktop.openIsolatedWindow", () => {
     });
   });
 });
+
+describe("ctx.desktop.launchNativeRdp", () => {
+  const request = { host: "win.example.test", port: 3389, username: "bob" };
+
+  it("refuses without desktop:window", async () => {
+    grants.set("demo", []);
+    const { ctx } = contextFor("demo", []);
+
+    await expect(ctx.desktop.launchNativeRdp(request)).rejects.toThrow(
+      /desktop:window/,
+    );
+    expect(bridge.requestFromElectronMain).not.toHaveBeenCalled();
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_desktop_launch_native_rdp",
+      success: false,
+    });
+  });
+
+  it("refuses outside the desktop app", async () => {
+    grants.set("demo", ["desktop:window"]);
+    const { ctx } = contextFor("demo", ["desktop:window"]);
+
+    expect(ctx.desktop.available()).toBe(false);
+    await expect(ctx.desktop.launchNativeRdp(request)).rejects.toThrow(
+      /desktop app/,
+    );
+  });
+
+  it("relays to Electron main and audits success", async () => {
+    grants.set("demo", ["desktop:window"]);
+    bridge.available = true;
+    const { ctx } = contextFor("demo", ["desktop:window"]);
+
+    expect(ctx.desktop.available()).toBe(true);
+    await expect(ctx.desktop.launchNativeRdp(request)).resolves.toEqual({
+      success: true,
+    });
+    expect(bridge.requestFromElectronMain).toHaveBeenCalledWith(
+      "launch-native-rdp",
+      request,
+    );
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_desktop_launch_native_rdp",
+      success: true,
+    });
+  });
+});

@@ -204,11 +204,75 @@
       "fontName": "Назва шрифту",
       "fontSize": "Розмір шрифту",
       "colorScheme": "Колірна схема",
-      "backspaceKey": "Клавіша Backspace"
-    }
+      "backspaceKey": "Клавіша Backspace",
+      "colorDepth": "Глибина кольору",
+      "resizeMethod": "Метод зміни розміру"
+    },
+    "remoteDesktop": "Віддалений робочий стіл",
+    "tabRdp": "ПРП",
+    "tabVnc": "VNC",
+    "tabTelnet": "Телнет",
+    "virtualNetwork": "Віртуальна мережа",
+    "unencryptedShell": "Незашифрована оболонка"
   },
   "onboarding": {
     "feature_desktop": "Віддалений робочий стіл",
     "feature_desktop_desc": "Відкривати сеанси RDP, VNC та Telnet у вкладці, так само, як SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Глибина кольору"
+      },
+      "resizeMethod": {
+        "label": "Метод зміни розміру"
+      },
+      "resizeDisplayUpdate": "Оновлення дисплея",
+      "resizeReconnect": "Знову підключитися",
+      "inherit": "Успадкувати",
+      "on": "Увімкнено",
+      "off": "Вимкнено",
+      "forceLossless": {
+        "label": "Примусово без втрат",
+        "description": "Примусове кодування зображень без втрат (вища якість, більша пропускна здатність)"
+      },
+      "enableWallpaper": {
+        "label": "Шпалери",
+        "description": "Показувати шпалери робочого столу (вимикання покращує продуктивність)"
+      },
+      "enableFontSmoothing": {
+        "label": "Згладжування шрифтів",
+        "description": "Увімкнути рендеринг шрифтів ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Композиція робочого столу",
+        "description": "Увімкнути ефекти Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Вимкнути аудіо",
+        "description": "Вимкнути весь звук під час віддаленого сеансу"
+      },
+      "enablePrinting": {
+        "label": "Увімкнути друк",
+        "description": "Перенаправити локальні принтери на віддалений сеанс"
+      },
+      "enableDrive": {
+        "label": "Увімкнути перенаправлення диска",
+        "description": "Призначення локальної папки як диска у віддаленому сеансі"
+      },
+      "disableCopy": {
+        "label": "Вимкнути копіювання",
+        "description": "Запобігти копіюванню тексту з віддаленого сеансу"
+      },
+      "disablePaste": {
+        "label": "Вимкнути вставку",
+        "description": "Запобігти вставці тексту у віддалений сеанс"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL-адреса GUACD"
+      }
+    }
   }
 }

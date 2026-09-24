@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   fromTriState,
-  parseRemoteDesktopDefaults,
   parseTerminalDefaults,
   resolveConnectionDefaults,
   toTriState,
@@ -10,7 +9,7 @@ import {
 describe("connection defaults", () => {
   it("ignores malformed persisted defaults", () => {
     expect(parseTerminalDefaults("not-json")).toEqual({});
-    expect(parseRemoteDesktopDefaults("[]")).toEqual({});
+    expect(parseTerminalDefaults("[]")).toEqual({});
   });
 
   it("lets host values override user defaults", () => {

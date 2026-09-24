@@ -1,5 +1,9 @@
 import crypto from "crypto";
-import { guacLogger } from "../../../../src/backend/utils/logger.js";
+
+interface TokenLogger {
+  warn: (message: string, meta?: Record<string, unknown>) => void;
+  error: (message: string, meta?: Record<string, unknown>) => void;
+}
 
 export interface GuacamoleConnectionSettings {
   type?: "rdp" | "vnc" | "telnet";
@@ -33,8 +37,10 @@ export interface GuacamoleConnectionSettings {
 export interface TermixGuacMeta {
   termixConnectId: string;
   hostId: number;
+  hostName: string;
   ownerUserId: string;
   protocol: "rdp" | "vnc" | "telnet";
+  tabInstanceId: string | null;
 }
 
 export interface GuacamoleToken {
@@ -57,19 +63,17 @@ export interface GuacamoleRecordingMetadata {
 const CIPHER = "aes-256-cbc";
 const KEY_LENGTH = 32;
 
+const silentLogger: TokenLogger = { warn: () => {}, error: () => {} };
+
+/**
+ * Encrypts the connection tokens guacamole-lite decrypts. Built in activate;
+ * the key is derived from the environment, so a restart keeps it.
+ */
 export class GuacamoleTokenService {
-  private static instance: GuacamoleTokenService;
   private encryptionKey: Buffer;
 
-  private constructor() {
+  constructor(private readonly log: TokenLogger = silentLogger) {
     this.encryptionKey = this.initializeKey();
-  }
-
-  static getInstance(): GuacamoleTokenService {
-    if (!GuacamoleTokenService.instance) {
-      GuacamoleTokenService.instance = new GuacamoleTokenService();
-    }
-    return GuacamoleTokenService.instance;
   }
 
   private initializeKey(): Buffer {
@@ -91,12 +95,9 @@ export class GuacamoleTokenService {
         .digest();
     }
 
-    guacLogger.warn(
-      "No persistent encryption key found, generating random key",
-      {
-        operation: "guac_key_generation",
-      },
-    );
+    this.log.warn("No persistent encryption key found, generating random key", {
+      operation: "guac_key_generation",
+    });
     return crypto.randomBytes(KEY_LENGTH);
   }
 
@@ -134,8 +135,9 @@ export class GuacamoleTokenService {
 
       return JSON.parse(decrypted) as GuacamoleToken;
     } catch (error) {
-      guacLogger.error("Failed to decrypt guacamole token", error, {
+      this.log.error("Failed to decrypt guacamole token", {
         operation: "guac_token_decrypt_error",
+        error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }

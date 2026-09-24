@@ -302,21 +302,13 @@ export const hosts = mysqlTable(
     quickActions: text("quick_actions"),
     notes: text("notes"),
     enableSsh: boolean("enable_ssh").notNull().default(true),
-    enableRdp: boolean("enable_rdp").notNull().default(false),
-    enableVnc: boolean("enable_vnc").notNull().default(false),
-    enableTelnet: boolean("enable_telnet").notNull().default(false),
 
     sshPort: int("ssh_port").default(22),
-    rdpPort: int("rdp_port").default(3389),
-    vncPort: int("vnc_port").default(5900),
-    telnetPort: int("telnet_port").default(23),
 
     rdpCredentialId: int("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     rdpUser: text("rdp_user"),
     rdpPassword: text("rdp_password"),
     rdpDomain: text("rdp_domain"),
-    rdpSecurity: text("rdp_security"),
-    rdpIgnoreCert: boolean("rdp_ignore_cert").default(false),
 
     vncCredentialId: int("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
     vncPassword: text("vnc_password"),
@@ -331,9 +323,6 @@ export const hosts = mysqlTable(
     telnetAuthType: text("telnet_auth_type"),
 
     domain: text("domain"),
-    security: text("security"),
-    ignoreCert: boolean("ignore_cert").default(false),
-    guacamoleConfig: text("guacamole_config"),
 
     useSocks5: boolean("use_socks5"),
     socks5Host: text("socks5_host"),
@@ -892,7 +881,6 @@ export const userPreferences = mysqlTable("user_preferences", {
   customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
   terminalDefaults: text("terminal_defaults"),
-  rdpDefaults: text("rdp_defaults"),
   terminalMacros: text("terminal_macros"),
   updatedAt: varchar("updated_at", { length: 255 })
     .notNull()

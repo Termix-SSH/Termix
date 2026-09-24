@@ -1,4 +1,4 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { errorMessage } from "./host-remote";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Guacamole from "guacamole-common-js";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/button.tsx";
+import { Button } from "@termix/plugin-sdk/ui";
 import {
   downloadFile,
   listDirectory,
@@ -56,7 +56,7 @@ export function GuacamoleFileBrowser({
         setEntries(await listDirectory(filesystem, target));
       } catch (err) {
         setEntries([]);
-        setError(getErrorMessage(err, t("remoteDesktop.files.listFailed")));
+        setError(errorMessage(err, t("remoteDesktop.files.listFailed")));
       } finally {
         setLoading(false);
       }

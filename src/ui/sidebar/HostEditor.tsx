@@ -76,6 +76,7 @@ import {
 } from "./HostEditorData";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
+import { withProtocolSettings } from "./host-protocols";
 import { canEditHost } from "./host-permissions";
 import { VaultProfileManager } from "./VaultProfileManager";
 import {
@@ -331,7 +332,10 @@ export function HostEditor({
       }
       // After the host: a new one has no id to scope settings to until it
       // exists. A failure here must not claim the host itself failed to save.
-      await savePluginHostSettings(Number(saved.id), form.pluginSettings);
+      await savePluginHostSettings(
+        Number(saved.id),
+        withProtocolSettings(form.pluginSettings, protocols),
+      );
 
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
       setPreviewTerminalTheme(null);

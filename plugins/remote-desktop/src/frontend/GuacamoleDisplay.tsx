@@ -1,4 +1,3 @@
-import { getErrorMessage } from "@/lib/error-message.js";
 import type React from "react";
 import {
   useEffect,
@@ -11,15 +10,18 @@ import {
 import Guacamole from "guacamole-common-js";
 import { Upload } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { isElectron } from "@/main-axios";
 import { getGuacamoleToken } from "./guacamole-api";
-import { getBasePath } from "@/lib/base-path.ts";
 import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
 import {
-  resolveConnectionOrigin,
   buildOriginWsUrl,
+  getBasePath,
+  guacStateToStage,
+  isElectron,
+  resolveConnectionOrigin,
   type ConnectionOrigin,
-} from "@/lib/connection-origin.ts";
+  type ConnectionStage,
+} from "@termix/plugin-sdk/ui";
+import { errorMessage } from "./host-remote";
 import { isPasteShortcut, pasteTextToRemote } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
 import { bindPointerInput } from "./guacamole-pointer.ts";
@@ -31,8 +33,6 @@ import {
   uploadFileToClient,
   type GuacamoleFileStreamClient,
 } from "./guacamole-filesystem.ts";
-import { guacStateToStage } from "@/components/connection/connection-status.ts";
-import type { ConnectionStage } from "@/types/connection-log.ts";
 import { clampGuacamoleZoom, stepGuacamoleZoom } from "./guacamole-zoom.ts";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
@@ -243,10 +243,10 @@ export const GuacamoleDisplay = forwardRef<
         // Resolved before the token is minted, not just before the socket is
         // opened: the token has to come from whichever backend will serve the
         // session, so both steps have to agree on the origin.
-        const origin = await resolveConnectionOrigin({
-          connectionType: connectionProtocol,
-          connectionOrigin: connectionConfig.connectionOrigin,
-        });
+        const origin = await resolveConnectionOrigin(
+          { connectionOrigin: connectionConfig.connectionOrigin },
+          { defaultRemote: true },
+        );
 
         if (connectionConfig.token) {
           token = connectionConfig.token;
@@ -317,8 +317,8 @@ export const GuacamoleDisplay = forwardRef<
         if (displaySize.dpi) params.set("dpi", String(displaySize.dpi));
         return { url: wsBase, query: params.toString() };
       } catch (error) {
-        const errorMessage = getErrorMessage(error);
-        onError?.(errorMessage);
+        const message = errorMessage(error);
+        onError?.(message);
         return null;
       }
     },
@@ -698,7 +698,7 @@ export const GuacamoleDisplay = forwardRef<
       if (!isMountedRef.current) return;
       setIsReady(false);
       setHasError(true);
-      onError?.(getErrorMessage(error, t("remoteDesktop.connectionError")));
+      onError?.(errorMessage(error, t("remoteDesktop.connectionError")));
     }
   }, [
     getWebSocketConnection,

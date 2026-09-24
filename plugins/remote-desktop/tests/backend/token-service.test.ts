@@ -1,20 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-vi.mock("../../../../src/backend/utils/logger.js", () => ({
-  guacLogger: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    success: vi.fn(),
-  },
-}));
-
-const { GuacamoleTokenService } =
-  await import("../../src/backend/token-service.js");
+import { GuacamoleTokenService } from "../../src/backend/token-service.js";
 
 describe("GuacamoleTokenService", () => {
-  const tokenService = GuacamoleTokenService.getInstance();
+  const tokenService = new GuacamoleTokenService();
 
   it("disables RDP pre-authentication when no credentials are configured", () => {
     const token = tokenService.createRdpToken("windows.example.test", "", "");

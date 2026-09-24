@@ -1,4 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+import {
+  enabledHostProtocols,
+  hostProtocolFlags,
+  type HostProtocols,
+} from "./host-protocols";
 import React, {
   useState,
   useEffect,
@@ -102,12 +107,9 @@ export function HostManager({
   } | null>(null);
   const [hostEditorDirty, setHostEditorDirty] = useState(false);
   const [showUnsavedHostDialog, setShowUnsavedHostDialog] = useState(false);
-  const [editingProtocols, setEditingProtocols] = useState({
-    enableSsh: true,
-    enableRdp: false,
-    enableVnc: false,
-    enableTelnet: false,
-  });
+  const [editingProtocols, setEditingProtocols] = useState<HostProtocols>(() =>
+    hostProtocolFlags(null),
+  );
   const simpleEditor = useUiPreference("hostEditor", "mode") === "simple";
   // Expanding advanced is a per-session choice; fixing one host's SSH options
   // shouldn't quietly move the whole app off the Simple preset.
@@ -142,12 +144,7 @@ export function HostManager({
         setEditingHost(host);
         setEditingCredential(null);
         setActiveHostTab("general");
-        setEditingProtocols({
-          enableSsh: host.enableSsh,
-          enableRdp: host.enableRdp,
-          enableVnc: host.enableVnc,
-          enableTelnet: host.enableTelnet,
-        });
+        setEditingProtocols(hostProtocolFlags(host));
         return true;
       }
     }
@@ -204,12 +201,7 @@ export function HostManager({
       if (action === "add-host") {
         setEditingHost("new");
         setEditingCredential(null);
-        setEditingProtocols({
-          enableSsh: true,
-          enableRdp: false,
-          enableVnc: false,
-          enableTelnet: false,
-        });
+        setEditingProtocols(hostProtocolFlags(null));
         setActiveHostTab("general");
       } else if (action === "add-credential") {
         setEditingCredential("new");
@@ -224,12 +216,7 @@ export function HostManager({
     const handleAddHost = () => {
       setEditingHost("new");
       setEditingCredential(null);
-      setEditingProtocols({
-        enableSsh: true,
-        enableRdp: false,
-        enableVnc: false,
-        enableTelnet: false,
-      });
+      setEditingProtocols(hostProtocolFlags(null));
       setActiveHostTab("general");
     };
     const handleAddCredential = () => {
@@ -244,12 +231,7 @@ export function HostManager({
         setEditingHost(host);
         setEditingCredential(null);
         setActiveHostTab("general");
-        setEditingProtocols({
-          enableSsh: host.enableSsh,
-          enableRdp: host.enableRdp,
-          enableVnc: host.enableVnc,
-          enableTelnet: host.enableTelnet,
-        });
+        setEditingProtocols(hostProtocolFlags(host));
       }
     };
     window.addEventListener("host-manager:add-host", handleAddHost);
@@ -848,9 +830,7 @@ export function HostManager({
                 <option value="">{t("credentials.selectHostOption")}</option>
                 {allHosts
                   .filter(
-                    (h) =>
-                      h.enableSsh ||
-                      (!h.enableRdp && !h.enableVnc && !h.enableTelnet),
+                    (h) => h.enableSsh || enabledHostProtocols(h).length === 0,
                   )
                   .map((h) => (
                     <option key={h.id} value={h.id}>

@@ -112,7 +112,6 @@ export async function getAllServerStatuses(): Promise<
       try {
         const response = await sshHostApi.get<SSHHost[]>("/db/host");
         const defaultOrigin = await resolveConnectionOrigin({
-          connectionType: "ssh",
           connectionOrigin: null,
         });
         localHostIds = (response.data || [])

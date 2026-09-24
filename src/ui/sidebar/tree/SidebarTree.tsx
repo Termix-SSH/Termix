@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useState,
 } from "react";
+import { updatePluginHostSettings } from "@/api/plugins-api";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
@@ -608,22 +609,14 @@ export function SidebarTree({
         credentialId: host.credentialId ? Number(host.credentialId) : null,
         overrideCredentialUsername: host.overrideCredentialUsername ?? false,
         enableSsh: host.enableSsh,
-        enableRdp: host.enableRdp,
-        enableVnc: host.enableVnc,
-        enableTelnet: host.enableTelnet,
         enableTerminal: host.enableTerminal,
         enableTunnel: host.enableTunnel,
         enableFileManager: host.enableFileManager,
         enableDocker: host.enableDocker,
         sshPort: host.sshPort,
-        rdpPort: host.rdpPort,
-        vncPort: host.vncPort,
-        telnetPort: host.telnetPort,
         rdpUser: host.rdpUser ?? null,
         rdpPassword: host.rdpPassword ?? null,
         rdpDomain: host.domain ?? null,
-        rdpSecurity: host.security ?? null,
-        rdpIgnoreCert: host.ignoreCert ?? false,
         vncAuthType: host.vncAuthType ?? null,
         vncCredentialId: host.vncCredentialId
           ? Number(host.vncCredentialId)
@@ -650,10 +643,21 @@ export function SidebarTree({
           snippetId: Number(a.snippetId),
         })),
         statsConfig: host.statsConfig,
-        guacamoleConfig: host.guacamoleConfig ?? null,
         terminalConfig: host.terminalConfig ?? null,
       };
-      await createSSHHost(duplicateHost);
+      const created = await createSSHHost(duplicateHost);
+      // Plugin host settings live outside the host row. Secrets come back
+      // redacted, and sending the marker back is a no-op, so they stay unset.
+      for (const [pluginId, fields] of Object.entries(
+        host.pluginSettings ?? {},
+      )) {
+        if (!fields || Object.keys(fields).length === 0) continue;
+        await updatePluginHostSettings(
+          pluginId,
+          Number(created.id),
+          fields,
+        ).catch(() => {});
+      }
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.duplicatedHost", { name: host.name }));
     } catch {

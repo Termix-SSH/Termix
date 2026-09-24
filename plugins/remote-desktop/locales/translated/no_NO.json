@@ -204,11 +204,75 @@
       "fontName": "Skriftnavn",
       "fontSize": "Skriftstørrelse",
       "colorScheme": "Fargeskjema",
-      "backspaceKey": "Tilbaketast"
-    }
+      "backspaceKey": "Tilbaketast",
+      "colorDepth": "Fargedybde",
+      "resizeMethod": "Endre størrelse-metoden"
+    },
+    "remoteDesktop": "Eksternt skrivebord",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuelt nettverk",
+    "unencryptedShell": "Ukryptert skall"
   },
   "onboarding": {
     "feature_desktop": "Eksternt skrivebord",
     "feature_desktop_desc": "Åpne RDP-, VNC- og Telnet-økter i en fane, på samme måte som SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Fargedybde"
+      },
+      "resizeMethod": {
+        "label": "Endre størrelse-metoden"
+      },
+      "resizeDisplayUpdate": "Oppdatering av skjerm",
+      "resizeReconnect": "Koble til igjen",
+      "inherit": "Arve",
+      "on": "På",
+      "off": "Av",
+      "forceLossless": {
+        "label": "Tving tapsfri",
+        "description": "Tving frem tapsfri bildekoding (høyere kvalitet, mer båndbredde)"
+      },
+      "enableWallpaper": {
+        "label": "Bakgrunn",
+        "description": "Vis skrivebordsbakgrunn (deaktivering forbedrer ytelsen)"
+      },
+      "enableFontSmoothing": {
+        "label": "Skriftutjevning",
+        "description": "Aktiver gjengivelse av ClearType-skrifttyper"
+      },
+      "enableDesktopComposition": {
+        "label": "Skrivebordskomposisjon",
+        "description": "Aktiver Aero Glass-effekter"
+      },
+      "disableAudio": {
+        "label": "Deaktiver lyd",
+        "description": "Demp all lyd fra den eksterne økten"
+      },
+      "enablePrinting": {
+        "label": "Aktiver utskrift",
+        "description": "Omdiriger lokale skrivere til den eksterne økten"
+      },
+      "enableDrive": {
+        "label": "Aktiver omdirigering av stasjoner",
+        "description": "Tilordne en lokal mappe som en stasjon i den eksterne økten"
+      },
+      "disableCopy": {
+        "label": "Deaktiver kopiering",
+        "description": "Forhindre kopiering av tekst fra den eksterne økten"
+      },
+      "disablePaste": {
+        "label": "Deaktiver liming",
+        "description": "Forhindre innliming av tekst i den eksterne økten"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd-URL"
+      }
+    }
   }
 }

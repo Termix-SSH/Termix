@@ -40,7 +40,6 @@ export type { PluginSettingsScope };
  */
 export const CORE_SETTINGS_ALLOWLIST: readonly string[] = [
   "app_name",
-  "guac_enabled",
   "global_metrics_interval",
   "global_status_check_interval",
 ];

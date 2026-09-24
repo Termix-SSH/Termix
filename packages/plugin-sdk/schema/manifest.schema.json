@@ -510,6 +510,10 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Registered component id. Required when type is \"custom\"."
+                  },
+                  "hidden": {
+                    "type": "boolean",
+                    "description": "Stored and validated, but not drawn by the generic settings form."
                   }
                 }
               }
@@ -602,6 +606,10 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Registered component id. Required when type is \"custom\"."
+                  },
+                  "hidden": {
+                    "type": "boolean",
+                    "description": "Stored and validated, but not drawn by the generic settings form."
                   }
                 }
               }

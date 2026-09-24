@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../lib/error-message.js";
+import { enabledHostProtocols, useHostProtocols } from "./host-protocols";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useEffect, useRef, useState } from "react";
 import type { HostData } from "@/types/index";
@@ -87,9 +88,9 @@ function hostGroupNames(host: Host, key: GroupKey): string[] {
     case "protocol": {
       const protos: string[] = [];
       if (host.enableSsh) protos.push("ssh");
-      if (host.enableRdp) protos.push("rdp");
-      if (host.enableVnc) protos.push("vnc");
-      if (host.enableTelnet) protos.push("telnet");
+      for (const protocol of enabledHostProtocols(host)) {
+        protos.push(protocol.id);
+      }
       return protos.length > 0 ? protos : ["__none__"];
     }
     case "auth":
@@ -144,9 +145,9 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
   if (filters.protocol.length > 0) {
     const ok =
       (filters.protocol.includes("ssh") && host.enableSsh) ||
-      (filters.protocol.includes("rdp") && host.enableRdp) ||
-      (filters.protocol.includes("vnc") && host.enableVnc) ||
-      (filters.protocol.includes("telnet") && host.enableTelnet);
+      enabledHostProtocols(host).some((protocol) =>
+        filters.protocol.includes(protocol.id),
+      );
     if (!ok) return false;
   }
   if (filters.features.length > 0) {
@@ -203,6 +204,7 @@ export function HostsPanel({
   active?: boolean;
 }) {
   const { t } = useTranslation();
+  const hostProtocols = useHostProtocols();
   const sshAuthProviders = useSshAuthProviders();
   const [hostSearch, setHostSearch] = useState("");
   const [managerEditing, setManagerEditing] = useState(false);
@@ -349,9 +351,6 @@ export function HostsPanel({
             pin: true,
             notes: "Main production web server running Nginx",
             enableSsh: true,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: false,
             sshPort: 22,
             enableTerminal: true,
             enableTunnel: false,
@@ -370,9 +369,6 @@ export function HostsPanel({
             folder: "Production",
             tags: ["database", "production", "postgresql"],
             enableSsh: true,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: false,
             sshPort: 22,
             enableTerminal: true,
             enableTunnel: true,
@@ -449,10 +445,6 @@ export function HostsPanel({
                     ...h,
                     port: h.port ?? h.sshPort ?? 22,
                     enableSsh: h.enableSsh ?? h.connectionType === "ssh",
-                    enableRdp: h.enableRdp ?? h.connectionType === "rdp",
-                    enableVnc: h.enableVnc ?? h.connectionType === "vnc",
-                    enableTelnet:
-                      h.enableTelnet ?? h.connectionType === "telnet",
                   }),
                 );
                 const result = await bulkImportSSHHosts(
@@ -768,23 +760,20 @@ export function HostsPanel({
                   <DropdownMenuLabel>
                     {t("hosts.filterProtocolGroup")}
                   </DropdownMenuLabel>
-                  {(
-                    [
-                      ["ssh", "Ssh"],
-                      ["rdp", "Rdp"],
-                      ["vnc", "Vnc"],
-                      ["telnet", "Telnet"],
-                    ] as const
-                  ).map(([val, key]) => (
+                  {[
+                    { id: "ssh", label: t("hosts.filterProtocolSsh") },
+                    ...hostProtocols.map((protocol) => ({
+                      id: protocol.id,
+                      label: t(protocol.titleKey),
+                    })),
+                  ].map(({ id, label }) => (
                     <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.protocol.includes(val)}
-                      onCheckedChange={() =>
-                        handleFilterToggle("protocol", val)
-                      }
+                      key={id}
+                      checked={filterState.protocol.includes(id)}
+                      onCheckedChange={() => handleFilterToggle("protocol", id)}
                       onSelect={(e) => e.preventDefault()}
                     >
-                      {t(`hosts.filterProtocol${key}`)}
+                      {label}
                     </DropdownMenuCheckboxItem>
                   ))}
                   <DropdownMenuSeparator />

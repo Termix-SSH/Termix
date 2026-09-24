@@ -204,11 +204,75 @@
       "fontName": "Nama Font",
       "fontSize": "Ukuran Huruf",
       "colorScheme": "Skema Warna",
-      "backspaceKey": "Tombol Backspace"
-    }
+      "backspaceKey": "Tombol Backspace",
+      "colorDepth": "Kedalaman Warna",
+      "resizeMethod": "Metode Pengubahan Ukuran"
+    },
+    "remoteDesktop": "Desktop Jarak Jauh",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Jaringan Virtual",
+    "unencryptedShell": "Shell yang tidak terenkripsi"
   },
   "onboarding": {
     "feature_desktop": "Desktop jarak jauh",
     "feature_desktop_desc": "Buka sesi RDP, VNC, dan Telnet dalam satu tab, sama seperti SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Kedalaman Warna"
+      },
+      "resizeMethod": {
+        "label": "Metode Pengubahan Ukuran"
+      },
+      "resizeDisplayUpdate": "Pembaruan Tampilan",
+      "resizeReconnect": "Terhubung kembali",
+      "inherit": "Mewarisi",
+      "on": "Pada",
+      "off": "Mati",
+      "forceLossless": {
+        "label": "Paksa Tanpa Kehilangan",
+        "description": "Paksa pengkodean gambar tanpa kehilangan data (kualitas lebih tinggi, bandwidth lebih besar)"
+      },
+      "enableWallpaper": {
+        "label": "Wallpaper",
+        "description": "Tampilkan wallpaper desktop (menonaktifkannya akan meningkatkan kinerja)"
+      },
+      "enableFontSmoothing": {
+        "label": "Penghalusan Font",
+        "description": "Aktifkan rendering font ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Komposisi Desktop",
+        "description": "Aktifkan efek kaca Aero"
+      },
+      "disableAudio": {
+        "label": "Nonaktifkan Audio",
+        "description": "Nonaktifkan semua audio dari sesi jarak jauh."
+      },
+      "enablePrinting": {
+        "label": "Aktifkan Pencetakan",
+        "description": "Alihkan printer lokal ke sesi jarak jauh."
+      },
+      "enableDrive": {
+        "label": "Aktifkan Pengalihan Drive",
+        "description": "Petakan folder lokal sebagai drive di sesi jarak jauh."
+      },
+      "disableCopy": {
+        "label": "Nonaktifkan Salin",
+        "description": "Mencegah penyalinan teks dari sesi jarak jauh"
+      },
+      "disablePaste": {
+        "label": "Nonaktifkan Tempel",
+        "description": "Mencegah penyisipan teks ke dalam sesi jarak jauh"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL guacd"
+      }
+    }
   }
 }

@@ -1,63 +1,108 @@
 import type { PluginContext } from "@termix/plugin-sdk/backend";
-import { setPluginSsh } from "./ssh.js";
+import { GuacamoleTokenService } from "./token-service.js";
+import { RemoteSessions } from "./sessions.js";
 import {
-  getGuacSessionInfo,
-  handleGuacamoleUpgrade,
-  restartGuacServer,
-  setPluginRecordings,
-  startGuacamoleService,
-  stopGuacamoleService,
-  tokenService,
+  createGuacamoleServer,
   type RecordingsWriter,
 } from "./guacamole-server.js";
-import { startRemoteDesktopService } from "./routes.js";
+import { resolveGuacdOptions } from "./guacd-config.js";
+import { registerRoutes } from "./routes.js";
+import { createLiveSessions } from "./live-sessions.js";
+import { normalizeImportedHost } from "./host-settings.js";
+import { createLogger } from "./log.js";
 
 export async function activate(ctx: PluginContext) {
-  setPluginSsh(ctx.ssh);
-  ctx.disposables.add(() => setPluginSsh(null));
+  const log = createLogger(ctx.log);
+  const tokens = new GuacamoleTokenService(log);
+  const sessions = new RemoteSessions();
+  ctx.disposables.add(() => sessions.clear());
 
-  // Optional: without the session-recording plugin, a guacd recording is
-  // still made on disk but never gets a row, so it never shows in the list.
-  const recordings = ctx.services.get<RecordingsWriter>("recordings.writer");
-  setPluginRecordings("createFinished" in recordings ? recordings : null);
-  ctx.disposables.add(() => setPluginRecordings(null));
+  // The admin setting, unless GUACD_URL / GUACD_HOST / GUACD_PORT override it.
+  let guacdUrl = (await ctx.settings.get<string>("guacdUrl")) ?? "";
+  const guacd = () => resolveGuacdOptions(guacdUrl || undefined);
+  const enabled = async () =>
+    (await ctx.settings.get<boolean>("enabled")) !== false;
 
-  await startGuacamoleService();
+  // Optional: without session-recording nothing is recorded.
+  const recordings = (): RecordingsWriter | null => {
+    const service =
+      ctx.services.get<Partial<RecordingsWriter>>("recordings.writer");
+    return typeof service.createFinished === "function" &&
+      typeof service.enabledFor === "function"
+      ? (service as RecordingsWriter)
+      : null;
+  };
 
-  startRemoteDesktopService(ctx.http.router());
+  // guacamole-lite prints every new connection to stdout.
+  const consoleLog = console.log;
+  console.log = (...args: unknown[]) => {
+    if (
+      typeof args[0] === "string" &&
+      args[0].startsWith("New client connection")
+    )
+      return;
+    consoleLog(...args);
+  };
+  ctx.disposables.add(() => {
+    console.log = consoleLog;
+  });
+
+  const server = createGuacamoleServer({
+    log,
+    tokens,
+    sessions,
+    guacd,
+    recordings,
+    asUser: (userId, fn) => ctx.asUser(userId, fn),
+    onOpen: (hostId) => ctx.hosts.trackSession(hostId),
+  });
+  ctx.disposables.add(() => server.close());
+
+  ctx.settings.onChange("guacdUrl", (value) => {
+    guacdUrl = typeof value === "string" ? value : "";
+    server.restart();
+  });
+
+  registerRoutes(ctx.http.router(), {
+    ctx,
+    log,
+    tokens,
+    sessions,
+    guacd,
+    enabled,
+    recordings,
+  });
 
   // guacamole-lite owns its own WebSocketServer, so it takes the raw upgrade.
-  //
-  // Public because a Guacamole display authenticates with the encrypted,
-  // single-use connection token minted by POST /token, not with a session
-  // JWT. guacamole-lite decrypts and validates that token itself, and the
-  // route that mints one is authenticated normally.
+  // Public because a display authenticates with the encrypted, single-use
+  // token minted by an authenticated route, not with a session JWT.
   ctx.ws.upgrade(
     "/display",
     (request, socket, head) =>
-      handleGuacamoleUpgrade(
-        request as Parameters<typeof handleGuacamoleUpgrade>[0],
-        socket as Parameters<typeof handleGuacamoleUpgrade>[1],
+      server.handleUpgrade(
+        request as Parameters<typeof server.handleUpgrade>[0],
+        socket as Parameters<typeof server.handleUpgrade>[1],
         head as Buffer,
       ),
     { public: true },
   );
 
-  // What collab, session-sharing and the admin guacd setting need from a
-  // running Guacamole server. Revoked automatically on deactivate, and
-  // hosts/guacamole-sessions.ts degrades safely while it is gone.
-  ctx.registry.provide("remote-desktop.sessions", {
-    restart: restartGuacServer,
-    createJoinToken: (guacamoleConnectionId: string, readOnly: boolean) =>
-      tokenService.createJoinToken(guacamoleConnectionId, readOnly),
-    getSessionInfo: getGuacSessionInfo,
-  });
+  for (const protocol of ["rdp", "vnc", "telnet"] as const) {
+    ctx.services.provide(
+      "sessions.live",
+      createLiveSessions(protocol, {
+        sessions,
+        tokens,
+        endSession: server.endSession,
+      }),
+      { name: protocol },
+    );
+  }
 
-  ctx.log.info(
-    "Remote Desktop mounted at /plugin-api/remote-desktop and /plugin-ws/remote-desktop/display",
+  ctx.registry.provide(
+    "remote-desktop.hostImportNormalizer",
+    normalizeImportedHost,
   );
 }
 
-export async function deactivate() {
-  await stopGuacamoleService();
-}
+export async function deactivate() {}

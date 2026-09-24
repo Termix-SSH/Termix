@@ -794,7 +794,7 @@ function getApiUrl(path: string, defaultPort: number): string {
 // JWT fresh on every request (cheap, and correct even if the user
 // connects/disconnects remote sync without an app reload).
 
-function createRemoteOriginApiInstance(path: string): AxiosInstance {
+export function createRemoteOriginApiInstance(path: string): AxiosInstance {
   const instance = axios.create({
     headers: { "Content-Type": "application/json" },
     timeout: 30000,
@@ -835,7 +835,6 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
 let remoteFileManagerApi: AxiosInstance | null = null;
 let remoteStatsApi: AxiosInstance | null = null;
 let remoteCoreApi: AxiosInstance | null = null;
-let remoteGuacamoleApi: AxiosInstance | null = null;
 
 export function getRemoteFileManagerApi(): AxiosInstance {
   if (!remoteFileManagerApi) {
@@ -865,13 +864,6 @@ export function getRemoteCoreApi(): AxiosInstance {
     remoteCoreApi = createRemoteOriginApiInstance("");
   }
   return remoteCoreApi;
-}
-
-export function getRemoteGuacamoleApi(): AxiosInstance {
-  if (!remoteGuacamoleApi) {
-    remoteGuacamoleApi = createRemoteOriginApiInstance("");
-  }
-  return remoteGuacamoleApi;
 }
 
 // Maps a live SSH session (keyed by sessionId, which today is the host's
@@ -1582,8 +1574,6 @@ export {
   updateLogLevel,
   getSessionTimeout,
   updateSessionTimeout,
-  getGuacamoleSettings,
-  updateGuacamoleSettings,
 } from "@/api/settings-api";
 
 // ============================================================================

@@ -204,11 +204,75 @@
       "fontName": "字体名称",
       "fontSize": "字体大小",
       "colorScheme": "配色方案",
-      "backspaceKey": "退格键"
-    }
+      "backspaceKey": "退格键",
+      "colorDepth": "颜色深度",
+      "resizeMethod": "调整大小方法"
+    },
+    "remoteDesktop": "远程桌面",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "虚拟网络",
+    "unencryptedShell": "未加密 Shell"
   },
   "onboarding": {
     "feature_desktop": "远程桌面",
     "feature_desktop_desc": "像 SSH 一样，在标签页中直接打开 RDP、VNC 和 Telnet 会话。"
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "颜色深度"
+      },
+      "resizeMethod": {
+        "label": "调整大小方法"
+      },
+      "resizeDisplayUpdate": "显示更新",
+      "resizeReconnect": "重新连接",
+      "inherit": "继承",
+      "on": "开启",
+      "off": "关闭",
+      "forceLossless": {
+        "label": "强制无损",
+        "description": "强制无损图像编码（质量更高，占用更多带宽）"
+      },
+      "enableWallpaper": {
+        "label": "壁纸",
+        "description": "显示桌面壁纸（禁用可提高性能）"
+      },
+      "enableFontSmoothing": {
+        "label": "字体平滑",
+        "description": "启用 ClearType 字体渲染"
+      },
+      "enableDesktopComposition": {
+        "label": "桌面合成",
+        "description": "启用 Aero 玻璃效果"
+      },
+      "disableAudio": {
+        "label": "禁用音频",
+        "description": "将远程会话的所有音频静音"
+      },
+      "enablePrinting": {
+        "label": "启用打印",
+        "description": "将本地打印机重定向到远程会话"
+      },
+      "enableDrive": {
+        "label": "启用驱动器重定向",
+        "description": "将本地文件夹映射为远程会话中的驱动器"
+      },
+      "disableCopy": {
+        "label": "禁用复制",
+        "description": "禁止从远程会话复制文本"
+      },
+      "disablePaste": {
+        "label": "禁用粘贴",
+        "description": "禁止粘贴文本到远程会话"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }

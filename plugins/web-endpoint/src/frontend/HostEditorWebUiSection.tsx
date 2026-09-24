@@ -119,7 +119,6 @@ export function HostEditorWebUiSection({
   useEffect(() => {
     let cancelled = false;
     void resolveConnectionOrigin({
-      connectionType: "ssh",
       connectionOrigin: connectionOrigin as "local" | "remote" | null,
     }).then((origin) => {
       if (!cancelled) setOriginIsLocal(origin === "local");

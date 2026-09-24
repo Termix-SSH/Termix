@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { hostProtocolFlags, type HostProtocols } from "./host-protocols";
 import { getUserList } from "@/main-axios";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -141,12 +142,9 @@ export function AdminUserManagePanel({
   }, [user.id]);
   const [editor, setEditor] = useState<EditorState>(null);
   const [editorTab, setEditorTab] = useState("general");
-  const [editorProtocols, setEditorProtocols] = useState({
-    enableSsh: true,
-    enableRdp: false,
-    enableVnc: false,
-    enableTelnet: false,
-  });
+  const [editorProtocols, setEditorProtocols] = useState<HostProtocols>(() =>
+    hostProtocolFlags(null),
+  );
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     onConfirm: () => void;
@@ -791,12 +789,7 @@ export function AdminUserManagePanel({
                     size="sm"
                     className="h-6 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
                     onClick={() => {
-                      setEditorProtocols({
-                        enableSsh: true,
-                        enableRdp: false,
-                        enableVnc: false,
-                        enableTelnet: false,
-                      });
+                      setEditorProtocols(hostProtocolFlags(null));
                       setEditorTab("general");
                       setEditor({ kind: "host", host: null });
                     }}
@@ -842,12 +835,7 @@ export function AdminUserManagePanel({
                       size="icon"
                       className="size-6 text-muted-foreground hover:text-foreground"
                       onClick={() => {
-                        setEditorProtocols({
-                          enableSsh: host.enableSsh,
-                          enableRdp: host.enableRdp,
-                          enableVnc: host.enableVnc,
-                          enableTelnet: host.enableTelnet,
-                        });
+                        setEditorProtocols(hostProtocolFlags(host));
                         setEditorTab("general");
                         setEditor({ kind: "host", host });
                       }}

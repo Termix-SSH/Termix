@@ -204,11 +204,75 @@
       "fontName": "שם הגופן",
       "fontSize": "גודל גופן",
       "colorScheme": "ערכת צבעים",
-      "backspaceKey": "מקש Backspace"
-    }
+      "backspaceKey": "מקש Backspace",
+      "colorDepth": "עומק צבע",
+      "resizeMethod": "שיטת שינוי גודל"
+    },
+    "remoteDesktop": "שולחן עבודה מרוחק",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "טלנט",
+    "virtualNetwork": "רשת וירטואלית",
+    "unencryptedShell": "מעטפת לא מוצפנת"
   },
   "onboarding": {
     "feature_desktop": "שולחן עבודה מרוחק",
     "feature_desktop_desc": "פתחו הפעלות RDP, VNC ו-Telnet בכרטיסייה, בדומה ל-SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "עומק צבע"
+      },
+      "resizeMethod": {
+        "label": "שיטת שינוי גודל"
+      },
+      "resizeDisplayUpdate": "עדכון תצוגה",
+      "resizeReconnect": "התחבר מחדש",
+      "inherit": "לָרֶשֶׁת",
+      "on": "עַל",
+      "off": "כבוי",
+      "forceLossless": {
+        "label": "כפיית אובדן נתונים",
+        "description": "כפיית קידוד תמונה ללא אובדן נתונים (איכות גבוהה יותר, רוחב פס גדול יותר)"
+      },
+      "enableWallpaper": {
+        "label": "טָפֵּט",
+        "description": "הצגת טפט שולחן עבודה (השבתה משפרת את הביצועים)"
+      },
+      "enableFontSmoothing": {
+        "label": "החלקת גופנים",
+        "description": "הפעלת עיבוד גופני ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "קומפוזיציה לשולחן העבודה",
+        "description": "הפעלת אפקטים של Aero Glass"
+      },
+      "disableAudio": {
+        "label": "השבתת שמע",
+        "description": "השתקת כל האודיו מההפעלה המרוחקת"
+      },
+      "enablePrinting": {
+        "label": "הפעל הדפסה",
+        "description": "ניתוב מחדש של מדפסות מקומיות להפעלה מרוחקת"
+      },
+      "enableDrive": {
+        "label": "הפעל ניתוב מחדש של כונן",
+        "description": "מיפוי תיקייה מקומית ככונן בהפעלה מרוחקת"
+      },
+      "disableCopy": {
+        "label": "השבתת העתקה",
+        "description": "מניעת העתקת טקסט מההפעלה המרוחקת"
+      },
+      "disablePaste": {
+        "label": "השבתת הדבקה",
+        "description": "מניעת הדבקת טקסט לתוך ההפעלה המרוחקת"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "כתובת אתר של guacd"
+      }
+    }
   }
 }

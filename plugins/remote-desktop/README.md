@@ -1,68 +1,60 @@
 # Remote Desktop
 
-RDP, VNC and Telnet remote desktop sessions, packaged as a first-party plugin.
+RDP, VNC and Telnet sessions over guacd, with clipboard, file transfer through
+RDP drive redirection, session recording and session sharing.
 
-## Why this plugin runs in-process
+## guacd
 
-Every other plugin runs in a `worker_threads` worker and reaches the server
-through a structured-clone `postMessage` boundary. That boundary is what makes
-the capability gate and the audit trail mean anything: a worker plugin cannot
-hold a db handle, an ssh2 `Client` or a live socket, so every privileged action
-has to go through the broker.
+guacd (the Apache Guacamole proxy daemon that speaks RDP, VNC and Telnet) is an
+external service this plugin talks to over TCP. The stock Docker compose runs
+it as its own `guacamole/guacd` container. This plugin never starts it.
 
-This plugin cannot work that way:
+Where to find it is the admin setting **guacd URL** (`host:port`). The
+`GUACD_URL`, or `GUACD_HOST` and `GUACD_PORT`, environment variables override
+the setting, so a compose file stays the source of truth where it sets them.
+Changing the setting rebuilds the connection server without a restart.
 
-- it owns a `guacamole-lite` WebSocket server on port 30008,
-- its `/connect-host/:hostId` route does multi-step credential and tunnel
-  resolution (SSH jump-host tunnels, a macOS VNC compatibility proxy) using
-  raw `net.Socket` plumbing,
-- it needs plaintext host credentials to connect at all.
+Other environment variables the plugin reads:
 
-None of that can cross a structured-clone boundary, so this plugin runs on the
-main thread instead, under the `process:transport-owner` tier, the same as
-`ssh-terminal`, `docker` and `host-metrics`.
+| Variable                       | What it sets                                                                |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `GUACD_TUNNEL_HOST`            | The name guacd uses to reach Termix for a jump host tunnel (default termix) |
+| `GUACD_RECORDING_PATH`         | Where guacd writes recordings, as guacd sees it                             |
+| `GUACD_RECORDING_BACKEND_PATH` | The same folder as Termix sees it                                           |
+| `GUACD_DRIVE_PATH`             | The root of each user's RDP drive folder on the guacd host                  |
+| `GUACAMOLE_ENCRYPTION_KEY`     | The connection token key; derived from `JWT_SECRET` when unset              |
 
-## guacd is not spawned by this plugin
+## Settings
 
-guacd (the Apache Guacamole proxy daemon that actually speaks RDP/VNC/Telnet)
-is a separate, external service reached over plain TCP -- by default a
-sibling Docker container, or any network-reachable host configured through the
-admin "guacd URL" setting. This plugin does not download, bundle or spawn
-guacd as a child process.
+- **Admin**: turn Remote Desktop on or off, and the guacd URL.
+- **User**: RDP defaults (colour depth, resize method, wallpaper, clipboard
+  and the rest). A host's own values win; anything a host leaves on its
+  default takes the user's.
+- **Host**: the RDP, VNC and Telnet switches, ports, security mode,
+  certificate handling and every guacd parameter, edited in the host
+  editor's RDP, VNC and Telnet tabs. The toolbar switch is in the Plugins tab.
 
-That is a deliberate limitation, not an oversight: Apache Guacamole does not
-publish prebuilt guacd binaries for any platform (only source tarballs and
-their own Docker image), and there is no viable native guacd for Windows at
-all. Bundling guacd for Linux and macOS is possible in principle but would
-make Termix the ongoing upstream builder and security patcher for guacd plus
-FreeRDP/libvncclient/libssh2/libtelnet -- out of scope for this conversion.
-guacd's availability is handled as an external dependency with graceful
-degradation, exactly as it was before this plugin existed.
+The logins (users, passwords, stored credentials, domain) stay on the host in
+core, because sharing decides which of them a recipient may use.
 
-## What lives where
+## Capabilities
 
-Unlike `ssh-terminal` (whose implementation stays in core because
-`session-manager.ts` has consumers well beyond the terminal), this plugin's
-backend and frontend code is fully relocated here from
-`src/backend/hosts/guacamole/` and `src/ui/features/guacamole/`, the same
-shape `docker` and `host-metrics` use.
+- `credentials:read`: guacd needs the host's RDP, VNC or Telnet password in
+  plain text, so the plugin reads it through `ctx.credentials`. A shared
+  recipient only ever gets the owner's shared snapshot or their own override.
+- `ssh:connect`, `credentials:use`: jump host tunnels, through
+  `ctx.ssh.jumpChain`, or the tunnels plugin's `tunnels.access` for a single
+  hop when it is running.
+- `network:serve`: the routes and the `/display` socket.
+- `desktop:window`: opening the Windows Remote Desktop client from the desktop
+  app.
+- `hosts:read`: the online indicator while a session is open.
+- `ui:surface`: everything the frontend registers.
 
-Two pieces of shared infrastructure still reach across the plugin boundary
-into this plugin rather than living in core:
+## Services
 
-- `src/backend/hosts/collab/routes.ts` and
-  `src/backend/hosts/session-sharing/` import `token-service.ts` and
-  `guacamole-server.ts` directly to resolve and validate live Guacamole
-  sessions for collaborative/shared viewing.
-- `src/ui/features/collab/` and `src/ui/features/session-sharing/` import
-  `GuacamoleDisplay.tsx` directly for the same reason.
-
-This is an accepted, temporary coupling: collab and session-sharing are
-expected to become plugins of their own later, at which point these become
-real inter-plugin references instead of raw relative imports.
-
-## Disabling
-
-Disabling behaves like any other plugin: the rdp/vnc/telnet tabs stop being
-offered from the host list, command palette and quick connect, the
-`/guacamole` router 404s, and the WebSocket server on port 30008 is closed.
+Provides `sessions.live` under the names `rdp`, `vnc` and `telnet`, which is
+how session sharing and collab rooms find a live session and mint a viewer
+token for it. Uses `recordings.writer` (session-recording) to decide whether
+to record and to list finished recordings, and `tunnels.access` (tunnels)
+for single-hop jump tunnels. Both are optional.

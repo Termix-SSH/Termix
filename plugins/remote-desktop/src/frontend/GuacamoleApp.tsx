@@ -1,5 +1,4 @@
 import { watchGuacamoleConnectionId } from "./guacamole-session-id";
-import { getErrorMessage } from "@/lib/error-message.js";
 import React, {
   useState,
   useEffect,
@@ -14,40 +13,42 @@ import {
   type GuacamoleDisplayHandle,
   type GuacamoleTouchMode,
 } from "./GuacamoleDisplay.tsx";
-import { getSSHHosts, logActivity, isElectron } from "@/main-axios";
 import { getGuacamoleTokenFromHost, getGuacdStatus } from "./guacamole-api";
 import { readConfiguredDimension } from "./guacamole-display-size.ts";
-import { getGuacamoleToken, parseGuacamoleConfig } from "./guacamole-api";
+import { getGuacamoleToken } from "./guacamole-api";
 import {
-  resolveConnectionOrigin,
-  type ConnectionOrigin,
-} from "@/lib/connection-origin.ts";
-import {
+  useHost,
   useTranslation,
   useConnectionRetry,
 } from "@termix/plugin-sdk/frontend";
-import { GuacamoleToolbar } from "./GuacamoleToolbar.tsx";
-import { GuacamoleFileBrowser } from "./GuacamoleFileBrowser.tsx";
-import { describeUploadError } from "./guacamole-filesystem.ts";
-import { canUploadToRdpDrive } from "./guacamole-file-drop.ts";
-import { Button } from "@/components/button.tsx";
-import { Input } from "@/components/input.tsx";
-import { PasswordInput } from "@/components/password-input.tsx";
 import {
+  Button,
+  ConnectionLogProvider,
+  ConnectionScreen,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/dialog.tsx";
-import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
-import {
-  ConnectionLogProvider,
+  Input,
+  PasswordInput,
+  isElectron,
+  logActivity,
+  resolveConnectionOrigin,
   useConnectionLog,
-} from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import type { SSHHost } from "@/types";
-import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
-import { resolveConnectionDefaults } from "@/lib/connection-defaults";
+  type ConnectionOrigin,
+} from "@termix/plugin-sdk/ui";
+import type { GuacamoleConfig } from "./guacamole-config";
+import {
+  errorMessage,
+  hostRemoteOptions,
+  type Protocol,
+  type RemoteHostLogin,
+} from "./host-remote";
+import { GuacamoleToolbar } from "./GuacamoleToolbar.tsx";
+import { GuacamoleFileBrowser } from "./GuacamoleFileBrowser.tsx";
+import { describeUploadError } from "./guacamole-filesystem.ts";
+import { canUploadToRdpDrive } from "./guacamole-file-drop.ts";
 import { needsRdpCredentialPrompt } from "./rdp-credential-prompt";
 
 interface GuacamoleAppProps {
@@ -59,10 +60,48 @@ interface GuacamoleAppProps {
   quickConnectHost?: GuacamoleQuickHost;
 }
 
-/** What GuacamoleApp needs from a host that has no database row. */
-export type GuacamoleQuickHost = GuacamoleAppInnerProps["hostConfig"] & {
+/**
+ * What a session needs from its host. A saved host brings its options; a
+ * quick-connect host has no row, so it also carries its address and login.
+ */
+export interface GuacamoleHostConfig {
   name?: string;
-};
+  ip: string;
+  connectionType?: Protocol;
+  domain?: string;
+  guacamoleConfig?: GuacamoleConfig;
+  rdpAuthType?: string;
+  authOverrides?: RemoteHostLogin["authOverrides"];
+  syncId?: string | null;
+  connectionOrigin?: "local" | "remote" | null;
+  showToolbar?: boolean;
+  port?: number;
+  username?: string;
+  password?: string;
+}
+
+export type GuacamoleQuickHost = GuacamoleHostConfig;
+
+function savedHostConfig(
+  host: RemoteHostLogin,
+  protocol: Protocol | undefined,
+): GuacamoleHostConfig {
+  const options = hostRemoteOptions(host);
+  return {
+    name: host.name ?? undefined,
+    ip: host.ip ?? "",
+    connectionType:
+      protocol ??
+      (options.enableRdp ? "rdp" : options.enableVnc ? "vnc" : "telnet"),
+    domain: host.domain,
+    guacamoleConfig: options.guacamoleConfig,
+    rdpAuthType: host.rdpAuthType,
+    authOverrides: host.authOverrides,
+    syncId: host.syncId,
+    connectionOrigin: host.connectionOrigin,
+    showToolbar: options.enableToolbar,
+  };
+}
 
 export interface GuacamoleAppHandle {
   disconnect: () => void;
@@ -77,50 +116,20 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
     ref,
   ) {
     const { t } = useTranslation();
-    const defaults = useConnectionDefaults();
-    const [hostConfig, setHostConfig] = useState<GuacamoleQuickHost | null>(
-      null,
-    );
-    const [loading, setLoading] = useState(true);
-
+    const savedHost = useHost(quickConnectHost ? undefined : hostId);
+    const hostConfig: GuacamoleHostConfig | null = quickConnectHost
+      ? quickConnectHost
+      : savedHost
+        ? savedHostConfig(savedHost as RemoteHostLogin, protocol)
+        : null;
+    // The host list loads with the shell; a tab restored before it arrives
+    // waits for it instead of reporting the host missing.
+    const [waited, setWaited] = useState(false);
     useEffect(() => {
-      if (!defaults.ready) return;
-      if (quickConnectHost) {
-        const connectionType = protocol ?? quickConnectHost.connectionType;
-        setHostConfig({
-          ...quickConnectHost,
-          guacamoleConfig: resolveConnectionDefaults(
-            connectionType === "rdp" ? defaults.rdp : {},
-            {},
-          ),
-        });
-        setLoading(false);
-        return;
-      }
-      if (!hostId) {
-        setLoading(false);
-        return;
-      }
-      getSSHHosts()
-        .then((hosts) => {
-          const host = hosts.find((h) => h.id === parseInt(hostId, 10));
-          if (!host) {
-            setHostConfig(null);
-            return;
-          }
-          const connectionType = protocol ?? host.connectionType;
-          const protocolDefaults = connectionType === "rdp" ? defaults.rdp : {};
-          setHostConfig({
-            ...host,
-            guacamoleConfig: resolveConnectionDefaults(
-              protocolDefaults,
-              parseGuacamoleConfig(host.guacamoleConfig),
-            ),
-          });
-        })
-        .catch(() => setHostConfig(null))
-        .finally(() => setLoading(false));
-    }, [hostId, protocol, defaults.ready, defaults.rdp, quickConnectHost]);
+      const timer = setTimeout(() => setWaited(true), 3000);
+      return () => clearTimeout(timer);
+    }, []);
+    const loading = !hostConfig && !!hostId && !waited;
 
     if (loading) {
       return (
@@ -159,23 +168,7 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
 
 interface GuacamoleAppInnerProps {
   hostId: number;
-  hostConfig: Pick<
-    SSHHost,
-    | "connectionType"
-    | "domain"
-    | "guacamoleConfig"
-    | "rdpAuthType"
-    | "authOverrides"
-    | "syncId"
-    | "connectionOrigin"
-    | "ip"
-    | "rdpPort"
-    | "vncPort"
-    | "rdpUser"
-    | "rdpPassword"
-    | "vncUser"
-    | "vncPassword"
-  > & { enableTerminalToolbar?: boolean };
+  hostConfig: GuacamoleHostConfig;
   hostName: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
@@ -223,7 +216,7 @@ const GuacamoleAppInner = React.forwardRef<
   const [toolbarHidden, setToolbarHidden] = useState(false);
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
 
-  const guacConfig = parseGuacamoleConfig(hostConfig.guacamoleConfig);
+  const guacConfig = hostConfig.guacamoleConfig ?? {};
   const allowUpload = guacConfig.disableUpload !== true;
   const allowDownload = guacConfig.disableDownload !== true;
 
@@ -311,10 +304,10 @@ const GuacamoleAppInner = React.forwardRef<
     let resolvedOrigin: ConnectionOrigin = "local";
 
     if (isElectron()) {
-      resolvedOrigin = await resolveConnectionOrigin({
-        connectionType: resolvedProtocolForConnect,
-        connectionOrigin: hostConfig.connectionOrigin,
-      });
+      resolvedOrigin = await resolveConnectionOrigin(
+        { connectionOrigin: hostConfig.connectionOrigin },
+        { defaultRemote: true },
+      );
       if (resolvedOrigin === "remote") {
         const remoteConfig = (await window.electronAPI?.invoke?.(
           "get-remote-sync-config",
@@ -331,6 +324,9 @@ const GuacamoleAppInner = React.forwardRef<
       message: t("remoteDesktop.checkingGuacd"),
     });
     const status = await getGuacdStatus(resolvedOrigin);
+    if (status.enabled === false) {
+      throw new Error(t("remoteDesktop.disabled"));
+    }
     if (status.guacd.status !== "connected") {
       throw new Error(t("remoteDesktop.guacdUnavailable"));
     }
@@ -351,21 +347,12 @@ const GuacamoleAppInner = React.forwardRef<
             {
               protocol: resolvedProtocolForConnect,
               hostname: hostConfig.ip,
-              port:
-                resolvedProtocolForConnect === "vnc"
-                  ? hostConfig.vncPort
-                  : hostConfig.rdpPort,
-              username:
-                resolvedProtocolForConnect === "vnc"
-                  ? hostConfig.vncUser
-                  : hostConfig.rdpUser,
-              password:
-                resolvedProtocolForConnect === "vnc"
-                  ? hostConfig.vncPassword
-                  : hostConfig.rdpPassword,
+              port: hostConfig.port,
+              username: hostConfig.username,
+              password: hostConfig.password,
               domain: hostConfig.domain,
               ignoreCert: true,
-              guacamoleConfig: parseGuacamoleConfig(hostConfig.guacamoleConfig),
+              guacamoleConfig: hostConfig.guacamoleConfig,
             },
             resolvedOrigin,
           )
@@ -375,6 +362,7 @@ const GuacamoleAppInner = React.forwardRef<
             protocol,
             promptedCredentials ?? undefined,
             hostConfig.syncId,
+            tabId,
           );
     if (result) {
       setSessionLookup(
@@ -397,6 +385,7 @@ const GuacamoleAppInner = React.forwardRef<
     promptedCredentials,
     resolvedProtocolForConnect,
     hostConfig,
+    tabId,
     addLog,
     t,
   ]);
@@ -407,10 +396,7 @@ const GuacamoleAppInner = React.forwardRef<
         await fetchToken();
         tokenRetryRef.current.markConnected();
       } catch (err: unknown) {
-        const message = getErrorMessage(
-          err,
-          t("remoteDesktop.failedToConnect"),
-        );
+        const message = errorMessage(err, t("remoteDesktop.failedToConnect"));
         setError(message || t("remoteDesktop.failedToConnect"));
         addLog({ type: "error", stage: "error", message });
         tokenRetryRef.current.markFailed();
@@ -632,7 +618,7 @@ const GuacamoleAppInner = React.forwardRef<
           onClose={() => setFileBrowserOpen(false)}
         />
       )}
-      {hostConfig.enableTerminalToolbar !== false && !toolbarHidden && (
+      {hostConfig.showToolbar !== false && !toolbarHidden && (
         <GuacamoleToolbar
           displayRef={displayRef}
           protocol={resolvedProtocol}

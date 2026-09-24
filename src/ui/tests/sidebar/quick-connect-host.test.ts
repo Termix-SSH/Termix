@@ -61,46 +61,40 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
     expect(isQuickConnectHost(host)).toBe(true);
     expect(host).toMatchObject({
       enableSsh: true,
-      enableRdp: false,
       sshPort: 2222,
       password: "pw",
     });
   });
 
-  it("builds an RDP host that GuacamoleApp can mint a token from", () => {
+  const desktop = {
+    id: "demo-desktop",
+    pluginId: "demo",
+    settingKey: "enableDemo",
+    portKey: "demoPort",
+    defaultPort: 3389,
+    titleKey: "demo",
+    icon: () => null,
+  };
+
+  it("builds a plugin protocol host with its switch and port in plugin settings", () => {
     const host = createQuickConnectHost({
       ip: "10.0.0.2",
       port: 3390,
       username: "admin",
       authType: "password",
       password: "pw",
-      protocol: "rdp",
+      protocol: desktop,
       domain: "CORP",
     });
     expect(host).toMatchObject({
       enableSsh: false,
-      enableRdp: true,
-      enableVnc: false,
-      rdpPort: 3390,
-      rdpUser: "admin",
-      rdpPassword: "pw",
+      pluginSettings: { demo: { enableDemo: true, demoPort: 3390 } },
       domain: "CORP",
     });
-  });
-
-  it("builds a VNC host with the password on the VNC fields", () => {
-    const host = createQuickConnectHost({
-      ip: "10.0.0.3",
-      port: 5901,
-      username: "",
-      authType: "password",
-      password: "vncpw",
-      protocol: "vnc",
-    });
+    // The login sits on the core fields named after the protocol.
     expect(host).toMatchObject({
-      enableVnc: true,
-      vncPort: 5901,
-      vncPassword: "vncpw",
+      "demo-desktopUser": "admin",
+      "demo-desktopPassword": "pw",
     });
   });
 });

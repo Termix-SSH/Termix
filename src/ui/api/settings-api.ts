@@ -107,33 +107,6 @@ export async function updateSessionTimeout(
 // plugins/tailscale/src/frontend/tailscale-api.ts.
 
 // ============================================================================
-// GUACAMOLE SETTINGS
-// ============================================================================
-
-export async function getGuacamoleSettings(): Promise<{
-  enabled: boolean;
-  url: string;
-}> {
-  try {
-    const response = await authApi.get("/users/guacamole-settings");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch guacamole settings");
-  }
-}
-
-export async function updateGuacamoleSettings(settings: {
-  enabled?: boolean;
-  url?: string;
-}): Promise<void> {
-  try {
-    await authApi.patch("/users/guacamole-settings", settings);
-  } catch (error) {
-    handleApiError(error, "update guacamole settings");
-  }
-}
-
-// ============================================================================
 // ANALYTICS SETTINGS
 // ============================================================================
 

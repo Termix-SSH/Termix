@@ -1,4 +1,3 @@
-import type { GuacamoleConfig } from "./guacamole-config.js";
 import type { StatsConfig } from "./stats-widgets.js";
 import type { Request } from "express";
 import type { RefObject } from "react";
@@ -250,29 +249,19 @@ export type Host = {
     delay?: number;
   }>;
 
-  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
+  /** "ssh", or the id of the plugin protocol a host without SSH uses. */
+  connectionType?: string;
   domain?: string;
-  security?: string;
-  ignoreCert?: boolean;
-  guacamoleConfig?: string | GuacamoleConfig;
   dockerConfig?: Record<string, unknown> | null;
   enableWebUi?: boolean;
   webUiConfig?: WebUiConfig | null;
 
   enableSsh?: boolean;
-  enableRdp?: boolean;
-  enableVnc?: boolean;
-  enableTelnet?: boolean;
   sshPort?: number;
-  rdpPort?: number;
-  vncPort?: number;
-  telnetPort?: number;
   rdpCredentialId?: number | null;
   rdpUser?: string;
   rdpPassword?: string;
   rdpDomain?: string;
-  rdpSecurity?: string;
-  rdpIgnoreCert?: boolean;
   vncCredentialId?: number | null;
   vncPassword?: string;
   vncUser?: string;
@@ -415,29 +404,19 @@ export interface HostData {
     delay?: number;
   }>;
 
-  connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
+  /** "ssh", or the id of the plugin protocol a host without SSH uses. */
+  connectionType?: string;
   domain?: string;
-  security?: string;
-  ignoreCert?: boolean;
-  guacamoleConfig?: GuacamoleConfig | null;
   dockerConfig?: Record<string, unknown> | null;
   enableWebUi?: boolean;
   webUiConfig?: WebUiConfig | null;
 
   enableSsh?: boolean;
-  enableRdp?: boolean;
-  enableVnc?: boolean;
-  enableTelnet?: boolean;
   sshPort?: number;
-  rdpPort?: number;
-  vncPort?: number;
-  telnetPort?: number;
   rdpCredentialId?: number | null;
   rdpUser?: string;
   rdpPassword?: string;
   rdpDomain?: string;
-  rdpSecurity?: string;
-  rdpIgnoreCert?: boolean;
   vncCredentialId?: number | null;
   vncPassword?: string;
   vncUser?: string;

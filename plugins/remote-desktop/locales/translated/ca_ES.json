@@ -204,11 +204,75 @@
       "fontName": "Nom de la font",
       "fontSize": "Mida de la lletra",
       "colorScheme": "Esquema de colors",
-      "backspaceKey": "Tecla Retrocés"
-    }
+      "backspaceKey": "Tecla Retrocés",
+      "colorDepth": "Profunditat de color",
+      "resizeMethod": "Mètode de redimensionament"
+    },
+    "remoteDesktop": "Escriptori remot",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Xarxa virtual",
+    "unencryptedShell": "Shell sense xifrar"
   },
   "onboarding": {
     "feature_desktop": "Escriptori remot",
     "feature_desktop_desc": "Obriu sessions RDP, VNC i Telnet en una pestanya, igual que SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Profunditat de color"
+      },
+      "resizeMethod": {
+        "label": "Mètode de redimensionament"
+      },
+      "resizeDisplayUpdate": "Actualització de la pantalla",
+      "resizeReconnect": "Reconnecta",
+      "inherit": "Heretar",
+      "on": "Activat",
+      "off": "Desactivat",
+      "forceLossless": {
+        "label": "Força sense pèrdues",
+        "description": "Força la codificació d'imatges sense pèrdues (més qualitat, més amplada de banda)"
+      },
+      "enableWallpaper": {
+        "label": "Fons de pantalla",
+        "description": "Mostra el fons de pantalla de l'escriptori (desactivar-lo millora el rendiment)"
+      },
+      "enableFontSmoothing": {
+        "label": "Suavitzat de fonts",
+        "description": "Activa la renderització de fonts ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Composició d'escriptori",
+        "description": "Activa els efectes Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Desactiva l'àudio",
+        "description": "Silencia tot l'àudio de la sessió remota"
+      },
+      "enablePrinting": {
+        "label": "Habilita la impressió",
+        "description": "Redirigir les impressores locals a la sessió remota"
+      },
+      "enableDrive": {
+        "label": "Activa la redirecció de la unitat",
+        "description": "Assignar una carpeta local com a unitat a la sessió remota"
+      },
+      "disableCopy": {
+        "label": "Desactiva la còpia",
+        "description": "Impedir la còpia de text des de la sessió remota"
+      },
+      "disablePaste": {
+        "label": "Desactiva l'enganxament",
+        "description": "Impedir enganxar text a la sessió remota"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL de guacd"
+      }
+    }
   }
 }

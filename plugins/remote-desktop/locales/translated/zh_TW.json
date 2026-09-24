@@ -204,11 +204,75 @@
       "fontName": "字型名稱",
       "fontSize": "字型大小",
       "colorScheme": "色彩配置",
-      "backspaceKey": "退格鍵"
-    }
+      "backspaceKey": "退格鍵",
+      "colorDepth": "色彩深度",
+      "resizeMethod": "調整尺寸方法"
+    },
+    "remoteDesktop": "遠端桌面",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "虛擬網路",
+    "unencryptedShell": "未加密殼層"
   },
   "onboarding": {
     "feature_desktop": "遠端桌面",
     "feature_desktop_desc": "像 SSH 一樣，在同一個標籤頁中開啟 RDP、VNC 和 Telnet 會話。"
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "色彩深度"
+      },
+      "resizeMethod": {
+        "label": "調整尺寸方法"
+      },
+      "resizeDisplayUpdate": "顯示更新",
+      "resizeReconnect": "重新連接",
+      "inherit": "繼承",
+      "on": "在",
+      "off": "離開",
+      "forceLossless": {
+        "label": "強制無損",
+        "description": "強制使用無損影像編碼（品質較高，頻寬需求較大）"
+      },
+      "enableWallpaper": {
+        "label": "桌面背景",
+        "description": "顯示桌面背景（停用可提升效能）"
+      },
+      "enableFontSmoothing": {
+        "label": "字型平滑處理",
+        "description": "啟用 ClearType 字型轉譯"
+      },
+      "enableDesktopComposition": {
+        "label": "桌面合成",
+        "description": "啟用 Aero 玻璃效果"
+      },
+      "disableAudio": {
+        "label": "停用音訊",
+        "description": "將遠端工作階段的音訊全部靜音"
+      },
+      "enablePrinting": {
+        "label": "啟用列印功能",
+        "description": "將本機印表機重新導向至遠端工作階段"
+      },
+      "enableDrive": {
+        "label": "啟用磁碟機重新導向",
+        "description": "在遠端工作階段中將本機資料夾對應為磁碟機"
+      },
+      "disableCopy": {
+        "label": "停用複製",
+        "description": "防止從遠端工作階段複製文字"
+      },
+      "disablePaste": {
+        "label": "停用貼上",
+        "description": "防止將文字貼上至遠端工作階段"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }

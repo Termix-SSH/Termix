@@ -60,11 +60,6 @@ type GeneralSettingsSectionProps = {
   metricsInterval: string;
   setMetricsInterval: Dispatch<SetStateAction<string>>;
   handleSaveMonitoring: () => void;
-  guacEnabled: boolean;
-  handleToggleGuacamole: () => void;
-  guacUrl: string;
-  setGuacUrl: Dispatch<SetStateAction<string>>;
-  handleSaveGuacamole: () => void;
   logLevel: string;
   handleSaveLogLevel: (level: string) => void;
 };
@@ -106,11 +101,6 @@ export function AdminGeneralSettingsSection({
   metricsInterval,
   setMetricsInterval,
   handleSaveMonitoring,
-  guacEnabled,
-  handleToggleGuacamole,
-  guacUrl,
-  setGuacUrl,
-  handleSaveGuacamole,
   logLevel,
   handleSaveLogLevel,
 }: GeneralSettingsSectionProps) {
@@ -388,50 +378,6 @@ export function AdminGeneralSettingsSection({
               </Button>
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
-          <SettingRow
-            label={t("admin.enableRemoteDesktop")}
-            description={
-              <>
-                {t("admin.enableRemoteDesktopDesc")}{" "}
-                <a
-                  href="https://docs.termix.site/setup/remote-desktop"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent-brand hover:underline"
-                >
-                  {t("admin.enableRemoteDesktopDocsLink")}
-                </a>
-              </>
-            }
-          >
-            <AdminToggle on={guacEnabled} onToggle={handleToggleGuacamole} />
-          </SettingRow>
-          {guacEnabled && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                {t("admin.guacdUrl")}
-              </label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={guacUrl}
-                  onChange={(e) => setGuacUrl(e.target.value)}
-                  placeholder="guacd:4822"
-                  className="text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7 shrink-0"
-                  onClick={handleSaveGuacamole}
-                >
-                  Save
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">

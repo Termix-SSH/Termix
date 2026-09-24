@@ -204,11 +204,75 @@
       "fontName": "Skrifttypenavn",
       "fontSize": "Skriftstørrelse",
       "colorScheme": "Farveskema",
-      "backspaceKey": "Tilbagetast"
-    }
+      "backspaceKey": "Tilbagetast",
+      "colorDepth": "Farvedybde",
+      "resizeMethod": "Ændre størrelse-metode"
+    },
+    "remoteDesktop": "Fjernskrivebord",
+    "tabRdp": "Landdistriktsudviklingsplan",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtuelt netværk",
+    "unencryptedShell": "Ukrypteret skal"
   },
   "onboarding": {
     "feature_desktop": "Fjernskrivebord",
     "feature_desktop_desc": "Åbn RDP-, VNC- og Telnet-sessioner i en fane, ligesom med SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Farvedybde"
+      },
+      "resizeMethod": {
+        "label": "Ændre størrelse-metode"
+      },
+      "resizeDisplayUpdate": "Opdatering af display",
+      "resizeReconnect": "Genopret forbindelse",
+      "inherit": "Arve",
+      "on": "På",
+      "off": "Slukket",
+      "forceLossless": {
+        "label": "Tving tabsfri",
+        "description": "Tving tabsfri billedkodning (højere kvalitet, mere båndbredde)"
+      },
+      "enableWallpaper": {
+        "label": "Tapet",
+        "description": "Vis skrivebordsbaggrund (deaktivering forbedrer ydeevnen)"
+      },
+      "enableFontSmoothing": {
+        "label": "Skrifttypeudjævning",
+        "description": "Aktivér gengivelse af ClearType-skrifttyper"
+      },
+      "enableDesktopComposition": {
+        "label": "Skrivebordskomposition",
+        "description": "Aktivér Aero Glass-effekter"
+      },
+      "disableAudio": {
+        "label": "Deaktiver lyd",
+        "description": "Slå al lyd fra fra fjernsessionen"
+      },
+      "enablePrinting": {
+        "label": "Aktivér udskrivning",
+        "description": "Omdiriger lokale printere til fjernsessionen"
+      },
+      "enableDrive": {
+        "label": "Aktivér drevomdirigering",
+        "description": "Tilknyt en lokal mappe som et drev i den eksterne session"
+      },
+      "disableCopy": {
+        "label": "Deaktiver kopiering",
+        "description": "Forhindr kopiering af tekst fra fjernsessionen"
+      },
+      "disablePaste": {
+        "label": "Deaktiver indsætning",
+        "description": "Forhindr indsættelse af tekst i fjernsessionen"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd-URL"
+      }
+    }
   }
 }

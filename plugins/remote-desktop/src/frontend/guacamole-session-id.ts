@@ -1,5 +1,5 @@
 import { getGuacamoleConnectionId } from "./guacamole-api";
-import type { ConnectionOrigin } from "@/lib/connection-origin";
+import type { ConnectionOrigin } from "@termix/plugin-sdk/ui";
 
 export function watchGuacamoleConnectionId(
   connectId: string,

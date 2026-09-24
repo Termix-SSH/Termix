@@ -36,7 +36,8 @@ export interface HostSidebarFilterState {
   status: ("online" | "offline" | "pinned")[];
   /** SSH auth type ids; plugins add their own. */
   authType: string[];
-  protocol: ("ssh" | "rdp" | "vnc" | "telnet")[];
+  /** "ssh" or a plugin protocol id. */
+  protocol: string[];
   features: ("terminal" | "fileManager" | "tunnel" | "docker")[];
   tags: string[];
 }
@@ -93,14 +94,8 @@ const FILTER_STATUS: HostSidebarFilterState["status"] = [
   "offline",
   "pinned",
 ];
-/** Same shape as a manifest's contributes.auth.sshAuthTypes entries. */
+/** Same shape as a manifest's auth type and protocol ids. */
 const AUTH_TYPE_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
-const FILTER_PROTOCOL: HostSidebarFilterState["protocol"] = [
-  "ssh",
-  "rdp",
-  "vnc",
-  "telnet",
-];
 const FILTER_FEATURES: HostSidebarFilterState["features"] = [
   "terminal",
   "fileManager",
@@ -174,7 +169,9 @@ export function sanitizeHostSidebarPreferences(
     authType: sanitizeStringArray(filtersObj.authType).filter((value) =>
       AUTH_TYPE_PATTERN.test(value),
     ),
-    protocol: sanitizeEnumArray(filtersObj.protocol, FILTER_PROTOCOL),
+    protocol: sanitizeStringArray(filtersObj.protocol).filter((value) =>
+      AUTH_TYPE_PATTERN.test(value),
+    ),
     features: sanitizeEnumArray(filtersObj.features, FILTER_FEATURES),
     tags: sanitizeStringArray(filtersObj.tags),
   };

@@ -43,6 +43,7 @@ import {
   type PluginContext,
   type PluginModule,
   type PluginOpenIsolatedWindowRequest,
+  type PluginNativeRdpRequest,
 } from "@termix/plugin-sdk/backend";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
 import * as syncRegistry from "./sync-registry.js";
@@ -52,6 +53,8 @@ import {
 } from "../database/db/dialect.js";
 import { createPluginAuth, createPluginSsh } from "./ctx-ssh-auth.js";
 import { createPluginHosts } from "./ctx-hosts.js";
+import { createPluginCredentials } from "./ctx-credentials.js";
+import { isElectronIpcAvailable } from "../utils/electron-ipc-bridge.js";
 
 export type { PluginModule };
 
@@ -333,6 +336,28 @@ export function createPluginContext(
     {
       action: "desktop_open_isolated_window",
       details: () => "opened an isolated Electron window",
+    },
+  );
+
+  const desktopLaunchNativeRdp = guarded(
+    manifest,
+    "desktop:window",
+    async (request: PluginNativeRdpRequest) => {
+      const { isElectronIpcAvailable, requestFromElectronMain } =
+        await import("../utils/electron-ipc-bridge.js");
+      if (!isElectronIpcAvailable()) {
+        throw new Error(
+          `Plugin ${pluginId} tried to open the native RDP client outside the desktop app`,
+        );
+      }
+      return requestFromElectronMain<{ success: boolean; error?: string }>(
+        "launch-native-rdp",
+        request,
+      );
+    },
+    {
+      action: "desktop_launch_native_rdp",
+      details: () => "opened the native RDP client",
     },
   );
 
@@ -696,7 +721,11 @@ export function createPluginContext(
 
     desktop: {
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
+      launchNativeRdp: (request) => desktopLaunchNativeRdp(request),
+      available: () => isElectronIpcAvailable(),
     },
+
+    credentials: createPluginCredentials({ manifest, audit: auditCall }),
 
     audit: {
       // Attribution comes from the runtime: the actor, never a plugin value.

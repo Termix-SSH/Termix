@@ -982,7 +982,6 @@ export async function ensureSSHSessionForHost(
 ): Promise<EnsureSSHSessionResult> {
   const sessionId = host.id.toString();
   const origin = await resolveConnectionOrigin({
-    connectionType: host.connectionType,
     connectionOrigin: host.connectionOrigin,
   });
   setSessionOrigin(sessionId, origin);

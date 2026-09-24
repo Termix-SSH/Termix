@@ -204,11 +204,75 @@
       "fontName": "Nume font",
       "fontSize": "Dimensiunea fontului",
       "colorScheme": "Schemă de culori",
-      "backspaceKey": "Tasta Backspace"
-    }
+      "backspaceKey": "Tasta Backspace",
+      "colorDepth": "Adâncimea culorii",
+      "resizeMethod": "Metodă de redimensionare"
+    },
+    "remoteDesktop": "Desktop la distanță",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Rețea virtuală",
+    "unencryptedShell": "Shell necriptat"
   },
   "onboarding": {
     "feature_desktop": "Desktop la distanță",
     "feature_desktop_desc": "Deschideți sesiuni RDP, VNC și Telnet într-o filă, la fel ca în cazul SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Adâncimea culorii"
+      },
+      "resizeMethod": {
+        "label": "Metodă de redimensionare"
+      },
+      "resizeDisplayUpdate": "Actualizare afișare",
+      "resizeReconnect": "Reconectați-vă",
+      "inherit": "Moşteni",
+      "on": "Pe",
+      "off": "Dezactivat",
+      "forceLossless": {
+        "label": "Forța fără pierderi",
+        "description": "Forțează codificarea imaginilor fără pierderi (calitate mai mare, lățime de bandă mai mare)"
+      },
+      "enableWallpaper": {
+        "label": "Tapet",
+        "description": "Afișează imaginea de fundal a desktopului (dezactivarea îmbunătățește performanța)"
+      },
+      "enableFontSmoothing": {
+        "label": "Netezirea fonturilor",
+        "description": "Activează randarea fonturilor ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Compoziție desktop",
+        "description": "Activează efectele Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Dezactivați sunetul",
+        "description": "Dezactivați tot sunetul din sesiunea la distanță"
+      },
+      "enablePrinting": {
+        "label": "Activează imprimarea",
+        "description": "Redirecționează imprimantele locale către sesiunea la distanță"
+      },
+      "enableDrive": {
+        "label": "Activați redirecționarea unității",
+        "description": "Maparea unui folder local ca unitate în sesiunea la distanță"
+      },
+      "disableCopy": {
+        "label": "Dezactivați copierea",
+        "description": "Împiedicați copierea textului din sesiunea la distanță"
+      },
+      "disablePaste": {
+        "label": "Dezactivați lipirea",
+        "description": "Împiedicați lipirea textului în sesiunea la distanță"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL-ul guacd"
+      }
+    }
   }
 }

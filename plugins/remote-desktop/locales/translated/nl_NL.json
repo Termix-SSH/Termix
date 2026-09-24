@@ -204,11 +204,75 @@
       "fontName": "Lettertypenaam",
       "fontSize": "Lettergrootte",
       "colorScheme": "Kleurenschema",
-      "backspaceKey": "Backspace-toets"
-    }
+      "backspaceKey": "Backspace-toets",
+      "colorDepth": "Kleurdiepte",
+      "resizeMethod": "Formaatwijzigingsmethode"
+    },
+    "remoteDesktop": "Extern bureaublad",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Virtueel netwerk",
+    "unencryptedShell": "Niet-versleutelde shell"
   },
   "onboarding": {
     "feature_desktop": "Extern bureaublad",
     "feature_desktop_desc": "Open RDP-, VNC- en Telnet-sessies in een tabblad, net als bij SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Kleurdiepte"
+      },
+      "resizeMethod": {
+        "label": "Formaatwijzigingsmethode"
+      },
+      "resizeDisplayUpdate": "Weergave bijwerken",
+      "resizeReconnect": "Opnieuw verbinding maken",
+      "inherit": "Erven",
+      "on": "Op",
+      "off": "Uit",
+      "forceLossless": {
+        "label": "Krachtverliesloos",
+        "description": "Forceer verliesvrije beeldcodering (hogere kwaliteit, meer bandbreedte)"
+      },
+      "enableWallpaper": {
+        "label": "Behang",
+        "description": "Toon bureaubladachtergrond (uitschakelen verbetert de prestaties)"
+      },
+      "enableFontSmoothing": {
+        "label": "Lettertype-vloeiendheid",
+        "description": "Schakel ClearType-lettertypeweergave in"
+      },
+      "enableDesktopComposition": {
+        "label": "Bureaubladcompositie",
+        "description": "Schakel Aero-glaseffecten in"
+      },
+      "disableAudio": {
+        "label": "Geluid uitschakelen",
+        "description": "Demp alle audio van de externe sessie."
+      },
+      "enablePrinting": {
+        "label": "Afdrukken inschakelen",
+        "description": "Lokale printers doorverwijzen naar de externe sessie"
+      },
+      "enableDrive": {
+        "label": "Schakel schijfomleiding in",
+        "description": "Een lokale map toewijzen als schijfstation in de externe sessie."
+      },
+      "disableCopy": {
+        "label": "Kopiëren uitschakelen",
+        "description": "Voorkom het kopiëren van tekst vanuit de externe sessie."
+      },
+      "disablePaste": {
+        "label": "Plakken uitschakelen",
+        "description": "Voorkom dat tekst in de externe sessie wordt geplakt."
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }

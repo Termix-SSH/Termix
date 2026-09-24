@@ -204,11 +204,75 @@
       "fontName": "Nome da fonte",
       "fontSize": "Tamanho da fonte",
       "colorScheme": "Esquema de cores",
-      "backspaceKey": "Tecla Backspace"
-    }
+      "backspaceKey": "Tecla Backspace",
+      "colorDepth": "Profundidade de cor",
+      "resizeMethod": "Método de redimensionamento"
+    },
+    "remoteDesktop": "Área de Trabalho Remota",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Rede Virtual",
+    "unencryptedShell": "Shell não criptografado"
   },
   "onboarding": {
     "feature_desktop": "Área de trabalho remota",
     "feature_desktop_desc": "Abra sessões RDP, VNC e Telnet em uma aba, da mesma forma que o SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Profundidade de cor"
+      },
+      "resizeMethod": {
+        "label": "Método de redimensionamento"
+      },
+      "resizeDisplayUpdate": "Atualização de exibição",
+      "resizeReconnect": "Reconectar",
+      "inherit": "Herdar",
+      "on": "Sobre",
+      "off": "Desligado",
+      "forceLossless": {
+        "label": "Força sem perdas",
+        "description": "Forçar codificação de imagem sem perdas (maior qualidade, mais largura de banda)"
+      },
+      "enableWallpaper": {
+        "label": "Papel de parede",
+        "description": "Exibir papel de parede da área de trabalho (desativar melhora o desempenho)"
+      },
+      "enableFontSmoothing": {
+        "label": "Suavização de fontes",
+        "description": "Ativar renderização de fontes ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Composição de mesa",
+        "description": "Ative os efeitos de vidro Aero"
+      },
+      "disableAudio": {
+        "label": "Desativar áudio",
+        "description": "Silenciar todo o áudio da sessão remota."
+      },
+      "enablePrinting": {
+        "label": "Habilitar impressão",
+        "description": "Redirecionar impressoras locais para a sessão remota."
+      },
+      "enableDrive": {
+        "label": "Ativar o redirecionamento de unidades",
+        "description": "Mapear uma pasta local como uma unidade na sessão remota."
+      },
+      "disableCopy": {
+        "label": "Desativar cópia",
+        "description": "Impedir a cópia de texto da sessão remota"
+      },
+      "disablePaste": {
+        "label": "Desativar colagem",
+        "description": "Impedir a colagem de texto na sessão remota."
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL do guacd"
+      }
+    }
   }
 }

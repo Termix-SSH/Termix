@@ -1,18 +1,20 @@
 import GuacamoleLite from "guacamole-lite";
-import { guacLogger } from "../../../../src/backend/utils/logger.js";
-import {
-  GuacamoleTokenService,
-  type GuacamoleRecordingMetadata,
-} from "./token-service.js";
-import { getCurrentSettingValue } from "../../../../src/backend/database/repositories/factory.js";
-import { resolveGuacdOptions } from "../../../../src/backend/utils/guacd-config.js";
 import fs from "fs";
 import path from "path";
-
-const tokenService = GuacamoleTokenService.getInstance();
+import type { IncomingMessage } from "http";
+import type { Duplex } from "stream";
+import type {
+  GuacamoleRecordingMetadata,
+  GuacamoleTokenService,
+  TermixGuacMeta,
+} from "./token-service.js";
+import type { GuacdOptions } from "./guacd-config.js";
+import type { RemoteSessions } from "./sessions.js";
+import { errorMessage, type RemoteDesktopLogger } from "./log.js";
 
 /** The recordings.writer service, when the session-recording plugin provides it. */
 export interface RecordingsWriter {
+  enabledFor: (hostId: number) => Promise<boolean>;
   createFinished: (input: {
     hostId: number;
     userId: string;
@@ -25,147 +27,38 @@ export interface RecordingsWriter {
   }) => Promise<{ id: number }>;
 }
 
-let pluginRecordings: RecordingsWriter | null = null;
-
-export function setPluginRecordings(recordings: RecordingsWriter | null): void {
-  pluginRecordings = recordings;
-}
-
-function readGuacdOptions(): { host: string; port: number } {
-  let dbUrl: string | undefined;
-  try {
-    dbUrl = getCurrentSettingValue("guac_url") ?? undefined;
-  } catch {
-    // DB not available yet, use env var defaults
-  }
-  return resolveGuacdOptions(dbUrl);
-}
-
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
-const GUACAMOLE_RECORDINGS_DIR =
-  process.env.GUACD_RECORDING_BACKEND_PATH ||
-  path.join(DATA_DIR, "session_recordings", "guacamole");
 
-type GuacamoleClientConnection = {
+/** Where the backend reads guacd's recordings from. */
+export function recordingsDir(env: NodeJS.ProcessEnv = process.env): string {
+  return (
+    env.GUACD_RECORDING_BACKEND_PATH ||
+    path.join(DATA_DIR, "session_recordings", "guacamole")
+  );
+}
+
+type ClientConnection = {
   guacamoleConnectionId?: string;
   connectionSettings?: {
     connection?: { type?: string; join?: string; readOnly?: boolean };
     recording?: GuacamoleRecordingMetadata;
-    termixMeta?: {
-      termixConnectId: string;
-      hostId: number;
-      ownerUserId: string;
-      protocol: string;
-    };
+    termixMeta?: TermixGuacMeta;
   };
+  close?: () => void;
 };
 
-export interface GuacSessionInfo {
-  guacamoleConnectionId: string;
-  hostId: number;
-  ownerUserId: string;
-  protocol: string;
-  openedAt: number;
-}
-
-// Keyed by termixConnectId (routes.ts's correlation id), populated once the
-// primary connection's guacd handshake completes.
-const guacSessionByConnectId = new Map<string, GuacSessionInfo>();
-// Keyed by guacd's own guacamoleConnectionId, for join-time lookups.
-const guacSessionByGuacamoleId = new Map<string, GuacSessionInfo>();
-export function getGuacSessionByConnectId(
-  connectId: string,
-  userId: string,
-): GuacSessionInfo | null {
-  const info = guacSessionByConnectId.get(connectId);
-  return info?.ownerUserId === userId ? info : null;
-}
-
-export function getGuacSessionInfo(
-  guacamoleConnectionId: string,
-): GuacSessionInfo | null {
-  return guacSessionByGuacamoleId.get(guacamoleConnectionId) ?? null;
-}
-
-async function persistGuacamoleRecording(
-  clientConnection: GuacamoleClientConnection,
-): Promise<void> {
-  const recording = clientConnection.connectionSettings?.recording;
-  if (!recording) return;
-
-  const resolvedPath = path.resolve(GUACAMOLE_RECORDINGS_DIR, recording.path);
-  const allowedBase = `${path.resolve(GUACAMOLE_RECORDINGS_DIR)}${path.sep}`;
-  if (!resolvedPath.startsWith(allowedBase)) return;
-
-  // guacd may flush/rename the recording just after the websocket closes.
-  for (
-    let attempt = 0;
-    attempt < 10 && !fs.existsSync(resolvedPath);
-    attempt++
-  ) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  if (!fs.existsSync(resolvedPath)) {
-    const guacdPath = recording.guacdPath ?? GUACAMOLE_RECORDINGS_DIR;
-    guacLogger.warn("Guacamole recording file was not found", {
-      operation: "guac_recording_missing",
-      hostId: recording.hostId,
-      path: resolvedPath,
-      guacdPath,
-      hint:
-        "guacd writes the recording to guacdPath, the backend reads it from path. " +
-        "When guacd runs in its own container these must be the same volume — set " +
-        "GUACD_RECORDING_PATH to guacd's mount point and GUACD_RECORDING_BACKEND_PATH to this one.",
-    });
-    return;
-  }
-
-  if (!pluginRecordings) {
-    guacLogger.warn(
-      "Session Recording plugin is off; guacamole recording not saved to the log",
-      { operation: "guac_recording_no_writer", hostId: recording.hostId },
-    );
-    return;
-  }
-
-  const endedAt = new Date();
-  const startedAt = new Date(recording.startedAt);
-  await pluginRecordings.createFinished({
-    hostId: recording.hostId,
-    userId: recording.userId,
-    startedAt: startedAt.toISOString(),
-    endedAt: endedAt.toISOString(),
-    duration: Math.max(
-      0,
-      Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000),
-    ),
-    recordingPath: resolvedPath,
-    protocol: recording.protocol,
-    format: "guacamole",
-  });
-}
-
-// noServer: core owns the listening socket. guacamole-lite passes this object
-// straight to ws, and exposes the WebSocketServer it builds, so the plugin can
-// hand it an upgrade from /plugin-ws/remote-desktop/display. There is no
-// guacamole port any more.
-const websocketOptions = {
-  noServer: true,
-};
-
-const clientOptions = {
+const clientOptions = (
+  tokens: GuacamoleTokenService,
+  log: RemoteDesktopLogger,
+) => ({
   crypt: {
     cypher: "AES-256-CBC",
-    key: tokenService.getEncryptionKey(),
+    key: tokens.getEncryptionKey(),
   },
   log: {
     level: "ERRORS",
-    stdLog: (...args: unknown[]) => {
-      guacLogger.info(args.join(" "));
-    },
-    errorLog: (...args: unknown[]) => {
-      guacLogger.error(args.join(" "));
-    },
+    stdLog: (...args: unknown[]) => log.info(args.join(" ")),
+    errorLog: (...args: unknown[]) => log.error(args.join(" ")),
   },
   allowedUnencryptedConnectionSettings: {
     rdp: ["width", "height", "dpi"],
@@ -202,150 +95,224 @@ const clientOptions = {
       "terminal-type": "xterm-256color",
     },
   },
-};
+});
 
-const _origConsoleLog = console.log;
-console.log = (...args: unknown[]) => {
-  const msg = args[0];
-  if (typeof msg === "string" && msg.startsWith("New client connection"))
-    return;
-  _origConsoleLog(...args);
-};
+export interface GuacamoleServerDeps {
+  log: RemoteDesktopLogger;
+  tokens: GuacamoleTokenService;
+  sessions: RemoteSessions;
+  guacd: () => GuacdOptions;
+  recordings: () => RecordingsWriter | null;
+  /** A socket event has no request behind it, so the row is written as the session's user. */
+  asUser: <T>(userId: string, fn: () => Promise<T>) => Promise<T>;
+  /** Called when a primary session opens; returns what to release on close. */
+  onOpen?: (hostId: number) => () => void;
+}
 
-function createGuacServer(): GuacamoleLite {
-  const guacdOptions = readGuacdOptions();
-  const server = new GuacamoleLite(
-    websocketOptions,
-    guacdOptions,
-    clientOptions,
-  );
+export interface GuacamoleServer {
+  handleUpgrade: (
+    request: IncomingMessage,
+    socket: Duplex,
+    head: Buffer,
+  ) => void;
+  /** Rebuilds the server so a changed guacd address takes effect. */
+  restart: () => void;
+  /** Closes a session and everyone watching it. */
+  endSession: (guacamoleConnectionId: string) => boolean;
+  close: () => void;
+}
 
-  server.on("open", (clientConnection: GuacamoleClientConnection) => {
-    guacLogger.info("Guacamole connection opened", {
-      operation: "guac_connection_open",
-      type: clientConnection.connectionSettings?.connection?.type,
+/**
+ * guacamole-lite in noServer mode: core owns the listening socket and hands
+ * upgrades from /plugin-ws/remote-desktop/display to its WebSocketServer.
+ */
+export function createGuacamoleServer(
+  deps: GuacamoleServerDeps,
+): GuacamoleServer {
+  const { log, sessions } = deps;
+  let server: GuacamoleLite | null = null;
+
+  const persistRecording = async (connection: ClientConnection) => {
+    const recording = connection.connectionSettings?.recording;
+    if (!recording) return;
+
+    const dir = recordingsDir();
+    const resolvedPath = path.resolve(dir, recording.path);
+    if (!resolvedPath.startsWith(`${path.resolve(dir)}${path.sep}`)) return;
+
+    // guacd may flush or rename the recording just after the socket closes.
+    for (
+      let attempt = 0;
+      attempt < 10 && !fs.existsSync(resolvedPath);
+      attempt++
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!fs.existsSync(resolvedPath)) {
+      log.warn("Guacamole recording file was not found", {
+        operation: "guac_recording_missing",
+        hostId: recording.hostId,
+        path: resolvedPath,
+        guacdPath: recording.guacdPath ?? dir,
+        hint:
+          "guacd writes the recording to guacdPath, the backend reads it from path. " +
+          "When guacd runs in its own container these must be the same volume: set " +
+          "GUACD_RECORDING_PATH to guacd's mount point and GUACD_RECORDING_BACKEND_PATH to this one.",
+      });
+      return;
+    }
+
+    const writer = await deps.asUser(recording.userId, async () =>
+      deps.recordings(),
+    );
+    if (!writer) {
+      log.warn(
+        "Session Recording is off; the recording was kept on disk only",
+        {
+          operation: "guac_recording_no_writer",
+          hostId: recording.hostId,
+        },
+      );
+      return;
+    }
+
+    const endedAt = new Date();
+    const startedAt = new Date(recording.startedAt);
+    await deps.asUser(recording.userId, () =>
+      writer.createFinished({
+        hostId: recording.hostId,
+        userId: recording.userId,
+        startedAt: startedAt.toISOString(),
+        endedAt: endedAt.toISOString(),
+        duration: Math.max(
+          0,
+          Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000),
+        ),
+        recordingPath: resolvedPath,
+        protocol: recording.protocol,
+        format: "guacamole",
+      }),
+    );
+  };
+
+  const build = (): GuacamoleLite => {
+    // guacamole-lite fills in port 8080 unless it sees a server key, and ws
+    // refuses a port next to noServer, so the port is cleared explicitly.
+    const guacamole = new GuacamoleLite(
+      { noServer: true, port: undefined },
+      deps.guacd(),
+      clientOptions(deps.tokens, log),
+    );
+    // It also installs its own SIGTERM and SIGINT handlers. Core decides
+    // when the process stops and closes this through deactivate instead.
+    const handlers = guacamole as unknown as {
+      sigTermHandler?: () => void;
+      sigIntHandler?: () => void;
+    };
+    if (handlers.sigTermHandler) {
+      process.off("SIGTERM", handlers.sigTermHandler);
+    }
+    if (handlers.sigIntHandler) {
+      process.off("SIGINT", handlers.sigIntHandler);
+    }
+
+    guacamole.on("open", (connection: ClientConnection) => {
+      const meta = connection.connectionSettings?.termixMeta;
+      const guacamoleConnectionId = connection.guacamoleConnectionId;
+      const isJoin = !!connection.connectionSettings?.connection?.join;
+      if (isJoin || !meta || !guacamoleConnectionId) return;
+      const release = deps.onOpen?.(meta.hostId);
+      sessions.opened(meta, guacamoleConnectionId, release ? [release] : []);
     });
 
-    const termixMeta = clientConnection.connectionSettings?.termixMeta;
-    const guacamoleConnectionId = clientConnection.guacamoleConnectionId;
-    const isJoin = !!clientConnection.connectionSettings?.connection?.join;
-
-    if (!isJoin && termixMeta && guacamoleConnectionId) {
-      const info: GuacSessionInfo = {
-        guacamoleConnectionId,
-        hostId: termixMeta.hostId,
-        ownerUserId: termixMeta.ownerUserId,
-        protocol: termixMeta.protocol,
-        openedAt: Date.now(),
-      };
-      guacSessionByConnectId.set(termixMeta.termixConnectId, info);
-      guacSessionByGuacamoleId.set(guacamoleConnectionId, info);
-    }
-  });
-
-  server.on("close", (clientConnection: GuacamoleClientConnection) => {
-    guacLogger.info("Guacamole connection closed", {
-      operation: "guac_connection_close",
-      type: clientConnection.connectionSettings?.connection?.type,
-    });
-
-    const isJoin = !!clientConnection.connectionSettings?.connection?.join;
-    const termixMeta = clientConnection.connectionSettings?.termixMeta;
-    const guacamoleConnectionId = clientConnection.guacamoleConnectionId;
-    if (!isJoin && termixMeta && guacamoleConnectionId) {
-      guacSessionByConnectId.delete(termixMeta.termixConnectId);
-      guacSessionByGuacamoleId.delete(guacamoleConnectionId);
-    }
-
-    persistGuacamoleRecording(clientConnection).catch((error) => {
-      guacLogger.error("Failed to persist Guacamole recording", error, {
-        operation: "guac_recording_persist_error",
+    guacamole.on("close", (connection: ClientConnection) => {
+      const meta = connection.connectionSettings?.termixMeta;
+      const isJoin = !!connection.connectionSettings?.connection?.join;
+      if (!isJoin && meta) sessions.closed(meta.termixConnectId);
+      persistRecording(connection).catch((error) => {
+        log.error("Failed to persist Guacamole recording", {
+          operation: "guac_recording_persist_error",
+          error: errorMessage(error),
+        });
       });
     });
-  });
 
-  server.on(
-    "error",
-    (clientConnection: GuacamoleClientConnection, error: Error) => {
-      guacLogger.error("Guacamole connection error", error, {
+    guacamole.on("error", (connection: ClientConnection, error: Error) => {
+      log.error("Guacamole connection error", {
         operation: "guac_connection_error",
-        type: clientConnection.connectionSettings?.connection?.type,
+        type: connection.connectionSettings?.connection?.type,
+        error: errorMessage(error),
+      });
+    });
+
+    return guacamole;
+  };
+
+  const closeServer = () => {
+    if (!server) return;
+    try {
+      server.close();
+    } catch (error) {
+      log.error("Error closing the Guacamole server", {
+        error: errorMessage(error),
+      });
+    }
+    server = null;
+  };
+
+  server = build();
+
+  return {
+    handleUpgrade(request, socket, head) {
+      const wss = (
+        server as unknown as {
+          webSocketServer?: {
+            handleUpgrade: (
+              request: IncomingMessage,
+              socket: Duplex,
+              head: Buffer,
+              done: (ws: unknown) => void,
+            ) => void;
+            emit: (event: string, ...args: unknown[]) => void;
+          };
+        } | null
+      )?.webSocketServer;
+      if (!wss) {
+        socket.destroy();
+        return;
+      }
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit("connection", ws, request);
       });
     },
-  );
 
-  return server;
+    restart() {
+      if (!server) return;
+      closeServer();
+      server = build();
+    },
+
+    endSession(guacamoleConnectionId) {
+      const active = (
+        server as unknown as {
+          activeConnections?: Map<unknown, ClientConnection>;
+        } | null
+      )?.activeConnections;
+      if (!active) return false;
+      let closed = false;
+      for (const connection of [...active.values()]) {
+        const join = connection.connectionSettings?.connection?.join;
+        if (
+          connection.guacamoleConnectionId === guacamoleConnectionId ||
+          join === guacamoleConnectionId
+        ) {
+          connection.close?.();
+          closed = true;
+        }
+      }
+      return closed;
+    },
+
+    close: closeServer,
+  };
 }
-
-let guacServer: GuacamoleLite | null = null;
-
-/**
- * Builds the guacamole-lite server. Called from this plugin's activate().
- * Nothing binds a port: handleGuacamoleUpgrade below feeds it connections.
- */
-export async function startGuacamoleService(): Promise<void> {
-  guacServer = createGuacServer();
-}
-
-/**
- * Hands one upgrade to guacamole-lite's own WebSocketServer.
- *
- * guacamole-lite constructs that server internally and has no "attach to this
- * http server" option, so giving it the upgrade is the only way in. Core has
- * already authenticated the request by the time this runs.
- */
-export function handleGuacamoleUpgrade(
-  request: import("http").IncomingMessage,
-  socket: import("stream").Duplex,
-  head: Buffer,
-): void {
-  const server = guacServer as unknown as {
-    webSocketServer?: {
-      handleUpgrade: (
-        request: import("http").IncomingMessage,
-        socket: import("stream").Duplex,
-        head: Buffer,
-        done: (ws: unknown) => void,
-      ) => void;
-      emit: (event: string, ...args: unknown[]) => void;
-    };
-  } | null;
-
-  const wss = server?.webSocketServer;
-  if (!wss) {
-    socket.destroy();
-    return;
-  }
-
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit("connection", ws, request);
-  });
-}
-
-/**
- * Stops the guacamole-lite WebSocket server. Called from this plugin's
- * deactivate().
- */
-export async function stopGuacamoleService(): Promise<void> {
-  if (!guacServer) return;
-  try {
-    guacServer.close();
-  } catch (err) {
-    guacLogger.error("Error closing guac server during shutdown", err as Error);
-  }
-  guacServer = null;
-}
-
-export async function restartGuacServer(): Promise<void> {
-  // A no-op while the plugin is disabled: creating a new server here would
-  // silently resurrect the WS server behind deactivate()'s back.
-  if (!guacServer) return;
-  try {
-    guacServer.close();
-  } catch (err) {
-    guacLogger.error("Error closing guac server during restart", err as Error);
-  }
-  guacServer = createGuacServer();
-}
-
-export { guacServer, tokenService };

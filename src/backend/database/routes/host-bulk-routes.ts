@@ -812,9 +812,6 @@ export function registerHostBulkRoutes(
               ? 1
               : 0,
             enableSsh: hostData.enableSsh ?? effectiveConnectionType === "ssh",
-            enableRdp: hostData.enableRdp ?? false,
-            enableVnc: hostData.enableVnc ?? false,
-            enableTelnet: hostData.enableTelnet ?? false,
             updatedAt: new Date().toISOString(),
           };
 
@@ -828,21 +825,10 @@ export function registerHostBulkRoutes(
             sshDataObj.rdpUser = hostData.rdpUser || null;
             sshDataObj.rdpPassword = hostData.rdpPassword || null;
             sshDataObj.rdpDomain = hostData.rdpDomain || null;
-            sshDataObj.rdpSecurity = hostData.rdpSecurity || null;
-            sshDataObj.rdpIgnoreCert = hostData.rdpIgnoreCert ? 1 : 0;
-            sshDataObj.rdpPort = hostData.rdpPort || 3389;
             sshDataObj.vncUser = hostData.vncUser || null;
             sshDataObj.vncPassword = hostData.vncPassword || null;
-            sshDataObj.vncPort = hostData.vncPort || 5900;
             sshDataObj.telnetUser = hostData.telnetUser || null;
             sshDataObj.telnetPassword = hostData.telnetPassword || null;
-            sshDataObj.telnetPort = hostData.telnetPort || 23;
-            sshDataObj.enableRdp = hostData.enableRdp ? 1 : 0;
-            sshDataObj.enableVnc = hostData.enableVnc ? 1 : 0;
-            sshDataObj.enableTelnet = hostData.enableTelnet ? 1 : 0;
-            sshDataObj.guacamoleConfig = hostData.guacamoleConfig
-              ? JSON.stringify(hostData.guacamoleConfig)
-              : null;
           } else {
             sshDataObj.password =
               hostData.authType === "password" ? hostData.password : null;
@@ -855,9 +841,6 @@ export function registerHostBulkRoutes(
             sshDataObj.keyType =
               hostData.authType === "key" ? hostData.keyType || "auto" : null;
             sshDataObj.domain = null;
-            sshDataObj.security = null;
-            sshDataObj.ignoreCert = 0;
-            sshDataObj.guacamoleConfig = null;
           }
 
           const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
@@ -1079,9 +1062,6 @@ export function registerHostBulkRoutes(
             portKnockSequence: null,
             overrideCredentialUsername: 0,
             enableSsh: true,
-            enableRdp: false,
-            enableVnc: false,
-            enableTelnet: false,
             updatedAt: new Date().toISOString(),
           };
 

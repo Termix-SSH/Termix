@@ -204,11 +204,75 @@
       "fontName": "Nome font",
       "fontSize": "Dimensione font",
       "colorScheme": "Schema colori",
-      "backspaceKey": "Tasto Backspace"
-    }
+      "backspaceKey": "Tasto Backspace",
+      "colorDepth": "Profondità colore",
+      "resizeMethod": "Metodo di ridimensionamento"
+    },
+    "remoteDesktop": "Desktop remoto",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "Rete virtuale",
+    "unencryptedShell": "Shell non crittografata"
   },
   "onboarding": {
     "feature_desktop": "Desktop remoto",
     "feature_desktop_desc": "Apri le sessioni RDP, VNC e Telnet in una scheda, proprio come per SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "Profondità colore"
+      },
+      "resizeMethod": {
+        "label": "Metodo di ridimensionamento"
+      },
+      "resizeDisplayUpdate": "Aggiornamento della visualizzazione",
+      "resizeReconnect": "Ricollega",
+      "inherit": "Ereditare",
+      "on": "SU",
+      "off": "Spento",
+      "forceLossless": {
+        "label": "Forza lossless",
+        "description": "Forza la codifica lossless delle immagini (qualità più alta, maggiore utilizzo di banda)"
+      },
+      "enableWallpaper": {
+        "label": "Sfondo",
+        "description": "Mostra lo sfondo del desktop (disabilitarlo migliora le prestazioni)"
+      },
+      "enableFontSmoothing": {
+        "label": "Smussamento caratteri",
+        "description": "Abilita il rendering dei caratteri ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "Composizione desktop",
+        "description": "Abilita gli effetti Aero Glass"
+      },
+      "disableAudio": {
+        "label": "Disabilita audio",
+        "description": "Disattiva tutto l'audio dalla sessione remota"
+      },
+      "enablePrinting": {
+        "label": "Abilita stampa",
+        "description": "Reindirizza le stampanti locali alla sessione remota"
+      },
+      "enableDrive": {
+        "label": "Abilita reindirizzamento unità",
+        "description": "Mappa una cartella locale come unità nella sessione remota"
+      },
+      "disableCopy": {
+        "label": "Disabilita copia",
+        "description": "Impedisce la copia di testo dalla sessione remota"
+      },
+      "disablePaste": {
+        "label": "Disabilita incolla",
+        "description": "Impedisce di incollare testo nella sessione remota"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "URL guacd"
+      }
+    }
   }
 }

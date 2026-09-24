@@ -78,7 +78,6 @@ function toRecord(host: Record<string, unknown>): PluginHostRecord {
     folder: (host.folder as string | null) ?? null,
     jumpHosts: host.jumpHosts,
     enableSsh: (host.enableSsh as boolean | null) ?? null,
-    enableRdp: (host.enableRdp as boolean | null) ?? null,
     enableTerminal: (host.enableTerminal as boolean | null) ?? null,
     enableFileManager: (host.enableFileManager as boolean | null) ?? null,
     enableTunnel: (host.enableTunnel as boolean | null) ?? null,
@@ -205,6 +204,14 @@ export function createPluginHosts({ manifest, audit }: Deps): PluginHosts {
           ...host,
           userId,
         });
+      // Fields another plugin owns (a remote desktop switch) go to that
+      // plugin's host settings, the same way a bulk import row's do.
+      const { applyPluginHostImportSettings } =
+        await import("../database/routes/host-plugin-settings.js");
+      await applyPluginHostImportSettings(
+        created.id,
+        host as Record<string, unknown>,
+      );
       await audit("hosts_create", `host ${created.id}`, { success: true });
       return toRecord(created as unknown as Record<string, unknown>);
     },

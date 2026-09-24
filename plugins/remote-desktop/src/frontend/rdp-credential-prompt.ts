@@ -1,4 +1,4 @@
-import type { HostAuthOverrides } from "@/types/auth-protocols";
+import type { RemoteHostLogin } from "./host-remote";
 
 export function needsRdpCredentialPrompt({
   protocol,
@@ -7,7 +7,7 @@ export function needsRdpCredentialPrompt({
 }: {
   protocol: "rdp" | "vnc" | "telnet";
   rdpAuthType?: string;
-  authOverrides?: HostAuthOverrides;
+  authOverrides?: RemoteHostLogin["authOverrides"];
 }): boolean {
   return (
     protocol === "rdp" &&

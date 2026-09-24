@@ -105,15 +105,10 @@ describe("normalizeProtocolEnableFields", () => {
     expect(normalizeProtocolEnableFields({ name: "server" })).toEqual({});
   });
 
-  it("converts explicitly provided protocol booleans to database integers", () => {
+  it("converts an explicitly provided SSH switch to a database integer", () => {
     expect(
-      normalizeProtocolEnableFields({
-        enableSsh: true,
-        enableRdp: false,
-        enableVnc: undefined,
-        enableTelnet: true,
-      }),
-    ).toEqual({ enableSsh: 1, enableRdp: 0, enableTelnet: 1 });
+      normalizeProtocolEnableFields({ enableSsh: true, enableRdp: false }),
+    ).toEqual({ enableSsh: 1 });
   });
 });
 
@@ -174,14 +169,13 @@ describe("normalizeImportedHost", () => {
     expect(host.connectionType).toBe("ssh");
     expect(host.port).toBe(22);
     expect(host.enableSsh).toBe(true);
-    expect(host.enableRdp).toBe(false);
   });
 
   it("infers rdp from enableRdp and uses default rdp port", () => {
     const host = normalizeImportedHost({ enableRdp: true, ip: "10.0.0.2" });
     expect(host.connectionType).toBe("rdp");
     expect(host.port).toBe(3389);
-    expect(host.enableRdp).toBe(true);
+    expect(host.enableSsh).toBe(false);
   });
 
   it("honors an explicit port over protocol defaults", () => {
@@ -321,21 +315,15 @@ describe("transformHostResponse", () => {
     expect(result.jumpHosts).toEqual([]);
   });
 
-  it("infers protocol flags for a migrated non-ssh host", () => {
-    const result = transformHostResponse({
-      connectionType: "rdp",
-      enableSsh: true,
-    });
-    expect(result.enableSsh).toBe(false);
-    expect(result.enableRdp).toBe(true);
+  it("passes the stored SSH switch through", () => {
+    // The remote desktop migration corrects connection_type-only hosts once.
+    expect(transformHostResponse({ enableSsh: false }).enableSsh).toBe(false);
   });
 
-  it("applies default protocol ports", () => {
+  it("applies the default SSH port", () => {
     const result = transformHostResponse({ port: 22 });
     expect(result.sshPort).toBe(22);
-    expect(result.rdpPort).toBe(3389);
-    expect(result.vncPort).toBe(5900);
-    expect(result.telnetPort).toBe(23);
+    expect(result).not.toHaveProperty("rdpPort");
   });
 });
 
@@ -426,8 +414,6 @@ describe("sanitizeHostForRecipient", () => {
     );
     expect(result.name).toBe("prod");
     expect(result.ip).toBe("10.0.0.42");
-    expect(result.enableRdp).toBe(true);
-    expect(result.rdpPort).toBe(3389);
     expect(result.rdpAuthType).toBe("none");
     expect(result.permissionLevel).toBe("connect");
     expect(result.shareSshAuth).toBe(true);

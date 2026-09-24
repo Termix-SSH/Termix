@@ -2,19 +2,16 @@ import { TERMINAL_THEMES } from "@/lib/terminal-themes";
 import type { Host } from "@/types/ui-types";
 import type { SSHHostData } from "@/types";
 import type { HostDefaults } from "@/api/settings-api";
-import type {
-  RemoteDesktopDefaults,
-  TerminalDefaults,
-} from "@/lib/connection-defaults";
+import type { TerminalDefaults } from "@/lib/connection-defaults";
+import {
+  listHostProtocols,
+  protocolPort,
+  type HostProtocols,
+} from "./host-protocols";
 
 type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
 
-export type HostProtocols = {
-  enableSsh: boolean;
-  enableRdp: boolean;
-  enableVnc: boolean;
-  enableTelnet: boolean;
-};
+export type { HostProtocols };
 
 export type HostAuthType = Host["authType"];
 export type HostCursorStyle = NonNullable<
@@ -44,23 +41,8 @@ export const terminalAppearanceKeys = [
   "customThemeColors",
 ] as const satisfies readonly (keyof TerminalDefaults)[];
 
-export const remoteDesktopDefaultKeys = [
-  "colorDepth",
-  "resizeMethod",
-  "forceLossless",
-  "disableAudio",
-  "enableWallpaper",
-  "enableFontSmoothing",
-  "enableDesktopComposition",
-  "enablePrinting",
-  "enableDrive",
-  "disableCopy",
-  "disablePaste",
-] as const satisfies readonly (keyof RemoteDesktopDefaults)[];
-
 export interface UserConnectionDefaults {
   terminal: TerminalDefaults;
-  rdp: RemoteDesktopDefaults;
 }
 
 function hasOwn(value: object | undefined, key: PropertyKey): boolean {
@@ -86,18 +68,13 @@ type SnippetResponse = SnippetListItem[] | { snippets?: SnippetListItem[] };
 /**
  * Whether the Connection Origin control is meaningful for a host.
  *
- * Every protocol Termix can dial from either backend belongs here. RDP, VNC
- * and Telnet were added once they could originate from the desktop
- * (Termix-SSH/Support#1240); before that the control was gated on SSH alone,
- * so a host enabling only those protocols could never reach the setting.
+ * Every protocol Termix can dial from either backend belongs here, plugin
+ * protocols included (Termix-SSH/Support#1240); before that the control was
+ * gated on SSH alone, so a host enabling only remote desktop could never
+ * reach the setting.
  */
 export function connectionOriginAppliesTo(protocols: HostProtocols): boolean {
-  return (
-    protocols.enableSsh ||
-    protocols.enableRdp ||
-    protocols.enableVnc ||
-    protocols.enableTelnet
-  );
+  return Object.values(protocols).some(Boolean);
 }
 
 export function mapSnippetResponse(
@@ -122,11 +99,6 @@ export function createHostEditorForm(
     ...(connectionDefaults?.terminal ?? {}),
     ...(host?.terminalConfig ?? {}),
   };
-  const remoteDefaults = host?.enableRdp ? connectionDefaults?.rdp : undefined;
-  const guacamoleConfig = {
-    ...(remoteDefaults ?? {}),
-    ...(host?.guacamoleConfig ?? {}),
-  };
   const proxmoxSettings = (host?.pluginSettings?.proxmox ?? {}) as Record<
     string,
     unknown
@@ -147,9 +119,6 @@ export function createHostEditorForm(
     ip: host?.ip ?? "",
     username: host?.username ?? (host ? "" : "root"),
     sshPort: host?.sshPort ?? host?.port ?? 22,
-    rdpPort: host?.rdpPort ?? 3389,
-    vncPort: host?.vncPort ?? 5900,
-    telnetPort: host?.telnetPort ?? 23,
     authType: host?.authType ?? "password",
     useWarpgate: host?.useWarpgate ?? false,
     shareSshAuth: host?.shareSshAuth ?? false,
@@ -223,11 +192,6 @@ export function createHostEditorForm(
     inheritTerminalAppearance:
       !host ||
       terminalAppearanceKeys.every((key) => !hasOwn(host.terminalConfig, key)),
-    inheritRemoteDesktopDefaults:
-      !host ||
-      remoteDesktopDefaultKeys.every(
-        (key) => !hasOwn(host.guacamoleConfig, key),
-      ),
     localEcho: host?.terminalConfig?.localEcho ?? "default",
     fontSize: terminalConfig.fontSize ?? d?.fontSize ?? 14,
     fontFamily:
@@ -298,8 +262,6 @@ export function createHostEditorForm(
       ? "existing_rdp_password"
       : (host?.rdpPassword ?? ""),
     domain: host?.domain ?? "",
-    security: host?.security ?? "",
-    ignoreCert: host?.ignoreCert ?? false,
     vncCredentialId: host?.vncCredentialId ?? "",
     vncPassword: host?.hasVncPassword
       ? "existing_vnc_password"
@@ -320,7 +282,6 @@ export function createHostEditorForm(
     telnetAuthType: (host?.telnetAuthType ??
       (host?.telnetCredentialId ? "credential" : "direct")) as
       "direct" | "credential",
-    guacamoleConfig,
     statsConfig: host?.statsConfig ?? {
       statusCheckEnabled: d?.statusCheckEnabled ?? true,
       statusCheckInterval: 60,
@@ -399,9 +360,11 @@ export function buildHostEditorPayload(
   const usesPassword = form.authType === "password";
   const usesAgent = form.authType === "agent";
   const usesVault = form.authType === "vault";
-  const guacamoleConfig = form.inheritRemoteDesktopDefaults
-    ? stripKeys(form.guacamoleConfig, remoteDesktopDefaultKeys)
-    : form.guacamoleConfig;
+  // With SSH off, the host's primary protocol is the first plugin protocol
+  // switched on, and its port stands in for the host port.
+  const primaryProtocol = protocols.enableSsh
+    ? undefined
+    : listHostProtocols().find((protocol) => protocols[protocol.settingKey]);
   const terminalConfig = {
     theme: form.theme,
     cursorBlink: form.cursorBlink,
@@ -449,22 +412,12 @@ export function buildHostEditorPayload(
     : terminalConfig;
 
   return {
-    connectionType: protocols.enableSsh
-      ? "ssh"
-      : protocols.enableRdp
-        ? "rdp"
-        : protocols.enableVnc
-          ? "vnc"
-          : "telnet",
+    connectionType: primaryProtocol?.id ?? "ssh",
     name: form.name,
     ip: form.ip,
-    port: protocols.enableSsh
-      ? Number(form.sshPort)
-      : protocols.enableRdp
-        ? Number(form.rdpPort)
-        : protocols.enableVnc
-          ? Number(form.vncPort)
-          : Number(form.telnetPort),
+    port: primaryProtocol
+      ? protocolPort(form.pluginSettings, primaryProtocol)
+      : Number(form.sshPort),
     username: form.username,
     folder: form.folder,
     parentHostId: form.parentHostId ? Number(form.parentHostId) : null,
@@ -531,13 +484,7 @@ export function buildHostEditorPayload(
       form.socks5ProxyMode === "chain" ? form.socks5ProxyChain : null,
     connectionOrigin: form.connectionOrigin,
     enableSsh: protocols.enableSsh,
-    enableRdp: protocols.enableRdp,
-    enableVnc: protocols.enableVnc,
-    enableTelnet: protocols.enableTelnet,
     sshPort: Number(form.sshPort),
-    rdpPort: Number(form.rdpPort),
-    vncPort: Number(form.vncPort),
-    telnetPort: Number(form.telnetPort),
     forceKeyboardInteractive: form.forceKeyboardInteractive,
     rdpAuthType: protocols.enableRdp ? form.rdpAuthType : null,
     rdpCredentialId:
@@ -557,8 +504,6 @@ export function buildHostEditorPayload(
         ? form.rdpPassword || null
         : null,
     rdpDomain: form.domain || null,
-    rdpSecurity: form.security || null,
-    rdpIgnoreCert: form.ignoreCert,
     vncAuthType: protocols.enableVnc ? form.vncAuthType : null,
     vncCredentialId:
       protocols.enableVnc &&
@@ -602,11 +547,6 @@ export function buildHostEditorPayload(
       snippetId: Number(a.snippetId),
     })),
     statsConfig: form.statsConfig,
-    guacamoleConfig:
-      (protocols.enableRdp || protocols.enableVnc || protocols.enableTelnet) &&
-      Object.keys(guacamoleConfig).length > 0
-        ? guacamoleConfig
-        : null,
     terminalConfig: protocols.enableSsh ? terminalOverrides : null,
   };
 }

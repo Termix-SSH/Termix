@@ -146,7 +146,6 @@ export interface UserPreferences {
   customThemes?: string | null;
   customKeybindings?: string | null;
   terminalDefaults?: string | null;
-  rdpDefaults?: string | null;
   terminalMacros?: string | null;
 }
 

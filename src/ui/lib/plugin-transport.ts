@@ -17,7 +17,7 @@
  */
 
 import type { AxiosInstance } from "axios";
-import { authApi } from "@/main-axios";
+import { authApi, createRemoteOriginApiInstance } from "@/main-axios";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
 import { websocketAuthProtocols } from "@/lib/ws-auth";
@@ -73,6 +73,27 @@ export function createPluginApi(pluginId: string): AxiosInstance {
       return value.bind(target);
     },
   }) as AxiosInstance;
+}
+
+const remotePluginApis = new Map<string, AxiosInstance>();
+
+/**
+ * The same client pointed at the connected remote server, for a desktop app
+ * host whose connection origin is "remote". Outside Electron, and for
+ * "local", it is the ordinary client.
+ */
+export function pluginApiFor(
+  pluginId: string,
+  origin: ConnectionOrigin | undefined,
+  local: AxiosInstance,
+): AxiosInstance {
+  if (origin !== "remote" || !isElectron()) return local;
+  let client = remotePluginApis.get(pluginId);
+  if (!client) {
+    client = createRemoteOriginApiInstance(pluginApiPath(pluginId));
+    remotePluginApis.set(pluginId, client);
+  }
+  return client;
 }
 
 /**

@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { enabledHostProtocols } from "@/sidebar/host-protocols";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -105,9 +106,9 @@ export function buildStatusTooltip(
   if (!statusCheckEnabled(host)) return t("hosts.status.monitoringDisabled");
   const protocols: string[] = [];
   if (host.enableSsh) protocols.push("SSH");
-  if (host.enableRdp) protocols.push("RDP");
-  if (host.enableVnc) protocols.push("VNC");
-  if (host.enableTelnet) protocols.push("Telnet");
+  for (const protocol of enabledHostProtocols(host)) {
+    protocols.push(t(protocol.titleKey));
+  }
   if (protocols.length === 0) return statusLabel;
   return `${protocols.join(", ")}: ${statusLabel}`;
 }
@@ -958,11 +959,7 @@ export function HostItem({
         // reachable. If the host only exposes a single action, just launch it.
         if (isTouchOnly) {
           e.stopPropagation();
-          const otherProtocols = [
-            host.enableRdp,
-            host.enableVnc,
-            host.enableTelnet,
-          ].filter(Boolean).length;
+          const otherProtocols = enabledHostProtocols(host).length;
           if (otherProtocols <= 1) {
             openHostTab(defaultAction);
           } else {

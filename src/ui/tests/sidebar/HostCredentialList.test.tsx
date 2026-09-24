@@ -55,13 +55,7 @@ function makeHost(overrides: Partial<Host>): Host {
     enableTmuxMonitor: false,
     quickActions: [],
     enableSsh: true,
-    enableRdp: false,
-    enableVnc: false,
-    enableTelnet: false,
     sshPort: 22,
-    rdpPort: 3389,
-    vncPort: 5900,
-    telnetPort: 23,
     ...overrides,
   };
 }
@@ -136,7 +130,6 @@ describe("HostCredentialList credential usage", () => {
           credentialId: undefined,
           rdpCredentialId: "1",
           enableSsh: false,
-          enableRdp: true,
         }),
       ],
     });

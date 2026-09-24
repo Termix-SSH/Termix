@@ -224,6 +224,12 @@ export interface PluginSettingsField {
   group?: string;
   /** Registered component id. Required when type is "custom". */
   component?: string;
+  /**
+   * Stored and validated like any field, but not drawn by the generic
+   * settings form, because the plugin edits it in its own UI (a host editor
+   * section).
+   */
+  hidden?: boolean;
 }
 
 export interface PluginHostSettingsContribution {
@@ -382,6 +388,7 @@ const ALLOWED_SETTINGS_FIELD = [
   "permission",
   "group",
   "component",
+  "hidden",
 ];
 
 /** Settings keys are stored as-is, so they stay short and index-safe. */
@@ -932,6 +939,9 @@ function validateSettingsFields(
     }
     if ("permission" in raw) {
       requireString(raw.permission, `${at}.permission`, errors);
+    }
+    if ("hidden" in raw && typeof raw.hidden !== "boolean") {
+      errors.push(`${at}.hidden must be a boolean`);
     }
 
     if (raw.type === "select" || raw.type === "multiselect") {

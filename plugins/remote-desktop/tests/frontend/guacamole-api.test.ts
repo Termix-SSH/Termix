@@ -11,21 +11,26 @@ const remoteApiMock = vi.hoisted(() => ({
 const isElectronMock = vi.hoisted(() => vi.fn(() => false));
 const resolveRemoteHostIdMock = vi.hoisted(() => vi.fn());
 
-vi.mock("@/main-axios", () => ({
-  authApi: authApiMock,
-  getRemoteGuacamoleApi: () => remoteApiMock,
+vi.mock("@termix/plugin-sdk/ui", () => ({
   isElectron: isElectronMock,
-  handleApiError: (error: unknown) => error,
-}));
-vi.mock("@/lib/remote-server-api", () => ({
   resolveRemoteHostId: resolveRemoteHostIdMock,
 }));
 
 import {
+  setRemoteDesktopApp,
   getGuacdStatus,
   getGuacamoleConnectionId,
   getGuacamoleTokenFromHost,
 } from "../../src/frontend/guacamole-api";
+
+// Mirrors app.apiFor: the remote server only for a remote origin in the
+// desktop app, the ordinary client otherwise.
+setRemoteDesktopApp({
+  apiFor: (origin) =>
+    (origin === "remote" && isElectronMock()
+      ? remoteApiMock
+      : authApiMock) as never,
+});
 
 beforeEach(() => {
   authApiMock.get.mockClear();
@@ -42,9 +47,7 @@ describe("guacamole API origin", () => {
     await getGuacdStatus("remote");
     await getGuacamoleTokenFromHost(9, "remote", "vnc");
 
-    expect(authApiMock.get).toHaveBeenCalledWith(
-      "/plugin-api/remote-desktop/status",
-    );
+    expect(authApiMock.get).toHaveBeenCalledWith("/status");
     expect(authApiMock.post).toHaveBeenCalledOnce();
     expect(remoteApiMock.get).not.toHaveBeenCalled();
     expect(remoteApiMock.post).not.toHaveBeenCalled();
@@ -60,9 +63,7 @@ describe("guacamole API origin", () => {
 
     expect(status.guacd.status).toBe("connected");
     expect(token.token).toBe("remote-token");
-    expect(remoteApiMock.get).toHaveBeenCalledWith(
-      "/plugin-api/remote-desktop/status",
-    );
+    expect(remoteApiMock.get).toHaveBeenCalledWith("/status");
     expect(remoteApiMock.post).toHaveBeenCalledOnce();
     expect(authApiMock.get).not.toHaveBeenCalled();
     expect(authApiMock.post).not.toHaveBeenCalled();
@@ -84,15 +85,12 @@ describe("guacamole API origin", () => {
       "host-sync-id",
     );
 
-    expect(remoteApiMock.post).toHaveBeenCalledWith(
-      "/plugin-api/remote-desktop/connect-host/41",
-      {
-        protocol: "rdp",
-        promptedUsername: "admin",
-        promptedPassword: "secret",
-        promptedDomain: "EXAMPLE",
-      },
-    );
+    expect(remoteApiMock.post).toHaveBeenCalledWith("/connect-host/41", {
+      protocol: "rdp",
+      promptedUsername: "admin",
+      promptedPassword: "secret",
+      promptedDomain: "EXAMPLE",
+    });
     expect(resolveRemoteHostIdMock).toHaveBeenCalledWith("host-sync-id");
   });
 
@@ -105,15 +103,12 @@ describe("guacamole API origin", () => {
       domain: "",
     });
 
-    expect(authApiMock.post).toHaveBeenCalledWith(
-      "/plugin-api/remote-desktop/connect-host/9",
-      {
-        protocol: "rdp",
-        promptedUsername: "local-admin",
-        promptedPassword: "secret",
-        promptedDomain: "",
-      },
-    );
+    expect(authApiMock.post).toHaveBeenCalledWith("/connect-host/9", {
+      protocol: "rdp",
+      promptedUsername: "local-admin",
+      promptedPassword: "secret",
+      promptedDomain: "",
+    });
   });
 
   // Support#1240: a host set to "This Device" is served by the embedded
@@ -125,12 +120,9 @@ describe("guacamole API origin", () => {
     const token = await getGuacamoleTokenFromHost(9, "local", "rdp");
 
     expect(token.token).toBe("local-token");
-    expect(authApiMock.post).toHaveBeenCalledWith(
-      "/plugin-api/remote-desktop/connect-host/9",
-      {
-        protocol: "rdp",
-      },
-    );
+    expect(authApiMock.post).toHaveBeenCalledWith("/connect-host/9", {
+      protocol: "rdp",
+    });
     expect(remoteApiMock.post).not.toHaveBeenCalled();
     expect(resolveRemoteHostIdMock).not.toHaveBeenCalled();
   });
@@ -141,9 +133,7 @@ describe("guacamole API origin", () => {
     const status = await getGuacdStatus("local");
 
     expect(status.guacd.status).toBe("disconnected");
-    expect(authApiMock.get).toHaveBeenCalledWith(
-      "/plugin-api/remote-desktop/status",
-    );
+    expect(authApiMock.get).toHaveBeenCalledWith("/status");
     expect(remoteApiMock.get).not.toHaveBeenCalled();
   });
 
@@ -177,9 +167,8 @@ it("looks up the session on the backend that issued its token", async () => {
   isElectronMock.mockReturnValue(true);
   const signal = new AbortController().signal;
   await getGuacamoleConnectionId("connect/id", "remote", signal);
-  expect(remoteApiMock.get).toHaveBeenCalledWith(
-    "/plugin-api/remote-desktop/connection/connect%2Fid",
-    { signal },
-  );
+  expect(remoteApiMock.get).toHaveBeenCalledWith("/connection/connect%2Fid", {
+    signal,
+  });
   expect(authApiMock.get).not.toHaveBeenCalled();
 });

@@ -35,6 +35,10 @@ import type {
 } from "./backend.js";
 import type { SyncEntityRegistration } from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
+import type {
+  PluginNativeRdpRequest,
+  PluginProtocolTarget,
+} from "./backend.js";
 
 export interface FakeContextOptions {
   pluginId?: string;
@@ -69,6 +73,13 @@ export interface FakeContextOptions {
   shareableRoles?: PluginShareableRole[];
   /** Hosts ctx.ssh.resolveHost answers with, secrets included. */
   sshHosts?: PluginSshHost[];
+  /**
+   * What ctx.credentials.resolveHostProtocol answers, keyed
+   * "<hostId>:<protocol>". A missing key answers null.
+   */
+  protocolTargets?: Record<string, PluginProtocolTarget>;
+  /** What ctx.desktop.available() answers. Defaults to false. */
+  desktopAvailable?: boolean;
 }
 
 export interface FakeAuthRegistrations {
@@ -123,6 +134,10 @@ export interface FakePluginContext {
     title?: string;
     ignoreCert?: boolean;
   }>;
+  /** Every ctx.desktop.launchNativeRdp call, in order. */
+  nativeRdpLaunches: PluginNativeRdpRequest[];
+  /** Every ctx.credentials.resolveHostProtocol call, in order. */
+  credentialReads: Array<{ hostId: number; protocol: string }>;
   /** Every ctx.audit.record entry, in order. */
   audits: Array<{ action: string; success: boolean; [key: string]: unknown }>;
   /** Every ctx.hosts.recordActivity call, in order. */
@@ -206,6 +221,8 @@ export function createFakeContext(
   const sshConnections: FakePluginContext["sshConnections"] = [];
   const hostShares: FakePluginContext["hostShares"] = [];
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
+  const nativeRdpLaunches: FakePluginContext["nativeRdpLaunches"] = [];
+  const credentialReads: FakePluginContext["credentialReads"] = [];
   const audits: FakePluginContext["audits"] = [];
   const activities: FakePluginContext["activities"] = [];
   const trackedSessions: number[] = [];
@@ -635,6 +652,18 @@ export function createFakeContext(
         desktopWindows.push(request);
         return { success: true };
       },
+      launchNativeRdp: async (request) => {
+        nativeRdpLaunches.push(request);
+        return { success: true };
+      },
+      available: () => options.desktopAvailable ?? false,
+    },
+
+    credentials: {
+      resolveHostProtocol: async (hostId, protocol) => {
+        credentialReads.push({ hostId, protocol });
+        return options.protocolTargets?.[`${hostId}:${protocol}`] ?? null;
+      },
     },
 
     asUser: async (userId, fn) => {
@@ -666,6 +695,8 @@ export function createFakeContext(
     hostShares,
     auth,
     desktopWindows,
+    nativeRdpLaunches,
+    credentialReads,
     audits,
     activities,
     trackedSessions,
@@ -704,6 +735,10 @@ export interface MockContextOptions {
   services?: Record<string, object>;
   /** Hosts ctx.ssh.resolveHost serves. See FakeContextOptions. */
   sshHosts?: PluginSshHost[];
+  /** What ctx.credentials serves. See FakeContextOptions. */
+  protocolTargets?: Record<string, PluginProtocolTarget>;
+  /** What ctx.desktop.available() answers. */
+  desktopAvailable?: boolean;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -740,6 +775,8 @@ export function createMockCtx(
     hosts: options.hosts,
     sshHosts: options.sshHosts,
     services: options.services,
+    protocolTargets: options.protocolTargets,
+    desktopAvailable: options.desktopAvailable,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -972,6 +1009,18 @@ export function createMockCtx(
         require("desktop:window");
         return ctx.desktop.openIsolatedWindow(request);
       },
+      launchNativeRdp: async (request) => {
+        require("desktop:window");
+        return ctx.desktop.launchNativeRdp(request);
+      },
+      available: () => ctx.desktop.available(),
+    },
+
+    credentials: {
+      resolveHostProtocol: async (hostId, protocol) => {
+        require("credentials:read");
+        return ctx.credentials.resolveHostProtocol(hostId, protocol);
+      },
     },
 
     capabilities: {
@@ -1180,6 +1229,7 @@ export interface RenderedPluginApp {
     tabs: () => string[];
     panels: () => string[];
     hostActions: () => Array<{ id: string; tabType?: string }>;
+    hostProtocols: () => string[];
     hostEditorSections: () => string[];
     dashboardCards: () => string[];
     settingsComponents: () => string[];

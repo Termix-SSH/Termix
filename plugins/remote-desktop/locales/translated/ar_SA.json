@@ -204,11 +204,75 @@
       "fontName": "اسم الخط",
       "fontSize": "حجم الخط",
       "colorScheme": "نظام الألوان",
-      "backspaceKey": "مفتاح Backspace"
-    }
+      "backspaceKey": "مفتاح Backspace",
+      "colorDepth": "عمق اللون",
+      "resizeMethod": "طريقة تغيير الحجم"
+    },
+    "remoteDesktop": "سطح المكتب البعيد",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "الشبكة الافتراضية",
+    "unencryptedShell": "shell غير مشفر"
   },
   "onboarding": {
     "feature_desktop": "سطح المكتب البعيد",
     "feature_desktop_desc": "افتح جلسات RDP وVNC وTelnet في علامة تبويب، تمامًا مثل SSH."
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "عمق اللون"
+      },
+      "resizeMethod": {
+        "label": "طريقة تغيير الحجم"
+      },
+      "resizeDisplayUpdate": "تحديث الشاشة",
+      "resizeReconnect": "إعادة الاتصال",
+      "inherit": "يرث",
+      "on": "على",
+      "off": "عن",
+      "forceLossless": {
+        "label": "فرض بدون فقدان",
+        "description": "فرض ترميز الصور بدون فقدان (جودة أعلى، استهلاك أكبر للنطاق الترددي)"
+      },
+      "enableWallpaper": {
+        "label": "خلفية سطح المكتب",
+        "description": "إظهار خلفية سطح المكتب (التعطيل يحسن الأداء)"
+      },
+      "enableFontSmoothing": {
+        "label": "تنعيم الخطوط",
+        "description": "تمكين عرض خطوط ClearType"
+      },
+      "enableDesktopComposition": {
+        "label": "تركيب سطح المكتب",
+        "description": "تمكين تأثيرات Aero الزجاجية"
+      },
+      "disableAudio": {
+        "label": "تعطيل الصوت",
+        "description": "كتم كل الصوت من الجلسة البعيدة"
+      },
+      "enablePrinting": {
+        "label": "تمكين الطباعة",
+        "description": "إعادة توجيه الطابعات المحلية إلى الجلسة البعيدة"
+      },
+      "enableDrive": {
+        "label": "تمكين إعادة توجيه القرص",
+        "description": "تعيين مجلد محلي كقرص في الجلسة البعيدة"
+      },
+      "disableCopy": {
+        "label": "تعطيل النسخ",
+        "description": "منع نسخ النص من الجلسة البعيدة"
+      },
+      "disablePaste": {
+        "label": "تعطيل اللصق",
+        "description": "منع لصق النص في الجلسة البعيدة"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "رابط guacd"
+      }
+    }
   }
 }

@@ -204,11 +204,75 @@
       "fontName": "フォント名",
       "fontSize": "フォントサイズ",
       "colorScheme": "カラースキーム",
-      "backspaceKey": "バックスペースキー"
-    }
+      "backspaceKey": "バックスペースキー",
+      "colorDepth": "色深度",
+      "resizeMethod": "リサイズ方法"
+    },
+    "remoteDesktop": "リモートデスクトップ",
+    "tabRdp": "RDP",
+    "tabVnc": "VNC",
+    "tabTelnet": "Telnet",
+    "virtualNetwork": "仮想ネットワーク",
+    "unencryptedShell": "暗号化されていないシェル"
   },
   "onboarding": {
     "feature_desktop": "リモートデスクトップ",
     "feature_desktop_desc": "RDP、VNC、Telnetのセッションは、SSHと同様にタブで開きます。"
+  },
+  "settings": {
+    "user": {
+      "colorDepth": {
+        "label": "色深度"
+      },
+      "resizeMethod": {
+        "label": "リサイズ方法"
+      },
+      "resizeDisplayUpdate": "ディスプレイの更新",
+      "resizeReconnect": "再接続",
+      "inherit": "継承する",
+      "on": "の上",
+      "off": "オフ",
+      "forceLossless": {
+        "label": "ロスレスを強制",
+        "description": "ロスレス画像エンコーディングを強制する（高品質だが帯域幅を多く消費）"
+      },
+      "enableWallpaper": {
+        "label": "壁紙",
+        "description": "デスクトップ壁紙を表示する（無効にするとパフォーマンスが向上）"
+      },
+      "enableFontSmoothing": {
+        "label": "フォントスムージング",
+        "description": "ClearTypeフォントレンダリングを有効にする"
+      },
+      "enableDesktopComposition": {
+        "label": "デスクトップコンポジション",
+        "description": "Aero Glass効果を有効にする"
+      },
+      "disableAudio": {
+        "label": "オーディオを無効化",
+        "description": "リモートセッションの音声をすべてミュートする"
+      },
+      "enablePrinting": {
+        "label": "印刷を有効化",
+        "description": "ローカルプリンターをリモートセッションにリダイレクトする"
+      },
+      "enableDrive": {
+        "label": "ドライブリダイレクションを有効化",
+        "description": "リモートセッションでローカルフォルダーをドライブとしてマッピングする"
+      },
+      "disableCopy": {
+        "label": "コピーを無効にする",
+        "description": "リモートセッションからのテキストコピーを禁止します"
+      },
+      "disablePaste": {
+        "label": "貼り付けを無効にする",
+        "description": "リモートセッションへのテキスト貼り付けを禁止します"
+      }
+    },
+    "admin": {
+      "guacdUrl": {
+        "label": "guacd URL"
+      }
+    }
   }
 }
