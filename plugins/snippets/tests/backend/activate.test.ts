@@ -56,6 +56,27 @@ describe("snippets activate", () => {
     expect(otherUsersList).toEqual([]);
   });
 
+  it("refuses service writes the user could not make in the panel", async () => {
+    server = await startServer({ permissions: ["snippets.view"] });
+    const service = server.mock.services.get("snippets.access") as {
+      create: (input: { name: string; content: string }) => Promise<unknown>;
+      update: (id: number, changes: { name: string }) => Promise<unknown>;
+      remove: (id: number) => Promise<unknown>;
+    };
+    const asUser = <T>(fn: () => Promise<T>) =>
+      server!.mock.ctx.asUser("user-1", fn);
+
+    await expect(
+      asUser(() => service.create({ name: "x", content: "ls" })),
+    ).rejects.toThrow("snippets.create");
+    await expect(
+      asUser(() => service.update(1, { name: "y" })),
+    ).rejects.toThrow("snippets.edit");
+    await expect(asUser(() => service.remove(1))).rejects.toThrow(
+      "snippets.delete",
+    );
+  });
+
   it("wipes a user's snippets when user.data_wiped fires", async () => {
     // events:core only to simulate core firing the topic in this test; the
     // plugin's own manifest never declares it, since it only subscribes.

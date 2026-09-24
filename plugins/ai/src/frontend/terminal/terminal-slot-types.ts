@@ -7,7 +7,7 @@ interface TerminalHost {
   id: number | string;
   name?: string;
   ip?: string;
-  enableAiAssistant?: boolean;
+  pluginSettings?: Record<string, Record<string, unknown> | undefined>;
   [key: string]: unknown;
 }
 

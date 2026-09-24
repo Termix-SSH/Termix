@@ -374,10 +374,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   brings `enable_docker` across, the same gap every earlier column move left
   there: it writes host rows only and never plugin settings. Owner: D1, with
   the generic host-settings export and import.
-- **B15 (docker), for B18:** the AI assistant's `list_hosts`/`get_host`
-  tools still report `enableDocker` from the host row, which no longer has
-  the column, so it always reads null. Read `pluginSettings.docker` or ask the
-  `docker.containers` service instead. Owner: B18.
 
 - **B17 (automations), for B20:** the wake-on-lan step calls the optional
   `wake-on-lan.send` v1 service, `wake(hostId): Promise<void>`, as the
@@ -408,9 +404,34 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   ever is not, the run now fails on its first SSH step instead of being
   skipped silently. Owner: none unless a background "is this user unlocked"
   check is added to the SDK.
-- **B17 (automations):** AI's `list_notification_channels` read tool still reads
-  notification channels through core's repository by relative import; it
-  can use `ctx.notify.channels()` now. Owner: B18.
+- **B18 (ai), for B19:** the assistant's `list_homepage_items` tool calls
+  the optional `homepage.items` v1 service, `list(): Promise<Array<{ id,
+typeId, title }>>`, as the acting user. Until B19 provides it the tool is
+  not offered to the model. Owner: B19.
+- **B18 (ai):** the "allow read-only diagnostic commands" user setting only
+  adds a line to the system prompt. No tool runs a command directly;
+  `tools/command-allowlist.ts` (`isReadOnlyCommand`) is tested but unused, so
+  every command is still a proposal. Either add the direct tool or drop the
+  setting. Owner: D0.
+- **B18 (ai):** provider requests now go through `ctx.fetch`, which has no
+  outbound proxy support. Before, an admin-allowlisted private provider went
+  through `fetchWithProxy` (public ones never did). Decide whether
+  `ctx.fetch` should honour the proxy settings. Owner: D0.
+- **B18:** `scripts/generate-dialect-schema.cjs` decides varchar or text by
+  column name across every table, so removing the ai indexes on
+  `created_at`, `updated_at` and `label` turned those columns into `text`
+  everywhere in `schema.pg.ts` and `schema.mysql.ts`. drizzle-kit then wrote
+  about a hundred type changes, which B18 left out of
+  `drizzle/postgres/0048` and `drizzle/mysql/0047` (both a no-op), so real
+  databases keep `varchar(255)` while the snapshots say `text`. Key the
+  generator per table, regenerate, and check `verify:dialect`. Owner: D0.
+- **B18:** saving a plugin setting from the Settings screen tells nobody. The
+  ai frontend re-reads its status on `termix:plugins-changed` and on window
+  focus (throttled to 30 seconds), so an admin turning it on shows up on the
+  next focus. A settings-changed hook on the app object would be cleaner.
+  Owner: D1.
+- **B18:** tunnels builds its own SSE URL off the axios base instead of the
+  new `app.fetch`. Owner: D1.
 
 ## Manual checks after 2.9.0
 

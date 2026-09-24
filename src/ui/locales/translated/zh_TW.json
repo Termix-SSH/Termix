@@ -1046,8 +1046,6 @@
     "connectionToolbar": "連接工具列",
     "showConnectionToolbar": "顯示連接工具列",
     "showConnectionToolbarDesc": "在主機的 SSH、RDP、VNC 和 Telnet 會話中顯示工具列。您也可以暫時將其從工具列本身隱藏。",
-    "enableAiAssistant": "啟用人工智慧助手",
-    "enableAiAssistantDesc": "允許 AI 助理在此主機的終端機上提供協助。預設為關閉狀態，但仍需在您的帳戶中啟用 AI 功能。",
     "proxmoxLastSyncStatus": {
       "success": "成功"
     },

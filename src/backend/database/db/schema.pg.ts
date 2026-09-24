@@ -63,10 +63,10 @@ export const ssoProviders = pgTable("sso_providers", {
   enabled: boolean("enabled").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
   config: text("config").notNull(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -84,7 +84,7 @@ export const sessions = pgTable(
     oidcSub: text("oidc_sub"),
     oidcSid: text("oidc_sid"),
     ssoProviderId: integer("sso_provider_id"),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -109,7 +109,7 @@ export const trustedDevices = pgTable(
     deviceFingerprint: text("device_fingerprint").notNull(),
     deviceType: text("device_type").notNull(),
     deviceInfo: text("device_info").notNull(),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -135,7 +135,7 @@ export const userExternalIdentities = pgTable(
     /** The provider's id for the user, at most 255 characters. */
     subject: varchar("subject", { length: 255 }).notNull(),
     email: text("email"),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -187,7 +187,7 @@ export const webauthnCredentials = pgTable("webauthn_credentials", {
   backedUp: boolean("backed_up").notNull().default(false),
   transports: text("transports"),
   userVerification: text("user_verification").notNull().default("preferred"),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   lastUsedAt: text("last_used_at"),
@@ -273,9 +273,6 @@ export const hosts = pgTable(
     enableTerminalToolbar: boolean("enable_terminal_toolbar")
       .notNull()
       .default(true),
-    enableAiAssistant: boolean("enable_ai_assistant")
-      .notNull()
-      .default(false),
     showTerminalInSidebar: boolean("show_terminal_in_sidebar")
       .notNull()
       .default(true),
@@ -352,10 +349,10 @@ export const hosts = pgTable(
     // sync -- local autoincrement ids collide across instances.
     syncId: varchar("sync_id", { length: 255 }).unique(),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -421,10 +418,10 @@ export const sshCredentials = pgTable(
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -471,10 +468,10 @@ export const sshFolders = pgTable(
     // to name sort, same convention as hosts.sortOrder.
     sortOrder: integer("sort_order"),
     syncId: varchar("sync_id", { length: 255 }).unique(),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -526,7 +523,7 @@ export const hostAccess = pgTable(
 
     expiresAt: varchar("expires_at", { length: 255 }),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     lastAccessedAt: text("last_accessed_at"),
@@ -556,10 +553,10 @@ export const sharedHostAuthOverrides = pgTable(
     credentialId: integer("credential_id")
       .notNull()
       .references(() => sshCredentials.id, { onDelete: "cascade" }),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -601,10 +598,10 @@ export const sharedHostSecrets = pgTable(
     encryptedKeyType: text("encrypted_key_type"),
     encryptedDomain: text("encrypted_domain"),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -632,10 +629,10 @@ export const roles = pgTable("roles", {
 
   permissions: text("permissions"),
 
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -726,7 +723,7 @@ export const opksshTokens = pgTable(
     issuer: text("issuer"),
     audience: text("audience"),
   
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -766,10 +763,10 @@ export const vaultProfiles = pgTable("vault_profiles", {
   // When true the profile is visible/usable by all users on the server
   shared: boolean("shared").notNull().default(false),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -791,7 +788,7 @@ export const vaultTokens = pgTable(
     sshCert: text("ssh_cert").notNull(),
     privateKey: text("private_key").notNull(),
   
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -813,7 +810,7 @@ export const apiKeys = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     tokenHash: text("token_hash").notNull(),
     tokenPrefix: text("token_prefix").notNull(),
-    createdAt: varchar("created_at", { length: 255 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     expiresAt: varchar("expires_at", { length: 255 }),
     lastUsedAt: text("last_used_at"),
     isActive: boolean("is_active").notNull().default(true),
@@ -832,13 +829,13 @@ export const userOpenTabs = pgTable(
     hostId: integer("host_id").references(() => hosts.id, {
       onDelete: "cascade",
     }),
-    label: varchar("label", { length: 255 }).notNull(),
+    label: text("label").notNull(),
     tabOrder: integer("tab_order").notNull().default(0),
     backendSessionId: text("backend_session_id"),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -869,19 +866,13 @@ export const userPreferences = pgTable("user_preferences", {
   disableUpdateCheck: boolean("disable_update_check"),
   confirmTabClose: boolean("confirm_tab_close"),
   hiddenRailTabs: text("hidden_rail_tabs"),
-  // null means the user has not been asked yet; the assistant stays hidden
-  // until this is explicitly true and the admin global is on.
-  aiAssistantEnabled: boolean("ai_assistant_enabled"),
-  // Opt-in to letting the assistant run allowlisted read-only diagnostics
-  // without a per-command approval click.
-  aiReadOnlyCommands: boolean("ai_read_only_commands"),
   compactHostView: boolean("compact_host_view"),
   statusColorScheme: text("status_color_scheme"),
   customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
   terminalDefaults: text("terminal_defaults"),
   terminalMacros: text("terminal_macros"),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -893,7 +884,7 @@ export const hostSidebarPreferences = pgTable("host_sidebar_preferences", {
   // JSON-encoded HostSidebarPreferences. No secrets in this blob, stored as
   // plain JSON.
   data: text("data").notNull(),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -907,7 +898,7 @@ export const credentialSidebarPreferences = pgTable(
     // JSON-encoded CredentialSidebarPreferences. No secrets in this blob,
     // same convention as hostSidebarPreferences.data.
     data: text("data").notNull(),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -921,7 +912,7 @@ export const uiPreferences = pgTable("ui_preferences", {
   // state). No secrets in this blob, same convention as
   // hostSidebarPreferences.data.
   data: text("data").notNull(),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -931,14 +922,14 @@ export const dashboardServiceLinks = pgTable("dashboard_service_links", {
   userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  label: varchar("label", { length: 255 }).notNull(),
+  label: text("label").notNull(),
   url: text("url").notNull(),
   order: integer("order").notNull().default(0),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -956,10 +947,10 @@ export const termixIdentities = pgTable("termix_identities", {
     .references(() => users.id, { onDelete: "cascade" }),
   handle: varchar("handle", { length: 255 }).notNull().unique(),
   description: text("description"),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -979,7 +970,7 @@ export const termixIdentityKeys = pgTable("termix_identity_keys", {
   // the /<ALGO> resolver filter (RSA / ED25519 / ECDSA / ...).
   keyType: text("key_type").notNull(),
   algorithm: text("algorithm").notNull(),
-  label: varchar("label", { length: 255 }),
+  label: text("label"),
   comment: text("comment"),
   // "manual" (pasted) or "credential" (imported from an ssh_credentials entry).
   source: text("source").notNull().default("manual"),
@@ -987,7 +978,7 @@ export const termixIdentityKeys = pgTable("termix_identity_keys", {
     onDelete: "set null",
   }),
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1007,10 +998,10 @@ export const termixIdentityCa = pgTable("termix_identity_ca", {
   publicKey: text("public_key").notNull(),
   privateKey: text("private_key").notNull(),
   validityDays: integer("validity_days").notNull().default(90),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1026,7 +1017,7 @@ export const notificationChannels = pgTable("notification_channels", {
   type: text("type").notNull(),
   config: text("config").notNull(),
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1046,10 +1037,10 @@ export const homepageItems = pgTable(
     config: text("config").notNull().default("{}"),
     folderId: integer("folder_id"),
     syncId: varchar("sync_id", { length: 255 }).unique(),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1064,7 +1055,7 @@ export const homepageLayouts = pgTable("homepage_layouts", {
     .references(() => users.id, { onDelete: "cascade" }),
   // JSON: { entries: HomepageLayoutEntry[], pan: {x,y}, zoom: number }
   layout: text("layout").notNull().default("{}"),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1088,121 +1079,6 @@ export const syncTombstones = pgTable("sync_tombstones", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- sync end ---
-
-// --- ai begin ---
-/**
- * A user's connection to one AI provider. api_key is encrypted at rest via
- * FieldCrypto; it is never returned to the frontend, which only ever sees
- * api_key_prefix for display.
- */
-export const aiProviders = pgTable(
-  "ai_providers",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    // ollama | anthropic | openai | gemini | openai_compatible
-    providerType: text("provider_type").notNull(),
-    label: varchar("label", { length: 255 }).notNull(),
-    // Required for ollama and openai_compatible, optional elsewhere.
-    baseUrl: text("base_url"),
-    apiKey: text("api_key"),
-    // First few characters, kept in the clear so the UI can identify a key.
-    apiKeyPrefix: text("api_key_prefix"),
-    defaultModel: text("default_model"),
-    enabled: boolean("enabled").notNull().default(true),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    uniqueIndex("idx_ai_providers_user_label").on(table.userId, table.label),
-  ],
-);
-
-export const aiConversations = pgTable(
-  "ai_conversations",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    title: text("title"),
-    providerId: integer("provider_id"),
-    model: text("model"),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_ai_conversations_user").on(table.userId, table.updatedAt),
-  ],
-);
-
-export const aiMessages = pgTable(
-  "ai_messages",
-  {
-    id: serial("id").primaryKey(),
-    conversationId: integer("conversation_id")
-      .notNull()
-      .references(() => aiConversations.id, { onDelete: "cascade" }),
-    // user | assistant | tool
-    role: text("role").notNull(),
-    content: text("content").notNull().default(""),
-    // Serialized tool calls and their results for this turn.
-    toolCalls: text("tool_calls"),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_ai_messages_conversation").on(
-      table.conversationId,
-      table.createdAt,
-    ),
-  ],
-);
-
-/**
- * A change the assistant wants to make. Nothing here has been applied: the
- * payload is re-validated against the tool schema at apply time and only then
- * dispatched through the same repository logic a human action uses.
- */
-export const aiProposals = pgTable(
-  "ai_proposals",
-  {
-    id: serial("id").primaryKey(),
-    conversationId: integer("conversation_id")
-      .notNull()
-      .references(() => aiConversations.id, { onDelete: "cascade" }),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    // The propose_* tool name that produced this.
-    kind: text("kind").notNull(),
-    summary: text("summary"),
-    payload: text("payload").notNull().default("{}"),
-    // pending | applied | rejected | expired
-    status: varchar("status", { length: 255 }).notNull().default("pending"),
-    appliedAt: text("applied_at"),
-    resultSummary: text("result_summary"),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_ai_proposals_user").on(table.userId, table.status),
-    index("idx_ai_proposals_conversation").on(table.conversationId),
-  ],
-);
-// --- ai end ---
 
 // --- collab rooms ---
 
@@ -1228,10 +1104,10 @@ export const secretSources = pgTable(
     token: text("token").notNull(),
     // Visible to every user; secrets still decrypt with the owner's key.
     shared: boolean("shared").notNull().default(false),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1266,7 +1142,7 @@ export const credentialAccess = pgTable(
 
     expiresAt: varchar("expires_at", { length: 255 }),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1304,10 +1180,10 @@ export const sharedCredentialSecrets = pgTable(
     publicKey: text("public_key"),
     certPublicKey: text("cert_public_key"),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1356,7 +1232,7 @@ export const folderAccess = pgTable(
     permissionLevel: text("permission_level").notNull().default("connect"),
     expiresAt: varchar("expires_at", { length: 255 }),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1389,7 +1265,7 @@ export const plugins = pgTable(
     installedAt: text("installed_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     autoUpdate: boolean("auto_update")
@@ -1457,7 +1333,7 @@ export const pluginInstallCounts = pgTable(
     registryId: varchar("registry_id", { length: 255 }).notNull(),
     count: integer("count").notNull().default(0),
     source: text("source").notNull().default("aggregate-telemetry"),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1483,7 +1359,7 @@ export const pluginStorage = pgTable(
       .references(() => plugins.id, { onDelete: "cascade" }),
     key: varchar("key", { length: 255 }).notNull(),
     value: text("value").notNull(),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -1520,7 +1396,7 @@ export const pluginSettings = pgTable(
     encrypted: boolean("encrypted")
       .notNull()
       .default(false),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },

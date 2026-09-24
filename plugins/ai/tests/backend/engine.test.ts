@@ -8,22 +8,6 @@ vi.mock("../../src/backend/providers/registry.js", () => ({
   getAdapter: () => ({ streamChat, listModels: async () => [] }),
 }));
 
-vi.mock("../../src/backend/tools/catalog.js", () => ({
-  getTool: (name: string) =>
-    name === "list_hosts"
-      ? {
-          name: "list_hosts",
-          description: "List hosts",
-          category: "read",
-          parameters: { type: "object", properties: {} },
-          handler,
-        }
-      : undefined,
-  toolDefinitions: () => [
-    { name: "list_hosts", description: "List hosts", parameters: {} },
-  ],
-}));
-
 const { runAgent } = await import("../../src/backend/engine.js");
 
 function chunks(...values: ChatChunk[]) {
@@ -33,14 +17,25 @@ function chunks(...values: ChatChunk[]) {
 }
 
 const BASE = {
-  config: { providerType: "ollama" as const },
+  config: { providerType: "ollama" as const, fetch: vi.fn() },
   model: "test",
   system: "system",
   context: {
     userId: "user-1",
     conversationId: 1,
     allowReadOnlyCommands: false,
+    deps: {} as never,
   },
+  // Only what was offered can run, so this is the whole catalog here.
+  tools: [
+    {
+      name: "list_hosts",
+      description: "List hosts",
+      category: "read" as const,
+      parameters: { type: "object", properties: {} },
+      handler,
+    },
+  ],
 };
 
 async function collect(history: any[] = []) {

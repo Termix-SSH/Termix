@@ -1,14 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatChunk } from "../../../src/backend/providers/types.js";
 
+// Adapters get the egress-checked fetch through their config.
 const providerFetch = vi.fn();
-
-vi.mock("../../../src/backend/providers/http.js", async () => {
-  const actual = await vi.importActual<
-    typeof import("../../../src/backend/providers/http.js")
-  >("../../../src/backend/providers/http.js");
-  return { ...actual, providerFetch };
-});
 
 const { openAiAdapter } =
   await import("../../../src/backend/providers/openai.js");
@@ -69,7 +63,10 @@ describe("openAiAdapter", () => {
     );
 
     const chunks = await collect(
-      openAiAdapter.streamChat({ providerType: "openai" }, REQUEST),
+      openAiAdapter.streamChat(
+        { fetch: providerFetch, providerType: "openai" },
+        REQUEST,
+      ),
     );
 
     expect(chunks.filter((c) => c.type === "text")).toEqual([
@@ -89,7 +86,10 @@ describe("openAiAdapter", () => {
     );
 
     const chunks = await collect(
-      openAiAdapter.streamChat({ providerType: "openai" }, REQUEST),
+      openAiAdapter.streamChat(
+        { fetch: providerFetch, providerType: "openai" },
+        REQUEST,
+      ),
     );
 
     const call = chunks.find((c) => c.type === "tool_call");
@@ -110,7 +110,10 @@ describe("openAiAdapter", () => {
     );
 
     const chunks = await collect(
-      openAiAdapter.streamChat({ providerType: "openai" }, REQUEST),
+      openAiAdapter.streamChat(
+        { fetch: providerFetch, providerType: "openai" },
+        REQUEST,
+      ),
     );
 
     expect(chunks.find((c) => c.type === "tool_call")).toMatchObject({
@@ -122,7 +125,7 @@ describe("openAiAdapter", () => {
     await expect(
       collect(
         openAiAdapter.streamChat(
-          { providerType: "openai_compatible" },
+          { fetch: providerFetch, providerType: "openai_compatible" },
           REQUEST,
         ),
       ),
@@ -143,7 +146,10 @@ describe("ollamaAdapter", () => {
     );
 
     const chunks = await collect(
-      ollamaAdapter.streamChat({ providerType: "ollama" }, REQUEST),
+      ollamaAdapter.streamChat(
+        { fetch: providerFetch, providerType: "ollama" },
+        REQUEST,
+      ),
     );
 
     expect(chunks.filter((c) => c.type === "text")).toHaveLength(2);
@@ -160,7 +166,10 @@ describe("ollamaAdapter", () => {
     );
 
     const chunks = await collect(
-      ollamaAdapter.streamChat({ providerType: "ollama" }, REQUEST),
+      ollamaAdapter.streamChat(
+        { fetch: providerFetch, providerType: "ollama" },
+        REQUEST,
+      ),
     );
 
     const calls = chunks.filter((c) => c.type === "tool_call") as any[];
@@ -196,7 +205,7 @@ describe("geminiAdapter", () => {
 
     const chunks = await collect(
       geminiAdapter.streamChat(
-        { providerType: "gemini", apiKey: "k" },
+        { fetch: providerFetch, providerType: "gemini", apiKey: "k" },
         REQUEST,
       ),
     );
@@ -211,7 +220,7 @@ describe("geminiAdapter", () => {
 
     await collect(
       geminiAdapter.streamChat(
-        { providerType: "gemini", apiKey: "k" },
+        { fetch: providerFetch, providerType: "gemini", apiKey: "k" },
         {
           ...REQUEST,
           messages: [
@@ -271,7 +280,12 @@ describe("assertOk error messages", () => {
     );
 
     await expect(
-      collect(openAiAdapter.streamChat({ providerType: "openai" }, REQUEST)),
+      collect(
+        openAiAdapter.streamChat(
+          { fetch: providerFetch, providerType: "openai" },
+          REQUEST,
+        ),
+      ),
     ).rejects.toThrow("Function call is missing a signature.");
   });
 
@@ -284,7 +298,12 @@ describe("assertOk error messages", () => {
     );
 
     await expect(
-      collect(openAiAdapter.streamChat({ providerType: "openai" }, REQUEST)),
+      collect(
+        openAiAdapter.streamChat(
+          { fetch: providerFetch, providerType: "openai" },
+          REQUEST,
+        ),
+      ),
     ).rejects.toThrow(/rate limit reached/i);
   });
 
@@ -294,7 +313,12 @@ describe("assertOk error messages", () => {
     );
 
     await expect(
-      collect(openAiAdapter.streamChat({ providerType: "openai" }, REQUEST)),
+      collect(
+        openAiAdapter.streamChat(
+          { fetch: providerFetch, providerType: "openai" },
+          REQUEST,
+        ),
+      ),
     ).rejects.toThrow(/rejected the API key/i);
   });
 
@@ -302,7 +326,12 @@ describe("assertOk error messages", () => {
     providerFetch.mockResolvedValue(errorResponse(500, "upstream exploded"));
 
     await expect(
-      collect(openAiAdapter.streamChat({ providerType: "openai" }, REQUEST)),
+      collect(
+        openAiAdapter.streamChat(
+          { fetch: providerFetch, providerType: "openai" },
+          REQUEST,
+        ),
+      ),
     ).rejects.toThrow("upstream exploded");
   });
 });

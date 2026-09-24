@@ -27,7 +27,6 @@ export function hostToSSHHost(h: Host): SSHHost {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableTerminalToolbar: h.enableTerminalToolbar ?? true,
-    enableAiAssistant: h.enableAiAssistant ?? false,
     enableWebUi: h.enableWebUi ?? false,
     webUiConfig: (h.pluginSettings?.["web-endpoint"]?.webUiConfig as
       SSHHost["webUiConfig"] | undefined) ?? { endpoints: [] },

@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Anslutningsverktygsfält",
     "showConnectionToolbar": "Visa anslutningsverktygsfältet",
     "showConnectionToolbarDesc": "Visa verktygsfältet i den här värdens SSH-, RDP-, VNC- och Telnet-sessioner. Du kan också dölja det tillfälligt från själva verktygsfältet.",
-    "enableAiAssistant": "Aktivera AI-assistenten",
-    "enableAiAssistantDesc": "Tillåt AI-assistenten att hjälpa till i den här värdens terminal. Av som standard och kräver fortfarande att AI är aktiverat för ditt konto.",
     "proxmoxLastSyncStatus": {
       "success": "Framgång"
     },

@@ -1,4 +1,4 @@
-import { assertOk, joinUrl, providerFetch, readSseLines } from "./http.js";
+import { assertOk, joinUrl, readSseLines } from "./http.js";
 import type {
   ChatChunk,
   ChatRequest,
@@ -73,7 +73,7 @@ export const openAiAdapter: ProviderAdapter = {
     };
     if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
 
-    const response = await providerFetch(url, {
+    const response = await config.fetch(url, {
       method: "POST",
       headers,
       signal: request.signal,
@@ -145,7 +145,7 @@ export const openAiAdapter: ProviderAdapter = {
     const headers: Record<string, string> = {};
     if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
 
-    const response = await providerFetch(joinUrl(baseFor(config), "models"), {
+    const response = await config.fetch(joinUrl(baseFor(config), "models"), {
       method: "GET",
       headers,
     });

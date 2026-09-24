@@ -185,6 +185,8 @@ export interface FakePluginContext {
     channelIds: number[];
     notification: PluginNotification;
   }>;
+  /** Backing store behind ctx.secrets.get/set, keyed "<userId>:<key>". */
+  secretStore: Map<string, string>;
   /** Every ctx.fetch call, in order. */
   fetches: Array<{ url: string; init?: PluginFetchInit }>;
   /** Every ctx.audit.record entry, in order. */
@@ -290,6 +292,7 @@ export function createFakeContext(
   const credentialReads: FakePluginContext["credentialReads"] = [];
   const notifications: FakePluginContext["notifications"] = [];
   const fetches: FakePluginContext["fetches"] = [];
+  const secretStore = new Map<string, string>();
   const audits: FakePluginContext["audits"] = [];
   const activities: FakePluginContext["activities"] = [];
   const trackedSessions: number[] = [];
@@ -491,6 +494,14 @@ export function createFakeContext(
     },
 
     secrets: {
+      get: async (key) => secretStore.get(`${actor ?? ""}:${key}`) ?? null,
+      set: async (key, value) => {
+        if (value === null) secretStore.delete(`${actor ?? ""}:${key}`);
+        else secretStore.set(`${actor ?? ""}:${key}`, value);
+      },
+      delete: async (key) => {
+        secretStore.delete(`${actor ?? ""}:${key}`);
+      },
       offer: () => {},
       withdraw: () => false,
       getShared: async () => null,
@@ -628,6 +639,11 @@ export function createFakeContext(
         const updated = { ...existing, ...patch };
         hostRecordsById.set(hostId, updated);
         return updated;
+      },
+      delete: async (hostId: number): Promise<boolean> => {
+        const existed =
+          hostRecordsById.delete(hostId) || hostsById.delete(hostId);
+        return existed;
       },
       listOwned: async (): Promise<PluginHostRecord[]> => [
         ...hostRecordsById.values(),
@@ -836,6 +852,7 @@ export function createFakeContext(
     credentialReads,
     notifications,
     fetches,
+    secretStore,
     audits,
     activities,
     trackedSessions,
@@ -1076,6 +1093,10 @@ export function createMockCtx(
         require("hosts:write");
         return ctx.hosts.update(hostId, patch);
       },
+      delete: async (hostId) => {
+        require("hosts:write");
+        return ctx.hosts.delete(hostId);
+      },
       listOwned: async () => {
         require("hosts:write");
         return ctx.hosts.listOwned();
@@ -1218,6 +1239,22 @@ export function createMockCtx(
     fetch: async (url, init) => {
       require("network:outbound");
       return ctx.fetch(url, init);
+    },
+
+    secrets: {
+      ...ctx.secrets,
+      get: async (key) => {
+        require("secrets:own");
+        return ctx.secrets.get(key);
+      },
+      set: async (key, value) => {
+        require("secrets:own");
+        return ctx.secrets.set(key, value);
+      },
+      delete: async (key) => {
+        require("secrets:own");
+        return ctx.secrets.delete(key);
+      },
     },
 
     capabilities: {

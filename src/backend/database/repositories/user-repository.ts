@@ -205,7 +205,10 @@ export class UserRepository {
     await this.context.drizzle
       .delete(pluginSettings)
       .where(
-        and(eq(pluginSettings.scope, "user"), eq(pluginSettings.scopeId, id)),
+        and(
+          inArray(pluginSettings.scope, ["user", "secret"]),
+          eq(pluginSettings.scopeId, id),
+        ),
       );
 
     const result = await this.context.drizzle

@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { providerFetch } from "./http.js";
 import type {
   ChatChunk,
   ChatRequest,
@@ -26,7 +25,7 @@ function createClient(config: ProviderConfig): Anthropic {
     apiKey: config.apiKey,
     ...(config.baseUrl?.trim() ? { baseURL: config.baseUrl.trim() } : {}),
     // Routes the SDK's HTTP through the shared egress guard.
-    fetch: providerFetch as unknown as typeof fetch,
+    fetch: config.fetch as unknown as typeof fetch,
   });
 }
 

@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Barra degli strumenti di connessione",
     "showConnectionToolbar": "Mostra la barra degli strumenti di connessione",
     "showConnectionToolbarDesc": "Mostra la barra degli strumenti nelle sessioni SSH, RDP, VNC e Telnet di questo host. Puoi anche nasconderla temporaneamente dalla barra degli strumenti stessa.",
-    "enableAiAssistant": "Assistente AI per l'innovazione",
-    "enableAiAssistantDesc": "Consenti all'assistente IA di fornire assistenza nel terminale di questo host. Disattivato per impostazione predefinita, ma è necessario abilitare l'IA per il tuo account.",
     "proxmoxLastSyncStatus": {
       "success": "Riuscita"
     },

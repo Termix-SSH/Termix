@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Tilkoblingsverktøylinje",
     "showConnectionToolbar": "Vis tilkoblingsverktøylinjen",
     "showConnectionToolbarDesc": "Vis verktøylinjen i denne vertens SSH-, RDP-, VNC- og Telnet-økter. Du kan også skjule den midlertidig fra selve verktøylinjen.",
-    "enableAiAssistant": "Aktiver AI-assistent",
-    "enableAiAssistantDesc": "Tillat at AI-assistenten hjelper til i denne vertens terminal. Av som standard, og krever fortsatt at AI er aktivert for kontoen din.",
     "proxmoxLastSyncStatus": {
       "success": "Suksess"
     },

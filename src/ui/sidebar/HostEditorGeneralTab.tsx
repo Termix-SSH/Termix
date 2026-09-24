@@ -905,15 +905,6 @@ export function HostEditorGeneralTab({
               onChange={(value) => setField("enableTerminalToolbar", value)}
             />
           </SettingRow>
-          <SettingRow
-            label={t("hosts.enableAiAssistant")}
-            description={t("hosts.enableAiAssistantDesc")}
-          >
-            <FakeSwitch
-              checked={form.enableAiAssistant}
-              onChange={(value) => setField("enableAiAssistant", value)}
-            />
-          </SettingRow>
         </div>
       </SectionCard>
     </>

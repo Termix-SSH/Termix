@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Thanh công cụ kết nối",
     "showConnectionToolbar": "Hiển thị thanh công cụ kết nối",
     "showConnectionToolbarDesc": "Hiển thị thanh công cụ trong các phiên SSH, RDP, VNC và Telnet của máy chủ này. Bạn cũng có thể tạm thời ẩn nó từ chính thanh công cụ.",
-    "enableAiAssistant": "Kích hoạt Trợ lý AI",
-    "enableAiAssistantDesc": "Cho phép trợ lý AI hỗ trợ trong thiết bị đầu cuối của máy chủ này. Mặc định là tắt, nhưng bạn vẫn cần bật AI cho tài khoản của mình.",
     "proxmoxLastSyncStatus": {
       "success": "Thành công"
     },

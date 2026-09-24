@@ -67,12 +67,21 @@
     "aiEnableDesc": "Voegt een assistent toe die je instellingen leest en wijzigingen voorstelt die je kunt goedkeuren. Vereist een leverancier die je zelf aanlevert, zoals een lokale Ollama.",
     "aiNote": "Er wordt niets verzonden totdat je een provider toevoegt en een bericht verstuurt."
   },
-  "admin": {
-    "aiGloballyEnabled": "AI-assistent",
-    "aiGloballyEnabledDesc": "Gebruikers kunnen de AI-assistent inschakelen. Wanneer deze is uitgeschakeld, is de assistent verborgen en voor iedereen geblokkeerd.",
-    "aiPrivateEndpoints": "Toegestane privé-AI-hosts",
-    "aiPrivateEndpointsDesc": "Hosts op uw privénetwerk waarnaar gebruikers een provider kunnen verwijzen, zoals een zelfgehoste Ollama. Scheid ze met komma's.",
-    "updateAiEnabledFailed": "De AI-instelling kon niet worden bijgewerkt.",
-    "updateAiEndpointsFailed": "Het lukte niet om de lijst met toegestane hosts bij te werken."
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI-assistent",
+        "description": "Gebruikers kunnen de AI-assistent inschakelen. Wanneer deze is uitgeschakeld, is de assistent verborgen en voor iedereen geblokkeerd."
+      },
+      "privateEndpoints": {
+        "label": "Toegestane privé-AI-hosts"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "AI-assistent inschakelen",
+        "description": "Sta de AI-assistent toe om te helpen in de terminal van deze host. Standaard uitgeschakeld, maar AI moet nog steeds voor uw account zijn ingeschakeld."
+      }
+    }
   }
 }

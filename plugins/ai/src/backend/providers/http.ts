@@ -1,33 +1,63 @@
-import { fetchWithProxy } from "../../../../../src/backend/utils/proxy-agent.js";
-import { safeOutboundFetch } from "../../../../../src/backend/utils/safe-outbound-fetch.js";
-import { evaluateEgress, readPrivateAllowlist } from "../egress.js";
-import { AiProviderError } from "./types.js";
+import type { PluginFetch } from "@termix/plugin-sdk/backend";
+import { evaluateEgress, PRIVATE_DESTINATION_MESSAGE } from "../egress.js";
+import { AiProviderError, type ProviderFetch } from "./types.js";
+
+/** A model can take a while to load before the first token. */
+const PROVIDER_TIMEOUT_MS = 10 * 60 * 1000;
+
+function toHeaderRecord(
+  headers: RequestInit["headers"] | undefined,
+): Record<string, string> {
+  const record: Record<string, string> = {};
+  new Headers(headers ?? {}).forEach((value, key) => {
+    record[key] = value;
+  });
+  return record;
+}
 
 /**
  * Every outbound provider request goes through here so the egress rules cannot
- * be bypassed by an adapter calling fetch directly.
- *
- * Public hosts use safeOutboundFetch, which re-checks the resolved address at
- * connect time. Allowlisted private hosts cannot use it (its whole job is to
- * refuse them), so they use the installed Undici fetch implementation with
- * its matching proxy dispatcher -- still respecting proxy configuration.
+ * be bypassed by an adapter calling fetch directly. The actual request is
+ * ctx.fetch, which pins DNS and refuses private addresses unless the host is
+ * on the admin allowlist.
  */
-export async function providerFetch(
-  url: string,
-  init: RequestInit,
-): Promise<Response> {
-  const allowlist = await readPrivateAllowlist();
-  const decision = evaluateEgress(url, allowlist);
+export function createProviderFetch(
+  fetch: PluginFetch,
+  allowlist: string[],
+): ProviderFetch {
+  return async (url, init) => {
+    const decision = evaluateEgress(url, allowlist);
+    if (!decision.allowed) {
+      throw new AiProviderError(decision.reason ?? "Destination not allowed");
+    }
 
-  if (!decision.allowed) {
-    throw new AiProviderError(decision.reason ?? "Destination not allowed");
-  }
+    if (
+      init.body !== undefined &&
+      init.body !== null &&
+      typeof init.body !== "string"
+    ) {
+      throw new AiProviderError("Provider requests must send a text body");
+    }
 
-  if (decision.isPrivate) {
-    return fetchWithProxy(url, init);
-  }
-
-  return safeOutboundFetch(url, init) as unknown as Promise<Response>;
+    try {
+      return await fetch(url, {
+        method: init.method ?? "GET",
+        headers: toHeaderRecord(init.headers),
+        body: (init.body as string | null | undefined) ?? undefined,
+        signal: init.signal ?? undefined,
+        timeoutMs: PROVIDER_TIMEOUT_MS,
+        allowPrivateHosts: allowlist,
+      });
+    } catch (error) {
+      // A hostname that resolved to a private address is refused after DNS,
+      // which the check above cannot see coming.
+      const message = error instanceof Error ? error.message : "";
+      if (/private destinations/i.test(message)) {
+        throw new AiProviderError(PRIVATE_DESTINATION_MESSAGE);
+      }
+      throw error;
+    }
+  };
 }
 
 export function joinUrl(base: string, path: string): string {

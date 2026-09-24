@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Kapcsolat eszköztár",
     "showConnectionToolbar": "Kapcsolat eszköztár megjelenítése",
     "showConnectionToolbarDesc": "Eszköztár megjelenítése a gazdagép SSH, RDP, VNC és Telnet munkameneteiben. Ideiglenesen el is rejtheti magáról az eszköztárról.",
-    "enableAiAssistant": "AI asszisztens engedélyezése",
-    "enableAiAssistantDesc": "Engedélyezi a mesterséges intelligencia asszisztensének a gazdagép terminálján való segítséget. Alapértelmezés szerint ki van kapcsolva, de továbbra is engedélyeznie kell a mesterséges intelligenciát a fiókjában.",
     "proxmoxLastSyncStatus": {
       "success": "Siker"
     },

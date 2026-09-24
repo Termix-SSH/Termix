@@ -91,6 +91,15 @@ export async function activate(ctx: PluginContext) {
     return repo.findAccessibleSharedSnippet(id, userId, roleIds);
   }
 
+  // The service is gated on snippets.view; a write also needs the same
+  // permission its route requires, so a caller cannot write through here
+  // what the user could not write in the panel.
+  async function requirePermission(permission: string): Promise<void> {
+    if (!(await ctx.rbac.has(permission))) {
+      throw new Error(`Missing permission snippets.${permission}`);
+    }
+  }
+
   const service: SnippetsService = {
     list: async () => {
       const userId = ctx.currentActor();
@@ -127,18 +136,21 @@ export async function activate(ctx: PluginContext) {
     create: async (input) => {
       const userId = ctx.currentActor();
       if (!userId) throw new Error("snippets.access.create needs an actor");
+      await requirePermission("create");
       const created = await repo.createSnippet(userId, input);
       return { id: created.id, name: created.name };
     },
     update: async (id, changes) => {
       const userId = ctx.currentActor();
       if (!userId) throw new Error("snippets.access.update needs an actor");
+      await requirePermission("edit");
       const result = await repo.updateSnippet(userId, id, changes);
       if (!result) throw new Error("Snippet not found");
     },
     remove: async (id) => {
       const userId = ctx.currentActor();
       if (!userId) throw new Error("snippets.access.remove needs an actor");
+      await requirePermission("delete");
       const existing = await repo.deleteSnippet(userId, id);
       if (existing?.syncId) {
         await ctx.sync.recordTombstone(userId, "snippets", existing.syncId);

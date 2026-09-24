@@ -159,7 +159,6 @@ export interface HostFeatureFlags {
   enableFileManager: boolean; // SSH only
   enableTmuxMonitor: boolean; // SSH only
   enableTerminalToolbar: boolean; // SSH, RDP, VNC, and Telnet
-  enableAiAssistant: boolean; // SSH only
   enableRemoteDesktop: boolean; // RDP, VNC only
 }
 
@@ -217,7 +216,6 @@ export type Host = {
   scpLegacy?: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
-  enableAiAssistant: boolean;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
   showTunnelInSidebar: boolean;
@@ -368,7 +366,6 @@ export interface HostData {
   enableProxmox?: boolean;
   enableTmuxMonitor?: boolean;
   enableTerminalToolbar?: boolean;
-  enableAiAssistant?: boolean;
   proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   enableProxmoxStats?: boolean;
   proxmoxStatsConfig?: ProxmoxStatsConfig | Record<string, unknown> | null;

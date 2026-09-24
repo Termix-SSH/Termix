@@ -67,12 +67,21 @@
     "aiEnableDesc": "Ayarlarınızı okuyan ve onaylamanız halinde değişiklikler öneren bir asistan ekler. Yerel bir Ollama gibi, sizin sağladığınız bir sağlayıcıya ihtiyaç duyar.",
     "aiNote": "Bir sağlayıcı ekleyip mesaj gönderene kadar hiçbir şey hiçbir yere gönderilmez."
   },
-  "admin": {
-    "aiGloballyEnabled": "Yapay zeka asistanı",
-    "aiGloballyEnabledDesc": "Kullanıcıların yapay zeka asistanını açmasına izin verin. Bu özellik kapalıyken, asistan gizlenir ve herkes için engellenir.",
-    "aiPrivateEndpoints": "Özel yapay zeka sunucularına izin verildi.",
-    "aiPrivateEndpointsDesc": "Kullanıcıların bir sağlayıcıya yönlendirebileceği, özel ağınızdaki sunucular (örneğin, kendi sunucunuzda barındırdığınız Ollama). Bunları virgülle ayırın.",
-    "updateAiEnabledFailed": "Yapay zeka ayarları güncellenemedi.",
-    "updateAiEndpointsFailed": "İzin verilen sunucular güncellenemedi."
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Yapay zeka asistanı",
+        "description": "Kullanıcıların yapay zeka asistanını açmasına izin verin. Bu özellik kapalıyken, asistan gizlenir ve herkes için engellenir."
+      },
+      "privateEndpoints": {
+        "label": "Özel yapay zeka sunucularına izin verildi."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Yapay Zeka Asistanını Etkinleştir",
+        "description": "Bu sunucunun terminalinde yapay zeka asistanının yardımcı olmasına izin verin. Varsayılan olarak kapalıdır ve hesabınız için yapay zekanın etkinleştirilmiş olması gerekir."
+      }
+    }
   }
 }

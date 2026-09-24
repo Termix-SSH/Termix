@@ -12,11 +12,12 @@ import type {
 import { AiPanel } from "./AiPanel";
 import { TerminalAiPanel } from "./terminal/TerminalAiPanel";
 import { AiAssistantStep } from "./AiAssistantStep";
-import { AiAccessSettings } from "./settings/AiAccessSettings";
-import { AI_RAIL_ID, AiUserSettings } from "./settings/AiUserSettings";
-import { getAiStatus } from "./ai-api";
-import { AI_STATUS_CHANGED_EVENT } from "./use-ai-availability";
+import { ProvidersSetting } from "./settings/ProvidersSetting";
+import { AI_STATUS_CHANGED_EVENT, getAiStatus } from "./ai-api";
+import { setAiApp } from "./app-ref";
 
+/** The rail id the assistant registers under. */
+const AI_RAIL_ID = "ai";
 const ASSISTANT_ACTION = "ai.openWithContext";
 const SIDE_PANEL_ID = "ai.assistant";
 
@@ -57,6 +58,9 @@ function TerminalSidePanel({
 }
 
 export function activate(app: TermixApp): void {
+  setAiApp(app);
+  app.onDispose(() => setAiApp(null));
+
   let globallyEnabled = false;
   let userEnabled = false;
   const surface: (() => void)[] = [];
@@ -99,10 +103,14 @@ export function activate(app: TermixApp): void {
       }),
     );
 
+    // The per-host switch is this plugin's host setting.
     const offeredOnHost = (context: Record<string, unknown>) =>
       userEnabled &&
-      (context.host as { enableAiAssistant?: boolean } | undefined)
-        ?.enableAiAssistant === true;
+      (
+        context.host as
+          | { pluginSettings?: { ai?: { enableAiAssistant?: boolean } } }
+          | undefined
+      )?.pluginSettings?.ai?.enableAiAssistant === true;
 
     surface.push(
       app.registerSlotContribution("terminal.toolbar", {
@@ -171,15 +179,23 @@ export function activate(app: TermixApp): void {
     { permission: "services.use" },
   );
 
-  app.registerSettingsComponent("access", AiAccessSettings);
-  app.registerSettingsComponent("assistant", AiUserSettings);
+  app.registerSettingsComponent("providers", ProvidersSetting);
 
   applyStatus();
   refresh();
-  window.addEventListener(AI_STATUS_CHANGED_EVENT, refresh);
-  window.addEventListener("hiddenRailTabsChanged", refresh);
+  // The admin switch and the user's own choice are settings, saved from
+  // the settings screen, so re-read when plugin state or focus changes too.
+  let lastFocusRefresh = Date.now();
+  const onFocus = () => {
+    if (Date.now() - lastFocusRefresh < 30_000) return;
+    lastFocusRefresh = Date.now();
+    refresh();
+  };
+  const events = [AI_STATUS_CHANGED_EVENT, "termix:plugins-changed"];
+  for (const event of events) window.addEventListener(event, refresh);
+  window.addEventListener("focus", onFocus);
   app.onDispose(() => {
-    window.removeEventListener(AI_STATUS_CHANGED_EVENT, refresh);
-    window.removeEventListener("hiddenRailTabsChanged", refresh);
+    for (const event of events) window.removeEventListener(event, refresh);
+    window.removeEventListener("focus", onFocus);
   });
 }

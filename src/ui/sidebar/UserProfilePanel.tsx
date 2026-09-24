@@ -536,8 +536,6 @@ export function UserProfilePanel({
     storageMode?: string | null;
     commandAutocomplete?: boolean | null;
     commandPaletteEnabled?: boolean | null;
-    aiAssistantEnabled?: boolean | null;
-    aiReadOnlyCommands?: boolean | null;
     showHostTags?: boolean | null;
     hostTrayOnClick?: boolean | null;
     compactHostView?: boolean | null;

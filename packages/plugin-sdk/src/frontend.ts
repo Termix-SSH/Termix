@@ -600,6 +600,11 @@ export interface TermixApp extends TermixAppInfo {
    * desktop app's connected remote server, anything else is `api`.
    */
   apiFor: (origin?: unknown) => PluginApiClient;
+  /**
+   * A raw fetch on /plugin-api/<id>/<path> with core's auth, for a response
+   * read as a stream (server-sent events), which `api` cannot do.
+   */
+  fetch: (path: string, init?: RequestInit) => Promise<Response>;
   /** WebSocket URL and auth subprotocols for /plugin-ws/<id>/<path>. */
   wsUrl: (
     path: string,

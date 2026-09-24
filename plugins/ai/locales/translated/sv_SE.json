@@ -67,12 +67,21 @@
     "aiEnableDesc": "Lägger till en assistent som läser din installation och föreslår ändringar som du godkänner. Kräver en leverantör som du tillhandahåller, till exempel en lokal Ollama.",
     "aiNote": "Ingenting skickas någonstans förrän du lägger till en leverantör och skickar ett meddelande."
   },
-  "admin": {
-    "aiGloballyEnabled": "AI-assistent",
-    "aiGloballyEnabledDesc": "Låt användare aktivera AI-assistenten. Medan detta är avstängt är assistenten dold och blockerad för alla.",
-    "aiPrivateEndpoints": "Tillåtna privata AI-värdar",
-    "aiPrivateEndpointsDesc": "Värdar på ditt privata nätverk som användare kan hänvisa en leverantör till, till exempel en egenhostad Ollama. Separera dem med kommatecken.",
-    "updateAiEnabledFailed": "Kunde inte uppdatera AI-inställningen",
-    "updateAiEndpointsFailed": "Kunde inte uppdatera de tillåtna värdarna"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI-assistent",
+        "description": "Låt användare aktivera AI-assistenten. Medan detta är avstängt är assistenten dold och blockerad för alla."
+      },
+      "privateEndpoints": {
+        "label": "Tillåtna privata AI-värdar"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Aktivera AI-assistenten",
+        "description": "Tillåt AI-assistenten att hjälpa till i den här värdens terminal. Av som standard och kräver fortfarande att AI är aktiverat för ditt konto."
+      }
+    }
   }
 }

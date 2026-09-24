@@ -219,6 +219,19 @@ export interface PluginServices {
 }
 
 export interface PluginSecrets {
+  /**
+   * The acting user's own copy of a secret this plugin stored, decrypted, or
+   * null when nothing is stored. Needs secrets:own and an actor. Not audited:
+   * a plugin reads its keys on every request that uses them.
+   */
+  get: (key: string) => Promise<string | null>;
+  /**
+   * Stores a secret for the acting user, encrypted at rest. Null clears it.
+   * Needs secrets:own and an actor. Audited without the value.
+   */
+  set: (key: string, value: string | null) => Promise<void>;
+  /** Removes the acting user's secret. Needs secrets:own. Audited. */
+  delete: (key: string) => Promise<void>;
   offer: (
     key: string,
     resolve: (userId: string) => Promise<string | null> | string | null,
@@ -580,6 +593,14 @@ export interface PluginHosts {
     hostId: number,
     patch: PluginHostUpdateInput,
   ) => Promise<PluginHostRecord | null>;
+  /**
+   * Deletes a host the acting user owns, the same way the host editor's
+   * delete does: its access grants, activity and plugin settings go with it
+   * and remote sync gets a tombstone. Needs hosts:write, and the acting user
+   * needs the core hosts.delete permission. False when the host does not
+   * exist or is not theirs.
+   */
+  delete: (hostId: number) => Promise<boolean>;
   /**
    * Every host the acting user owns, decrypted and wide (PluginHostRecord,
    * not the narrow list() summary). For a plugin that scans its own hosts in
@@ -1317,6 +1338,8 @@ export interface PluginFetchInit {
    * private is refused, and redirects are never followed.
    */
   allowPrivateHosts?: readonly string[];
+  /** Aborts the request, and a streamed body, when the caller gives up. */
+  signal?: AbortSignal;
 }
 
 /**

@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Pasek narzędzi połączenia",
     "showConnectionToolbar": "Pokaż pasek narzędzi połączenia",
     "showConnectionToolbarDesc": "Pokaż pasek narzędzi w sesjach SSH, RDP, VNC i Telnet tego hosta. Możesz go również tymczasowo ukryć na samym pasku narzędzi.",
-    "enableAiAssistant": "Włącz asystenta AI",
-    "enableAiAssistantDesc": "Zezwól asystentowi AI na pomoc w terminalu tego hosta. Domyślnie wyłączone, ale nadal wymaga włączenia AI na Twoim koncie.",
     "proxmoxLastSyncStatus": {
       "success": "Powodzenie"
     },

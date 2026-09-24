@@ -165,7 +165,6 @@ export function createHostEditorForm(
     scpLegacy: host?.scpLegacy ?? false,
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
-    enableAiAssistant: host?.enableAiAssistant ?? false,
     enableProxmox: (proxmoxSettings.enableProxmox as boolean) ?? false,
     // The proxmox tab fills in its own defaults when this is unset.
     proxmoxConfig:
@@ -428,7 +427,6 @@ export function buildHostEditorPayload(
     scpLegacy: form.scpLegacy,
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableTerminalToolbar: form.enableTerminalToolbar,
-    enableAiAssistant: form.enableAiAssistant,
     enableProxmox: form.enableProxmox,
     proxmoxConfig:
       form.enableProxmox || form.proxmoxConfig?.source

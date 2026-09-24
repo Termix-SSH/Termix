@@ -35,7 +35,6 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
       enableFileManager: false,
       enableTunnel: false,
       enableTerminalToolbar: false,
-      enableAiAssistant: false,
       enableSsh: false,
       domain: input.domain,
       pluginSettings: {
@@ -74,7 +73,6 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
     enableProxmoxStats: false,
     enableTmuxMonitor: false,
     enableTerminalToolbar: true,
-    enableAiAssistant: false,
     enableSsh: true,
     sshPort: input.port,
   };
@@ -103,7 +101,6 @@ export function quickConnectHostToPayload(host: Host): SSHHostData {
     enableProxmox: host.enableProxmox,
     enableTmuxMonitor: host.enableTmuxMonitor,
     enableTerminalToolbar: host.enableTerminalToolbar,
-    enableAiAssistant: host.enableAiAssistant,
     showTerminalInSidebar: true,
     showFileManagerInSidebar: true,
     showTunnelInSidebar: true,

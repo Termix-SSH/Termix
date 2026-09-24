@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Verbindingswerkbalk",
     "showConnectionToolbar": "Verbindingswerkbalk weergeven",
     "showConnectionToolbarDesc": "Toon de werkbalk in de SSH-, RDP-, VNC- en Telnet-sessies van deze host. Je kunt de werkbalk ook tijdelijk verbergen via de werkbalk zelf.",
-    "enableAiAssistant": "AI-assistent inschakelen",
-    "enableAiAssistantDesc": "Sta de AI-assistent toe om te helpen in de terminal van deze host. Standaard uitgeschakeld, maar AI moet nog steeds voor uw account zijn ingeschakeld.",
     "proxmoxLastSyncStatus": {
       "success": "Succes"
     },

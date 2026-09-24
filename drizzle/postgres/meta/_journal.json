@@ -337,6 +337,13 @@
       "when": 1790272733784,
       "tag": "0047_mighty_butterfly",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1790274704269,
+      "tag": "0048_rare_catseye",
+      "breakpoints": true
     }
   ]
 }

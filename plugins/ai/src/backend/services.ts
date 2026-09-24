@@ -1,109 +1,33 @@
 import type { PluginServices } from "@termix/plugin-sdk/backend";
 
-let current: PluginServices | null = null;
-
-/** Set in activate, cleared on deactivate. */
-export function setPluginServices(services: PluginServices | null): void {
-  current = services;
-}
-
-/** Another plugin's workspaces, as ctx.services.get("workspaces.saved") returns them. */
-interface SavedWorkspaces {
-  list: () => Promise<Array<{ id: number; name: string; isDefault: boolean }>>;
-}
-
 /**
- * The user's saved workspaces, or null when the workspaces plugin is off or
- * the user may not use it. Optional: the assistant works without it.
+ * Other plugins the assistant reads and changes through, each optional. A
+ * service call runs as the acting user and the provider checks that user's
+ * permissions, so nothing here takes a user id.
  */
-export async function listSavedWorkspaces(
-  userId: string,
-): Promise<Array<{ id: number; name: string; isDefault: boolean }> | null> {
-  if (!current) return null;
+
+export const SERVICE = {
+  snippets: "snippets.access",
+  fleets: "fleets.access",
+  automations: "automations.access",
+  workspaces: "workspaces.saved",
+  topology: "network-topology.graph",
+  history: "terminal.history",
+  homepage: "homepage.items",
+} as const;
+
+export type ServiceName = (typeof SERVICE)[keyof typeof SERVICE];
+
+/** Whether a compatible provider is running right now. */
+export function serviceAvailable(
+  services: Pick<PluginServices, "providers">,
+  service: string,
+): boolean {
   try {
-    return await current
-      .get<SavedWorkspaces>("workspaces.saved", { userId })
-      .list();
+    return services.providers(service).length > 0;
   } catch {
-    return null;
+    return false;
   }
-}
-
-/** Another plugin's graph, as ctx.services.get("network-topology.graph") returns it. */
-interface NetworkTopologyGraph {
-  get: () => Promise<unknown | null>;
-}
-
-/**
- * The user's saved network topology, or null when the network-topology
- * plugin is off or the user may not use it. Optional: the tool disappears
- * without it.
- */
-export async function getNetworkTopology(
-  userId: string,
-): Promise<unknown | null> {
-  if (!current) return null;
-  try {
-    return await current
-      .get<NetworkTopologyGraph>("network-topology.graph", { userId })
-      .get();
-  } catch {
-    return null;
-  }
-}
-
-/** Another plugin's fleets, as ctx.services.get("fleets.access") returns them. */
-interface FleetsAccess {
-  list: () => Promise<
-    Array<{ id: number; name: string; color: string | null }>
-  >;
-  create: (input: {
-    name: string;
-    description?: string | null;
-  }) => Promise<{ id: number; name: string }>;
-  addMember: (fleetId: number, hostId: number) => Promise<void>;
-}
-
-/**
- * The user's fleets, or null when the fleets plugin is off or the user may
- * not use it. Optional: the list_fleets tool disappears without it.
- */
-export async function listFleets(
-  userId: string,
-): Promise<Array<{ id: number; name: string; color: string | null }> | null> {
-  if (!current) return null;
-  try {
-    return await current.get<FleetsAccess>("fleets.access", { userId }).list();
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Requires the fleets plugin, unlike listFleets above: a proposal apply must
- * surface a failure as an error the user sees, not silently no-op.
- */
-function requireFleetsAccess(userId: string): FleetsAccess {
-  if (!current) {
-    throw new Error("The fleets plugin is disabled");
-  }
-  return current.get<FleetsAccess>("fleets.access", { userId });
-}
-
-export async function createFleet(
-  userId: string,
-  input: { name: string; description?: string | null },
-): Promise<{ id: number; name: string } | null> {
-  if (!current) return null;
-  return requireFleetsAccess(userId).create(input);
-}
-
-export async function addFleetMember(
-  userId: string,
-  fleetId: number,
-  hostId: number,
-): Promise<void> {
-  await requireFleetsAccess(userId).addMember(fleetId, hostId);
 }
 
 export interface SnippetSummary {
@@ -115,8 +39,7 @@ export interface SnippetSummary {
   folder: string | null;
 }
 
-/** Another plugin's snippets, as ctx.services.get("snippets.access") returns them. */
-interface SnippetsAccess {
+export interface SnippetsAccess {
   list: () => Promise<SnippetSummary[]>;
   get: (id: number) => Promise<{
     id: number;
@@ -142,115 +65,18 @@ interface SnippetsAccess {
   remove: (id: number) => Promise<boolean>;
 }
 
-/**
- * The user's own snippets, or null when the snippets plugin is off or the
- * user may not use it. Optional: the list_snippets tool disappears without
- * it, and the propose_*_snippet tools fail with a clear message.
- */
-export async function listSnippets(
-  userId: string,
-): Promise<SnippetSummary[] | null> {
-  if (!current) return null;
-  try {
-    return await current
-      .get<SnippetsAccess>("snippets.access", { userId })
-      .list();
-  } catch {
-    return null;
-  }
-}
-
-export async function getSnippet(
-  userId: string,
-  id: number,
-): Promise<{
-  id: number;
-  name: string;
-  content: string;
-  isNote: boolean;
-} | null> {
-  if (!current) return null;
-  try {
-    return await current
-      .get<SnippetsAccess>("snippets.access", { userId })
-      .get(id);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Requires the snippets plugin, unlike the read helpers above: a failed
- * proposal apply must surface as an error the user sees, not silently no-op.
- */
-function requireSnippetsAccess(userId: string): SnippetsAccess {
-  if (!current) {
-    throw new Error("The snippets plugin is disabled");
-  }
-  return current.get<SnippetsAccess>("snippets.access", { userId });
-}
-
-export async function createSnippet(
-  userId: string,
-  input: {
+export interface FleetsAccess {
+  list: () => Promise<
+    Array<{ id: number; name: string; color: string | null }>
+  >;
+  create: (input: {
     name: string;
-    content: string;
     description?: string | null;
-    folder?: string | null;
-  },
-): Promise<{ id: number; name: string }> {
-  return requireSnippetsAccess(userId).create(input);
+  }) => Promise<{ id: number; name: string }>;
+  addMember: (fleetId: number, hostId: number) => Promise<void>;
 }
 
-export async function updateSnippet(
-  userId: string,
-  id: number,
-  changes: {
-    name?: string;
-    content?: string;
-    description?: string | null;
-    folder?: string | null;
-  },
-): Promise<void> {
-  return requireSnippetsAccess(userId).update(id, changes);
-}
-
-export async function deleteSnippet(
-  userId: string,
-  id: number,
-): Promise<boolean> {
-  return requireSnippetsAccess(userId).remove(id);
-}
-
-/** The terminal's command history, as ctx.services.get("terminal.history") returns it. */
-interface TerminalHistory {
-  list: (
-    hostId: number,
-    limit?: number,
-  ) => Promise<Array<{ command: string; executedAt: string }>>;
-}
-
-/**
- * The user's recent commands on one host, or null when the ssh-terminal
- * plugin is off or the user may not read its history.
- */
-export async function listCommandHistory(
-  userId: string,
-  hostId: number,
-  limit: number,
-): Promise<Array<{ command: string; executedAt: string }> | null> {
-  if (!current) return null;
-  try {
-    return await current
-      .get<TerminalHistory>("terminal.history", { userId })
-      .list(hostId, limit);
-  } catch {
-    return null;
-  }
-}
-
-/** The automations plugin, as ctx.services.get("automations.access") returns it. */
-interface AutomationsAccess {
+export interface AutomationsAccess {
   list: () => Promise<
     Array<{
       id: number;
@@ -277,55 +103,61 @@ interface AutomationsAccess {
   }) => Promise<{ id: number; name: string }>;
 }
 
-function automations(userId: string): Partial<AutomationsAccess> {
-  if (!current) return {};
-  try {
-    return current.get<AutomationsAccess>("automations.access", { userId });
-  } catch {
-    return {};
-  }
+export interface SavedWorkspaces {
+  list: () => Promise<Array<{ id: number; name: string; isDefault: boolean }>>;
+}
+
+export interface NetworkTopologyGraph {
+  get: () => Promise<unknown | null>;
+}
+
+export interface TerminalHistory {
+  list: (
+    hostId: number,
+    limit?: number,
+  ) => Promise<Array<{ command: string; executedAt: string }>>;
+}
+
+/** homepage.items v1, which the homepage plugin provides from B19. */
+export interface HomepageItems {
+  list: () => Promise<
+    Array<{ id: number; typeId: string; title: string | null }>
+  >;
+}
+
+interface ServiceTypes {
+  "snippets.access": SnippetsAccess;
+  "fleets.access": FleetsAccess;
+  "automations.access": AutomationsAccess;
+  "workspaces.saved": SavedWorkspaces;
+  "network-topology.graph": NetworkTopologyGraph;
+  "terminal.history": TerminalHistory;
+  "homepage.items": HomepageItems;
 }
 
 /**
- * The user's automations, or null when the automations plugin is off or the
- * user may not use it.
+ * The service handle. Throws when the provider is missing or the user may
+ * not use it; a proposal apply wants that error, a read tool catches it.
  */
-export async function listAutomations(
-  userId: string,
-): Promise<Awaited<ReturnType<AutomationsAccess["list"]>> | null> {
-  const list = automations(userId).list;
-  if (typeof list !== "function") return null;
+export function requireService<S extends ServiceName>(
+  services: Pick<PluginServices, "get" | "providers">,
+  service: S,
+): ServiceTypes[S] {
+  if (!serviceAvailable(services, service)) {
+    throw new Error(`The ${service.split(".")[0]} plugin is not available`);
+  }
+  return services.get<ServiceTypes[S]>(service);
+}
+
+/** A read through a service, or null when it is missing or refused. */
+export async function readService<S extends ServiceName, T>(
+  services: Pick<PluginServices, "get" | "providers">,
+  service: S,
+  read: (handle: ServiceTypes[S]) => Promise<T>,
+): Promise<T | null> {
   try {
-    return await list();
+    return await read(requireService(services, service));
   } catch {
     return null;
   }
-}
-
-export async function getAutomation(
-  userId: string,
-  id: number,
-): Promise<Awaited<ReturnType<AutomationsAccess["get"]>> | undefined> {
-  const get = automations(userId).get;
-  if (typeof get !== "function") return undefined;
-  try {
-    return await get(id);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Creates an automation through the plugin, which validates it exactly as
- * its own route does. Throws when the plugin is off.
- */
-export async function createAutomation(
-  userId: string,
-  input: Parameters<AutomationsAccess["create"]>[0],
-): Promise<{ id: number; name: string }> {
-  const create = automations(userId).create;
-  if (typeof create !== "function") {
-    throw new Error("The automations plugin is not available");
-  }
-  return create(input);
 }

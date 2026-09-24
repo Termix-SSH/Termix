@@ -67,12 +67,21 @@
     "aiEnableDesc": "Tilføjer en assistent, der læser din opsætning og foreslår ændringer, du godkender. Kræver en udbyder, du angiver, f.eks. en lokal Ollama.",
     "aiNote": "Intet sendes nogen steder, før du tilføjer en udbyder og sender en besked."
   },
-  "admin": {
-    "aiGloballyEnabled": "AI-assistent",
-    "aiGloballyEnabledDesc": "Lad brugerne aktivere AI-assistenten. Når dette er slået fra, er assistenten skjult og blokeret for alle.",
-    "aiPrivateEndpoints": "Tilladte private AI-værter",
-    "aiPrivateEndpointsDesc": "Værter på dit private netværk, som brugerne kan henvise til en udbyder, f.eks. en selvhostet Ollama. Adskil dem med kommaer.",
-    "updateAiEnabledFailed": "Kunne ikke opdatere AI-indstillingen",
-    "updateAiEndpointsFailed": "Kunne ikke opdatere de tilladte værter"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI-assistent",
+        "description": "Lad brugerne aktivere AI-assistenten. Når dette er slået fra, er assistenten skjult og blokeret for alle."
+      },
+      "privateEndpoints": {
+        "label": "Tilladte private AI-værter"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Aktivér AI-assistent",
+        "description": "Tillad AI-assistenten at hjælpe i denne værts terminal. Deaktiveret som standard, og kræver stadig, at AI er aktiveret for din konto."
+      }
+    }
   }
 }

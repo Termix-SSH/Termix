@@ -1,15 +1,6 @@
 {
   "ui-to-plugin": [],
   "plugin-frontend-to-core": [
-    "plugins/ai/src/frontend/AiPanel.tsx",
-    "plugins/ai/src/frontend/AiProviderSettings.tsx",
-    "plugins/ai/src/frontend/ProposalCard.tsx",
-    "plugins/ai/src/frontend/ai-api.ts",
-    "plugins/ai/src/frontend/settings/AiUserSettings.tsx",
-    "plugins/ai/src/frontend/terminal/TerminalAiPanel.tsx",
-    "plugins/ai/src/frontend/terminal/TerminalProposalCard.tsx",
-    "plugins/ai/src/frontend/use-ai-stream.ts",
-    "plugins/ai/src/frontend/useMentions.ts",
     "plugins/file-manager/src/frontend/FileManager.tsx",
     "plugins/file-manager/src/frontend/FileManagerContextMenu.tsx",
     "plugins/file-manager/src/frontend/FileManagerDialogs.tsx",
@@ -67,14 +58,6 @@
     "plugins/web-endpoint/src/frontend/web-endpoint-api.ts"
   ],
   "plugin-to-core": [
-    "plugins/ai/src/backend/egress.ts",
-    "plugins/ai/src/backend/engine.ts",
-    "plugins/ai/src/backend/gating.ts",
-    "plugins/ai/src/backend/index.ts",
-    "plugins/ai/src/backend/providers/http.ts",
-    "plugins/ai/src/backend/routes.ts",
-    "plugins/ai/src/backend/tools/executor.ts",
-    "plugins/ai/src/backend/tools/read-tools.ts",
     "plugins/file-manager/src/backend/index.ts",
     "plugins/file-manager/src/backend/operation-routes.ts",
     "plugins/proxmox/src/backend/routes.ts",

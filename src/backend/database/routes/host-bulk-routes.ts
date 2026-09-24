@@ -288,8 +288,6 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
         if (typeof updates.enableTerminalToolbar === "boolean")
           simpleUpdates.enableTerminalToolbar = updates.enableTerminalToolbar;
-        if (typeof updates.enableAiAssistant === "boolean")
-          simpleUpdates.enableAiAssistant = updates.enableAiAssistant;
         if (typeof updates.statusCheckEnabled === "boolean")
           simpleUpdates.statusCheckEnabled = updates.statusCheckEnabled;
 
@@ -751,7 +749,6 @@ export function registerHostBulkRoutes(
             enableFileManager: hostData.enableFileManager !== false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
-            enableAiAssistant: hostData.enableAiAssistant || false,
             enableCommandHistory: hostData.enableCommandHistory !== false,
             showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
             showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
@@ -1012,7 +1009,6 @@ export function registerHostBulkRoutes(
             enableFileManager: true,
             enableTmuxMonitor: false,
             enableTerminalToolbar: true,
-            enableAiAssistant: false,
             showTerminalInSidebar: 0,
             showFileManagerInSidebar: 0,
             showTunnelInSidebar: 0,

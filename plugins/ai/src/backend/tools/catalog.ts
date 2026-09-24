@@ -58,9 +58,21 @@ export const FORBIDDEN_DOMAINS = [
   "settings",
 ];
 
+/**
+ * The tools offered right now. A tool whose service has no running provider
+ * is left out, so the model never sees something it cannot use.
+ */
+export function availableTools(
+  isAvailable: (service: string) => boolean,
+): AiTool[] {
+  return AI_TOOLS.filter((tool) => !tool.service || isAvailable(tool.service));
+}
+
 /** Tool definitions in the shape the provider adapters expect. */
-export function toolDefinitions(): ToolDefinitionShape[] {
-  return AI_TOOLS.map((tool) => ({
+export function toolDefinitions(
+  tools: AiTool[] = AI_TOOLS,
+): ToolDefinitionShape[] {
+  return tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters,

@@ -92,6 +92,16 @@ describe("user deletion", () => {
     expect(await remaining()).toEqual([{ scope: "user", scopeId: "user-2" }]);
   });
 
+  it("removes the user's ctx.secrets rows too", async () => {
+    const context = await seed();
+    await addSetting("secret", "user-1");
+    await addSetting("secret", "user-2");
+
+    await new UserRepository(context).delete("user-1");
+
+    expect(await remaining()).toEqual([{ scope: "secret", scopeId: "user-2" }]);
+  });
+
   it("leaves admin-scope settings alone", async () => {
     const context = await seed();
     await addSetting("admin", null);

@@ -67,12 +67,21 @@
     "aiEnableDesc": "Ajoute un assistant qui analyse votre configuration et suggère des modifications que vous approuvez. Nécessite un fournisseur que vous désignez, comme un Ollama local.",
     "aiNote": "Aucun message n'est envoyé tant que vous n'avez pas ajouté de fournisseur et envoyé un message."
   },
-  "admin": {
-    "aiGloballyEnabled": "Assistant IA",
-    "aiGloballyEnabledDesc": "Autoriser les utilisateurs à activer l'assistant IA. Lorsqu'il est désactivé, l'assistant est masqué et inaccessible à tous.",
-    "aiPrivateEndpoints": "Hôtes d'IA privés autorisés",
-    "aiPrivateEndpointsDesc": "Les hôtes de votre réseau privé vers lesquels les utilisateurs peuvent orienter un fournisseur, comme un serveur Ollama auto-hébergé. Séparez-les par des virgules.",
-    "updateAiEnabledFailed": "Impossible de mettre à jour les paramètres d'IA",
-    "updateAiEndpointsFailed": "Impossible de mettre à jour les hôtes autorisés."
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Assistant IA",
+        "description": "Autoriser les utilisateurs à activer l'assistant IA. Lorsqu'il est désactivé, l'assistant est masqué et inaccessible à tous."
+      },
+      "privateEndpoints": {
+        "label": "Hôtes d'IA privés autorisés"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Activer l'assistant IA",
+        "description": "Autoriser l'assistant IA à vous aider dans le terminal de cet hôte. Désactivé par défaut ; l'IA doit être activée pour votre compte."
+      }
+    }
   }
 }

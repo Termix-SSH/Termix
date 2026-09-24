@@ -67,12 +67,21 @@
     "aiEnableDesc": "Aggiunge un assistente che legge la tua configurazione e suggerisce modifiche che approvi. Richiede un provider che tu fornisca, come ad esempio un Ollama locale.",
     "aiNote": "Non viene inviato nulla finché non si aggiunge un provider e si invia un messaggio."
   },
-  "admin": {
-    "aiGloballyEnabled": "Assistente basato sull'intelligenza artificiale",
-    "aiGloballyEnabledDesc": "Consenti agli utenti di attivare l'assistente AI. Quando è disattivato, l'assistente è nascosto e bloccato per tutti.",
-    "aiPrivateEndpoints": "Host di IA privati consentiti",
-    "aiPrivateEndpointsDesc": "Host sulla tua rete privata a cui gli utenti possono indirizzare un provider, come ad esempio un'istanza di Ollama autogestita. Separali con delle virgole.",
-    "updateAiEnabledFailed": "Impossibile aggiornare le impostazioni dell'IA",
-    "updateAiEndpointsFailed": "Impossibile aggiornare gli host consentiti"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Assistente basato sull'intelligenza artificiale",
+        "description": "Consenti agli utenti di attivare l'assistente AI. Quando è disattivato, l'assistente è nascosto e bloccato per tutti."
+      },
+      "privateEndpoints": {
+        "label": "Host di IA privati consentiti"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Assistente AI per l'innovazione",
+        "description": "Consenti all'assistente IA di fornire assistenza nel terminale di questo host. Disattivato per impostazione predefinita, ma è necessario abilitare l'IA per il tuo account."
+      }
+    }
   }
 }

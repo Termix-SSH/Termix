@@ -6,7 +6,11 @@ import { insertReturning, updateReturning } from "./returning.js";
 
 export type PluginSettingsRecord = typeof pluginSettings.$inferSelect;
 
-export type PluginSettingsScope = "admin" | "user" | "host";
+/**
+ * "secret" holds ctx.secrets values, one row per user and key. The settings
+ * service is driven by manifest fields, so it never reads them.
+ */
+export type PluginSettingsScope = "admin" | "user" | "host" | "secret";
 
 /**
  * Values behind ctx.settings and the /plugins/:id/settings routes.

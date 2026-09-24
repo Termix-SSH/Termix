@@ -1046,8 +1046,6 @@
     "connectionToolbar": "कनेक्शन टूलबार",
     "showConnectionToolbar": "कनेक्शन टूलबार दिखाएँ",
     "showConnectionToolbarDesc": "इस होस्ट के SSH, RDP, VNC और Telnet सेशन में टूलबार दिखाएँ। आप इसे टूलबार से अस्थायी रूप से छिपा भी सकते हैं।",
-    "enableAiAssistant": "एआई असिस्टेंट को सक्षम करें",
-    "enableAiAssistantDesc": "इस होस्ट के टर्मिनल में एआई सहायक को मदद करने की अनुमति दें। यह डिफ़ॉल्ट रूप से बंद है, लेकिन आपके खाते के लिए एआई को सक्षम करना आवश्यक है।",
     "proxmoxLastSyncStatus": {
       "success": "सफलता"
     },

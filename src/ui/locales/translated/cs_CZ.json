@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Panel nástrojů pro připojení",
     "showConnectionToolbar": "Zobrazit panel nástrojů pro připojení",
     "showConnectionToolbarDesc": "Zobrazit panel nástrojů v relacích SSH, RDP, VNC a Telnet tohoto hostitele. Můžete jej také dočasně skrýt přímo v panelu nástrojů.",
-    "enableAiAssistant": "Povolit asistenta s umělou inteligencí",
-    "enableAiAssistantDesc": "Povolit asistentovi s umělou inteligencí pomáhat v terminálu tohoto hostitele. Ve výchozím nastavení vypnuto, ale stále vyžaduje, aby byla pro váš účet povolena umělá inteligence.",
     "proxmoxLastSyncStatus": {
       "success": "Úspěch"
     },

@@ -1,4 +1,4 @@
-import { assertOk, joinUrl, providerFetch, readJsonLines } from "./http.js";
+import { assertOk, joinUrl, readJsonLines } from "./http.js";
 import type {
   ChatChunk,
   ChatRequest,
@@ -47,7 +47,7 @@ export const ollamaAdapter: ProviderAdapter = {
     config: ProviderConfig,
     request: ChatRequest,
   ): AsyncIterable<ChatChunk> {
-    const response = await providerFetch(joinUrl(baseFor(config), "api/chat"), {
+    const response = await config.fetch(joinUrl(baseFor(config), "api/chat"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: request.signal,
@@ -117,7 +117,7 @@ export const ollamaAdapter: ProviderAdapter = {
   },
 
   async listModels(config: ProviderConfig): Promise<string[]> {
-    const response = await providerFetch(joinUrl(baseFor(config), "api/tags"), {
+    const response = await config.fetch(joinUrl(baseFor(config), "api/tags"), {
       method: "GET",
     });
     await assertOk(response, "Ollama");

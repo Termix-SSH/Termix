@@ -123,35 +123,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     table: "dismissed_alerts",
     columns: "user_id",
   },
-
-
-  // AI assistant.
-  {
-    name: "idx_ai_providers_user_label",
-    table: "ai_providers",
-    columns: "user_id, label",
-    unique: true,
-  },
-  {
-    name: "idx_ai_conversations_user",
-    table: "ai_conversations",
-    columns: "user_id, updated_at",
-  },
-  {
-    name: "idx_ai_messages_conversation",
-    table: "ai_messages",
-    columns: "conversation_id, created_at",
-  },
-  {
-    name: "idx_ai_proposals_user",
-    table: "ai_proposals",
-    columns: "user_id, status",
-  },
-  {
-    name: "idx_ai_proposals_conversation",
-    table: "ai_proposals",
-    columns: "conversation_id",
-  },
 ];
 
 interface IndexableDatabase {

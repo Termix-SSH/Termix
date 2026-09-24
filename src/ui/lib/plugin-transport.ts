@@ -20,6 +20,7 @@ import type { AxiosInstance } from "axios";
 import { authApi, createRemoteOriginApiInstance } from "@/main-axios";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
+import { getDeviceId } from "@/lib/device-id";
 import { websocketAuthProtocols } from "@/lib/ws-auth";
 import {
   buildOriginWsUrl,
@@ -73,6 +74,32 @@ export function createPluginApi(pluginId: string): AxiosInstance {
       return value.bind(target);
     },
   }) as AxiosInstance;
+}
+
+/**
+ * A raw fetch on this plugin's /plugin-api mount point, for a response the
+ * caller reads as a stream (server-sent events). axios buffers the whole
+ * body, so it cannot. Sends the same auth the shared client does.
+ */
+export function pluginFetch(
+  pluginId: string,
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const base = (authApi.defaults.baseURL ?? "").replace(/\/+$/, "");
+  const headers = new Headers(init.headers);
+  const deviceId = getDeviceId();
+  if (deviceId) headers.set("X-Termix-Device-ID", deviceId);
+  if (isElectron()) {
+    headers.set("X-Electron-App", "true");
+    const jwt = localStorage.getItem("jwt");
+    if (jwt) headers.set("Authorization", `Bearer ${jwt}`);
+  }
+  return fetch(`${base}${pluginApiPath(pluginId, path)}`, {
+    credentials: "include",
+    ...init,
+    headers,
+  });
 }
 
 const remotePluginApis = new Map<string, AxiosInstance>();

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { setAssistantEnabledForUser } from "./settings/AiUserSettings";
+import { setAiOptIn } from "./ai-api";
 
 /**
  * Asks once, plainly.
@@ -17,7 +17,8 @@ export function AiAssistantStep() {
 
   function apply(next: boolean) {
     setEnabled(next);
-    setAssistantEnabledForUser(next);
+    // The local choice still shows if the write fails.
+    setAiOptIn(next).catch(() => undefined);
   }
 
   // Skipping the step entirely still has to mean off, not unset.

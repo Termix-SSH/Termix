@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Bot, GripVertical, Send, Square, X } from "lucide-react";
-import { Button } from "@/components/button";
+import { Button } from "@termix/plugin-sdk/ui";
 import { getAiProviders, type AiProposal, type AiProvider } from "../ai-api";
 import { AiMessage } from "../AiMessage";
 import { AiToolCall } from "../AiToolCall";

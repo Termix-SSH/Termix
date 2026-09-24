@@ -1,4 +1,35 @@
-import { authApi, handleApiError } from "@/main-axios";
+import { aiApp } from "./app-ref";
+
+/** Fired when the AI status may have changed, so every surface re-reads it. */
+export const AI_STATUS_CHANGED_EVENT = "termix-ai:status-changed";
+
+export function notifyAiStatusChanged(): void {
+  window.dispatchEvent(new Event(AI_STATUS_CHANGED_EVENT));
+}
+
+/** The server's own message when it sent one, so the user sees why. */
+function apiError(error: unknown, action: string): Error {
+  const data = (error as { response?: { data?: { error?: unknown } } })
+    ?.response?.data;
+  if (typeof data?.error === "string" && data.error) {
+    return new Error(data.error);
+  }
+  if (error instanceof Error && error.message) return error;
+  return new Error(`Failed to ${action}`);
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Response bodies are typed per function below, at the edge.
+interface LooseClient {
+  get(url: string): Promise<{ data: any }>;
+  delete(url: string): Promise<{ data: any }>;
+  post(url: string, body?: unknown): Promise<{ data: any }>;
+  put(url: string, body?: unknown): Promise<{ data: any }>;
+  patch(url: string, body?: unknown): Promise<{ data: any }>;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+const api = () => aiApp().api as unknown as LooseClient;
 
 export type AiProviderType =
   "ollama" | "anthropic" | "openai" | "gemini" | "openai_compatible";
@@ -52,17 +83,17 @@ export interface AiStatus {
 
 export async function getAiStatus(): Promise<AiStatus> {
   try {
-    return (await authApi.get("/plugin-api/ai/status")).data;
+    return (await api().get("/status")).data;
   } catch (error) {
-    throw handleApiError(error, "get AI status");
+    throw apiError(error, "get AI status");
   }
 }
 
 export async function getAiProviders(): Promise<AiProvider[]> {
   try {
-    return (await authApi.get("/plugin-api/ai/providers")).data.providers;
+    return (await api().get("/providers")).data.providers;
   } catch (error) {
-    throw handleApiError(error, "list AI providers");
+    throw apiError(error, "list AI providers");
   }
 }
 
@@ -74,10 +105,9 @@ export async function createAiProvider(input: {
   defaultModel?: string | null;
 }): Promise<AiProvider> {
   try {
-    return (await authApi.post("/plugin-api/ai/providers", input)).data
-      .provider;
+    return (await api().post("/providers", input)).data.provider;
   } catch (error) {
-    throw handleApiError(error, "create AI provider");
+    throw apiError(error, "create AI provider");
   }
 }
 
@@ -92,18 +122,17 @@ export async function updateAiProvider(
   }>,
 ): Promise<AiProvider> {
   try {
-    return (await authApi.patch(`/plugin-api/ai/providers/${id}`, input)).data
-      .provider;
+    return (await api().patch(`/providers/${id}`, input)).data.provider;
   } catch (error) {
-    throw handleApiError(error, "update AI provider");
+    throw apiError(error, "update AI provider");
   }
 }
 
 export async function deleteAiProvider(id: number): Promise<void> {
   try {
-    await authApi.delete(`/plugin-api/ai/providers/${id}`);
+    await api().delete(`/providers/${id}`);
   } catch (error) {
-    throw handleApiError(error, "delete AI provider");
+    throw apiError(error, "delete AI provider");
   }
 }
 
@@ -122,27 +151,25 @@ export async function probeAiModels(input: {
   warning?: string;
 }> {
   try {
-    return (await authApi.post("/plugin-api/ai/probe-models", input)).data;
+    return (await api().post("/probe-models", input)).data;
   } catch (error) {
-    throw handleApiError(error, "detect models");
+    throw apiError(error, "detect models");
   }
 }
 
 export async function getAiProviderModels(id: number): Promise<string[]> {
   try {
-    return (await authApi.get(`/plugin-api/ai/providers/${id}/models`)).data
-      .models;
+    return (await api().get(`/providers/${id}/models`)).data.models;
   } catch (error) {
-    throw handleApiError(error, "list provider models");
+    throw apiError(error, "list provider models");
   }
 }
 
 export async function getAiConversations(): Promise<AiConversation[]> {
   try {
-    return (await authApi.get("/plugin-api/ai/conversations")).data
-      .conversations;
+    return (await api().get("/conversations")).data.conversations;
   } catch (error) {
-    throw handleApiError(error, "list AI conversations");
+    throw apiError(error, "list AI conversations");
   }
 }
 
@@ -152,17 +179,17 @@ export async function getAiConversation(id: number): Promise<{
   proposals: AiProposal[];
 }> {
   try {
-    return (await authApi.get(`/plugin-api/ai/conversations/${id}`)).data;
+    return (await api().get(`/conversations/${id}`)).data;
   } catch (error) {
-    throw handleApiError(error, "load AI conversation");
+    throw apiError(error, "load AI conversation");
   }
 }
 
 export async function deleteAiConversation(id: number): Promise<void> {
   try {
-    await authApi.delete(`/plugin-api/ai/conversations/${id}`);
+    await api().delete(`/conversations/${id}`);
   } catch (error) {
-    throw handleApiError(error, "delete AI conversation");
+    throw apiError(error, "delete AI conversation");
   }
 }
 
@@ -170,17 +197,17 @@ export async function applyAiProposal(
   id: number,
 ): Promise<{ success: boolean; summary: string }> {
   try {
-    return (await authApi.post(`/plugin-api/ai/proposals/${id}/apply`)).data;
+    return (await api().post(`/proposals/${id}/apply`)).data;
   } catch (error) {
-    throw handleApiError(error, "apply AI proposal");
+    throw apiError(error, "apply AI proposal");
   }
 }
 
 export async function rejectAiProposal(id: number): Promise<void> {
   try {
-    await authApi.post(`/plugin-api/ai/proposals/${id}/reject`);
+    await api().post(`/proposals/${id}/reject`);
   } catch (error) {
-    throw handleApiError(error, "reject AI proposal");
+    throw apiError(error, "reject AI proposal");
   }
 }
 
@@ -195,53 +222,23 @@ export async function markAiProposalRunInTerminal(
 ): Promise<{ success: boolean; summary: string }> {
   try {
     return (
-      await authApi.post(
-        `/plugin-api/ai/proposals/${id}/mark-run-in-terminal`,
-        {
-          hostId,
-          summary,
-        },
-      )
+      await api().post(`/proposals/${id}/mark-run-in-terminal`, {
+        hostId,
+        summary,
+      })
     ).data;
   } catch (error) {
-    throw handleApiError(error, "mark AI proposal run in terminal");
+    throw apiError(error, "mark AI proposal run in terminal");
   }
 }
 
-// --- admin ---
-
-export async function getAiGloballyEnabled(): Promise<boolean> {
+/** Turns the assistant on or off for the current user. */
+export async function setAiOptIn(enabled: boolean): Promise<void> {
   try {
-    return (await authApi.get("/plugin-api/ai/enabled")).data.enabled;
+    await api().put("/opt-in", { enabled });
   } catch (error) {
-    throw handleApiError(error, "get AI enabled setting");
-  }
-}
-
-export async function setAiGloballyEnabled(enabled: boolean): Promise<boolean> {
-  try {
-    return (await authApi.patch("/plugin-api/ai/enabled", { enabled })).data
-      .enabled;
-  } catch (error) {
-    throw handleApiError(error, "update AI enabled setting");
-  }
-}
-
-export async function getAiPrivateEndpoints(): Promise<string[]> {
-  try {
-    return (await authApi.get("/plugin-api/ai/private-endpoints")).data.hosts;
-  } catch (error) {
-    throw handleApiError(error, "get AI endpoint allowlist");
-  }
-}
-
-export async function setAiPrivateEndpoints(
-  hosts: string[],
-): Promise<string[]> {
-  try {
-    return (await authApi.patch("/plugin-api/ai/private-endpoints", { hosts }))
-      .data.hosts;
-  } catch (error) {
-    throw handleApiError(error, "update AI endpoint allowlist");
+    throw apiError(error, "update the AI setting");
+  } finally {
+    notifyAiStatusChanged();
   }
 }

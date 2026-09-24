@@ -1046,8 +1046,6 @@
     "connectionToolbar": "연결 도구 모음",
     "showConnectionToolbar": "연결 도구 모음 표시",
     "showConnectionToolbarDesc": "이 호스트의 SSH, RDP, VNC 및 Telnet 세션에 툴바를 표시합니다. 툴바 자체에서 툴바를 일시적으로 숨길 수도 있습니다.",
-    "enableAiAssistant": "AI 어시스턴트 활성화",
-    "enableAiAssistantDesc": "이 호스트의 터미널에서 AI 도우미의 도움을 받을 수 있도록 허용합니다. 기본적으로 비활성화되어 있으며, 계정에 AI 기능이 활성화되어 있어야 합니다.",
     "proxmoxLastSyncStatus": {
       "success": "성공"
     },

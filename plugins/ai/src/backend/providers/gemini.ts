@@ -1,4 +1,4 @@
-import { assertOk, providerFetch, readSseLines } from "./http.js";
+import { assertOk, readSseLines } from "./http.js";
 import type {
   ChatChunk,
   ChatRequest,
@@ -104,7 +104,7 @@ export const geminiAdapter: ProviderAdapter = {
 
     const url = `${baseFor(config).replace(/\/+$/, "")}/models/${encodeURIComponent(request.model)}:streamGenerateContent?alt=sse`;
 
-    const response = await providerFetch(url, {
+    const response = await config.fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -176,7 +176,7 @@ export const geminiAdapter: ProviderAdapter = {
   async listModels(config: ProviderConfig): Promise<string[]> {
     if (!config.apiKey) return [];
 
-    const response = await providerFetch(
+    const response = await config.fetch(
       `${baseFor(config).replace(/\/+$/, "")}/models`,
       { method: "GET", headers: { "x-goog-api-key": config.apiKey } },
     );

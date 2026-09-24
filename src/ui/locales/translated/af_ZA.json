@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Verbindingsnutsbalk",
     "showConnectionToolbar": "Wys verbindingsbalk",
     "showConnectionToolbarDesc": "Wys die nutsbalk in hierdie gasheer se SSH-, RDP-, VNC- en Telnet-sessies. Jy kan dit ook tydelik van die nutsbalk self versteek.",
-    "enableAiAssistant": "Aktiveer KI-assistent",
-    "enableAiAssistantDesc": "Laat die KI-assistent toe om in hierdie gasheer se terminaal te help. Standaard afgeskakel, en KI moet steeds vir jou rekening geaktiveer word.",
     "proxmoxLastSyncStatus": {
       "success": "Sukses"
     },

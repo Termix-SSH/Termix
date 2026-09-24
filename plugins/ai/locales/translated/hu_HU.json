@@ -67,12 +67,21 @@
     "aiEnableDesc": "Hozzáad egy asszisztenst, amely beolvassa a beállításait, és javaslatokat tesz az Ön által jóváhagyott módosításokra. Szükség van egy Ön által biztosított szolgáltatóra, például egy helyi Ollama szakemberre.",
     "aiNote": "Semmi sem kerül sehova, amíg nem adsz hozzá egy szolgáltatót és nem küldesz üzenetet."
   },
-  "admin": {
-    "aiGloballyEnabled": "MI asszisztens",
-    "aiGloballyEnabledDesc": "Engedélyezheti a felhasználóknak a mesterséges intelligencia asszisztens bekapcsolását. Amíg ez ki van kapcsolva, az asszisztens rejtett és blokkolt mindenki számára.",
-    "aiPrivateEndpoints": "Engedélyezett privát AI-gazdagépek",
-    "aiPrivateEndpointsDesc": "A privát hálózatodon található olyan hosztok, amelyekre a felhasználók szolgáltatót irányíthatnak, például egy saját hosztolt Ollama. Vesszővel válaszd el őket.",
-    "updateAiEnabledFailed": "Nem sikerült frissíteni a mesterséges intelligencia beállítását",
-    "updateAiEndpointsFailed": "Nem sikerült frissíteni az engedélyezett gazdagépeket"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "MI asszisztens",
+        "description": "Engedélyezheti a felhasználóknak a mesterséges intelligencia asszisztens bekapcsolását. Amíg ez ki van kapcsolva, az asszisztens rejtett és blokkolt mindenki számára."
+      },
+      "privateEndpoints": {
+        "label": "Engedélyezett privát AI-gazdagépek"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "AI asszisztens engedélyezése",
+        "description": "Engedélyezi a mesterséges intelligencia asszisztensének a gazdagép terminálján való segítséget. Alapértelmezés szerint ki van kapcsolva, de továbbra is engedélyeznie kell a mesterséges intelligenciát a fiókjában."
+      }
+    }
   }
 }

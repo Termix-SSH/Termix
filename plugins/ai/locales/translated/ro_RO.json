@@ -67,12 +67,21 @@
     "aiEnableDesc": "Adaugă un asistent care citește configurația și sugerează modificări pe care le aprobi. Necesită un furnizor furnizat de tine, cum ar fi un Ollama local.",
     "aiNote": "Nimic nu este trimis nicăieri până nu adăugați un furnizor și nu trimiteți un mesaj."
   },
-  "admin": {
-    "aiGloballyEnabled": "Asistent AI",
-    "aiGloballyEnabledDesc": "Permiteți utilizatorilor să activeze asistentul AI. Cât timp este dezactivat, asistentul este ascuns și blocat pentru toată lumea.",
-    "aiPrivateEndpoints": "Gazde private AI permise",
-    "aiPrivateEndpointsDesc": "Gazde din rețeaua privată către care utilizatorii pot direcționa un furnizor, cum ar fi un Ollama auto-găzduit. Separați-le prin virgule.",
-    "updateAiEnabledFailed": "Nu s-a putut actualiza setarea AI",
-    "updateAiEndpointsFailed": "Nu s-au putut actualiza gazdele permise"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Asistent AI",
+        "description": "Permiteți utilizatorilor să activeze asistentul AI. Cât timp este dezactivat, asistentul este ascuns și blocat pentru toată lumea."
+      },
+      "privateEndpoints": {
+        "label": "Gazde private AI permise"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Activează Asistentul AI",
+        "description": "Permiteți asistentului AI să vă ajute în terminalul acestei gazde. Dezactivat în mod implicit, dar este nevoie ca AI să fie activat pentru contul dvs."
+      }
+    }
   }
 }

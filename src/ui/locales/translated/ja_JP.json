@@ -1046,8 +1046,6 @@
     "connectionToolbar": "接続ツールバー",
     "showConnectionToolbar": "接続ツールバーを表示する",
     "showConnectionToolbarDesc": "このホストのSSH、RDP、VNC、およびTelnetセッションでツールバーを表示します。ツールバー自体から一時的に非表示にすることもできます。",
-    "enableAiAssistant": "AIアシスタントを有効にする",
-    "enableAiAssistantDesc": "このホストのターミナルでAIアシスタントによる支援を許可します。デフォルトでは無効になっており、アカウントでAIを有効にする必要があります。",
     "proxmoxLastSyncStatus": {
       "success": "成功"
     },

@@ -44,7 +44,6 @@ function makeHost(overrides: Partial<Host>): Host {
     authType: "credential",
     enableTerminal: true,
     enableTerminalToolbar: true,
-    enableAiAssistant: false,
     enableCommandHistory: true,
     enableTunnel: false,
     serverTunnels: [],

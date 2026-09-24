@@ -67,12 +67,21 @@
     "aiEnableDesc": "启用 AI 助手，它将分析您的配置并提供优化建议。需自行配置服务商，例如本地运行的 Ollama。",
     "aiNote": "在您配置服务商并主动发送消息之前，绝不会向外发送任何数据。"
   },
-  "admin": {
-    "aiGloballyEnabled": "AI 助手",
-    "aiGloballyEnabledDesc": "允许用户开启 AI 助手。关闭此功能后，助手将被隐藏，所有用户均无法使用。",
-    "aiPrivateEndpoints": "允许的私有 AI 主机",
-    "aiPrivateEndpointsDesc": "用户可能将服务提供商指向的私有网络上的主机，例如自托管的 Ollama。用逗号分隔。",
-    "updateAiEnabledFailed": "无法更新 AI 设置",
-    "updateAiEndpointsFailed": "无法更新允许的主机列表。"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI 助手",
+        "description": "允许用户开启 AI 助手。关闭此功能后，助手将被隐藏，所有用户均无法使用。"
+      },
+      "privateEndpoints": {
+        "label": "允许的私有 AI 主机"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "启用人工智能助手",
+        "description": "允许 AI 助手在此主机的终端上提供帮助。默认情况下处于关闭状态，但仍需在您的帐户中启用 AI 功能。"
+      }
+    }
   }
 }

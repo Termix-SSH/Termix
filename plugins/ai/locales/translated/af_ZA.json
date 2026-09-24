@@ -67,12 +67,21 @@
     "aiEnableDesc": "Voeg 'n assistent by wat jou opstelling lees en veranderinge voorstel wat jy goedkeur. Benodig 'n verskaffer wat jy verskaf, soos 'n plaaslike Ollama.",
     "aiNote": "Niks word êrens heen gestuur totdat jy 'n verskaffer byvoeg en 'n boodskap stuur nie."
   },
-  "admin": {
-    "aiGloballyEnabled": "KI-assistent",
-    "aiGloballyEnabledDesc": "Laat gebruikers die KI-assistent aanskakel. Terwyl dit af is, is die assistent vir almal versteek en geblokkeer.",
-    "aiPrivateEndpoints": "Toegelate private KI-gashere",
-    "aiPrivateEndpointsDesc": "Gashere op jou privaat netwerk waarna gebruikers 'n verskaffer kan verwys, soos 'n self-gehoste Ollama. Skei hulle met kommas.",
-    "updateAiEnabledFailed": "Kon nie die KI-instelling opdateer nie",
-    "updateAiEndpointsFailed": "Kon nie die toegelate gashere opdateer nie"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "KI-assistent",
+        "description": "Laat gebruikers die KI-assistent aanskakel. Terwyl dit af is, is die assistent vir almal versteek en geblokkeer."
+      },
+      "privateEndpoints": {
+        "label": "Toegelate private KI-gashere"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Aktiveer KI-assistent",
+        "description": "Laat die KI-assistent toe om in hierdie gasheer se terminaal te help. Standaard afgeskakel, en KI moet steeds vir jou rekening geaktiveer word."
+      }
+    }
   }
 }

@@ -1,17 +1,8 @@
-import { createCurrentHostRepository } from "../../../../../src/backend/database/repositories/factory.js";
-import { resolveHostById } from "../../../../../src/backend/hosts/host-resolver.js";
+import type { Client } from "ssh2";
 import { execCommand } from "@termix/plugin-sdk/host-commands";
-import { withSshConnection } from "../ssh.js";
 import { getTool } from "./catalog.js";
-import {
-  createSnippet,
-  updateSnippet,
-  deleteSnippet,
-  getSnippet,
-  createFleet,
-  addFleetMember,
-  createAutomation,
-} from "../services.js";
+import type { ToolDeps } from "./types.js";
+import { requireService, SERVICE } from "../services.js";
 
 /** Approved commands get a bounded window rather than hanging the request. */
 const COMMAND_TIMEOUT_MS = 60_000;
@@ -22,8 +13,8 @@ const COMMAND_TIMEOUT_MS = 60_000;
  * The stored payload is treated as untrusted input even though the server wrote
  * it: the proposal could have sat in the table across a release, and defending
  * the apply path rather than the create path means one place to get right.
- * Everything goes through the same repositories a human action uses, scoped to
- * the approving user.
+ * Everything goes through the same core APIs and plugin services a human
+ * action uses, and runs as the approving user: the apply request's actor.
  */
 
 export interface ApplyResult {
@@ -52,10 +43,29 @@ function optionalString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+/** Tags as ssh_data stores them, comma-separated. */
+function joinTags(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  return value
+    .filter((tag): tag is string => typeof tag === "string")
+    .map((tag) => tag.trim().replace(/,/g, ""))
+    .filter(Boolean)
+    .join(",");
+}
+
+async function requirePermission(
+  deps: ToolDeps,
+  permission: string,
+): Promise<void> {
+  if (!(await deps.rbac.has(permission))) {
+    throw new Error("You do not have permission to do this");
+  }
+}
+
 export async function applyProposal(
   kind: string,
   payload: Record<string, unknown>,
-  userId: string,
+  deps: ToolDeps,
 ): Promise<ApplyResult> {
   // A payload whose tool no longer exists is refused rather than guessed at.
   if (!getTool(kind)) {
@@ -64,30 +74,24 @@ export async function applyProposal(
 
   switch (kind) {
     case "propose_create_host": {
-      const created = await createCurrentHostRepository().create({
-        userId,
+      await requirePermission(deps, "hosts.create");
+      const created = await deps.hosts.create({
         name: requireString(payload.name, "name"),
         ip: requireString(payload.ip, "ip"),
         port: Number(payload.port) || 22,
         username: optionalString(payload.username) ?? "",
-        folder: optionalString(payload.folder) ?? "",
-        tags: JSON.stringify(Array.isArray(payload.tags) ? payload.tags : []),
-      } as any);
-      return {
-        ok: true,
-        summary: `Created host ${(created as any).name ?? ""}`.trim(),
-      };
+        // Credentials are attached by the user after approving.
+        authType: "password",
+        folder: optionalString(payload.folder),
+        tags: joinTags(payload.tags),
+      });
+      return { ok: true, summary: `Created host ${created.name ?? ""}`.trim() };
     }
 
     case "propose_update_host": {
+      await requirePermission(deps, "hosts.edit");
       const hostId = requireNumber(payload.hostId, "hostId");
       const changes = (payload.changes ?? {}) as Record<string, unknown>;
-
-      const existing = await createCurrentHostRepository().findByIdForUser(
-        userId,
-        hostId,
-      );
-      if (!existing) throw new Error("Host not found");
 
       const updates: Record<string, unknown> = {};
       if (changes.name !== undefined)
@@ -98,37 +102,32 @@ export async function applyProposal(
       if (changes.username !== undefined)
         updates.username = optionalString(changes.username) ?? "";
       if (changes.folder !== undefined)
-        updates.folder = optionalString(changes.folder) ?? "";
-      if (changes.tags !== undefined) {
-        updates.tags = JSON.stringify(
-          Array.isArray(changes.tags) ? changes.tags : [],
-        );
-      }
+        updates.folder = optionalString(changes.folder);
+      if (changes.tags !== undefined) updates.tags = joinTags(changes.tags);
 
       if (!Object.keys(updates).length) {
         return { ok: false, summary: "Nothing to change" };
       }
 
-      await createCurrentHostRepository().updateForUser(
-        userId,
-        hostId,
-        updates as any,
-      );
+      // update() refuses a host the approving user does not own.
+      const updated = await deps.hosts.update(hostId, updates);
+      if (!updated) throw new Error("Host not found");
       return { ok: true, summary: `Updated host ${hostId}` };
     }
 
     case "propose_delete_host": {
       const hostId = requireNumber(payload.hostId, "hostId");
-      const deleted = await createCurrentHostRepository().deleteForUser(
-        userId,
-        hostId,
-      );
+      // delete() checks hosts.delete and ownership itself.
+      const deleted = await deps.hosts.delete(hostId);
       if (!deleted) throw new Error("Host not found");
       return { ok: true, summary: `Deleted host ${hostId}` };
     }
 
     case "propose_create_snippet": {
-      const created = await createSnippet(userId, {
+      const created = await requireService(
+        deps.services,
+        SERVICE.snippets,
+      ).create({
         name: requireString(payload.name, "name"),
         content: requireString(payload.content, "content"),
         description: optionalString(payload.description),
@@ -144,7 +143,8 @@ export async function applyProposal(
       const snippetId = requireNumber(payload.snippetId, "snippetId");
       const changes = (payload.changes ?? {}) as Record<string, unknown>;
 
-      const existing = await getSnippet(userId, snippetId);
+      const snippets = requireService(deps.services, SERVICE.snippets);
+      const existing = await snippets.get(snippetId);
       if (!existing) throw new Error("Snippet not found");
 
       const updates: Record<string, unknown> = {};
@@ -161,23 +161,26 @@ export async function applyProposal(
         return { ok: false, summary: "Nothing to change" };
       }
 
-      await updateSnippet(userId, snippetId, updates);
+      await snippets.update(snippetId, updates);
       return { ok: true, summary: `Updated snippet ${snippetId}` };
     }
 
     case "propose_delete_snippet": {
       const snippetId = requireNumber(payload.snippetId, "snippetId");
-      const deleted = await deleteSnippet(userId, snippetId);
+      const deleted = await requireService(
+        deps.services,
+        SERVICE.snippets,
+      ).remove(snippetId);
       if (!deleted) throw new Error("Snippet not found");
       return { ok: true, summary: `Deleted snippet ${snippetId}` };
     }
 
     case "propose_create_fleet": {
-      const fleet = await createFleet(userId, {
+      const fleets = requireService(deps.services, SERVICE.fleets);
+      const fleet = await fleets.create({
         name: requireString(payload.name, "name"),
         description: optionalString(payload.description),
       });
-      if (!fleet) throw new Error("The fleets plugin is disabled");
 
       const hostIds = Array.isArray(payload.hostIds) ? payload.hostIds : [];
       let added = 0;
@@ -185,12 +188,9 @@ export async function applyProposal(
         const hostId = Number(raw);
         if (!Number.isInteger(hostId) || hostId <= 0) continue;
         // Only hosts the approving user owns can join their fleet.
-        const host = await createCurrentHostRepository().findByIdForUser(
-          userId,
-          hostId,
-        );
-        if (!host) continue;
-        await addFleetMember(userId, fleet.id, hostId);
+        const access = await deps.hosts.checkAccess(hostId, "view");
+        if (!access.isOwner) continue;
+        await fleets.addMember(fleet.id, hostId);
         added += 1;
       }
 
@@ -203,7 +203,10 @@ export async function applyProposal(
     case "propose_create_automation": {
       // The automations plugin runs the same validator its own route does,
       // so an LLM-authored definition is held to exactly the human standard.
-      const created = await createAutomation(userId, {
+      const created = await requireService(
+        deps.services,
+        SERVICE.automations,
+      ).create({
         name: requireString(payload.name, "name"),
         description: optionalString(payload.description),
         definition: payload.definition,
@@ -222,14 +225,10 @@ export async function applyProposal(
       const hostId = requireNumber(payload.hostId, "hostId");
       const command = requireString(payload.command, "command");
 
-      // resolveHostById, not the raw repository row: it runs the connect-level
-      // permission check, decrypts auth under the owner's key, and resolves the
-      // jump host chain. A plain row has none of that, so the SSH factory saw
-      // an unresolved jumpHosts field and failed the connection.
-      const host = await resolveHostById(hostId, userId);
-      if (!host) throw new Error("Host not found");
-
-      const result = await runCommandOnHost(host, command);
+      // ctx.ssh resolves the host for the approving user, with the same
+      // connect-level access check, owner-key decryption and jump chain a
+      // terminal gets.
+      const result = await runCommandOnHost(deps, hostId, command);
       if (result.error) {
         throw new Error(result.error);
       }
@@ -245,18 +244,20 @@ export async function applyProposal(
 }
 
 /**
- * Runs one approved command over the shared SSH pool, mirroring how an
+ * Runs one approved command over this plugin's SSH pool, mirroring how an
  * automation run_command step executes.
  */
 async function runCommandOnHost(
-  host: Record<string, any>,
+  deps: ToolDeps,
+  hostId: number,
   command: string,
 ): Promise<{ output?: string; error?: string }> {
   try {
-    const result = await withSshConnection(
-      host as any as never,
-      { pool: "fleet", purpose: "fleet" },
-      async (client) => execCommand(client, command, COMMAND_TIMEOUT_MS),
+    const result = await deps.ssh.withConnection<
+      Awaited<ReturnType<typeof execCommand>>,
+      Client
+    >(hostId, { pool: "ai", purpose: "fleet" }, (client) =>
+      execCommand(client, command, COMMAND_TIMEOUT_MS),
     );
 
     const output = [result.stdout, result.stderr].filter(Boolean).join("\n");

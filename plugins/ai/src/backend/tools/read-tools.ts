@@ -1,18 +1,6 @@
-import {
-  createCurrentNotificationChannelRepository,
-  createCurrentHomepageItemRepository,
-  createCurrentHostRepository,
-} from "../../../../../src/backend/database/repositories/factory.js";
+import type { PluginHostSummary } from "@termix/plugin-sdk/backend";
 import { num, objectSchema, type AiTool } from "./types.js";
-import {
-  listSavedWorkspaces,
-  getNetworkTopology,
-  listSnippets,
-  listFleets,
-  listCommandHistory,
-  listAutomations,
-  getAutomation,
-} from "../services.js";
+import { readService, SERVICE } from "../services.js";
 
 /**
  * Read tools project explicit fields rather than spreading rows. Redaction runs
@@ -20,35 +8,24 @@ import {
  * primary control: a field that is never selected cannot leak.
  */
 
-interface HostSummary {
-  id: number;
-  name: string | null;
-  ip: string | null;
-  port: number | null;
-  username: string | null;
-  folder: string | null;
-  tags: unknown;
-  protocol: string | null;
-  enableTerminal: boolean | null;
-  enableFileManager: boolean | null;
-  enableTunnel: boolean | null;
-  enableDocker: boolean | null;
+function splitTags(tags: string | null): string[] {
+  if (!tags) return [];
+  return tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
-function toHostSummary(host: Record<string, any>): HostSummary {
+function toHostSummary(host: PluginHostSummary) {
   return {
     id: host.id,
     name: host.name ?? null,
-    ip: host.ip ?? null,
-    port: host.port ?? null,
-    username: host.username ?? null,
+    ip: host.ip,
+    port: host.port,
+    username: host.username,
     folder: host.folder ?? null,
-    tags: host.tags ?? null,
-    protocol: host.protocol ?? null,
-    enableTerminal: host.enableTerminal ?? null,
-    enableFileManager: host.enableFileManager ?? null,
-    enableTunnel: host.enableTunnel ?? null,
-    enableDocker: host.enableDocker ?? null,
+    tags: splitTags(host.tags),
+    authType: host.authType,
   };
 }
 
@@ -60,10 +37,8 @@ export const readTools: AiTool[] = [
     category: "read",
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const hosts = await createCurrentHostRepository().listByUserId(
-        context.userId,
-      );
-      return { hosts: hosts.map((host) => toHostSummary(host as any)) };
+      const hosts = await context.deps.hosts.list();
+      return { hosts: hosts.map(toHostSummary) };
     },
   },
   {
@@ -76,40 +51,43 @@ export const readTools: AiTool[] = [
       ["hostId"],
     ),
     handler: async (args, context) => {
-      const hostId = Number(args.hostId);
-      const host = await createCurrentHostRepository().findByIdForUser(
-        context.userId,
-        hostId,
-      );
+      const host = await context.deps.hosts.get(Number(args.hostId));
       if (!host) return { error: "Host not found" };
-      return { host: toHostSummary(host as any) };
+      return { host: toHostSummary(host) };
     },
   },
   {
     name: "list_fleets",
     description:
-      "List the user's fleets. Fleets group hosts for bulk operations and inventory. Unavailable if the fleets plugin is disabled.",
+      "List the user's fleets. Fleets group hosts for bulk operations and inventory.",
     category: "read",
+    service: SERVICE.fleets,
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const fleets = await listFleets(context.userId);
+      const fleets = await readService(
+        context.deps.services,
+        SERVICE.fleets,
+        (fleetsAccess) => fleetsAccess.list(),
+      );
       if (fleets === null) return { unavailable: true, fleets: [] };
       return {
-        fleets: fleets.map((fleet) => ({
-          id: fleet.id,
-          name: fleet.name,
-        })),
+        fleets: fleets.map((fleet) => ({ id: fleet.id, name: fleet.name })),
       };
     },
   },
   {
     name: "list_snippets",
     description:
-      "List the user's saved command snippets, including their folder and the command text. Unavailable if the snippets plugin is disabled.",
+      "List the user's saved command snippets, including their folder and the command text.",
     category: "read",
+    service: SERVICE.snippets,
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const snippets = await listSnippets(context.userId);
+      const snippets = await readService(
+        context.deps.services,
+        SERVICE.snippets,
+        (snippetsAccess) => snippetsAccess.list(),
+      );
       if (!snippets) return { unavailable: true, snippets: [] };
       return {
         snippets: snippets.map((snippet) => ({
@@ -127,9 +105,14 @@ export const readTools: AiTool[] = [
     description:
       "List the user's automations with their trigger kind and enabled state. Read this before proposing a change to an existing automation.",
     category: "read",
+    service: SERVICE.automations,
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const automations = await listAutomations(context.userId);
+      const automations = await readService(
+        context.deps.services,
+        SERVICE.automations,
+        (automationsAccess) => automationsAccess.list(),
+      );
       if (!automations) return { automations: [], unavailable: true };
       return {
         automations: automations.map((automation) => ({
@@ -150,6 +133,7 @@ export const readTools: AiTool[] = [
     description:
       "Get one automation's full definition (trigger and steps) by id.",
     category: "read",
+    service: SERVICE.automations,
     parameters: objectSchema(
       {
         automationId: num("The automation id, as returned by list_automations"),
@@ -157,11 +141,15 @@ export const readTools: AiTool[] = [
       ["automationId"],
     ),
     handler: async (args, context) => {
-      const automation = await getAutomation(
-        context.userId,
-        Number(args.automationId),
+      const result = await readService(
+        context.deps.services,
+        SERVICE.automations,
+        async (automationsAccess) => ({
+          automation: await automationsAccess.get(Number(args.automationId)),
+        }),
       );
-      if (automation === undefined) return { unavailable: true };
+      if (result === null) return { unavailable: true };
+      const { automation } = result;
       if (!automation) return { error: "Automation not found" };
       return {
         automation: {
@@ -178,9 +166,14 @@ export const readTools: AiTool[] = [
     description:
       "List the user's saved workspace layouts (named sets of open tabs and splits).",
     category: "read",
+    service: SERVICE.workspaces,
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const workspaces = await listSavedWorkspaces(context.userId);
+      const workspaces = await readService(
+        context.deps.services,
+        SERVICE.workspaces,
+        (saved) => saved.list(),
+      );
       if (workspaces === null) return { workspaces: [], unavailable: true };
       return { workspaces };
     },
@@ -192,16 +185,13 @@ export const readTools: AiTool[] = [
     category: "read",
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const channels =
-        await createCurrentNotificationChannelRepository().listNotificationChannels(
-          context.userId,
-        );
+      const channels = await context.deps.notify.channels();
       return {
         channels: channels.map((channel) => ({
           id: channel.id,
           name: channel.name,
           type: channel.type,
-          enabled: channel.enabled === 1,
+          enabled: channel.enabled,
         })),
       };
     },
@@ -210,13 +200,17 @@ export const readTools: AiTool[] = [
     name: "list_homepage_items",
     description: "List the user's homepage service-link tiles.",
     category: "read",
+    service: SERVICE.homepage,
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const items = await createCurrentHomepageItemRepository().listByUserId(
-        context.userId,
+      const items = await readService(
+        context.deps.services,
+        SERVICE.homepage,
+        (homepage) => homepage.list(),
       );
+      if (items === null) return { items: [], unavailable: true };
       return {
-        items: (items as any[]).map((item) => ({
+        items: items.map((item) => ({
           id: item.id,
           typeId: item.typeId,
           title: item.title ?? null,
@@ -229,6 +223,7 @@ export const readTools: AiTool[] = [
     description:
       "Recent commands the user has run on one host, newest first. Useful for understanding what they have been working on.",
     category: "read",
+    service: SERVICE.history,
     parameters: objectSchema(
       {
         hostId: num("The host id, as returned by list_hosts"),
@@ -240,14 +235,15 @@ export const readTools: AiTool[] = [
       const limit = Math.min(Math.max(Number(args.limit) || 25, 1), 100);
       const hostId = Number(args.hostId);
 
-      // Ownership is enforced here rather than trusted from the model.
-      const host = await createCurrentHostRepository().findByIdForUser(
-        context.userId,
-        hostId,
-      );
+      // Access is checked here rather than trusted from the model.
+      const host = await context.deps.hosts.get(hostId);
       if (!host) return { error: "Host not found" };
 
-      const history = await listCommandHistory(context.userId, hostId, limit);
+      const history = await readService(
+        context.deps.services,
+        SERVICE.history,
+        (terminalHistory) => terminalHistory.list(hostId, limit),
+      );
       if (history === null) return { commands: [], unavailable: true };
       return { commands: history.map((entry) => entry.command) };
     },
@@ -256,11 +252,16 @@ export const readTools: AiTool[] = [
     name: "get_network_topology",
     description: "The user's saved network topology graph, if they have one.",
     category: "read",
+    service: SERVICE.topology,
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const topology = await getNetworkTopology(context.userId);
-      if (topology === null) return { topology: null, unavailable: true };
-      return { topology };
+      const result = await readService(
+        context.deps.services,
+        SERVICE.topology,
+        async (graph) => ({ topology: await graph.get() }),
+      );
+      if (result === null) return { topology: null, unavailable: true };
+      return { topology: result.topology };
     },
   },
 ];

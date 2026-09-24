@@ -22,7 +22,24 @@
     }
   },
   "settings": {
-    "assistantUnavailable": "The AI assistant is turned off on this server."
+    "assistantUnavailable": "The AI assistant is turned off on this server.",
+    "providersNeedOptIn": "Turn on the AI assistant above to add providers.",
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI assistant",
+        "description": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone."
+      },
+      "privateEndpoints": {
+        "label": "Allowed private AI hosts",
+        "description": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Put one host on each line."
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Enable AI Assistant",
+        "description": "Allow the AI assistant to help in this host's terminal. Off by default, and still needs AI enabled for your account."
+      }
+    }
   },
   "ai": {
     "title": "Assistant",
@@ -95,13 +112,5 @@
     "aiEnableTitle": "Turn it on",
     "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
     "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
-  },
-  "admin": {
-    "aiGloballyEnabled": "AI assistant",
-    "aiGloballyEnabledDesc": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone.",
-    "aiPrivateEndpoints": "Allowed private AI hosts",
-    "aiPrivateEndpointsDesc": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Separate them with commas.",
-    "updateAiEnabledFailed": "Could not update the AI setting",
-    "updateAiEndpointsFailed": "Could not update the allowed hosts"
   }
 }

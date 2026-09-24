@@ -1,76 +1,70 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const hostRepository = {
-  create: vi.fn(),
-  findByIdForUser: vi.fn(),
-  updateForUser: vi.fn(),
-  deleteForUser: vi.fn(),
-};
-const snippetRepository = {
-  createSnippet: vi.fn(),
-  findOwnedById: vi.fn(),
-  updateSnippet: vi.fn(),
-  deleteSnippet: vi.fn(),
-};
-const automationsAccess = { create: vi.fn() };
-const fleetsAccess = { create: vi.fn(), addMember: vi.fn() };
-
-vi.mock("../../../../../src/backend/database/repositories/factory.js", () => ({
-  createCurrentHostRepository: () => hostRepository,
-  createCurrentSnippetRepository: () => snippetRepository,
-}));
-
-const resolveHostById = vi.fn();
-vi.mock("../../../../../src/backend/hosts/host-resolver.js", () => ({
-  resolveHostById: (...args: unknown[]) => resolveHostById(...args),
-}));
-
 const execCommand = vi.fn();
 vi.mock("@termix/plugin-sdk/host-commands", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   execCommand: (...args: unknown[]) => execCommand(...args),
 }));
-vi.mock("../../../src/backend/ssh.js", () => ({
-  withSshConnection: async (
-    _host: unknown,
-    _options: unknown,
-    run: (client: unknown) => Promise<unknown>,
-  ) => run({}),
-}));
 
 const { applyProposal } =
   await import("../../../src/backend/tools/executor.js");
-const { setPluginServices } = await import("../../../src/backend/services.js");
+
+const hosts = {
+  create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
+  checkAccess: vi.fn(),
+};
+const automationsAccess = { create: vi.fn() };
+const fleetsAccess = { create: vi.fn(), addMember: vi.fn() };
+const snippetsAccess = {
+  create: vi.fn(),
+  get: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
+};
+const withConnection = vi.fn(
+  async (
+    _host: unknown,
+    _options: unknown,
+    run: (client: unknown) => unknown,
+  ) => run({}),
+);
+
+let provided: Record<string, object> = {};
+let granted = new Set<string>();
+
+/** What the executor gets from ctx: the approving user's view of core. */
+function deps() {
+  return {
+    hosts,
+    services: {
+      providers: (service: string) => (service in provided ? [""] : []),
+      get: (service: string) => provided[service],
+    },
+    rbac: { has: async (permission: string) => granted.has(permission) },
+    ssh: { withConnection },
+    notify: {},
+  } as never;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  provided = {};
+  granted = new Set(["hosts.create", "hosts.edit"]);
+});
 
 describe("applyProposal", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setPluginServices(null);
-  });
-
   it("refuses a kind that is not a real tool", async () => {
     // The stored payload is treated as untrusted even though the server wrote
     // it, because a proposal can outlive the release that created it.
     await expect(
-      applyProposal("propose_delete_everything", {}, "user-1"),
+      applyProposal("propose_delete_everything", {}, deps()),
     ).rejects.toThrow("Unknown proposal kind");
   });
 
-  function withAutomations() {
-    setPluginServices({
-      get: (service: string) => {
-        if (service !== "automations.access")
-          throw new Error(`unexpected ${service}`);
-        return automationsAccess as never;
-      },
-      provide: vi.fn(),
-    } as never);
-  }
-
   it("hands an automation to the automations plugin, which validates it", async () => {
-    // The plugin runs its own route's validator, so a definition the model
-    // invented is held to the same standard as a hand-written one.
-    withAutomations();
+    provided["automations.access"] = automationsAccess;
     automationsAccess.create.mockRejectedValue(
       new Error("Unknown or missing trigger kind"),
     );
@@ -81,7 +75,7 @@ describe("applyProposal", () => {
           name: "bad",
           definition: { trigger: { kind: "nonsense" }, steps: [] },
         },
-        "user-1",
+        deps(),
       ),
     ).rejects.toThrow("Unknown or missing trigger kind");
   });
@@ -91,13 +85,13 @@ describe("applyProposal", () => {
       applyProposal(
         "propose_create_automation",
         { name: "x", definition: {} },
-        "user-1",
+        deps(),
       ),
     ).rejects.toThrow("The automations plugin is not available");
   });
 
   it("creates a valid automation disabled so it cannot fire unwatched", async () => {
-    withAutomations();
+    provided["automations.access"] = automationsAccess;
     automationsAccess.create.mockResolvedValue({ id: 5, name: "nightly" });
 
     const result = await applyProposal(
@@ -109,7 +103,7 @@ describe("applyProposal", () => {
           steps: [{ id: "s1", type: "wait", seconds: 1 }],
         },
       },
-      "user-1",
+      deps(),
     );
 
     expect(result.ok).toBe(true);
@@ -118,119 +112,100 @@ describe("applyProposal", () => {
     );
   });
 
-  it("runs an approved command only on a host the user can reach", async () => {
-    // resolveHostById returns null when the connect-level permission check
-    // fails, so an unreachable host never gets as far as an SSH attempt.
-    resolveHostById.mockResolvedValue(null);
-
-    await expect(
-      applyProposal(
-        "propose_run_command",
-        { hostId: 9, command: "uptime" },
-        "user-1",
-      ),
-    ).rejects.toThrow("Host not found");
-    expect(execCommand).not.toHaveBeenCalled();
-  });
-
-  it("returns command output on success", async () => {
-    resolveHostById.mockResolvedValue({ id: 9, ip: "10.0.0.9" });
+  it("runs an approved command through ctx.ssh on the host id", async () => {
+    // ctx.ssh resolves the host for the approving user, with the connect
+    // access check, so the executor never holds a host row itself.
     execCommand.mockResolvedValue({ stdout: "up 3 days", stderr: "", code: 0 });
 
     const result = await applyProposal(
       "propose_run_command",
       { hostId: 9, command: "uptime" },
-      "user-1",
+      deps(),
     );
 
+    expect(withConnection).toHaveBeenCalledWith(
+      9,
+      { pool: "ai", purpose: "fleet" },
+      expect.any(Function),
+    );
     expect(result.ok).toBe(true);
     expect(result.summary).toContain("up 3 days");
   });
 
-  it("resolves the host rather than using a raw repository row", async () => {
-    // A raw row has no decrypted auth and an unresolved jumpHosts field, which
-    // made the SSH factory fail with a jump host error on hosts that have none.
-    resolveHostById.mockResolvedValue({ id: 9, ip: "10.0.0.9" });
-    execCommand.mockResolvedValue({ stdout: "ok", stderr: "", code: 0 });
+  it("fails when the user cannot reach the host", async () => {
+    withConnection.mockRejectedValueOnce(new Error("Host not found"));
 
-    await applyProposal(
-      "propose_run_command",
-      { hostId: 9, command: "uptime" },
-      "user-1",
-    );
-
-    expect(resolveHostById).toHaveBeenCalledWith(9, "user-1");
-    expect(hostRepository.findByIdForUser).not.toHaveBeenCalled();
+    await expect(
+      applyProposal(
+        "propose_run_command",
+        { hostId: 9, command: "uptime" },
+        deps(),
+      ),
+    ).rejects.toThrow("Host not found");
+    expect(execCommand).not.toHaveBeenCalled();
   });
 
   it("surfaces a non-zero exit rather than reporting success", async () => {
-    resolveHostById.mockResolvedValue({ id: 9, ip: "10.0.0.9" });
     execCommand.mockResolvedValue({ stdout: "", stderr: "denied", code: 1 });
 
     await expect(
       applyProposal(
         "propose_run_command",
         { hostId: 9, command: "cat /etc/shadow" },
-        "user-1",
+        deps(),
       ),
     ).rejects.toThrow("code 1");
   });
 
-  it("creates a host through the normal repository", async () => {
-    hostRepository.create.mockResolvedValue({ id: 7, name: "web-1" });
+  it("creates a host through ctx.hosts, with tags as core stores them", async () => {
+    hosts.create.mockResolvedValue({ id: 7, name: "web-1" });
 
     const result = await applyProposal(
       "propose_create_host",
-      { name: "web-1", ip: "10.0.0.5", port: 22, tags: ["prod"] },
-      "user-1",
+      { name: "web-1", ip: "10.0.0.5", port: 22, tags: ["prod", "eu"] },
+      deps(),
     );
 
     expect(result.ok).toBe(true);
-    expect(hostRepository.create).toHaveBeenCalledWith(
+    expect(hosts.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        userId: "user-1",
         name: "web-1",
         ip: "10.0.0.5",
+        tags: "prod,eu",
       }),
     );
   });
 
+  it("refuses to create a host without hosts.create", async () => {
+    granted = new Set();
+    await expect(
+      applyProposal(
+        "propose_create_host",
+        { name: "web-1", ip: "10.0.0.5" },
+        deps(),
+      ),
+    ).rejects.toThrow("permission");
+    expect(hosts.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a host payload missing required fields", async () => {
     await expect(
-      applyProposal("propose_create_host", { name: "web-1" }, "user-1"),
+      applyProposal("propose_create_host", { name: "web-1" }, deps()),
     ).rejects.toThrow("ip is required");
-    expect(hostRepository.create).not.toHaveBeenCalled();
+    expect(hosts.create).not.toHaveBeenCalled();
   });
 
-  it("scopes an update to the approving user", async () => {
-    hostRepository.findByIdForUser.mockResolvedValue({ id: 7 });
-    hostRepository.updateForUser.mockResolvedValue({ id: 7 });
-
-    await applyProposal(
-      "propose_update_host",
-      { hostId: 7, changes: { name: "renamed" } },
-      "user-1",
-    );
-
-    expect(hostRepository.findByIdForUser).toHaveBeenCalledWith("user-1", 7);
-    expect(hostRepository.updateForUser).toHaveBeenCalledWith(
-      "user-1",
-      7,
-      expect.objectContaining({ name: "renamed" }),
-    );
-  });
-
-  it("refuses to update a host the user does not own", async () => {
-    hostRepository.findByIdForUser.mockResolvedValue(null);
+  it("updates through ctx.hosts, which refuses a host the user does not own", async () => {
+    hosts.update.mockResolvedValue(null);
 
     await expect(
       applyProposal(
         "propose_update_host",
         { hostId: 999, changes: { name: "x" } },
-        "user-1",
+        deps(),
       ),
     ).rejects.toThrow("Host not found");
-    expect(hostRepository.updateForUser).not.toHaveBeenCalled();
+    expect(hosts.update).toHaveBeenCalledWith(999, { name: "x" });
   });
 
   it("rejects a non-numeric id rather than coercing it", async () => {
@@ -238,30 +213,46 @@ describe("applyProposal", () => {
       applyProposal(
         "propose_update_host",
         { hostId: "7; DROP TABLE hosts", changes: { name: "x" } },
-        "user-1",
+        deps(),
       ),
     ).rejects.toThrow("hostId must be a positive integer");
   });
 
-  it("only adds fleet members the approving user owns", async () => {
-    setPluginServices({
-      get: (service: string) => {
-        if (service !== "fleets.access")
-          throw new Error(`unexpected ${service}`);
-        return fleetsAccess as never;
-      },
-      provide: vi.fn(),
-    } as never);
-    fleetsAccess.create.mockResolvedValue({ id: 3, name: "prod" });
-    hostRepository.findByIdForUser.mockImplementation(
-      async (_userId: string, hostId: number) =>
-        hostId === 1 ? { id: 1 } : null,
+  it("reports nothing to change on an empty update", async () => {
+    const result = await applyProposal(
+      "propose_update_host",
+      { hostId: 7, changes: {} },
+      deps(),
     );
+
+    expect(result.ok).toBe(false);
+    expect(hosts.update).not.toHaveBeenCalled();
+  });
+
+  it("deletes through ctx.hosts", async () => {
+    hosts.delete.mockResolvedValue(true);
+    const result = await applyProposal(
+      "propose_delete_host",
+      { hostId: 7, reason: "old" },
+      deps(),
+    );
+    expect(result.ok).toBe(true);
+    expect(hosts.delete).toHaveBeenCalledWith(7);
+  });
+
+  it("only adds fleet members the approving user owns", async () => {
+    provided["fleets.access"] = fleetsAccess;
+    fleetsAccess.create.mockResolvedValue({ id: 3, name: "prod" });
+    hosts.checkAccess.mockImplementation(async (hostId: number) => ({
+      hasAccess: true,
+      isOwner: hostId === 1,
+      isShared: hostId !== 1,
+    }));
 
     const result = await applyProposal(
       "propose_create_fleet",
       { name: "prod", hostIds: [1, 2] },
-      "user-1",
+      deps(),
     );
 
     expect(fleetsAccess.addMember).toHaveBeenCalledTimes(1);
@@ -269,22 +260,22 @@ describe("applyProposal", () => {
     expect(result.summary).toContain("1 host");
   });
 
-  it("fails clearly when the fleets plugin is disabled", async () => {
+  it("fails clearly when the fleets plugin is off", async () => {
     await expect(
-      applyProposal("propose_create_fleet", { name: "prod" }, "user-1"),
-    ).rejects.toThrow("fleets plugin is disabled");
+      applyProposal("propose_create_fleet", { name: "prod" }, deps()),
+    ).rejects.toThrow("The fleets plugin is not available");
   });
 
-  it("reports nothing to change on an empty update", async () => {
-    hostRepository.findByIdForUser.mockResolvedValue({ id: 7 });
+  it("edits a snippet through the snippets plugin", async () => {
+    provided["snippets.access"] = snippetsAccess;
+    snippetsAccess.get.mockResolvedValue({ id: 4, name: "a" });
 
-    const result = await applyProposal(
-      "propose_update_host",
-      { hostId: 7, changes: {} },
-      "user-1",
+    await applyProposal(
+      "propose_update_snippet",
+      { snippetId: 4, changes: { name: "b" } },
+      deps(),
     );
 
-    expect(result.ok).toBe(false);
-    expect(hostRepository.updateForUser).not.toHaveBeenCalled();
+    expect(snippetsAccess.update).toHaveBeenCalledWith(4, { name: "b" });
   });
 });

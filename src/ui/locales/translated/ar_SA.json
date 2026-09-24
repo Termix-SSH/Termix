@@ -1046,8 +1046,6 @@
     "connectionToolbar": "شريط أدوات الاتصال",
     "showConnectionToolbar": "إظهار شريط أدوات الاتصال",
     "showConnectionToolbarDesc": "يمكنك إظهار شريط الأدوات في جلسات SSH وRDP وVNC وTelnet الخاصة بهذا المضيف. كما يمكنك إخفاؤه مؤقتًا من شريط الأدوات نفسه.",
-    "enableAiAssistant": "تفعيل مساعد الذكاء الاصطناعي",
-    "enableAiAssistantDesc": "اسمح للمساعد الذكي بالمساعدة في طرفية هذا المضيف. هذه الميزة معطلة افتراضيًا، ولا يزال يتعين تفعيلها لحسابك.",
     "proxmoxLastSyncStatus": {
       "success": "نجاح"
     },

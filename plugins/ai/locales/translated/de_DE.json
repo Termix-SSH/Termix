@@ -67,12 +67,21 @@
     "aiEnableDesc": "Fügt einen Assistenten hinzu, der Ihre Einstellungen analysiert und Ihnen von Ihnen genehmigte Änderungen vorschlägt. Benötigt einen von Ihnen angegebenen Anbieter, z. B. einen lokalen Ollama-Händler.",
     "aiNote": "Es wird nichts gesendet, bis Sie einen Anbieter hinzufügen und eine Nachricht senden."
   },
-  "admin": {
-    "aiGloballyEnabled": "KI-Assistent",
-    "aiGloballyEnabledDesc": "Ermöglichen Sie den Nutzern, den KI-Assistenten zu aktivieren. Solange diese Option deaktiviert ist, ist der Assistent für alle ausgeblendet und gesperrt.",
-    "aiPrivateEndpoints": "Zulässige private KI-Hosts",
-    "aiPrivateEndpointsDesc": "Hosts in Ihrem privaten Netzwerk, auf die Benutzer einen Provider verweisen können, wie z. B. ein selbst gehostetes Ollama. Trennen Sie diese durch Kommas.",
-    "updateAiEnabledFailed": "Die KI-Einstellungen konnten nicht aktualisiert werden.",
-    "updateAiEndpointsFailed": "Die Liste der zulässigen Hosts konnte nicht aktualisiert werden."
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "KI-Assistent",
+        "description": "Ermöglichen Sie den Nutzern, den KI-Assistenten zu aktivieren. Solange diese Option deaktiviert ist, ist der Assistent für alle ausgeblendet und gesperrt."
+      },
+      "privateEndpoints": {
+        "label": "Zulässige private KI-Hosts"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "KI-Assistent aktivieren",
+        "description": "Erlauben Sie dem KI-Assistenten, im Terminal dieses Hosts Hilfe zu leisten. Standardmäßig deaktiviert; die KI muss weiterhin für Ihr Konto aktiviert sein."
+      }
+    }
   }
 }

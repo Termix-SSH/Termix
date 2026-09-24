@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   delivered: [] as Array<{ channelId: number; title: string }>,
   failChannel: null as number | null,
   fetchCalls: [] as Array<{ url: string; allowlist: readonly string[] }>,
+  lastSignal: null as AbortSignal | null,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -58,9 +59,10 @@ vi.mock("../../utils/notification-sender.js", () => ({
 vi.mock("../../utils/safe-outbound-fetch.js", () => ({
   safeOutboundFetch: async (
     url: string,
-    _init: RequestInit,
+    init: RequestInit,
     allowlist: readonly string[],
   ) => {
+    state.lastSignal = init.signal ?? null;
     state.fetchCalls.push({ url, allowlist });
     return new Response("ok", { status: 200 });
   },
@@ -180,5 +182,16 @@ describe("ctx.fetch", () => {
     expect(state.fetchCalls).toEqual([
       { url: "https://ntfy.lan/topic", allowlist: ["ntfy.lan"] },
     ]);
+  });
+
+  it("aborts the request, and a streamed body, when the caller's signal fires", async () => {
+    const ctx = contextFor(["network:outbound"]);
+    const controller = new AbortController();
+    await ctx.fetch("https://example.com/stream", {
+      signal: controller.signal,
+    });
+    expect(state.lastSignal?.aborted).toBe(false);
+    controller.abort();
+    expect(state.lastSignal?.aborted).toBe(true);
   });
 });

@@ -67,12 +67,21 @@
     "aiEnableDesc": "설정을 읽고 사용자가 승인하는 변경 사항을 제안하는 도우미를 추가합니다. 사용자가 제공하는 공급업체(예: 지역 Ollama)가 필요합니다.",
     "aiNote": "공급자를 추가하고 메시지를 보내기 전까지는 아무것도 전송되지 않습니다."
   },
-  "admin": {
-    "aiGloballyEnabled": "AI 비서",
-    "aiGloballyEnabledDesc": "사용자가 AI 비서를 켜고 끌 수 있도록 하세요. AI 비서가 꺼져 있으면 모든 사용자에게 비서 기능이 숨겨지고 차단됩니다.",
-    "aiPrivateEndpoints": "개인 AI 호스트 허용",
-    "aiPrivateEndpointsDesc": "사용자가 공급자에게 연결할 수 있는 개인 네트워크의 호스트(예: 자체 호스팅 Ollama)를 나열하세요. 호스트는 쉼표로 구분하세요.",
-    "updateAiEnabledFailed": "AI 설정을 업데이트할 수 없습니다.",
-    "updateAiEndpointsFailed": "허용된 호스트를 업데이트할 수 없습니다."
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI 비서",
+        "description": "사용자가 AI 비서를 켜고 끌 수 있도록 하세요. AI 비서가 꺼져 있으면 모든 사용자에게 비서 기능이 숨겨지고 차단됩니다."
+      },
+      "privateEndpoints": {
+        "label": "개인 AI 호스트 허용"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "AI 어시스턴트 활성화",
+        "description": "이 호스트의 터미널에서 AI 도우미의 도움을 받을 수 있도록 허용합니다. 기본적으로 비활성화되어 있으며, 계정에 AI 기능이 활성화되어 있어야 합니다."
+      }
+    }
   }
 }

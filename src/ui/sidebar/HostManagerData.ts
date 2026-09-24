@@ -101,7 +101,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       (proxmoxSettings.enableProxmoxStats as boolean) ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false,
     enableTerminalToolbar: h.enableTerminalToolbar ?? true,
-    enableAiAssistant: h.enableAiAssistant ?? false,
     proxmoxConfig:
       (proxmoxSettings.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
     proxmoxStatsConfig:

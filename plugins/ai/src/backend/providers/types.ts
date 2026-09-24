@@ -63,10 +63,20 @@ export type ChatChunk =
   | { type: "done"; stopReason?: string }
   | { type: "error"; message: string };
 
+/**
+ * How an adapter reaches its provider. Always the egress-checked fetch from
+ * http.ts, never the global one.
+ */
+export type ProviderFetch = (
+  url: string,
+  init: RequestInit,
+) => Promise<Response>;
+
 export interface ProviderConfig {
   providerType: AiProviderType;
   baseUrl?: string | null;
   apiKey?: string | null;
+  fetch: ProviderFetch;
 }
 
 export interface ProviderAdapter {

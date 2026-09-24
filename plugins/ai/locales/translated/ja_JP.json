@@ -67,12 +67,21 @@
     "aiEnableDesc": "設定内容を読み取り、承認した上で変更案を提案するアシスタント機能を追加します。ローカルのOllamaなど、お客様ご自身で手配するプロバイダーが必要です。",
     "aiNote": "プロバイダーを追加してメッセージを送信するまで、データはどこにも送信されません。"
   },
-  "admin": {
-    "aiGloballyEnabled": "AIアシスタント",
-    "aiGloballyEnabledDesc": "ユーザーがAIアシスタントをオンにできるようにします。オフになっている間は、アシスタントは非表示になり、誰からも利用できなくなります。",
-    "aiPrivateEndpoints": "プライベートAIホストを許可",
-    "aiPrivateEndpointsDesc": "ユーザーがプロバイダに指定できる、プライベートネットワーク上のホスト（自己ホスト型のOllamaなど）を指定します。カンマで区切ってください。",
-    "updateAiEnabledFailed": "AI設定を更新できませんでした",
-    "updateAiEndpointsFailed": "許可されたホストを更新できませんでした"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "AIアシスタント",
+        "description": "ユーザーがAIアシスタントをオンにできるようにします。オフになっている間は、アシスタントは非表示になり、誰からも利用できなくなります。"
+      },
+      "privateEndpoints": {
+        "label": "プライベートAIホストを許可"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "AIアシスタントを有効にする",
+        "description": "このホストのターミナルでAIアシスタントによる支援を許可します。デフォルトでは無効になっており、アカウントでAIを有効にする必要があります。"
+      }
+    }
   }
 }

@@ -67,12 +67,21 @@
     "aiEnableDesc": "Lisää avustajan, joka lukee asetuksesi ja ehdottaa hyväksymiäsi muutoksia. Edellyttää toimittamaasi palveluntarjoajaa, kuten paikallisen Ollaman.",
     "aiNote": "Mitään ei lähetetä mihinkään ennen kuin lisäät palveluntarjoajan ja lähetät viestin."
   },
-  "admin": {
-    "aiGloballyEnabled": "Tekoälyavustaja",
-    "aiGloballyEnabledDesc": "Salli käyttäjien ottaa tekoälyavustaja käyttöön. Kun tämä on pois päältä, avustaja on piilotettu ja estetty kaikilta.",
-    "aiPrivateEndpoints": "Sallitut yksityiset tekoälyisännät",
-    "aiPrivateEndpointsDesc": "Yksityisen verkon isännät, joihin käyttäjät voivat ohjata palveluntarjoajan, kuten itse isännöity Ollama. Erota ne pilkuilla.",
-    "updateAiEnabledFailed": "Tekoälyasetuksen päivittäminen epäonnistui",
-    "updateAiEndpointsFailed": "Sallittujen isäntien päivittäminen epäonnistui"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Tekoälyavustaja",
+        "description": "Salli käyttäjien ottaa tekoälyavustaja käyttöön. Kun tämä on pois päältä, avustaja on piilotettu ja estetty kaikilta."
+      },
+      "privateEndpoints": {
+        "label": "Sallitut yksityiset tekoälyisännät"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Ota tekoälyavustaja käyttöön",
+        "description": "Salli tekoälyavustaja auttaa tämän isännän terminaalissa. Oletusarvoisesti pois päältä, mutta tekoälyn on silti oltava käytössä tililläsi."
+      }
+    }
   }
 }

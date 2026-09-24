@@ -1046,8 +1046,6 @@
     "connectionToolbar": "סרגל הכלים לחיבור",
     "showConnectionToolbar": "הצג סרגל הכלים של החיבור",
     "showConnectionToolbarDesc": "הצג את סרגל הכלים בהפעלות SSH, RDP, VNC ו-Telnet של מחשב מארח זה. ניתן גם להסתיר אותו באופן זמני מסרגל הכלים עצמו.",
-    "enableAiAssistant": "הפעל את עוזר הבינה המלאכותית",
-    "enableAiAssistantDesc": "אפשר לעוזר הבינה המלאכותית לסייע במסוף של מארח זה. כבוי כברירת מחדל, ועדיין נדרשת הפעלת בינה מלאכותית עבור חשבונך.",
     "proxmoxLastSyncStatus": {
       "success": "הַצלָחָה"
     },

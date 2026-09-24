@@ -67,12 +67,21 @@
     "aiEnableDesc": "Thêm một trợ lý đọc cấu hình của bạn và đề xuất các thay đổi mà bạn chấp thuận. Cần có nhà cung cấp do bạn chỉ định, chẳng hạn như Ollama địa phương.",
     "aiNote": "Không có dữ liệu nào được gửi đi cho đến khi bạn thêm nhà cung cấp và gửi tin nhắn."
   },
-  "admin": {
-    "aiGloballyEnabled": "Trợ lý AI",
-    "aiGloballyEnabledDesc": "Cho phép người dùng bật trợ lý AI. Khi trợ lý này tắt, nó sẽ bị ẩn và chặn đối với tất cả mọi người.",
-    "aiPrivateEndpoints": "Cho phép máy chủ AI riêng",
-    "aiPrivateEndpointsDesc": "Các máy chủ trên mạng riêng của bạn mà người dùng có thể trỏ đến nhà cung cấp, chẳng hạn như Ollama tự lưu trữ. Phân tách chúng bằng dấu phẩy.",
-    "updateAiEnabledFailed": "Không thể cập nhật cài đặt AI.",
-    "updateAiEndpointsFailed": "Không thể cập nhật các máy chủ được cho phép"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Trợ lý AI",
+        "description": "Cho phép người dùng bật trợ lý AI. Khi trợ lý này tắt, nó sẽ bị ẩn và chặn đối với tất cả mọi người."
+      },
+      "privateEndpoints": {
+        "label": "Cho phép máy chủ AI riêng"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Kích hoạt Trợ lý AI",
+        "description": "Cho phép trợ lý AI hỗ trợ trong thiết bị đầu cuối của máy chủ này. Mặc định là tắt, nhưng bạn vẫn cần bật AI cho tài khoản của mình."
+      }
+    }
   }
 }

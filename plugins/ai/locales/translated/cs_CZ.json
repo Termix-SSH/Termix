@@ -67,12 +67,21 @@
     "aiEnableDesc": "Přidá asistenta, který si přečte vaše nastavení a navrhne změny, které schválíte. Vyžaduje poskytovatele, kterého dodáte, například místní Ollamu.",
     "aiNote": "Nic se nikam neodesílá, dokud nepřidáte poskytovatele a neodešlete zprávu."
   },
-  "admin": {
-    "aiGloballyEnabled": "Asistent s umělou inteligencí",
-    "aiGloballyEnabledDesc": "Umožněte uživatelům zapnout asistenta s umělou inteligencí. Pokud je tato funkce vypnutá, asistent je skrytý a blokovaný pro všechny.",
-    "aiPrivateEndpoints": "Povolení soukromí hostitelé s umělou inteligencí",
-    "aiPrivateEndpointsDesc": "Hostitelé ve vaší privátní síti, na které mohou uživatelé odkazovat poskytovatele, například samostatně hostovaný Ollama. Oddělte je čárkami.",
-    "updateAiEnabledFailed": "Nepodařilo se aktualizovat nastavení umělé inteligence",
-    "updateAiEndpointsFailed": "Nepodařilo se aktualizovat povolené hostitele"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Asistent s umělou inteligencí",
+        "description": "Umožněte uživatelům zapnout asistenta s umělou inteligencí. Pokud je tato funkce vypnutá, asistent je skrytý a blokovaný pro všechny."
+      },
+      "privateEndpoints": {
+        "label": "Povolení soukromí hostitelé s umělou inteligencí"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Povolit asistenta s umělou inteligencí",
+        "description": "Povolit asistentovi s umělou inteligencí pomáhat v terminálu tohoto hostitele. Ve výchozím nastavení vypnuto, ale stále vyžaduje, aby byla pro váš účet povolena umělá inteligence."
+      }
+    }
   }
 }

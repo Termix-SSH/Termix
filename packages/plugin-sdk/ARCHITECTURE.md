@@ -457,6 +457,7 @@ boundary and Suspense.
 | `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method and a second factor challenge (plus an optional `enrollment` section)                                                  |
 | `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                         |
 | `apiFor(origin)`                                    | The same client for a resolved connection origin: `"remote"` reaches the desktop app's connected server (**B14**)                                   |
+| `fetch(path, init)`                                 | A raw `fetch` on `/plugin-api/<id>/<path>` with core's auth, for a streamed response (SSE) axios cannot read (**B18**)                              |
 | `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                 |
 | `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                    |
 | `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                         |
@@ -766,6 +767,29 @@ by hand. Core's `hosts/automation-events.ts` became `hosts/internal-events.ts`
 live at `/plugin-api/automations/webhook/<token>`; the 2.8 path
 `/automations/webhook/<token>` is rewritten to it in both nginx configs,
 because external systems hold that URL.
+
+**AI assistant (B18)** imports nothing from core. It adopts `ai_providers`,
+`ai_conversations`, `ai_messages` and `ai_proposals` (the migrations keep the
+conversation foreign keys by hand), keeps provider keys in `ctx.secrets`,
+reaches providers through `ctx.fetch` with the admin's private endpoint list
+as `allowPrivateHosts`, and runs approved commands through
+`ctx.ssh.withConnection`. Hosts come from `ctx.hosts` (proposals use
+`create`, `update` and `delete`, after checking the approving user's core
+`hosts.*` permission), channels from `ctx.notify.channels()`, and everything
+else from optional services: `snippets.access`, `fleets.access`,
+`automations.access`, `workspaces.saved`, `network-topology.graph`,
+`terminal.history` and `homepage.items` v1 (`list()`, which the homepage
+plugin provides from B19). A tool names the service it needs, and a tool
+whose service has no running provider is not offered to the model at all. B18
+made the write methods of `snippets.access` and `fleets.access` check the
+same permission their routes do (`snippets.create`/`edit`/`delete`,
+`fleets.manage`), since a proposal runs as the approving user. Its settings
+are the admin `globallyEnabled` and `privateEndpoints`, the user `enabled`
+and `allowReadOnlyCommands` plus a custom `providers` field, and the host
+`enableAiAssistant`, which decides whether its `terminal.toolbar` button and
+`terminal.sidePanel` appear. `ai-settings-migration.ts` moves the 2.8 values
+and keys. The shell knows nothing about it: availability is the plugin being
+enabled, `ai.use`, and those settings.
 
 #### Host status is core
 
@@ -1380,6 +1404,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.registry.*`                                 | none                                 | **A1**                  |
 | `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                     | **A1**, named **B12**   |
 | `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1**                  |
+| `ctx.secrets.get` / `.set` / `.delete`           | `secrets:own`                        | **B18**                 |
 | `ctx.disposables.add`                            | none                                 | **A1**                  |
 | `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1**                  |
 | `ctx.currentActor()`                             | none                                 | **A1**                  |
@@ -1389,7 +1414,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4**                  |
 | `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5**                  |
 | `ctx.capabilities.has` / `.require`              | the capability itself                | **B11**                 |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4**, extended **B5** |
+| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4**, **B5**, **B18** |
 | `ctx.hosts.status.*`                             | `hosts:read`                         | **B16**                 |
 | `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8**                  |
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
@@ -1400,7 +1425,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.credentials.resolveHostProtocol`            | `credentials:read`                   | **B14**                 |
 | `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
 | `ctx.schedule.every` / `.after`                  | none                                 | **B16**                 |
-| `ctx.fetch`                                      | `network:outbound`                   | **B17**                 |
+| `ctx.fetch`                                      | `network:outbound`                   | **B17**, signal **B18** |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
 generic check for a capability no other ctx member wraps. Unlike every other
@@ -1608,6 +1633,28 @@ notification)` delivers to the ones among them that are theirs and
   `network:outbound`, audited as `plugin_fetch`. Automations' HTTP step
   passes the admin allowlist it reads through `ctx.settings.readCore`
   (`notification_private_endpoint_allowlist` joined `CORE_SETTINGS_ALLOWLIST`).
+
+**B18** added three members for the AI assistant:
+
+- `ctx.secrets.get(key)` / `.set(key, value)` / `.delete(key)` store a
+  plugin's own secrets for the acting user, next to the `offer` side of
+  `ctx.secrets`. Rows live in `plugin_settings` under the `secret` scope
+  (`scope_id` the user id), encrypted with `encryptSystemSecret`, so they go
+  with the plugin on uninstall and with the user when `UserRepository.delete`
+  removes that user's rows. The settings service is manifest-driven and never
+  reads them. All three need `secrets:own` and an actor; `set` and `delete`
+  are audited without the value, `get` only checks the capability, like
+  `ctx.db.persist`, because a plugin reads its keys on every request that
+  uses them. The AI assistant keeps each provider's key under
+  `provider:<id>` instead of in its providers table.
+- `ctx.fetch` takes a `signal`. It aborts the request and a streamed body;
+  `timeoutMs` still only covers the wait for the headers, so a long model
+  stream is not cut.
+- `ctx.hosts.delete(hostId)` deletes a host the actor owns through core's
+  own delete path (`hosts/delete-host.ts`, shared with the host editor's
+  route: access grants, activity, plugin settings, the tombstone and the
+  `host.deleted` event). Needs `hosts:write`, and the actor needs the core
+  `hosts.delete` permission. False for a host that is missing or not theirs.
 
 `ctx.hosts.create` (**B14**) hands the created row to every plugin's
 `hostImportNormalizer`, the same as a bulk import row, so a plugin creating a
@@ -2139,8 +2186,8 @@ Then, with the app running:
 ## Legacy core imports: the debt D1 removes
 
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
-(B2), remote-desktop (B14), docker (B15), host-metrics (B16) and automations
-(B17), which import
+(B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
+(B17) and ai (B18), which import
 nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
@@ -2168,8 +2215,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 64 files  | D1         |
-| A plugin importing core by relative path         | Warning   | 12 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 55 files  | D1         |
+| A plugin importing core by relative path         | Warning   | 4 files   | D1         |
 | A plugin importing another plugin's source       | Warning   | 0 files   | -          |
 
 A warning does not fail a build, so the counts are held by

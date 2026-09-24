@@ -1,4 +1,5 @@
 import { num, objectSchema, proposal, str, type AiTool } from "./types.js";
+import { SERVICE } from "../services.js";
 
 /**
  * Propose tools never mutate anything. They return a draft that is stored as a
@@ -100,6 +101,7 @@ export const proposeTools: AiTool[] = [
     description:
       "Propose saving a new command snippet the user can run against their hosts.",
     category: "propose",
+    service: SERVICE.snippets,
     parameters: objectSchema(
       {
         name: str("Snippet name"),
@@ -125,6 +127,7 @@ export const proposeTools: AiTool[] = [
     name: "propose_update_snippet",
     description: "Propose editing an existing snippet.",
     category: "propose",
+    service: SERVICE.snippets,
     parameters: objectSchema(
       {
         snippetId: num("The snippet id to update"),
@@ -151,6 +154,7 @@ export const proposeTools: AiTool[] = [
     name: "propose_delete_snippet",
     description: "Propose deleting a snippet.",
     category: "propose",
+    service: SERVICE.snippets,
     parameters: objectSchema(
       {
         snippetId: num("The snippet id to delete"),
@@ -170,6 +174,7 @@ export const proposeTools: AiTool[] = [
     description:
       "Propose a new automation. The definition must be a valid AutomationDefinition object with a trigger and an ordered list of steps. It is validated server-side and previewed with a dry run before anything happens.",
     category: "propose",
+    service: SERVICE.automations,
     parameters: objectSchema(
       {
         name: str("Automation name"),
@@ -197,6 +202,7 @@ export const proposeTools: AiTool[] = [
     name: "propose_create_fleet",
     description: "Propose grouping hosts into a new fleet.",
     category: "propose",
+    service: SERVICE.fleets,
     parameters: objectSchema(
       {
         name: str("Fleet name"),

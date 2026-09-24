@@ -62,10 +62,10 @@ export const ssoProviders = mysqlTable("sso_providers", {
   enabled: boolean("enabled").notNull().default(true),
   displayOrder: int("display_order").notNull().default(0),
   config: text("config").notNull(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -83,7 +83,7 @@ export const sessions = mysqlTable(
     oidcSub: text("oidc_sub"),
     oidcSid: text("oidc_sid"),
     ssoProviderId: int("sso_provider_id"),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -108,7 +108,7 @@ export const trustedDevices = mysqlTable(
     deviceFingerprint: text("device_fingerprint").notNull(),
     deviceType: text("device_type").notNull(),
     deviceInfo: text("device_info").notNull(),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -134,7 +134,7 @@ export const userExternalIdentities = mysqlTable(
     /** The provider's id for the user, at most 255 characters. */
     subject: varchar("subject", { length: 255 }).notNull(),
     email: text("email"),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -186,7 +186,7 @@ export const webauthnCredentials = mysqlTable("webauthn_credentials", {
   backedUp: boolean("backed_up").notNull().default(false),
   transports: text("transports"),
   userVerification: text("user_verification").notNull().default("preferred"),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
   lastUsedAt: text("last_used_at"),
@@ -272,9 +272,6 @@ export const hosts = mysqlTable(
     enableTerminalToolbar: boolean("enable_terminal_toolbar")
       .notNull()
       .default(true),
-    enableAiAssistant: boolean("enable_ai_assistant")
-      .notNull()
-      .default(false),
     showTerminalInSidebar: boolean("show_terminal_in_sidebar")
       .notNull()
       .default(true),
@@ -351,10 +348,10 @@ export const hosts = mysqlTable(
     // sync -- local autoincrement ids collide across instances.
     syncId: varchar("sync_id", { length: 255 }).unique(),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -420,10 +417,10 @@ export const sshCredentials = mysqlTable(
   usageCount: int("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -470,10 +467,10 @@ export const sshFolders = mysqlTable(
     // to name sort, same convention as hosts.sortOrder.
     sortOrder: int("sort_order"),
     syncId: varchar("sync_id", { length: 255 }).unique(),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -525,7 +522,7 @@ export const hostAccess = mysqlTable(
 
     expiresAt: varchar("expires_at", { length: 255 }),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
     lastAccessedAt: text("last_accessed_at"),
@@ -555,10 +552,10 @@ export const sharedHostAuthOverrides = mysqlTable(
     credentialId: int("credential_id")
       .notNull()
       .references(() => sshCredentials.id, { onDelete: "cascade" }),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -600,10 +597,10 @@ export const sharedHostSecrets = mysqlTable(
     encryptedKeyType: text("encrypted_key_type"),
     encryptedDomain: text("encrypted_domain"),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -631,10 +628,10 @@ export const roles = mysqlTable("roles", {
 
   permissions: text("permissions"),
 
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -725,7 +722,7 @@ export const opksshTokens = mysqlTable(
     issuer: text("issuer"),
     audience: text("audience"),
   
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -765,10 +762,10 @@ export const vaultProfiles = mysqlTable("vault_profiles", {
   // When true the profile is visible/usable by all users on the server
   shared: boolean("shared").notNull().default(false),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -790,7 +787,7 @@ export const vaultTokens = mysqlTable(
     sshCert: text("ssh_cert").notNull(),
     privateKey: text("private_key").notNull(),
   
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
     expiresAt: varchar("expires_at", { length: 255 }).notNull(),
@@ -812,7 +809,7 @@ export const apiKeys = mysqlTable(
     name: varchar("name", { length: 255 }).notNull(),
     tokenHash: text("token_hash").notNull(),
     tokenPrefix: text("token_prefix").notNull(),
-    createdAt: varchar("created_at", { length: 255 }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
     expiresAt: varchar("expires_at", { length: 255 }),
     lastUsedAt: text("last_used_at"),
     isActive: boolean("is_active").notNull().default(true),
@@ -831,13 +828,13 @@ export const userOpenTabs = mysqlTable(
     hostId: int("host_id").references(() => hosts.id, {
       onDelete: "cascade",
     }),
-    label: varchar("label", { length: 255 }).notNull(),
+    label: text("label").notNull(),
     tabOrder: int("tab_order").notNull().default(0),
     backendSessionId: text("backend_session_id"),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -868,19 +865,13 @@ export const userPreferences = mysqlTable("user_preferences", {
   disableUpdateCheck: boolean("disable_update_check"),
   confirmTabClose: boolean("confirm_tab_close"),
   hiddenRailTabs: text("hidden_rail_tabs"),
-  // null means the user has not been asked yet; the assistant stays hidden
-  // until this is explicitly true and the admin global is on.
-  aiAssistantEnabled: boolean("ai_assistant_enabled"),
-  // Opt-in to letting the assistant run allowlisted read-only diagnostics
-  // without a per-command approval click.
-  aiReadOnlyCommands: boolean("ai_read_only_commands"),
   compactHostView: boolean("compact_host_view"),
   statusColorScheme: text("status_color_scheme"),
   customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
   terminalDefaults: text("terminal_defaults"),
   terminalMacros: text("terminal_macros"),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -892,7 +883,7 @@ export const hostSidebarPreferences = mysqlTable("host_sidebar_preferences", {
   // JSON-encoded HostSidebarPreferences. No secrets in this blob, stored as
   // plain JSON.
   data: text("data").notNull(),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -906,7 +897,7 @@ export const credentialSidebarPreferences = mysqlTable(
     // JSON-encoded CredentialSidebarPreferences. No secrets in this blob,
     // same convention as hostSidebarPreferences.data.
     data: text("data").notNull(),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -920,7 +911,7 @@ export const uiPreferences = mysqlTable("ui_preferences", {
   // state). No secrets in this blob, same convention as
   // hostSidebarPreferences.data.
   data: text("data").notNull(),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -930,14 +921,14 @@ export const dashboardServiceLinks = mysqlTable("dashboard_service_links", {
   userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  label: varchar("label", { length: 255 }).notNull(),
+  label: text("label").notNull(),
   url: text("url").notNull(),
   order: int("order").notNull().default(0),
   syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -955,10 +946,10 @@ export const termixIdentities = mysqlTable("termix_identities", {
     .references(() => users.id, { onDelete: "cascade" }),
   handle: varchar("handle", { length: 255 }).notNull().unique(),
   description: text("description"),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -978,7 +969,7 @@ export const termixIdentityKeys = mysqlTable("termix_identity_keys", {
   // the /<ALGO> resolver filter (RSA / ED25519 / ECDSA / ...).
   keyType: text("key_type").notNull(),
   algorithm: text("algorithm").notNull(),
-  label: varchar("label", { length: 255 }),
+  label: text("label"),
   comment: text("comment"),
   // "manual" (pasted) or "credential" (imported from an ssh_credentials entry).
   source: text("source").notNull().default("manual"),
@@ -986,7 +977,7 @@ export const termixIdentityKeys = mysqlTable("termix_identity_keys", {
     onDelete: "set null",
   }),
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -1006,10 +997,10 @@ export const termixIdentityCa = mysqlTable("termix_identity_ca", {
   publicKey: text("public_key").notNull(),
   privateKey: text("private_key").notNull(),
   validityDays: int("validity_days").notNull().default(90),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -1025,7 +1016,7 @@ export const notificationChannels = mysqlTable("notification_channels", {
   type: text("type").notNull(),
   config: text("config").notNull(),
   enabled: boolean("enabled").notNull().default(true),
-  createdAt: varchar("created_at", { length: 255 })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -1045,10 +1036,10 @@ export const homepageItems = mysqlTable(
     config: text("config").notNull().default("{}"),
     folderId: int("folder_id"),
     syncId: varchar("sync_id", { length: 255 }).unique(),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -1063,7 +1054,7 @@ export const homepageLayouts = mysqlTable("homepage_layouts", {
     .references(() => users.id, { onDelete: "cascade" }),
   // JSON: { entries: HomepageLayoutEntry[], pan: {x,y}, zoom: number }
   layout: text("layout").notNull().default("{}"),
-  updatedAt: varchar("updated_at", { length: 255 })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -1087,121 +1078,6 @@ export const syncTombstones = mysqlTable("sync_tombstones", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 // --- sync end ---
-
-// --- ai begin ---
-/**
- * A user's connection to one AI provider. api_key is encrypted at rest via
- * FieldCrypto; it is never returned to the frontend, which only ever sees
- * api_key_prefix for display.
- */
-export const aiProviders = mysqlTable(
-  "ai_providers",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    // ollama | anthropic | openai | gemini | openai_compatible
-    providerType: text("provider_type").notNull(),
-    label: varchar("label", { length: 255 }).notNull(),
-    // Required for ollama and openai_compatible, optional elsewhere.
-    baseUrl: text("base_url"),
-    apiKey: text("api_key"),
-    // First few characters, kept in the clear so the UI can identify a key.
-    apiKeyPrefix: text("api_key_prefix"),
-    defaultModel: text("default_model"),
-    enabled: boolean("enabled").notNull().default(true),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  (table) => [
-    uniqueIndex("idx_ai_providers_user_label").on(table.userId, table.label),
-  ],
-);
-
-export const aiConversations = mysqlTable(
-  "ai_conversations",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    title: text("title"),
-    providerId: int("provider_id"),
-    model: text("model"),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  (table) => [
-    index("idx_ai_conversations_user").on(table.userId, table.updatedAt),
-  ],
-);
-
-export const aiMessages = mysqlTable(
-  "ai_messages",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    conversationId: int("conversation_id")
-      .notNull()
-      .references(() => aiConversations.id, { onDelete: "cascade" }),
-    // user | assistant | tool
-    role: text("role").notNull(),
-    content: text("content").notNull().default(""),
-    // Serialized tool calls and their results for this turn.
-    toolCalls: text("tool_calls"),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  (table) => [
-    index("idx_ai_messages_conversation").on(
-      table.conversationId,
-      table.createdAt,
-    ),
-  ],
-);
-
-/**
- * A change the assistant wants to make. Nothing here has been applied: the
- * payload is re-validated against the tool schema at apply time and only then
- * dispatched through the same repository logic a human action uses.
- */
-export const aiProposals = mysqlTable(
-  "ai_proposals",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    conversationId: int("conversation_id")
-      .notNull()
-      .references(() => aiConversations.id, { onDelete: "cascade" }),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    // The propose_* tool name that produced this.
-    kind: text("kind").notNull(),
-    summary: text("summary"),
-    payload: text("payload").notNull().default("{}"),
-    // pending | applied | rejected | expired
-    status: varchar("status", { length: 255 }).notNull().default("pending"),
-    appliedAt: text("applied_at"),
-    resultSummary: text("result_summary"),
-    createdAt: varchar("created_at", { length: 255 })
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  (table) => [
-    index("idx_ai_proposals_user").on(table.userId, table.status),
-    index("idx_ai_proposals_conversation").on(table.conversationId),
-  ],
-);
-// --- ai end ---
 
 // --- collab rooms ---
 
@@ -1227,10 +1103,10 @@ export const secretSources = mysqlTable(
     token: text("token").notNull(),
     // Visible to every user; secrets still decrypt with the owner's key.
     shared: boolean("shared").notNull().default(false),
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -1265,7 +1141,7 @@ export const credentialAccess = mysqlTable(
 
     expiresAt: varchar("expires_at", { length: 255 }),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -1303,10 +1179,10 @@ export const sharedCredentialSecrets = mysqlTable(
     publicKey: text("public_key"),
     certPublicKey: text("cert_public_key"),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -1355,7 +1231,7 @@ export const folderAccess = mysqlTable(
     permissionLevel: text("permission_level").notNull().default("connect"),
     expiresAt: varchar("expires_at", { length: 255 }),
 
-    createdAt: varchar("created_at", { length: 255 })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -1388,7 +1264,7 @@ export const plugins = mysqlTable(
     installedAt: text("installed_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
     autoUpdate: boolean("auto_update")
@@ -1456,7 +1332,7 @@ export const pluginInstallCounts = mysqlTable(
     registryId: varchar("registry_id", { length: 255 }).notNull(),
     count: int("count").notNull().default(0),
     source: text("source").notNull().default("aggregate-telemetry"),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -1482,7 +1358,7 @@ export const pluginStorage = mysqlTable(
       .references(() => plugins.id, { onDelete: "cascade" }),
     key: varchar("key", { length: 255 }).notNull(),
     value: text("value").notNull(),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
@@ -1519,7 +1395,7 @@ export const pluginSettings = mysqlTable(
     encrypted: boolean("encrypted")
       .notNull()
       .default(false),
-    updatedAt: varchar("updated_at", { length: 255 })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },

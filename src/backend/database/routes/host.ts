@@ -15,17 +15,15 @@ import {
   pickResolvedUsername,
 } from "../../hosts/credential-username.js";
 import { emitInternalEvent } from "../../hosts/internal-events.js";
+import { deleteOwnedHost } from "../../hosts/delete-host.js";
 import {
   createCurrentCredentialRepository,
   createCurrentOpksshTokenRepository,
-  createCurrentRecentActivityRepository,
-  createCurrentSshCredentialUsageRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
   createCurrentUserRepository,
-  createCurrentSyncTombstoneRepository,
   createCurrentSharedHostAuthOverrideRepository,
 } from "../repositories/factory.js";
 import {
@@ -202,7 +200,6 @@ router.post(
       enableProxmox,
       enableTmuxMonitor,
       enableTerminalToolbar,
-      enableAiAssistant,
       showTerminalInSidebar,
       showFileManagerInSidebar,
       showTunnelInSidebar,
@@ -332,7 +329,6 @@ router.post(
       scpLegacy: scpLegacy ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
-      enableAiAssistant: enableAiAssistant ? 1 : 0,
       showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
       showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
       showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
@@ -756,7 +752,6 @@ router.post(
         enableWebUi: false,
         enableTmuxMonitor: false,
         enableTerminalToolbar: true,
-        enableAiAssistant: false,
         showTerminalInSidebar: true,
         showFileManagerInSidebar: false,
         showTunnelInSidebar: false,
@@ -886,7 +881,6 @@ router.put(
       enableProxmox,
       enableTmuxMonitor,
       enableTerminalToolbar,
-      enableAiAssistant,
       showTerminalInSidebar,
       showFileManagerInSidebar,
       showTunnelInSidebar,
@@ -1017,7 +1011,6 @@ router.put(
       scpLegacy: scpLegacy ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
       enableTerminalToolbar: enableTerminalToolbar === false ? 0 : 1,
-      enableAiAssistant: enableAiAssistant ? 1 : 0,
       showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
       showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
       showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
@@ -2084,7 +2077,6 @@ router.get(
             enableProxmoxStats: !!proxmoxSettings?.enableProxmoxStats,
             enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
             enableTerminalToolbar: resolvedHost.enableTerminalToolbar !== false,
-            enableAiAssistant: !!resolvedHost.enableAiAssistant,
             showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
             showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
             showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
@@ -2241,7 +2233,6 @@ router.get(
               enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
               enableTerminalToolbar:
                 resolvedHost.enableTerminalToolbar !== false,
-              enableAiAssistant: !!resolvedHost.enableAiAssistant,
               showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
               showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
               showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
@@ -2418,47 +2409,15 @@ router.delete(
       hostId: parseInt(hostId),
     });
     try {
-      const hostToDelete =
-        await createCurrentHostResolutionRepository().findHostByIdForUser(
-          Number(hostId),
-          userId,
-        );
+      const deleted = await deleteOwnedHost(userId, Number(hostId));
 
-      if (!hostToDelete) {
+      if (!deleted) {
         sshLogger.warn("SSH host not found for deletion", {
           operation: "host_delete",
           hostId: parseInt(hostId),
           userId,
         });
         return res.status(404).json({ error: "SSH host not found" });
-      }
-
-      const numericHostId = Number(hostId);
-
-      // file manager recent/pinned/shortcuts, transfer_recent, command
-      // history and session recordings cascade on the host's refHost()
-      // foreign key, as the file-manager, ssh-terminal and
-      // session-recording plugins' adopted tables.
-
-      await createCurrentSshCredentialUsageRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentRecentActivityRepository().deleteByHostId(
-        numericHostId,
-      );
-
-      await createCurrentRbacAccessRepository().deleteHostAccessForHost(
-        numericHostId,
-      );
-
-      await createCurrentHostRepository().deleteForUser(userId, numericHostId);
-      if (hostToDelete.syncId) {
-        await createCurrentSyncTombstoneRepository().record(
-          userId,
-          "hosts",
-          hostToDelete.syncId,
-        );
       }
 
       databaseLogger.success("SSH host deleted", {
@@ -2474,28 +2433,11 @@ router.delete(
         action: "delete_host",
         resourceType: "host",
         resourceId: hostId,
-        resourceName: hostToDelete.name ?? hostToDelete.ip,
+        resourceName: deleted.name,
         ipAddress: dhIp,
         userAgent: dhUa,
         success: true,
       });
-
-      emitInternalEvent("host_deleted", userId, numericHostId, {
-        name: hostToDelete.name ?? hostToDelete.ip,
-      });
-
-      try {
-        pluginEvents.emit(TOPICS.hostDeleted, {
-          hostId: numericHostId,
-          userId,
-        });
-      } catch (err) {
-        sshLogger.warn("Failed to publish host deletion event", {
-          operation: "host_delete",
-          hostId: numericHostId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
 
       res.json({ message: "SSH host deleted" });
     } catch (err) {

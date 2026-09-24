@@ -1,6 +1,5 @@
 import { authLogger } from "../../utils/logger.js";
 import {
-  createCurrentAiRepository,
   createCurrentNotificationChannelRepository,
   createCurrentApiKeyRepository,
   createCurrentAuditLogRepository,
@@ -73,7 +72,6 @@ export async function deleteUserAndRelatedData(
     await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
     await createCurrentRoleRepository().removeAllRolesFromUser(userId);
-    await createCurrentAiRepository().deleteByUserId(userId);
     await createCurrentNotificationChannelRepository().deleteByUserId(userId);
     await createCurrentAuditLogRepository().anonymizeByUserId(userId);
 

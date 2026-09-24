@@ -101,22 +101,22 @@ describe("evaluateEgress", () => {
 });
 
 describe("parseAllowlist", () => {
-  it("falls back to the defaults when unset or malformed", () => {
+  it("falls back to the defaults when the setting is not text", () => {
     expect(parseAllowlist(null)).toEqual(DEFAULT_PRIVATE_ALLOWLIST);
-    expect(parseAllowlist("not json")).toEqual(DEFAULT_PRIVATE_ALLOWLIST);
-    expect(parseAllowlist('{"a":1}')).toEqual(DEFAULT_PRIVATE_ALLOWLIST);
+    expect(parseAllowlist(undefined)).toEqual(DEFAULT_PRIVATE_ALLOWLIST);
   });
 
-  it("normalises stored entries", () => {
-    expect(parseAllowlist('[" LocalHost ", "", "10.0.0.5"]')).toEqual([
-      "localhost",
-      "10.0.0.5",
-    ]);
+  it("reads one host per line, normalised, skipping anything that is not a host", () => {
+    expect(
+      parseAllowlist(
+        [" LocalHost ", "", "10.0.0.5", "http://x/y", "10.0.0.5"].join("\n"),
+      ),
+    ).toEqual(["localhost", "10.0.0.5"]);
   });
 
   it("honours a deliberately empty allowlist", () => {
     // An admin clearing the list must actually block everything private,
     // not silently get the defaults back.
-    expect(parseAllowlist("[]")).toEqual([]);
+    expect(parseAllowlist("")).toEqual([]);
   });
 });

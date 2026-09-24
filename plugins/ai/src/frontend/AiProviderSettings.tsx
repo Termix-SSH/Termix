@@ -1,18 +1,18 @@
-import { getErrorMessage } from "@/lib/error-message";
+import { getErrorMessage } from "./errors";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
 import {
+  Button,
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/select";
+} from "@termix/plugin-sdk/ui";
 import {
   createAiProvider,
   deleteAiProvider,

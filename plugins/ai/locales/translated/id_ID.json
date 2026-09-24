@@ -67,12 +67,21 @@
     "aiEnableDesc": "Menambahkan asisten yang membaca pengaturan Anda dan menyarankan perubahan yang Anda setujui. Membutuhkan penyedia yang Anda berikan, seperti Ollama lokal.",
     "aiNote": "Tidak ada data yang dikirim ke mana pun sampai Anda menambahkan penyedia dan mengirim pesan."
   },
-  "admin": {
-    "aiGloballyEnabled": "Asisten AI",
-    "aiGloballyEnabledDesc": "Izinkan pengguna untuk mengaktifkan asisten AI. Saat dinonaktifkan, asisten akan disembunyikan dan diblokir untuk semua orang.",
-    "aiPrivateEndpoints": "Host AI pribadi yang diizinkan",
-    "aiPrivateEndpointsDesc": "Host di jaringan pribadi Anda yang mungkin ditunjuk pengguna untuk penyedia layanan, seperti Ollama yang dihosting sendiri. Pisahkan dengan koma.",
-    "updateAiEnabledFailed": "Pengaturan AI tidak dapat diperbarui.",
-    "updateAiEndpointsFailed": "Tidak dapat memperbarui host yang diizinkan."
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Asisten AI",
+        "description": "Izinkan pengguna untuk mengaktifkan asisten AI. Saat dinonaktifkan, asisten akan disembunyikan dan diblokir untuk semua orang."
+      },
+      "privateEndpoints": {
+        "label": "Host AI pribadi yang diizinkan"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Aktifkan Asisten AI",
+        "description": "Izinkan asisten AI untuk membantu di terminal host ini. Secara default dinonaktifkan, dan AI tetap perlu diaktifkan untuk akun Anda."
+      }
+    }
   }
 }

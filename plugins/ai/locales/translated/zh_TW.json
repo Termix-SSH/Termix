@@ -67,12 +67,21 @@
     "aiEnableDesc": "添加一個助手，它可以讀取您的設定並提出您批准的更改建議。需要您提供服務提供者，例如當地的 Ollama 服務提供者。",
     "aiNote": "在您新增服務提供者並發送訊息之前，任何內容都不會發送到任何地方。"
   },
-  "admin": {
-    "aiGloballyEnabled": "人工智慧助手",
-    "aiGloballyEnabledDesc": "允許用戶開啟AI助理。關閉此功能後，助手將被隱藏，所有使用者均無法使用。",
-    "aiPrivateEndpoints": "允許的私有人工智慧主機",
-    "aiPrivateEndpointsDesc": "使用者可能將服務提供者指向的私有網路上的主機，例如自架的 Ollama。用逗號分隔。",
-    "updateAiEnabledFailed": "無法更新AI設定",
-    "updateAiEndpointsFailed": "無法更新允許的主機清單。"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "人工智慧助手",
+        "description": "允許用戶開啟AI助理。關閉此功能後，助手將被隱藏，所有使用者均無法使用。"
+      },
+      "privateEndpoints": {
+        "label": "允許的私有人工智慧主機"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "啟用人工智慧助手",
+        "description": "允許 AI 助理在此主機的終端機上提供協助。預設為關閉狀態，但仍需在您的帳戶中啟用 AI 功能。"
+      }
+    }
   }
 }

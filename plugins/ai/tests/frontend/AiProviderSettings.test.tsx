@@ -17,7 +17,8 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/frontend/ai-api", () => api);
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock("sonner", () => ({

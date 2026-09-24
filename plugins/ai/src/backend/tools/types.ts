@@ -1,17 +1,31 @@
+import type { PluginContext } from "@termix/plugin-sdk/backend";
+
 export type ToolCategory = "read" | "propose";
 
+/** What tools and the proposal executor reach core and other plugins through. */
+export type ToolDeps = Pick<
+  PluginContext,
+  "hosts" | "services" | "notify" | "rbac" | "ssh"
+>;
+
 export interface ToolContext {
-  /** Always taken from the verified JWT, never from model input. */
+  /** Always the request's authenticated user, never from model input. */
   userId: string;
   conversationId: number;
   /** Per-user opt-in for running allowlisted read-only commands. */
   allowReadOnlyCommands: boolean;
+  deps: ToolDeps;
 }
 
 export interface AiTool {
   name: string;
   description: string;
   category: ToolCategory;
+  /**
+   * The service this tool needs. While no plugin provides it, the tool is
+   * not offered to the model at all.
+   */
+  service?: string;
   /** JSON Schema for the arguments, sent to the provider verbatim. */
   parameters: Record<string, unknown>;
   /**

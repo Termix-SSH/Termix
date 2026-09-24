@@ -1,94 +1,127 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createAiGate,
+  isAiGloballyEnabled,
+  readPrivateAllowlist,
+  resolveAiAccess,
+} from "../../src/backend/gating.js";
+import { DEFAULT_PRIVATE_ALLOWLIST } from "../../src/backend/egress.js";
 
-const settingsRepository = { getBoolean: vi.fn() };
-const userPreferenceRepository = { findByUserId: vi.fn() };
-
-vi.mock("../../../../src/backend/database/repositories/factory.js", () => ({
-  createCurrentSettingsRepository: () => settingsRepository,
-  createCurrentUserPreferenceRepository: () => userPreferenceRepository,
-}));
-
-const { isAiGloballyEnabled, resolveAiAccess } =
-  await import("../../src/backend/gating.js");
+/** The plugin's settings as ctx.settings reads them: admin, then per user. */
+function settings(
+  admin: Record<string, unknown>,
+  user: Record<string, unknown> = {},
+) {
+  return {
+    get: vi.fn(async (key: string) => admin[key]) as never,
+    getUser: vi.fn(async (_userId: string, key: string) => user[key]) as never,
+  };
+}
 
 describe("AI gating", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("defaults to off so upgrading an install enables nothing", async () => {
-    settingsRepository.getBoolean.mockResolvedValue(false);
-    await isAiGloballyEnabled();
-    expect(settingsRepository.getBoolean).toHaveBeenCalledWith(
-      "ai_globally_enabled",
-      false,
+  it("is off until an admin turns it on, so an upgrade enables nothing", async () => {
+    expect(await isAiGloballyEnabled(settings({}))).toBe(false);
+    expect(await isAiGloballyEnabled(settings({ globallyEnabled: true }))).toBe(
+      true,
     );
   });
 
-  it("blocks everyone when the admin global is off", async () => {
-    settingsRepository.getBoolean.mockResolvedValue(false);
-    userPreferenceRepository.findByUserId.mockResolvedValue({
-      aiAssistantEnabled: true,
-      aiReadOnlyCommands: true,
-    });
+  it("blocks everyone when the admin switch is off", async () => {
+    const reader = settings(
+      { globallyEnabled: false },
+      { enabled: true, allowReadOnlyCommands: true },
+    );
 
-    const access = await resolveAiAccess("user-1");
+    const access = await resolveAiAccess(reader, "user-1");
 
+    expect(access).toEqual({ enabled: false, allowReadOnlyCommands: false });
+    // The kill switch short-circuits, so the user's choice is never read.
+    expect(reader.getUser).not.toHaveBeenCalled();
+  });
+
+  it("treats a user who never chose as not enabled", async () => {
+    const access = await resolveAiAccess(
+      settings({ globallyEnabled: true }),
+      "user-1",
+    );
     expect(access.enabled).toBe(false);
-    expect(access.allowReadOnlyCommands).toBe(false);
-    // The kill switch short-circuits, so the preference is never consulted.
-    expect(userPreferenceRepository.findByUserId).not.toHaveBeenCalled();
-  });
-
-  it("blocks a user who has not enabled it", async () => {
-    settingsRepository.getBoolean.mockResolvedValue(true);
-    userPreferenceRepository.findByUserId.mockResolvedValue({
-      aiAssistantEnabled: false,
-    });
-
-    expect((await resolveAiAccess("user-1")).enabled).toBe(false);
-  });
-
-  it("treats never-asked as not enabled", async () => {
-    // Null means the user was never shown the choice, which is not consent.
-    settingsRepository.getBoolean.mockResolvedValue(true);
-    userPreferenceRepository.findByUserId.mockResolvedValue({
-      aiAssistantEnabled: null,
-    });
-
-    expect((await resolveAiAccess("user-1")).enabled).toBe(false);
-  });
-
-  it("treats a missing preference row as not enabled", async () => {
-    settingsRepository.getBoolean.mockResolvedValue(true);
-    userPreferenceRepository.findByUserId.mockResolvedValue(null);
-
-    expect((await resolveAiAccess("user-1")).enabled).toBe(false);
   });
 
   it("allows only when both gates are open", async () => {
-    settingsRepository.getBoolean.mockResolvedValue(true);
-    userPreferenceRepository.findByUserId.mockResolvedValue({
-      aiAssistantEnabled: true,
-      aiReadOnlyCommands: true,
-    });
-
-    const access = await resolveAiAccess("user-1");
-
-    expect(access.enabled).toBe(true);
-    expect(access.allowReadOnlyCommands).toBe(true);
+    const access = await resolveAiAccess(
+      settings(
+        { globallyEnabled: true },
+        { enabled: true, allowReadOnlyCommands: true },
+      ),
+      "user-1",
+    );
+    expect(access).toEqual({ enabled: true, allowReadOnlyCommands: true });
   });
 
   it("keeps read-only commands off unless separately opted in", async () => {
-    settingsRepository.getBoolean.mockResolvedValue(true);
-    userPreferenceRepository.findByUserId.mockResolvedValue({
-      aiAssistantEnabled: true,
-      aiReadOnlyCommands: null,
-    });
-
-    const access = await resolveAiAccess("user-1");
-
-    expect(access.enabled).toBe(true);
+    const access = await resolveAiAccess(
+      settings({ globallyEnabled: true }, { enabled: true }),
+      "user-1",
+    );
     expect(access.allowReadOnlyCommands).toBe(false);
+  });
+
+  it("reads the private endpoint list, with defaults when unset", async () => {
+    expect(await readPrivateAllowlist(settings({}))).toEqual(
+      DEFAULT_PRIVATE_ALLOWLIST,
+    );
+    expect(
+      await readPrivateAllowlist(
+        settings({ privateEndpoints: "ollama.lan\n10.0.0.5" }),
+      ),
+    ).toEqual(["ollama.lan", "10.0.0.5"]);
+  });
+});
+
+describe("createAiGate", () => {
+  function response() {
+    const res = {
+      statusCode: 200,
+      body: undefined as unknown,
+      status(code: number) {
+        res.statusCode = code;
+        return { json: (body: unknown) => (res.body = body) };
+      },
+    };
+    return res;
+  }
+
+  it("answers 401 without a user and 403 while the assistant is off", async () => {
+    const next = vi.fn();
+    const noUser = response();
+    await createAiGate(settings({ globallyEnabled: true }), () => undefined)(
+      {},
+      noUser,
+      next,
+    );
+    expect(noUser.statusCode).toBe(401);
+
+    const off = response();
+    await createAiGate(settings({ globallyEnabled: false }), () => "user-1")(
+      {},
+      off,
+      next,
+    );
+    expect(off.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("passes an opted-in user through with their access attached", async () => {
+    const next = vi.fn();
+    const req: { aiAccess?: unknown } = {};
+    await createAiGate(
+      settings({ globallyEnabled: true }, { enabled: true }),
+      () => "user-1",
+    )(req, response(), next);
+    expect(next).toHaveBeenCalledWith();
+    expect(req.aiAccess).toEqual({
+      enabled: true,
+      allowReadOnlyCommands: false,
+    });
   });
 });

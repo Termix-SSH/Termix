@@ -104,7 +104,6 @@ export type Host = {
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
-  enableAiAssistant: boolean;
   proxmoxConfig?: {
     source?: {
       source: "proxmox";
@@ -264,7 +263,6 @@ export type KnownTabType =
   | "history"
   | "ssh-tools"
   | "automations"
-  | "ai"
   | "split-screen";
 
 /**

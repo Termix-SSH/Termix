@@ -76,6 +76,14 @@ export function activate(app: TermixApp): void {
       : null;
   }) as never);
 
+  // For pickers in other plugins (the AI assistant's @-mentions): id and name.
+  app.registerAction("snippets.list", (async () => {
+    const snippets = await createSnippetsApi(app.api)
+      .list()
+      .catch(() => []);
+    return snippets.map((snippet) => ({ id: snippet.id, name: snippet.name }));
+  }) as never);
+
   app.registerAction("snippets.execute", (async (
     snippetId: number,
     hostId: number,

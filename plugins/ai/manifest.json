@@ -22,7 +22,7 @@
     "db:own",
     "secrets:own",
     "network:outbound",
-    "audit:read",
+    "notify:send",
     "network:serve",
     "ui:surface"
   ],
@@ -32,7 +32,8 @@
     "snippets": "^1.0.0",
     "fleets": "^1.0.0",
     "ssh-terminal": "^1.0.0",
-    "automations": "^1.0.0"
+    "automations": "^1.0.0",
+    "homepage": "^1.0.0"
   },
   "requires": [
     {
@@ -62,6 +63,11 @@
     },
     {
       "service": "automations.access",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "homepage.items",
       "versionRange": "^1.0.0",
       "optional": true
     }
@@ -128,18 +134,55 @@
     "settings": {
       "admin": [
         {
-          "key": "access",
-          "type": "custom",
-          "component": "access"
+          "key": "globallyEnabled",
+          "type": "boolean",
+          "labelKey": "settings.admin.globallyEnabled.label",
+          "descriptionKey": "settings.admin.globallyEnabled.description",
+          "default": false
+        },
+        {
+          "key": "privateEndpoints",
+          "type": "textarea",
+          "labelKey": "settings.admin.privateEndpoints.label",
+          "descriptionKey": "settings.admin.privateEndpoints.description",
+          "requires": "globallyEnabled",
+          "default": "localhost\n127.0.0.1\n::1\nhost.docker.internal"
         }
       ],
       "user": [
         {
-          "key": "assistant",
+          "key": "enabled",
+          "type": "boolean",
+          "labelKey": "ai.enableTitle",
+          "descriptionKey": "ai.enableDescription",
+          "default": false
+        },
+        {
+          "key": "allowReadOnlyCommands",
+          "type": "boolean",
+          "labelKey": "ai.readOnlyCommands",
+          "descriptionKey": "ai.readOnlyCommandsDescription",
+          "requires": "enabled",
+          "default": false
+        },
+        {
+          "key": "providers",
           "type": "custom",
-          "component": "assistant"
+          "component": "providers",
+          "permission": "manage_providers"
         }
-      ]
+      ],
+      "host": {
+        "fields": [
+          {
+            "key": "enableAiAssistant",
+            "type": "boolean",
+            "labelKey": "settings.host.enableAiAssistant.label",
+            "descriptionKey": "settings.host.enableAiAssistant.description",
+            "default": false
+          }
+        ]
+      }
     }
   },
   "locales": "locales",

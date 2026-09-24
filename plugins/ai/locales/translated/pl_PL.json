@@ -67,12 +67,21 @@
     "aiEnableDesc": "Dodaje asystenta, który odczytuje Twoją konfigurację i sugeruje zmiany, które zatwierdzasz. Wymaga wskazanego przez Ciebie dostawcy, np. lokalnej Ollamy.",
     "aiNote": "Dopóki nie dodasz dostawcy i nie wyślesz wiadomości, nic nie zostanie wysłane."
   },
-  "admin": {
-    "aiGloballyEnabled": "Asystent AI",
-    "aiGloballyEnabledDesc": "Pozwól użytkownikom włączyć asystenta AI. Gdy ta opcja jest wyłączona, asystent jest ukryty i zablokowany dla wszystkich.",
-    "aiPrivateEndpoints": "Dozwolone prywatne hosty AI",
-    "aiPrivateEndpointsDesc": "Hosty w Twojej sieci prywatnej, na które użytkownicy mogą wskazać dostawcę, na przykład własna instancja Ollamy. Rozdziel je przecinkami.",
-    "updateAiEnabledFailed": "Nie można zaktualizować ustawień AI",
-    "updateAiEndpointsFailed": "Nie można zaktualizować dozwolonych hostów"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Asystent AI",
+        "description": "Pozwól użytkownikom włączyć asystenta AI. Gdy ta opcja jest wyłączona, asystent jest ukryty i zablokowany dla wszystkich."
+      },
+      "privateEndpoints": {
+        "label": "Dozwolone prywatne hosty AI"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Włącz asystenta AI",
+        "description": "Zezwól asystentowi AI na pomoc w terminalu tego hosta. Domyślnie wyłączone, ale nadal wymaga włączenia AI na Twoim koncie."
+      }
+    }
   }
 }

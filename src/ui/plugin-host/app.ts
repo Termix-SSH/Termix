@@ -31,7 +31,7 @@ import {
   registerAction,
   registerSlotContribution,
 } from "@/shell/action-registry";
-import { pluginApiFor, pluginWsUrl } from "@/lib/plugin-transport";
+import { pluginApiFor, pluginFetch, pluginWsUrl } from "@/lib/plugin-transport";
 import { registerPluginComponent } from "./component-registry";
 import type { WidgetTypeDefinition } from "@/types/homepage-types";
 import type { LucideIcon } from "lucide-react";
@@ -387,6 +387,7 @@ export function createPluginApp(
         origin as never,
         pluginHostBridge.getApi(pluginId) as never,
       ) as unknown as TermixApp["api"],
+    fetch: (path, init) => pluginFetch(pluginId, path, init),
     wsUrl: (path, options) =>
       pluginWsUrl(pluginId, path, options as never) as ReturnType<
         TermixApp["wsUrl"]

@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Toolbar Koneksi",
     "showConnectionToolbar": "Tampilkan bilah alat koneksi",
     "showConnectionToolbarDesc": "Tampilkan toolbar di sesi SSH, RDP, VNC, dan Telnet host ini. Anda juga dapat menyembunyikannya sementara dari toolbar itu sendiri.",
-    "enableAiAssistant": "Aktifkan Asisten AI",
-    "enableAiAssistantDesc": "Izinkan asisten AI untuk membantu di terminal host ini. Secara default dinonaktifkan, dan AI tetap perlu diaktifkan untuk akun Anda.",
     "proxmoxLastSyncStatus": {
       "success": "Kesuksesan"
     },

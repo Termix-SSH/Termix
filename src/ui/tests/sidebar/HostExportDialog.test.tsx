@@ -52,7 +52,6 @@ function sshHost(
     enableFileManager: false,
     enableTmuxMonitor: false,
     enableTerminalToolbar: true,
-    enableAiAssistant: false,
     showTerminalInSidebar: true,
     showFileManagerInSidebar: false,
     showTunnelInSidebar: false,

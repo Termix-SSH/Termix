@@ -25,6 +25,8 @@ const h = vi.hoisted(() => ({
   statusReports: [] as Array<Record<string, unknown>>,
   statusPorts: [] as string[],
   statusPortsRemoved: [] as string[],
+  userPermissions: new Set<string>(),
+  deleted: [] as Array<{ userId: string; hostId: number }>,
   roles: [] as Array<{
     id: number;
     name: string;
@@ -52,6 +54,8 @@ vi.mock("../../utils/permission-manager.js", () => ({
   PermissionManager: {
     getInstance: () => ({
       canAccessHost: async () => h.access,
+      hasPermission: async (_userId: string, permission: string) =>
+        h.userPermissions.has(permission),
     }),
   },
 }));
@@ -147,6 +151,13 @@ vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
   },
 }));
 
+vi.mock("../../hosts/delete-host.js", () => ({
+  deleteOwnedHost: async (userId: string, hostId: number) => {
+    h.deleted.push({ userId, hostId });
+    return hostId === 404 ? null : { id: hostId, name: "gone" };
+  },
+}));
+
 const { createPluginHosts } = await import("../../plugins/ctx-hosts.js");
 const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
 
@@ -174,6 +185,8 @@ beforeEach(() => {
   h.updateResult = null;
   h.users = [];
   h.roles = [];
+  h.userPermissions = new Set();
+  h.deleted = [];
 });
 
 describe("ctx.hosts", () => {
@@ -399,6 +412,45 @@ describe("ctx.hosts", () => {
       audit: vi.fn(async () => {}),
     });
     expect(await hosts.listOwned()).toMatchObject([{ id: 1, name: "own" }]);
+  });
+});
+
+describe("ctx.hosts.delete", () => {
+  it("refuses without hosts:write and audits it", async () => {
+    const audit = vi.fn(async () => {});
+    const hosts = createPluginHosts({ manifest: manifest([]), audit });
+    await expect(hosts.delete(1)).rejects.toBeInstanceOf(PluginCapabilityError);
+    expect(audit).toHaveBeenCalledWith(
+      "hosts_delete",
+      "host 1",
+      expect.objectContaining({ success: false }),
+    );
+    expect(h.deleted).toEqual([]);
+  });
+
+  it("refuses an acting user without hosts.delete", async () => {
+    h.granted = new Set(["hosts:write"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    await expect(hosts.delete(1)).rejects.toThrow("may not delete hosts");
+    expect(h.deleted).toEqual([]);
+  });
+
+  it("deletes the actor's own host through core's delete path", async () => {
+    h.granted = new Set(["hosts:write"]);
+    h.userPermissions = new Set(["hosts.delete"]);
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:write"]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(await hosts.delete(7)).toBe(true);
+    expect(await hosts.delete(404)).toBe(false);
+    expect(h.deleted).toEqual([
+      { userId: "user-1", hostId: 7 },
+      { userId: "user-1", hostId: 404 },
+    ]);
   });
 });
 

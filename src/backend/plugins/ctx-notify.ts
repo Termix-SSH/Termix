@@ -132,6 +132,11 @@ export function createPluginFetch(deps: Deps): PluginFetch {
         () => controller.abort(),
         Math.max(init.timeoutMs ?? 30_000, 1),
       );
+      // The caller's signal keeps working after the headers arrive, so it
+      // can stop a streamed body; the timeout only covers the wait for them.
+      const onAbort = () => controller.abort();
+      if (init.signal?.aborted) controller.abort();
+      init.signal?.addEventListener("abort", onAbort, { once: true });
       try {
         return await safeOutboundFetch(
           url,

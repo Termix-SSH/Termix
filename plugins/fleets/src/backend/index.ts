@@ -38,6 +38,14 @@ export async function activate(ctx: PluginContext) {
 
   registerFleetRoutes(ctx.http.router<Router>(), repo, ctx);
 
+  // The service is gated on fleets.view; changing a fleet also needs
+  // fleets.manage, as its routes do.
+  async function requireManage(): Promise<void> {
+    if (!(await ctx.rbac.has("manage"))) {
+      throw new Error("Missing permission fleets.manage");
+    }
+  }
+
   const service: FleetsService = {
     list: async () => {
       const userId = ctx.currentActor();
@@ -54,12 +62,16 @@ export async function activate(ctx: PluginContext) {
     create: async (input) => {
       const userId = ctx.currentActor();
       if (!userId) throw new Error("fleets.access.create needs an actor");
+      await requireManage();
       const created = await repo.create(userId, input);
       return { id: created.id, name: created.name };
     },
     addMember: async (fleetId, hostId) => {
       const userId = ctx.currentActor();
       if (!userId) throw new Error("fleets.access.addMember needs an actor");
+      await requireManage();
+      // A host joins a fleet only if the caller can see it.
+      if (!(await ctx.hosts.get(hostId))) throw new Error("Host not found");
       const fleet = await repo.findById(userId, fleetId);
       if (!fleet) throw new Error("Fleet not found");
       await repo.addMember(fleetId, hostId);

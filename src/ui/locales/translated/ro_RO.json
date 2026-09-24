@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Bara de instrumente Conexiune",
     "showConnectionToolbar": "Afișează bara de instrumente pentru conexiuni",
     "showConnectionToolbarDesc": "Afișează bara de instrumente în sesiunile SSH, RDP, VNC și Telnet ale acestei gazde. De asemenea, o poți ascunde temporar din bara de instrumente.",
-    "enableAiAssistant": "Activează Asistentul AI",
-    "enableAiAssistantDesc": "Permiteți asistentului AI să vă ajute în terminalul acestei gazde. Dezactivat în mod implicit, dar este nevoie ca AI să fie activat pentru contul dvs.",
     "proxmoxLastSyncStatus": {
       "success": "Succes"
     },

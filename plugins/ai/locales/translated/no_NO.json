@@ -67,12 +67,21 @@
     "aiEnableDesc": "Legger til en assistent som leser oppsettet ditt og foreslår endringer du godkjenner. Krever en leverandør du oppgir, for eksempel en lokal Ollama.",
     "aiNote": "Ingenting sendes noe sted før du legger til en leverandør og sender en melding."
   },
-  "admin": {
-    "aiGloballyEnabled": "AI-assistent",
-    "aiGloballyEnabledDesc": "La brukere slå på AI-assistenten. Mens dette er av, er assistenten skjult og blokkert for alle.",
-    "aiPrivateEndpoints": "Tillatte private AI-verter",
-    "aiPrivateEndpointsDesc": "Verter på ditt private nettverk som brukere kan peke en leverandør til, for eksempel en selvhostet Ollama. Skill dem med komma.",
-    "updateAiEnabledFailed": "Kunne ikke oppdatere AI-innstillingen",
-    "updateAiEndpointsFailed": "Kunne ikke oppdatere de tillatte vertene"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "AI-assistent",
+        "description": "La brukere slå på AI-assistenten. Mens dette er av, er assistenten skjult og blokkert for alle."
+      },
+      "privateEndpoints": {
+        "label": "Tillatte private AI-verter"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Aktiver AI-assistent",
+        "description": "Tillat at AI-assistenten hjelper til i denne vertens terminal. Av som standard, og krever fortsatt at AI er aktivert for kontoen din."
+      }
+    }
   }
 }

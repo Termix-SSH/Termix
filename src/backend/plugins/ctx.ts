@@ -181,6 +181,23 @@ export function createPluginContext(
   const logContext = { operation: `plugin:${pluginId}` };
   const declared = manifest.capabilities;
 
+  // ctx.secrets rows live in plugin_settings under the "secret" scope, one
+  // per user, so they go with the user and with the plugin.
+  const secretsRepository = async () => {
+    const { createCurrentPluginSettingsRepository } =
+      await import("../database/repositories/factory.js");
+    return createCurrentPluginSettingsRepository();
+  };
+  const secretOwner = (): string => {
+    const actor = getActor();
+    if (!actor) {
+      throw new Error(
+        "ctx.secrets needs an acting user: call it inside a request or ctx.asUser",
+      );
+    }
+    return actor;
+  };
+
   const kvGet = guarded(
     manifest,
     "kv:own",
@@ -537,6 +554,52 @@ export function createPluginContext(
     },
 
     secrets: {
+      get: async (key) => {
+        await assertCapability(pluginId, "secrets:own", declared);
+        const row = await (
+          await secretsRepository()
+        ).get(pluginId, "secret", secretOwner(), key);
+        if (!row?.value) return null;
+        const { decryptSystemSecret } =
+          await import("../utils/system-secret-crypto.js");
+        return decryptSystemSecret(JSON.parse(row.value) as string);
+      },
+
+      set: guarded(
+        manifest,
+        "secrets:own",
+        async (key: string, value: string | null) => {
+          const repository = await secretsRepository();
+          const owner = secretOwner();
+          if (value === null || value === "") {
+            await repository.delete(pluginId, "secret", owner, key);
+            return;
+          }
+          const { encryptSystemSecret } =
+            await import("../utils/system-secret-crypto.js");
+          await repository.set(
+            pluginId,
+            "secret",
+            owner,
+            key,
+            JSON.stringify(await encryptSystemSecret(value)),
+            true,
+          );
+        },
+        { action: "secret_set", details: () => "stored a secret" },
+      ),
+
+      delete: guarded(
+        manifest,
+        "secrets:own",
+        async (key: string) => {
+          await (
+            await secretsRepository()
+          ).delete(pluginId, "secret", secretOwner(), key);
+        },
+        { action: "secret_delete", details: () => "deleted a secret" },
+      ),
+
       offer: (key, resolve) => {
         const entry = manifest.providesSecret?.find(
           (candidate) => candidate.key === key,

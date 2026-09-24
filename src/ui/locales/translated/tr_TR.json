@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Bağlantı Araç Çubuğu",
     "showConnectionToolbar": "Bağlantı araç çubuğunu göster",
     "showConnectionToolbarDesc": "Bu sunucunun SSH, RDP, VNC ve Telnet oturumlarında araç çubuğunu gösterin. Ayrıca, araç çubuğundan geçici olarak gizleyebilirsiniz.",
-    "enableAiAssistant": "Yapay Zeka Asistanını Etkinleştir",
-    "enableAiAssistantDesc": "Bu sunucunun terminalinde yapay zeka asistanının yardımcı olmasına izin verin. Varsayılan olarak kapalıdır ve hesabınız için yapay zekanın etkinleştirilmiş olması gerekir.",
     "proxmoxLastSyncStatus": {
       "success": "Başarılı"
     },

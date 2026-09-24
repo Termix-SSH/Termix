@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getSSHHosts } from "@/api/ssh-host-management-api";
-import { getSnippets } from "@/api/snippets-api";
-import { invokeAction } from "@termix/plugin-sdk/frontend";
+import { invokeAction, useHosts } from "@termix/plugin-sdk/frontend";
 
 /**
  * Backs the @-mention picker in the composer.
@@ -39,11 +37,14 @@ export function activeMentionQuery(
   return { query, start: at };
 }
 
-/** The automations plugin's list, or nothing when it is not running. */
-async function listAutomationsForMentions(): Promise<
-  { id: number; name: string }[]
-> {
-  const result = await invokeAction("automations.list");
+/**
+ * Another plugin's list through its action, or nothing when it is not
+ * running, so the assistant works without it and never imports its code.
+ */
+async function listFromAction(
+  actionId: string,
+): Promise<{ id: number; name: string }[]> {
+  const result = await invokeAction(actionId);
   return Array.isArray(result)
     ? (result as { id: number; name: string }[])
     : [];
@@ -51,35 +52,28 @@ async function listAutomationsForMentions(): Promise<
 
 export function useMentions(enabled: boolean) {
   const [items, setItems] = useState<MentionItem[]>([]);
+  const { hosts } = useHosts();
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
     (async () => {
-      const [hosts, snippets, automations] = await Promise.allSettled([
-        getSSHHosts(),
-        getSnippets(),
-        // Through the automations plugin's action, so the assistant works
-        // without it and never imports its code.
-        listAutomationsForMentions(),
+      const [snippets, automations] = await Promise.allSettled([
+        listFromAction("snippets.list"),
+        listFromAction("automations.list"),
       ]);
       if (cancelled) return;
 
-      const collected: MentionItem[] = [];
+      const collected: MentionItem[] = hosts.map((host) => ({
+        kind: "host" as const,
+        id: Number(host.id),
+        label: host.name || host.ip,
+        detail: host.ip,
+      }));
 
-      if (hosts.status === "fulfilled") {
-        for (const host of (hosts.value ?? []) as any[]) {
-          collected.push({
-            kind: "host",
-            id: host.id,
-            label: host.name || host.ip,
-            detail: host.ip,
-          });
-        }
-      }
       if (snippets.status === "fulfilled") {
-        for (const snippet of (snippets.value ?? []) as any[]) {
+        for (const snippet of snippets.value) {
           collected.push({
             kind: "snippet",
             id: snippet.id,
@@ -88,7 +82,7 @@ export function useMentions(enabled: boolean) {
         }
       }
       if (automations.status === "fulfilled") {
-        for (const automation of (automations.value ?? []) as any[]) {
+        for (const automation of automations.value) {
           collected.push({
             kind: "automation",
             id: automation.id,
@@ -103,7 +97,7 @@ export function useMentions(enabled: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, [enabled, hosts]);
 
   const search = useCallback(
     (query: string): MentionItem[] => {

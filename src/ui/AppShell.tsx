@@ -2494,7 +2494,6 @@ export function AppShell({
                   enableProxmoxStats: false,
                   enableTmuxMonitor: false,
                   enableTerminalToolbar: false,
-                  enableAiAssistant: false,
                   enableSsh: false,
                   sshPort: 22,
                   serverTunnels: [],

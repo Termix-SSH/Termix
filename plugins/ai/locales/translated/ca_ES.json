@@ -67,12 +67,21 @@
     "aiEnableDesc": "Afegeix un assistent que llegeix la configuració i suggereix els canvis que aproveu. Necessita un proveïdor que subministreu, com ara un Ollama local.",
     "aiNote": "No s'envia res enlloc fins que no afegiu un proveïdor i envieu un missatge."
   },
-  "admin": {
-    "aiGloballyEnabled": "Assistent d'IA",
-    "aiGloballyEnabledDesc": "Permet que els usuaris activin l'assistent d'IA. Mentre estigui desactivat, l'assistent està ocult i bloquejat per a tothom.",
-    "aiPrivateEndpoints": "Amfitrions d'IA privats permesos",
-    "aiPrivateEndpointsDesc": "Amfitrions de la vostra xarxa privada als quals els usuaris poden dirigir un proveïdor, com ara un Ollama autoallotjat. Separeu-los amb comes.",
-    "updateAiEnabledFailed": "No s'ha pogut actualitzar la configuració de la IA",
-    "updateAiEndpointsFailed": "No s'han pogut actualitzar els amfitrions permesos"
+  "settings": {
+    "admin": {
+      "globallyEnabled": {
+        "label": "Assistent d'IA",
+        "description": "Permet que els usuaris activin l'assistent d'IA. Mentre estigui desactivat, l'assistent està ocult i bloquejat per a tothom."
+      },
+      "privateEndpoints": {
+        "label": "Amfitrions d'IA privats permesos"
+      }
+    },
+    "host": {
+      "enableAiAssistant": {
+        "label": "Activa l'Assistent d'IA",
+        "description": "Permet que l'assistent d'IA ajudi al terminal d'aquest amfitrió. Desactivat per defecte, però encara cal que la IA estigui activada per al teu compte."
+      }
+    }
   }
 }

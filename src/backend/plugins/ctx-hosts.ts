@@ -254,6 +254,35 @@ export function createPluginHosts({ manifest, bag, audit }: Deps): PluginHosts {
         : null;
     },
 
+    delete: async (hostId: number): Promise<boolean> => {
+      try {
+        await requireWrite();
+        const userId = actingUser();
+        const { PermissionManager } =
+          await import("../utils/permission-manager.js");
+        if (
+          !(await PermissionManager.getInstance().hasPermission(
+            userId,
+            "hosts.delete",
+          ))
+        ) {
+          throw new Error("The acting user may not delete hosts");
+        }
+        const { deleteOwnedHost } = await import("../hosts/delete-host.js");
+        const deleted = await deleteOwnedHost(userId, hostId);
+        await audit("hosts_delete", `host ${hostId}`, {
+          success: deleted !== null,
+        });
+        return deleted !== null;
+      } catch (error) {
+        await audit("hosts_delete", `host ${hostId}`, {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    },
+
     listOwned: async (): Promise<PluginHostRecord[]> => {
       await requireWrite();
       const userId = actingUser();

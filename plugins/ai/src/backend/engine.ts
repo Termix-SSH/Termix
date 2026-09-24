@@ -1,4 +1,4 @@
-import { getErrorMessage } from "../../../../src/backend/utils/error-message.js";
+import { getErrorMessage } from "./errors.js";
 import { getAdapter } from "./providers/registry.js";
 import type {
   ChatMessage,
@@ -6,9 +6,10 @@ import type {
   ToolCall,
 } from "./providers/types.js";
 import { redact, redactToJson } from "./redaction.js";
-import { getTool, toolDefinitions } from "./tools/catalog.js";
+import { toolDefinitions } from "./tools/catalog.js";
 import {
   isProposalDraft,
+  type AiTool,
   type ProposalDraft,
   type ToolContext,
 } from "./tools/types.js";
@@ -36,6 +37,8 @@ export interface EngineOptions {
   system: string;
   history: ChatMessage[];
   context: ToolContext;
+  /** What the model may call this turn; availableTools() decides. */
+  tools: AiTool[];
   signal?: AbortSignal;
 }
 
@@ -43,7 +46,8 @@ export async function* runAgent(
   options: EngineOptions,
 ): AsyncGenerator<EngineEvent> {
   const adapter = getAdapter(options.config.providerType);
-  const tools = toolDefinitions();
+  const tools = toolDefinitions(options.tools);
+  const byName = new Map(options.tools.map((tool) => [tool.name, tool]));
   const messages: ChatMessage[] = [...options.history];
 
   for (let turn = 0; turn < MAX_TURNS; turn += 1) {
@@ -89,7 +93,7 @@ export async function* runAgent(
     for (const call of calls) {
       yield { type: "tool_call", name: call.name, arguments: call.arguments };
 
-      const result = await runTool(call, options.context);
+      const result = await runTool(byName, call, options.context);
 
       if (isProposalDraft(result)) {
         // Closes the tool call before the proposal card is emitted. Without
@@ -132,10 +136,14 @@ export async function* runAgent(
   };
 }
 
-async function runTool(call: ToolCall, context: ToolContext): Promise<unknown> {
-  const tool = getTool(call.name);
+async function runTool(
+  tools: Map<string, AiTool>,
+  call: ToolCall,
+  context: ToolContext,
+): Promise<unknown> {
+  const tool = tools.get(call.name);
 
-  // A model can emit any name it likes; only the catalog decides what runs.
+  // A model can emit any name it likes; only what was offered runs.
   if (!tool) {
     return { error: `Unknown tool: ${call.name}` };
   }

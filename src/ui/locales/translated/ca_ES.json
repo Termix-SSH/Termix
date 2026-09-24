@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Barra d'eines de connexió",
     "showConnectionToolbar": "Mostra la barra d'eines de connexió",
     "showConnectionToolbarDesc": "Mostra la barra d'eines a les sessions SSH, RDP, VNC i Telnet d'aquest amfitrió. També la pots ocultar temporalment des de la barra d'eines.",
-    "enableAiAssistant": "Activa l'Assistent d'IA",
-    "enableAiAssistantDesc": "Permet que l'assistent d'IA ajudi al terminal d'aquest amfitrió. Desactivat per defecte, però encara cal que la IA estigui activada per al teu compte.",
     "proxmoxLastSyncStatus": {
       "success": "Èxit"
     },

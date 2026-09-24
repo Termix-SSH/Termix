@@ -1046,8 +1046,6 @@
     "connectionToolbar": "Verbindungssymbolleiste",
     "showConnectionToolbar": "Verbindungssymbolleiste anzeigen",
     "showConnectionToolbarDesc": "Die Symbolleiste wird in den SSH-, RDP-, VNC- und Telnet-Sitzungen dieses Hosts angezeigt. Sie kann auch vorübergehend in der Symbolleiste selbst ausgeblendet werden.",
-    "enableAiAssistant": "KI-Assistent aktivieren",
-    "enableAiAssistantDesc": "Erlauben Sie dem KI-Assistenten, im Terminal dieses Hosts Hilfe zu leisten. Standardmäßig deaktiviert; die KI muss weiterhin für Ihr Konto aktiviert sein.",
     "proxmoxLastSyncStatus": {
       "success": "Erfolg"
     },

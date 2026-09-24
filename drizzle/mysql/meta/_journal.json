@@ -330,6 +330,13 @@
       "when": 1790272734438,
       "tag": "0046_rich_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "5",
+      "when": 1790274704817,
+      "tag": "0047_red_silver_sable",
+      "breakpoints": true
     }
   ]
 }

@@ -1,17 +1,7 @@
-import { getErrorMessage } from "@/lib/error-message";
+import { getErrorMessage } from "./errors";
 import { useCallback, useRef, useState } from "react";
-import { authApi } from "@/main-axios";
+import { aiApp } from "./app-ref";
 import type { AiProposal } from "./ai-api";
-
-/**
- * Reuses whatever base authApi resolved to, so the stream follows the same
- * dev proxy, Electron localhost and reverse-proxy base path rules as every
- * other call instead of hardcoding an origin.
- */
-function streamUrl(): string {
-  const base = (authApi.defaults.baseURL ?? "").replace(/\/+$/, "");
-  return `${base}/ai/chat/stream`;
-}
 
 /**
  * Drives the chat stream.
@@ -86,10 +76,9 @@ export function useAiStream() {
       let toolSequence = 0;
 
       try {
-        const response = await fetch(streamUrl(), {
+        const response = await aiApp().fetch("chat/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           signal: controller.signal,
           body: JSON.stringify({
             message: input.message,
