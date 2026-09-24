@@ -118,7 +118,11 @@ Plugins own their tables. A plugin declares them with `defineTable()` from
 `@termix/plugin-sdk/db` and ships migrations for `sqlite`, `postgres` and
 `mysql` under `migrations/<dialect>/NNNN_name.sql`. Table names are prefixed
 `p_<id with - as _>_`, which `defineTable` adds. `ctx.kv` is for small
-key/value state. Core `schema.ts` ends up holding only core tables.
+key/value state, and `ctx.files.dataDir()` (**B13**, needs `files:own`) is a
+per-plugin folder under `DATA_DIR`, created on first call, for state too
+large for `ctx.kv` (session recordings, uploaded files); a plugin lays out
+its own subdirectories underneath it. Core `schema.ts` ends up holding only
+core tables.
 
 **One table object, three DDL emitters.** The sqlite-core definitions already
 encode correctly on every engine at query time, which is why core's own 44
@@ -607,6 +611,22 @@ provide: `tmux.sessions` (B10; without it the terminal skips tmux attach),
 the asciicast formatting and the 300 ms batched flush (issue #1049) and hands
 the provider one `append` per batch. Service names need a dot, so "tmux" and
 "recordings" became `tmux.sessions` and `recordings.writer`.
+
+**B13** is the session-recording plugin, which provides `recordings.writer`.
+It adopts `session_recordings`, keeping `userId` a plain column rather than
+`refUser()` (a recording is evidence about the host as much as the person,
+so it outlives the account) and clearing it on the `user.deleted` event
+instead of cascading. `open(meta)` returns null when the host's
+`enableSessionRecording` setting is off; otherwise a `RecordingSink` with
+`append(chunk)` (one call per already-batched chunk, so it never writes
+per-chunk itself), `persist(summary)` and `discard()` for a session that
+recorded nothing. `createFinished(input)` is the second half of the
+contract, for a caller that already wrote its own recording to disk and only
+needs the database row: remote-desktop's guacd recordings use it instead of
+importing the old repository directly, and without the plugin enabled a
+guacd recording still lands on disk but gets no row. Recording files live
+under `ctx.files.dataDir()/session_logs/<user>/<session>.cast`. Retention
+(`retentionDays`, an admin setting) runs a sweep at boot and every 24 hours.
 
 A service call runs a permission check for its actor, so a share-link guest,
 who has no user, cannot make one. Guest link resolution is therefore
@@ -1161,6 +1181,7 @@ deciding, not the mechanism.
 | `hosts:read`         | low      | See the host list it can already see                           |
 | `db:own`             | low      | Own tables                                                     |
 | `kv:own`             | low      | Small key/value state                                          |
+| `files:own`          | low      | Its own files on disk                                          |
 | `secrets:own`        | low      | Its own encrypted secrets                                      |
 | `settings:read-core` | low      | Read core server settings                                      |
 | `ui:surface`         | low      | Contribute tabs, panels and settings                           |
@@ -1190,6 +1211,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.log.*`                                      | none                                 | **A1**                  |
 | `ctx.events.emit` / `.on`                        | `events:core` for core topics        | **A1**                  |
 | `ctx.kv.get/set/delete/list`                     | `kv:own`                             | **A1**                  |
+| `ctx.files.dataDir`                              | `files:own`                          | **B13**                 |
 | `ctx.registry.*`                                 | none                                 | **A1**                  |
 | `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                     | **A1**, named **B12**   |
 | `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1**                  |
@@ -1668,9 +1690,13 @@ upgrade on all three engines, and the checks in step 15 are green.
    - `src/backend/database/routes/delete-user-data.ts` and the user/host
      repositories: explicit deletes of the table. A `refUser`/`refHost` column
      cascades on every engine, because the foreign key survives the rename.
-     Prefer that cascade. A table that cannot carry such a column needs a
-     core "user deleted" or "host deleted" event on `ctx.events`, added to
-     the SDK the step 3 way; none exists yet because no plugin needed one.
+     Prefer that cascade. A table that cannot carry such a column (evidence
+     that has to outlive the account, like a recording) subscribes to
+     `ctx.events.on("user.deleted", ...)` or `"host.deleted"` instead, added
+     to the SDK the step 3 way; **B13** added `user.deleted`
+     (`TOPICS.userDeleted` in `src/backend/plugins/events.ts`), emitted from
+     `deleteUserAndRelatedData` right where the old direct repository call
+     used to sit. `host.deleted` already existed (B7).
    - `sync-entities.ts`, if core synced it (step 9).
    - Anything else `grep -rn "<table_name>\|<tableConst>" src` finds, including
      core tests and `src/types`.

@@ -9,7 +9,6 @@ import {
   createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
   createCurrentSshCredentialUsageRepository,
-  createCurrentSessionRecordingRepository,
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
@@ -397,9 +396,10 @@ export function registerHostFolderRoutes(
         const hostIds = hostsToDelete.map((host) => host.id);
 
         if (hostIds.length > 0) {
-          // file manager recent/pinned/shortcuts, transfer_recent and command
-          // history cascade on the host's refHost() foreign key, as the
-          // file-manager and ssh-terminal plugins' adopted tables.
+          // file manager recent/pinned/shortcuts, transfer_recent, command
+          // history and session recordings cascade on the host's refHost()
+          // foreign key, as the file-manager, ssh-terminal and
+          // session-recording plugins' adopted tables.
 
           await createCurrentSshCredentialUsageRepository().deleteByHostIds(
             hostIds,
@@ -410,10 +410,6 @@ export function registerHostFolderRoutes(
           );
 
           await createCurrentRbacAccessRepository().deleteHostAccessForHosts(
-            hostIds,
-          );
-
-          await createCurrentSessionRecordingRepository().deleteByHostIds(
             hostIds,
           );
         }

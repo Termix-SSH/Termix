@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Journaux de session"
+  },
+  "hosts": {
+    "enableSessionRecording": "Journalisation de session",
+    "enableSessionRecordingDesc": "Enregistrer la sortie de la session terminal pour une consultation ultérieure"
+  },
+  "sessionLogs": {
+    "title": "Journaux de session",
+    "noLogs": "Aucun journal de session pour l’instant",
+    "noLogsDesc": "Activez la journalisation des sessions sur un hôte pour démarrer l’enregistrement",
+    "duration": "Durée",
+    "viewLog": "Afficher le journal",
+    "downloadLog": "Télécharger",
+    "downloadAsText": "Télécharger au format texte",
+    "deleteLog": "Supprimer",
+    "confirmDelete": "Supprimer ce journal de session ?",
+    "confirmDeleteDesc": "Cette action est irréversible.",
+    "copyContent": "Copier",
+    "copied": "Copié !",
+    "loadError": "Échec du chargement des journaux de session",
+    "deleteError": "Échec de la suppression du journal de session",
+    "filterByHost": "Filtrer par hôte..."
+  }
+}

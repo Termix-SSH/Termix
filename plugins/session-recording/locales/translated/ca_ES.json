@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Registres de sessió"
+  },
+  "hosts": {
+    "enableSessionRecording": "Registre de sessions",
+    "enableSessionRecordingDesc": "Enregistra la sortida de la sessió de terminal per a una revisió posterior"
+  },
+  "sessionLogs": {
+    "title": "Registres de sessió",
+    "noLogs": "Encara no hi ha registres de sessió",
+    "noLogsDesc": "Habilita el registre de sessions en un amfitrió per iniciar l'enregistrament",
+    "duration": "Durada",
+    "viewLog": "Veure registre",
+    "downloadLog": "Descarrega",
+    "downloadAsText": "Descarrega com a text",
+    "deleteLog": "Suprimeix",
+    "confirmDelete": "Voleu suprimir aquest registre de sessió?",
+    "confirmDeleteDesc": "Aquesta acció no es pot desfer.",
+    "copyContent": "Còpia",
+    "copied": "Copiat!",
+    "loadError": "No s'han pogut carregar els registres de sessió",
+    "deleteError": "No s'ha pogut suprimir el registre de sessió",
+    "filterByHost": "Filtra per amfitrió..."
+  }
+}

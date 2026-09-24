@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "セッションログ"
+  },
+  "hosts": {
+    "enableSessionRecording": "セッションログ",
+    "enableSessionRecordingDesc": "後で確認できるようにターミナルセッションの出力を記録します"
+  },
+  "sessionLogs": {
+    "title": "セッションログ",
+    "noLogs": "セッションログはまだありません",
+    "noLogsDesc": "ホストでセッションログを有効にして記録を開始してください",
+    "duration": "所要時間",
+    "viewLog": "ログを表示",
+    "downloadLog": "ダウンロード",
+    "downloadAsText": "テキストとしてダウンロード",
+    "deleteLog": "削除",
+    "confirmDelete": "このセッションログを削除しますか？",
+    "confirmDeleteDesc": "この操作は元に戻せません。",
+    "copyContent": "コピー",
+    "copied": "コピーしました！",
+    "loadError": "セッションログの読み込みに失敗しました",
+    "deleteError": "セッションログの削除に失敗しました",
+    "filterByHost": "ホストでフィルター..."
+  }
+}

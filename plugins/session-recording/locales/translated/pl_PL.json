@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Logi sesji"
+  },
+  "hosts": {
+    "enableSessionRecording": "Rejestrowanie sesji",
+    "enableSessionRecordingDesc": "Zapisuj wyjście sesji terminala do późniejszego przejrzenia"
+  },
+  "sessionLogs": {
+    "title": "Logi sesji",
+    "noLogs": "Brak logów sesji",
+    "noLogsDesc": "Włącz rejestrowanie sesji na hoście, aby rozpocząć nagrywanie",
+    "duration": "Czas trwania",
+    "viewLog": "Wyświetl log",
+    "downloadLog": "Pobierz",
+    "downloadAsText": "Pobierz jako tekst",
+    "deleteLog": "Usuń",
+    "confirmDelete": "Usunąć ten log sesji?",
+    "confirmDeleteDesc": "Tej czynności nie można cofnąć.",
+    "copyContent": "Kopiuj",
+    "copied": "Skopiowano!",
+    "loadError": "Nie udało się załadować logów sesji",
+    "deleteError": "Nie udało się usunąć logu sesji",
+    "filterByHost": "Filtruj według hosta..."
+  }
+}

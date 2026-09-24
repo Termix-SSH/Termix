@@ -300,6 +300,12 @@ export function createFakeContext(
       list: async () => [...kv.keys()],
     },
 
+    files: {
+      // A fake path; a test that needs a real folder uses the OS temp dir
+      // itself, not this double.
+      dataDir: async () => `/tmp/${pluginId}`,
+    },
+
     db: options.db
       ? {
           ...options.db,
@@ -795,6 +801,13 @@ export function createMockCtx(
       list: async () => {
         require("kv:own");
         return guardedKv.list();
+      },
+    },
+
+    files: {
+      dataDir: async () => {
+        require("files:own");
+        return ctx.files.dataDir();
       },
     },
 

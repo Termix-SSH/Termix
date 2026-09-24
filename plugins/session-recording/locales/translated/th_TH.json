@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "บันทึกเซสชัน"
+  },
+  "hosts": {
+    "enableSessionRecording": "การบันทึกเซสชัน",
+    "enableSessionRecordingDesc": "บันทึกผลลัพธ์จากเทอร์มินัลเพื่อตรวจสอบในภายหลัง"
+  },
+  "sessionLogs": {
+    "title": "บันทึกเซสชัน",
+    "noLogs": "ยังไม่มีบันทึกการใช้งานใดๆ",
+    "noLogsDesc": "เปิดใช้งานการบันทึกเซสชันบนโฮสต์เพื่อเริ่มการบันทึก",
+    "duration": "ระยะเวลา",
+    "viewLog": "ดูบันทึก",
+    "downloadLog": "ดาวน์โหลด",
+    "downloadAsText": "ดาวน์โหลดเป็นข้อความ",
+    "deleteLog": "ลบ",
+    "confirmDelete": "ลบบันทึกการใช้งานนี้หรือไม่?",
+    "confirmDeleteDesc": "การกระทำนี้ไม่สามารถย้อนกลับได้",
+    "copyContent": "สำเนา",
+    "copied": "คัดลอกแล้ว!",
+    "loadError": "ไม่สามารถโหลดบันทึกเซสชันได้",
+    "deleteError": "ไม่สามารถลบบันทึกเซสชันได้",
+    "filterByHost": "กรองตามโฮสต์..."
+  }
+}

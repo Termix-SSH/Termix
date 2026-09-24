@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "工作階段記錄"
+  },
+  "hosts": {
+    "enableSessionRecording": "工作階段記錄",
+    "enableSessionRecordingDesc": "記錄終端機工作階段輸出以供日後檢視"
+  },
+  "sessionLogs": {
+    "title": "工作階段記錄",
+    "noLogs": "尚無任何工作階段記錄",
+    "noLogsDesc": "在主機上啟用工作階段記錄以開始錄製",
+    "duration": "持續時間",
+    "viewLog": "檢視記錄",
+    "downloadLog": "下載",
+    "downloadAsText": "下載為文字",
+    "deleteLog": "刪除",
+    "confirmDelete": "刪除此工作階段記錄？",
+    "confirmDeleteDesc": "此動作無法復原。",
+    "copyContent": "複製",
+    "copied": "已複製！",
+    "loadError": "載入工作階段記錄失敗",
+    "deleteError": "刪除工作階段記錄失敗",
+    "filterByHost": "依主機篩選..."
+  }
+}

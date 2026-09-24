@@ -720,48 +720,6 @@ export const auditLogs = pgTable(
   ],
 );
 
-export const sessionRecordings = pgTable(
-  "session_recordings",
-  {
-    id: serial("id").primaryKey(),
-
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    // Nullable on purpose: a recording is evidence about the host as much as the
-    // person, so it outlives the account. username keeps it attributable.
-    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
-    username: text("username"),
-    accessId: integer("access_id").references(() => hostAccess.id, {
-      onDelete: "set null",
-    }),
-
-    startedAt: varchar("started_at", { length: 255 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    endedAt: text("ended_at"),
-    duration: integer("duration"),
-
-    commands: text("commands"),
-    dangerousActions: text("dangerous_actions"),
-
-    recordingPath: text("recording_path"),
-    protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
-    format: text("format").notNull().default("text"),
-
-    terminatedByOwner: boolean("terminated_by_owner").default(false),
-    terminationReason: text("termination_reason"),
-  },
-  // Listed newest-first per user, and audited per host.
-  (table) => [
-    index("idx_session_recordings_user_started").on(
-      table.userId,
-      table.startedAt,
-    ),
-    index("idx_session_recordings_host").on(table.hostId),
-  ],
-);
-
 export const opksshTokens = pgTable(
   "opkssh_tokens",
   {

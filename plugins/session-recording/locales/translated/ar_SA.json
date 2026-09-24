@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "سجلات الجلسات"
+  },
+  "hosts": {
+    "enableSessionRecording": "تسجيل الجلسات",
+    "enableSessionRecordingDesc": "تسجيل مخرجات الجلسة الطرفية للمراجعة لاحقاً"
+  },
+  "sessionLogs": {
+    "title": "سجلات الجلسات",
+    "noLogs": "لا توجد سجلات جلسات بعد",
+    "noLogsDesc": "فعّل تسجيل الجلسات على مضيف لبدء التسجيل",
+    "duration": "المدة",
+    "viewLog": "عرض السجل",
+    "downloadLog": "تنزيل",
+    "downloadAsText": "تنزيل كنص",
+    "deleteLog": "حذف",
+    "confirmDelete": "حذف سجل الجلسة هذا؟",
+    "confirmDeleteDesc": "لا يمكن التراجع عن هذا الإجراء.",
+    "copyContent": "نسخ",
+    "copied": "تم النسخ!",
+    "loadError": "فشل في تحميل سجلات الجلسات",
+    "deleteError": "فشل في حذف سجل الجلسة",
+    "filterByHost": "تصفية حسب المضيف..."
+  }
+}

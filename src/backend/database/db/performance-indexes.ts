@@ -124,17 +124,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "user_id",
   },
 
-  // Recordings and live session sharing.
-  {
-    name: "idx_session_recordings_user_started",
-    table: "session_recordings",
-    columns: "user_id, started_at",
-  },
-  {
-    name: "idx_session_recordings_host",
-    table: "session_recordings",
-    columns: "host_id",
-  },
 
   // Automations.
   {

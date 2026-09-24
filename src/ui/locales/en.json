@@ -692,7 +692,6 @@
     "quickConnect": "Quick Connect",
     "sshTools": "SSH Tools",
     "history": "History",
-    "sessionLogs": "Session Logs",
     "openAsTabHint": "Ctrl+click or middle click to open as a tab",
     "openAsTab": "Open as tab",
     "openInRightDock": "Open in right dock",
@@ -1029,8 +1028,6 @@
     "enableAutoMoshDesc": "Prefer Mosh over SSH if available",
     "enableAutoTmux": "Enable Auto-Tmux",
     "enableAutoTmuxDesc": "Keep your shell and anything running in it alive across disconnects and browser restarts by running inside tmux (tmux must be installed on the host)",
-    "enableSessionLogging": "Session Logging",
-    "enableSessionLoggingDesc": "Record terminal session output for later review",
     "localEchoLabel": "Local Echo",
     "localEchoDesc": "Predict safe printable keystrokes locally on slow connections. Password prompts and control input are never echoed.",
     "localEchoDefault": "Use global setting",
@@ -1978,23 +1975,6 @@
     "serviceLinksAddFailed": "Failed to add service link",
     "disk": "Disk",
     "viewServerDetails": "View server details"
-  },
-  "sessionLogs": {
-    "title": "Session Logs",
-    "noLogs": "No session logs yet",
-    "noLogsDesc": "Enable session logging on a host to start recording",
-    "duration": "Duration",
-    "viewLog": "View log",
-    "downloadLog": "Download",
-    "downloadAsText": "Download as text",
-    "deleteLog": "Delete",
-    "confirmDelete": "Delete this session log?",
-    "confirmDeleteDesc": "This action cannot be undone.",
-    "copyContent": "Copy",
-    "copied": "Copied!",
-    "loadError": "Failed to load session logs",
-    "deleteError": "Failed to delete session log",
-    "filterByHost": "Filter by host..."
   },
   "admin": {
     "sectionGeneral": "General",
@@ -3150,6 +3130,10 @@
       "kv:own": {
         "title": "Remember small settings",
         "consequence": "Kept separate from other plugins."
+      },
+      "files:own": {
+        "title": "Store its own files",
+        "consequence": "In its own folder on disk, separate from other plugins."
       },
       "secrets:own": {
         "title": "Store its own secrets",

@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "会话日志"
+  },
+  "hosts": {
+    "enableSessionRecording": "会话日志记录",
+    "enableSessionRecordingDesc": "记录终端会话输出以供日后查看"
+  },
+  "sessionLogs": {
+    "title": "会话日志",
+    "noLogs": "暂无会话日志",
+    "noLogsDesc": "在主机上启用会话日志以开始记录",
+    "duration": "持续时间",
+    "viewLog": "查看日志",
+    "downloadLog": "下载",
+    "downloadAsText": "下载为文本",
+    "deleteLog": "删除",
+    "confirmDelete": "删除此会话日志？",
+    "confirmDeleteDesc": "此操作无法撤消。",
+    "copyContent": "复制",
+    "copied": "已复制！",
+    "loadError": "加载会话日志失败",
+    "deleteError": "删除会话日志失败",
+    "filterByHost": "按主机筛选..."
+  }
+}

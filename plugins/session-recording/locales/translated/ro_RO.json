@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Jurnalele de sesiune"
+  },
+  "hosts": {
+    "enableSessionRecording": "Înregistrarea sesiunilor",
+    "enableSessionRecordingDesc": "Înregistrați ieșirea sesiunii terminale pentru o revizuire ulterioară"
+  },
+  "sessionLogs": {
+    "title": "Jurnalele de sesiune",
+    "noLogs": "Încă nu există jurnale de sesiune",
+    "noLogsDesc": "Activați înregistrarea în jurnal pe o gazdă pentru a începe înregistrarea",
+    "duration": "Durată",
+    "viewLog": "Vizualizare jurnal",
+    "downloadLog": "Descărcare",
+    "downloadAsText": "Descărcați ca text",
+    "deleteLog": "Şterge",
+    "confirmDelete": "Ștergeți acest jurnal de sesiune?",
+    "confirmDeleteDesc": "Această acțiune nu poate fi anulată.",
+    "copyContent": "Copie",
+    "copied": "Copiat!",
+    "loadError": "Nu s-au putut încărca jurnalele de sesiune",
+    "deleteError": "Nu s-a putut șterge jurnalul sesiunii",
+    "filterByHost": "Filtrare după gazdă..."
+  }
+}

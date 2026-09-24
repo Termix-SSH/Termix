@@ -47,6 +47,13 @@ export const TOPICS = {
    * the row is not gone, only unrecoverable, and should go with it.
    */
   userDataWiped: "user.data_wiped",
+  /**
+   * A user account was deleted. For a plugin whose rows should outlive the
+   * account (evidence, audit trail) rather than cascade with a refUser()
+   * column: it keeps a plain userId column and anonymizes its own rows here,
+   * the way core's own session recordings did before this event existed.
+   */
+  userDeleted: "user.deleted",
 } as const;
 
 export type EventListener = (payload: unknown) => void;

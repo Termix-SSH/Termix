@@ -22,6 +22,13 @@
     "audit:read",
     "ui:surface"
   ],
+  "requires": [
+    {
+      "service": "recordings.writer",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
+  ],
   "contributes": {
     "tabs": [
       {

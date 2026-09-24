@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAsciicast } from "../../../features/session-recording/asciicast";
+import { parseAsciicast } from "../../src/frontend/asciicast";
 
 describe("parseAsciicast", () => {
   it("parses terminal dimensions and timed input/output", () => {

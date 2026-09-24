@@ -250,6 +250,20 @@ export function createPluginContext(
     { action: "kv_list" },
   );
 
+  const filesDataDir = guarded(
+    manifest,
+    "files:own",
+    async () => {
+      const fs = await import("node:fs/promises");
+      const path = await import("node:path");
+      const base = process.env.DATA_DIR ?? "./db/data";
+      const dir = path.join(base, "plugins", pluginId);
+      await fs.mkdir(dir, { recursive: true });
+      return dir;
+    },
+    { action: "files_data_dir" },
+  );
+
   const dbDefine = guarded(
     manifest,
     "db:own",
@@ -420,6 +434,10 @@ export function createPluginContext(
       set: (key, value) => kvSet(key, value),
       delete: (key) => kvDelete(key),
       list: () => kvList(),
+    },
+
+    files: {
+      dataDir: () => filesDataDir(),
     },
 
     registry: {

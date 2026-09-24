@@ -1789,27 +1789,6 @@ export function HostEditor({
                       onChange={(v) => setField("autoMosh", v)}
                     />
                   </SettingRow>
-                  <SettingRow
-                    label={t("hosts.enableSessionLogging")}
-                    description={
-                      <>
-                        {t("hosts.enableSessionLoggingDesc")}{" "}
-                        <a
-                          href="https://docs.termix.site/features/terminal/session-recording"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </>
-                    }
-                  >
-                    <FakeSwitch
-                      checked={form.enableSessionLogging}
-                      onChange={(v) => setField("enableSessionLogging", v)}
-                    />
-                  </SettingRow>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {t("hosts.localEchoLabel")}

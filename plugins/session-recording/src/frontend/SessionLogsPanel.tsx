@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { copyToClipboard } from "@/lib/clipboard";
-import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
-import { Input } from "@/components/input";
 import {
+  useTranslation,
+  useToast,
+  usePluginApi,
+  usePermission,
+} from "@termix/plugin-sdk/frontend";
+import {
+  Input,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/tooltip";
+  copyToClipboard,
+} from "@termix/plugin-sdk/ui";
 import {
   ArrowLeft,
   Check,
@@ -17,26 +21,58 @@ import {
   Eye,
   FileText,
   Loader2,
-  Save,
   ScrollText,
   Search,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
+import { SessionRecordingPlayer } from "./SessionRecordingPlayer";
+import { asciicastToPlainText, parseAsciicast } from "./asciicast";
 import {
-  getSessionLogs,
-  getSessionLogContent,
-  getSessionLogBlob,
-  getSessionRecordingRetention,
-  setSessionRecordingRetention,
-  deleteSessionLog,
+  createSessionRecordingApi,
   type SessionLogRecord,
-} from "@/api/session-log-api";
-import { SessionRecordingPlayer } from "@/features/session-recording/SessionRecordingPlayer";
-import {
-  asciicastToPlainText,
-  parseAsciicast,
-} from "@/features/session-recording/asciicast";
+} from "./session-recording-api";
+
+function useAdaptivePolling(
+  fn: () => Promise<boolean | void>,
+  options: { minIntervalMs: number; maxIntervalMs: number },
+  enabled: boolean,
+) {
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+
+  useEffect(() => {
+    if (!enabled) return;
+    let interval = options.minIntervalMs;
+    let stable = 0;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const changed = await fnRef.current();
+        if (changed) {
+          interval = options.minIntervalMs;
+          stable = 0;
+        } else {
+          stable++;
+          if (stable >= 3) {
+            interval = Math.min(interval * 1.5, options.maxIntervalMs);
+          }
+        }
+      } catch {
+        // keep polling
+      }
+      if (!cancelled) timer = setTimeout(tick, interval);
+    };
+
+    timer = setTimeout(tick, interval);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [enabled, options.minIntervalMs, options.maxIntervalMs]);
+}
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "--";
@@ -206,6 +242,9 @@ function LogRow({
 
 export function SessionLogsPanel() {
   const { t } = useTranslation();
+  const toast = useToast();
+  const api = createSessionRecordingApi(usePluginApi());
+  const canView = usePermission("view");
   const [logs, setLogs] = useState<SessionLogRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
@@ -219,8 +258,6 @@ export function SessionLogsPanel() {
   );
   const [deleting, setDeleting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [retentionDays, setRetentionDays] = useState<number | null>(null);
-  const [savingRetention, setSavingRetention] = useState(false);
   const logsRef = useRef(logs);
   logsRef.current = logs;
 
@@ -228,7 +265,7 @@ export function SessionLogsPanel() {
     async (initial = false) => {
       if (initial) setLoading(true);
       try {
-        const fresh = await getSessionLogs();
+        const fresh = await api.list();
         const changed =
           logsRef.current.length !== fresh.length ||
           logsRef.current.some((log, i) => log.id !== fresh[i]?.id);
@@ -247,25 +284,21 @@ export function SessionLogsPanel() {
         if (initial) setLoading(false);
       }
     },
-    [t],
+    [api, t, toast],
   );
 
   useEffect(() => {
+    if (!canView) return;
     void load(true);
-    getSessionRecordingRetention()
-      .then(setRetentionDays)
-      .catch(() => setRetentionDays(null));
-  }, [load]);
+  }, [canView, load]);
 
   useAdaptivePolling(
     () => load(false),
     {
       minIntervalMs: 5_000,
       maxIntervalMs: 30_000,
-      stablePollsPerStep: 3,
     },
-    true,
-    { runImmediately: false },
+    canView,
   );
 
   const q = filter.trim().toLowerCase();
@@ -285,11 +318,11 @@ export function SessionLogsPanel() {
     setViewLoading(true);
     try {
       if (log.format === "text") {
-        const text = await getSessionLogContent(log.id);
+        const text = await api.getContent(log.id);
         setViewContent(text);
         setViewText(text);
       } else {
-        const blob = await getSessionLogBlob(log.id);
+        const blob = await api.getBlob(log.id);
         setViewBlob(blob);
         setViewText(await extractPlainText(log, blob));
       }
@@ -311,7 +344,7 @@ export function SessionLogsPanel() {
 
   const handleDownload = async (log: SessionLogRecord) => {
     try {
-      downloadBlob(await getSessionLogBlob(log.id), buildFilename(log));
+      downloadBlob(await api.getBlob(log.id), buildFilename(log));
     } catch {
       toast.error(t("sessionLogs.loadError"));
     }
@@ -322,7 +355,7 @@ export function SessionLogsPanel() {
       const text =
         log.id === viewLog?.id && viewText != null
           ? viewText
-          : await extractPlainText(log, await getSessionLogBlob(log.id));
+          : await extractPlainText(log, await api.getBlob(log.id));
       if (text == null) {
         toast.error(t("sessionLogs.loadError"));
         return;
@@ -340,7 +373,7 @@ export function SessionLogsPanel() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteSessionLog(deleteTarget.id);
+      await api.delete(deleteTarget.id);
       setLogs((prev) => prev.filter((l) => l.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch {
@@ -473,44 +506,6 @@ export function SessionLogsPanel() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto">
-        {retentionDays != null && (
-          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] text-muted-foreground">
-            <span className="flex-1">Recording retention</span>
-            <Input
-              type="number"
-              min={1}
-              max={3650}
-              value={retentionDays}
-              onChange={(event) => setRetentionDays(Number(event.target.value))}
-              className="h-7 w-20 text-xs"
-              aria-label="Recording retention days"
-            />
-            <span>days</span>
-            <button
-              type="button"
-              disabled={savingRetention}
-              onClick={async () => {
-                setSavingRetention(true);
-                try {
-                  await setSessionRecordingRetention(retentionDays);
-                  toast.success("Recording retention updated");
-                } catch {
-                  toast.error("Failed to update recording retention");
-                } finally {
-                  setSavingRetention(false);
-                }
-              }}
-              className="flex size-7 items-center justify-center hover:bg-muted disabled:opacity-50"
-              aria-label="Save recording retention"
-            >
-              {savingRetention ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                <Save className="size-3" />
-              )}
-            </button>
-          </div>
-        )}
         {logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-3 p-6 text-center py-16">
             <div className="size-10 bg-muted/40 flex items-center justify-center">

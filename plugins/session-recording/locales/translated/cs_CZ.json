@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Protokoly relací"
+  },
+  "hosts": {
+    "enableSessionRecording": "Protokolování relací",
+    "enableSessionRecordingDesc": "Zaznamenejte výstup terminálové relace pro pozdější kontrolu"
+  },
+  "sessionLogs": {
+    "title": "Protokoly relací",
+    "noLogs": "Zatím žádné protokoly relací",
+    "noLogsDesc": "Povolte protokolování relace na hostiteli pro zahájení nahrávání",
+    "duration": "Trvání",
+    "viewLog": "Zobrazit protokol",
+    "downloadLog": "Stáhnout",
+    "downloadAsText": "Stáhnout jako text",
+    "deleteLog": "Vymazat",
+    "confirmDelete": "Smazat tento protokol relace?",
+    "confirmDeleteDesc": "Tuto akci nelze vrátit zpět.",
+    "copyContent": "Kopie",
+    "copied": "Zkopírováno!",
+    "loadError": "Nepodařilo se načíst protokoly relací",
+    "deleteError": "Nepodařilo se smazat protokol relace",
+    "filterByHost": "Filtrovat podle hostitele..."
+  }
+}

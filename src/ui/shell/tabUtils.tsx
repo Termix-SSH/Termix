@@ -9,7 +9,6 @@ import {
   User,
   Fingerprint,
   Hammer,
-  ScrollText,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
@@ -40,11 +39,6 @@ const HomepageCanvas = lazy(() =>
 // Rail panels promoted to full tabs.
 const TermixIdPanel = lazy(() =>
   import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
-);
-const SessionLogsPanel = lazy(() =>
-  import("@/sidebar/SessionLogsPanel").then((m) => ({
-    default: m.SessionLogsPanel,
-  })),
 );
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
@@ -124,8 +118,6 @@ export function tabIcon(type: TabType) {
       return <LayoutGrid className="size-3.5" />;
     case "termix-id":
       return <Fingerprint className="size-3.5" />;
-    case "session-logs":
-      return <ScrollText className="size-3.5" />;
     case "macros":
       return <Braces className="size-3.5" />;
 
@@ -226,13 +218,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
       return withTabSuspense(
         <PanelTabFrame>
           <TermixIdPanel />
-        </PanelTabFrame>,
-      );
-
-    case "session-logs":
-      return withTabSuspense(
-        <PanelTabFrame>
-          <SessionLogsPanel />
         </PanelTabFrame>,
       );
 

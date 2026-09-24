@@ -21,7 +21,6 @@ import { getTabType } from "./tab-registry";
 const CORE_CAPTURABLE = new Set([
   "homepage",
   "termix-id",
-  "session-logs",
   "macros",
   "ssh-tools",
 ]);
@@ -30,7 +29,6 @@ const CORE_CAPTURABLE = new Set([
 const CORE_SINGLETON = new Set([
   "homepage",
   "termix-id",
-  "session-logs",
   "macros",
   "ssh-tools",
 ]);

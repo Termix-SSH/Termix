@@ -20,7 +20,6 @@ import {
   createCurrentOpksshTokenRepository,
   createCurrentRecentActivityRepository,
   createCurrentSshCredentialUsageRepository,
-  createCurrentSessionRecordingRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentHostResolutionRepository,
@@ -2524,9 +2523,10 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
-      // file manager recent/pinned/shortcuts, transfer_recent and command
-      // history cascade on the host's refHost() foreign key, as the
-      // file-manager and ssh-terminal plugins' adopted tables.
+      // file manager recent/pinned/shortcuts, transfer_recent, command
+      // history and session recordings cascade on the host's refHost()
+      // foreign key, as the file-manager, ssh-terminal and
+      // session-recording plugins' adopted tables.
 
       await createCurrentSshCredentialUsageRepository().deleteByHostId(
         numericHostId,
@@ -2537,10 +2537,6 @@ router.delete(
       );
 
       await createCurrentRbacAccessRepository().deleteHostAccessForHost(
-        numericHostId,
-      );
-
-      await createCurrentSessionRecordingRepository().deleteByHostId(
         numericHostId,
       );
 

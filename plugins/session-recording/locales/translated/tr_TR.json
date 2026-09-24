@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Oturum Kayıtları"
+  },
+  "hosts": {
+    "enableSessionRecording": "Oturum Kaydı",
+    "enableSessionRecordingDesc": "Daha sonra gözden geçirmek için terminal oturumu çıktısını kaydet"
+  },
+  "sessionLogs": {
+    "title": "Oturum Günlükleri",
+    "noLogs": "Henüz oturum günlüğü yok",
+    "noLogsDesc": "Kayda başlamak için bir sunucuda oturum günlüğünü etkinleştirin",
+    "duration": "Süre",
+    "viewLog": "Günlüğü görüntüle",
+    "downloadLog": "İndir",
+    "downloadAsText": "Metin olarak indir",
+    "deleteLog": "Sil",
+    "confirmDelete": "Bu oturum günlüğü silinsin mi?",
+    "confirmDeleteDesc": "Bu işlem geri alınamaz.",
+    "copyContent": "Kopyala",
+    "copied": "Kopyalandı!",
+    "loadError": "Oturum günlükleri yüklenemedi",
+    "deleteError": "Oturum günlüğü silinemedi",
+    "filterByHost": "Sunucuya göre filtrele..."
+  }
+}

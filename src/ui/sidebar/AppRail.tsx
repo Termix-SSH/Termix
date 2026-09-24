@@ -23,7 +23,6 @@ export type CoreRailView =
   | "quick-connect"
   | ToolsTab
   | "connections"
-  | "session-logs"
   | "user-profile"
   | "admin-settings";
 

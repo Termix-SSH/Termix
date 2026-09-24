@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Log Sesi"
+  },
+  "hosts": {
+    "enableSessionRecording": "Pencatatan Sesi",
+    "enableSessionRecordingDesc": "Rekam output sesi terminal untuk ditinjau nanti."
+  },
+  "sessionLogs": {
+    "title": "Log Sesi",
+    "noLogs": "Belum ada log sesi.",
+    "noLogsDesc": "Aktifkan pencatatan sesi pada host untuk memulai perekaman.",
+    "duration": "Lamanya",
+    "viewLog": "Lihat log",
+    "downloadLog": "Unduh",
+    "downloadAsText": "Unduh sebagai teks",
+    "deleteLog": "Menghapus",
+    "confirmDelete": "Hapus log sesi ini?",
+    "confirmDeleteDesc": "Tindakan ini tidak dapat dibatalkan.",
+    "copyContent": "Menyalin",
+    "copied": "Disalin!",
+    "loadError": "Gagal memuat log sesi",
+    "deleteError": "Gagal menghapus log sesi",
+    "filterByHost": "Saring berdasarkan host..."
+  }
+}

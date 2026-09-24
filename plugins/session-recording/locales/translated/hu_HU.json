@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Munkamenet-naplók"
+  },
+  "hosts": {
+    "enableSessionRecording": "Munkamenet-naplózás",
+    "enableSessionRecordingDesc": "Terminál munkamenet kimenetének rögzítése későbbi áttekintés céljából"
+  },
+  "sessionLogs": {
+    "title": "Munkamenet-naplók",
+    "noLogs": "Még nincsenek munkamenet-naplók",
+    "noLogsDesc": "A felvétel megkezdéséhez engedélyezze a munkamenet-naplózást egy gazdagépen",
+    "duration": "Időtartam",
+    "viewLog": "Napló megtekintése",
+    "downloadLog": "Letöltés",
+    "downloadAsText": "Letöltés szövegként",
+    "deleteLog": "Töröl",
+    "confirmDelete": "Törli ezt a munkamenet-naplót?",
+    "confirmDeleteDesc": "Ez a művelet nem vonható vissza.",
+    "copyContent": "Másolat",
+    "copied": "Másolva!",
+    "loadError": "Nem sikerült betölteni a munkamenet-naplókat",
+    "deleteError": "Nem sikerült törölni a munkamenet-naplót",
+    "filterByHost": "Szűrés hoszt szerint..."
+  }
+}

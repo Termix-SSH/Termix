@@ -712,50 +712,6 @@ export const auditLogs = sqliteTable(
   ],
 );
 
-export const sessionRecordings = sqliteTable(
-  "session_recordings",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    // Nullable on purpose: a recording is evidence about the host as much as the
-    // person, so it outlives the account. username keeps it attributable.
-    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-    username: text("username"),
-    accessId: integer("access_id").references(() => hostAccess.id, {
-      onDelete: "set null",
-    }),
-
-    startedAt: text("started_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    endedAt: text("ended_at"),
-    duration: integer("duration"),
-
-    commands: text("commands"),
-    dangerousActions: text("dangerous_actions"),
-
-    recordingPath: text("recording_path"),
-    protocol: text("protocol").notNull().default("ssh"),
-    format: text("format").notNull().default("text"),
-
-    terminatedByOwner: integer("terminated_by_owner", {
-      mode: "boolean",
-    }).default(false),
-    terminationReason: text("termination_reason"),
-  },
-  // Listed newest-first per user, and audited per host.
-  (table) => [
-    index("idx_session_recordings_user_started").on(
-      table.userId,
-      table.startedAt,
-    ),
-    index("idx_session_recordings_host").on(table.hostId),
-  ],
-);
-
 export const opksshTokens = sqliteTable(
   "opkssh_tokens",
   {

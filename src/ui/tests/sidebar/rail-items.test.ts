@@ -50,7 +50,8 @@ describe("RAIL_ITEMS", () => {
     // from this one list.
     // "sftp" moved to the file-manager plugin's own registerRailItem,
     // "port-forwarding" to the tunnels plugin's, "serial" to the serial
-    // plugin's, and "collab" to the session-sharing plugin's.
+    // plugin's, "collab" to the session-sharing plugin's, and "session-logs"
+    // to the session-recording plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
@@ -59,7 +60,6 @@ describe("RAIL_ITEMS", () => {
       "quick-connect",
       "ssh-tools",
       "macros",
-      "session-logs",
       "split-screen",
     ]);
   });
@@ -81,7 +81,7 @@ describe("RAIL_ITEMS", () => {
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
-    ).toEqual(["termix-id", "ssh-tools", "macros", "session-logs"]);
+    ).toEqual(["termix-id", "ssh-tools", "macros"]);
   });
 
   it("derives promotableIds from the promotable flag", () => {
@@ -118,12 +118,7 @@ describe("RAIL_ITEMS", () => {
   });
 
   it("only offers reference panels in the right dock", () => {
-    expect(rightDockableIds()).toEqual([
-      "connections",
-      "ssh-tools",
-      "macros",
-      "session-logs",
-    ]);
+    expect(rightDockableIds()).toEqual(["connections", "ssh-tools", "macros"]);
   });
 });
 

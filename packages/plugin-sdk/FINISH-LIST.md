@@ -282,6 +282,40 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   desktop toolbars now; the tab bar's share button is gone, so a host with the
   terminal toolbar switched off has no share button. A generic tab-menu slot
   would bring it back if that matters. Owner: D1, if wanted.
+- **B13 (session-recording):** `enable_session_logging` is still a live
+  `ssh_data` column; only the copy-into-plugin-settings migration shipped
+  (`session-recording-settings-migration.ts`). The legacy default was `true`;
+  the plugin's enable switch defaults to `false` like every other plugin's, so
+  the migration copies every host's value rather than only the ones that
+  turned it off - a fresh host created after 2.9.0 defaults to recording off,
+  a real behaviour change from the old column default, made once here rather
+  than silently. `ssh-terminal/src/backend/terminal-socket.ts` still reads
+  `resolvedHostData?.enableSessionLogging ?? hostConfig.enableSessionLogging`
+  off the resolved SSH host instead of `ctx.settings.getHost`, and
+  `plugins/remote-desktop/src/backend/routes.ts`'s
+  `host.enableSessionLogging !== false` check, `HostEditorData.ts`,
+  `HostManagerData.ts`, `quick-connect-host.ts` and the export/import sample
+  all still read the column directly. The General tab's checkbox was removed
+  from `HostEditor.tsx` (the schema-driven Plugins group replaces it); the
+  data plumbing above was not switched over. Dropping the column in lockstep
+  (`schema.ts`, `db/index.ts`, a drizzle migration per dialect,
+  `schema:generate`) needs every one of those switched first. Owner: a
+  dedicated follow-up step, or D0.
+- **B13 (session-recording):** `remote-desktop`'s guacd recordings now insert
+  through the optional `recordings.writer` service's `createFinished(input)`
+  (added alongside `open()`/`RecordingSink` for ssh-terminal's incremental
+  writer) instead of importing `createCurrentSessionRecordingRepository`
+  directly. Without the session-recording plugin enabled, a guacd recording
+  is still written to disk but gets no `session_recordings` row and so never
+  appears in the list - a warning is logged. Owner: none needed unless a
+  second consumer of `recordings.writer` appears.
+- **B13 (session-recording):** `accessId` (the legacy `access_id` column,
+  referencing the now-core-only `host_access` table) is carried in the
+  adopted table's shape as a plain unreferenced integer, since the SDK's
+  `defineTable` has no builder for a foreign key into an arbitrary core
+  table beyond `refUser()`/`refHost()`. Nothing has ever populated it (true
+  in core before this step too). Owner: none needed unless a future step
+  wants to actually use it.
 
 ## Manual checks after 2.9.0
 
@@ -295,3 +329,8 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   window, a user share joined from Active Connections, revoke and "end for
   everyone", and a collab room with two members, control hand-off, a guest
   link, rotate and end.
+- Session recording: an SSH session recorded end to end (playback matches what
+  happened, including a resize mid-session), a host with recording switched
+  off records nothing, retention prunes an old recording on schedule, a guacd
+  RDP/VNC/Telnet recording still gets a row and plays back, and deleting a
+  user anonymizes their recordings instead of removing them.

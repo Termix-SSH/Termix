@@ -4,15 +4,24 @@ import {
   getGuacSessionInfo,
   handleGuacamoleUpgrade,
   restartGuacServer,
+  setPluginRecordings,
   startGuacamoleService,
   stopGuacamoleService,
   tokenService,
+  type RecordingsWriter,
 } from "./guacamole-server.js";
 import { startRemoteDesktopService } from "./routes.js";
 
 export async function activate(ctx: PluginContext) {
   setPluginSsh(ctx.ssh);
   ctx.disposables.add(() => setPluginSsh(null));
+
+  // Optional: without the session-recording plugin, a guacd recording is
+  // still made on disk but never gets a row, so it never shows in the list.
+  const recordings = ctx.services.get<RecordingsWriter>("recordings.writer");
+  setPluginRecordings("createFinished" in recordings ? recordings : null);
+  ctx.disposables.add(() => setPluginRecordings(null));
+
   await startGuacamoleService();
 
   startRemoteDesktopService(ctx.http.router());

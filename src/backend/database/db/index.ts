@@ -479,27 +479,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
     );
 
-    CREATE TABLE IF NOT EXISTS session_recordings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT,
-        username TEXT,
-        access_id INTEGER,
-        started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        ended_at TEXT,
-        duration INTEGER,
-        commands TEXT,
-        dangerous_actions TEXT,
-        recording_path TEXT,
-        protocol TEXT NOT NULL DEFAULT 'ssh',
-        format TEXT NOT NULL DEFAULT 'text',
-        terminated_by_owner INTEGER DEFAULT 0,
-        termination_reason TEXT,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
-        FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
-    );
-
     CREATE TABLE IF NOT EXISTS secret_sources (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -937,17 +916,6 @@ const relaxPluginGrantGrantedBy = () => {
 };
 
 const migrateSchema = () => {
-  addColumnIfNotExists(
-    "session_recordings",
-    "protocol",
-    "TEXT NOT NULL DEFAULT 'ssh'",
-  );
-  addColumnIfNotExists(
-    "session_recordings",
-    "format",
-    "TEXT NOT NULL DEFAULT 'text'",
-  );
-
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");

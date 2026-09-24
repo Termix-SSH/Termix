@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Øktlogger"
+  },
+  "hosts": {
+    "enableSessionRecording": "Øktlogging",
+    "enableSessionRecordingDesc": "Ta opp utdata fra terminaløkten for senere gjennomgang"
+  },
+  "sessionLogs": {
+    "title": "Øktlogger",
+    "noLogs": "Ingen øktlogger ennå",
+    "noLogsDesc": "Aktiver øktlogging på en vert for å starte opptaket",
+    "duration": "Varighet",
+    "viewLog": "Vis logg",
+    "downloadLog": "Last ned",
+    "downloadAsText": "Last ned som tekst",
+    "deleteLog": "Slett",
+    "confirmDelete": "Slette denne øktloggen?",
+    "confirmDeleteDesc": "Denne handlingen kan ikke angres.",
+    "copyContent": "Kopiere",
+    "copied": "Kopiert!",
+    "loadError": "Kunne ikke laste inn øktlogger",
+    "deleteError": "Kunne ikke slette øktloggen",
+    "filterByHost": "Filtrer etter vert..."
+  }
+}

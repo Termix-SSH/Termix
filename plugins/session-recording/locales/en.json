@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "sessionLogs": "Session Logs"
+  },
+  "hosts": {
+    "enableSessionRecording": "Session Recording",
+    "enableSessionRecordingDesc": "Record terminal session output for later review"
+  },
+  "permissions": {
+    "view": {
+      "title": "View session recordings",
+      "description": "See and play back your own session recordings."
+    }
+  },
+  "settings": {
+    "admin": {
+      "retentionDays": {
+        "label": "Retention (days)",
+        "description": "How long a session recording is kept before it is deleted automatically."
+      }
+    },
+    "host": {
+      "enable": {
+        "label": "Enable session recording"
+      }
+    }
+  },
+  "terminalStatus": {
+    "recording": "Recording"
+  },
+  "sessionLogs": {
+    "title": "Session Logs",
+    "noLogs": "No session logs yet",
+    "noLogsDesc": "Enable session logging on a host to start recording",
+    "duration": "Duration",
+    "viewLog": "View log",
+    "downloadLog": "Download",
+    "downloadAsText": "Download as text",
+    "deleteLog": "Delete",
+    "confirmDelete": "Delete this session log?",
+    "confirmDeleteDesc": "This action cannot be undone.",
+    "copyContent": "Copy",
+    "copied": "Copied!",
+    "loadError": "Failed to load session logs",
+    "deleteError": "Failed to delete session log",
+    "filterByHost": "Filter by host..."
+  }
+}

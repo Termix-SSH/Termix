@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "세션 로그"
+  },
+  "hosts": {
+    "enableSessionRecording": "세션 로깅",
+    "enableSessionRecordingDesc": "나중에 검토할 수 있도록 터미널 세션 출력을 기록합니다"
+  },
+  "sessionLogs": {
+    "title": "세션 로그",
+    "noLogs": "아직 세션 로그 없음",
+    "noLogsDesc": "호스트에서 세션 로깅을 활성화하여 기록 시작",
+    "duration": "지속 시간",
+    "viewLog": "로그 보기",
+    "downloadLog": "다운로드",
+    "downloadAsText": "텍스트 파일로 다운로드",
+    "deleteLog": "삭제",
+    "confirmDelete": "이 세션 로그를 삭제하시겠습니까?",
+    "confirmDeleteDesc": "이 작업은 취소할 수 없습니다.",
+    "copyContent": "복사",
+    "copied": "복사됨!",
+    "loadError": "세션 로그 로드 실패",
+    "deleteError": "세션 로그 삭제 실패",
+    "filterByHost": "호스트로 필터링..."
+  }
+}

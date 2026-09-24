@@ -4,15 +4,32 @@ import {
   GuacamoleTokenService,
   type GuacamoleRecordingMetadata,
 } from "./token-service.js";
-import {
-  createCurrentSessionRecordingRepository,
-  getCurrentSettingValue,
-} from "../../../../src/backend/database/repositories/factory.js";
+import { getCurrentSettingValue } from "../../../../src/backend/database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../../../src/backend/utils/guacd-config.js";
 import fs from "fs";
 import path from "path";
 
 const tokenService = GuacamoleTokenService.getInstance();
+
+/** The recordings.writer service, when the session-recording plugin provides it. */
+export interface RecordingsWriter {
+  createFinished: (input: {
+    hostId: number;
+    userId: string;
+    startedAt: string;
+    endedAt: string;
+    duration: number | null;
+    recordingPath: string;
+    protocol: string;
+    format: string;
+  }) => Promise<{ id: number }>;
+}
+
+let pluginRecordings: RecordingsWriter | null = null;
+
+export function setPluginRecordings(recordings: RecordingsWriter | null): void {
+  pluginRecordings = recordings;
+}
 
 function readGuacdOptions(): { host: string; port: number } {
   let dbUrl: string | undefined;
@@ -103,9 +120,17 @@ async function persistGuacamoleRecording(
     return;
   }
 
+  if (!pluginRecordings) {
+    guacLogger.warn(
+      "Session Recording plugin is off; guacamole recording not saved to the log",
+      { operation: "guac_recording_no_writer", hostId: recording.hostId },
+    );
+    return;
+  }
+
   const endedAt = new Date();
   const startedAt = new Date(recording.startedAt);
-  await createCurrentSessionRecordingRepository().create({
+  await pluginRecordings.createFinished({
     hostId: recording.hostId,
     userId: recording.userId,
     startedAt: startedAt.toISOString(),

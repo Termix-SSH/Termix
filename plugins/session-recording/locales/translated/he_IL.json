@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "יומני סשן"
+  },
+  "hosts": {
+    "enableSessionRecording": "רישום מושבים",
+    "enableSessionRecordingDesc": "הקלט את פלט הפעלת הטרמינל לצורך סקירה מאוחרת יותר"
+  },
+  "sessionLogs": {
+    "title": "יומני סשן",
+    "noLogs": "אין עדיין יומני סשן",
+    "noLogsDesc": "הפעל רישום סשן במארח כדי להתחיל להקליט",
+    "duration": "מֶשֶׁך",
+    "viewLog": "הצג יומן",
+    "downloadLog": "הורדה",
+    "downloadAsText": "הורד כטקסט",
+    "deleteLog": "לִמְחוֹק",
+    "confirmDelete": "למחוק את יומן הפעילויות הזה?",
+    "confirmDeleteDesc": "לא ניתן לבטל פעולה זו.",
+    "copyContent": "לְהַעְתִיק",
+    "copied": "מוּעֲתָק!",
+    "loadError": "טעינת יומני הסשן נכשלה",
+    "deleteError": "נכשלה מחיקת יומן ההפעלה",
+    "filterByHost": "סנן לפי מארח..."
+  }
+}

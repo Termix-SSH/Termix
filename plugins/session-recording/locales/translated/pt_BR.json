@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Registros de sessão"
+  },
+  "hosts": {
+    "enableSessionRecording": "Registro de sessão",
+    "enableSessionRecordingDesc": "Registre a saída da sessão do terminal para revisão posterior."
+  },
+  "sessionLogs": {
+    "title": "Registros de sessão",
+    "noLogs": "Ainda não há registros de sessão.",
+    "noLogsDesc": "Habilite o registro de sessão em um host para iniciar a gravação.",
+    "duration": "Duração",
+    "viewLog": "Ver registro",
+    "downloadLog": "Download",
+    "downloadAsText": "Baixar como texto",
+    "deleteLog": "Excluir",
+    "confirmDelete": "Excluir este registro de sessão?",
+    "confirmDeleteDesc": "Esta ação não pode ser desfeita.",
+    "copyContent": "Cópia",
+    "copied": "Copiado!",
+    "loadError": "Falha ao carregar os registros da sessão.",
+    "deleteError": "Falha ao excluir o registro da sessão",
+    "filterByHost": "Filtrar por host..."
+  }
+}

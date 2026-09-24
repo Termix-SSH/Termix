@@ -86,11 +86,6 @@ const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 
-const SessionLogsPanel = lazy(() =>
-  import("@/sidebar/SessionLogsPanel").then((m) => ({
-    default: m.SessionLogsPanel,
-  })),
-);
 // One screen behind both rail entries. It lazy-loads the profile and admin
 // panels itself, so the shell no longer imports either directly.
 const SettingsScreen = lazy(() =>
@@ -2522,12 +2517,6 @@ export function AppShell({
                 if (isMobile) setSidebarOpen(false);
               }}
             />
-          </div>
-        )}
-
-        {railView === "session-logs" && (
-          <div className="relative flex-1 min-h-0 flex flex-col">
-            <SessionLogsPanel />
           </div>
         )}
 

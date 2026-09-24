@@ -7,10 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * `migrateSchema()` carried a `SELECT id FROM <table> LIMIT 1` probe for a
  * number of tables that the primary bootstrap already creates. The probe never
- * threw, so the `CREATE TABLE IF NOT EXISTS` in its catch never ran — and two
+ * threw, so the `CREATE TABLE IF NOT EXISTS` in its catch never ran — and one
  * of those unreachable copies had drifted away from the real definition
- * (`sessions` had lost `ON DELETE CASCADE`; `session_recordings` still had the
- * pre-#1128 `user_id NOT NULL` with `ON DELETE CASCADE` and no `username`).
+ * (`sessions` had lost `ON DELETE CASCADE`).
  *
  * They are gone now. What has to stay true is that the bootstrap alone
  * produces every one of those tables, from an empty database and from a
@@ -27,7 +26,6 @@ describe("bootstrap creates the tables the removed probes covered", () => {
     "roles",
     "user_roles",
     "audit_logs",
-    "session_recordings",
     "api_keys",
   ];
 
@@ -98,16 +96,6 @@ describe("bootstrap creates the tables the removed probes covered", () => {
     const db = await import("../../../database/db/index.js");
     await db.initializeDatabase();
     const sqlite = db.getSqlite();
-
-    // session_recordings: nullable user_id with the attribution kept, per
-    // "audit trails survive the account" — not the NOT NULL + CASCADE the
-    // dead copy still carried.
-    const columns = sqlite
-      .prepare("PRAGMA table_info(session_recordings)")
-      .all() as Array<{ name: string; notnull: number }>;
-    const userId = columns.find((c) => c.name === "user_id");
-    expect(userId?.notnull).toBe(0);
-    expect(columns.some((c) => c.name === "username")).toBe(true);
 
     // sessions: the dead copy had dropped ON DELETE CASCADE.
     const sql = sqlite

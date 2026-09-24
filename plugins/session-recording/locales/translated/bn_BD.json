@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "সেশন লগ"
+  },
+  "hosts": {
+    "enableSessionRecording": "সেশন লগিং",
+    "enableSessionRecordingDesc": "পরবর্তী পর্যালোচনার জন্য টার্মিনাল সেশনের আউটপুট রেকর্ড করুন।"
+  },
+  "sessionLogs": {
+    "title": "সেশন লগ",
+    "noLogs": "এখনো কোনো সেশন লগ নেই",
+    "noLogsDesc": "রেকর্ডিং শুরু করতে কোনো হোস্টে সেশন লগিং চালু করুন।",
+    "duration": "সময়কাল",
+    "viewLog": "লগ দেখুন",
+    "downloadLog": "ডাউনলোড করুন",
+    "downloadAsText": "টেক্সট হিসেবে ডাউনলোড করুন",
+    "deleteLog": "মুছে ফেলুন",
+    "confirmDelete": "এই সেশন লগটি মুছে ফেলবেন?",
+    "confirmDeleteDesc": "এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।",
+    "copyContent": "অনুলিপি",
+    "copied": "অনুলিপি করা হয়েছে!",
+    "loadError": "সেশন লগ লোড করতে ব্যর্থ হয়েছে",
+    "deleteError": "সেশন লগ মুছে ফেলতে ব্যর্থ হয়েছে",
+    "filterByHost": "হোস্ট দ্বারা ফিল্টার করুন..."
+  }
+}

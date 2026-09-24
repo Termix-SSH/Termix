@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Sessielogboeke"
+  },
+  "hosts": {
+    "enableSessionRecording": "Sessie-logging",
+    "enableSessionRecordingDesc": "Neem terminaalsessie-uitvoer op vir latere hersiening"
+  },
+  "sessionLogs": {
+    "title": "Sessielogboeke",
+    "noLogs": "Geen sessielogboeke nog nie",
+    "noLogsDesc": "Aktiveer sessie-aanmelding op 'n gasheer om opname te begin",
+    "duration": "Duur",
+    "viewLog": "Bekyk logboek",
+    "downloadLog": "Laai af",
+    "downloadAsText": "Laai af as teks",
+    "deleteLog": "Vee uit",
+    "confirmDelete": "Vee hierdie sessielog uit?",
+    "confirmDeleteDesc": "Hierdie aksie kan nie ongedaan gemaak word nie.",
+    "copyContent": "Kopieer",
+    "copied": "Gekopieer!",
+    "loadError": "Kon nie sessielogboeke laai nie",
+    "deleteError": "Kon nie sessielogboek uitvee nie",
+    "filterByHost": "Filtreer volgens gasheer..."
+  }
+}

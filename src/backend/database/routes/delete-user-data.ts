@@ -22,7 +22,6 @@ import {
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentSessionRepository,
-  createCurrentSessionRecordingRepository,
   createCurrentSettingsRepository,
   createCurrentSharedHostSecretsRepository,
   createCurrentSshCredentialUsageRepository,
@@ -61,9 +60,11 @@ export async function deleteUserAndRelatedData(
       userId,
     );
 
-    // Retained rather than deleted: these outlive the account by design.
-    // See anonymizeByUserId on each repository.
-    await createCurrentSessionRecordingRepository().anonymizeByUserId(userId);
+    // session_recordings is retained rather than deleted, by design: it
+    // outlives the account. The session-recording plugin listens for
+    // user.deleted and anonymizes its own rows instead of cascading.
+    const { pluginEvents, TOPICS } = await import("../../plugins/events.js");
+    pluginEvents.emit(TOPICS.userDeleted, { userId });
 
     await createCurrentRbacAccessRepository().deleteHostAccessForUserReferences(
       userId,

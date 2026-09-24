@@ -373,6 +373,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runSessionSharingSettingsMigration } =
         await import("./utils/crypto-migration/session-sharing-settings-migration.js");
       await runSessionSharingSettingsMigration();
+
+      const { runSessionRecordingSettingsMigration } =
+        await import("./utils/crypto-migration/session-recording-settings-migration.js");
+      await runSessionRecordingSettingsMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

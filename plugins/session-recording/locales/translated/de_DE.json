@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Sitzungsprotokolle"
+  },
+  "hosts": {
+    "enableSessionRecording": "Sitzungsprotokollierung",
+    "enableSessionRecordingDesc": "Terminal-Sitzungsausgabe zur späteren Überprüfung aufzeichnen"
+  },
+  "sessionLogs": {
+    "title": "Sitzungsprotokolle",
+    "noLogs": "Noch keine Sitzungsprotokolle",
+    "noLogsDesc": "Aktivieren Sie die Sitzungsprotokollierung auf einem Host, um die Aufzeichnung zu starten",
+    "duration": "Dauer",
+    "viewLog": "Protokoll anzeigen",
+    "downloadLog": "Herunterladen",
+    "downloadAsText": "Als Text herunterladen",
+    "deleteLog": "Löschen",
+    "confirmDelete": "Dieses Sitzungsprotokoll löschen?",
+    "confirmDeleteDesc": "Diese Aktion kann nicht rückgängig gemacht werden.",
+    "copyContent": "Kopieren",
+    "copied": "Kopiert!",
+    "loadError": "Fehler beim Laden der Sitzungsprotokolle",
+    "deleteError": "Fehler beim Löschen des Sitzungsprotokolls",
+    "filterByHost": "Nach Host filtern..."
+  }
+}

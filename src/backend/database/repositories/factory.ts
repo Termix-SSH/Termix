@@ -37,7 +37,6 @@ import { RbacAccessRepository } from "./rbac-access-repository.js";
 import { RbacPermissionRepository } from "./rbac-permission-repository.js";
 import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
-import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { SecretSourceRepository } from "./secret-source-repository.js";
 import { CredentialAccessRepository } from "./credential-access-repository.js";
@@ -397,13 +396,6 @@ export function createCurrentRoleRepository(): RoleRepository {
   return new RoleRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("role_repository_write"),
-  );
-}
-
-export function createCurrentSessionRecordingRepository(): SessionRecordingRepository {
-  return new SessionRecordingRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("session_recording_repository_write"),
   );
 }
 

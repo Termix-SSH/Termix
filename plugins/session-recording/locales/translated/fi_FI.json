@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Istuntolokit"
+  },
+  "hosts": {
+    "enableSessionRecording": "Istuntojen lokitiedot",
+    "enableSessionRecordingDesc": "Tallenna pääteistunnon tuloste myöhempää tarkastelua varten"
+  },
+  "sessionLogs": {
+    "title": "Istuntolokit",
+    "noLogs": "Ei vielä istuntolokeja",
+    "noLogsDesc": "Ota istunnon lokikirjaus käyttöön isännässä aloittaaksesi tallennuksen",
+    "duration": "Kesto",
+    "viewLog": "Näytä loki",
+    "downloadLog": "Lataa",
+    "downloadAsText": "Lataa tekstinä",
+    "deleteLog": "Poistaa",
+    "confirmDelete": "Poistetaanko tämä istuntoloki?",
+    "confirmDeleteDesc": "Tätä toimintoa ei voi perua.",
+    "copyContent": "Kopioida",
+    "copied": "Kopioitu!",
+    "loadError": "Istuntolokien lataaminen epäonnistui",
+    "deleteError": "Istuntolokitietojen poistaminen epäonnistui",
+    "filterByHost": "Suodata isännän mukaan..."
+  }
+}

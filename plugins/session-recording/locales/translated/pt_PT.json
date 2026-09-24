@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Registos de Sessão"
+  },
+  "hosts": {
+    "enableSessionRecording": "Registo de sessão",
+    "enableSessionRecordingDesc": "Gravar a saída da sessão de terminal para revisão posterior"
+  },
+  "sessionLogs": {
+    "title": "Registos de Sessão",
+    "noLogs": "Ainda sem registos de sessão",
+    "noLogsDesc": "Ative o registo de sessão num host para começar a gravar",
+    "duration": "Duração",
+    "viewLog": "Ver registo",
+    "downloadLog": "Transferir",
+    "downloadAsText": "Descarregar como texto",
+    "deleteLog": "Eliminar",
+    "confirmDelete": "Eliminar este registo de sessão?",
+    "confirmDeleteDesc": "Esta ação não pode ser desfeita.",
+    "copyContent": "Copiar",
+    "copied": "Copiado!",
+    "loadError": "Falha ao carregar registos de sessão",
+    "deleteError": "Falha ao eliminar registo de sessão",
+    "filterByHost": "Filtrar por host..."
+  }
+}

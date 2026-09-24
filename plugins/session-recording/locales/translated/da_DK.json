@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Sessionslogfiler"
+  },
+  "hosts": {
+    "enableSessionRecording": "Sessionslogning",
+    "enableSessionRecordingDesc": "Optag output fra terminalsessionen til senere gennemgang"
+  },
+  "sessionLogs": {
+    "title": "Sessionslogfiler",
+    "noLogs": "Ingen sessionslogfiler endnu",
+    "noLogsDesc": "Aktivér sessionslogning på en vært for at starte optagelse",
+    "duration": "Varighed",
+    "viewLog": "Se log",
+    "downloadLog": "Download",
+    "downloadAsText": "Download som tekst",
+    "deleteLog": "Slet",
+    "confirmDelete": "Slet denne sessionslog?",
+    "confirmDeleteDesc": "Denne handling kan ikke fortrydes.",
+    "copyContent": "Kopi",
+    "copied": "Kopieret!",
+    "loadError": "Kunne ikke indlæse sessionslogfiler",
+    "deleteError": "Kunne ikke slette sessionsloggen",
+    "filterByHost": "Filtrer efter vært..."
+  }
+}

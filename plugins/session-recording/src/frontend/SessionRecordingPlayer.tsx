@@ -1,19 +1,22 @@
-import { getErrorMessage } from "../../lib/error-message.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import Guacamole from "guacamole-common-js";
-import type { SessionLogRecord } from "@/api/session-log-api";
-import { parseAsciicast, type Asciicast } from "./asciicast";
+import { Select2 } from "@termix/plugin-sdk/ui";
 import "@xterm/xterm/css/xterm.css";
-import { Select2 } from "@/components/select2";
+import { parseAsciicast, type Asciicast } from "./asciicast";
+import type { SessionLogRecord } from "./session-recording-api";
 
 const SPEEDS = [0.5, 1, 2, 4];
 
 function formatPosition(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 function PlaybackControls({

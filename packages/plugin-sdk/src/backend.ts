@@ -75,6 +75,19 @@ export interface PluginKeyValue {
 }
 
 /**
+ * A folder on disk this plugin owns, for state too large for ctx.kv (session
+ * recordings, uploaded files). Requires files:own.
+ */
+export interface PluginFiles {
+  /**
+   * The plugin's own folder under DATA_DIR, created if it does not exist yet.
+   * Always the same path for this plugin; a plugin lays out its own
+   * subdirectories underneath it.
+   */
+  dataDir: () => Promise<string>;
+}
+
+/**
  * The plugin's own tables.
  *
  * `define` registers a table definition and returns the Drizzle table object
@@ -1147,6 +1160,7 @@ export interface PluginContext {
   readonly log: PluginLogger;
   readonly events: PluginEvents;
   readonly kv: PluginKeyValue;
+  readonly files: PluginFiles;
   readonly db: PluginDatabase;
   readonly sync: PluginSync;
   readonly registry: PluginRegistry;

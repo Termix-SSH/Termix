@@ -267,6 +267,13 @@
       "when": 1790224429343,
       "tag": "0037_burly_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1790225599344,
+      "tag": "0038_broad_avengers",
+      "breakpoints": true
     }
   ]
 }

@@ -60,6 +60,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
   entry("hosts:read", "low"),
   entry("db:own", "low"),
   entry("kv:own", "low"),
+  entry("files:own", "low"),
   entry("secrets:own", "low"),
   entry("settings:read-core", "low"),
   entry("ui:surface", "low"),

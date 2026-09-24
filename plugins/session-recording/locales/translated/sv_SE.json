@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "Sessionsloggar"
+  },
+  "hosts": {
+    "enableSessionRecording": "Sessionsloggning",
+    "enableSessionRecordingDesc": "Spela in utdata från terminalsessionen för senare granskning"
+  },
+  "sessionLogs": {
+    "title": "Sessionsloggar",
+    "noLogs": "Inga sessionsloggar ännu",
+    "noLogsDesc": "Aktivera sessionsloggning på en värd för att starta inspelning",
+    "duration": "Varaktighet",
+    "viewLog": "Visa logg",
+    "downloadLog": "Ladda ner",
+    "downloadAsText": "Ladda ner som text",
+    "deleteLog": "Radera",
+    "confirmDelete": "Radera den här sessionsloggen?",
+    "confirmDeleteDesc": "Den här åtgärden kan inte ångras.",
+    "copyContent": "Kopiera",
+    "copied": "Kopierad!",
+    "loadError": "Misslyckades med att läsa in sessionsloggar",
+    "deleteError": "Misslyckades med att radera sessionsloggen",
+    "filterByHost": "Filtrera efter värd..."
+  }
+}

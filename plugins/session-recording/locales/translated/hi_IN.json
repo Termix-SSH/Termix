@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "sessionLogs": "सत्र लॉग्स"
+  },
+  "hosts": {
+    "enableSessionRecording": "सत्र लॉगिंग",
+    "enableSessionRecordingDesc": "बाद में समीक्षा के लिए टर्मिनल सत्र का आउटपुट रिकॉर्ड करें"
+  },
+  "sessionLogs": {
+    "title": "सेशन लॉग्स",
+    "noLogs": "अभी तक कोई सेशन लॉग नहीं",
+    "noLogsDesc": "रिकॉर्डिंग शुरू करने के लिए किसी होस्ट पर सेशन लॉगिंग सक्षम करें",
+    "duration": "अवधि",
+    "viewLog": "लॉग देखें",
+    "downloadLog": "डाउनलोड करें",
+    "downloadAsText": "टेक्स्ट के रूप में डाउनलोड करें",
+    "deleteLog": "हटाएं",
+    "confirmDelete": "क्या इस सेशन लॉग को हटाएं?",
+    "confirmDeleteDesc": "यह क्रिया वापस नहीं ली जा सकती।",
+    "copyContent": "कॉपी करें",
+    "copied": "कॉपी हो गया!",
+    "loadError": "सेशन लॉग लोड करने में विफल",
+    "deleteError": "सेशन लॉग हटाने में विफल",
+    "filterByHost": "होस्ट द्वारा फ़िल्टर करें..."
+  }
+}
