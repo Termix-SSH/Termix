@@ -112,6 +112,7 @@ const offline = () =>
     loaded: true,
   }),
   useSlotContributions: () => [],
+  usePluginComponent: () => undefined,
 };
 
 afterEach(() => {

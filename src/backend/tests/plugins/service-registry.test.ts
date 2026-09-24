@@ -21,6 +21,7 @@ const {
   clearServiceRegistry,
   createServiceHandle,
   getRegistration,
+  getServiceImplementation,
   listServices,
   provideService,
   resolveRequirements,
@@ -83,6 +84,19 @@ describe("service registry", () => {
 
   it("reports a revoke of something never registered", () => {
     expect(revokeService("nothing.here")).toBe(false);
+  });
+
+  it("hands core the implementation of a compatible version, or nothing", () => {
+    expect(
+      getServiceImplementation("testplugin.greet", "^1.0.0"),
+    ).toBeUndefined();
+    const registration = register({ version: "1.4.0" });
+    expect(getServiceImplementation("testplugin.greet", "^1.0.0")).toBe(
+      registration.implementation,
+    );
+    expect(
+      getServiceImplementation("testplugin.greet", "^2.0.0"),
+    ).toBeUndefined();
   });
 
   describe("resolution", () => {

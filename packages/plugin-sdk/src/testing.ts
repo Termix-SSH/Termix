@@ -62,6 +62,8 @@ export interface FakeContextOptions {
   /** Users and roles ctx.hosts.listUsers/listRoles answer with. */
   shareableUsers?: PluginShareableUser[];
   shareableRoles?: PluginShareableRole[];
+  /** Hosts ctx.ssh.resolveHost answers with, secrets included. */
+  sshHosts?: PluginSshHost[];
 }
 
 export interface FakeAuthRegistrations {
@@ -115,6 +117,18 @@ export interface FakePluginContext {
     partition?: string;
     title?: string;
     ignoreCert?: boolean;
+  }>;
+  /** Every ctx.audit.record entry, in order. */
+  audits: Array<{ action: string; success: boolean; [key: string]: unknown }>;
+  /** Every ctx.hosts.recordActivity call, in order. */
+  activities: Array<{ hostId: number; type: string; hostName: string }>;
+  /** Host ids with a live ctx.hosts.trackSession, one entry per session. */
+  trackedSessions: number[];
+  /** Every ctx.ssh.startInteraction / cancelInteraction call, in order. */
+  interactions: Array<{
+    action: "start" | "cancel";
+    interaction: string;
+    request: Record<string, unknown>;
   }>;
   /** Changes the acting user, as core's request middleware would. */
   setActor: (userId: string | undefined) => void;
@@ -187,6 +201,10 @@ export function createFakeContext(
   const sshConnections: FakePluginContext["sshConnections"] = [];
   const hostShares: FakePluginContext["hostShares"] = [];
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
+  const audits: FakePluginContext["audits"] = [];
+  const activities: FakePluginContext["activities"] = [];
+  const trackedSessions: number[] = [];
+  const interactions: FakePluginContext["interactions"] = [];
   const hostsById = new Map<number, PluginHostSummary>(
     (options.hosts ?? []).map((h) => [h.id, h]),
   );
@@ -486,6 +504,25 @@ export function createFakeContext(
       },
       listUsers: async () => options.shareableUsers ?? [],
       listRoles: async () => options.shareableRoles ?? [],
+      trackSession: (hostId) => {
+        trackedSessions.push(hostId);
+        let active = true;
+        return () => {
+          if (!active) return;
+          active = false;
+          const index = trackedSessions.indexOf(hostId);
+          if (index >= 0) trackedSessions.splice(index, 1);
+        };
+      },
+      recordActivity: async (hostId, type, hostName) => {
+        activities.push({ hostId, type, hostName });
+      },
+    },
+
+    audit: {
+      record: async (entry) => {
+        audits.push({ ...entry });
+      },
     },
 
     ssh: {
@@ -512,8 +549,24 @@ export function createFakeContext(
       }),
       poolKey: (pool, host) =>
         `${pool}:${host.userId}:${host.ip}:${host.port}:${host.username}`,
-      prepare: async () => ({ config: {}, outcome: { status: "ready" } }),
+      resolveHost: async (hostId, resolveOptions) =>
+        (options.sshHosts ?? []).find((host) =>
+          resolveOptions?.syncId
+            ? host.syncId === resolveOptions.syncId
+            : host.id === hostId,
+        ) ?? null,
+      prepare: async () => ({
+        config: {},
+        outcome: { status: "ready" },
+        authType: null,
+      }),
       openTransport: async () => ({ jumpClient: null, via: "direct" }),
+      startInteraction: async (interaction, request) => {
+        interactions.push({ action: "start", interaction, request });
+      },
+      cancelInteraction: async (interaction, request) => {
+        interactions.push({ action: "cancel", interaction, request });
+      },
       classifyKeyboardInteractive: ({ prompts }, host) => ({
         kind: "auto",
         responses: prompts.map((p) =>
@@ -586,6 +639,10 @@ export function createFakeContext(
     hostShares,
     auth,
     desktopWindows,
+    audits,
+    activities,
+    trackedSessions,
+    interactions,
     setActor: (userId) => {
       actor = userId;
     },
@@ -616,6 +673,8 @@ export interface MockContextOptions {
   permissions?: string[];
   /** Hosts ctx.hosts.list/get/checkAccess serve. See FakeContextOptions. */
   hosts?: PluginHostSummary[];
+  /** Hosts ctx.ssh.resolveHost serves. See FakeContextOptions. */
+  sshHosts?: PluginSshHost[];
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -650,6 +709,7 @@ export function createMockCtx(
     router: options.router,
     permissions: options.permissions,
     hosts: options.hosts,
+    sshHosts: options.sshHosts,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -795,6 +855,14 @@ export function createMockCtx(
         require("hosts:write");
         return ctx.hosts.listRoles();
       },
+      trackSession: (hostId) => {
+        require("hosts:read");
+        return ctx.hosts.trackSession(hostId);
+      },
+      recordActivity: async (hostId, type, hostName) => {
+        require("hosts:read");
+        return ctx.hosts.recordActivity(hostId, type, hostName);
+      },
     },
 
     ssh: {
@@ -814,9 +882,23 @@ export function createMockCtx(
         require("credentials:use");
         return ctx.ssh.prepare(host, prepareOptions);
       },
-      openTransport: async (host, config) => {
+      openTransport: async (host, config, transportOptions) => {
         require("ssh:connect");
-        return ctx.ssh.openTransport(host, config);
+        return ctx.ssh.openTransport(host, config, transportOptions);
+      },
+      resolveHost: async (hostId, resolveOptions) => {
+        require("ssh:connect");
+        require("credentials:use");
+        return ctx.ssh.resolveHost(hostId, resolveOptions);
+      },
+      startInteraction: async (interaction, request) => {
+        require("ssh:connect");
+        require("credentials:use");
+        return ctx.ssh.startInteraction(interaction, request);
+      },
+      cancelInteraction: async (interaction, request) => {
+        require("ssh:connect");
+        return ctx.ssh.cancelInteraction(interaction, request);
       },
       jumpChain: async (jumpHosts, chainOptions) => {
         require("ssh:connect");

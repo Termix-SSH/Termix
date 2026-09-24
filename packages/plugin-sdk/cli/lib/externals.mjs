@@ -23,6 +23,8 @@ export const BACKEND_EXTERNALS = [
   "@anthropic-ai/sdk",
   "drizzle-orm",
   "drizzle-orm/*",
+  // Native image processing, loaded on first use by the terminal's image upload.
+  "sharp",
 ];
 
 /**

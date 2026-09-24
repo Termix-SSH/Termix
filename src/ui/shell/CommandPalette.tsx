@@ -13,7 +13,6 @@ import {
 import {
   Server,
   Settings,
-  Terminal,
   Globe,
   Plus,
   MessagesSquare,
@@ -66,12 +65,11 @@ function getSshActions(host: Host): {
 }[] {
   return [
     // --- tmux-monitor --- opt-in per host, off by default
-    host.enableTerminal !== false &&
-      host.enableTmuxMonitor && {
-        type: "tmux_monitor",
-        icon: Layers,
-        label: "Tmux Monitor",
-      },
+    host.enableTmuxMonitor && {
+      type: "tmux_monitor",
+      icon: Layers,
+      label: "Tmux Monitor",
+    },
   ].filter(Boolean) as {
     type: TabType;
     icon: React.ElementType;
@@ -173,11 +171,7 @@ export function CommandPalette({
       setSelectedValue(`host-${firstHost.id}`);
       return;
     }
-    setSelectedValue(
-      window.electronAPI?.isElectron
-        ? "quick-action-local-terminal"
-        : "quick-action-add-host",
-    );
+    setSelectedValue("quick-action-add-host");
   }, [filteredHosts, isOpen, search]);
 
   const activeTargetTab =
@@ -235,27 +229,6 @@ export function CommandPalette({
               heading={t("commandPalette.quickActions")}
               className="px-2"
             >
-              {window.electronAPI?.isElectron && (
-                <CommandItem
-                  value="quick-action-local-terminal"
-                  onSelect={() =>
-                    handleAction(() => onOpenTab("local-terminal"))
-                  }
-                  className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                >
-                  <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                    <Terminal className="size-4 text-accent-brand" />
-                  </div>
-                  <div className="flex flex-col flex-1">
-                    <span className="text-sm font-semibold">
-                      {t("commandPalette.localTerminal")}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {t("commandPalette.localTerminalDesc")}
-                    </span>
-                  </div>
-                </CommandItem>
-              )}
               <CommandItem
                 value="quick-action-add-host"
                 onSelect={() =>

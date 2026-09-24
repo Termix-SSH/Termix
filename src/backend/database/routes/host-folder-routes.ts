@@ -3,7 +3,6 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
 import { pluginEvents, TOPICS } from "../../plugins/events.js";
 import {
-  createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
   createCurrentHostFolderRepository,
   createCurrentFolderAccessRepository,
@@ -398,13 +397,9 @@ export function registerHostFolderRoutes(
         const hostIds = hostsToDelete.map((host) => host.id);
 
         if (hostIds.length > 0) {
-          // file manager recent/pinned/shortcuts and transfer_recent cascade
-          // on the host's refHost() foreign key, as the file-manager
-          // plugin's adopted tables.
-
-          await createCurrentCommandHistoryRepository().deleteByHostIds(
-            hostIds,
-          );
+          // file manager recent/pinned/shortcuts, transfer_recent and command
+          // history cascade on the host's refHost() foreign key, as the
+          // file-manager and ssh-terminal plugins' adopted tables.
 
           await createCurrentSshCredentialUsageRepository().deleteByHostIds(
             hostIds,

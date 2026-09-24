@@ -292,6 +292,16 @@ export interface PluginWebSocketConnection {
   readonly request: unknown;
   /** The ws WebSocket. Binary frames and backpressure work as usual. */
   readonly socket: unknown;
+  /** The client address, behind a trusted proxy when one is configured. */
+  readonly clientIp: string;
+  /** The public origin the request came in on, for browser redirects. */
+  readonly requestOrigin: string;
+  /**
+   * Whether the user's data key is still unlocked. False for a guest and
+   * once a session expires, so a long-lived socket can refuse work it can no
+   * longer decrypt for.
+   */
+  isDataUnlocked: () => boolean;
 }
 
 export type PluginWebSocketHandler = (
@@ -305,6 +315,12 @@ export interface PluginWebSocketOptions {
    * guest or a token-in-query protocol needs.
    */
   public?: boolean;
+  /**
+   * With `public`, still resolves a token when the client sent one, so one
+   * route can serve signed-in users and a guest arriving with a token of its
+   * own. The handler gets the user id, or an empty one for a guest.
+   */
+  optionalAuth?: boolean;
 }
 
 /**
@@ -551,6 +567,22 @@ export interface PluginHosts {
   listUsers: () => Promise<PluginShareableUser[]>;
   /** Non-system roles the caller may pick as a share target. */
   listRoles: () => Promise<PluginShareableRole[]>;
+  /**
+   * Marks a live session on a host, for the online indicator. Counted with
+   * every other feature's sessions; call the returned function once when the
+   * session ends. Needs hosts:read.
+   */
+  trackSession: (hostId: number) => () => void;
+  /**
+   * Adds a recent activity entry for the acting user, rate limited and
+   * refused for a host they cannot reach, like the dashboard's own route.
+   * Needs hosts:read.
+   */
+  recordActivity: (
+    hostId: number,
+    type: string,
+    hostName: string,
+  ) => Promise<void>;
 }
 
 /**
@@ -579,7 +611,8 @@ export type PluginSshPurpose =
   | "remote-desktop"
   | "tunnel"
   | "file-manager"
-  | "file-transfer";
+  | "file-transfer"
+  | "terminal";
 
 export type PluginSshAuthOutcome =
   | { status: "ready" }
@@ -718,6 +751,18 @@ export interface PluginSsh {
   poolKey: (pool: string, host: PluginSshHost) => string;
 
   /**
+   * The host as the acting user may connect to it: RBAC, owner-key
+   * decryption, shared-host overrides and external secret references
+   * resolved, secrets included. By sync id when given, since a numeric id
+   * only names a host on the database that issued it. Null when the host is
+   * not on this server or the user cannot reach it.
+   */
+  resolveHost: (
+    hostId: number,
+    options?: { syncId?: string | null },
+  ) => Promise<PluginSshHost | null>;
+
+  /**
    * Lower level: fills an ssh2 config for a client the plugin drives itself,
    * for transports with their own prompt flow. Never connects.
    */
@@ -729,17 +774,48 @@ export interface PluginSsh {
       /** Server-side host id when it differs from host.id. */
       serverHostId?: number;
       log?: (level: "info" | "warning" | "error", message: string) => void;
+      /** A person is at the keyboard, so providers may prompt. */
+      interactive?: boolean;
+      /**
+       * The ws socket the host key verifier asks on when a key is new or has
+       * changed. Without one a changed key is refused.
+       */
+      hostKeySocket?: unknown;
     },
-  ) => Promise<{
-    config: Record<string, unknown>;
-    outcome: PluginSshAuthOutcome;
-  }>;
+  ) => Promise<PluginSshPrepared>;
 
   /** Lower level: port knocking, jump hosts or proxy; sets config.sock. */
   openTransport: (
     host: PluginSshHost,
     config: Record<string, unknown>,
+    options?: {
+      /** False when the caller already resolved DNS, or a jump host will. */
+      resolveDns?: boolean;
+      log?: (level: "info" | "warning" | "error", message: string) => void;
+    },
   ) => Promise<{ jumpClient: unknown | null; via: string }>;
+
+  /**
+   * Starts the browser step behind an `<interaction>_auth_required` message.
+   * The provider for the host's own auth type wins, else the first provider
+   * that owns the interaction. Rejects with PluginSshInteractionError when
+   * none can.
+   */
+  startInteraction: (
+    interaction: string,
+    request: {
+      hostId: number;
+      socket: unknown;
+      requestOrigin: string;
+      payload?: Record<string, unknown>;
+    },
+  ) => Promise<void>;
+
+  /** Cancels a pending browser step on every provider that owns it. */
+  cancelInteraction: (
+    interaction: string,
+    request: { hostId?: number; requestId?: string },
+  ) => Promise<void>;
 
   /** What a keyboard-interactive round is. Pure; no capability needed. */
   classifyKeyboardInteractive: (
@@ -762,6 +838,31 @@ export interface PluginSsh {
 
   /** Whether an auth type can connect unattended, for polling. */
   supportsBackground: (authType: string) => boolean;
+}
+
+/** What ctx.ssh.prepare built, plus the provider hooks bound to it. */
+export interface PluginSshPrepared {
+  config: Record<string, unknown>;
+  outcome: PluginSshAuthOutcome;
+  /** The auth type whose provider prepared it, null when none exists. */
+  authType: string | null;
+  /** The provider's banner hook, bound to this host and connection. */
+  onBanner?: (banner: string) => PluginSshBannerDecision | undefined;
+  /** The provider's auth failure hook, bound to this host and connection. */
+  onAuthFailed?: (context: {
+    error: Error;
+    retries: number;
+    canRetry: boolean;
+    methodNotAvailable: boolean;
+  }) => PluginSshAuthOutcome | undefined;
+}
+
+/** Thrown by ctx.ssh.startInteraction when no provider can start it. */
+export class PluginSshInteractionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PluginSshInteractionError";
+  }
 }
 
 export interface PluginSshAuthEnv {
@@ -845,6 +946,12 @@ export interface PluginSshAuthProvider {
     requestOrigin: string;
     payload: Record<string, unknown>;
   }) => Promise<void>;
+  /** Cancels a pending browser step. */
+  cancelInteraction?: (request: {
+    userId: string;
+    hostId?: number;
+    requestId?: string;
+  }) => void | Promise<void>;
 }
 
 /**
@@ -986,6 +1093,23 @@ export interface PluginDesktop {
   ) => Promise<{ success: true }>;
 }
 
+/**
+ * An audit line under an action name of the plugin's choosing (an SSH login),
+ * for the acting user, next to the plugin_* line every privileged ctx call
+ * already writes.
+ */
+export interface PluginAudit {
+  record: (entry: {
+    action: string;
+    resourceType?: string;
+    resourceId?: string;
+    resourceName?: string;
+    details?: string;
+    success: boolean;
+    errorMessage?: string;
+  }) => Promise<void>;
+}
+
 export interface PluginContext {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -1010,6 +1134,8 @@ export interface PluginContext {
   readonly auth: PluginAuth;
   /** Opens Electron windows outside the main renderer. Needs desktop:window. */
   readonly desktop: PluginDesktop;
+  /** Audit lines under the plugin's own action names. */
+  readonly audit: PluginAudit;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

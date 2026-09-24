@@ -101,8 +101,8 @@ vi.mock("../../../hosts/collab/runtime-store.js", () => ({
     },
   },
 }));
-vi.mock("../../../hosts/terminal/session-manager.js", () => ({
-  sessionManager: {
+vi.mock("../../../hosts/live-terminal-sessions.js", () => ({
+  liveTerminalSessions: {
     setRoomShareControl: (...args: unknown[]) => {
       state.control.push(args);
     },

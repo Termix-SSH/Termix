@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Adicionar",
+    "arrowDown": "Seta para Baixo",
+    "arrowLeft": "Seta para a Esquerda",
+    "arrowRight": "Seta para a Direita",
+    "arrowUp": "Seta para Cima",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Concluir",
+    "editQuickKeys": "Editar teclas rápidas",
+    "end": "Fim",
+    "esc": "Esc",
+    "home": "Início",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Colar",
+    "quickKeyPlaceholder": "ex: sudo ",
+    "quickKeysDesc": "Toque no × para remover. Suporta até 8 caracteres.",
+    "quickKeysTitle": "Teclas Rápidas",
+    "removeQuickKey": "Remover",
+    "resetDefaults": "Restaurar predefinições",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Falha ao ativar o Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux ativado para {{host}}. Aplica-se a partir da ligação seguinte.",
+    "clipboardHttpWarning": "Não foi possível ler a área de transferência. Alguns browsers restringem o acesso à área de transferência fora de HTTPS - experimente Ctrl+V ou utilize HTTPS para aceder ao Termix.",
+    "closeTab": "Fechar",
+    "connecting": "A ligar...",
+    "connectionLost": "Ligação perdida",
+    "connectionRejected": "Ligação rejeitada pelo servidor. Verifique a sua autenticação e configuração de rede.",
+    "connectionTimeout": "Tempo limite da ligação",
+    "enableAutoTmuxAction": "Ativar o Auto-Tmux",
+    "hostKeyRejected": "Verificação da chave de host SSH rejeitada. Ligação cancelada.",
+    "linkDialogCopy": "Copiar",
+    "linkDialogOpen": "Abrir",
+    "linkDialogTitle": "Abrir Ligação",
+    "maxReconnectAttemptsReached": "Número máximo de tentativas de restabelecimento de ligação atingido",
+    "noHostSelected": "Nenhum host selecionado",
+    "opksshAuthFailed": "A autenticação falhou. Verifique as suas credenciais e tente novamente.",
+    "opksshTimeout": "A autenticação expirou. Tente novamente.",
+    "passwordPromptFillTitle": "Preencher a palavra-passe guardada neste pedido?",
+    "reconnect": "Reconectar",
+    "reconnected": "Ligação restabelecida com sucesso",
+    "reconnecting": "A restabelecer ligação... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Caixa de fósforos",
+    "searchClose": "Fechar (Esc)",
+    "searchNext": "Próxima partida (Entrar)",
+    "searchNoResults": "Nenhum resultado",
+    "searchPlaceholder": "Encontrar",
+    "searchPrevious": "Partida anterior (Shift+Enter)",
+    "searchRegex": "Utilizar expressão regular",
+    "searchResultCount": "{{index}} de {{count}}",
+    "searchWholeWord": "Combine a palavra inteira",
+    "sessionExpiredNotice": "A sua sessão anterior em {{host}} expirou após {{minutes}} minutos desligado; o shell e tudo o que estava a ser executado nele foram perdidos. Active o Auto-Tmux neste host para manter as sessões ativas.",
+    "sessionExpiredNoticeNoMinutes": "A sua sessão anterior em {{host}} expirou enquanto estava desligada; o shell e tudo o que estava a ser executado nele foram perdidos. Active o Auto-Tmux neste host para manter as sessões ativas.",
+    "sessionTakenOver": "A sessão foi aberta noutro separador. A restabelecer ligação...",
+    "tmuxAttached": "Clientes anexados",
+    "tmuxAttachedCount": "{{count}} anexado",
+    "tmuxCopyHint": "Ajuste a seleção e prima Enter para copiar para a área de transferência",
+    "tmuxCreateNew": "Iniciar nova sessão",
+    "tmuxDetached": "Desanexado da sessão tmux",
+    "tmuxLastActivity": "Última atividade",
+    "tmuxSessionAttached": "Sessão tmux anexada: {{name}}",
+    "tmuxSessionCreated": "Sessão tmux criada: {{name}}",
+    "tmuxSessionPickerDesc": "Foram encontradas sessões tmux neste host. Selecione uma para retomar ou crie uma nova sessão.",
+    "tmuxSessionPickerTitle": "Sessões tmux",
+    "tmuxTimeDays": "há {{count}} d",
+    "tmuxTimeHours": "há {{count}} h",
+    "tmuxTimeJustNow": "agora mesmo",
+    "tmuxTimeMinutes": "há {{count}} min",
+    "tmuxUnavailable": "O tmux não está instalado no host remoto, a reverter para shell padrão",
+    "tmuxWindowCount": "{{count}} janela",
+    "tmuxWindows": "Janelas",
+    "unknownError": "Ocorreu um erro desconhecido.",
+    "vaultAuthDescription": "Foi aberta uma janela para iniciar sessão no HashiCorp Vault. Conclua o início de sessão aí; esta ligação continuará automaticamente.",
+    "vaultAuthFailed": "A autenticação no Vault falhou. Tente novamente.",
+    "vaultAuthTitle": "Início de sessão no Vault necessário",
+    "vaultReopen": "Reabrir janela de início de sessão",
+    "websocketAbnormalClose": "A ligação foi fechada inesperadamente. Isto pode dever-se a um problema de configuração do proxy reverso ou SSL. Verifique os registos do servidor.",
+    "websocketError": "Erro de ligação WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Desanexar tmux",
+    "detachTmuxDescription": "Desanexar sessão tmux",
+    "dismissError": "Ignorar erro de imagem",
+    "hideToolbar": "Ocultar barra de ferramentas",
+    "image": "Ações de imagem (apenas imagens)",
+    "imageActionFailed": "A ação de imagem falhou",
+    "layout": "Modo de visualização da barra de ferramentas",
+    "layoutExpanded": "Expandido com métricas",
+    "layoutIcon": "Apenas o ícone",
+    "layoutLabeled": "Ícones e rótulos",
+    "moveToolbar": "Mover barra de ferramentas",
+    "moveToolbarHint": "Arraste para reposicionar a barra de ferramentas.",
+    "paste": "Colar imagem",
+    "pasteImage": "Colar imagem da área de transferência (apenas imagens)",
+    "retry": "Tentar novamente",
+    "showToolbar": "Expandir barra de ferramentas",
+    "upload": "Carregar imagem",
+    "uploadImage": "Faça o upload de uma imagem para o host.",
+    "uploadingImage": "Carregando..."
+  },
+  "history": {
+    "noTerminalSelected": "Nenhum terminal selecionado",
+    "noTerminalSelectedHint": "Abra um separador de terminal SSH para ver o histórico de comandos",
+    "searchPlaceholder": "Pesquisar histórico...",
+    "clearAll": "Limpar Tudo",
+    "noHistoryEntries": "Sem entradas no histórico",
+    "trackingDisabled": "O rastreio do histórico está desativado"
+  },
+  "touchInput": {
+    "enabled": "Ativar entrada por toque",
+    "enabledDesc": "Permitir a rolagem com um único dedo nos terminais.",
+    "momentumEnabled": "Ativar o impulso",
+    "momentumEnabledDesc": "Continue a rolar brevemente após deslizar o dedo.",
+    "advanced": "Avançado",
+    "resetDefaults": "Restaurar as predefinições de fábrica",
+    "dragThreshold": "Limiar de arrasto",
+    "maxWheelDelta": "Delta máximo da roda",
+    "momentumSampleWindow": "Janela de amostra de momento",
+    "releaseGracePeriod": "Período de carência para lançamento",
+    "minimumVelocity": "Velocidade mínima",
+    "maximumVelocity": "Velocidade máxima",
+    "maximumDuration": "Duração máxima",
+    "maximumTravel": "Viagem máxima",
+    "decayTime": "Tempo de decaimento",
+    "pixelsPerTick": "Pixels por tick",
+    "maximumFrameInterval": "Intervalo máximo entre fotogramas",
+    "maximumTicksPerFrame": "Número máximo de ticks por frame"
+  },
+  "imageStorage": {
+    "instanceId": "ID da instância da sessão do terminal",
+    "instanceIdDesc": "ID da instância de uma das suas abas de terminal ligadas, utilizada para testar a visibilidade.",
+    "selectedModeUnavailable": "Indisponível",
+    "test": "Teste",
+    "testing": "Testando...",
+    "testFailed": "Falha ao testar o armazenamento de imagens",
+    "testConnected": "A sessão do terminal está ligada.",
+    "testNotConnected": "Nenhuma sessão de terminal ligada com este ID de instância.",
+    "testSelectedMode": "Um upload utilizaria: {{mode}}",
+    "testLocalVisible": "O diretório local está visível a partir do host ligado.",
+    "testLocalNotVisible": "O diretório local NÃO está visível a partir do host ligado."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Entrada por toque",
+        "images": "Armazenamento de imagens"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Persistência de sessão do terminal",
+        "description": "Tempo que um terminal desligado permanece ativo no servidor antes de ser fechado. Mínimo 1 minuto · Máximo 1440 minutos. Para sessões que necessitem de durar mais do que isso, ative o Auto-Tmux no host."
+      },
+      "commandHistoryEnabled": {
+        "label": "Histórico de Comandos",
+        "description": "Permitir o registo do histórico de comandos. Quando desativado, o histórico não é guardado independentemente das definições por máquina."
+      },
+      "imageStorageMode": {
+        "label": "Modo de armazenamento",
+        "description": "Local onde são apresentadas as imagens de terminal coladas e carregadas. As seleções automáticas por ligação, Local e Remota (SFTP), foram corrigidas.",
+        "auto": "Auto",
+        "local": "Local",
+        "remoteSftp": "Remoto (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Diretório local"
+      },
+      "imageHostPath": {
+        "label": "Caminho do host",
+        "description": "Vista do diretório local recebida pelos agentes de terminal, do lado do host."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Contagem máxima de imagens"
+      },
+      "imageMaxBytes": {
+        "label": "Bytes de armazenamento máximo"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Ativar a barra de ferramentas do terminal",
+        "description": "Visualizar uma barra de ferramentas de acesso rápido acoplada ao terminal ativo com as ferramentas e estatísticas em tempo real deste host."
+      },
+      "enableCommandHistory": {
+        "label": "Histórico de comandos",
+        "description": "Gravar comandos executados neste terminal para histórico e autocompletar"
+      },
+      "enableTerminal": {
+        "label": "Ativar Terminal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Terminal local"
+  }
+}

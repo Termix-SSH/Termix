@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable react-hooks/exhaustive-deps */
+import type { TabHandle } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";
@@ -89,9 +90,21 @@ const CollabPanel = lazy(() =>
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
-const HistoryPanel = lazy(() =>
-  import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
+
+const ShareSessionModal = lazy(() =>
+  import("@/features/session-sharing/ShareSessionModal").then((m) => ({
+    default: m.ShareSessionModal,
+  })),
 );
+
+/** What a session tab's handle gives the shell's share dialog. */
+interface ShareTarget {
+  hostId: number;
+  sessionId: string;
+  protocol: "ssh";
+  tabInstanceId?: string;
+}
+
 const SessionLogsPanel = lazy(() =>
   import("@/sidebar/SessionLogsPanel").then((m) => ({
     default: m.SessionLogsPanel,
@@ -514,10 +527,7 @@ export function AppShell({
         const tabId = activeTabIdRef.current;
         if (!tabId) return;
         const termRef = terminalRefs.current.get(tabId);
-        (
-          termRef?.current as
-            import("@/features/terminal/Terminal").TerminalHandle | null
-        )?.reconnect();
+        (termRef?.current as TabHandle | null)?.reconnect?.();
         return;
       }
       const currentTabs = tabsRef.current;
@@ -608,9 +618,12 @@ export function AppShell({
   // Once those panels can themselves be the active tab, activeTabId points at
   // the panel and the lookup misses, so remember the last terminal instead.
   const [lastTerminalTabId, setLastTerminalTabId] = useState(activeTabId);
+  const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   useEffect(() => {
     const active = tabs.find((t) => t.id === activeTabId);
-    if (active?.type === "terminal") setLastTerminalTabId(active.id);
+    if (active && getTabType(active.type)?.commandTarget) {
+      setLastTerminalTabId(active.id);
+    }
   }, [activeTabId, tabs]);
   useEffect(() => {
     splitModeRef.current = splitMode;
@@ -856,10 +869,7 @@ export function AppShell({
           const tabId = paneTabIdsRef.current[next];
           if (tabId) {
             const termRef = terminalRefs.current.get(tabId);
-            (
-              termRef?.current as
-                import("@/features/terminal/Terminal").TerminalHandle | null
-            )?.focus();
+            (termRef?.current as TabHandle | null)?.focus?.();
           }
           return;
         }
@@ -1688,6 +1698,7 @@ export function AppShell({
     },
   ) {
     const type = resolveHostTabType(host, preferredType);
+    if (!type) return;
     // --- tmux-monitor --- singleton tab, not a per-host tab
     if (type === "tmux_monitor") {
       openSingletonTab(type, undefined, host);
@@ -1758,26 +1769,24 @@ export function AppShell({
     });
   }
 
-  function openLocalTerminalTab(): string {
+  /** A tab type that opens a fresh tab every time (a local shell). */
+  function openMultiInstanceTab(type: TabType): string {
     const instanceId =
       typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-    const id = `local-terminal-${instanceId}`;
+    const id = `${type}-${instanceId}`;
+    const titleKey = getTabType(type)?.titleKey;
+    const title = titleKey ? t(titleKey) : type;
     setTabs((current) => {
-      const count = current.filter(
-        (tab) => tab.type === "local-terminal",
-      ).length;
+      const count = current.filter((tab) => tab.type === type).length;
       return [
         ...current,
         {
           id,
           instanceId,
-          type: "local-terminal",
-          label:
-            count === 0
-              ? t("nav.localTerminal")
-              : `${t("nav.localTerminal")} (${count + 1})`,
+          type,
+          label: count === 0 ? title : `${title} (${count + 1})`,
           openedAt: Date.now(),
         },
       ];
@@ -1841,9 +1850,9 @@ export function AppShell({
       host?: Host,
       data?: Record<string, unknown>,
     ) {
-      // Local terminals are never singletons, each one is its own shell.
-      if (type === "local-terminal") {
-        return openLocalTerminalTab();
+      // A local shell is never a singleton: each open is its own session.
+      if (getTabType(type)?.multiInstance) {
+        return openMultiInstanceTab(type);
       }
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
@@ -2024,8 +2033,15 @@ export function AppShell({
   function openShareForTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
     if (!tab) return;
-    const ref = tab.terminalRef?.current;
-    if (ref?.canShare?.()) {
+    const ref = tab.terminalRef?.current as TabHandle | null | undefined;
+    // A session tab either opens its own share dialog or hands over what
+    // the shell's dialog needs.
+    const target = (
+      ref?.getShareTarget as (() => ShareTarget | null) | undefined
+    )?.();
+    if (target) {
+      setShareTarget(target);
+    } else if (ref?.canShare?.()) {
       ref.openShareModal?.();
     } else {
       toast.error(t("sessionSharing.notReadyToShare"));
@@ -2311,8 +2327,7 @@ export function AppShell({
     }
 
     for (const tab of tabs) {
-      const isTerminal =
-        tab.type === "terminal" || tab.type === "local-terminal";
+      const isTerminal = !!getTabType(tab.type)?.ownBackground;
       const node = getTabNode(tab.id, isTerminal);
       const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
       const inPane = paneIdx !== -1;
@@ -2373,7 +2388,7 @@ export function AppShell({
     }
   });
 
-  const terminalTabs = tabs.filter((t) => t.type === "terminal");
+  const terminalTabs = tabs.filter((t) => getTabType(t.type)?.commandTarget);
   const topLevelTabs = tabs.filter((tab) => !tab.parentSplitTabId);
 
   function reorderTopLevelTabs(reordered: Tab[]) {
@@ -2402,10 +2417,6 @@ export function AppShell({
    */
   // The param deliberately shadows the outer railView so the body reads the
   // same whichever dock is rendering.
-  const newInstanceId = () =>
-    typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
   /**
    * What plugins may ask of the shell. Rebuilt every render so it always
@@ -2423,12 +2434,7 @@ export function AppShell({
       openSingletonTab(type, undefined, undefined, options?.data),
     closeTab: (tabId) => closeTab(tabId),
     renameTab: (tabId, label) => renameTab(tabId, label),
-    openTerminalTab: (host, path) =>
-      openTab(host, "terminal", {
-        instanceId: newInstanceId(),
-        restoredSessionId: null,
-        initialFilePath: path,
-      }),
+
     openRailView: (id) => {
       setRailView(id as RailView);
       setSidebarOpen(true);
@@ -2540,15 +2546,6 @@ export function AppShell({
           </div>
         )}
 
-        {railView === "history" && (
-          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-            <HistoryPanel
-              terminalTabs={terminalTabs}
-              activeTabId={targetTerminalTabId}
-            />
-          </div>
-        )}
-
         {railView === "split-screen" && (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <SplitScreenPanel
@@ -2579,6 +2576,9 @@ export function AppShell({
               className={`flex flex-col flex-1 min-h-0 overflow-y-auto ${shown ? "" : "hidden"}`}
             >
               <Panel
+                targetTab={terminalTabs.find(
+                  (tab) => tab.id === targetTerminalTabId,
+                )}
                 active={shown}
                 shell={panelShell}
                 setEditing={setSidebarEditing}
@@ -2673,16 +2673,10 @@ export function AppShell({
                   serverTunnels: [],
                   quickActions: [],
                 };
-                const instanceId =
-                  typeof crypto.randomUUID === "function"
-                    ? crypto.randomUUID()
-                    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-                openTab(host, "terminal", {
-                  instanceId,
-                  restoredSessionId: null,
+                void invokeAction("terminal.open", host, {
                   joinSharedSessionId: session.sessionId,
                   joinShareId: session.shareId,
-                  savedLabel: t("connections.sharedSessionLabel", {
+                  label: t("connections.sharedSessionLabel", {
                     hostName: session.hostName,
                   }),
                 });
@@ -3053,7 +3047,7 @@ export function AppShell({
                   {tabsByPortalOrder.map((tab) => {
                     const tabNode = getTabNode(
                       tab.id,
-                      tab.type === "terminal" || tab.type === "local-terminal",
+                      !!getTabType(tab.type)?.ownBackground,
                     );
                     const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
                     const inPane = paneIdx !== -1;
@@ -3129,6 +3123,19 @@ export function AppShell({
         </div>
       </div>
 
+      {shareTarget && (
+        <Suspense fallback={null}>
+          <ShareSessionModal
+            open
+            onClose={() => setShareTarget(null)}
+            hostId={shareTarget.hostId}
+            sessionId={shareTarget.sessionId}
+            protocol={shareTarget.protocol}
+            tabInstanceId={shareTarget.tabInstanceId}
+          />
+        </Suspense>
+      )}
+
       {commandPaletteOpen && (
         <Suspense fallback={null}>
           <CommandPalette
@@ -3148,8 +3155,8 @@ export function AppShell({
                 ].includes(type)
               ) {
                 openSingletonTab(type, pendingEvent);
-              } else if (type === "local-terminal") {
-                openLocalTerminalTab();
+              } else if (getTabType(type)?.multiInstance) {
+                openMultiInstanceTab(type);
               } else if (type === "tmux_monitor") {
                 // --- tmux-monitor --- singleton tab, optionally preselecting a host
                 openSingletonTab(

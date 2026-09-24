@@ -89,7 +89,6 @@ export const shell: TabShellCallbacks = {
   openSingletonTab: (...args) => callbacks?.openSingletonTab(...args),
   closeTab: (...args) => callbacks?.closeTab(...args),
   renameTab: (...args) => callbacks?.renameTab(...args),
-  openTerminalTab: (...args) => callbacks?.openTerminalTab(...args),
   openRailView: (...args) => callbacks?.openRailView(...args),
   closeRailView: (...args) => callbacks?.closeRailView(...args),
   saveQuickConnect: (...args) =>

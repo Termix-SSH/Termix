@@ -37,6 +37,13 @@ vi.mock("../../utils/auth-manager.js", () => ({
   },
 }));
 
+vi.mock("../../utils/data-crypto.js", () => ({
+  DataCrypto: {
+    getUserDataKey: (userId: string) =>
+      userId === state.userId ? Buffer.from("key") : null,
+  },
+}));
+
 vi.mock("../../plugins/permissions.js", () => ({
   hasCapability: async (
     _pluginId: string,
@@ -186,6 +193,54 @@ describe("ctx.ws authentication", () => {
     const result = await connect(`${base}/plugin-ws/sample-plugin/guest`);
 
     expect(result.outcome).toBe("open");
+    if (result.outcome === "open") result.socket.close();
+  });
+});
+
+describe("ctx.ws optional auth", () => {
+  function register(seen: Array<Record<string, unknown>>) {
+    ws.registerPluginWsRoute(
+      "sample-plugin",
+      "/mixed",
+      (connection) => {
+        seen.push({
+          userId: connection.userId,
+          unlocked: connection.isDataUnlocked(),
+          clientIp: connection.clientIp,
+          requestOrigin: connection.requestOrigin,
+        });
+        (connection.socket as WebSocket).send("hi");
+      },
+      DECLARED,
+      { public: true, optionalAuth: true },
+    );
+  }
+
+  it("names the user when a valid token came with the upgrade", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    register(seen);
+    const base = await startServer();
+    const result = await connect(
+      `${base}/plugin-ws/sample-plugin/mixed`,
+      authProtocols(state.validToken),
+    );
+    expect(result.outcome).toBe("open");
+    expect(seen[0]).toMatchObject({ userId: state.userId, unlocked: true });
+    expect(typeof seen[0].clientIp).toBe("string");
+    expect(String(seen[0].requestOrigin)).toMatch(/^http/);
+    if (result.outcome === "open") result.socket.close();
+  });
+
+  it("still serves a guest, with no user and nothing unlocked", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    register(seen);
+    const base = await startServer();
+    const result = await connect(
+      `${base}/plugin-ws/sample-plugin/mixed`,
+      authProtocols("nope"),
+    );
+    expect(result.outcome).toBe("open");
+    expect(seen[0]).toMatchObject({ userId: "", unlocked: false });
     if (result.outcome === "open") result.socket.close();
   });
 });

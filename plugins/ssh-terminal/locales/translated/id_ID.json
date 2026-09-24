@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Menambahkan",
+    "arrowDown": "Panah ke Bawah",
+    "arrowLeft": "Panah Kiri",
+    "arrowRight": "Panah Kanan",
+    "arrowUp": "Panah Atas",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Selesai",
+    "editQuickKeys": "Edit tombol pintasan",
+    "end": "Akhir",
+    "esc": "Esc",
+    "home": "Rumah",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Pasta",
+    "quickKeyPlaceholder": "misalnya sudo ",
+    "quickKeysDesc": "Ketuk × untuk menghapus. Mendukung hingga 8 karakter.",
+    "quickKeysTitle": "Tombol Pintas",
+    "removeQuickKey": "Menghapus",
+    "resetDefaults": "Kembalikan ke pengaturan default",
+    "shift": "Menggeser",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Gagal mengaktifkan Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux diaktifkan untuk {{host}}. Ini berlaku mulai koneksi berikutnya.",
+    "clipboardHttpWarning": "Tidak dapat membaca isi clipboard. Beberapa browser membatasi akses clipboard di luar HTTPS - coba tekan Ctrl+V, atau sajikan Termix melalui HTTPS.",
+    "closeTab": "Menutup",
+    "connecting": "Menghubungkan...",
+    "connectionLost": "Koneksi terputus",
+    "connectionRejected": "Koneksi ditolak oleh server. Harap periksa otentikasi dan konfigurasi jaringan Anda.",
+    "connectionTimeout": "Waktu habis koneksi",
+    "enableAutoTmuxAction": "Aktifkan Auto-Tmux",
+    "hostKeyRejected": "Verifikasi kunci host SSH ditolak. Koneksi dibatalkan.",
+    "linkDialogCopy": "Menyalin",
+    "linkDialogOpen": "Membuka",
+    "linkDialogTitle": "Buka Tautan",
+    "maxReconnectAttemptsReached": "Upaya penyambungan kembali maksimum telah tercapai.",
+    "noHostSelected": "Tidak ada pembawa acara yang dipilih.",
+    "opksshAuthFailed": "Autentikasi gagal. Harap periksa kredensial Anda dan coba lagi.",
+    "opksshTimeout": "Autentikasi habis waktu. Silakan coba lagi.",
+    "passwordPromptFillTitle": "Masukkan kata sandi yang tersimpan ke dalam kolom ini?",
+    "reconnect": "Terhubung kembali",
+    "reconnected": "Berhasil terhubung kembali",
+    "reconnecting": "Menghubungkan kembali... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Kotak Korek Api",
+    "searchClose": "Tutup (Keluar)",
+    "searchNext": "Pertandingan Berikutnya (Masuk)",
+    "searchNoResults": "Tidak ada hasil",
+    "searchPlaceholder": "Menemukan",
+    "searchPrevious": "Pertandingan Sebelumnya (Shift+Enter)",
+    "searchRegex": "Gunakan Ekspresi Reguler",
+    "searchResultCount": "{{index}} dari {{count}}",
+    "searchWholeWord": "Cocokkan Seluruh Kata",
+    "sessionExpiredNotice": "Sesi Anda sebelumnya di {{host}} telah berakhir setelah {{minutes}} menit terputus; shell dan semua yang berjalan di dalamnya telah hilang. Aktifkan Auto-Tmux pada host ini untuk menjaga agar sesi tetap aktif.",
+    "sessionExpiredNoticeNoMinutes": "Sesi Anda sebelumnya di {{host}} telah berakhir saat terputus; shell dan semua yang berjalan di dalamnya telah hilang. Aktifkan Auto-Tmux pada host ini untuk menjaga agar sesi tetap aktif.",
+    "sessionTakenOver": "Sesi dibuka di tab lain. Sedang menyambungkan kembali...",
+    "tmuxAttached": "Klien terlampir",
+    "tmuxAttachedCount": "{{count}} terlampir",
+    "tmuxCopyHint": "Sesuaikan pilihan dan tekan Enter untuk menyalin ke papan klip.",
+    "tmuxCreateNew": "Mulai sesi baru",
+    "tmuxDetached": "Terputus dari sesi tmux",
+    "tmuxLastActivity": "Aktivitas terakhir",
+    "tmuxSessionAttached": "Sesi tmux terlampir: {{name}}",
+    "tmuxSessionCreated": "Sesi tmux dibuat: {{name}}",
+    "tmuxSessionPickerDesc": "Sesi tmux yang ada ditemukan di host ini. Pilih salah satu untuk menyambungkan kembali atau membuat sesi baru.",
+    "tmuxSessionPickerTitle": "Sesi tmux",
+    "tmuxTimeDays": "{{count}}d lalu",
+    "tmuxTimeHours": "{{count}}h lalu",
+    "tmuxTimeJustNow": "baru saja",
+    "tmuxTimeMinutes": "{{count}}m lalu",
+    "tmuxUnavailable": "tmux tidak terpasang pada host jarak jauh, sehingga kembali menggunakan shell standar.",
+    "tmuxWindowCount": "{{count}} jendela",
+    "tmuxWindows": "Windows",
+    "unknownError": "Terjadi kesalahan yang tidak diketahui.",
+    "vaultAuthDescription": "Jendela telah terbuka untuk masuk ke HashiCorp Vault. Selesaikan proses masuk di sana; koneksi ini akan berlanjut secara otomatis.",
+    "vaultAuthFailed": "Autentikasi Vault gagal. Silakan coba lagi.",
+    "vaultAuthTitle": "Login ke Vault diperlukan.",
+    "vaultReopen": "Buka kembali jendela masuk",
+    "websocketAbnormalClose": "Koneksi terputus secara tidak terduga. Ini mungkin disebabkan oleh masalah konfigurasi reverse proxy atau SSL. Silakan periksa log server.",
+    "websocketError": "Kesalahan koneksi WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Lepaskan tmux",
+    "detachTmuxDescription": "Lepaskan sesi tmux",
+    "dismissError": "Abaikan kesalahan gambar",
+    "hideToolbar": "Sembunyikan bilah alat",
+    "image": "Aksi gambar (hanya gambar)",
+    "imageActionFailed": "Aksi gambar gagal",
+    "layout": "Mode tampilan bilah alat",
+    "layoutExpanded": "Diperluas dengan metrik",
+    "layoutIcon": "Hanya ikon",
+    "layoutLabeled": "Ikon dan label",
+    "moveToolbar": "Pindahkan bilah alat",
+    "moveToolbarHint": "Seret untuk memposisikan ulang bilah alat",
+    "paste": "Tempel gambar",
+    "pasteImage": "Tempel gambar dari clipboard (hanya gambar)",
+    "retry": "Mencoba kembali",
+    "showToolbar": "Perluas bilah alat",
+    "upload": "Unggah gambar",
+    "uploadImage": "Unggah gambar ke host",
+    "uploadingImage": "Sedang mengunggah..."
+  },
+  "history": {
+    "noTerminalSelected": "Tidak ada terminal yang dipilih",
+    "noTerminalSelectedHint": "Buka tab terminal SSH untuk melihat riwayat perintahnya.",
+    "searchPlaceholder": "Riwayat pencarian...",
+    "clearAll": "Hapus Semua",
+    "noHistoryEntries": "Tidak ada entri riwayat.",
+    "trackingDisabled": "Pelacakan riwayat dinonaktifkan"
+  },
+  "touchInput": {
+    "enabled": "Aktifkan Input Sentuh",
+    "enabledDesc": "Izinkan pengguliran sentuh satu jari di terminal.",
+    "momentumEnabled": "Aktifkan Momentum",
+    "momentumEnabledDesc": "Lanjutkan menggulir sebentar setelah menggeser",
+    "advanced": "Canggih",
+    "resetDefaults": "Kembalikan ke pengaturan default",
+    "dragThreshold": "Ambang batas seret",
+    "maxWheelDelta": "Delta roda maksimum",
+    "momentumSampleWindow": "Jendela sampel momentum",
+    "releaseGracePeriod": "Masa tenggang pelepasan",
+    "minimumVelocity": "Kecepatan minimum",
+    "maximumVelocity": "Kecepatan maksimum",
+    "maximumDuration": "Durasi maksimum",
+    "maximumTravel": "Perjalanan maksimum",
+    "decayTime": "Waktu peluruhan",
+    "pixelsPerTick": "Piksel per detik",
+    "maximumFrameInterval": "Interval bingkai maksimum",
+    "maximumTicksPerFrame": "Jumlah tick maksimum per frame"
+  },
+  "imageStorage": {
+    "instanceId": "ID instance sesi terminal",
+    "instanceIdDesc": "ID instans dari salah satu tab terminal yang terhubung, digunakan untuk menguji visibilitas.",
+    "selectedModeUnavailable": "Tidak tersedia",
+    "test": "Tes",
+    "testing": "Pengujian...",
+    "testFailed": "Pengujian penyimpanan gambar gagal.",
+    "testConnected": "Sesi terminal terhubung.",
+    "testNotConnected": "Tidak ada sesi terminal yang terhubung dengan ID instance ini.",
+    "testSelectedMode": "Unggahan akan menggunakan: {{mode}}",
+    "testLocalVisible": "Direktori lokal tersebut dapat dilihat dari host yang terhubung.",
+    "testLocalNotVisible": "Direktori lokal TIDAK terlihat dari host yang terhubung."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Input Sentuh",
+        "images": "Penyimpanan Gambar"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Ketahanan Sesi Terminal",
+        "description": "Berapa lama terminal yang terputus tetap aktif di server sebelum ditutup. Minimal 1 menit · Maksimal 1440 menit. Untuk sesi yang harus bertahan lebih lama dari ini, aktifkan Auto-Tmux pada host."
+      },
+      "commandHistoryEnabled": {
+        "label": "Riwayat Perintah",
+        "description": "Izinkan perekaman riwayat perintah. Jika dinonaktifkan, riwayat tidak akan disimpan terlepas dari pengaturan per host."
+      },
+      "imageStorageMode": {
+        "label": "Mode Penyimpanan",
+        "description": "Di sinilah gambar terminal yang disalin dan diunggah ditulis. Pemilihan otomatis berdasarkan koneksi, Lokal dan Jarak Jauh (SFTP) telah ditetapkan.",
+        "auto": "Mobil",
+        "local": "Lokal",
+        "remoteSftp": "Jarak Jauh (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Direktori lokal"
+      },
+      "imageHostPath": {
+        "label": "Jalur host",
+        "description": "Tampilan sisi host dari direktori lokal yang diterima oleh agen terminal."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Jumlah gambar maksimum"
+      },
+      "imageMaxBytes": {
+        "label": "Byte penyimpanan maksimum"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Aktifkan Toolbar Terminal",
+        "description": "Tampilkan bilah alat akses cepat yang terpasang pada terminal aktif untuk alat dan statistik langsung host ini."
+      },
+      "enableCommandHistory": {
+        "label": "Riwayat Perintah",
+        "description": "Rekam perintah yang dijalankan di terminal ini untuk riwayat dan pelengkapan otomatis."
+      },
+      "enableTerminal": {
+        "label": "Aktifkan Terminal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Terminal Lokal"
+  }
+}

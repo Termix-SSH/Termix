@@ -23,7 +23,7 @@ export interface TabShellCallbacks {
   ) => void;
   closeTab: (tabId: string) => void;
   renameTab: (tabId: string, label: string) => void;
-  openTerminalTab: (host: Host, path?: string) => void;
+
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown, e.g. when its feature goes away. */
   closeRailView: (id: string) => void;
@@ -69,6 +69,12 @@ export interface TabTypeDef {
   panelFrame?: boolean;
   /** False keeps this tab out of saved layouts and workspaces. */
   inLayouts?: boolean;
+  /** History, macros and SSH tools act on the last one of these focused. */
+  commandTarget?: boolean;
+  /** Paints its own background; its frame stays transparent. */
+  ownBackground?: boolean;
+  /** Every open is a new tab. */
+  multiInstance?: boolean;
   preload?: () => Promise<unknown>;
 }
 

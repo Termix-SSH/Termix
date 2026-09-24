@@ -21,7 +21,7 @@ import {
 import {
   TERMINAL_FONT_ZOOM_MIN,
   TERMINAL_FONT_ZOOM_MAX,
-} from "@/features/terminal/terminal-font-zoom";
+} from "@/lib/terminal-look/terminal-font-zoom";
 import {
   Globe,
   Info,
@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
-import { TerminalPreview } from "@/features/terminal/TerminalPreview";
+import { TerminalPreview } from "@/components/terminal-preview/TerminalPreview";
 import {
   createSSHHost,
   updateSSHHost,
@@ -1169,7 +1169,7 @@ export function HostEditor({
             </>
           )}
 
-          {activeTab === "terminal" && (
+          {activeTab === "terminal-options" && (
             <>
               <SectionCard
                 title={t("hosts.terminalAppearance")}
@@ -1818,27 +1818,6 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.allowSessionSharing}
                       onChange={(v) => setField("allowSessionSharing", v)}
-                    />
-                  </SettingRow>
-                  <SettingRow
-                    label={t("hosts.enableCommandHistory")}
-                    description={
-                      <>
-                        {t("hosts.enableCommandHistoryDesc")}{" "}
-                        <a
-                          href="https://docs.termix.site/features/terminal/command-history"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-brand hover:underline"
-                        >
-                          {t("hosts.docsLink")}
-                        </a>
-                      </>
-                    }
-                  >
-                    <FakeSwitch
-                      checked={form.enableCommandHistory}
-                      onChange={(v) => setField("enableCommandHistory", v)}
                     />
                   </SettingRow>
                   <div className="flex flex-col gap-1.5">

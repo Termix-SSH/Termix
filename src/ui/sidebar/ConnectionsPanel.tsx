@@ -1,7 +1,15 @@
 import { getTabType, isPersistentTabType } from "@/shell/tab-registry";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ExternalLink, Plug, Search, X, Pencil, Check } from "lucide-react";
+import {
+  ExternalLink,
+  Plug,
+  Search,
+  X,
+  Pencil,
+  Check,
+  SquareTerminal,
+} from "lucide-react";
 import {
   getActiveSessions,
   deleteOpenTab,
@@ -9,6 +17,7 @@ import {
   type OpenTabRecord,
 } from "@/main-axios";
 import { tabIcon } from "@/shell/tabUtils";
+import { getSessionTimeoutMinutes } from "@/api/open-tabs-api";
 import type { Tab, TabType } from "@/types/ui-types";
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
@@ -309,9 +318,8 @@ export function ConnectionsPanel({
 
   const [persistMinutes, setPersistMinutes] = useState(30);
   useEffect(() => {
-    import("@/api/settings-api")
-      .then(({ getTerminalSessionSettings }) => getTerminalSessionSettings())
-      .then((settings) => setPersistMinutes(settings.timeoutMinutes))
+    getSessionTimeoutMinutes()
+      .then((minutes) => setPersistMinutes(minutes))
       .catch(() => {});
   }, []);
   const [activeSessions, setActiveSessions] = useState<ActiveSessionInfo[]>([]);
@@ -510,10 +518,10 @@ export function ConnectionsPanel({
             const liveSession = tab.instanceId
               ? sessionByInstanceId.get(tab.instanceId)
               : undefined;
-            const isLive =
-              tab.type === "terminal"
-                ? (liveSession?.isConnected ?? false)
-                : true;
+            const tracksSession = !!getTabType(tab.type)?.commandTarget;
+            const isLive = tracksSession
+              ? (liveSession?.isConnected ?? false)
+              : true;
             const duration = liveSession?.createdAt
               ? formatDuration(now - liveSession.createdAt)
               : formatDuration(now - tab.openedAt);
@@ -552,7 +560,7 @@ export function ConnectionsPanel({
                   name={displayName}
                   hostName={tab.customLabel ? hostName : undefined}
                   subLabel={
-                    isLive && tab.type === "terminal"
+                    isLive && tracksSession
                       ? t("connections.connectedFor", { duration })
                       : isLive
                         ? t("connections.connected")
@@ -655,7 +663,7 @@ function SharedWithMeRow({
   return (
     <div className="group flex items-center gap-2.5 px-3 py-2.5 border-b border-border/40 last:border-b-0">
       <div className="shrink-0 flex items-center justify-center size-7 rounded bg-muted/60 text-muted-foreground">
-        {tabIcon("terminal")}
+        <SquareTerminal className="size-3.5" />
       </div>
       <div className="flex flex-col flex-1 min-w-0 gap-0.5">
         <div className="flex items-center gap-1.5 min-w-0">

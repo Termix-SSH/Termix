@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "إضافة",
+    "arrowDown": "Arrow Down",
+    "arrowLeft": "Arrow Left",
+    "arrowRight": "Arrow Right",
+    "arrowUp": "Arrow Up",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "تم",
+    "editQuickKeys": "تحرير المفاتيح السريعة",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "لصق",
+    "quickKeyPlaceholder": "مثال: sudo ",
+    "quickKeysDesc": "اضغط × للإزالة. يدعم حتى 8 أحرف.",
+    "quickKeysTitle": "المفاتيح السريعة",
+    "removeQuickKey": "إزالة",
+    "resetDefaults": "استعادة الإعدادات الافتراضية",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "فشل تفعيل خاصية Auto-Tmux",
+    "autoTmuxEnabled": "تم تفعيل خاصية Auto-Tmux لـ {{host}}. وسيتم تطبيقها بدءًا من الاتصال التالي.",
+    "clipboardHttpWarning": "تعذر قراءة الحافظة. بعض المتصفحات تقيّد الوصول إلى الحافظة خارج بروتوكول HTTPS - جرّب Ctrl+V بدلاً من ذلك، أو شغّل Termix عبر HTTPS.",
+    "closeTab": "إغلاق",
+    "connecting": "جارٍ الاتصال...",
+    "connectionLost": "انقطع الاتصال",
+    "connectionRejected": "تم رفض الاتصال من قبل الخادم. يرجى التحقق من المصادقة وإعدادات الشبكة.",
+    "connectionTimeout": "انتهت مهلة الاتصال",
+    "enableAutoTmuxAction": "تفعيل خاصية Auto-Tmux",
+    "hostKeyRejected": "تم رفض التحقق من مفتاح مضيف SSH. تم إلغاء الاتصال.",
+    "linkDialogCopy": "نسخ",
+    "linkDialogOpen": "فتح",
+    "linkDialogTitle": "فتح الرابط",
+    "maxReconnectAttemptsReached": "تم الوصول إلى الحد الأقصى لمحاولات إعادة الاتصال",
+    "noHostSelected": "لم يتم تحديد مضيف",
+    "opksshAuthFailed": "فشلت المصادقة. يرجى التحقق من بيانات الاعتماد والمحاولة مرة أخرى.",
+    "opksshTimeout": "انتهت مهلة المصادقة. يرجى المحاولة مرة أخرى.",
+    "passwordPromptFillTitle": "هل تريد ملء كلمة المرور المحفوظة في هذه النافذة؟",
+    "reconnect": "إعادة الاتصال",
+    "reconnected": "تمت إعادة الاتصال بنجاح",
+    "reconnecting": "جارٍ إعادة الاتصال... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "علبة كبريت",
+    "searchClose": "إغلاق (الهروب)",
+    "searchNext": "المباراة التالية (إدخال)",
+    "searchNoResults": "لا توجد نتائج",
+    "searchPlaceholder": "يجد",
+    "searchPrevious": "المباراة السابقة (Shift+Enter)",
+    "searchRegex": "استخدم التعبير النمطي",
+    "searchResultCount": "{{index}} من {{count}}",
+    "searchWholeWord": "تطابق الكلمة الكاملة",
+    "sessionExpiredNotice": "انتهت صلاحية جلستك السابقة على {{host}} بعد {{minutes}} دقيقة من قطع الاتصال؛ تم إغلاق نافذة الأوامر وأي شيء يعمل بداخلها. فعّل خاصية Auto-Tmux على هذا المضيف للحفاظ على استمرارية الجلسات.",
+    "sessionExpiredNoticeNoMinutes": "انتهت صلاحية جلستك السابقة على {{host}} أثناء انقطاع الاتصال؛ تم حذف واجهة سطر الأوامر وأي شيء كان يعمل بداخلها. فعّل خاصية Auto-Tmux على هذا المضيف للحفاظ على استمرارية الجلسات.",
+    "sessionTakenOver": "تم فتح الجلسة في علامة تبويب أخرى. جارٍ إعادة الاتصال...",
+    "tmuxAttached": "العملاء المتصلون",
+    "tmuxAttachedCount": "{{count}} متصل",
+    "tmuxCopyHint": "اضبط التحديد واضغط Enter للنسخ إلى الحافظة",
+    "tmuxCreateNew": "بدء جلسة جديدة",
+    "tmuxDetached": "تم الفصل من جلسة tmux",
+    "tmuxLastActivity": "آخر نشاط",
+    "tmuxSessionAttached": "تم الالتحاق بجلسة tmux: {{name}}",
+    "tmuxSessionCreated": "تم إنشاء جلسة tmux: {{name}}",
+    "tmuxSessionPickerDesc": "تم العثور على جلسات tmux موجودة على هذا المضيف. اختر واحدة لإعادة الاتصال أو أنشئ جلسة جديدة.",
+    "tmuxSessionPickerTitle": "جلسات tmux",
+    "tmuxTimeDays": "منذ {{count}}ي",
+    "tmuxTimeHours": "منذ {{count}}س",
+    "tmuxTimeJustNow": "الآن فقط",
+    "tmuxTimeMinutes": "منذ {{count}}د",
+    "tmuxUnavailable": "tmux غير مثبّت على المضيف البعيد، جارٍ الرجوع إلى الصدفة القياسية",
+    "tmuxWindowCount": "{{count}} نافذة",
+    "tmuxWindows": "النوافذ",
+    "unknownError": "حدث خطأ غير معروف",
+    "vaultAuthDescription": "تم فتح نافذة لتسجيل الدخول إلى HashiCorp Vault. أكمل تسجيل الدخول هناك؛ سيستمر هذا الاتصال تلقائيًا.",
+    "vaultAuthFailed": "فشلت مصادقة Vault. يرجى المحاولة مرة أخرى.",
+    "vaultAuthTitle": "مطلوب تسجيل الدخول إلى Vault",
+    "vaultReopen": "أعد فتح نافذة تسجيل الدخول",
+    "websocketAbnormalClose": "أُغلق الاتصال بشكل غير متوقع. قد يكون السبب مشكلة في الوكيل العكسي أو إعدادات SSL. يرجى مراجعة سجلات الخادم.",
+    "websocketError": "خطأ في اتصال WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "افصل tmux",
+    "detachTmuxDescription": "فصل جلسة tmux",
+    "dismissError": "تجاهل خطأ الصورة",
+    "hideToolbar": "إخفاء شريط الأدوات",
+    "image": "إجراءات الصور (للصور فقط)",
+    "imageActionFailed": "فشلت عملية معالجة الصورة",
+    "layout": "وضع عرض شريط الأدوات",
+    "layoutExpanded": "تم توسيعه بمقاييس",
+    "layoutIcon": "أيقونة فقط",
+    "layoutLabeled": "الرموز والملصقات",
+    "moveToolbar": "نقل شريط الأدوات",
+    "moveToolbarHint": "اسحب لإعادة وضع شريط الأدوات",
+    "paste": "لصق الصورة",
+    "pasteImage": "لصق الصورة من الحافظة (الصور فقط)",
+    "retry": "إعادة المحاولة",
+    "showToolbar": "توسيع شريط الأدوات",
+    "upload": "تحميل صورة",
+    "uploadImage": "قم بتحميل صورة إلى المضيف",
+    "uploadingImage": "جارٍ التحميل..."
+  },
+  "history": {
+    "noTerminalSelected": "لا توجد طرفية محددة",
+    "noTerminalSelectedHint": "افتح علامة تبويب طرفية SSH لعرض سجل الأوامر الخاص بها",
+    "searchPlaceholder": "ابحث في السجل...",
+    "clearAll": "مسح الكل",
+    "noHistoryEntries": "لا توجد مدخلات سجل",
+    "trackingDisabled": "تتبع السجل معطل"
+  },
+  "touchInput": {
+    "enabled": "تفعيل إدخال اللمس",
+    "enabledDesc": "السماح بالتمرير بلمسة إصبع واحدة في المحطات الطرفية",
+    "momentumEnabled": "تفعيل الزخم",
+    "momentumEnabledDesc": "استمر في التمرير لفترة وجيزة بعد التمرير",
+    "advanced": "متقدم",
+    "resetDefaults": "إعادة ضبط الإعدادات الافتراضية",
+    "dragThreshold": "عتبة السحب",
+    "maxWheelDelta": "أقصى دلتا للعجلة",
+    "momentumSampleWindow": "نافذة عينة الزخم",
+    "releaseGracePeriod": "فترة السماح للإفراج",
+    "minimumVelocity": "الحد الأدنى للسرعة",
+    "maximumVelocity": "أقصى سرعة",
+    "maximumDuration": "أقصى مدة",
+    "maximumTravel": "أقصى قدر من السفر",
+    "decayTime": "وقت التحلل",
+    "pixelsPerTick": "بكسل لكل نبضة",
+    "maximumFrameInterval": "أقصى فاصل زمني بين الإطارات",
+    "maximumTicksPerFrame": "الحد الأقصى للنبضات لكل إطار"
+  },
+  "imageStorage": {
+    "instanceId": "معرّف مثيل جلسة الطرفية",
+    "instanceIdDesc": "معرف مثيل إحدى علامات تبويب الطرفية المتصلة، المستخدمة لاختبار الرؤية.",
+    "selectedModeUnavailable": "غير متاح",
+    "test": "امتحان",
+    "testing": "جارٍ الاختبار...",
+    "testFailed": "فشل اختبار تخزين الصور",
+    "testConnected": "تم الاتصال بجلسة الطرفية.",
+    "testNotConnected": "لا توجد جلسة طرفية متصلة بهذا المعرف.",
+    "testSelectedMode": "سيتم استخدام الأمر التالي للتحميل: {{mode}}",
+    "testLocalVisible": "الدليل المحلي مرئي من الجهاز المضيف المتصل.",
+    "testLocalNotVisible": "الدليل المحلي غير مرئي من الجهاز المضيف المتصل."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "إدخال اللمس",
+        "images": "تخزين الصور"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "استمرار جلسة الطرفية",
+        "description": "مدة بقاء طرفية غير متصلة على الخادم قبل إغلاقها. الحد الأدنى: دقيقة واحدة، الحد الأقصى: 1440 دقيقة. بالنسبة للجلسات التي يجب أن تستمر لفترة أطول من ذلك، فعّل خاصية Auto-Tmux على المضيف."
+      },
+      "commandHistoryEnabled": {
+        "label": "سجل الأوامر",
+        "description": "السماح بتسجيل سجل الأوامر. عند التعطيل، لا يتم حفظ السجل بغض النظر عن إعدادات كل جهاز."
+      },
+      "imageStorageMode": {
+        "label": "وضع التخزين",
+        "description": "يتم حفظ الصور الطرفية الملصقة والمرفوعة في هذا المكان. يتم تثبيت عمليات الاختيار التلقائي حسب الاتصال، سواء كان محليًا أو عن بُعد (SFTP).",
+        "auto": "آلي",
+        "local": "محلي",
+        "remoteSftp": "عن بعد (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "الدليل المحلي"
+      },
+      "imageHostPath": {
+        "label": "مسار المضيف",
+        "description": "عرض الدليل المحلي من جانب المضيف الذي تتلقاه وكلاء المحطة الطرفية."
+      },
+      "imageTtlMs": {
+        "label": "مدة البقاء (بالمللي ثانية)"
+      },
+      "imageMaxCount": {
+        "label": "الحد الأقصى لعدد الصور"
+      },
+      "imageMaxBytes": {
+        "label": "الحد الأقصى لحجم التخزين بالبايت"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "تفعيل شريط أدوات الطرفية",
+        "description": "اعرض شريط أدوات سريع الوصول مثبتًا على الطرفية النشطة لأدوات هذا المضيف وإحصائياته المباشرة."
+      },
+      "enableCommandHistory": {
+        "label": "سجل الأوامر",
+        "description": "تسجيل الأوامر المنفذة في هذه الطرفية للسجل والإكمال التلقائي"
+      },
+      "enableTerminal": {
+        "label": "تمكين الطرفية"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "المحطة المحلية"
+  }
+}

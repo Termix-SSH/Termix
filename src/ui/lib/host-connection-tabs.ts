@@ -8,10 +8,11 @@ import {
 /**
  * Which tab a click on a host opens. The ways to connect (SSH terminal, RDP,
  * VNC, Telnet) are host actions that plugins register, so the answer is the
- * highest-priority connect action the host allows.
+ * highest-priority connect action the host allows, or null when no running
+ * plugin can connect to it.
  */
-export function getDefaultConnectionTab(host: Host): TabType {
-  return defaultConnectAction(listHostActions(), host)?.tabType ?? "terminal";
+export function getDefaultConnectionTab(host: Host): TabType | null {
+  return defaultConnectAction(listHostActions(), host)?.tabType ?? null;
 }
 
 /**
@@ -22,7 +23,7 @@ export function getDefaultConnectionTab(host: Host): TabType {
 export function resolveHostTabType(
   host: Host,
   preferredType?: TabType,
-): TabType {
+): TabType | null {
   if (!preferredType) return getDefaultConnectionTab(host);
   const all = listHostActions();
   const isConnectType = all.some(

@@ -640,6 +640,29 @@ export function createPluginContext(
       openIsolatedWindow: (request) => desktopOpenIsolatedWindow(request),
     },
 
+    audit: {
+      // Attribution comes from the runtime: the actor, never a plugin value.
+      record: async (entry) => {
+        try {
+          const { logAudit } = await import("../utils/audit-logger.js");
+          const actor = getActor() ?? "system";
+          await logAudit({
+            userId: actor,
+            username: actor,
+            action: entry.action,
+            resourceType: entry.resourceType ?? "plugin",
+            resourceId: entry.resourceId ?? pluginId,
+            resourceName: entry.resourceName ?? manifest.name,
+            details: entry.details ?? `via plugin ${pluginId}`,
+            success: entry.success,
+            errorMessage: entry.errorMessage,
+          });
+        } catch {
+          // Auditing must never break the caller.
+        }
+      },
+    },
+
     /**
      * Background work acts as a named user. Always audited, because "this ran
      * as someone" is exactly the thing an operator needs to be able to see.

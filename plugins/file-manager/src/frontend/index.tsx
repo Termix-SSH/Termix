@@ -1,10 +1,11 @@
 import type { ComponentType } from "react";
 import { FolderSearch, ArrowLeftRight } from "lucide-react";
-import type {
-  PluginHostRecord,
-  StandaloneViewProps,
-  TabProps,
-  TermixApp,
+import {
+  invokeAction,
+  type PluginHostRecord,
+  type StandaloneViewProps,
+  type TabProps,
+  type TermixApp,
 } from "@termix/plugin-sdk/frontend";
 import { GRID_SIZE } from "@/types/homepage-types";
 import { FileManager } from "./FileManager.tsx";
@@ -15,7 +16,7 @@ import { FileManagerWidget } from "./homepage/FileManagerWidget.tsx";
 import { FileManagerWidgetEditForm } from "./homepage/FileManagerWidgetEditForm.tsx";
 import { startTransferMonitor } from "./TransferMonitor.tsx";
 
-function FilesTab({ tab, host, sshHost, isVisible, shell }: TabProps) {
+function FilesTab({ tab, host, sshHost, isVisible }: TabProps) {
   const data = tab.data as
     { initialFilePath?: string; initialPath?: string } | undefined;
   return (
@@ -25,7 +26,9 @@ function FilesTab({ tab, host, sshHost, isVisible, shell }: TabProps) {
       initialPath={data?.initialPath}
       isVisible={isVisible}
       onOpenTerminalTab={
-        host ? (path) => shell.openTerminalTab(host, path) : undefined
+        host
+          ? (path) => void invokeAction("terminal.open", host, { path })
+          : undefined
       }
     />
   );

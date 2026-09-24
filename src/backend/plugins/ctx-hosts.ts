@@ -21,7 +21,9 @@ import type {
   PluginShareableRole,
 } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 import { assertCapability } from "./permissions.js";
+import { hostSessionStatus } from "../hosts/host-session-status.js";
 import { getActor } from "./actor.js";
 
 type AuditFn = (
@@ -391,6 +393,23 @@ export function createPluginHosts({ manifest, audit }: Deps): PluginHosts {
       return roles
         .filter((r) => !r.isSystem)
         .map((r) => ({ id: r.id, name: r.name, displayName: r.displayName }));
+    },
+
+    // Synchronous so a transport can call it from an ssh2 "ready" handler, so
+    // only the declaration is checked here, like ctx.http.router.
+    trackSession: (hostId: number) => {
+      if (!declared.includes("hosts:read")) {
+        throw new PluginCapabilityError(pluginId, "hosts:read");
+      }
+      return hostSessionStatus.register(hostId);
+    },
+
+    recordActivity: async (hostId, type, hostName) => {
+      await requireRead();
+      const userId = actingUser();
+      const { recordRecentActivity } =
+        await import("../services/recent-activity.js");
+      await recordRecentActivity(userId, { type, hostId, hostName });
     },
   };
 }

@@ -239,5 +239,8 @@
     "showCurrentValue": "Show Current Value",
     "chartMetric": "Metric",
     "metricRange": "Range"
+  },
+  "terminalStatus": {
+    "unavailable": "Live stats unavailable"
   }
 }

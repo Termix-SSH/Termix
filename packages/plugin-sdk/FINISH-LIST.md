@@ -144,3 +144,91 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   to ask Electron's main process for something, extend
   `BACKEND_REQUEST_HANDLERS` there rather than building a parallel channel.
   No owner needed unless a second caller appears.
+- **B9 (ssh-terminal):** session sharing has no provider yet. The terminal
+  consumes `sessions.sharing` v1 (member joins through `authorizeJoin` and
+  `recordJoin`, collab room events through `subscribeRoom`/`unsubscribeRoom`)
+  and reads guest link resolution from `ctx.registry` as
+  `sessions.sharing.guests` (`resolve`, `recordJoin`), all typed in
+  `plugins/ssh-terminal/src/backend/services.ts`. Until something provides
+  them, share-link and room guests are refused and in-app joins fail. Core's
+  session-sharing, collab and open-tabs code reach the terminal through
+  `sessions.live` already. Owner: B12, which provides both from the
+  session-sharing plugin (the lookups are the old code in
+  `hosts/session-sharing` and `hosts/collab`: share repo, room repo, guest
+  rate limit, `canJoinRoomStageShare`, `session_sharing_globally_enabled`,
+  host `allowSessionSharing`, `getAuditUsername` for labels, `collabRoomHub`).
+  B12 also moves `eventsWsPath` in `collab/routes.ts` and the share dialog the
+  shell opens from a tab's `getShareTarget()`.
+- **B9 (ssh-terminal), for D2:** the terminal socket is a public route with
+  `optionalAuth`, because share-link and room guests authenticate inside the
+  handler with their token. Guest auth itself is unchanged; review it with the
+  rest of the public routes.
+- **B9 (ssh-terminal):** tmux has no provider yet. The terminal calls the
+  optional `tmux.sessions` v1 (`detect`, `attachOrCreate`, `waitForSession`)
+  and skips tmux attach without it (auto-tmux, the tmux monitor's attach, the
+  session picker). The toolbar's old host action list only ever held the
+  Tmux Monitor button, which is gone with it. `TmuxSessionPicker` lives in
+  ssh-terminal now. Owner: B10, which provides the service (the helpers are
+  `hosts/tmux/helper.ts`) and contributes its toolbar button to
+  `terminal.toolbar`.
+- **B9 (ssh-terminal):** recording has no provider yet. The terminal calls the
+  optional `recordings.writer` v1 `open(meta)` and gets a sink with
+  `append(chunk)` (one call per 300 ms batch, the first starting with the
+  asciicast header), `persist(summary)` and `discard()`. Without it nothing is
+  recorded and no `session_recordings` row is written. Owner: B13, which
+  writes the file under `DATA_DIR/session_logs/<user>/<session>.cast` (mkdir
+  and writeFile on the first append, appendFile after, never per chunk, see
+  issue #1049) and creates or updates the row as the old session manager did.
+- **B9 (ssh-terminal):** `enable_terminal`, `enable_terminal_toolbar` and
+  `enable_command_history` are still live `ssh_data` columns. The copy into
+  ssh-terminal host settings shipped (`ssh-terminal-settings-migration.ts`)
+  and the terminal reads its settings, but core host routes, types, the
+  export/import sample and `HostEditorData` still carry the columns.
+  `enable_terminal_toolbar` also drives the RDP/VNC/Telnet toolbar
+  (`remote-desktop/GuacamoleApp.tsx`), whose host editor switch stays in the
+  General tab, so remote-desktop needs its own host setting and copy first.
+  Then drop all three in lockstep. Owner: remote-desktop's step for its copy,
+  then D0.
+- **B9 (ssh-terminal):** the legacy `settings` rows for the terminal
+  (`terminal_session_timeout_minutes`, `terminal_session_persistence_enabled`,
+  `command_history_enabled`, `touch_input_settings`, `terminal_image_*`) are
+  left in place for a release after the move; nothing reads them. Delete them
+  in 3.0.0. `sessionPersistence` is carried over but, as before, nothing acts
+  on it. Owner: D0 to decide.
+- **B9 (ssh-terminal):** the image storage paths used to be rejected at save
+  when not absolute; the schema-driven settings form accepts any string and
+  the resolver ignores a bad one with a warning. A custom field or a validate
+  hook on plugin settings would restore the save-time error. Owner: D1.
+- **B9 (ssh-terminal):** `@termix/plugin-sdk/ui` now re-exports a handful of
+  core APIs the terminal needs (`logActivity`, `getHostPassword`,
+  `patchOpenTab`, `getUserPreferences`, `parseCustomKeybindings`,
+  `setHostAutoTmux`, `getCookie`) and the connection helpers. They belong on
+  the typed host bridge, which is also where B7's `app.logActivity` line
+  above lands. Owner: D1.
+- **B9 (ssh-terminal):** `OPKSSHDialog` is exported from
+  `@termix/plugin-sdk/ui` so the terminal can show the opkssh sign-in. It
+  leaves the ui entry when opkssh becomes a plugin that draws its own UI in
+  `terminal.overlay`. Owner: Phase C (opkssh).
+- **B9 (host-metrics):** the terminal toolbar's CPU/memory/disk bars
+  (`TerminalMetricsStatus`) poll the local backend only; on the desktop app a
+  host that lives on a connected remote server shows no bars. Same fix as the
+  B7 remote-origin line above. Owner: D1.
+- **B9:** the Hosts panel's "Terminal" feature filter was removed along with
+  the column reads, the same as B7's tunnel filter. Owner: D1, with the
+  generic host-settings filter.
+- **B9:** the startup purge of expired open tabs in `db/index.ts` read
+  `terminal_session_timeout_minutes` from core settings; it was removed and
+  expired tabs are dropped when the tab list is read, against the terminal's
+  own timeout (`GET /open-tabs/session-timeout`, 30 while the terminal is
+  off). No owner unless the table growth matters.
+- **Pre-existing (B8), found in B9:** `node scripts/check-shell-plugin-ids.cjs`
+  fails on `src/ui/lib/host-to-ssh-host.ts` spelling `web-endpoint` (the
+  `pluginSettings` lookup B8 added). Not allowlisted and not introduced here.
+  Owner: D0 (read it through a registry or allowlist it with a reason).
+
+## Manual checks after 2.9.0
+
+- SSH terminal: password auth, key auth (and an encrypted key's passphrase
+  prompt), TOTP keyboard-interactive, a jump host, Warpgate, split view,
+  snippets sent to a terminal, reconnect after a network drop and after a
+  page reload (session reattach), and the local terminal in the desktop app.

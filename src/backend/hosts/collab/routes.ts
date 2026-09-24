@@ -23,7 +23,7 @@ import {
   collabRuntimeStore,
   type CollabControlRequest,
 } from "./runtime-store.js";
-import { sessionManager } from "../terminal/session-manager.js";
+import { liveTerminalSessions } from "../live-terminal-sessions.js";
 import {
   isLiveSession,
   isLiveSessionOwnedBy,
@@ -79,9 +79,13 @@ async function revokeStageShare(room: CollabRoomRecord): Promise<void> {
     throw new Error("Failed to revoke the active stage share");
   }
   if (share.protocol === "ssh") {
-    sessionManager.disconnectShareParticipants(share.sessionId, share.id, {
-      reason: "The collaboration stage ended",
-    });
+    liveTerminalSessions.disconnectShareParticipants(
+      share.sessionId,
+      share.id,
+      {
+        reason: "The collaboration stage ended",
+      },
+    );
     void collabRuntimeStore.publish(room.id, {
       type: "collab_internal_stage_revoked",
       sessionId: share.sessionId,
@@ -241,6 +245,8 @@ router.get(
         controlRequests: mayReviewControlRequests
           ? controlRequests
           : controlRequests.filter((request) => request.userId === userId),
+        // Room events ride on the terminal socket.
+        eventsWsPath: "/plugin-ws/ssh-terminal/terminal",
       });
     } catch (error) {
       sshLogger.error("Failed to get collab room", error, {
@@ -387,7 +393,7 @@ router.delete(
             access.room.stageShareId,
           );
         if (share) {
-          sessionManager.disconnectShareParticipants(
+          liveTerminalSessions.disconnectShareParticipants(
             share.sessionId,
             share.id,
             {
@@ -689,7 +695,7 @@ async function applyStageControl(
         room.stageShareId,
       );
       if (share) {
-        sessionManager.setRoomShareControl(
+        liveTerminalSessions.setRoomShareControl(
           share.sessionId,
           share.id,
           controllerUserId,
@@ -722,7 +728,7 @@ collabRuntimeStore.onEvent((roomId, message) => {
           .findActiveById(room.stageShareId)
           .then((share) => {
             if (share) {
-              sessionManager.setRoomShareControl(
+              liveTerminalSessions.setRoomShareControl(
                 share.sessionId,
                 share.id,
                 controllerUserId,
@@ -739,7 +745,7 @@ collabRuntimeStore.onEvent((roomId, message) => {
     "shareId" in message &&
     typeof message.shareId === "string"
   ) {
-    sessionManager.disconnectShareParticipants(
+    liveTerminalSessions.disconnectShareParticipants(
       message.sessionId,
       message.shareId,
       {
@@ -1016,7 +1022,7 @@ router.post(
             access.room.stageShareId,
           );
         if (share) {
-          sessionManager.disconnectShareParticipants(
+          liveTerminalSessions.disconnectShareParticipants(
             share.sessionId,
             share.id,
             {

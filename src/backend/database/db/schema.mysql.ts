@@ -515,26 +515,6 @@ export const recentActivity = mysqlTable(
   ],
 );
 
-export const commandHistory = mysqlTable(
-  "command_history",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: int("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    command: text("command").notNull(),
-    executedAt: text("executed_at")
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  (table) => [
-    index("idx_command_history_user_host").on(table.userId, table.hostId),
-  ],
-);
-
 export const hostAccess = mysqlTable(
   "host_access",
   {

@@ -49,6 +49,13 @@ export interface PluginTabRecord {
   label: string;
   host?: PluginHostRecord;
   data?: Record<string, unknown>;
+  /** Stable across restores, for a session tab to reattach by. */
+  instanceId?: string;
+  /** A backend session a session tab should reattach to. */
+  restoredSessionId?: string | null;
+  /** A live shared session this tab joins instead of connecting its own. */
+  joinSharedSessionId?: string | null;
+  joinShareId?: string | null;
   [key: string]: unknown;
 }
 
@@ -76,7 +83,11 @@ export interface ShellApi {
   openSingletonTab: (type: string, options?: OpenTabOptions) => void;
   closeTab: (tabId: string) => void;
   renameTab: (tabId: string, label: string) => void;
-  openTerminalTab: (host: PluginHostRecord, path?: string) => void;
+  /** Saves a quick-connect tab's host as a real host. Absent in some shells. */
+  saveQuickConnect?: (
+    tab: PluginTabRecord,
+    host: PluginHostRecord,
+  ) => Promise<void>;
   /** Opens a rail view in the left sidebar. */
   openRailView: (id: string) => void;
   /** Closes a rail view wherever it is shown. */
@@ -141,6 +152,11 @@ export interface RailItemContribution {
 }
 
 export interface PanelProps {
+  /**
+   * The command-target tab (see TabOptions.commandTarget) the user is working
+   * in: the active one, else the one focused last. For panels that act on it.
+   */
+  targetTab?: PluginTabRecord;
   /** Whether the panel is the one currently shown. */
   active: boolean;
   shell: ShellApi;
@@ -155,6 +171,33 @@ export interface PanelProps {
 export interface PanelOptions {
   /** Keep the panel mounted after the user switches away. */
   keepMounted?: boolean;
+}
+
+/**
+ * What a session tab hands the shell through `handleRef`, so split view, tab
+ * close and reconnect-all can drive it without knowing what kind it is.
+ */
+export interface TabHandle {
+  focus?: () => void;
+  fit?: () => void;
+  reconnect?: () => void;
+  disconnect?: () => void;
+  isConnected?: () => boolean;
+  sendInput?: (data: string) => void;
+  paste?: (text: string) => void;
+  refresh?: () => void;
+  notifyResize?: () => void;
+  /** A tab that shows its own share dialog. */
+  canShare?: () => boolean;
+  openShareModal?: () => void;
+  /** A tab whose session the shell's share dialog can share. */
+  getShareTarget?: () => {
+    hostId: number;
+    sessionId: string;
+    protocol: "ssh";
+    tabInstanceId?: string;
+  } | null;
+  [key: string]: unknown;
 }
 
 export interface TabProps {
@@ -203,6 +246,15 @@ export interface TabOptions {
   panelFrame?: boolean;
   /** False keeps the tab out of saved layouts and workspaces. Default true. */
   inLayouts?: boolean;
+  /**
+   * Its session takes typed commands: the history, macros and SSH tools
+   * panels act on the one focused last.
+   */
+  commandTarget?: boolean;
+  /** Paints its own background, so the shell leaves its frame transparent. */
+  ownBackground?: boolean;
+  /** Every open is a new tab, labelled "<title> (2)" and so on. */
+  multiInstance?: boolean;
   /** Warms the tab's code before it is opened. */
   preload?: () => Promise<unknown>;
 }
@@ -504,6 +556,16 @@ export interface TermixApp extends TermixAppInfo {
     contribution: SlotContribution,
   ) => Disposer;
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
+  /**
+   * Offers a component to other plugins and to core by id, rendered where
+   * they choose with `PluginComponent` from @termix/plugin-sdk/ui or
+   * `usePluginComponent`. The id should start with a name the plugin owns
+   * ("terminal.view"). The props are the owner's contract; document them.
+   */
+  registerComponent: (
+    id: string,
+    component: ComponentType<Record<string, unknown>>,
+  ) => Disposer;
   registerSshAuthEditor: (editor: SshAuthEditorContribution) => Disposer;
   registerLoginMethod: (method: LoginMethodContribution) => Disposer;
   registerSecondFactorUI: (factor: SecondFactorContribution) => Disposer;
@@ -609,7 +671,13 @@ export interface PluginHostBridge {
   useTabs: () => TabsApi;
   invokeAction: (id: string, ...args: unknown[]) => Promise<unknown>;
   useSshAuthTypes: () => { types: SshAuthTypeInfo[]; loaded: boolean };
-  useSlotContributions: (slotId: string) => SlotContribution[];
+  useSlotContributions: (
+    slotId: string,
+    context?: Record<string, unknown>,
+  ) => SlotContribution[];
+  usePluginComponent: (
+    id: string,
+  ) => ComponentType<Record<string, unknown>> | undefined;
 }
 
 let host: PluginHostBridge | null = null;
@@ -717,10 +785,24 @@ export function useSshAuthTypes(): {
  * metadata (id, titleKey, component). For an owner that needs to build a
  * catalog from what was contributed rather than just render it in place, e.g.
  * host-metrics listing manager cards plugins added to "host-metrics.managers"
- * next to its own. Same permission and `when` filtering as ComponentSlot.
+ * next to its own. Same permission and `when` filtering as ComponentSlot;
+ * `context` is what each contribution's `when` sees.
  */
-export function useSlotContributions(slotId: string): SlotContribution[] {
-  return requireHost().useSlotContributions(slotId);
+export function useSlotContributions(
+  slotId: string,
+  context?: Record<string, unknown>,
+): SlotContribution[] {
+  return requireHost().useSlotContributions(slotId, context);
+}
+
+/**
+ * The component another plugin registered under `id` with
+ * app.registerComponent, or undefined while that plugin is off.
+ */
+export function usePluginComponent(
+  id: string,
+): ComponentType<Record<string, unknown>> | undefined {
+  return requireHost().usePluginComponent(id);
 }
 
 /**

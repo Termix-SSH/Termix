@@ -13,6 +13,7 @@ import HostMetricsApp from "./HostMetricsApp";
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { metricsChartWidget } from "./MetricsChartWidget";
 import { MetricsRetentionSetting } from "./MetricsRetentionSetting";
+import { TerminalMetricsStatus } from "./TerminalMetricsStatus";
 
 type SectionSetField = Parameters<typeof HostStatsTab>[0]["setField"];
 
@@ -89,6 +90,17 @@ export function activate(app: TermixApp): void {
   );
 
   app.registerSettingsComponent("retention", MetricsRetentionSetting);
+
+  // Live CPU, memory and disk bars in the terminal toolbar's expanded view.
+  app.registerSlotContribution("terminal.toolbarStatus", {
+    actionId: "host-metrics.terminalStatus",
+    titleKey: "nav.hostMetrics",
+    kind: "component",
+    component: TerminalMetricsStatus,
+    when: (context) =>
+      (context.host as { statsConfig?: { metricsEnabled?: boolean } })
+        ?.statsConfig?.metricsEnabled !== false,
+  });
 
   app.registerSlotContribution("onboarding.features", {
     actionId: "host-metrics.feature",

@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Tilføje",
+    "arrowDown": "Pil ned",
+    "arrowLeft": "Pil til venstre",
+    "arrowRight": "Pil til højre",
+    "arrowUp": "Pil op",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Færdig",
+    "editQuickKeys": "Rediger genvejstaster",
+    "end": "Ende",
+    "esc": "Esc",
+    "home": "Hjem",
+    "pageDown": "PgDn",
+    "pageUp": "Side op",
+    "paste": "Indsæt",
+    "quickKeyPlaceholder": "f.eks. sudo ",
+    "quickKeysDesc": "Tryk på × for at fjerne. Understøtter op til 8 tegn.",
+    "quickKeysTitle": "Hurtigtaster",
+    "removeQuickKey": "Fjerne",
+    "resetDefaults": "Nulstil til standardindstillinger",
+    "shift": "Flytte",
+    "tab": "Faneblad"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Kunne ikke aktivere Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux aktiveret for {{host}}. Det gælder fra den næste forbindelse.",
+    "clipboardHttpWarning": "Kunne ikke læse udklipsholderen. Nogle browsere begrænser adgang til udklipsholderen uden for HTTPS - prøv Ctrl+V i stedet, eller server Termix via HTTPS.",
+    "closeTab": "Tæt",
+    "connecting": "Forbinder...",
+    "connectionLost": "Forbindelse tabt",
+    "connectionRejected": "Forbindelsen blev afvist af serveren. Kontroller din godkendelse og netværkskonfiguration.",
+    "connectionTimeout": "Forbindelsestimeout",
+    "enableAutoTmuxAction": "Aktivér Auto-Tmux",
+    "hostKeyRejected": "SSH-værtsnøglebekræftelse afvist. Forbindelse afbrudt.",
+    "linkDialogCopy": "Kopi",
+    "linkDialogOpen": "Åben",
+    "linkDialogTitle": "Åbn link",
+    "maxReconnectAttemptsReached": "Maksimalt antal forsøg på genoprettelse nået",
+    "noHostSelected": "Ingen vært valgt",
+    "opksshAuthFailed": "Godkendelse mislykkedes. Tjek dine loginoplysninger, og prøv igen.",
+    "opksshTimeout": "Godkendelsen udløb. Prøv igen.",
+    "passwordPromptFillTitle": "Udfyld den gemte adgangskode i denne prompt?",
+    "reconnect": "Genopret forbindelse",
+    "reconnected": "Genoprettet forbindelse",
+    "reconnecting": "Genopretter forbindelse... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Match-sag",
+    "searchClose": "Luk (Escape)",
+    "searchNext": "Næste kamp (Enter)",
+    "searchNoResults": "Ingen resultater",
+    "searchPlaceholder": "Finde",
+    "searchPrevious": "Forrige match (Shift+Enter)",
+    "searchRegex": "Brug regulært udtryk",
+    "searchResultCount": "{{index}} af {{count}}",
+    "searchWholeWord": "Match hele ordet",
+    "sessionExpiredNotice": "Din forrige session på {{host}} udløb efter {{minutes}} minutters afbrydelse; shell'en og alt, der kører i den, er væk. Aktiver Auto-Tmux på denne vært for at holde sessionerne aktive.",
+    "sessionExpiredNoticeNoMinutes": "Din forrige session på {{host}} udløb, mens forbindelsen var afbrudt; skallen og alt, der kørte i den, er væk. Aktiver Auto-Tmux på denne vært for at holde sessionerne aktive.",
+    "sessionTakenOver": "Sessionen blev åbnet i en anden fane. Genopretter forbindelse...",
+    "tmuxAttached": "Tilknyttede klienter",
+    "tmuxAttachedCount": "{{count}} vedhæftet",
+    "tmuxCopyHint": "Juster valget, og tryk på Enter for at kopiere til udklipsholderen",
+    "tmuxCreateNew": "Start en ny session",
+    "tmuxDetached": "Afkoblet fra tmux-session",
+    "tmuxLastActivity": "Sidste aktivitet",
+    "tmuxSessionAttached": "tmux-session vedhæftet: {{name}}",
+    "tmuxSessionCreated": "tmux-session oprettet: {{name}}",
+    "tmuxSessionPickerDesc": "Eksisterende tmux-sessioner fundet på denne vært. Vælg en for at gentilknytte eller opret en ny session.",
+    "tmuxSessionPickerTitle": "tmux-sessioner",
+    "tmuxTimeDays": "for {{count}}dage siden",
+    "tmuxTimeHours": "For {{count}}timer siden",
+    "tmuxTimeJustNow": "lige nu",
+    "tmuxTimeMinutes": "For {{count}}minutter siden",
+    "tmuxUnavailable": "tmux er ikke installeret på den eksterne vært, og bruger standardshell",
+    "tmuxWindowCount": "{{count}} vindue",
+    "tmuxWindows": "Vinduer",
+    "unknownError": "Der opstod en ukendt fejl",
+    "vaultAuthDescription": "Et vindue er åbnet, hvor du kan logge ind på HashiCorp Vault. Fuldfør loginprocessen der; forbindelsen fortsætter automatisk.",
+    "vaultAuthFailed": "Godkendelse af arkiv mislykkedes. Prøv igen.",
+    "vaultAuthTitle": "Login til Vault kræves",
+    "vaultReopen": "Genåbn loginvinduet",
+    "websocketAbnormalClose": "Forbindelsen blev lukket uventet. Dette kan skyldes et problem med reverse proxy eller SSL-konfigurationen. Tjek venligst serverlogfilerne.",
+    "websocketError": "WebSocket-forbindelsesfejl"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Afmonter tmux",
+    "detachTmuxDescription": "Afbryd tmux-session",
+    "dismissError": "Afvis billedfejl",
+    "hideToolbar": "Skjul værktøjslinjen",
+    "image": "Billedhandlinger (kun billeder)",
+    "imageActionFailed": "Billedhandling mislykkedes",
+    "layout": "Værktøjslinjevisningstilstand",
+    "layoutExpanded": "Udvidet med metrikker",
+    "layoutIcon": "Kun ikon",
+    "layoutLabeled": "Ikoner og etiketter",
+    "moveToolbar": "Flyt værktøjslinjen",
+    "moveToolbarHint": "Træk for at flytte værktøjslinjen",
+    "paste": "Indsæt billede",
+    "pasteImage": "Indsæt billede fra udklipsholder (kun billeder)",
+    "retry": "Prøv igen",
+    "showToolbar": "Udvid værktøjslinjen",
+    "upload": "Upload billede",
+    "uploadImage": "Upload et billede til værten",
+    "uploadingImage": "Uploader..."
+  },
+  "history": {
+    "noTerminalSelected": "Ingen terminal valgt",
+    "noTerminalSelectedHint": "Åbn en SSH-terminalfane for at se dens kommandohistorik",
+    "searchPlaceholder": "Søgehistorik...",
+    "clearAll": "Ryd alt",
+    "noHistoryEntries": "Ingen historikposter",
+    "trackingDisabled": "Historiksporing er deaktiveret"
+  },
+  "touchInput": {
+    "enabled": "Aktivér berøringsinput",
+    "enabledDesc": "Tillad scrolling med én finger i terminaler",
+    "momentumEnabled": "Aktiver momentum",
+    "momentumEnabledDesc": "Fortsæt med at scrolle kort efter et swipe",
+    "advanced": "Fremskreden",
+    "resetDefaults": "Nulstil til standardindstillinger",
+    "dragThreshold": "Trækgrænse",
+    "maxWheelDelta": "Maksimal hjuldelta",
+    "momentumSampleWindow": "Momentum-eksempelvindue",
+    "releaseGracePeriod": "Frigivelsesperiode",
+    "minimumVelocity": "Minimumshastighed",
+    "maximumVelocity": "Maksimal hastighed",
+    "maximumDuration": "Maksimal varighed",
+    "maximumTravel": "Maksimal rejse",
+    "decayTime": "Henfaldstid",
+    "pixelsPerTick": "Pixels pr. tick",
+    "maximumFrameInterval": "Maksimalt billedinterval",
+    "maximumTicksPerFrame": "Maksimalt antal ticks pr. frame"
+  },
+  "imageStorage": {
+    "instanceId": "Terminalsessionsinstans-ID",
+    "instanceIdDesc": "Instans-ID for en af dine tilsluttede terminalfaner, der bruges til at teste synligheden.",
+    "selectedModeUnavailable": "Ikke tilgængelig",
+    "test": "Prøve",
+    "testing": "Testning...",
+    "testFailed": "Kunne ikke teste billedlagring",
+    "testConnected": "Terminalsessionen er forbundet.",
+    "testNotConnected": "Ingen forbundet terminalsession med dette instans-ID.",
+    "testSelectedMode": "En upload ville bruge: {{mode}}",
+    "testLocalVisible": "Den lokale mappe er synlig fra den tilsluttede vært.",
+    "testLocalNotVisible": "Den lokale mappe er IKKE synlig fra den tilsluttede vært."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Berøringsinput",
+        "images": "Billedlagring"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminalsessionens persistens",
+        "description": "Hvor længe en frakoblet terminal holdes aktiv på serveren, før den lukkes. Min. 1 · Maks. 1440 minutter. For sessioner, der skal overleve dette, skal du aktivere Auto-Tmux på værten."
+      },
+      "commandHistoryEnabled": {
+        "label": "Kommandohistorik",
+        "description": "Tillad optagelse af kommandohistorik. Når den er deaktiveret, gemmes historikken ikke uanset indstillingerne for den enkelte vært."
+      },
+      "imageStorageMode": {
+        "label": "Lagringstilstand",
+        "description": "Hvor indsatte og uploadede terminalbilleder skrives. Automatiske valg efter forbindelse, lokal og fjern (SFTP) er rettet.",
+        "auto": "Bil",
+        "local": "Lokal",
+        "remoteSftp": "Fjernbetjening (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Lokal mappe"
+      },
+      "imageHostPath": {
+        "label": "Værtssti",
+        "description": "Værtsvisningen af den lokale mappe, som terminalagenter modtager."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Maksimalt antal billeder"
+      },
+      "imageMaxBytes": {
+        "label": "Maks. lagerplads i bytes"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Aktivér Terminalværktøjslinjen",
+        "description": "Vis en værktøjslinje med hurtig adgang, der er docket til den aktive terminal for denne værts værktøjer og live statistikker"
+      },
+      "enableCommandHistory": {
+        "label": "Kommandohistorik",
+        "description": "Optagelseskommandoer køres i denne terminal for historik og autofuldførelse"
+      },
+      "enableTerminal": {
+        "label": "Aktivér terminal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Lokal terminal"
+  }
+}

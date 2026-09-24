@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "เพิ่ม",
+    "arrowDown": "ลูกศรลง",
+    "arrowLeft": "ลูกศรซ้าย",
+    "arrowRight": "ลูกศรขวา",
+    "arrowUp": "ลูกศรขึ้น",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "เดล",
+    "done": "เสร็จแล้ว",
+    "editQuickKeys": "แก้ไขปุ่มลัด",
+    "end": "จบ",
+    "esc": "เอส",
+    "home": "บ้าน",
+    "pageDown": "พีจีดีเอ็น",
+    "pageUp": "พีจีอัพ",
+    "paste": "แปะ",
+    "quickKeyPlaceholder": "เช่น sudo ",
+    "quickKeysDesc": "แตะ × เพื่อลบ รองรับได้สูงสุด 8 ตัวอักษร",
+    "quickKeysTitle": "ปุ่มลัด",
+    "removeQuickKey": "ลบ",
+    "resetDefaults": "รีเซ็ตเป็นการตั้งค่าเริ่มต้น",
+    "shift": "กะ",
+    "tab": "แท็บ"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "ไม่สามารถเปิดใช้งาน Auto-Tmux ได้",
+    "autoTmuxEnabled": "เปิดใช้งาน Auto-Tmux สำหรับ {{host}}แล้ว จะมีผลตั้งแต่การเชื่อมต่อครั้งถัดไป",
+    "clipboardHttpWarning": "ไม่สามารถอ่านข้อมูลในคลิปบอร์ดได้ เบราว์เซอร์บางตัวจำกัดการเข้าถึงคลิปบอร์ดนอก HTTPS - ลองใช้ Ctrl+V แทน หรือใช้งาน Termix ผ่าน HTTPS",
+    "closeTab": "ปิด",
+    "connecting": "กำลังเชื่อมต่อ...",
+    "connectionLost": "การเชื่อมต่อขาดหาย",
+    "connectionRejected": "เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ โปรดตรวจสอบการยืนยันตัวตนและการกำหนดค่าเครือข่ายของคุณ",
+    "connectionTimeout": "หมดเวลาการเชื่อมต่อ",
+    "enableAutoTmuxAction": "เปิดใช้งาน Auto-Tmux",
+    "hostKeyRejected": "การตรวจสอบคีย์โฮสต์ SSH ถูกปฏิเสธ การเชื่อมต่อถูกยกเลิก",
+    "linkDialogCopy": "สำเนา",
+    "linkDialogOpen": "เปิด",
+    "linkDialogTitle": "เปิดลิงก์",
+    "maxReconnectAttemptsReached": "จำนวนครั้งการเชื่อมต่อใหม่สูงสุดครบแล้ว",
+    "noHostSelected": "ไม่ได้เลือกโฮสต์",
+    "opksshAuthFailed": "การตรวจสอบสิทธิ์ล้มเหลว โปรดตรวจสอบข้อมูลประจำตัวของคุณและลองอีกครั้ง",
+    "opksshTimeout": "การตรวจสอบสิทธิ์หมดเวลา โปรดลองอีกครั้ง",
+    "passwordPromptFillTitle": "กรอกรหัสผ่านที่บันทึกไว้ลงในช่องนี้ใช่หรือไม่?",
+    "reconnect": "เชื่อมต่อใหม่",
+    "reconnected": "เชื่อมต่อสำเร็จแล้ว",
+    "reconnecting": "กำลังเชื่อมต่อใหม่... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "กล่องไม้ขีดไฟ",
+    "searchClose": "ปิด (หนี)",
+    "searchNext": "การแข่งขันถัดไป (กดเข้าร่วม)",
+    "searchNoResults": "ไม่พบผลลัพธ์",
+    "searchPlaceholder": "หา",
+    "searchPrevious": "การแข่งขันครั้งก่อนหน้า (Shift+Enter)",
+    "searchRegex": "ใช้ Regular Expression",
+    "searchResultCount": "{{index}} ของ {{count}}",
+    "searchWholeWord": "จับคู่คำทั้งหมด",
+    "sessionExpiredNotice": "เซสชันก่อนหน้าของคุณบน {{host}} หมดอายุหลังจาก {{minutes}} นาทีถูกตัดการเชื่อมต่อ เชลล์และทุกสิ่งที่กำลังทำงานอยู่ภายในนั้นหายไปแล้ว โปรดเปิดใช้งาน Auto-Tmux บนโฮสต์นี้เพื่อรักษาสถานะเซสชันให้คงอยู่",
+    "sessionExpiredNoticeNoMinutes": "เซสชันก่อนหน้าของคุณบน {{host}} หมดอายุขณะที่ไม่ได้เชื่อมต่อ เชลล์และทุกอย่างที่กำลังทำงานอยู่ภายในนั้นหายไปแล้ว โปรดเปิดใช้งาน Auto-Tmux บนโฮสต์นี้เพื่อรักษาสถานะเซสชันให้คงอยู่",
+    "sessionTakenOver": "เซสชั่นนี้เปิดอยู่ในแท็บอื่น กำลังเชื่อมต่อใหม่...",
+    "tmuxAttached": "ลูกค้าที่แนบมาด้วย",
+    "tmuxAttachedCount": "{{count}} แนบมาด้วย",
+    "tmuxCopyHint": "ปรับตำแหน่งที่เลือกแล้วกด Enter เพื่อคัดลอกไปยังคลิปบอร์ด",
+    "tmuxCreateNew": "เริ่มเซสชั่นใหม่",
+    "tmuxDetached": "ตัดการเชื่อมต่อจากเซสชัน tmux แล้ว",
+    "tmuxLastActivity": "กิจกรรมล่าสุด",
+    "tmuxSessionAttached": "การเชื่อมต่อเซสชัน tmux: {{name}}",
+    "tmuxSessionCreated": "สร้างเซสชัน tmux แล้ว: {{name}}",
+    "tmuxSessionPickerDesc": "พบเซสชัน tmux ที่มีอยู่แล้วในโฮสต์นี้ เลือกหนึ่งเซสชันเพื่อเชื่อมต่อใหม่หรือสร้างเซสชันใหม่",
+    "tmuxSessionPickerTitle": "เซสชัน tmux",
+    "tmuxTimeDays": "{{count}}วันก่อน",
+    "tmuxTimeHours": "{{count}}ชั่วโมงที่แล้ว",
+    "tmuxTimeJustNow": "เมื่อสักครู่นี้เอง",
+    "tmuxTimeMinutes": "{{count}}นาทีที่แล้ว",
+    "tmuxUnavailable": "tmux ไม่ได้ติดตั้งอยู่บนโฮสต์ระยะไกล จึงใช้เชลล์มาตรฐานแทน",
+    "tmuxWindowCount": "{{count}} หน้าต่าง",
+    "tmuxWindows": "วินโดวส์",
+    "unknownError": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+    "vaultAuthDescription": "หน้าต่างสำหรับเข้าสู่ระบบ HashiCorp Vault ได้เปิดขึ้นแล้ว โปรดทำการเข้าสู่ระบบให้เสร็จสมบูรณ์ การเชื่อมต่อนี้จะดำเนินการต่อโดยอัตโนมัติ",
+    "vaultAuthFailed": "การตรวจสอบสิทธิ์ Vault ล้มเหลว โปรดลองอีกครั้ง",
+    "vaultAuthTitle": "ต้องลงชื่อเข้าใช้ Vault",
+    "vaultReopen": "เปิดหน้าต่างเข้าสู่ระบบอีกครั้ง",
+    "websocketAbnormalClose": "การเชื่อมต่อถูกตัดโดยไม่คาดคิด อาจเกิดจากปัญหาเกี่ยวกับรีเวิร์สพร็อกซีหรือการกำหนดค่า SSL โปรดตรวจสอบบันทึกของเซิร์ฟเวอร์",
+    "websocketError": "ข้อผิดพลาดในการเชื่อมต่อ WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "ถอด tmux ออก",
+    "detachTmuxDescription": "ยกเลิกการเชื่อมต่อเซสชัน tmux",
+    "dismissError": "แก้ไขข้อผิดพลาดเกี่ยวกับรูปภาพ",
+    "hideToolbar": "ซ่อนแถบเครื่องมือ",
+    "image": "การดำเนินการกับรูปภาพ (เฉพาะรูปภาพ)",
+    "imageActionFailed": "การดำเนินการรูปภาพล้มเหลว",
+    "layout": "โหมดแสดงแถบเครื่องมือ",
+    "layoutExpanded": "ขยายเพิ่มเติมด้วยตัวชี้วัด",
+    "layoutIcon": "เฉพาะไอคอน",
+    "layoutLabeled": "ไอคอนและป้ายกำกับ",
+    "moveToolbar": "ย้ายแถบเครื่องมือ",
+    "moveToolbarHint": "ลากเพื่อจัดตำแหน่งแถบเครื่องมือใหม่",
+    "paste": "วางรูปภาพ",
+    "pasteImage": "วางภาพจากคลิปบอร์ด (เฉพาะภาพ)",
+    "retry": "ลองใหม่อีกครั้ง",
+    "showToolbar": "ขยายแถบเครื่องมือ",
+    "upload": "อัปโหลดรูปภาพ",
+    "uploadImage": "อัปโหลดรูปภาพไปยังโฮสต์",
+    "uploadingImage": "กำลังอัปโหลด..."
+  },
+  "history": {
+    "noTerminalSelected": "ไม่ได้เลือกเทอร์มินัล",
+    "noTerminalSelectedHint": "เปิดแท็บเทอร์มินัล SSH เพื่อดูประวัติคำสั่ง",
+    "searchPlaceholder": "ประวัติการค้นหา...",
+    "clearAll": "ล้างทั้งหมด",
+    "noHistoryEntries": "ไม่มีรายการประวัติ",
+    "trackingDisabled": "ปิดใช้งานการติดตามประวัติแล้ว"
+  },
+  "touchInput": {
+    "enabled": "เปิดใช้งานการป้อนข้อมูลแบบสัมผัส",
+    "enabledDesc": "อนุญาตให้เลื่อนหน้าจอด้วยนิ้วเดียวในเทอร์มินัล",
+    "momentumEnabled": "เปิดใช้งานโมเมนตัม",
+    "momentumEnabledDesc": "เลื่อนหน้าจอต่ออีกสักครู่หลังจากปัดนิ้ว",
+    "advanced": "ขั้นสูง",
+    "resetDefaults": "รีเซ็ตเป็นการตั้งค่าเริ่มต้น",
+    "dragThreshold": "เกณฑ์การลาก",
+    "maxWheelDelta": "เดลต้าล้อสูงสุด",
+    "momentumSampleWindow": "หน้าต่างตัวอย่างโมเมนตัม",
+    "releaseGracePeriod": "ระยะเวลาผ่อนผันการปล่อยตัว",
+    "minimumVelocity": "ความเร็วต่ำสุด",
+    "maximumVelocity": "ความเร็วสูงสุด",
+    "maximumDuration": "ระยะเวลาสูงสุด",
+    "maximumTravel": "การเดินทางสูงสุด",
+    "decayTime": "เวลาการเสื่อมสภาพ",
+    "pixelsPerTick": "พิกเซลต่อติ๊ก",
+    "maximumFrameInterval": "ช่วงเวลาเฟรมสูงสุด",
+    "maximumTicksPerFrame": "จำนวนขีดสูงสุดต่อเฟรม"
+  },
+  "imageStorage": {
+    "instanceId": "รหัสอินสแตนซ์เซสชันเทอร์มินัล",
+    "instanceIdDesc": "รหัสอินสแตนซ์ของแท็บเทอร์มินัลที่เชื่อมต่ออยู่แท็บหนึ่ง ใช้สำหรับทดสอบการมองเห็น",
+    "selectedModeUnavailable": "ไม่พร้อมใช้งาน",
+    "test": "ทดสอบ",
+    "testing": "กำลังทดสอบ...",
+    "testFailed": "การทดสอบการจัดเก็บรูปภาพล้มเหลว",
+    "testConnected": "การเชื่อมต่อเซสชันเทอร์มินัลเสร็จสมบูรณ์แล้ว",
+    "testNotConnected": "ไม่มีเซสชันเทอร์มินัลที่เชื่อมต่อกับรหัสอินสแตนซ์นี้",
+    "testSelectedMode": "การอัปโหลดจะใช้รูปแบบ: {{mode}}",
+    "testLocalVisible": "ไดเร็กทอรีภายในเครื่องสามารถมองเห็นได้จากโฮสต์ที่เชื่อมต่ออยู่",
+    "testLocalNotVisible": "ไดเร็กทอรีภายในเครื่องจะไม่สามารถมองเห็นได้จากโฮสต์ที่เชื่อมต่ออยู่"
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "การป้อนข้อมูลด้วยระบบสัมผัส",
+        "images": "การจัดเก็บรูปภาพ"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "การคงอยู่ของเซสชันเทอร์มินัล",
+        "description": "ระยะเวลาที่เทอร์มินัลที่ไม่ได้เชื่อมต่อจะยังคงทำงานอยู่บนเซิร์ฟเวอร์ก่อนที่จะถูกปิด ต่ำสุด 1 นาที สูงสุด 1440 นาที สำหรับเซสชันที่ต้องใช้งานนานกว่านี้ ให้เปิดใช้งาน Auto-Tmux บนโฮสต์"
+      },
+      "commandHistoryEnabled": {
+        "label": "ประวัติคำสั่ง",
+        "description": "อนุญาตให้บันทึกประวัติคำสั่ง เมื่อปิดใช้งาน ประวัติจะไม่ถูกบันทึกไม่ว่าการตั้งค่าต่อโฮสต์จะเป็นอย่างไรก็ตาม"
+      },
+      "imageStorageMode": {
+        "label": "โหมดจัดเก็บข้อมูล",
+        "description": "ตำแหน่งที่จะบันทึกภาพเทอร์มินัลที่คัดลอกและอัปโหลด การเลือกอัตโนมัติตามการเชื่อมต่อ ทั้งแบบโลคอลและรีโมต (SFTP) จะถูกกำหนดไว้ตายตัว",
+        "auto": "อัตโนมัติ",
+        "local": "ท้องถิ่น",
+        "remoteSftp": "รีโมท (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "ไดเร็กทอรีท้องถิ่น"
+      },
+      "imageHostPath": {
+        "label": "เส้นทางโฮสต์",
+        "description": "มุมมองฝั่งโฮสต์ของไดเร็กทอรีท้องถิ่นที่เอเจนต์เทอร์มินัลได้รับ"
+      },
+      "imageTtlMs": {
+        "label": "ทีทีแอล (มิลลิวินาที)"
+      },
+      "imageMaxCount": {
+        "label": "จำนวนภาพสูงสุด"
+      },
+      "imageMaxBytes": {
+        "label": "พื้นที่จัดเก็บสูงสุด (ไบต์)"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "เปิดใช้งานแถบเครื่องมือเทอร์มินัล",
+        "description": "แสดงแถบเครื่องมือเข้าถึงด่วนที่ตรึงอยู่กับเทอร์มินัลที่ใช้งานอยู่ สำหรับเครื่องมือและสถิติแบบเรียลไทม์ของโฮสต์นี้"
+      },
+      "enableCommandHistory": {
+        "label": "ประวัติคำสั่ง",
+        "description": "บันทึกคำสั่งที่เรียกใช้ในเทอร์มินัลนี้เพื่อดูประวัติและฟังก์ชันเติมคำอัตโนมัติ"
+      },
+      "enableTerminal": {
+        "label": "เปิดใช้งานเทอร์มินัล"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "สถานีปลายทางท้องถิ่น"
+  }
+}

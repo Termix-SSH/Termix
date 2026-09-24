@@ -4,7 +4,7 @@ import { KeyRound, Settings, SquareTerminal, Terminal } from "lucide-react";
 import { byOrderThenId, createRegistry } from "@/lib/registry";
 
 /** Core host editor tabs. Plugins add theirs through registerHostEditorSection. */
-export type CoreHostTabId = "general" | "ssh" | "terminal";
+export type CoreHostTabId = "general" | "ssh" | "terminal-options";
 export type HostTabId = CoreHostTabId | (string & {});
 export type CredentialTabId = "general" | "auth";
 
@@ -60,7 +60,7 @@ export const hostEditorSectionList = sections.list;
 export const useHostEditorSections = sections.useList;
 export const resetHostEditorSections = sections.reset;
 
-const CORE_SSH_GROUP = new Set<string>(["ssh", "terminal"]);
+const CORE_SSH_GROUP = new Set<string>(["ssh", "terminal-options"]);
 
 /** Whether a tab lives in the SSH group's second strip. */
 export function isSshGroupTab(id: string): boolean {
@@ -148,7 +148,7 @@ export function makeHostSshSubTabs(
         order: 0,
       },
       {
-        id: "terminal",
+        id: "terminal-options",
         label: t("hosts.tabTerminal"),
         icon: <SquareTerminal className="size-3" />,
         order: 10,

@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "추가",
+    "arrowDown": "아래쪽 화살표",
+    "arrowLeft": "왼쪽 화살표",
+    "arrowRight": "오른쪽 화살표",
+    "arrowUp": "위쪽 화살표",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "완료",
+    "editQuickKeys": "빠른 키 편집",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "반죽",
+    "quickKeyPlaceholder": "예: sudo ",
+    "quickKeysDesc": "×를 탭하여 제거합니다. 최대 8자까지 지원합니다.",
+    "quickKeysTitle": "빠른 키",
+    "removeQuickKey": "제거",
+    "resetDefaults": "기본값으로 초기화",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "자동 Tmux를 활성화하는 데 실패했습니다.",
+    "autoTmuxEnabled": "{{host}}에 대해 자동 Tmux가 활성화되었습니다. 이는 다음 연결부터 적용됩니다.",
+    "clipboardHttpWarning": "클립보드를 읽을 수 없습니다. 일부 브라우저는 HTTPS 외부에서 클립보드 접근을 제한합니다. Ctrl+V를 눌러 V를 누르거나 Termix를 HTTPS로 실행해 보세요.",
+    "closeTab": "닫기",
+    "connecting": "연결 중...",
+    "connectionLost": "연결이 끊어졌습니다",
+    "connectionRejected": "서버에서 연결이 거부되었습니다. 인증 및 네트워크 구성을 확인하세요.",
+    "connectionTimeout": "연결 시간 초과",
+    "enableAutoTmuxAction": "자동 Tmux 활성화",
+    "hostKeyRejected": "SSH 호스트 키 검증이 거부되었습니다. 연결이 취소되었습니다.",
+    "linkDialogCopy": "복사",
+    "linkDialogOpen": "열기",
+    "linkDialogTitle": "링크 열기",
+    "maxReconnectAttemptsReached": "최대 재연결 시도 횟수에 도달했습니다.",
+    "noHostSelected": "선택된 호스트가 없습니다.",
+    "opksshAuthFailed": "인증에 실패했습니다. 자격 증명을 확인하고 다시 시도하세요.",
+    "opksshTimeout": "인증 시간이 초과되었습니다. 다시 시도하세요.",
+    "passwordPromptFillTitle": "저장된 비밀번호를 이 프롬프트에 입력하시겠습니까?",
+    "reconnect": "재연결",
+    "reconnected": "재연결 성공",
+    "reconnecting": "재연결 중... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "대소문자를 일치시키세요",
+    "searchClose": "닫기 (탈출)",
+    "searchNext": "다음 매치 (Enter)",
+    "searchNoResults": "결과가 없습니다",
+    "searchPlaceholder": "찾다",
+    "searchPrevious": "이전 일치 항목 (Shift+Enter)",
+    "searchRegex": "정규 표현식을 사용하세요",
+    "searchResultCount": "{{index}} {{count}}",
+    "searchWholeWord": "단어 전체를 일치시키세요",
+    "sessionExpiredNotice": "{{host}} 호스트에서 진행 중이던 이전 세션이 {{minutes}} 분 후 연결이 끊어지면서 만료되었습니다. 셸과 셸에서 실행 중이던 모든 항목이 종료되었습니다. 세션을 유지하려면 이 호스트에서 자동 Tmux를 활성화하십시오.",
+    "sessionExpiredNoticeNoMinutes": "{{host}} 에서 이전 세션이 연결이 끊긴 상태에서 만료되었습니다. 셸과 그 안에서 실행 중이던 모든 항목이 사라졌습니다. 세션을 유지하려면 이 호스트에서 자동 Tmux를 활성화하십시오.",
+    "sessionTakenOver": "다른 탭에서 세션이 열렸습니다. 다시 연결 중...",
+    "tmuxAttached": "연결된 클라이언트",
+    "tmuxAttachedCount": "{{count}}개 연결됨",
+    "tmuxCopyHint": "선택 영역을 조정하고 Enter 키를 누르면 클립보드에 복사됩니다.",
+    "tmuxCreateNew": "새 세션 시작",
+    "tmuxDetached": "tmux 세션에서 분리됨",
+    "tmuxLastActivity": "마지막 활동",
+    "tmuxSessionAttached": "tmux 세션 연결됨: {{name}}",
+    "tmuxSessionCreated": "tmux 세션 생성됨: {{name}}",
+    "tmuxSessionPickerDesc": "이 호스트에서 기존 tmux 세션을 찾았습니다. 다시 연결할 세션을 선택하거나 새 세션을 만드세요.",
+    "tmuxSessionPickerTitle": "tmux 세션",
+    "tmuxTimeDays": "{{count}}일 전",
+    "tmuxTimeHours": "{{count}}시간 전",
+    "tmuxTimeJustNow": "방금",
+    "tmuxTimeMinutes": "{{count}}분 전",
+    "tmuxUnavailable": "원격 호스트에 tmux가 설치되어 있지 않아 표준 셸로 대체합니다.",
+    "tmuxWindowCount": "{{count}}개 윈도우",
+    "tmuxWindows": "윈도우",
+    "unknownError": "알 수 없는 오류가 발생했습니다.",
+    "vaultAuthDescription": "HashiCorp Vault 로그인을 위한 창이 열렸습니다. 해당 창에서 로그인을 완료하면 연결이 자동으로 계속됩니다.",
+    "vaultAuthFailed": "Vault 인증에 실패했습니다. 다시 시도하세요.",
+    "vaultAuthTitle": "Vault 로그인 필요",
+    "vaultReopen": "로그인 창 다시 열기",
+    "websocketAbnormalClose": "연결이 예기치 않게 종료되었습니다. 리버스 프록시 또는 SSL 구성 문제일 수 있습니다. 서버 로그를 확인하세요.",
+    "websocketError": "WebSocket 연결 오류"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmux 분리",
+    "detachTmuxDescription": "tmux 세션 분리",
+    "dismissError": "이미지 오류를 닫습니다",
+    "hideToolbar": "툴바 숨기기",
+    "image": "이미지 관련 작업 (이미지에만 해당)",
+    "imageActionFailed": "이미지 작업이 실패했습니다.",
+    "layout": "툴바 표시 모드",
+    "layoutExpanded": "측정 지표를 추가하여 확장했습니다.",
+    "layoutIcon": "아이콘만",
+    "layoutLabeled": "아이콘 및 레이블",
+    "moveToolbar": "툴바 이동",
+    "moveToolbarHint": "드래그하여 툴바의 위치를 변경하세요.",
+    "paste": "이미지 붙여넣기",
+    "pasteImage": "클립보드에서 이미지 붙여넣기 (이미지만 해당)",
+    "retry": "다시 해 보다",
+    "showToolbar": "확장 도구 모음",
+    "upload": "이미지 업로드",
+    "uploadImage": "호스트에 이미지를 업로드하세요",
+    "uploadingImage": "업로드 중..."
+  },
+  "history": {
+    "noTerminalSelected": "선택된 터미널 없음",
+    "noTerminalSelectedHint": "SSH 터미널 탭을 열어 명령 기록을 확인하세요.",
+    "searchPlaceholder": "기록 검색...",
+    "clearAll": "모두 지우기",
+    "noHistoryEntries": "기록 항목 없음",
+    "trackingDisabled": "기록 추적이 비활성화됨"
+  },
+  "touchInput": {
+    "enabled": "터치 입력 활성화",
+    "enabledDesc": "단말기에서 한 손가락 터치 스크롤을 허용합니다.",
+    "momentumEnabled": "모멘텀을 활성화하세요",
+    "momentumEnabledDesc": "스와이프 후 잠시 스크롤을 더 내리세요.",
+    "advanced": "고급의",
+    "resetDefaults": "기본 설정으로 재설정",
+    "dragThreshold": "드래그 임계값",
+    "maxWheelDelta": "최대 휠 델타",
+    "momentumSampleWindow": "모멘텀 샘플 윈도우",
+    "releaseGracePeriod": "릴리스 유예 기간",
+    "minimumVelocity": "최소 속도",
+    "maximumVelocity": "최대 속도",
+    "maximumDuration": "최대 지속 시간",
+    "maximumTravel": "최대 이동",
+    "decayTime": "소멸 시간",
+    "pixelsPerTick": "틱당 픽셀",
+    "maximumFrameInterval": "최대 프레임 간격",
+    "maximumTicksPerFrame": "프레임당 최대 틱 수"
+  },
+  "imageStorage": {
+    "instanceId": "터미널 세션 인스턴스 ID",
+    "instanceIdDesc": "연결된 터미널 탭 중 하나의 인스턴스 ID입니다. 이는 가시성 테스트에 사용됩니다.",
+    "selectedModeUnavailable": "없는",
+    "test": "시험",
+    "testing": "테스트 중...",
+    "testFailed": "이미지 저장소 테스트에 실패했습니다.",
+    "testConnected": "터미널 세션이 연결되었습니다.",
+    "testNotConnected": "이 인스턴스 ID로 연결된 터미널 세션이 없습니다.",
+    "testSelectedMode": "업로드 시에는 {{mode}}를 사용합니다.",
+    "testLocalVisible": "로컬 디렉터리는 연결된 호스트에서 볼 수 있습니다.",
+    "testLocalNotVisible": "로컬 디렉터리는 연결된 호스트에서 볼 수 없습니다."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "터치 입력",
+        "images": "이미지 저장"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "터미널 세션 지속성",
+        "description": "연결이 끊긴 터미널이 서버에서 종료되기 전까지 유지되는 시간입니다. 최소 1분, 최대 1440분. 이 시간보다 오래 세션을 유지해야 하는 경우 호스트에서 자동 Tmux를 활성화하십시오."
+      },
+      "commandHistoryEnabled": {
+        "label": "명령어 히스토리",
+        "description": "명령어 히스토리 기록 허용. 비활성화 시 호스트별 설정과 무관하게 히스토리가 저장되지 않습니다."
+      },
+      "imageStorageMode": {
+        "label": "저장 모드",
+        "description": "붙여넣거나 업로드한 터미널 이미지가 표시되는 위치입니다. 연결 유형에 따라 로컬 및 원격(SFTP) 이미지가 자동으로 선택됩니다.",
+        "auto": "자동",
+        "local": "현지의",
+        "remoteSftp": "원격(SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "로컬 디렉토리"
+      },
+      "imageHostPath": {
+        "label": "호스트 경로",
+        "description": "터미널 에이전트가 수신하는 로컬 디렉터리의 호스트 측 보기입니다."
+      },
+      "imageTtlMs": {
+        "label": "TTL(밀리초)"
+      },
+      "imageMaxCount": {
+        "label": "최대 이미지 개수"
+      },
+      "imageMaxBytes": {
+        "label": "최대 저장 용량(바이트)"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "터미널 툴바 활성화",
+        "description": "현재 활성화된 터미널에 도킹된 빠른 액세스 툴바를 표시하여 해당 호스트의 도구 및 실시간 통계를 볼 수 있도록 합니다."
+      },
+      "enableCommandHistory": {
+        "label": "명령어 히스토리",
+        "description": "히스토리 및 자동 완성을 위해 이 터미널에서 실행된 명령어를 기록합니다"
+      },
+      "enableTerminal": {
+        "label": "터미널 활성화"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "로컬 터미널"
+  }
+}

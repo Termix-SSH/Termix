@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Hinzufügen",
+    "arrowDown": "Pfeil nach unten",
+    "arrowLeft": "Pfeil nach links",
+    "arrowRight": "Pfeil nach rechts",
+    "arrowUp": "Pfeil nach oben",
+    "backTab": "⇥",
+    "ctrl": "Strg",
+    "delete": "Entf",
+    "done": "Fertig",
+    "editQuickKeys": "Schnelltasten bearbeiten",
+    "end": "Ende",
+    "esc": "Esc",
+    "home": "Pos1",
+    "pageDown": "Bild ab",
+    "pageUp": "Bild auf",
+    "paste": "Paste",
+    "quickKeyPlaceholder": "z. B. sudo ",
+    "quickKeysDesc": "Tippen Sie auf × zum Entfernen. Unterstützt bis zu 8 Zeichen.",
+    "quickKeysTitle": "Schnelltasten",
+    "removeQuickKey": "Entfernen",
+    "resetDefaults": "Auf Standard zurücksetzen",
+    "shift": "Umschalt",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Auto-Tmux konnte nicht aktiviert werden.",
+    "autoTmuxEnabled": "Auto-Tmux ist für {{host}}aktiviert. Es gilt ab der nächsten Verbindung.",
+    "clipboardHttpWarning": "Die Zwischenablage konnte nicht gelesen werden. Einige Browser beschränken den Zugriff auf die Zwischenablage außerhalb von HTTPS – versuchen Sie stattdessen Strg+V oder verwenden Sie für Termix eine HTTPS-Verbindung.",
+    "closeTab": "Schließen",
+    "connecting": "Verbinde...",
+    "connectionLost": "Verbindung verloren",
+    "connectionRejected": "Verbindung vom Server abgelehnt. Bitte überprüfen Sie Ihre Authentifizierung und Netzwerkkonfiguration.",
+    "connectionTimeout": "Verbindungs-Timeout",
+    "enableAutoTmuxAction": "Auto-Tmux aktivieren",
+    "hostKeyRejected": "SSH-Hostschlüssel-Überprüfung abgelehnt. Verbindung abgebrochen.",
+    "linkDialogCopy": "Kopieren",
+    "linkDialogOpen": "Öffnen",
+    "linkDialogTitle": "Link öffnen",
+    "maxReconnectAttemptsReached": "Maximale Wiederverbindungsversuche erreicht",
+    "noHostSelected": "Kein Host ausgewählt",
+    "opksshAuthFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldeinformationen und versuchen Sie es erneut.",
+    "opksshTimeout": "Authentifizierung abgelaufen. Bitte versuchen Sie es erneut.",
+    "passwordPromptFillTitle": "Gespeichertes Passwort in diese Eingabeaufforderung einfügen?",
+    "reconnect": "Erneut verbinden",
+    "reconnected": "Erfolgreich wieder verbunden",
+    "reconnecting": "Wiederverbinden... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Streichholzschachtel",
+    "searchClose": "Schließen (Flucht)",
+    "searchNext": "Nächstes Spiel (Eingabe)",
+    "searchNoResults": "Keine Ergebnisse",
+    "searchPlaceholder": "Finden",
+    "searchPrevious": "Vorheriges Spiel (Umschalt+Eingabe)",
+    "searchRegex": "Regulären Ausdruck verwenden",
+    "searchResultCount": "{{index}} von {{count}}",
+    "searchWholeWord": "Gleiches Wort aus",
+    "sessionExpiredNotice": "Ihre vorherige Sitzung auf {{host}} ist nach {{minutes}} Minuten Verbindungsabbruch abgelaufen; die Shell und alle darin laufenden Prozesse wurden gelöscht. Aktivieren Sie Auto-Tmux auf diesem Host, um Sitzungen aufrechtzuerhalten.",
+    "sessionExpiredNoticeNoMinutes": "Ihre vorherige Sitzung auf {{host}} ist während der Trennung abgelaufen; die Shell und alle darin laufenden Prozesse wurden gelöscht. Aktivieren Sie Auto-Tmux auf diesem Host, um Sitzungen aufrechtzuerhalten.",
+    "sessionTakenOver": "Sitzung wurde in einem anderen Tab geöffnet. Verbindung wird wiederhergestellt...",
+    "tmuxAttached": "Verbundene Clients",
+    "tmuxAttachedCount": "{{count}} verbunden",
+    "tmuxCopyHint": "Auswahl anpassen und Enter drücken, um in die Zwischenablage zu kopieren",
+    "tmuxCreateNew": "Neue Sitzung starten",
+    "tmuxDetached": "Von tmux-Sitzung getrennt",
+    "tmuxLastActivity": "Letzte Aktivität",
+    "tmuxSessionAttached": "tmux-Sitzung verbunden: {{name}}",
+    "tmuxSessionCreated": "tmux-Sitzung erstellt: {{name}}",
+    "tmuxSessionPickerDesc": "Bestehende tmux-Sitzungen auf diesem Host gefunden. Wählen Sie eine aus, um sie erneut zu verbinden, oder erstellen Sie eine neue.",
+    "tmuxSessionPickerTitle": "tmux-Sitzungen",
+    "tmuxTimeDays": "vor {{count}} Tagen",
+    "tmuxTimeHours": "vor {{count}} Std.",
+    "tmuxTimeJustNow": "Soeben",
+    "tmuxTimeMinutes": "vor {{count}} Min.",
+    "tmuxUnavailable": "tmux ist auf dem Remote-Host nicht installiert, Fallback auf die Standard-Shell",
+    "tmuxWindowCount": "{{count}} Fenster",
+    "tmuxWindows": "Fenster",
+    "unknownError": "Unbekannter Fehler aufgetreten",
+    "vaultAuthDescription": "Ein Fenster zur Anmeldung bei HashiCorp Vault wurde geöffnet. Schließen Sie die Anmeldung dort ab; diese Verbindung wird automatisch fortgesetzt.",
+    "vaultAuthFailed": "Vault-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "vaultAuthTitle": "Vault-Anmeldung erforderlich",
+    "vaultReopen": "Anmeldefenster erneut öffnen",
+    "websocketAbnormalClose": "Verbindung unerwartet geschlossen. Dies kann auf ein Problem mit dem Reverse-Proxy oder der SSL-Konfiguration zurückzuführen sein. Bitte überprüfen Sie die Server-Logs.",
+    "websocketError": "WebSocket-Verbindungsfehler"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmux trennen",
+    "detachTmuxDescription": "tmux-Sitzung trennen",
+    "dismissError": "Bildfehler ignorieren",
+    "hideToolbar": "Werkzeugleiste ausblenden",
+    "image": "Bildaktionen (nur Bilder)",
+    "imageActionFailed": "Bildaktion fehlgeschlagen",
+    "layout": "Symbolleistenanzeigemodus",
+    "layoutExpanded": "Erweitert um Kennzahlen",
+    "layoutIcon": "Nur Symbol",
+    "layoutLabeled": "Symbole und Beschriftungen",
+    "moveToolbar": "Verschieben Sie die Werkzeugleiste",
+    "moveToolbarHint": "Ziehen Sie, um die Symbolleiste neu zu positionieren.",
+    "paste": "Bild einfügen",
+    "pasteImage": "Bild aus der Zwischenablage einfügen (nur Bilder)",
+    "retry": "Wiederholen",
+    "showToolbar": "Symbolleiste erweitern",
+    "upload": "Bild hochladen",
+    "uploadImage": "Laden Sie ein Bild auf den Host hoch.",
+    "uploadingImage": "Wird hochgeladen..."
+  },
+  "history": {
+    "noTerminalSelected": "Kein Terminal ausgewählt",
+    "noTerminalSelectedHint": "Öffnen Sie einen SSH-Terminal-Tab, um den Befehlsverlauf anzuzeigen.",
+    "searchPlaceholder": "Verlauf durchsuchen...",
+    "clearAll": "Alle löschen",
+    "noHistoryEntries": "Keine Verlaufseinträge",
+    "trackingDisabled": "Verlaufsaufzeichnung ist deaktiviert"
+  },
+  "touchInput": {
+    "enabled": "Touch-Eingabe aktivieren",
+    "enabledDesc": "Ein-Finger-Touch-Scrollen in Terminals ermöglichen",
+    "momentumEnabled": "Dynamik aktivieren",
+    "momentumEnabledDesc": "Nach dem Wischen kurz weiterscrollen.",
+    "advanced": "Fortschrittlich",
+    "resetDefaults": "Auf Standardeinstellungen zurücksetzen",
+    "dragThreshold": "Widerstandsschwelle",
+    "maxWheelDelta": "Maximale Rad-Delta",
+    "momentumSampleWindow": "Momentum-Abtastfenster",
+    "releaseGracePeriod": "Freigabefrist",
+    "minimumVelocity": "Minimale Geschwindigkeit",
+    "maximumVelocity": "Maximale Geschwindigkeit",
+    "maximumDuration": "Maximale Dauer",
+    "maximumTravel": "Maximale Reisegeschwindigkeit",
+    "decayTime": "Zerfallszeit",
+    "pixelsPerTick": "Pixel pro Tick",
+    "maximumFrameInterval": "Maximales Frame-Intervall",
+    "maximumTicksPerFrame": "Maximale Anzahl an Ticks pro Frame"
+  },
+  "imageStorage": {
+    "instanceId": "Terminal-Sitzungsinstanz-ID",
+    "instanceIdDesc": "Instanz-ID eines Ihrer verbundenen Terminal-Tabs, die zum Testen der Sichtbarkeit verwendet wird.",
+    "selectedModeUnavailable": "Nicht verfügbar",
+    "test": "Prüfen",
+    "testing": "Testen...",
+    "testFailed": "Fehler beim Testen der Bildspeicherung",
+    "testConnected": "Die Terminal-Sitzung ist verbunden.",
+    "testNotConnected": "Es besteht keine verbundene Terminal-Sitzung mit dieser Instanz-ID.",
+    "testSelectedMode": "Ein Upload würde Folgendes verwenden: {{mode}}",
+    "testLocalVisible": "Das lokale Verzeichnis ist vom verbundenen Host aus sichtbar.",
+    "testLocalNotVisible": "Das lokale Verzeichnis ist vom verbundenen Host aus nicht sichtbar."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Berührungseingabe",
+        "images": "Bildspeicherung"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminal-Sitzungspersistenz",
+        "description": "Wie lange ein getrenntes Terminal auf dem Server aktiv bleibt, bevor es geschlossen wird. Min. 1 Minute · Max. 1440 Minuten. Für Sitzungen, die länger als diese Zeitspanne bestehen bleiben sollen, aktivieren Sie Auto-Tmux auf dem Host."
+      },
+      "commandHistoryEnabled": {
+        "label": "Befehlsverlauf",
+        "description": "Aufzeichnung des Befehlsverlaufs erlauben. Wenn deaktiviert, wird der Verlauf unabhängig von Host-Einstellungen nicht gespeichert."
+      },
+      "imageStorageMode": {
+        "label": "Speichermodus",
+        "description": "Hier werden eingefügte und hochgeladene Terminalbilder gespeichert. Die automatische Auswahl anhand der Verbindung (lokal und remote (SFTP)) ist festgelegt.",
+        "auto": "Auto",
+        "local": "Lokal",
+        "remoteSftp": "Remote (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Lokales Verzeichnis"
+      },
+      "imageHostPath": {
+        "label": "Hostpfad",
+        "description": "Die hostseitige Ansicht des lokalen Verzeichnisses, die Terminalagenten empfangen."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Maximale Bildanzahl"
+      },
+      "imageMaxBytes": {
+        "label": "Maximale Speicherkapazität in Bytes"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Terminal-Symbolleiste aktivieren",
+        "description": "Zeigt eine Schnellzugriffsleiste an, die am aktiven Terminal angedockt ist und die Tools und Live-Statistiken dieses Hosts anzeigt."
+      },
+      "enableCommandHistory": {
+        "label": "Befehlsverlauf",
+        "description": "In diesem Terminal ausgeführte Befehle für Verlauf und Autovervollständigung aufzeichnen"
+      },
+      "enableTerminal": {
+        "label": "Terminal aktivieren"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Lokales Terminal"
+  }
+}

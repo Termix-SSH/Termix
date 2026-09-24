@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Tillägga",
+    "arrowDown": "Pil nedåt",
+    "arrowLeft": "Pil vänster",
+    "arrowRight": "Pil höger",
+    "arrowUp": "Pil upp",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Gjort",
+    "editQuickKeys": "Redigera snabbknappar",
+    "end": "Avsluta",
+    "esc": "Esc",
+    "home": "Hem",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Klistra",
+    "quickKeyPlaceholder": "t.ex. sudo ",
+    "quickKeysDesc": "Tryck på × för att ta bort. Stöder upp till 8 tecken.",
+    "quickKeysTitle": "Snabbtangenter",
+    "removeQuickKey": "Ta bort",
+    "resetDefaults": "Återställ till standardinställningarna",
+    "shift": "Flytta",
+    "tab": "Flik"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Misslyckades med att aktivera Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux aktiverat för {{host}}. Det gäller från nästa anslutning.",
+    "clipboardHttpWarning": "Kunde inte läsa urklippet. Vissa webbläsare begränsar åtkomst till urklipp utanför HTTPS - prova Ctrl+V istället, eller servera Termix över HTTPS.",
+    "closeTab": "Nära",
+    "connecting": "Ansluter...",
+    "connectionLost": "Anslutningen förlorades",
+    "connectionRejected": "Anslutningen avvisades av servern. Kontrollera din autentisering och nätverkskonfiguration.",
+    "connectionTimeout": "Anslutningstimeout",
+    "enableAutoTmuxAction": "Aktivera Auto-Tmux",
+    "hostKeyRejected": "Verifiering av SSH-värdnyckel avvisad. Anslutningen avbröts.",
+    "linkDialogCopy": "Kopiera",
+    "linkDialogOpen": "Öppna",
+    "linkDialogTitle": "Öppna länk",
+    "maxReconnectAttemptsReached": "Maximalt antal återanslutningsförsök uppnådda",
+    "noHostSelected": "Ingen värd vald",
+    "opksshAuthFailed": "Autentiseringen misslyckades. Kontrollera dina inloggningsuppgifter och försök igen.",
+    "opksshTimeout": "Autentiseringen har gått ut. Försök igen.",
+    "passwordPromptFillTitle": "Fyll i det sparade lösenordet i den här frågan?",
+    "reconnect": "Återanslut",
+    "reconnected": "Återansluten lyckades",
+    "reconnecting": "Återansluter... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Matchfodral",
+    "searchClose": "Stäng (Escape)",
+    "searchNext": "Nästa match (Enter)",
+    "searchNoResults": "Inga resultat",
+    "searchPlaceholder": "Hitta",
+    "searchPrevious": "Föregående matchning (Shift+Enter)",
+    "searchRegex": "Använd reguljärt uttryck",
+    "searchResultCount": "{{index}} av {{count}}",
+    "searchWholeWord": "Matcha hela ordet",
+    "sessionExpiredNotice": "Din föregående session på {{host}} gick ut efter {{minutes}} minuters frånkoppling; skalet och allt som körs i det är borta. Aktivera Auto-Tmux på den här värden för att hålla sessionerna aktiva.",
+    "sessionExpiredNoticeNoMinutes": "Din föregående session på {{host}} upphörde medan den var frånkopplad; skalet och allt som körs i det är borta. Aktivera Auto-Tmux på den här värden för att hålla sessionerna aktiva.",
+    "sessionTakenOver": "Sessionen öppnades i en annan flik. Återansluter...",
+    "tmuxAttached": "Anslutna klienter",
+    "tmuxAttachedCount": "{{count}} bifogad",
+    "tmuxCopyHint": "Justera markeringen och tryck på Enter för att kopiera till urklipp",
+    "tmuxCreateNew": "Starta ny session",
+    "tmuxDetached": "Losskopplad från tmux-sessionen",
+    "tmuxLastActivity": "Senaste aktivitet",
+    "tmuxSessionAttached": "tmux-session bifogad: {{name}}",
+    "tmuxSessionCreated": "tmux-session skapad: {{name}}",
+    "tmuxSessionPickerDesc": "Befintliga tmux-sessioner hittades på den här värden. Välj en för att återansluta eller skapa en ny session.",
+    "tmuxSessionPickerTitle": "tmux-sessioner",
+    "tmuxTimeDays": "för {{count}}dagar sedan",
+    "tmuxTimeHours": "för {{count}}timmar sedan",
+    "tmuxTimeJustNow": "just nu",
+    "tmuxTimeMinutes": "för {{count}}minuter sedan",
+    "tmuxUnavailable": "tmux är inte installerat på fjärrdatorn, utan återgår till standardskal",
+    "tmuxWindowCount": "{{count}} fönster",
+    "tmuxWindows": "Fönster",
+    "unknownError": "Okänt fel inträffade",
+    "vaultAuthDescription": "Ett fönster har öppnats för att logga in på HashiCorp Vault. Slutför inloggningen där; anslutningen fortsätter automatiskt.",
+    "vaultAuthFailed": "Valvautentisering misslyckades. Försök igen.",
+    "vaultAuthTitle": "Inloggning till arkivet krävs",
+    "vaultReopen": "Öppna inloggningsfönstret igen",
+    "websocketAbnormalClose": "Anslutningen stängdes oväntat. Detta kan bero på ett problem med omvänd proxy eller SSL-konfiguration. Kontrollera serverloggarna.",
+    "websocketError": "WebSocket-anslutningsfel"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Lossa tmux",
+    "detachTmuxDescription": "Koppla bort tmux-session",
+    "dismissError": "Stäng bildfel",
+    "hideToolbar": "Dölj verktygsfältet",
+    "image": "Bildåtgärder (endast bilder)",
+    "imageActionFailed": "Bildåtgärden misslyckades",
+    "layout": "Verktygsfältets visningsläge",
+    "layoutExpanded": "Utökad med mätvärden",
+    "layoutIcon": "Endast ikon",
+    "layoutLabeled": "Ikoner och etiketter",
+    "moveToolbar": "Flytta verktygsfältet",
+    "moveToolbarHint": "Dra för att flytta verktygsfältet",
+    "paste": "Klistra in bild",
+    "pasteImage": "Klistra in bild från urklipp (endast bilder)",
+    "retry": "Försöka igen",
+    "showToolbar": "Expandera verktygsfältet",
+    "upload": "Ladda upp bild",
+    "uploadImage": "Ladda upp en bild till värden",
+    "uploadingImage": "Laddar upp..."
+  },
+  "history": {
+    "noTerminalSelected": "Ingen terminal vald",
+    "noTerminalSelectedHint": "Öppna en SSH-terminalflik för att visa dess kommandohistorik",
+    "searchPlaceholder": "Sökhistorik...",
+    "clearAll": "Rensa alla",
+    "noHistoryEntries": "Inga historikposter",
+    "trackingDisabled": "Historikspårning är inaktiverad"
+  },
+  "touchInput": {
+    "enabled": "Aktivera pekinmatning",
+    "enabledDesc": "Tillåt scrollning med ett finger i terminaler",
+    "momentumEnabled": "Aktivera momentum",
+    "momentumEnabledDesc": "Fortsätt skrolla kort efter en svepning",
+    "advanced": "Avancerad",
+    "resetDefaults": "Återställ till standardinställningarna",
+    "dragThreshold": "Draggräns",
+    "maxWheelDelta": "Maximal hjuldelta",
+    "momentumSampleWindow": "Momentum-exempelfönster",
+    "releaseGracePeriod": "Frigivningsfrist",
+    "minimumVelocity": "Minsta hastighet",
+    "maximumVelocity": "Maximal hastighet",
+    "maximumDuration": "Maximal varaktighet",
+    "maximumTravel": "Maximal resa",
+    "decayTime": "Avklingningstid",
+    "pixelsPerTick": "Pixlar per tick",
+    "maximumFrameInterval": "Maximalt bildintervall",
+    "maximumTicksPerFrame": "Maximalt antal ticks per bildruta"
+  },
+  "imageStorage": {
+    "instanceId": "Terminalsessionsinstans-ID",
+    "instanceIdDesc": "Instans-ID för en av dina anslutna terminalflikar, används för att testa synligheten.",
+    "selectedModeUnavailable": "Inte tillgänglig",
+    "test": "Testa",
+    "testing": "Testning...",
+    "testFailed": "Misslyckades med att testa bildlagring",
+    "testConnected": "Terminalsessionen är ansluten.",
+    "testNotConnected": "Ingen ansluten terminalsession med detta instans-ID.",
+    "testSelectedMode": "En uppladdning skulle använda: {{mode}}",
+    "testLocalVisible": "Den lokala katalogen är synlig från den anslutna värden.",
+    "testLocalNotVisible": "Den lokala katalogen är INTE synlig från den anslutna värden."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Pekinmatning",
+        "images": "Bildlagring"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminalsessionens persistens",
+        "description": "Hur länge en frånkopplad terminal hålls aktiv på servern innan den stängs. Min 1 · Max 1440 minuter. För sessioner som måste överleva detta, aktivera Auto-Tmux på värden."
+      },
+      "commandHistoryEnabled": {
+        "label": "Kommandohistorik",
+        "description": "Tillåt inspelning av kommandohistorik. När det är inaktiverat sparas inte historiken oavsett inställningarna per värd."
+      },
+      "imageStorageMode": {
+        "label": "Lagringsläge",
+        "description": "Där inklistrade och uppladdade terminalbilder skrivs. Automatiska val via anslutning, lokal och fjärransluten (SFTP) är åtgärdade.",
+        "auto": "Bil",
+        "local": "Lokal",
+        "remoteSftp": "Fjärrstyrning (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Lokal katalog"
+      },
+      "imageHostPath": {
+        "label": "Värdsökväg",
+        "description": "Värdsidans vy av den lokala katalogen som terminalagenter tar emot."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Max antal bilder"
+      },
+      "imageMaxBytes": {
+        "label": "Max antal lagringsbyte"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Aktivera terminalverktygsfältet",
+        "description": "Visa en snabbåtkomstverktygsfält dockad till den aktiva terminalen för den här värdens verktyg och livestatistik"
+      },
+      "enableCommandHistory": {
+        "label": "Kommandohistorik",
+        "description": "Record-kommandon körs i den här terminalen för historik och autofullständig ifyllning"
+      },
+      "enableTerminal": {
+        "label": "Aktivera terminalen"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Lokal terminal"
+  }
+}

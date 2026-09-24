@@ -225,7 +225,11 @@ describe("registries through the app object", () => {
   it("adds a host editor section to the SSH group in order", async () => {
     await mount();
     const ids = makeHostSshSubTabs((key) => key).map((tab) => tab.id);
-    expect(ids.slice(0, 3)).toEqual(["ssh", "terminal", "fixture-section"]);
+    expect(ids.slice(0, 3)).toEqual([
+      "ssh",
+      "terminal-options",
+      "fixture-section",
+    ]);
     expect(makeHostTabs((key) => key).map((tab) => tab.id)).not.toContain(
       "fixture-section",
     );

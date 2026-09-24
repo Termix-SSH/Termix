@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Hozzáadás",
+    "arrowDown": "Lefelé mutató nyíl",
+    "arrowLeft": "Balra nyíl",
+    "arrowRight": "Jobbra nyíl",
+    "arrowUp": "Felfelé nyíl",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Kész",
+    "editQuickKeys": "Gyorsbillentyűk szerkesztése",
+    "end": "Vége",
+    "esc": "Esc",
+    "home": "Otthon",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Paszta",
+    "quickKeyPlaceholder": "pl. sudo ",
+    "quickKeysDesc": "Koppintson a × jelre az eltávolításhoz. Legfeljebb 8 karaktert támogat.",
+    "quickKeysTitle": "Gyorsbillentyűk",
+    "removeQuickKey": "Eltávolítás",
+    "resetDefaults": "Alapértelmezett beállítások visszaállítása",
+    "shift": "Váltás",
+    "tab": "Fül"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Nem sikerült engedélyezni az Auto-Tmux-ot",
+    "autoTmuxEnabled": "Auto-Tmux engedélyezve a {{host}}számára. A következő kapcsolattól érvényes.",
+    "clipboardHttpWarning": "Nem sikerült beolvasni a vágólapot. Néhány böngésző korlátozza a vágólap elérését HTTPS-en kívül - próbálja ki a Ctrl+V billentyűkombinációt, vagy HTTPS-en keresztül szolgáltassa ki a Termixet.",
+    "closeTab": "Közeli",
+    "connecting": "Kapcsolódás...",
+    "connectionLost": "Kapcsolat megszakadt",
+    "connectionRejected": "A szerver elutasította a kapcsolatot. Kérjük, ellenőrizze a hitelesítést és a hálózati konfigurációt.",
+    "connectionTimeout": "Kapcsolati időtúllépés",
+    "enableAutoTmuxAction": "Auto-Tmux engedélyezése",
+    "hostKeyRejected": "SSH host kulcs ellenőrzése elutasítva. Kapcsolat megszakítva.",
+    "linkDialogCopy": "Másolat",
+    "linkDialogOpen": "Nyitott",
+    "linkDialogTitle": "Link megnyitása",
+    "maxReconnectAttemptsReached": "Elérte az újracsatlakozási kísérletek maximális számát",
+    "noHostSelected": "Nincs kiválasztva gazdagép",
+    "opksshAuthFailed": "Sikertelen hitelesítés. Kérjük, ellenőrizze a hitelesítő adatait, és próbálja újra.",
+    "opksshTimeout": "A hitelesítés időtúllépést okozott. Kérjük, próbálja újra.",
+    "passwordPromptFillTitle": "Írja be a mentett jelszót ebbe a mezőbe?",
+    "reconnect": "Újracsatlakozás",
+    "reconnected": "Sikeresen újrakapcsolódott",
+    "reconnecting": "Újracsatlakozás... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Gyufa tok",
+    "searchClose": "Bezárás (Escape)",
+    "searchNext": "Következő találat (Enter)",
+    "searchNoResults": "Nincs találat",
+    "searchPlaceholder": "Lelet",
+    "searchPrevious": "Előző találat (Shift+Enter)",
+    "searchRegex": "Reguláris kifejezés használata",
+    "searchResultCount": "{{index}} a {{count}}-ból",
+    "searchWholeWord": "Egész szó egyezése",
+    "sessionExpiredNotice": "Az előző munkameneted a következő helyen: {{host}} lejárt {{minutes}} perc lecsatlakozás után; a shell és minden, ami benne fut, eltűnt. Kapcsold be az Auto-Tmux-ot ezen a gépen a munkamenetek életben tartásához.",
+    "sessionExpiredNoticeNoMinutes": "Az előző munkameneted a {{host}} gépen lejárt, miközben le voltál választva; a shell és minden benne futó dolog elveszett. Kapcsold be az Auto-Tmuxot ezen a gépen a munkamenetek életben tartásához.",
+    "sessionTakenOver": "A munkamenet egy másik lapon nyílt meg. Újrakapcsolódás...",
+    "tmuxAttached": "Csatlakoztatott ügyfelek",
+    "tmuxAttachedCount": "{{count}} csatolva",
+    "tmuxCopyHint": "Módosítsa a kijelölést, és nyomja meg az Enter billentyűt a vágólapra másoláshoz",
+    "tmuxCreateNew": "Új munkamenet indítása",
+    "tmuxDetached": "Leválasztva a tmux munkamenetről",
+    "tmuxLastActivity": "Utolsó tevékenység",
+    "tmuxSessionAttached": "tmux munkamenet csatolva: {{name}}",
+    "tmuxSessionCreated": "tmux munkamenet létrehozva: {{name}}",
+    "tmuxSessionPickerDesc": "Meglévő tmux munkamenetek találhatók ezen a gazdagépen. Válasszon ki egyet az újracsatlakozáshoz, vagy hozzon létre egy új munkamenetet.",
+    "tmuxSessionPickerTitle": "tmux munkamenetek",
+    "tmuxTimeDays": "{{count}}nappal ezelőtt",
+    "tmuxTimeHours": "{{count}}órával ezelőtt",
+    "tmuxTimeJustNow": "éppen most",
+    "tmuxTimeMinutes": "{{count}}perccel ezelőtt",
+    "tmuxUnavailable": "A tmux nincs telepítve a távoli gépre, a standard shell-t használja.",
+    "tmuxWindowCount": "{{count}} ablak",
+    "tmuxWindows": "Ablakok",
+    "unknownError": "Ismeretlen hiba történt",
+    "vaultAuthDescription": "Megnyílt egy ablak a HashiCorp Vaultba való bejelentkezéshez. Fejezze be a bejelentkezést ott; a kapcsolat automatikusan folytatódik.",
+    "vaultAuthFailed": "A trezor hitelesítése sikertelen. Próbálja újra.",
+    "vaultAuthTitle": "Bejelentkezés szükséges a széfbe",
+    "vaultReopen": "Bejelentkezési ablak újranyitása",
+    "websocketAbnormalClose": "A kapcsolat váratlanul megszakadt. Ennek oka lehet fordított proxy vagy SSL konfigurációs probléma. Kérjük, ellenőrizze a szervernaplókat.",
+    "websocketError": "WebSocket csatlakozási hiba"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmux leválasztása",
+    "detachTmuxDescription": "tmux munkamenet leválasztása",
+    "dismissError": "Képhiba elvetése",
+    "hideToolbar": "Eszköztár elrejtése",
+    "image": "Képműveletek (csak képek)",
+    "imageActionFailed": "Képművelet sikertelen",
+    "layout": "Eszköztár megjelenítési módja",
+    "layoutExpanded": "Metrikákkal bővítve",
+    "layoutIcon": "Csak ikon",
+    "layoutLabeled": "Ikonok és címkék",
+    "moveToolbar": "Eszköztár áthelyezése",
+    "moveToolbarHint": "Húzza az eszköztár áthelyezéséhez",
+    "paste": "Kép beillesztése",
+    "pasteImage": "Kép beillesztése a vágólapról (csak képek)",
+    "retry": "Újrapróbálkozás",
+    "showToolbar": "Eszköztár kibontása",
+    "upload": "Kép feltöltése",
+    "uploadImage": "Töltsön fel egy képet a tárhelyszolgáltatóra",
+    "uploadingImage": "Feltöltés..."
+  },
+  "history": {
+    "noTerminalSelected": "Nincs kiválasztva terminál",
+    "noTerminalSelectedHint": "Nyisson meg egy SSH terminálfület a parancselőzmények megtekintéséhez",
+    "searchPlaceholder": "Keresési előzmények...",
+    "clearAll": "Összes törlése",
+    "noHistoryEntries": "Nincsenek előzménybejegyzések",
+    "trackingDisabled": "Az előzmények követése le van tiltva"
+  },
+  "touchInput": {
+    "enabled": "Érintéses bevitel engedélyezése",
+    "enabledDesc": "Egyujjas görgetés engedélyezése a terminálokban",
+    "momentumEnabled": "Lendület engedélyezése",
+    "momentumEnabledDesc": "Görgessen tovább röviden egy húzás után",
+    "advanced": "Fejlett",
+    "resetDefaults": "Alapértelmezett beállítások visszaállítása",
+    "dragThreshold": "Húzási küszöb",
+    "maxWheelDelta": "Maximális kerékdelta",
+    "momentumSampleWindow": "Lendület mintavételi ablak",
+    "releaseGracePeriod": "Kiadási türelmi időszak",
+    "minimumVelocity": "Minimális sebesség",
+    "maximumVelocity": "Maximális sebesség",
+    "maximumDuration": "Maximális időtartam",
+    "maximumTravel": "Maximális mozgástartomány",
+    "decayTime": "Bomlási idő",
+    "pixelsPerTick": "Pixelek száma kullancsonként",
+    "maximumFrameInterval": "Maximális képkocka-intervallum",
+    "maximumTicksPerFrame": "Maximális tickek képkockánként"
+  },
+  "imageStorage": {
+    "instanceId": "Terminál munkamenet példányazonosítója",
+    "instanceIdDesc": "Az egyik csatlakoztatott terminálfül példányazonosítója, amelyet a láthatóság teszteléséhez használunk.",
+    "selectedModeUnavailable": "Nem elérhető",
+    "test": "Teszt",
+    "testing": "Tesztelés...",
+    "testFailed": "Nem sikerült tesztelni a képtárolást",
+    "testConnected": "A terminál munkamenet csatlakozva van.",
+    "testNotConnected": "Nincs csatlakoztatott terminál munkamenet ezzel a példányazonosítóval.",
+    "testSelectedMode": "Egy feltöltés ezt használná: {{mode}}",
+    "testLocalVisible": "A helyi könyvtár látható a csatlakoztatott gépről.",
+    "testLocalNotVisible": "A helyi könyvtár NEM látható a csatlakoztatott gépről."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Érintéses bevitel",
+        "images": "Képtárolás"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminál munkamenet-megőrző",
+        "description": "Mennyi ideig marad életben egy leválasztott terminál a szerveren, mielőtt bezárásra kerül. Min. 1 · Max. 1440 perc. Azoknál a munkameneteknél, amelyeknek ezt túl kell élniük, engedélyezze az Auto-Tmux funkciót a gazdagépen."
+      },
+      "commandHistoryEnabled": {
+        "label": "Parancsnoki előzmények",
+        "description": "Parancselőzmények rögzítésének engedélyezése. Ha le van tiltva, az előzmények nem kerülnek mentésre, függetlenül a gazdagép beállításaitól."
+      },
+      "imageStorageMode": {
+        "label": "Tárolási mód",
+        "description": "A beillesztett és feltöltött terminálképek írási helye. Kijavítottuk az automatikus kiválasztást kapcsolat, helyi és távoli (SFTP) alapján.",
+        "auto": "Autó",
+        "local": "Helyi",
+        "remoteSftp": "Távoli (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Helyi címtár"
+      },
+      "imageHostPath": {
+        "label": "Gazdagép elérési útja",
+        "description": "A terminálügynökök által fogadott helyi könyvtár hosztoldali nézete."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Max. képszám"
+      },
+      "imageMaxBytes": {
+        "label": "Max. tárhely byte-okban"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Terminál eszköztár engedélyezése",
+        "description": "Gyorselérési eszköztár megjelenítése az aktív terminálhoz rögzítve a gazdagép eszközeihez és élő statisztikáihoz"
+      },
+      "enableCommandHistory": {
+        "label": "Parancsnoki előzmények",
+        "description": "A terminálon futó parancsok rögzítése előzmények és automatikus kiegészítés céljából"
+      },
+      "enableTerminal": {
+        "label": "Terminál engedélyezése"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Helyi terminál"
+  }
+}

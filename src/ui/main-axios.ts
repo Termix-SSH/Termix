@@ -1960,8 +1960,6 @@ export {
   updatePasswordResetAllowed,
   updateOIDCConfig,
   disableOIDCConfig,
-  getCommandHistoryEnabled,
-  updateCommandHistoryEnabled,
   adminResetUserPassword,
   adminDisableUserTotp,
   adminExportUserData,
@@ -2070,13 +2068,6 @@ export {
 } from "@/api/dashboard-api";
 
 // ============================================================================
-export {
-  saveCommandToHistory,
-  getCommandHistory,
-  deleteCommandFromHistory,
-  clearCommandHistory,
-} from "@/api/command-history-api";
-
 export {
   linkOIDCToPasswordAccount,
   unlinkOIDCFromPasswordAccount,

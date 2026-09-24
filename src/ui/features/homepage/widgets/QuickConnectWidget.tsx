@@ -38,10 +38,13 @@ function QuickConnectWidget({
   const [loading, setLoading] = useState(true);
   const targets = quickConnectTargets(useHostActions());
 
+  // An empty list means the first tools plugins offer, in their order.
   const types =
     config.connectionTypes.length > 0
       ? config.connectionTypes
-      : (["terminal"] as QuickConnectType[]);
+      : (targets
+          .slice(0, 2)
+          .map((target) => target.type) as QuickConnectType[]);
 
   useEffect(() => {
     getSSHHosts()
@@ -131,7 +134,7 @@ registerWidget<QuickConnectConfig>({
   icon: <Zap size={14} />,
   defaultConfig: {
     hostIds: [],
-    connectionTypes: ["terminal", "files"],
+    connectionTypes: [],
     showStatus: true,
     layout: "list",
   },

@@ -68,7 +68,6 @@ function recordingShell(calls: ShellCall[]): TabShellCallbacks {
     openSingletonTab: record("openSingletonTab"),
     closeTab: record("closeTab"),
     renameTab: record("renameTab"),
-    openTerminalTab: record("openTerminalTab"),
     openRailView: record("openRailView"),
     closeRailView: record("closeRailView"),
     saveQuickConnect: async (...args) => {

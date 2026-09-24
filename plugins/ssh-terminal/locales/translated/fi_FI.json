@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Lisätä",
+    "arrowDown": "Nuoli alas",
+    "arrowLeft": "Nuoli vasemmalle",
+    "arrowRight": "Nuoli oikealle",
+    "arrowUp": "Nuoli ylös",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Poista",
+    "done": "Tehty",
+    "editQuickKeys": "Muokkaa pikanäppäimiä",
+    "end": "Loppu",
+    "esc": "Esc-näppäin",
+    "home": "Kotiin",
+    "pageDown": "PgDn",
+    "pageUp": "Sivu ylös",
+    "paste": "Liitä",
+    "quickKeyPlaceholder": "esim. sudo ",
+    "quickKeysDesc": "Poista napauttamalla ×. Tukee enintään 8 merkkiä.",
+    "quickKeysTitle": "Pikanäppäimet",
+    "removeQuickKey": "Poistaa",
+    "resetDefaults": "Palauta oletusasetukset",
+    "shift": "Siirtää",
+    "tab": "Välilehti"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Automaattisen Tmuxin käyttöönotto epäonnistui",
+    "autoTmuxEnabled": "Auto-Tmux käytössä kohteelle {{host}}. Se on voimassa seuraavasta yhteydestä alkaen.",
+    "clipboardHttpWarning": "Leikepöydän lukeminen epäonnistui. Jotkin selaimet rajoittavat leikepöydän käyttöä HTTPS-yhteyden ulkopuolella – kokeile Ctrl+V-näppäinyhdistelmää tai käytä Termixiä HTTPS-yhteyden kautta.",
+    "closeTab": "Lähellä",
+    "connecting": "Yhdistetään...",
+    "connectionLost": "Yhteys katkesi",
+    "connectionRejected": "Palvelin hylkäsi yhteyden. Tarkista todennus ja verkkoasetukset.",
+    "connectionTimeout": "Yhteyden aikakatkaisu",
+    "enableAutoTmuxAction": "Ota automaattinen Tmux käyttöön",
+    "hostKeyRejected": "SSH-isännän avaimen vahvistus hylättiin. Yhteys katkaistu.",
+    "linkDialogCopy": "Kopioida",
+    "linkDialogOpen": "Avata",
+    "linkDialogTitle": "Avaa linkki",
+    "maxReconnectAttemptsReached": "Yhteyden muodostamisen uudelleenyritysten enimmäismäärä saavutettu",
+    "noHostSelected": "Ei valittua isäntää",
+    "opksshAuthFailed": "Todennus epäonnistui. Tarkista tunnistetietosi ja yritä uudelleen.",
+    "opksshTimeout": "Todennus aikakatkaistiin. Yritä uudelleen.",
+    "passwordPromptFillTitle": "Täytä tallennettu salasana tähän kehotteeseen?",
+    "reconnect": "Yhdistä uudelleen",
+    "reconnected": "Yhdistäminen uudelleen onnistui",
+    "reconnecting": "Yhdistetään uudelleen... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Ottelukotelo",
+    "searchClose": "Sulje (Esc)",
+    "searchNext": "Seuraava osuma (Enter)",
+    "searchNoResults": "Ei tuloksia",
+    "searchPlaceholder": "Löytää",
+    "searchPrevious": "Edellinen osuma (Vaihto+Enter)",
+    "searchRegex": "Käytä säännöllistä lauseketta",
+    "searchResultCount": "{{index}} / {{count}}",
+    "searchWholeWord": "Koko sanan täsmäys",
+    "sessionExpiredNotice": "Edellinen istuntosi kohdassa {{host}} päättyi {{minutes}} minuutin katkoksen jälkeen; komentotulkki ja kaikki siinä käynnissä oleva on poistettu. Ota automaattinen Tmux käyttöön tällä koneella pitääksesi istunnot toiminnassa.",
+    "sessionExpiredNoticeNoMinutes": "Edellinen istuntosi koneella {{host}} päättyi yhteyden katkettua; komentotulkki ja kaikki siinä käynnissä oleva on poissa. Ota automaattinen Tmux käyttöön tällä koneella pitääksesi istunnot toiminnassa.",
+    "sessionTakenOver": "Istunto avattiin toisella välilehdellä. Yhdistetään uudelleen...",
+    "tmuxAttached": "Liitetyt asiakkaat",
+    "tmuxAttachedCount": "{{count}} liitteenä",
+    "tmuxCopyHint": "Säädä valintaa ja kopioi leikepöydälle painamalla Enter",
+    "tmuxCreateNew": "Aloita uusi istunto",
+    "tmuxDetached": "Irrotettu tmux-istunnosta",
+    "tmuxLastActivity": "Viimeisin aktiviteetti",
+    "tmuxSessionAttached": "tmux-istunto liitetty: {{name}}",
+    "tmuxSessionCreated": "tmux-istunto luotu: {{name}}",
+    "tmuxSessionPickerDesc": "Tältä isännältä löytyi olemassa olevia tmux-istuntoja. Valitse yksi liittääksesi sen uudelleen tai luodaksesi uuden istunnon.",
+    "tmuxSessionPickerTitle": "tmux-istunnot",
+    "tmuxTimeDays": "{{count}}d sitten",
+    "tmuxTimeHours": "{{count}}tuntia sitten",
+    "tmuxTimeJustNow": "juuri nyt",
+    "tmuxTimeMinutes": "{{count}}minuuttia sitten",
+    "tmuxUnavailable": "tmuxia ei ole asennettu etäkoneeseen, vaan käytetään vakiokuorta.",
+    "tmuxWindowCount": "{{count}} ikkuna",
+    "tmuxWindows": "Ikkunat",
+    "unknownError": "Tuntematon virhe tapahtui",
+    "vaultAuthDescription": "Ikkuna HashiCorp-holviin kirjautumista varten on avautunut. Kirjaudu sisään siinä. Yhteys jatkuu automaattisesti.",
+    "vaultAuthFailed": "Holvin todennus epäonnistui. Yritä uudelleen.",
+    "vaultAuthTitle": "Holviin kirjautuminen vaaditaan",
+    "vaultReopen": "Avaa kirjautumisikkuna uudelleen",
+    "websocketAbnormalClose": "Yhteys katkesi odottamatta. Tämä voi johtua käänteisestä välityspalvelimesta tai SSL-määritysongelmasta. Tarkista palvelimen lokit.",
+    "websocketError": "WebSocket-yhteysvirhe"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Irrota tmux",
+    "detachTmuxDescription": "Irrota tmux-istunto",
+    "dismissError": "Hylkää kuvavirhe",
+    "hideToolbar": "Piilota työkalupalkki",
+    "image": "Kuvatoiminnot (vain kuvat)",
+    "imageActionFailed": "Kuvatoiminto epäonnistui",
+    "layout": "Työkalurivin näyttötila",
+    "layoutExpanded": "Laajennettu mittareilla",
+    "layoutIcon": "Vain kuvake",
+    "layoutLabeled": "Kuvakkeet ja otsikot",
+    "moveToolbar": "Siirrä työkalupalkkia",
+    "moveToolbarHint": "Vedä työkalupalkin sijaintia",
+    "paste": "Liitä kuva",
+    "pasteImage": "Liitä kuva leikepöydältä (vain kuvat)",
+    "retry": "Yritä uudelleen",
+    "showToolbar": "Laajenna työkalupalkkia",
+    "upload": "Lataa kuva",
+    "uploadImage": "Lataa kuva isännöintipalveluun",
+    "uploadingImage": "Ladataan..."
+  },
+  "history": {
+    "noTerminalSelected": "Ei valittua päätettä",
+    "noTerminalSelectedHint": "Avaa SSH-päätevälilehti nähdäksesi sen komentohistorian",
+    "searchPlaceholder": "Hakuhistoria...",
+    "clearAll": "Tyhjennä kaikki",
+    "noHistoryEntries": "Ei historiamerkintöjä",
+    "trackingDisabled": "Historian seuranta on poistettu käytöstä"
+  },
+  "touchInput": {
+    "enabled": "Ota kosketussyöttö käyttöön",
+    "enabledDesc": "Salli yhden sormen kosketusvieritys päätteissä",
+    "momentumEnabled": "Ota vauhti käyttöön",
+    "momentumEnabledDesc": "Jatka vierittämistä lyhyesti pyyhkäisyn jälkeen",
+    "advanced": "Edistynyt",
+    "resetDefaults": "Palauta oletusasetukset",
+    "dragThreshold": "Vetokynnys",
+    "maxWheelDelta": "Suurin pyörän delta",
+    "momentumSampleWindow": "Momentumin näyteikkuna",
+    "releaseGracePeriod": "Vapautuksen lisäaika",
+    "minimumVelocity": "Miniminopeus",
+    "maximumVelocity": "Suurin nopeus",
+    "maximumDuration": "Enimmäiskesto",
+    "maximumTravel": "Maksimaalinen liikerata",
+    "decayTime": "Hajoamisaika",
+    "pixelsPerTick": "Pikseleitä rastia kohden",
+    "maximumFrameInterval": "Suurin kehysväli",
+    "maximumTicksPerFrame": "Maksimi tikit kehystä kohden"
+  },
+  "imageStorage": {
+    "instanceId": "Pääteistunnon instanssin tunnus",
+    "instanceIdDesc": "Yhdistetyn päätevälilehden instanssi-ID, jota käytetään näkyvyyden testaamiseen.",
+    "selectedModeUnavailable": "Ei saatavilla",
+    "test": "Testata",
+    "testing": "Testaus...",
+    "testFailed": "Kuvan tallennuksen testaus epäonnistui",
+    "testConnected": "Pääteistunto on yhdistetty.",
+    "testNotConnected": "Tällä instanssi-ID:llä ei ole yhdistettyä pääteistuntoa.",
+    "testSelectedMode": "Lataus käyttäisi seuraavaa: {{mode}}",
+    "testLocalVisible": "Paikallinen hakemisto on näkyvissä yhdistetyssä isännässä.",
+    "testLocalNotVisible": "Paikallinen hakemisto EI ole näkyvissä yhdistetyssä isännässä."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Kosketussyöttö",
+        "images": "Kuvien tallennus"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Pääteistunnon pysyvyys",
+        "description": "Kuinka kauan irrotettua päätelaitetta pidetään toiminnassa palvelimella ennen sen sulkemista. Min 1 · Max 1440 minuuttia. Jos istunnon on kestettävä tätä pidempään, ota automaattinen Tmux käyttöön isännässä."
+      },
+      "commandHistoryEnabled": {
+        "label": "Komentohistoria",
+        "description": "Salli komentohistorian tallennus. Kun tämä on poistettu käytöstä, historiaa ei tallenneta isäntäkohtaisista asetuksista riippumatta."
+      },
+      "imageStorageMode": {
+        "label": "Tallennustila",
+        "description": "Mihin liitetyt ja ladatut päätekuvat kirjoitetaan. Automaattiset valinnat yhteyden, paikallisen ja etäyhteyden (SFTP) mukaan on korjattu.",
+        "auto": "Auto",
+        "local": "Paikallinen",
+        "remoteSftp": "Etäkäyttö (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Paikallinen hakemisto"
+      },
+      "imageHostPath": {
+        "label": "Isäntäpolku",
+        "description": "Pääteagenttien vastaanottaman paikallisen hakemiston isäntäpuolen näkymä."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Kuvien enimmäismäärä"
+      },
+      "imageMaxBytes": {
+        "label": "Tallennustilan enimmäismäärä tavuja"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Ota käyttöön päätetyökalurivi",
+        "description": "Näytä aktiiviseen terminaaliin kiinnitetty pikakäyttöinen työkalupalkki tämän isännän työkaluille ja reaaliaikaisille tilastoille"
+      },
+      "enableCommandHistory": {
+        "label": "Komentohistoria",
+        "description": "Tallenna tässä terminaalissa suoritettavat komennot historiaa ja automaattista täydennystä varten"
+      },
+      "enableTerminal": {
+        "label": "Ota terminaali käyttöön"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Paikallinen terminaali"
+  }
+}

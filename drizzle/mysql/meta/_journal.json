@@ -267,6 +267,13 @@
       "when": 1790201005569,
       "tag": "0037_foamy_norman_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1790208810478,
+      "tag": "0038_quiet_karnak",
+      "breakpoints": true
     }
   ]
 }

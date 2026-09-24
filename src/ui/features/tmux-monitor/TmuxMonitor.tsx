@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  defaultConnectAction,
+  listHostActions,
+} from "@/sidebar/host-contributions";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -46,7 +50,7 @@ import {
   type TmuxSearchMatch,
   type TmuxSearchResult,
 } from "@/api/tmux-monitor-api";
-import type { TerminalHandle } from "@/features/terminal/Terminal";
+import type { TabHandle as TerminalHandle } from "@termix/plugin-sdk/frontend";
 import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 import { SessionTree, type SessionMetricsAgg } from "./SessionTree";
 import { SearchResults } from "./SearchResults";
@@ -184,7 +188,6 @@ export function TmuxMonitor({
         const sshHosts = all.filter(
           (h) =>
             (h.connectionType ?? "ssh") === "ssh" &&
-            h.enableTerminal !== false &&
             h.enableTmuxMonitor === true,
         );
         setHosts(sshHosts);
@@ -766,8 +769,17 @@ export function TmuxMonitor({
       if (session) attachInline(session);
       return;
     }
+    // The standalone view of whichever plugin connects to a host by default.
+    const selectedHost = hosts.find((h) => h.id === selectedHostId);
+    const view = selectedHost
+      ? defaultConnectAction(
+          listHostActions(),
+          selectedHost as unknown as Parameters<typeof defaultConnectAction>[1],
+        )?.copyUrlView
+      : undefined;
+    if (!view) return;
     const params = new URLSearchParams({
-      view: "terminal",
+      view,
       hostId: String(selectedHostId),
     });
     if (session) params.set("tmuxSession", session);

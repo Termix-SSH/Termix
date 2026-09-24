@@ -447,7 +447,7 @@ export function SidebarTree({
     const hosts = collectAllHosts(folder.children);
     for (const host of hosts) {
       const type = resolveHostTabType(host);
-      onOpenTab(host, type);
+      if (type) onOpenTab(host, type);
     }
   }
 
@@ -1285,7 +1285,8 @@ export function SidebarTree({
                   selectedHostIds.has(String(h.id)),
                 );
                 for (const host of selectedHosts) {
-                  onOpenTab(host, resolveHostTabType(host));
+                  const type = resolveHostTabType(host);
+                  if (type) onOpenTab(host, type);
                 }
                 setSelectedHostIds(new Set());
                 onToggleSelectionMode();

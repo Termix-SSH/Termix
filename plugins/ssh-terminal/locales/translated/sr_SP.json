@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Додај",
+    "arrowDown": "Стрелица надоле",
+    "arrowLeft": "Стрелица лево",
+    "arrowRight": "Стрелица десно",
+    "arrowUp": "Стрелица нагоре",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Дел",
+    "done": "Готово",
+    "editQuickKeys": "Уреди брзе тастере",
+    "end": "Крај",
+    "esc": "Излаз",
+    "home": "Дом",
+    "pageDown": "ПгДн",
+    "pageUp": "PgUp",
+    "paste": "Залепи",
+    "quickKeyPlaceholder": "нпр. sudo ",
+    "quickKeysDesc": "Додирните × да бисте уклонили. Подржава до 8 знакова.",
+    "quickKeysTitle": "Брзи тастери",
+    "removeQuickKey": "Уклони",
+    "resetDefaults": "Ресетуј на подразумеване вредности",
+    "shift": "Померање",
+    "tab": "Таб"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Није успело омогућавање аутоматског Tmux-а",
+    "autoTmuxEnabled": "Аутоматски Tmux је омогућен за {{host}}. Примењује се од следећег повезивања.",
+    "clipboardHttpWarning": "Није могуће прочитати међуспремник. Неки прегледачи ограничавају приступ међуспремнику ван HTTPS-а - покушајте са Ctrl+V или покрените Termix преко HTTPS-а.",
+    "closeTab": "Затвори",
+    "connecting": "Повезивање...",
+    "connectionLost": "Веза је прекинута",
+    "connectionRejected": "Сервер је одбио везу. Проверите аутентификацију и конфигурацију мреже.",
+    "connectionTimeout": "Временско ограничење везе",
+    "enableAutoTmuxAction": "Омогући аутоматски Tmux",
+    "hostKeyRejected": "Верификација SSH кључа хоста је одбијена. Веза је отказана.",
+    "linkDialogCopy": "Копија",
+    "linkDialogOpen": "Отворено",
+    "linkDialogTitle": "Отвори линк",
+    "maxReconnectAttemptsReached": "Достигнут је максималан број покушаја поновног повезивања",
+    "noHostSelected": "Није изабран домаћин",
+    "opksshAuthFailed": "Аутентификација није успела. Проверите своје акредитиве и покушајте поново.",
+    "opksshTimeout": "Временско ограничење за аутентификацију је истекло. Молимо покушајте поново.",
+    "passwordPromptFillTitle": "Унесите сачувану лозинку у овај промпт?",
+    "reconnect": "Поново се повежите",
+    "reconnected": "Поново повезано успешно",
+    "reconnecting": "Поновно повезивање... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Упаривање великог и малог дела",
+    "searchClose": "Затвори (Escape)",
+    "searchNext": "Следећи меч (Унесите)",
+    "searchNoResults": "Нема резултата",
+    "searchPlaceholder": "Пронађи",
+    "searchPrevious": "Претходно подударање (Shift+Enter)",
+    "searchRegex": "Користите регуларни израз",
+    "searchResultCount": "{{index}} од {{count}}",
+    "searchWholeWord": "Подударање целе речи",
+    "sessionExpiredNotice": "Ваша претходна сесија на {{host}} је истекла након {{minutes}} минута од прекида везе; љуска и све што је у њој покренуто су нестали. Омогућите Auto-Tmux на овом хосту да би сесије остале активне.",
+    "sessionExpiredNoticeNoMinutes": "Ваша претходна сесија на {{host}} је истекла док сте били одвојени; љуска и све што је у њој покренуто су нестали. Омогућите Auto-Tmux на овом хосту да би сесије остале активне.",
+    "sessionTakenOver": "Сесија је отворена у другој картици. Поновно повезивање...",
+    "tmuxAttached": "Прикључени клијенти",
+    "tmuxAttachedCount": "{{count}} приложено",
+    "tmuxCopyHint": "Прилагодите избор и притисните Ентер да бисте копирали у међуспремник",
+    "tmuxCreateNew": "Започни нову сесију",
+    "tmuxDetached": "Одвојено од tmux сесије",
+    "tmuxLastActivity": "Последња активност",
+    "tmuxSessionAttached": "приложена tmux сесија: {{name}}",
+    "tmuxSessionCreated": "tmux сесија креирана: {{name}}",
+    "tmuxSessionPickerDesc": "Постојеће tmux сесије пронађене су на овом хосту. Изаберите једну да бисте је поново повезали или креирали нову сесију.",
+    "tmuxSessionPickerTitle": "tmux сесије",
+    "tmuxTimeDays": "{{count}}пре д",
+    "tmuxTimeHours": "{{count}}пре сати",
+    "tmuxTimeJustNow": "управо сада",
+    "tmuxTimeMinutes": "{{count}}пре мин",
+    "tmuxUnavailable": "tmux није инсталиран на удаљеном хосту, враћа се на стандардну љуску",
+    "tmuxWindowCount": "{{count}} прозор",
+    "tmuxWindows": "Прозори",
+    "unknownError": "Дошло је до непознате грешке",
+    "vaultAuthDescription": "Отворио се прозор за пријављивање на HashiCorp Vault. Завршите пријављивање тамо; ова веза ће се аутоматски наставити.",
+    "vaultAuthFailed": "Аутентификација трезора није успела. Молимо покушајте поново.",
+    "vaultAuthTitle": "Потребно је пријављивање у трезор",
+    "vaultReopen": "Поново отвори прозор за пријављивање",
+    "websocketAbnormalClose": "Веза је неочекивано прекинута. Ово може бити због проблема са обрнутим проксијем или SSL конфигурацијом. Молимо вас да проверите логове сервера.",
+    "websocketError": "Грешка у повезивању са WebSocket-ом"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Одвојите tmux",
+    "detachTmuxDescription": "Одвојите tmux сесију",
+    "dismissError": "Грешка при одбацивању слике",
+    "hideToolbar": "Сакриј траку са алаткама",
+    "image": "Радње са сликама (само слике)",
+    "imageActionFailed": "Акција са сликом није успела",
+    "layout": "Режим приказа алатне траке",
+    "layoutExpanded": "Проширено са метрикама",
+    "layoutIcon": "Само икона",
+    "layoutLabeled": "Иконе и ознаке",
+    "moveToolbar": "Помери траку са алаткама.",
+    "moveToolbarHint": "Превуците да бисте променили положај траке са алаткама",
+    "paste": "Налепи слику",
+    "pasteImage": "Налепи слику из међуспремника (само слике)",
+    "retry": "Покушај поново",
+    "showToolbar": "Прошири траку са алаткама",
+    "upload": "Отпреми слику",
+    "uploadImage": "Отпремите слику на хост",
+    "uploadingImage": "Отпремање..."
+  },
+  "history": {
+    "noTerminalSelected": "Није изабран терминал",
+    "noTerminalSelectedHint": "Отворите картицу SSH терминала да бисте видели историју његових команди",
+    "searchPlaceholder": "Историја претраге...",
+    "clearAll": "Обриши све",
+    "noHistoryEntries": "Нема уноса у историји",
+    "trackingDisabled": "Праћење историје је онемогућено"
+  },
+  "touchInput": {
+    "enabled": "Омогући унос додиром",
+    "enabledDesc": "Дозволите скроловање једним прстом у терминалима",
+    "momentumEnabled": "Омогући Моментум",
+    "momentumEnabledDesc": "Наставите кратко да скролујете након превлачења прстом",
+    "advanced": "Напредно",
+    "resetDefaults": "Ресетуј на подразумеване вредности",
+    "dragThreshold": "Праг превлачења",
+    "maxWheelDelta": "Максимална делта точка",
+    "momentumSampleWindow": "Прозор узорка момента",
+    "releaseGracePeriod": "Грејс период за објављивање",
+    "minimumVelocity": "Минимална брзина",
+    "maximumVelocity": "Максимална брзина",
+    "maximumDuration": "Максимално трајање",
+    "maximumTravel": "Максимални ход",
+    "decayTime": "Време распада",
+    "pixelsPerTick": "Пиксела по тик-у",
+    "maximumFrameInterval": "Максимални интервал кадра",
+    "maximumTicksPerFrame": "Максималан број откуцаја по кадру"
+  },
+  "imageStorage": {
+    "instanceId": "ИД инстанце терминалне сесије",
+    "instanceIdDesc": "ИД инстанце једне од ваших повезаних картица терминала, која се користи за тестирање видљивости.",
+    "selectedModeUnavailable": "Недоступно",
+    "test": "Тест",
+    "testing": "Тестирање...",
+    "testFailed": "Тестирање складиштења слика није успело",
+    "testConnected": "Терминална сесија је повезана.",
+    "testNotConnected": "Нема повезане терминалне сесије са овим ID-ом инстанце.",
+    "testSelectedMode": "Отпремање би користило: {{mode}}",
+    "testLocalVisible": "Локални директоријум је видљив са повезаног хоста.",
+    "testLocalNotVisible": "Локални директоријум НИЈЕ видљив са повезаног хоста."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Унос додиром",
+        "images": "Складиштење слика"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Трајност терминалне сесије",
+        "description": "Колико дуго се искључени терминал одржава активним на серверу пре него што се затвори. Мин. 1 · Макс. 1440 минута. За сесије које морају да трају дуже од овог периода, омогућите Auto-Tmux на хосту."
+      },
+      "commandHistoryEnabled": {
+        "label": "Историја команди",
+        "description": "Дозволи снимање историје команди. Када је онемогућено, историја се не чува без обзира на подешавања за сваки хост."
+      },
+      "imageStorageMode": {
+        "label": "Режим складиштења",
+        "description": "Где се записују налепљене и отпремљене слике терминала. Аутоматски избори по конекцији, локални и удаљени (SFTP) су поправљени.",
+        "auto": "Аутоматски",
+        "local": "Локално",
+        "remoteSftp": "Удаљено (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Локални директоријум"
+      },
+      "imageHostPath": {
+        "label": "Путања хоста",
+        "description": "Поглед са стране хоста на локални директоријум који терминални агенти примају."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Максималан број слика"
+      },
+      "imageMaxBytes": {
+        "label": "Максимални број бајтова за складиштење"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Омогући траку са алаткама терминала",
+        "description": "Прикажи траку са алаткама за брзи приступ причвршћену за активни терминал за алате и статистику уживо овог хоста"
+      },
+      "enableCommandHistory": {
+        "label": "Историја команди",
+        "description": "Снимање команди које се извршавају у овом терминалу за историју и аутоматско довршавање"
+      },
+      "enableTerminal": {
+        "label": "Омогући терминал"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Локални терминал"
+  }
+}

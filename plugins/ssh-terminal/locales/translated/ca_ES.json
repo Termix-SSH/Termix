@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Afegeix",
+    "arrowDown": "Fletxa avall",
+    "arrowLeft": "Fletxa esquerra",
+    "arrowRight": "Fletxa dreta",
+    "arrowUp": "Fletxa amunt",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Eliminar",
+    "done": "Fet",
+    "editQuickKeys": "Edita les tecles ràpides",
+    "end": "Final",
+    "esc": "Esc",
+    "home": "Inici",
+    "pageDown": "Av Pàg",
+    "pageUp": "Re Pàg",
+    "paste": "Enganxa",
+    "quickKeyPlaceholder": "p. ex. sudo ",
+    "quickKeysDesc": "Toca × per eliminar. Admet fins a 8 caràcters.",
+    "quickKeysTitle": "Tecles ràpides",
+    "removeQuickKey": "Elimina",
+    "resetDefaults": "Restableix els valors predeterminats",
+    "shift": "Majúscules",
+    "tab": "Pestanya"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "No s'ha pogut habilitar Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux habilitat per a {{host}}. S'aplica a partir de la següent connexió.",
+    "clipboardHttpWarning": "No s'ha pogut llegir el porta-retalls. Alguns navegadors restringeixen l'accés al porta-retalls fora d'HTTPS; proveu Ctrl+V o serviu Termix a través d'HTTPS.",
+    "closeTab": "Tanca",
+    "connecting": "Connectant...",
+    "connectionLost": "Connexió perduda",
+    "connectionRejected": "Connexió rebutjada pel servidor. Si us plau, comproveu l'autenticació i la configuració de xarxa.",
+    "connectionTimeout": "Temps d'espera de connexió",
+    "enableAutoTmuxAction": "Activa la transmissió automàtica",
+    "hostKeyRejected": "Verificació de la clau de l'amfitrió SSH rebutjada. Connexió cancel·lada.",
+    "linkDialogCopy": "Còpia",
+    "linkDialogOpen": "Obre",
+    "linkDialogTitle": "Obre l'enllaç",
+    "maxReconnectAttemptsReached": "S'ha arribat al màxim d'intents de reconnexió",
+    "noHostSelected": "No s'ha seleccionat cap amfitrió",
+    "opksshAuthFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
+    "opksshTimeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar.",
+    "passwordPromptFillTitle": "Voleu introduir la contrasenya desada en aquesta sol·licitud?",
+    "reconnect": "Reconnecta",
+    "reconnected": "S'ha reconnectat correctament",
+    "reconnecting": "Reconnectant... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Coincideix amb el cas",
+    "searchClose": "Tanca (Escapada)",
+    "searchNext": "Pròxima coincidència (Intro)",
+    "searchNoResults": "Sense resultats",
+    "searchPlaceholder": "Troba",
+    "searchPrevious": "Coincidència anterior (Maj+Intro)",
+    "searchRegex": "Utilitza l'expressió regular",
+    "searchResultCount": "{{index}} de {{count}}",
+    "searchWholeWord": "Coincideix amb la paraula sencera",
+    "sessionExpiredNotice": "La sessió anterior a {{host}} ha caducat després de {{minutes}} minuts de desconnexió; l'intèrpret d'ordres i tot el que s'hi executa ha desaparegut. Activeu Auto-Tmux en aquest amfitrió per mantenir les sessions actives.",
+    "sessionExpiredNoticeNoMinutes": "La sessió anterior a {{host}} ha caducat mentre estava desconnectada; l'intèrpret d'ordres i tot el que s'hi executa ha desaparegut. Activeu Auto-Tmux en aquest host per mantenir les sessions actives.",
+    "sessionTakenOver": "La sessió s'ha obert en una altra pestanya. S'està tornant a connectar...",
+    "tmuxAttached": "Clients adjunts",
+    "tmuxAttachedCount": "{{count}} adjunt",
+    "tmuxCopyHint": "Ajusta la selecció i prem Intro per copiar al porta-retalls",
+    "tmuxCreateNew": "Inicia una nova sessió",
+    "tmuxDetached": "Desconnectat de la sessió tmux",
+    "tmuxLastActivity": "Darrera activitat",
+    "tmuxSessionAttached": "sessió tmux adjunta: {{name}}",
+    "tmuxSessionCreated": "Sessió tmux creada: {{name}}",
+    "tmuxSessionPickerDesc": "S'han trobat sessions tmux existents en aquest amfitrió. Seleccioneu-ne una per tornar-la a adjuntar o crear una sessió nova.",
+    "tmuxSessionPickerTitle": "Sessions de tmux",
+    "tmuxTimeDays": "fa {{count}}dies",
+    "tmuxTimeHours": "fa {{count}}h",
+    "tmuxTimeJustNow": "ara mateix",
+    "tmuxTimeMinutes": "fa {{count}}minuts",
+    "tmuxUnavailable": "tmux no està instal·lat a l'amfitrió remot, tornant a l'intèrpret d'ordres estàndard",
+    "tmuxWindowCount": "finestra {{count}}",
+    "tmuxWindows": "Finestres",
+    "unknownError": "S'ha produït un error desconegut",
+    "vaultAuthDescription": "S'ha obert una finestra per iniciar la sessió a HashiCorp Vault. Completeu l'inici de sessió allà; aquesta connexió continuarà automàticament.",
+    "vaultAuthFailed": "L'autenticació de la caixa forta ha fallat. Torna-ho a provar.",
+    "vaultAuthTitle": "Cal iniciar sessió a la caixa forta",
+    "vaultReopen": "Torna a obrir la finestra d'inici de sessió",
+    "websocketAbnormalClose": "La connexió s'ha tancat inesperadament. Això pot ser degut a un problema de configuració del proxy invers o de l'SSL. Si us plau, reviseu els registres del servidor.",
+    "websocketError": "Error de connexió de WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Desconnecta tmux",
+    "detachTmuxDescription": "Desconnecta la sessió tmux",
+    "dismissError": "Error d'ignorar la imatge",
+    "hideToolbar": "Amaga la barra d'eines",
+    "image": "Accions d'imatge (només imatges)",
+    "imageActionFailed": "L'acció de la imatge ha fallat",
+    "layout": "Mode de visualització de la barra d'eines",
+    "layoutExpanded": "Ampliat amb mètriques",
+    "layoutIcon": "Només icona",
+    "layoutLabeled": "Icones i etiquetes",
+    "moveToolbar": "Mou la barra d'eines",
+    "moveToolbarHint": "Arrossega per reposicionar la barra d'eines",
+    "paste": "Enganxa la imatge",
+    "pasteImage": "Enganxa la imatge del porta-retalls (només imatges)",
+    "retry": "Torna-ho a intentar",
+    "showToolbar": "Expandeix la barra d'eines",
+    "upload": "Puja una imatge",
+    "uploadImage": "Puja una imatge a l'amfitrió",
+    "uploadingImage": "S'està carregant..."
+  },
+  "history": {
+    "noTerminalSelected": "No s'ha seleccionat cap terminal",
+    "noTerminalSelectedHint": "Obriu una pestanya de terminal SSH per veure el seu historial d'ordres",
+    "searchPlaceholder": "Historial de cerca...",
+    "clearAll": "Esborra-ho tot",
+    "noHistoryEntries": "Sense entrades a l'historial",
+    "trackingDisabled": "El seguiment de l'historial està desactivat"
+  },
+  "touchInput": {
+    "enabled": "Activa l'entrada tàctil",
+    "enabledDesc": "Permetre el desplaçament tàctil amb un dit als terminals",
+    "momentumEnabled": "Activa l'impuls",
+    "momentumEnabledDesc": "Continua desplaçant-te breument després de lliscar el dit",
+    "advanced": "Avançat",
+    "resetDefaults": "Restableix els valors predeterminats",
+    "dragThreshold": "Llindar d'arrossegament",
+    "maxWheelDelta": "Delta màxim de roda",
+    "momentumSampleWindow": "Finestra de mostra de momentum",
+    "releaseGracePeriod": "Període de gràcia de llançament",
+    "minimumVelocity": "Velocitat mínima",
+    "maximumVelocity": "Velocitat màxima",
+    "maximumDuration": "Durada màxima",
+    "maximumTravel": "Recorregut màxim",
+    "decayTime": "Temps de decadència",
+    "pixelsPerTick": "Píxels per clic",
+    "maximumFrameInterval": "Interval màxim de fotograma",
+    "maximumTicksPerFrame": "Màxims de tics per fotograma"
+  },
+  "imageStorage": {
+    "instanceId": "ID d'instància de sessió de terminal",
+    "instanceIdDesc": "ID d'instància d'una de les pestanyes del terminal connectat, que s'utilitza per provar la visibilitat.",
+    "selectedModeUnavailable": "No disponible",
+    "test": "Prova",
+    "testing": "Proves...",
+    "testFailed": "No s'ha pogut provar l'emmagatzematge d'imatges",
+    "testConnected": "La sessió de terminal està connectada.",
+    "testNotConnected": "No hi ha cap sessió de terminal connectada amb aquest ID d'instància.",
+    "testSelectedMode": "Una càrrega utilitzaria: {{mode}}",
+    "testLocalVisible": "El directori local és visible des de l'amfitrió connectat.",
+    "testLocalNotVisible": "El directori local NO és visible des de l'amfitrió connectat."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Entrada tàctil",
+        "images": "Emmagatzematge d'imatges"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Persistència de la sessió terminal",
+        "description": "Quant de temps es manté actiu un terminal desconnectat al servidor abans de tancar-lo. Mín 1 · Màx 1440 minuts. Per a sessions que han de durar més temps, activeu Auto-Tmux a l'amfitrió."
+      },
+      "commandHistoryEnabled": {
+        "label": "Historial de comandaments",
+        "description": "Permet l'enregistrament de l'historial d'ordres. Quan està desactivat, l'historial no es desa independentment de la configuració de cada host."
+      },
+      "imageStorageMode": {
+        "label": "Mode d'emmagatzematge",
+        "description": "On s'escriuen les imatges de terminal enganxades i carregades. Les seleccions automàtiques per connexió, Local i Remota (SFTP) estan corregides.",
+        "auto": "Automàtic",
+        "local": "Local",
+        "remoteSftp": "Remot (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Directori local"
+      },
+      "imageHostPath": {
+        "label": "Camí d'amfitrió",
+        "description": "La vista del costat de l'amfitrió del directori local que reben els agents del terminal."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Nombre màxim d'imatges"
+      },
+      "imageMaxBytes": {
+        "label": "Bytes d'emmagatzematge màxims"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Habilita la barra d'eines del terminal",
+        "description": "Mostra una barra d'eines d'accés ràpid acoblada al terminal actiu per a les eines i les estadístiques en directe d'aquest amfitrió"
+      },
+      "enableCommandHistory": {
+        "label": "Historial de comandaments",
+        "description": "Enregistra les ordres executades en aquest terminal per a l'historial i l'autocompleció"
+      },
+      "enableTerminal": {
+        "label": "Habilita el terminal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Terminal local"
+  }
+}

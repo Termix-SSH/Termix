@@ -337,6 +337,14 @@ export type Tab = {
     getApplicationCursorKeysMode?: () => boolean;
     openShareModal?: () => void;
     canShare?: () => boolean;
+    openFileManager?: () => void;
+    getShareTarget?: () => {
+      hostId: number;
+      sessionId: string;
+      protocol: "ssh";
+      tabInstanceId?: string;
+    } | null;
+    focus?: () => void;
   } | null>;
 };
 

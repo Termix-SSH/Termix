@@ -16,16 +16,12 @@ import {
   type TerminalDefaults,
 } from "@/lib/connection-defaults";
 
-type DefaultsKind = "terminal" | "rdp";
-
 interface ConnectionDefaultsContextValue {
   ready: boolean;
   terminal: TerminalDefaults;
   rdp: RemoteDesktopDefaults;
-  saveDefaults: (
-    kind: DefaultsKind,
-    value: TerminalDefaults | RemoteDesktopDefaults,
-  ) => Promise<void>;
+  saveTerminalDefaults: (value: TerminalDefaults) => Promise<void>;
+  saveRdpDefaults: (value: RemoteDesktopDefaults) => Promise<void>;
 }
 
 const ConnectionDefaultsContext = createContext<ConnectionDefaultsContextValue>(
@@ -33,7 +29,8 @@ const ConnectionDefaultsContext = createContext<ConnectionDefaultsContextValue>(
     ready: true,
     terminal: {},
     rdp: {},
-    saveDefaults: async () => {},
+    saveTerminalDefaults: async () => {},
+    saveRdpDefaults: async () => {},
   },
 );
 
@@ -63,22 +60,18 @@ export function ConnectionDefaultsProvider({
     };
   }, []);
 
-  const saveDefaults = useCallback(
-    async (
-      kind: DefaultsKind,
-      value: TerminalDefaults | RemoteDesktopDefaults,
-    ) => {
-      const serialized = JSON.stringify(value);
-      await saveUserPreferences({ [`${kind}Defaults`]: serialized });
-      if (kind === "terminal") setTerminal(value as TerminalDefaults);
-      if (kind === "rdp") setRdp(value as RemoteDesktopDefaults);
-    },
-    [],
-  );
+  const saveTerminalDefaults = useCallback(async (value: TerminalDefaults) => {
+    await saveUserPreferences({ terminalDefaults: JSON.stringify(value) });
+    setTerminal(value);
+  }, []);
+  const saveRdpDefaults = useCallback(async (value: RemoteDesktopDefaults) => {
+    await saveUserPreferences({ rdpDefaults: JSON.stringify(value) });
+    setRdp(value);
+  }, []);
 
   const value = useMemo(
-    () => ({ ready, terminal, rdp, saveDefaults }),
-    [ready, terminal, rdp, saveDefaults],
+    () => ({ ready, terminal, rdp, saveTerminalDefaults, saveRdpDefaults }),
+    [ready, terminal, rdp, saveTerminalDefaults, saveRdpDefaults],
   );
   return (
     <ConnectionDefaultsContext.Provider value={value}>

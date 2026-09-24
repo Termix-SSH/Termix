@@ -36,13 +36,11 @@ import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
 
 /**
- * Tabs holding a live connection that can be refreshed and shared: local
- * terminals and registered session tabs. Serial sessions are not shareable.
+ * Tabs holding a live connection that can be refreshed and shared: the
+ * registered session tabs. Serial sessions are not shareable.
  */
 function isConnectionTab(type: TabType): boolean {
-  return (
-    type === "local-terminal" || (type !== "serial" && isSessionTabType(type))
-  );
+  return type !== "serial" && isSessionTabType(type);
 }
 
 export function TabBar({
@@ -689,7 +687,8 @@ export function TabBar({
                   {t("nav.refreshTab")}
                 </button>
               )}
-              {ctxTab.type === "terminal" &&
+              {typeof ctxTab.terminalRef?.current?.openFileManager ===
+                "function" &&
                 ctxTab.host &&
                 onOpenFileManager && (
                   <button

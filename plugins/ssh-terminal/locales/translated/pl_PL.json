@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Dodaj",
+    "arrowDown": "Strzałka w dół",
+    "arrowLeft": "Strzałka w lewo",
+    "arrowRight": "Strzałka w prawo",
+    "arrowUp": "Strzałka w górę",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Gotowe",
+    "editQuickKeys": "Edytuj szybkie klawisze",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Wklej",
+    "quickKeyPlaceholder": "np. sudo ",
+    "quickKeysDesc": "Dotknij ×, aby usunąć. Maksymalnie 8 znaków.",
+    "quickKeysTitle": "Szybkie klawisze",
+    "removeQuickKey": "Usuń",
+    "resetDefaults": "Przywróć ustawienia domyślne",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Nie udało się włączyć funkcji Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux włączony dla {{host}}. Ma zastosowanie od następnego połączenia.",
+    "clipboardHttpWarning": "Nie udało się odczytać schowka. Niektóre przeglądarki ograniczają dostęp do schowka poza HTTPS. Użyj Ctrl+V albo udostępniaj Termix przez HTTPS.",
+    "closeTab": "Zamknij",
+    "connecting": "Łączenie...",
+    "connectionLost": "Utracono połączenie",
+    "connectionRejected": "Połączenie odrzucone przez serwer. Sprawdź uwierzytelnianie i konfigurację sieci.",
+    "connectionTimeout": "Przekroczono limit czasu połączenia",
+    "enableAutoTmuxAction": "Włącz Auto-Tmux",
+    "hostKeyRejected": "Weryfikacja klucza hosta SSH odrzucona. Połączenie anulowane.",
+    "linkDialogCopy": "Kopiuj",
+    "linkDialogOpen": "Otwórz",
+    "linkDialogTitle": "Otwórz link",
+    "maxReconnectAttemptsReached": "Osiągnięto maksymalną liczbę prób ponownego połączenia",
+    "noHostSelected": "Nie wybrano hosta",
+    "opksshAuthFailed": "Uwierzytelnienie nie powiodło się. Sprawdź poświadczenia i spróbuj ponownie.",
+    "opksshTimeout": "Upłynął limit czasu uwierzytelniania. Spróbuj ponownie.",
+    "passwordPromptFillTitle": "Czy wpisać zapisane hasło w tym monicie?",
+    "reconnect": "Połącz ponownie",
+    "reconnected": "Połączono ponownie pomyślnie",
+    "reconnecting": "Ponowne łączenie... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Uwzględnij wielkość liter",
+    "searchClose": "Zamknij (Esc)",
+    "searchNext": "Następne dopasowanie (Enter)",
+    "searchNoResults": "Brak wyników",
+    "searchPlaceholder": "Znajdź",
+    "searchPrevious": "Poprzednie dopasowanie (Shift+Enter)",
+    "searchRegex": "Użyj wyrażenia regularnego",
+    "searchResultCount": "{{index}} z {{count}}",
+    "searchWholeWord": "Dopasuj całe słowo",
+    "sessionExpiredNotice": "Twoja poprzednia sesja z {{host}} wygasła po {{minutes}} minutach odłączenia. Powłoka i wszystko, co w niej działa, zniknęło. Włącz Auto-Tmux na tym hoście, aby sesje pozostały aktywne.",
+    "sessionExpiredNoticeNoMinutes": "Twoja poprzednia sesja na {{host}} wygasła podczas rozłączenia; powłoka i wszystko, co w niej działa, zniknęło. Włącz Auto-Tmux na tym hoście, aby sesje pozostały aktywne.",
+    "sessionTakenOver": "Sesja została otwarta w innej karcie. Ponowne łączenie...",
+    "tmuxAttached": "Dołączeni klienci",
+    "tmuxAttachedCount": "{{count}} dołączonych",
+    "tmuxCopyHint": "Dostosuj zaznaczenie i naciśnij Enter, aby skopiować do schowka",
+    "tmuxCreateNew": "Rozpocznij nową sesję",
+    "tmuxDetached": "Odłączono od sesji tmux",
+    "tmuxLastActivity": "Ostatnia aktywność",
+    "tmuxSessionAttached": "Dołączono do sesji tmux: {{name}}",
+    "tmuxSessionCreated": "Utworzono sesję tmux: {{name}}",
+    "tmuxSessionPickerDesc": "Znaleziono istniejące sesje tmux na tym hoście. Wybierz jedną, aby ponownie dołączyć lub utworzyć nową sesję.",
+    "tmuxSessionPickerTitle": "Sesje tmux",
+    "tmuxTimeDays": "{{count}} dni temu",
+    "tmuxTimeHours": "{{count}} godz. temu",
+    "tmuxTimeJustNow": "przed chwilą",
+    "tmuxTimeMinutes": "{{count}} min temu",
+    "tmuxUnavailable": "tmux nie jest zainstalowany na zdalnym hoście, następuje powrót do standardowej powłoki",
+    "tmuxWindowCount": "{{count}} okno",
+    "tmuxWindows": "Okna",
+    "unknownError": "Wystąpił nieznany błąd",
+    "vaultAuthDescription": "Otworzyło się okno logowania do HashiCorp Vault. Dokończ logowanie, a połączenie zostanie nawiązane automatycznie.",
+    "vaultAuthFailed": "Uwierzytelnienie w Vault nie powiodło się. Spróbuj ponownie.",
+    "vaultAuthTitle": "Wymagane logowanie do Vault",
+    "vaultReopen": "Otwórz ponownie okno logowania",
+    "websocketAbnormalClose": "Połączenie zostało nieoczekiwanie zamknięte. Przyczyną może być reverse proxy lub problem z konfiguracją SSL. Sprawdź logi serwera.",
+    "websocketError": "Błąd połączenia WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Odłącz tmux",
+    "detachTmuxDescription": "Odłącz sesję tmux",
+    "dismissError": "Odrzuć błąd obrazu",
+    "hideToolbar": "Ukryj pasek narzędzi",
+    "image": "Akcje obrazu (tylko obrazy)",
+    "imageActionFailed": "Akcja obrazu nie powiodła się",
+    "layout": "Tryb wyświetlania paska narzędzi",
+    "layoutExpanded": "Rozszerzone o metryki",
+    "layoutIcon": "Tylko ikona",
+    "layoutLabeled": "Ikony i etykiety",
+    "moveToolbar": "Przenieś pasek narzędzi",
+    "moveToolbarHint": "Przeciągnij, aby zmienić położenie paska narzędzi",
+    "paste": "Wklej obraz",
+    "pasteImage": "Wklej obraz ze schowka (tylko obrazy)",
+    "retry": "Ponów",
+    "showToolbar": "Rozwiń pasek narzędzi",
+    "upload": "Prześlij obraz",
+    "uploadImage": "Prześlij obraz do hosta",
+    "uploadingImage": "Przesyłanie..."
+  },
+  "history": {
+    "noTerminalSelected": "Nie wybrano terminala",
+    "noTerminalSelectedHint": "Otwórz kartę terminala SSH, aby wyświetlić historię poleceń",
+    "searchPlaceholder": "Przeszukaj historię...",
+    "clearAll": "Wyczyść wszystko",
+    "noHistoryEntries": "Brak wpisów w historii",
+    "trackingDisabled": "Śledzenie historii jest wyłączone"
+  },
+  "touchInput": {
+    "enabled": "Włącz wprowadzanie dotykowe",
+    "enabledDesc": "Zezwól na przewijanie jednym palcem w terminalach",
+    "momentumEnabled": "Włącz Momentum",
+    "momentumEnabledDesc": "Kontynuuj przewijanie przez chwilę po przesunięciu",
+    "advanced": "Zaawansowane",
+    "resetDefaults": "Przywróć ustawienia domyślne",
+    "dragThreshold": "Próg przeciągania",
+    "maxWheelDelta": "Maksymalna delta koła",
+    "momentumSampleWindow": "Okno próbki pędu",
+    "releaseGracePeriod": "Okres karencji po puszczeniu",
+    "minimumVelocity": "Minimalna prędkość",
+    "maximumVelocity": "Maksymalna prędkość",
+    "maximumDuration": "Maksymalny czas trwania",
+    "maximumTravel": "Maksymalny dystans",
+    "decayTime": "Czas wygaszania",
+    "pixelsPerTick": "Pikseli na tick",
+    "maximumFrameInterval": "Maksymalny interwał klatek",
+    "maximumTicksPerFrame": "Maksymalna liczba tików na klatkę"
+  },
+  "imageStorage": {
+    "instanceId": "Identyfikator instancji sesji terminalowej",
+    "instanceIdDesc": "Identyfikator instancji jednej z podłączonych kart terminala, używany do testowania widoczności.",
+    "selectedModeUnavailable": "Niedostępny",
+    "test": "Test",
+    "testing": "Testowanie...",
+    "testFailed": "Nie udało się przetestować magazynu obrazów",
+    "testConnected": "Sesja terminalowa jest połączona.",
+    "testNotConnected": "Brak połączonej sesji terminala z tym identyfikatorem instancji.",
+    "testSelectedMode": "Przesyłanie użyłoby: {{mode}}",
+    "testLocalVisible": "Katalog lokalny jest widoczny z podłączonego hosta.",
+    "testLocalNotVisible": "Katalog lokalny NIE jest widoczny z podłączonego hosta."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Wprowadzanie dotykowe",
+        "images": "Przechowywanie obrazów"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Trwałość sesji terminalowej",
+        "description": "Jak długo odłączony terminal jest utrzymywany aktywny na serwerze przed jego zamknięciem. Min. 1 · Maks. 1440 minut. W przypadku sesji, które muszą przetrwać ten czas, włącz funkcję Auto-Tmux na hoście."
+      },
+      "commandHistoryEnabled": {
+        "label": "Historia poleceń",
+        "description": "Zezwól na rejestrowanie historii poleceń. Po wyłączeniu historia nie jest zapisywana, niezależnie od ustawień poszczególnych hostów."
+      },
+      "imageStorageMode": {
+        "label": "Tryb przechowywania",
+        "description": "Gdzie zapisywane są wklejone i przesłane obrazy z terminala. Auto wybiera według połączenia; Lokalny i Zdalny (SFTP) są stałe.",
+        "auto": "Auto",
+        "local": "Lokalny",
+        "remoteSftp": "Zdalny (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Katalog lokalny"
+      },
+      "imageHostPath": {
+        "label": "Ścieżka hosta",
+        "description": "Widok katalogu lokalnego od strony hosta, który otrzymują agenci terminalowi."
+      },
+      "imageTtlMs": {
+        "label": "Czas życia (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Maksymalna liczba obrazów"
+      },
+      "imageMaxBytes": {
+        "label": "Maksymalny rozmiar magazynu (bajty)"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Włącz pasek narzędzi terminala",
+        "description": "Pokaż pasek narzędzi szybkiego dostępu zadokowany do aktywnego terminala, umożliwiający dostęp do narzędzi i statystyk na żywo tego hosta"
+      },
+      "enableCommandHistory": {
+        "label": "Historia poleceń",
+        "description": "Zapisuj polecenia uruchamiane w tym terminalu na potrzeby historii i autouzupełniania"
+      },
+      "enableTerminal": {
+        "label": "Włącz terminal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Terminal lokalny"
+  }
+}

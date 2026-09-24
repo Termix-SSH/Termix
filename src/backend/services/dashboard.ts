@@ -6,13 +6,9 @@ import { dashboardLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { dashboardServiceLinksRouter } from "../database/routes/dashboard-service-links-routes.js";
-import {
-  createCurrentHostResolutionRepository,
-  createCurrentRbacAccessRepository,
-  createCurrentRecentActivityRepository,
-  createCurrentRoleRepository,
-} from "../database/repositories/factory.js";
+import { createCurrentRecentActivityRepository } from "../database/repositories/factory.js";
 import { DataCrypto } from "../utils/data-crypto.js";
+import { recordRecentActivity } from "./recent-activity.js";
 import { listenOnServicePort } from "../utils/service-listen.js";
 
 const app = express();
@@ -20,9 +16,6 @@ app.set("trust proxy", "loopback");
 const authManager = AuthManager.getInstance();
 
 const serverStartTime = Date.now();
-
-const activityRateLimiter = new Map<string, number>();
-const RATE_LIMIT_MS = 1000;
 
 function isUserDataUnlocked(userId: string): boolean {
   return DataCrypto.getUserDataKey(userId) !== null;
@@ -181,91 +174,24 @@ app.post("/activity/log", async (req, res) => {
       });
     }
 
-    if (
-      ![
-        "terminal",
-        "file_manager",
-        "server_stats",
-        "tunnel",
-        "docker",
-        "telnet",
-        "vnc",
-        "rdp",
-      ].includes(type)
-    ) {
+    const result = await recordRecentActivity(userId, {
+      type,
+      hostId,
+      hostName,
+    });
+    if (result.status === "invalid_type") {
       return res.status(400).json({
         error:
           "Invalid activity type. Must be 'terminal', 'file_manager', 'server_stats', 'tunnel', 'docker', 'telnet', 'vnc', or 'rdp'",
       });
     }
-
-    const rateLimitKey = `${userId}:${hostId}:${type}`;
-    const now = Date.now();
-    const lastLogged = activityRateLimiter.get(rateLimitKey);
-
-    if (lastLogged && now - lastLogged < RATE_LIMIT_MS) {
+    if (result.status === "rate_limited") {
       return res.json({
         message: "Activity already logged recently (rate limited)",
       });
     }
-
-    activityRateLimiter.set(rateLimitKey, now);
-
-    if (activityRateLimiter.size > 10000) {
-      const entriesToDelete: string[] = [];
-      for (const [key, timestamp] of activityRateLimiter.entries()) {
-        if (now - timestamp > RATE_LIMIT_MS * 2) {
-          entriesToDelete.push(key);
-        }
-      }
-      entriesToDelete.forEach((key) => activityRateLimiter.delete(key));
-    }
-
-    const isOwnedHost =
-      await createCurrentHostResolutionRepository().isHostOwnedByUser(
-        hostId,
-        userId,
-      );
-
-    if (!isOwnedHost) {
-      const roleIds =
-        await createCurrentRoleRepository().listUserRoleIds(userId);
-      const sharedHosts =
-        await createCurrentRbacAccessRepository().listVisibleHostAccessEntries(
-          userId,
-          roleIds,
-        );
-      const hasSharedAccess = sharedHosts.some(
-        (access) => access.hostId === hostId,
-      );
-
-      if (!hasSharedAccess) {
-        return res
-          .status(404)
-          .json({ error: "Host not found or access denied" });
-      }
-    }
-
-    const result = await createCurrentRecentActivityRepository().create({
-      userId,
-      type,
-      hostId,
-      hostName,
-    });
-
-    // Best-effort trim of old activity entries; failures here should not
-    // cause the primary /activity/log request to 500.
-    try {
-      await createCurrentRecentActivityRepository().trimUserActivity(
-        userId,
-        100,
-      );
-    } catch (trimErr) {
-      dashboardLogger.warn("Failed to trim recent_activity (non-fatal)", {
-        operation: "trim_recent_activity",
-        userId,
-        error: trimErr instanceof Error ? trimErr.message : String(trimErr),
-      });
+    if (result.status === "denied") {
+      return res.status(404).json({ error: "Host not found or access denied" });
     }
 
     res.json({ message: "Activity logged", id: result.id });

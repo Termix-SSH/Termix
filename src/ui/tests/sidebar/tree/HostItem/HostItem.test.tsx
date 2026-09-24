@@ -229,7 +229,8 @@ describe("HostItem density parity", () => {
     expect(hostRow).toBeTruthy();
     fireEvent.pointerEnter(hostRow!);
 
-    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("terminal");
+    // No plugin registered a connect action, so only the learned tool preloads.
+    expect(preloadTabSurfaceMock).not.toHaveBeenCalledWith("");
     expect(preloadTabSurfaceMock).toHaveBeenCalledWith("tmux_monitor");
   });
 });

@@ -58,8 +58,34 @@ describe(`${manifest.id} activate`, () => {
         "terminal.listSessions",
         "terminal.sendToActive",
         "terminal.sendToSession",
+        "terminal.open",
       ]),
     );
+  });
+
+  it("registers the command history panel and its rail item", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.panels()).toContain("history");
+    expect(rendered.registered.railItems().map((item) => item.id)).toContain(
+      "history",
+    );
+  });
+
+  it("offers the local terminal only in the desktop app", async () => {
+    rendered = await renderWithApp(plugin, { manifest, locales });
+    expect(rendered.registered.tabs()).not.toContain("local-terminal");
+    await rendered.deactivate();
+
+    (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+    try {
+      rendered = await renderWithApp(plugin, { manifest, locales });
+      expect(rendered.registered.tabs()).toContain("local-terminal");
+      expect(rendered.registered.railItems().map((item) => item.id)).toContain(
+        "local-terminal",
+      );
+    } finally {
+      delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
+    }
   });
 
   it("terminal.sendToActive and terminal.listSessions report no session when none is registered", async () => {

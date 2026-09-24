@@ -93,7 +93,7 @@ export default function CollabGuestView() {
           <GuestTerminalView
             key={stage.shareId}
             share={{ permissionLevel: "read-only" }}
-            wsQuery={`roomGuestToken=${encodeURIComponent(token ?? "")}`}
+            wsPath={stage.wsPath ?? ""}
             hideBadges
             onParticipantsChange={(participants: SessionParticipantInfo[]) =>
               setParticipantCount(participants.length)

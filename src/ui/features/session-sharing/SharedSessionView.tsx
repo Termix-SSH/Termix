@@ -9,7 +9,7 @@ import {
   type ShareLinkErrorKind,
 } from "@/api/session-sharing-api";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
-import { pluginWsUrl } from "@/lib/plugin-transport";
+import { pluginWsUrlForPath } from "@/lib/plugin-transport";
 import { RemoteDisplay } from "@/features/remote-display/RemoteDisplay";
 
 const PING_INTERVAL_MS = 30000;
@@ -25,8 +25,8 @@ interface TerminalWsMessage {
 // A shared session link is always resolved against the desktop app's
 // embedded local backend -- joining a session hosted on someone else's
 // remote server isn't supported from the desktop app today.
-async function resolveTerminalWsBaseUrl(): Promise<string> {
-  const target = await pluginWsUrl("ssh-terminal", "/terminal");
+async function resolveTerminalWsUrl(wsPath: string): Promise<string> {
+  const target = await pluginWsUrlForPath(wsPath);
   if (!target) throw new Error("No terminal endpoint is available");
   return target.url;
 }
@@ -107,12 +107,13 @@ function CenteredMessage({
 
 export function GuestTerminalView({
   share,
-  wsQuery,
+  wsPath,
   hideBadges = false,
   onParticipantsChange,
 }: {
   share: Pick<ResolvedShareLink, "permissionLevel">;
-  wsQuery: string;
+  /** The socket path the backend handed out, query string included. */
+  wsPath: string;
   /** Suppress the built-in overlay badges when the host page renders its own. */
   hideBadges?: boolean;
   onParticipantsChange?: (participants: SessionParticipantInfo[]) => void;
@@ -144,10 +145,9 @@ export function GuestTerminalView({
     let cancelled = false;
     let ws: WebSocket | null = null;
 
-    resolveTerminalWsBaseUrl().then((baseWsUrl) => {
+    resolveTerminalWsUrl(wsPath).then((url) => {
       if (cancelled) return;
-      const separator = baseWsUrl.includes("?") ? "&" : "?";
-      ws = new WebSocket(`${baseWsUrl}${separator}${wsQuery}`);
+      ws = new WebSocket(url);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -209,7 +209,7 @@ export function GuestTerminalView({
     };
     // Deliberately runs once terminal mounts - share/token/permission are stable for the view's lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [terminal, wsQuery]);
+  }, [terminal, wsPath]);
 
   return (
     <div className="relative w-full h-full">
@@ -354,10 +354,7 @@ export default function SharedSessionView() {
           share &&
           linkToken &&
           (share.protocol === "ssh" ? (
-            <GuestTerminalView
-              share={share}
-              wsQuery={`shareToken=${encodeURIComponent(linkToken)}`}
-            />
+            <GuestTerminalView share={share} wsPath={share.wsPath} />
           ) : (
             <GuestGuacamoleView share={share} />
           ))}

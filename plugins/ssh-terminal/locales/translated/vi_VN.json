@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Thêm",
+    "arrowDown": "Mũi tên xuống",
+    "arrowLeft": "Mũi tên trái",
+    "arrowRight": "Mũi tên phải",
+    "arrowUp": "Mũi tên lên",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Xong",
+    "editQuickKeys": "Chỉnh sửa phím tắt",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Dán",
+    "quickKeyPlaceholder": "vd: sudo ",
+    "quickKeysDesc": "Nhấn × để xóa. Hỗ trợ tối đa 8 ký tự.",
+    "quickKeysTitle": "Phím tắt",
+    "removeQuickKey": "Xóa",
+    "resetDefaults": "Đặt lại mặc định",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Không thể bật Auto-Tmux.",
+    "autoTmuxEnabled": "Tính năng Auto-Tmux đã được bật cho {{host}}. Tính năng này sẽ được áp dụng từ lần kết nối tiếp theo.",
+    "clipboardHttpWarning": "Không thể đọc nội dung clipboard. Một số trình duyệt hạn chế quyền truy cập clipboard khi không sử dụng HTTPS - hãy thử Ctrl+V hoặc sử dụng HTTPS để chạy Termix.",
+    "closeTab": "Đóng",
+    "connecting": "Đang kết nối...",
+    "connectionLost": "Mất kết nối",
+    "connectionRejected": "Kết nối bị máy chủ từ chối. Vui lòng kiểm tra xác thực và cấu hình mạng.",
+    "connectionTimeout": "Hết thời gian kết nối",
+    "enableAutoTmuxAction": "Bật Auto-Tmux",
+    "hostKeyRejected": "Xác minh khóa máy chủ SSH bị từ chối. Đã hủy kết nối.",
+    "linkDialogCopy": "Sao chép",
+    "linkDialogOpen": "Mở",
+    "linkDialogTitle": "Mở liên kết",
+    "maxReconnectAttemptsReached": "Đã đạt số lần kết nối lại tối đa",
+    "noHostSelected": "Chưa chọn máy chủ",
+    "opksshAuthFailed": "Xác thực thất bại. Vui lòng kiểm tra thông tin đăng nhập và thử lại.",
+    "opksshTimeout": "Xác thực đã hết thời gian chờ. Vui lòng thử lại.",
+    "passwordPromptFillTitle": "Điền mật khẩu đã lưu vào dòng nhắc này?",
+    "reconnect": "Kết nối lại",
+    "reconnected": "Đã kết nối lại thành công",
+    "reconnecting": "Đang kết nối lại... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Hộp diêm",
+    "searchClose": "Đóng (Thoát)",
+    "searchNext": "Trận đấu tiếp theo (Nhập)",
+    "searchNoResults": "Không có kết quả",
+    "searchPlaceholder": "Tìm thấy",
+    "searchPrevious": "Kết quả khớp trước đó (Shift+Enter)",
+    "searchRegex": "Sử dụng biểu thức chính quy",
+    "searchResultCount": "{{index}} của {{count}}",
+    "searchWholeWord": "Ghép toàn bộ từ",
+    "sessionExpiredNotice": "Phiên làm việc trước của bạn trên {{host}} đã hết hạn sau {{minutes}} phút bị ngắt kết nối; shell và mọi thứ đang chạy trong đó đều đã biến mất. Hãy bật Auto-Tmux trên máy chủ này để duy trì các phiên làm việc.",
+    "sessionExpiredNoticeNoMinutes": "Phiên làm việc trước của bạn trên {{host}} đã hết hạn khi bị ngắt kết nối; shell và mọi thứ đang chạy trong đó đều đã biến mất. Hãy bật Auto-Tmux trên máy chủ này để duy trì các phiên làm việc.",
+    "sessionTakenOver": "Phiên đã được mở trong tab khác. Đang kết nối lại...",
+    "tmuxAttached": "Các máy khách đã gắn kết",
+    "tmuxAttachedCount": "{{count}} đã gắn kết",
+    "tmuxCopyHint": "Điều chỉnh lựa chọn và nhấn Enter để sao chép vào clipboard",
+    "tmuxCreateNew": "Tạo phiên mới",
+    "tmuxDetached": "Đã ngắt khỏi phiên tmux",
+    "tmuxLastActivity": "Hoạt động cuối",
+    "tmuxSessionAttached": "Đã gắn vào phiên tmux: {{name}}",
+    "tmuxSessionCreated": "Đã tạo phiên tmux: {{name}}",
+    "tmuxSessionPickerDesc": "Các phiên tmux hiện có trên máy chủ này. Chọn một phiên để gắn lại hoặc tạo phiên mới.",
+    "tmuxSessionPickerTitle": "Phiên tmux",
+    "tmuxTimeDays": "{{count}} ngày trước",
+    "tmuxTimeHours": "{{count}} giờ trước",
+    "tmuxTimeJustNow": "vừa xong",
+    "tmuxTimeMinutes": "{{count}} phút trước",
+    "tmuxUnavailable": "tmux chưa được cài đặt trên máy chủ từ xa, chuyển sang shell tiêu chuẩn",
+    "tmuxWindowCount": "{{count}} cửa sổ",
+    "tmuxWindows": "Cửa sổ",
+    "unknownError": "Lỗi không xác định đã xảy ra",
+    "vaultAuthDescription": "Một cửa sổ đã mở để đăng nhập vào HashiCorp Vault. Hoàn tất đăng nhập ở đó; kết nối này sẽ tự động tiếp tục.",
+    "vaultAuthFailed": "Xác thực Vault thất bại. Vui lòng thử lại.",
+    "vaultAuthTitle": "Yêu cầu đăng nhập Vault",
+    "vaultReopen": "Mở lại cửa sổ đăng nhập",
+    "websocketAbnormalClose": "Kết nối đóng đột ngột. Có thể do sự cố cấu hình reverse proxy hoặc SSL. Vui lòng kiểm tra nhật ký máy chủ.",
+    "websocketError": "Lỗi kết nối WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Tách tmux",
+    "detachTmuxDescription": "Tách phiên tmux",
+    "dismissError": "Bỏ qua lỗi hình ảnh",
+    "hideToolbar": "Ẩn thanh công cụ",
+    "image": "Thao tác với hình ảnh (chỉ áp dụng cho hình ảnh)",
+    "imageActionFailed": "Thao tác xử lý hình ảnh thất bại",
+    "layout": "Chế độ hiển thị thanh công cụ",
+    "layoutExpanded": "Đã mở rộng với các số liệu",
+    "layoutIcon": "Chỉ có biểu tượng",
+    "layoutLabeled": "Biểu tượng và nhãn",
+    "moveToolbar": "Di chuyển thanh công cụ",
+    "moveToolbarHint": "Kéo để định vị lại thanh công cụ",
+    "paste": "Dán hình ảnh",
+    "pasteImage": "Dán hình ảnh từ clipboard (chỉ áp dụng cho hình ảnh)",
+    "retry": "Thử lại",
+    "showToolbar": "Mở rộng thanh công cụ",
+    "upload": "Tải ảnh lên",
+    "uploadImage": "Tải ảnh lên máy chủ",
+    "uploadingImage": "Đang tải lên..."
+  },
+  "history": {
+    "noTerminalSelected": "Chưa chọn terminal",
+    "noTerminalSelectedHint": "Mở một tab terminal SSH để xem lịch sử lệnh",
+    "searchPlaceholder": "Tìm kiếm lịch sử...",
+    "clearAll": "Xóa tất cả",
+    "noHistoryEntries": "Không có mục lịch sử",
+    "trackingDisabled": "Tính năng ghi lịch sử đã bị tắt"
+  },
+  "touchInput": {
+    "enabled": "Cho phép nhập liệu cảm ứng",
+    "enabledDesc": "Cho phép cuộn bằng một ngón tay trong cửa sổ dòng lệnh.",
+    "momentumEnabled": "Tạo đà",
+    "momentumEnabledDesc": "Tiếp tục cuộn xuống một chút sau khi vuốt.",
+    "advanced": "Trình độ cao",
+    "resetDefaults": "Khôi phục về cài đặt mặc định",
+    "dragThreshold": "Ngưỡng kéo",
+    "maxWheelDelta": "Chênh lệch bánh xe tối đa",
+    "momentumSampleWindow": "Cửa sổ mẫu động lượng",
+    "releaseGracePeriod": "thời gian ân hạn thả",
+    "minimumVelocity": "Vận tốc tối thiểu",
+    "maximumVelocity": "Vận tốc tối đa",
+    "maximumDuration": "Thời gian tối đa",
+    "maximumTravel": "Hành trình tối đa",
+    "decayTime": "Thời gian phân rã",
+    "pixelsPerTick": "Số pixel trên mỗi tick",
+    "maximumFrameInterval": "Khoảng thời gian khung hình tối đa",
+    "maximumTicksPerFrame": "Số tick tối đa mỗi khung hình"
+  },
+  "imageStorage": {
+    "instanceId": "ID phiên bản phiên thiết bị đầu cuối",
+    "instanceIdDesc": "ID phiên bản của một trong các tab thiết bị đầu cuối được kết nối của bạn, được sử dụng để kiểm tra khả năng hiển thị.",
+    "selectedModeUnavailable": "Không khả dụng",
+    "test": "Bài kiểm tra",
+    "testing": "Đang thử nghiệm...",
+    "testFailed": "Không thể kiểm tra lưu trữ hình ảnh",
+    "testConnected": "Phiên kết nối terminal đã được thiết lập.",
+    "testNotConnected": "Không có phiên làm việc thiết bị đầu cuối nào được kết nối với ID phiên bản này.",
+    "testSelectedMode": "Quá trình tải lên sẽ sử dụng: {{mode}}",
+    "testLocalVisible": "Thư mục cục bộ có thể được nhìn thấy từ máy chủ được kết nối.",
+    "testLocalNotVisible": "Thư mục cục bộ KHÔNG hiển thị từ máy chủ được kết nối."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Nhập liệu cảm ứng",
+        "images": "Lưu trữ hình ảnh"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Duy trì phiên đầu cuối",
+        "description": "Thời gian duy trì kết nối của một thiết bị đầu cuối bị ngắt kết nối trên máy chủ trước khi nó bị đóng. Tối thiểu 1 phút · Tối đa 1440 phút. Đối với các phiên cần duy trì lâu hơn thời gian này, hãy bật Auto-Tmux trên máy chủ."
+      },
+      "commandHistoryEnabled": {
+        "label": "Lịch sử lệnh",
+        "description": "Cho phép ghi lịch sử lệnh. Khi tắt, lịch sử sẽ không được lưu bất kể cài đặt từng máy chủ."
+      },
+      "imageStorageMode": {
+        "label": "Chế độ lưu trữ",
+        "description": "Nơi hiển thị hình ảnh từ thiết bị đầu cuối được dán và tải lên. Chức năng tự động chọn theo kết nối, cục bộ và từ xa (SFTP) được cố định.",
+        "auto": "Tự động",
+        "local": "Địa phương",
+        "remoteSftp": "Từ xa (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Thư mục cục bộ"
+      },
+      "imageHostPath": {
+        "label": "Đường dẫn máy chủ",
+        "description": "Đây là giao diện phía máy chủ của thư mục cục bộ mà các tác nhân đầu cuối nhận được."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Số lượng ảnh tối đa"
+      },
+      "imageMaxBytes": {
+        "label": "Số byte lưu trữ tối đa"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Kích hoạt thanh công cụ Terminal",
+        "description": "Hiển thị thanh công cụ truy cập nhanh được gắn vào cửa sổ terminal đang hoạt động để xem các công cụ và số liệu thống kê trực tiếp của máy chủ này."
+      },
+      "enableCommandHistory": {
+        "label": "Lịch sử lệnh",
+        "description": "Ghi lại các lệnh chạy trong terminal này để dùng cho lịch sử và tự động hoàn thành"
+      },
+      "enableTerminal": {
+        "label": "Bật Terminal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Ga địa phương"
+  }
+}

@@ -52,8 +52,8 @@ vi.mock("../../../utils/permission-manager.js", () => ({
   },
 }));
 
-vi.mock("../../../hosts/terminal/session-manager.js", () => ({
-  sessionManager: {
+vi.mock("../../../hosts/live-terminal-sessions.js", () => ({
+  liveTerminalSessions: {
     getSession: (sessionId: string) => {
       const session = state.sshSessions.get(sessionId);
       if (!session) return null;

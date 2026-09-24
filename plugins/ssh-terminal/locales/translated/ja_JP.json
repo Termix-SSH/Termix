@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "追加",
+    "arrowDown": "↓",
+    "arrowLeft": "←",
+    "arrowRight": "→",
+    "arrowUp": "↑",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "完了",
+    "editQuickKeys": "クイックキー編集",
+    "end": "エンド",
+    "esc": "Esc",
+    "home": "ホーム",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "ペースト",
+    "quickKeyPlaceholder": "例: sudo ",
+    "quickKeysDesc": "× をタップして削除します。最大8文字まで対応。",
+    "quickKeysTitle": "クイックキー",
+    "removeQuickKey": "削除",
+    "resetDefaults": "デフォルトにリセット",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Auto-Tmux の有効化に失敗しました",
+    "autoTmuxEnabled": "{{host}}に対して Auto-Tmux が有効になりました。これは次回の接続時に適用されます。",
+    "clipboardHttpWarning": "クリップボードを読み取れませんでした。一部のブラウザはHTTPS接続以外でのクリップボードへのアクセスを制限しています。代わりにCtrl+Vを試すか、TermixをHTTPS経由で提供してみてください。",
+    "closeTab": "閉じる",
+    "connecting": "接続中...",
+    "connectionLost": "接続切断",
+    "connectionRejected": "サーバーによって接続が拒否されました。認証設定とネットワーク構成を確認してください。",
+    "connectionTimeout": "接続タイムアウト",
+    "enableAutoTmuxAction": "Auto-Tmuxを有効にする",
+    "hostKeyRejected": "SSHホストキーの検証が拒否されました。接続がキャンセルされました。",
+    "linkDialogCopy": "コピー",
+    "linkDialogOpen": "開く",
+    "linkDialogTitle": "リンクを開く",
+    "maxReconnectAttemptsReached": "再接続の最大試行回数に達しました",
+    "noHostSelected": "ホストが選択されていません",
+    "opksshAuthFailed": "認証に失敗しました。資格情報を確認して再試行してください。",
+    "opksshTimeout": "認証がタイムアウトしました。もう一度お試しください。",
+    "passwordPromptFillTitle": "保存されたパスワードをこのプロンプトに入力しますか？",
+    "reconnect": "再接続",
+    "reconnected": "再接続完了",
+    "reconnecting": "再接続中... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "マッチケース",
+    "searchClose": "閉じる（Escキー）",
+    "searchNext": "次の試合（入場）",
+    "searchNoResults": "検索結果なし",
+    "searchPlaceholder": "探す",
+    "searchPrevious": "前の試合 (Shift+Enter)",
+    "searchRegex": "正規表現を使用する",
+    "searchResultCount": "{{index}} / {{count}}",
+    "searchWholeWord": "単語全体を一致させる",
+    "sessionExpiredNotice": "{{host}} での前回のセッションは {{minutes}} 分後に切断され、シェルおよびそこで実行されていたすべてのものが失われました。セッションを維持するには、このホストで Auto-Tmux を有効にしてください。",
+    "sessionExpiredNoticeNoMinutes": "{{host}} での前回のセッションは、接続が切断された状態で期限切れになりました。シェルおよびシェル内で実行されていたすべてのプロセスは失われています。セッションを維持するには、このホストで Auto-Tmux を有効にしてください。",
+    "sessionTakenOver": "セッションが別のタブで開かれました。再接続中...",
+    "tmuxAttached": "接続クライアント",
+    "tmuxAttachedCount": "{{count}} 接続",
+    "tmuxCopyHint": "選択範囲を調整してEnterでクリップボードにコピー",
+    "tmuxCreateNew": "新規セッションを開始",
+    "tmuxDetached": "tmuxセッションからデタッチしました",
+    "tmuxLastActivity": "最終アクティビティ",
+    "tmuxSessionAttached": "tmuxセッションに接続しました: {{name}}",
+    "tmuxSessionCreated": "tmuxセッションが作成されました: {{name}}",
+    "tmuxSessionPickerDesc": "このホストに既存のtmuxセッションがあります。再アタッチするか、新しいセッションを作成してください。",
+    "tmuxSessionPickerTitle": "tmuxセッション",
+    "tmuxTimeDays": "{{count}}日前",
+    "tmuxTimeHours": "{{count}}時間前",
+    "tmuxTimeJustNow": "たった今",
+    "tmuxTimeMinutes": "{{count}}分前",
+    "tmuxUnavailable": "リモートホストにtmuxがインストールされていません。標準シェルにフォールバックします。",
+    "tmuxWindowCount": "{{count}} ウィンドウ",
+    "tmuxWindows": "ウィンドウ",
+    "unknownError": "不明なエラーが発生しました",
+    "vaultAuthDescription": "HashiCorp Vaultへのサインイン用のウィンドウが開きました。そこでサインインを完了すると、この接続は自動的に続行されます。",
+    "vaultAuthFailed": "Vault 認証に失敗しました。もう一度お試しください。",
+    "vaultAuthTitle": "Vault サインインが必要です",
+    "vaultReopen": "サインインウィンドウを再表示",
+    "websocketAbnormalClose": "接続が予期せず切断されました。リバースプロキシまたはSSLの設定に問題がある可能性があります。サーバーログを確認してください。",
+    "websocketError": "WebSocket接続エラー"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmuxをデタッチする",
+    "detachTmuxDescription": "tmuxセッションをデタッチする",
+    "dismissError": "画像エラーを非表示にする",
+    "hideToolbar": "ツールバーを非表示にする",
+    "image": "画像アクション（画像のみ）",
+    "imageActionFailed": "画像操作が失敗しました",
+    "layout": "ツールバー表示モード",
+    "layoutExpanded": "指標を追加して拡張",
+    "layoutIcon": "アイコンのみ",
+    "layoutLabeled": "アイコンとラベル",
+    "moveToolbar": "ツールバーを移動",
+    "moveToolbarHint": "ツールバーをドラッグして位置を変更します",
+    "paste": "画像を貼り付ける",
+    "pasteImage": "クリップボードから画像を貼り付ける（画像のみ）",
+    "retry": "リトライ",
+    "showToolbar": "ツールバーを展開する",
+    "upload": "画像をアップロード",
+    "uploadImage": "ホストに画像をアップロードする",
+    "uploadingImage": "アップロード中..."
+  },
+  "history": {
+    "noTerminalSelected": "ターミナルが選択されていません",
+    "noTerminalSelectedHint": "SSH ターミナルタブを開いてコマンド履歴を表示",
+    "searchPlaceholder": "履歴を検索...",
+    "clearAll": "すべてクリア",
+    "noHistoryEntries": "履歴エントリがありません",
+    "trackingDisabled": "履歴の追跡が無効です"
+  },
+  "touchInput": {
+    "enabled": "タッチ入力を有効にする",
+    "enabledDesc": "端末で指一本でのスクロールを可能にする",
+    "momentumEnabled": "勢いを加速させる",
+    "momentumEnabledDesc": "スワイプ後、少しスクロールを続ける",
+    "advanced": "高度な",
+    "resetDefaults": "初期設定に戻す",
+    "dragThreshold": "ドラッグしきい値",
+    "maxWheelDelta": "最大ホイールデルタ",
+    "momentumSampleWindow": "モメンタムサンプルウィンドウ",
+    "releaseGracePeriod": "釈放猶予期間",
+    "minimumVelocity": "最小速度",
+    "maximumVelocity": "最大速度",
+    "maximumDuration": "最大持続時間",
+    "maximumTravel": "最大移動距離",
+    "decayTime": "減衰時間",
+    "pixelsPerTick": "ピクセル/ティック",
+    "maximumFrameInterval": "最大フレーム間隔",
+    "maximumTicksPerFrame": "フレームあたりの最大ティック数"
+  },
+  "imageStorage": {
+    "instanceId": "端末セッションインスタンスID",
+    "instanceIdDesc": "表示されている可視性をテストするために使用される、接続されているターミナルタブのいずれかのインスタンスID。",
+    "selectedModeUnavailable": "利用不可",
+    "test": "テスト",
+    "testing": "テスト中...",
+    "testFailed": "画像ストレージのテストに失敗しました",
+    "testConnected": "端末セッションが接続されました。",
+    "testNotConnected": "このインスタンスIDで接続されている端末セッションはありません。",
+    "testSelectedMode": "アップロードには以下を使用します： {{mode}}",
+    "testLocalVisible": "ローカルディレクトリは、接続されているホストから参照可能です。",
+    "testLocalNotVisible": "ローカルディレクトリは、接続されているホストからアクセスできません。"
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "タッチ入力",
+        "images": "画像ストレージ"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "端末セッションの永続性",
+        "description": "切断された端末がサーバー上で閉じられるまでの時間。最小1分、最大1440分。この時間を超えてセッションを継続する必要がある場合は、ホスト上でAuto-Tmuxを有効にしてください。"
+      },
+      "commandHistoryEnabled": {
+        "label": "コマンド履歴",
+        "description": "コマンド履歴の記録を許可します。無効にすると、ホストごとの設定に関わらず履歴は保存されません。"
+      },
+      "imageStorageMode": {
+        "label": "ストレージモード",
+        "description": "貼り付けおよびアップロードされた端末イメージが書き込まれる場所。接続による自動選択、ローカルおよびリモート（SFTP）が固定されています。",
+        "auto": "自動",
+        "local": "地元",
+        "remoteSftp": "リモート（SFTP）"
+      },
+      "imageLocalDir": {
+        "label": "ローカルディレクトリ"
+      },
+      "imageHostPath": {
+        "label": "ホストパス",
+        "description": "端末エージェントが受信するローカルディレクトリのホスト側ビュー。"
+      },
+      "imageTtlMs": {
+        "label": "TTL（ミリ秒）"
+      },
+      "imageMaxCount": {
+        "label": "最大画像数"
+      },
+      "imageMaxBytes": {
+        "label": "最大ストレージバイト数"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "ターミナルツールバーを有効にする",
+        "description": "このホストのツールとリアルタイム統計情報に素早くアクセスできるツールバーを、アクティブなターミナルにドッキングして表示します。"
+      },
+      "enableCommandHistory": {
+        "label": "コマンド履歴",
+        "description": "このターミナルで実行されたコマンドを履歴とオートコンプリート用に記録します"
+      },
+      "enableTerminal": {
+        "label": "ターミナルを有効にする"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "ローカル端末"
+  }
+}

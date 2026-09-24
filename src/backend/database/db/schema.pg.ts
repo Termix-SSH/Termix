@@ -516,26 +516,6 @@ export const recentActivity = pgTable(
   ],
 );
 
-export const commandHistory = pgTable(
-  "command_history",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    command: text("command").notNull(),
-    executedAt: text("executed_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_command_history_user_host").on(table.userId, table.hostId),
-  ],
-);
-
 export const hostAccess = pgTable(
   "host_access",
   {

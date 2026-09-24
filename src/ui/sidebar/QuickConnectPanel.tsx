@@ -76,7 +76,8 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
       protocol,
       domain: domain || undefined,
     });
-    onConnect(hostConfig, type ?? resolveHostTabType(hostConfig));
+    const target = type ?? resolveHostTabType(hostConfig);
+    if (target) onConnect(hostConfig, target);
   };
 
   const connectDefault = () => connect();
@@ -282,7 +283,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
           ) : (
             <>
               <button
-                onClick={() => connect("terminal")}
+                onClick={() => connect()}
                 className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors"
               >
                 <Terminal className="size-3.5" />

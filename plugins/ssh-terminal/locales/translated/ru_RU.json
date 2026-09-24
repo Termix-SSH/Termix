@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Добавить",
+    "arrowDown": "Вниз",
+    "arrowLeft": "Влево",
+    "arrowRight": "Вправо",
+    "arrowUp": "Вверх",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Готово",
+    "editQuickKeys": "Редактировать",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Вставить",
+    "quickKeyPlaceholder": "напр. sudo ",
+    "quickKeysDesc": "Нажмите × для удаления. Поддерживается до 8 символов.",
+    "quickKeysTitle": "Быстрые клавиши",
+    "removeQuickKey": "Удалить",
+    "resetDefaults": "Сбросить по умолчанию",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Не удалось включить Auto-Tmux.",
+    "autoTmuxEnabled": "Автоматический Tmux включен для {{host}}. Он применяется со следующего соединения.",
+    "clipboardHttpWarning": "Не удалось прочитать содержимое буфера обмена. Некоторые браузеры ограничивают доступ к буферу обмена вне протокола HTTPS — попробуйте использовать Ctrl+V или используйте Termix через HTTPS.",
+    "closeTab": "Закрыть",
+    "connecting": "Подключение...",
+    "connectionLost": "Соединение потеряно",
+    "connectionRejected": "Подключение отклонено сервером. Проверьте аутентификацию и сетевые настройки.",
+    "connectionTimeout": "Тайм-аут подключения",
+    "enableAutoTmuxAction": "Включить Auto-Tmux",
+    "hostKeyRejected": "Проверка ключа хоста SSH отклонена. Подключение отменено.",
+    "linkDialogCopy": "Копировать",
+    "linkDialogOpen": "Открыть",
+    "linkDialogTitle": "Открыть ссылку",
+    "maxReconnectAttemptsReached": "Достигнуто максимальное количество попыток переподключения",
+    "noHostSelected": "Не выбран хост",
+    "opksshAuthFailed": "Аутентификация не удалась. Проверьте учётные данные и попробуйте снова.",
+    "opksshTimeout": "Время аутентификации истекло. Попробуйте снова.",
+    "passwordPromptFillTitle": "Вставить сохраненный пароль в этот запрос?",
+    "reconnect": "Переподключиться",
+    "reconnected": "Успешно переподключено",
+    "reconnecting": "Переподключение... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Спичечный коробок",
+    "searchClose": "Закрыть (Выход)",
+    "searchNext": "Следующий матч (Вход)",
+    "searchNoResults": "Результаты отсутствуют",
+    "searchPlaceholder": "Находить",
+    "searchPrevious": "Предыдущий матч (Shift+Enter)",
+    "searchRegex": "Используйте регулярные выражения",
+    "searchResultCount": "{{index}} из {{count}}",
+    "searchWholeWord": "Сопоставьте целое слово",
+    "sessionExpiredNotice": "Ваша предыдущая сессия на {{host}} завершилась через {{minutes}} минут после разрыва соединения; оболочка и все запущенные в ней программы удалены. Включите Auto-Tmux на этом хосте, чтобы поддерживать сессии активными.",
+    "sessionExpiredNoticeNoMinutes": "Ваша предыдущая сессия на {{host}} завершилась во время отключения; оболочка и все запущенные в ней приложения удалены. Включите Auto-Tmux на этом хосте, чтобы поддерживать сессии активными.",
+    "sessionTakenOver": "Сеанс был открыт в другой вкладке. Переподключение...",
+    "tmuxAttached": "Подключённые клиенты",
+    "tmuxAttachedCount": "{{count}} подключено",
+    "tmuxCopyHint": "Скорректируйте выделение и нажмите Enter, чтобы скопировать в буфер обмена",
+    "tmuxCreateNew": "Начать новую сессию",
+    "tmuxDetached": "Отключён от сессии tmux",
+    "tmuxLastActivity": "Последняя активность",
+    "tmuxSessionAttached": "Сессия tmux подключена: {{name}}",
+    "tmuxSessionCreated": "Сессия tmux создана: {{name}}",
+    "tmuxSessionPickerDesc": "Найдены существующие сессии tmux на этом хосте. Выберите одну для переподключения или создайте новую сессию.",
+    "tmuxSessionPickerTitle": "Сессии tmux",
+    "tmuxTimeDays": "{{count}}д назад",
+    "tmuxTimeHours": "{{count}}ч назад",
+    "tmuxTimeJustNow": "только что",
+    "tmuxTimeMinutes": "{{count}}м назад",
+    "tmuxUnavailable": "tmux не установлен на удалённом хосте, переход на стандартную оболочку",
+    "tmuxWindowCount": "{{count}} окно",
+    "tmuxWindows": "Окна",
+    "unknownError": "Произошла неизвестная ошибка",
+    "vaultAuthDescription": "Открыто окно для входа в HashiCorp Vault. Завершите вход там; подключение продолжится автоматически.",
+    "vaultAuthFailed": "Аутентификация Vault не удалась. Попробуйте снова.",
+    "vaultAuthTitle": "Требуется вход в Vault",
+    "vaultReopen": "Повторно открыть окно входа",
+    "websocketAbnormalClose": "Соединение неожиданно закрыто. Возможно, проблема с обратным прокси или конфигурацией SSL. Проверьте журналы сервера.",
+    "websocketError": "Ошибка подключения WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Отсоединить tmux",
+    "detachTmuxDescription": "Отключить сессию tmux",
+    "dismissError": "Отклонить ошибку изображения",
+    "hideToolbar": "Скрыть панель инструментов",
+    "image": "Действия с изображениями (только с изображениями)",
+    "imageActionFailed": "Операция с изображением не удалась.",
+    "layout": "режим отображения панели инструментов",
+    "layoutExpanded": "Дополнено метриками",
+    "layoutIcon": "Только иконка",
+    "layoutLabeled": "Иконки и подписи",
+    "moveToolbar": "Переместить панель инструментов",
+    "moveToolbarHint": "Перетащите панель инструментов, чтобы изменить ее положение.",
+    "paste": "Вставить изображение",
+    "pasteImage": "Вставить изображение из буфера обмена (только изображения)",
+    "retry": "Повторить попытку",
+    "showToolbar": "Развернуть панель инструментов",
+    "upload": "Загрузить изображение",
+    "uploadImage": "Загрузите изображение на хостинг.",
+    "uploadingImage": "Загрузка..."
+  },
+  "history": {
+    "noTerminalSelected": "Терминал не выбран",
+    "noTerminalSelectedHint": "Откройте вкладку SSH-терминала, чтобы просмотреть историю команд",
+    "searchPlaceholder": "Поиск по истории...",
+    "clearAll": "Очистить всё",
+    "noHistoryEntries": "Нет записей в истории",
+    "trackingDisabled": "Отслеживание истории отключено"
+  },
+  "touchInput": {
+    "enabled": "Включить сенсорный ввод",
+    "enabledDesc": "Разрешить прокрутку одним пальцем в терминалах",
+    "momentumEnabled": "Включить импульс",
+    "momentumEnabledDesc": "После свайпа продолжите прокрутку еще немного.",
+    "advanced": "Передовой",
+    "resetDefaults": "Сбросить до значений по умолчанию",
+    "dragThreshold": "Порог сопротивления",
+    "maxWheelDelta": "Максимальная разница колес",
+    "momentumSampleWindow": "Окно выборки импульса",
+    "releaseGracePeriod": "Льготный период освобождения",
+    "minimumVelocity": "Минимальная скорость",
+    "maximumVelocity": "Максимальная скорость",
+    "maximumDuration": "Максимальная продолжительность",
+    "maximumTravel": "Максимальный ход",
+    "decayTime": "Время распада",
+    "pixelsPerTick": "Пикселей на такт",
+    "maximumFrameInterval": "Максимальный интервал кадров",
+    "maximumTicksPerFrame": "Максимальное количество тактов на кадр"
+  },
+  "imageStorage": {
+    "instanceId": "Идентификатор экземпляра терминальной сессии",
+    "instanceIdDesc": "Идентификатор экземпляра одной из подключенных вкладок терминала, используемый для проверки видимости.",
+    "selectedModeUnavailable": "Недоступно",
+    "test": "Тест",
+    "testing": "Тестирование...",
+    "testFailed": "Не удалось проверить хранилище изображений.",
+    "testConnected": "Терминальная сессия подключена.",
+    "testNotConnected": "Нет подключенной терминальной сессии с этим идентификатором экземпляра.",
+    "testSelectedMode": "Для загрузки будет использоваться следующий синтаксис: {{mode}}",
+    "testLocalVisible": "Локальный каталог виден с подключенного хоста.",
+    "testLocalNotVisible": "Локальный каталог НЕ виден с подключенного хоста."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Сенсорный ввод",
+        "images": "Хранилище изображений"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Сохранение сессии в терминале",
+        "description": "Как долго отключенный терминал остается активным на сервере до его закрытия. Мин. 1 · Макс. 1440 минут. Для сессий, которые должны длиться дольше этого времени, включите Auto-Tmux на хосте."
+      },
+      "commandHistoryEnabled": {
+        "label": "История команд",
+        "description": "Включить запись истории команд. При отключении история не сохраняется независимо от настроек хостов."
+      },
+      "imageStorageMode": {
+        "label": "Режим хранения",
+        "description": "Где записываются и загружаются образы терминала. Автоматический выбор по типу подключения, локальному и удаленному (SFTP) — это фиксированная настройка.",
+        "auto": "Авто",
+        "local": "Местный",
+        "remoteSftp": "Удаленный (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Локальный каталог"
+      },
+      "imageHostPath": {
+        "label": "Путь к хосту",
+        "description": "Представление локального каталога на стороне хоста, которое получают терминальные агенты."
+      },
+      "imageTtlMs": {
+        "label": "TTL (мс)"
+      },
+      "imageMaxCount": {
+        "label": "Максимальное количество изображений"
+      },
+      "imageMaxBytes": {
+        "label": "Максимальный объем хранилища в байтах"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Включить панель инструментов терминала",
+        "description": "Отобразить панель быстрого доступа, закрепленную на активном терминале, для отображения инструментов и статистики этого хоста в режиме реального времени."
+      },
+      "enableCommandHistory": {
+        "label": "История команд",
+        "description": "Сохранять команды, выполняемые в этом терминале, для истории и автодополнения"
+      },
+      "enableTerminal": {
+        "label": "Включить терминал"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Локальный терминал"
+  }
+}

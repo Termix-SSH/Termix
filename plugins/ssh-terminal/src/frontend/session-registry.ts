@@ -1,4 +1,4 @@
-import type { TerminalHandle } from "@/features/terminal/terminal-types";
+import type { TerminalHandle } from "./terminal/terminal-types";
 
 export interface TerminalSessionInfo {
   id: string;

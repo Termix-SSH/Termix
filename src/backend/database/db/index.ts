@@ -419,15 +419,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
 
-    CREATE TABLE IF NOT EXISTS command_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        command TEXT NOT NULL,
-        executed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-    );
+    -- command_history is owned by the ssh-terminal plugin, which adopts it
+    -- as p_ssh_terminal_command_history in its first migration.
 
     CREATE TABLE IF NOT EXISTS host_access (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -858,35 +851,8 @@ async function initializeCompleteDatabase(): Promise<void> {
 
 `);
 
-  try {
-    const timeoutRow = sqlite
-      .prepare(
-        "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
-      )
-      .get() as { value: string } | undefined;
-    const timeoutMinutes = timeoutRow
-      ? parseInt(timeoutRow.value, 10)
-      : 30;
-    const ttlMs =
-      !isNaN(timeoutMinutes) && timeoutMinutes > 0
-        ? timeoutMinutes * 60_000
-        : 30 * 60_000;
-    const cutoff = new Date(Date.now() - ttlMs).toISOString();
-    const result = sqlite
-      .prepare("DELETE FROM user_open_tabs WHERE updated_at <= ?")
-      .run(cutoff);
-    if (result.changes > 0) {
-      databaseLogger.info("Expired open tabs cleared on startup", {
-        operation: "db_init_open_tabs_cleanup",
-        count: result.changes,
-      });
-    }
-  } catch (e) {
-    databaseLogger.warn("Could not clear expired open tabs on startup", {
-      operation: "db_init_open_tabs_cleanup_failed",
-      error: e,
-    });
-  }
+  // Expired open tabs are dropped when the tab list is read, against the
+  // terminal plugin's own session timeout.
 
   try {
     const result = sqlite

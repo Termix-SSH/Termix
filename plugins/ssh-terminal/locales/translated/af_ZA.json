@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Voeg by",
+    "arrowDown": "Pyltjie Af",
+    "arrowLeft": "Pyltjie links",
+    "arrowRight": "Pyltjie Regs",
+    "arrowUp": "Pyltjie Op",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Klaar",
+    "editQuickKeys": "Wysig vinnige sleutels",
+    "end": "Einde",
+    "esc": "Esc",
+    "home": "Tuis",
+    "pageDown": "PgDn",
+    "pageUp": "Bladsy Op",
+    "paste": "Plak",
+    "quickKeyPlaceholder": "bv. sudo ",
+    "quickKeysDesc": "Tik × om te verwyder. Ondersteun tot 8 karakters.",
+    "quickKeysTitle": "Vinnige sleutels",
+    "removeQuickKey": "Verwyder",
+    "resetDefaults": "Stel terug na verstekwaardes",
+    "shift": "Skof",
+    "tab": "Oortjie"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Kon nie Auto-Tmux aktiveer nie",
+    "autoTmuxEnabled": "Auto-Tmux geaktiveer vir {{host}}. Dit geld vanaf die volgende verbinding.",
+    "clipboardHttpWarning": "Kon nie die knipbord lees nie. Sommige blaaiers beperk toegang tot die knipbord buite HTTPS - probeer eerder Ctrl+V, of bedien Termix oor HTTPS.",
+    "closeTab": "Maak toe",
+    "connecting": "Verbind...",
+    "connectionLost": "Verbinding verloor",
+    "connectionRejected": "Verbinding deur bediener verwerp. Kontroleer asseblief u verifikasie en netwerkkonfigurasie.",
+    "connectionTimeout": "Verbindingstydverstryking",
+    "enableAutoTmuxAction": "Aktiveer Auto-Tmux",
+    "hostKeyRejected": "SSH-gasheersleutelverifikasie verwerp. Verbinding gekanselleer.",
+    "linkDialogCopy": "Kopieer",
+    "linkDialogOpen": "Oop",
+    "linkDialogTitle": "Maak skakel oop",
+    "maxReconnectAttemptsReached": "Maksimum herverbindingspogings bereik",
+    "noHostSelected": "Geen gasheer gekies nie",
+    "opksshAuthFailed": "Verifikasie het misluk. Kontroleer asseblief jou geloofsbriewe en probeer weer.",
+    "opksshTimeout": "Verifikasie het verstryk. Probeer asseblief weer.",
+    "passwordPromptFillTitle": "Vul die gestoorde wagwoord in hierdie aanwysingsprompt in?",
+    "reconnect": "Herkoppel",
+    "reconnected": "Herverbind suksesvol",
+    "reconnecting": "Herverbind... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Pasmaat",
+    "searchClose": "Maak toe (Escape)",
+    "searchNext": "Volgende Wedstryd (Enter)",
+    "searchNoResults": "Geen resultate nie",
+    "searchPlaceholder": "Vind",
+    "searchPrevious": "Vorige Wedersydse (Shift+Enter)",
+    "searchRegex": "Gebruik Gereelde Uitdrukking",
+    "searchResultCount": "{{index}} van {{count}}",
+    "searchWholeWord": "Pas die hele woord by",
+    "sessionExpiredNotice": "Jou vorige sessie op {{host}} het verval nadat {{minutes}} minute ontkoppel was; die dop en enigiets wat daarin loop, is weg. Aktiveer Auto-Tmux op hierdie gasheer om sessies aan die gang te hou.",
+    "sessionExpiredNoticeNoMinutes": "Jou vorige sessie op {{host}} het verval terwyl dit ontkoppel was; die dop en enigiets wat daarin loop, is weg. Aktiveer Auto-Tmux op hierdie gasheer om sessies aan die gang te hou.",
+    "sessionTakenOver": "Sessie is in 'n ander oortjie oopgemaak. Herverbind tans...",
+    "tmuxAttached": "Aangehegte kliënte",
+    "tmuxAttachedCount": "{{count}} aangeheg",
+    "tmuxCopyHint": "Pas seleksie aan en druk Enter om na knipbord te kopieer",
+    "tmuxCreateNew": "Begin nuwe sessie",
+    "tmuxDetached": "Losgemaak van tmux-sessie",
+    "tmuxLastActivity": "Laaste aktiwiteit",
+    "tmuxSessionAttached": "tmux-sessie aangeheg: {{name}}",
+    "tmuxSessionCreated": "tmux-sessie geskep: {{name}}",
+    "tmuxSessionPickerDesc": "Bestaande tmux-sessies is op hierdie gasheer gevind. Kies een om weer aan te heg of skep 'n nuwe sessie.",
+    "tmuxSessionPickerTitle": "tmux-sessies",
+    "tmuxTimeDays": "{{count}}dae gelede",
+    "tmuxTimeHours": "{{count}}uur gelede",
+    "tmuxTimeJustNow": "nou net",
+    "tmuxTimeMinutes": "{{count}}m gelede",
+    "tmuxUnavailable": "tmux is nie op die afgeleë gasheer geïnstalleer nie, en val terug na die standaard dop.",
+    "tmuxWindowCount": "{{count}} venster",
+    "tmuxWindows": "Vensters",
+    "unknownError": "Onbekende fout het voorgekom",
+    "vaultAuthDescription": "'n Venster het oopgemaak om by HashiCorp Vault aan te meld. Voltooi die aanmelding daar; hierdie verbinding sal outomaties voortgaan.",
+    "vaultAuthFailed": "Kluisverifikasie het misluk. Probeer asseblief weer.",
+    "vaultAuthTitle": "Kluisaanmelding vereis",
+    "vaultReopen": "Maak aanmeldvenster weer oop",
+    "websocketAbnormalClose": "Verbinding het onverwags gesluit. Dit kan wees as gevolg van 'n omgekeerde proxy- of SSL-konfigurasieprobleem. Gaan asseblief bedienerlogboeke na.",
+    "websocketError": "WebSocket-verbindingsfout"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Ontkoppel tmux",
+    "detachTmuxDescription": "Ontkoppel tmux-sessie",
+    "dismissError": "Maak beeldfout toe",
+    "hideToolbar": "Versteek nutsbalk",
+    "image": "Beeldaksies (slegs beelde)",
+    "imageActionFailed": "Beeldaksie het misluk",
+    "layout": "Nutsbalk-vertoonmodus",
+    "layoutExpanded": "Uitgebrei met statistieke",
+    "layoutIcon": "Slegs ikoon",
+    "layoutLabeled": "Ikone en etikette",
+    "moveToolbar": "Skuif nutsbalk",
+    "moveToolbarHint": "Sleep om die nutsbalk te herposisioneer",
+    "paste": "Plak beeld",
+    "pasteImage": "Plak beeld vanaf knipbord (slegs beelde)",
+    "retry": "Probeer weer",
+    "showToolbar": "Vou die nutsbalk uit",
+    "upload": "Laai beeld op",
+    "uploadImage": "Laai 'n beeld op na die gasheer",
+    "uploadingImage": "Laai tans op..."
+  },
+  "history": {
+    "noTerminalSelected": "Geen terminaal gekies nie",
+    "noTerminalSelectedHint": "Maak 'n SSH-terminaal-oortjie oop om die opdraggeskiedenis te sien",
+    "searchPlaceholder": "Soekgeskiedenis...",
+    "clearAll": "Vee alles uit",
+    "noHistoryEntries": "Geen geskiedenisinskrywings nie",
+    "trackingDisabled": "Geskiedenisopsporing is gedeaktiveer"
+  },
+  "touchInput": {
+    "enabled": "Aktiveer Aanraakinvoer",
+    "enabledDesc": "Laat eenvinger-aanraakblaai in terminale toe",
+    "momentumEnabled": "Aktiveer Momentum",
+    "momentumEnabledDesc": "Gaan voort met blaai kortliks na 'n swipe",
+    "advanced": "Gevorderd",
+    "resetDefaults": "Stel terug na verstekwaardes",
+    "dragThreshold": "Sleepdrempel",
+    "maxWheelDelta": "Maksimum wieldelta",
+    "momentumSampleWindow": "Momentum voorbeeldvenster",
+    "releaseGracePeriod": "Vrystellingsgrasietydperk",
+    "minimumVelocity": "Minimum snelheid",
+    "maximumVelocity": "Maksimum snelheid",
+    "maximumDuration": "Maksimum duur",
+    "maximumTravel": "Maksimum reis",
+    "decayTime": "Vervaltyd",
+    "pixelsPerTick": "Piksels per tik",
+    "maximumFrameInterval": "Maksimum raaminterval",
+    "maximumTicksPerFrame": "Maksimum aantal tikkies per raam"
+  },
+  "imageStorage": {
+    "instanceId": "Terminale sessie-instansie-ID",
+    "instanceIdDesc": "Instansie-ID van een van jou gekoppelde terminaal-oortjies, wat gebruik word om sigbaarheid te toets.",
+    "selectedModeUnavailable": "Nie beskikbaar nie",
+    "test": "Toets",
+    "testing": "Toetsing...",
+    "testFailed": "Kon nie beeldberging toets nie",
+    "testConnected": "Terminaalsessie is gekoppel.",
+    "testNotConnected": "Geen gekoppelde terminaalsessie met hierdie instansie-ID nie.",
+    "testSelectedMode": "'n Oplaai sal gebruik: {{mode}}",
+    "testLocalVisible": "Die plaaslike gids is sigbaar vanaf die gekoppelde gasheer.",
+    "testLocalNotVisible": "Die plaaslike gids is NIE sigbaar vanaf die gekoppelde gasheer nie."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Aanraakinvoer",
+        "images": "Beeldberging"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminale Sessie Persistensie",
+        "description": "Hoe lank 'n ontkoppelde terminaal op die bediener aan die gang gehou word voordat dit gesluit word. Min 1 · Maks 1440 minute. Vir sessies wat dit moet oorleef, aktiveer Auto-Tmux op die gasheer."
+      },
+      "commandHistoryEnabled": {
+        "label": "Opdraggeskiedenis",
+        "description": "Laat die opname van opdraggeskiedenis toe. Wanneer dit gedeaktiveer is, word geskiedenis nie gestoor nie, ongeag die instellings per gasheer."
+      },
+      "imageStorageMode": {
+        "label": "Bergingsmodus",
+        "description": "Waar geplakte en opgelaaide terminaalbeelde geskryf word. Outomatiese seleksies per verbinding, Plaaslik en Afgeleë (SFTP) is reggestel.",
+        "auto": "Outomaties",
+        "local": "Plaaslik",
+        "remoteSftp": "Afstandsbediening (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Plaaslike gids"
+      },
+      "imageHostPath": {
+        "label": "Gasheerpad",
+        "description": "Die gasheer-aansig van die plaaslike gids wat terminaalagente ontvang."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Maksimum beeldtelling"
+      },
+      "imageMaxBytes": {
+        "label": "Maksimum stoorplekgrepe"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Aktiveer Terminale-nutsbalk",
+        "description": "Wys 'n vinnige toegangsbalk wat aan die aktiewe terminaal gekoppel is vir hierdie gasheer se gereedskap en regstreekse statistieke."
+      },
+      "enableCommandHistory": {
+        "label": "Opdraggeskiedenis",
+        "description": "Rekordopdragte word in hierdie terminaal uitgevoer vir geskiedenis en outovoltooiing"
+      },
+      "enableTerminal": {
+        "label": "Aktiveer Terminaal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Plaaslike Terminaal"
+  }
+}

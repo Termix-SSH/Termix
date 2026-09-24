@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "לְהוֹסִיף",
+    "arrowDown": "חץ למטה",
+    "arrowLeft": "חץ שמאלה",
+    "arrowRight": "חץ ימינה",
+    "arrowUp": "חץ למעלה",
+    "backTab": "⇥",
+    "ctrl": "קונטרול",
+    "delete": "דל",
+    "done": "נַעֲשָׂה",
+    "editQuickKeys": "עריכת מקשי מהירים",
+    "end": "סוֹף",
+    "esc": "Esc",
+    "home": "בַּיִת",
+    "pageDown": "PgDn",
+    "pageUp": "עמוד למעלה",
+    "paste": "לְהַדבִּיק",
+    "quickKeyPlaceholder": "למשל סודו ",
+    "quickKeysDesc": "הקש על × כדי להסיר. תומך בעד 8 תווים.",
+    "quickKeysTitle": "מקשי מהירים",
+    "removeQuickKey": "לְהַסִיר",
+    "resetDefaults": "איפוס להגדרות ברירת מחדל",
+    "shift": "מִשׁמֶרֶת",
+    "tab": "טאב"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "נכשל בהפעלת Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux מופעל עבור {{host}}. זה חל מהחיבור הבא.",
+    "clipboardHttpWarning": "לא ניתן היה לקרוא את הלוח. חלק מהדפדפנים מגבילים את הגישה ללוח מחוץ ל-HTTPS - נסה Ctrl+V במקום זאת, או שלח את Termix דרך HTTPS.",
+    "closeTab": "לִסְגוֹר",
+    "connecting": "מְקַשֵׁר...",
+    "connectionLost": "החיבור אבד",
+    "connectionRejected": "החיבור נדחה על ידי השרת. אנא בדוק את האימות ותצורת הרשת שלך.",
+    "connectionTimeout": "זמן קצוב לחיבור",
+    "enableAutoTmuxAction": "הפעל את Auto-Tmux",
+    "hostKeyRejected": "אימות מפתח מארח SSH נדחה. החיבור בוטל.",
+    "linkDialogCopy": "לְהַעְתִיק",
+    "linkDialogOpen": "לִפְתוֹחַ",
+    "linkDialogTitle": "פתח קישור",
+    "maxReconnectAttemptsReached": "הגעת למספר המקסימלי של ניסיונות חיבור מחדש",
+    "noHostSelected": "לא נבחר מארח",
+    "opksshAuthFailed": "האימות נכשל. אנא בדוק את פרטי הגישה שלך ונסה שוב.",
+    "opksshTimeout": "הזמן שהוקצב לאימות הסתיים. אנא נסה שוב.",
+    "passwordPromptFillTitle": "למלא את הסיסמה השמורה בשורת הפקודה הזו?",
+    "reconnect": "התחבר מחדש",
+    "reconnected": "התחבר מחדש בהצלחה",
+    "reconnecting": "מתחבר מחדש... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "מארז התאמה",
+    "searchClose": "סגור (Escape)",
+    "searchNext": "המשחק הבא (Enter)",
+    "searchNoResults": "אין תוצאות",
+    "searchPlaceholder": "לִמצוֹא",
+    "searchPrevious": "התאמה קודמת (Shift+Enter)",
+    "searchRegex": "השתמש בביטוי רגולרי",
+    "searchResultCount": "{{index}} מתוך {{count}}",
+    "searchWholeWord": "התאמת מילה שלמה",
+    "sessionExpiredNotice": "הסשן הקודם שלך ב- {{host}} פג תוקפו לאחר {{minutes}} דקות של ניתוק; המעטפת וכל מה שפועל בה נעלם. הפעל את Auto-Tmux במארח זה כדי לשמור על הסשנים פעילים.",
+    "sessionExpiredNoticeNoMinutes": "הסשן הקודם שלך ב- {{host}} פג תוקפו בזמן ניתוק; המעטפת וכל מה שפועל בה נעלם. הפעל את Auto-Tmux במארח זה כדי לשמור על הסשנים פעילים.",
+    "sessionTakenOver": "הסשן נפתח בכרטיסייה אחרת. מתחבר מחדש...",
+    "tmuxAttached": "לקוחות מצורפים",
+    "tmuxAttachedCount": "{{count}} מצורף",
+    "tmuxCopyHint": "התאם את הבחירה ולחץ על Enter כדי להעתיק ללוח",
+    "tmuxCreateNew": "התחל סשן חדש",
+    "tmuxDetached": "מנותק מסשן tmux",
+    "tmuxLastActivity": "פעילות אחרונה",
+    "tmuxSessionAttached": "סשן tmux מצורף: {{name}}",
+    "tmuxSessionCreated": "נוצרה סשן tmux: {{name}}",
+    "tmuxSessionPickerDesc": "נמצאו הפעלות tmux קיימות במארח זה. בחר אחת לחיבור מחדש או צור הפעלות חדשה.",
+    "tmuxSessionPickerTitle": "מפגשי tmux",
+    "tmuxTimeDays": "{{count}}d ago",
+    "tmuxTimeHours": "{{count}}h ago",
+    "tmuxTimeJustNow": "זֶה עַתָה",
+    "tmuxTimeMinutes": "לפני {{count}}דקות",
+    "tmuxUnavailable": "tmux אינו מותקן על המארח המרוחק, חוזר למעטפת סטנדרטית",
+    "tmuxWindowCount": "חלון {{count}}",
+    "tmuxWindows": "חלונות",
+    "unknownError": "אירעה שגיאה לא ידועה",
+    "vaultAuthDescription": "נפתח חלון לכניסה לכספת HashiCorp. השלם את תהליך הכניסה שם; חיבור זה ימשיך אוטומטית.",
+    "vaultAuthFailed": "אימות הכספת נכשל. אנא נסה שוב.",
+    "vaultAuthTitle": "נדרשת כניסה לכספת",
+    "vaultReopen": "פתח מחדש את חלון הכניסה",
+    "websocketAbnormalClose": "החיבור נסגר באופן בלתי צפוי. ייתכן שהדבר נובע מבעיית פרוקסי הפוך או מבעיית תצורת SSL. אנא בדוק את יומני השרת.",
+    "websocketError": "שגיאת חיבור WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "ניתוק tmux",
+    "detachTmuxDescription": "ניתוק סשן tmux",
+    "dismissError": "סגור שגיאת תמונה",
+    "hideToolbar": "הסתר את סרגל הכלים",
+    "image": "פעולות תמונה (תמונות בלבד)",
+    "imageActionFailed": "פעולת התמונה נכשלה",
+    "layout": "מצב תצוגה של סרגל הכלים",
+    "layoutExpanded": "מורחב עם מדדים",
+    "layoutIcon": "סמל בלבד",
+    "layoutLabeled": "סמלים ותוויות",
+    "moveToolbar": "הזזת סרגל הכלים",
+    "moveToolbarHint": "גרור כדי לשנות את מיקום סרגל הכלים",
+    "paste": "הדבקת תמונה",
+    "pasteImage": "הדבקת תמונה מהלוח (תמונות בלבד)",
+    "retry": "נסה שוב",
+    "showToolbar": "הרחב את סרגל הכלים",
+    "upload": "העלאת תמונה",
+    "uploadImage": "העלה תמונה למארח",
+    "uploadingImage": "מעלה..."
+  },
+  "history": {
+    "noTerminalSelected": "לא נבחר טרמינל",
+    "noTerminalSelectedHint": "פתח כרטיסיית מסוף SSH כדי להציג את היסטוריית הפקודות שלה",
+    "searchPlaceholder": "היסטוריית חיפוש...",
+    "clearAll": "נקה הכל",
+    "noHistoryEntries": "אין רשומות היסטוריה",
+    "trackingDisabled": "מעקב אחר היסטוריה מושבת"
+  },
+  "touchInput": {
+    "enabled": "הפעל קלט מגע",
+    "enabledDesc": "אפשר גלילה באמצעות מגע באצבע אחת במסופים",
+    "momentumEnabled": "לאפשר מומנטום",
+    "momentumEnabledDesc": "המשך גלילה קצרה לאחר החלקה",
+    "advanced": "מִתקַדֵם",
+    "resetDefaults": "איפוס להגדרות ברירת מחדל",
+    "dragThreshold": "סף גרירה",
+    "maxWheelDelta": "דלתא גלגל מקסימלית",
+    "momentumSampleWindow": "חלון דוגמת מומנטום",
+    "releaseGracePeriod": "תקופת חסד לשחרור",
+    "minimumVelocity": "מהירות מינימלית",
+    "maximumVelocity": "מהירות מקסימלית",
+    "maximumDuration": "משך זמן מקסימלי",
+    "maximumTravel": "נסיעה מקסימלית",
+    "decayTime": "זמן דעיכה",
+    "pixelsPerTick": "פיקסלים לכל טיק",
+    "maximumFrameInterval": "מרווח פריימים מקסימלי",
+    "maximumTicksPerFrame": "מספר מקסימלי של טיקים למסגרת"
+  },
+  "imageStorage": {
+    "instanceId": "מזהה מופע של סשן מסוף",
+    "instanceIdDesc": "מזהה מופע של אחת מכרטיסיות הטרמינל המחוברות שלך, המשמש לבדיקת נראות.",
+    "selectedModeUnavailable": "לא זמין",
+    "test": "מִבְחָן",
+    "testing": "בּוֹחֵן...",
+    "testFailed": "נכשלה בדיקת אחסון התמונה",
+    "testConnected": "סשן הטרמינל מחובר.",
+    "testNotConnected": "אין סשן מסוף מחובר עם מזהה מופע זה.",
+    "testSelectedMode": "העלאה תשתמש ב: {{mode}}",
+    "testLocalVisible": "הספרייה המקומית גלויה מהמארח המחובר.",
+    "testLocalNotVisible": "הספרייה המקומית אינה גלויה מהמארח המחובר."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "קלט מגע",
+        "images": "אחסון תמונות"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "התמדה של סשן מסוף",
+        "description": "כמה זמן מסוף מנותק נשאר פעיל בשרת לפני שהוא נסגר. מינימום 1 · מקסימום 1440 דקות. עבור סשנים שחייבים לשרוד יותר מ-10 דקות, הפעל את Auto-Tmux במארח."
+      },
+      "commandHistoryEnabled": {
+        "label": "היסטוריית פקודות",
+        "description": "אפשר רישום היסטוריית פקודות. כאשר האפשרות מושבתת, ההיסטוריה לא נשמרת ללא קשר להגדרות של כל מחשב מארח."
+      },
+      "imageStorageMode": {
+        "label": "מצב אחסון",
+        "description": "היכן נכתבות תמונות טרמינל שהודבקו והועלו. בחירות אוטומטיות לפי חיבור, מקומי ומרוחק (SFTP) תוקנו.",
+        "auto": "אוטומטי",
+        "local": "מְקוֹמִי",
+        "remoteSftp": "מרחוק (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "ספרייה מקומית"
+      },
+      "imageHostPath": {
+        "label": "נתיב המארח",
+        "description": "תצוגת המארח של הספרייה המקומית שמקבלים סוכני הטרמינל."
+      },
+      "imageTtlMs": {
+        "label": "TTL (אלפיות שנייה)"
+      },
+      "imageMaxCount": {
+        "label": "ספירת תמונות מקסימלית"
+      },
+      "imageMaxBytes": {
+        "label": "מספר בייטים מקסימלי לאחסון"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "הפעלת סרגל הכלים של הטרמינל",
+        "description": "הצג סרגל כלים לגישה מהירה המעוגן למסוף הפעיל עבור הכלים והסטטיסטיקות החיות של מארח זה"
+      },
+      "enableCommandHistory": {
+        "label": "היסטוריית פקודות",
+        "description": "פקודות הקלטה פועלות בטרמינל זה לצורך היסטוריה והשלמה אוטומטית"
+      },
+      "enableTerminal": {
+        "label": "הפעלת טרמינל"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "מסוף מקומי"
+  }
+}

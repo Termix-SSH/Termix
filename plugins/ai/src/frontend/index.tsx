@@ -6,9 +6,9 @@ import type {
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
 import type {
-  TerminalDockProps,
+  TerminalSidePanelProps,
   TerminalSlotApi,
-} from "@/features/terminal/terminal-slots";
+} from "./terminal/terminal-slot-types";
 import { AiPanel } from "./AiPanel";
 import { TerminalAiPanel } from "./terminal/TerminalAiPanel";
 import { AiAssistantStep } from "./AiAssistantStep";
@@ -18,7 +18,7 @@ import { getAiStatus } from "./ai-api";
 import { AI_STATUS_CHANGED_EVENT } from "./use-ai-availability";
 
 const ASSISTANT_ACTION = "ai.openWithContext";
-const DOCK_ID = "ai.assistant";
+const SIDE_PANEL_ID = "ai.assistant";
 
 function AssistantPanel({ activeTabType }: PanelProps) {
   return (
@@ -32,15 +32,15 @@ function AssistantTab() {
   return <AiPanel />;
 }
 
-/** The assistant docked beside a terminal. */
-function TerminalDock({
+/** The assistant beside a terminal, in its "terminal.sidePanel" slot. */
+function TerminalSidePanel({
   host,
   hostId,
   hostLabel,
-  dockProps,
+  panelProps,
   onClose,
   onRunInTerminal,
-}: TerminalDockProps) {
+}: TerminalSidePanelProps) {
   if (!hostId) return null;
   return (
     <TerminalAiPanel
@@ -48,7 +48,7 @@ function TerminalDock({
       hostId={hostId}
       activeTab={`terminal:${host?.name || host?.ip || ""}`}
       initialContext={
-        typeof dockProps.context === "string" ? dockProps.context : ""
+        typeof panelProps.context === "string" ? panelProps.context : ""
       }
       onClose={onClose}
       onRunInTerminal={onRunInTerminal}
@@ -114,12 +114,12 @@ export function activate(app: TermixApp): void {
       }),
     );
     surface.push(
-      app.registerSlotContribution("terminal.dock", {
-        actionId: DOCK_ID,
+      app.registerSlotContribution("terminal.sidePanel", {
+        actionId: SIDE_PANEL_ID,
         titleKey: "ai.assistant",
         icon: Bot,
         kind: "component",
-        component: TerminalDock as unknown as ComponentType<
+        component: TerminalSidePanel as unknown as ComponentType<
           Record<string, unknown>
         >,
         when: offeredOnHost,
@@ -165,7 +165,9 @@ export function activate(app: TermixApp): void {
   app.registerAction(
     ASSISTANT_ACTION,
     (terminal: TerminalSlotApi) =>
-      terminal?.openDock(DOCK_ID, { context: terminal.getBufferText() }),
+      terminal?.openSidePanel(SIDE_PANEL_ID, {
+        context: terminal.getBufferText(),
+      }),
     { permission: "services.use" },
   );
 

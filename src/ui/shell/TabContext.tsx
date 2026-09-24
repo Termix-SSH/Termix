@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { getTabType } from "./tab-registry";
 import React, {
   createContext,
   useContext,
@@ -175,8 +176,9 @@ export function TabProvider({ children }: TabProviderProps) {
 
       const id = nextTabId.current++;
       const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const isCommandTarget = !!getTabType(tabData.type)?.commandTarget;
       const needsUniqueTitle =
-        tabData.type === "terminal" || tabData.type === "file_manager";
+        isCommandTarget || tabData.type === "file_manager";
       const effectiveTitle = needsUniqueTitle
         ? computeUniqueTitle(tabData.type, tabData.title)
         : tabData.type === "tmux_monitor" // --- tmux-monitor ---
@@ -187,10 +189,9 @@ export function TabProvider({ children }: TabProviderProps) {
         id,
         instanceId,
         title: effectiveTitle,
-        terminalRef:
-          tabData.type === "terminal"
-            ? React.createRef<TerminalRefHandle>()
-            : undefined,
+        terminalRef: isCommandTarget
+          ? React.createRef<TerminalRefHandle>()
+          : undefined,
         hostConfig: tabData.hostConfig
           ? {
               ...tabData.hostConfig,

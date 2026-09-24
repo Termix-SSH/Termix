@@ -13,12 +13,16 @@ import type {
   PluginSshHost,
 } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
-import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
+import {
+  PluginCapabilityError,
+  PluginSshInteractionError,
+} from "@termix/plugin-sdk/backend";
 import { assertCapability } from "./permissions.js";
 import { getActor } from "./actor.js";
 import type { DisposableBag } from "./disposables.js";
 import {
   getSshAuthProvider,
+  listSshAuthProviders,
   registerKeyboardInteractiveInterceptor,
   registerSshAuthProvider,
 } from "../hosts/connect/auth-provider-registry.js";
@@ -55,6 +59,7 @@ const PLUGIN_PURPOSES = new Set<SshConnectPurpose>([
   "tunnel",
   "file-manager",
   "file-transfer",
+  "terminal",
 ]);
 
 function purposeOf(options?: PluginSshConnectOptions): SshConnectPurpose {
@@ -222,6 +227,21 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
 
     poolKey,
 
+    resolveHost: async (hostId, options) => {
+      await checkSsh(true);
+      const userId = actingUser(hostId);
+      const { resolveHostById, resolveHostBySyncId } =
+        await import("../hosts/host-resolver.js");
+      const resolved = options?.syncId
+        ? await resolveHostBySyncId(options.syncId, userId)
+        : await resolveHostById(hostId, userId);
+      await audit("ssh_resolve_host", describeHost(hostId), {
+        success: !!resolved,
+        errorMessage: resolved ? undefined : "Host not found",
+      });
+      return (resolved as unknown as PluginSshHost | null) ?? null;
+    },
+
     prepare: async (host, options) => {
       await checkSsh(true);
       const { buildConnectConfig } =
@@ -232,22 +252,38 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         client: options.client as never,
         serverHostId: options.serverHostId,
         log: options.log,
+        interactive: options.interactive,
+        hostKeySocket: (options.hostKeySocket ?? null) as never,
       });
       await audit("ssh_prepare", describeHost(host), {
         success: built.outcome.status === "ready",
         errorMessage:
           built.outcome.status === "ready" ? undefined : built.outcome.message,
       });
-      return { config: built.config, outcome: built.outcome };
+      const provider = built.provider;
+      const target = host as SshConnectHost;
+      return {
+        config: built.config,
+        outcome: built.outcome,
+        authType: provider?.type ?? null,
+        onBanner: provider?.onBanner
+          ? (banner: string) =>
+              provider.onBanner!(banner, target, built.env) as never
+          : undefined,
+        onAuthFailed: provider?.onAuthFailed
+          ? (context) => provider.onAuthFailed!(target, built.env, context)
+          : undefined,
+      };
     },
 
-    openTransport: async (host, config) => {
+    openTransport: async (host, config, transportOptions) => {
       await checkSsh(false);
       const { openSshTransport } =
         await import("../hosts/connect/transport.js");
       const opened = await openSshTransport(
         host as SshConnectHost,
         config as MutableConnectConfig,
+        transportOptions,
       );
       if (opened.jumpClient) {
         const jumpClient = opened.jumpClient;
@@ -259,6 +295,60 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
         jumpClient.once("close", () => open.delete(dispose));
       }
       return opened;
+    },
+
+    startInteraction: async (interaction, request) => {
+      await checkSsh(true);
+      const userId = actingUser(request.hostId);
+      ensureCoreSshAuthProviders();
+      const { createCurrentHostResolutionRepository } =
+        await import("../database/repositories/factory.js");
+      const host = await createCurrentHostResolutionRepository().findHostById(
+        request.hostId,
+        userId,
+      );
+      if (!host) throw new PluginSshInteractionError("Host not found");
+
+      const own = getSshAuthProvider(host.authType as string);
+      const provider =
+        own?.interaction === interaction && own.startInteraction
+          ? own
+          : listSshAuthProviders().find(
+              (candidate) =>
+                candidate.interaction === interaction &&
+                candidate.startInteraction,
+            );
+      if (!provider?.startInteraction) {
+        throw new PluginSshInteractionError(
+          `No enabled provider handles ${interaction} sign-in`,
+        );
+      }
+      await audit("ssh_start_interaction", describeHost(request.hostId), {
+        success: true,
+      });
+      await provider.startInteraction({
+        userId,
+        hostId: request.hostId,
+        host: {
+          name: host.name as string | null,
+          ip: host.ip as string,
+          username: host.username as string,
+        },
+        socket: request.socket as never,
+        requestOrigin: request.requestOrigin,
+        payload: request.payload ?? {},
+      });
+    },
+
+    cancelInteraction: async (interaction, request) => {
+      await checkSsh(false);
+      const userId = actingUser(request.hostId ?? 0);
+      ensureCoreSshAuthProviders();
+      for (const provider of listSshAuthProviders()) {
+        if (provider.interaction !== interaction) continue;
+        if (!provider.cancelInteraction) continue;
+        await provider.cancelInteraction({ userId, ...request });
+      }
     },
 
     classifyKeyboardInteractive: (round, host) => {

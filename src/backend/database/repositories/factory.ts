@@ -9,7 +9,6 @@ import { NotificationChannelRepository } from "./notification-channel-repository
 import { AutomationRepository } from "./automation-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
-import { CommandHistoryRepository } from "./command-history-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { DashboardServiceLinkRepository } from "./dashboard-service-link-repository.js";
 import { DismissedAlertRepository } from "./dismissed-alert-repository.js";
@@ -181,13 +180,6 @@ export function createCurrentAuditLogRepository(): AuditLogRepository {
   return new AuditLogRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("audit_log_repository_write"),
-  );
-}
-
-export function createCurrentCommandHistoryRepository(): CommandHistoryRepository {
-  return new CommandHistoryRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("command_history_repository_write"),
   );
 }
 

@@ -1,6 +1,5 @@
 import {
   Braces,
-  Clock,
   Fingerprint,
   Hammer,
   KeyRound,
@@ -9,7 +8,6 @@ import {
   ScrollText,
   Server,
   Settings,
-  TerminalSquare,
   Usb,
   User,
   Zap,
@@ -124,14 +122,7 @@ export const RAIL_ITEMS: RailItemDef[] = [
     promotable: true,
     rightDockable: true,
   },
-  {
-    id: "history",
-    icon: Clock,
-    labelKey: "nav.history",
-    separatorAfter: true,
-    promotable: true,
-    rightDockable: true,
-  },
+
   {
     id: "session-logs",
     icon: ScrollText,
@@ -145,14 +136,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     icon: LayoutPanelLeft,
     labelKey: "nav.splitScreen",
     separatorAfter: true,
-  },
-  {
-    id: "local-terminal",
-    icon: TerminalSquare,
-    labelKey: "nav.localTerminal",
-    kind: "tab",
-    separatorAfter: true,
-    electronOnly: true,
   },
 ];
 

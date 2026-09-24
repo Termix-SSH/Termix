@@ -66,3 +66,61 @@ export { useTabs, useTabsSafe } from "@/shell/TabContext";
 
 // Slots: a plugin can offer places for other plugins to fill.
 export { ActionSlot, ComponentSlot } from "@/shell/ActionSlot";
+
+// Components other plugins offer by id (app.registerComponent), rendered with
+// a fallback while their plugin is off.
+export { PluginComponent } from "@/plugin-host/component-registry";
+
+// More primitives and hooks.
+export { cn } from "@/lib/utils";
+export {
+  runAdaptivePolling,
+  getPollingEnvironmentMultiplier,
+} from "@/lib/adaptive-polling";
+export * from "@/components/sheet";
+export { useConfirmation } from "@/hooks/use-confirmation";
+export { useIsMobile } from "@/hooks/use-mobile";
+export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
+export { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog";
+export { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog";
+
+// Terminal look: themes, fonts and clipboard, shared by every terminal-like
+// surface (the SSH and local terminals, the docker console, serial).
+export * from "@/lib/terminal-themes";
+export { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
+export { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
+export * from "@/lib/terminal-look/terminal-font-zoom";
+export { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
+export { RobustClipboardProvider } from "@/lib/clipboard-provider";
+export { useTheme as useAppTheme } from "@/components/theme-provider";
+
+// Keyboard handling the shell shares with a terminal, so app shortcuts keep
+// working while a terminal has focus.
+export { findMatchingKeybinding } from "@/lib/keybinding-match";
+export { globalShortcutHandler } from "@/lib/global-shortcut-handler";
+export { isMacPlatform, isTabJumpHotkey } from "@/lib/tab-jump-hotkey";
+export type * from "@/types/keybindings";
+
+// Connection helpers: which backend a host's session dials, and the pieces
+// the desktop app needs to reach it.
+export { isElectron } from "@/lib/electron";
+export {
+  resolveConnectionOrigin,
+  type ConnectionOrigin,
+} from "@/lib/connection-origin";
+export { pluginWsUrl } from "@/lib/plugin-transport";
+export { hydrateLocalSharedHostAuth } from "@/lib/remote-server-api";
+export { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
+
+// Core APIs a terminal-like surface calls: recent activity, the host's stored
+// password for sudo autofill, the open tab record, the user's keybindings and
+// host terminal options.
+export { getCookie } from "@/main-axios";
+export { logActivity } from "@/api/dashboard-api";
+export { getHostPassword } from "@/api/credentials-api";
+export {
+  patchOpenTab,
+  getUserPreferences,
+  parseCustomKeybindings,
+} from "@/api/open-tabs-api";
+export { setHostAutoTmux } from "@/api/host-terminal-config-api";

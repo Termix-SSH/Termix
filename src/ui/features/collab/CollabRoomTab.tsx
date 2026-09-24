@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PluginComponent } from "@/plugin-host/component-registry";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -31,8 +32,6 @@ import {
 } from "@/components/alert-dialog";
 import { Input } from "@/components/input";
 import { CollabMembersSidebar } from "./CollabMembersSidebar";
-import { Terminal } from "@/features/terminal/Terminal";
-import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
 import {
   RemoteDisplay,
   createRemoteSessionToken,
@@ -40,7 +39,7 @@ import {
 import { getSSHHosts, getUserList, type SSHHostWithStatus } from "@/main-axios";
 import { getRoles } from "@/api/rbac-api";
 import type { Role } from "@/main-axios";
-import { pluginWsUrl } from "@/lib/plugin-transport";
+import { pluginWsUrlForPath } from "@/lib/plugin-transport";
 import { getErrorMessage } from "@/lib/error-message";
 import {
   deleteCollabRoom,
@@ -65,8 +64,9 @@ const POLL_FALLBACK_MS = 15000;
 
 // The terminal socket the ssh-terminal plugin serves. Authentication rides on
 // the jwt cookie the way every terminal WS connection does.
-async function roomEventsWsUrl(): Promise<string | null> {
-  const target = await pluginWsUrl("ssh-terminal", "/terminal");
+async function roomEventsWsUrl(roomId: string): Promise<string | null> {
+  const { eventsWsPath } = await getCollabRoom(roomId);
+  const target = await pluginWsUrlForPath(eventsWsPath);
   return target?.url ?? null;
 }
 
@@ -186,7 +186,7 @@ export function CollabRoomTab({
     const connect = async () => {
       if (cancelled) return;
       try {
-        const url = await roomEventsWsUrl();
+        const url = await roomEventsWsUrl(roomId);
         if (cancelled) return;
         if (!url) throw new Error("No terminal endpoint is available");
         ws = new WebSocket(url);
@@ -673,23 +673,22 @@ export function CollabRoomTab({
         <div className="relative flex-1 min-w-0 min-h-0">
           {draft ? (
             draft.protocol === "ssh" ? (
-              <CommandHistoryProvider>
-                <Terminal
-                  hostConfig={{
-                    ...draft.host,
-                    id: Number(draft.host.id),
-                    ip: draft.host.ip,
-                    port: draft.host.port,
-                    username: draft.host.username,
-                    instanceId: `collab-present-${roomId}`,
-                  }}
-                  isVisible={isVisible}
-                  disableAutoFocus={false}
-                  onSessionReady={(sessionId) =>
-                    void registerStage("ssh", sessionId, Number(draft.host.id))
-                  }
-                />
-              </CommandHistoryProvider>
+              <PluginComponent
+                id="terminal.view"
+                hostConfig={{
+                  ...draft.host,
+                  id: Number(draft.host.id),
+                  ip: draft.host.ip,
+                  port: draft.host.port,
+                  username: draft.host.username,
+                  instanceId: `collab-present-${roomId}`,
+                }}
+                isVisible={isVisible}
+                disableAutoFocus={false}
+                onSessionReady={(sessionId) =>
+                  void registerStage("ssh", sessionId, Number(draft.host.id))
+                }
+              />
             ) : (
               <RemoteDisplay
                 token={draft.token}
@@ -716,23 +715,22 @@ export function CollabRoomTab({
                 </div>
               )}
               {stage.protocol === "ssh" ? (
-                <CommandHistoryProvider>
-                  <Terminal
-                    hostConfig={{
-                      id: stage.hostId ?? undefined,
-                      name: detail?.room.name ?? "stage",
-                      ip: "",
-                      port: 0,
-                      username: "",
-                      authType: "none",
-                      instanceId: `collab-view-${roomId}-${stage.shareId}`,
-                      joinShareId: stage.shareId,
-                      joinSharedSessionId: stage.sessionId ?? null,
-                    }}
-                    isVisible={isVisible}
-                    disableAutoFocus
-                  />
-                </CommandHistoryProvider>
+                <PluginComponent
+                  id="terminal.view"
+                  hostConfig={{
+                    id: stage.hostId ?? undefined,
+                    name: detail?.room.name ?? "stage",
+                    ip: "",
+                    port: 0,
+                    username: "",
+                    authType: "none",
+                    instanceId: `collab-view-${roomId}-${stage.shareId}`,
+                    joinShareId: stage.shareId,
+                    joinSharedSessionId: stage.sessionId ?? null,
+                  }}
+                  isVisible={isVisible}
+                  disableAutoFocus
+                />
               ) : stage.connectParams?.token ? (
                 <RemoteDisplay
                   key={stage.connectParams.token}
@@ -785,7 +783,7 @@ export function CollabRoomTab({
             )}
             {filteredHosts.map((host) => {
               const protocols: Array<"ssh" | "rdp" | "vnc" | "telnet"> = [];
-              if (host.enableTerminal || host.enableSsh) protocols.push("ssh");
+              if (host.enableSsh) protocols.push("ssh");
               if (host.enableRdp) protocols.push("rdp");
               if (host.enableVnc) protocols.push("vnc");
               if (host.enableTelnet) protocols.push("telnet");

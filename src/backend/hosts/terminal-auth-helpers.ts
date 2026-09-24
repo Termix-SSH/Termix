@@ -12,7 +12,7 @@ import ssh2Pkg, {
 
 type KnownPublicKey = KnownPublicKeys[number];
 
-const { AgentProtocol, BaseAgent } = ssh2Pkg;
+const { BaseAgent } = ssh2Pkg;
 const DEFAULT_PORT_KNOCK_TIMEOUT_MS = 1000;
 
 type Sleep = (ms: number) => Promise<void>;
@@ -26,58 +26,6 @@ type PortKnockingOptions = {
 };
 
 const sleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export class MemoryAgent extends BaseAgent {
-  private key: ParsedKey;
-
-  constructor(key: ParsedKey) {
-    super();
-    this.key = key;
-  }
-
-  getIdentities(cb: IdentityCallback<ParsedKey>): void {
-    cb(null, [this.key]);
-  }
-
-  getStream(cb: GetStreamCallback): void {
-    const protocol = new AgentProtocol(false);
-
-    protocol.on("identities", (request) => {
-      protocol.getIdentitiesReply(request, [this.key]);
-    });
-
-    protocol.on("sign", (request, publicKey, data, options) => {
-      this.sign(publicKey, data, options, (error, signature) => {
-        if (error || !signature) return protocol.failureReply(request);
-        protocol.signReply(request, signature);
-      });
-    });
-
-    cb(null, protocol);
-  }
-
-  sign(
-    _pubKey: ParsedKey | Buffer | string,
-    data: Buffer,
-    optionsOrCb: SigningRequestOptions | SignCallback,
-    cb?: SignCallback,
-  ): void {
-    const callback = typeof optionsOrCb === "function" ? optionsOrCb : cb!;
-    const options = typeof optionsOrCb === "function" ? {} : optionsOrCb;
-    try {
-      const algo =
-        options.hash === "sha256"
-          ? "rsa-sha2-256"
-          : options.hash === "sha512"
-            ? "rsa-sha2-512"
-            : undefined;
-      const signature = this.key.sign(data, algo);
-      callback(null, signature);
-    } catch (err) {
-      callback(err instanceof Error ? err : new Error(String(err)));
-    }
-  }
-}
 
 export async function resolveAgentSocket(
   terminalConfig: Record<string, unknown> | undefined,

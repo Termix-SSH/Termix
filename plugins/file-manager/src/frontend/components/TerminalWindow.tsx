@@ -1,13 +1,9 @@
 import React from "react";
 import { DraggableWindow } from "./DraggableWindow.tsx";
-import {
-  Terminal,
-  type TerminalHandle,
-  type TerminalHostConfig,
-} from "@/features/terminal/Terminal.tsx";
+import type { TabHandle as TerminalHandle } from "@termix/plugin-sdk/frontend";
+import { PluginComponent } from "@termix/plugin-sdk/ui";
 import { useWindowManager } from "./WindowManager.tsx";
 import { useTranslation } from "react-i18next";
-import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 import type { SSHHost } from "@/types/index.ts";
 import { ExternalLink } from "lucide-react";
 
@@ -96,7 +92,7 @@ export function TerminalWindow({
       : t("terminal.terminalTitle", { host: hostConfig.name });
 
   return (
-    <CommandHistoryProvider>
+    <>
       <DraggableWindow
         title={terminalTitle}
         initialX={initialX}
@@ -126,15 +122,16 @@ export function TerminalWindow({
           ) : null
         }
       >
-        <Terminal
-          ref={terminalRef}
-          hostConfig={hostConfig as TerminalHostConfig}
+        <PluginComponent
+          id="terminal.view"
+          handleRef={terminalRef}
+          hostConfig={hostConfig}
           isVisible={!currentWindow.isMinimized}
           initialPath={initialPath}
           executeCommand={executeCommand}
           onClose={handleClose}
         />
       </DraggableWindow>
-    </CommandHistoryProvider>
+    </>
   );
 }

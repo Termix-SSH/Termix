@@ -105,7 +105,7 @@ export function ConnectionDefaultsSettings() {
   const { t } = useTranslation();
   const defaults = useConnectionDefaults();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"terminal" | "rdp">("terminal");
+  const [tab, setTab] = useState<"shell" | "desktop">("shell");
   const [terminal, setTerminal] = useState<TerminalDefaults>({});
   const [rdp, setRdp] = useState<RemoteDesktopDefaults>({});
   const [saving, setSaving] = useState(false);
@@ -154,8 +154,8 @@ export function ConnectionDefaultsSettings() {
     setSaving(true);
     try {
       await Promise.all([
-        defaults.saveDefaults("terminal", terminal),
-        defaults.saveDefaults("rdp", rdp),
+        defaults.saveTerminalDefaults(terminal),
+        defaults.saveRdpDefaults(rdp),
       ]);
       toast.success(t("newUi.sidebar.connectionDefaults.saved"));
       setOpen(false);
@@ -207,8 +207,11 @@ export function ConnectionDefaultsSettings() {
           <div className="flex border-b border-border">
             {(
               [
-                ["terminal", "newUi.sidebar.connectionDefaults.tabTerminal"],
-                ["rdp", "newUi.sidebar.connectionDefaults.tabRemoteDesktop"],
+                ["shell", "newUi.sidebar.connectionDefaults.tabTerminal"],
+                [
+                  "desktop",
+                  "newUi.sidebar.connectionDefaults.tabRemoteDesktop",
+                ],
               ] as const
             ).map(([id, labelKey]) => (
               <button
@@ -226,7 +229,7 @@ export function ConnectionDefaultsSettings() {
           </div>
 
           <div className="max-h-[55vh] overflow-y-auto pr-1">
-            {tab === "terminal" ? (
+            {tab === "shell" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label={t("hosts.fontFamilyLabel")}>
                   <select

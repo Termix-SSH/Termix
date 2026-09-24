@@ -151,7 +151,6 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
   }
   if (filters.features.length > 0) {
     const ok =
-      (filters.features.includes("terminal") && host.enableTerminal) ||
       (filters.features.includes("fileManager") && host.enableFileManager) ||
       (filters.features.includes("docker") && host.enableDocker);
     if (!ok) return false;
@@ -794,7 +793,6 @@ export function HostsPanel({
                   </DropdownMenuLabel>
                   {(
                     [
-                      ["terminal", "Terminal"],
                       ["fileManager", "FileManager"],
                       ["docker", "Docker"],
                     ] as const

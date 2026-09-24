@@ -159,6 +159,8 @@ export async function handlePluginUpgrade(
       return true;
     }
     userId = resolved;
+  } else if (route.options.optionalAuth) {
+    userId = (await verifyToken(request)) ?? "";
   }
 
   if (route.rawHandler) {
@@ -175,6 +177,17 @@ export async function handlePluginUpgrade(
     return true;
   }
 
+  const { getClientIp, getRequestOrigin } =
+    await import("../utils/request-origin.js");
+  const { DataCrypto } = await import("../utils/data-crypto.js");
+  const connection = {
+    userId,
+    request,
+    clientIp: getClientIp(request as never),
+    requestOrigin: getRequestOrigin(request as never),
+    isDataUnlocked: () => !!userId && !!DataCrypto.getUserDataKey(userId),
+  };
+
   server.handleUpgrade(request, socket, head, (ws: WebSocket) => {
     const handler = route.handler;
     if (!handler) {
@@ -182,7 +195,7 @@ export async function handlePluginUpgrade(
       return;
     }
     runAsActor(userId || "anonymous", "request", () => {
-      void Promise.resolve(handler({ userId, request, socket: ws })).catch(
+      void Promise.resolve(handler({ ...connection, socket: ws })).catch(
         (error) => {
           pluginLogger.error(
             `Plugin ${route.pluginId} socket ${route.path} failed`,

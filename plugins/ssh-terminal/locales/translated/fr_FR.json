@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Ajouter",
+    "arrowDown": "Flèche bas",
+    "arrowLeft": "Flèche gauche",
+    "arrowRight": "Flèche droite",
+    "arrowUp": "Flèche haut",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Suppr",
+    "done": "Terminé",
+    "editQuickKeys": "Modifier les touches rapides",
+    "end": "Fin",
+    "esc": "Échap",
+    "home": "Début",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Coller",
+    "quickKeyPlaceholder": "ex. sudo ",
+    "quickKeysDesc": "Appuyez sur × pour supprimer. Prend en charge jusqu’à 8 caractères.",
+    "quickKeysTitle": "Touches rapides",
+    "removeQuickKey": "Supprimer",
+    "resetDefaults": "Rétablir les paramètres par défaut",
+    "shift": "Maj",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Échec de l'activation d'Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux activé pour {{host}}. Cela s'appliquera à partir de la prochaine connexion.",
+    "clipboardHttpWarning": "Impossible de lire le contenu du presse-papiers. Certains navigateurs restreignent l'accès au presse-papiers en dehors du protocole HTTPS ; essayez plutôt Ctrl+V ou utilisez Termix via HTTPS.",
+    "closeTab": "Fermer",
+    "connecting": "Connexion en cours...",
+    "connectionLost": "Connexion perdue",
+    "connectionRejected": "Connexion rejetée par le serveur. Veuillez vérifier votre authentification et votre configuration réseau.",
+    "connectionTimeout": "Délai de connexion dépassé",
+    "enableAutoTmuxAction": "Activer Auto-Tmux",
+    "hostKeyRejected": "Vérification de la clé de l'hôte SSH rejetée. Connexion annulée.",
+    "linkDialogCopy": "Copier",
+    "linkDialogOpen": "Ouvrir",
+    "linkDialogTitle": "Ouvrir le lien",
+    "maxReconnectAttemptsReached": "Nombre maximal de tentatives de reconnexion atteint",
+    "noHostSelected": "Aucun hôte sélectionné",
+    "opksshAuthFailed": "Échec de l'authentification. Veuillez vérifier vos identifiants et réessayer.",
+    "opksshTimeout": "L'authentification a expiré. Veuillez réessayer.",
+    "passwordPromptFillTitle": "Remplir ce champ avec le mot de passe enregistré ?",
+    "reconnect": "Reconnecter",
+    "reconnected": "Reconnexion réussie",
+    "reconnecting": "Reconnexion... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Boîte d'allumettes",
+    "searchClose": "Fermer (Échap)",
+    "searchNext": "Prochain match (Entrée)",
+    "searchNoResults": "Aucun résultat",
+    "searchPlaceholder": "Trouver",
+    "searchPrevious": "Match précédent (Maj+Entrée)",
+    "searchRegex": "Utilisez une expression régulière",
+    "searchResultCount": "{{index}} de {{count}}",
+    "searchWholeWord": "Associer le mot entier",
+    "sessionExpiredNotice": "Votre session précédente sur {{host}} a expiré après {{minutes}} minutes de déconnexion ; le shell et tous les processus en cours d'exécution ont été supprimés. Activez Auto-Tmux sur cet hôte pour maintenir les sessions actives.",
+    "sessionExpiredNoticeNoMinutes": "Votre session précédente sur {{host}} a expiré pendant la déconnexion ; le shell et tous les processus en cours d'exécution ont été supprimés. Activez Auto-Tmux sur cet hôte pour maintenir les sessions actives.",
+    "sessionTakenOver": "La session a été ouverte dans un autre onglet. Reconnexion en cours...",
+    "tmuxAttached": "Clients attachés",
+    "tmuxAttachedCount": "{{count}} attaché(s)",
+    "tmuxCopyHint": "Ajustez la sélection et appuyez sur Entrée pour copier dans le presse-papiers",
+    "tmuxCreateNew": "Créer une nouvelle session",
+    "tmuxDetached": "Détaché de la session tmux",
+    "tmuxLastActivity": "Dernière activité",
+    "tmuxSessionAttached": "Session tmux attachée : {{name}}",
+    "tmuxSessionCreated": "Session tmux créée : {{name}}",
+    "tmuxSessionPickerDesc": "Des sessions tmux existantes ont été trouvées sur cet hôte. Sélectionnez-en une pour vous y rattacher ou créez une nouvelle session.",
+    "tmuxSessionPickerTitle": "Sessions tmux",
+    "tmuxTimeDays": "il y a {{count}} j",
+    "tmuxTimeHours": "il y a {{count}} h",
+    "tmuxTimeJustNow": "à l'instant",
+    "tmuxTimeMinutes": "il y a {{count}} min",
+    "tmuxUnavailable": "tmux n'est pas installé sur l'hôte distant, retour au shell standard",
+    "tmuxWindowCount": "{{count}} fenêtre(s)",
+    "tmuxWindows": "Fenêtres",
+    "unknownError": "Une erreur inconnue s'est produite",
+    "vaultAuthDescription": "Une fenêtre s'est ouverte pour vous connecter à HashiCorp Vault. Terminez la connexion dans cette fenêtre ; cette connexion continuera automatiquement.",
+    "vaultAuthFailed": "Échec de l'authentification Vault. Veuillez réessayer.",
+    "vaultAuthTitle": "Connexion à Vault requise",
+    "vaultReopen": "Rouvrir la fenêtre de connexion",
+    "websocketAbnormalClose": "Connexion fermée de manière inattendue. Cela peut être dû à un problème de proxy inverse ou de configuration SSL. Veuillez vérifier les journaux du serveur.",
+    "websocketError": "Erreur de connexion WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Détacher tmux",
+    "detachTmuxDescription": "Détacher la session tmux",
+    "dismissError": "Erreur d'image",
+    "hideToolbar": "Masquer la barre d'outils",
+    "image": "Actions sur les images (images uniquement)",
+    "imageActionFailed": "L'action sur l'image a échoué",
+    "layout": "mode d'affichage de la barre d'outils",
+    "layoutExpanded": "Développé avec des indicateurs",
+    "layoutIcon": "Icône uniquement",
+    "layoutLabeled": "Icônes et étiquettes",
+    "moveToolbar": "Déplacer la barre d'outils",
+    "moveToolbarHint": "Faites glisser pour repositionner la barre d'outils",
+    "paste": "Coller l'image",
+    "pasteImage": "Coller une image depuis le presse-papiers (images uniquement)",
+    "retry": "Réessayer",
+    "showToolbar": "Barre d'outils Développer",
+    "upload": "Télécharger une image",
+    "uploadImage": "Téléversez une image sur l'hôte",
+    "uploadingImage": "Chargement en cours..."
+  },
+  "history": {
+    "noTerminalSelected": "Aucun terminal sélectionné",
+    "noTerminalSelectedHint": "Ouvrez un onglet de terminal SSH pour voir son historique de commandes",
+    "searchPlaceholder": "Rechercher dans l'historique...",
+    "clearAll": "Tout effacer",
+    "noHistoryEntries": "Aucune entrée d'historique",
+    "trackingDisabled": "Le suivi de l'historique est désactivé"
+  },
+  "touchInput": {
+    "enabled": "Activer l'entrée tactile",
+    "enabledDesc": "Autoriser le défilement tactile à un doigt dans les terminaux",
+    "momentumEnabled": "Activer l'élan",
+    "momentumEnabledDesc": "Continuez à faire défiler brièvement après un glissement.",
+    "advanced": "Avancé",
+    "resetDefaults": "Réinitialiser les paramètres par défaut",
+    "dragThreshold": "Seuil de glissement",
+    "maxWheelDelta": "Delta de roue maximal",
+    "momentumSampleWindow": "fenêtre d'échantillonnage de l'impulsion",
+    "releaseGracePeriod": "période de grâce pour la libération",
+    "minimumVelocity": "Vitesse minimale",
+    "maximumVelocity": "Vitesse maximale",
+    "maximumDuration": "Durée maximale",
+    "maximumTravel": "Voyage maximal",
+    "decayTime": "Temps de dégradation",
+    "pixelsPerTick": "Pixels par tick",
+    "maximumFrameInterval": "Intervalle d'images maximal",
+    "maximumTicksPerFrame": "Nombre maximal de ticks par image"
+  },
+  "imageStorage": {
+    "instanceId": "ID d'instance de session du terminal",
+    "instanceIdDesc": "ID d'instance de l'un de vos onglets de terminal connectés, utilisé pour tester la visibilité.",
+    "selectedModeUnavailable": "Indisponible",
+    "test": "Test",
+    "testing": "Essai...",
+    "testFailed": "Échec du test du stockage d'images",
+    "testConnected": "La session terminal est connectée.",
+    "testNotConnected": "Aucune session de terminal connectée avec cet ID d'instance.",
+    "testSelectedMode": "Un téléchargement utiliserait : {{mode}}",
+    "testLocalVisible": "Le répertoire local est visible depuis l'hôte connecté.",
+    "testLocalNotVisible": "Le répertoire local n'est PAS visible depuis l'hôte connecté."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Entrée tactile",
+        "images": "Stockage d'images"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Persistance de session terminale",
+        "description": "Durée de vie d'un terminal déconnecté sur le serveur avant sa fermeture. Minimum : 1 minute ; maximum : 1 440 minutes. Pour les sessions qui doivent durer plus longtemps, activez Auto-Tmux sur l'hôte."
+      },
+      "commandHistoryEnabled": {
+        "label": "Historique des commandes",
+        "description": "Autoriser l'enregistrement de l'historique des commandes. Lorsque désactivé, l'historique n'est pas sauvegardé, indépendamment des paramètres par hôte."
+      },
+      "imageStorageMode": {
+        "label": "Mode de stockage",
+        "description": "Emplacement où sont écrites les images du terminal collées et téléchargées. La sélection automatique par connexion (locale et distante [SFTP]) est fixe.",
+        "auto": "Auto",
+        "local": "Locale",
+        "remoteSftp": "Accès distant (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Répertoire local"
+      },
+      "imageHostPath": {
+        "label": "Chemin hôte",
+        "description": "Vue côté hôte du répertoire local reçu par les agents terminaux."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Nombre maximal d'images"
+      },
+      "imageMaxBytes": {
+        "label": "Capacité de stockage maximale"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Activer la barre d'outils du terminal",
+        "description": "Afficher une barre d'outils d'accès rapide ancrée au terminal actif pour les outils et les statistiques en direct de cet hôte."
+      },
+      "enableCommandHistory": {
+        "label": "Historique des commandes",
+        "description": "Enregistrer les commandes exécutées dans ce terminal pour l'historique et l'autocomplétion"
+      },
+      "enableTerminal": {
+        "label": "Activer le terminal"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Terminal local"
+  }
+}

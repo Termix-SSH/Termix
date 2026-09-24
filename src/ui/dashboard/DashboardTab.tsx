@@ -384,7 +384,10 @@ function QuickActionsCard({
               {pinnedHosts.slice(0, 4).map((host) => (
                 <button
                   key={host.id}
-                  onClick={() => onOpenTab(host, getDefaultConnectionTab(host))}
+                  onClick={() => {
+                    const type = getDefaultConnectionTab(host);
+                    if (type) onOpenTab(host, type);
+                  }}
                   className="group/btn flex items-center gap-2.5 px-4 py-2 hover:bg-muted transition-colors cursor-pointer border-b border-border last:border-b-0"
                 >
                   <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">

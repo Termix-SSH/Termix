@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Adăuga",
+    "arrowDown": "Săgeată în jos",
+    "arrowLeft": "Săgeată stânga",
+    "arrowRight": "Săgeată dreapta",
+    "arrowUp": "Săgeată în sus",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Șterge",
+    "done": "Făcut",
+    "editQuickKeys": "Editați tastele rapide",
+    "end": "Sfârşit",
+    "esc": "Esc",
+    "home": "Acasă",
+    "pageDown": "Pagină următoare",
+    "pageUp": "PagUp",
+    "paste": "Pastă",
+    "quickKeyPlaceholder": "de exemplu sudo ",
+    "quickKeysDesc": "Atingeți × pentru a elimina. Acceptă până la 8 caractere.",
+    "quickKeysTitle": "Taste rapide",
+    "removeQuickKey": "Elimina",
+    "resetDefaults": "Resetare la setările implicite",
+    "shift": "Schimbare",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Nu s-a putut activa Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux activat pentru {{host}}. Se aplică de la următoarea conexiune.",
+    "clipboardHttpWarning": "Nu s-a putut citi clipboard-ul. Unele browsere restricționează accesul la clipboard în afara HTTPS - încercați Ctrl+V sau serviți Termix prin HTTPS.",
+    "closeTab": "Aproape",
+    "connecting": "Se conectează...",
+    "connectionLost": "Conexiune pierdută",
+    "connectionRejected": "Conexiune respinsă de server. Vă rugăm să verificați autentificarea și configurația rețelei.",
+    "connectionTimeout": "Expirare conexiune",
+    "enableAutoTmuxAction": "Activează Auto-Tmux",
+    "hostKeyRejected": "Verificarea cheii gazdei SSH a fost respinsă. Conexiunea a fost anulată.",
+    "linkDialogCopy": "Copie",
+    "linkDialogOpen": "Deschide",
+    "linkDialogTitle": "Deschideți linkul",
+    "maxReconnectAttemptsReached": "S-a atins numărul maxim de încercări de reconectare",
+    "noHostSelected": "Nicio gazdă selectată",
+    "opksshAuthFailed": "Autentificarea a eșuat. Verificați acreditările și încercați din nou.",
+    "opksshTimeout": "Autentificarea a expirat. Vă rugăm să încercați din nou.",
+    "passwordPromptFillTitle": "Introduceți parola salvată în această solicitare?",
+    "reconnect": "Reconectați-vă",
+    "reconnected": "Reconectare cu succes",
+    "reconnecting": "Se reconecta... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Potrivire caz",
+    "searchClose": "Închide (Escape)",
+    "searchNext": "Următorul meci (Introduce)",
+    "searchNoResults": "Niciun rezultat",
+    "searchPlaceholder": "Găsi",
+    "searchPrevious": "Potrivire anterioară (Shift+Enter)",
+    "searchRegex": "Folosește expresia regulată",
+    "searchResultCount": "{{index}} din {{count}}",
+    "searchWholeWord": "Potrivire cuvânt întreg",
+    "sessionExpiredNotice": "Sesiunea anterioară de pe {{host}} a expirat după {{minutes}} minute de deconectare; shell-ul și tot ce rulează în el au dispărut. Activați Auto-Tmux pe această gazdă pentru a menține sesiunile active.",
+    "sessionExpiredNoticeNoMinutes": "Sesiunea anterioară pe {{host}} a expirat în timp ce era deconectat; shell-ul și tot ce rulează în el au dispărut. Activați Auto-Tmux pe această gazdă pentru a menține sesiunile active.",
+    "sessionTakenOver": "Sesiunea a fost deschisă într-o altă filă. Se reconectare...",
+    "tmuxAttached": "Clienți atașați",
+    "tmuxAttachedCount": "{{count}} atașat",
+    "tmuxCopyHint": "Ajustați selecția și apăsați Enter pentru a copia în clipboard",
+    "tmuxCreateNew": "Începeți o sesiune nouă",
+    "tmuxDetached": "Detașat de sesiunea tmux",
+    "tmuxLastActivity": "Ultima activitate",
+    "tmuxSessionAttached": "sesiune tmux atașată: {{name}}",
+    "tmuxSessionCreated": "Sesiune tmux creată: {{name}}",
+    "tmuxSessionPickerDesc": "Au fost găsite sesiuni tmux existente pe această gazdă. Selectați una pentru a o reatașa sau pentru a crea o sesiune nouă.",
+    "tmuxSessionPickerTitle": "Sesiuni tmux",
+    "tmuxTimeDays": "{{count}}zile în urmă",
+    "tmuxTimeHours": "{{count}}acum o oră",
+    "tmuxTimeJustNow": "chiar acum",
+    "tmuxTimeMinutes": "{{count}}acum câteva minute",
+    "tmuxUnavailable": "tmux nu este instalat pe gazda la distanță, revenind la shell-ul standard",
+    "tmuxWindowCount": "fereastră {{count}}",
+    "tmuxWindows": "Ferestre",
+    "unknownError": "A apărut o eroare necunoscută",
+    "vaultAuthDescription": "S-a deschis o fereastră pentru a vă conecta la HashiCorp Vault. Finalizați conectarea acolo; această conexiune va continua automat.",
+    "vaultAuthFailed": "Autentificarea în seif a eșuat. Vă rugăm să încercați din nou.",
+    "vaultAuthTitle": "Este necesară conectarea la seif",
+    "vaultReopen": "Redeschideți fereastra de conectare",
+    "websocketAbnormalClose": "Conexiunea s-a închis pe neașteptate. Acest lucru se poate datora unei probleme de configurare a proxy-ului invers sau a SSL. Vă rugăm să verificați jurnalele serverului.",
+    "websocketError": "Eroare de conexiune WebSocket"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Detașați tmux",
+    "detachTmuxDescription": "Detașați sesiunea tmux",
+    "dismissError": "Eroare de închidere a imaginii",
+    "hideToolbar": "Ascunde bara de instrumente",
+    "image": "Acțiuni de imagine (doar imagini)",
+    "imageActionFailed": "Acțiunea imaginii a eșuat",
+    "layout": "Mod de afișare a barei de instrumente",
+    "layoutExpanded": "Extins cu valori metrice",
+    "layoutIcon": "Numai pictogramă",
+    "layoutLabeled": "Pictograme și etichete",
+    "moveToolbar": "Mută bara de instrumente",
+    "moveToolbarHint": "Trageți pentru a repoziționa bara de instrumente",
+    "paste": "Lipiți imaginea",
+    "pasteImage": "Lipiți imaginea din clipboard (doar imagini)",
+    "retry": "Reîncercați",
+    "showToolbar": "Extindeți bara de instrumente",
+    "upload": "Încărcați imaginea",
+    "uploadImage": "Încărcați o imagine către gazdă",
+    "uploadingImage": "Se încarcă..."
+  },
+  "history": {
+    "noTerminalSelected": "Niciun terminal selectat",
+    "noTerminalSelectedHint": "Deschideți o filă de terminal SSH pentru a vizualiza istoricul comenzilor sale",
+    "searchPlaceholder": "Istoricul căutărilor...",
+    "clearAll": "Ștergeți tot",
+    "noHistoryEntries": "Nicio intrare în istoric",
+    "trackingDisabled": "Urmărirea istoricului este dezactivată"
+  },
+  "touchInput": {
+    "enabled": "Activează introducerea tactilă",
+    "enabledDesc": "Permiteți derularea tactilă cu un singur deget în terminale",
+    "momentumEnabled": "Activează impulsul",
+    "momentumEnabledDesc": "Continuați derularea scurtă după o glisare",
+    "advanced": "Avansat",
+    "resetDefaults": "Resetare la setările implicite",
+    "dragThreshold": "Pragul de rezistență",
+    "maxWheelDelta": "Delta maximă a roții",
+    "momentumSampleWindow": "Fereastra de eșantionare a impulsului",
+    "releaseGracePeriod": "Perioada de grație a lansării",
+    "minimumVelocity": "Viteză minimă",
+    "maximumVelocity": "Viteză maximă",
+    "maximumDuration": "Durată maximă",
+    "maximumTravel": "Cursă maximă",
+    "decayTime": "Timp de descreștere",
+    "pixelsPerTick": "Pixeli per bifă",
+    "maximumFrameInterval": "Interval maxim de cadre",
+    "maximumTicksPerFrame": "Număr maxim de ticuri per cadru"
+  },
+  "imageStorage": {
+    "instanceId": "ID-ul instanței sesiunii terminale",
+    "instanceIdDesc": "ID-ul instanței uneia dintre filele terminalului conectat, folosit pentru a testa vizibilitatea.",
+    "selectedModeUnavailable": "Indisponibil",
+    "test": "Test",
+    "testing": "Testare...",
+    "testFailed": "Nu s-a putut testa stocarea imaginilor",
+    "testConnected": "Sesiunea terminalului este conectată.",
+    "testNotConnected": "Nicio sesiune de terminal conectată cu acest ID de instanță.",
+    "testSelectedMode": "O încărcare ar folosi: {{mode}}",
+    "testLocalVisible": "Directorul local este vizibil de pe gazda conectată.",
+    "testLocalNotVisible": "Directorul local NU este vizibil de pe gazda conectată."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Intrare tactilă",
+        "images": "Stocarea imaginilor"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Persistența sesiunii terminale",
+        "description": "Cât timp este menținut activ pe server un terminal deconectat înainte de a fi închis. Min 1 · Max 1440 de minute. Pentru sesiunile care trebuie să dureze mai mult decât această durată, activați Auto-Tmux pe gazdă."
+      },
+      "commandHistoryEnabled": {
+        "label": "Istoricul comenzilor",
+        "description": "Permite înregistrarea istoricului comenzilor. Când este dezactivată, istoricul nu este salvat, indiferent de setările pentru fiecare gazdă."
+      },
+      "imageStorageMode": {
+        "label": "Mod de stocare",
+        "description": "Unde sunt scrise imaginile terminalului lipite și încărcate. Selecțiile automate prin conexiune, Local și Remote (SFTP) sunt fixe.",
+        "auto": "Auto",
+        "local": "Local",
+        "remoteSftp": "La distanță (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Director local"
+      },
+      "imageHostPath": {
+        "label": "Calea gazdă",
+        "description": "Vizualizarea din partea gazdei a directorului local pe care îl primesc agenții terminalului."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Număr maxim de imagini"
+      },
+      "imageMaxBytes": {
+        "label": "Capacitate maximă de stocare în octeți"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Activează bara de instrumente Terminal",
+        "description": "Afișează o bară de instrumente cu acces rapid atașată la terminalul activ pentru instrumentele și statisticile live ale acestei gazde"
+      },
+      "enableCommandHistory": {
+        "label": "Istoricul comenzilor",
+        "description": "Înregistrați comenzile executate în acest terminal pentru istoric și completare automată"
+      },
+      "enableTerminal": {
+        "label": "Activează terminalul"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Terminal local"
+  }
+}

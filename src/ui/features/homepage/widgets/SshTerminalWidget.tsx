@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { PluginComponent } from "@/plugin-host/component-registry";
 import { Terminal as TerminalIcon, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { registerWidget } from "./WidgetRegistry";
@@ -7,8 +8,7 @@ import type {
   WidgetComponentProps,
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
-import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
-import { Terminal, type TerminalHandle } from "@/features/terminal/Terminal";
+import type { TabHandle as TerminalHandle } from "@termix/plugin-sdk/frontend";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { WidgetTitle } from "./WidgetTitle";
@@ -136,17 +136,16 @@ function SshTerminalWidget({
     >
       <WidgetTitle title={widget.title} icon={<TerminalIcon size={11} />} />
       <div className="flex-1 overflow-hidden">
-        <CommandHistoryProvider>
-          <Terminal
-            ref={terminalRef}
-            hostConfig={hostConfig}
-            isVisible={true}
-            showTitle={false}
-            splitScreen={false}
-            disableAutoFocus={true}
-            onClose={() => setStarted(false)}
-          />
-        </CommandHistoryProvider>
+        <PluginComponent
+          id="terminal.view"
+          handleRef={terminalRef}
+          hostConfig={hostConfig}
+          isVisible={true}
+          showTitle={false}
+          splitScreen={false}
+          disableAutoFocus={true}
+          onClose={() => setStarted(false)}
+        />
       </div>
     </div>
   );

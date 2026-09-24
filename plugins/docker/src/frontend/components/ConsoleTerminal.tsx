@@ -19,9 +19,9 @@ import {
   useTranslation,
   useConnectionRetry,
 } from "@termix/plugin-sdk/frontend";
-import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
+import { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
-import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
+import { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
 import { useTheme } from "@/components/theme-provider";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 import {

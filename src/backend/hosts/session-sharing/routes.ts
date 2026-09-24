@@ -4,7 +4,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { sshLogger } from "../../utils/logger.js";
-import { sessionManager } from "../terminal/session-manager.js";
+import { liveTerminalSessions } from "../live-terminal-sessions.js";
 import {
   isLiveSession,
   isLiveSessionOwnedBy,
@@ -326,7 +326,7 @@ router.delete(
       // guac link only blocks *future* resolves until the guest's own socket ends.
       if (share.protocol === "ssh") {
         try {
-          sessionManager.ownerEndSession(
+          liveTerminalSessions.ownerEndSession(
             share.sessionId,
             "Session share revoked by owner",
           );
@@ -482,7 +482,7 @@ router.post(
       }
 
       if (share.protocol === "ssh") {
-        sessionManager.ownerEndSession(
+        liveTerminalSessions.ownerEndSession(
           share.sessionId,
           "Session ended by owner",
         );

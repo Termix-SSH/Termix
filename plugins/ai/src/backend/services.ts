@@ -221,3 +221,30 @@ export async function deleteSnippet(
 ): Promise<boolean> {
   return requireSnippetsAccess(userId).remove(id);
 }
+
+/** The terminal's command history, as ctx.services.get("terminal.history") returns it. */
+interface TerminalHistory {
+  list: (
+    hostId: number,
+    limit?: number,
+  ) => Promise<Array<{ command: string; executedAt: string }>>;
+}
+
+/**
+ * The user's recent commands on one host, or null when the ssh-terminal
+ * plugin is off or the user may not read its history.
+ */
+export async function listCommandHistory(
+  userId: string,
+  hostId: number,
+  limit: number,
+): Promise<Array<{ command: string; executedAt: string }> | null> {
+  if (!current) return null;
+  try {
+    return await current
+      .get<TerminalHistory>("terminal.history", { userId })
+      .list(hostId, limit);
+  } catch {
+    return null;
+  }
+}

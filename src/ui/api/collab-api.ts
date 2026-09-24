@@ -47,6 +47,8 @@ export interface CollabRoomDetail {
   stage: CollabStage;
   controllerUserId: string | null;
   controlRequests: CollabControlRequest[];
+  /** Where live room events are served, as /plugin-ws/<id>/<path>. */
+  eventsWsPath: string;
 }
 
 export interface CollabControlRequest {

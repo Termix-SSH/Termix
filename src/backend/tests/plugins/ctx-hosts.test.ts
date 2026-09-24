@@ -18,6 +18,9 @@ const h = vi.hoisted(() => ({
   updates: [] as Array<Record<string, unknown>>,
   updateResult: null as Record<string, unknown> | null,
   users: [] as Array<{ id: string; username: string }>,
+  activities: [] as Array<Record<string, unknown>>,
+  sessions: [] as number[],
+  released: [] as number[],
   roles: [] as Array<{
     id: number;
     name: string;
@@ -89,6 +92,23 @@ vi.mock("../../database/repositories/factory.js", () => ({
     },
     listDecryptedByUserId: async () => h.ownedHosts,
   }),
+}));
+vi.mock("../../services/recent-activity.js", () => ({
+  recordRecentActivity: async (
+    userId: string,
+    entry: Record<string, unknown>,
+  ) => {
+    h.activities.push({ userId, ...entry });
+    return { status: "logged", id: 1 };
+  },
+}));
+vi.mock("../../hosts/host-session-status.js", () => ({
+  hostSessionStatus: {
+    register: (hostId: number) => {
+      h.sessions.push(hostId);
+      return () => h.released.push(hostId);
+    },
+  },
 }));
 vi.mock("../../utils/shared-host-secrets-manager.js", () => ({
   SharedHostSecretsManager: {
@@ -345,5 +365,42 @@ describe("ctx.hosts", () => {
       audit: vi.fn(async () => {}),
     });
     expect(await hosts.listOwned()).toMatchObject([{ id: 1, name: "own" }]);
+  });
+});
+
+describe("ctx.hosts session tracking and activity", () => {
+  it("counts a live session through core and releases it", () => {
+    h.sessions = [];
+    h.released = [];
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:read"]),
+      audit: vi.fn(async () => {}),
+    });
+    const release = hosts.trackSession(4);
+    expect(h.sessions).toEqual([4]);
+    release();
+    expect(h.released).toEqual([4]);
+  });
+
+  it("refuses to track a session without hosts:read declared", () => {
+    const hosts = createPluginHosts({
+      manifest: manifest([]),
+      audit: vi.fn(async () => {}),
+    });
+    expect(() => hosts.trackSession(4)).toThrow(PluginCapabilityError);
+  });
+
+  it("records activity for the acting user only", async () => {
+    h.activities = [];
+    h.granted = new Set(["hosts:read"]);
+    h.actor = "user-7";
+    const hosts = createPluginHosts({
+      manifest: manifest(["hosts:read"]),
+      audit: vi.fn(async () => {}),
+    });
+    await hosts.recordActivity(4, "terminal", "web-01");
+    expect(h.activities).toEqual([
+      { userId: "user-7", type: "terminal", hostId: 4, hostName: "web-01" },
+    ]);
   });
 });

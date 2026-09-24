@@ -8,9 +8,7 @@ import {
   Settings,
   Usb,
   User,
-  TerminalSquare,
   Layers, // --- tmux-monitor ---
-  Clock,
   Fingerprint,
   Hammer,
   ScrollText,
@@ -38,11 +36,7 @@ const CollabRoomTab = lazy(() =>
     default: m.CollabRoomTab,
   })),
 );
-const LocalTerminal = lazy(() =>
-  import("@/features/local-terminal/LocalTerminal").then((m) => ({
-    default: m.LocalTerminal,
-  })),
-);
+
 const loadTmuxMonitor = () =>
   import("@/features/tmux-monitor/TmuxMonitor").then((m) => ({
     default: m.TmuxMonitor,
@@ -75,9 +69,7 @@ const SessionLogsPanel = lazy(() =>
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
-const HistoryPanel = lazy(() =>
-  import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
-);
+
 const SshToolsPanel = lazy(() =>
   import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
 );
@@ -146,8 +138,6 @@ export function tabIcon(type: TabType) {
   switch (type) {
     case "dashboard":
       return <LayoutDashboard className="size-3.5" />;
-    case "local-terminal":
-      return <TerminalSquare className="size-3.5" />;
     case "host-manager":
       return <Server className="size-3.5" />;
     case "user-profile":
@@ -169,8 +159,7 @@ export function tabIcon(type: TabType) {
       return <ScrollText className="size-3.5" />;
     case "macros":
       return <Braces className="size-3.5" />;
-    case "history":
-      return <Clock className="size-3.5" />;
+
     case "ssh-tools":
       return <Hammer className="size-3.5" />;
     case "split-screen":
@@ -262,11 +251,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
         />,
       );
 
-    case "local-terminal":
-      return withTabSuspense(
-        <LocalTerminal instanceId={tab.instanceId} isVisible={isVisible} />,
-      );
-
     // --- tmux-monitor ---
     case "tmux_monitor":
       return withTabSuspense(
@@ -320,16 +304,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
             terminalTabs={panelProps?.terminalTabs ?? []}
             activeTabId={panelProps?.targetTerminalTabId ?? ""}
             storageMode={panelProps?.storageMode ?? "local"}
-          />
-        </PanelTabFrame>,
-      );
-
-    case "history":
-      return withTabSuspense(
-        <PanelTabFrame>
-          <HistoryPanel
-            terminalTabs={panelProps?.terminalTabs ?? []}
-            activeTabId={panelProps?.targetTerminalTabId ?? ""}
           />
         </PanelTabFrame>,
       );

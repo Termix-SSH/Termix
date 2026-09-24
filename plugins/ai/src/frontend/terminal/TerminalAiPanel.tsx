@@ -18,7 +18,7 @@ import {
   persistAiPanelPosition,
   readStoredAiPanelPosition,
   type ToolbarPosition,
-} from "@/features/terminal/toolbar-geometry";
+} from "./panel-geometry";
 
 interface HistoryEntry {
   role: "user" | "assistant";

@@ -25,7 +25,6 @@ const CORE_CAPTURABLE = new Set([
   "termix-id",
   "session-logs",
   "macros",
-  "history",
   "ssh-tools",
 ]);
 
@@ -36,14 +35,12 @@ const CORE_SINGLETON = new Set([
   "termix-id",
   "session-logs",
   "macros",
-  "history",
   "ssh-tools",
 ]);
 
 /** Core tab types that are never part of a saved arrangement. */
 const CORE_UNSAVED = new Set([
   "dashboard",
-  "local-terminal",
   "host-manager",
   "user-profile",
   "admin-settings",

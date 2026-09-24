@@ -2,9 +2,8 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { sessionManager } from "../../hosts/terminal/session-manager.js";
+import { liveTerminalSessions } from "../../hosts/live-terminal-sessions.js";
 import {
-  getCurrentSettingValue,
   createCurrentOpenTabRepository,
   createCurrentSessionShareRepository,
 } from "../repositories/factory.js";
@@ -26,17 +25,10 @@ const authenticateJWT = authManager.createAuthMiddleware();
  */
 const DEFAULT_TAB_TTL_MINUTES = 30;
 
+// Tabs live as long as the terminal keeps a detached session.
 function getTabTtlMs(): number {
-  try {
-    const value = getCurrentSettingValue("terminal_session_timeout_minutes");
-    if (value) {
-      const minutes = parseInt(value, 10);
-      if (!isNaN(minutes) && minutes > 0) return minutes * 60_000;
-    }
-  } catch {
-    // DB not available, use default
-  }
-  return DEFAULT_TAB_TTL_MINUTES * 60_000;
+  const minutes = liveTerminalSessions.idleTimeoutMinutes();
+  return (minutes && minutes > 0 ? minutes : DEFAULT_TAB_TTL_MINUTES) * 60_000;
 }
 
 // Legacy tab types that were renamed. Normalize on read so previously saved
@@ -275,6 +267,33 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
 /**
  * @openapi
+ * /open-tabs/session-timeout:
+ *   get:
+ *     summary: Get how long a detached session is kept
+ *     description: The terminal's idle timeout for detached sessions, which is also how long a saved open tab lives. 30 while the terminal is off.
+ *     tags:
+ *       - Open Tabs
+ *     responses:
+ *       200:
+ *         description: The timeout in minutes.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 minutes:
+ *                   type: integer
+ */
+router.get(
+  "/session-timeout",
+  authenticateJWT,
+  (_req: Request, res: Response) => {
+    res.json({ minutes: getTabTtlMs() / 60_000 });
+  },
+);
+
+/**
+ * @openapi
  * /open-tabs/active-sessions:
  *   get:
  *     summary: Get all active backend sessions for the current user
@@ -324,12 +343,12 @@ router.get(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const ownSessions = sessionManager.getUserSessions(userId);
+      const ownSessions = liveTerminalSessions.listForUser(userId);
       const result = ownSessions.map((s) => ({
         sessionId: s.id,
         hostId: s.hostId,
         hostName: s.hostName,
-        tabInstanceId: s.attachedTabInstanceId ?? s.tabInstanceId ?? null,
+        tabInstanceId: s.tabInstanceId,
         isConnected: s.isConnected,
         createdAt: s.createdAt,
         isOwnSession: true,
@@ -344,16 +363,13 @@ router.get(
         );
       for (const share of sharedWithMe) {
         if (share.protocol !== "ssh") continue;
-        const sharedSession = sessionManager.getSession(share.sessionId);
+        const sharedSession = liveTerminalSessions.getSession(share.sessionId);
         if (!sharedSession || !sharedSession.isConnected) continue;
         result.push({
           sessionId: sharedSession.id,
           hostId: sharedSession.hostId,
           hostName: sharedSession.hostName,
-          tabInstanceId:
-            sharedSession.attachedTabInstanceId ??
-            sharedSession.tabInstanceId ??
-            null,
+          tabInstanceId: sharedSession.tabInstanceId,
           isConnected: sharedSession.isConnected,
           createdAt: sharedSession.createdAt,
           isOwnSession: false,

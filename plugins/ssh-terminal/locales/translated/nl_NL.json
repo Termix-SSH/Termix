@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Toevoegen",
+    "arrowDown": "Pijl omlaag",
+    "arrowLeft": "Pijl naar links",
+    "arrowRight": "Pijl naar rechts",
+    "arrowUp": "Pijl omhoog",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Klaar",
+    "editQuickKeys": "Sneltoetsen bewerken",
+    "end": "Einde",
+    "esc": "Esc",
+    "home": "Thuis",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Plakken",
+    "quickKeyPlaceholder": "bijv. sudo ",
+    "quickKeysDesc": "Tik op × om te verwijderen. Ondersteunt maximaal 8 tekens.",
+    "quickKeysTitle": "Sneltoetsen",
+    "removeQuickKey": "Verwijderen",
+    "resetDefaults": "Terugzetten naar standaardinstellingen",
+    "shift": "Verschuiving",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Auto-Tmux inschakelen is mislukt.",
+    "autoTmuxEnabled": "Auto-Tmux ingeschakeld voor {{host}}. Dit geldt vanaf de volgende verbinding.",
+    "clipboardHttpWarning": "Kon het klembord niet lezen. Sommige browsers beperken de toegang tot het klembord buiten HTTPS - probeer in plaats daarvan Ctrl+V, of serveer Termix via HTTPS.",
+    "closeTab": "Dichtbij",
+    "connecting": "Verbinden...",
+    "connectionLost": "Verbinding verbroken",
+    "connectionRejected": "Verbinding geweigerd door de server. Controleer uw authenticatie- en netwerkconfiguratie.",
+    "connectionTimeout": "Verbindingstime-out",
+    "enableAutoTmuxAction": "Auto-Tmux inschakelen",
+    "hostKeyRejected": "SSH-hostsleutelverificatie geweigerd. Verbinding verbroken.",
+    "linkDialogCopy": "Kopiëren",
+    "linkDialogOpen": "Open",
+    "linkDialogTitle": "Open link",
+    "maxReconnectAttemptsReached": "Maximaal aantal herverbindingspogingen bereikt",
+    "noHostSelected": "Geen host geselecteerd",
+    "opksshAuthFailed": "Authenticatie mislukt. Controleer uw inloggegevens en probeer het opnieuw.",
+    "opksshTimeout": "De authenticatie is mislukt vanwege een time-out. Probeer het opnieuw.",
+    "passwordPromptFillTitle": "Voer het opgeslagen wachtwoord in op dit veld.",
+    "reconnect": "Opnieuw verbinding maken",
+    "reconnected": "De verbinding is succesvol hersteld.",
+    "reconnecting": "Opnieuw verbinding maken... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Lucifersdoosje",
+    "searchClose": "Sluiten (Escape)",
+    "searchNext": "Volgende wedstrijd (Invoeren)",
+    "searchNoResults": "Geen resultaten",
+    "searchPlaceholder": "Vinden",
+    "searchPrevious": "Vorige wedstrijd (Shift+Enter)",
+    "searchRegex": "Gebruik een reguliere expressie.",
+    "searchResultCount": "{{index}} van {{count}}",
+    "searchWholeWord": "Combineer het hele woord",
+    "sessionExpiredNotice": "Je vorige sessie op {{host}} is na {{minutes}} minuten verlopen; de shell en alles wat erin draaide, is verdwenen. Schakel Auto-Tmux op deze host in om sessies actief te houden.",
+    "sessionExpiredNoticeNoMinutes": "Je vorige sessie op {{host}} is verlopen terwijl de verbinding verbroken was; de shell en alles wat daarin draaide, is verdwenen. Schakel Auto-Tmux in op deze host om sessies actief te houden.",
+    "sessionTakenOver": "De sessie is in een ander tabblad geopend. Opnieuw verbinding maken...",
+    "tmuxAttached": "Aangesloten klanten",
+    "tmuxAttachedCount": "{{count}} bevestigd",
+    "tmuxCopyHint": "Pas je selectie aan en druk op Enter om naar het klembord te kopiëren.",
+    "tmuxCreateNew": "Start een nieuwe sessie",
+    "tmuxDetached": "Losgekoppeld van de tmux-sessie",
+    "tmuxLastActivity": "Laatste activiteit",
+    "tmuxSessionAttached": "tmux-sessie gekoppeld: {{name}}",
+    "tmuxSessionCreated": "tmux-sessie aangemaakt: {{name}}",
+    "tmuxSessionPickerDesc": "Bestaande tmux-sessies gevonden op deze host. Selecteer er een om opnieuw verbinding te maken of een nieuwe sessie te creëren.",
+    "tmuxSessionPickerTitle": "tmux-sessies",
+    "tmuxTimeDays": "{{count}}dagen geleden",
+    "tmuxTimeHours": "{{count}}uur geleden",
+    "tmuxTimeJustNow": "zojuist",
+    "tmuxTimeMinutes": "{{count}}m geleden",
+    "tmuxUnavailable": "Tmux is niet geïnstalleerd op de externe host, er wordt teruggevallen op de standaard shell.",
+    "tmuxWindowCount": "{{count}} venster",
+    "tmuxWindows": "Windows",
+    "unknownError": "Er is een onbekende fout opgetreden.",
+    "vaultAuthDescription": "Er is een venster geopend om in te loggen bij HashiCorp Vault. Voltooi de aanmelding daar; deze verbinding wordt automatisch tot stand gebracht.",
+    "vaultAuthFailed": "Authenticatie voor de kluis is mislukt. Probeer het opnieuw.",
+    "vaultAuthTitle": "Aanmelden bij Vault is vereist.",
+    "vaultReopen": "Heropen het aanmeldvenster",
+    "websocketAbnormalClose": "De verbinding is onverwacht verbroken. Dit kan te wijten zijn aan een probleem met de reverse proxy of de SSL-configuratie. Controleer de serverlogboeken.",
+    "websocketError": "WebSocket-verbindingsfout"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Ontkoppel tmux",
+    "detachTmuxDescription": "Ontkoppel de tmux-sessie",
+    "dismissError": "Afbeeldingsfout negeren",
+    "hideToolbar": "Werkbalk verbergen",
+    "image": "Acties met afbeeldingen (alleen afbeeldingen)",
+    "imageActionFailed": "Afbeeldingsactie mislukt",
+    "layout": "Werkbalkweergavemodus",
+    "layoutExpanded": "Uitgebreid met meetgegevens",
+    "layoutIcon": "Alleen pictogram",
+    "layoutLabeled": "Pictogrammen en labels",
+    "moveToolbar": "Verplaats de werkbalk",
+    "moveToolbarHint": "Sleep om de werkbalk te verplaatsen.",
+    "paste": "Plak afbeelding",
+    "pasteImage": "Plak een afbeelding vanuit het klembord (alleen afbeeldingen)",
+    "retry": "Opnieuw proberen",
+    "showToolbar": "Werkbalk uitklappen",
+    "upload": "Afbeelding uploaden",
+    "uploadImage": "Upload een afbeelding naar de host.",
+    "uploadingImage": "Bezig met uploaden..."
+  },
+  "history": {
+    "noTerminalSelected": "Geen terminal geselecteerd",
+    "noTerminalSelectedHint": "Open een SSH-terminaltabblad om de opdrachtgeschiedenis te bekijken.",
+    "searchPlaceholder": "Zoekgeschiedenis...",
+    "clearAll": "Alles wissen",
+    "noHistoryEntries": "Geen geschiedenisvermeldingen",
+    "trackingDisabled": "Geschiedenisregistratie is uitgeschakeld"
+  },
+  "touchInput": {
+    "enabled": "Aanraakinvoer inschakelen",
+    "enabledDesc": "Schakel scrollen met één vinger in op terminals in.",
+    "momentumEnabled": "Activeer momentum",
+    "momentumEnabledDesc": "Scroll nog even kort verder na een veegbeweging.",
+    "advanced": "Geavanceerd",
+    "resetDefaults": "Terugzetten naar standaardinstellingen",
+    "dragThreshold": "Sleepdrempel",
+    "maxWheelDelta": "Maximale wieldelta",
+    "momentumSampleWindow": "Momentum-steekproefvenster",
+    "releaseGracePeriod": "Vrijlatingstermijn",
+    "minimumVelocity": "Minimale snelheid",
+    "maximumVelocity": "Maximale snelheid",
+    "maximumDuration": "Maximale duur",
+    "maximumTravel": "Maximale reis",
+    "decayTime": "Vervaltijd",
+    "pixelsPerTick": "Pixels per tik",
+    "maximumFrameInterval": "Maximale frame-interval",
+    "maximumTicksPerFrame": "Maximaal aantal ticks per frame"
+  },
+  "imageStorage": {
+    "instanceId": "Terminal sessie instantie-ID",
+    "instanceIdDesc": "Instantie-ID van een van uw verbonden terminaltabbladen, gebruikt om de zichtbaarheid te testen.",
+    "selectedModeUnavailable": "Niet beschikbaar",
+    "test": "Test",
+    "testing": "Testen...",
+    "testFailed": "Het testen van de beeldopslag is mislukt.",
+    "testConnected": "De terminalsessie is verbonden.",
+    "testNotConnected": "Er is geen verbonden terminalsessie met deze instantie-ID.",
+    "testSelectedMode": "Een upload zou het volgende gebruiken: {{mode}}",
+    "testLocalVisible": "De lokale map is zichtbaar vanaf de verbonden host.",
+    "testLocalNotVisible": "De lokale map is NIET zichtbaar vanaf de verbonden host."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Aanraakinvoer",
+        "images": "Afbeeldingsopslag"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminalsessiepersistentie",
+        "description": "Hoe lang een losgekoppelde terminal actief blijft op de server voordat deze wordt gesloten. Min. 1 · Max. 1440 minuten. Voor sessies die langer dan deze tijd actief moeten blijven, schakelt u Auto-Tmux in op de host."
+      },
+      "commandHistoryEnabled": {
+        "label": "Commandogeschiedenis",
+        "description": "Sta het vastleggen van de opdrachtgeschiedenis toe. Indien uitgeschakeld, wordt de geschiedenis niet opgeslagen, ongeacht de instellingen per host."
+      },
+      "imageStorageMode": {
+        "label": "Opslagmodus",
+        "description": "Hier worden geplakte en geüploade terminalafbeeldingen opgeslagen. Automatische selectie op basis van de verbinding, lokaal en extern (SFTP) zijn vastgelegd.",
+        "auto": "Auto",
+        "local": "Lokaal",
+        "remoteSftp": "Op afstand (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Lokale map"
+      },
+      "imageHostPath": {
+        "label": "Hostpad",
+        "description": "De weergave aan de hostzijde van de lokale directory die terminalagents ontvangen."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Maximaal aantal afbeeldingen"
+      },
+      "imageMaxBytes": {
+        "label": "Maximale opslagcapaciteit in bytes"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Terminalwerkbalk inschakelen",
+        "description": "Toon een sneltoegangsbalk die is vastgezet aan de actieve terminal voor de tools en live statistieken van deze host."
+      },
+      "enableCommandHistory": {
+        "label": "Commandogeschiedenis",
+        "description": "Sla de commando's die in deze terminal worden uitgevoerd op voor de geschiedenis en automatisch aanvullen."
+      },
+      "enableTerminal": {
+        "label": "Terminal inschakelen"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Lokale terminal"
+  }
+}

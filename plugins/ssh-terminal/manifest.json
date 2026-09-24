@@ -2,7 +2,7 @@
   "id": "ssh-terminal",
   "name": "SSH Terminal",
   "version": "1.0.0",
-  "description": "Interactive SSH terminal sessions, with jump hosts, host key verification and session sharing.",
+  "description": "Interactive SSH terminal sessions, with jump hosts, host key verification, command history and the desktop app's local terminal.",
   "author": {
     "name": "Termix"
   },
@@ -19,7 +19,38 @@
     "credentials:use",
     "ssh:connect",
     "network:serve",
+    "db:own",
+    "events:core",
     "ui:surface"
+  ],
+  "provides": [
+    {
+      "service": "sessions.live",
+      "version": "1.0.0",
+      "permission": "ssh-terminal.sessions"
+    },
+    {
+      "service": "terminal.history",
+      "version": "1.0.0",
+      "permission": "ssh-terminal.history"
+    }
+  ],
+  "requires": [
+    {
+      "service": "tmux.sessions",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "sessions.sharing",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "recordings.writer",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
   ],
   "contributes": {
     "tabs": [
@@ -28,6 +59,19 @@
         "titleKey": "nav.terminal",
         "icon": "SquareTerminal",
         "openFrom": ["host-context-menu", "palette"]
+      },
+      {
+        "id": "local-terminal",
+        "titleKey": "nav.localTerminal",
+        "icon": "Laptop",
+        "openFrom": ["rail", "palette"]
+      }
+    ],
+    "panels": [
+      {
+        "id": "history",
+        "titleKey": "nav.history",
+        "icon": "History"
       }
     ],
     "actionSlots": [
@@ -36,14 +80,160 @@
         "accepts": ["button"]
       },
       {
-        "id": "terminal.dock",
+        "id": "terminal.toolbarStatus",
+        "accepts": ["component"]
+      },
+      {
+        "id": "terminal.sidePanel",
         "accepts": ["component"]
       },
       {
         "id": "terminal.overlay",
         "accepts": ["component"]
       }
-    ]
+    ],
+    "permissions": [
+      {
+        "name": "sessions",
+        "titleKey": "permissions.sessions.title",
+        "descriptionKey": "permissions.sessions.description",
+        "defaultRoles": ["admin", "user"]
+      },
+      {
+        "name": "history",
+        "titleKey": "permissions.history.title",
+        "descriptionKey": "permissions.history.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "sessionTimeoutMinutes",
+          "type": "number",
+          "labelKey": "settings.admin.sessionTimeoutMinutes.label",
+          "descriptionKey": "settings.admin.sessionTimeoutMinutes.description",
+          "group": "settings.admin.group.sessions",
+          "min": 1,
+          "max": 1440,
+          "default": 30
+        },
+        {
+          "key": "sessionPersistence",
+          "type": "boolean",
+          "labelKey": "settings.admin.sessionPersistence.label",
+          "descriptionKey": "settings.admin.sessionPersistence.description",
+          "group": "settings.admin.group.sessions",
+          "default": true
+        },
+        {
+          "key": "commandHistoryEnabled",
+          "type": "boolean",
+          "labelKey": "settings.admin.commandHistoryEnabled.label",
+          "descriptionKey": "settings.admin.commandHistoryEnabled.description",
+          "group": "settings.admin.group.sessions",
+          "default": true
+        },
+        {
+          "key": "touchInput",
+          "type": "custom",
+          "component": "touchInput",
+          "group": "settings.admin.group.touch"
+        },
+        {
+          "key": "imageStorageMode",
+          "type": "select",
+          "labelKey": "settings.admin.imageStorageMode.label",
+          "descriptionKey": "settings.admin.imageStorageMode.description",
+          "group": "settings.admin.group.images",
+          "options": [
+            {
+              "value": "auto",
+              "labelKey": "settings.admin.imageStorageMode.auto"
+            },
+            {
+              "value": "local",
+              "labelKey": "settings.admin.imageStorageMode.local"
+            },
+            {
+              "value": "remote-sftp",
+              "labelKey": "settings.admin.imageStorageMode.remoteSftp"
+            }
+          ]
+        },
+        {
+          "key": "imageLocalDir",
+          "type": "secret",
+          "labelKey": "settings.admin.imageLocalDir.label",
+          "descriptionKey": "settings.admin.imageLocalDir.description",
+          "group": "settings.admin.group.images"
+        },
+        {
+          "key": "imageHostPath",
+          "type": "string",
+          "labelKey": "settings.admin.imageHostPath.label",
+          "descriptionKey": "settings.admin.imageHostPath.description",
+          "group": "settings.admin.group.images"
+        },
+        {
+          "key": "imageTtlMs",
+          "type": "number",
+          "labelKey": "settings.admin.imageTtlMs.label",
+          "descriptionKey": "settings.admin.imageTtlMs.description",
+          "group": "settings.admin.group.images",
+          "min": 0
+        },
+        {
+          "key": "imageMaxCount",
+          "type": "number",
+          "labelKey": "settings.admin.imageMaxCount.label",
+          "descriptionKey": "settings.admin.imageMaxCount.description",
+          "group": "settings.admin.group.images",
+          "min": 1
+        },
+        {
+          "key": "imageMaxBytes",
+          "type": "number",
+          "labelKey": "settings.admin.imageMaxBytes.label",
+          "descriptionKey": "settings.admin.imageMaxBytes.description",
+          "group": "settings.admin.group.images",
+          "min": 1048576
+        },
+        {
+          "key": "imageStorageTest",
+          "type": "custom",
+          "component": "imageStorageTest",
+          "group": "settings.admin.group.images"
+        }
+      ],
+      "host": {
+        "fields": [
+          {
+            "key": "enableTerminal",
+            "type": "boolean",
+            "labelKey": "settings.host.enableTerminal.label",
+            "descriptionKey": "settings.host.enableTerminal.description",
+            "default": true
+          },
+          {
+            "key": "enableTerminalToolbar",
+            "type": "boolean",
+            "labelKey": "settings.host.enableTerminalToolbar.label",
+            "descriptionKey": "settings.host.enableTerminalToolbar.description",
+            "requires": "enableTerminal",
+            "default": true
+          },
+          {
+            "key": "enableCommandHistory",
+            "type": "boolean",
+            "labelKey": "settings.host.enableCommandHistory.label",
+            "descriptionKey": "settings.host.enableCommandHistory.description",
+            "requires": "enableTerminal",
+            "default": true
+          }
+        ]
+      }
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

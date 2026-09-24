@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { TabProvider } from "@/shell/TabContext.tsx";
-import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 import { SidebarProvider } from "@/components/sidebar.tsx";
 import {
   getSSHHosts,
@@ -173,7 +172,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
     return (
       <SidebarProvider>
         <TabProvider>
-          <CommandHistoryProvider>
+          <>
             <div
               className="w-full h-screen overflow-hidden flex items-center justify-center"
               style={{ backgroundColor: "var(--bg-base)" }}
@@ -187,7 +186,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
                 offset={20}
               />
             </div>
-          </CommandHistoryProvider>
+          </>
         </TabProvider>
       </SidebarProvider>
     );
@@ -202,14 +201,14 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
   return (
     <SidebarProvider>
       <TabProvider>
-        <CommandHistoryProvider>
+        <>
           <div
             className="w-full h-screen overflow-hidden"
             style={{ backgroundColor: "var(--bg-base)" }}
           >
             {children(hostConfig, phase)}
           </div>
-        </CommandHistoryProvider>
+        </>
       </TabProvider>
     </SidebarProvider>
   );

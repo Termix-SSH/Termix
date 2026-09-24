@@ -31,6 +31,7 @@ import {
   registerSlotContribution,
 } from "@/shell/action-registry";
 import { pluginWsUrl } from "@/lib/plugin-transport";
+import { registerPluginComponent } from "./component-registry";
 import type { WidgetTypeDefinition } from "@/types/homepage-types";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -168,6 +169,9 @@ export function createPluginApp(
           standaloneViews: options.standaloneViews,
           panelFrame: options.panelFrame,
           inLayouts: options.inLayouts,
+          commandTarget: options.commandTarget,
+          ownBackground: options.ownBackground,
+          multiInstance: options.multiInstance,
           preload: options.preload,
         }),
       );
@@ -304,6 +308,10 @@ export function createPluginApp(
     },
 
     invokeAction: (id, ...args) => invokeAction(id, ...args),
+
+    registerComponent(id, component) {
+      return track(registerPluginComponent(id, scoped(component)));
+    },
 
     registerSshAuthEditor(editor) {
       return track(

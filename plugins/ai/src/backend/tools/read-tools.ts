@@ -1,7 +1,6 @@
 import {
   createCurrentNotificationChannelRepository,
   createCurrentAutomationRepository,
-  createCurrentCommandHistoryRepository,
   createCurrentHomepageItemRepository,
   createCurrentHostRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
@@ -11,6 +10,7 @@ import {
   getNetworkTopology,
   listSnippets,
   listFleets,
+  listCommandHistory,
 } from "../services.js";
 
 /**
@@ -244,13 +244,9 @@ export const readTools: AiTool[] = [
       );
       if (!host) return { error: "Host not found" };
 
-      const commands =
-        await createCurrentCommandHistoryRepository().listCommandsForHost(
-          context.userId,
-          hostId,
-          limit,
-        );
-      return { commands };
+      const history = await listCommandHistory(context.userId, hostId, limit);
+      if (history === null) return { commands: [], unavailable: true };
+      return { commands: history.map((entry) => entry.command) };
     },
   },
   {

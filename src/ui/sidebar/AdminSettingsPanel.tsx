@@ -41,8 +41,6 @@ import {
   updateSecondFactorAfterExternalLogin,
   getOidcSilentLoginDefault,
   updateOidcSilentLoginDefault,
-  getCommandHistoryEnabled,
-  updateCommandHistoryEnabled,
   isElectron,
   getUserRoles,
 } from "@/main-axios";
@@ -51,14 +49,9 @@ import {
   updateHostDefaults,
   getAnalyticsEnabled,
   updateAnalyticsEnabled,
-  getTerminalImageStorageSettings,
-  updateTerminalImageStorageSettings,
-  testTerminalImageStorage,
   getBranding,
   updateBranding,
   type HostDefaults,
-  type TerminalImageStorageSettings,
-  type TerminalImageStorageTestResult,
   type BrandingSettings,
 } from "@/api/settings-api";
 import {
@@ -94,12 +87,7 @@ import {
   type AdminUser,
 } from "./AdminManagementSections";
 import { toast } from "sonner";
-import {
-  getTerminalSessionSettings,
-  updateTerminalSessionSettings,
-  getStepCaSettings,
-  updateStepCaSettings,
-} from "@/api/settings-api";
+import { getStepCaSettings, updateStepCaSettings } from "@/api/settings-api";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
   AdminDatabaseSection,
@@ -118,17 +106,6 @@ import {
   AdminUnlinkAccountDialog,
 } from "./AdminUserDialogs";
 import { AdminUserManagePanel } from "./AdminUserManagePanel";
-import {
-  TOUCH_INPUT_DEFAULTS,
-  type TouchInputSettings,
-} from "@/types/touch-input-settings";
-import {
-  getTouchInputSettings,
-  updateTouchInputSettings,
-} from "@/api/touch-input-settings-api";
-import { cacheTouchInputSettings } from "@/features/terminal/touch-input-settings-store";
-import { AdminTouchInputSection } from "./AdminTouchInputSection";
-import { AdminImageStorageSection } from "./AdminImageStorageSection";
 import { AdminBrandingSection } from "./AdminBrandingSection";
 
 type ApiErrorLike = {
@@ -162,18 +139,11 @@ export function AdminSettingsPanel({
   const [passwordLoginForced, setPasswordLoginForced] = useState(false);
   const [allowPasswordReset, setAllowPasswordReset] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("24");
-  const [terminalTimeout, setTerminalTimeout] = useState("30");
-  useEffect(() => {
-    getTerminalSessionSettings()
-      .then((settings) => setTerminalTimeout(String(settings.timeoutMinutes)))
-      .catch(() => {});
-  }, []);
   const [statusInterval, setStatusInterval] = useState("60");
   const [metricsInterval, setMetricsInterval] = useState("30");
   const [guacEnabled, setGuacEnabled] = useState(false);
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
-  const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [oidcSilentLoginDefaultLocked, setOidcSilentLoginDefaultLocked] =
@@ -204,19 +174,9 @@ export function AdminSettingsPanel({
   const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
     useState<string[]>([]);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
-  const [touchInputSettings, setTouchInputSettings] =
-    useState<TouchInputSettings>({ ...TOUCH_INPUT_DEFAULTS });
 
   // Terminal image storage state. localDir stays a draft: the API never
   // returns the configured backend path, so it is only sent when changed.
-  const [imageStorageSettings, setImageStorageSettings] =
-    useState<TerminalImageStorageSettings | null>(null);
-  const [imageStorageLocalDir, setImageStorageLocalDir] = useState("");
-  const [imageStorageInstanceId, setImageStorageInstanceId] = useState("");
-  const [imageStorageSaving, setImageStorageSaving] = useState(false);
-  const [imageStorageTesting, setImageStorageTesting] = useState(false);
-  const [imageStorageTestResult, setImageStorageTestResult] =
-    useState<TerminalImageStorageTestResult | null>(null);
 
   const [brandingSettings, setBrandingSettings] =
     useState<BrandingSettings | null>(null);
@@ -400,14 +360,11 @@ export function AdminSettingsPanel({
         oidcProv,
         secondFactorExternal,
         oidcSilent,
-        cmdHistory,
         analytics,
         sessionSharingEnabled,
-        touchInput,
         notificationEndpoints,
         stepCaEndpoints,
         secretSourceEndpoints,
-        imageStorage,
         branding,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
@@ -420,14 +377,11 @@ export function AdminSettingsPanel({
         getOidcAutoProvision(),
         getSecondFactorAfterExternalLogin(),
         getOidcSilentLoginDefault(),
-        getCommandHistoryEnabled(),
         getAnalyticsEnabled(),
         getSessionSharingGloballyEnabled(),
-        getTouchInputSettings(),
         getNotificationPrivateEndpoints(),
         getStepCaPrivateEndpoints(),
         getSecretSourcePrivateEndpoints(),
-        getTerminalImageStorageSettings(),
         getBranding(),
       ]);
 
@@ -460,19 +414,12 @@ export function AdminSettingsPanel({
         setGuacEnabled(guac.value.enabled);
         setGuacUrl(guac.value.url || "guacd:4822");
       }
-      if (cmdHistory.status === "fulfilled") {
-        setCommandHistoryEnabled(cmdHistory.value.enabled);
-      }
       if (analytics.status === "fulfilled") {
         setAnalyticsEnabled(analytics.value.enabled);
         setAnalyticsLocked(analytics.value.locked ?? false);
       }
       if (sessionSharingEnabled.status === "fulfilled") {
         setSessionSharingGloballyEnabled(sessionSharingEnabled.value.enabled);
-      }
-      if (touchInput.status === "fulfilled") {
-        setTouchInputSettings(touchInput.value);
-        cacheTouchInputSettings(touchInput.value);
       }
       if (stepCaEndpoints.status === "fulfilled") {
         setStepCaPrivateEndpoints(stepCaEndpoints.value);
@@ -482,9 +429,6 @@ export function AdminSettingsPanel({
       }
       if (notificationEndpoints.status === "fulfilled") {
         setNotificationPrivateEndpoints(notificationEndpoints.value);
-      }
-      if (imageStorage.status === "fulfilled") {
-        setImageStorageSettings(imageStorage.value);
       }
       if (branding.status === "fulfilled") {
         setBrandingSettings(branding.value);
@@ -597,17 +541,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleToggleCommandHistory() {
-    const newVal = !commandHistoryEnabled;
-    setCommandHistoryEnabled(newVal);
-    try {
-      await updateCommandHistoryEnabled(newVal);
-    } catch {
-      setCommandHistoryEnabled(!newVal);
-      toast.error(t("admin.updateCommandHistoryFailed"));
-    }
-  }
-
   async function handleToggleAnalytics() {
     if (analyticsLocked) return;
     const newVal = !analyticsEnabled;
@@ -679,47 +612,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function saveTouchInputSettings(settings = touchInputSettings) {
-    try {
-      const saved = await updateTouchInputSettings(settings);
-      setTouchInputSettings(saved);
-      cacheTouchInputSettings(saved);
-      toast.success(t("admin.touchSaved"));
-    } catch {
-      toast.error(t("admin.touchSaveFailed"));
-    }
-  }
-
-  function resetTouchInputSettings() {
-    const defaults = { ...TOUCH_INPUT_DEFAULTS };
-    setTouchInputSettings(defaults);
-    void saveTouchInputSettings(defaults);
-  }
-
-  async function handleSaveImageStorage() {
-    if (!imageStorageSettings) return;
-    setImageStorageSaving(true);
-    try {
-      const saved = await updateTerminalImageStorageSettings({
-        mode: imageStorageSettings.mode,
-        hostPath: imageStorageSettings.hostPath,
-        ttlMs: imageStorageSettings.ttlMs,
-        maxCount: imageStorageSettings.maxCount,
-        maxBytes: imageStorageSettings.maxBytes,
-        ...(imageStorageLocalDir.trim()
-          ? { localDir: imageStorageLocalDir.trim() }
-          : {}),
-      });
-      setImageStorageSettings(saved);
-      setImageStorageLocalDir("");
-      toast.success(t("admin.imageStorageSaved"));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.imageStorageSaveFailed")));
-    } finally {
-      setImageStorageSaving(false);
-    }
-  }
-
   async function handleSaveBranding() {
     if (!brandingSettings) return;
     setBrandingSaving(true);
@@ -754,24 +646,6 @@ export function AdminSettingsPanel({
     }
   }
 
-  async function handleTestImageStorage() {
-    if (!imageStorageInstanceId.trim()) {
-      toast.error(t("admin.imageStorageInstanceIdRequired"));
-      return;
-    }
-    setImageStorageTesting(true);
-    setImageStorageTestResult(null);
-    try {
-      setImageStorageTestResult(
-        await testTerminalImageStorage(imageStorageInstanceId.trim()),
-      );
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.imageStorageTestFailed")));
-    } finally {
-      setImageStorageTesting(false);
-    }
-  }
-
   async function handleSaveSessionTimeout() {
     const hours = parseInt(sessionTimeout, 10);
     if (isNaN(hours) || hours < 1 || hours > 720) {
@@ -783,20 +657,6 @@ export function AdminSettingsPanel({
       toast.success(t("admin.sessionTimeoutSaved"));
     } catch {
       toast.error(t("admin.sessionTimeoutSaveFailed"));
-    }
-  }
-
-  async function handleSaveTerminalTimeout() {
-    const minutes = parseInt(terminalTimeout, 10);
-    if (isNaN(minutes) || minutes < 1 || minutes > 1440) {
-      toast.error(t("admin.terminalSessionTimeoutRange"));
-      return;
-    }
-    try {
-      await updateTerminalSessionSettings({ timeoutMinutes: minutes });
-      toast.success(t("admin.terminalSessionTimeoutSaved"));
-    } catch {
-      toast.error(t("admin.terminalSessionTimeoutSaveFailed"));
     }
   }
 
@@ -1261,14 +1121,9 @@ export function AdminSettingsPanel({
         handleToggleOidcSilentLoginDefault={handleToggleOidcSilentLoginDefault}
         allowPasswordReset={allowPasswordReset}
         handleTogglePasswordReset={handleTogglePasswordReset}
-        commandHistoryEnabled={commandHistoryEnabled}
-        handleToggleCommandHistory={handleToggleCommandHistory}
         sessionTimeout={sessionTimeout}
         setSessionTimeout={setSessionTimeout}
         handleSaveSessionTimeout={handleSaveSessionTimeout}
-        terminalTimeout={terminalTimeout}
-        setTerminalTimeout={setTerminalTimeout}
-        handleSaveTerminalTimeout={handleSaveTerminalTimeout}
         statusInterval={statusInterval}
         setStatusInterval={setStatusInterval}
         metricsInterval={metricsInterval}
@@ -1355,22 +1210,6 @@ export function AdminSettingsPanel({
         handleSaveDefaults={handleSaveHostDefaults}
       />
 
-      <AdminImageStorageSection
-        open={openSections.has("image-storage")}
-        onToggle={() => toggle("image-storage")}
-        settings={imageStorageSettings}
-        setSettings={setImageStorageSettings}
-        localDir={imageStorageLocalDir}
-        setLocalDir={setImageStorageLocalDir}
-        instanceId={imageStorageInstanceId}
-        setInstanceId={setImageStorageInstanceId}
-        saving={imageStorageSaving}
-        testing={imageStorageTesting}
-        testResult={imageStorageTestResult}
-        onSave={() => void handleSaveImageStorage()}
-        onTest={() => void handleTestImageStorage()}
-      />
-
       <AdminBrandingSection
         open={openSections.has("branding")}
         onToggle={() => toggle("branding")}
@@ -1440,15 +1279,6 @@ export function AdminSettingsPanel({
       <AdminPluginsSection
         open={openSections.has("plugins")}
         onToggle={() => toggle("plugins")}
-      />
-
-      <AdminTouchInputSection
-        open={openSections.has("touch-input")}
-        onToggle={() => toggle("touch-input")}
-        settings={touchInputSettings}
-        setSettings={setTouchInputSettings}
-        onSave={() => void saveTouchInputSettings()}
-        onReset={resetTouchInputSettings}
       />
 
       <AdminCreateUserDialog

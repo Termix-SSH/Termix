@@ -248,6 +248,20 @@ arrives with a share token), the Docker console (per-message auth), and the
 Guacamole display (a single-use encrypted connection token in the query, minted
 by an authenticated route).
 
+**B9** added `optionalAuth` for a public route: core still verifies a token
+when the client sent one and hands the handler that user, else an empty id.
+The terminal uses it, because one socket serves both signed-in users and
+share-link or room guests, who arrive with a share token instead. The route is
+public so a guest can reach it at all; guest auth itself stays in the plugin's
+handler (noted for D2). Every route connection now also carries `clientIp`,
+`requestOrigin` and `isDataUnlocked()`, the data-key check a long-lived socket
+repeats per message so an expired session stops being served.
+
+Socket and ssh2 event listeners fire outside the upgrade's async context, so a
+plugin that calls privileged ctx members from them binds them with Node's
+`AsyncResource.bind` while the actor is still set; the terminal does this for
+every listener it registers.
+
 ### 7. Settings
 
 Plugins declare settings fields in the manifest with scope `admin`, `user` or
@@ -426,8 +440,10 @@ to list manager cards plugins added to `host-metrics.managers` next to its
 own). The SDK has no runtime dependencies: the hooks delegate to a host
 bridge core installs.
 
-Slots core owns: `terminal.toolbar`, `terminal.dock`, `terminal.overlay`
-(declared by ssh-terminal), `onboarding.steps`, `onboarding.features`,
+Slots core owns: `terminal.toolbar`, `terminal.toolbarStatus`,
+`terminal.sidePanel`, `terminal.overlay` (declared by ssh-terminal; **B9**
+renamed `terminal.dock` to `terminal.sidePanel` and added the status slot,
+where host-metrics puts its CPU, memory and disk bars), `onboarding.steps`, `onboarding.features`,
 `onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`
 and `session.remoteDisplay`. `host-metrics.managers` (component slot,
 **B3**) is host-metrics's own: tailscale contributes its manager card there
@@ -437,6 +453,29 @@ or without tailscale enabled. Cross-plugin frontend calls go through actions:
 plugin actions the same way when a core view shows a plugin's data:
 `files.openHost`, and **B7**'s `tunnels.statuses` and `tunnels.open` behind the
 dashboard's active tunnel counter, which reads as zero while tunnels is off.
+
+**B9** moved the terminal itself into ssh-terminal, which adds
+`terminal.open(host, { path?, joinSharedSessionId?, joinShareId?, label? })`
+(the file manager's "open terminal here", the connections panel's "join a
+shared session") and replaces `ShellApi.openTerminalTab`, which the shell no
+longer has.
+
+**Components by id.** `app.registerComponent(id, component)` offers a
+component to other plugins and core, which render it with `PluginComponent`
+from `@termix/plugin-sdk/ui` (a fallback while the owner is off) or
+`usePluginComponent(id)`. ssh-terminal registers `terminal.view`, the
+embeddable terminal the collab room, the homepage SSH widget, the tmux
+monitor and the file manager's window render instead of importing it; its
+handle comes back through a `handleRef` prop, since a registered component
+cannot take a React ref.
+
+**Session tabs.** `TabOptions` gained `commandTarget` (history, macros and SSH
+tools act on the last one focused; `PanelProps.targetTab` hands a panel that
+tab), `ownBackground` (the shell leaves the frame transparent) and
+`multiInstance` (each open is a new tab). `TabHandle` documents what a session
+tab puts on `handleRef`: focus, reconnect, disconnect and, for sharing,
+`getShareTarget()`, which the shell's own share dialog uses. These replaced
+every check of the `terminal` and `local-terminal` tab types in the shell.
 
 **B2** added a live-terminal-session surface, for a plugin that needs to push
 resolved text into an open SSH session rather than just fill a slot with a
@@ -466,12 +505,28 @@ skipped, and it stays in the next snapshot (`isUnregisteredPluginTabType` in
 `src/ui/plugin-host/sdk-ui.ts`. Adding to it is a contract change; removing
 from it is a breaking one. Today it exports: alert, alert-dialog, badge,
 button, card, checkbox, dialog, dropdown-menu, input, label, password-input,
-select, select2, separator, switch, textarea, tooltip, section-card,
+select, select2, separator, switch, textarea, tooltip, sheet, section-card,
 metric-card, charts, the card grid, `ConnectionScreen` and the connection
 status helpers, `SnippetVariablesDialog`, `FullScreenAppWrapper`, the
 connection log context, `TOTPDialog`, `SSHAuthDialog`, `WarpgateDialog`,
-`useTabs`/`useTabsSafe`, `ActionSlot`, `ComponentSlot` and `FOLDER_COLORS` (the
-colour swatches folders and workspaces pick from). Publishing its
+`PassphraseDialog`, `OPKSSHDialog` (until opkssh moves in Phase C),
+`HostKeyVerificationDialog`, `useTabs`/`useTabsSafe`, `ActionSlot`,
+`ComponentSlot`, `PluginComponent` and `FOLDER_COLORS` (the colour swatches
+folders and workspaces pick from).
+
+**B9** added what a terminal-like surface needs from the shell: `cn`,
+`useConfirmation`, `useIsMobile`, `runAdaptivePolling`; the terminal look
+(`TERMINAL_THEMES`, `TERMINAL_FONTS`, `DEFAULT_TERMINAL_CONFIG`,
+`resolveTermixThemeColors`, `ensureTerminalFontsLoaded`, the font zoom limits,
+the clipboard helpers and `useAppTheme`, the full theme id rather than light or
+dark), shared by the SSH and local terminals, the docker console and serial
+from `src/ui/lib/terminal-look/`; keyboard handling shared with the shell
+(`findMatchingKeybinding`, `globalShortcutHandler`, `isTabJumpHotkey`); the
+connection helpers (`isElectron`, `resolveConnectionOrigin`, `pluginWsUrl`,
+`hydrateLocalSharedHostAuth`, `useConnectionDefaults`); and a few core APIs
+(`logActivity`, `getHostPassword`, `patchOpenTab`, `getUserPreferences`,
+`parseCustomKeybindings`, `setHostAutoTmux`, `getCookie`). The APIs are a
+stopgap in the right place: D1 turns them into typed bridge members. Publishing its
 `.d.ts` for plugins outside this repo is a follow-up for the repo split.
 
 #### Strings
@@ -520,10 +575,33 @@ every enabled plugin that declares `contributes.settings.host`, it looks up
 `"<id>.hostImportNormalizer"` and, if the plugin registered one, calls it with
 the raw imported row and writes back whatever it returns (or nothing, for
 `null`). This is not part of the SDK's typed `ctx` surface - it is a plain
-`ctx.registry` convention, the same mechanism `terminal.sessions` and
-`remote-desktop.sessions` already use, just with a name core's own code knows
+`ctx.registry` convention, the same mechanism `remote-desktop.sessions`
+already uses, just with a name core's own code knows
 to look for. web-endpoint (`src/backend/host-import.ts`) is the first plugin
 to register one.
+
+**B9**'s terminal provides `sessions.live` (live SSH sessions: look up, end,
+remove a share's participants, hand a room share's control over, subscribe to
+output, write) and `terminal.history` (the actor's command history, which the
+AI assistant reads). It consumes three optional services that later steps
+provide: `tmux.sessions` (B10; without it the terminal skips tmux attach),
+`sessions.sharing` (B12; member joins and collab room events) and
+`recordings.writer` (B13; without it nothing is recorded). The terminal keeps
+the asciicast formatting and the 300 ms batched flush (issue #1049) and hands
+the provider one `append` per batch. Service names need a dot, so "tmux" and
+"recordings" became `tmux.sessions` and `recordings.writer`.
+
+A service call runs a permission check for its actor, so a share-link guest,
+who has no user, cannot make one. Guest link resolution is therefore
+published on `ctx.registry` as `sessions.sharing.guests` instead: the token is
+the authority there.
+
+**Core consuming a plugin service.** Session sharing, collab and the open
+tabs route are still core and reach live terminal sessions through
+`getServiceImplementation(service, range)` in `service-registry.ts`
+(`hosts/live-terminal-sessions.ts` wraps it). Core already authorized the
+request, so this skips the per-call check and returns the same object
+plugins get, or undefined while no compatible provider runs.
 
 ### 10. Lifecycle
 
@@ -1082,6 +1160,7 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.notify.*`                                   | `notify:send`                        | A6                      |
 | `ctx.auth.*`                                     | `auth:provide`                       | **A8**                  |
 | `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
+| `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
 | `ctx.fetch`                                      | `network:outbound`                   | B                       |
 
 `ctx.ssh` was pulled forward from B so plugin transports go through core's
@@ -1107,6 +1186,15 @@ connect pipeline instead of importing ssh2 helpers from core:
   since the file-manager plugin's interactive connect route and its dedicated
   transfer sessions both need their own keepalive/timeout defaults rather than
   falling back to the generic `"plugin"` purpose.
+- **B9** added what an interactive transport needs, for the terminal:
+  `resolveHost(hostId, { syncId? })` (the host with secrets, by sync id first,
+  audited), the `"terminal"` purpose, `interactive` and `hostKeySocket` on
+  `prepare` (so a changed host key can be accepted over the socket), the
+  provider's `onBanner` and `onAuthFailed` hooks bound on its result,
+  `openTransport(..., { resolveDns, log })`, and `startInteraction` /
+  `cancelInteraction` for the browser sign-ins (opkssh, step-ca, vault), which
+  the terminal used to reach by import. Providers gained an optional
+  `cancelInteraction`.
 - **B7** added `sock` to the connect options: an already-open stream to the
   host, such as a `forwardOut` channel through another host. `connect` then
   skips the transport step (port knocking, proxy, jump hosts, DNS) and runs
@@ -1164,6 +1252,12 @@ existing ones (proxmox's discovery and sync flow is the first caller):
   `hosts:write`, matching `create`/`update`: this is the same "full host
   detail" surface those calls need to read back, not a wider read grant than
   `hosts:read` gives through `list`/`get`.
+
+**B9** added `trackSession(hostId)` (the online indicator, counted with every
+other feature's sessions; synchronous, so only the declaration is checked, like
+`ctx.http.router`) and `recordActivity(hostId, type, hostName)` (the same rate
+limit and access rule as the dashboard's route, which now shares
+`services/recent-activity.ts` with it). Both need `hosts:read`.
 
 `PluginHostRecord` carries no secret auth material (password, key, vault
 token): a plugin that creates a host picks an `authType` and, for
@@ -1318,7 +1412,8 @@ and that is bundled into its output.
 
 **Backend** (plus every node builtin): `@termix/plugin-sdk`, `express`, `ssh2`,
 `ws`, `multer`, `cookie-parser`, `axios`, `jszip`, `guacamole-lite`,
-`@anthropic-ai/sdk`, `drizzle-orm`.
+`@anthropic-ai/sdk`, `drizzle-orm`, `sharp` (native, so it cannot be bundled;
+the terminal's image upload loads it on first use).
 
 **Frontend**: `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`,
 `i18next`, `react-i18next`, `sonner`, `@termix/plugin-sdk/frontend`,
@@ -1666,8 +1761,8 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 135 files | D1         |
-| A plugin importing core by relative path         | Warning   | 67 files  | D1         |
+| A plugin frontend importing core through `@/`    | Warning   | 130 files | D1         |
+| A plugin importing core by relative path         | Warning   | 66 files  | D1         |
 | A plugin importing another plugin's source       | Warning   | 3 files   | B18        |
 
 A warning does not fail a build, so the counts are held by
@@ -1702,14 +1797,10 @@ Known specifics:
   **B6** moved file-manager off port 30004 onto `/plugin-api/file-manager/`,
   and **B7** moved tunnels off port 30003 onto `/plugin-api/tunnels/` and
   `/plugin-ws/tunnels/c2s/stream`.
-- The terminal component and `TerminalTabContent` stay in core until the
-  terminal's Phase B step (session manager, split view). ssh-terminal
-  registers them through the legacy alias; **B6** switched every core caller
-  of the file manager over to `invokeAction("files.openHost"/"files.openEditor")`
-  instead of the `openFileManager`/`openFileInEditor` shell callbacks it
-  removed, so `TerminalWindow.tsx`'s embedding of the core terminal component
-  is now the only file-manager-adjacent legacy-core import left, tracked the
-  same way as any other plugin depending on an unconverted core component.
+- **B9** moved the terminal, its session manager, the local terminal and the
+  command history panel into ssh-terminal, which imports nothing from core.
+  The file manager's terminal window renders the `terminal.view` component
+  instead of importing the core terminal.
 - Host data columns (`enableDocker`, `enableRdp`, `guacamoleConfig` and so on)
   stay in core types until Phase B moves them. Only UI branches on them left
   the shell.

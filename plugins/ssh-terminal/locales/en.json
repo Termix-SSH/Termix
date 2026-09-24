@@ -1,1 +1,226 @@
-{}
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Add",
+    "arrowDown": "Arrow Down",
+    "arrowLeft": "Arrow Left",
+    "arrowRight": "Arrow Right",
+    "arrowUp": "Arrow Up",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Done",
+    "editQuickKeys": "Edit quick keys",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Paste",
+    "quickKeyPlaceholder": "e.g. sudo ",
+    "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",
+    "quickKeysTitle": "Quick Keys",
+    "removeQuickKey": "Remove",
+    "resetDefaults": "Reset to defaults",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Failed to enable Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux enabled for {{host}}. It applies from the next connection.",
+    "clipboardHttpWarning": "Couldn't read the clipboard. Some browsers restrict clipboard access outside HTTPS - try Ctrl+V instead, or serve Termix over HTTPS.",
+    "closeTab": "Close",
+    "connecting": "Connecting...",
+    "connectionLost": "Connection lost",
+    "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
+    "connectionTimeout": "Connection timeout",
+    "enableAutoTmuxAction": "Enable Auto-Tmux",
+    "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
+    "linkDialogCopy": "Copy",
+    "linkDialogOpen": "Open",
+    "linkDialogTitle": "Open Link",
+    "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
+    "noHostSelected": "No host selected",
+    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
+    "opksshTimeout": "Authentication timed out. Please try again.",
+    "passwordPromptFillTitle": "Fill the saved password into this prompt?",
+    "reconnect": "Reconnect",
+    "reconnected": "Reconnected successfully",
+    "reconnecting": "Reconnecting... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Match Case",
+    "searchClose": "Close (Escape)",
+    "searchNext": "Next Match (Enter)",
+    "searchNoResults": "No results",
+    "searchPlaceholder": "Find",
+    "searchPrevious": "Previous Match (Shift+Enter)",
+    "searchRegex": "Use Regular Expression",
+    "searchResultCount": "{{index}} of {{count}}",
+    "searchWholeWord": "Match Whole Word",
+    "sessionExpiredNotice": "Your previous session on {{host}} expired after {{minutes}} minutes disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionExpiredNoticeNoMinutes": "Your previous session on {{host}} expired while disconnected; the shell and anything running in it are gone. Enable Auto-Tmux on this host to keep sessions alive.",
+    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
+    "tmuxAttached": "Attached clients",
+    "tmuxAttachedCount": "{{count}} attached",
+    "tmuxCopyHint": "Adjust selection and press Enter to copy to clipboard",
+    "tmuxCreateNew": "Start new session",
+    "tmuxDetached": "Detached from tmux session",
+    "tmuxLastActivity": "Last activity",
+    "tmuxSessionAttached": "tmux session attached: {{name}}",
+    "tmuxSessionCreated": "tmux session created: {{name}}",
+    "tmuxSessionPickerDesc": "Existing tmux sessions found on this host. Select one to reattach or create a new session.",
+    "tmuxSessionPickerTitle": "tmux Sessions",
+    "tmuxTimeDays": "{{count}}d ago",
+    "tmuxTimeHours": "{{count}}h ago",
+    "tmuxTimeJustNow": "just now",
+    "tmuxTimeMinutes": "{{count}}m ago",
+    "tmuxUnavailable": "tmux is not installed on the remote host, falling back to standard shell",
+    "tmuxWindowCount": "{{count}} window",
+    "tmuxWindows": "Windows",
+    "unknownError": "Unknown error occurred",
+    "vaultAuthDescription": "A window has opened to sign in to HashiCorp Vault. Complete the sign-in there; this connection will continue automatically.",
+    "vaultAuthFailed": "Vault authentication failed. Please try again.",
+    "vaultAuthTitle": "Vault sign-in required",
+    "vaultReopen": "Reopen sign-in window",
+    "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
+    "websocketError": "WebSocket connection error"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Detach tmux",
+    "detachTmuxDescription": "Detach tmux session",
+    "dismissError": "Dismiss image error",
+    "hideToolbar": "Hide toolbar",
+    "image": "Image actions (images only)",
+    "imageActionFailed": "Image action failed",
+    "layout": "Toolbar display mode",
+    "layoutExpanded": "Expanded with metrics",
+    "layoutIcon": "Icon only",
+    "layoutLabeled": "Icons and labels",
+    "moveToolbar": "Move toolbar",
+    "moveToolbarHint": "Drag to reposition the toolbar",
+    "paste": "Paste image",
+    "pasteImage": "Paste image from clipboard (images only)",
+    "retry": "Retry",
+    "showToolbar": "Expand toolbar",
+    "upload": "Upload image",
+    "uploadImage": "Upload an image to the host",
+    "uploadingImage": "Uploading..."
+  },
+  "history": {
+    "noTerminalSelected": "No terminal selected",
+    "noTerminalSelectedHint": "Open an SSH terminal tab to view its command history",
+    "searchPlaceholder": "Search history...",
+    "clearAll": "Clear All",
+    "noHistoryEntries": "No history entries",
+    "trackingDisabled": "History tracking is disabled",
+    "trackingDisabledHint": "Turn on Command History for this host in its SSH Terminal plugin settings.",
+    "commandCount_one": "{{count}} command",
+    "commandCount_other": "{{count}} commands"
+  },
+  "touchInput": {
+    "enabled": "Enable Touch Input",
+    "enabledDesc": "Allow one-finger touch scrolling in terminals",
+    "momentumEnabled": "Enable Momentum",
+    "momentumEnabledDesc": "Continue scrolling briefly after a swipe",
+    "advanced": "Advanced",
+    "resetDefaults": "Reset to defaults",
+    "dragThreshold": "Drag threshold",
+    "maxWheelDelta": "Maximum wheel delta",
+    "momentumSampleWindow": "Momentum sample window",
+    "releaseGracePeriod": "Release grace period",
+    "minimumVelocity": "Minimum velocity",
+    "maximumVelocity": "Maximum velocity",
+    "maximumDuration": "Maximum duration",
+    "maximumTravel": "Maximum travel",
+    "decayTime": "Decay time",
+    "pixelsPerTick": "Pixels per tick",
+    "maximumFrameInterval": "Maximum frame interval",
+    "maximumTicksPerFrame": "Maximum ticks per frame"
+  },
+  "imageStorage": {
+    "instanceId": "Terminal session instance ID",
+    "instanceIdDesc": "Instance ID of one of your connected terminal tabs, used to test visibility.",
+    "selectedModeUnavailable": "Unavailable",
+    "test": "Test",
+    "testing": "Testing...",
+    "testFailed": "Failed to test image storage",
+    "testConnected": "Terminal session is connected.",
+    "testNotConnected": "No connected terminal session with this instance ID.",
+    "testSelectedMode": "An upload would use: {{mode}}",
+    "testLocalVisible": "The local directory is visible from the connected host.",
+    "testLocalNotVisible": "The local directory is NOT visible from the connected host."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Touch Input",
+        "images": "Image Storage",
+        "sessions": "Sessions"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminal Session Persistence",
+        "description": "How long a disconnected terminal is kept alive on the server before it is closed. Min 1 · Max 1440 minutes. For sessions that must outlive this, enable Auto-Tmux on the host."
+      },
+      "commandHistoryEnabled": {
+        "label": "Command History",
+        "description": "Allow command history recording. When disabled, history is not saved regardless of per-host settings."
+      },
+      "imageStorageMode": {
+        "label": "Storage Mode",
+        "description": "Where pasted and uploaded terminal images are written. Auto picks by connection, Local and Remote (SFTP) are fixed.",
+        "auto": "Auto",
+        "local": "Local",
+        "remoteSftp": "Remote (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Local directory",
+        "description": "Absolute path on the Termix backend where local mode writes images. Never shown after saving. Empty uses TERMIX_IMAGE_DIR."
+      },
+      "imageHostPath": {
+        "label": "Host path",
+        "description": "The host-side view of the local directory that terminal agents receive."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)",
+        "description": "How long an uploaded image is kept, in milliseconds. Empty uses TERMIX_IMAGE_TTL_MS or one hour."
+      },
+      "imageMaxCount": {
+        "label": "Max image count",
+        "description": "Most images kept at once. Empty uses TERMIX_MAX_IMAGE_COUNT or 100."
+      },
+      "imageMaxBytes": {
+        "label": "Max storage bytes",
+        "description": "Most bytes of images kept at once. Empty uses TERMIX_MAX_IMAGE_STORAGE_BYTES or 5 GiB."
+      },
+      "sessionPersistence": {
+        "label": "Keep sessions after disconnect",
+        "description": "Keep a disconnected terminal alive on the server for the time above, so reopening its tab picks up where it left off."
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Enable Terminal Toolbar",
+        "description": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats"
+      },
+      "enableCommandHistory": {
+        "label": "Command History",
+        "description": "Record commands run in this terminal for history and autocomplete"
+      },
+      "enableTerminal": {
+        "label": "Enable Terminal",
+        "description": "Offer an SSH terminal for this host."
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Local Terminal"
+  },
+  "permissions": {
+    "sessions": {
+      "title": "Use live terminal sessions",
+      "description": "Lets other features, such as session sharing and recording, reach your live terminal sessions."
+    },
+    "history": {
+      "title": "Read command history",
+      "description": "Lets other features, such as the AI assistant, read your command history."
+    }
+  }
+}

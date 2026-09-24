@@ -31,7 +31,6 @@ const shell = {
   renameTab: () => {},
   openFileInEditor: () => {},
   openFileManager: () => {},
-  openTerminalTab: () => {},
   openRailView: () => {},
   closeRailView: () => {},
 };

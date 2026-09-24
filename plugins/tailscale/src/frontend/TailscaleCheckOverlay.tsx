@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import type { TerminalOverlayProps } from "@/features/terminal/terminal-slots";
+
+/** What the ssh-terminal plugin hands a "terminal.overlay" component. */
+interface TerminalOverlayProps {
+  host: { id: number | string; [key: string]: unknown } | undefined;
+  backgroundColor?: string;
+  subscribe: (
+    listener: (message: { type: string; [key: string]: unknown }) => void,
+  ) => () => void;
+  holdConnectTimeout: (held: boolean) => void;
+  fail: (message: string) => void;
+  disconnect: () => void;
+}
 import { TailscaleCheckDialog } from "./TailscaleCheckDialog";
 
 /** How long Tailscale may hold a connection open waiting on approval. */

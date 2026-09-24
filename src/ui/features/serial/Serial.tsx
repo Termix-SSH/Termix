@@ -12,9 +12,9 @@ import { TriangleAlert } from "lucide-react";
 import { isElectron } from "@/lib/electron";
 import { websocketAuthProtocols } from "@/lib/ws-auth";
 import { useTheme } from "@/components/theme-provider";
-import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
+import { resolveTermixThemeColors } from "@/lib/terminal-look/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
-import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
+import { ensureTerminalFontsLoaded } from "@/lib/terminal-look/terminal-global-styles";
 import type { SerialConfig } from "@/types/ui-types";
 import type { SerialHandle } from "./serial-types";
 

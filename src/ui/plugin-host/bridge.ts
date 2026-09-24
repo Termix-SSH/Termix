@@ -26,6 +26,7 @@ import { tabsApi, useShellHosts } from "./shell-bridge";
 import { invokeAction } from "@/shell/action-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { useActionSlot } from "@/hooks/use-action-slot";
+import { usePluginComponent } from "./component-registry";
 
 /**
  * Core permission groups, mirroring RESERVED_PERMISSION_PREFIXES in the SDK
@@ -272,7 +273,9 @@ export const pluginHostBridge: PluginHostBridge = {
     };
   },
 
-  useSlotContributions: (slotId) => useActionSlot(slotId),
+  useSlotContributions: (slotId, context) => useActionSlot(slotId, context),
+
+  usePluginComponent: (id) => usePluginComponent(id),
 };
 
 /** Installs the bridge. Idempotent. */

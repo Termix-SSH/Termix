@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "जोड़ें",
+    "arrowDown": "नीचे तीर",
+    "arrowLeft": "बाएँ तीर",
+    "arrowRight": "दाएँ तीर",
+    "arrowUp": "ऊपर तीर",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "पूर्ण",
+    "editQuickKeys": "त्वरित कुंजियाँ संपादित करें",
+    "end": "एंड",
+    "esc": "Esc",
+    "home": "होम",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "पेस्ट करें",
+    "quickKeyPlaceholder": "उदा. sudo ",
+    "quickKeysDesc": "हटाने के लिए × पर टैप करें। अधिकतम 8 वर्ण समर्थित।",
+    "quickKeysTitle": "त्वरित कुंजियाँ",
+    "removeQuickKey": "हटाएँ",
+    "resetDefaults": "डिफ़ॉल्ट पर रीसेट करें",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "ऑटो-टीमक्स को सक्षम करने में विफल",
+    "autoTmuxEnabled": "{{host}}के लिए ऑटो-Tmux सक्षम किया गया है। यह अगले कनेक्शन से लागू होगा।",
+    "clipboardHttpWarning": "क्लिपबोर्ड पढ़ा नहीं जा सका। कुछ ब्राउज़र HTTPS के बाहर क्लिपबोर्ड एक्सेस को प्रतिबंधित करते हैं - इसके बजाय Ctrl+V का उपयोग करके देखें, या Termix को HTTPS पर चलाएं।",
+    "closeTab": "बंद करें",
+    "connecting": "कनेक्ट हो रहा है...",
+    "connectionLost": "कनेक्शन खो गया",
+    "connectionRejected": "सर्वर द्वारा कनेक्शन अस्वीकृत। कृपया अपनी प्रमाणीकरण और नेटवर्क कॉन्फ़िगरेशन जाँचें।",
+    "connectionTimeout": "कनेक्शन टाइमआउट",
+    "enableAutoTmuxAction": "ऑटो-टीमक्स सक्षम करें",
+    "hostKeyRejected": "SSH होस्ट कुंजी सत्यापन अस्वीकृत। कनेक्शन रद्द किया गया।",
+    "linkDialogCopy": "कॉपी करें",
+    "linkDialogOpen": "खोलें",
+    "linkDialogTitle": "लिंक खोलें",
+    "maxReconnectAttemptsReached": "अधिकतम पुनः कनेक्ट प्रयास पूर्ण हो गए",
+    "noHostSelected": "कोई होस्ट चयनित नहीं",
+    "opksshAuthFailed": "प्रमाणीकरण विफल। कृपया अपने क्रेडेंशियल जाँचें और पुनः प्रयास करें।",
+    "opksshTimeout": "प्रमाणीकरण का समय समाप्त हो गया। कृपया पुनः प्रयास करें।",
+    "passwordPromptFillTitle": "क्या सहेजे गए पासवर्ड को इस प्रांप्ट में भरें?",
+    "reconnect": "पुनः कनेक्ट करें",
+    "reconnected": "पुनः कनेक्ट हुआ",
+    "reconnecting": "पुनः कनेक्ट हो रहा है... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "मामले मिलाएं",
+    "searchClose": "बंद करें (एस्केप)",
+    "searchNext": "अगला मैच (प्रवेश करें)",
+    "searchNoResults": "कोई परिणाम नहीं",
+    "searchPlaceholder": "खोजो",
+    "searchPrevious": "पिछला मैच (शिफ्ट+एंटर)",
+    "searchRegex": "नियमित अभिव्यक्ति का उपयोग करें",
+    "searchResultCount": "{{index}} का {{count}}",
+    "searchWholeWord": "पूरे शब्द का मिलान करें",
+    "sessionExpiredNotice": "{{host}} पर आपका पिछला सत्र {{minutes}} मिनट बाद समाप्त हो गया; शेल और उसमें चल रही हर चीज़ समाप्त हो गई है। सत्रों को सक्रिय रखने के लिए इस होस्ट पर ऑटो-ट्मक्स सक्षम करें।",
+    "sessionExpiredNoticeNoMinutes": "{{host}} पर आपका पिछला सत्र डिस्कनेक्ट होने के दौरान समाप्त हो गया; शेल और उसमें चल रही हर चीज़ नष्ट हो गई है। सत्रों को सक्रिय रखने के लिए इस होस्ट पर ऑटो-ट्मक्स सक्षम करें।",
+    "sessionTakenOver": "सत्र किसी अन्य टैब में खोला गया था। पुनः कनेक्ट हो रहा है...",
+    "tmuxAttached": "अटैच किए गए क्लाइंट",
+    "tmuxAttachedCount": "{{count}} अटैच किए गए",
+    "tmuxCopyHint": "चयन समायोजित करें और क्लिपबोर्ड पर कॉपी करने के लिए Enter दबाएं",
+    "tmuxCreateNew": "नया सत्र प्रारंभ करें",
+    "tmuxDetached": "tmux सत्र से डिटैच हो गया",
+    "tmuxLastActivity": "अंतिम गतिविधि",
+    "tmuxSessionAttached": "tmux सत्र अटैच किया गया: {{name}}",
+    "tmuxSessionCreated": "tmux सत्र बनाया गया: {{name}}",
+    "tmuxSessionPickerDesc": "इस होस्ट पर मौजूदा tmux सत्र पाए गए। पुनः अटैच करने के लिए एक का चयन करें या नया सत्र बनाएं।",
+    "tmuxSessionPickerTitle": "tmux सत्र",
+    "tmuxTimeDays": "{{count}} दिन पहले",
+    "tmuxTimeHours": "{{count}} घंटे पहले",
+    "tmuxTimeJustNow": "अभी-अभी",
+    "tmuxTimeMinutes": "{{count}} मिनट पहले",
+    "tmuxUnavailable": "tmux रिमोट होस्ट पर स्थापित नहीं है, मानक शेल पर वापस लौट रहा है",
+    "tmuxWindowCount": "{{count}} विंडो",
+    "tmuxWindows": "विंडो",
+    "unknownError": "अज्ञात त्रुटि हुई",
+    "vaultAuthDescription": "HashiCorp Vault में साइन इन करने के लिए एक विंडो खुल गई है। वहाँ साइन-इन पूरा करें; यह कनेक्शन स्वचालित रूप से जारी रहेगा।",
+    "vaultAuthFailed": "Vault प्रमाणीकरण विफल। कृपया पुनः प्रयास करें।",
+    "vaultAuthTitle": "Vault साइन-इन आवश्यक है",
+    "vaultReopen": "साइन-इन विंडो फिर से खोलें",
+    "websocketAbnormalClose": "कनेक्शन अप्रत्याशित रूप से बंद हो गया। यह रिवर्स प्रॉक्सी या SSL कॉन्फ़िगरेशन समस्या के कारण हो सकता है। कृपया सर्वर लॉग जाँचें।",
+    "websocketError": "WebSocket कनेक्शन त्रुटि"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmux को अलग करें",
+    "detachTmuxDescription": "tmux सत्र को अलग करें",
+    "dismissError": "छवि त्रुटि को खारिज करें",
+    "hideToolbar": "उपकरण पट्टी छिपाओ",
+    "image": "छवि क्रियाएँ (केवल छवियाँ)",
+    "imageActionFailed": "छवि संबंधी कार्रवाई विफल रही",
+    "layout": "टूलबार डिस्प्ले मोड",
+    "layoutExpanded": "मैट्रिक्स के साथ विस्तारित",
+    "layoutIcon": "केवल आइकन",
+    "layoutLabeled": "आइकन और लेबल",
+    "moveToolbar": "टूलबार को स्थानांतरित करें",
+    "moveToolbarHint": "टूलबार की स्थिति बदलने के लिए उसे खींचें",
+    "paste": "छवि चिपकाएँ",
+    "pasteImage": "क्लिपबोर्ड से छवि पेस्ट करें (केवल छवियां)",
+    "retry": "पुन: प्रयास करें",
+    "showToolbar": "टूलबार का विस्तार करें",
+    "upload": "तस्विर अपलोड करना",
+    "uploadImage": "होस्ट पर एक छवि अपलोड करें",
+    "uploadingImage": "अपलोड हो रहा है..."
+  },
+  "history": {
+    "noTerminalSelected": "कोई टर्मिनल चयनित नहीं",
+    "noTerminalSelectedHint": "कमांड इतिहास देखने के लिए SSH टर्मिनल टैब खोलें",
+    "searchPlaceholder": "इतिहास खोजें...",
+    "clearAll": "सभी साफ़ करें",
+    "noHistoryEntries": "कोई इतिहास प्रविष्टियाँ नहीं",
+    "trackingDisabled": "इतिहास ट्रैकिंग अक्षम है"
+  },
+  "touchInput": {
+    "enabled": "टच इनपुट सक्षम करें",
+    "enabledDesc": "टर्मिनलों में एक उंगली से स्क्रॉल करने की सुविधा दें",
+    "momentumEnabled": "गति को सक्षम करें",
+    "momentumEnabledDesc": "स्वाइप करने के बाद थोड़ी देर स्क्रॉल करते रहें",
+    "advanced": "विकसित",
+    "resetDefaults": "डिफ़ॉल्ट पर पुनः सेट करें",
+    "dragThreshold": "ड्रैग थ्रेशहोल्ड",
+    "maxWheelDelta": "अधिकतम पहिया डेल्टा",
+    "momentumSampleWindow": "मोमेंटम सैंपल विंडो",
+    "releaseGracePeriod": "रिहाई की मोहलत",
+    "minimumVelocity": "न्यूनतम वेग",
+    "maximumVelocity": "अधिकतम वेग",
+    "maximumDuration": "अधिकतम अवधि",
+    "maximumTravel": "अधिकतम यात्रा",
+    "decayTime": "क्षय समय",
+    "pixelsPerTick": "पिक्सेल प्रति टिक",
+    "maximumFrameInterval": "अधिकतम फ्रेम अंतराल",
+    "maximumTicksPerFrame": "प्रति फ्रेम अधिकतम टिक"
+  },
+  "imageStorage": {
+    "instanceId": "टर्मिनल सत्र इंस्टेंस आईडी",
+    "instanceIdDesc": "आपके कनेक्टेड टर्मिनल टैब में से किसी एक का इंस्टेंस आईडी, जिसका उपयोग दृश्यता का परीक्षण करने के लिए किया जाता है।",
+    "selectedModeUnavailable": "अनुपलब्ध",
+    "test": "परीक्षा",
+    "testing": "परीक्षण...",
+    "testFailed": "इमेज स्टोरेज का परीक्षण विफल रहा",
+    "testConnected": "टर्मिनल सत्र कनेक्ट हो गया है।",
+    "testNotConnected": "इस इंस्टेंस आईडी के साथ कोई कनेक्टेड टर्मिनल सेशन नहीं है।",
+    "testSelectedMode": "अपलोड करने के लिए निम्न का उपयोग किया जाएगा: {{mode}}",
+    "testLocalVisible": "कनेक्टेड होस्ट से लोकल डायरेक्टरी दिखाई देती है।",
+    "testLocalNotVisible": "स्थानीय डायरेक्टरी कनेक्टेड होस्ट से दिखाई नहीं देती है।"
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "स्पर्श निवेश",
+        "images": "छवि संग्रहण"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "टर्मिनल सत्र दृढ़ता",
+        "description": "सर्वर पर डिस्कनेक्ट होने के बाद टर्मिनल को बंद करने से पहले कितनी देर तक चालू रखा जाता है। न्यूनतम 1 मिनट · अधिकतम 1440 मिनट। इससे अधिक समय तक चलने वाले सेशन के लिए, होस्ट पर ऑटो-ट्मक्स को सक्षम करें।"
+      },
+      "commandHistoryEnabled": {
+        "label": "कमांड इतिहास",
+        "description": "कमांड इतिहास रिकॉर्डिंग की अनुमति दें। अक्षम होने पर, प्रति-होस्ट सेटिंग्स की परवाह किए बिना इतिहास सहेजा नहीं जाता है।"
+      },
+      "imageStorageMode": {
+        "label": "भंडारण मोड",
+        "description": "जहां पेस्ट और अपलोड की गई टर्मिनल इमेज लिखी जाती हैं। कनेक्शन के आधार पर ऑटो पिकिंग की सुविधा उपलब्ध है, लोकल और रिमोट (SFTP) कनेक्शन दोनों ही तय हैं।",
+        "auto": "ऑटो",
+        "local": "स्थानीय",
+        "remoteSftp": "रिमोट (एसएफटीपी)"
+      },
+      "imageLocalDir": {
+        "label": "स्थानीय निर्देशिका"
+      },
+      "imageHostPath": {
+        "label": "होस्ट पथ",
+        "description": "टर्मिनल एजेंटों को प्राप्त होने वाली स्थानीय निर्देशिका का होस्ट-साइड दृश्य।"
+      },
+      "imageTtlMs": {
+        "label": "टीटीएल (मिलीमीटर)"
+      },
+      "imageMaxCount": {
+        "label": "अधिकतम छवि संख्या"
+      },
+      "imageMaxBytes": {
+        "label": "अधिकतम संग्रहण बाइट्स"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "टर्मिनल टूलबार को सक्षम करें",
+        "description": "इस होस्ट के टूल्स और लाइव स्टैट्स के लिए सक्रिय टर्मिनल से जुड़ा एक त्वरित-पहुँच टूलबार दिखाएँ।"
+      },
+      "enableCommandHistory": {
+        "label": "कमांड इतिहास",
+        "description": "इतिहास और स्वतः पूर्ण के लिए इस टर्मिनल में चलाए गए कमांड रिकॉर्ड करें"
+      },
+      "enableTerminal": {
+        "label": "टर्मिनल सक्षम करें"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "स्थानीय टर्मिनल"
+  }
+}

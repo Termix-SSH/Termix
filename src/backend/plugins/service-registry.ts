@@ -166,6 +166,25 @@ export function getRegistration(
   return services.get(service);
 }
 
+/**
+ * A plugin service as core itself calls it, or undefined while no plugin
+ * provides a compatible version.
+ *
+ * Core is not a plugin and already authorized the request it is serving, so
+ * this skips the per-call permission check a plugin's handle runs. It is the
+ * same object plugins get. Session sharing reaching the terminal's live
+ * sessions is the first caller.
+ */
+export function getServiceImplementation<T extends object>(
+  service: string,
+  versionRange: string,
+): T | undefined {
+  const registration = services.get(service);
+  if (!registration) return undefined;
+  if (!semver.satisfies(registration.version, versionRange)) return undefined;
+  return registration.implementation as T;
+}
+
 export function listServices(): ServiceRegistration[] {
   return [...services.values()];
 }

@@ -60,10 +60,8 @@ describe("RAIL_ITEMS", () => {
       "serial",
       "ssh-tools",
       "macros",
-      "history",
       "session-logs",
       "split-screen",
-      "local-terminal",
     ]);
   });
 
@@ -84,7 +82,7 @@ describe("RAIL_ITEMS", () => {
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
-    ).toEqual(["termix-id", "ssh-tools", "macros", "history", "session-logs"]);
+    ).toEqual(["termix-id", "ssh-tools", "macros", "session-logs"]);
   });
 
   it("derives promotableIds from the promotable flag", () => {
@@ -125,7 +123,6 @@ describe("RAIL_ITEMS", () => {
       "connections",
       "ssh-tools",
       "macros",
-      "history",
       "session-logs",
     ]);
   });
@@ -198,15 +195,27 @@ describe("railItemLabel", () => {
       delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
     });
 
+    const desktopOnly = {
+      id: "desktop-only",
+      icon: Boxes,
+      labelKey: "nav.desktopOnly",
+      pluginId: "p",
+      electronOnly: true,
+    };
+
     it("hides electron-only destinations in the browser build", () => {
+      const dispose = registerRailItem(desktopOnly);
       const ids = visibleRailItems().map((item) => item.id);
-      expect(ids).not.toContain("local-terminal");
+      dispose();
+      expect(ids).not.toContain("desktop-only");
     });
 
     it("shows electron-only destinations in the desktop app", () => {
       (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+      const dispose = registerRailItem(desktopOnly);
       const ids = visibleRailItems().map((item) => item.id);
-      expect(ids).toContain("local-terminal");
+      dispose();
+      expect(ids).toContain("desktop-only");
     });
 
     it("keeps every non-electron item in both builds", () => {

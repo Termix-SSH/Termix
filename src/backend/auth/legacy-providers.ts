@@ -108,6 +108,16 @@ function issuedCertificateProvider(
         request.requestOrigin,
       );
     },
+    cancelInteraction: async (request) => {
+      if (!request.requestId) return;
+      if (type === "stepca") {
+        const { cancelStepCaAuth } = await import("../hosts/step-ca-auth.js");
+        cancelStepCaAuth(request.requestId);
+        return;
+      }
+      const { cancelAuthSession } = await import("../hosts/opkssh-auth.js");
+      cancelAuthSession(request.requestId);
+    },
   };
 }
 
@@ -201,6 +211,12 @@ const vaultProvider: SshAuthProvider = {
       request.socket,
       request.requestOrigin,
     );
+  },
+  cancelInteraction: async (request) => {
+    if (request.hostId === undefined) return;
+    const { cancelVaultAuthByHost } =
+      await import("../hosts/vault-oidc-auth.js");
+    cancelVaultAuthByHost(request.userId, request.hostId);
   },
 };
 

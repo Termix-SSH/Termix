@@ -76,6 +76,23 @@ export function createPluginApi(pluginId: string): AxiosInstance {
 }
 
 /**
+ * pluginWsUrl for a path a backend handed out ("/plugin-ws/<id>/<path>?q"),
+ * so a caller can dial a plugin's socket without naming the plugin.
+ */
+export async function pluginWsUrlForPath(
+  wsPath: string,
+  options: { origin?: ConnectionOrigin } = {},
+): Promise<WebSocketConnectionTarget | null> {
+  const [pathname, query] = wsPath.split("?", 2);
+  const match = /^\/plugin-ws\/([^/]+)(\/.*)$/.exec(pathname);
+  if (!match) return null;
+  const target = await pluginWsUrl(match[1], match[2], options);
+  if (!target || !query) return target;
+  const separator = target.url.includes("?") ? "&" : "?";
+  return { ...target, url: `${target.url}${separator}${query}` };
+}
+
+/**
  * The WebSocket URL for /plugin-ws/<id>/<path>, plus the subprotocols that
  * carry the JWT.
  *

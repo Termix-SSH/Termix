@@ -4,7 +4,6 @@ import {
   createCurrentNotificationChannelRepository,
   createCurrentApiKeyRepository,
   createCurrentAuditLogRepository,
-  createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
   createCurrentDashboardServiceLinkRepository,
   createCurrentDismissedAlertRepository,
@@ -93,8 +92,6 @@ export async function deleteUserAndRelatedData(
     // refUser() foreign key, as the snippets plugin's adopted tables.
 
     await createCurrentHostFolderRepository().deleteByUserId(userId);
-
-    await createCurrentCommandHistoryRepository().deleteByUserId(userId);
 
     await createCurrentHostHealthRepository().deleteByUserId(userId);
     await createCurrentHostMetricsPreferenceRepository().deleteByUserId(userId);

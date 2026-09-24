@@ -178,6 +178,12 @@ export interface SshAuthProvider {
    * transports that can show one (the terminal today).
    */
   startInteraction?: (request: SshInteractionRequest) => Promise<void>;
+  /** Cancels a pending browser step, by request id or by host. */
+  cancelInteraction?: (request: {
+    userId: string;
+    hostId?: number;
+    requestId?: string;
+  }) => void | Promise<void>;
   prepare: (
     config: MutableConnectConfig,
     host: SshConnectHost,

@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Přidat",
+    "arrowDown": "Šipka dolů",
+    "arrowLeft": "Šipka vlevo",
+    "arrowRight": "Šipka vpravo",
+    "arrowUp": "Šipka nahoru",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Hotovo",
+    "editQuickKeys": "Upravit rychlé klávesy",
+    "end": "Konec",
+    "esc": "Esc",
+    "home": "Domov",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Pasta",
+    "quickKeyPlaceholder": "např. sudo ",
+    "quickKeysDesc": "Klepnutím na × odstraníte. Podporuje až 8 znaků.",
+    "quickKeysTitle": "Rychlé klávesy",
+    "removeQuickKey": "Odstranit",
+    "resetDefaults": "Obnovit na výchozí nastavení",
+    "shift": "Posun",
+    "tab": "Záložka"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Nepodařilo se povolit Auto-Tmux",
+    "autoTmuxEnabled": "Auto-Tmux povolen pro {{host}}. Platí od dalšího připojení.",
+    "clipboardHttpWarning": "Nelze přečíst schránku. Některé prohlížeče omezují přístup ke schránce mimo HTTPS – zkuste Ctrl+V nebo přes HTTPS poskytněte Termix.",
+    "closeTab": "Blízko",
+    "connecting": "Spojovací...",
+    "connectionLost": "Spojení ztraceno",
+    "connectionRejected": "Server odmítl připojení. Zkontrolujte prosím ověření a konfiguraci sítě.",
+    "connectionTimeout": "Časový limit připojení",
+    "enableAutoTmuxAction": "Povolit Auto-Tmux",
+    "hostKeyRejected": "Ověření klíče hostitele SSH odmítnuto. Připojení zrušeno.",
+    "linkDialogCopy": "Kopie",
+    "linkDialogOpen": "OTEVŘENO",
+    "linkDialogTitle": "Otevřít odkaz",
+    "maxReconnectAttemptsReached": "Dosažen maximální počet pokusů o opětovné připojení",
+    "noHostSelected": "Nebyl vybrán žádný hostitel",
+    "opksshAuthFailed": "Ověření se nezdařilo. Zkontrolujte prosím své přihlašovací údaje a zkuste to znovu.",
+    "opksshTimeout": "Časový limit ověření vypršel. Zkuste to prosím znovu.",
+    "passwordPromptFillTitle": "Vyplňte uložené heslo do tohoto řádku?",
+    "reconnect": "Znovu se připojte",
+    "reconnected": "Úspěšné opětovné připojení",
+    "reconnecting": "Znovu se připojuji... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Zápasová karta",
+    "searchClose": "Zavřít (Escape)",
+    "searchNext": "Další zápas (Enter)",
+    "searchNoResults": "Žádné výsledky",
+    "searchPlaceholder": "Nalézt",
+    "searchPrevious": "Předchozí shoda (Shift+Enter)",
+    "searchRegex": "Použít regulární výraz",
+    "searchResultCount": "{{index}} z {{count}}",
+    "searchWholeWord": "Shoda celého slova",
+    "sessionExpiredNotice": "Vaše předchozí relace na {{host}} vypršela po {{minutes}} minutách odpojení; shell a vše, co v něm běží, je pryč. Povolte na tomto hostiteli Auto-Tmux, aby relace zůstaly aktivní.",
+    "sessionExpiredNoticeNoMinutes": "Vaše předchozí relace na {{host}} vypršela během odpojení; shell a vše, co v něm běží, je pryč. Povolte na tomto hostiteli Auto-Tmux, aby relace zůstaly aktivní.",
+    "sessionTakenOver": "Relace byla otevřena na jiné kartě. Znovu se připojuji...",
+    "tmuxAttached": "Připojení klienti",
+    "tmuxAttachedCount": "{{count}} připojen",
+    "tmuxCopyHint": "Upravte výběr a stiskněte Enter pro zkopírování do schránky",
+    "tmuxCreateNew": "Zahájit novou relaci",
+    "tmuxDetached": "Odpojeno od relace tmux",
+    "tmuxLastActivity": "Poslední aktivita",
+    "tmuxSessionAttached": "připojena relace tmux: {{name}}",
+    "tmuxSessionCreated": "Vytvořena relace tmux: {{name}}",
+    "tmuxSessionPickerDesc": "Na tomto hostiteli byly nalezeny existující relace tmux. Vyberte jednu, kterou chcete znovu připojit, nebo vytvořte novou relaci.",
+    "tmuxSessionPickerTitle": "Sezení tmux",
+    "tmuxTimeDays": "Před {{count}}dny",
+    "tmuxTimeHours": "{{count}}před hodinami",
+    "tmuxTimeJustNow": "právě teď",
+    "tmuxTimeMinutes": "{{count}}před m",
+    "tmuxUnavailable": "tmux není nainstalován na vzdáleném hostiteli, vrací se ke standardnímu shellu.",
+    "tmuxWindowCount": "{{count}} okno",
+    "tmuxWindows": "Okna",
+    "unknownError": "Došlo k neznámé chybě",
+    "vaultAuthDescription": "Otevřelo se okno pro přihlášení do HashiCorp Vault. Dokončete přihlášení tam; toto připojení bude automaticky pokračovat.",
+    "vaultAuthFailed": "Ověření v trezoru se nezdařilo. Zkuste to prosím znovu.",
+    "vaultAuthTitle": "Vyžaduje se přihlášení do trezoru",
+    "vaultReopen": "Znovu otevřít přihlašovací okno",
+    "websocketAbnormalClose": "Spojení se neočekávaně ukončilo. Může to být způsobeno problémem s reverzní proxy nebo konfigurací SSL. Zkontrolujte prosím protokoly serveru.",
+    "websocketError": "Chyba připojení k WebSocketu"
+  },
+  "terminalToolbar": {
+    "detachTmux": "Odpojit tmux",
+    "detachTmuxDescription": "Odpojení relace tmux",
+    "dismissError": "Chyba při zavírání obrázku",
+    "hideToolbar": "Skrýt panel nástrojů",
+    "image": "Akce s obrázky (pouze obrázky)",
+    "imageActionFailed": "Akce s obrázkem se nezdařila",
+    "layout": "Režim zobrazení panelu nástrojů",
+    "layoutExpanded": "Rozšířeno o metriky",
+    "layoutIcon": "Pouze ikona",
+    "layoutLabeled": "Ikony a popisky",
+    "moveToolbar": "Přesunout panel nástrojů",
+    "moveToolbarHint": "Přetažením změňte umístění panelu nástrojů",
+    "paste": "Vložit obrázek",
+    "pasteImage": "Vložit obrázek ze schránky (pouze obrázky)",
+    "retry": "Zkusit znovu",
+    "showToolbar": "Rozbalit panel nástrojů",
+    "upload": "Nahrát obrázek",
+    "uploadImage": "Nahrajte obrázek na hostitele",
+    "uploadingImage": "Nahrávání..."
+  },
+  "history": {
+    "noTerminalSelected": "Není vybrán žádný terminál",
+    "noTerminalSelectedHint": "Otevření karty terminálu SSH pro zobrazení historie jejích příkazů",
+    "searchPlaceholder": "Historie vyhledávání...",
+    "clearAll": "Vymazat vše",
+    "noHistoryEntries": "Žádné záznamy v historii",
+    "trackingDisabled": "Sledování historie je zakázáno"
+  },
+  "touchInput": {
+    "enabled": "Povolit dotykový vstup",
+    "enabledDesc": "Povolit posouvání jedním prstem v terminálech",
+    "momentumEnabled": "Povolit hybnost",
+    "momentumEnabledDesc": "Po přejetí prstem krátce pokračujte v rolování",
+    "advanced": "Moderní",
+    "resetDefaults": "Obnovit na výchozí nastavení",
+    "dragThreshold": "Práh přetažení",
+    "maxWheelDelta": "Maximální delta kola",
+    "momentumSampleWindow": "Okno vzorku hybnosti",
+    "releaseGracePeriod": "Dodatečná lhůta",
+    "minimumVelocity": "Minimální rychlost",
+    "maximumVelocity": "Maximální rychlost",
+    "maximumDuration": "Maximální doba trvání",
+    "maximumTravel": "Maximální zdvih",
+    "decayTime": "Doba rozpadu",
+    "pixelsPerTick": "Pixely na tik",
+    "maximumFrameInterval": "Maximální interval snímků",
+    "maximumTicksPerFrame": "Maximální počet tiků na snímek"
+  },
+  "imageStorage": {
+    "instanceId": "ID instance terminálové relace",
+    "instanceIdDesc": "ID instance jedné z vašich připojených karet terminálu, používané k testování viditelnosti.",
+    "selectedModeUnavailable": "Nedostupné",
+    "test": "Test",
+    "testing": "Testování...",
+    "testFailed": "Nepodařilo se otestovat úložiště obrázků",
+    "testConnected": "Terminálová relace je připojena.",
+    "testNotConnected": "S tímto ID instance není připojena žádná terminálová relace.",
+    "testSelectedMode": "Nahrávání by použilo: {{mode}}",
+    "testLocalVisible": "Lokální adresář je viditelný z připojeného hostitele.",
+    "testLocalNotVisible": "Lokální adresář NENÍ viditelný z připojeného hostitele."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Dotykový vstup",
+        "images": "Ukládání obrázků"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Perzistence terminálové relace",
+        "description": "Jak dlouho je odpojený terminál udržován aktivní na serveru, než je uzavřen. Min. 1 · Max. 1440 minut. Pro relace, které musí tuto dobu přetrvávat, povolte na hostiteli Auto-Tmux."
+      },
+      "commandHistoryEnabled": {
+        "label": "Historie příkazů",
+        "description": "Povolit záznam historie příkazů. Pokud je tato možnost zakázána, historie se neukládá bez ohledu na nastavení pro jednotlivé hostitele."
+      },
+      "imageStorageMode": {
+        "label": "Režim úložiště",
+        "description": "Kam se zapisují vložené a nahrané obrazy terminálu. Automatické výběry podle připojení, lokální a vzdálené (SFTP) jsou opraveny.",
+        "auto": "Auto",
+        "local": "Místní",
+        "remoteSftp": "Vzdálené (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Místní adresář"
+      },
+      "imageHostPath": {
+        "label": "Cesta hostitele",
+        "description": "Pohled na lokální adresář, který termináloví agenti přijímají, na straně hostitele."
+      },
+      "imageTtlMs": {
+        "label": "Doba trvání (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Maximální počet obrázků"
+      },
+      "imageMaxBytes": {
+        "label": "Maximální počet bajtů úložiště"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Povolit panel nástrojů terminálu",
+        "description": "Zobrazit panel nástrojů pro rychlý přístup ukotvený v aktivním terminálu pro nástroje a aktuální statistiky tohoto hostitele"
+      },
+      "enableCommandHistory": {
+        "label": "Historie příkazů",
+        "description": "Zaznamenávejte příkazy spouštěné v tomto terminálu pro historii a automatické dokončování"
+      },
+      "enableTerminal": {
+        "label": "Povolit terminál"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Místní terminál"
+  }
+}

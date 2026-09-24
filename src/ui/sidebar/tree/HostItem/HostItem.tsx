@@ -126,7 +126,6 @@ export function getSshActions(host: Host): {
   return [
     // --- tmux-monitor --- opt-in per host, off by default
     host.enableSsh &&
-      host.enableTerminal &&
       host.enableTmuxMonitor && {
         type: "tmux_monitor" as TabType,
         icon: Layers,
@@ -419,8 +418,9 @@ export function HostItem({
       action.tabType ? [action.tabType] : [],
     ),
   ];
+  // Empty when no running plugin can connect to this host.
   const defaultAction: TabType =
-    defaultConnectAction(allHostActions, host)?.tabType ?? "terminal";
+    defaultConnectAction(allHostActions, host)?.tabType ?? "";
   const openHostTab = (
     type: TabType,
     options?: {
@@ -429,6 +429,7 @@ export function HostItem({
       forceNewTab?: boolean;
     },
   ) => {
+    if (!type) return;
     markTabSurfaceUsed(type);
     recordHostActionPreference(host.id, type);
     onOpenTab(type, {
@@ -798,22 +799,20 @@ export function HostItem({
               {t("hosts.copyLink")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {host.enableSsh &&
-                host.enableTerminal &&
-                host.enableTmuxMonitor && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      writeClipboardText(
-                        `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
-                      );
-                      toast.success(t("hosts.tmuxMonitorUrlCopied"));
-                    }}
-                  >
-                    <Layers className="size-3.5 mr-2" />
-                    {t("hosts.copyTmuxMonitorUrlAction")}
-                  </DropdownMenuItem>
-                )}
+              {host.enableSsh && host.enableTmuxMonitor && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    writeClipboardText(
+                      `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
+                    );
+                    toast.success(t("hosts.tmuxMonitorUrlCopied"));
+                  }}
+                >
+                  <Layers className="size-3.5 mr-2" />
+                  {t("hosts.copyTmuxMonitorUrlAction")}
+                </DropdownMenuItem>
+              )}
               {pluginActions
                 .filter((action) => action.copyUrlView)
                 .map((action) => {
@@ -972,7 +971,7 @@ export function HostItem({
       }}
       style={depthStyle}
       onPointerEnter={() => {
-        preloadTabSurface(defaultAction);
+        if (defaultAction) preloadTabSurface(defaultAction);
         const preferredAction = getPreferredHostAction(
           host.id,
           availableActions,

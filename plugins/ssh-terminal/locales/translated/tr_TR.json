@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "Ekle",
+    "arrowDown": "Aşağı Ok",
+    "arrowLeft": "Sol Ok",
+    "arrowRight": "Sağ Ok",
+    "arrowUp": "Yukarı Ok",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "Del",
+    "done": "Tamam",
+    "editQuickKeys": "Hızlı tuşları düzenle",
+    "end": "End",
+    "esc": "Esc",
+    "home": "Home",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "paste": "Yapıştır",
+    "quickKeyPlaceholder": "ör. sudo ",
+    "quickKeysDesc": "Kaldırmak için × işaretine dokunun. En fazla 8 karakter desteklenir.",
+    "quickKeysTitle": "Hızlı Tuşlar",
+    "removeQuickKey": "Kaldır",
+    "resetDefaults": "Varsayılanlara sıfırla",
+    "shift": "Shift",
+    "tab": "Tab"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "Otomatik Tmux etkinleştirme başarısız oldu.",
+    "autoTmuxEnabled": "{{host}}için otomatik Tmux etkinleştirildi. Bu, sonraki bağlantıdan itibaren geçerli olacak.",
+    "clipboardHttpWarning": "Panoyu okuyamadım. Bazı tarayıcılar HTTPS dışında panoya erişimi kısıtlar; bunun yerine Ctrl+V tuş kombinasyonunu deneyin veya Termix'i HTTPS üzerinden sunun.",
+    "closeTab": "Kapat",
+    "connecting": "Bağlanıyor...",
+    "connectionLost": "Bağlantı kesildi",
+    "connectionRejected": "Bağlantı sunucu tarafından reddedildi. Lütfen kimlik doğrulamanızı ve ağ yapılandırmanızı kontrol edin.",
+    "connectionTimeout": "Bağlantı zaman aşımı",
+    "enableAutoTmuxAction": "Otomatik Tmux'ı etkinleştirin",
+    "hostKeyRejected": "SSH sunucu anahtarı doğrulaması reddedildi. Bağlantı iptal edildi.",
+    "linkDialogCopy": "Kopyala",
+    "linkDialogOpen": "Aç",
+    "linkDialogTitle": "Bağlantıyı Aç",
+    "maxReconnectAttemptsReached": "Maksimum yeniden bağlanma denemesine ulaşıldı",
+    "noHostSelected": "Hiçbir sunucu seçilmedi",
+    "opksshAuthFailed": "Kimlik doğrulaması başarısız oldu. Lütfen kimlik bilgilerinizi kontrol edip tekrar deneyin.",
+    "opksshTimeout": "Kimlik doğrulaması zaman aşımına uğradı. Lütfen tekrar deneyin.",
+    "passwordPromptFillTitle": "Kayıtlı parola bu isteme doldurulsun mu?",
+    "reconnect": "Yeniden Bağlan",
+    "reconnected": "Başarıyla yeniden bağlandı",
+    "reconnecting": "Yeniden bağlanıyor... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "Kibrit Kutusu",
+    "searchClose": "Kapat (Escape)",
+    "searchNext": "Sonraki Maç (Giriş)",
+    "searchNoResults": "Sonuç bulunamadı.",
+    "searchPlaceholder": "Bulmak",
+    "searchPrevious": "Önceki Maç (Shift+Enter)",
+    "searchRegex": "Düzenli İfade Kullanımı",
+    "searchResultCount": "{{index}} / {{count}}",
+    "searchWholeWord": "Kelimenin tamamını eşleştir",
+    "sessionExpiredNotice": "{{host}} üzerindeki önceki oturumunuz {{minutes}} dakika sonra sona erdi; kabuk ve içinde çalışan her şey silindi. Oturumların aktif kalması için bu sunucuda Auto-Tmux'u etkinleştirin.",
+    "sessionExpiredNoticeNoMinutes": "{{host}} üzerindeki önceki oturumunuz bağlantı kesikken sona erdi; kabuk ve içinde çalışan her şey kayboldu. Oturumların aktif kalması için bu sunucuda Auto-Tmux'u etkinleştirin.",
+    "sessionTakenOver": "Oturum başka bir sekmede açıldı. Yeniden bağlanılıyor...",
+    "tmuxAttached": "Bağlı istemciler",
+    "tmuxAttachedCount": "{{count}} bağlı",
+    "tmuxCopyHint": "Seçimi ayarlayın ve panoya kopyalamak için Enter tuşuna basın",
+    "tmuxCreateNew": "Yeni oturum başlat",
+    "tmuxDetached": "tmux oturumundan ayrıldı",
+    "tmuxLastActivity": "Son etkinlik",
+    "tmuxSessionAttached": "tmux oturumuna bağlanıldı: {{name}}",
+    "tmuxSessionCreated": "tmux oturumu oluşturuldu: {{name}}",
+    "tmuxSessionPickerDesc": "Bu sunucuda mevcut tmux oturumları bulundu. Yeniden bağlanmak için birini seçin veya yeni bir oturum oluşturun.",
+    "tmuxSessionPickerTitle": "tmux Oturumları",
+    "tmuxTimeDays": "{{count}}g önce",
+    "tmuxTimeHours": "{{count}}s önce",
+    "tmuxTimeJustNow": "az önce",
+    "tmuxTimeMinutes": "{{count}}dk önce",
+    "tmuxUnavailable": "Uzak sunucuda tmux yüklü değil, standart kabuğa dönülüyor",
+    "tmuxWindowCount": "{{count}} pencere",
+    "tmuxWindows": "Pencereler",
+    "unknownError": "Bilinmeyen bir hata oluştu",
+    "vaultAuthDescription": "HashiCorp Vault'ta oturum açmak için bir pencere açıldı. Orada oturum açmayı tamamlayın; bu bağlantı otomatik olarak devam edecek.",
+    "vaultAuthFailed": "Vault kimlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
+    "vaultAuthTitle": "Vault Oturum Açması Gerekli",
+    "vaultReopen": "Oturum açma penceresini yeniden aç",
+    "websocketAbnormalClose": "Bağlantı beklenmedik şekilde kapandı. Bu, ters proxy veya SSL yapılandırma sorunundan kaynaklanabilir. Lütfen sunucu günlüklerini kontrol edin.",
+    "websocketError": "WebSocket bağlantı hatası"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmux'u ayır",
+    "detachTmuxDescription": "Tmux oturumunu ayır",
+    "dismissError": "Görüntü hatasını kapat",
+    "hideToolbar": "Araç çubuğunu gizle",
+    "image": "Görüntü işlemleri (yalnızca görüntüler)",
+    "imageActionFailed": "Görüntü işlemi başarısız oldu",
+    "layout": "Araç çubuğu görüntüleme modu",
+    "layoutExpanded": "Ölçütlerle genişletildi",
+    "layoutIcon": "Yalnızca simge",
+    "layoutLabeled": "Simgeler ve etiketler",
+    "moveToolbar": "Araç çubuğunu taşı",
+    "moveToolbarHint": "Araç çubuğunu yeniden konumlandırmak için sürükleyin.",
+    "paste": "Resmi yapıştır",
+    "pasteImage": "Panodan resim yapıştır (yalnızca resimler)",
+    "retry": "Tekrar dene",
+    "showToolbar": "Araç çubuğunu genişletin",
+    "upload": "Resim yükle",
+    "uploadImage": "Sunucuya bir resim yükleyin.",
+    "uploadingImage": "Yükleniyor..."
+  },
+  "history": {
+    "noTerminalSelected": "Terminal seçilmedi",
+    "noTerminalSelectedHint": "Komut geçmişini görüntülemek için bir SSH terminal sekmesi açın",
+    "searchPlaceholder": "Geçmişte ara...",
+    "clearAll": "Tümünü Temizle",
+    "noHistoryEntries": "Geçmiş girdisi yok",
+    "trackingDisabled": "Geçmiş takibi kapalı"
+  },
+  "touchInput": {
+    "enabled": "Dokunmatik Girişi Etkinleştir",
+    "enabledDesc": "Terminallerde tek parmakla dokunmatik kaydırmaya izin verin.",
+    "momentumEnabled": "İvme Kazandırın",
+    "momentumEnabledDesc": "Kaydırma işleminden sonra kısa bir süre daha aşağı kaydırmaya devam edin.",
+    "advanced": "Gelişmiş",
+    "resetDefaults": "Varsayılan ayarlara sıfırla",
+    "dragThreshold": "Sürükleme eşiği",
+    "maxWheelDelta": "Maksimum tekerlek deltası",
+    "momentumSampleWindow": "Momentum örnek penceresi",
+    "releaseGracePeriod": "Serbest bırakma erteleme süresi",
+    "minimumVelocity": "Minimum hız",
+    "maximumVelocity": "Maksimum hız",
+    "maximumDuration": "Maksimum süre",
+    "maximumTravel": "Maksimum seyahat",
+    "decayTime": "Bozunma süresi",
+    "pixelsPerTick": "Piksel başına tik",
+    "maximumFrameInterval": "Maksimum kare aralığı",
+    "maximumTicksPerFrame": "Kare başına maksimum tik sayısı"
+  },
+  "imageStorage": {
+    "instanceId": "Terminal oturum örneği kimliği",
+    "instanceIdDesc": "Görünürlüğü test etmek için kullanılan, bağlı terminal sekmelerinizden birinin örnek kimliği.",
+    "selectedModeUnavailable": "Mevcut değil",
+    "test": "Test",
+    "testing": "Test...",
+    "testFailed": "Görüntü depolama testi başarısız oldu.",
+    "testConnected": "Terminal oturumu bağlandı.",
+    "testNotConnected": "Bu örnek kimliğiyle bağlantılı bir terminal oturumu bulunmamaktadır.",
+    "testSelectedMode": "Yükleme işlemi şu şekilde yapılır: {{mode}}",
+    "testLocalVisible": "Yerel dizin, bağlı sunucudan görülebilir.",
+    "testLocalNotVisible": "Yerel dizin, bağlı sunucudan görünmez."
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "Dokunmatik Giriş",
+        "images": "Görüntü Depolama"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "Terminal Oturum Kalıcılığı",
+        "description": "Bağlantısı kesilmiş bir terminalin sunucuda kapatılmadan önce ne kadar süreyle aktif tutulacağı. Minimum 1 dakika, maksimum 1440 dakika. Bu süreyi aşması gereken oturumlar için, sunucuda Auto-Tmux'u etkinleştirin."
+      },
+      "commandHistoryEnabled": {
+        "label": "Komut Geçmişi",
+        "description": "Komut geçmişi kaydına izin ver. Devre dışı bırakıldığında, host başına ayarlara bakılmaksızın geçmiş kaydedilmez."
+      },
+      "imageStorageMode": {
+        "label": "Depolama Modu",
+        "description": "Yapıştırılan ve yüklenen terminal görüntülerinin yazıldığı yer. Bağlantı türüne göre otomatik seçim, Yerel ve Uzak (SFTP) ayarları düzeltildi.",
+        "auto": "Otomatik",
+        "local": "Yerel",
+        "remoteSftp": "Uzaktan (SFTP)"
+      },
+      "imageLocalDir": {
+        "label": "Yerel dizin"
+      },
+      "imageHostPath": {
+        "label": "Ana bilgisayar yolu",
+        "description": "Terminal aracıların aldığı yerel dizinin sunucu tarafındaki görünümü."
+      },
+      "imageTtlMs": {
+        "label": "TTL (ms)"
+      },
+      "imageMaxCount": {
+        "label": "Maksimum görüntü sayısı"
+      },
+      "imageMaxBytes": {
+        "label": "Maksimum depolama baytları"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "Terminal Araç Çubuğunu Etkinleştir",
+        "description": "Etkin terminale sabitlenmiş, bu sunucunun araçlarına ve canlı istatistiklerine hızlı erişim sağlayan bir araç çubuğu gösterin."
+      },
+      "enableCommandHistory": {
+        "label": "Komut Geçmişi",
+        "description": "Geçmiş ve otomatik tamamlama için bu terminalde çalıştırılan komutları kaydet"
+      },
+      "enableTerminal": {
+        "label": "Terminali Etkinleştir"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "Yerel Terminal"
+  }
+}

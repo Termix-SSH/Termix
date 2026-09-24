@@ -1,0 +1,203 @@
+{
+  "mobileKeyboard": {
+    "addQuickKey": "যোগ করুন",
+    "arrowDown": "অ্যারো ডাউন",
+    "arrowLeft": "বাম তীর",
+    "arrowRight": "ডান তীরচিহ্ন",
+    "arrowUp": "তীর ঊর্ধ্বমুখী",
+    "backTab": "⇥",
+    "ctrl": "Ctrl",
+    "delete": "ডেল",
+    "done": "সম্পন্ন হয়েছে",
+    "editQuickKeys": "দ্রুত কী সম্পাদনা করুন",
+    "end": "শেষ",
+    "esc": "এস্ক",
+    "home": "হোম",
+    "pageDown": "পিজিডিএন",
+    "pageUp": "পিজিআপ",
+    "paste": "পেস্ট",
+    "quickKeyPlaceholder": "যেমন sudo ",
+    "quickKeysDesc": "মুছে ফেলতে × চাপুন। সর্বোচ্চ ৮টি অক্ষর সমর্থন করে।",
+    "quickKeysTitle": "দ্রুত চাবি",
+    "removeQuickKey": "অপসারণ করুন",
+    "resetDefaults": "ডিফল্টে রিসেট করুন",
+    "shift": "শিফট",
+    "tab": "ট্যাব"
+  },
+  "terminal": {
+    "autoTmuxEnableFailed": "অটো-টিমাক্স সক্রিয় করতে ব্যর্থ হয়েছে",
+    "autoTmuxEnabled": "{{host}}এর জন্য অটো-টিমাক্স সক্রিয় করা হয়েছে। এটি পরবর্তী সংযোগ থেকে প্রযোজ্য হবে।",
+    "clipboardHttpWarning": "ক্লিপবোর্ডটি পড়া যায়নি। কিছু ব্রাউজার HTTPS-এর বাইরে ক্লিপবোর্ড অ্যাক্সেস সীমাবদ্ধ করে - এর পরিবর্তে Ctrl+V ব্যবহার করে দেখুন, অথবা HTTPS-এর মাধ্যমে Termix পরিবেশন করুন।",
+    "closeTab": "বন্ধ করুন",
+    "connecting": "সংযোগ স্থাপন...",
+    "connectionLost": "সংযোগ বিচ্ছিন্ন",
+    "connectionRejected": "সার্ভার কর্তৃক সংযোগ প্রত্যাখ্যাত হয়েছে। অনুগ্রহ করে আপনার প্রমাণীকরণ এবং নেটওয়ার্ক কনফিগারেশন যাচাই করুন।",
+    "connectionTimeout": "সংযোগের সময়সীমা শেষ",
+    "enableAutoTmuxAction": "অটো-Tmux সক্রিয় করুন",
+    "hostKeyRejected": "SSH হোস্ট কী যাচাইকরণ প্রত্যাখ্যাত হয়েছে। সংযোগ বাতিল করা হয়েছে।",
+    "linkDialogCopy": "অনুলিপি",
+    "linkDialogOpen": "খোলা",
+    "linkDialogTitle": "লিঙ্ক খুলুন",
+    "maxReconnectAttemptsReached": "পুনঃসংযোগের সর্বোচ্চ প্রচেষ্টা শেষ হয়েছে",
+    "noHostSelected": "কোন হোস্ট নির্বাচন করা হয়নি",
+    "opksshAuthFailed": "প্রমাণীকরণ ব্যর্থ হয়েছে। অনুগ্রহ করে আপনার পরিচয়পত্র যাচাই করে আবার চেষ্টা করুন।",
+    "opksshTimeout": "প্রমাণীকরণের সময়সীমা শেষ হয়ে গেছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+    "passwordPromptFillTitle": "সংরক্ষিত পাসওয়ার্ডটি এই প্রম্পটে পূরণ করুন?",
+    "reconnect": "পুনরায় সংযোগ করুন",
+    "reconnected": "সফলভাবে পুনরায় সংযুক্ত হয়েছে",
+    "reconnecting": "পুনরায় সংযোগ স্থাপন করা হচ্ছে... ({{attempt}}/{{max}})",
+    "searchCaseSensitive": "দেশলাইয়ের বাক্স",
+    "searchClose": "বন্ধ করুন (পলায়ন)",
+    "searchNext": "পরবর্তী ম্যাচ (প্রবেশ করুন)",
+    "searchNoResults": "কোন ফলাফল নেই",
+    "searchPlaceholder": "খুঁজুন",
+    "searchPrevious": "পূর্ববর্তী ম্যাচ (Shift+Enter)",
+    "searchRegex": "রেগুলার এক্সপ্রেশন ব্যবহার করুন",
+    "searchResultCount": "{{index}} এর {{count}}",
+    "searchWholeWord": "সম্পূর্ণ শব্দ মেলান",
+    "sessionExpiredNotice": "{{host}} -এ আপনার পূর্ববর্তী সেশনটি {{minutes}} মিনিট পর সংযোগ বিচ্ছিন্ন হয়ে মেয়াদোত্তীর্ণ হয়েছে; শেল এবং এর মধ্যে চলমান সবকিছু চলে গেছে। সেশনগুলো সচল রাখতে এই হোস্টে অটো-টিমাক্স (Auto-Tmux) সক্রিয় করুন।",
+    "sessionExpiredNoticeNoMinutes": "{{host}} -এ আপনার পূর্ববর্তী সেশনটি সংযোগ বিচ্ছিন্ন থাকাকালীন মেয়াদোত্তীর্ণ হয়ে গেছে; শেল এবং এর মধ্যে চলমান সবকিছু মুছে গেছে। সেশনগুলো সচল রাখতে এই হোস্টে অটো-টিমাক্স (Auto-Tmux) সক্রিয় করুন।",
+    "sessionTakenOver": "সেশনটি অন্য একটি ট্যাবে খোলা হয়েছিল। পুনরায় সংযোগ করা হচ্ছে...",
+    "tmuxAttached": "সংযুক্ত ক্লায়েন্ট",
+    "tmuxAttachedCount": "{{count}} সংযুক্ত",
+    "tmuxCopyHint": "নির্বাচনটি ঠিক করুন এবং ক্লিপবোর্ডে কপি করতে এন্টার চাপুন।",
+    "tmuxCreateNew": "নতুন সেশন শুরু করুন",
+    "tmuxDetached": "tmux সেশন থেকে বিচ্ছিন্ন",
+    "tmuxLastActivity": "শেষ কার্যকলাপ",
+    "tmuxSessionAttached": "tmux সেশন সংযুক্ত হয়েছে: {{name}}",
+    "tmuxSessionCreated": "tmux সেশন তৈরি হয়েছে: {{name}}",
+    "tmuxSessionPickerDesc": "এই হোস্টে বিদ্যমান tmux সেশন পাওয়া গেছে। পুনরায় সংযুক্ত হতে বা একটি নতুন সেশন তৈরি করতে যেকোনো একটি নির্বাচন করুন।",
+    "tmuxSessionPickerTitle": "tmux সেশন",
+    "tmuxTimeDays": "{{count}}দিন আগে",
+    "tmuxTimeHours": "{{count}}ঘণ্টা আগে",
+    "tmuxTimeJustNow": "এইমাত্র",
+    "tmuxTimeMinutes": "{{count}}মিনিট আগে",
+    "tmuxUnavailable": "রিমোট হোস্টে tmux ইনস্টল করা নেই, তাই স্ট্যান্ডার্ড শেল ব্যবহার করা হচ্ছে।",
+    "tmuxWindowCount": "{{count}} জানালা",
+    "tmuxWindows": "উইন্ডোজ",
+    "unknownError": "অজানা ত্রুটি ঘটেছে",
+    "vaultAuthDescription": "হ্যাশিকর্প ভল্টে সাইন ইন করার জন্য একটি উইন্ডো খুলেছে। সেখানে সাইন-ইন সম্পন্ন করুন; এই সংযোগটি স্বয়ংক্রিয়ভাবে চলতে থাকবে।",
+    "vaultAuthFailed": "ভল্ট প্রমাণীকরণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+    "vaultAuthTitle": "ভল্টে সাইন-ইন করা আবশ্যক",
+    "vaultReopen": "সাইন-ইন উইন্ডো পুনরায় খুলুন",
+    "websocketAbnormalClose": "সংযোগটি অপ্রত্যাশিতভাবে বন্ধ হয়ে গেছে। এটি রিভার্স প্রক্সি বা SSL কনফিগারেশন সংক্রান্ত সমস্যার কারণে হতে পারে। অনুগ্রহ করে সার্ভার লগ পরীক্ষা করুন।",
+    "websocketError": "ওয়েবসকেট সংযোগ ত্রুটি"
+  },
+  "terminalToolbar": {
+    "detachTmux": "tmux বিচ্ছিন্ন করুন",
+    "detachTmuxDescription": "tmux সেশন বিচ্ছিন্ন করুন",
+    "dismissError": "ছবির ত্রুটি খারিজ করুন",
+    "hideToolbar": "টুলবার লুকান",
+    "image": "ছবির কার্যকলাপ (শুধুমাত্র ছবি)",
+    "imageActionFailed": "ছবির অ্যাকশন ব্যর্থ হয়েছে",
+    "layout": "টুলবার প্রদর্শন মোড",
+    "layoutExpanded": "মেট্রিক্স দিয়ে প্রসারিত",
+    "layoutIcon": "শুধুমাত্র আইকন",
+    "layoutLabeled": "আইকন এবং লেবেল",
+    "moveToolbar": "টুলবার সরান",
+    "moveToolbarHint": "টুলবারের অবস্থান পরিবর্তন করতে টেনে আনুন",
+    "paste": "ছবি পেস্ট করুন",
+    "pasteImage": "ক্লিপবোর্ড থেকে ছবি পেস্ট করুন (শুধুমাত্র ছবি)",
+    "retry": "পুনরায় চেষ্টা করুন",
+    "showToolbar": "টুলবার প্রসারিত করুন",
+    "upload": "ছবি আপলোড করুন",
+    "uploadImage": "হোস্টে একটি ছবি আপলোড করুন",
+    "uploadingImage": "আপলোড হচ্ছে..."
+  },
+  "history": {
+    "noTerminalSelected": "কোন টার্মিনাল নির্বাচন করা হয়নি",
+    "noTerminalSelectedHint": "এর কমান্ড হিস্ট্রি দেখতে একটি SSH টার্মিনাল ট্যাব খুলুন।",
+    "searchPlaceholder": "অনুসন্ধানের ইতিহাস...",
+    "clearAll": "সব পরিষ্কার করুন",
+    "noHistoryEntries": "ইতিহাসের কোন এন্ট্রি নেই",
+    "trackingDisabled": "ইতিহাস ট্র্যাকিং নিষ্ক্রিয় করা হয়েছে"
+  },
+  "touchInput": {
+    "enabled": "টাচ ইনপুট সক্রিয় করুন",
+    "enabledDesc": "টার্মিনালে এক আঙুলের স্পর্শে স্ক্রোলিং করার অনুমতি দিন",
+    "momentumEnabled": "গতি সঞ্চার করুন",
+    "momentumEnabledDesc": "সোয়াইপ করার পর কিছুক্ষণ স্ক্রোল করতে থাকুন।",
+    "advanced": "উন্নত",
+    "resetDefaults": "ডিফল্টে রিসেট করুন",
+    "dragThreshold": "ড্র্যাগ থ্রেশহোল্ড",
+    "maxWheelDelta": "সর্বোচ্চ চাকার ডেল্টা",
+    "momentumSampleWindow": "ভরবেগ নমুনা উইন্ডো",
+    "releaseGracePeriod": "মুক্তির জন্য অতিরিক্ত সময়সীমা",
+    "minimumVelocity": "সর্বনিম্ন বেগ",
+    "maximumVelocity": "সর্বোচ্চ বেগ",
+    "maximumDuration": "সর্বোচ্চ সময়কাল",
+    "maximumTravel": "সর্বোচ্চ ভ্রমণ",
+    "decayTime": "ক্ষয়ের সময়",
+    "pixelsPerTick": "প্রতি টিক পিক্সেল",
+    "maximumFrameInterval": "সর্বোচ্চ ফ্রেম ব্যবধান",
+    "maximumTicksPerFrame": "প্রতি ফ্রেমে সর্বোচ্চ টিক"
+  },
+  "imageStorage": {
+    "instanceId": "টার্মিনাল সেশন ইনস্ট্যান্স আইডি",
+    "instanceIdDesc": "আপনার সংযুক্ত টার্মিনাল ট্যাবগুলোর একটির ইনস্ট্যান্স আইডি, যা দৃশ্যমানতা পরীক্ষা করতে ব্যবহৃত হয়।",
+    "selectedModeUnavailable": "অনুপলব্ধ",
+    "test": "পরীক্ষা",
+    "testing": "পরীক্ষা চলছে...",
+    "testFailed": "ইমেজ স্টোরেজ পরীক্ষা করতে ব্যর্থ হয়েছে",
+    "testConnected": "টার্মিনাল সেশন সংযুক্ত আছে।",
+    "testNotConnected": "এই ইনস্ট্যান্স আইডির সাথে কোনো সংযুক্ত টার্মিনাল সেশন নেই।",
+    "testSelectedMode": "আপলোড করতে ব্যবহৃত হবে: {{mode}}",
+    "testLocalVisible": "সংযুক্ত হোস্ট থেকে স্থানীয় ডিরেক্টরিটি দেখা যায়।",
+    "testLocalNotVisible": "সংযুক্ত হোস্ট থেকে স্থানীয় ডিরেক্টরিটি দেখা যাচ্ছে না।"
+  },
+  "settings": {
+    "admin": {
+      "group": {
+        "touch": "টাচ ইনপুট",
+        "images": "ইমেজ স্টোরেজ"
+      },
+      "sessionTimeoutMinutes": {
+        "label": "টার্মিনাল সেশন স্থায়িত্ব",
+        "description": "একটি সংযোগ বিচ্ছিন্ন টার্মিনাল বন্ধ হওয়ার আগে সার্ভারে কতক্ষণ চালু থাকে। সর্বনিম্ন ১ · সর্বোচ্চ ১৪৪০ মিনিট। যে সেশনগুলোকে এই সময়ের চেয়ে বেশি সময় ধরে চালু রাখতে হবে, সেগুলোর জন্য হোস্টে অটো-টিমাক্স (Auto-Tmux) সক্রিয় করুন।"
+      },
+      "commandHistoryEnabled": {
+        "label": "কমান্ডের ইতিহাস",
+        "description": "কমান্ড হিস্ট্রি রেকর্ডিংয়ের অনুমতি দিন। এটি নিষ্ক্রিয় করা থাকলে, হোস্ট-ভিত্তিক সেটিংস নির্বিশেষে হিস্ট্রি সংরক্ষিত হয় না।"
+      },
+      "imageStorageMode": {
+        "label": "স্টোরেজ মোড",
+        "description": "যেখানে পেস্ট করা এবং আপলোড করা টার্মিনাল ইমেজগুলো লেখা হয়। কানেকশন অনুযায়ী অটো পিক, লোকাল এবং রিমোট (SFTP) নির্দিষ্ট করা আছে।",
+        "auto": "অটো",
+        "local": "স্থানীয়",
+        "remoteSftp": "রিমোট (এসএফটিপি)"
+      },
+      "imageLocalDir": {
+        "label": "স্থানীয় ডিরেক্টরি"
+      },
+      "imageHostPath": {
+        "label": "হোস্ট পাথ",
+        "description": "টার্মিনাল এজেন্টরা স্থানীয় ডিরেক্টরির যে হোস্ট-সাইড ভিউটি পায়।"
+      },
+      "imageTtlMs": {
+        "label": "টিটিএল (মিলিসেকেন্ড)"
+      },
+      "imageMaxCount": {
+        "label": "সর্বোচ্চ ছবির সংখ্যা"
+      },
+      "imageMaxBytes": {
+        "label": "সর্বোচ্চ স্টোরেজ বাইট"
+      }
+    },
+    "host": {
+      "enableTerminalToolbar": {
+        "label": "টার্মিনাল টুলবার সক্রিয় করুন",
+        "description": "এই হোস্টের টুলস এবং লাইভ পরিসংখ্যানের জন্য সক্রিয় টার্মিনালে ডক করা একটি কুইক-অ্যাক্সেস টুলবার দেখান।"
+      },
+      "enableCommandHistory": {
+        "label": "কমান্ডের ইতিহাস",
+        "description": "ইতিহাস এবং স্বয়ংক্রিয় সম্পূর্ণতার জন্য এই টার্মিনালে চালানো কমান্ডগুলো রেকর্ড করুন।"
+      },
+      "enableTerminal": {
+        "label": "টার্মিনাল সক্রিয় করুন"
+      }
+    }
+  },
+  "palette": {
+    "localTerminal": "স্থানীয় টার্মিনাল"
+  }
+}

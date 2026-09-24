@@ -91,6 +91,12 @@ export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
   });
 }
 
+/** How long a detached terminal session is kept, in minutes. */
+export async function getSessionTimeoutMinutes(): Promise<number> {
+  const response = await authApi.get("/open-tabs/session-timeout");
+  return Number(response.data?.minutes) || 30;
+}
+
 // ============================================================================
 // USER PREFERENCES API
 // ============================================================================

@@ -3,6 +3,8 @@ import { createRegistry } from "@/lib/registry";
 import type { TabShellCallbacks } from "./tab-registry";
 
 export interface PanelRenderProps {
+  /** The command-target tab the user is working in, if any. */
+  targetTab?: import("@/types/ui-types").Tab;
   active: boolean;
   shell: TabShellCallbacks;
   setEditing: (editing: boolean) => void;

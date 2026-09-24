@@ -3,6 +3,7 @@
 // the native tmux_attach flow, so the pane is fully usable — typing, mouse
 // scrolling and tmux copy-mode all behave exactly like a normal terminal tab.
 
+import { PluginComponent } from "@/plugin-host/component-registry";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,12 +16,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
-import { Terminal } from "@/features/terminal/Terminal";
-import type {
-  TerminalHandle,
-  TerminalHostConfig,
-} from "@/features/terminal/Terminal";
+import type { TabHandle as TerminalHandle } from "@termix/plugin-sdk/frontend";
+
+type TerminalHostConfig = Record<string, unknown>;
 import type { SSHHost } from "@/types/index";
 import type { TmuxPaneMetrics } from "@/api/tmux-monitor-api";
 import { formatMem } from "./format";
@@ -154,18 +152,18 @@ export function PanePreview({
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <CommandHistoryProvider key={attachNonce}>
-          <Terminal
-            ref={terminalRef}
-            hostConfig={terminalHostConfig}
-            isVisible={true}
-            title={pane.sessionName}
-            showTitle={false}
-            splitScreen={false}
-            tmuxAttachSession={pane.sessionName}
-            onClose={onClose}
-          />
-        </CommandHistoryProvider>
+        <PluginComponent
+          id="terminal.view"
+          key={attachNonce}
+          handleRef={terminalRef}
+          hostConfig={terminalHostConfig}
+          isVisible={true}
+          title={pane.sessionName}
+          showTitle={false}
+          splitScreen={false}
+          tmuxAttachSession={pane.sessionName}
+          onClose={onClose}
+        />
       </div>
     </>
   );

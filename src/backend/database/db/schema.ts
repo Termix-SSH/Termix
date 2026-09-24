@@ -508,26 +508,6 @@ export const recentActivity = sqliteTable(
   ],
 );
 
-export const commandHistory = sqliteTable(
-  "command_history",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-    command: text("command").notNull(),
-    executedAt: text("executed_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [
-    index("idx_command_history_user_host").on(table.userId, table.hostId),
-  ],
-);
-
 export const hostAccess = sqliteTable(
   "host_access",
   {

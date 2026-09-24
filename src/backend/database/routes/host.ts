@@ -16,7 +16,6 @@ import {
 } from "../../hosts/credential-username.js";
 import { notifyAutomationInternalEvent } from "../../hosts/automation-events.js";
 import {
-  createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
   createCurrentOpksshTokenRepository,
   createCurrentRecentActivityRepository,
@@ -53,7 +52,6 @@ import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
 import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
-import { registerHostCommandHistoryRoutes } from "./host-command-history-routes.js";
 import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
 import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
@@ -2530,13 +2528,9 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
-      // file manager recent/pinned/shortcuts and transfer_recent cascade on
-      // the host's refHost() foreign key, as the file-manager plugin's
-      // adopted tables.
-
-      await createCurrentCommandHistoryRepository().deleteByHostId(
-        numericHostId,
-      );
+      // file manager recent/pinned/shortcuts, transfer_recent and command
+      // history cascade on the host's refHost() foreign key, as the
+      // file-manager and ssh-terminal plugins' adopted tables.
 
       await createCurrentSshCredentialUsageRepository().deleteByHostId(
         numericHostId,
@@ -2612,13 +2606,8 @@ router.delete(
 );
 
 // File manager recent/pinned/shortcuts and transfer/recent routes moved to
-// the file-manager plugin, under /plugin-api/file-manager/.
-registerHostCommandHistoryRoutes(
-  router,
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-);
+// the file-manager plugin, under /plugin-api/file-manager/, and command
+// history to the ssh-terminal plugin, under /plugin-api/ssh-terminal/.
 
 async function resolveHostCredentials(
   host: Record<string, unknown>,
