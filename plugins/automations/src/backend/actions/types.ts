@@ -1,4 +1,6 @@
-import type { Step } from "../../../../../src/types/automations.js";
+import type { PluginContext } from "@termix/plugin-sdk/backend";
+import type { Step } from "../../types.js";
+import type { Deps } from "../deps.js";
 import type { TemplateContext } from "../template.js";
 
 /** What every executor returns. `output` is what later steps can read. */
@@ -10,6 +12,12 @@ export interface StepResult {
   vars?: Record<string, string>;
   /** Set by the stop step to end the run early. */
   halt?: { status: "success" | "failed" };
+}
+
+/** What the executors reach the rest of Termix through. */
+export interface StepRuntime {
+  ctx: PluginContext;
+  deps: Deps;
 }
 
 export interface StepExecutionContext {

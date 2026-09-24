@@ -1,19 +1,14 @@
 /**
  * The process-wide event bus behind ctx.events.
  *
- * This formalises the ad-hoc publish paths that already existed:
- *   - hosts/automation-events.ts  (generic named internal events)
- *   - hosts/host-session-status.ts  (the "host.session.status" topic)
- *
- * Each of those lazily imported the automations engine and swallowed errors,
- * for two reasons that still apply and are preserved here:
+ * Core publishes here (hosts/internal-events.ts for generic named events,
+ * hosts/host-session-status.ts for "host.session.status", and the topics in
+ * TOPICS below) and plugins subscribe through ctx.events. Two rules:
  *
  *   1. Fire-and-forget. A failing subscriber must never disturb the caller. A
- *      metrics poll or a host delete does not fail because an automation threw.
- *   2. No static import of the automations layer. It reads repositories, which
- *      several hosts modules also pull in, so a static edge would close a
- *      cycle. Subscribers register themselves here instead of being reached
- *      into.
+ *      metrics poll or a host delete does not fail because a listener threw.
+ *   2. No static import of a subscriber. Subscribers register themselves here
+ *      instead of being reached into, so core never names a plugin.
  *
  * Topics are dotted strings. The internal ones the server itself publishes are
  * listed in TOPICS; a plugin may emit and subscribe to any topic, but only

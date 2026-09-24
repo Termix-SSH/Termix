@@ -1,15 +1,6 @@
-import {
-  DEFAULT_STEP_TIMEOUT_MS,
-  type Step,
-} from "../../../../../src/types/automations.js";
+import type { Client } from "ssh2";
+import { DEFAULT_STEP_TIMEOUT_MS, type Step } from "../../types.js";
 import { execCommand, execElevated } from "@termix/plugin-sdk/host-commands";
-import { withSshConnection } from "../ssh.js";
-import { createCurrentNotificationChannelRepository } from "../../../../../src/backend/database/repositories/factory.js";
-import { getSnippet, resolveSnippetCommandFor } from "../snippets.js";
-import { runDockerAction } from "../docker.js";
-import { runTunnelAction } from "../tunnels.js";
-import { sendAutomationNotification } from "../notify.js";
-import { automationFetch } from "../http.js";
 import { renderRecord, renderTemplate } from "../template.js";
 import { resolveTargets, type ResolvedTarget } from "./host-targets.js";
 import {
@@ -18,7 +9,13 @@ import {
   stepTimeout,
   type StepExecutionContext,
   type StepResult,
+  type StepRuntime,
 } from "./types.js";
+
+/** The admin allowlist of private hosts an HTTP step may reach. */
+const PRIVATE_ALLOWLIST_KEY = "notification_private_endpoint_allowlist";
+const errorText = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 /**
  * One executor per step type.
@@ -30,22 +27,23 @@ import {
 export async function executeStep(
   step: Step,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
   switch (step.type) {
     case "notify":
-      return runNotify(step, context);
+      return runNotify(step, context, runtime);
     case "http":
-      return runHttp(step, context);
+      return runHttp(step, context, runtime);
     case "run_command":
-      return runCommand(step, context);
+      return runCommand(step, context, runtime);
     case "run_snippet":
-      return runSnippet(step, context);
+      return runSnippet(step, context, runtime);
     case "docker":
-      return runDocker(step, context);
+      return runDocker(step, context, runtime);
     case "tunnel":
-      return runTunnel(step, context);
+      return runTunnel(step, context, runtime);
     case "wol":
-      return runWol(step, context);
+      return runWol(step, context, runtime);
     case "wait":
       return runWait(step, context);
     case "set_var":
@@ -64,6 +62,7 @@ export async function executeStep(
 async function runNotify(
   step: Extract<Step, { type: "notify" }>,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
   const title = renderTemplate(step.title ?? "", context.template);
   const body = renderTemplate(step.body ?? "", context.template);
@@ -77,49 +76,45 @@ async function runNotify(
     );
   }
 
-  const repository = createCurrentNotificationChannelRepository();
-  const channels = await repository.listNotificationChannels(context.userId);
-  const selected = channels.filter((channel) =>
-    step.channelIds.includes(channel.id),
-  );
-
-  if (selected.length === 0) {
-    return fail("Selected notification channels no longer exist");
+  const trigger = context.template.trigger ?? {};
+  let result;
+  try {
+    result = await runtime.ctx.notify.send(step.channelIds, {
+      title: title || "Termix automation",
+      body,
+      severity: step.severity ?? "warning",
+      context: {
+        hostId:
+          context.template.host?.id ??
+          (typeof trigger.hostId === "number" ? trigger.hostId : undefined),
+        hostName:
+          context.template.host?.name ??
+          (typeof trigger.hostName === "string" ? trigger.hostName : undefined),
+        sourceId: context.automationId,
+        sourceName: title || undefined,
+        triggerType:
+          typeof trigger.type === "string" ? trigger.type : undefined,
+        value: trigger.value,
+        threshold: trigger.threshold,
+      },
+    });
+  } catch (error) {
+    return fail(errorText(error));
   }
 
-  let delivered = 0;
-  const errors: string[] = [];
-  for (const channel of selected) {
-    if (!channel.enabled) continue;
-    try {
-      await sendAutomationNotification(
-        { id: channel.id, type: channel.type, config: channel.config },
-        {
-          title,
-          body,
-          severity: step.severity ?? "warning",
-          context: context.template,
-        },
-      );
-      delivered++;
-    } catch (error) {
-      errors.push(
-        `${channel.name}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  if (delivered === 0) {
+  const errors = result.failures.map((f) => `${f.name}: ${f.error}`);
+  if (result.delivered === 0) {
     return fail(errors.join("; ") || "No enabled channels to notify");
   }
   return ok(
-    `Notified ${delivered} channel(s)${errors.length ? `; ${errors.join("; ")}` : ""}`,
+    `Notified ${result.delivered} channel(s)${errors.length ? `; ${errors.join("; ")}` : ""}`,
   );
 }
 
 async function runHttp(
   step: Extract<Step, { type: "http" }>,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
   const url = renderTemplate(step.url, context.template);
   const headers = renderRecord(step.headers, context.template);
@@ -132,11 +127,20 @@ async function runHttp(
   }
 
   try {
-    const response = await automationFetch(url, {
+    // Private delivery needs both the step's opt-in and an exact host in
+    // the admin allowlist.
+    const allowPrivateHosts = step.allowPrivateNetwork
+      ? parseAllowlist(
+          await runtime.ctx.settings.readCore(PRIVATE_ALLOWLIST_KEY),
+        )
+      : [];
+    const response = await runtime.ctx.fetch(url, {
       method: step.method,
-      headers,
+      headers: body
+        ? { "Content-Type": "application/json", ...(headers ?? {}) }
+        : headers,
       body,
-      allowPrivateNetwork: step.allowPrivateNetwork,
+      allowPrivateHosts,
       timeoutMs: stepTimeout(context, step.timeoutMs, DEFAULT_STEP_TIMEOUT_MS),
     });
 
@@ -144,16 +148,31 @@ async function runHttp(
     const summary = `HTTP ${response.status} ${response.statusText}\n${text}`;
     return response.ok ? ok(summary) : fail(`HTTP ${response.status}`, summary);
   } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
+    return fail(errorText(error));
+  }
+}
+
+function parseAllowlist(raw: unknown): string[] {
+  if (typeof raw !== "string" || !raw) return [];
+  try {
+    const value = JSON.parse(raw);
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter((entry): entry is string => typeof entry === "string")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean);
+  } catch {
+    return [];
   }
 }
 
 async function runCommand(
   step: Extract<Step, { type: "run_command" }>,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
   const command = renderTemplate(step.command, context.template);
-  return runOnTargets(step.hostSelector, context, async (target) => {
+  return runOnTargets(step.hostSelector, context, runtime, async (target) => {
     if (context.dryRun) {
       return { output: `Would run on ${target.name}: ${command}` };
     }
@@ -162,6 +181,7 @@ async function runCommand(
       command,
       step.elevated,
       context,
+      runtime,
       step.timeoutMs,
     );
   });
@@ -170,10 +190,20 @@ async function runCommand(
 async function runSnippet(
   step: Extract<Step, { type: "run_snippet" }>,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
-  const snippet = await getSnippet(context.userId, step.snippetId);
+  const snippets = runtime.deps.snippets();
+  const getSnippet = snippets.get;
+  const resolveCommand = snippets.resolveCommand;
+  if (
+    typeof getSnippet !== "function" ||
+    typeof resolveCommand !== "function"
+  ) {
+    return fail("The snippets plugin is not available");
+  }
+  const snippet = await getSnippet(step.snippetId).catch(() => null);
 
-  if (!snippet) return fail("Snippet not found, or the snippets plugin is off");
+  if (!snippet) return fail("Snippet not found");
   if (snippet.isNote) return fail("Notes cannot be executed on a host");
 
   // Template values only ever reach the snippet through inputValues, never by
@@ -181,18 +211,17 @@ async function runSnippet(
   // syntax of their own.
   const inputValues = renderRecord(step.inputValues, context.template) ?? {};
 
-  return runOnTargets(step.hostSelector, context, async (target) => {
-    const command = await resolveSnippetCommandFor(
-      context.userId,
+  return runOnTargets(step.hostSelector, context, runtime, async (target) => {
+    const command = await resolveCommand(
       step.snippetId,
       {
         ip: target.host.ip,
         username: target.host.username,
         port: target.host.port,
-        name: target.host.name,
+        name: target.name,
       },
       inputValues,
-    );
+    ).catch(() => null);
     if (!command) {
       return { output: "", error: "Snippet could not be resolved" };
     }
@@ -205,6 +234,7 @@ async function runSnippet(
       command,
       step.elevated,
       context,
+      runtime,
       step.timeoutMs,
     );
   });
@@ -213,40 +243,51 @@ async function runSnippet(
 async function runDocker(
   step: Extract<Step, { type: "docker" }>,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
   const container = renderTemplate(step.container, context.template);
   if (!container) return fail("Container name is required");
+  const action = runtime.deps.docker().action;
+  if (typeof action !== "function") {
+    return fail("The docker plugin is not available");
+  }
 
-  return runOnTargets(step.hostSelector, context, async (target) => {
+  return runOnTargets(step.hostSelector, context, runtime, async (target) => {
     if (context.dryRun) {
       return {
         output: `Would ${step.action} container ${container} on ${target.name}`,
       };
     }
 
-    const result = await runDockerAction(
-      context.userId,
-      target.id,
-      container,
-      step.action,
-    );
-    return result.ok
-      ? { output: `Container ${container}: ${step.action} done` }
-      : { output: "", error: result.error };
+    try {
+      await action(target.id, container, step.action);
+      return { output: `Container ${container}: ${step.action} done` };
+    } catch (error) {
+      return { output: "", error: errorText(error) };
+    }
   });
 }
 
 async function runTunnel(
   step: Extract<Step, { type: "tunnel" }>,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
   const name = renderTemplate(step.tunnelName, context.template);
   if (context.dryRun) return ok(`Would ${step.action} tunnel ${name}`);
 
+  const tunnels = runtime.deps.tunnels();
+  const act = step.action === "connect" ? tunnels.start : tunnels.stop;
+  if (typeof act !== "function") {
+    return fail("The tunnels plugin is not available");
+  }
   // A disconnect goes through the tunnels plugin's manual stop, which also
   // holds off its retries, so the tunnel stays down.
-  const result = await runTunnelAction(context.userId, step.action, name);
-  if (!result.ok) return fail(result.error);
+  try {
+    await act(name);
+  } catch (error) {
+    return fail(errorText(error));
+  }
   return ok(
     step.action === "connect"
       ? `Tunnel ${name} connected`
@@ -257,26 +298,23 @@ async function runTunnel(
 async function runWol(
   step: Extract<Step, { type: "wol" }>,
   context: StepExecutionContext,
+  runtime: StepRuntime,
 ): Promise<StepResult> {
-  const host = await resolveTargets(
-    { kind: "host", hostId: step.hostId },
-    context,
-  );
-  const target = host.targets[0];
-  if (!target?.host) return fail("Host not found or not accessible");
+  const host = await runtime.ctx.hosts.get(step.hostId).catch(() => null);
+  if (!host) return fail("Host not found or not accessible");
+  const name = host.name || host.ip;
 
-  const mac = (target.host as { macAddress?: string }).macAddress;
-  if (!mac) return fail("Host has no MAC address configured");
-  if (context.dryRun) return ok(`Would wake ${target.name} (${mac})`);
+  const wake = runtime.deps.wakeOnLan().wake;
+  if (typeof wake !== "function") {
+    return fail("The wake-on-lan plugin is not available");
+  }
+  if (context.dryRun) return ok(`Would wake ${name}`);
 
   try {
-    const { sendWakeOnLan, isValidMac } =
-      await import("../../../../../src/backend/utils/wake-on-lan.js");
-    if (!isValidMac(mac)) return fail(`Invalid MAC address: ${mac}`);
-    await sendWakeOnLan(mac);
-    return ok(`Sent magic packet to ${target.name}`);
+    await wake(step.hostId);
+    return ok(`Sent magic packet to ${name}`);
   } catch (error) {
-    return fail(error instanceof Error ? error.message : String(error));
+    return fail(errorText(error));
   }
 }
 
@@ -310,9 +348,10 @@ async function runSetVar(
 async function runOnTargets(
   selector: Extract<Step, { type: "run_command" }>["hostSelector"],
   context: StepExecutionContext,
+  runtime: StepRuntime,
   run: (target: ResolvedTarget) => Promise<{ output?: string; error?: string }>,
 ): Promise<StepResult> {
-  const { targets, skipped } = await resolveTargets(selector, context);
+  const { targets, skipped } = await resolveTargets(selector, context, runtime);
 
   if (targets.length === 0) {
     return fail(
@@ -363,25 +402,27 @@ async function execOnHost(
   command: string,
   elevated: boolean | undefined,
   context: StepExecutionContext,
+  runtime: StepRuntime,
   timeoutMs: number | undefined,
 ): Promise<{ output?: string; error?: string }> {
-  const sshHost = host as ResolvedTarget["host"] & { sudoPassword?: string };
   const timeout = stepTimeout(context, timeoutMs, DEFAULT_STEP_TIMEOUT_MS);
   if (timeout <= 0) return { error: "Run deadline exceeded" };
 
   try {
-    const result = await withSshConnection(
-      sshHost as never,
-      { pool: "fleet", purpose: "fleet" },
-      async (client) => {
-        if (elevated) {
-          return execElevated(client, command, sshHost.sudoPassword, {
-            timeoutMs: timeout,
-          });
-        }
-        return execCommand(client, command, timeout);
-      },
-    );
+    const result = await runtime.ctx.ssh.withConnection<
+      { stdout: string; stderr: string; code: number | null },
+      Client
+    >(host, { pool: "automations", purpose: "fleet" }, async (client) => {
+      if (elevated) {
+        return execElevated(
+          client,
+          command,
+          host.sudoPassword as string | undefined,
+          { timeoutMs: timeout },
+        );
+      }
+      return execCommand(client, command, timeout);
+    });
 
     const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
     if (result.code === 0 || result.code === null) {
@@ -389,6 +430,6 @@ async function execOnHost(
     }
     return { error: `Exited with code ${result.code}`, output };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
+    return { error: errorText(error) };
   }
 }

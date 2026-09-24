@@ -6,7 +6,6 @@ import type { DatabaseContext } from "./database-context.js";
 import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
 import { AiRepository } from "./ai-repository.js";
 import { NotificationChannelRepository } from "./notification-channel-repository.js";
-import { AutomationRepository } from "./automation-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
@@ -152,13 +151,6 @@ export function createCurrentNotificationChannelRepository(): NotificationChanne
   return new NotificationChannelRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("notification_channel_repository_write"),
-  );
-}
-
-export function createCurrentAutomationRepository(): AutomationRepository {
-  return new AutomationRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("automation_repository_write"),
   );
 }
 

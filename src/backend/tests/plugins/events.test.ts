@@ -108,13 +108,13 @@ describe("hosts publishers route through the bus", () => {
     pluginEvents.clear();
   });
 
-  it("notifyAutomationInternalEvent emits internal.event", async () => {
-    const { notifyAutomationInternalEvent } =
-      await import("../../hosts/automation-events.js");
+  it("emitInternalEvent emits internal.event", async () => {
+    const { emitInternalEvent } =
+      await import("../../hosts/internal-events.js");
     const listener = vi.fn();
     pluginEvents.on(TOPICS.internalEvent, listener);
 
-    notifyAutomationInternalEvent("host_deleted", "user-1", 42, { a: 1 });
+    emitInternalEvent("host_deleted", "user-1", 42, { a: 1 });
 
     expect(listener).toHaveBeenCalledWith({
       event: "host_deleted",
@@ -124,13 +124,13 @@ describe("hosts publishers route through the bus", () => {
     });
   });
 
-  it("notifyAutomationInternalEvent ignores a missing userId", async () => {
-    const { notifyAutomationInternalEvent } =
-      await import("../../hosts/automation-events.js");
+  it("emitInternalEvent ignores a missing userId", async () => {
+    const { emitInternalEvent } =
+      await import("../../hosts/internal-events.js");
     const listener = vi.fn();
     pluginEvents.on(TOPICS.internalEvent, listener);
 
-    notifyAutomationInternalEvent("host_deleted", "");
+    emitInternalEvent("host_deleted", "");
     expect(listener).not.toHaveBeenCalled();
   });
 

@@ -598,7 +598,10 @@ The `docker` and `hostMetrics` areas are still declared in core's
 status for a host, from the shell's own polling, or null outside the shell.
 **B14** added `buildOriginWsUrl`, `getBasePath`, `resolveRemoteHostId` and the
 `ConnectionStage` type, for remote desktop's display socket and its remote
-host lookup. `useConnectionDefaults` now carries terminal defaults only; the
+host lookup. **B17** added `NotificationChannelDialog` and the channel API
+(`getNotificationChannels`, `deleteNotificationChannel`,
+`testNotificationChannel`, the `NotificationChannel` type): channels are core,
+so a plugin that manages them shows core's dialog. `useConnectionDefaults` now carries terminal defaults only; the
 RDP half became remote desktop's user settings. Publishing its
 `.d.ts` for plugins outside this repo is a follow-up for the repo split.
 
@@ -731,6 +734,38 @@ themselves and are rate limited per IP. The share button is a contribution to
 the `shareable`, `canShare`, `openShareModal` and `getShareTarget` members of
 `TabOptions`/`TabHandle` are gone. Core's active connections list gets the
 sessions shared with a user from the `sessions.sharedWithMe` action.
+
+**Automations (B17)** imports nothing from core. It reaches snippets
+(`snippets.access`, a hard dependency), fleets (`fleets.access`), tunnels
+(`tunnels.access`), Docker (`docker.containers`, `docker.events`), host metrics
+(`host-metrics.viewers`) and wake-on-lan (`wake-on-lan.send` v1,
+`wake(hostId)`, which B20 provides) as services, notification channels through
+`ctx.notify`, the HTTP step through `ctx.fetch`, hosts through `ctx.hosts` and
+`ctx.ssh.resolveHost`, and commands through `ctx.ssh.withConnection`. Every run
+executes inside `ctx.asUser(<owner>)`, so each of those calls is the owner's.
+The scheduler tick is `ctx.schedule.every`, and triggers listen through
+`ctx.events` to `host.status`, `host.login`, `internal.event`,
+`plugin.host-metrics.snapshot`, `plugin.host-metrics.health-check`,
+`plugin.tunnels.tunnel_disconnected` and its own
+`plugin.automations.automation_failed`, which replaced the core
+`automation_failed` internal event.
+
+A definition's trigger and steps say which of those optional plugins it needs
+(`requirements.ts`). An automation whose provider is not running is skipped:
+the run is recorded as `skipped` with "Needs the <plugin> plugin", the reason
+is logged, and the engine carries on with the next one. The editor asks
+`GET /editor-options` for the running providers and only offers the triggers
+and steps they allow, and the list marks such an automation "Needs <plugin>".
+It provides `automations.access` v1 (`list`, `get`, `create`, `run`, gated
+on `automations.view`, with `create` and `run` also checking their own
+permissions) for the AI assistant, which lists automations as an optional
+dependency. It adopts `automations` and the five `automation_*` tables; the
+migrations keep the legacy links between them and to `notification_channels`
+by hand. Core's `hosts/automation-events.ts` became `hosts/internal-events.ts`
+(`emitInternalEvent`), since it never was specific to automations. Webhooks
+live at `/plugin-api/automations/webhook/<token>`; the 2.8 path
+`/automations/webhook/<token>` is rewritten to it in both nginx configs,
+because external systems hold that URL.
 
 #### Host status is core
 
@@ -1358,14 +1393,14 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.hosts.status.*`                             | `hosts:read`                         | **B16**                 |
 | `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8**                  |
 | `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
-| `ctx.notify.*`                                   | `notify:send`                        | A6                      |
+| `ctx.notify.channels` / `.send`                  | `notify:send`                        | **B17**                 |
 | `ctx.auth.*`                                     | `auth:provide`                       | **A8**                  |
 | `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
 | `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)       | **B14**                 |
 | `ctx.credentials.resolveHostProtocol`            | `credentials:read`                   | **B14**                 |
 | `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
 | `ctx.schedule.every` / `.after`                  | none                                 | **B16**                 |
-| `ctx.fetch`                                      | `network:outbound`                   | B                       |
+| `ctx.fetch`                                      | `network:outbound`                   | **B17**                 |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
 generic check for a capability no other ctx member wraps. Unlike every other
@@ -1554,6 +1589,25 @@ per-host timers spreads out. Needs no capability.
 `ctx.db.persist({ lazy: true })` (**B16**) marks the database dirty and lets
 the debounced save write it, for frequent low-value writes such as metrics
 samples; the default still saves before returning.
+
+**B17** added `ctx.notify` and `ctx.fetch`:
+
+- `ctx.notify.channels()` lists the acting user's notification channels
+  (id, name, type, enabled, never the config), and `send(channelIds,
+notification)` delivers to the ones among them that are theirs and
+  enabled, returning `{ delivered, failures }`. Both need `notify:send` and
+  an actor, and are audited (`plugin_notify_channels`, `plugin_notify_send`).
+  Channels stay core (`notification_channels`, its routes and
+  `NotificationChannelDialog`); delivery is `deliverNotification` in
+  `utils/notification-sender.ts`, which keeps the channel's private-network
+  opt-in plus the admin allowlist.
+- `ctx.fetch(url, { method, headers, body, timeoutMs, allowPrivateHosts })`
+  goes through `safeOutboundFetch`: http and https only, no embedded
+  credentials, DNS pinned, no redirects, and private or loopback addresses
+  refused unless the exact host is in `allowPrivateHosts`. Needs
+  `network:outbound`, audited as `plugin_fetch`. Automations' HTTP step
+  passes the admin allowlist it reads through `ctx.settings.readCore`
+  (`notification_private_endpoint_allowlist` joined `CORE_SETTINGS_ALLOWLIST`).
 
 `ctx.hosts.create` (**B14**) hands the created row to every plugin's
 `hostImportNormalizer`, the same as a bulk import row, so a plugin creating a
@@ -2085,7 +2139,8 @@ Then, with the app running:
 ## Legacy core imports: the debt D1 removes
 
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
-(B2), remote-desktop (B14), docker (B15) and host-metrics (B16), which import
+(B2), remote-desktop (B14), docker (B15), host-metrics (B16) and automations
+(B17), which import
 nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
@@ -2113,9 +2168,9 @@ What the lint fence enforces today, in `eslint.config.mjs`:
 | Core importing a plugin backend                  | **Error** | 0         | -          |
 | A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
 | The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 70 files  | D1         |
-| A plugin importing core by relative path         | Warning   | 24 files  | D1         |
-| A plugin importing another plugin's source       | Warning   | 1 file    | B18        |
+| A plugin frontend importing core through `@/`    | Warning   | 64 files  | D1         |
+| A plugin importing core by relative path         | Warning   | 12 files  | D1         |
+| A plugin importing another plugin's source       | Warning   | 0 files   | -          |
 
 A warning does not fail a build, so the counts are held by
 `scripts/check-plugin-boundaries.cjs`, run by `npm run lint`. Every offender is
@@ -2131,12 +2186,10 @@ rule cannot carry both severities on the same files.
 
 Known specifics:
 
-- **TODO(B18):** `plugins/ai/src/backend/tools/executor.ts` imports
-  `automations`' `routes.js` directly. It is declared as a hard `dependencies`
-  entry so the loader starts automations first and marks `ai` blocked if
-  automations is disabled. In B18 `ai` calls automations through an
-  `automations` service as an `optionalDependency` and the direct import goes
-  away.
+- **B17** removed the last plugin-to-plugin import: ai's proposal executor
+  and automation read tools call automations through the `automations.access`
+  service, and automations is an optional dependency of ai rather than a hard
+  one.
 - **B16** moved host-metrics onto the SDK: it imports nothing from core or
   automations. Automations reaches it through the `host-metrics.viewers`
   service and its `plugin.host-metrics.*` events, and core reaches it through

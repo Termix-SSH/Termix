@@ -330,6 +330,13 @@
       "when": 1790268465907,
       "tag": "0046_small_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1790272733784,
+      "tag": "0047_mighty_butterfly",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,4 @@
-import {
-  createCurrentAutomationRepository,
-  createCurrentHostRepository,
-} from "../../../../../src/backend/database/repositories/factory.js";
-import { validateDefinition } from "../../../../automations/src/backend/routes.js";
+import { createCurrentHostRepository } from "../../../../../src/backend/database/repositories/factory.js";
 import { resolveHostById } from "../../../../../src/backend/hosts/host-resolver.js";
 import { execCommand } from "@termix/plugin-sdk/host-commands";
 import { withSshConnection } from "../ssh.js";
@@ -14,6 +10,7 @@ import {
   getSnippet,
   createFleet,
   addFleetMember,
+  createAutomation,
 } from "../services.js";
 
 /** Approved commands get a bounded window rather than hanging the request. */
@@ -204,20 +201,12 @@ export async function applyProposal(
     }
 
     case "propose_create_automation": {
-      // Reuses the same validator the automations route runs, so an
-      // LLM-authored definition is held to exactly the human standard.
-      const validation = validateDefinition(payload.definition);
-      if (!validation.ok || !validation.definition) {
-        throw new Error(
-          validation.error ?? "The automation definition is invalid",
-        );
-      }
-
-      const created = await createCurrentAutomationRepository().create({
-        userId,
+      // The automations plugin runs the same validator its own route does,
+      // so an LLM-authored definition is held to exactly the human standard.
+      const created = await createAutomation(userId, {
         name: requireString(payload.name, "name"),
         description: optionalString(payload.description),
-        definition: JSON.stringify(validation.definition),
+        definition: payload.definition,
         // Starts disabled: an automation the user has not watched run once
         // should not begin firing against their servers on approval.
         enabled: false,
@@ -225,7 +214,7 @@ export async function applyProposal(
 
       return {
         ok: true,
-        summary: `Created automation ${(created as any).name} (disabled until you enable it)`,
+        summary: `Created automation ${created.name} (disabled until you enable it)`,
       };
     }
 

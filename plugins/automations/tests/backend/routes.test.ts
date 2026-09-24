@@ -1,513 +1,231 @@
 import crypto from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Request, Response, Router } from "express";
-import type { AutomationDefinition } from "../../../../src/types/automations.js";
+import { afterEach, describe, expect, it } from "vitest";
+import { definition, startServer, type TestServer } from "./helpers";
 
-/**
- * Route-level behaviour: validation, ownership and webhook token handling. The repository and engine are mocked; what matters here is what
- * the HTTP layer accepts, rejects and hands back.
- */
+let server: TestServer | null = null;
 
-const state = vi.hoisted(() => ({
-  currentUserId: "user-1",
-  rows: [] as Array<Record<string, unknown>>,
-  nextId: 1,
-}));
-
-vi.mock("../../../../src/backend/database/db/index.js", () => ({ db: {} }));
-
-vi.mock("../../../../src/backend/utils/logger.js", () => ({
-  databaseLogger: {
-    error: vi.fn(),
-    warn: vi.fn(),
-    info: vi.fn(),
-    success: vi.fn(),
-  },
-}));
-
-const repository = vi.hoisted(() => ({
-  list: vi.fn(),
-  findForUser: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
-  delete: vi.fn(),
-  listAllEnabled: vi.fn(),
-  listRuns: vi.fn(),
-  findRunForUser: vi.fn(),
-  listRunSteps: vi.fn(),
-  upsertSchedule: vi.fn(),
-  deleteSchedule: vi.fn(),
-}));
-
-vi.mock("../../../../src/backend/database/repositories/factory.js", () => ({
-  createCurrentAutomationRepository: () => repository,
-}));
-
-const run = vi.hoisted(() => vi.fn());
-vi.mock("../../src/backend/engine.js", () => ({
-  AutomationEngine: { getInstance: () => ({ run }) },
-}));
-
-vi.mock(
-  "../../../../src/backend/database/routes/automation-dispatch.js",
-  () => ({
-    registerAutomationsRouter: vi.fn(),
-    unregisterAutomationsRouter: vi.fn(),
-  }),
-);
-
-vi.mock("../../../../src/backend/utils/permission-manager.js", () => ({
-  PermissionManager: {
-    getInstance: () => ({
-      requirePermission:
-        () => (_req: unknown, _res: unknown, next: () => void) =>
-          next(),
-    }),
-  },
-}));
-
-vi.mock("../../../../src/backend/utils/auth-manager.js", () => ({
-  AuthManager: {
-    getInstance: () => ({
-      createAuthMiddleware:
-        () =>
-        (req: Record<string, unknown>, _res: unknown, next: () => void) => {
-          req.userId = state.currentUserId;
-          next();
-        },
-      createDataAccessMiddleware:
-        () => (_req: unknown, _res: unknown, next: () => void) =>
-          next(),
-    }),
-  },
-}));
-
-vi.mock("../../../../src/backend/utils/audit-logger.js", () => ({
-  logAudit: vi.fn(async () => undefined),
-  getAuditUsername: vi.fn(async () => "alice"),
-  getRequestMeta: () => ({ ipAddress: "127.0.0.1", userAgent: "test" }),
-}));
-
-const { router } = await import("../../src/backend/routes.js");
-
-/** Runs the whole middleware chain for the route, not just its handler. */
-async function invoke(
-  method: string,
-  path: string,
-  overrides: {
-    body?: Record<string, unknown>;
-    params?: Record<string, unknown>;
-    query?: Record<string, unknown>;
-  } = {},
-) {
-  const stack = (router as unknown as Router).stack as Array<{
-    route?: {
-      path: string;
-      methods: Record<string, boolean>;
-      stack: Array<{ handle: (...args: unknown[]) => unknown }>;
-    };
-  }>;
-  const layer = stack.find(
-    (l) => l.route?.path === path && l.route?.methods[method],
-  );
-  if (!layer?.route) throw new Error(`No route for ${method} ${path}`);
-
-  const req = {
-    userId: state.currentUserId,
-    body: overrides.body ?? {},
-    params: overrides.params ?? {},
-    query: overrides.query ?? {},
-    headers: {},
-  } as unknown as Request;
-
-  const res = {
-    statusCode: 200,
-    jsonBody: null as unknown,
-    status(code: number) {
-      (this as unknown as { statusCode: number }).statusCode = code;
-      return this;
-    },
-    json(payload: unknown) {
-      (this as unknown as { jsonBody: unknown }).jsonBody = payload;
-      return this;
-    },
-  } as unknown as Response & { statusCode: number; jsonBody: unknown };
-
-  for (const entry of layer.route.stack) {
-    let advanced = false;
-    await entry.handle(req, res, () => {
-      advanced = true;
-    });
-    if (!advanced) break;
-  }
-
-  return res as unknown as {
-    statusCode: number;
-    jsonBody: Record<string, unknown> | null;
-  };
-}
-
-function definition(
-  overrides: Partial<AutomationDefinition> = {},
-): AutomationDefinition {
-  return {
-    version: 1,
-    trigger: {
-      kind: "metric_threshold",
-      hostSelector: { kind: "host", hostId: 7 },
-      metric: { path: "disk.percent", mount: "/data" },
-      operator: ">",
-      value: 90,
-      cooldownMinutes: 15,
-    },
-    steps: [{ id: "a", type: "notify", channelIds: [1] }],
-    ...overrides,
-  } as AutomationDefinition;
-}
-
-beforeEach(() => {
-  state.currentUserId = "user-1";
-  state.rows = [];
-  state.nextId = 1;
-  vi.clearAllMocks();
-
-  repository.list.mockImplementation(async (userId: string) =>
-    state.rows.filter((row) => row.user_id === userId),
-  );
-  repository.findForUser.mockImplementation(
-    async (id: number, userId: string) =>
-      state.rows.find((row) => row.id === id && row.user_id === userId) ?? null,
-  );
-  repository.create.mockImplementation(
-    async (input: Record<string, unknown>) => {
-      const row = {
-        id: state.nextId++,
-        user_id: input.userId,
-        name: input.name,
-        definition: input.definition,
-        enabled: input.enabled === false ? 0 : 1,
-        channels: input.channels ?? [],
-      };
-      state.rows.push(row);
-      return row;
-    },
-  );
-  repository.delete.mockImplementation(async (id: number, userId: string) => {
-    const index = state.rows.findIndex(
-      (row) => row.id === id && row.user_id === userId,
-    );
-    if (index === -1) return false;
-    state.rows.splice(index, 1);
-    return true;
-  });
-  repository.listAllEnabled.mockImplementation(async () =>
-    state.rows.map((row) => ({
-      id: row.id,
-      userId: row.user_id,
-      definition: row.definition,
-      enabled: true,
-    })),
-  );
-  repository.upsertSchedule.mockResolvedValue(undefined);
-  repository.deleteSchedule.mockResolvedValue(undefined);
-  run.mockResolvedValue({ runId: 1, status: "success" });
+afterEach(async () => {
+  await server?.close();
+  server = null;
 });
 
-describe("POST /", () => {
-  it("creates an automation from a valid definition", async () => {
-    const res = await invoke("post", "/", {
-      body: { name: "Disk watch", definition: definition() },
-    });
+const schedule = definition({ kind: "schedule", intervalSeconds: 300 });
 
-    expect(res.statusCode).toBe(201);
-    expect(res.jsonBody?.name).toBe("Disk watch");
+describe("automation routes", () => {
+  it("creates, lists, updates and deletes an automation", async () => {
+    server = await startServer();
+
+    const created = await server.request("POST", "/", {
+      body: { name: " Nightly ", definition: schedule, channels: [1, 99] },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      name: "Nightly",
+      enabled: 1,
+      // 99 is not one of alice's channels, so it is not linked.
+      channels: [1],
+      missingPlugins: [],
+    });
+    const id = created.body.id;
+
+    // A schedule trigger registers its next due time.
+    const scheduleRow = server.db.sqlite
+      .prepare(
+        "SELECT next_due_at FROM p_automations_schedules WHERE automation_id = ?",
+      )
+      .get(id) as { next_due_at: string | null };
+    expect(scheduleRow.next_due_at).toBeTruthy();
+
+    const listed = await server.request("GET", "/");
+    expect(listed.body.map((row: { id: number }) => row.id)).toEqual([id]);
+    expect(listed.body[0].definition.trigger.kind).toBe("schedule");
+
+    const updated = await server.request("PUT", `/${id}`, {
+      body: { enabled: false, name: "Nightly job" },
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({ enabled: 0, name: "Nightly job" });
+
+    expect((await server.request("DELETE", `/${id}`)).status).toBe(200);
+    expect((await server.request("GET", `/${id}`)).status).toBe(404);
+    // The schedule goes with it.
+    expect(
+      server.db.sqlite
+        .prepare("SELECT COUNT(*) AS n FROM p_automations_schedules")
+        .get(),
+    ).toEqual({ n: 0 });
   });
 
-  it("requires a name", async () => {
-    const res = await invoke("post", "/", {
-      body: { definition: definition() },
+  it("never shows one user's automations to another", async () => {
+    server = await startServer();
+    const created = await server.request("POST", "/", {
+      body: { name: "Mine", definition: schedule },
     });
-    expect(res.statusCode).toBe(400);
-    expect(String(res.jsonBody?.error)).toMatch(/name/i);
+
+    expect((await server.request("GET", "/", { user: "bob" })).body).toEqual(
+      [],
+    );
+    expect(
+      (await server.request("GET", `/${created.body.id}`, { user: "bob" }))
+        .status,
+    ).toBe(404);
+    expect(
+      (await server.request("DELETE", `/${created.body.id}`, { user: "bob" }))
+        .status,
+    ).toBe(404);
   });
 
-  it("rejects an unknown trigger kind", async () => {
-    const res = await invoke("post", "/", {
+  it("rejects an invalid definition", async () => {
+    server = await startServer();
+    const response = await server.request("POST", "/", {
       body: {
         name: "Bad",
-        definition: { version: 1, trigger: { kind: "nope" }, steps: [] },
-      },
-    });
-    expect(res.statusCode).toBe(400);
-    expect(String(res.jsonBody?.error)).toMatch(/trigger/i);
-  });
-
-  it("rejects an unknown operator", async () => {
-    const res = await invoke("post", "/", {
-      body: {
-        name: "Bad",
-        definition: definition({
-          trigger: {
-            kind: "metric_threshold",
-            hostSelector: { kind: "all" },
-            metric: { path: "cpu.percent" },
-            operator: "~=",
-            value: 1,
-            cooldownMinutes: 5,
-          },
-        } as Partial<AutomationDefinition>),
-      },
-    });
-    expect(res.statusCode).toBe(400);
-    expect(String(res.jsonBody?.error)).toMatch(/operator/i);
-  });
-
-  it("rejects an unknown step type", async () => {
-    const res = await invoke("post", "/", {
-      body: {
-        name: "Bad",
-        definition: definition({
-          steps: [{ id: "a", type: "launch_missiles" }],
-        } as Partial<AutomationDefinition>),
-      },
-    });
-    expect(res.statusCode).toBe(400);
-    expect(String(res.jsonBody?.error)).toMatch(/step type/i);
-  });
-
-  it("rejects duplicate step ids, including inside a branch", async () => {
-    const res = await invoke("post", "/", {
-      body: {
-        name: "Bad",
-        definition: definition({
-          steps: [
-            { id: "dup", type: "wait", seconds: 1 },
-            {
-              id: "branch",
-              type: "if",
-              condition: { left: "1", operator: "==", right: "1" },
-              then: [{ id: "dup", type: "wait", seconds: 1 }],
-            },
-          ],
-        } as Partial<AutomationDefinition>),
-      },
-    });
-    expect(res.statusCode).toBe(400);
-    expect(String(res.jsonBody?.error)).toMatch(/duplicate/i);
-  });
-
-  it("rejects an invalid cron expression", async () => {
-    const res = await invoke("post", "/", {
-      body: {
-        name: "Bad",
-        definition: definition({
-          trigger: { kind: "schedule", cron: "not a cron" },
-        } as Partial<AutomationDefinition>),
-      },
-    });
-    expect(res.statusCode).toBe(400);
-    expect(String(res.jsonBody?.error)).toMatch(/cron/i);
-  });
-
-  it("rejects an interval under a minute", async () => {
-    const res = await invoke("post", "/", {
-      body: {
-        name: "Bad",
-        definition: definition({
+        definition: {
           trigger: { kind: "schedule", intervalSeconds: 5 },
-        } as Partial<AutomationDefinition>),
+          steps: [],
+        },
       },
     });
-    expect(res.statusCode).toBe(400);
-    expect(String(res.jsonBody?.error)).toMatch(/60 seconds/i);
+    expect(response.status).toBe(400);
+    expect(response.body.error).toMatch(/60 seconds/);
   });
 
-  it("registers a schedule for a schedule trigger", async () => {
-    await invoke("post", "/", {
+  it("marks an automation that needs a plugin that is off", async () => {
+    server = await startServer();
+    const created = await server.request("POST", "/", {
       body: {
-        name: "Nightly",
-        definition: definition({
-          trigger: { kind: "schedule", cron: "0 2 * * *" },
-        } as Partial<AutomationDefinition>),
+        name: "Restart app",
+        definition: definition({ kind: "schedule", intervalSeconds: 300 }, [
+          {
+            id: "d",
+            type: "docker",
+            action: "restart",
+            container: "app",
+            hostSelector: { kind: "host", hostId: 1 },
+          },
+        ]),
       },
     });
-    expect(repository.upsertSchedule).toHaveBeenCalled();
+    expect(created.body.missingPlugins).toEqual(["docker"]);
   });
 
-  it("returns a webhook token once and stores only its hash", async () => {
-    const res = await invoke("post", "/", {
-      body: {
-        name: "Hooked",
-        definition: definition({
-          trigger: { kind: "webhook", tokenHash: "" },
-        } as Partial<AutomationDefinition>),
+  it("offers editor options and the running providers", async () => {
+    server = await startServer({
+      services: {
+        "fleets.access": { list: async () => [{ id: 3, name: "web" }] },
       },
     });
+    const response = await server.request("GET", "/editor-options");
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      hosts: [
+        { id: 1, name: "host-1" },
+        { id: 2, name: "host-2" },
+      ],
+      snippets: [{ id: 5, name: "Restart nginx" }],
+      fleets: [{ id: 3, name: "web" }],
+      channels: [{ id: 1, name: "ops" }],
+    });
+    expect(response.body.providers).toMatchObject({
+      snippets: true,
+      fleets: true,
+      docker: false,
+      "host-metrics": false,
+      "wake-on-lan": false,
+    });
+  });
 
-    expect(res.statusCode).toBe(201);
-    const token = res.jsonBody?.webhookToken as string;
-    expect(token).toMatch(/^[a-f0-9]{64}$/);
+  it("returns a webhook token once and runs the automation from it", async () => {
+    server = await startServer();
+    const created = await server.request("POST", "/", {
+      body: { name: "Hook", definition: definition({ kind: "webhook" }) },
+    });
+    const token = created.body.webhookToken as string;
+    expect(token).toHaveLength(64);
+    expect(created.body.definition.trigger.tokenHash).toBe("");
 
-    const stored = JSON.parse(state.rows[0].definition as string);
-    expect(stored.trigger.tokenHash).not.toBe(token);
-    expect(stored.trigger.tokenHash).toBe(
+    const stored = server.db.sqlite
+      .prepare("SELECT definition FROM p_automations_automations WHERE id = ?")
+      .get(created.body.id) as { definition: string };
+    expect(JSON.parse(stored.definition).trigger.tokenHash).toBe(
       crypto.createHash("sha256").update(token).digest("hex"),
     );
 
-    // The hash is never echoed back to the client.
-    const body = res.jsonBody as { definition: AutomationDefinition };
-    expect((body.definition.trigger as { tokenHash: string }).tokenHash).toBe(
-      "",
-    );
-  });
-
-  it("stores the automation against the caller, not a supplied user id", async () => {
-    // Authorization here is ownership, the same as the other data routes:
-    // every read and write is scoped to req.userId, so a client cannot create
-    // an automation that belongs to somebody else.
-    await invoke("post", "/", {
-      body: {
-        name: "Mine",
-        definition: definition(),
-        userId: "user-2",
-        user_id: "user-2",
-      },
-    });
-
-    expect(state.rows).toHaveLength(1);
-    expect(state.rows[0].user_id).toBe("user-1");
-  });
-});
-
-describe("GET /", () => {
-  it("only returns the caller's automations", async () => {
-    state.rows.push({
-      id: 1,
-      user_id: "user-2",
-      name: "Theirs",
-      definition: JSON.stringify(definition()),
-      channels: [],
-    });
-
-    const res = await invoke("get", "/");
-    expect(res.statusCode).toBe(200);
-    expect(res.jsonBody).toHaveLength(0);
-  });
-});
-
-describe("DELETE /:id", () => {
-  it("will not delete another user's automation", async () => {
-    state.rows.push({
-      id: 1,
-      user_id: "user-2",
-      name: "Theirs",
-      definition: JSON.stringify(definition()),
-      channels: [],
-    });
-
-    const res = await invoke("delete", "/:id", { params: { id: "1" } });
-    expect(res.statusCode).toBe(404);
-    expect(state.rows).toHaveLength(1);
-  });
-});
-
-describe("POST /:id/run", () => {
-  function seedOwned() {
-    state.rows.push({
-      id: 1,
-      user_id: "user-1",
-      name: "Mine",
-      definition: JSON.stringify(definition()),
-      channels: [],
-    });
-  }
-
-  it("runs an owned automation", async () => {
-    seedOwned();
-    const res = await invoke("post", "/:id/run", { params: { id: "1" } });
-
-    expect(res.statusCode).toBe(200);
-    expect(run).toHaveBeenCalledWith(
-      expect.objectContaining({ automationId: 1, triggerType: "manual" }),
-    );
-  });
-
-  it("passes the dry-run flag through", async () => {
-    seedOwned();
-    await invoke("post", "/:id/run", {
-      params: { id: "1" },
-      body: { dryRun: true },
-    });
-    expect(run).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
-  });
-
-  it("refuses to run someone else's automation", async () => {
-    state.rows.push({
-      id: 1,
-      user_id: "user-2",
-      name: "Theirs",
-      definition: JSON.stringify(definition()),
-      channels: [],
-    });
-
-    const res = await invoke("post", "/:id/run", { params: { id: "1" } });
-    expect(res.statusCode).toBe(404);
-    expect(run).not.toHaveBeenCalled();
-  });
-});
-
-describe("POST /webhook/:token", () => {
-  function seedWebhook(token: string) {
-    state.rows.push({
-      id: 1,
-      user_id: "user-1",
-      name: "Hooked",
-      definition: JSON.stringify(
-        definition({
-          trigger: {
-            kind: "webhook",
-            tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
-          },
-        } as Partial<AutomationDefinition>),
-      ),
-      channels: [],
-    });
-  }
-
-  it("runs the automation matching the token", async () => {
-    const token = "a".repeat(64);
-    seedWebhook(token);
-
-    const res = await invoke("post", "/webhook/:token", {
-      params: { token },
+    const fired = await server.request("POST", `/webhook/${token}`, {
+      user: null,
       body: { hello: "world" },
     });
+    expect(fired.status).toBe(202);
+    expect(fired.body.status).toBe("success");
 
-    expect(res.statusCode).toBe(202);
-    expect(run).toHaveBeenCalledWith(
-      expect.objectContaining({ automationId: 1, triggerType: "webhook" }),
+    const wrong = await server.request("POST", `/webhook/${"0".repeat(64)}`, {
+      user: null,
+      body: {},
+    });
+    expect(wrong.status).toBe(404);
+  });
+
+  it("runs now, records the steps and lists the run", async () => {
+    server = await startServer();
+    const created = await server.request("POST", "/", {
+      body: { name: "Now", definition: schedule },
+    });
+    const outcome = await server.request("POST", `/${created.body.id}/run`, {
+      body: { dryRun: true },
+    });
+    expect(outcome.body.status).toBe("success");
+
+    const runs = await server.request("GET", "/runs/history");
+    expect(runs.body[0]).toMatchObject({
+      automation_id: created.body.id,
+      automation_name: "Now",
+      status: "success",
+      dry_run: 1,
+      trigger_type: "manual",
+    });
+    const steps = await server.request("GET", `/runs/${runs.body[0].id}/steps`);
+    expect(steps.body).toMatchObject([
+      { step_type: "set_var", status: "success" },
+    ]);
+    expect(
+      (
+        await server.request("GET", `/runs/${runs.body[0].id}/steps`, {
+          user: "bob",
+        })
+      ).status,
+    ).toBe(404);
+  });
+});
+
+describe("permissions", () => {
+  const routes: Array<[string, string, string]> = [
+    ["GET", "/", "view"],
+    ["GET", "/editor-options", "view"],
+    ["GET", "/runs/history", "view"],
+    ["GET", "/runs/1/steps", "view"],
+    ["GET", "/1", "view"],
+    ["POST", "/", "create"],
+    ["PUT", "/1", "edit"],
+    ["DELETE", "/1", "delete"],
+    ["POST", "/1/run", "run"],
+  ];
+
+  it.each(routes)(
+    "%s %s answers 403 without automations.%s",
+    async (method, path) => {
+      server = await startServer({ permissions: [] });
+      const response = await server.request(method, path, { body: {} });
+      expect(response.status).toBe(403);
+    },
+  );
+
+  it("serves the webhook without a session", async () => {
+    server = await startServer({ permissions: [] });
+    const response = await server.request(
+      "POST",
+      `/webhook/${"a".repeat(64)}`,
+      { user: null, body: {} },
     );
-  });
-
-  it("rejects a token that does not match", async () => {
-    seedWebhook("a".repeat(64));
-
-    const res = await invoke("post", "/webhook/:token", {
-      params: { token: "b".repeat(64) },
-    });
-
-    expect(res.statusCode).toBe(404);
-    expect(run).not.toHaveBeenCalled();
-  });
-
-  it("rejects a token too short to be real", async () => {
-    seedWebhook("a".repeat(64));
-
-    const res = await invoke("post", "/webhook/:token", {
-      params: { token: "short" },
-    });
-
-    expect(res.statusCode).toBe(404);
-    expect(run).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
   });
 });

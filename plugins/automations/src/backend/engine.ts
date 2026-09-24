@@ -1,21 +1,23 @@
-import type {
-  AutomationDefinition,
-  RunStatus,
-  Step,
-} from "../../../../src/types/automations.js";
+import type { PluginContext } from "@termix/plugin-sdk/backend";
+import type { AutomationDefinition, RunStatus, Step } from "../types.js";
 import {
   DEFAULT_MAX_RUN_SECONDS,
   MAX_AUTOMATION_DEPTH,
   MAX_STEP_OUTPUT_BYTES,
-} from "../../../../src/types/automations.js";
-import { createCurrentAutomationRepository } from "../../../../src/backend/database/repositories/factory.js";
-import { statsLogger } from "../../../../src/backend/utils/logger.js";
-import { resolveHostById } from "../../../../src/backend/hosts/host-resolver.js";
-import { notifyAutomationInternalEvent } from "../../../../src/backend/hosts/automation-events.js";
+} from "../types.js";
 import { executeStep } from "./actions/index.js";
 import type { StepExecutionContext, StepResult } from "./actions/types.js";
 import { compare } from "./conditions.js";
+import type { Deps } from "./deps.js";
+import type {
+  AutomationEngineRow,
+  AutomationRepository,
+} from "./repository.js";
+import { missingPlugins } from "./requirements.js";
 import { renderTemplate, type TemplateContext } from "./template.js";
+
+/** Emitted when a run fails, so an automation_failed trigger can react. */
+export const TOPIC_AUTOMATION_FAILED = "plugin.automations.automation_failed";
 
 export interface RunRequest {
   automationId: number;
@@ -36,38 +38,53 @@ export interface RunOutcome {
 }
 
 /**
- * Executes automations.
- *
- * Both HTTP handlers and the metrics hooks live in this same process, so this
- * is a plain singleton rather than anything cross-process. State that has to
- * survive a restart (cooldowns, dwell windows) lives in the database; the only
- * thing held in memory is the set of runs currently in flight, which is
- * meaningless after a restart anyway.
+ * Executes automations. One per activation. State that has to survive a
+ * restart (cooldowns, dwell windows) lives in the database; the only thing
+ * held in memory is the set of runs in flight, which is meaningless after a
+ * restart anyway.
  */
 export class AutomationEngine {
-  private static instance: AutomationEngine;
-
   private readonly running = new Set<number>();
   private readonly queued = new Map<number, number>();
 
-  static getInstance(): AutomationEngine {
-    if (!AutomationEngine.instance) {
-      AutomationEngine.instance = new AutomationEngine();
-    }
-    return AutomationEngine.instance;
-  }
+  constructor(
+    private readonly ctx: PluginContext,
+    private readonly repository: AutomationRepository,
+    private readonly deps: Deps,
+  ) {}
 
   isRunning(automationId: number): boolean {
     return this.running.has(automationId);
   }
 
+  /**
+   * Runs an automation as its owner. Never throws: a failure is the outcome.
+   */
   async run(request: RunRequest): Promise<RunOutcome> {
-    const repository = createCurrentAutomationRepository();
-    const automation = await repository.findById(request.automationId);
-
+    let automation: AutomationEngineRow | null;
+    try {
+      automation = await this.repository.findById(request.automationId);
+    } catch (err) {
+      return { runId: null, status: "failed", error: errorText(err) };
+    }
     if (!automation) {
       return { runId: null, status: "failed", error: "Automation not found" };
     }
+    const owner = automation;
+    try {
+      return await this.ctx.asUser(owner.userId, () =>
+        this.runAsOwner(owner, request),
+      );
+    } catch (err) {
+      return { runId: null, status: "failed", error: errorText(err) };
+    }
+  }
+
+  private async runAsOwner(
+    automation: AutomationEngineRow,
+    request: RunRequest,
+  ): Promise<RunOutcome> {
+    const repository = this.repository;
 
     const depth = request.depth ?? 0;
     const ancestry = request.ancestry ?? [];
@@ -97,6 +114,30 @@ export class AutomationEngine {
         status: "failed",
         error: "Automation definition is not valid JSON",
       };
+    }
+
+    // A trigger or step whose plugin is off skips the whole run with the
+    // reason on record, rather than running half of it.
+    const missing = missingPlugins(definition, this.deps);
+    if (missing.length > 0) {
+      const reason = `Needs the ${missing.join(", ")} plugin${missing.length > 1 ? "s" : ""}`;
+      this.ctx.log.info(
+        `Skipping automation ${automation.id} (${request.triggerType}): ${reason}`,
+      );
+      const run = await repository.createRun({
+        automationId: automation.id,
+        userId: automation.userId,
+        triggerType: request.triggerType,
+        triggerContext: JSON.stringify(request.triggerContext ?? {}),
+        status: "skipped",
+        parentRunId: request.parentRunId ?? null,
+      });
+      await repository.finishRun(run.id, {
+        status: "skipped",
+        error: reason,
+        durationMs: 0,
+      });
+      return { runId: run.id, status: "skipped", error: reason };
     }
 
     // A second trigger while a run is in flight is recorded as skipped rather
@@ -182,10 +223,7 @@ export class AutomationEngine {
     let host: TemplateContext["host"];
     if (request.triggerHostId) {
       try {
-        const resolved = await resolveHostById(
-          request.triggerHostId,
-          automation.userId,
-        );
+        const resolved = await this.ctx.hosts.get(request.triggerHostId);
         if (resolved) {
           host = {
             id: request.triggerHostId,
@@ -245,7 +283,7 @@ export class AutomationEngine {
       }
     } catch (err) {
       status = "failed";
-      error = err instanceof Error ? err.message : String(err);
+      error = errorText(err);
     } finally {
       this.running.delete(automation.id);
     }
@@ -257,31 +295,21 @@ export class AutomationEngine {
     });
 
     if (status === "failed") {
-      statsLogger.warn(`Automation "${automation.name}" failed`, {
-        operation: "automation_run_failed",
-        automationId: automation.id,
-        runId: run.id,
-        error,
-      });
+      this.ctx.log.warn(
+        `Automation "${automation.name}" (${automation.id}) failed in run ${run.id}: ${error ?? "unknown error"}`,
+      );
 
       // An automation_failed handler that itself fails must not re-announce
       // its own failure, so the event is not emitted for runs that this event
       // already started.
       if (request.triggerType !== "internal_event") {
-        // Emitted onto the bus rather than imported from hosts/: the bus is
-        // fire-and-forget, so this no longer needs the lazy-import dance that
-        // was working around the repositories cycle.
-        notifyAutomationInternalEvent(
-          "automation_failed",
-          automation.userId,
-          undefined,
-          {
-            automationId: automation.id,
-            automationName: automation.name,
-            runId: run.id,
-            error: error ?? null,
-          },
-        );
+        this.ctx.events.emit(TOPIC_AUTOMATION_FAILED, {
+          userId: automation.userId,
+          automationId: automation.id,
+          automationName: automation.name,
+          runId: run.id,
+          error: error ?? null,
+        });
       }
     }
 
@@ -301,7 +329,7 @@ export class AutomationEngine {
     error?: string;
     halted?: { status: "success" | "failed" };
   }> {
-    const repository = createCurrentAutomationRepository();
+    const repository = this.repository;
 
     for (const step of steps) {
       if (step.enabled === false) continue;
@@ -382,12 +410,12 @@ export class AutomationEngine {
 
       let result: StepResult;
       try {
-        result = await executeStep(step, context);
+        result = await executeStep(step, context, {
+          ctx: this.ctx,
+          deps: this.deps,
+        });
       } catch (err) {
-        result = {
-          success: false,
-          error: err instanceof Error ? err.message : String(err),
-        };
+        result = { success: false, error: errorText(err) };
       }
 
       const { text, truncated } = truncate(result.output);
@@ -430,6 +458,10 @@ export class AutomationEngine {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** Keeps a single step's output from bloating the database. */

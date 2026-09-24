@@ -146,3 +146,13 @@ export {
   parseCustomKeybindings,
 } from "@/api/open-tabs-api";
 export { setHostAutoTmux } from "@/api/host-terminal-config-api";
+
+// Notification channels are core (ctx.notify on the backend). A plugin that
+// lets users pick or manage them shows core's own dialog.
+export { NotificationChannelDialog } from "@/sidebar/NotificationChannelDialog";
+export {
+  getNotificationChannels,
+  deleteNotificationChannel,
+  testNotificationChannel,
+  type NotificationChannel,
+} from "@/api/notification-channels-api";

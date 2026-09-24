@@ -1255,6 +1255,80 @@ export interface PluginAudit {
   }) => Promise<void>;
 }
 
+/** A notification channel the acting user set up. Its config never leaves core. */
+export interface PluginNotificationChannel {
+  id: number;
+  name: string;
+  /** "webhook", "ntfy" or "discord". */
+  type: string;
+  enabled: boolean;
+}
+
+export interface PluginNotification {
+  title: string;
+  body: string;
+  severity?: "info" | "warning" | "critical";
+  /**
+   * Extra fields a webhook receiver gets alongside the message. `sourceId`
+   * and `sourceName` name what sent it (an automation, a rule).
+   */
+  context?: {
+    hostId?: number;
+    hostName?: string;
+    sourceId?: number | string;
+    sourceName?: string;
+    triggerType?: string;
+    value?: unknown;
+    threshold?: unknown;
+  };
+}
+
+export interface PluginNotifyResult {
+  delivered: number;
+  failures: Array<{ channelId: number; name: string; error: string }>;
+}
+
+/**
+ * Core's notification channels, as the acting user. Needs notify:send, and
+ * refuses a call with no actor: channels belong to a user.
+ */
+export interface PluginNotify {
+  /** The acting user's channels, without their config. */
+  channels: () => Promise<PluginNotificationChannel[]>;
+  /**
+   * Sends to the listed channels the acting user owns. Disabled channels and
+   * ids the user does not own are skipped. One channel failing does not stop
+   * the others.
+   */
+  send: (
+    channelIds: number[],
+    notification: PluginNotification,
+  ) => Promise<PluginNotifyResult>;
+}
+
+export interface PluginFetchInit {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  /** Aborts the request after this long. Defaults to 30 seconds. */
+  timeoutMs?: number;
+  /**
+   * Exact private or loopback hosts this request may reach. Everything else
+   * private is refused, and redirects are never followed.
+   */
+  allowPrivateHosts?: readonly string[];
+}
+
+/**
+ * Outbound HTTP through core's SSRF guard: http and https only, no embedded
+ * credentials, DNS pinned, private addresses refused unless listed. Needs
+ * network:outbound.
+ */
+export type PluginFetch = (
+  url: string,
+  init?: PluginFetchInit,
+) => Promise<Response>;
+
 /**
  * A generic capability check, for a privileged action that has no dedicated
  * ctx method to wrap it: a plugin bundling its own native dependency to touch
@@ -1325,6 +1399,10 @@ export interface PluginContext {
   readonly audit: PluginAudit;
   /** Timers that stop on deactivate. */
   readonly schedule: PluginSchedule;
+  /** Core's notification channels. Needs notify:send. */
+  readonly notify: PluginNotify;
+  /** Outbound HTTP through core's SSRF guard. Needs network:outbound. */
+  readonly fetch: PluginFetch;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

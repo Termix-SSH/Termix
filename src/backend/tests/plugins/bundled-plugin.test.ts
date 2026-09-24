@@ -90,15 +90,15 @@ describe("declared dependencies", () => {
     }
   });
 
-  // plugins/ai/src/backend/tools/executor.ts imports automations' routes
-  // directly, so the loader has to start automations first. B18 replaces the
-  // import with a service call and this becomes optional.
-  it("records ai's dependency on automations", () => {
+  // ai reaches automations through the automations.access service, so it
+  // keeps working when automations is off.
+  it("keeps ai's use of automations optional", () => {
     if (!ids.includes("ai")) return;
 
     const { manifest } = parseManifest(readManifest("ai"));
 
-    expect(manifest?.dependencies?.automations).toBeTruthy();
+    expect(manifest?.dependencies?.automations).toBeUndefined();
+    expect(manifest?.optionalDependencies?.automations).toBeTruthy();
   });
 });
 

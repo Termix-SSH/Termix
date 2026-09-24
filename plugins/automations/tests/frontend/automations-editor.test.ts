@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defaultTrigger } from "../../src/frontend/automations/TriggerCard";
 import { emptyDraft } from "../../src/frontend/automations/AutomationEditor";
 import { newStepId } from "../../src/frontend/automations/editor-types";
-import { AUTOMATION_DEFINITION_VERSION } from "@/types/automations";
+import { AUTOMATION_DEFINITION_VERSION } from "../../src/types";
 
 describe("emptyDraft", () => {
   it("starts on a metric threshold with no steps", () => {

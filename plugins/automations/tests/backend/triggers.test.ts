@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  AutomationDefinition,
-  Trigger,
-} from "../../../../src/types/automations.js";
+import type { AutomationDefinition, Trigger } from "../../src/types.js";
+import { createTriggers } from "../../src/backend/triggers.js";
 
 /**
  * Trigger matching, dwell windows and cooldowns. The repository and the engine
@@ -42,16 +40,14 @@ const repository = {
   }),
 };
 
-vi.mock("../../../../src/backend/database/repositories/factory.js", () => ({
-  createCurrentAutomationRepository: () => repository,
-}));
-
 const run = vi.fn(async () => ({ runId: 1, status: "success" as const }));
-vi.mock("../../src/backend/engine.js", () => ({
-  AutomationEngine: { getInstance: () => ({ run }) },
-}));
-
-const triggers = await import("../../src/backend/triggers.js");
+const log = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
+const triggers = createTriggers(repository as never, { run }, log);
 
 function addAutomation(trigger: Trigger, overrides: Partial<FakeRow> = {}) {
   const definition: AutomationDefinition = { version: 1, trigger, steps: [] };
@@ -415,7 +411,7 @@ describe("onDockerEvent", () => {
   });
 });
 
-describe("listAutomationWatchedHosts", () => {
+describe("watchedHosts", () => {
   it("collects hosts from metric triggers so they can be polled headlessly", async () => {
     addAutomation({
       kind: "metric_threshold",
@@ -426,7 +422,7 @@ describe("listAutomationWatchedHosts", () => {
       cooldownMinutes: 15,
     });
 
-    const watched = await triggers.listAutomationWatchedHosts();
+    const watched = await triggers.watchedHosts("metric_threshold");
 
     expect([...watched.keys()].sort()).toEqual([3, 4]);
   });
@@ -439,6 +435,6 @@ describe("listAutomationWatchedHosts", () => {
       cooldownMinutes: 0,
     });
 
-    expect((await triggers.listAutomationWatchedHosts()).size).toBe(0);
+    expect((await triggers.watchedHosts("metric_threshold")).size).toBe(0);
   });
 });

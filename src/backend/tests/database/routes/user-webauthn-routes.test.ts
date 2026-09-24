@@ -22,8 +22,8 @@ vi.mock("../../../utils/audit-logger.js", () => ({
   logAudit: vi.fn(),
   getRequestMeta: () => ({ ipAddress: "", userAgent: "" }),
 }));
-vi.mock("../../../hosts/automation-events.js", () => ({
-  notifyAutomationInternalEvent: vi.fn(),
+vi.mock("../../../hosts/internal-events.js", () => ({
+  emitInternalEvent: vi.fn(),
 }));
 vi.mock("@simplewebauthn/server", () => ({
   generateAuthenticationOptions: vi

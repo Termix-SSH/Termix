@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  AutomationDefinition,
-  Step,
-} from "../../../../src/types/automations.js";
+import { createFakeContext } from "@termix/plugin-sdk/testing";
+import type { PluginHostSummary } from "@termix/plugin-sdk/backend";
+import type { AutomationDefinition, Step } from "../../src/types.js";
 
 /**
- * The engine reaches the database through the repository factory and the
- * outside world through the step executors, so both are mocked here. What is
- * under test is the run loop itself: ordering, branching, error policy,
+ * The engine reaches the database through its repository and the outside
+ * world through the step executors, so both are faked here. What is under
+ * test is the run loop itself: ordering, branching, error policy,
  * concurrency, recursion and dry-run.
  */
 
@@ -50,15 +49,7 @@ const repository = {
   }),
 };
 
-const resolveHostById = vi.fn();
-
-vi.mock("../../../../src/backend/hosts/host-resolver.js", () => ({
-  resolveHostById: (...args: unknown[]) => resolveHostById(...args),
-}));
-
-vi.mock("../../../../src/backend/database/repositories/factory.js", () => ({
-  createCurrentAutomationRepository: () => repository,
-}));
+let hosts: PluginHostSummary[] = [];
 
 const executeStep = vi.fn();
 vi.mock("../../src/backend/actions/index.js", () => ({
@@ -66,6 +57,18 @@ vi.mock("../../src/backend/actions/index.js", () => ({
 }));
 
 const { AutomationEngine } = await import("../../src/backend/engine.js");
+
+// Every provider is running unless a test says otherwise.
+const deps = { available: () => true };
+
+let current: InstanceType<typeof AutomationEngine>;
+function getEngine() {
+  return current;
+}
+function freshEngine() {
+  const { ctx } = createFakeContext({ pluginId: "automations", hosts });
+  current = new AutomationEngine(ctx, repository as never, deps as never);
+}
 
 function defineAutomation(
   steps: Step[],
@@ -102,23 +105,30 @@ beforeEach(() => {
   nextRunId = 1;
   nextStepRowId = 1;
   vi.clearAllMocks();
-  resolveHostById.mockResolvedValue(null);
+  hosts = [];
   executeStep.mockResolvedValue({ success: true, output: "ok" });
-  // The singleton carries in-flight state between tests.
-  (AutomationEngine as unknown as { instance?: unknown }).instance = undefined;
+  freshEngine();
 });
 
 describe("AutomationEngine.run", () => {
   it("adds the trigger host name to the template context", async () => {
     defineAutomation([step({ id: "notify", type: "notify" })]);
-    resolveHostById.mockResolvedValue({
-      name: "Proxmox Node",
-      ip: "10.0.0.11",
-      username: "root",
-      port: 22,
-    });
+    hosts = [
+      {
+        id: 11,
+        userId: "user-1",
+        name: "Proxmox Node",
+        ip: "10.0.0.11",
+        port: 22,
+        username: "root",
+        tags: null,
+        folder: null,
+        authType: "password",
+      },
+    ];
+    freshEngine();
 
-    await AutomationEngine.getInstance().run({
+    await getEngine().run({
       automationId: 1,
       triggerType: "metric_threshold",
       triggerHostId: 11,
@@ -143,7 +153,7 @@ describe("AutomationEngine.run", () => {
       step({ id: "b", type: "http" }),
     ]);
 
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -161,7 +171,7 @@ describe("AutomationEngine.run", () => {
     ]);
     executeStep.mockResolvedValueOnce({ success: false, error: "boom" });
 
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -178,7 +188,7 @@ describe("AutomationEngine.run", () => {
     ]);
     executeStep.mockResolvedValueOnce({ success: false, error: "boom" });
 
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -193,7 +203,7 @@ describe("AutomationEngine.run", () => {
       step({ id: "b", type: "http" }),
     ]);
 
-    await AutomationEngine.getInstance().run({
+    await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -209,7 +219,7 @@ describe("AutomationEngine.run", () => {
     ]);
     executeStep.mockResolvedValueOnce({ success: true, output: "hello" });
 
-    await AutomationEngine.getInstance().run({
+    await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -231,7 +241,7 @@ describe("AutomationEngine.run", () => {
       vars: { x: "1" },
     });
 
-    await AutomationEngine.getInstance().run({
+    await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -254,7 +264,7 @@ describe("AutomationEngine.run", () => {
         }),
       ]);
 
-      await AutomationEngine.getInstance().run({
+      await getEngine().run({
         automationId: 1,
         triggerType: "manual",
       });
@@ -274,7 +284,7 @@ describe("AutomationEngine.run", () => {
         }),
       ]);
 
-      await AutomationEngine.getInstance().run({
+      await getEngine().run({
         automationId: 1,
         triggerType: "manual",
       });
@@ -296,7 +306,7 @@ describe("AutomationEngine.run", () => {
         }),
       ]);
 
-      await AutomationEngine.getInstance().run({
+      await getEngine().run({
         automationId: 1,
         triggerType: "metric_threshold",
         triggerContext: { value: 95 },
@@ -316,7 +326,7 @@ describe("AutomationEngine.run", () => {
         step({ id: "after", type: "http" }),
       ]);
 
-      await AutomationEngine.getInstance().run({
+      await getEngine().run({
         automationId: 1,
         triggerType: "manual",
       });
@@ -335,7 +345,7 @@ describe("AutomationEngine.run", () => {
       halt: { status: "success" },
     });
 
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -351,7 +361,7 @@ describe("AutomationEngine.run", () => {
       halt: { status: "failed" },
     });
 
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -365,7 +375,7 @@ describe("AutomationEngine.run", () => {
         step({ id: "nested", type: "run_automation", automationId: 1 }),
       ]);
 
-      const outcome = await AutomationEngine.getInstance().run({
+      const outcome = await getEngine().run({
         automationId: 1,
         triggerType: "manual",
       });
@@ -389,7 +399,7 @@ describe("AutomationEngine.run", () => {
         { id: 2 },
       );
 
-      await AutomationEngine.getInstance().run({
+      await getEngine().run({
         automationId: 1,
         triggerType: "manual",
       });
@@ -402,7 +412,7 @@ describe("AutomationEngine.run", () => {
     it("refuses to nest deeper than the maximum depth", async () => {
       defineAutomation([step({ id: "a", type: "http" })]);
 
-      const outcome = await AutomationEngine.getInstance().run({
+      const outcome = await getEngine().run({
         automationId: 1,
         triggerType: "manual",
         depth: 99,
@@ -428,7 +438,7 @@ describe("AutomationEngine.run", () => {
           }),
       );
 
-      const engine = AutomationEngine.getInstance();
+      const engine = getEngine();
       const first = engine.run({ automationId: 1, triggerType: "manual" });
       // Let the first run register itself as in flight.
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -461,7 +471,7 @@ describe("AutomationEngine.run", () => {
 
       // No gap between the two: the in-flight slot used to be claimed several
       // awaits after it was checked, so both runs got through.
-      const engine = AutomationEngine.getInstance();
+      const engine = getEngine();
       const [first, second] = await Promise.all([
         engine.run({ automationId: 1, triggerType: "manual" }),
         engine.run({ automationId: 1, triggerType: "manual" }),
@@ -478,7 +488,7 @@ describe("AutomationEngine.run", () => {
       defineAutomation([step({ id: "a", type: "run_command" })]);
       repository.createRun.mockRejectedValueOnce(new Error("db down"));
 
-      const engine = AutomationEngine.getInstance();
+      const engine = getEngine();
       const failed = await engine.run({
         automationId: 1,
         triggerType: "manual",
@@ -497,7 +507,7 @@ describe("AutomationEngine.run", () => {
   it("propagates the dry-run flag to executors", async () => {
     defineAutomation([step({ id: "a", type: "http" })], { dryRun: true });
 
-    await AutomationEngine.getInstance().run({
+    await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -509,7 +519,7 @@ describe("AutomationEngine.run", () => {
   it("lets a caller force a dry run on a live automation", async () => {
     defineAutomation([step({ id: "a", type: "http" })], { dryRun: false });
 
-    await AutomationEngine.getInstance().run({
+    await getEngine().run({
       automationId: 1,
       triggerType: "manual",
       dryRun: true,
@@ -520,7 +530,7 @@ describe("AutomationEngine.run", () => {
   });
 
   it("fails cleanly when the automation is missing", async () => {
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 404,
       triggerType: "manual",
     });
@@ -539,7 +549,7 @@ describe("AutomationEngine.run", () => {
       dryRun: false,
     });
 
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -551,7 +561,7 @@ describe("AutomationEngine.run", () => {
     defineAutomation([step({ id: "a", type: "run_command" })]);
     executeStep.mockRejectedValueOnce(new Error("connection reset"));
 
-    const outcome = await AutomationEngine.getInstance().run({
+    const outcome = await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -568,7 +578,7 @@ describe("AutomationEngine.run", () => {
       output: "x".repeat(40_000),
     });
 
-    await AutomationEngine.getInstance().run({
+    await getEngine().run({
       automationId: 1,
       triggerType: "manual",
     });
@@ -591,7 +601,7 @@ describe("AutomationEngine.run", () => {
 
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
-      const outcome = await AutomationEngine.getInstance().run({
+      const outcome = await getEngine().run({
         automationId: 1,
         triggerType: "manual",
       });

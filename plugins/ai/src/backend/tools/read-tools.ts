@@ -1,6 +1,5 @@
 import {
   createCurrentNotificationChannelRepository,
-  createCurrentAutomationRepository,
   createCurrentHomepageItemRepository,
   createCurrentHostRepository,
 } from "../../../../../src/backend/database/repositories/factory.js";
@@ -11,6 +10,8 @@ import {
   listSnippets,
   listFleets,
   listCommandHistory,
+  listAutomations,
+  getAutomation,
 } from "../services.js";
 
 /**
@@ -128,17 +129,18 @@ export const readTools: AiTool[] = [
     category: "read",
     parameters: objectSchema({}),
     handler: async (_args, context) => {
-      const automations = await createCurrentAutomationRepository().list(
-        context.userId,
-      );
+      const automations = await listAutomations(context.userId);
+      if (!automations) return { automations: [], unavailable: true };
       return {
-        automations: automations.map((automation: any) => ({
+        automations: automations.map((automation) => ({
           id: automation.id,
           name: automation.name,
-          description: automation.description ?? null,
+          description: automation.description,
           enabled: automation.enabled,
-          lastRunAt: automation.lastRunAt ?? null,
-          lastRunStatus: automation.lastRunStatus ?? null,
+          triggerKind: automation.triggerKind,
+          lastRunAt: automation.lastRunAt,
+          lastRunStatus: automation.lastRunStatus,
+          needsPlugins: automation.missingPlugins,
         })),
       };
     },
@@ -155,17 +157,18 @@ export const readTools: AiTool[] = [
       ["automationId"],
     ),
     handler: async (args, context) => {
-      const automation = await createCurrentAutomationRepository().findForUser(
-        Number(args.automationId),
+      const automation = await getAutomation(
         context.userId,
+        Number(args.automationId),
       );
+      if (automation === undefined) return { unavailable: true };
       if (!automation) return { error: "Automation not found" };
       return {
         automation: {
-          id: (automation as any).id,
-          name: (automation as any).name,
-          enabled: (automation as any).enabled,
-          definition: (automation as any).definition,
+          id: automation.id,
+          name: automation.name,
+          enabled: automation.enabled,
+          definition: automation.definition,
         },
       };
     },

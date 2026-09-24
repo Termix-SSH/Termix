@@ -1,7 +1,4 @@
-import type {
-  MetricPath,
-  Operator,
-} from "../../../../src/types/automations.js";
+import type { MetricPath, Operator } from "../types.js";
 
 /**
  * Operator evaluation and metric extraction.

@@ -157,6 +157,16 @@
         "onError": {
           "stop": "Stop the run",
           "continue": "Carry on"
+        },
+        "needsPlugin": "Needs {{plugin}}",
+        "needsPluginHint": "This automation is skipped until the plugin it needs is turned on again.",
+        "offBadge": "Off",
+        "docsLink": "View docs",
+        "ago": {
+          "seconds": "{{count}}s ago",
+          "minutes": "{{count}}m ago",
+          "hours": "{{count}}h ago",
+          "days": "{{count}}d ago"
         }
       }
     }

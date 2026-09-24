@@ -1,6 +1,6 @@
 /**
  * The one place a login becomes a session: JWT, cookie, response body,
- * audit line and the automation event. Every login method ends here, so
+ * audit line and the user_login internal event. Every login method ends here, so
  * they all behave the same way.
  */
 
@@ -10,7 +10,7 @@ import { authLogger } from "../utils/logger.js";
 import { loginRateLimiter } from "../utils/login-rate-limiter.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
-import { notifyAutomationInternalEvent } from "../hosts/automation-events.js";
+import { emitInternalEvent } from "../hosts/internal-events.js";
 import { createCurrentSettingsRepository } from "../database/repositories/factory.js";
 import type { UserRecord } from "../database/repositories/user-repository.js";
 
@@ -112,7 +112,7 @@ export async function issueSession(
     userAgent,
     success: true,
   });
-  notifyAutomationInternalEvent("user_login", user.id, undefined, {
+  emitInternalEvent("user_login", user.id, undefined, {
     username: user.username,
     ipAddress,
   });

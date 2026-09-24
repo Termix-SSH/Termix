@@ -334,16 +334,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `@termix/plugin-sdk/ui`), workspaces included. `npm run type-check` covers
   plugins through `tsconfig.plugins*.json` and passes. Owner: D0.
 
-- **B16 (host-metrics):** automations still sets up its headless viewers
-  through `setViewerRegistry` in `plugins/automations/src/backend/headless-viewer.ts`,
-  which nothing calls any more, so hosts an automation watches are only
-  sampled while somebody has them open. Switch it to the
-  `host-metrics.viewers` service (`register(hostId)` as the automation's
-  owner, `heartbeat`, `unregister`) and make host-metrics an optional
-  dependency again. Its triggers already listen to the final topics
-  (`plugin.host-metrics.snapshot`, `plugin.host-metrics.health-check`, core
-  `host.status`, `host.login`), but through core's bus by relative import
-  instead of `ctx.events`. Owner: B17.
 - **B16 (host-metrics):** Termix-Mobile read `statsConfig` on each host
   (`statusCheckEnabled`, `enabledWidgets`) and the host status from the
   metrics API. The host payload now carries `statusCheckEnabled` and
@@ -367,12 +357,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `widgets/network-collector.ts`) to compute rates. The poller clears them on
   deactivate and per host, so nothing leaks, but they are still module state
   rather than per-activation. Owner: D1.
-- **Pre-existing, found in B16:** automations
-  `tests/backend/tunnels.test.ts` fails "fails the step cleanly while the
-  tunnels plugin is off": it expects "tunnels plugin is not available" and
-  gets "tunnels.start is not a function". Same cause as the tunnels line
-  above: since B12 `ctx.services.get` hands back an empty handle instead of
-  throwing, so the step has to check `typeof start`. Owner: B17 or D0.
 - **B15 (docker), for D2:** the console socket `/plugin-ws/docker/console`
   is a public route with `optionalAuth`. The handler refuses a socket with no
   signed-in user or without `docker.use` and checks the data key per connect
@@ -394,10 +378,39 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   tools still report `enableDocker` from the host row, which no longer has
   the column, so it always reads null. Read `pluginSettings.docker` or ask the
   `docker.containers` service instead. Owner: B18.
-- **B15 (docker), for B17:** automations' `docker-watcher.ts` still reads its
-  own rules through core's automation repository and types by relative
-  import; only the Docker side is on the SDK (`docker.containers` for the
-  step, `docker.events` for the trigger). Owner: B17.
+
+- **B17 (automations), for B20:** the wake-on-lan step calls the optional
+  `wake-on-lan.send` v1 service, `wake(hostId): Promise<void>`, as the
+  automation's owner; the provider resolves the host's MAC and checks access
+  itself. Until B20 provides it, the step is offered nowhere and an existing
+  one is skipped with "Needs the wake-on-lan plugin". Owner: B20.
+- **B17 (automations), for D2:** the ctx table says `ctx.events.on` needs
+  `events:core` for core topics, but the runtime only checks `emit`.
+  docker, file-manager, host-metrics, session-recording and snippets
+  subscribe to core topics (`host.*`, `user.*`) without declaring it.
+  Either gate `on` and add `events:core` to those five, or change the doc to
+  say subscribing is ungated. Owner: D2.
+- **B17 (automations):** the 2.8 webhook URL `/automations/webhook/<token>`
+  is kept only by a rewrite in `docker/nginx.conf` and
+  `docker/nginx-https.conf`. An install that serves the backend without
+  nginx (the desktop app's embedded backend, a hand-rolled proxy) answers
+  404 there. Decide whether that matters enough for a generic legacy-path
+  alias in the plugin HTTP layer. Owner: D0.
+- **B17 (automations):** there are two notification senders now:
+  `deliverNotification` (ctx.notify, per-channel private opt-in, throws) and
+  the older `sendWebhook`/`sendNtfy`/`sendDiscord` that the channel "test"
+  route in `notification-channels-routes.ts` still uses (always applies the
+  allowlist, retries once). Point the test route at `deliverNotification`
+  and delete the old ones. Owner: D1.
+- **B17 (automations):** the scheduler no longer skips a user whose data key
+  cannot be resolved (`DataCrypto.canUserAccessData` has no SDK equivalent).
+  With system-wrapped DEKs that check was effectively always true; if it
+  ever is not, the run now fails on its first SSH step instead of being
+  skipped silently. Owner: none unless a background "is this user unlocked"
+  check is added to the SDK.
+- **B17 (automations):** AI's `list_notification_channels` read tool still reads
+  notification channels through core's repository by relative import; it
+  can use `ctx.notify.channels()` now. Owner: B18.
 
 ## Manual checks after 2.9.0
 
@@ -444,3 +457,14 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   with no stored password asks for credentials; the homepage Docker widget;
   an automation Docker step and a `docker_event` trigger; disable Docker with
   a console open, then enable it and open another.
+- Automations: on a 2.8 database the automations, their run history and
+  their channel links are there; a schedule fires; a webhook fires on both
+  `/plugin-api/automations/webhook/<token>` and the old
+  `/automations/webhook/<token>`; a metric threshold on a host nobody has
+  open still fires (headless viewers); a `docker_event` trigger and a Docker
+  step; a notify step to webhook, ntfy and Discord channels, and to a LAN
+  ntfy with the private opt-in plus the admin allowlist; disable Docker and
+  the automation shows "Needs docker", its scheduled runs are recorded as
+  skipped and the others keep running, then enable it again; the AI
+  assistant lists and creates automations, and says they are unavailable
+  with automations off.

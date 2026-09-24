@@ -1,4 +1,3 @@
-import { getErrorMessage } from "@/lib/error-message.js";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
@@ -12,30 +11,22 @@ import {
   Trash2,
   Workflow,
 } from "lucide-react";
-import { Button } from "@/components/button";
-import { Badge } from "@/components/badge";
 import {
-  createAutomation,
-  deleteAutomation,
-  listAutomationRunSteps,
-  listAutomationRuns,
-  listAutomations,
-  runAutomation,
-  updateAutomation,
+  Badge,
+  Button,
+  NotificationChannelDialog,
+  deleteNotificationChannel,
+  getBasePath,
+  getNotificationChannels,
+  testNotificationChannel,
+  type NotificationChannel,
+} from "@termix/plugin-sdk/ui";
+import {
+  useAutomationsApi,
   type AutomationRow,
   type AutomationRunRow,
   type AutomationRunStepRow,
 } from "./automations-api";
-import {
-  deleteNotificationChannel,
-  getNotificationChannels,
-  testNotificationChannel,
-  type NotificationChannel,
-} from "@/api/notification-channels-api";
-import { NotificationChannelDialog } from "@/sidebar/NotificationChannelDialog";
-import { getSnippets } from "@/api/snippets-api";
-import { getSSHHosts } from "@/api/ssh-host-management-api";
-import { invokeAction } from "@termix/plugin-sdk/frontend";
 
 import {
   AutomationEditor,
@@ -46,6 +37,10 @@ import {
   EMPTY_EDITOR_OPTIONS,
   type AutomationEditorOptions,
 } from "./automations/editor-types";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
 type PanelTab = "automations" | "runs" | "channels";
 
@@ -58,25 +53,20 @@ const STATUS_CLASS: Record<string, string> = {
   cancelled: "text-muted-foreground",
 };
 
-function timeAgo(iso: string | null): string {
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+function timeAgo(iso: string | null, t: Translate): string {
   if (!iso) return "";
   const ms = Date.now() - new Date(iso).getTime();
   if (!Number.isFinite(ms)) return "";
+  const base = "newUi.sidebar.automations.ago";
   const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return t(`${base}.seconds`, { count: sec });
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t(`${base}.minutes`, { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return `${Math.floor(hr / 24)}d ago`;
-}
-
-/** Fleets from the fleets plugin, or none when it is not running. */
-async function listFleets(): Promise<{ id: number; name: string }[]> {
-  const result = await invokeAction("fleets.list");
-  return Array.isArray(result)
-    ? (result as { id: number; name: string }[])
-    : [];
+  if (hr < 24) return t(`${base}.hours`, { count: hr });
+  return t(`${base}.days`, { count: Math.floor(hr / 24) });
 }
 
 export function AutomationsPanel({
@@ -87,6 +77,7 @@ export function AutomationsPanel({
   onEditingChange?: (editing: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const api = useAutomationsApi();
   const base = "newUi.sidebar.automations";
 
   const [tab, setTab] = useState<PanelTab>("automations");
@@ -113,60 +104,34 @@ export function AutomationsPanel({
   const loadAutomations = useCallback(async () => {
     setLoading(true);
     try {
-      setAutomations(await listAutomations());
+      setAutomations(await api.list());
     } catch {
       // A failed load leaves the previous list on screen.
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [api]);
 
   const loadRuns = useCallback(async () => {
     try {
-      setRuns(await listAutomationRuns({ limit: 100 }));
+      setRuns(await api.runs({ limit: 100 }));
     } catch {
       // Non-fatal.
     }
-  }, []);
+  }, [api]);
 
   const loadOptions = useCallback(async () => {
-    const [hosts, snippets, channelsResult, fleets] = await Promise.allSettled([
-      getSSHHosts({ includeStatus: false }),
-      getSnippets(),
+    const [editorOptions, channelsResult] = await Promise.allSettled([
+      api.editorOptions(),
       getNotificationChannels(),
-      listFleets(),
     ]);
-
     if (channelsResult.status === "fulfilled") {
       setChannels(channelsResult.value);
     }
-
-    setOptions({
-      hosts:
-        hosts.status === "fulfilled"
-          ? hosts.value.map((host) => ({
-              id: host.id,
-              name: host.name || host.ip,
-            }))
-          : [],
-      snippets:
-        snippets.status === "fulfilled"
-          ? snippets.value.map((s) => ({
-              id: s.id,
-              // SnippetRow only types its id; the rest is narrowed by callers.
-              name: typeof s.name === "string" ? s.name : `#${s.id}`,
-            }))
-          : [],
-      channels:
-        channelsResult.status === "fulfilled"
-          ? channelsResult.value.map((c) => ({ id: c.id, name: c.name }))
-          : [],
-      fleets:
-        fleets.status === "fulfilled"
-          ? fleets.value.map((f) => ({ id: f.id, name: f.name }))
-          : [],
-    });
-  }, []);
+    if (editorOptions.status === "fulfilled") {
+      setOptions(editorOptions.value);
+    }
+  }, [api]);
 
   useEffect(() => {
     if (!active) return;
@@ -222,7 +187,7 @@ export function AutomationsPanel({
     setSaving(true);
     try {
       if (editingId === null) {
-        const created = await createAutomation({
+        const created = await api.create({
           name: draft.name.trim(),
           description: draft.description || null,
           enabled: draft.enabled,
@@ -236,7 +201,7 @@ export function AutomationsPanel({
           setEditorOpen(false);
         }
       } else {
-        await updateAutomation(editingId, {
+        await api.update(editingId, {
           name: draft.name.trim(),
           description: draft.description || null,
           enabled: draft.enabled,
@@ -257,7 +222,7 @@ export function AutomationsPanel({
   async function remove(row: AutomationRow) {
     if (!confirm(t(`${base}.deleteConfirm`))) return;
     try {
-      await deleteAutomation(row.id);
+      await api.remove(row.id);
       toast.success(t(`${base}.deleted`));
       await loadAutomations();
     } catch (error) {
@@ -267,7 +232,7 @@ export function AutomationsPanel({
 
   async function run(row: AutomationRow, dryRun: boolean) {
     try {
-      const outcome = await runAutomation(row.id, { dryRun });
+      const outcome = await api.run(row.id, { dryRun });
       toast.success(t(`${base}.runFinished`, { status: outcome.status }));
       await loadAutomations();
       if (tab === "runs") await loadRuns();
@@ -304,7 +269,7 @@ export function AutomationsPanel({
     }
     setExpandedRun(runId);
     try {
-      setRunSteps(await listAutomationRunSteps(runId));
+      setRunSteps(await api.runSteps(runId));
     } catch {
       setRunSteps([]);
     }
@@ -314,7 +279,7 @@ export function AutomationsPanel({
   // host manager does, rather than opening a dialog over the app.
   if (editorOpen) {
     const webhookUrl = webhookToken
-      ? `${window.location.origin}/automations/webhook/${webhookToken}`
+      ? `${window.location.origin}${getBasePath()}/plugin-api/automations/webhook/${webhookToken}`
       : "";
 
     return (
@@ -432,7 +397,7 @@ export function AutomationsPanel({
           rel="noreferrer"
           className="ml-auto shrink-0 text-[10px] text-accent-brand hover:underline"
         >
-          {t("hosts.docsLink")}
+          {t(`${base}.docsLink`)}
         </a>
       </div>
 
@@ -475,9 +440,20 @@ export function AutomationsPanel({
                     >
                       {row.name}
                     </button>
+                    {!!row.missingPlugins?.length && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-destructive/50 text-destructive"
+                        title={t(`${base}.needsPluginHint`)}
+                      >
+                        {t(`${base}.needsPlugin`, {
+                          plugin: row.missingPlugins.join(", "),
+                        })}
+                      </Badge>
+                    )}
                     {!row.enabled && (
                       <Badge variant="outline" className="text-[10px]">
-                        off
+                        {t(`${base}.offBadge`)}
                       </Badge>
                     )}
                   </div>
@@ -490,7 +466,7 @@ export function AutomationsPanel({
                           )
                         : ""}
                       {row.last_run_status
-                        ? ` · ${timeAgo(row.last_run_at)}`
+                        ? ` · ${timeAgo(row.last_run_at, t)}`
                         : ""}
                     </span>
                     <Button
@@ -555,7 +531,7 @@ export function AutomationsPanel({
                     </span>
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    {timeAgo(entry.started_at)}
+                    {timeAgo(entry.started_at, t)}
                     {entry.duration_ms !== null
                       ? ` · ${Math.round(entry.duration_ms / 100) / 10}s`
                       : ""}

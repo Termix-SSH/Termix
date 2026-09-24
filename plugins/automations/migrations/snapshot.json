@@ -1,0 +1,303 @@
+{
+  "version": 1,
+  "tables": {
+    "automations": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "name": {
+          "type": "text",
+          "notNull": true
+        },
+        "description": {
+          "type": "text"
+        },
+        "enabled": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": true
+        },
+        "definition": {
+          "type": "text",
+          "notNull": true
+        },
+        "definitionVersion": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 1
+        },
+        "concurrencyPolicy": {
+          "type": "text",
+          "notNull": true,
+          "defaultValue": "skip"
+        },
+        "maxRunSeconds": {
+          "type": "integer",
+          "notNull": true,
+          "defaultValue": 300
+        },
+        "dryRun": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "lastRunAt": {
+          "type": "text"
+        },
+        "lastRunStatus": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_automations_user",
+          "columns": ["userId", "enabled"]
+        }
+      ],
+      "adopts": "automations"
+    },
+    "trigger_state": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "automationId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "stateKey": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        },
+        "breachStartedAt": {
+          "type": "text"
+        },
+        "lastFiredAt": {
+          "type": "text"
+        },
+        "lastValue": {
+          "type": "real"
+        },
+        "lastObservedState": {
+          "type": "text"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_automation_trigger_state_key",
+          "columns": ["automationId", "stateKey"],
+          "unique": true
+        }
+      ],
+      "adopts": "automation_trigger_state"
+    },
+    "schedules": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "automationId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "cron": {
+          "type": "text"
+        },
+        "intervalSeconds": {
+          "type": "integer"
+        },
+        "timezone": {
+          "type": "text"
+        },
+        "nextDueAt": {
+          "type": "timestamp"
+        },
+        "lastTickAt": {
+          "type": "text"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_automation_schedules_automation",
+          "columns": ["automationId"],
+          "unique": true
+        },
+        {
+          "name": "idx_automation_schedules_due",
+          "columns": ["nextDueAt"]
+        }
+      ],
+      "adopts": "automation_schedules"
+    },
+    "runs": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "automationId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "triggerType": {
+          "type": "text",
+          "notNull": true
+        },
+        "triggerContext": {
+          "type": "text"
+        },
+        "status": {
+          "type": "text",
+          "notNull": true
+        },
+        "startedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "finishedAt": {
+          "type": "text"
+        },
+        "durationMs": {
+          "type": "integer"
+        },
+        "error": {
+          "type": "text"
+        },
+        "dryRun": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        },
+        "parentRunId": {
+          "type": "integer"
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_automation_runs_automation",
+          "columns": ["automationId", "startedAt"]
+        },
+        {
+          "name": "idx_automation_runs_user",
+          "columns": ["userId", "startedAt"]
+        }
+      ],
+      "adopts": "automation_runs"
+    },
+    "run_steps": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "runId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "stepIndex": {
+          "type": "integer",
+          "notNull": true
+        },
+        "stepId": {
+          "type": "text",
+          "notNull": true
+        },
+        "stepType": {
+          "type": "text",
+          "notNull": true
+        },
+        "status": {
+          "type": "text",
+          "notNull": true
+        },
+        "startedAt": {
+          "type": "timestamp",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "finishedAt": {
+          "type": "text"
+        },
+        "output": {
+          "type": "text"
+        },
+        "error": {
+          "type": "text"
+        },
+        "truncated": {
+          "type": "boolean",
+          "notNull": true,
+          "defaultValue": false
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_automation_run_steps_run",
+          "columns": ["runId", "stepIndex"]
+        }
+      ],
+      "adopts": "automation_run_steps"
+    },
+    "channels": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "automationId": {
+          "type": "integer",
+          "notNull": true
+        },
+        "channelId": {
+          "type": "integer",
+          "notNull": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_automation_channels_pair",
+          "columns": ["automationId", "channelId"],
+          "unique": true
+        }
+      ],
+      "adopts": "automation_channels"
+    }
+  }
+}

@@ -1,13 +1,13 @@
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { Label } from "@/components/label";
 import {
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/select";
-import type { HostSelector } from "@/types/automations";
+} from "@termix/plugin-sdk/ui";
+import type { HostSelector } from "../../types";
 import type { AutomationEditorOptions } from "./editor-types";
 
 /**
@@ -56,9 +56,11 @@ export function HostSelectorField({
             <SelectItem value="host">
               {t(`${base}.hostSelector.host`)}
             </SelectItem>
-            <SelectItem value="fleet">
-              {t(`${base}.hostSelector.fleet`)}
-            </SelectItem>
+            {(options.providers.fleets || kind === "fleet") && (
+              <SelectItem value="fleet">
+                {t(`${base}.hostSelector.fleet`)}
+              </SelectItem>
+            )}
             <SelectItem value="all">{t(`${base}.hostSelector.all`)}</SelectItem>
           </SelectContent>
         </Select>

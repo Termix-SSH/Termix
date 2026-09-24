@@ -1,24 +1,23 @@
-import { getErrorMessage } from "@/lib/error-message.js";
 import { useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
-import { Switch } from "@/components/switch";
 import {
+  Button,
+  Input,
+  Label,
+  Switch,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/select";
+} from "@termix/plugin-sdk/ui";
+import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { Plus } from "lucide-react";
 import {
   AUTOMATION_DEFINITION_VERSION,
   type AutomationDefinition,
   type ConcurrencyPolicy,
   type Step,
-} from "@/types/automations";
+} from "../../types";
 import { StepBlock } from "./StepBlock";
 import { TriggerCard, defaultTrigger } from "./TriggerCard";
 import { newStepId, type AutomationEditorOptions } from "./editor-types";
@@ -246,7 +245,9 @@ export function AutomationEditor({
                 setDefinition(parsed as AutomationDefinition);
                 setJsonError(null);
               } catch (error) {
-                setJsonError(getErrorMessage(error, String(error)));
+                setJsonError(
+                  error instanceof Error ? error.message : String(error),
+                );
               }
             }}
           />

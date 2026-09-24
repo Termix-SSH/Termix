@@ -248,3 +248,84 @@ export async function listCommandHistory(
     return null;
   }
 }
+
+/** The automations plugin, as ctx.services.get("automations.access") returns it. */
+interface AutomationsAccess {
+  list: () => Promise<
+    Array<{
+      id: number;
+      name: string;
+      description: string | null;
+      enabled: boolean;
+      triggerKind: string | null;
+      lastRunAt: string | null;
+      lastRunStatus: string | null;
+      missingPlugins: string[];
+    }>
+  >;
+  get: (id: number) => Promise<{
+    id: number;
+    name: string;
+    enabled: boolean;
+    definition: unknown;
+  } | null>;
+  create: (input: {
+    name: string;
+    description?: string | null;
+    definition: unknown;
+    enabled?: boolean;
+  }) => Promise<{ id: number; name: string }>;
+}
+
+function automations(userId: string): Partial<AutomationsAccess> {
+  if (!current) return {};
+  try {
+    return current.get<AutomationsAccess>("automations.access", { userId });
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * The user's automations, or null when the automations plugin is off or the
+ * user may not use it.
+ */
+export async function listAutomations(
+  userId: string,
+): Promise<Awaited<ReturnType<AutomationsAccess["list"]>> | null> {
+  const list = automations(userId).list;
+  if (typeof list !== "function") return null;
+  try {
+    return await list();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAutomation(
+  userId: string,
+  id: number,
+): Promise<Awaited<ReturnType<AutomationsAccess["get"]>> | undefined> {
+  const get = automations(userId).get;
+  if (typeof get !== "function") return undefined;
+  try {
+    return await get(id);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Creates an automation through the plugin, which validates it exactly as
+ * its own route does. Throws when the plugin is off.
+ */
+export async function createAutomation(
+  userId: string,
+  input: Parameters<AutomationsAccess["create"]>[0],
+): Promise<{ id: number; name: string }> {
+  const create = automations(userId).create;
+  if (typeof create !== "function") {
+    throw new Error("The automations plugin is not available");
+  }
+  return create(input);
+}

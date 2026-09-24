@@ -1,105 +1,101 @@
-import { statsLogger } from "../../../../src/backend/utils/logger.js";
-import { listAutomationWatchedHosts } from "./triggers.js";
+import type { PluginContext } from "@termix/plugin-sdk/backend";
+import type { Deps } from "./deps.js";
 
 /**
  * Keeps metric collection running for hosts an automation watches.
  *
- * Heavy metric collection is normally started by a UI viewer and stops when
- * the last one leaves, which means threshold rules only ever evaluated while
- * somebody had the host open. Automations register a synthetic viewer instead
- * of bypassing that mechanism, so a real viewer arriving or leaving still
- * behaves exactly as before.
- *
- * The catch is `cleanupInactiveViewers`, which drops any viewer whose
- * heartbeat is older than 120s. Without the heartbeat below, headless polling
- * would quietly stop two minutes after it started.
+ * Host metrics only polls hosts somebody is looking at. Automations register
+ * as a viewer through the host-metrics.viewers service, as the automation's
+ * owner, and heartbeat every tick so the viewer is not reaped. A heartbeat
+ * that comes back false means host-metrics restarted and forgot the viewer,
+ * so the next tick registers it again.
  */
 
-export interface ViewerRegistry {
-  registerViewer(hostId: number, sessionId: string, userId: string): void;
-  unregisterViewer(hostId: number, sessionId: string): void;
-  updateHeartbeat(sessionId: string): boolean;
+interface Registered {
+  userId: string;
+  viewerSessionId: string;
 }
 
-const SESSION_PREFIX = "automation:";
+export function createHeadlessViewers(
+  ctx: Pick<PluginContext, "asUser" | "log">,
+  deps: Pick<Deps, "viewers">,
+  watchedHosts: () => Promise<Map<number, string>>,
+) {
+  const registered = new Map<number, Registered>();
 
-let registry: ViewerRegistry | null = null;
-const registered = new Map<number, string>();
-
-export function setViewerRegistry(next: ViewerRegistry | null): void {
-  registry = next;
-}
-
-export function automationSessionId(hostId: number): string {
-  return `${SESSION_PREFIX}${hostId}`;
-}
-
-/**
- * Brings the set of synthetic viewers in line with what the enabled
- * automations currently watch, and heartbeats the ones that stay.
- */
-export async function reconcileHeadlessViewers(): Promise<{
-  added: number;
-  removed: number;
-  active: number;
-}> {
-  if (!registry) return { added: 0, removed: 0, active: 0 };
-
-  let watched: Map<number, string>;
-  try {
-    watched = await listAutomationWatchedHosts();
-  } catch {
-    return { added: 0, removed: 0, active: registered.size };
-  }
-
-  let added = 0;
-  let removed = 0;
-
-  for (const [hostId, userId] of watched) {
-    const sessionId = automationSessionId(hostId);
-    if (registered.has(hostId)) {
-      // Refresh before the 120s reaper would take it.
-      registry.updateHeartbeat(sessionId);
-      continue;
-    }
-
+  async function release(hostId: number, entry: Registered): Promise<void> {
+    registered.delete(hostId);
+    const unregister = deps.viewers().unregister;
+    if (typeof unregister !== "function") return;
     try {
-      registry.registerViewer(hostId, sessionId, userId);
-      registered.set(hostId, userId);
-      added++;
-    } catch (error) {
-      statsLogger.warn("Could not start headless metrics for a host", {
-        operation: "automation_headless_register_error",
-        hostId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  for (const hostId of [...registered.keys()]) {
-    if (watched.has(hostId)) continue;
-    try {
-      registry.unregisterViewer(hostId, automationSessionId(hostId));
+      await ctx.asUser(entry.userId, () =>
+        unregister(hostId, entry.viewerSessionId),
+      );
     } catch {
       // Already gone; drop it either way.
     }
-    registered.delete(hostId);
-    removed++;
   }
 
-  return { added, removed, active: registered.size };
-}
-
-/** Drops every synthetic viewer, for shutdown and tests. */
-export function releaseHeadlessViewers(): void {
-  if (registry) {
-    for (const hostId of registered.keys()) {
-      try {
-        registry.unregisterViewer(hostId, automationSessionId(hostId));
-      } catch {
-        // Nothing useful to do during teardown.
+  return {
+    /** Brings the viewers in line with what the automations watch. */
+    async reconcile(): Promise<{ added: number; removed: number }> {
+      const viewers = deps.viewers();
+      if (typeof viewers.register !== "function") {
+        // host-metrics is off: its viewers went with it.
+        registered.clear();
+        return { added: 0, removed: 0 };
       }
-    }
-  }
-  registered.clear();
+
+      const watched = await watchedHosts();
+      let added = 0;
+      let removed = 0;
+
+      for (const [hostId, entry] of [...registered]) {
+        if (watched.get(hostId) === entry.userId) continue;
+        await release(hostId, entry);
+        removed++;
+      }
+
+      for (const [hostId, userId] of watched) {
+        const existing = registered.get(hostId);
+        if (existing) {
+          const alive = await ctx
+            .asUser(userId, () => viewers.heartbeat!(existing.viewerSessionId))
+            .catch(() => false);
+          if (alive) continue;
+          registered.delete(hostId);
+        }
+
+        try {
+          const result = await ctx.asUser(userId, () =>
+            viewers.register!(hostId),
+          );
+          if ("viewerSessionId" in result) {
+            registered.set(hostId, {
+              userId,
+              viewerSessionId: result.viewerSessionId,
+            });
+            added++;
+          }
+        } catch (error) {
+          ctx.log.warn(
+            `Could not start headless metrics for host ${hostId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }
+
+      return { added, removed };
+    },
+
+    /** Drops every viewer, on deactivate. */
+    async releaseAll(): Promise<void> {
+      for (const [hostId, entry] of [...registered]) {
+        await release(hostId, entry);
+      }
+    },
+
+    registeredHosts: () => [...registered.keys()],
+  };
 }

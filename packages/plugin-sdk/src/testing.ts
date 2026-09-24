@@ -56,6 +56,9 @@ import type {
   PluginNativeRdpRequest,
   PluginProtocolTarget,
   PluginHostStatusEntry,
+  PluginNotification,
+  PluginNotificationChannel,
+  PluginFetchInit,
 } from "./backend.js";
 
 /** A timer registered through ctx.schedule, run by hand with runScheduled. */
@@ -108,6 +111,13 @@ export interface FakeContextOptions {
   desktopAvailable?: boolean;
   /** What ctx.hosts.status.get and check answer, by host id. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
+  /** The acting user's channels, what ctx.notify.channels answers. */
+  notificationChannels?: PluginNotificationChannel[];
+  /**
+   * Answers ctx.fetch. Without it every fetch rejects, so a test never
+   * reaches the network by accident.
+   */
+  fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
 }
 
 export interface FakeAuthRegistrations {
@@ -169,6 +179,14 @@ export interface FakePluginContext {
   nativeRdpLaunches: PluginNativeRdpRequest[];
   /** Every ctx.credentials.resolveHostProtocol call, in order. */
   credentialReads: Array<{ hostId: number; protocol: string }>;
+  /** Every ctx.notify.send call, with the actor it ran as. */
+  notifications: Array<{
+    actor: string | undefined;
+    channelIds: number[];
+    notification: PluginNotification;
+  }>;
+  /** Every ctx.fetch call, in order. */
+  fetches: Array<{ url: string; init?: PluginFetchInit }>;
   /** Every ctx.audit.record entry, in order. */
   audits: Array<{ action: string; success: boolean; [key: string]: unknown }>;
   /** Every ctx.hosts.recordActivity call, in order. */
@@ -270,6 +288,8 @@ export function createFakeContext(
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
   const nativeRdpLaunches: FakePluginContext["nativeRdpLaunches"] = [];
   const credentialReads: FakePluginContext["credentialReads"] = [];
+  const notifications: FakePluginContext["notifications"] = [];
+  const fetches: FakePluginContext["fetches"] = [];
   const audits: FakePluginContext["audits"] = [];
   const activities: FakePluginContext["activities"] = [];
   const trackedSessions: number[] = [];
@@ -766,6 +786,23 @@ export function createFakeContext(
       },
     },
 
+    notify: {
+      channels: async () => options.notificationChannels ?? [],
+      send: async (channelIds, notification) => {
+        notifications.push({ actor, channelIds, notification });
+        const selected = (options.notificationChannels ?? []).filter(
+          (channel) => channelIds.includes(channel.id) && channel.enabled,
+        );
+        return { delivered: selected.length, failures: [] };
+      },
+    },
+
+    fetch: async (url, init) => {
+      fetches.push({ url, init });
+      if (!options.fetch) throw new Error("ctx.fetch is not stubbed");
+      return options.fetch(url, init);
+    },
+
     asUser: async (userId, fn) => {
       const previous = actor;
       actor = userId;
@@ -797,6 +834,8 @@ export function createFakeContext(
     desktopWindows,
     nativeRdpLaunches,
     credentialReads,
+    notifications,
+    fetches,
     audits,
     activities,
     trackedSessions,
@@ -852,6 +891,13 @@ export interface MockContextOptions {
   desktopAvailable?: boolean;
   /** What ctx.hosts.status answers. See FakeContextOptions. */
   hostStatuses?: Record<number, PluginHostStatusEntry>;
+  /** The acting user's channels, what ctx.notify.channels answers. */
+  notificationChannels?: PluginNotificationChannel[];
+  /**
+   * Answers ctx.fetch. Without it every fetch rejects, so a test never
+   * reaches the network by accident.
+   */
+  fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
 }
 
 export interface MockPluginContext extends FakePluginContext {
@@ -866,7 +912,8 @@ export interface MockPluginContext extends FakePluginContext {
  * The gates on today's ctx surface: kv:own on every ctx.kv call, db:own on
  * ctx.db, network:serve on ctx.http and ctx.ws, events:core on emitting a
  * topic outside the plugin's own namespace, settings:read-core on
- * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh, and
+ * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh,
+ * notify:send on ctx.notify, network:outbound on ctx.fetch, and
  * auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
@@ -891,6 +938,8 @@ export function createMockCtx(
     protocolTargets: options.protocolTargets,
     desktopAvailable: options.desktopAvailable,
     hostStatuses: options.hostStatuses,
+    notificationChannels: options.notificationChannels,
+    fetch: options.fetch,
     manifest: {
       capabilities: options.capabilities ?? [],
       ...options.manifest,
@@ -1153,6 +1202,22 @@ export function createMockCtx(
         require("credentials:read");
         return ctx.credentials.resolveHostProtocol(hostId, protocol);
       },
+    },
+
+    notify: {
+      channels: async () => {
+        require("notify:send");
+        return ctx.notify.channels();
+      },
+      send: async (channelIds, notification) => {
+        require("notify:send");
+        return ctx.notify.send(channelIds, notification);
+      },
+    },
+
+    fetch: async (url, init) => {
+      require("network:outbound");
+      return ctx.fetch(url, init);
     },
 
     capabilities: {

@@ -42,8 +42,8 @@ vi.mock("../../utils/audit-logger.js", () => ({
   },
   getRequestMeta: () => ({ ipAddress: "10.0.0.1", userAgent: "test" }),
 }));
-vi.mock("../../hosts/automation-events.js", () => ({
-  notifyAutomationInternalEvent: vi.fn(),
+vi.mock("../../hosts/internal-events.js", () => ({
+  emitInternalEvent: vi.fn(),
 }));
 vi.mock("../../utils/logger.js", () => {
   const log = {

@@ -6,7 +6,7 @@
  *
  * The heavy dependencies are imported lazily inside each function rather than
  * at module scope: several pull in the repository layer, and a static import
- * here would close the cycle hosts/automation-events.ts documents.
+ * here would close an import cycle through the repositories.
  */
 
 import { pluginLogger } from "../utils/logger.js";

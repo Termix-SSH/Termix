@@ -1,20 +1,23 @@
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
-import { Textarea } from "@/components/textarea";
-import { Switch } from "@/components/switch";
 import {
+  Button,
+  Input,
+  Label,
+  Textarea,
+  Switch,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/select";
-import type { Step, StepType } from "@/types/automations";
+} from "@termix/plugin-sdk/ui";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import type { Step, StepType } from "../../types";
 import { HostSelectorField } from "./HostSelectorField";
-import type { AutomationEditorOptions } from "./editor-types";
+import {
+  missingStepProvider,
+  type AutomationEditorOptions,
+} from "./editor-types";
 
 const STEP_TYPES: StepType[] = [
   "notify",
@@ -86,11 +89,20 @@ export function StepBlock({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {STEP_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {t(`${base}.stepTypes.${type}`)}
-              </SelectItem>
-            ))}
+            {STEP_TYPES.map((type) => {
+              const needs = missingStepProvider(type, options.providers);
+              // A type whose plugin is off is only listed when this step
+              // already uses it, marked as needing that plugin.
+              if (needs && type !== step.type) return null;
+              return (
+                <SelectItem key={type} value={type}>
+                  {t(`${base}.stepTypes.${type}`)}
+                  {needs
+                    ? ` (${t(`${base}.needsPlugin`, { plugin: needs })})`
+                    : ""}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
 

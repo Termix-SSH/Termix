@@ -1,63 +1,61 @@
+import type { Router } from "express";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
-import { setPluginSsh } from "./ssh.js";
-import { setPluginServices } from "./snippets.js";
-import { setTunnelServices } from "./tunnels.js";
-import { setDockerServices } from "./docker.js";
-import { startAutomationsService, stopAutomationsService } from "./routes.js";
-import {
-  startAutomationScheduler,
-  stopAutomationScheduler,
-} from "./scheduler.js";
-import { onInternalEvent } from "./triggers.js";
+import { createDeps } from "./deps.js";
+import { createDockerWatcher } from "./docker-watcher.js";
+import { AutomationEngine } from "./engine.js";
+import { createHeadlessViewers } from "./headless-viewer.js";
+import { createAutomationRepository } from "./repository.js";
+import { registerRoutes } from "./routes.js";
+import { createScheduler, STARTUP_DELAY_MS, TICK_MS } from "./scheduler.js";
+import { createAutomationsService } from "./service.js";
+import { createTriggers } from "./triggers.js";
 
-/** What the tunnels plugin emits when a tunnel drops without being asked to. */
-interface TunnelDisconnectedEvent {
-  userId?: string;
-  hostId?: number;
-  tunnelName?: string;
-}
+export type { AutomationsAccessV1, AutomationSummary } from "./service.js";
 
 export async function activate(ctx: PluginContext) {
-  setPluginSsh(ctx.ssh);
-  ctx.disposables.add(() => setPluginSsh(null));
-  setPluginServices(ctx.services);
-  ctx.disposables.add(() => setPluginServices(null));
-  setTunnelServices(ctx.services);
-  ctx.disposables.add(() => setTunnelServices(null));
-  setDockerServices(ctx.services);
-  ctx.disposables.add(() => setDockerServices(null));
+  const repository = await createAutomationRepository(ctx.db, async () => {
+    const channels = await ctx.notify.channels();
+    return channels.map((channel) => channel.id);
+  });
+  const deps = createDeps(ctx.services);
+  const engine = new AutomationEngine(ctx, repository, deps);
+  const triggers = createTriggers(repository, engine, ctx.log);
+  triggers.subscribe(ctx.events);
 
-  // Nothing arrives here while the tunnels plugin is off, which is the whole
-  // of the optional dependency.
-  ctx.events.on("plugin.tunnels.tunnel_disconnected", (payload) => {
-    const event = payload as TunnelDisconnectedEvent;
-    if (!event?.userId) return;
-    void onInternalEvent({
-      event: "tunnel_disconnected",
-      userId: event.userId,
-      hostId: event.hostId,
-      details: { tunnelName: event.tunnelName },
-    }).catch((error: unknown) => {
-      ctx.log.warn(
-        `Tunnel disconnect trigger failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    });
+  const viewers = createHeadlessViewers(ctx, deps, () =>
+    triggers.watchedHosts("metric_threshold"),
+  );
+  const docker = createDockerWatcher(
+    ctx,
+    deps,
+    () => triggers.watchedHosts("docker_event"),
+    triggers.onDockerEvent,
+  );
+  ctx.disposables.add(() => {
+    docker.reset();
+    void viewers.releaseAll();
   });
 
-  startAutomationsService(
+  const scheduler = createScheduler({
+    repository,
+    engine,
+    log: ctx.log,
+    reconcile: [() => viewers.reconcile(), (now) => docker.reconcile(now)],
+  });
+  ctx.schedule.after(STARTUP_DELAY_MS, () => scheduler.tick());
+  ctx.schedule.every(TICK_MS, () => scheduler.tick());
+
+  registerRoutes(
     // The webhook route authenticates on its own per-automation token rather
     // than a session, which is the point of an inbound webhook.
-    ctx.http.router({ public: ["/webhook/:token"] }),
+    ctx.http.router<Router>({ public: ["/webhook/:token"] }),
+    { ctx, repository, engine, deps },
   );
-  startAutomationScheduler();
-  ctx.log.info(
-    "Automations routes mounted at /plugin-api/automations; scheduler started",
+
+  ctx.services.provide(
+    "automations.access",
+    createAutomationsService(ctx, repository, engine, deps),
   );
 }
 
-export async function deactivate() {
-  stopAutomationScheduler();
-  stopAutomationsService();
-}
+export async function deactivate() {}

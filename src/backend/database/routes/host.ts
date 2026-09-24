@@ -14,7 +14,7 @@ import {
   pickResolvedPassword,
   pickResolvedUsername,
 } from "../../hosts/credential-username.js";
-import { notifyAutomationInternalEvent } from "../../hosts/automation-events.js";
+import { emitInternalEvent } from "../../hosts/internal-events.js";
 import {
   createCurrentCredentialRepository,
   createCurrentOpksshTokenRepository,
@@ -534,12 +534,9 @@ router.post(
         success: true,
       });
 
-      notifyAutomationInternalEvent(
-        "host_added",
-        userId,
-        createdHost.id as number,
-        { name: String(name ?? ip) },
-      );
+      emitInternalEvent("host_added", userId, createdHost.id as number, {
+        name: String(name ?? ip),
+      });
 
       res.json(stripSensitiveFields(resolvedHost));
       notifyStatsHostUpdated(createdHost.id as number, userId, "host_create");
@@ -2483,7 +2480,7 @@ router.delete(
         success: true,
       });
 
-      notifyAutomationInternalEvent("host_deleted", userId, numericHostId, {
+      emitInternalEvent("host_deleted", userId, numericHostId, {
         name: hostToDelete.name ?? hostToDelete.ip,
       });
 

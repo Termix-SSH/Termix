@@ -12,13 +12,12 @@ const snippetRepository = {
   updateSnippet: vi.fn(),
   deleteSnippet: vi.fn(),
 };
-const automationRepository = { create: vi.fn() };
+const automationsAccess = { create: vi.fn() };
 const fleetsAccess = { create: vi.fn(), addMember: vi.fn() };
 
 vi.mock("../../../../../src/backend/database/repositories/factory.js", () => ({
   createCurrentHostRepository: () => hostRepository,
   createCurrentSnippetRepository: () => snippetRepository,
-  createCurrentAutomationRepository: () => automationRepository,
 }));
 
 const resolveHostById = vi.fn();
@@ -57,9 +56,24 @@ describe("applyProposal", () => {
     ).rejects.toThrow("Unknown proposal kind");
   });
 
-  it("validates an automation definition before creating it", async () => {
-    // Reuses the automations route's own validator, so a definition the model
+  function withAutomations() {
+    setPluginServices({
+      get: (service: string) => {
+        if (service !== "automations.access")
+          throw new Error(`unexpected ${service}`);
+        return automationsAccess as never;
+      },
+      provide: vi.fn(),
+    } as never);
+  }
+
+  it("hands an automation to the automations plugin, which validates it", async () => {
+    // The plugin runs its own route's validator, so a definition the model
     // invented is held to the same standard as a hand-written one.
+    withAutomations();
+    automationsAccess.create.mockRejectedValue(
+      new Error("Unknown or missing trigger kind"),
+    );
     await expect(
       applyProposal(
         "propose_create_automation",
@@ -69,12 +83,22 @@ describe("applyProposal", () => {
         },
         "user-1",
       ),
-    ).rejects.toThrow();
-    expect(automationRepository.create).not.toHaveBeenCalled();
+    ).rejects.toThrow("Unknown or missing trigger kind");
+  });
+
+  it("refuses an automation while the automations plugin is off", async () => {
+    await expect(
+      applyProposal(
+        "propose_create_automation",
+        { name: "x", definition: {} },
+        "user-1",
+      ),
+    ).rejects.toThrow("The automations plugin is not available");
   });
 
   it("creates a valid automation disabled so it cannot fire unwatched", async () => {
-    automationRepository.create.mockResolvedValue({ id: 5, name: "nightly" });
+    withAutomations();
+    automationsAccess.create.mockResolvedValue({ id: 5, name: "nightly" });
 
     const result = await applyProposal(
       "propose_create_automation",
@@ -89,8 +113,8 @@ describe("applyProposal", () => {
     );
 
     expect(result.ok).toBe(true);
-    expect(automationRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "user-1", enabled: false }),
+    expect(automationsAccess.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "nightly", enabled: false }),
     );
   });
 

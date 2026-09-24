@@ -1,16 +1,19 @@
 import { useTranslation } from "@termix/plugin-sdk/frontend";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
 import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/select";
-import type { Trigger, TriggerKind } from "@/types/automations";
+} from "@termix/plugin-sdk/ui";
+import type { Trigger, TriggerKind } from "../../types";
 import { HostSelectorField } from "./HostSelectorField";
-import type { AutomationEditorOptions } from "./editor-types";
+import {
+  missingTriggerProvider,
+  type AutomationEditorOptions,
+} from "./editor-types";
 
 const TRIGGER_KINDS: TriggerKind[] = [
   "metric_threshold",
@@ -98,11 +101,20 @@ export function TriggerCard({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {TRIGGER_KINDS.map((kind) => (
-              <SelectItem key={kind} value={kind}>
-                {t(`${base}.triggerKinds.${kind}`)}
-              </SelectItem>
-            ))}
+            {TRIGGER_KINDS.map((kind) => {
+              const needs = missingTriggerProvider(kind, options.providers);
+              // A kind whose plugin is off is only listed when this trigger
+              // already uses it, marked as needing that plugin.
+              if (needs && kind !== trigger.kind) return null;
+              return (
+                <SelectItem key={kind} value={kind}>
+                  {t(`${base}.triggerKinds.${kind}`)}
+                  {needs
+                    ? ` (${t(`${base}.needsPlugin`, { plugin: needs })})`
+                    : ""}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

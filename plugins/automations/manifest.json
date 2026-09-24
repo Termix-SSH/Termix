@@ -16,7 +16,6 @@
   },
   "capabilities": [
     "hosts:read",
-    "hosts:write",
     "credentials:use",
     "ssh:connect",
     "db:own",
@@ -24,19 +23,20 @@
     "notify:send",
     "network:outbound",
     "network:serve",
+    "settings:read-core",
     "ui:surface"
   ],
   "optionalDependencies": {
-    "snippets": "^1.0.0",
     "fleets": "^1.0.0",
     "tunnels": "^1.0.0",
-    "docker": "^1.0.0"
+    "docker": "^1.0.0",
+    "host-metrics": "^1.0.0",
+    "wake-on-lan": "^1.0.0"
   },
   "requires": [
     {
       "service": "snippets.access",
-      "versionRange": "^1.0.0",
-      "optional": true
+      "versionRange": "^1.0.0"
     },
     {
       "service": "fleets.access",
@@ -57,6 +57,23 @@
       "service": "docker.events",
       "versionRange": "^1.0.0",
       "optional": true
+    },
+    {
+      "service": "host-metrics.viewers",
+      "versionRange": "^1.0.0",
+      "optional": true
+    },
+    {
+      "service": "wake-on-lan.send",
+      "versionRange": "^1.0.0",
+      "optional": true
+    }
+  ],
+  "provides": [
+    {
+      "service": "automations.access",
+      "version": "1.0.0",
+      "permission": "automations.view"
     }
   ],
   "contributes": {
@@ -102,5 +119,8 @@
     ]
   },
   "locales": "locales",
-  "platforms": ["linux", "win32", "darwin"]
+  "platforms": ["linux", "win32", "darwin"],
+  "dependencies": {
+    "snippets": "^1.0.0"
+  }
 }

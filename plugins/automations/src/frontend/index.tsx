@@ -5,7 +5,7 @@ import type {
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
 import { AutomationsPanel } from "./AutomationsPanel";
-import { listAutomations } from "./automations-api";
+import { createAutomationsApi } from "./automations-api";
 
 const VIEW_ID = "automations";
 
@@ -40,7 +40,8 @@ export function activate(app: TermixApp): void {
   });
 
   // The assistant's @-mentions list automations through this.
-  app.registerAction("automations.list", () => listAutomations());
+  const api = createAutomationsApi(app.api);
+  app.registerAction("automations.list", () => api.list());
 
   app.registerSlotContribution("onboarding.features", {
     actionId: "automations.feature",
