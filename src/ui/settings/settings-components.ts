@@ -61,12 +61,6 @@ export function listSettingsComponents(): string[] {
 /** Re-renders when components are registered, e.g. after a plugin loads. */
 export const useSettingsComponents = registry.useList;
 
-export function unregisterSettingsComponents(pluginId: string): void {
-  for (const entry of registry.list()) {
-    if (entry.id.startsWith(`${pluginId}:`)) registry.unregister(entry.id);
-  }
-}
-
 /** Test helper. */
 export function resetSettingsComponents(): void {
   registry.reset();

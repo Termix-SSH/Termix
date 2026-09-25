@@ -22,7 +22,7 @@ const state = vi.hoisted(() => ({
   warnings: [] as string[],
 }));
 
-vi.mock("../../plugins/boot-migrations.js", () => ({
+vi.mock("../../upgrade/boot-migrations.js", () => ({
   runPluginDataMigrations: async () => {},
 }));
 
@@ -224,7 +224,7 @@ describe("namespace escalation is refused", () => {
     ["admin.users.manage", /reserved core group/],
     ["hosts.view", /reserved core group/],
     ["credentials.read", /reserved core group/],
-    ["snippets.edit", /reserved core group/],
+    ["admin.plugins.manage", /reserved core group/],
   ])("refuses the core name %s", (name, pattern) => {
     const { errors } = parseManifest(manifest("sample", [permission(name)]));
 

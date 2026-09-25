@@ -128,7 +128,7 @@ async function deriveWebAuthnSystemKey(userId: string): Promise<Buffer> {
 
 function deriveLegacyDefaultKey(
   userId: string,
-  type: "oidc" | "webauthn",
+  type: "oidc" | "passkey",
 ): Buffer {
   const secret =
     type === "oidc"
@@ -144,7 +144,7 @@ function deriveLegacyDefaultKey(
 async function tryUnwrapSystemWrapped(
   userId: string,
   raw: string | null,
-  type: "oidc" | "webauthn",
+  type: "oidc" | "passkey",
 ): Promise<Buffer | null> {
   const encrypted = parseJson<LegacyEncryptedDEK>(raw);
   if (!encrypted?.data || !encrypted.iv || !encrypted.tag) return null;
@@ -203,7 +203,7 @@ async function unwrapServerSide(userId: string): Promise<Buffer | null> {
   const fromWebauthn = await tryUnwrapSystemWrapped(
     userId,
     getCurrentSettingValue(keys.webauthnWrap),
-    "webauthn",
+    "passkey",
   );
   if (fromWebauthn) return fromWebauthn;
 

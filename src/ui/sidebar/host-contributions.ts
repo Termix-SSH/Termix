@@ -24,6 +24,8 @@ export interface HostActionDef {
   copyUrlView?: string;
   /** Where the dashboard's host status list sends a click. */
   overview?: boolean;
+  /** Offered as a button in Quick Connect, opening tabType. */
+  quickConnect?: boolean;
   order?: number;
   /** A label worked out per host, e.g. a single endpoint's name. */
   label?: (host: Host) => string | undefined;

@@ -41,7 +41,3 @@ export type LogEntry = {
   message: string;
   details?: Record<string, unknown> | string;
 };
-
-export interface ConnectionLogResponse {
-  connectionLogs?: LogEntry[];
-}

@@ -1,5 +1,5 @@
 import { fileManagerHostSetting } from "./host-settings";
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage } from "./lib/error-message";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, {
   useState,
@@ -8,8 +8,8 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { asHttpError } from "@/lib/http-error";
-import { cn } from "@/lib/utils.ts";
+import { asHttpError } from "./lib/http-error";
+import { cn } from "@termix/plugin-sdk/ui";
 import { FileManagerGrid } from "./FileManagerGrid.tsx";
 import { FileManagerSidebar, type SidebarItem } from "./FileManagerSidebar.tsx";
 import { FileManagerContextMenu } from "./FileManagerContextMenu.tsx";
@@ -24,33 +24,33 @@ import { DownloadProgressToast } from "./components/DownloadProgressToast.tsx";
 import { DiffWindow } from "./components/DiffWindow.tsx";
 import { useDragToDesktop } from "./hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "./hooks/useDragToSystemDesktop";
-import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { useConfirmation } from "@termix/plugin-sdk/ui";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
-import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
+import { PassphraseDialog } from "@termix/plugin-sdk/ui";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
 import { LocalFilePane } from "./LocalFilePane.tsx";
 import { useLocalTransfers } from "./hooks/useLocalTransfers.ts";
 import { usePaneWidth } from "./hooks/usePaneWidth.ts";
 import { PaneResizeHandle } from "./components/PaneResizeHandle.tsx";
-import { isLocalFileBrowserAvailable } from "@/lib/local-files.ts";
+import { isLocalFileBrowserAvailable } from "./lib/local-files";
 import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
 import { FileManagerTrashDialog } from "./FileManagerTrashDialog.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
-import type { SSHHost, FileItem } from "@/types/index";
+import type { SSHHost, FileItem } from "./host-types";
 import {
   ConnectionLogProvider,
   useConnectionLog,
   ConnectionScreen,
 } from "@termix/plugin-sdk/ui";
-import { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel.tsx";
+import { ConnectionLogPanel } from "@termix/plugin-sdk/ui";
 import {
   invokeAction,
   useConnectionRetry,
   logActivity,
 } from "@termix/plugin-sdk/frontend";
-import { copyToClipboard } from "@/lib/clipboard.ts";
+import { copyToClipboard } from "@termix/plugin-sdk/ui";
 import {
   listSSHFiles,
   readSSHFile,
@@ -85,13 +85,13 @@ import {
   transferToHost,
   addTransferRecent,
   type TransferMethodPreference,
-} from "@/main-axios.ts";
+} from "./api/transfer-api";
 import type { DiskFilesystem, HostDiskInfo } from "./disk-info";
 import {
   getAdaptiveResourceBudget,
   markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
-} from "@/lib/adaptive-resource-budget";
+} from "@termix/plugin-sdk/ui";
 import { shouldPrefetchFileContent } from "./lib/file-content-request-cache";
 import {
   markFilePreviewUsed,

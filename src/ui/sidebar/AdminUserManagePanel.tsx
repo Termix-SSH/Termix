@@ -24,10 +24,6 @@ import {
   adminDeleteUserHost,
   adminGetUserCredentials,
   adminDeleteUserCredential,
-  adminGetUserSnippets,
-  adminCreateUserSnippet,
-  adminUpdateUserSnippet,
-  adminDeleteUserSnippet,
   adminResetUserPassword,
   adminExportUserData,
   getSessions,
@@ -55,6 +51,7 @@ import { HostEditor } from "./HostEditor";
 import { mapCredentials, sshHostToHost } from "./HostManagerData";
 import type { AdminSession, AdminUser } from "./AdminManagementSections";
 import { makeCredentialTabs, makeHostTabs, TabStrip } from "./HostManagerTabs";
+import { useActionSlot } from "@/hooks/use-action-slot";
 
 type ApiErrorLike = {
   response?: {
@@ -65,18 +62,9 @@ type ApiErrorLike = {
   };
 };
 
-// user-snippets rather than the snippets plugin's own id: this is a tab key
-// in this admin panel's own local state, not a lookup into the plugin registry.
-type ManageTabId =
-  "account" | "hosts" | "credentials" | "user-snippets" | "sessions" | "danger";
-
-type ManagedSnippet = {
-  id: number;
-  name: string;
-  content: string;
-  description?: string | null;
-  folder?: string | null;
-};
+// Core tabs, or "plugin:<actionId>" for a tab a plugin contributes to the
+// admin.userTabs slot.
+type ManageTabId = string;
 
 type EditorState =
   | { kind: "host"; host: Host | null }
@@ -89,19 +77,6 @@ function apiErrorCode(error: unknown): string | undefined {
 
 function apiErrorMessage(error: unknown, fallback: string) {
   return (error as ApiErrorLike).response?.data?.error || fallback;
-}
-
-function mapSnippets(res: unknown): ManagedSnippet[] {
-  const list = Array.isArray(res)
-    ? res
-    : ((res as { snippets?: unknown[] })?.snippets ?? []);
-  return (list as Record<string, unknown>[]).map((s) => ({
-    id: Number(s.id),
-    name: String(s.name ?? ""),
-    content: String(s.content ?? ""),
-    description: (s.description as string | null) ?? null,
-    folder: (s.folder as string | null) ?? null,
-  }));
 }
 
 export function AdminUserManagePanel({
@@ -150,22 +125,10 @@ export function AdminUserManagePanel({
 
   const [hosts, setHosts] = useState<Host[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
-  const [snippets, setSnippets] = useState<ManagedSnippet[]>([]);
   const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Snippet inline editor
-  const [editingSnippet, setEditingSnippet] = useState<
-    ManagedSnippet | "new" | null
-  >(null);
-  const [snippetForm, setSnippetForm] = useState({
-    name: "",
-    content: "",
-    folder: "",
-  });
-  const [snippetSaving, setSnippetSaving] = useState(false);
 
   // Account tab state
   const [resetPassword, setResetPassword] = useState("");
@@ -194,13 +157,6 @@ export function AdminUserManagePanel({
       .catch(() => {});
   };
 
-  const reloadSnippets = () => {
-    if (!dataUnlocked) return;
-    adminGetUserSnippets(user.id)
-      .then((res) => setSnippets(mapSnippets(res)))
-      .catch(() => {});
-  };
-
   const reloadSessions = () => {
     getSessions()
       .then(({ sessions: s }) =>
@@ -214,12 +170,11 @@ export function AdminUserManagePanel({
     Promise.allSettled([
       dataUnlocked ? adminGetUserHosts(user.id) : Promise.resolve([]),
       dataUnlocked ? adminGetUserCredentials(user.id) : Promise.resolve([]),
-      dataUnlocked ? adminGetUserSnippets(user.id) : Promise.resolve([]),
       getSessions(),
       getApiKeys(),
       getUserRoles(user.id),
     ])
-      .then(([h, c, s, sess, keys, ur]) => {
+      .then(([h, c, sess, keys, ur]) => {
         if (h.status === "fulfilled" && dataUnlocked) {
           setHosts(
             (h.value as SSHHostWithStatus[]).map((raw) => sshHostToHost(raw)),
@@ -227,9 +182,6 @@ export function AdminUserManagePanel({
         }
         if (c.status === "fulfilled" && dataUnlocked) {
           setCredentials(mapCredentials(c.value));
-        }
-        if (s.status === "fulfilled" && dataUnlocked) {
-          setSnippets(mapSnippets(s.value));
         }
         if (sess.status === "fulfilled") {
           setSessions(
@@ -246,11 +198,21 @@ export function AdminUserManagePanel({
       .finally(() => setLoading(false));
   }, [user.id, dataUnlocked]);
 
+  const pluginTabs = useActionSlot("admin.userTabs").filter(
+    (contribution) =>
+      contribution.kind === "component" && contribution.component,
+  );
+  const activePluginTab = pluginTabs.find(
+    (contribution) => `plugin:${contribution.actionId}` === activeTab,
+  );
   const manageTabs: { id: ManageTabId; label: string }[] = [
     { id: "account", label: t("admin.manageTabAccount") },
     { id: "hosts", label: t("admin.manageTabHosts") },
     { id: "credentials", label: t("admin.manageTabCredentials") },
-    { id: "user-snippets", label: t("admin.manageTabSnippets") },
+    ...pluginTabs.map((contribution) => ({
+      id: `plugin:${contribution.actionId}`,
+      label: t(contribution.titleKey),
+    })),
     { id: "sessions", label: t("admin.manageTabSessions") },
     { id: "danger", label: t("admin.manageTabDanger") },
   ];
@@ -345,33 +307,6 @@ export function AdminUserManagePanel({
       toast.error(apiErrorMessage(e, t("admin.deleteUserFailed")));
     } finally {
       setDeleteLoading(false);
-    }
-  }
-
-  async function handleSaveSnippet() {
-    if (!snippetForm.name.trim() || !snippetForm.content.trim()) {
-      toast.error(t("admin.snippetRequiredFields"));
-      return;
-    }
-    setSnippetSaving(true);
-    try {
-      const payload = {
-        name: snippetForm.name.trim(),
-        content: snippetForm.content,
-        folder: snippetForm.folder.trim() || null,
-      };
-      if (editingSnippet !== "new" && editingSnippet) {
-        await adminUpdateUserSnippet(user.id, editingSnippet.id, payload);
-      } else {
-        await adminCreateUserSnippet(user.id, payload);
-      }
-      setEditingSnippet(null);
-      reloadSnippets();
-      toast.success(t("admin.snippetSaved"));
-    } catch (e) {
-      toast.error(apiErrorMessage(e, t("admin.snippetSaveFailed")));
-    } finally {
-      setSnippetSaving(false);
     }
   }
 
@@ -939,161 +874,11 @@ export function AdminUserManagePanel({
             </div>
           ))}
 
-        {activeTab === "user-snippets" &&
+        {activePluginTab &&
           (!dataUnlocked ? (
             lockedNotice
           ) : (
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between py-2 border-b border-border">
-                <span className="text-[10px] text-muted-foreground">
-                  {t("admin.snippetsCount", { count: snippets.length })}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-muted-foreground hover:text-foreground"
-                    onClick={reloadSnippets}
-                  >
-                    <RefreshCw className="size-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                    onClick={() => {
-                      setSnippetForm({ name: "", content: "", folder: "" });
-                      setEditingSnippet("new");
-                    }}
-                  >
-                    <Plus className="size-3" />
-                    {t("admin.addSnippetForUser")}
-                  </Button>
-                </div>
-              </div>
-              {editingSnippet && (
-                <div className="flex flex-col gap-2.5 py-3 border-b border-border">
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder={t("admin.snippetNamePlaceholder")}
-                    value={snippetForm.name}
-                    onChange={(e) =>
-                      setSnippetForm((p) => ({ ...p, name: e.target.value }))
-                    }
-                  />
-                  <textarea
-                    rows={4}
-                    placeholder={t("admin.snippetContentPlaceholder")}
-                    value={snippetForm.content}
-                    onChange={(e) =>
-                      setSnippetForm((p) => ({
-                        ...p,
-                        content: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder={t("admin.snippetFolderPlaceholder")}
-                    value={snippetForm.folder}
-                    onChange={(e) =>
-                      setSnippetForm((p) => ({
-                        ...p,
-                        folder: e.target.value,
-                      }))
-                    }
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-[10px]"
-                      onClick={() => setEditingSnippet(null)}
-                    >
-                      {t("common.cancel")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                      disabled={snippetSaving}
-                      onClick={handleSaveSnippet}
-                    >
-                      {snippetSaving ? t("hosts.savingBtn") : t("common.save")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {!loading && snippets.length === 0 && !editingSnippet && (
-                <span className="text-xs text-muted-foreground py-3">
-                  {t("admin.noSnippetsForUser")}
-                </span>
-              )}
-              {snippets.map((snippet) => (
-                <div
-                  key={snippet.id}
-                  className="flex items-center justify-between py-2.5 border-b border-border last:border-0"
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-xs font-semibold truncate max-w-[180px]">
-                      {snippet.name}
-                    </span>
-                    <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[220px]">
-                      {snippet.content}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-muted-foreground hover:text-foreground"
-                      onClick={() => {
-                        setSnippetForm({
-                          name: snippet.name,
-                          content: snippet.content,
-                          folder: snippet.folder ?? "",
-                        });
-                        setEditingSnippet(snippet);
-                      }}
-                    >
-                      <Pencil className="size-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-muted-foreground hover:text-destructive"
-                      onClick={() =>
-                        setConfirmDialog({
-                          message: t("admin.deleteSnippetConfirm", {
-                            name: snippet.name,
-                            username: user.username,
-                          }),
-                          onConfirm: async () => {
-                            try {
-                              await adminDeleteUserSnippet(user.id, snippet.id);
-                              setSnippets((prev) =>
-                                prev.filter((s) => s.id !== snippet.id),
-                              );
-                              toast.success(t("admin.snippetDeletedSuccess"));
-                            } catch (e) {
-                              toast.error(
-                                apiErrorMessage(
-                                  e,
-                                  t("admin.snippetDeleteFailed"),
-                                ),
-                              );
-                            }
-                          },
-                        })
-                      }
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <activePluginTab.component user={user} />
           ))}
 
         {activeTab === "sessions" && (

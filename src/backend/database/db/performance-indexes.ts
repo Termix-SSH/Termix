@@ -98,16 +98,12 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     columns: "user_id",
   },
 
-
   // Per-user history and file manager surfaces.
   {
     name: "idx_recent_activity_user_ts",
     table: "recent_activity",
     columns: "user_id, timestamp",
   },
-  // file_manager_recent, file_manager_pinned, file_manager_shortcuts,
-  // transfer_recent and command_history are owned by plugins now; their
-  // adopted table definitions carry these same indexes across the rename.
   {
     name: "idx_user_open_tabs_user_id",
     table: "user_open_tabs",

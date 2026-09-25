@@ -8,7 +8,7 @@
       "path": "./tsconfig.node.json"
     },
     {
-      "path": "./tsconfig.plugins.json"
+      "path": "./tsconfig.plugins.backend.json"
     },
     {
       "path": "./tsconfig.plugins.frontend.json"

@@ -4,9 +4,8 @@ const fileManagerApiMock = vi.hoisted(() => ({
   post: vi.fn(async () => ({ data: { complete: false } })),
 }));
 
-vi.mock("@/main-axios", () => ({
-  authApi: { defaults: {} },
-  fileManagerApi: { defaults: {} },
+vi.mock("../../../src/frontend/api/client", () => ({
+  fileManagerApi: () => ({ defaults: {} }),
   getFileManagerApiForSession: () => fileManagerApiMock,
   handleApiError: (error: unknown) => {
     throw error;
@@ -14,19 +13,20 @@ vi.mock("@/main-axios", () => ({
   setSessionOrigin: vi.fn(),
   clearSessionOrigin: vi.fn(),
 }));
-vi.mock("@/lib/connection-origin", () => ({
+vi.mock("@termix/plugin-sdk/ui", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   resolveConnectionOrigin: vi.fn(),
-}));
-vi.mock("@/lib/frontend-logger", () => ({
-  fileLogger: {
+  createFrontendLogger: () => ({
     info: vi.fn(),
     success: vi.fn(),
-  },
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
 }));
-vi.mock("@/lib/file-list-request-cache", () => ({
+vi.mock("../../../src/frontend/lib/file-list-request-cache", () => ({
   getCachedFileList: vi.fn(),
 }));
-vi.mock("@/lib/file-content-request-cache", () => ({
+vi.mock("../../../src/frontend/lib/file-content-request-cache", () => ({
   getCachedFileContent: vi.fn(),
   invalidateCachedFileContent: vi.fn(),
 }));

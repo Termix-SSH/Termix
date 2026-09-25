@@ -46,7 +46,7 @@ function findSchemeOwner(scheme: string): SecretResolverOwner | null {
     : null;
 }
 
-export class SecretResolverMissingError extends Error {
+class SecretResolverMissingError extends Error {
   readonly code = "SECRET_RESOLVER_MISSING";
   constructor(
     readonly scheme: string,

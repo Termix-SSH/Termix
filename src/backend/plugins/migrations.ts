@@ -57,10 +57,7 @@ export function checksum(contents: string): string {
   return crypto.createHash("sha256").update(normalised).digest("hex");
 }
 
-export function migrationsDir(
-  pluginDir: string,
-  dialect: DatabaseDialect,
-): string {
+function migrationsDir(pluginDir: string, dialect: DatabaseDialect): string {
   return path.join(pluginDir, "migrations", dialect);
 }
 
@@ -209,11 +206,6 @@ export async function applyPluginMigrations(
   );
 
   return pending.map((migration) => migration.id);
-}
-
-/** The dialect directories a plugin is expected to ship. */
-export function expectedDialects(): readonly DatabaseDialect[] {
-  return DIALECTS;
 }
 
 /**

@@ -48,7 +48,7 @@ import {
 } from "./types.js";
 
 const PENDING_TTL_MS = 10 * 60 * 1000;
-export const PENDING_LOGIN_COOKIE = "termix_pending_login";
+const PENDING_LOGIN_COOKIE = "termix_pending_login";
 
 const pendingLogins = new Map<string, PendingLogin>();
 
@@ -235,8 +235,7 @@ export async function runLogin(
   if ("password" in identity && identity.password) {
     // A 2.8 key still wrapped by the password only opens here, so this is the
     // first chance to move that user's TOTP secret into the plugin.
-    const { runTotpMigration } =
-      await import("../utils/crypto-migration/totp-migration.js");
+    const { runTotpMigration } = await import("../upgrade/totp-migration.js");
     await runTotpMigration(user.id);
   }
   await syncSharedCredentialsForUserRoles(
@@ -318,7 +317,7 @@ export async function runLogin(
 }
 
 /** JSON form of a login result, the shape the login screen expects. */
-export function secondFactorBody(
+function secondFactorBody(
   result: Extract<LoginResult, { kind: "second-factor" }>,
 ): Record<string, unknown> {
   return {
@@ -379,7 +378,7 @@ export async function readPendingLogin(
   return { userId: decoded.userId, token, pending };
 }
 
-export function consumePendingLogin(token: string): void {
+function consumePendingLogin(token: string): void {
   pendingLogins.delete(pendingKey(token));
 }
 

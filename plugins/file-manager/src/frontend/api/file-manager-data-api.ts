@@ -1,4 +1,4 @@
-import { fileManagerApi, handleApiError } from "@/main-axios";
+import { fileManagerApi, handleApiError } from "./client";
 
 /** Row shape shared by the recent / pinned / shortcut list endpoints. */
 export interface FileManagerEntry {
@@ -16,7 +16,7 @@ export async function getRecentFiles(
   hostId: number,
 ): Promise<FileManagerEntry[]> {
   try {
-    const response = await fileManagerApi.get("/recent", {
+    const response = await fileManagerApi().get("/recent", {
       params: { hostId },
     });
     return response.data;
@@ -32,7 +32,7 @@ export async function addRecentFile(
   name?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/recent", {
+    const response = await fileManagerApi().post("/recent", {
       hostId,
       path,
       name,
@@ -49,7 +49,7 @@ export async function removeRecentFile(
   path: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.delete("/recent", {
+    const response = await fileManagerApi().delete("/recent", {
       data: { hostId, path },
     });
     return response.data;
@@ -63,7 +63,7 @@ export async function getPinnedFiles(
   hostId: number,
 ): Promise<FileManagerEntry[]> {
   try {
-    const response = await fileManagerApi.get("/pinned", {
+    const response = await fileManagerApi().get("/pinned", {
       params: { hostId },
     });
     return response.data;
@@ -79,7 +79,7 @@ export async function addPinnedFile(
   name?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/pinned", {
+    const response = await fileManagerApi().post("/pinned", {
       hostId,
       path,
       name,
@@ -96,7 +96,7 @@ export async function removePinnedFile(
   path: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.delete("/pinned", {
+    const response = await fileManagerApi().delete("/pinned", {
       data: { hostId, path },
     });
     return response.data;
@@ -110,7 +110,7 @@ export async function getFolderShortcuts(
   hostId: number,
 ): Promise<FileManagerEntry[]> {
   try {
-    const response = await fileManagerApi.get("/shortcuts", {
+    const response = await fileManagerApi().get("/shortcuts", {
       params: { hostId },
     });
     return response.data;
@@ -126,7 +126,7 @@ export async function addFolderShortcut(
   name?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/shortcuts", {
+    const response = await fileManagerApi().post("/shortcuts", {
       hostId,
       path,
       name,
@@ -143,7 +143,7 @@ export async function removeFolderShortcut(
   path: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.delete("/shortcuts", {
+    const response = await fileManagerApi().delete("/shortcuts", {
       data: { hostId, path },
     });
     return response.data;

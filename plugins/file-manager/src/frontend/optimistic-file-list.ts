@@ -1,4 +1,4 @@
-import type { FileItem } from "@/types/index";
+import type { FileItem } from "./host-types";
 
 export function childPath(parent: string, name: string): string {
   return parent === "/" ? `/${name}` : `${parent.replace(/\/$/, "")}/${name}`;

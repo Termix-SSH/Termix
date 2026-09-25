@@ -36,7 +36,7 @@ export function getProxyAgent(targetUrl?: string): Dispatcher | undefined {
   return new ProxyAgent(proxyUrl) as unknown as Dispatcher;
 }
 
-export function getFetchDispatcher(targetUrl: string): Dispatcher {
+function getFetchDispatcher(targetUrl: string): Dispatcher {
   return getProxyAgent(targetUrl) ?? (directAgent as unknown as Dispatcher);
 }
 

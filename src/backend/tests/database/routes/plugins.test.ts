@@ -35,7 +35,7 @@ const state = vi.hoisted(() => ({
   active: new Set<string>(),
 }));
 
-vi.mock("../../../plugins/boot-migrations.js", () => ({
+vi.mock("../../../upgrade/boot-migrations.js", () => ({
   runPluginDataMigrations: async () => {},
 }));
 

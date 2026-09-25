@@ -14,10 +14,10 @@ import {
   openWebEndpointTunnel,
   requireNumericHostId,
 } from "./web-endpoint-api";
-import { copyToClipboard } from "@/lib/clipboard";
-import { isElectron } from "@/lib/electron";
-import { Button } from "@/components/button";
-import type { Host } from "@/types/ui-types";
+import { copyToClipboard } from "@termix/plugin-sdk/ui";
+import { isElectron } from "@termix/plugin-sdk/ui";
+import { Button } from "@termix/plugin-sdk/ui";
+import type { PluginHostRecord as Host } from "@termix/plugin-sdk/frontend";
 import type { WebEndpoint } from "../shared/web-endpoint-config";
 
 const REFUSAL_MESSAGES: Record<WebEndpointRefusalReason, string> = {

@@ -6,7 +6,15 @@ import {
   getCredentialSidebarPreferences,
   saveCredentialSidebarPreferences,
 } from "@/main-axios";
-import { PRESETS, type UiPreset } from "@/types/ui-preferences";
+import {
+  PRESETS,
+  type UiPreset,
+  type UiRailPreferences,
+} from "@/types/ui-preferences";
+import {
+  listRegisteredRailItems,
+  type RailItemDef,
+} from "@/sidebar/rail-items";
 import { sanitizeHostSidebarPreferences } from "@/types/host-sidebar-preferences";
 import { sanitizeCredentialSidebarPreferences } from "@/types/credential-sidebar-preferences";
 import { getRegisteredDashboardCard } from "@/dashboard/dashboard-cards-registry";
@@ -69,6 +77,23 @@ function writeLocal(key: string, value: string) {
 }
 
 /**
+ * The rail views a preset hides: its own list, plus every plugin item that
+ * does not ask to stay when the preset hides plugin items.
+ */
+export function presetHiddenRailTabs(
+  rail: UiRailPreferences,
+  pluginItems: Pick<RailItemDef, "id" | "simplePreset" | "hideable">[],
+): string[] {
+  if (!rail.hidePluginItems) return [...rail.hiddenTabs];
+  return [
+    ...rail.hiddenTabs,
+    ...pluginItems
+      .filter((item) => !item.simplePreset && item.hideable !== false)
+      .map((item) => item.id),
+  ];
+}
+
+/**
  * Writes a preset's values into the stores that own them. Safe to call when
  * nothing changed; every write is idempotent.
  */
@@ -87,7 +112,9 @@ export async function applyPresetSideEffects(
 
   // Rail visibility lives on user_preferences and is mirrored to localStorage
   // with a change event, the same way the settings toggles write it.
-  const hiddenRailTabs = JSON.stringify(target.rail.hiddenTabs);
+  const hiddenRailTabs = JSON.stringify(
+    presetHiddenRailTabs(target.rail, listRegisteredRailItems()),
+  );
   writeLocal("hiddenRailTabs", hiddenRailTabs);
   window.dispatchEvent(new Event("hiddenRailTabsChanged"));
   if (isCloud) {

@@ -9,13 +9,13 @@ export type UserExternalIdentityRecord =
 export type UserSecondFactorRecord = typeof userSecondFactors.$inferSelect;
 
 /** Subjects are indexed, so they stay within the portable key length. */
-export const MAX_EXTERNAL_SUBJECT_LENGTH = 255;
+const MAX_EXTERNAL_SUBJECT_LENGTH = 255;
 
 /**
  * Keeps a subject within the index length. Longer ones are hashed, which is
  * stable, so the same provider answer always finds the same row.
  */
-export function normalizeExternalSubject(subject: string): string {
+function normalizeExternalSubject(subject: string): string {
   if (subject.length <= MAX_EXTERNAL_SUBJECT_LENGTH) return subject;
   return `sha256:${crypto.createHash("sha256").update(subject).digest("hex")}`;
 }

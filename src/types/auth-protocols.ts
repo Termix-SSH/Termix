@@ -2,7 +2,7 @@ export const AUTH_OVERRIDE_PROTOCOLS = ["ssh", "rdp", "vnc", "telnet"] as const;
 
 export type AuthOverrideProtocol = (typeof AUTH_OVERRIDE_PROTOCOLS)[number];
 
-export const SUPPORTED_AUTH_OVERRIDE_PROTOCOLS =
+const SUPPORTED_AUTH_OVERRIDE_PROTOCOLS =
   AUTH_OVERRIDE_PROTOCOLS satisfies readonly AuthOverrideProtocol[];
 
 export const AUTH_PROTOCOL_METADATA = {

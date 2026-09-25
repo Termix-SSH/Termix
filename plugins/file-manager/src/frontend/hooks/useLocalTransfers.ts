@@ -2,8 +2,8 @@ import { useCallback, useRef } from "react";
 import { createElement } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import type { FileItem } from "@/types/index";
-import type { LocalWalkResult } from "@/types/electron";
+import type { FileItem } from "../host-types";
+import type { LocalWalkResult } from "@termix/plugin-sdk/ui";
 import {
   cancelLocalTransfer,
   createLocalTransferId,
@@ -16,7 +16,7 @@ import {
   getLocalHome,
   localPathsExist,
   walkLocalPaths,
-} from "@/lib/local-files.ts";
+} from "../lib/local-files";
 import {
   UnsafeLocalNameError,
   buildLocalDestination,

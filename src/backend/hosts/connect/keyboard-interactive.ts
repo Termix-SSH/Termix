@@ -23,7 +23,7 @@ const FORTI_TOKEN_PATTERN = /type\s+['"]?push['"]?/i;
 
 // JumpCloud Protect / DUO: a menu choice, then an empty-answerable confirm.
 // Checked before TOTP because "...or [2] TOTP:" would match that pattern.
-export const PUSH_PROMPT_PATTERN =
+const PUSH_PROMPT_PATTERN =
   /choose.*push.*totp|press enter.*(push|send)|push notification|authentication by phone/i;
 
 const TOTP_PATTERN =
@@ -36,7 +36,7 @@ export interface KeyboardInteractiveRound {
 }
 
 /** Stored password for every password prompt, empty for the rest. */
-export function autoResponses(
+function autoResponses(
   prompts: KeyboardInteractivePrompt[],
   password: string | null | undefined,
 ): string[] {
@@ -46,7 +46,7 @@ export function autoResponses(
 }
 
 /** Puts the user's answer at one index and auto-fills the rest. */
-export function responsesWithAnswer(
+function responsesWithAnswer(
   prompts: KeyboardInteractivePrompt[],
   answerIndex: number,
   answer: string,

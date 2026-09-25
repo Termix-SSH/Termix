@@ -48,7 +48,6 @@
   "shareTitle": "Shared",
   "importExport": "Import / Export",
   "importFailed": "Failed to import snippets",
-
   "nameLabel": "Name",
   "namePlaceholder": "Snippet name",
   "descriptionLabel": "Description",
@@ -61,20 +60,17 @@
   "commandPlaceholder": "Command to run, e.g. systemctl status $HOST",
   "noteLabel": "Note",
   "notePlaceholder": "Text to paste into the terminal",
-
   "createSnippetTitle": "Create snippet",
   "createSnippetDescription": "Save a command or note you can run or paste into a terminal.",
   "createSnippetButton": "Create snippet",
   "createSuccess": "Snippet created",
   "createFailed": "Failed to create snippet",
-
   "editSnippetTitle": "Edit snippet",
   "editSnippetDescription": "Change this snippet's name, content or folder.",
   "saveSnippetButton": "Save snippet",
   "updateSuccess": "Snippet updated",
   "updateFailed": "Failed to update snippet",
   "deleteFailed": "Failed to delete snippet",
-
   "createFolderTitle": "Create folder",
   "createFolderButton": "Create folder",
   "folderCreateSuccess": "Folder created",
@@ -88,11 +84,26 @@
   "folderIconLabel": "Icon",
   "folderDeleteSuccess": "Folder deleted",
   "folderDeleteFailed": "Failed to delete folder",
-
   "confirmRunMessage": "Run \"{{name}}\"?",
   "confirmRunButton": "Run",
   "runSuccess": "Ran \"{{name}}\" on {{count}} terminal(s)",
   "pasteSuccess": "Pasted \"{{name}}\" into {{count}} terminal(s)",
-
-  "foldersCollapsedLabel": "Collapse folders by default"
+  "foldersCollapsedLabel": "Collapse folders by default",
+  "admin": {
+    "tabTitle": "Snippets",
+    "count": "{{count}} snippets",
+    "add": "Add Snippet",
+    "namePlaceholder": "Snippet name",
+    "contentPlaceholder": "Command content",
+    "folderPlaceholder": "Folder (optional)",
+    "empty": "This user has no snippets",
+    "deleteConfirm": "Delete snippet \"{{name}}\" belonging to {{username}}?",
+    "deleted": "Snippet deleted",
+    "deleteFailed": "Failed to delete snippet",
+    "requiredFields": "Snippet name and content are required",
+    "saved": "Snippet saved",
+    "saveFailed": "Failed to save snippet",
+    "saving": "Saving...",
+    "save": "Save"
+  }
 }

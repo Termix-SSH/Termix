@@ -53,6 +53,8 @@ export interface RailItemDef {
   electronOnly?: boolean;
   /** False keeps it out of the Navigation visibility toggles. */
   hideable?: boolean;
+  /** A plugin item that stays visible in the Simple preset. */
+  simplePreset?: boolean;
   /** Registered but not shown, e.g. while its feature is switched off. */
   hidden?: boolean;
   /** Places a registered item after this id instead of at the end. */
@@ -122,12 +124,6 @@ const registeredRailItems = createRegistry<RailItemDef>();
 export function registerRailItem(def: RailItemDef): () => void {
   return registeredRailItems.register(def);
 }
-
-export function unregisterRailItem(id: string): void {
-  registeredRailItems.unregister(id);
-}
-
-export const subscribeToRailItems = registeredRailItems.subscribe;
 
 /** Registered items, hidden ones included. */
 export const listRegisteredRailItems = registeredRailItems.list;

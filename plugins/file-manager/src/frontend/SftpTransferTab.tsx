@@ -38,10 +38,10 @@ import {
 } from "@termix/plugin-sdk/ui";
 import {
   addTransferRecent,
-  getSSHHosts,
   transferToHost,
   type TransferProgressResponse,
-} from "@/main-axios";
+} from "./api/transfer-api";
+import { getSSHHosts } from "./api/hosts";
 import {
   browseSSHDirectory,
   changeSSHPermissions,
@@ -51,7 +51,7 @@ import {
   renameSSHItem,
   type HostConnectionState,
 } from "./api/ssh-file-operations-api";
-import type { SSHHost } from "@/types";
+import type { SSHHost } from "./host-types";
 import { PermissionsDialog } from "./components/PermissionsDialog";
 import { formatFileSize } from "./file-manager-utils";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor";
@@ -581,7 +581,7 @@ export function SftpTransferTab() {
 
   useEffect(() => {
     setHostsLoading(true);
-    getSSHHosts({ includeStatus: false })
+    getSSHHosts()
       .then((data) =>
         setHosts(
           data.filter(

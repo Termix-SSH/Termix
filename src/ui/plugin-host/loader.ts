@@ -327,7 +327,7 @@ export function syncPlugins(summaries?: PluginSummary[]): Promise<void> {
 }
 
 /** Fired by anything that changes plugin state, e.g. the admin toggle. */
-export const PLUGINS_CHANGED_EVENT = "termix:plugins-changed";
+const PLUGINS_CHANGED_EVENT = "termix:plugins-changed";
 
 let lastFocusSync = 0;
 const FOCUS_SYNC_INTERVAL_MS = 30_000;

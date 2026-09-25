@@ -200,6 +200,7 @@ export function registerConsole(ctx: PluginContext, log: DockerLogger): void {
 
         const { client, dispose } = await ctx.ssh.connect<Client>(host, {
           purpose: "docker-console",
+          profile: "stream",
           timeoutMs: 65_000,
         });
         if (ws.readyState !== WebSocket.OPEN) {

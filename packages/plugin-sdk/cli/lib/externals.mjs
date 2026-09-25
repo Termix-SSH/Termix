@@ -42,6 +42,4 @@ export const FRONTEND_EXTERNALS = [
   "sonner",
   "@termix/plugin-sdk/frontend",
   "@termix/plugin-sdk/ui",
-  // Legacy: the shell's own modules, see legacy-core-imports.mjs. D1 removes.
-  "@termix/legacy-core/*",
 ];

@@ -130,19 +130,21 @@ async function prepareKey(
   return { status: "ready" };
 }
 
-export const passwordProvider: SshAuthProvider = {
+const passwordProvider: SshAuthProvider = {
   type: "password",
   pluginId: "core",
   labelKey: "hosts.filterAuthPassword",
+  quickConnect: true,
   credentialType: true,
   requiresSecret: true,
   prepare: preparePassword,
 };
 
-export const keyProvider: SshAuthProvider = {
+const keyProvider: SshAuthProvider = {
   type: "key",
   pluginId: "core",
   labelKey: "hosts.filterAuthKey",
+  quickConnect: true,
   credentialType: true,
   requiresSecret: true,
   prepare: prepareKey,
@@ -153,10 +155,11 @@ export const keyProvider: SshAuthProvider = {
  * this only runs when that expansion found something odd, like an unresolved
  * reference. It behaves like whichever secret is present.
  */
-export const credentialProvider: SshAuthProvider = {
+const credentialProvider: SshAuthProvider = {
   type: "credential",
   pluginId: "core",
   labelKey: "hosts.filterAuthCredential",
+  quickConnect: true,
   requiresSecret: true,
   prepare: async (config, host, env) => {
     if (keyText(host.key).trim()) return prepareKey(config, host, env);
@@ -169,10 +172,11 @@ export const credentialProvider: SshAuthProvider = {
   },
 };
 
-export const agentProvider: SshAuthProvider = {
+const agentProvider: SshAuthProvider = {
   type: "agent",
   pluginId: "core",
   labelKey: "hosts.filterAuthAgent",
+  quickConnect: true,
   requiresSecret: true,
   prepare: async (config, host, env) => {
     const result = await applyAgentAuth(
@@ -187,10 +191,11 @@ export const agentProvider: SshAuthProvider = {
   },
 };
 
-export const noneProvider: SshAuthProvider = {
+const noneProvider: SshAuthProvider = {
   type: "none",
   pluginId: "core",
   labelKey: "hosts.filterAuthNone",
+  quickConnect: true,
   // Keyboard-interactive only: a background poll would fire a live prompt
   // (a RADIUS or Duo push) with nobody there to answer it.
   supportsBackground: false,
@@ -200,7 +205,7 @@ export const noneProvider: SshAuthProvider = {
   },
 };
 
-export const BUILTIN_SSH_AUTH_PROVIDERS: readonly SshAuthProvider[] = [
+const BUILTIN_SSH_AUTH_PROVIDERS: readonly SshAuthProvider[] = [
   passwordProvider,
   keyProvider,
   credentialProvider,

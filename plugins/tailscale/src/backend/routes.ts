@@ -1,6 +1,4 @@
 import { Router } from "express";
-import { apiLogger } from "../../../../src/backend/utils/logger.js";
-import { fetchWithProxy } from "../../../../src/backend/utils/proxy-agent.js";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 
 interface TailscaleDevice {
@@ -89,18 +87,20 @@ export function startTailscaleService(
         );
 
         const url = `${apiBase}/tailnet/-/devices?fields=all`;
-        const response = await fetchWithProxy(url, {
+        // The base is admin-set and may be a LAN Headscale; listing it also
+        // routes the call through the configured outbound proxy.
+        const response = await context.fetch(url, {
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "User-Agent": "Termix/1.0",
           },
+          allowPrivateHosts: [new URL(apiBase).hostname],
         });
 
         if (!response.ok) {
-          apiLogger.warn("Tailscale API returned non-OK status", {
-            operation: "tailscale_devices",
-            status: response.status,
-          });
+          context.log.warn(
+            `Tailscale API returned non-OK status ${response.status}`,
+          );
           if (response.status === 401 || response.status === 403) {
             return res.status(401).json({
               error: "Invalid Tailscale API key",
@@ -130,9 +130,10 @@ export function startTailscaleService(
 
         res.json({ devices, hasApiKey: true });
       } catch (err) {
-        apiLogger.error("Failed to fetch Tailscale devices", err, {
-          operation: "tailscale_devices",
-        });
+        context?.log.error(
+          "Failed to fetch Tailscale devices",
+          err instanceof Error ? err : undefined,
+        );
         res.status(500).json({
           error: "Failed to fetch Tailscale devices",
           devices: [],

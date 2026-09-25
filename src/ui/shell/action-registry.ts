@@ -104,10 +104,6 @@ export function registerAction(
   };
 }
 
-export function unregisterAction(id: string): void {
-  if (actions.delete(id)) emit();
-}
-
 /** Every registered action. */
 export function listActions(): RegisteredAction[] {
   return [...actions.values()];
@@ -149,15 +145,6 @@ export function declareActionSlot(slot: ActionSlotDefinition): () => void {
       emit();
     }
   };
-}
-
-/** Whether a slot is declared, i.e. its owner is running. */
-export function isActionSlotDeclared(slotId: string): boolean {
-  return slots.has(slotId);
-}
-
-export function undeclareActionSlot(slotId: string): void {
-  if (slots.delete(slotId)) emit();
 }
 
 /**

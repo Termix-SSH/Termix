@@ -97,4 +97,19 @@ describe("createQuickConnectHost for remote desktop protocols", () => {
       "demo-desktopPassword": "pw",
     });
   });
+
+  it("carries the fields a plugin's SSH auth editor filled in", () => {
+    const host = createQuickConnectHost({
+      ip: "100.64.0.9",
+      port: 22,
+      username: "root",
+      authType: "tailnet-login",
+      authFields: { pluginSettings: { demo: { profileId: 3 } } },
+    });
+    expect(host.authType).toBe("tailnet-login");
+    expect(host.password).toBeUndefined();
+    expect(host).toMatchObject({
+      pluginSettings: { demo: { profileId: 3 } },
+    });
+  });
 });

@@ -59,10 +59,6 @@ export function useShellHosts(): { hosts: Host[]; loaded: boolean } {
   );
 }
 
-export function getShellHosts(): Host[] {
-  return hosts;
-}
-
 export function notifyTabsChanged(): void {
   for (const listener of changeListeners) listener();
 }

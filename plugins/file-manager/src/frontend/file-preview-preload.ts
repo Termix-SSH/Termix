@@ -1,7 +1,7 @@
 import {
   markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
-} from "@/lib/adaptive-resource-budget";
+} from "@termix/plugin-sdk/ui";
 
 export type FilePreviewKind =
   | "image"

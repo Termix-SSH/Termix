@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { FileItem } from "@/types/index";
+import type { FileItem } from "../../src/frontend/host-types";
 import {
   addOptimisticItem,
   childPath,

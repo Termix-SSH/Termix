@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { downloadSSHFile } from "../api/ssh-file-operations-api";
-import type { FileItem, SSHHost } from "@/types/index.js";
+import type { FileItem, SSHHost } from "../host-types";
 
 interface DragToDesktopState {
   isDragging: boolean;

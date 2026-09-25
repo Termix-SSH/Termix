@@ -13,6 +13,4 @@ export {
   dropTableSql,
   addColumnSql,
   keyedColumns,
-  columnName,
-  REFERENCEABLE,
 } from "@termix/plugin-sdk/ddl";

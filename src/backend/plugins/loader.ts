@@ -48,8 +48,8 @@ export type PluginSource = "bundled" | "user";
 const ACTIVATION_TIMEOUT_MS = 30_000;
 
 /** Defaults for the runtime error budget. Both are configurable. */
-export const DEFAULT_ERROR_THRESHOLD = 5;
-export const DEFAULT_ERROR_WINDOW_MS = 60_000;
+const DEFAULT_ERROR_THRESHOLD = 5;
+const DEFAULT_ERROR_WINDOW_MS = 60_000;
 
 export interface LoadedPlugin {
   id: string;
@@ -141,7 +141,7 @@ export class PluginLoader {
   /**
    * Scans both roots. A user-installed plugin can never shadow a bundled one:
    * the collision is rejected with an error rather than silently skipped, so
-   * dropping an "ssh-terminal" folder into the data directory is visibly
+   * dropping a folder with a bundled plugin's id into the data directory is visibly
    * refused instead of quietly ignored.
    *
    * The check is on the parsed manifest id, not the directory name, because a
@@ -347,7 +347,7 @@ export class PluginLoader {
       // A new table may be where core data is waiting to move.
       if (applied.length > 0) {
         const { runPluginDataMoves } =
-          await import("../utils/crypto-migration/plugin-data-moves.js");
+          await import("../upgrade/plugin-data-moves.js");
         await runPluginDataMoves();
       }
 

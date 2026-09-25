@@ -75,7 +75,7 @@ class PluginErrorBoundary extends Component<BoundaryProps, { error: boolean }> {
   }
 }
 
-export function PluginScope({
+function PluginScope({
   pluginId,
   children,
 }: {

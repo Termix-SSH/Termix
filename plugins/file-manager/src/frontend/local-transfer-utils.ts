@@ -1,7 +1,7 @@
 // Pure helpers shared by the dual-pane (local <-> remote) file manager code.
 // Kept free of React/DOM so they can be unit tested directly.
 
-import type { LocalFileEntry } from "@/types/electron";
+import type { LocalFileEntry } from "@termix/plugin-sdk/ui";
 
 /** Custom MIME type carried by drags that originate in the local pane. */
 export const LOCAL_FILES_DRAG_MIME = "application/x-termix-local-files";

@@ -1,6 +1,6 @@
 import type { TranslateFn } from "@termix/plugin-sdk/frontend";
 import type { TFunction } from "i18next";
-import { getTransferStatus, listActiveTransfers } from "@/main-axios.ts";
+import { getTransferStatus, listActiveTransfers } from "./api/transfer-api";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
 import {
   beginTransferProgressMonitoring,
@@ -12,7 +12,7 @@ import {
   getPendingTransferIds,
   isTransferNotified,
 } from "./transferNotificationStore.ts";
-import { runAdaptivePolling } from "@/lib/adaptive-polling.ts";
+import { runAdaptivePolling } from "@termix/plugin-sdk/ui";
 
 const POLL_INTERVAL_MS = 2000;
 

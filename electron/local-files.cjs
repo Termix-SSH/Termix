@@ -317,16 +317,18 @@ function writeToRequest(request, chunk) {
 }
 
 const TRANSFER_ROUTES = Object.freeze({
-  uploadFileStream: "/ssh/uploadFileStream",
-  downloadFileStream: "/ssh/downloadFileStream",
+  uploadFileStream: "/uploadFileStream",
+  downloadFileStream: "/downloadFileStream",
 });
 
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 // A compact JWT (base64url segments joined by dots); anything else is refused.
 const AUTH_TOKEN_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
-const DEFAULT_LOCAL_FILE_MANAGER_BASE =
-  "http://localhost:30004/ssh/file_manager";
+// The file-manager plugin serves both routes under /plugin-api/file-manager
+// on the main backend.
+const FILE_MANAGER_API = "/plugin-api/file-manager";
+const DEFAULT_LOCAL_FILE_MANAGER_BASE = `http://localhost:30001${FILE_MANAGER_API}`;
 
 function normalizeHttpBase(candidate, what) {
   let parsed;
@@ -408,7 +410,7 @@ function createTargetResolver({
       const jwt =
         typeof getRemoteSyncJwt === "function" ? getRemoteSyncJwt() : null;
       if (jwt) headers.Authorization = `Bearer ${jwt}`;
-      return { url: `${base}/ssh/file_manager${routePath}`, headers };
+      return { url: `${base}${FILE_MANAGER_API}${routePath}`, headers };
     }
 
     throw new Error(`Unknown transfer origin: ${String(origin)}`);

@@ -11,8 +11,3 @@ export function ensureCoreSshAuthProviders(): void {
   registered = true;
   registerBuiltinSshAuthProviders();
 }
-
-/** Test helper, pairs with resetSshAuthRegistryForTests. */
-export function resetCoreSshAuthProvidersForTests(): void {
-  registered = false;
-}

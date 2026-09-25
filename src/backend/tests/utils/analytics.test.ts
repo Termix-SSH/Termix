@@ -186,7 +186,6 @@ describe("analytics", () => {
       properties: expect.objectContaining({
         user_count: 0,
         host_count: 0,
-        used_terminal: 0,
       }),
     });
   });

@@ -1,8 +1,9 @@
 import type { ComponentType } from "react";
 import { Radar } from "lucide-react";
 import type { PanelProps, TermixApp } from "@termix/plugin-sdk/frontend";
-import type { Host } from "@/types/ui-types";
+import type { PluginHostRecord as Host } from "@termix/plugin-sdk/frontend";
 import { TailscaleDevicesPanel } from "./TailscaleDevicesPanel";
+import { setTailscaleApi } from "./tailscale-api";
 import { TailscaleDevicesStatus } from "./TailscaleDevicesStatus";
 import { TailscaleAuthEditor } from "./TailscaleAuthEditor";
 import { TailscaleCheckOverlay } from "./TailscaleCheckOverlay";
@@ -22,6 +23,8 @@ function Panel({ shell }: PanelProps) {
 }
 
 export function activate(app: TermixApp): void {
+  setTailscaleApi(app.api);
+  app.onDispose(() => setTailscaleApi(null));
   app.registerRailItem({
     id: "tailscale",
     icon: Radar,

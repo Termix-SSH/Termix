@@ -11,7 +11,8 @@ vi.mock("@/dashboard/dashboard-cards-registry", () => ({
   getRegisteredDashboardCard: (id: string) => registered.cards.get(id),
 }));
 
-const { buildDashboardSlots } = await import("../../lib/apply-ui-preset.js");
+const { buildDashboardSlots, presetHiddenRailTabs } =
+  await import("../../lib/apply-ui-preset.js");
 
 afterEach(() => {
   registered.cards.clear();
@@ -67,5 +68,26 @@ describe("buildDashboardSlots", () => {
       ["quick_actions", "main", 1],
       ["recent_activity", "side", 1],
     ]);
+  });
+});
+
+describe("presetHiddenRailTabs", () => {
+  const items = [
+    { id: "snippets", simplePreset: true },
+    { id: "docker-like" },
+    { id: "pinned", hideable: false },
+  ];
+
+  it("hides plugin items that do not opt in when the preset asks", () => {
+    expect(
+      presetHiddenRailTabs(
+        { hiddenTabs: ["macros"], hidePluginItems: true },
+        items,
+      ),
+    ).toEqual(["macros", "docker-like"]);
+  });
+
+  it("leaves plugin items alone otherwise", () => {
+    expect(presetHiddenRailTabs({ hiddenTabs: [] }, items)).toEqual([]);
   });
 });

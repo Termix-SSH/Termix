@@ -81,10 +81,8 @@ export interface TabTypeDef {
 const registry = createRegistry<TabTypeDef>();
 
 export const registerTabType = registry.register;
-export const unregisterTabType = registry.unregister;
 export const getTabType = registry.get;
 export const listTabTypes = registry.list;
-export const subscribeToTabTypes = registry.subscribe;
 export const useTabTypes = registry.useList;
 export const resetTabTypes = registry.reset;
 
@@ -115,7 +113,7 @@ export function isSessionTabType(type: string): boolean {
   return CORE_SESSION.has(type) || !!registry.get(type)?.session;
 }
 
-export function isHostlessTabType(type: string): boolean {
+function isHostlessTabType(type: string): boolean {
   return CORE_HOSTLESS.has(type) || !!registry.get(type)?.hostless;
 }
 

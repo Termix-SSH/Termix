@@ -3,7 +3,7 @@ import {
   formatTransferMbPerSec,
   getTransferProgressPercent,
   type TransferProgressResponse,
-} from "@/main-axios.ts";
+} from "../api/transfer-api";
 import { useTranslation } from "react-i18next";
 import {
   Archive,

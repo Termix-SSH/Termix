@@ -17,8 +17,8 @@ import {
   SelectValue,
   SettingRow,
 } from "@termix/plugin-sdk/ui";
-import { resolveConnectionOrigin } from "@/lib/connection-origin";
-import { isElectron } from "@/lib/electron";
+import { resolveConnectionOrigin } from "@termix/plugin-sdk/ui";
+import { isElectron } from "@termix/plugin-sdk/ui";
 import {
   MAX_WEB_ENDPOINTS,
   MAX_WEB_ENDPOINT_LABEL_LENGTH,

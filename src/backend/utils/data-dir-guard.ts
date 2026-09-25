@@ -55,9 +55,7 @@ export function findDatabaseOutsideDataDir(
   return null;
 }
 
-export function isEmptyDataDirAllowed(
-  env: NodeJS.ProcessEnv = process.env,
-): boolean {
+function isEmptyDataDirAllowed(env: NodeJS.ProcessEnv = process.env): boolean {
   return TRUE_VALUES.has(
     env[ALLOW_EMPTY_DATA_DIR_ENV]?.trim().toLowerCase() ?? "",
   );

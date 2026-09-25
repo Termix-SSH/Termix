@@ -17,7 +17,7 @@ import { sql, type SQLWrapper } from "drizzle-orm";
  * `substr` are used rather than `datetime()` to keep the expression portable
  * across engines.
  */
-export const CANONICAL_TIMESTAMP_LENGTH = 19;
+const CANONICAL_TIMESTAMP_LENGTH = 19;
 
 export function normalizeSyncTimestamp(value: string): string {
   return value.replace("T", " ").slice(0, CANONICAL_TIMESTAMP_LENGTH);

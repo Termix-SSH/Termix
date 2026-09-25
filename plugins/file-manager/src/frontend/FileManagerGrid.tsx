@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { cn } from "@/lib/utils.ts";
+import { cn } from "@termix/plugin-sdk/ui";
 import {
   Folder,
   File,
@@ -30,7 +30,7 @@ import {
   GitCompare,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { FileItem } from "@/types/index";
+import type { FileItem } from "./host-types";
 import type { CreateIntent } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
 import {

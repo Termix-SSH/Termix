@@ -1,5 +1,5 @@
-import type { FileItem } from "@/types/index";
-import { createKeyedRequestCache } from "@/lib/keyed-request-cache";
+import type { FileItem } from "../host-types";
+import { createKeyedRequestCache } from "./keyed-request-cache";
 
 export interface FileContentResult {
   content: string;

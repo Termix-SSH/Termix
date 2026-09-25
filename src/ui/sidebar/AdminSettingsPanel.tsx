@@ -768,7 +768,7 @@ export function AdminSettingsPanel({
           const total =
             (s.sshHostsImported || 0) +
             (s.sshCredentialsImported || 0) +
-            (s.fileManagerItemsImported || 0) +
+            (s.pluginItemsImported || 0) +
             (s.dismissedAlertsImported || 0) +
             (s.settingsImported || 0);
           toast.success(

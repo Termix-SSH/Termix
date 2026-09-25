@@ -4,8 +4,7 @@ import {
   renderWithApp,
   type RenderedPluginApp,
 } from "@termix/plugin-sdk/testing";
-import { hostActionsFor, listHostActions } from "@/sidebar/host-contributions";
-import type { Host } from "@/types/ui-types";
+import type { PluginHostRecord as Host } from "@termix/plugin-sdk/frontend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import type { WebEndpoint } from "../../src/shared/web-endpoint-config";
 import * as plugin from "../../src/frontend/index";
@@ -48,9 +47,9 @@ let rendered: RenderedPluginApp | null = null;
 
 async function webAction(target: Host) {
   rendered ??= await renderWithApp(plugin, { manifest });
-  return hostActionsFor(listHostActions(), target).find(
-    (action) => action.id === "web-endpoint",
-  );
+  return rendered.registered
+    .hostActionsFor(target)
+    .find((action) => action.id === "web-endpoint");
 }
 
 afterEach(async () => {

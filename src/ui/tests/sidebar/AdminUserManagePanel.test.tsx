@@ -10,10 +10,6 @@ const api = vi.hoisted(() => ({
   adminDeleteUserHost: vi.fn(async () => ({})),
   adminGetUserCredentials: vi.fn(async () => [] as unknown[]),
   adminDeleteUserCredential: vi.fn(async () => ({})),
-  adminGetUserSnippets: vi.fn(async () => [] as unknown[]),
-  adminCreateUserSnippet: vi.fn(async () => ({})),
-  adminUpdateUserSnippet: vi.fn(async () => ({})),
-  adminDeleteUserSnippet: vi.fn(async () => ({})),
   adminResetUserPassword: vi.fn(async () => ({ dataWiped: false })),
   adminExportUserData: vi.fn(async () => ({})),
   getSessions: vi.fn(async () => ({ sessions: [] as unknown[] })),
@@ -87,7 +83,6 @@ describe("AdminUserManagePanel", () => {
       "admin.manageTabAccount",
       "admin.manageTabHosts",
       "admin.manageTabCredentials",
-      "admin.manageTabSnippets",
       "admin.manageTabSessions",
       "admin.manageTabDanger",
     ]) {
@@ -97,7 +92,6 @@ describe("AdminUserManagePanel", () => {
     await waitFor(() => {
       expect(api.adminGetUserHosts).toHaveBeenCalledWith("u2");
       expect(api.adminGetUserCredentials).toHaveBeenCalledWith("u2");
-      expect(api.adminGetUserSnippets).toHaveBeenCalledWith("u2");
       expect(api.getUserRoles).toHaveBeenCalledWith("u2");
     });
   });
@@ -113,7 +107,6 @@ describe("AdminUserManagePanel", () => {
 
     expect(api.adminGetUserHosts).not.toHaveBeenCalled();
     expect(api.adminGetUserCredentials).not.toHaveBeenCalled();
-    expect(api.adminGetUserSnippets).not.toHaveBeenCalled();
   });
 
   it("lists the user's hosts and opens a tab via the connect button", async () => {
@@ -142,28 +135,43 @@ describe("AdminUserManagePanel", () => {
     });
   });
 
-  it("creates a snippet for the target user", async () => {
-    renderPanel(makeUser());
-
-    await userEvent.click(screen.getByText("admin.manageTabSnippets"));
-    await userEvent.click(screen.getByText("admin.addSnippetForUser"));
-    await userEvent.type(
-      screen.getByPlaceholderText("admin.snippetNamePlaceholder"),
-      "restart",
-    );
-    await userEvent.type(
-      screen.getByPlaceholderText("admin.snippetContentPlaceholder"),
-      "systemctl restart nginx",
-    );
-    await userEvent.click(screen.getByText("common.save"));
-
-    await waitFor(() => {
-      expect(api.adminCreateUserSnippet).toHaveBeenCalledWith("u2", {
-        name: "restart",
-        content: "systemctl restart nginx",
-        folder: null,
-      });
+  it("shows a tab a plugin contributes, with the user it manages", async () => {
+    const { registerSlotContribution } =
+      await import("../../shell/action-registry");
+    const dispose = registerSlotContribution("admin.userTabs", {
+      actionId: "fixture.adminTab",
+      titleKey: "fixture.tabTitle",
+      kind: "component",
+      component: ((props: { user: AdminUser }) => (
+        <div>managing {props.user.username}</div>
+      )) as never,
     });
+    try {
+      renderPanel(makeUser());
+      await userEvent.click(screen.getByText("fixture.tabTitle"));
+      expect(screen.getByText("managing bob")).toBeTruthy();
+    } finally {
+      dispose();
+    }
+  });
+
+  it("shows the locked notice instead of a plugin tab while data is locked", async () => {
+    const { registerSlotContribution } =
+      await import("../../shell/action-registry");
+    const dispose = registerSlotContribution("admin.userTabs", {
+      actionId: "fixture.adminTab",
+      titleKey: "fixture.tabTitle",
+      kind: "component",
+      component: (() => <div>plugin content</div>) as never,
+    });
+    try {
+      renderPanel(makeUser({ dataUnlocked: false }));
+      await userEvent.click(screen.getByText("fixture.tabTitle"));
+      expect(screen.queryByText("plugin content")).toBeNull();
+      expect(screen.getByText("admin.dataLockedNotice")).toBeTruthy();
+    } finally {
+      dispose();
+    }
   });
 
   it("deletes the user from the danger tab after confirmation", async () => {

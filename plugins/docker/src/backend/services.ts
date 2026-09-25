@@ -92,7 +92,7 @@ export function registerServices(ctx: PluginContext, log: DockerLogger): void {
     const { runtime } = await readDockerHostSettings(ctx, hostId);
     const output = await ctx.ssh.withConnection<string, Client>(
       hostId,
-      { pool: POOL, purpose: "docker" },
+      { pool: POOL, purpose: "docker", profile: "session" },
       (client) => execOnClient(client, command(runtime)),
     );
     return handle(output);
@@ -161,7 +161,7 @@ export function registerServices(ctx: PluginContext, log: DockerLogger): void {
       const { runtime } = await readDockerHostSettings(ctx, watch.hostId);
       const output = await ctx.ssh.withConnection<string, Client>(
         host,
-        { pool: POOL, purpose: "docker" },
+        { pool: POOL, purpose: "docker", profile: "session" },
         (client) =>
           execOnClient(
             client,

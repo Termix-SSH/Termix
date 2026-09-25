@@ -17,7 +17,6 @@ import { buildTable, dropTableSql } from "./table-builder.js";
 import {
   applyPluginMigrations,
   readMigrations,
-  tableExistsSql,
   type MigrationRunner,
 } from "./migrations.js";
 
@@ -49,16 +48,26 @@ export function registerTable(
   return table;
 }
 
-export function getTable(pluginId: string, name: string): unknown {
+function getTable(pluginId: string, name: string): unknown {
   return built.get(pluginId)?.get(name);
 }
 
-export function listTables(pluginId: string): PluginTableDefinition[] {
+function listTables(pluginId: string): PluginTableDefinition[] {
   return [...(registered.get(pluginId) ?? [])];
 }
 
+/** Every registered definition, with the plugin that owns it. */
+export function listAllTables(): Array<{
+  pluginId: string;
+  definition: PluginTableDefinition;
+}> {
+  return [...registered.entries()].flatMap(([pluginId, definitions]) =>
+    definitions.map((definition) => ({ pluginId, definition })),
+  );
+}
+
 /** Forgets a plugin's definitions. Used by the tests and by uninstall. */
-export function forgetTables(pluginId: string): void {
+function forgetTables(pluginId: string): void {
   registered.delete(pluginId);
   built.delete(pluginId);
 }
@@ -84,7 +93,7 @@ async function execute(statements: string[]): Promise<void> {
  * the engine does not keep. A half-applied migration is recorded statement by
  * statement either way, so a retry resumes rather than repeating.
  */
-export async function createMigrationRunner(
+async function createMigrationRunner(
   dialect: DatabaseDialect = resolveDatabaseDialect(),
 ): Promise<MigrationRunner> {
   const { createCurrentPluginMigrationRepository } =
@@ -123,16 +132,6 @@ export async function migratePlugin(
 
   const runner = await createMigrationRunner(dialect);
   return applyPluginMigrations(pluginId, pluginDir, runner);
-}
-
-/** Whether a table exists, asked in the active dialect's own catalog. */
-export async function tableExists(
-  table: string,
-  dialect: DatabaseDialect = resolveDatabaseDialect(),
-): Promise<boolean> {
-  const { getDb } = await import("../database/db/index.js");
-  const rows = (await getDb().all(tableExistsSql(dialect, table))) as unknown[];
-  return rows.length > 0;
 }
 
 /**

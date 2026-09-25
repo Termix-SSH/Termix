@@ -23,6 +23,7 @@ import type {
   SshAuthLog,
   SshAuthOutcome,
   SshConnectHost,
+  SshConnectProfile,
   SshConnectPurpose,
   SshPromptChannel,
 } from "./types.js";
@@ -41,7 +42,7 @@ export class SshConnectError extends Error {
   }
 }
 
-export class SshHostNotFoundError extends Error {
+class SshHostNotFoundError extends Error {
   constructor(readonly hostId: number) {
     super("Host not found or access denied");
     this.name = "SshHostNotFoundError";
@@ -52,6 +53,8 @@ export interface ConnectHostOptions {
   /** Acting user. Access and credentials are resolved for them. */
   userId: string;
   purpose: SshConnectPurpose;
+  /** Keepalive and timeout defaults. Defaults to "background". */
+  profile?: SshConnectProfile;
   /** Ask a person for keyboard-interactive answers. Without it, auto-fill. */
   prompt?: SshPromptChannel;
   /** Replaces the keyboard-interactive handler entirely. */
@@ -100,6 +103,7 @@ export async function connectHost(
   const { config, provider, outcome, env } = await buildConnectConfig(host, {
     userId: options.userId,
     purpose: options.purpose,
+    profile: options.profile,
     client,
     hostKeySocket: options.prompt?.hostKeySocket ?? null,
     interactive: !!options.prompt,

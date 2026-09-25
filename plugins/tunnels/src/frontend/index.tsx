@@ -13,7 +13,8 @@ import {
   TunnelWidget,
   TunnelWidgetEditForm,
 } from "./views";
-import { getTunnelStatuses, setTunnelsApi } from "./api";
+import { setTunnelsApi } from "./api";
+import { ActiveTunnelsCounter } from "./ActiveTunnelsCounter";
 import { hostTunnelSettings } from "./host-tunnels";
 
 // Matches the homepage canvas grid.
@@ -96,14 +97,20 @@ export function activate(app: TermixApp): void {
     editFormComponent: TunnelWidgetEditForm,
   } as HomepageWidgetContribution);
 
-  // The dashboard's active tunnel counter reads and opens these, and gets
-  // undefined back while the plugin is off.
-  app.registerAction("tunnels.statuses", (() => getTunnelStatuses()) as never, {
-    permission: "use",
-  });
+  // The dashboard's active tunnel counter.
   app.registerAction(
     "tunnels.open",
     (() => app.tabs.openSingletonTab("tunnel")) as never,
     { permission: "use" },
   );
+  app.registerSlotContribution("dashboard.counters", {
+    actionId: "tunnels.open",
+    titleKey: "tunnels.activeTunnels",
+    kind: "component",
+    component: (() => (
+      <ActiveTunnelsCounter
+        onOpen={() => void app.tabs.openSingletonTab("tunnel")}
+      />
+    )) as never,
+  });
 }

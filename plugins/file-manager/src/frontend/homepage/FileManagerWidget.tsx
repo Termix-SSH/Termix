@@ -6,7 +6,7 @@ import type {
   FileManagerWidgetConfig,
   WidgetComponentProps,
 } from "./homepage.js";
-import type { SSHHost } from "@/types/index";
+import type { SSHHost } from "../host-types";
 import { FileManager } from "../FileManager";
 
 export function FileManagerWidget({

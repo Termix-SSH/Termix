@@ -99,7 +99,7 @@ export async function verifyPasswordLogin(request: {
   };
 }
 
-export const passwordLoginMethod: LoginMethod = {
+const passwordLoginMethod: LoginMethod = {
   id: "password",
   pluginId: "core",
   labelKey: "auth.password",

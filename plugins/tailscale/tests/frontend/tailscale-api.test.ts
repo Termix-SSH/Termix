@@ -1,23 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  getTailscaleDevices,
+  setTailscaleApi,
+} from "../../src/frontend/tailscale-api";
 
-const authApiMock = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn() }));
-const handleApiErrorMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@/main-axios", () => ({
-  authApi: authApiMock,
-  statsApi: { get: vi.fn(), patch: vi.fn() },
-  handleApiError: handleApiErrorMock,
-}));
-
-import { getTailscaleDevices } from "../../src/frontend/tailscale-api";
+const api = { get: vi.fn() };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setTailscaleApi(api as never);
 });
 
 describe("getTailscaleDevices", () => {
+  it("reads the plugin's own devices route", async () => {
+    api.get.mockResolvedValue({ data: { devices: [], hasApiKey: false } });
+
+    await expect(getTailscaleDevices()).resolves.toEqual({
+      devices: [],
+      hasApiKey: false,
+    });
+    expect(api.get).toHaveBeenCalledWith("/devices");
+  });
+
   it("preserves configured-key state when discovery fails", async () => {
-    authApiMock.get.mockRejectedValue({
+    api.get.mockRejectedValue({
       isAxiosError: true,
       response: {
         data: {
@@ -33,17 +39,17 @@ describe("getTailscaleDevices", () => {
       hasApiKey: true,
       error: "Failed to fetch Tailscale devices",
     });
-    expect(handleApiErrorMock).not.toHaveBeenCalled();
   });
 
-  it("uses normal API error handling when no structured state is available", async () => {
+  it("rethrows when no structured state is available", async () => {
     const error = { isAxiosError: true, response: { data: {} } };
-    authApiMock.get.mockRejectedValue(error);
+    api.get.mockRejectedValue(error);
 
     await expect(getTailscaleDevices()).rejects.toBe(error);
-    expect(handleApiErrorMock).toHaveBeenCalledWith(
-      error,
-      "fetch Tailscale devices",
-    );
+  });
+
+  it("refuses while the plugin is off", async () => {
+    setTailscaleApi(null);
+    await expect(getTailscaleDevices()).rejects.toThrow(/not active/);
   });
 });

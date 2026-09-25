@@ -40,10 +40,6 @@ export function registerPluginComponent(
   };
 }
 
-export function getPluginComponent(id: string): AnyComponent | undefined {
-  return components.get(id);
-}
-
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -71,10 +67,4 @@ export function PluginComponent({
   const Component = usePluginComponent(id);
   if (!Component) return fallback as ReactNode;
   return createElement(Component, props);
-}
-
-/** Test seam. */
-export function resetPluginComponents(): void {
-  components.clear();
-  notify();
 }

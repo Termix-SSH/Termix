@@ -11,7 +11,7 @@ import {
   connectSSH,
 } from "../api/ssh-file-operations-api";
 import { toast } from "sonner";
-import type { SSHHost } from "@/types/index";
+import type { SSHHost } from "../host-types";
 import { useTranslation } from "react-i18next";
 
 interface FileItem {

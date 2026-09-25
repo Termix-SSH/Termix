@@ -37,7 +37,7 @@ const CORE_UNSAVED = new Set([
  * failed, still loading or not installed. The shell shows a placeholder for
  * it, and a layout keeps it so nothing is lost when the plugin comes back.
  */
-export function isUnregisteredPluginTabType(type: string): boolean {
+function isUnregisteredPluginTabType(type: string): boolean {
   return (
     !CORE_UNSAVED.has(type) && !CORE_CAPTURABLE.has(type) && !getTabType(type)
   );

@@ -481,7 +481,7 @@ class PermissionManager {
   }
 }
 
-export { PermissionManager, SHARE_PERMISSION_LEVELS, LEVEL_RANK };
+export { PermissionManager, SHARE_PERMISSION_LEVELS };
 export type {
   AuthenticatedRequest,
   HostAccessInfo,

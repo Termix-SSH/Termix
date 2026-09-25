@@ -9,18 +9,7 @@ import {
 } from "../database/repositories/factory.js";
 import { Logger } from "./logger.js";
 
-export const analyticsLogger = new Logger("ANALYTICS", "📈", "#06b6d4");
-
-const FEATURE_ACTIVITY_TYPES = [
-  "terminal",
-  "file_manager",
-  "tunnel",
-  "docker",
-  "telnet",
-  "vnc",
-  "rdp",
-  "server_stats",
-] as const;
+const analyticsLogger = new Logger("ANALYTICS", "📈", "#06b6d4");
 
 const POSTHOG_HOST = process.env.POSTHOG_HOST || "https://us.i.posthog.com";
 const HEARTBEAT_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -70,10 +59,13 @@ async function collectFeatureUsage(): Promise<Record<string, number>> {
     .where(sql`${recentActivity.timestamp} >= ${since}`)
     .groupBy(recentActivity.type);
 
-  const counts = new Map(rows.map((row) => [row.type, Number(row.count)]));
+  // Activity types come from whichever plugins recorded them, so report the
+  // ones that appeared rather than a fixed list.
   const usage: Record<string, number> = {};
-  for (const type of FEATURE_ACTIVITY_TYPES) {
-    usage[`used_${type}`] = counts.get(type) ?? 0;
+  for (const row of rows) {
+    if (/^[a-z][a-z0-9_]*$/.test(row.type)) {
+      usage[`used_${row.type}`] = Number(row.count);
+    }
   }
   return usage;
 }

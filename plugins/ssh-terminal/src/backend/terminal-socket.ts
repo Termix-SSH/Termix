@@ -2701,6 +2701,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
 
       const built = await ctx.ssh.prepare(connectTarget, {
         purpose: "terminal",
+        profile: "terminal",
         client: sshConn,
         serverHostId: serverHostId ?? undefined,
         hostKeySocket: ws,

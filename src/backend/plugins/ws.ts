@@ -31,7 +31,7 @@ import { recordConflict } from "./conflicts.js";
 import { extractWebSocketToken } from "../utils/ws-auth.js";
 import { runAsActor } from "./actor.js";
 
-export const PLUGIN_WS_PREFIX = "/plugin-ws/";
+const PLUGIN_WS_PREFIX = "/plugin-ws/";
 
 type RawUpgradeHandler = (
   request: IncomingMessage,
@@ -127,7 +127,7 @@ function reject(socket: Duplex, status: number, message: string): void {
  * Exported for the test suite and for database.ts, which wires it into both
  * the HTTP and the HTTPS server.
  */
-export async function handlePluginUpgrade(
+async function handlePluginUpgrade(
   request: IncomingMessage,
   socket: Duplex,
   head: Buffer,

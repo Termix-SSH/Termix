@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Loader2, RefreshCw, Terminal } from "lucide-react";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import type { Host } from "@/types/ui-types";
+import { Button } from "@termix/plugin-sdk/ui";
+import { Input } from "@termix/plugin-sdk/ui";
+import type { PluginHostRecord as Host } from "@termix/plugin-sdk/frontend";
 import { getTailscaleDevices } from "./tailscale-api";
-import { createQuickConnectHost } from "@/sidebar/quick-connect-host";
+import { createQuickConnectHost } from "@termix/plugin-sdk/ui";
 
 interface TailscaleDevice {
   id: string;
@@ -61,7 +61,7 @@ export function TailscaleDevicesPanel({
       port: 22,
       username,
       authType: "tailscale",
-    });
+    }) as unknown as Host;
     onConnect(host, "terminal");
   }
 

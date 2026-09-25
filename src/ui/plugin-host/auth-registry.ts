@@ -50,7 +50,6 @@ const loginMethods = createRegistry<LoginMethodDef>();
 const secondFactors = createRegistry<SecondFactorDef>();
 
 export const registerSshAuthEditor = sshAuthEditors.register;
-export const getSshAuthEditor = sshAuthEditors.get;
 export const useSshAuthEditors = sshAuthEditors.useList;
 
 export const registerLoginMethod = loginMethods.register;
@@ -62,9 +61,3 @@ export const registerSecondFactor = secondFactors.register;
 export const getSecondFactorUI = secondFactors.get;
 export const useSecondFactors = secondFactors.useList;
 export const listSecondFactorUIs = secondFactors.list;
-
-export function resetAuthRegistries(): void {
-  sshAuthEditors.reset();
-  loginMethods.reset();
-  secondFactors.reset();
-}

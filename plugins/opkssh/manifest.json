@@ -44,6 +44,14 @@
           "default": false
         }
       ]
+    },
+    "http": {
+      "legacyRedirects": [
+        {
+          "from": "/host/opkssh-callback",
+          "to": "/callback"
+        }
+      ]
     }
   },
   "locales": "locales",

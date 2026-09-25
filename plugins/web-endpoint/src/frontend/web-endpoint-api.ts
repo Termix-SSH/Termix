@@ -1,10 +1,15 @@
 import axios from "axios";
 import type { PluginApiClient } from "@termix/plugin-sdk/frontend";
-import { handleApiError } from "@/main-axios";
-import { isElectron } from "@/lib/electron";
+import { isElectron } from "@termix/plugin-sdk/ui";
 import type { WebEndpoint } from "../shared/web-endpoint-config";
 
 let pluginApi: PluginApiClient | null = null;
+
+function genericFailure(error: unknown, action: string): never {
+  if (!axios.isAxiosError(error) && error instanceof Error) throw error;
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+  throw new WebEndpointTunnelError(`Could not ${action}`, status);
+}
 
 /** Set from activate with app.api, cleared on deactivate. */
 export function setWebEndpointApi(api: PluginApiClient | null): void {
@@ -15,8 +20,8 @@ export function setWebEndpointApi(api: PluginApiClient | null): void {
  * Thrown when the backend rejects a web endpoint tunnel open with a specific,
  * actionable reason -- most commonly a 502 carrying the real cause: SSH auth
  * rejected, host unreachable, or nothing listening on the target port.
- * Preserves that reason instead of letting handleApiError collapse three
- * actionable errors into "Server error occurred. Please try again later."
+ * Preserves that reason instead of collapsing three actionable errors into
+ * one generic failure.
  */
 export class WebEndpointTunnelError extends Error {
   constructor(
@@ -67,7 +72,7 @@ export async function openWebEndpointTunnel(
         );
       }
     }
-    return handleApiError(error, "open web endpoint tunnel");
+    return genericFailure(error, "open web endpoint tunnel");
   }
 }
 
@@ -145,6 +150,6 @@ export async function openWebEndpointExternally(
         );
       }
     }
-    return handleApiError(error, "open isolated web endpoint");
+    return genericFailure(error, "open isolated web endpoint");
   }
 }

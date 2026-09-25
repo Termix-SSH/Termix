@@ -128,6 +128,11 @@ export interface RailItemContribution {
   kind?: "panel" | "tab";
   /** Users may hide it from Appearance > Sidebar > Navigation. Default true. */
   hideable?: boolean;
+  /**
+   * Stays visible in the Simple interface preset, which hides every other
+   * plugin rail item. For the one or two things a new user reaches for.
+   */
+  simplePreset?: boolean;
   /** Can also open as a full-width tab. */
   promotable?: boolean;
   /** Can open in the right dock. */
@@ -302,6 +307,11 @@ export interface HostActionContribution {
   copyUrlView?: string;
   /** Where a host overview (the dashboard's host status list) sends a click. */
   overview?: boolean;
+  /**
+   * Offered as a button in Quick Connect, next to the default connect button,
+   * for an address that is never saved. Opens tabType.
+   */
+  quickConnect?: boolean;
   /**
    * Position in the host row. Core: Files 20, Tunnel 40, Tmux 70. Connect
    * actions default to 100 and sit after a separator.
@@ -709,6 +719,8 @@ export interface SshAuthTypeInfo {
   credentialType: boolean;
   /** Can connect unattended, for polling. */
   supportsBackground: boolean;
+  /** Offered in Quick Connect, for a host that is never saved. */
+  quickConnect: boolean;
 }
 
 /**
@@ -825,6 +837,18 @@ export interface PluginCoreApi {
   setHostAutoTmux: (hostId: number, autoTmux: boolean) => Promise<void>;
   /** A browser-side UI preference (a cookie, or the desktop app's store). */
   getClientPreference: (name: string) => string | undefined;
+  /** Every host the user can see, fetched now rather than from the shell's cache. */
+  listHosts: () => Promise<PluginHostRecord[]>;
+  /** The user's stored credentials, without their secrets. */
+  listCredentials: () => Promise<PluginCredentialSummary[]>;
+}
+
+/** A stored credential as a picker needs it. Secrets never leave core. */
+export interface PluginCredentialSummary {
+  id: number;
+  name: string;
+  username?: string;
+  authType?: string;
 }
 
 /** What a recent-activity entry opens and how it is labelled. */
@@ -970,6 +994,14 @@ export function setHostAutoTmux(
 
 export function getClientPreference(name: string): string | undefined {
   return requireHost().core.getClientPreference(name);
+}
+
+export function listHosts(): Promise<PluginHostRecord[]> {
+  return requireHost().core.listHosts();
+}
+
+export function listCredentials(): Promise<PluginCredentialSummary[]> {
+  return requireHost().core.listCredentials();
 }
 
 export function usePluginApi(): PluginApiClient {

@@ -7,10 +7,6 @@ import multer from "multer";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/users.js";
 import hostRoutes from "./routes/host.js";
-import {
-  registerTermixIdCompatRoutes,
-  registerVaultCompatRoutes,
-} from "./routes/host-compat-routes.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import sshAuthRoutes from "./routes/ssh-auth-routes.js";
@@ -44,6 +40,10 @@ import { DataCrypto } from "../utils/data-crypto.js";
 import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
+import {
+  importUserPluginRows,
+  writeUserPluginTables,
+} from "../plugins/user-data.js";
 import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
 import { acmeChallengeHandler } from "../tls/acme-challenges.js";
 import {
@@ -65,8 +65,7 @@ import type {
   GitHubAPIResponse,
   AuthenticatedRequest,
 } from "../../types/index.js";
-import { DatabaseSaveTrigger, getDb } from "./db/index.js";
-import { sql } from "drizzle-orm";
+import { DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
 
@@ -867,43 +866,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE p_file_manager_recent (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          host_id INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          path TEXT NOT NULL,
-          last_opened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE p_file_manager_pinned (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          host_id INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          path TEXT NOT NULL,
-          pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE p_file_manager_shortcuts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          host_id INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          path TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE p_file_manager_transfer_recent (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          source_host_id INTEGER NOT NULL,
-          dest_host_id INTEGER NOT NULL,
-          dest_path TEXT NOT NULL,
-          dest_path_label TEXT NOT NULL,
-          last_used TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
         CREATE TABLE dismissed_alerts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL,
@@ -1043,86 +1005,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      // The file manager plugin owns these tables now (p_file_manager_*);
-      // read them by raw SQL rather than importing plugin code into core.
-      const drizzleDb = getDb();
-      const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
-        drizzleDb.all<{
-          id: number;
-          user_id: string;
-          host_id: number;
-          name: string;
-          path: string;
-          last_opened: string;
-        }>(
-          sql`SELECT id, user_id, host_id, name, path, last_opened FROM p_file_manager_recent WHERE user_id = ${userId}`,
-        ),
-        drizzleDb.all<{
-          id: number;
-          user_id: string;
-          host_id: number;
-          name: string;
-          path: string;
-          pinned_at: string;
-        }>(
-          sql`SELECT id, user_id, host_id, name, path, pinned_at FROM p_file_manager_pinned WHERE user_id = ${userId}`,
-        ),
-        drizzleDb.all<{
-          id: number;
-          user_id: string;
-          host_id: number;
-          name: string;
-          path: string;
-          created_at: string;
-        }>(
-          sql`SELECT id, user_id, host_id, name, path, created_at FROM p_file_manager_shortcuts WHERE user_id = ${userId}`,
-        ),
-      ]);
-
-      const insertRecent = exportDb.prepare(`
-        INSERT INTO p_file_manager_recent (id, user_id, host_id, name, path, last_opened)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const item of recentFiles) {
-        insertRecent.run(
-          item.id,
-          item.user_id,
-          item.host_id,
-          item.name,
-          item.path,
-          item.last_opened,
-        );
-      }
-
-      const insertPinned = exportDb.prepare(`
-        INSERT INTO p_file_manager_pinned (id, user_id, host_id, name, path, pinned_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const item of pinnedFiles) {
-        insertPinned.run(
-          item.id,
-          item.user_id,
-          item.host_id,
-          item.name,
-          item.path,
-          item.pinned_at,
-        );
-      }
-
-      const insertShortcut = exportDb.prepare(`
-        INSERT INTO p_file_manager_shortcuts (id, user_id, host_id, name, path, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const item of shortcuts) {
-        insertShortcut.run(
-          item.id,
-          item.user_id,
-          item.host_id,
-          item.name,
-          item.path,
-          item.created_at,
-        );
-      }
+      // Rows the user owns in plugin tables travel with the export.
+      await writeUserPluginTables(exportDb, userId);
 
       const dismissedAlertRepository = createCurrentDismissedAlertRepository();
       const alerts = await dismissedAlertRepository.listByUserId(userId);
@@ -1332,7 +1216,7 @@ app.post(
         summary: {
           sshHostsImported: 0,
           sshCredentialsImported: 0,
-          fileManagerItemsImported: 0,
+          pluginItemsImported: 0,
           dismissedAlertsImported: 0,
           credentialUsageImported: 0,
           settingsImported: 0,
@@ -1477,90 +1361,10 @@ app.post(
             );
           }
 
-          // The file manager plugin owns these tables now (p_file_manager_*).
-          // Older export files still have the legacy name, so try that too.
-          const fileManagerTables = [
-            {
-              tableNames: ["p_file_manager_recent", "file_manager_recent"],
-              physicalTable: "p_file_manager_recent",
-              dateColumn: "last_opened",
-              key: "fileManagerItemsImported",
-            },
-            {
-              tableNames: ["p_file_manager_pinned", "file_manager_pinned"],
-              physicalTable: "p_file_manager_pinned",
-              dateColumn: "pinned_at",
-              key: "fileManagerItemsImported",
-            },
-            {
-              tableNames: [
-                "p_file_manager_shortcuts",
-                "file_manager_shortcuts",
-              ],
-              physicalTable: "p_file_manager_shortcuts",
-              dateColumn: "created_at",
-              key: "fileManagerItemsImported",
-            },
-          ];
-
-          const importDrizzleDb = getDb();
-
-          for (const {
-            tableNames,
-            physicalTable,
-            dateColumn,
-            key,
-          } of fileManagerTables) {
-            let importedItems: Array<Record<string, unknown>> | null = null;
-            let sourceTable = "";
-            for (const tableName of tableNames) {
-              try {
-                importedItems = importDb
-                  .prepare(`SELECT * FROM ${tableName}`)
-                  .all() as Array<Record<string, unknown>>;
-                sourceTable = tableName;
-                break;
-              } catch {
-                // try the next name
-              }
-            }
-
-            if (importedItems === null) {
-              apiLogger.info(
-                `${physicalTable} table not found in import file, skipping`,
-              );
-              continue;
-            }
-
-            for (const item of importedItems) {
-              try {
-                const hostId = item.host_id as number;
-                const path = item.path as string;
-                const name =
-                  (item.name as string) || path.split("/").pop() || "Unknown";
-                const dateValue =
-                  (item[dateColumn] as string) || new Date().toISOString();
-
-                const existing = await importDrizzleDb.all<{ id: number }>(
-                  sql`SELECT id FROM ${sql.raw(physicalTable)} WHERE user_id = ${userId} AND host_id = ${hostId} AND path = ${path}`,
-                );
-
-                if (existing.length > 0) {
-                  result.summary.skippedItems++;
-                  continue;
-                }
-
-                await importDrizzleDb.run(
-                  sql`INSERT INTO ${sql.raw(physicalTable)} (user_id, host_id, path, name, ${sql.raw(dateColumn)}) VALUES (${userId}, ${hostId}, ${path}, ${name}, ${dateValue})`,
-                );
-                result.summary[key]++;
-              } catch (itemError) {
-                result.summary.errors.push(
-                  `${sourceTable} import error: ${itemError.message}`,
-                );
-              }
-            }
-          }
+          const pluginRows = await importUserPluginRows(importDb, userId);
+          result.summary.pluginItemsImported += pluginRows.imported;
+          result.summary.skippedItems += pluginRows.skipped;
+          result.summary.errors.push(...pluginRows.errors);
 
           const dismissedAlertRepository =
             createCurrentDismissedAlertRepository();
@@ -1819,13 +1623,7 @@ app.use("/user-preferences", userPreferencesRoutes);
 app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
 app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
-const termixIdCompatRoutes = express.Router();
-registerTermixIdCompatRoutes(termixIdCompatRoutes);
-app.use("/termix-id", termixIdCompatRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
-const vaultCompatRoutes = express.Router();
-registerVaultCompatRoutes(vaultCompatRoutes);
-app.use("/vault", vaultCompatRoutes);
 app.use("/", notificationChannelsRoutes);
 app.use("/sync", syncRoutes);
 app.use("/dashboard", dashboardRoutes);
@@ -1842,8 +1640,12 @@ mountPluginLegacyPaths(app, () =>
     .map((plugin) => ({
       id: plugin.id,
       legacyPaths: plugin.manifest.contributes?.http?.legacyPaths ?? [],
+      legacyRedirects: plugin.manifest.contributes?.http?.legacyRedirects ?? [],
     }))
-    .filter((plugin) => plugin.legacyPaths.length > 0),
+    .filter(
+      (plugin) =>
+        plugin.legacyPaths.length > 0 || plugin.legacyRedirects.length > 0,
+    ),
 );
 
 const frontendDistPaths = [

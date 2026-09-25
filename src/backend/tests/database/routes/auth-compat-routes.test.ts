@@ -1,7 +1,6 @@
 /**
- * The 2.8 login URLs identity providers and 2.8 clients still call. They
- * forward to whatever replaced them and, with the method's plugin gone, sign
- * nobody in.
+ * The 2.8 login URLs 2.8 clients still call. They forward to the login
+ * pipeline and, with the method's plugin gone, sign nobody in.
  */
 
 import http from "node:http";
@@ -63,43 +62,6 @@ function registerSso() {
     }),
   });
 }
-
-describe("the old identity provider URLs", () => {
-  it("forwards the callback to the sso plugin, query intact", async () => {
-    const response = await get("/users/oidc/callback?code=abc&state=xyz");
-    expect(response.status).toBe(308);
-    expect(response.headers.get("location")).toBe(
-      "/plugin-api/sso/callback?code=abc&state=xyz",
-    );
-  });
-
-  it("forwards a form-posted callback with a 308 so the body is resent", async () => {
-    const response = await fetch(`${base}/users/oidc/callback`, {
-      method: "POST",
-      redirect: "manual",
-    });
-    expect(response.status).toBe(308);
-  });
-
-  it("forwards back-channel logout to the sso plugin", async () => {
-    const response = await fetch(`${base}/users/oidc/backchannel-logout`, {
-      method: "POST",
-      redirect: "manual",
-    });
-    expect(response.status).toBe(308);
-    expect(response.headers.get("location")).toMatch(
-      /\/plugin-api\/sso\/backchannel-logout$/,
-    );
-  });
-
-  it("forwards the public config to the sso plugin", async () => {
-    const response = await get("/users/oidc-config");
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toMatch(
-      /\/plugin-api\/sso\/config$/,
-    );
-  });
-});
 
 describe("the old client routes", () => {
   it("starts an SSO login through the oidc method", async () => {

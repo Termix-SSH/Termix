@@ -154,3 +154,32 @@ with a real install, a real device or a repo outside this one.
   copied in without a restart.
 - A password user who signs in for the first time after the upgrade keeps
   their TOTP (the copy runs once their keys unlock).
+- D1 changes to check by hand: Quick Connect lists Tailscale next to the
+  core auth types and connects with it, and its "Connect to Files" button
+  comes from the file manager; the admin "manage user" panel's Snippets tab
+  (add, edit, delete a snippet for another user); the dashboard's active
+  tunnel counter and its click; the tab bar's file manager button; the
+  secret reference hint and manager in the host and credential editors;
+  Proxmox guest discovery and import (now its own `/plugin-api/proxmox/import`
+  route); the Tailscale device list behind an outbound proxy and against a
+  LAN Headscale; dragging a local file into a host in the desktop app (its
+  transfer URL moved off the dead port 30004); a per-user database export and
+  import that carries file manager bookmarks; the Simple preset hiding plugin
+  rail items except Snippets.
+
+## Left for later
+
+- 3.0.0: drop the migrated 2.8 settings rows (`guac_url`, `step_ca_url`,
+  `global_metrics_interval` and the rest). The upgrade moves leave them in
+  place so a downgrade to 2.8 still works; nothing reads them in 2.9.
+- Plugin repo split: knip still reports about 150 unused exports inside
+  plugins (constants exported for readability, `tables.ts` exports the CLI
+  reads, test-only helpers). Prune them per plugin when it moves to its own
+  repo; core and the SDK are clean.
+- Plugin OpenAPI docs: plugins carry `@openapi` comments but
+  `src/backend/utils/swagger.ts` only scans core routes, so
+  `npm run generate:openapi` leaves every `/plugin-api/` route out.
+- Three backend tests sit next to their source, against the test layout
+  rule: `src/backend/hosts/host-session-status.test.ts`,
+  `jump-host-proxy.test.ts` and `ssh-keepalive.test.ts`. Move them under
+  `src/backend/tests/hosts/`.

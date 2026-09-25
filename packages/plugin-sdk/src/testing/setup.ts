@@ -112,6 +112,7 @@ const offline = () =>
       pluginId: "core",
       credentialType: type === "password" || type === "key",
       supportsBackground: type !== "none",
+      quickConnect: true,
     })),
     loaded: true,
   }),
@@ -138,6 +139,8 @@ const offline = () =>
     getCustomKeybindings: async () => [],
     setHostAutoTmux: async () => {},
     getClientPreference: () => undefined,
+    listHosts: async () => [],
+    listCredentials: async () => [],
   },
 };
 

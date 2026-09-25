@@ -48,9 +48,8 @@ export async function deleteUserAndRelatedData(
       userId,
     );
 
-    // session_recordings is retained rather than deleted, by design: it
-    // outlives the account. The session-recording plugin listens for
-    // user.deleted and anonymizes its own rows instead of cascading.
+    // Plugins drop or anonymize their own rows on user.deleted, or rely on
+    // their refUser() foreign keys cascading.
     const { pluginEvents, TOPICS } = await import("../../plugins/events.js");
     pluginEvents.emit(TOPICS.userDeleted, { userId });
 
@@ -68,15 +67,8 @@ export async function deleteUserAndRelatedData(
 
     await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 
-    // file manager recent/pinned/shortcuts and transfer_recent cascade on the
-    // user's refUser() foreign key, as the file-manager plugin's adopted
-    // tables.
-
     await createCurrentRecentActivityRepository().deleteByUserId(userId);
     await createCurrentDismissedAlertRepository().deleteByUserId(userId);
-
-    // snippets, snippet_folders and snippet_access cascade on the user's
-    // refUser() foreign key, as the snippets plugin's adopted tables.
 
     await createCurrentHostFolderRepository().deleteByUserId(userId);
 
@@ -88,12 +80,7 @@ export async function deleteUserAndRelatedData(
     await createCurrentHostRepository().deleteByUserId(userId);
     await createCurrentCredentialRepository().deleteByUserId(userId);
 
-    // homepage_items, homepage_layouts, dashboard_service_links and
-    // secret_sources cascade on the user's refUser() foreign key, as the
-    // homepage and secret-sources plugins' adopted tables. The secret
-    // source's token in ctx.secrets is cleaned up generically below, with
-    // every other plugin_settings row for this user. The opkssh and vault
-    // plugins' tables cascade the same way, and so do termix-identity's.
+    // Plugin tables with a refUser() column cascade on the user row.
 
     await createCurrentOpenTabRepository().deleteByUserId(userId);
     await createCurrentUserPreferenceRepository().deleteByUserId(userId);

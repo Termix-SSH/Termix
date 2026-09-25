@@ -1,4 +1,6 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { isQuickConnectAuthType } from "../../hosts/connect/auth-provider-registry.js";
+import { ensureCoreSshAuthProviders } from "../../hosts/connect/core-providers.js";
 import { applyFolderAccessRules } from "../../utils/folder-access-inheritance.js";
 import { findUsableCredential } from "../../hosts/usable-credential.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
@@ -44,7 +46,6 @@ import {
   withHostPluginSettings,
 } from "./host-plugin-settings.js";
 import { validateParentHostId } from "./host-parent-validation.js";
-import { registerHostAuthCompatRoutes } from "./host-compat-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
@@ -74,9 +75,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 /**
  * Tells whoever is polling this host that its details changed.
  *
- * An event rather than the HTTP POST to localhost:30005 this used to be: host
- * metrics is a plugin now and has no port of its own. Fire and forget, so a
- * subscriber that throws cannot fail the host update that caused it.
+ * An event, so whichever plugin polls the host can listen for it. Fire and
+ * forget, so a subscriber that throws cannot fail the host update that
+ * caused it.
  */
 function notifyStatsHostUpdated(
   hostId: number,
@@ -556,7 +557,7 @@ router.post(
  *                 description: SSH username
  *               authType:
  *                 type: string
- *                 enum: [password, key, credential]
+ *                 description: Any registered SSH auth type that works for an unsaved host (password, key, credential, agent, none, or one a plugin marks for Quick Connect).
  *                 description: Authentication method
  *               password:
  *                 type: string
@@ -616,6 +617,13 @@ router.post(
       !authType
     ) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    ensureCoreSshAuthProviders();
+    if (!isQuickConnectAuthType(String(authType))) {
+      return res
+        .status(400)
+        .json({ error: "That auth type cannot be used for Quick Connect" });
     }
 
     try {
@@ -2435,8 +2443,6 @@ registerHostBulkRoutes(
   permissionManager.requirePermission("hosts.edit"),
   requireDataAccess,
 );
-
-registerHostAuthCompatRoutes(router);
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,

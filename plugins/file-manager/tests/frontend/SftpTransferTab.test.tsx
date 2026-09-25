@@ -19,11 +19,14 @@ const api = vi.hoisted(() => ({
   beginTransferProgressMonitoring: vi.fn(),
 }));
 
-vi.mock("@/main-axios", () => ({
+vi.mock("../../src/frontend/api/transfer-api", () => ({
   addTransferRecent: api.addTransferRecent,
-  getSSHHosts: api.getSSHHosts,
   getTransferProgressPercent: api.getTransferProgressPercent,
   transferToHost: api.transferToHost,
+}));
+
+vi.mock("../../src/frontend/api/hosts", () => ({
+  getSSHHosts: api.getSSHHosts,
 }));
 
 vi.mock("../../src/frontend/api/ssh-file-operations-api", () => ({

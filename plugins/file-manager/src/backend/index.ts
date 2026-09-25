@@ -1,9 +1,5 @@
-// Core imports below point at TypeScript source so tsc can type-check them.
-// The plugin build rewrites the prefix to the compiled output path; see
-// packages/plugin-sdk/cli/lib/legacy-core-imports.mjs.
 import express, { type Router } from "express";
 import cookieParser from "cookie-parser";
-import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import type { PluginContext, PluginSshHost } from "@termix/plugin-sdk/backend";
 import { getErrorMessage } from "./error-message.js";
@@ -15,30 +11,17 @@ import {
 } from "./transfer-tuning.js";
 
 const TRANSFER_PROFILES_KEY = "transfer-profiles";
-import { AuthManager } from "../../../../src/backend/utils/auth-manager.js";
-import { logger } from "../../../../src/backend/utils/logger.js";
 import {
-  logAudit,
-  getAuditUsername,
-  getRequestMeta,
-} from "../../../../src/backend/utils/audit-logger.js";
-import { createCurrentHostResolutionRepository } from "../../../../src/backend/database/repositories/factory.js";
-import {
-  resolveHostById,
-  resolveHostBySyncId,
-} from "../../../../src/backend/hosts/host-resolver.js";
-import { createConnectionLog } from "../../../../src/backend/hosts/connection-log.js";
-import { JumpHostChainError } from "../../../../src/backend/hosts/jump-host-chain.js";
-import {
+  createConnectionLog,
+  createFileLogger,
   hostAddressMismatch,
   HostAddressMismatchError,
   HostNotOnThisServerError,
   resolveServerHostId,
-} from "../../../../src/backend/hosts/host-identity.js";
-import type {
-  LogEntry,
-  ConnectionStage,
-} from "../../../../src/types/connection-log.js";
+  type ConnectionStage,
+  type FileLogger,
+  type LogEntry,
+} from "./host-identity.js";
 import {
   ChannelOpenSerializer,
   execChannel,
@@ -66,7 +49,17 @@ import {
 import { createFilesService } from "./service.js";
 import { tables } from "./tables.js";
 
-const fileLogger = logger;
+let fileLogger: FileLogger = createFileLogger(console);
+
+// Shape of a resolved host as this route reads it; core fills more fields
+// than PluginSshHost names.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LooseHost = PluginSshHost & Record<string, any>;
+
+// Core's jump chain failure, matched by name so no core class is imported.
+function isJumpHostChainError(error: unknown): boolean {
+  return error instanceof Error && error.name === "JumpHostChainError";
+}
 
 /** Cosmetic only: whether the proxy step is worth a connection-log line. */
 function hasSocks5Config(host: PluginSshHost): boolean {
@@ -115,6 +108,7 @@ function assertResolvedHost(
 }
 
 export async function activate(ctx: PluginContext) {
+  fileLogger = createFileLogger(ctx.log);
   setPluginSsh(ctx.ssh);
   setPluginCtx(ctx);
   ctx.disposables.add(() => setPluginSsh(null));
@@ -276,7 +270,7 @@ export async function activate(ctx: PluginContext) {
       throw new Error("Cannot open transfer connection: unknown host");
     }
 
-    const host = await resolveHostById(hostId, userId);
+    const host = await ctx.asUser(userId, () => ctx.ssh.resolveHost(hostId));
     if (!host) {
       throw new Error("Host not found for transfer connection");
     }
@@ -304,6 +298,7 @@ export async function activate(ctx: PluginContext) {
       host as unknown as PluginSshHost,
       {
         purpose: "file-transfer",
+        profile: "stream",
         timeoutMs: 60000,
         overrides: { tcpKeepAliveInitialDelay: 5000 },
       },
@@ -600,9 +595,9 @@ export async function activate(ctx: PluginContext) {
     let resolvedSocks5ProxyChain = socks5ProxyChain;
 
     const resolveFrom = async () => {
-      const resolvedHost = hostSyncId
-        ? await resolveHostBySyncId(hostSyncId, userId)
-        : await resolveHostById(hostId, userId);
+      const resolvedHost = (await ctx.ssh.resolveHost(hostId, {
+        syncId: hostSyncId,
+      })) as LooseHost | null;
       assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
       if (!resolvedHost) return;
       resolvedIp = resolvedHost.ip;
@@ -690,7 +685,9 @@ export async function activate(ctx: PluginContext) {
 
     let serverHostId = hostId;
     if (hostSyncId && userId) {
-      const resolvedHost = await resolveHostBySyncId(hostSyncId, userId);
+      const resolvedHost = await ctx.ssh.resolveHost(hostId, {
+        syncId: hostSyncId,
+      });
       assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
       serverHostId = resolveServerHostId(hostId, resolvedHost) ?? hostId;
     }
@@ -744,6 +741,7 @@ export async function activate(ctx: PluginContext) {
     const ssh = pluginSsh();
     const prepared = await ssh.prepare(connectTarget, {
       purpose: "file-manager",
+      profile: "session",
       client,
       serverHostId,
       log: (level, message) =>
@@ -850,17 +848,13 @@ export async function activate(ctx: PluginContext) {
       scheduleSessionCleanup(sessionId);
 
       if (userId) {
-        const { ipAddress, userAgent } = getRequestMeta(req);
         void (async () => {
-          await logAudit({
-            userId,
-            username: await getAuditUsername(userId),
+          await ctx.audit.record({
+            request: req,
             action: "file_manager_connect",
             resourceType: "host",
             resourceId: serverHostId ? String(serverHostId) : undefined,
             resourceName: `${username}@${ip}:${port}`,
-            ipAddress,
-            userAgent,
             success: true,
           });
         })();
@@ -1169,17 +1163,14 @@ export async function activate(ctx: PluginContext) {
         hostId,
       });
       const stage =
-        error instanceof JumpHostChainError || jumpHostCount > 0
-          ? "jump"
-          : "proxy";
+        isJumpHostChainError(error) || jumpHostCount > 0 ? "jump" : "proxy";
       connectionLogs.push(
         createConnectionLog("error", stage, getErrorMessage(error)),
       );
       return res.status(500).json({
-        error:
-          error instanceof JumpHostChainError
-            ? `Failed to connect through jump hosts: ${error.message}`
-            : getErrorMessage(error),
+        error: isJumpHostChainError(error)
+          ? `Failed to connect through jump hosts: ${error.message}`
+          : getErrorMessage(error),
         connectionLogs,
       });
     }
@@ -1195,24 +1186,13 @@ export async function activate(ctx: PluginContext) {
     port: number,
   ): Promise<void> {
     try {
-      const host = await createCurrentHostResolutionRepository().findHostById(
-        hostId,
-        userId,
-      );
-      const hostName =
-        host?.userId === userId && host.name
-          ? host.name
-          : `${username}@${ip}:${port}`;
-
-      const authManager = AuthManager.getInstance();
-      await axios.post(
-        "http://localhost:30006/activity/log",
-        { type: "file_manager", hostId, hostName },
-        {
-          headers: {
-            Authorization: `Bearer ${await authManager.generateJWTToken(userId)}`,
-          },
-        },
+      const host = await ctx.hosts.get(hostId);
+      await ctx.asUser(userId, () =>
+        ctx.hosts.recordActivity(
+          hostId,
+          "file_manager",
+          host?.name || `${username}@${ip}:${port}`,
+        ),
       );
     } catch (error) {
       fileLogger.warn("Failed to log file manager activity", {

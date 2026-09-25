@@ -40,7 +40,11 @@ async function withServiceSftp<T>(
 ): Promise<T> {
   return ctx.ssh.withConnection<T, import("ssh2").Client>(
     hostId,
-    { pool: "file-manager-service", purpose: "file-manager" },
+    {
+      pool: "file-manager-service",
+      purpose: "file-manager",
+      profile: "session",
+    },
     (client) =>
       new Promise<T>((resolve, reject) => {
         client.sftp(async (err, sftp) => {

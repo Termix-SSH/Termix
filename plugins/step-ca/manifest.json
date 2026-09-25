@@ -70,6 +70,14 @@
           "default": false
         }
       ]
+    },
+    "http": {
+      "legacyRedirects": [
+        {
+          "from": "/host/step-ca-callback",
+          "to": "/callback"
+        }
+      ]
     }
   },
   "locales": "locales",

@@ -23,7 +23,7 @@ const SCRIPT_SRC = /script-src ([^;"]*)/;
 async function main() {
   const { sharedModules, productionImportMap, importMapCspHash } =
     await import("./lib/plugin-import-map.mjs");
-  const expected = importMapCspHash(productionImportMap(sharedModules(ROOT)));
+  const expected = importMapCspHash(productionImportMap(sharedModules()));
   const write = process.argv.includes("--write");
   const problems = [];
 

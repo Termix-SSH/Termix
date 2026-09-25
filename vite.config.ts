@@ -11,10 +11,9 @@ const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
 
 const hasSSL = fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath);
 const useHTTPS = process.env.VITE_HTTPS === "true" && hasSSL;
-// Plugins no longer own ports: their HTTP and WebSocket traffic rides 30001
-// under /plugin-api and /plugin-ws. What is left is core servers that have not
-// moved yet.
-const apiProxyPorts = [30001, 30004, 30006, 30010, 30012];
+// Everything rides the main backend on 30001, plugins included (under
+// /plugin-api and /plugin-ws).
+const apiProxyPorts = [30001];
 const apiProxy = Object.fromEntries(
   apiProxyPorts.map((port) => [
     `/__termix_api/${port}`,

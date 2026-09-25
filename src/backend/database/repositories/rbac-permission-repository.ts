@@ -19,8 +19,8 @@ export interface AppliedDefaultInput {
 /**
  * The two records that make plugin permissions outlive their plugin.
  *
- * `rbac_known_permissions` is why a role holding `ai.use` still saves while the
- * ai plugin is disabled. `rbac_applied_defaults` is why a default an admin
+ * `rbac_known_permissions` is why a role holding a plugin permission
+ * (`<plugin>.use`) still saves while its plugin is disabled. `rbac_applied_defaults` is why a default an admin
  * revoked is not handed back on the next boot. Neither has a foreign key to
  * `plugins`, because both have to survive the plugin going away.
  */

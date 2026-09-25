@@ -1500,7 +1500,6 @@
   "dashboardTab": {
     "stable": "STABLE",
     "hostsOnline": "Hosts Online",
-    "activeTunnels": "Active Tunnels",
     "registerNewServer": "Register a new server",
     "storeSshKeysOrPasswords": "Store SSH keys or passwords",
     "manageUsersAndRoles": "Manage users and roles",
@@ -1742,7 +1741,6 @@
     "manageTabAccount": "Account",
     "manageTabHosts": "Hosts",
     "manageTabCredentials": "Credentials",
-    "manageTabSnippets": "Snippets",
     "manageTabSessions": "Sessions",
     "manageTabDanger": "Danger",
     "manageEditorBack": "Back to {{username}}'s data",
@@ -1779,18 +1777,6 @@
     "deleteCredentialConfirm": "Delete credential \"{{name}}\" belonging to {{username}}?",
     "credentialDeletedSuccess": "Credential deleted",
     "credentialDeleteFailed": "Failed to delete credential",
-    "snippetsCount": "{{count}} snippets",
-    "addSnippetForUser": "Add Snippet",
-    "noSnippetsForUser": "This user has no snippets",
-    "snippetRequiredFields": "Snippet name and content are required",
-    "snippetNamePlaceholder": "Snippet name",
-    "snippetContentPlaceholder": "Command content",
-    "snippetFolderPlaceholder": "Folder (optional)",
-    "snippetSaved": "Snippet saved",
-    "snippetSaveFailed": "Failed to save snippet",
-    "deleteSnippetConfirm": "Delete snippet \"{{name}}\" belonging to {{username}}?",
-    "snippetDeletedSuccess": "Snippet deleted",
-    "snippetDeleteFailed": "Failed to delete snippet",
     "noSessionsForUser": "No active sessions",
     "deleteSuccessorLabel": "Hand over hosts and credentials to",
     "deleteSuccessorMe": "Me (the deleting admin)",
@@ -1895,8 +1881,8 @@
         "domainLabel": "Domain",
         "domainPlaceholder": "optional",
         "connectToTerminal": "Connect to Terminal",
-        "connectToFiles": "Connect to Files",
-        "connectWith": "Connect via {{protocol}}"
+        "connectWith": "Connect via {{protocol}}",
+        "connectToAction": "Connect to {{name}}"
       },
       "sshTools": {
         "keyRecordingTitle": "Key Recording",
@@ -2150,7 +2136,6 @@
         "uiArea_terminal": "Terminal",
         "uiArea_fileManager": "File manager",
         "uiArea_hostEditor": "Host editor",
-        "uiArea_homepage": "Homepage",
         "sectionAppearance": "Appearance",
         "sectionSecurity": "Security",
         "sectionApiKeys": "API Keys",
@@ -2328,7 +2313,9 @@
     "discordUrlInvalid": "Discord URL must be a valid Discord webhook URL",
     "discordWebhookDesc": "POST a Discord embed to this webhook URL on each alert firing",
     "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)"
+    "discordAvatar": "Avatar URL (optional)",
+    "failedToLoad": "Failed to load alerts",
+    "failedToDismiss": "Failed to dismiss alert"
   },
   "macros": {
     "title": "Macros",

@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { cn } from "@/lib/utils.ts";
+import { cn } from "@termix/plugin-sdk/ui";
 import {
   Star,
   Clock,
@@ -17,7 +17,7 @@ import {
   Check,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { SSHHost } from "@/types";
+import type { SSHHost } from "./host-types";
 import {
   getRecentFiles,
   getPinnedFiles,
@@ -29,7 +29,7 @@ import {
 import { listSSHFiles } from "./api/ssh-file-operations-api";
 import type { DiskFilesystem } from "./disk-info";
 import { toast } from "sonner";
-import FolderTree from "@/components/folder.tsx";
+import FolderTree from "./components/FolderTree";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

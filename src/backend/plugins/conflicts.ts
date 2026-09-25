@@ -22,8 +22,3 @@ export function recordConflict(conflict: RegistrationConflict): void {
 export function listRegistrationConflicts(): RegistrationConflict[] {
   return [...conflicts];
 }
-
-/** Test seam. */
-export function clearRegistrationConflicts(): void {
-  conflicts.length = 0;
-}

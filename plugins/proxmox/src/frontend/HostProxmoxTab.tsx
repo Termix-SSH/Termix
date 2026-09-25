@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { useSshAuthTypes, useTranslation } from "@termix/plugin-sdk/frontend";
 import { Server } from "lucide-react";
-import { Input } from "@/components/input";
-import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
-import { getCredentials } from "@/main-axios";
-import { Select2 } from "@/components/select2";
+import {
+  FakeSwitch,
+  Input,
+  SectionCard,
+  Select2,
+  SettingRow,
+} from "@termix/plugin-sdk/ui";
+import { listCredentials } from "@termix/plugin-sdk/frontend";
 import type { ProxmoxHostConfig } from "./types";
 
 interface HostProxmoxForm {
@@ -28,19 +32,16 @@ export function HostProxmoxTab({
   >([]);
 
   useEffect(() => {
-    getCredentials()
-      .then((res: unknown) => {
-        const raw =
-          (res as { credentials?: unknown })?.credentials ?? res ?? [];
-        const list = (Array.isArray(raw) ? raw : []).map(
-          (c: Record<string, unknown>) => ({
-            id: c.id as number,
-            name: c.name as string,
-            username: (c.username as string | null) ?? null,
-          }),
-        );
-        setCredentials(list);
-      })
+    listCredentials()
+      .then((list) =>
+        setCredentials(
+          list.map((c) => ({
+            id: c.id,
+            name: c.name,
+            username: c.username ?? null,
+          })),
+        ),
+      )
       .catch(() => {});
   }, []);
 

@@ -141,7 +141,8 @@
     "listensOn": "Bound to localhost:{{port}}",
     "socksProxy": "SOCKS5 proxy",
     "waiting": "Waiting",
-    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again."
+    "remoteSessionExpired": "Remote Sync session expired. Reconnect Remote Sync and try again.",
+    "activeTunnels": "Active Tunnels"
   },
   "permissions": {
     "use": {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, FolderSearch, Terminal } from "lucide-react";
+import { Eye, EyeOff, Terminal } from "lucide-react";
 import { Input } from "@/components/input";
 import type { Host } from "@/types/ui-types";
 import { getCredentials } from "@/api/credentials-api";
@@ -9,6 +9,12 @@ import { createQuickConnectHost } from "./quick-connect-host";
 import { useHostProtocols } from "./host-protocols";
 import { Select2 } from "@/components/select2";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
+import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
+import { useSshAuthEditors } from "@/plugin-host/auth-registry";
+import { useHostActions } from "./host-contributions";
+
+// Core types Quick Connect draws its own fields for.
+const INLINE_AUTH_TYPES = new Set(["password", "key", "credential"]);
 
 interface QuickConnectPanelProps {
   onConnect: (host: Host, type: string) => void;
@@ -22,9 +28,8 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
   const [port, setPort] = useState("22");
   const [domain, setDomain] = useState("");
   const [username, setUsername] = useState("root");
-  const [authType, setAuthType] = useState<"password" | "key" | "credential">(
-    "password",
-  );
+  const [authType, setAuthType] = useState("password");
+  const [authFields, setAuthFields] = useState<Record<string, unknown>>({});
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -38,6 +43,21 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
       .then((res) => setCredentials(mapCredentials(res)))
       .catch(() => {});
   }, []);
+
+  // Every registered SSH auth type that works for a host that is never saved.
+  const { providers } = useSshAuthProviders();
+  const authOptions = providers.filter(
+    (option) => option.available && option.quickConnect,
+  );
+  const authEditor = useSshAuthEditors().find(
+    (editor) => editor.id === authType,
+  );
+  const AuthEditor = INLINE_AUTH_TYPES.has(authType)
+    ? undefined
+    : authEditor?.component;
+  const quickActions = useHostActions().filter(
+    (action) => action.quickConnect && action.tabType,
+  );
 
   const pluginProtocols = useHostProtocols().filter(
     (entry) => entry.quickConnect,
@@ -67,6 +87,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
       credentialId,
       protocol: selected,
       domain: domain || undefined,
+      authFields: INLINE_AUTH_TYPES.has(authType) ? undefined : authFields,
     });
     const target = type ?? resolveHostTabType(hostConfig);
     if (target) onConnect(hostConfig, target);
@@ -152,18 +173,21 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.quickConnect.authLabel")}
             </label>
-            <div className="flex gap-1">
-              {(["password", "key", "credential"] as const).map((type) => (
+            <div className="flex flex-wrap gap-1">
+              {authOptions.map((option) => (
                 <button
-                  key={type}
-                  onClick={() => setAuthType(type)}
-                  className={`flex-1 py-1 text-[10px] font-semibold border transition-colors capitalize ${
-                    authType === type
+                  key={option.type}
+                  onClick={() => {
+                    setAuthType(option.type);
+                    setAuthFields({});
+                  }}
+                  className={`flex-1 py-1 px-1.5 text-[10px] font-semibold border transition-colors ${
+                    authType === option.type
                       ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {type}
+                  {t(option.editorTitleKey ?? option.labelKey)}
                 </button>
               ))}
             </div>
@@ -257,6 +281,14 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             </Select2>
           </div>
         )}
+        {!isDesktop && AuthEditor && (
+          <AuthEditor
+            form={authFields}
+            setField={(key, value) =>
+              setAuthFields((current) => ({ ...current, [key]: value }))
+            }
+          />
+        )}
         <div className="flex flex-col gap-1.5 pt-1">
           {selected ? (
             <button
@@ -277,13 +309,18 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
                 <Terminal className="size-3.5" />
                 {t("newUi.sidebar.quickConnect.connectToTerminal")}
               </button>
-              <button
-                onClick={() => connect("files")}
-                className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors"
-              >
-                <FolderSearch className="size-3.5" />
-                {t("newUi.sidebar.quickConnect.connectToFiles")}
-              </button>
+              {quickActions.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => connect(action.tabType)}
+                  className="flex items-center justify-center gap-1.5 h-7 w-full border border-accent-brand/40 bg-accent-brand/10 text-accent-brand text-xs font-semibold hover:bg-accent-brand/20 transition-colors"
+                >
+                  <action.icon className="size-3.5" />
+                  {t("newUi.sidebar.quickConnect.connectToAction", {
+                    name: t(action.titleKey),
+                  })}
+                </button>
+              ))}
             </>
           )}
         </div>

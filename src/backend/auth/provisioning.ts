@@ -31,7 +31,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 /** SSO auto-provisioning: the admin setting, or OIDC_ALLOW_REGISTRATION. */
-export async function isExternalProvisioningAllowed(): Promise<boolean> {
+async function isExternalProvisioningAllowed(): Promise<boolean> {
   try {
     if (
       await createCurrentSettingsRepository().getBoolean(
@@ -54,7 +54,7 @@ export async function isExternalProvisioningAllowed(): Promise<boolean> {
  * approval queue yet, so nobody does; a plugin or a later release can change
  * that here without touching any login method.
  */
-export async function isApprovalRequired(
+async function isApprovalRequired(
   _identity: ExternalIdentity,
 ): Promise<boolean> {
   return false;
@@ -103,7 +103,7 @@ async function syncAdmin(
  * Adds and removes the roles a provider's group map manages. Roles assigned
  * by hand, and roles outside the map, are never touched.
  */
-export async function applyRoleSync(
+async function applyRoleSync(
   userId: string,
   roleSync: { desired: string[]; managed: string[] },
 ): Promise<void> {

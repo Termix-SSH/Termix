@@ -15,7 +15,6 @@ import {
   permanentlyDeleteTrashItem,
   restoreTrashItem,
 } from "./trash-service.js";
-import { PermissionManager } from "../../../../src/backend/utils/permission-manager.js";
 
 type FileOperationRoutesDeps = {
   ctx: PluginContext;
@@ -29,10 +28,8 @@ export function registerFileOperationRoutes(
   app: Express,
   { ctx, sshSessions, verifySessionOwnership }: FileOperationRoutesDeps,
 ): void {
-  // NOTE: trash retention is an install-wide admin setting, not a per-host
-  // access check, so it stays on PermissionManager.isAdmin rather than
-  // ctx.hosts.checkAccess (see rule 5 scope: host resolution/access only).
-  const permissionManager = PermissionManager.getInstance();
+  // Trash retention is an install-wide admin setting, not a per-host check.
+  const canManageRetention = () => ctx.rbac.has("admin.settings.manage");
   const getTrashRetentionDays = async (): Promise<number> => {
     try {
       const value = Number(await ctx.settings.get(TRASH_RETENTION_DAYS_KEY));
@@ -68,9 +65,7 @@ export function registerFileOperationRoutes(
       res.json({
         items: await listTrash(await getSessionSftp(session), retentionDays),
         retentionDays,
-        canManageRetention: await permissionManager.isAdmin(
-          ctx.currentActor()!,
-        ),
+        canManageRetention: await canManageRetention(),
       });
     } catch (error) {
       ctx.log.error("Failed to list trash", error as Error);
@@ -121,8 +116,7 @@ export function registerFileOperationRoutes(
   });
 
   app.put("/trash-retention", async (req, res) => {
-    const userId = ctx.currentActor()!;
-    if (!(await permissionManager.isAdmin(userId))) {
+    if (!(await canManageRetention())) {
       return res.status(403).json({ error: "Admin access required" });
     }
     const retentionDays = Number(req.body?.retentionDays);

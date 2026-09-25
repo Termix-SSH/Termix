@@ -9,7 +9,10 @@
 
 import type { ReactElement } from "react";
 import { render } from "@testing-library/react";
-import type { PluginManifest } from "@termix/plugin-sdk/frontend";
+import type {
+  HostActionContribution,
+  PluginManifest,
+} from "@termix/plugin-sdk/frontend";
 import type {
   FrontendPluginModule,
   RenderWithAppOptions,
@@ -27,7 +30,7 @@ import {
 } from "@/shell/tab-registry";
 import { getPanel, listPanels } from "@/shell/panel-registry";
 import { listRegisteredRailItems } from "@/sidebar/rail-items";
-import { listHostActions } from "@/sidebar/host-contributions";
+import { hostActionsFor, listHostActions } from "@/sidebar/host-contributions";
 import { listHostProtocols } from "@/sidebar/host-protocols";
 import {
   getHostEditorSection,
@@ -214,6 +217,10 @@ export async function renderPlugin(
           id: action.id,
           tabType: action.tabType,
         })),
+      hostActionsFor: (host) =>
+        mine(
+          hostActionsFor(listHostActions(), host as Host),
+        ) as unknown as HostActionContribution[],
       hostProtocols: () =>
         mine(listHostProtocols()).map((protocol) => protocol.id),
       hostEditorSections: () =>

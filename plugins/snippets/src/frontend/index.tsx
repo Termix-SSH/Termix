@@ -3,6 +3,11 @@ import type { PanelProps, TermixApp } from "@termix/plugin-sdk/frontend";
 import { SnippetsPanel } from "./SnippetsPanel";
 import { createSnippetsApi } from "./snippets-api";
 import { resolveSnippetContent, hasSnippetInputs } from "./snippet-variables";
+import {
+  AdminUserSnippets,
+  adminOptions,
+  mapSnippets,
+} from "./AdminUserSnippets";
 
 export function activate(app: TermixApp): void {
   app.registerRailItem({
@@ -10,6 +15,8 @@ export function activate(app: TermixApp): void {
     icon: Play,
     titleKey: "nav.snippets",
     permission: "view",
+    // The most approachable power feature, so Simple keeps it.
+    simplePreset: true,
   });
 
   app.registerPanel("snippets", (props: PanelProps) => (
@@ -33,9 +40,37 @@ export function activate(app: TermixApp): void {
     icon: Play,
   });
 
-  // Resolves a snippet by id for core's terminal (startup snippet, custom
-  // keybindings), so core never imports snippet code or data directly.
-  app.registerAction("snippets.resolveForTerminal", (async (
+  // The admin "manage user" panel's Snippets tab.
+  app.registerSlotContribution("admin.userTabs", {
+    actionId: "snippets.adminUserTab",
+    titleKey: "admin.tabTitle",
+    kind: "component",
+    component: AdminUserSnippets as never,
+    order: 10,
+  });
+
+  // Core's snippet pickers (the host editor's startup snippet, keybindings,
+  // the command palette) read the list through this. An admin editing
+  // another user's host passes that user's id.
+  app.registerAction("snippet.list", (async (options?: {
+    targetUserId?: string;
+  }) => {
+    const response = options?.targetUserId
+      ? await app.api.get("/", adminOptions(options.targetUserId))
+      : await app.api.get("/");
+    const raw = response.data as unknown;
+    const list = Array.isArray(raw)
+      ? raw
+      : ((raw as { snippets?: unknown[] })?.snippets ?? []);
+    return (list as Record<string, unknown>[]).map((row) => ({
+      ...mapSnippets([row])[0],
+      isNote: row.isNote === true,
+    }));
+  }) as never);
+
+  // Resolves a snippet by id for a terminal (startup snippet, custom
+  // keybindings, the command palette), so core never imports snippet code.
+  const resolveForTerminal = async (
     snippetId: number,
     host: {
       ip?: string;
@@ -63,7 +98,12 @@ export function activate(app: TermixApp): void {
       content: resolveSnippetContent(snippet.content, host, inputValues ?? {}),
       isNote: snippet.isNote,
     };
-  }) as never);
+  };
+  app.registerAction("snippet.resolveForTerminal", resolveForTerminal as never);
+  app.registerAction(
+    "snippets.resolveForTerminal",
+    resolveForTerminal as never,
+  );
 
   // For other plugins' quick actions (host metrics): the snippet's content,
   // so the caller can ask for $INPUT_n values, and a run on a host.

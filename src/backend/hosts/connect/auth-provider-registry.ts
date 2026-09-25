@@ -37,7 +37,7 @@ export function listSshAuthTypeOwners(): Array<
   return ownerSource();
 }
 
-export function findSshAuthTypeOwner(type: string): SshAuthTypeOwner | null {
+function findSshAuthTypeOwner(type: string): SshAuthTypeOwner | null {
   const owner = ownerSource().find((entry) => entry.type === type);
   return owner
     ? { pluginId: owner.pluginId, pluginName: owner.pluginName }
@@ -89,6 +89,11 @@ export function requireSshAuthProvider(type: string): SshAuthProvider {
 
 export function listSshAuthProviders(): SshAuthProvider[] {
   return [...providers.values()];
+}
+
+/** Whether a registered provider works for a host that is never saved. */
+export function isQuickConnectAuthType(type: string): boolean {
+  return providers.get(type)?.quickConnect === true;
 }
 
 /** Types a stored credential may use. */

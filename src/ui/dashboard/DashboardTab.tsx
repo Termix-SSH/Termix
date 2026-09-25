@@ -14,7 +14,6 @@ import {
   GripVertical,
   KeyRound,
   LayoutDashboard,
-  Network,
   Plus,
   Server,
   Settings,
@@ -25,8 +24,6 @@ import {
 import { Kbd } from "@/components/kbd";
 import { VersionBadge } from "@/components/version-badge";
 import { DASHBOARD_CARDS } from "@/lib/theme";
-import { CONNECTION_STATES } from "@/types/index";
-import { invokeAction } from "@/shell/action-registry";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
@@ -232,17 +229,15 @@ function StatsBarCard({
 function CountersBarCard({
   hosts,
   credentialCount,
-  activeTunnelCount,
   onOpenSingletonTab,
 }: {
   hosts: Host[];
   credentialCount: number;
-  activeTunnelCount: number;
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <Card className="grid grid-cols-3 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
+    <Card className="grid grid-flow-col auto-cols-fr divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <button
         onClick={() => onOpenSingletonTab("host-manager")}
         className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
@@ -265,16 +260,7 @@ function CountersBarCard({
           {t("dashboard.totalCredentials")}
         </span>
       </button>
-      <button
-        onClick={() => void invokeAction("tunnels.open")}
-        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
-      >
-        <Network className="size-3.5 text-muted-foreground shrink-0" />
-        <span className="text-base font-bold">{activeTunnelCount}</span>
-        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.activeTunnels")}
-        </span>
-      </button>
+      <ComponentSlot slotId="dashboard.counters" />
     </Card>
   );
 }
@@ -645,7 +631,6 @@ function CardItem({
   releaseUrl,
   dbHealth,
   credentialCount,
-  activeTunnelCount,
   activity,
   onClearActivity,
   isAdmin,
@@ -669,7 +654,6 @@ function CardItem({
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
-  activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
   isAdmin: boolean;
@@ -740,7 +724,6 @@ function CardItem({
           <CountersBarCard
             hosts={hosts}
             credentialCount={credentialCount}
-            activeTunnelCount={activeTunnelCount}
             onOpenSingletonTab={onOpenSingletonTab}
           />
         )}
@@ -881,7 +864,6 @@ type PanelColumnProps = {
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
-  activeTunnelCount: number;
   activity: RecentActivityItem[];
   onClearActivity: () => void;
   cardLabels: Record<DashboardCardId, string>;
@@ -910,7 +892,6 @@ function PanelColumn({
   releaseUrl,
   dbHealth,
   credentialCount,
-  activeTunnelCount,
   activity,
   onClearActivity,
   cardLabels,
@@ -965,7 +946,6 @@ function PanelColumn({
             releaseUrl={releaseUrl}
             dbHealth={dbHealth}
             credentialCount={credentialCount}
-            activeTunnelCount={activeTunnelCount}
             activity={activity}
             onClearActivity={onClearActivity}
             isAdmin={isAdmin}
@@ -1130,7 +1110,6 @@ export function DashboardTab({
   const [releaseUrl, setReleaseUrl] = useState("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [credentialCount, setCredentialCount] = useState(0);
-  const [activeTunnelCount, setActiveTunnelCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
   const statusCheckHosts = hosts.filter(isStatusCheckEnabled);
 
@@ -1185,15 +1164,6 @@ export function DashboardTab({
               : 0,
         ),
       )
-      .catch(() => {});
-    // Undefined while the tunnels plugin is off, which reads as zero.
-    invokeAction("tunnels.statuses")
-      .then((statuses) => {
-        const active = Object.values(
-          (statuses ?? {}) as Record<string, { status?: string }>,
-        ).filter((s) => s?.status === CONNECTION_STATES.CONNECTED).length;
-        setActiveTunnelCount(active);
-      })
       .catch(() => {});
 
     if (!isVisible) {
@@ -1351,7 +1321,6 @@ export function DashboardTab({
     releaseUrl,
     dbHealth,
     credentialCount,
-    activeTunnelCount,
     activity,
     onClearActivity: handleClearActivity,
     onOpenSingletonTab,
@@ -1468,7 +1437,6 @@ export function DashboardTab({
                 <CountersBarCard
                   hosts={hosts}
                   credentialCount={credentialCount}
-                  activeTunnelCount={activeTunnelCount}
                   onOpenSingletonTab={onOpenSingletonTab}
                 />
               )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils.ts";
+import { cn } from "@termix/plugin-sdk/ui";
 import {
   Download,
   Edit3,
@@ -22,7 +22,7 @@ import {
   Link,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Kbd, KbdKey, KbdSeparator } from "@/components/kbd.tsx";
+import { Kbd, KbdKey, KbdSeparator } from "@termix/plugin-sdk/ui";
 
 const VIEWPORT_PADDING = 16;
 

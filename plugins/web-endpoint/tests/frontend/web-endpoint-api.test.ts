@@ -2,14 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebEndpoint } from "../../src/shared/web-endpoint-config";
 
 const isElectron = vi.hoisted(() => vi.fn(() => false));
-vi.mock("@/lib/electron", () => ({ isElectron }));
+vi.mock("@termix/plugin-sdk/ui", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  isElectron,
+}));
 
 const pluginPost = vi.hoisted(() => vi.fn());
-vi.mock("@/main-axios", () => ({
-  handleApiError: (error: unknown) => {
-    throw new Error(`generic: ${String(error)}`);
-  },
-}));
 
 function endpoint(overrides: Partial<WebEndpoint> = {}): WebEndpoint {
   return {
@@ -94,7 +92,9 @@ describe("openWebEndpointTunnel", () => {
     );
     const { openWebEndpointTunnel } =
       await import("../../src/frontend/web-endpoint-api");
-    await expect(openWebEndpointTunnel(7, "e1")).rejects.toThrow(/generic:/);
+    await expect(openWebEndpointTunnel(7, "e1")).rejects.toThrow(
+      /Could not open web endpoint tunnel/,
+    );
   });
 
   it("treats a missing port as a failure rather than returning undefined", async () => {

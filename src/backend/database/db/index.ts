@@ -322,11 +322,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    -- file_manager_recent, file_manager_pinned, file_manager_shortcuts and
-    -- transfer_recent are owned by the file-manager plugin now. Its own
-    -- migration creates p_file_manager_* on a fresh install and adopts the
-    -- legacy tables by rename on an upgrade.
-
     CREATE TABLE IF NOT EXISTS dismissed_alerts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -390,9 +385,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
-
-    -- command_history is owned by the ssh-terminal plugin, which adopts it
-    -- as p_ssh_terminal_command_history in its first migration.
 
     CREATE TABLE IF NOT EXISTS host_access (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1120,10 +1112,6 @@ const migrateSchema = () => {
     });
   }
 
-  addColumnIfNotExists("file_manager_recent", "host_id", "INTEGER NOT NULL");
-  addColumnIfNotExists("file_manager_pinned", "host_id", "INTEGER NOT NULL");
-  addColumnIfNotExists("file_manager_shortcuts", "host_id", "INTEGER NOT NULL");
-
   try {
     sqlite.prepare("SELECT role_id FROM host_access LIMIT 1").get();
   } catch {
@@ -1313,25 +1301,6 @@ const migrateSchema = () => {
         error: e,
       });
     }
-  }
-
-  // Rename the legacy "stats" tab type to "host-metrics" so previously saved
-  // open tabs restore correctly after the Server Stats -> Host Metrics rename.
-  try {
-    sqlite.prepare("SELECT id FROM user_open_tabs LIMIT 1").get();
-    const result = sqlite
-      .prepare(
-        "UPDATE user_open_tabs SET tab_type = 'host-metrics' WHERE tab_type = 'stats'",
-      )
-      .run();
-    if (result.changes > 0) {
-      databaseLogger.info(
-        `Migrated ${result.changes} open tab(s) from 'stats' to 'host-metrics'`,
-        { operation: "open_tabs_tab_type_migration" },
-      );
-    }
-  } catch {
-    // user_open_tabs table not present yet; nothing to migrate.
   }
 
   try {
@@ -1619,8 +1588,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "sync_id", "TEXT");
   addColumnIfNotExists("ssh_credentials", "sync_id", "TEXT");
   addColumnIfNotExists("ssh_folders", "sync_id", "TEXT");
-  addColumnIfNotExists("snippets", "sync_id", "TEXT");
-  addColumnIfNotExists("snippet_folders", "sync_id", "TEXT");
 
   // Plugin runtime: lastError reports why a plugin is blocked or failed, and
   // grants record whether a capability came from an admin or from bundling.
@@ -1632,13 +1599,7 @@ const migrateSchema = () => {
   );
   relaxPluginGrantGrantedBy();
 
-  const syncIdTables = [
-    "ssh_data",
-    "ssh_credentials",
-    "ssh_folders",
-    "snippets",
-    "snippet_folders",
-  ];
+  const syncIdTables = ["ssh_data", "ssh_credentials", "ssh_folders"];
 
   for (const table of syncIdTables) {
     try {
@@ -1978,14 +1939,7 @@ export function getSqlite(): Database.Database {
   return sqlite;
 }
 
-export { db };
-export { DatabaseFileEncryption };
-export const databasePaths = {
-  main: actualDbPath,
-  encrypted: encryptedDbPath,
-  directory: dbDir,
-  inMemory: true,
-};
+
 
 export { saveMemoryDatabaseToFile };
 

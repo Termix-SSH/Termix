@@ -250,6 +250,7 @@ export async function startConnect(
   ctx.ssh
     .connect<Client>(host, {
       purpose: "docker",
+      profile: "session",
       timeoutMs: CONNECT_TIMEOUT_MS,
       prompt: { ask },
     })

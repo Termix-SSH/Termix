@@ -23,7 +23,7 @@ export interface SharedHostConnectionAuth {
   keyType?: string | null;
 }
 
-export async function getRemoteSharedHostConnectionAuth(
+async function getRemoteSharedHostConnectionAuth(
   localHostId: number,
 ): Promise<SharedHostConnectionAuth> {
   if (localHostId >= 0) {

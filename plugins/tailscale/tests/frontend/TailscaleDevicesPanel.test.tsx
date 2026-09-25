@@ -8,7 +8,8 @@ vi.mock("../../src/frontend/tailscale-api", () => ({
   getTailscaleDevices: getTailscaleDevicesMock,
 }));
 
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 

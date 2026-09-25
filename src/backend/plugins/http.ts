@@ -42,10 +42,6 @@ export function getPluginRouter(pluginId: string): Router | undefined {
   return routers.get(pluginId);
 }
 
-export function getRegisteredHttpPluginIds(): string[] {
-  return [...routers.keys()];
-}
-
 export function unregisterPluginHttp(pluginId: string): void {
   if (!routers.delete(pluginId)) return;
   pluginLogger.info(`Unmounted /plugin-api/${pluginId}`, {

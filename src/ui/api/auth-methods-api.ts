@@ -153,6 +153,8 @@ export interface SshAuthProviderSummary {
   credentialType: boolean;
   needsUserInteraction: boolean;
   supportsBackground: boolean;
+  /** Offered in Quick Connect, for a host that is never saved. */
+  quickConnect?: boolean;
   available: boolean;
   missingPlugin?: { id: string; name: string };
 }

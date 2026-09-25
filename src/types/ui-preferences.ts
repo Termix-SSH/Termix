@@ -32,17 +32,7 @@ export type UiAreaKey =
   | "dashboard"
   | "terminal"
   | "fileManager"
-  | "hostEditor"
-  | "homepage";
-
-/**
- * The homepage area key, named rather than spelled inline in src/ui: it
- * happens to share its spelling with the homepage plugin's id, which
- * scripts/check-shell-plugin-ids.cjs treats as a plugin id wherever it sees
- * that literal under src/ui. This area predates plugins and is unrelated -
- * it is core's own widget-visibility override, not the plugin.
- */
-export const HOMEPAGE_AREA_KEY: UiAreaKey = "homepage";
+  | "hostEditor";
 
 export type UiDensity = "comfortable" | "compact";
 export type UiTrayTrigger = "always" | "hover" | "click" | "actionsOnly";
@@ -74,6 +64,11 @@ export interface UiCredentialListPreferences {
 
 export interface UiRailPreferences {
   hiddenTabs: string[];
+  /**
+   * Also hide every plugin rail item that does not set simplePreset. Plugin
+   * items are only known at runtime, so the preset cannot list them.
+   */
+  hidePluginItems?: boolean;
 }
 
 export interface UiDashboardPreferences {
@@ -93,11 +88,6 @@ export interface UiHostEditorPreferences {
   mode: UiHostEditorMode;
 }
 
-export interface UiHomepagePreferences {
-  /** null means "never preset-driven" -- a preset must not touch the canvas. */
-  enabledWidgets: string[] | null;
-}
-
 export interface UiAreaPreferences {
   chrome: UiChromePreferences;
   hostList: UiHostListPreferences;
@@ -107,7 +97,6 @@ export interface UiAreaPreferences {
   terminal: UiTerminalPreferences;
   fileManager: UiFileManagerPreferences;
   hostEditor: UiHostEditorPreferences;
-  homepage: UiHomepagePreferences;
 }
 
 /** A plugin's own area, keyed "plugin:<id>", holding what it declared in contributes.uiPresets. */
@@ -134,34 +123,24 @@ export interface UiPreferences {
 const PRESET_VALUES: UiPreset[] = ["simple", "balanced", "advanced", "custom"];
 
 /**
- * Rail views Simple keeps. Cutting all the way down to hosts+credentials makes
- * the app feel broken, so connections and snippets stay: snippets is the most
- * approachable power feature and connections is where troubleshooting starts.
+ * Core rail views Simple keeps. Cutting all the way down to hosts+credentials
+ * makes the app feel broken, so connections stays: it is where
+ * troubleshooting starts. Plugin items opt in with simplePreset.
  */
-const SIMPLE_RAIL_VISIBLE = ["hosts", "credentials", "connections", "snippets"];
+const SIMPLE_RAIL_VISIBLE = ["hosts", "credentials", "connections"];
 
-/** Every hideable rail view, mirroring HideableRailView in sidebar/AppRail.tsx. */
-const ALL_HIDEABLE_RAIL_VIEWS = [
+/** Core's hideable rail views, mirroring RAIL_ITEMS in sidebar/rail-items.ts. */
+const CORE_HIDEABLE_RAIL_VIEWS = [
   "hosts",
   "credentials",
-  "termix-id",
-  "quick-connect",
-  "serial",
-  "ssh-tools",
-  "snippets",
-  "macros",
-  "history",
-  "split-screen",
   "connections",
-  "session-logs",
-  "fleets",
-  "workspaces",
-  "network_graph",
-  "homepage",
-  "ai",
+  "quick-connect",
+  "ssh-tools",
+  "macros",
+  "split-screen",
 ];
 
-const SIMPLE_HIDDEN_RAIL_TABS = ALL_HIDEABLE_RAIL_VIEWS.filter(
+const SIMPLE_HIDDEN_RAIL_TABS = CORE_HIDEABLE_RAIL_VIEWS.filter(
   (view) => !SIMPLE_RAIL_VISIBLE.includes(view),
 );
 
@@ -196,7 +175,7 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
       rowActions: "essential",
     },
     credentialList: { density: "comfortable", showTags: false },
-    rail: { hiddenTabs: SIMPLE_HIDDEN_RAIL_TABS },
+    rail: { hiddenTabs: SIMPLE_HIDDEN_RAIL_TABS, hidePluginItems: true },
     dashboard: {
       enabledCards: [
         "stats_bar",
@@ -208,7 +187,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     terminal: { toolbarDensity: "icon" },
     fileManager: { viewMode: "grid", showHiddenFiles: false },
     hostEditor: { mode: "simple" },
-    homepage: { enabledWidgets: null },
   },
   balanced: {
     chrome: {
@@ -232,7 +210,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     fileManager: { viewMode: "grid", showHiddenFiles: false },
     // 3 is defaultLayoutFromWidgets's own default, i.e. today's behavior.
     hostEditor: { mode: "full" },
-    homepage: { enabledWidgets: null },
   },
   advanced: {
     chrome: {
@@ -255,7 +232,6 @@ export const PRESETS: Record<Exclude<UiPreset, "custom">, UiAreaPreferences> = {
     // List packs more files and metadata per screen than the grid.
     fileManager: { viewMode: "list", showHiddenFiles: true },
     hostEditor: { mode: "full" },
-    homepage: { enabledWidgets: null },
   },
 };
 
@@ -263,8 +239,7 @@ type FieldSpec =
   | { kind: "enum"; values: readonly string[] }
   | { kind: "bool" }
   | { kind: "int"; min: number; max: number }
-  | { kind: "stringArray" }
-  | { kind: "nullableStringArray" };
+  | { kind: "stringArray" };
 
 /**
  * Field descriptors for every area knob. Unlike the flat sanitizers on the
@@ -296,6 +271,7 @@ const AREA_SPECS: {
   },
   rail: {
     hiddenTabs: { kind: "stringArray" },
+    hidePluginItems: { kind: "bool" },
   },
   dashboard: {
     enabledCards: { kind: "stringArray" },
@@ -312,9 +288,6 @@ const AREA_SPECS: {
   },
   hostEditor: {
     mode: { kind: "enum", values: ["simple", "full"] },
-  },
-  homepage: {
-    enabledWidgets: { kind: "nullableStringArray" },
   },
 };
 
@@ -337,11 +310,6 @@ function coerce(spec: FieldSpec, value: unknown): unknown | undefined {
       return rounded;
     }
     case "stringArray":
-      return Array.isArray(value)
-        ? value.filter((v): v is string => typeof v === "string")
-        : undefined;
-    case "nullableStringArray":
-      if (value === null) return null;
       return Array.isArray(value)
         ? value.filter((v): v is string => typeof v === "string")
         : undefined;
@@ -531,14 +499,4 @@ export function resolvePluginArea(
 
 export function hasUiOverrides(preferences: UiPreferences): boolean {
   return Object.keys(preferences.overrides).length > 0;
-}
-
-/**
- * What the settings UI should show as the active preset. "custom" is derived
- * rather than stored, so clearing every override automatically restores the
- * user's chosen preset instead of stranding them on a label.
- */
-export function effectivePresetLabel(preferences: UiPreferences): UiPreset {
-  if (preferences.preset === "custom") return "custom";
-  return hasUiOverrides(preferences) ? "custom" : preferences.preset;
 }

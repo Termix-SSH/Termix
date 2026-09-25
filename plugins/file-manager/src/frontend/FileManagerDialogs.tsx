@@ -1,4 +1,4 @@
-import type { FileItem, SSHHost } from "@/types/index";
+import type { FileItem, SSHHost } from "./host-types";
 import {
   TOTPDialog,
   SSHAuthDialog,

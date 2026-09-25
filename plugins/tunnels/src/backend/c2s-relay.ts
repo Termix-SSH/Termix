@@ -204,6 +204,7 @@ export function createC2SRelay(ctx: PluginContext) {
   function connectSource(hostId: number): Promise<PluginSshConnection<Client>> {
     return ctx.ssh.connect<Client>(hostId, {
       purpose: "tunnel",
+      profile: "forward",
       timeoutMs: 60_000,
     });
   }

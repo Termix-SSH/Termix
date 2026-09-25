@@ -117,11 +117,11 @@ function actionOrder(action: HostActionDef): number {
   return action.order ?? (action.kind === "connect" ? 100 : 50);
 }
 
-export async function writeClipboardText(value: string): Promise<void> {
+async function writeClipboardText(value: string): Promise<void> {
   await copyToClipboard(value);
 }
 
-export function canCopyHostPassword(host: Host): boolean {
+function canCopyHostPassword(host: Host): boolean {
   return (
     host.authType === "password" ||
     host.authType === "credential" ||
@@ -130,7 +130,7 @@ export function canCopyHostPassword(host: Host): boolean {
   );
 }
 
-export function canCopyHostSudoPassword(host: Host): boolean {
+function canCopyHostSudoPassword(host: Host): boolean {
   return (
     !!host.hasSudoPassword ||
     !!host.sudoPassword ||

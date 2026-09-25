@@ -19,14 +19,6 @@ import type {
   CredentialTrayTrigger,
 } from "@/types/credential-sidebar-preferences";
 
-export function credentialMatchesQuery(cred: Credential, query: string) {
-  return (
-    cred.name.toLowerCase().includes(query) ||
-    cred.username.toLowerCase().includes(query) ||
-    cred.tags?.some((t) => t.toLowerCase().includes(query))
-  );
-}
-
 /**
  * Per-density layout knobs, mirroring HOST_ITEM_DENSITY_TOKENS in
  * HostItem.tsx -- one implementation with a token lookup instead of two

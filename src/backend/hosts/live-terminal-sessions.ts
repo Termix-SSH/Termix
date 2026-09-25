@@ -10,7 +10,7 @@
 
 import { getServiceImplementation } from "../plugins/service-registry.js";
 
-export const LIVE_SESSIONS_SERVICE = "sessions.live";
+const LIVE_SESSIONS_SERVICE = "sessions.live";
 const SSH_PROVIDER = "ssh";
 
 export interface LiveSessionInfo {

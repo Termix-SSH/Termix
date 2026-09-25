@@ -12,7 +12,6 @@
  * order rather than relying on registration sequence.
  */
 
-import { pluginLogger } from "../utils/logger.js";
 import type { SyncEntityRegistration } from "@termix/plugin-sdk/backend";
 
 export interface RegisteredSyncEntity extends SyncEntityRegistration {
@@ -90,11 +89,4 @@ export function unregisterByOwner(owner: string): void {
 
 export function resetSyncRegistry(): void {
   entities.clear();
-}
-
-/** Logged once at boot so a missing entity is visible without a debugger. */
-export function logRegisteredEntities(): void {
-  pluginLogger.info(`Sync entities: ${listEntityTypes().join(", ")}`, {
-    operation: "sync_registry",
-  });
 }

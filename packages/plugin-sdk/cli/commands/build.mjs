@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { BACKEND_EXTERNALS, FRONTEND_EXTERNALS } from "../lib/externals.mjs";
-import { legacyCoreImports } from "../lib/legacy-core-imports.mjs";
 import { staticUrlImports } from "../lib/static-url-imports.mjs";
 import { readManifest, resolveEntry, copyDir } from "../lib/plugin-dir.mjs";
 
@@ -17,17 +16,6 @@ const FRONTEND_ENTRIES = [
   "src/frontend/index.mjs",
   "src/frontend/index.js",
 ];
-
-/** Whether the plugin sits in a Termix checkout, i.e. is a bundled plugin. */
-function insideTermixCheckout(cwd) {
-  let dir = path.resolve(cwd);
-  for (;;) {
-    if (fs.existsSync(path.join(dir, "src", "ui", "plugin-host"))) return true;
-    const parent = path.dirname(dir);
-    if (parent === dir) return false;
-    dir = parent;
-  }
-}
 
 export async function build({ cwd }) {
   const manifest = readManifest(cwd);
@@ -59,7 +47,6 @@ export async function build({ cwd }) {
     // node_modules import instead, resolved at runtime like a host-provided
     // package.
     external: [...BACKEND_EXTERNALS, ...(manifest.nativeDependencies ?? [])],
-    plugins: [legacyCoreImports({ pluginId, platform: "node" })],
   });
 
   const frontendEntry = resolveEntry(cwd, FRONTEND_ENTRIES);
@@ -75,14 +62,7 @@ export async function build({ cwd }) {
       sourcemap: true,
       logLevel: "warning",
       external: FRONTEND_EXTERNALS,
-      plugins: [
-        staticUrlImports({ outDir }),
-        legacyCoreImports({
-          pluginId,
-          platform: "browser",
-          insideTermix: insideTermixCheckout(cwd),
-        }),
-      ],
+      plugins: [staticUrlImports({ outDir })],
     });
   }
 

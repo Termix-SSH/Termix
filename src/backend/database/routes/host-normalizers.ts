@@ -80,7 +80,7 @@ export function containsOwnerPrivateAuthUpdate(
   );
 }
 
-export const FOLDER_PATH_SEPARATOR = " / ";
+const FOLDER_PATH_SEPARATOR = " / ";
 
 /**
  * Re-paths a folder string when its ancestor folder is renamed. Returns the new

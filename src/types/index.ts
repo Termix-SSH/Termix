@@ -7,49 +7,12 @@ export type {
   HostAuthOverrideState,
   HostAuthOverrides,
 } from "./auth-protocols.js";
-
-// ============================================================================
-// HOST TYPES (SSH, RDP, VNC, Telnet)
-// ============================================================================
-
-export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
+/**
+ * Core's own SSH auth types, plus whatever a plugin registers through
+ * ctx.auth (the owning plugin decides the name).
+ */
 export type SSHAuthType =
-  | "password"
-  | "key"
-  | "credential"
-  | "none"
-  | "opkssh"
-  | "stepca"
-  | "tailscale";
-
-export type GuacamoleAuthType = "password" | "credential";
-
-export interface ProxmoxStatsConfig {
-  nodeName?: string | null;
-  pollInterval?: number;
-  enabledCards?: string[];
-}
-
-export interface ProxmoxConfig {
-  defaultCredentialId: number | null;
-  defaultAuthType?: string;
-  windowsPatterns: string;
-  dockerPatterns: string;
-  preferredPrefixes: string;
-  autoSyncEnabled?: boolean;
-  syncIntervalMinutes?: number;
-  markMissingGuests?: boolean;
-  lastSyncAt?: string;
-  lastSyncStatus?: "success" | "error";
-  lastSyncError?: string | null;
-  lastSyncResult?: {
-    created: number;
-    updated: number;
-    markedMissing: number;
-    skipped: number;
-    errors: string[];
-  };
-}
+  "password" | "key" | "credential" | "none" | "agent" | (string & {});
 
 export type WebEndpointAccess = "direct" | "tunnel";
 export type WebEndpointRender = "external" | "embedded";
@@ -93,15 +56,6 @@ export interface WebEndpoint {
   localPort?: number;
 }
 
-export interface WebUiConfig {
-  endpoints: WebEndpoint[];
-}
-
-/** A host may declare at most this many web endpoints. */
-export const MAX_WEB_ENDPOINTS = 16;
-/** Endpoint labels are truncated to this length. */
-export const MAX_WEB_ENDPOINT_LABEL_LENGTH = 64;
-
 export interface JumpHost {
   hostId: number;
 }
@@ -120,16 +74,7 @@ export type Host = {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType:
-    | "password"
-    | "key"
-    | "credential"
-    | "none"
-    | "opkssh"
-    | "stepca"
-    | "tailscale"
-    | "agent"
-    | "vault";
+  authType: SSHAuthType;
   shareSshAuth?: boolean;
   password?: string;
   key?: string;
@@ -254,16 +199,7 @@ export interface HostData {
   parentHostId?: number | string | null;
   tags?: string[];
   pin?: boolean;
-  authType:
-    | "password"
-    | "key"
-    | "credential"
-    | "none"
-    | "opkssh"
-    | "stepca"
-    | "tailscale"
-    | "agent"
-    | "vault";
+  authType: SSHAuthType;
   shareSshAuth?: boolean;
   password?: string;
   key?: File | string | null;
@@ -382,54 +318,12 @@ export interface CredentialBackend {
   updatedAt: string;
 }
 
-export interface CredentialData {
-  name: string;
-  description?: string;
-  folder?: string;
-  tags: string[];
-  authType: "password" | "key";
-  username?: string;
-  password?: string;
-  key?: string;
-  publicKey?: string;
-  /** CA-signed certificate file content (e.g. id_ed25519-cert.pub) */
-  certPublicKey?: string | null;
-  keyPassword?: string;
-  keyType?: string;
-}
-
 // ============================================================================
 // TUNNEL TYPES
 // ============================================================================
 
 export type TunnelScope = "s2s" | "c2s";
 export type TunnelMode = "local" | "remote" | "dynamic";
-
-export interface TunnelConnection {
-  scope?: TunnelScope;
-  mode?: TunnelMode;
-  tunnelType?: "local" | "remote";
-  localAddress?: string;
-  remoteAddress?: string;
-  bindHost?: string;
-  sourceHostId?: number;
-  sourceHostSyncId?: string;
-  sourceHostName?: string;
-  sourcePort: number;
-  endpointPort: number;
-  endpointHost?: string;
-  targetHost?: string;
-
-  endpointPassword?: string;
-  endpointKey?: string;
-  endpointKeyPassword?: string;
-  endpointAuthType?: string;
-  endpointKeyType?: string;
-
-  maxRetries: number;
-  retryInterval: number;
-  autoStart: boolean;
-}
 
 // ============================================================================
 // FILE MANAGER TYPES
@@ -445,61 +339,6 @@ export interface Tab {
   filePath?: string;
   loading?: boolean;
   dirty?: boolean;
-}
-
-export interface FileManagerFile {
-  name: string;
-  path: string;
-  type?: "file" | "directory";
-  isSSH?: boolean;
-  sshSessionId?: string;
-}
-
-export interface FileManagerShortcut {
-  name: string;
-  path: string;
-}
-
-export interface FileItem {
-  name: string;
-  path: string;
-  isPinned?: boolean;
-  type: "file" | "directory" | "link";
-  sshSessionId?: string;
-  size?: number;
-  modified?: string;
-  modifiedTimestamp?: number;
-  permissions?: string;
-  owner?: string;
-  group?: string;
-  linkTarget?: string;
-  executable?: boolean;
-}
-
-export interface ShortcutItem {
-  name: string;
-  path: string;
-}
-
-export interface SSHConnection {
-  id: number;
-  name: string;
-  ip: string;
-  port: number;
-  username: string;
-  isPinned?: boolean;
-}
-
-// ============================================================================
-// HOST INFO TYPES
-// ============================================================================
-
-export interface HostInfo {
-  id: number;
-  name?: string;
-  ip: string;
-  port: number;
-  createdAt: string;
 }
 
 // ============================================================================
@@ -599,21 +438,8 @@ export interface TerminalConfig {
 export interface TabContextTab {
   id: number;
   instanceId?: string;
-  type:
-    | "home"
-    | "terminal"
-    | "ssh_manager"
-    | "server_stats"
-    | "admin"
-    | "file_manager"
-    | "user_profile"
-    | "docker"
-    | "tunnel"
-    | "network_graph"
-    | "tmux_monitor" // --- tmux-monitor ---
-    | "rdp"
-    | "vnc"
-    | "telnet";
+  /** A core tab type or one a plugin registered. */
+  type: string;
   title: string;
   hostConfig?: SSHHost;
   terminalRef?: RefObject<TerminalRefHandle | null>;
@@ -635,162 +461,6 @@ export interface TerminalRefHandle {
 }
 
 export type SplitLayout = "2h" | "2v" | "3l" | "3r" | "3t" | "4grid";
-
-export interface SplitConfiguration {
-  layout: SplitLayout;
-  positions: Map<number, number>;
-}
-
-export interface SplitLayoutOption {
-  id: SplitLayout;
-  name: string;
-  description: string;
-  cellCount: number;
-  icon: string;
-}
-
-// ============================================================================
-// CONNECTION STATES
-// ============================================================================
-
-export const CONNECTION_STATES = {
-  DISCONNECTED: "disconnected",
-  CONNECTING: "connecting",
-  CONNECTED: "connected",
-  VERIFYING: "verifying",
-  FAILED: "failed",
-  UNSTABLE: "unstable",
-  RETRYING: "retrying",
-  WAITING: "waiting",
-  DISCONNECTING: "disconnecting",
-} as const;
-
-export type ConnectionState =
-  (typeof CONNECTION_STATES)[keyof typeof CONNECTION_STATES];
-
-export type ErrorType =
-  | "CONNECTION_FAILED"
-  | "AUTHENTICATION_FAILED"
-  | "TIMEOUT"
-  | "NETWORK_ERROR"
-  | "UNKNOWN";
-
-// ============================================================================
-// AUTHENTICATION TYPES
-// ============================================================================
-
-export type AuthType =
-  | "password"
-  | "key"
-  | "credential"
-  | "none"
-  | "opkssh"
-  | "stepca"
-  | "tailscale";
-
-export type KeyType = "rsa" | "ecdsa" | "ed25519";
-
-// ============================================================================
-// API RESPONSE TYPES
-// ============================================================================
-
-export interface ApiResponse<T = unknown> {
-  data?: T;
-  error?: string;
-  message?: string;
-  status?: number;
-}
-
-// ============================================================================
-// COMPONENT PROP TYPES
-// ============================================================================
-
-export interface CredentialsManagerProps {
-  onEditCredential?: (credential: Credential) => void;
-  onAddCredential?: () => void;
-}
-
-export interface CredentialEditorProps {
-  editingCredential?: Credential | null;
-  onFormSubmit?: () => void;
-  onBack?: () => void;
-}
-
-export interface CredentialViewerProps {
-  credential: Credential;
-  onClose: () => void;
-  onEdit: () => void;
-}
-
-export interface CredentialSelectorProps {
-  value?: number | null;
-  onValueChange: (value: number | null) => void;
-}
-
-export interface HostManagerProps {
-  onSelectView?: (view: string) => void;
-  isTopbarOpen?: boolean;
-  initialTab?: string;
-  hostConfig?: SSHHost;
-  _updateTimestamp?: number;
-  rightSidebarOpen?: boolean;
-  rightSidebarWidth?: number;
-  currentTabId?: number;
-  updateTab?: (tabId: number, updates: Partial<Omit<Tab, "id">>) => void;
-}
-
-export interface SSHManagerHostEditorProps {
-  editingHost?: SSHHost | null;
-  onFormSubmit?: () => void;
-}
-
-export interface SSHManagerHostViewerProps {
-  onEditHost?: (host: SSHHost) => void;
-  onAddHost?: () => void;
-}
-
-export interface HostProps {
-  host: SSHHost;
-  onHostConnect?: () => void;
-}
-
-export interface FileManagerProps {
-  onSelectView?: (view: string) => void;
-  embedded?: boolean;
-  initialHost?: SSHHost | null;
-}
-
-export interface AlertCardProps {
-  alert: TermixAlert;
-  onDismiss: (alertId: string) => void;
-}
-
-export interface AlertManagerProps {
-  alerts: TermixAlert[];
-  onDismiss: (alertId: string) => void;
-  loggedIn: boolean;
-}
-
-export interface FolderStats {
-  totalHosts: number;
-  hostsByType: Array<{
-    type: string;
-    count: number;
-  }>;
-}
-
-// Snippet, SnippetFolder types live in ui-types.ts (the shape actually used
-// by SnippetsPanel.tsx); this file's older definitions were unused and removed.
-
-// ============================================================================
-// UTILITY TYPES
-// ============================================================================
-
-export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
-export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
-
-export type PartialExcept<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
 // ============================================================================
 // EXPRESS REQUEST TYPES
@@ -856,35 +526,12 @@ export interface CacheEntry<T = unknown> {
 export interface ExportSummary {
   sshHostsImported: number;
   sshCredentialsImported: number;
-  fileManagerItemsImported: number;
+  pluginItemsImported: number;
   dismissedAlertsImported: number;
   credentialUsageImported: number;
   settingsImported: number;
   skippedItems: number;
   errors: string[];
-}
-
-export interface ImportResult {
-  success: boolean;
-  summary: ExportSummary;
-}
-
-export interface ExportRequestBody {
-  password: string;
-}
-
-export interface ImportRequestBody {
-  password: string;
-}
-
-export interface ExportPreviewBody {
-  scope?: string;
-  includeCredentials?: boolean;
-}
-
-export interface RestoreRequestBody {
-  backupPath: string;
-  targetPath?: string;
 }
 
 // ============================================================================

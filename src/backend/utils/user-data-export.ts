@@ -1,34 +1,11 @@
-import { sql } from "drizzle-orm";
 import {
   createCurrentDismissedAlertRepository,
   createCurrentUserDataExportRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
-import { getDb } from "../database/db/index.js";
+import { readUserPluginRows } from "../plugins/user-data.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
-
-// The file manager plugin owns these tables now (p_file_manager_*); read by
-// raw SQL rather than importing plugin code into core.
-async function listFileManagerExportData(userId: string): Promise<{
-  recent: unknown[];
-  pinned: unknown[];
-  shortcuts: unknown[];
-  transferRecent: unknown[];
-}> {
-  const db = getDb();
-  const [recent, pinned, shortcuts, transferRecent] = await Promise.all([
-    db.all(sql`SELECT * FROM p_file_manager_recent WHERE user_id = ${userId}`),
-    db.all(sql`SELECT * FROM p_file_manager_pinned WHERE user_id = ${userId}`),
-    db.all(
-      sql`SELECT * FROM p_file_manager_shortcuts WHERE user_id = ${userId}`,
-    ),
-    db.all(
-      sql`SELECT * FROM p_file_manager_transfer_recent WHERE user_id = ${userId}`,
-    ),
-  ]);
-  return { recent, pinned, shortcuts, transferRecent };
-}
 
 interface UserExportData {
   version: string;
@@ -38,12 +15,8 @@ interface UserExportData {
   userData: {
     sshHosts: unknown[];
     sshCredentials: unknown[];
-    fileManagerData: {
-      recent: unknown[];
-      pinned: unknown[];
-      shortcuts: unknown[];
-      transferRecent: unknown[];
-    };
+    /** The user's rows in plugin tables, keyed by table name. */
+    pluginData: Record<string, unknown[]>;
     dismissedAlerts: unknown[];
   };
   metadata: {
@@ -112,12 +85,11 @@ class UserDataExport {
             : credentials;
       }
 
-      const {
-        recent: recentFiles,
-        pinned: pinnedFiles,
-        shortcuts,
-        transferRecent: transferRecentData,
-      } = await listFileManagerExportData(userId);
+      const pluginData = await readUserPluginRows(userId);
+      const pluginRowCount = Object.values(pluginData).reduce(
+        (total, rows) => total + rows.length,
+        0,
+      );
 
       const alerts =
         await createCurrentDismissedAlertRepository().listByUserId(userId);
@@ -130,22 +102,14 @@ class UserDataExport {
         userData: {
           sshHosts: processedSshHosts,
           sshCredentials: sshCredentialsData,
-          fileManagerData: {
-            recent: recentFiles,
-            pinned: pinnedFiles,
-            shortcuts: shortcuts,
-            transferRecent: transferRecentData,
-          },
+          pluginData,
           dismissedAlerts: alerts,
         },
         metadata: {
           totalRecords:
             processedSshHosts.length +
             sshCredentialsData.length +
-            recentFiles.length +
-            pinnedFiles.length +
-            shortcuts.length +
-            transferRecentData.length +
+            pluginRowCount +
             alerts.length,
           encrypted: format === "encrypted",
           exportType: scope,
@@ -218,37 +182,22 @@ class UserDataExport {
 
     if (dataObj.userData) {
       const userData = dataObj.userData as Record<string, unknown>;
-      const requiredFields = [
-        "sshHosts",
-        "sshCredentials",
-        "fileManagerData",
-        "dismissedAlerts",
-      ];
+      const requiredFields = ["sshHosts", "sshCredentials", "dismissedAlerts"];
       for (const field of requiredFields) {
-        if (
-          !Array.isArray(userData[field]) &&
-          !(field === "fileManagerData" && typeof userData[field] === "object")
-        ) {
+        if (!Array.isArray(userData[field])) {
           errors.push(`Missing or invalid userData.${field} field`);
         }
       }
 
       if (
-        userData.fileManagerData &&
-        typeof userData.fileManagerData === "object"
+        userData.pluginData !== undefined &&
+        (typeof userData.pluginData !== "object" ||
+          userData.pluginData === null ||
+          Object.values(userData.pluginData).some(
+            (rows) => !Array.isArray(rows),
+          ))
       ) {
-        const fileManagerData = userData.fileManagerData as Record<
-          string,
-          unknown
-        >;
-        const fmFields = ["recent", "pinned", "shortcuts"];
-        for (const field of fmFields) {
-          if (!Array.isArray(fileManagerData[field])) {
-            errors.push(
-              `Missing or invalid userData.fileManagerData.${field} field`,
-            );
-          }
-        }
+        errors.push("Missing or invalid userData.pluginData field");
       }
     }
 
@@ -263,7 +212,7 @@ class UserDataExport {
     breakdown: {
       sshHosts: number;
       sshCredentials: number;
-      fileManagerItems: number;
+      pluginRows: number;
       dismissedAlerts: number;
     };
     encrypted: boolean;
@@ -276,10 +225,10 @@ class UserDataExport {
       breakdown: {
         sshHosts: data.userData.sshHosts.length,
         sshCredentials: data.userData.sshCredentials.length,
-        fileManagerItems:
-          data.userData.fileManagerData.recent.length +
-          data.userData.fileManagerData.pinned.length +
-          data.userData.fileManagerData.shortcuts.length,
+        pluginRows: Object.values(data.userData.pluginData ?? {}).reduce(
+          (total, rows) => total + rows.length,
+          0,
+        ),
         dismissedAlerts: data.userData.dismissedAlerts.length,
       },
       encrypted: data.metadata.encrypted,

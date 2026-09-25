@@ -17,6 +17,8 @@
 import express, { type Request, type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { getPluginRouter } from "../../plugins/http.js";
+import { getRequestBasePath } from "../../utils/request-origin.js";
+import type { PluginLegacyRedirect } from "@termix/plugin-sdk/manifest";
 
 const router = express.Router();
 
@@ -78,21 +80,44 @@ export function mountPluginApi(app: express.Express): void {
   app.use("/plugin-api", router);
 }
 
+export interface ActiveLegacyRoutes {
+  id: string;
+  legacyPaths: string[];
+  legacyRedirects: PluginLegacyRedirect[];
+}
+
+function under(path: string, prefix: string): boolean {
+  return path === prefix || path.startsWith(`${prefix}/`);
+}
+
 /**
- * Serves the old URLs plugins declare in contributes.http.legacyPaths, each
- * under "/<plugin id>/", through that plugin's router with the prefix
- * removed. Mounted after every core route, so core wins a clash.
+ * Serves the old URLs plugins declare in contributes.http. A legacyPaths
+ * entry, under "/<plugin id>/", runs through that plugin's router with the
+ * prefix removed. A legacyRedirects entry redirects to the plugin's own URL,
+ * keeping the rest of the path and the query. Mounted after every core route,
+ * so core wins a clash.
  */
 export function mountPluginLegacyPaths(
   app: express.Express,
-  listActive: () => Array<{ id: string; legacyPaths: string[] }>,
+  listActive: () => ActiveLegacyRoutes[],
 ): void {
   app.use((req: Request, res: Response, next) => {
     for (const plugin of listActive()) {
-      const matched = plugin.legacyPaths.some(
-        (path) => req.path === path || req.path.startsWith(`${path}/`),
+      const redirect = plugin.legacyRedirects.find((entry) =>
+        under(req.path, entry.from),
       );
-      if (!matched) continue;
+      if (redirect) {
+        const rest = req.path.slice(redirect.from.length);
+        const query = req.originalUrl.indexOf("?");
+        res.redirect(
+          redirect.status ?? 307,
+          `${getRequestBasePath(req)}/plugin-api/${plugin.id}${redirect.to}${rest}${
+            query >= 0 ? req.originalUrl.slice(query) : ""
+          }`,
+        );
+        return;
+      }
+      if (!plugin.legacyPaths.some((path) => under(req.path, path))) continue;
       const pluginRouter = getPluginRouter(plugin.id);
       if (!pluginRouter) {
         res.status(404).json({ error: "Plugin not installed or not running" });

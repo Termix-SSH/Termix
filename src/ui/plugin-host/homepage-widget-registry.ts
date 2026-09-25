@@ -26,8 +26,6 @@ export interface RegisteredHomepageWidget {
 const registry = createRegistry<RegisteredHomepageWidget>();
 
 export const registerHomepageWidgetType = registry.register;
-export const unregisterHomepageWidgetType = registry.unregister;
 export const getHomepageWidgetType = registry.get;
-export const listHomepageWidgetTypes = registry.list;
 export const useHomepageWidgetTypes = registry.useList;
 export const resetHomepageWidgetTypes = registry.reset;

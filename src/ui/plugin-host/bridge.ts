@@ -30,7 +30,8 @@ import {
 } from "@/api/plugins-api";
 import { getCookie, getUserInfo } from "@/main-axios";
 import { logActivity } from "@/api/dashboard-api";
-import { getHostPassword } from "@/api/credentials-api";
+import { getCredentials, getHostPassword } from "@/api/credentials-api";
+import { getSSHHosts } from "@/api/ssh-host-management-api";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -51,8 +52,8 @@ import { useOptionalHostStatusEntry } from "@/lib/ServerStatusContext";
 /**
  * Core permission groups, mirroring RESERVED_PERMISSION_PREFIXES in the SDK
  * manifest module, which is not imported here because it pulls semver into
- * the browser bundle. A group that is itself a plugin id (snippets, once)
- * does not need an entry here: knownPluginIds() below already covers it.
+ * the browser bundle. A plugin's own namespace is covered by knownPluginIds()
+ * below.
  */
 const CORE_PERMISSION_GROUPS = ["hosts", "credentials", "admin"];
 
@@ -117,11 +118,6 @@ function loadCurrentUser() {
       });
   }
   return currentUser;
-}
-
-/** Forgets the cached user, on logout. */
-export function resetBridgeUser(): void {
-  currentUser = null;
 }
 
 const SETTINGS_READERS: Record<
@@ -295,6 +291,7 @@ export const pluginHostBridge: PluginHostBridge = {
           pluginId: option.pluginId,
           credentialType: option.credentialType,
           supportsBackground: option.supportsBackground,
+          quickConnect: option.quickConnect === true,
         })),
     };
   },
@@ -367,6 +364,20 @@ export const pluginHostBridge: PluginHostBridge = {
       parseCustomKeybindings((await getUserPreferences()).customKeybindings),
     setHostAutoTmux: (hostId, autoTmux) => setHostAutoTmux(hostId, autoTmux),
     getClientPreference: (name) => getCookie(name),
+    listHosts: async () =>
+      (await getSSHHosts({ includeStatus: false })).map(toHostRecord),
+    listCredentials: async () => {
+      const raw = await getCredentials();
+      const list = Array.isArray(raw)
+        ? raw
+        : ((raw as { credentials?: unknown[] }).credentials ?? []);
+      return (list as Record<string, unknown>[]).map((c) => ({
+        id: Number(c.id),
+        name: String(c.name ?? ""),
+        username: typeof c.username === "string" ? c.username : undefined,
+        authType: typeof c.authType === "string" ? c.authType : undefined,
+      }));
+    },
   },
 };
 

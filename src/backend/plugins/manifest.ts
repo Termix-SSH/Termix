@@ -11,12 +11,6 @@ export {
   validateManifest,
   parseManifest,
   SUPPORTED_PLUGIN_API_VERSION,
-  PLUGIN_CATEGORIES,
-  PLUGIN_PLATFORMS,
-  ACTION_CONTRIBUTION_KINDS,
-  DEFAULT_BACKEND_ENTRY,
-  DEFAULT_FRONTEND_ENTRY,
-  DEFAULT_LOCALES_DIR,
   SYSTEM_ROLE_NAMES,
   RESERVED_PERMISSION_PREFIXES,
   qualifyPermission,
@@ -40,13 +34,6 @@ export type {
   ActionContributionKind,
   ParsedManifest,
 } from "@termix/plugin-sdk/manifest";
-
-export {
-  CAPABILITY_CATALOG,
-  CAPABILITY_IDS,
-  isKnownCapability,
-  getCapabilityInfo,
-} from "@termix/plugin-sdk/capabilities";
 
 export type {
   Capability,

@@ -1050,7 +1050,7 @@ function getBackendPidFilePath() {
 // Manager) rather than through the normal quit flow, will-quit never fires
 // and stopBackendServer() never runs -- the forked backend child is a
 // genuinely separate OS process on Windows/mac/Linux, so it keeps running
-// and holding every port the backend binds (30001, 30004). Every subsequent
+// and holding the port the backend binds (30001). Every subsequent
 // launch's own backend then fails outright
 // with EADDRINUSE and the app is stuck until something manually kills the
 // orphan. Reap any such leftover process, identified by PID file, before

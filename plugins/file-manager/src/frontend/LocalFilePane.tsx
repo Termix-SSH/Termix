@@ -26,9 +26,9 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
-import { cn } from "@/lib/utils.ts";
+import { cn } from "@termix/plugin-sdk/ui";
 import { Button, Input } from "@termix/plugin-sdk/ui";
-import type { LocalFileEntry } from "@/types/electron";
+import type { LocalFileEntry } from "@termix/plugin-sdk/ui";
 import {
   createLocalFile,
   createLocalFolder,
@@ -38,9 +38,9 @@ import {
   renameLocalEntry,
   revealLocalPath,
   trashLocalPaths,
-} from "@/lib/local-files.ts";
-import { copyToClipboard } from "@/lib/clipboard.ts";
-import { useConfirmation } from "@/hooks/use-confirmation.ts";
+} from "./lib/local-files";
+import { copyToClipboard } from "@termix/plugin-sdk/ui";
+import { useConfirmation } from "@termix/plugin-sdk/ui";
 import { LocalFileContextMenu } from "./LocalFileContextMenu.tsx";
 import {
   useResizableColumns,

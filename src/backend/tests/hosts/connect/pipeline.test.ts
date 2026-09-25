@@ -66,7 +66,7 @@ vi.mock("../../../hosts/ssh-connection-pool.js", () => ({
 
 import {
   buildConnectConfig,
-  getPurposeDefaults,
+  getProfileDefaults,
 } from "../../../hosts/connect/build-connect-config.js";
 import {
   connectHost,
@@ -76,6 +76,7 @@ import {
 } from "../../../hosts/connect/connect-host.js";
 import {
   getSshAuthProvider,
+  isQuickConnectAuthType,
   listCredentialTypes,
   registerSshAuthProvider,
   setSshAuthTypeOwnerSource,
@@ -137,11 +138,12 @@ function registerSignInProvider(hasCert: boolean) {
 
 async function build(
   target: SshConnectHost,
-  purpose: Parameters<typeof buildConnectConfig>[1]["purpose"] = "terminal",
+  profile: Parameters<typeof buildConnectConfig>[1]["profile"] = "terminal",
 ) {
   return buildConnectConfig(target, {
     userId: "user-1",
-    purpose,
+    purpose: "test",
+    profile,
     client: new FakeSshClient() as never,
   });
 }
@@ -349,7 +351,7 @@ describe("buildConnectConfig per auth type", () => {
   it("jump hops skip keyboard-interactive for auth type none", async () => {
     const { config } = await build(
       host({ authType: "none", password: null }),
-      "jump-host",
+      "jump",
     );
     expect(config.tryKeyboard).toBe(false);
     expect(mocks.createHostVerifier).toHaveBeenCalledWith(
@@ -364,20 +366,24 @@ describe("buildConnectConfig per auth type", () => {
   });
 });
 
-describe("purpose defaults", () => {
+describe("profile defaults", () => {
   it("keeps each transport's old keepalive numbers", () => {
-    expect(getPurposeDefaults("terminal")).toMatchObject({
+    expect(getProfileDefaults("terminal")).toMatchObject({
       keepaliveIntervalMs: 30000,
       keepaliveCountMax: 5,
     });
-    expect(getPurposeDefaults("file-manager")).toMatchObject({
+    expect(getProfileDefaults("session")).toMatchObject({
       keepaliveIntervalMs: 60000,
       keepaliveCountMax: 5,
     });
-    expect(getPurposeDefaults("fleet")).toMatchObject({
+    expect(getProfileDefaults("background")).toMatchObject({
       keepaliveIntervalMs: 30000,
       keepaliveCountMax: 3,
     });
+  });
+
+  it("uses the background profile when none is given", () => {
+    expect(getProfileDefaults()).toEqual(getProfileDefaults("background"));
   });
 
   it("host keepalive settings apply where the transport honoured them", async () => {
@@ -386,7 +392,7 @@ describe("purpose defaults", () => {
     });
     const terminal = await build(withSettings, "terminal");
     expect(terminal.config.keepaliveInterval).toBe(10000);
-    const fleet = await build(withSettings, "fleet");
+    const fleet = await build(withSettings, "background");
     expect(fleet.config.keepaliveInterval).toBe(30000);
   });
 });
@@ -413,6 +419,31 @@ describe("provider registry", () => {
     expect(listCredentialTypes()).not.toContain("fixture");
     const { outcome } = await build(host({ authType: "fixture" }));
     expect(outcome).toMatchObject({ code: "provider-missing" });
+  });
+
+  it("offers core types and opted-in plugin types to Quick Connect", () => {
+    ensureCoreSshAuthProviders();
+    for (const type of ["password", "key", "credential", "agent", "none"]) {
+      expect(isQuickConnectAuthType(type)).toBe(true);
+    }
+    const plain = registerSshAuthProvider({
+      type: "needs-saved-host",
+      pluginId: "fixture-plugin",
+      labelKey: "x",
+      prepare: async () => ({ status: "ready" }),
+    });
+    const quick = registerSshAuthProvider({
+      type: "works-unsaved",
+      pluginId: "fixture-plugin",
+      labelKey: "x",
+      quickConnect: true,
+      prepare: async () => ({ status: "ready" }),
+    });
+    expect(isQuickConnectAuthType("needs-saved-host")).toBe(false);
+    expect(isQuickConnectAuthType("works-unsaved")).toBe(true);
+    expect(isQuickConnectAuthType("missing")).toBe(false);
+    plain();
+    quick();
   });
 
   it("refuses to let a second plugin take over a type", () => {

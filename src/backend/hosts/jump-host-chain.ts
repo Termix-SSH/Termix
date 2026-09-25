@@ -47,7 +47,7 @@ async function resolveJumpHost(
   }
 }
 
-export class JumpHostChainError extends Error {
+class JumpHostChainError extends Error {
   constructor(
     message: string,
     readonly hopIndex: number,
@@ -161,7 +161,7 @@ export async function createJumpHostChain(
         // every auth type, not just password, key and agent.
         const built = await buildConnectConfig(
           jumpHostConfig as unknown as SshConnectHost,
-          { userId, purpose: "jump-host", client: jumpClient },
+          { userId, purpose: "jump-host", profile: "jump", client: jumpClient },
         );
         if (built.outcome.status !== "ready") {
           clearTimeout(timeout);

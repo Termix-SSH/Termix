@@ -57,11 +57,12 @@ describe(`${manifest.id} activate`, () => {
     expect(rendered.registered.hostEditorSections()).toEqual([]);
   });
 
-  it("registers files.openHost and files.openEditor actions", async () => {
+  it("registers its open actions, including the shell's host.openFiles", async () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     expect(rendered.registered.actions().sort()).toEqual([
       "files.openEditor",
       "files.openHost",
+      "host.openFiles",
     ]);
   });
 

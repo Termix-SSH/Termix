@@ -1,57 +1,33 @@
 /**
- * The 2.8 login URLs that something outside Termix still depends on:
- * identity providers configured with the old callback and back-channel
- * logout URLs, and clients built against 2.8 such as Termix-Mobile. Each one
- * forwards to the login method or plugin route that replaced it, so none of
- * them can sign anyone in on its own.
+ * The 2.8 login URLs clients built against 2.8 (Termix-Mobile) still call.
+ * Each forwards to the login pipeline for the method it names, so none of
+ * them can sign anyone in on its own. Old identity provider callbacks are
+ * redirected by the owning plugin's manifest (contributes.http.legacyRedirects).
  */
 
-import type { Request, Router } from "express";
+import type { Router } from "express";
 import { authLogger } from "../../utils/logger.js";
-import { getRequestBasePath } from "../../utils/request-origin.js";
 import {
   listLegacySsoProviders,
   startRedirectLogin,
   verifyFormLogin,
 } from "./auth-routes.js";
 
-/**
- * A path on this install, keeping the query string. Relative, so the browser
- * stays on the scheme and host it used, whatever a proxy told us.
- */
-function pluginUrl(req: Request, path: string): string {
-  const query = req.originalUrl.indexOf("?");
-  return `${getRequestBasePath(req)}${path}${
-    query >= 0 ? req.originalUrl.slice(query) : ""
-  }`;
-}
-
 export function registerAuthCompatRoutes(router: Router): void {
   /**
    * @openapi
-   * /users/oidc-config:
+   * /users/{method}/authorize:
    *   get:
-   *     summary: Get the default SSO provider's public configuration (2.8 route)
-   *     description: Kept for 2.8 clients. Redirects to the sso plugin's /plugin-api/sso/config.
-   *     tags:
-   *       - Auth
-   *     responses:
-   *       307:
-   *         description: Redirect to the sso plugin.
-   */
-  router.get("/oidc-config", (req, res) => {
-    res.redirect(307, pluginUrl(req, "/plugin-api/sso/config"));
-  });
-
-  /**
-   * @openapi
-   * /users/oidc/authorize:
-   *   get:
-   *     summary: Start an SSO login (2.8 route)
-   *     description: Kept for 2.8 clients such as Termix-Mobile. Same as /users/auth/oidc/start, with the provider in providerId.
+   *     summary: Start a redirect login (2.8 route)
+   *     description: Kept for 2.8 clients such as Termix-Mobile, which call /users/oidc/authorize. Same as /users/auth/{method}/start, with the provider in providerId.
    *     tags:
    *       - Auth
    *     parameters:
+   *       - in: path
+   *         name: method
+   *         required: true
+   *         schema:
+   *           type: string
    *       - in: query
    *         name: providerId
    *         schema:
@@ -64,58 +40,18 @@ export function registerAuthCompatRoutes(router: Router): void {
    *       200:
    *         description: The authorization URL in auth_url.
    *       404:
-   *         description: SSO is not available.
+   *         description: That login method is not available.
    */
-  router.get("/oidc/authorize", (req, res) =>
+  router.get("/:method/authorize", (req, res) =>
     startRedirectLogin(
       req,
       res,
-      "oidc",
+      String(req.params.method),
       typeof req.query.providerId === "string" && req.query.providerId
         ? req.query.providerId
         : null,
     ),
   );
-
-  /**
-   * @openapi
-   * /users/oidc/callback:
-   *   get:
-   *     summary: SSO callback (2.8 URL)
-   *     description: The redirect URI identity providers were set up with before 2.9. Permanently redirects to /plugin-api/sso/callback with the same query, so existing provider configurations keep working.
-   *     tags:
-   *       - Auth
-   *     responses:
-   *       308:
-   *         description: Redirect to the sso plugin's callback.
-   *   post:
-   *     summary: SSO callback, form post (2.8 URL)
-   *     description: Same as the GET form.
-   *     tags:
-   *       - Auth
-   *     responses:
-   *       308:
-   *         description: Redirect to the sso plugin's callback.
-   */
-  router.all("/oidc/callback", (req, res) => {
-    res.redirect(308, pluginUrl(req, "/plugin-api/sso/callback"));
-  });
-
-  /**
-   * @openapi
-   * /users/oidc/backchannel-logout:
-   *   post:
-   *     summary: OIDC back-channel logout (2.8 URL)
-   *     description: Permanently redirects to /plugin-api/sso/backchannel-logout, so identity providers set up before 2.9 keep working.
-   *     tags:
-   *       - Auth
-   *     responses:
-   *       308:
-   *         description: Redirect to the sso plugin.
-   */
-  router.post("/oidc/backchannel-logout", (req, res) => {
-    res.redirect(308, pluginUrl(req, "/plugin-api/sso/backchannel-logout"));
-  });
 
   /**
    * @openapi
@@ -140,25 +76,31 @@ export function registerAuthCompatRoutes(router: Router): void {
 
   /**
    * @openapi
-   * /users/ldap/login:
+   * /users/{method}/login:
    *   post:
-   *     summary: LDAP login (2.8 route)
-   *     description: Kept for 2.8 clients. Same as /users/auth/ldap/verify, with the provider in providerId.
+   *     summary: Form login (2.8 route)
+   *     description: Kept for 2.8 clients, which call /users/ldap/login. Same as /users/auth/{method}/verify, with the provider in providerId.
    *     tags:
    *       - Auth
+   *     parameters:
+   *       - in: path
+   *         name: method
+   *         required: true
+   *         schema:
+   *           type: string
    *     responses:
    *       200:
    *         description: Login successful, or a second factor is required.
    *       401:
    *         description: Invalid credentials.
    *       404:
-   *         description: LDAP is not available.
+   *         description: That login method is not available.
    */
-  router.post("/ldap/login", (req, res) =>
+  router.post("/:method/login", (req, res) =>
     verifyFormLogin(
       req,
       res,
-      "ldap",
+      String(req.params.method),
       req.body?.providerId != null ? String(req.body.providerId) : null,
     ),
   );

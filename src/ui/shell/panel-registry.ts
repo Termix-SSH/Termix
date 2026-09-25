@@ -24,7 +24,6 @@ export interface PanelDef {
 const registry = createRegistry<PanelDef>();
 
 export const registerPanel = registry.register;
-export const unregisterPanel = registry.unregister;
 export const getPanel = registry.get;
 export const listPanels = registry.list;
 export const usePanels = registry.useList;

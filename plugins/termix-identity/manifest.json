@@ -38,7 +38,16 @@
         "descriptionKey": "permissions.use.description",
         "defaultRoles": ["admin", "user"]
       }
-    ]
+    ],
+    "http": {
+      "legacyRedirects": [
+        {
+          "from": "/termix-id/u",
+          "to": "/u",
+          "status": 308
+        }
+      ]
+    }
   },
   "locales": "locales",
   "platforms": ["linux", "win32", "darwin"]

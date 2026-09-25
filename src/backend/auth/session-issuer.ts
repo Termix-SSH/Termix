@@ -27,9 +27,7 @@ export function isNativeAppRequest(req: Request): boolean {
 }
 
 /** Cookie lifetime: 30 days when remembered, else session_timeout_hours. */
-export async function sessionCookieMaxAge(
-  rememberMe: boolean,
-): Promise<number> {
+async function sessionCookieMaxAge(rememberMe: boolean): Promise<number> {
   if (rememberMe) return THIRTY_DAYS_MS;
   const value = await createCurrentSettingsRepository().get(
     "session_timeout_hours",

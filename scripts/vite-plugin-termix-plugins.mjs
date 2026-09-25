@@ -1,9 +1,8 @@
 /**
  * Makes the shell a host for plugin bundles.
  *
- * - Every shared module (React, i18next, the SDK, and the legacy core modules
- *   bundled plugins still import) becomes an entry chunk, reached through a
- *   stable shim at dist/shared/<name>.js.
+ * - Every shared module (React, i18next and the SDK) becomes an entry chunk,
+ *   reached through a stable shim at dist/shared/<name>.js.
  * - index.html gets an import map pointing those bare specifiers at the shims,
  *   so a plugin bundle's `import "react"` lands on the shell's React.
  * - In `vite dev`, src/ui/plugin-host/workspace-plugins.ts is replaced with
@@ -17,7 +16,6 @@ import { createRequire } from "node:module";
 import {
   importMapCspHash,
   productionImportMap,
-  resolveLegacyCoreFile,
   sharedModules,
   shimName,
   shimPath,
@@ -86,13 +84,7 @@ export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
     if (specifier === "@termix/plugin-sdk/frontend") {
       return sourceFacade(sdkFrontendEntry);
     }
-    const file = resolveLegacyCoreFile(repoRoot, specifier);
-    if (!file) {
-      throw new Error(
-        `termix-plugin-host: a plugin imports ${specifier}, which does not exist in core`,
-      );
-    }
-    return sourceFacade(file);
+    throw new Error(`termix-plugin-host: ${specifier} is not a shared module`);
   };
 
   return {
@@ -100,7 +92,7 @@ export function termixPluginHost({ repoRoot, sdkUiEntry, sdkFrontendEntry }) {
 
     config(_config, env) {
       command = env.command;
-      shared = sharedModules(repoRoot);
+      shared = sharedModules();
       if (command !== "build") return;
       const input = { index: path.join(repoRoot, "index.html") };
       for (const specifier of shared) {

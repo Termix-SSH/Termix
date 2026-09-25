@@ -16,7 +16,7 @@ interface ResolvedForTerminal {
  * Shared "run this snippet against these terminal tabs" flow, for the few
  * core surfaces (the command palette) that still reach for a snippet
  * directly rather than through the snippets plugin's own panel. Variable
- * resolution runs through the snippets plugin's "snippets.resolveForTerminal"
+ * resolution runs through the snippets plugin's "snippet.resolveForTerminal"
  * action, and sending runs through ssh-terminal's "terminal.sendToSession",
  * since core no longer owns snippet content or a terminal ref.
  */
@@ -57,7 +57,7 @@ export function useSnippetRunner() {
     inputValues: Record<string, string>,
   ) {
     const resolved = (await invokeAction(
-      "snippets.resolveForTerminal",
+      "snippet.resolveForTerminal",
       snippet.id,
       tab.host ?? null,
       inputValues,
@@ -95,7 +95,7 @@ export function useSnippetRunner() {
       };
 
       void invokeAction(
-        "snippets.resolveForTerminal",
+        "snippet.resolveForTerminal",
         snippet.id,
         targets[0]?.host ?? null,
       ).then((result) => {

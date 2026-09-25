@@ -1,4 +1,4 @@
-import { getErrorMessage } from "@/lib/error-message.js";
+import { getErrorMessage } from "./lib/error-message";
 import { toast } from "sonner";
 import type { TFunction } from "i18next";
 import {
@@ -9,7 +9,7 @@ import {
   createTransferProgressTracker,
   type TransferProgressResponse,
   type TransferTimings,
-} from "@/main-axios.ts";
+} from "./api/transfer-api";
 import { TransferProgressToast } from "./components/TransferProgressToast.tsx";
 import {
   markTransferNotified,

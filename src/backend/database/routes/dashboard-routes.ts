@@ -130,7 +130,7 @@ router.get(
  *             properties:
  *               type:
  *                 type: string
- *                 enum: [terminal, file_manager, server_stats, tunnel, docker, telnet, vnc, rdp]
+ *                 description: An activity type a plugin's tab declares, lowercase letters, digits and underscores.
  *               hostId:
  *                 type: integer
  *               hostName:
@@ -177,7 +177,7 @@ router.post(
       if (result.status === "invalid_type") {
         return res.status(400).json({
           error:
-            "Invalid activity type. Must be 'terminal', 'file_manager', 'server_stats', 'tunnel', 'docker', 'telnet', 'vnc', or 'rdp'",
+            "Invalid activity type. Use lowercase letters, digits and underscores.",
         });
       }
       if (result.status === "rate_limited") {

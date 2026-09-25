@@ -653,3 +653,36 @@ describe("named service providers", () => {
     }
   });
 });
+
+describe("contributes.http.legacyRedirects", () => {
+  const withRedirects = (legacyRedirects: unknown) =>
+    validateManifest(base({ contributes: { http: { legacyRedirects } } }));
+
+  it("accepts an old URL outside the plugin's namespace", () => {
+    expect(
+      withRedirects([
+        { from: "/users/oidc/callback", to: "/callback", status: 308 },
+        { from: "/host/old-callback", to: "/callback" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("refuses the plugin framework's own prefixes", () => {
+    expect(
+      withRedirects([{ from: "/plugin-api/other/x", to: "/x" }]).join(),
+    ).toMatch(/cannot be under plugin-api/);
+  });
+
+  it("refuses a relative path, a bad status and unknown keys", () => {
+    const errors = withRedirects([
+      { from: "users/x", to: "/x" },
+      { from: "/a", to: "x" },
+      { from: "/a", to: "/x", status: 302 },
+      { from: "/a", to: "/x", extra: true },
+    ]).join();
+    expect(errors).toMatch(/from must be an absolute path/);
+    expect(errors).toMatch(/to must be a path/);
+    expect(errors).toMatch(/status must be 307 or 308/);
+    expect(errors).toMatch(/extra/);
+  });
+});

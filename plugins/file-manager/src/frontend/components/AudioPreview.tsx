@@ -2,7 +2,7 @@ import React from "react";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import { Music } from "lucide-react";
-import { cn } from "@/lib/utils.ts";
+import { cn } from "@termix/plugin-sdk/ui";
 import { useTranslation } from "react-i18next";
 
 interface FileItem {

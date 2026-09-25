@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@termix/plugin-sdk/ui";
-import type { FileItem } from "@/types/index";
+import type { FileItem } from "./host-types";
 
 type SortBy = "name" | "modified" | "size";
 type SortOrder = "asc" | "desc";

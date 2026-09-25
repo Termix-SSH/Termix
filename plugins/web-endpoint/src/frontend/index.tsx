@@ -8,7 +8,7 @@ import type {
   TabProps,
   TermixApp,
 } from "@termix/plugin-sdk/frontend";
-import type { Host } from "@/types/ui-types";
+import type { PluginHostRecord as Host } from "@termix/plugin-sdk/frontend";
 import type { WebEndpoint } from "../shared/web-endpoint-config";
 import { WebEndpointTab } from "./WebEndpointTab";
 import { HostEditorWebUiSection } from "./HostEditorWebUiSection";

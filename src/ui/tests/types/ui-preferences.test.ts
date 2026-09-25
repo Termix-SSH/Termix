@@ -94,19 +94,17 @@ describe("sanitizeUiOverrides", () => {
     ).toBe(false);
   });
 
+  it("drops the retired homepage area", () => {
+    expect(sanitizeUiOverrides({ homepage: { enabledWidgets: null } })).toEqual(
+      {},
+    );
+  });
+
   it("filters non-strings out of string arrays instead of rejecting them", () => {
     const result = sanitizeUiOverrides({
       rail: { hiddenTabs: ["serial", 7, null, "history"] },
     });
     expect(result.rail?.hiddenTabs).toEqual(["serial", "history"]);
-  });
-
-  it("keeps an explicit null for nullable array knobs", () => {
-    expect(sanitizeUiOverrides({ homepage: { enabledWidgets: null } })).toEqual(
-      {
-        homepage: { enabledWidgets: null },
-      },
-    );
   });
 });
 
@@ -155,12 +153,13 @@ describe("PRESETS.balanced", () => {
     expect(PRESETS.balanced.terminal.toolbarDensity).toBe("labeled");
     expect(PRESETS.balanced.fileManager.viewMode).toBe("grid");
     expect(PRESETS.balanced.hostEditor.mode).toBe("full");
-    expect(PRESETS.balanced.homepage.enabledWidgets).toBeNull();
   });
 
-  it("never lets a preset drive the homepage canvas", () => {
-    expect(PRESETS.simple.homepage.enabledWidgets).toBeNull();
-    expect(PRESETS.advanced.homepage.enabledWidgets).toBeNull();
+  it("keeps core's basics in Simple and hides plugin rail items that do not opt in", () => {
+    expect(PRESETS.simple.rail.hiddenTabs).not.toContain("hosts");
+    expect(PRESETS.simple.rail.hiddenTabs).not.toContain("connections");
+    expect(PRESETS.simple.rail.hidePluginItems).toBe(true);
+    expect(PRESETS.balanced.rail.hidePluginItems).toBeFalsy();
   });
 
   it("leaves the wide dashboard cards off by default in every preset", () => {

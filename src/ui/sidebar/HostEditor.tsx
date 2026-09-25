@@ -34,18 +34,17 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { listSnippets } from "@/lib/snippet-provider";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import { TerminalPreview } from "@/components/terminal-preview/TerminalPreview";
 import {
   createSSHHost,
   updateSSHHost,
-  getSnippets,
   getUserInfo,
   getHostPassword,
   adminCreateUserHost,
   adminUpdateUserHost,
   adminGetHostPassword,
-  adminGetUserSnippets,
   createCredential,
   adminCreateUserCredential,
 } from "@/main-axios";
@@ -240,10 +239,9 @@ export function HostEditor({
   }, []);
 
   useEffect(() => {
-    const loadSnippets = adminTargetUserId
-      ? adminGetUserSnippets(adminTargetUserId)
-      : getSnippets();
-    loadSnippets
+    listSnippets(
+      adminTargetUserId ? { targetUserId: adminTargetUserId } : undefined,
+    )
       .then((res) => setSnippets(mapSnippetResponse(res)))
       .catch(() => {});
   }, [adminTargetUserId]);
@@ -690,7 +688,7 @@ export function HostEditor({
                           onChange={(e) => setField("password", e.target.value)}
                         />
                         <PluginComponent
-                          id="secret-sources.hint"
+                          id="credentials.secretHint"
                           onManage={() => setShowSecretSources((v) => !v)}
                         />
                       </div>
@@ -698,7 +696,7 @@ export function HostEditor({
                     {(authMethod === "password" || authMethod === "key") &&
                       showSecretSources && (
                         <PluginComponent
-                          id="secret-sources.manager"
+                          id="credentials.secretManager"
                           onClose={() => setShowSecretSources(false)}
                         />
                       )}

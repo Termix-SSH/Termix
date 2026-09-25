@@ -21,8 +21,6 @@ import { PluginSettingsRepository } from "./plugin-settings-repository.js";
 import { PluginMigrationRepository } from "./plugin-migration-repository.js";
 import { PluginPermissionGrantRepository } from "./plugin-permission-grant-repository.js";
 import { UserAuthRepository } from "./user-auth-repository.js";
-import { PluginRegistryRepository } from "./plugin-registry-repository.js";
-import { PluginInstallCountRepository } from "./plugin-install-count-repository.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
 import { RbacPermissionRepository } from "./rbac-permission-repository.js";
 import { RecentActivityRepository } from "./recent-activity-repository.js";
@@ -163,9 +161,6 @@ export function createCurrentDismissedAlertRepository(): DismissedAlertRepositor
   );
 }
 
-// File manager recent/pinned/shortcuts moved to the file-manager plugin.
-// Homepage items/layout and dashboard service links moved to the homepage plugin.
-
 export function createCurrentHostFolderRepository(): HostFolderRepository {
   return new HostFolderRepository(
     createCurrentRepositoryContext(),
@@ -273,22 +268,6 @@ export function createCurrentRbacPermissionRepository(): RbacPermissionRepositor
   );
 }
 
-export function createCurrentPluginRegistryRepository(): PluginRegistryRepository {
-  return new PluginRegistryRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("plugin_registry_repository_write"),
-  );
-}
-
-export function createCurrentPluginInstallCountRepository(): PluginInstallCountRepository {
-  return new PluginInstallCountRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryLazyWriteHook(
-      "plugin_install_count_repository_write",
-    ),
-  );
-}
-
 export function createCurrentRbacAccessRepository(): RbacAccessRepository {
   return new RbacAccessRepository(
     createCurrentRepositoryContext(),
@@ -346,9 +325,6 @@ export function createCurrentSshCredentialUsageRepository(): SshCredentialUsageR
     createCurrentRepositoryWriteHook("ssh_credential_usage_repository_write"),
   );
 }
-
-// transfer_recent moved to the file-manager plugin.
-// tmux_session_tags moved to the tmux-monitor plugin.
 
 export function createCurrentTrustedDeviceRepository(): TrustedDeviceRepository {
   return new TrustedDeviceRepository(

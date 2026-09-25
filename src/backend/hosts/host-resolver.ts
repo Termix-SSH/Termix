@@ -15,7 +15,6 @@ import {
   expandOidcUsername,
 } from "./credential-username.js";
 import type { SSHHost } from "../../types/index.js";
-import type { HostAction } from "../utils/permission-manager.js";
 
 const sshLogger = logger;
 
@@ -315,30 +314,4 @@ async function resolveRecipientSshAuth(
   }
 
   return null;
-}
-
-/**
- * Check if a user has access to a host (owner or shared access).
- */
-export async function checkHostAccess(
-  hostId: number,
-  userId: string,
-  hostUserId: string,
-  requiredPermission: HostAction = "connect",
-): Promise<boolean> {
-  if (userId === hostUserId) return true;
-
-  try {
-    const { PermissionManager } =
-      await import("../utils/permission-manager.js");
-    const permissionManager = PermissionManager.getInstance();
-    const accessInfo = await permissionManager.canAccessHost(
-      userId,
-      hostId,
-      requiredPermission,
-    );
-    return accessInfo.hasAccess;
-  } catch {
-    return false;
-  }
 }

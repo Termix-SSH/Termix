@@ -825,6 +825,26 @@
                 "type": "string",
                 "pattern": "^/[a-z][a-z0-9-]*(/[A-Za-z0-9_.-]+)+$"
               }
+            },
+            "legacyRedirects": {
+              "type": "array",
+              "description": "Old URLs outside the plugin's namespace, redirected to a path in its router with the rest of the path and the query kept.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["from", "to"],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "pattern": "^(/[A-Za-z0-9_.-]+)+$"
+                  },
+                  "to": {
+                    "type": "string",
+                    "pattern": "^(/[A-Za-z0-9_.-]+)+$"
+                  },
+                  "status": { "enum": [307, 308] }
+                }
+              }
             }
           }
         },

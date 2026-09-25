@@ -31,13 +31,13 @@ import {
   Trash2,
 } from "lucide-react";
 import {
-  getSSHHosts,
   getTransferRecent,
   getTransferMethodPreview,
   type TransferDestination,
   type TransferMethodPreference,
   type TransferMethodPreview,
-} from "@/main-axios.ts";
+} from "../api/transfer-api";
+import { getSSHHosts } from "../api/hosts";
 import {
   getSSHStatus,
   browseSSHDirectory,
@@ -49,7 +49,7 @@ import {
   addFolderShortcut,
   removeFolderShortcut,
 } from "../api/file-manager-data-api";
-import type { SSHHost } from "@/types";
+import type { SSHHost } from "../host-types";
 
 interface FileItem {
   name: string;

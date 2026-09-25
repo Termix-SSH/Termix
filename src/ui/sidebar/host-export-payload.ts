@@ -15,7 +15,7 @@ export interface ExportPayload {
   hosts: Record<string, unknown>[];
 }
 
-export const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
+const FIELD_GROUP_KEYS: Record<FieldGroup, string[]> = {
   connection: [
     "connectionType",
     "name",

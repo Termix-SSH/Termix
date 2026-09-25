@@ -1,7 +1,7 @@
 import dns from "dns/promises";
 import net from "net";
 
-export const SSH_DNS_RETRY_DELAYS_MS = [250, 750, 1500];
+const SSH_DNS_RETRY_DELAYS_MS = [250, 750, 1500];
 
 type Lookup = typeof dns.lookup;
 type Sleep = (ms: number) => Promise<void>;

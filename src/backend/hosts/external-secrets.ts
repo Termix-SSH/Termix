@@ -1,7 +1,4 @@
-import {
-  getSecretResolver,
-  requireSecretResolver,
-} from "./connect/secret-resolver-registry.js";
+import { requireSecretResolver } from "./connect/secret-resolver-registry.js";
 
 /**
  * Expands "<scheme>://..." references ("op://vault/item/field" for 1Password
@@ -17,7 +14,7 @@ import {
  * cached briefly in memory; a rotated secret shows up within CACHE_TTL_MS.
  */
 
-export const SECRET_FIELDS = [
+const SECRET_FIELDS = [
   "password",
   "key",
   "keyPassword",
@@ -90,9 +87,4 @@ export async function resolveExternalSecretRefs(
     if (!isSecretReference(value)) continue;
     host[field] = await resolveSecretReference(userId, value, deps);
   }
-}
-
-/** Whether any plugin currently resolves this reference's scheme. */
-export function hasSecretResolverFor(reference: string): boolean {
-  return !!getSecretResolver(referenceScheme(reference));
 }

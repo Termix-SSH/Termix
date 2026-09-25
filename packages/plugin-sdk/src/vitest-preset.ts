@@ -75,6 +75,8 @@ export function pluginVitestConfig(
             "plugin-host",
             "testing-host.tsx",
           ),
+          // Core's own modules behind sdk-ui and the test host import each
+          // other this way. Plugin code may not (eslint refuses it).
           "@/types": path.join(repoRoot, "src", "types"),
           "@": path.join(repoRoot, "src", "ui"),
         }

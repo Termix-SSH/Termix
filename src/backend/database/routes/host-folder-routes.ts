@@ -396,10 +396,7 @@ export function registerHostFolderRoutes(
         const hostIds = hostsToDelete.map((host) => host.id);
 
         if (hostIds.length > 0) {
-          // file manager recent/pinned/shortcuts, transfer_recent, command
-          // history and session recordings cascade on the host's refHost()
-          // foreign key, as the file-manager, ssh-terminal and
-          // session-recording plugins' adopted tables.
+          // Plugin rows tied to a host cascade on their refHost() foreign keys.
 
           await createCurrentSshCredentialUsageRepository().deleteByHostIds(
             hostIds,

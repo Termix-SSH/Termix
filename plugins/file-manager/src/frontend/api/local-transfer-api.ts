@@ -12,9 +12,9 @@
 import type {
   LocalTransferOrigin,
   LocalTransferProgress,
-} from "@/types/electron";
-import { getSessionOrigin } from "@/main-axios";
-import { getDeviceId } from "@/lib/device-id";
+} from "@termix/plugin-sdk/ui";
+import { getSessionOrigin } from "./client";
+import { getDeviceId } from "@termix/plugin-sdk/ui";
 
 export interface LocalTransferProgressEvent {
   transferred: number;

@@ -32,10 +32,7 @@ export async function deleteOwnedHost(
     );
   if (!host) return null;
 
-  // file manager recent/pinned/shortcuts, transfer_recent, command history
-  // and session recordings cascade on the host's refHost() foreign key, as
-  // the file-manager, ssh-terminal and session-recording plugins' adopted
-  // tables.
+  // Plugin rows tied to a host cascade on their refHost() foreign keys.
   await createCurrentSshCredentialUsageRepository().deleteByHostId(hostId);
   await createCurrentRecentActivityRepository().deleteByHostId(hostId);
   await createCurrentRbacAccessRepository().deleteHostAccessForHost(hostId);

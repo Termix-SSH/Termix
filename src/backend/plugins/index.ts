@@ -431,7 +431,8 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   await pluginLoader.activate(pluginId);
 
   // A plugin enabled without a restart still needs its 2.8 data copied.
-  const { runPluginDataMigrations } = await import("./boot-migrations.js");
+  const { runPluginDataMigrations } =
+    await import("../upgrade/boot-migrations.js");
   await runPluginDataMigrations();
 }
 

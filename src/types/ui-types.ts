@@ -1,4 +1,4 @@
-import type { TerminalConfig } from "./index.js";
+import type { SSHAuthType, TerminalConfig } from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
 export type Host = {
@@ -23,16 +23,7 @@ export type Host = {
   ram: number | null;
   lastAccess: string;
   tags?: string[];
-  authType:
-    | "password"
-    | "key"
-    | "credential"
-    | "none"
-    | "opkssh"
-    | "stepca"
-    | "tailscale"
-    | "vault"
-    | "agent";
+  authType: SSHAuthType;
   shareSshAuth?: boolean;
   credentialId?: string;
   overrideCredentialUsername?: boolean;
@@ -146,35 +137,15 @@ export type HostFolder = {
   sortOrder?: number | null;
 };
 
-export type KnownTabType =
+/** Core's own tab types. Plugins register theirs at runtime. */
+type KnownTabType =
   | "dashboard"
-  | "terminal"
-  | "local-terminal"
-  | "rdp"
-  | "vnc"
-  | "telnet"
-  | "host-metrics"
-  | "proxmox-stats"
-  | "files"
   | "host-manager"
   | "user-profile"
   | "admin-settings"
-  | "docker"
-  | "tunnel"
-  | "sftp"
-  | "web-endpoint"
-  | "network_graph"
-  | "tmux_monitor" // --- tmux-monitor ---
-  | "serial"
-  | "homepage"
-  | "fleet-inventory"
   // Rail panels that can also open full-width in the main area.
-  | "session-logs"
-  | "snippets"
   | "macros"
-  | "history"
   | "ssh-tools"
-  | "automations"
   | "split-screen";
 
 /**
@@ -273,8 +244,8 @@ export type UiFontId =
   | "source-code-pro"
   | "caskaydia-cove";
 
-export type ToolsTab =
-  "ssh-tools" | "snippets" | "macros" | "history" | "split-screen";
+/** A tools panel view: core's own, or a rail panel a plugin registered. */
+export type ToolsTab = "ssh-tools" | "macros" | "split-screen" | (string & {});
 export type SplitMode =
   | "none"
   | "2-way"
@@ -311,7 +282,7 @@ export type WorkspaceTabSnapshot = {
 };
 
 /** One dock's arrangement. `view` is a RailView, or null when the dock is closed. */
-export type WorkspaceDockState = {
+type WorkspaceDockState = {
   view: string | null;
   open: boolean;
   width: number;
@@ -344,7 +315,7 @@ export type Snippet = {
   isNote?: boolean;
 };
 
-export const FOLDER_ICONS = [
+const FOLDER_ICONS = [
   "folder",
   "server",
   "cloud",
@@ -356,12 +327,4 @@ export const FOLDER_ICONS = [
   "cpu",
   "globe",
 ] as const;
-export type FolderIconId = (typeof FOLDER_ICONS)[number];
-
-export type SnippetFolder = {
-  id: number;
-  name: string;
-  color: string;
-  icon: FolderIconId;
-  open: boolean;
-};
+type FolderIconId = (typeof FOLDER_ICONS)[number];

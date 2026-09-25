@@ -272,9 +272,6 @@ export const hosts = pgTable(
   ],
 );
 
-// file_manager_recent, file_manager_pinned, file_manager_shortcuts and
-// transfer_recent moved to the file-manager plugin (p_file_manager_*).
-
 export const dismissedAlerts = pgTable(
   "dismissed_alerts",
   {
@@ -317,7 +314,6 @@ export const sshCredentials = pgTable(
   detectedKeyType: text("detected_key_type"),
 
   certPublicKey: text("cert_public_key"),
-
 
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
@@ -725,11 +721,6 @@ export const uiPreferences = pgTable("ui_preferences", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-// dashboard_service_links moved to the homepage plugin (p_homepage_dashboard_service_links).
-
-// termix_identities, termix_identity_keys and termix_identity_ca moved to the
-// termix-identity plugin (p_termix_identity_*).
-
 // --- alerts begin ---
 export const notificationChannels = pgTable("notification_channels", {
   id: serial("id").primaryKey(),
@@ -745,12 +736,6 @@ export const notificationChannels = pgTable("notification_channels", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- alerts end ---
-
-
-// homepage_items and homepage_layouts moved to the homepage plugin
-// (p_homepage_homepage_items, p_homepage_homepage_layouts).
-
-
 
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync
@@ -769,14 +754,11 @@ export const syncTombstones = pgTable("sync_tombstones", {
 });
 // --- sync end ---
 
-// --- collab rooms ---
-
 // --- credential sharing ---
 
 /**
- * Who may use or manage someone else's credential. Same shape as
- * snippet_access; "use" attaches it to hosts and connects, "manage" also
- * edits and re-shares it.
+ * Who may use or manage someone else's credential. "use" attaches it to
+ * hosts and connects, "manage" also edits and re-shares it.
  */
 export const credentialAccess = pgTable(
   "credential_access",

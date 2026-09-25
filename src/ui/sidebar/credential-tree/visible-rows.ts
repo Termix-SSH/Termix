@@ -17,7 +17,7 @@ export function isFolder(
   return "children" in item;
 }
 
-export function credentialMatchesQuery(cred: Credential, query: string) {
+function credentialMatchesQuery(cred: Credential, query: string) {
   return (
     cred.name.toLowerCase().includes(query) ||
     cred.username.toLowerCase().includes(query) ||

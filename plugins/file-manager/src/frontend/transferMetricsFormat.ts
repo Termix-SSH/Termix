@@ -3,7 +3,7 @@ import {
   formatDurationMs,
   formatTransferMbPerSec,
   type TransferTimings,
-} from "@/main-axios.ts";
+} from "./api/transfer-api";
 
 export function createFormatTransferMetrics(t: TFunction) {
   return (timings?: TransferTimings): string => {

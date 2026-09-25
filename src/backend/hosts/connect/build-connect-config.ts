@@ -15,6 +15,7 @@ import type {
   SshAuthOutcome,
   SshAuthProvider,
   SshConnectHost,
+  SshConnectProfile,
   SshConnectPurpose,
 } from "./types.js";
 
@@ -48,8 +49,7 @@ const BASIC_ENV: Record<string, string> = {
   LC_ALL: "en_US.UTF-8",
 };
 
-// The values each transport used before it moved onto the pipeline.
-const PURPOSE_DEFAULTS: Record<SshConnectPurpose, PurposeDefaults> = {
+const PROFILE_DEFAULTS: Record<SshConnectProfile, PurposeDefaults> = {
   terminal: {
     keepaliveIntervalMs: 30000,
     keepaliveCountMax: 5,
@@ -58,116 +58,55 @@ const PURPOSE_DEFAULTS: Record<SshConnectPurpose, PurposeDefaults> = {
     socketTimeout: 120000,
     env: TERMINAL_ENV,
   },
-  "file-manager": {
+  session: {
     keepaliveIntervalMs: 60000,
     keepaliveCountMax: 5,
     hostKeepalive: true,
     readyTimeout: 60000,
     env: TERMINAL_ENV,
   },
-  "file-transfer": {
+  stream: {
     keepaliveIntervalMs: 30000,
     keepaliveCountMax: 120,
     hostKeepalive: false,
     readyTimeout: 60000,
     env: null,
   },
-  tmux: {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 60000,
-    env: null,
-  },
-  metrics: {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 30000,
-    env: BASIC_ENV,
-  },
-  fleet: {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 30000,
-    env: BASIC_ENV,
-  },
-  tunnel: {
+  forward: {
     keepaliveIntervalMs: 30000,
     keepaliveCountMax: 3,
     hostKeepalive: true,
     readyTimeout: 60000,
     env: null,
   },
-  docker: {
-    keepaliveIntervalMs: 60000,
-    keepaliveCountMax: 5,
-    hostKeepalive: true,
-    readyTimeout: 60000,
-    env: TERMINAL_ENV,
-  },
-  "docker-console": {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 120,
-    hostKeepalive: false,
-    readyTimeout: 60000,
-    env: null,
-  },
-  proxmox: {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 20000,
-    env: null,
-  },
-  snippet: {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 30000,
-    env: null,
-  },
-  "credential-deploy": {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 30000,
-    env: null,
-  },
-  "jump-host": {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 60000,
-    env: null,
-  },
-  "remote-desktop": {
-    keepaliveIntervalMs: 30000,
-    keepaliveCountMax: 3,
-    hostKeepalive: false,
-    readyTimeout: 60000,
-    env: null,
-  },
-  plugin: {
+  background: {
     keepaliveIntervalMs: 30000,
     keepaliveCountMax: 3,
     hostKeepalive: false,
     readyTimeout: 30000,
     env: BASIC_ENV,
+  },
+  jump: {
+    keepaliveIntervalMs: 30000,
+    keepaliveCountMax: 3,
+    hostKeepalive: false,
+    readyTimeout: 60000,
+    env: null,
   },
 };
 
-export function getPurposeDefaults(
-  purpose: SshConnectPurpose,
+export function getProfileDefaults(
+  profile: SshConnectProfile = "background",
 ): PurposeDefaults {
-  return PURPOSE_DEFAULTS[purpose];
+  return PROFILE_DEFAULTS[profile];
 }
 
 export interface BuildConnectConfigOptions {
   /** Acting user: host key trust, certificates and tokens are per user. */
   userId: string;
   purpose: SshConnectPurpose;
+  /** Keepalive and timeout defaults. Defaults to "background". */
+  profile?: SshConnectProfile;
   client: Client;
   /** Server-side host id when it differs from host.id (sync-id lookups). */
   serverHostId?: number;
@@ -188,7 +127,7 @@ export interface BuiltConnectConfig {
 
 const noopLog: SshAuthLog = () => {};
 
-export function stripIpv6Brackets(ip: string): string {
+function stripIpv6Brackets(ip: string): string {
   return ip?.replace(/^\[|\]$/g, "") || ip;
 }
 
@@ -202,10 +141,11 @@ export async function buildConnectConfig(
 ): Promise<BuiltConnectConfig> {
   ensureCoreSshAuthProviders();
 
-  const defaults = PURPOSE_DEFAULTS[options.purpose];
+  const profile = options.profile ?? "background";
+  const defaults = PROFILE_DEFAULTS[profile];
   const authType = host.authType || "none";
   const serverHostId = options.serverHostId ?? host.id;
-  const isJumpHost = options.purpose === "jump-host";
+  const isJumpHost = profile === "jump";
   const terminalConfig = (host.terminalConfig ?? undefined) as
     Record<string, unknown> | undefined;
 

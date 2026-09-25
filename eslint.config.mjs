@@ -5,6 +5,49 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 import { globalIgnores } from "eslint/config";
+import path from "node:path";
+
+// A plugin may import @termix/plugin-sdk, npm packages and its own files.
+// A relative path that climbs out of plugins/<id>/ reaches core or another
+// plugin, and "@/..." is core's alias.
+const pluginBoundary = {
+  rules: {
+    "stay-inside": {
+      meta: {
+        type: "problem",
+        messages: {
+          core: "A plugin reaches core only through @termix/plugin-sdk. Use an SDK API, or add one.",
+          outside:
+            "A plugin cannot import files outside its own folder. Use the SDK, ctx.services, events, actions or slots.",
+        },
+      },
+      create(context) {
+        const file = context.filename.replace(/\\/g, "/");
+        const root = /^(.*\/plugins\/[^/]+)\//.exec(file)?.[1];
+        const check = (node, source) => {
+          if (typeof source !== "string") return;
+          if (source === "@" || source.startsWith("@/")) {
+            context.report({ node, messageId: "core" });
+            return;
+          }
+          if (!root || !source.startsWith(".")) return;
+          const target = path.posix.normalize(
+            path.posix.join(path.posix.dirname(file), source),
+          );
+          if (target !== root && !target.startsWith(`${root}/`)) {
+            context.report({ node, messageId: "outside" });
+          }
+        };
+        return {
+          ImportDeclaration: (node) => check(node, node.source.value),
+          ExportNamedDeclaration: (node) => check(node, node.source?.value),
+          ExportAllDeclaration: (node) => check(node, node.source.value),
+          ImportExpression: (node) => check(node, node.source.value),
+        };
+      },
+    },
+  },
+};
 
 export default tseslint.config([
   globalIgnores([
@@ -108,17 +151,10 @@ export default tseslint.config([
     // Core must not reach into a plugin. A plugin can be disabled, upgraded
     // or removed, so an import from core turns "disabled" into a broken
     // build rather than a missing feature. Core talks to plugins through the
-    // runtime in src/backend/plugins/ and the dispatchers in
-    // database/routes/*-dispatch.ts, both of which handle absence.
-    //
-    // Tests are exempt: they import a plugin's modules on purpose to test
-    // them, and until A2 gives each plugin its own suite they live under
-    // src/*/tests/plugins/.
+    // runtime in src/backend/plugins/, which handles absence. Core tests only
+    // use fixture plugins.
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/**/tests/**"],
     rules: {
-      // An error for the backend, which has dispatchers to register through
-      // and no remaining offenders.
       "no-restricted-imports": [
         "error",
         {
@@ -126,7 +162,7 @@ export default tseslint.config([
             {
               group: ["**/plugins/*/src/backend/**"],
               message:
-                "Core must not import a plugin backend. Register a dispatcher or an SDK service instead, so disabling the plugin degrades cleanly.",
+                "Core must not import a plugin backend. Go through the plugin runtime, so disabling the plugin degrades cleanly.",
             },
           ],
         },
@@ -139,7 +175,6 @@ export default tseslint.config([
     // also carries the backend rule for src/ui files, because flat config
     // replaces a rule's options rather than merging them.
     files: ["src/ui/**/*.{ts,tsx}", "src/main.tsx"],
-    ignores: ["src/ui/tests/**"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -156,53 +191,12 @@ export default tseslint.config([
     },
   },
   {
-    // The other direction. A plugin is supposed to talk to core only through
-    // @termix/plugin-sdk, which is the contract D1 finishes enforcing.
-    //
-    // Only the backend is fenced today. Plugin backends reach core by
-    // relative path (../../../src/backend/...) and plugin frontends use the
-    // "@/" alias for shared UI, both of which are the "legacy core imports"
-    // debt recorded in packages/plugin-sdk/ARCHITECTURE.md: the SDK does not
-    // yet expose the SSH pool, host resolution, repositories or the
-    // component library. A7 moves the frontends onto the app object and D1
-    // moves the backends onto SDK APIs, and this rule tightens to match.
-    //
-    // What it already catches: a plugin backend importing the frontend tree,
-    // which is not debt in any direction, just a mistake.
-    files: ["plugins/*/src/backend/**/*.{ts,mjs}"],
+    // The other direction. A plugin reaches core only through
+    // @termix/plugin-sdk, and never reaches into another plugin's source.
+    files: ["plugins/*/src/**/*.{ts,tsx,mjs}", "plugins/*/tests/**/*.{ts,tsx}"],
+    plugins: { "termix-plugins": pluginBoundary },
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["@/*", "**/src/ui/**"],
-              message:
-                "A plugin backend cannot import frontend code. Import from @termix/plugin-sdk, or use a relative path within the plugin.",
-            },
-          ],
-        },
-      ],
-      // A second rule name rather than a second pattern, because flat config
-      // replaces a rule's options rather than merging them: one rule cannot
-      // carry both severities, and folding this into the error above would
-      // fail the build on debt that has nowhere to go yet.
-      //
-      // scripts/plugin-boundary-allowlist.json holds today's offenders and
-      // scripts/check-plugin-boundaries.cjs fails on a new one. D1 empties
-      // the list and this becomes an error.
-      "@typescript-eslint/no-restricted-imports": [
-        "warn",
-        {
-          patterns: [
-            {
-              group: ["**/src/backend/**", "**/src/types/**"],
-              message:
-                "A plugin should reach core through @termix/plugin-sdk. This relative import is legacy debt tracked in scripts/plugin-boundary-allowlist.json.",
-            },
-          ],
-        },
-      ],
+      "termix-plugins/stay-inside": "error",
     },
   },
 ]);

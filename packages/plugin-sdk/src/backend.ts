@@ -737,19 +737,17 @@ export interface PluginSshHost {
 }
 
 /** Picks keepalive and timeout defaults. "plugin" is the generic one. */
-export type PluginSshPurpose =
-  | "plugin"
-  | "docker"
-  | "docker-console"
-  | "metrics"
-  | "proxmox"
-  | "fleet"
-  | "remote-desktop"
-  | "tunnel"
-  | "file-manager"
-  | "file-transfer"
-  | "terminal"
-  | "tmux";
+/** What a connection is for, as a free label. Auth providers see it. */
+export type PluginSshPurpose = string;
+
+/**
+ * Keepalive, timeout and environment defaults for a kind of connection.
+ * terminal: an interactive shell. session: a long-lived browsing session.
+ * stream: a long transfer or console. forward: port forwarding. background
+ * (the default): short exec work such as polling.
+ */
+export type PluginSshProfile =
+  "terminal" | "session" | "stream" | "forward" | "background";
 
 export type PluginSshAuthOutcome =
   | { status: "ready" }
@@ -868,6 +866,8 @@ export interface PluginSshPromptChannel {
 
 export interface PluginSshConnectOptions {
   purpose?: PluginSshPurpose;
+  /** Keepalive and timeout defaults. Defaults to "background". */
+  profile?: PluginSshProfile;
   /** Overall time to reach "ready". Defaults to 30s. */
   timeoutMs?: number;
   /** Without one, the stored password answers password prompts. */
@@ -956,6 +956,8 @@ export interface PluginSsh {
     host: PluginSshHost,
     options: {
       purpose?: PluginSshPurpose;
+      /** Keepalive and timeout defaults. Defaults to "background". */
+      profile?: PluginSshProfile;
       client: unknown;
       /** Server-side host id when it differs from host.id. */
       serverHostId?: number;
@@ -1079,6 +1081,11 @@ export interface PluginSshAuthProvider {
   requiresSecret?: boolean;
   /** Can connect unattended. Defaults to true. */
   supportsBackground?: boolean;
+  /**
+   * Works for a host that was never saved (nothing in host settings, no host
+   * id to key a cache on), so Quick Connect offers it. Default false.
+   */
+  quickConnect?: boolean;
   /** Interaction name its outcomes use, for startInteraction routing. */
   interaction?: string;
   connectOptions?: (

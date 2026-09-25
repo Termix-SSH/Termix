@@ -21,7 +21,6 @@ import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { applyPresetSideEffects } from "@/lib/apply-ui-preset";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import {
-  HOMEPAGE_AREA_KEY,
   UI_AREA_KEYS,
   type UiAreaKey,
   type UiPreset,
@@ -38,9 +37,6 @@ const PRESET_ICONS = {
   balanced: Gauge,
   advanced: Wrench,
 } as const;
-
-/** Areas that have nothing worth listing as a per-area override. */
-const HIDDEN_OVERRIDE_AREAS = new Set<UiAreaKey>([HOMEPAGE_AREA_KEY]);
 
 export function InterfacePresetSettings({
   onRunSetupAgain,
@@ -67,9 +63,7 @@ export function InterfacePresetSettings({
       Record<string, unknown> | undefined
     >;
     const core = UI_AREA_KEYS.filter(
-      (area) =>
-        !HIDDEN_OVERRIDE_AREAS.has(area) &&
-        Object.keys(overrides[area] ?? {}).length > 0,
+      (area) => Object.keys(overrides[area] ?? {}).length > 0,
     ).map((area) => ({
       key: area as string,
       label: t(`newUi.sidebar.userProfile.uiArea_${area}`),

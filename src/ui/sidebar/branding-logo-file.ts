@@ -1,6 +1,6 @@
 export const BRANDING_LOGO_MAX_BYTES = 750 * 1024;
 export const BRANDING_LOGO_ACCEPT = "image/png,image/jpeg,image/webp";
-export const BRANDING_LOGO_ACCEPTED_TYPES = new Set([
+const BRANDING_LOGO_ACCEPTED_TYPES = new Set([
   "image/png",
   "image/jpeg",
   "image/webp",

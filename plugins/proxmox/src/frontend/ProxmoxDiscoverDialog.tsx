@@ -1,31 +1,26 @@
 import { useRef, useState } from "react";
-import type { HostData } from "@/types/index";
 import { useTranslation } from "@termix/plugin-sdk/frontend";
 import { Server, RefreshCw, CheckSquare, Square, Download } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
+import { Button } from "@termix/plugin-sdk/ui";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/dialog";
-import { Select2 } from "@/components/select2";
-import {
-  discoverProxmoxGuestsStream,
-  bulkImportSSHHosts,
-  getSSHHosts,
-} from "@/main-axios";
-import type { SSHHostWithStatus } from "@/main-axios";
-import type { ProxmoxGuest } from "@/types/proxmox";
+} from "@termix/plugin-sdk/ui";
+import { Select2 } from "@termix/plugin-sdk/ui";
+import { discoverProxmoxGuestsStream, importProxmoxHosts } from "./proxmox-api";
+import { listHosts, type PluginHostRecord } from "@termix/plugin-sdk/frontend";
+import type { ProxmoxGuest } from "./types";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth";
 
 interface ProxmoxDiscoverDialogProps {
   open: boolean;
   onClose: () => void;
-  hosts: SSHHostWithStatus[];
-  onHostsChanged: (hosts: SSHHostWithStatus[]) => void;
+  hosts: PluginHostRecord[];
+  onHostsChanged: (hosts: PluginHostRecord[]) => void;
   /** Pre-select a specific host and skip the host picker */
   preselectedHostId?: number;
   /** Credential to use for imported hosts */
@@ -69,7 +64,11 @@ export function ProxmoxDiscoverDialog({
   // When opened from the dropdown (no preselectedHostId), only show Proxmox-enabled hosts
   const sshHosts = hosts.filter(
     (h) =>
-      !("isFolder" in h) && h.pluginSettings?.proxmox?.enableProxmox === true,
+      !("isFolder" in h) &&
+      (
+        h.pluginSettings as
+          Record<string, Record<string, unknown> | undefined> | undefined
+      )?.proxmox?.enableProxmox === true,
   );
 
   // The Proxmox host the discovery runs against — imported guests are grouped
@@ -189,11 +188,11 @@ export function ProxmoxDiscoverDialog({
       }));
 
       const result = toImport.length
-        ? await bulkImportSSHHosts(toImport as unknown as HostData[], false)
-        : { success: 0, updated: 0, skipped: 0, failed: 0 };
+        ? await importProxmoxHosts(toImport)
+        : { success: 0, failed: 0, errors: [] };
 
       if (toImport.length) {
-        const updated = await getSSHHosts();
+        const updated = await listHosts();
         onHostsChanged(updated);
         window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       }
@@ -201,9 +200,6 @@ export function ProxmoxDiscoverDialog({
       const msg = [
         result.success
           ? t("hosts.proxmoxResultImported", { count: result.success })
-          : null,
-        result.updated
-          ? t("hosts.proxmoxResultUpdated", { count: result.updated })
           : null,
         result.failed
           ? t("hosts.proxmoxResultFailed", { count: result.failed })

@@ -26,7 +26,7 @@ const PEM_CERT =
   /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g;
 
 /** The leaf is the first certificate in a full chain. */
-export function splitPemChain(pem: string): string[] {
+function splitPemChain(pem: string): string[] {
   return pem.match(PEM_CERT) ?? [];
 }
 
@@ -51,7 +51,7 @@ function isSelfSigned(cert: X509Certificate): boolean {
   }
 }
 
-export function describeCertificate(cert: X509Certificate): TlsCertificateInfo {
+function describeCertificate(cert: X509Certificate): TlsCertificateInfo {
   return {
     subject: cert.subject.replace(/\n/g, ", "),
     issuer: cert.issuer.replace(/\n/g, ", "),

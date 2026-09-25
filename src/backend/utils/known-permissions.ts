@@ -19,7 +19,7 @@ function isConcretePermission(permission: string): boolean {
  *
  * The backfill is what makes the upgrade lossless. Before A5 a plugin
  * permission existed only in memory while its plugin was active, so an install
- * upgrading with the ai plugin disabled would have had `ai.use` rejected on the
+ * upgrading with a plugin disabled would have had `<plugin>.use` rejected on the
  * next role save. Seeding from the roles themselves means anything an admin was
  * already relying on stays valid, whether or not the plugin ever loads again.
  */

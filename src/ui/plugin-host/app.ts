@@ -118,6 +118,7 @@ export function createPluginApp(
           labelKey: key(item.titleKey),
           kind: item.kind === "tab" ? "tab" : undefined,
           hideable: item.hideable,
+          simplePreset: item.simplePreset,
           promotable: item.promotable,
           rightDockable: item.rightDockable,
           mobilePrimary: item.mobilePrimary,

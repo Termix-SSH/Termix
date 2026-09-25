@@ -2,25 +2,19 @@ import type { Client, ConnectConfig } from "ssh2";
 import type { WebSocket } from "ws";
 
 /**
- * What a connection is for. Picks keepalive and timeout defaults so every
- * transport keeps the numbers it had before the pipeline existed.
+ * What a connection is for, as a free label ("terminal", "metrics"). Auth
+ * providers see it; core attaches no meaning to any value.
  */
-export type SshConnectPurpose =
-  | "terminal"
-  | "file-manager"
-  | "file-transfer"
-  | "tmux"
-  | "metrics"
-  | "fleet"
-  | "tunnel"
-  | "docker"
-  | "docker-console"
-  | "proxmox"
-  | "snippet"
-  | "credential-deploy"
-  | "jump-host"
-  | "remote-desktop"
-  | "plugin";
+export type SshConnectPurpose = string;
+
+/**
+ * Keepalive, timeout and environment defaults for a kind of connection.
+ * terminal: an interactive shell. session: a long-lived browsing session.
+ * stream: a long transfer or console. forward: port forwarding. background:
+ * short exec work such as polling. jump: a hop in a jump chain (core only).
+ */
+export type SshConnectProfile =
+  "terminal" | "session" | "stream" | "forward" | "background" | "jump";
 
 /** The resolved host fields the pipeline reads. */
 export interface SshConnectHost {
@@ -169,12 +163,17 @@ export interface SshAuthProvider {
    * true; false for types that need a person or a fresh browser sign-in.
    */
   supportsBackground?: boolean;
+  /**
+   * Works for a host that was never saved, so Quick Connect offers it.
+   * Default false.
+   */
+  quickConnect?: boolean;
   /** Overrides applied to the base config before prepare runs. */
   connectOptions?: (
     host: SshConnectHost,
     purpose: SshConnectPurpose,
   ) => Partial<MutableConnectConfig>;
-  /** The interaction name this provider's outcomes use, e.g. "opkssh". */
+  /** The interaction name this provider's outcomes use, e.g. "browser-signin". */
   interaction?: string;
   /**
    * Starts the browser step behind an `interaction-required` outcome, for

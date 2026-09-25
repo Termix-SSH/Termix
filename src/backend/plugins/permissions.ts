@@ -15,8 +15,6 @@
 import { createCurrentPluginPermissionGrantRepository } from "../database/repositories/factory.js";
 import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 
-export { PluginCapabilityError };
-
 const cache = new Map<string, Set<string>>();
 
 export function invalidatePluginPermissionCache(pluginId?: string): void {

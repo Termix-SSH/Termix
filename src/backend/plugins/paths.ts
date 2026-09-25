@@ -47,10 +47,6 @@ export function getBundledPluginsDir(): string {
   return candidates[0];
 }
 
-export function getPluginDir(pluginId: string): string {
-  return path.join(getPluginsDir(), pluginId);
-}
-
 /** The backend entry, from the manifest's own `backend` field. */
 export function getPluginBackendEntry(
   pluginDir: string,

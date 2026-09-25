@@ -9,9 +9,11 @@ type QuickConnectInput = Pick<
   /** A plugin protocol; SSH when omitted. */
   protocol?: HostProtocolDef;
   domain?: string;
+  /** Fields a plugin's SSH auth editor filled in. */
+  authFields?: Record<string, unknown>;
 };
 
-export const QUICK_CONNECT_ID_PREFIX = "quick-connect-";
+const QUICK_CONNECT_ID_PREFIX = "quick-connect-";
 
 export function isQuickConnectHost(host: Pick<Host, "id">): boolean {
   return host.id.startsWith(QUICK_CONNECT_ID_PREFIX);
@@ -60,6 +62,7 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
     quickActions: [],
     enableSsh: true,
     sshPort: input.port,
+    ...input.authFields,
   };
 }
 

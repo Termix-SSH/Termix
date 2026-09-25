@@ -15,6 +15,7 @@ import { SftpTransferTab } from "./SftpTransferTab.tsx";
 import { FileManagerWidget } from "./homepage/FileManagerWidget.tsx";
 import { FileManagerWidgetEditForm } from "./homepage/FileManagerWidgetEditForm.tsx";
 import { startTransferMonitor } from "./TransferMonitor.tsx";
+import { setFileManagerApp } from "./api/client";
 
 function FilesTab({ tab, host, sshHost, isVisible }: TabProps) {
   const data = tab.data as
@@ -66,6 +67,8 @@ function openEditorAction(
 }
 
 export function activate(app: TermixApp): void {
+  setFileManagerApp(app);
+  app.onDispose(() => setFileManagerApp(null));
   app.registerTab("files", FilesTab as unknown as ComponentType<TabProps>, {
     icon: FolderSearch,
     titleKey: "nav.files",
@@ -104,6 +107,7 @@ export function activate(app: TermixApp): void {
     order: 20,
     tabType: "files",
     copyUrlView: "file-manager",
+    quickConnect: true,
     when: (host) =>
       !!host.enableSsh &&
       fileManagerHostSetting(host, "enableFileManager", true),
@@ -122,10 +126,11 @@ export function activate(app: TermixApp): void {
     editFormComponent: FileManagerWidgetEditForm as never,
   });
 
-  app.registerAction("files.openHost", ((
-    host: PluginHostRecord | null,
-    path?: string,
-  ) => openHostAction(app, host, path)) as never);
+  const openHost = ((host: PluginHostRecord | null, path?: string) =>
+    openHostAction(app, host, path)) as never;
+  app.registerAction("files.openHost", openHost);
+  // The shell's "open in file manager" tab button asks for this.
+  app.registerAction("host.openFiles", openHost);
   app.registerAction("files.openEditor", ((
     host: PluginHostRecord | null,
     filePath: string,

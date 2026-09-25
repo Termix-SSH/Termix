@@ -18,12 +18,14 @@ export interface SshAuthProviderSummary {
   credentialType: boolean;
   needsUserInteraction: boolean;
   supportsBackground: boolean;
+  /** Offered in Quick Connect, for a host that is never saved. */
+  quickConnect: boolean;
   available: boolean;
   /** Set when the type belongs to a plugin that is disabled or missing. */
   missingPlugin?: { id: string; name: string };
 }
 
-export function summarizeSshAuthProviders(): SshAuthProviderSummary[] {
+function summarizeSshAuthProviders(): SshAuthProviderSummary[] {
   ensureCoreSshAuthProviders();
   const summaries: SshAuthProviderSummary[] = listSshAuthProviders().map(
     (provider) => ({
@@ -35,6 +37,7 @@ export function summarizeSshAuthProviders(): SshAuthProviderSummary[] {
       credentialType: !!provider.credentialType,
       needsUserInteraction: !!provider.needsUserInteraction,
       supportsBackground: provider.supportsBackground !== false,
+      quickConnect: !!provider.quickConnect,
       available: true,
     }),
   );
@@ -50,6 +53,7 @@ export function summarizeSshAuthProviders(): SshAuthProviderSummary[] {
       credentialType: false,
       needsUserInteraction: false,
       supportsBackground: false,
+      quickConnect: false,
       available: false,
       missingPlugin: { id: owner.pluginId, name: owner.pluginName },
     });

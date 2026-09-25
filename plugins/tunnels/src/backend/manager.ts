@@ -190,6 +190,7 @@ export function createTunnelManager(ctx: PluginContext) {
     return ctx.asUser(userId, () =>
       ctx.ssh.connect<Client>(hostId, {
         purpose: "tunnel",
+        profile: "forward",
         timeoutMs: CONNECT_TIMEOUT_MS,
         sock,
       }),

@@ -2744,7 +2744,7 @@ export function AppShell({
                 onOpenFileManager={(tabId) => {
                   const targetTab = tabs.find((t) => t.id === tabId);
                   if (targetTab?.host) {
-                    void invokeAction("files.openHost", targetTab.host);
+                    void invokeAction("host.openFiles", targetTab.host);
                   }
                 }}
                 isAppFullscreen={isAppFullscreen}

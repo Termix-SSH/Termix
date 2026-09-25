@@ -43,8 +43,16 @@ dependencies. Entry points:
 
 Plugins never import from `src/` or `@/`, and core never imports from
 `plugins/`. Anything a plugin needs from core becomes a typed, documented SDK
-API. Enforced by lint, with the exceptions recorded under
-[legacy core imports](#legacy-core-imports-the-debt-d1-removes).
+API. Enforced by lint, with no exceptions:
+
+- `eslint.config.mjs` runs a local rule, `termix-plugins/stay-inside`, on
+  every file under `plugins/*/src` and `plugins/*/tests`. It refuses `@/...`
+  and any relative import that resolves outside `plugins/<id>/`, which covers
+  core (`src/`) and every other plugin.
+- The same config refuses a `src/` file importing `plugins/*/src` or
+  `plugins/*/dist`.
+- `scripts/check-core-plugin-ids.cjs` (see [UI](#8-ui)) refuses core naming a
+  plugin at all.
 
 The SDK holds the contract: types, the catalog, and pure helpers. The ctx
 implementation lives in core (`src/backend/plugins/ctx.ts`) and is injected at
@@ -78,7 +86,7 @@ can never be confused with colon-separated capabilities.
 `contributes.permissions`, and core registers each as `<pluginId>.<name>`. The
 plugin never writes the prefix, so it cannot claim a core group or another
 plugin's namespace: `parseManifest` refuses a name starting with `hosts`,
-`snippets`, `credentials`, `admin` or the plugin's own id, and the runtime
+`credentials`, `admin` or the plugin's own id, and the runtime
 re-checks against every namespace already in the catalog, because the validator
 cannot know which other plugins exist.
 
@@ -184,6 +192,34 @@ Automations replaced them and A3 drops them. A core table needs all three
 artifacts in lockstep: the `schema.ts` declaration, the `index.ts` DDL, and the
 regenerated `schema.pg.ts`/`schema.mysql.ts` plus drizzle migrations.
 
+**What stays in core.** After 2.9.0, `schema.ts`, the SQLite DDL in
+`db/index.ts`, `performance-indexes.ts`, the repository factory and the
+drizzle migrations hold only these 38 tables. Anything else is a plugin's,
+under `p_<id>_`.
+
+| Area             | Tables                                                                                                                                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Accounts         | `users`, `sessions`, `trusted_devices`, `api_keys`, `user_external_identities`, `user_second_factors`                                                                                                           |
+| Preferences      | `settings`, `user_preferences`, `ui_preferences`, `host_sidebar_preferences`, `credential_sidebar_preferences`, `user_open_tabs`                                                                                |
+| Hosts            | `ssh_data`, `ssh_folders`, `recent_activity`, `dismissed_alerts`                                                                                                                                                |
+| Credentials      | `ssh_credentials`, `ssh_credential_usage`                                                                                                                                                                       |
+| Sharing and RBAC | `roles`, `user_roles`, `host_access`, `folder_access`, `credential_access`, `shared_host_secrets`, `shared_host_auth_overrides`, `shared_credential_secrets`, `rbac_known_permissions`, `rbac_applied_defaults` |
+| Audit and alerts | `audit_logs`, `notification_channels`                                                                                                                                                                           |
+| Sync             | `sync_tombstones`                                                                                                                                                                                               |
+| Plugin runtime   | `plugins`, `plugin_permission_grants`, `plugin_registries`, `plugin_install_counts`, `plugin_storage`, `plugin_settings`, `plugin_migrations`                                                                   |
+
+A few core tables still carry columns a plugin reads through its own host or
+user settings after the upgrade (the moved `ssh_data` feature columns, the
+2.8 OIDC columns on `users`, `sessions.oidc_sub`/`oidc_sid`). They are
+dropped in 3.0.0; see [Moving a host column into a plugin](#moving-a-host-column-into-a-plugin).
+
+**Exports and imports follow the plugins.** The per-user SQLite export and
+the JSON user export include every row the user owns in a plugin table: any
+table a running plugin declared with a `refUser()` column
+(`src/backend/plugins/user-data.ts`). Encrypted columns stay behind, since
+they are sealed with this server's keys. An import reads each table by its
+`p_` name, or by the legacy name it adopted for a file written before 2.9.
+
 **Sync entities are registered, not hardcoded.** `ctx.sync.registerEntity`
 adds an entity to remote sync; core registers its own the same way in
 `database/routes/sync-entities.ts`. The wire names are unchanged, because
@@ -271,6 +307,26 @@ public so a guest can reach it at all; guest auth itself stays in the plugin's
 handler (noted for D2). Every route connection now also carries `clientIp`,
 `requestOrigin` and `isDataUnlocked()`, the data-key check a long-lived socket
 repeats per message so an expired session stops being served.
+
+**Old URLs outside the namespace.** A few 2.8 URLs are called by something
+outside Termix: identity provider callbacks, the Vault OIDC callback, the
+Termix ID resolver, back-channel logout. A plugin lists them in
+`contributes.http.legacyRedirects` as `{ from, to, status? }`. Core redirects
+a request at `from` (or under it) to `/plugin-api/<id><to>` with the rest of
+the path and the query kept, 307 by default or 308 for a permanent move.
+`from` may be any absolute path outside the plugin framework's own prefixes,
+and core routes win a clash. It is a redirect rather than a forward because a
+cookie the plugin set is scoped to its own path. `contributes.http.legacyPaths`
+is the other form, for URLs already under `/<plugin id>/` (automation
+webhooks), which the plugin's router serves in place. 2.8 clients' login
+routes (`/users/<method>/authorize`, `/users/<method>/login`) stay in core as
+generic aliases of the login pipeline.
+
+The nginx configs keep one small group of blocks for those public 2.8 URLs
+(`/vault/oidc/callback`, `/termix-id/u/`, `/automations/webhook/`); the rest
+already fall under core's `/users` and `/host` blocks. A new plugin never
+needs an nginx change: everything it serves is under `/plugin-api/`,
+`/plugin-ws/` or `/plugin-assets/`.
 
 Socket and ssh2 event listeners fire outside the upgrade's async context, so a
 plugin that calls privileged ctx members from them binds them with Node's
@@ -371,14 +427,26 @@ allowlist (`CORE_SETTINGS_ALLOWLIST`) rather than the whole settings table.
 A plugin frontend is a built ESM bundle, `dist/frontend.js`, exporting
 `activate(app)` and optionally `deactivate()`. The shell has no plugin ids and
 no imports from `plugins/`; everything a plugin shows goes through the `app`
-object. `scripts/check-shell-plugin-ids.cjs` (run by lint) fails on a quoted
-plugin id in `src/ui` outside tests, apart from the entries in
-`scripts/shell-plugin-id-allowlist.json`, each with a reason (host data like
-the `docker` runtime name, which Phase B moves). **B14** removed the `rdp`,
-`vnc` and `telnet` entries: the shell learns those protocols from
-`app.registerHostProtocol`. **B15** removed both `docker` entries: the Hosts
-panel's Docker filter and the bulk Docker toggles went with the column, and
-the host editor no longer carries a Proxmox default that spelled `docker`.
+object. `scripts/check-core-plugin-ids.cjs` (run by lint) scans all of `src/`
+and fails on any plugin id core spells: a bare literal (`"docker"`), a plugin
+route (`"/plugin-api/docker/..."`), or an action, slot or permission id that
+starts with one (`"docker.open"`). The shell (`src/ui`) also may not spell a
+view a plugin owns (a tab, panel or dashboard card id). There is no
+allowlist. Three things are exempt, by rule rather than by entry:
+
+- tests and locales;
+- `src/backend/upgrade/`, the one-time 2.8 to 2.9 data moves, which have to
+  name the plugin each piece of data moves to, the same way
+  `LEGACY_TABLE_OWNERS` names the plugin that adopts each legacy table;
+- `"totp"` inside `src/backend/hosts/connect/`, where it is the SSH
+  keyboard-interactive one-time-code prompt kind, not the login plugin.
+
+Where core needs something from whichever plugin provides it, core names the
+contract and a plugin fills it: a slot (`dashboard.counters`,
+`admin.userTabs`), an action (`host.openFiles`, `snippet.list`,
+`snippet.resolveForTerminal`) or a component id (`credentials.secretHint`,
+`credentials.secretManager`). With no provider, the slot renders nothing and
+the action answers `undefined`.
 
 #### The loader
 
@@ -425,8 +493,8 @@ the full pass does not load the same bundle twice. See Auth below.
 #### Shared modules and the import map
 
 A bundle keeps `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`,
-`i18next`, `react-i18next`, `sonner`, `@termix/plugin-sdk/frontend`,
-`@termix/plugin-sdk/ui` and `@termix/legacy-core/*` as bare imports. Core's
+`i18next`, `react-i18next`, `sonner`, `@termix/plugin-sdk/frontend` and
+`@termix/plugin-sdk/ui` as bare imports. Core's
 Vite build (`scripts/vite-plugin-termix-plugins.mjs`) emits one entry per
 shared module, writes a stable unhashed shim for each at
 `dist/shared/<name>.js`, and injects an import map into `index.html` mapping
@@ -434,8 +502,7 @@ the bare names to those shims. In dev the map points at Vite's virtual
 modules instead. The map is inline, so both nginx configs allow it by hash in
 `script-src`; `scripts/check-importmap-csp.cjs` (run by lint) fails when the
 hash is out of date and `--write` updates it. The map changes only when the
-list of shared modules does, which includes the legacy-core modules plugins
-import.
+list of shared modules does.
 
 Electron loads `index.html` from `file://`. The map uses relative URLs, and
 plugin bundles come from the embedded backend
@@ -482,6 +549,22 @@ boundary and Suspense.
 | `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                         |
 | `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                              |
 | `desktop`                                           | `available`, `remoteServerUrl()` and `onRemoteServerChange`: whether the frontend runs in the desktop app and which remote server it syncs with (**C6**) |
+| `registerComponent`                                 | A component other plugins and core render by id with `PluginComponent`                                                                                   |
+| `onSettingsChanged`                                 | Called when one of the plugin's settings changes                                                                                                         |
+
+A few contribution fields core reads generically:
+
+| Field                                 | Effect                                                                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `RailItemContribution.simplePreset`   | The item stays visible in the Simple interface preset, which hides every other plugin rail item                                      |
+| `HostActionContribution.quickConnect` | The action is offered as a button in Quick Connect, opening its `tabType` for an address that is never saved                         |
+| `PluginSshAuthProvider.quickConnect`  | (backend) The auth type works for an unsaved host, so Quick Connect lists it and renders the plugin's `SshAuthEditor` for its fields |
+| `SshAuthTypeInfo.quickConnect`        | What `useSshAuthTypes()` reports for the above                                                                                       |
+
+Core calls outside a component (`@termix/plugin-sdk/frontend`): `logActivity`,
+`getHostPassword`, `patchOpenTab`, `getCustomKeybindings`, `setHostAutoTmux`,
+`getClientPreference`, `listHosts` (every host the user can see, fetched now)
+and `listCredentials` (the user's credentials without secrets, for a picker).
 
 Hooks: `useTranslation` (the plugin's namespace), `usePermission` (a short
 name resolves to `<id>.<name>`), `useSettings`, `useHost`, `useHosts`,
@@ -494,7 +577,21 @@ to list manager cards plugins added to `host-metrics.managers` next to its
 own). The SDK has no runtime dependencies: the hooks delegate to a host
 bridge core installs.
 
-Slots core owns: `terminal.toolbar`, `terminal.toolbarStatus`,
+Slots and actions core names for plugins to fill: `dashboard.counters`
+(component slot in the dashboard's counters card; tunnels shows its active
+tunnel count there), `admin.userTabs` (component slot, one tab per
+contribution in the admin "manage user" panel, rendered with `{ user }` and
+replaced by core's locked notice while the user's data is locked; snippets
+adds its tab), the `host.openFiles` action (the tab bar's file manager
+button), the `snippet.list` and `snippet.resolveForTerminal` actions (core's
+snippet pickers and the command palette's run flow) and the
+`credentials.secretHint` / `credentials.secretManager` components (the
+credential and host editors' secret reference UI). **D1** added these in
+place of `tunnels.statuses`, `tunnels.open`, `files.openHost`,
+`snippets.resolveForTerminal` and the `secret-sources.*` component ids, which
+core used to call by the plugin's name.
+
+Other slots: `terminal.toolbar`, `terminal.toolbarStatus`,
 `terminal.sidePanel`, `terminal.overlay` (declared by ssh-terminal; **B9**
 renamed `terminal.dock` to `terminal.sidePanel` and added the status slot,
 where host-metrics puts its CPU, memory and disk bars; **C3** gave overlay
@@ -526,10 +623,7 @@ invoked with `{ hostId, sessionId, protocol, tabInstanceId }`.
 **B3**) is host-metrics's own: tailscale contributes its manager card there
 instead of host-metrics knowing tailscale exists, and host-metrics works with
 or without tailscale enabled. Cross-plugin frontend calls go through actions:
-`automations.list`, `fleets.list`, `session.remoteDisplay.token`. Core calls
-plugin actions the same way when a core view shows a plugin's data:
-`files.openHost`, and **B7**'s `tunnels.statuses` and `tunnels.open` behind the
-dashboard's active tunnel counter, which reads as zero while tunnels is off.
+`automations.list`, `fleets.list`, `session.remoteDisplay.token`.
 **B16** added `host-metrics.disk` (the file manager's disk usage bar) and
 `snippets.get` / `snippets.execute` (host-metrics's quick actions); each
 answers undefined while its plugin is off.
@@ -628,6 +722,16 @@ calls a plugin makes for the signed-in user onto the typed host bridge, as
 `@termix/plugin-sdk/frontend` functions: `logActivity`, `getHostPassword`,
 `patchOpenTab`, `getCustomKeybindings`, `setHostAutoTmux` and
 `getClientPreference`.
+**D1** added what the last plugins reaching into core used: `Kbd`,
+`KbdKey` and `KbdSeparator`; `ConnectionLogPanel` and the `LogEntry`
+type; `createFrontendLogger(name)`, a console logger in core's format; the
+adaptive resource budget (`getAdaptiveResourceBudget`,
+`markAdaptiveResourceUsed`, `runAdaptiveBackgroundTask`) so a plugin's
+background work shares one budget with the shell; `getDeviceId`;
+`createQuickConnectHost` and `isQuickConnectHost`; and the desktop app's
+local file bridge types (`LocalFileEntry`, `LocalDirectoryListing`,
+`LocalWalkResult`, `LocalTransferProgress` and the rest), for a plugin that
+drives `window.electronAPI.localFs` itself.
 **B16** added `LineChart`, `useAdaptivePolling`, `useAreaPreferences` (the
 Appearance density and chart options), and the homepage widget pieces
 `WidgetTitle` and `runVisibleInterval` (moved to `src/ui/lib/` in **B19**,
@@ -685,8 +789,13 @@ where Crowdin writes them. Only `en.json` is edited by hand.
 
 #### Type checking
 
-`tsconfig.plugins.frontend.json` checks every plugin frontend and its tests
-with bundler resolution, and is part of `npm run type-check`.
+`npm run type-check` covers every plugin through two root configs:
+`tsconfig.plugins.frontend.json` (plugin frontends and their tests, bundler
+resolution; it extends the app config because `@termix/plugin-sdk/ui` is
+core's own `sdk-ui.ts`) and `tsconfig.plugins.backend.json` (plugin backends,
+`nodenext`, the SDK's built `.d.ts`). Neither gives a plugin a path into
+core; the `@/` alias the frontend config inherits exists for `sdk-ui.ts`
+itself, and lint refuses it in plugin code.
 
 ### 9. Cross-plugin use
 
@@ -1296,8 +1405,8 @@ Every SSH connection, core's and plugins', goes through
    decryption, shared-host overrides and shared agent, and `op://` external
    secret references.
 2. `buildConnectConfig` builds the ssh2 config: the defaults for the
-   connection's purpose (terminal, file-manager, tmux, metrics, fleet, docker,
-   ...), the host key verifier, then the auth provider's `prepare`.
+   connection's profile (terminal, session, stream, forward, background or
+   jump), the host key verifier, then the auth provider's `prepare`.
 3. `openSshTransport` does port knocking, the Cloudflare Access tunnel, the
    jump host chain (every hop through steps 1 and 2) or SOCKS5.
 4. `connectHost` connects with a keyboard-interactive handler: a prompt channel
@@ -1867,48 +1976,51 @@ deciding, not the mechanism.
 ## The ctx surface
 
 Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
+Every member is listed; the types in `@termix/plugin-sdk/backend` are the
+authority for signatures.
 
-| Member                                           | Capability                                         | Status                              |
-| ------------------------------------------------ | -------------------------------------------------- | ----------------------------------- |
-| `ctx.pluginId`, `ctx.manifest`                   | none                                               | **A1**                              |
-| `ctx.log.*`                                      | none                                               | **A1**                              |
-| `ctx.events.emit` / `.on`                        | `events:core` for core topics                      | **A1**                              |
-| `ctx.kv.get/set/delete/list`                     | `kv:own`                                           | **A1**                              |
-| `ctx.files.dataDir`                              | `files:own`                                        | **B13**                             |
-| `ctx.registry.*`                                 | none                                               | **A1**                              |
-| `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                                   | **A1**, named **B12**               |
-| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                                    | **A1**                              |
-| `ctx.secrets.get` / `.set` / `.delete`           | `secrets:own`                                      | **B18**                             |
-| `ctx.secrets.seal` / `.unseal`                   | `secrets:own`                                      | **C1**                              |
-| `ctx.disposables.add`                            | none                                               | **A1**                              |
-| `ctx.asUser(userId, fn)`                         | none, always audited                               | **A1**                              |
-| `ctx.currentActor()`                             | none                                               | **A1**                              |
-| `ctx.db.define` / `.client` / `.refs`            | `db:own`                                           | **A3**                              |
-| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)                            | **A9**, lazy **B16**                |
-| `ctx.sync.registerEntity`                        | none                                               | **A3**                              |
-| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                                    | **A4**                              |
-| `ctx.http.baseUrl(req)`                          | none                                               | **C2**                              |
-| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                               | **A5**                              |
-| `ctx.capabilities.has` / `.require`              | the capability itself                              | **B11**                             |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`                       | **B4**, **B5**, **B18**             |
-| `ctx.hosts.status.*`                             | `hosts:read`                                       | **B16**                             |
-| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`                   | **A8**                              |
-| `ctx.settings.*`                                 | `settings:read-core` (readCore only)               | **A6**                              |
-| `ctx.notify.channels` / `.send`                  | `notify:send`                                      | **B17**                             |
-| `ctx.auth.*`                                     | `auth:provide`                                     | **A8**                              |
-| `ctx.auth.completeRedirectLogin` and the rest    | `auth:provide`                                     | **C2**                              |
-| `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                                   | **B8**                              |
-| `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)                     | **B14**                             |
-| `ctx.credentials.resolveHostProtocol`            | `credentials:read`                                 | **B14**                             |
-| `ctx.credentials.registerSecretResolver`         | `auth:provide`                                     | **B20**                             |
-| `ctx.credentials.listSshKeys`                    | `credentials:use`                                  | **C6**                              |
-| `ctx.credentials.createSshKey`                   | `credentials:write`                                | **C6**                              |
-| `ctx.audit.record`                               | none, the actor is the runtime's                   | **B9**, request **D0**              |
-| `ctx.schedule.every` / `.after`                  | none                                               | **B16**                             |
-| `ctx.fetch`                                      | `network:outbound`                                 | **B17**, signal **B18**, tls **C4** |
-| `ctx.process.run` / `.ensureBinary`              | `process:spawn` (+ `network:outbound` to download) | **C3**                              |
-| `ctx.auth.registerKeyboardInteractiveHandler`    | `auth:provide`                                     | **C3**                              |
-| `ctx.system.*`                                   | `system:tls`                                       | **C7**                              |
+| Member                                                                                                               | Capability                                         | What it does                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `pluginId`, `manifest`                                                                                               | none                                               | The plugin's id and parsed manifest                                                                     |
+| `log.debug/info/warn/error`                                                                                          | none                                               | Lines in core's log, tagged with the plugin                                                             |
+| `events.emit/on`                                                                                                     | `events:core` for core topics                      | Topics under `plugin.<id>.*`, or core's (`user.deleted`, `user.data_wiped`, host events)                |
+| `kv.get/set/delete/list`                                                                                             | `kv:own`                                           | Small key/value state                                                                                   |
+| `files.dataDir()`                                                                                                    | `files:own`                                        | A per-plugin folder under `DATA_DIR`                                                                    |
+| `db.define/client/refs/persist/dialect`                                                                              | `db:own` (not `dialect`)                           | The plugin's own tables through Drizzle; `persist` flushes SQLite to disk                               |
+| `sync.registerEntity/recordTombstone`                                                                                | none                                               | Adds a table to remote sync, and records a delete for it                                                |
+| `registry.provide/consume/revoke`                                                                                    | none                                               | The low-level named registry services sit on                                                            |
+| `services.provide/get/providers`                                                                                     | per-service RBAC                                   | Typed, versioned cross-plugin services, checked per call                                                |
+| `secrets.get/set/delete/seal/unseal`                                                                                 | `secrets:own`                                      | The plugin's own encrypted values                                                                       |
+| `secrets.offer/withdraw/getShared`                                                                                   | per-secret RBAC                                    | Secrets one plugin lends another                                                                        |
+| `http.router(options)`, `http.baseUrl(req)`                                                                          | `network:serve` (router)                           | The router mounted at `/plugin-api/<id>/`, and the public origin for callback URLs                      |
+| `ws.route/upgrade`                                                                                                   | `network:serve`                                    | Sockets at `/plugin-ws/<id>/<path>`                                                                     |
+| `rbac.has/hasFor/require`                                                                                            | own permissions (require)                          | The acting user's role permissions; `require` is route middleware                                       |
+| `settings.get/set/getUser/setUser/getHost/setHost/listHostValues/getAll/onChange/onValidate`                         | `hosts:read` (listHostValues)                      | The plugin's admin, user and host settings from its manifest                                            |
+| `settings.readCore(key)`                                                                                             | `settings:read-core`                               | One of the core keys in `CORE_SETTINGS_ALLOWLIST`                                                       |
+| `disposables.add`                                                                                                    | none                                               | Extra cleanup on deactivate                                                                             |
+| `capabilities.has/require`                                                                                           | the named capability                               | A generic check for privileged code no ctx member wraps                                                 |
+| `hosts.list/get/checkAccess`                                                                                         | `hosts:read`                                       | Hosts the acting user can see, without secrets                                                          |
+| `hosts.create/update/delete/listOwned/share/listUsers/listRoles`                                                     | `hosts:write`                                      | Host changes and sharing on the user's behalf                                                           |
+| `hosts.trackSession/recordActivity`                                                                                  | `hosts:read`                                       | The online indicator and a recent activity entry                                                        |
+| `hosts.status.get/check/reportLogin/registerPort`                                                                    | `hosts:read`                                       | Core's reachability status                                                                              |
+| `ssh.connect/withConnection/jumpChain`                                                                               | `ssh:connect`, `credentials:use`                   | Connections through core's one connect pipeline                                                         |
+| `ssh.resolveHost/prepare/openTransport/classifyKeyboardInteractive/autoResponses/startInteraction/cancelInteraction` | `ssh:connect`, `credentials:use`                   | The lower level, for a transport with its own prompt flow                                               |
+| `ssh.poolKey/dropPooled/requiresSecret/supportsBackground`                                                           | `ssh:connect`                                      | Pool housekeeping and questions for an auth type's provider                                             |
+| `auth.registerLoginMethod/registerSecondFactor/recordEnrollment/removeEnrollment`                                    | `auth:provide`                                     | Login methods and second factors                                                                        |
+| `auth.completeRedirectLogin/revokeSessions/loginRateLimit/countLinkedUsers`                                          | `auth:provide`                                     | What a login method needs from core's session and provisioning code                                     |
+| `auth.registerSshAuthProvider/registerKeyboardInteractiveHandler`                                                    | `auth:provide`                                     | SSH auth types and keyboard-interactive handlers                                                        |
+| `credentials.listSshKeys` / `.createSshKey`                                                                          | `credentials:use` / `credentials:write`            | The user's saved SSH keys                                                                               |
+| `credentials.resolveHostProtocol`                                                                                    | `credentials:read`                                 | A host's RDP, VNC or Telnet login                                                                       |
+| `credentials.registerSecretResolver`                                                                                 | `auth:provide`                                     | Resolves external secret references in host and credential fields                                       |
+| `desktop.openIsolatedWindow/launchNativeRdp/available`                                                               | `desktop:window` (not `available`)                 | Electron windows and the native RDP client                                                              |
+| `audit.record`                                                                                                       | none                                               | An audit line under the plugin's own action name                                                        |
+| `schedule.every/after`                                                                                               | none                                               | Timers that stop on deactivate and never overlap                                                        |
+| `notify.channels/send`                                                                                               | `notify:send`                                      | Core's notification channels, as the acting user                                                        |
+| `fetch(url, init)`                                                                                                   | `network:outbound`                                 | Outbound HTTP through core's SSRF guard; `allowPrivateHosts` hosts also go through the configured proxy |
+| `process.run/ensureBinary`                                                                                           | `process:spawn` (+ `network:outbound` to download) | Programs on the server                                                                                  |
+| `system.tlsStatus/writeTlsCertificate/reloadTls/publishHttpChallenge/registerTlsRenewer`                             | `system:tls`                                       | The server certificate                                                                                  |
+| `asUser(userId, fn)`                                                                                                 | none, always audited                               | Background work as a user                                                                               |
+| `currentActor()`                                                                                                     | none                                               | The acting user for the current call                                                                    |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
 generic check for a capability no other ctx member wraps. Unlike every other
@@ -1948,14 +2060,14 @@ connect pipeline instead of importing ssh2 helpers from core:
   has no auth code of its own left.
 - `requiresSecret(authType)` and `supportsBackground(authType)` ask the
   provider.
-- **B6** added `"file-manager"` and `"file-transfer"` to `PluginSshPurpose`
-  (core's `SshConnectPurpose` already had them; the SDK type had lagged),
-  since the file-manager plugin's interactive connect route and its dedicated
-  transfer sessions both need their own keepalive/timeout defaults rather than
-  falling back to the generic `"plugin"` purpose.
-- **B10** added `"tmux"` to `PluginSshPurpose` the same way (core's
-  `SshConnectPurpose` already had it), for the tmux-monitor plugin's pooled
-  connection and the `tmux.sessions` service it provides to the terminal.
+- `purpose` is a free label (`"terminal"`, `"docker"`) that auth providers
+  see in `connectOptions`. **D1** moved the keepalive, timeout and
+  environment defaults onto `profile`: `"terminal"` (an interactive shell),
+  `"session"` (a long-lived browsing session such as the file manager or
+  Docker), `"stream"` (a long transfer or console), `"forward"` (port
+  forwarding) or `"background"`, the default, for short exec work. Core's own
+  jump chain uses a `"jump"` profile plugins cannot pick. Core no longer keeps
+  a list of purposes, so it names no plugin.
 - **B9** added what an interactive transport needs, for the terminal:
   `resolveHost(hostId, { syncId? })` (the host with secrets, by sync id first,
   audited), the `"terminal"` purpose, `interactive` and `hostKeySocket` on
@@ -2349,7 +2461,8 @@ keeps working unchanged.
 what Docker and electron-builder package. `npm run build`, `build:backend` and
 `dev:backend` all call it.
 
-TypeScript only type-checks (`tsconfig.plugins.json`, `noEmit`); esbuild does
+TypeScript only type-checks (`tsconfig.plugins.backend.json` and
+`tsconfig.plugins.frontend.json`, `noEmit`); esbuild does
 every emit. Nothing is written next to a source file.
 
 ### Host-provided packages
@@ -2365,9 +2478,8 @@ and that is bundled into its output.
 the terminal's image upload loads it on first use).
 
 **Frontend**: `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`,
-`i18next`, `react-i18next`, `sonner`, `@termix/plugin-sdk/frontend`,
-`@termix/plugin-sdk/ui` and `@termix/legacy-core/*`, all resolved through the
-import map (see UI). Everything else, including `lucide-react`, `axios`,
+`i18next`, `react-i18next`, `sonner`, `@termix/plugin-sdk/frontend` and
+`@termix/plugin-sdk/ui`, all resolved through the import map (see UI). Everything else, including `lucide-react`, `axios`,
 `cytoscape` and `guacamole-common-js`, is bundled into the plugin that uses
 it.
 
@@ -2673,10 +2785,10 @@ install (workspaces leaves out its `last_session` row).
 2. Register everything in `activate(app)`: rail item (with `permission` when
    there is one), panel, tabs, host editor sections, actions and slot
    contributions. Use `app.onDispose` for timers.
-3. Remove the shell's references: imports from the feature, hardcoded ids and
-   switch cases, and the matching entries in
-   `scripts/shell-plugin-id-allowlist.json`. `node scripts/check-shell-plugin-ids.cjs`
-   must pass.
+3. Remove core's references: imports from the feature, hardcoded ids and
+   switch cases. Where core still needs the feature, name a slot, action or
+   component id in core's own vocabulary and let the plugin fill it.
+   `node scripts/check-core-plugin-ids.cjs` must pass.
 4. The rail item appears in Appearance > Sidebar > Navigation on its own
    because it is registered; confirm it there.
 5. No hardcoded text (a relative time is a translated string), no em dashes,
@@ -2715,14 +2827,7 @@ install (workspaces leaves out its `last_session` row).
 4. `cd plugins/<id> && npx vitest run` while working; `npm run test:plugins` at
    the end.
 
-### 14. Boundary allowlist
-
-`node scripts/check-plugin-boundaries.cjs --write`, then
-`git diff scripts/plugin-boundary-allowlist.json`: the plugin's entries are
-gone and **no other line was added**. Update the counts in the table under
-[Legacy core imports](#legacy-core-imports-the-debt-d1-removes).
-
-### 15. Build, test and check by hand
+### 14. Build, test and check by hand
 
 ```bash
 npm run build:sdk
@@ -2745,91 +2850,3 @@ Then, with the app running:
    views show the "needs the plugin" placeholder while off and come back after.
 5. On Postgres or MySQL if available: `npm run verify:dialect`, then boot.
 6. Update this document for anything the step added to the contract.
-
----
-
-## Legacy core imports: the debt D1 removes
-
-The bundled plugins predate the SDK, apart from workspaces (A9), snippets
-(B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
-(B17), ai (B18), homepage (B19), totp and webauthn (C1), sso and ldap (C2),
-opkssh and warpgate (C3), step-ca (C4), vault (C5), termix-identity (C6),
-acme-ssl (C7),
-which import nothing from core. The others still reach core by relative
-path (`../../../../src/backend/...`), which an esbuild plugin,
-`packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
-and rewrites to the compiled output path (`../../../backend/backend/...`, or
-`../../../backend/types/...` for shared types). The rewrite is output-relative,
-so a source file at any nesting collapses to the same prefix. D1 deletes that
-file.
-
-Frontends do the same with `@/`: in the browser build, `@/x` and
-`../src/ui/x` become the bare `@termix/legacy-core/ui/x` (or
-`@termix/legacy-core/types/x`), which core's Vite build exposes as a shared
-module so plugin and shell use one instance of each core module. The CLI
-refuses the rewrite outside a Termix checkout. Every such import is counted
-in the `plugin-frontend-to-core` direction below.
-
-This is expected and temporary. The SDK does not yet expose what they need:
-the SSH connection pool, host resolution, the repository layer, the shared
-component library. D1 removes the debt once A3 through A8 have given them
-supported APIs to move onto.
-
-What the lint fence enforces today, in `eslint.config.mjs`:
-
-| Direction                                        | Severity  | Offenders | Emptied by |
-| ------------------------------------------------ | --------- | --------- | ---------- |
-| Core importing a plugin backend                  | **Error** | 0         | -          |
-| A plugin backend importing frontend code or `@/` | **Error** | 0         | -          |
-| The shell importing plugin code                  | **Error** | 0         | -          |
-| A plugin frontend importing core through `@/`    | Warning   | 51 files  | D1         |
-| A plugin importing core by relative path         | Warning   | 3 files   | D1         |
-| A plugin importing another plugin's source       | Warning   | 0 files   | -          |
-
-A warning does not fail a build, so the counts are held by
-`scripts/check-plugin-boundaries.cjs`, run by `npm run lint`. Every offender is
-listed in `scripts/plugin-boundary-allowlist.json`: a new one fails, and so
-does an entry that stopped being an offender, so the list shrinks as each step
-lands rather than rotting. `--write` regenerates it. D1 empties it and the two
-plugin-side warnings become errors.
-
-The two plugin-backend directions use different rule names
-(`no-restricted-imports` and `@typescript-eslint/no-restricted-imports`)
-because flat config replaces a rule's options rather than merging them, so one
-rule cannot carry both severities on the same files.
-
-Known specifics:
-
-- **B17** removed the last plugin-to-plugin import: ai's proposal executor
-  and automation read tools call automations through the `automations.access`
-  service, and automations is an optional dependency of ai rather than a hard
-  one.
-- **B16** moved host-metrics onto the SDK: it imports nothing from core or
-  automations. Automations reaches it through the `host-metrics.viewers`
-  service and its `plugin.host-metrics.*` events, and core reaches it through
-  the `dashboard.hostMetrics` and `homepage.hostMetrics` slots and the
-  `host-metrics.disk` action. Core's `hosts/metrics-shared/` is gone: ai,
-  automations, proxmox and tailscale use `@termix/plugin-sdk/host-commands`.
-- Core feature servers that are not plugins yet still own ports: dashboard
-  30006 and homepage 30012. Each keeps its nginx block until its own Phase B
-  step. No plugin owns a port any more (A4). **B6** moved file-manager off
-  port 30004 onto `/plugin-api/file-manager/`, **B7** moved tunnels off port
-  30003 onto `/plugin-api/tunnels/` and `/plugin-ws/tunnels/c2s/stream`,
-  **B10** moved tmux monitoring off port 30010, and **B11** moved serial off
-  port 30011 onto `/plugin-ws/serial/console`.
-- **B9** moved the terminal, its session manager, the local terminal and the
-  command history panel into ssh-terminal, which imports nothing from core.
-  The file manager's terminal window renders the `terminal.view` component
-  instead of importing the core terminal.
-- Host data columns (`enableFileManager` and so on) stay in core types until
-  Phase B moves them. Only UI branches on them left the shell. **B15** moved
-  docker's `enableDocker` and `docker_config` (now `containerRuntime`) into
-  its host settings. **B14** moved
-  remote desktop's (`enableRdp`, `enableVnc`, `enableTelnet`, the three ports,
-  `rdpSecurity`, `rdpIgnoreCert`, `guacamoleConfig`) into its host settings;
-  the protocol logins stay core host fields.
-- **B14** moved remote desktop onto the SDK: it imports nothing from core,
-  owns no module state, and its guacamole-lite server is built in `activate`
-  with its own signal handlers removed (guacamole-lite installs SIGTERM and
-  SIGINT handlers in its constructor). guacd is always an external service,
-  so it does not use `ctx.process`; its address is an admin setting.

@@ -24,7 +24,7 @@ export function resetCoreLoginProvidersForTests(): void {
 }
 
 /** The admin setting (or ALLOW_PASSWORD_LOGIN), before the lockout guard. */
-export function isPasswordLoginSettingOn(): boolean {
+function isPasswordLoginSettingOn(): boolean {
   const envVal = process.env.ALLOW_PASSWORD_LOGIN;
   if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
   try {
@@ -77,7 +77,7 @@ export function isSecondFactorAfterExternalLoginEnabled(): boolean {
  * Whether anyone could still sign in without a password: trusted proxy auth,
  * or a login method reporting an enabled instance (an SSO provider).
  */
-export async function hasOtherEnabledLoginMethod(): Promise<boolean> {
+async function hasOtherEnabledLoginMethod(): Promise<boolean> {
   if (isTrustedProxyAuthEnabled()) return true;
   ensureCoreLoginProviders();
   for (const method of listLoginMethods()) {

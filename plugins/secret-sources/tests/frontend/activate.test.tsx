@@ -24,7 +24,7 @@ describe(`${manifest.id} activate`, () => {
     rendered = await renderWithApp(plugin, { manifest, locales });
     render(
       <PluginComponent
-        id="secret-sources.hint"
+        id="credentials.secretHint"
         onManage={vi.fn()}
         fallback={<span>fallback</span>}
       />,
@@ -41,7 +41,9 @@ describe(`${manifest.id} activate`, () => {
       } as never,
     });
     const onClose = vi.fn();
-    render(<PluginComponent id="secret-sources.manager" onClose={onClose} />);
+    render(
+      <PluginComponent id="credentials.secretManager" onClose={onClose} />,
+    );
     expect(await screen.findByText(locales.title)).toBeTruthy();
   });
 
@@ -49,7 +51,10 @@ describe(`${manifest.id} activate`, () => {
     const app = await renderWithApp(plugin, { manifest, locales });
     await app.deactivate();
     render(
-      <PluginComponent id="secret-sources.hint" fallback={<span>gone</span>} />,
+      <PluginComponent
+        id="credentials.secretHint"
+        fallback={<span>gone</span>}
+      />,
     );
     expect(await screen.findByText("gone")).toBeTruthy();
   });

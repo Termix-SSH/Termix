@@ -42,7 +42,7 @@ interface ServiceListenOptions {
  * service attaches a WebSocket upgrade handler to it, for example) and so
  * cannot go through {@link listenOnServicePort}.
  */
-export function attachServicePortConflictHandler(
+function attachServicePortConflictHandler(
   server: http.Server,
   port: number,
   logger: Logger,

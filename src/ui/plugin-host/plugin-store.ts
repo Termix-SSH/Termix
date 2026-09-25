@@ -38,7 +38,7 @@ function commit(next: StoreState): void {
   for (const listener of listeners) listener();
 }
 
-export function subscribePluginStore(listener: () => void): () => void {
+function subscribePluginStore(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

@@ -55,8 +55,8 @@ export function AlertManager({
       setAlerts(sortedAlerts);
       setCurrentAlertIndex(0);
     } catch {
-      toast.error(t("homepage.failedToLoadAlerts"));
-      setError(t("homepage.failedToLoadAlerts"));
+      toast.error(t("alerts.failedToLoad"));
+      setError(t("alerts.failedToLoad"));
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ export function AlertManager({
         return prevIndex;
       });
     } catch {
-      setError(t("homepage.failedToDismissAlert"));
+      setError(t("alerts.failedToDismiss"));
     }
   };
 

@@ -70,10 +70,6 @@ export function getCachedServerStatuses(
   return statusCache.get(loader);
 }
 
-export function invalidateSSHHostsCache(): void {
-  hostsCache.invalidate();
-}
-
 export function invalidateServerStatusCache(): void {
   statusCache.invalidate();
 }

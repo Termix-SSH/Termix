@@ -46,7 +46,7 @@ export function requiresPersonalHostAuthentication(
 }
 
 /** Whether the owner's auth for this protocol is available to recipients. */
-export function isOwnerAuthShared(
+function isOwnerAuthShared(
   host: Pick<HostResolutionHostRecord, "shareSshAuth">,
   protocol: AuthOverrideProtocol,
 ): boolean {

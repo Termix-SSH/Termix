@@ -1004,6 +1004,63 @@ router.post("/discover", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /plugin-api/proxmox/import:
+ *   post:
+ *     summary: Import discovered Proxmox guests as hosts
+ *     description: >
+ *       Creates one host per entry, owned by the caller, and stores each
+ *       entry's proxmox host settings (the guest's source) on the new host.
+ *     tags:
+ *       - Proxmox
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - hosts
+ *             properties:
+ *               hosts:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: How many hosts were created and which failed.
+ *       400:
+ *         description: No hosts given.
+ */
+router.post("/import", async (req, res) => {
+  const ctx = pluginCtx();
+  const { hosts } = req.body as { hosts?: unknown };
+  if (!Array.isArray(hosts) || hosts.length === 0) {
+    return res.status(400).json({ error: "No hosts to import" });
+  }
+  const result = { success: 0, failed: 0, errors: [] as string[] };
+  for (const entry of hosts as Array<Record<string, unknown>>) {
+    const { pluginSettings, ...input } = entry;
+    try {
+      const created = await ctx.hosts.create(
+        input as unknown as PluginHostCreateInput,
+      );
+      const own = (pluginSettings as Record<string, unknown> | undefined)?.[
+        ctx.pluginId
+      ] as Record<string, unknown> | undefined;
+      for (const [key, value] of Object.entries(own ?? {})) {
+        await ctx.settings.setHost(Number(created.id), key, value);
+      }
+      result.success++;
+    } catch (err: unknown) {
+      result.failed++;
+      result.errors.push(`${String(input.name)}: ${getErrorMessage(err)}`);
+    }
+  }
+  return res.json(result);
+});
+
 /** Called from activate(). Mounts this router at /proxmox via the shared
  * dispatcher, and starts the background auto-sync scan (a 60s interval plus
  * a one-off 30s-delayed startup run, both unref'd so they never keep the

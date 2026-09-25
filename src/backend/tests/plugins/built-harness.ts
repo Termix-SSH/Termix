@@ -127,7 +127,7 @@ export async function bootCore(seed: Database.Database): Promise<BootedCore> {
   await initializePlugins();
 
   const { runPluginDataMigrations } =
-    await import("../../plugins/boot-migrations.js");
+    await import("../../upgrade/boot-migrations.js");
   await runPluginDataMigrations();
 
   return {

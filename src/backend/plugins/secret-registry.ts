@@ -29,7 +29,7 @@
  * ## Authorization is the provider's own permission
  *
  * No fourth grant mechanism. The provider declares which of its own role
- * permissions gates sharing ("ai.secrets.share", alongside "ai.services.use"),
+ * permissions gates sharing (for example "<plugin>.secrets.share"),
  * and getShared runs the acting user through the same PermissionManager check
  * that service-registry.ts and requirePermission() use. So:
  *

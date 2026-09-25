@@ -1,4 +1,4 @@
-import { formatTransferMbPerSec } from "@/main-axios.ts";
+import { formatTransferMbPerSec } from "../api/transfer-api";
 import { useTranslation } from "react-i18next";
 import { ArrowDownToLine } from "lucide-react";
 import { TransferProgressBar } from "./TransferProgressBar";

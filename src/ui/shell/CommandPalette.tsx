@@ -26,11 +26,8 @@ import {
   Play,
   Clipboard,
 } from "lucide-react";
-import {
-  getRecentActivity,
-  getSnippets,
-  type RecentActivityItem,
-} from "@/main-axios";
+import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
+import { listSnippets } from "@/lib/snippet-provider";
 import type { Host, TabType, Tab, Snippet } from "@/types/ui-types";
 import { canEditHost } from "@/sidebar/host-permissions";
 import { RAIL_UTILITY_ITEMS, useRailItems } from "@/sidebar/rail-items";
@@ -85,8 +82,8 @@ export function CommandPalette({
       getRecentActivity(5)
         .then(setRecentActivity)
         .catch(() => {});
-      getSnippets()
-        .then((data) => setSnippets((data ?? []) as unknown as Snippet[]))
+      listSnippets()
+        .then((data) => setSnippets(data as unknown as Snippet[]))
         .catch(() => {});
     }
   }, [isOpen]);

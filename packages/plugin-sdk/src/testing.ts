@@ -14,7 +14,7 @@ import type {
   PluginDisposables,
   PluginLogger,
 } from "./backend.js";
-import type { TermixApp } from "./frontend.js";
+import type { HostActionContribution, TermixApp } from "./frontend.js";
 import type { PluginManifest } from "./manifest.js";
 import type { PluginTableDefinition } from "./db.js";
 import type {
@@ -1967,6 +1967,8 @@ export interface RenderedPluginApp {
     tabs: () => string[];
     panels: () => string[];
     hostActions: () => Array<{ id: string; tabType?: string }>;
+    /** This plugin's host actions that apply to `host`, as the shell sees them. */
+    hostActionsFor: (host: unknown) => HostActionContribution[];
     hostProtocols: () => string[];
     hostEditorSections: () => string[];
     dashboardCards: () => string[];

@@ -18,7 +18,7 @@ import {
   getSSHStatus,
   connectSSH,
 } from "../api/ssh-file-operations-api";
-import type { FileItem, SSHHost } from "@/types";
+import type { FileItem, SSHHost } from "../host-types";
 
 interface DiffViewerProps {
   file1: FileItem;

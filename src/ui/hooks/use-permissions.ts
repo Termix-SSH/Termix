@@ -10,7 +10,7 @@ export interface PermissionsState {
 }
 
 /** Fired when a user's grants may have changed, so every surface re-reads them. */
-export const PERMISSIONS_CHANGED_EVENT = "permissionsChanged";
+const PERMISSIONS_CHANGED_EVENT = "permissionsChanged";
 
 interface CachedPermissions {
   permissions: string[];

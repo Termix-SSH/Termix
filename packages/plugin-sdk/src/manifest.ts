@@ -62,7 +62,6 @@ export type SystemRoleName = (typeof SYSTEM_ROLE_NAMES)[number];
  */
 export const RESERVED_PERMISSION_PREFIXES = [
   "hosts",
-  "snippets",
   "credentials",
   "admin",
 ] as const;
@@ -324,6 +323,23 @@ export interface PluginHttpContribution {
    * a clash.
    */
   legacyPaths?: string[];
+  /**
+   * Old URLs outside the plugin's namespace that something outside Termix
+   * still sends people to (an identity provider's callback, a published
+   * resolver URL). A request at `from`, or under it, is redirected to `to`
+   * under /plugin-api/<id>/ with the rest of the path and the query kept.
+   * Core routes win a clash.
+   */
+  legacyRedirects?: PluginLegacyRedirect[];
+}
+
+export interface PluginLegacyRedirect {
+  /** An absolute path, e.g. "/users/oidc/callback". */
+  from: string;
+  /** A path in this plugin's router, e.g. "/callback". */
+  to: string;
+  /** 307 (the default) or 308 for a permanent move. */
+  status?: 307 | 308;
 }
 
 export interface PluginManifest {
@@ -869,6 +885,40 @@ function validateUiPresets(value: unknown, errors: string[]): void {
 }
 
 const LEGACY_PATH_PATTERN = /^\/[a-z][a-z0-9-]*(\/[A-Za-z0-9_.-]+)+$/;
+const REDIRECT_PATH_PATTERN = /^(\/[A-Za-z0-9_.-]+)+$/;
+const RESERVED_PREFIXES = ["/plugin-api", "/plugin-ws", "/plugin-assets"];
+
+function validateLegacyRedirects(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+  if (!Array.isArray(value)) {
+    errors.push('Field "contributes.http.legacyRedirects" must be an array');
+    return;
+  }
+  value.forEach((entry, index) => {
+    const at = `contributes.http.legacyRedirects[${index}]`;
+    if (!isPlainObject(entry)) {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    rejectUnknown(entry, ["from", "to", "status"], at, errors);
+    const { from, to, status } = entry;
+    if (typeof from !== "string" || !REDIRECT_PATH_PATTERN.test(from)) {
+      errors.push(`${at}.from must be an absolute path`);
+    } else if (
+      RESERVED_PREFIXES.some(
+        (prefix) => from === prefix || from.startsWith(`${prefix}/`),
+      )
+    ) {
+      errors.push(`${at}.from cannot be under ${from.split("/")[1]}`);
+    }
+    if (typeof to !== "string" || !REDIRECT_PATH_PATTERN.test(to)) {
+      errors.push(`${at}.to must be a path in the plugin's router`);
+    }
+    if (status !== undefined && status !== 307 && status !== 308) {
+      errors.push(`${at}.status must be 307 or 308`);
+    }
+  });
+}
 
 function validateHttpContribution(
   value: unknown,
@@ -880,7 +930,13 @@ function validateHttpContribution(
     errors.push('Field "contributes.http" must be an object');
     return;
   }
-  rejectUnknown(value, ["legacyPaths"], "contributes.http", errors);
+  rejectUnknown(
+    value,
+    ["legacyPaths", "legacyRedirects"],
+    "contributes.http",
+    errors,
+  );
+  validateLegacyRedirects(value.legacyRedirects, errors);
   const paths = value.legacyPaths;
   if (paths === undefined) return;
   if (!Array.isArray(paths)) {

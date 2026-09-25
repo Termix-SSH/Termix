@@ -39,6 +39,7 @@ import type {
   MutableConnectConfig,
   SshAuthProvider,
   SshConnectHost,
+  SshConnectProfile,
   SshConnectPurpose,
 } from "../hosts/connect/types.js";
 
@@ -54,24 +55,22 @@ interface Deps {
   audit: AuditFn;
 }
 
-const PLUGIN_PURPOSES = new Set<SshConnectPurpose>([
-  "plugin",
-  "docker",
-  "docker-console",
-  "metrics",
-  "proxmox",
-  "fleet",
-  "remote-desktop",
-  "tunnel",
-  "file-manager",
-  "file-transfer",
+const PLUGIN_PROFILES = new Set<SshConnectProfile>([
   "terminal",
-  "tmux",
+  "session",
+  "stream",
+  "forward",
+  "background",
 ]);
 
-function purposeOf(options?: PluginSshConnectOptions): SshConnectPurpose {
-  const purpose = (options?.purpose ?? "plugin") as SshConnectPurpose;
-  return PLUGIN_PURPOSES.has(purpose) ? purpose : "plugin";
+function purposeOf(options?: { purpose?: string }): SshConnectPurpose {
+  return options?.purpose || "plugin";
+}
+
+// "jump" belongs to core's own jump chain; a plugin gets background.
+function profileOf(options?: { profile?: string }): SshConnectProfile {
+  const profile = options?.profile as SshConnectProfile | undefined;
+  return profile && PLUGIN_PROFILES.has(profile) ? profile : "background";
 }
 
 /**
@@ -141,6 +140,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       const connection = await connectHost(host as number | SshConnectHost, {
         userId,
         purpose: purposeOf(options),
+        profile: profileOf(options),
         timeoutMs: options?.timeoutMs,
         prompt: options?.prompt,
         overrides: options?.overrides as Partial<MutableConnectConfig>,
@@ -273,6 +273,7 @@ export function createPluginSsh({ manifest, bag, audit }: Deps): PluginSsh {
       const built = await buildConnectConfig(host as SshConnectHost, {
         userId: actingUser(host),
         purpose: purposeOf(options),
+        profile: profileOf(options),
         client: options.client as never,
         serverHostId: options.serverHostId,
         log: options.log,

@@ -127,7 +127,7 @@ export function registerTlsRenewer(renewer: TlsRenewer): () => void {
   };
 }
 
-export function currentTlsRenewer(): TlsRenewer | null {
+function currentTlsRenewer(): TlsRenewer | null {
   const first = renewers.values().next();
   return first.done ? null : first.value.renewer;
 }

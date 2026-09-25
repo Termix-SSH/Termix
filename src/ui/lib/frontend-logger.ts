@@ -373,7 +373,14 @@ export const authLogger = new FrontendLogger("AUTH", "🔐", "#dc2626");
 export const sshLogger = new FrontendLogger("SSH", "🖥️", "#1e3a8a");
 export const fileLogger = new FrontendLogger("FILE", "📁", "#1e3a8a");
 export const statsLogger = new FrontendLogger("STATS", "📊", "#22c55e");
-export const systemLogger = new FrontendLogger("SYSTEM", "🚀", "#1e3a8a");
+const systemLogger = new FrontendLogger("SYSTEM", "🚀", "#1e3a8a");
 export const dashboardLogger = new FrontendLogger("DASHBOARD", "📊", "#ec4899");
 
-export const logger = systemLogger;
+/** A named console logger, for plugins that want the same log format. */
+export function createFrontendLogger(
+  serviceName: string,
+  serviceIcon = "🧩",
+  serviceColor = "#6b7280",
+) {
+  return new FrontendLogger(serviceName, serviceIcon, serviceColor);
+}

@@ -132,7 +132,7 @@ const SHARE_LEVELS = ["connect", "view", "edit", "manage"];
  * Drops the fields a shared host's recipient may not read: a field declares
  * the lowest share level that sees it with shareRead. The owner sees all.
  */
-export function visibleHostPluginSettings(
+function visibleHostPluginSettings(
   values: HostPluginSettings,
   host: Record<string, unknown>,
 ): HostPluginSettings {

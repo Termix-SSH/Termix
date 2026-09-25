@@ -159,3 +159,40 @@ export {
   testNotificationChannel,
   type NotificationChannel,
 } from "@/api/notification-channels-api";
+
+// Keyboard hints, the connection log panel and a named console logger.
+export { Kbd, KbdKey, KbdSeparator } from "@/components/kbd";
+export { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel";
+export type { LogEntry } from "@/types/connection-log";
+export { createFrontendLogger, type LogContext } from "@/lib/frontend-logger";
+
+// One budget for background work across the whole app (preloads, prefetches).
+export {
+  getAdaptiveResourceBudget,
+  markAdaptiveResourceUsed,
+  runAdaptiveBackgroundTask,
+} from "@/lib/adaptive-resource-budget";
+
+// The id this browser sends as X-Termix-Device-ID.
+export { getDeviceId } from "@/lib/device-id";
+
+// A host that is never saved, for connecting to an address straight away.
+export {
+  createQuickConnectHost,
+  isQuickConnectHost,
+} from "@/sidebar/quick-connect-host";
+
+// The desktop app's local file bridge (window.electronAPI.localFs and
+// localTransfer), for plugins that browse or transfer local files.
+export type {
+  LocalCollectedFile,
+  LocalDirectoryListing,
+  LocalFileEntry,
+  LocalFsHomeInfo,
+  LocalFsResult,
+  LocalTransferOrigin,
+  LocalTransferProgress,
+  LocalTrashResult,
+  LocalWalkFile,
+  LocalWalkResult,
+} from "@/types/electron";

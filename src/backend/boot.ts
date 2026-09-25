@@ -39,7 +39,7 @@ export async function runCoreBootMigrations(): Promise<void> {
   await runChannelConfigEncryptionMigration();
 
   const { runExternalIdentityMigration } =
-    await import("./utils/crypto-migration/external-identity-migration.js");
+    await import("./upgrade/external-identity-migration.js");
   await runExternalIdentityMigration();
 
   const { runHostStatusConfigMigration } =

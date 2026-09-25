@@ -122,7 +122,7 @@ async function withHostConnection<T>(
 ): Promise<T> {
   return ctx.ssh.withConnection<T, Client>(
     host.id,
-    { pool: POOL, purpose: "tmux" },
+    { pool: POOL, purpose: "tmux", overrides: { readyTimeout: 60000 } },
     fn,
   );
 }

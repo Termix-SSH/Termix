@@ -1,13 +1,7 @@
 import { AxiosError } from "axios";
-import {
-  authApi,
-  getAllServerStatuses,
-  handleApiError,
-  sshHostApi,
-} from "@/main-axios";
+import { getAllServerStatuses, handleApiError, sshHostApi } from "@/main-axios";
 import type { SSHHost, SSHHostData, ProxyNode } from "@/types/index";
 import type { ServerStatus, SSHHostWithStatus } from "@/main-axios";
-import type { ProxmoxDiscoverResult, ProxmoxSyncResult } from "@/types/proxmox";
 import {
   getCachedSSHHosts,
   invalidateHostsAndStatusCaches,
@@ -171,90 +165,6 @@ export async function importSSHConfigHosts(
     return response.data;
   } catch (error) {
     handleApiError(error, "import SSH config hosts");
-  }
-}
-
-export async function discoverProxmoxGuests(
-  hostId: number,
-): Promise<ProxmoxDiscoverResult> {
-  try {
-    const response = await authApi.post(
-      "/plugin-api/proxmox/discover",
-      { hostId },
-      { timeout: 120000 },
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "discover Proxmox guests");
-  }
-}
-
-export function discoverProxmoxGuestsStream(
-  hostId: number,
-  handlers: {
-    onProgress?: (done: number, total: number) => void;
-    onResult: (result: ProxmoxDiscoverResult) => void;
-    onError: (message: string) => void;
-  },
-): () => void {
-  const baseURL = (authApi.defaults.baseURL || "").replace(/\/$/, "");
-  const source = new EventSource(
-    `${baseURL}/plugin-api/proxmox/discover/stream?hostId=${encodeURIComponent(
-      String(hostId),
-    )}`,
-    { withCredentials: true },
-  );
-  let settled = false;
-  const close = () => {
-    settled = true;
-    source.close();
-  };
-  source.addEventListener("progress", (event) => {
-    try {
-      const data = JSON.parse((event as MessageEvent).data);
-      handlers.onProgress?.(data.done, data.total);
-    } catch {
-      // ignore malformed progress frames
-    }
-  });
-  source.addEventListener("result", (event) => {
-    close();
-    try {
-      handlers.onResult(JSON.parse((event as MessageEvent).data));
-    } catch {
-      handlers.onError("Failed to parse discovery result");
-    }
-  });
-  source.addEventListener("fail", (event) => {
-    close();
-    let message = "Discovery failed";
-    try {
-      message = JSON.parse((event as MessageEvent).data).message || message;
-    } catch {
-      // keep default message
-    }
-    handlers.onError(message);
-  });
-  source.onerror = () => {
-    if (settled) return;
-    close();
-    handlers.onError("Discovery connection lost");
-  };
-  return close;
-}
-
-export async function syncProxmoxGuests(
-  hostId: number,
-): Promise<ProxmoxSyncResult> {
-  try {
-    const response = await authApi.post(
-      "/plugin-api/proxmox/sync",
-      { hostId },
-      { timeout: 120000 },
-    );
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "sync Proxmox guests");
   }
 }
 

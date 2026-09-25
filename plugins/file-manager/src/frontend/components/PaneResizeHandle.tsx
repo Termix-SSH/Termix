@@ -1,5 +1,5 @@
 import type React from "react";
-import { cn } from "@/lib/utils.ts";
+import { cn } from "@termix/plugin-sdk/ui";
 
 interface PaneResizeHandleProps {
   label: string;

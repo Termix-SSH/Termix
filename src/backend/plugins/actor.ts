@@ -47,11 +47,7 @@ export function getActor(): string | undefined {
   return storage.getStore()?.userId;
 }
 
-export function getActorSource(): ActorStore["source"] | undefined {
-  return storage.getStore()?.source;
-}
-
-export class PluginActorError extends Error {
+class PluginActorError extends Error {
   readonly code = "EPLUGINACTOR";
 
   constructor(pluginId: string, operation: string) {
@@ -61,10 +57,4 @@ export class PluginActorError extends Error {
     );
     this.name = "PluginActorError";
   }
-}
-
-export function requireActor(pluginId: string, operation: string): string {
-  const userId = getActor();
-  if (!userId) throw new PluginActorError(pluginId, operation);
-  return userId;
 }

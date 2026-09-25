@@ -9,16 +9,13 @@ import { dashboardLogger } from "../utils/logger.js";
 const RATE_LIMIT_MS = 1000;
 const activityRateLimiter = new Map<string, number>();
 
-export const RECENT_ACTIVITY_TYPES = [
-  "terminal",
-  "file_manager",
-  "server_stats",
-  "tunnel",
-  "docker",
-  "telnet",
-  "vnc",
-  "rdp",
-] as const;
+/**
+ * Activity types are whatever the recording plugin calls them (each tab
+ * declares the types it reopens), so only the shape is checked here.
+ */
+function isActivityType(type: unknown): type is string {
+  return typeof type === "string" && /^[a-z][a-z0-9_]{0,31}$/.test(type);
+}
 
 export type RecordActivityResult =
   | { status: "logged"; id: number }
@@ -36,7 +33,7 @@ export async function recordRecentActivity(
   entry: { type: string; hostId: number; hostName: string },
 ): Promise<RecordActivityResult> {
   const { type, hostId, hostName } = entry;
-  if (!(RECENT_ACTIVITY_TYPES as readonly string[]).includes(type)) {
+  if (!isActivityType(type)) {
     return { status: "invalid_type" };
   }
 

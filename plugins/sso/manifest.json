@@ -43,6 +43,24 @@
           "permission": "manage"
         }
       ]
+    },
+    "http": {
+      "legacyRedirects": [
+        {
+          "from": "/users/oidc-config",
+          "to": "/config"
+        },
+        {
+          "from": "/users/oidc/callback",
+          "to": "/callback",
+          "status": 308
+        },
+        {
+          "from": "/users/oidc/backchannel-logout",
+          "to": "/backchannel-logout",
+          "status": 308
+        }
+      ]
     }
   },
   "locales": "locales",

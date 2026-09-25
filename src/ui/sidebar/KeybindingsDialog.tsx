@@ -5,7 +5,8 @@ import {
   getUserPreferences,
   parseCustomKeybindings,
 } from "@/api/open-tabs-api";
-import { saveUserPreferences, getSnippets } from "@/main-axios";
+import { saveUserPreferences } from "@/main-axios";
+import { listSnippets } from "@/lib/snippet-provider";
 import { BUILT_IN_DEFAULTS } from "@/lib/default-keybindings";
 import type {
   CustomKeybinding,
@@ -87,7 +88,7 @@ export function KeybindingsDialog({
     setLoading(true);
     Promise.all([
       getUserPreferences().catch(() => null),
-      getSnippets().catch(() => []),
+      listSnippets().catch(() => []),
     ])
       .then(([prefs, snippetList]) => {
         setBindings(

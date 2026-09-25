@@ -294,13 +294,13 @@ export function CredentialEditorView({
                 onChange={(e) => setCredField("password", e.target.value)}
               />
               <PluginComponent
-                id="secret-sources.hint"
+                id="credentials.secretHint"
                 onManage={() => setShowSecretSources((v) => !v)}
               />
             </div>
             {showSecretSources && (
               <PluginComponent
-                id="secret-sources.manager"
+                id="credentials.secretManager"
                 onClose={() => setShowSecretSources(false)}
               />
             )}

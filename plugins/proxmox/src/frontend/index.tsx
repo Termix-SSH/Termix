@@ -9,13 +9,13 @@ import {
   type TermixApp,
 } from "@termix/plugin-sdk/frontend";
 import { ComponentSlot, DropdownMenuItem } from "@termix/plugin-sdk/ui";
-import type { SSHHostWithStatus } from "@/main-axios";
+import type { PluginHostRecord } from "@termix/plugin-sdk/frontend";
+import { setProxmoxApp } from "./proxmox-api";
 import { ProxmoxDiscoverDialog } from "./ProxmoxDiscoverDialog";
 import { HostProxmoxTab } from "./HostProxmoxTab";
 import { ProxmoxStatsTab } from "./stats/ProxmoxStatsTab";
 import ProxmoxStatsApp from "./stats/ProxmoxStatsApp";
 import { HostProxmoxStatsTab } from "./stats/HostProxmoxStatsTab";
-import type { SSHHost } from "@/types";
 
 interface DiscoverRequest {
   hostId?: number;
@@ -79,7 +79,7 @@ function ProxmoxHostSection({ form, updateForm }: HostEditorSectionProps) {
 function ProxmoxStatsTabView({ sshHost, label, isVisible }: TabProps) {
   return (
     <ProxmoxStatsTab
-      hostConfig={sshHost as unknown as SSHHost}
+      hostConfig={sshHost as never}
       title={label}
       isVisible={isVisible}
       isTopbarOpen={false}
@@ -93,6 +93,8 @@ function ProxmoxStatsStandalone({ hostId }: StandaloneViewProps) {
 }
 
 export function activate(app: TermixApp): void {
+  setProxmoxApp(app);
+  app.onDispose(() => setProxmoxApp(null));
   // The dialog lives in the hosts panel; the menu item and host action open
   // it through this, created per activation.
   const openers = new Set<Opener>();
@@ -104,8 +106,8 @@ export function activate(app: TermixApp): void {
     hosts,
     onHostsChanged,
   }: {
-    hosts: SSHHostWithStatus[];
-    onHostsChanged: (hosts: SSHHostWithStatus[]) => void;
+    hosts: PluginHostRecord[];
+    onHostsChanged: (hosts: PluginHostRecord[]) => void;
   }) {
     const [request, setRequest] = useState<DiscoverRequest | null>(null);
     useEffect(() => {

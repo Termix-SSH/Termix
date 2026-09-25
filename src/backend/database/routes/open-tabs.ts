@@ -28,16 +28,6 @@ function getTabTtlMs(): number {
   return (minutes && minutes > 0 ? minutes : DEFAULT_TAB_TTL_MINUTES) * 60_000;
 }
 
-// Legacy tab types that were renamed. Normalize on read so previously saved
-// tabs still restore to the correct (renamed) tab type.
-const LEGACY_TAB_TYPE_MAP: Record<string, string> = {
-  stats: "host-metrics",
-};
-
-function normalizeTabType(tabType: string): string {
-  return LEGACY_TAB_TYPE_MAP[tabType] ?? tabType;
-}
-
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -46,9 +36,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       userId,
       cutoff,
     );
-    return res.json(
-      tabs.map((tab) => ({ ...tab, tabType: normalizeTabType(tab.tabType) })),
-    );
+    return res.json(tabs);
   } catch (e) {
     databaseLogger.error("Failed to get open tabs", e, {
       operation: "get_open_tabs",

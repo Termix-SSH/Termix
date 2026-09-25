@@ -10,12 +10,6 @@
  */
 
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
-import {
-  LEGACY_CORE_PREFIX,
-  findLegacyCoreImports,
-} from "../../packages/plugin-sdk/cli/lib/legacy-core-specifier.mjs";
 
 /**
  * Third-party modules that must be one instance. Keep in step with the CLI's
@@ -42,59 +36,8 @@ export const SHARED_SDK_MODULES = [
   "@termix/plugin-sdk/ui",
 ];
 
-function walk(dir, out) {
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name !== "node_modules" && entry.name !== "dist") {
-        walk(full, out);
-      }
-    } else if (/\.(tsx?|mjs|jsx?)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-/** Legacy core modules imported by any bundled plugin's frontend. */
-export function scanLegacyCoreModules(repoRoot) {
-  const found = new Set();
-  const pluginsDir = path.join(repoRoot, "plugins");
-  let plugins = [];
-  try {
-    plugins = fs.readdirSync(pluginsDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  for (const plugin of plugins) {
-    if (!plugin.isDirectory()) continue;
-    const files = walk(
-      path.join(pluginsDir, plugin.name, "src", "frontend"),
-      [],
-    );
-    for (const file of files) {
-      for (const specifier of findLegacyCoreImports(
-        fs.readFileSync(file, "utf8"),
-      )) {
-        found.add(specifier);
-      }
-    }
-  }
-  return [...found].sort();
-}
-
-export function sharedModules(repoRoot) {
-  return [
-    ...SHARED_VENDOR_MODULES,
-    ...SHARED_SDK_MODULES,
-    ...scanLegacyCoreModules(repoRoot),
-  ];
+export function sharedModules() {
+  return [...SHARED_VENDOR_MODULES, ...SHARED_SDK_MODULES];
 }
 
 /** A file-name-safe name for a shared module's shim. */
@@ -125,20 +68,4 @@ export function productionImportMap(specifiers) {
 
 export function importMapCspHash(text) {
   return `'sha256-${crypto.createHash("sha256").update(text, "utf8").digest("base64")}'`;
-}
-
-/** Absolute source file behind a legacy core specifier, or null. */
-export function resolveLegacyCoreFile(repoRoot, specifier) {
-  if (!specifier.startsWith(LEGACY_CORE_PREFIX)) return null;
-  const rest = specifier.slice(LEGACY_CORE_PREFIX.length);
-  const base = rest.startsWith("types")
-    ? path.join(repoRoot, "src", rest)
-    : path.join(repoRoot, "src", "ui", rest.slice("ui/".length));
-  const candidates = [
-    `${base}.ts`,
-    `${base}.tsx`,
-    path.join(base, "index.ts"),
-    path.join(base, "index.tsx"),
-  ];
-  return candidates.find((file) => fs.existsSync(file)) ?? null;
 }

@@ -21,7 +21,7 @@ import type {
   SshConnectHost,
 } from "./types.js";
 
-export function getHostSocks5Config(host: SshConnectHost): SOCKS5Config | null {
+function getHostSocks5Config(host: SshConnectHost): SOCKS5Config | null {
   const chain = Array.isArray(host.socks5ProxyChain)
     ? (host.socks5ProxyChain as ProxyNode[])
     : [];
@@ -36,7 +36,7 @@ export function getHostSocks5Config(host: SshConnectHost): SOCKS5Config | null {
   };
 }
 
-export class SshTransportError extends Error {
+class SshTransportError extends Error {
   constructor(
     message: string,
     readonly stage: "cloudflare" | "jump-host" | "jump-forward" | "proxy",
