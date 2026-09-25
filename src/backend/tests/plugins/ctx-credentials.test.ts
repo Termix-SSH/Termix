@@ -15,6 +15,9 @@ const state = vi.hoisted(() => ({
   canConnect: true,
   resolution: null as Record<string, unknown> | null,
   resolverCalls: [] as Array<Record<string, unknown>>,
+  savedCredentials: [] as Array<Record<string, unknown>>,
+  userCredentials: new Map<string, Array<Record<string, unknown>>>(),
+  corePermissions: new Set<string>(["credentials.view", "credentials.create"]),
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -24,6 +27,18 @@ vi.mock("../../database/repositories/factory.js", () => ({
         pluginId,
         capability,
       })),
+  }),
+  createCurrentCredentialRepository: () => ({
+    listDecryptedByUserId: async (userId: string) =>
+      state.userCredentials.get(userId) ?? [],
+    createEncryptedForUser: async (
+      userId: string,
+      data: Record<string, unknown>,
+    ) => {
+      const row = { ...data, id: 100 + state.savedCredentials.length, userId };
+      state.savedCredentials.push(row);
+      return row;
+    },
   }),
   createCurrentHostResolutionRepository: () => ({
     findHostOwnerId: async (hostId: number) =>
@@ -44,6 +59,8 @@ vi.mock("../../utils/permission-manager.js", () => ({
   PermissionManager: {
     getInstance: () => ({
       canAccessHost: async () => ({ hasAccess: state.canConnect }),
+      hasPermission: async (_userId: string, permission: string) =>
+        state.corePermissions.has(permission),
     }),
   },
 }));
@@ -66,6 +83,7 @@ import {
   resetSecretResolverRegistryForTests,
 } from "../../hosts/connect/secret-resolver-registry.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
+import ssh2 from "ssh2";
 
 function contextFor(
   capabilities: string[],
@@ -112,6 +130,9 @@ beforeEach(() => {
   state.canConnect = true;
   state.resolution = null;
   state.resolverCalls.length = 0;
+  state.savedCredentials.length = 0;
+  state.userCredentials.clear();
+  state.corePermissions = new Set(["credentials.view", "credentials.create"]);
   state.hosts.set(7, { ...baseHost });
   resetSecretResolverRegistryForTests();
 });
@@ -303,5 +324,122 @@ describe("ctx.credentials.registerSecretResolver", () => {
     await handle.bag.disposeAll();
 
     expect(getSecretResolver("op")).toBeUndefined();
+  });
+});
+
+describe("ctx.credentials.listSshKeys", () => {
+  const pair = ssh2.utils.generateKeyPairSync("ed25519");
+  const derived = (() => {
+    const parsed = ssh2.utils.parseKey(pair.private);
+    const key = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (key instanceof Error) throw key;
+    return `${key.type} ${key.getPublicSSH().toString("base64")}`;
+  })();
+
+  beforeEach(() => {
+    state.userCredentials.set("owner", [
+      { id: 1, name: "stored", authType: "key", publicKey: "ssh-ed25519 AAAA" },
+      { id: 2, name: "derived", authType: "key", privateKey: pair.private },
+      { id: 3, name: "pw", authType: "password", password: "secret" },
+    ]);
+  });
+
+  it("refuses without credentials:use", async () => {
+    grants.set("demo", []);
+    const ctx = contextFor([]);
+    await expect(
+      runAsActor("owner", "request", () => ctx.credentials.listSshKeys()),
+    ).rejects.toThrow(/credentials:use/);
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_credentials_list_keys",
+      success: false,
+    });
+  });
+
+  it("refuses with no acting user", async () => {
+    grants.set("demo", ["credentials:use"]);
+    const ctx = contextFor(["credentials:use"]);
+    await expect(ctx.credentials.listSshKeys()).rejects.toThrow(/acting user/);
+  });
+
+  it("refuses without the core credentials.view permission", async () => {
+    grants.set("demo", ["credentials:use"]);
+    state.corePermissions.delete("credentials.view");
+    const ctx = contextFor(["credentials:use"]);
+    await expect(
+      runAsActor("owner", "request", () => ctx.credentials.listSshKeys()),
+    ).rejects.toThrow(/credentials.view/);
+  });
+
+  it("lists only the actor's key credentials, public half only", async () => {
+    grants.set("demo", ["credentials:use"]);
+    const ctx = contextFor(["credentials:use"]);
+    const keys = await runAsActor("owner", "request", () =>
+      ctx.credentials.listSshKeys(),
+    );
+    expect(keys).toEqual([
+      { id: 1, name: "stored", username: null, publicKey: "ssh-ed25519 AAAA" },
+      { id: 2, name: "derived", username: null, publicKey: derived },
+    ]);
+    expect(JSON.stringify(keys)).not.toContain("PRIVATE KEY");
+
+    const other = await runAsActor("someone", "request", () =>
+      ctx.credentials.listSshKeys(),
+    );
+    expect(other).toEqual([]);
+  });
+});
+
+describe("ctx.credentials.createSshKey", () => {
+  const input = {
+    name: "Generated",
+    privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----",
+    publicKey: "ssh-ed25519 AAAA",
+    keyType: "ssh-ed25519",
+  };
+
+  it("refuses without credentials:write", async () => {
+    grants.set("demo", ["credentials:use"]);
+    const ctx = contextFor(["credentials:use"]);
+    await expect(
+      runAsActor("owner", "request", () => ctx.credentials.createSshKey(input)),
+    ).rejects.toThrow(/credentials:write/);
+    expect(state.savedCredentials).toHaveLength(0);
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_credentials_create_key",
+      success: false,
+    });
+  });
+
+  it("refuses without the core credentials.create permission", async () => {
+    grants.set("demo", ["credentials:write"]);
+    state.corePermissions.delete("credentials.create");
+    const ctx = contextFor(["credentials:write"]);
+    await expect(
+      runAsActor("owner", "request", () => ctx.credentials.createSshKey(input)),
+    ).rejects.toThrow(/credentials.create/);
+    expect(state.savedCredentials).toHaveLength(0);
+  });
+
+  it("saves a key credential owned by the actor", async () => {
+    grants.set("demo", ["credentials:write"]);
+    const ctx = contextFor(["credentials:write"]);
+    const result = await runAsActor("owner", "request", () =>
+      ctx.credentials.createSshKey({ ...input, username: "root" }),
+    );
+    expect(result).toEqual({ id: 100 });
+    expect(state.savedCredentials[0]).toMatchObject({
+      userId: "owner",
+      authType: "key",
+      name: "Generated",
+      username: "root",
+      privateKey: input.privateKey,
+      publicKey: input.publicKey,
+      detectedKeyType: "ssh-ed25519",
+    });
+    expect(auditEntries.at(-1)).toMatchObject({
+      action: "plugin_credentials_create_key",
+      success: true,
+    });
   });
 });

@@ -18,8 +18,6 @@ import {
   createCurrentSettingsRepository,
   createCurrentSharedHostSecretsRepository,
   createCurrentSshCredentialUsageRepository,
-  createCurrentTermixIdentityCaRepository,
-  createCurrentTermixIdentityRepository,
   createCurrentTrustedDeviceRepository,
   createCurrentUserPreferenceRepository,
   createCurrentUserRepository,
@@ -95,10 +93,8 @@ export async function deleteUserAndRelatedData(
     // homepage and secret-sources plugins' adopted tables. The secret
     // source's token in ctx.secrets is cleaned up generically below, with
     // every other plugin_settings row for this user. The opkssh and vault
-    // plugins' tables cascade the same way.
+    // plugins' tables cascade the same way, and so do termix-identity's.
 
-    await createCurrentTermixIdentityCaRepository().deleteByUserId(userId);
-    await createCurrentTermixIdentityRepository().deleteByUserId(userId);
     await createCurrentOpenTabRepository().deleteByUserId(userId);
     await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 

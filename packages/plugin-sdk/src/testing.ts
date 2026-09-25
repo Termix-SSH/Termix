@@ -58,6 +58,8 @@ import type {
   PluginHostShareResult,
   PluginShareableUser,
   PluginShareableRole,
+  PluginSshKeyCredential,
+  PluginSshKeyCredentialInput,
 } from "./backend.js";
 import type { SyncEntityRegistration } from "./backend.js";
 import type { PluginDatabase } from "./backend.js";
@@ -120,6 +122,8 @@ export interface FakeContextOptions {
    * "<hostId>:<protocol>". A missing key answers null.
    */
   protocolTargets?: Record<string, PluginProtocolTarget>;
+  /** What ctx.credentials.listSshKeys answers. */
+  sshKeyCredentials?: PluginSshKeyCredential[];
   /** What ctx.desktop.available() answers. Defaults to false. */
   desktopAvailable?: boolean;
   /** What ctx.hosts.status.get and check answer, by host id. */
@@ -273,6 +277,8 @@ export interface FakePluginContext {
   nativeRdpLaunches: PluginNativeRdpRequest[];
   /** Every ctx.credentials.resolveHostProtocol call, in order. */
   credentialReads: Array<{ hostId: number; protocol: string }>;
+  /** Every ctx.credentials.createSshKey call, with the id it answered. */
+  createdSshKeys: Array<PluginSshKeyCredentialInput & { id: number }>;
   /** Every ctx.notify.send call, with the actor it ran as. */
   notifications: Array<{
     actor: string | undefined;
@@ -392,6 +398,7 @@ export function createFakeContext(
   const desktopWindows: FakePluginContext["desktopWindows"] = [];
   const nativeRdpLaunches: FakePluginContext["nativeRdpLaunches"] = [];
   const credentialReads: FakePluginContext["credentialReads"] = [];
+  const createdSshKeys: FakePluginContext["createdSshKeys"] = [];
   const notifications: FakePluginContext["notifications"] = [];
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
@@ -972,6 +979,25 @@ export function createFakeContext(
     },
 
     credentials: {
+      listSshKeys: async () => [
+        ...(options.sshKeyCredentials ?? []),
+        ...createdSshKeys.map((key) => ({
+          id: key.id,
+          name: key.name,
+          username: key.username ?? null,
+          publicKey: key.publicKey,
+        })),
+      ],
+      createSshKey: async (input) => {
+        const id =
+          Math.max(
+            0,
+            ...(options.sshKeyCredentials ?? []).map((key) => key.id),
+            ...createdSshKeys.map((key) => key.id),
+          ) + 1;
+        createdSshKeys.push({ ...input, id });
+        return { id };
+      },
       resolveHostProtocol: async (hostId, protocol) => {
         credentialReads.push({ hostId, protocol });
         return options.protocolTargets?.[`${hostId}:${protocol}`] ?? null;
@@ -1049,6 +1075,7 @@ export function createFakeContext(
     desktopWindows,
     nativeRdpLaunches,
     credentialReads,
+    createdSshKeys,
     notifications,
     fetches,
     processRuns,
@@ -1105,6 +1132,8 @@ export interface MockContextOptions {
   sshHosts?: PluginSshHost[];
   /** What ctx.credentials serves. See FakeContextOptions. */
   protocolTargets?: Record<string, PluginProtocolTarget>;
+  /** What ctx.credentials.listSshKeys serves. */
+  sshKeyCredentials?: PluginSshKeyCredential[];
   /** What ctx.desktop.available() answers. */
   desktopAvailable?: boolean;
   /** What ctx.hosts.status answers. See FakeContextOptions. */
@@ -1164,6 +1193,7 @@ export function createMockCtx(
     sshHosts: options.sshHosts,
     services: options.services,
     protocolTargets: options.protocolTargets,
+    sshKeyCredentials: options.sshKeyCredentials,
     desktopAvailable: options.desktopAvailable,
     hostStatuses: options.hostStatuses,
     notificationChannels: options.notificationChannels,
@@ -1462,6 +1492,14 @@ export function createMockCtx(
     },
 
     credentials: {
+      listSshKeys: async () => {
+        require("credentials:use");
+        return ctx.credentials.listSshKeys();
+      },
+      createSshKey: async (input) => {
+        require("credentials:write");
+        return ctx.credentials.createSshKey(input);
+      },
       resolveHostProtocol: async (hostId, protocol) => {
         require("credentials:read");
         return ctx.credentials.resolveHostProtocol(hostId, protocol);

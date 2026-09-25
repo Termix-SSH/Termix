@@ -393,6 +393,13 @@
       "when": 1790298804216,
       "tag": "0055_jazzy_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1790300572231,
+      "tag": "0056_chilly_vindicator",
+      "breakpoints": true
     }
   ]
 }

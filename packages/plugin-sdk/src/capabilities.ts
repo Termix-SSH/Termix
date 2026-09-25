@@ -49,6 +49,7 @@ export const CAPABILITY_CATALOG: readonly CapabilityInfo[] = [
 
   entry("hosts:write", "medium"),
   entry("credentials:use", "medium"),
+  entry("credentials:write", "medium"),
   entry("network:outbound", "medium"),
   entry("network:serve", "medium"),
   entry("network:broadcast", "medium"),

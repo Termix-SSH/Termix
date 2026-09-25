@@ -7,7 +7,10 @@ import multer from "multer";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/users.js";
 import hostRoutes from "./routes/host.js";
-import { registerVaultCompatRoutes } from "./routes/host-compat-routes.js";
+import {
+  registerTermixIdCompatRoutes,
+  registerVaultCompatRoutes,
+} from "./routes/host-compat-routes.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import sshAuthRoutes from "./routes/ssh-auth-routes.js";
@@ -17,7 +20,6 @@ import userPreferencesRoutes from "./routes/user-preferences.js";
 import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
 import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
 import uiPreferencesRoutes from "./routes/ui-preferences.js";
-import termixIdRoutes from "./routes/termix-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import notificationChannelsRoutes from "./routes/notification-channels-routes.js";
 import syncRoutes from "./routes/sync.js";
@@ -1793,7 +1795,9 @@ app.use("/user-preferences", userPreferencesRoutes);
 app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
 app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
-app.use("/termix-id", termixIdRoutes);
+const termixIdCompatRoutes = express.Router();
+registerTermixIdCompatRoutes(termixIdCompatRoutes);
+app.use("/termix-id", termixIdCompatRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 const vaultCompatRoutes = express.Router();
 registerVaultCompatRoutes(vaultCompatRoutes);

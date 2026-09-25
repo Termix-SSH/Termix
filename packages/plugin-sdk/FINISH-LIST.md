@@ -657,3 +657,17 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   editor (sharing only offered with "Share Vault profiles"); switch to the new
   redirect URI after allowing it in the Vault role; disable the vault plugin
   and a Vault host says it needs it, then enable it again.
+- **C6 (termix-identity):** only the public resolver URLs under
+  `/termix-id/u/` redirect to the plugin. The 2.8 management routes
+  (`/termix-id/me`, `/termix-id/keys`, `/termix-id/ca` and the rest) now 404.
+  Nothing in this repo calls them; confirm Termix-Mobile does not before
+  2.9.0 ships, and add redirects if it does. Owner: D0.
+- **C6 (termix-identity):** on MySQL the adopted `p_termix_identity_keys` has
+  no `idx_termix_identity_keys_identity` (core never created one there and
+  an adoption writes no MySQL indexes), so the public resolver scans the
+  keys table. Add it in a later plugin migration if a MySQL install needs
+  it. Owner: D0.
+- **C6 (termix-identity):** the docs site still shows the
+  `/termix-id/u/<handle>` resolver URL. It keeps working through the 308,
+  but the docs should show `/plugin-api/termix-identity/u/<handle>`. Owner:
+  D0.

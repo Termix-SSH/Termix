@@ -36,8 +36,6 @@ import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-re
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
 import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
-import { TermixIdentityCaRepository } from "./termix-identity-ca-repository.js";
-import { TermixIdentityRepository } from "./termix-identity-repository.js";
 import { TrustedDeviceRepository } from "./trusted-device-repository.js";
 import { UserDataExportRepository } from "./user-data-export-repository.js";
 import { UserPreferenceRepository } from "./user-preference-repository.js";
@@ -346,20 +344,6 @@ export function createCurrentSshCredentialUsageRepository(): SshCredentialUsageR
   return new SshCredentialUsageRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("ssh_credential_usage_repository_write"),
-  );
-}
-
-export function createCurrentTermixIdentityCaRepository(): TermixIdentityCaRepository {
-  return new TermixIdentityCaRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("termix_identity_ca_repository_write"),
-  );
-}
-
-export function createCurrentTermixIdentityRepository(): TermixIdentityRepository {
-  return new TermixIdentityRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("termix_identity_repository_write"),
   );
 }
 

@@ -530,6 +530,19 @@ export interface PluginWsTarget {
   protocols?: string[];
 }
 
+/** Where the frontend runs, for a plugin that behaves differently in the desktop app. */
+export interface DesktopApi {
+  /** True inside the Termix desktop app. */
+  readonly available: boolean;
+  /**
+   * The remote server the desktop app is connected to for sync, or null
+   * outside the desktop app and while it runs standalone.
+   */
+  remoteServerUrl: () => Promise<string | null>;
+  /** Called when the desktop app connects to or leaves a remote server. */
+  onRemoteServerChange: (listener: () => void) => Disposer;
+}
+
 export interface TermixAppInfo {
   readonly pluginId: string;
   readonly manifest: PluginManifest;
@@ -629,6 +642,8 @@ export interface TermixApp extends TermixAppInfo {
     options?: { origin?: unknown },
   ) => Promise<PluginWsTarget | null>;
   tabs: TabsApi;
+  /** The desktop app, when the frontend runs in it. */
+  desktop: DesktopApi;
   /** Registered cleanup, run when the plugin is disabled. */
   onDispose: (dispose: Disposer) => void;
 }

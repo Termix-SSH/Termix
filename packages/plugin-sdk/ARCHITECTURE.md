@@ -441,29 +441,30 @@ when the plugin deactivates. Every registered component is wrapped in the
 plugin's scope (so the hooks know which plugin they belong to), an error
 boundary and Suspense.
 
-| Member                                              | What it does                                                                                                                                        |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `registerRailItem`                                  | A rail button, hidden from users without its `permission`. Hideable items show in Appearance > Sidebar > Navigation. The id must be a declared view |
-| `registerPanel`                                     | A rail panel, id in `contributes.panels` or `contributes.tabs`                                                                                      |
-| `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs                                                 |
-| `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`                                                       |
-| `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                                                                |
-| `registerHostProtocol`                              | A connection protocol next to SSH (**B14**): General tab switch, Hosts panel filter and grouping, Quick Connect, the host's primary type and port   |
-| `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                                                            |
-| `registerPaletteEntry`                              | A global or per-host command palette entry                                                                                                          |
-| `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                                                                |
-| `registerHomepageWidget`                            | A homepage widget, with an optional edit form                                                                                                       |
-| `registerSettingsComponent`                         | A component a `type: "custom"` settings field names                                                                                                 |
-| `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                                                                        |
-| `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result                                            |
-| `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                                                                      |
-| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method (`placement: "inline"` beside the password form) and a second factor challenge, each with an optional `enrollment`     |
-| `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                         |
-| `apiFor(origin)`                                    | The same client for a resolved connection origin: `"remote"` reaches the desktop app's connected server (**B14**)                                   |
-| `fetch(path, init)`                                 | A raw `fetch` on `/plugin-api/<id>/<path>` with core's auth, for a streamed response (SSE) axios cannot read (**B18**)                              |
-| `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                 |
-| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                    |
-| `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                         |
+| Member                                              | What it does                                                                                                                                             |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `registerRailItem`                                  | A rail button, hidden from users without its `permission`. Hideable items show in Appearance > Sidebar > Navigation. The id must be a declared view      |
+| `registerPanel`                                     | A rail panel, id in `contributes.panels` or `contributes.tabs`                                                                                           |
+| `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs                                                      |
+| `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`                                                            |
+| `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                                                                     |
+| `registerHostProtocol`                              | A connection protocol next to SSH (**B14**): General tab switch, Hosts panel filter and grouping, Quick Connect, the host's primary type and port        |
+| `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                                                                 |
+| `registerPaletteEntry`                              | A global or per-host command palette entry                                                                                                               |
+| `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                                                                     |
+| `registerHomepageWidget`                            | A homepage widget, with an optional edit form                                                                                                            |
+| `registerSettingsComponent`                         | A component a `type: "custom"` settings field names                                                                                                      |
+| `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                                                                             |
+| `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result                                                 |
+| `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                                                                           |
+| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method (`placement: "inline"` beside the password form) and a second factor challenge, each with an optional `enrollment`          |
+| `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                              |
+| `apiFor(origin)`                                    | The same client for a resolved connection origin: `"remote"` reaches the desktop app's connected server (**B14**)                                        |
+| `fetch(path, init)`                                 | A raw `fetch` on `/plugin-api/<id>/<path>` with core's auth, for a streamed response (SSE) axios cannot read (**B18**)                                   |
+| `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                      |
+| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                         |
+| `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                              |
+| `desktop`                                           | `available`, `remoteServerUrl()` and `onRemoteServerChange`: whether the frontend runs in the desktop app and which remote server it syncs with (**C6**) |
 
 Hooks: `useTranslation` (the plugin's namespace), `usePermission` (a short
 name resolves to `<id>.<name>`), `useSettings`, `useHost`, `useHosts`,
@@ -484,8 +485,11 @@ components `send(type, data)` for the session socket and `connectPayload()`,
 the data an `<interaction>_auth_completed` needs to reconnect, so a sign-in
 flow such as OPKSSH's lives entirely in its plugin), `onboarding.steps`, `onboarding.features`,
 `onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`,
-`shell.overlay`, `dashboard.hostMetrics`, `homepage.hostMetrics` and
-`dashboard.secondaryView`. **B16** added the middle two, component slots in
+`shell.overlay`, `dashboard.hostMetrics`, `homepage.hostMetrics`,
+`credentials.badges` and `dashboard.secondaryView`. **C6** added
+`credentials.badges`, a component slot after the key/password badge on each
+saved credential row (`{ credentialId }`); termix-identity shows its "ID"
+badge there, so the credential list no longer fetches Termix ID data. **B16** added the middle two, component slots in
 the dashboard's host status card (`{ hostId, online }`, one per host row) and
 the homepage's host status widget (`{ hostId, shownMetrics, online }`): core
 draws the status and a plugin draws the numbers, so core no longer calls the
@@ -1190,6 +1194,32 @@ base types and branches on no plugin type name.
   message names (`vault_auth_url`, `vault_completed`, `vault_error`) for
   Termix-Mobile.
 
+**C6** moved Termix Identity out. It never was an SSH auth type: issued
+certificates are downloaded once and never stored, and no connect path reads
+them, so `termix-identity` is a standalone feature plugin with no provider.
+
+- It adopts `termix_identities`, `termix_identity_keys` and
+  `termix_identity_ca` as `p_termix_identity_identities`, `_keys` and `_ca`.
+  The migrations keep, by hand, the links from keys and CA to their identity
+  (cascade) and from a key to `ssh_credentials` (set null).
+- The CA private key is sealed with `ctx.secrets.seal` (`secrets:own`), so
+  issuing a certificate no longer needs the owner's data key unlocked.
+  `termix-identity-ca-migration.ts` reseals 2.8 rows, which core encrypted
+  with the owner's data key; it runs from `runPluginDataMoves` right after
+  the adoption and again at boot for a row whose key was not open.
+- The resolver, `/plugin-api/termix-identity/u/<handle>[/<ALGO>|/ca]`, is
+  public through `ctx.http.router({ public })`. The 2.8 URLs under
+  `/termix-id/u/` answer 308 to it (`registerTermixIdCompatRoutes` in
+  `host-compat-routes.ts`; nginx proxies only `/termix-id/u/` now), because
+  servers fetch them from provisioning scripts. The management routes moved
+  and are gated on the new `termix-identity.use` (admins and users).
+- Publishing a saved key and saving a generated pair go through
+  `ctx.credentials.listSshKeys` and `createSshKey` (**C6**, see the ctx
+  surface): the plugin never sees a stored private key.
+- The rail item keeps its id `termix-id`, so saved layouts, hidden-rail
+  preferences and presets carry over, and uses `app.desktop` to stay hidden
+  in a standalone desktop app, as the shell did before.
+
 #### One SSH connect pipeline
 
 Every SSH connection, core's and plugins', goes through
@@ -1693,6 +1723,7 @@ deciding, not the mechanism.
 | `device:serial`      | high     | Open a physical serial or USB device on the Termix server      |
 | `hosts:write`        | medium   | Create and change hosts                                        |
 | `credentials:use`    | medium   | Connect using a host's stored credentials, without seeing them |
+| `credentials:write`  | medium   | Save new credentials for the acting user                       |
 | `network:outbound`   | medium   | Make outbound requests                                         |
 | `network:serve`      | medium   | Open a listening port                                          |
 | `network:broadcast`  | medium   | Send network broadcast packets                                 |
@@ -1763,6 +1794,8 @@ Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 | `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)                     | **B14**                             |
 | `ctx.credentials.resolveHostProtocol`            | `credentials:read`                                 | **B14**                             |
 | `ctx.credentials.registerSecretResolver`         | `auth:provide`                                     | **B20**                             |
+| `ctx.credentials.listSshKeys`                    | `credentials:use`                                  | **C6**                              |
+| `ctx.credentials.createSshKey`                   | `credentials:write`                                | **C6**                              |
 | `ctx.audit.record`                               | none, the actor is the runtime's                   | **B9**                              |
 | `ctx.schedule.every` / `.after`                  | none                                               | **B16**                             |
 | `ctx.fetch`                                      | `network:outbound`                                 | **B17**, signal **B18**, tls **C4** |
@@ -1923,6 +1956,21 @@ credential it points at; a shared recipient gets only core's sharing
 resolution (the owner's shared snapshot or their own override), never the
 owner's raw secret; no connect access, or no host, is `null`. Every call is
 audited as `plugin_credentials_read`, allowed or refused.
+
+**C6** added two members for Termix Identity, both for the acting user's own
+saved SSH keys and both audited:
+
+- `listSshKeys()` returns `{ id, name, username, publicKey }` for every key
+  credential the actor owns. Core derives the public key from the private
+  key when none was stored, so the plugin never receives private material.
+  Needs `credentials:use` and the core `credentials.view` permission.
+- `createSshKey({ name, description, username, privateKey, publicKey,
+keyType })` saves a key pair as a new encrypted credential and returns its
+  id. Needs `credentials:write`, a new capability, the core
+  `credentials.create` permission and an unlocked data key. There is no
+  delete: a plugin that has to undo a save orders its own writes so it never
+  needs one (termix-identity publishes the key first and removes that row if
+  the save fails).
 
 **C3** added `ctx.process`, for a plugin that ships a program (opkssh):
 
@@ -2570,7 +2618,7 @@ Then, with the app running:
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
 (B17), ai (B18), homepage (B19), totp and webauthn (C1), sso and ldap (C2),
-opkssh and warpgate (C3), step-ca (C4), vault (C5),
+opkssh and warpgate (C3), step-ca (C4), vault (C5), termix-identity (C6),
 which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle

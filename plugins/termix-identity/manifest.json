@@ -1,0 +1,45 @@
+{
+  "id": "termix-identity",
+  "name": "Termix Identity",
+  "version": "1.0.0",
+  "description": "Publish your SSH public keys under a public handle that servers can fetch into authorized_keys, and run your own SSH certificate authority to issue short-lived user certificates.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "Fingerprint",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "secrets:own",
+    "network:serve",
+    "credentials:use",
+    "credentials:write",
+    "ui:surface"
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "termix-id",
+        "titleKey": "nav.termixId",
+        "icon": "Fingerprint",
+        "openFrom": ["rail"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ]
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

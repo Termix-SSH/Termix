@@ -26,7 +26,6 @@ import {
   updateCredential,
   deployCredentialToHost,
   renameCredentialFolder,
-  getLinkedCredentialIds,
 } from "@/main-axios";
 
 import type { Host, Credential } from "@/types/ui-types";
@@ -127,9 +126,6 @@ export function HostManager({
   const [credentialReturnHost, setCredentialReturnHost] = useState<
     Host | "new" | null
   >(null);
-  const [termixIdLinkedIds, setTermixIdLinkedIds] = useState<Set<number>>(
-    new Set(),
-  );
 
   useEffect(() => {
     onTagsChange?.([...new Set(credentials.flatMap((c) => c.tags ?? []))]);
@@ -168,16 +164,9 @@ export function HostManager({
       .finally(() => setCredentialsLoading(false));
   };
 
-  const reloadLinkedIds = () => {
-    getLinkedCredentialIds()
-      .then((d) => setTermixIdLinkedIds(new Set(d.credentialIds)))
-      .catch(() => {});
-  };
-
   useEffect(() => {
     reloadHosts();
     reloadCredentials();
-    reloadLinkedIds();
 
     window.addEventListener("termix:hosts-changed", reloadHosts);
     window.addEventListener("ssh-hosts:changed", reloadHosts);
@@ -711,7 +700,6 @@ export function HostManager({
             <CredentialSidebarTree
               folders={credentialFolderTree}
               usedByCounts={usedByCounts}
-              termixIdLinkedIds={termixIdLinkedIds}
               query=""
               loading={credentialsLoading}
               arrangeLocked={externalArrangeLocked}

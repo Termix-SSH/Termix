@@ -1382,11 +1382,42 @@ export interface PluginProtocolTarget {
   };
 }
 
+/** One of the acting user's saved SSH key credentials, public half only. */
+export interface PluginSshKeyCredential {
+  id: number;
+  name: string;
+  username: string | null;
+  /** "<type> <base64>", derived from the private key when none was stored. Null when it cannot be. */
+  publicKey: string | null;
+}
+
+/** A key pair to save as a new credential for the acting user. */
+export interface PluginSshKeyCredentialInput {
+  name: string;
+  description?: string;
+  username?: string | null;
+  privateKey: string;
+  publicKey: string;
+  /** The key's algorithm token, such as "ssh-ed25519". */
+  keyType: string;
+}
+
 /**
  * Plaintext host credentials, for a plugin that has to hand them to another
  * program. Needs credentials:read, and every call is audited.
  */
 export interface PluginCredentials {
+  /**
+   * The acting user's own SSH key credentials, without any private material.
+   * Needs credentials:use and the core credentials.view permission. Audited.
+   */
+  listSshKeys: () => Promise<PluginSshKeyCredential[]>;
+  /**
+   * Saves a key pair as a new encrypted credential owned by the acting user
+   * and returns its id. Needs credentials:write, the core credentials.create
+   * permission and an unlocked data key. Audited.
+   */
+  createSshKey: (input: PluginSshKeyCredentialInput) => Promise<{ id: number }>;
   /** Null when the host does not exist or the acting user cannot connect to it. */
   resolveHostProtocol: (
     hostId: number,
@@ -1627,7 +1658,7 @@ export interface PluginContext {
   readonly auth: PluginAuth;
   /** Opens Electron windows outside the main renderer. Needs desktop:window. */
   readonly desktop: PluginDesktop;
-  /** Plaintext host protocol credentials. Needs credentials:read. */
+  /** Host protocol credentials and the user's saved SSH keys. See PluginCredentials. */
   readonly credentials: PluginCredentials;
   /** Audit lines under the plugin's own action names. */
   readonly audit: PluginAudit;

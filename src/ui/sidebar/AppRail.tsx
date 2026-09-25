@@ -11,7 +11,6 @@ import {
   User,
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
-import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { useRailItems, type RailItemDef } from "./rail-items";
 
@@ -19,7 +18,6 @@ import { useRailItems, type RailItemDef } from "./rail-items";
 export type CoreRailView =
   | "hosts"
   | "credentials"
-  | "termix-id"
   | "quick-connect"
   | ToolsTab
   | "connections"
@@ -199,50 +197,8 @@ export function AppRail({
     return () => window.removeEventListener("hiddenRailTabsChanged", handler);
   }, []);
 
-  // Termix ID publishes SSH public keys under a claimed public handle for
-  // other servers to fetch -- meaningless for a standalone desktop install
-  // with no synced multi-device account, so it stays hidden until a remote
-  // server is actually connected.
-  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState(
-    () => !isElectron(),
-  );
-
-  useEffect(() => {
-    if (!isElectron()) return;
-    let cancelled = false;
-    const refreshSyncStatus = () => {
-      window.electronAPI
-        ?.invoke?.("get-remote-sync-config")
-        .then((config) => {
-          if (!cancelled) {
-            setIsRemoteSyncConnected(
-              !!(config as { serverUrl?: string } | null)?.serverUrl,
-            );
-          }
-        })
-        .catch(() => {});
-    };
-    refreshSyncStatus();
-    const unsubscribe = window.electronAPI?.onRemoteSyncStatusChanged?.(() =>
-      refreshSyncStatus(),
-    );
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
-  }, []);
-
   const railExpanded = pinned || (expandOnHover && hovered);
-  const effectiveHiddenTabs = new Set([
-    ...hiddenTabs,
-    ...(isRemoteSyncConnected ? [] : ["termix-id"]),
-  ]);
-  const railButtons = buildRailButtons(
-    railItems,
-    splitMode,
-    t,
-    effectiveHiddenTabs,
-  );
+  const railButtons = buildRailButtons(railItems, splitMode, t, hiddenTabs);
   const setRailPinned = (nextPinned: boolean) => {
     setPinned(nextPinned);
     localStorage.setItem("pinAppRail", String(nextPinned));

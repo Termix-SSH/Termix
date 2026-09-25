@@ -98,9 +98,6 @@ const CredentialsPanel = lazy(() =>
     default: m.CredentialsPanel,
   })),
 );
-const TermixIdPanel = lazy(() =>
-  import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
-);
 const ConnectionsPanel = lazy(() =>
   import("@/sidebar/ConnectionsPanel").then((m) => ({
     default: m.ConnectionsPanel,
@@ -2341,12 +2338,6 @@ export function AppShell({
               />
             </div>
           </>
-        )}
-
-        {railView === "termix-id" && (
-          <div className="flex flex-col flex-1 min-h-0">
-            <TermixIdPanel />
-          </div>
         )}
 
         {railView === "quick-connect" && (

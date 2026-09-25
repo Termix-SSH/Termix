@@ -69,8 +69,9 @@ describe("generated schemas", () => {
 
     expect(tablesOf(pgSchema)).toEqual(tablesOf(sqliteSchema));
     expect(tablesOf(mysqlSchema)).toEqual(tablesOf(sqliteSchema));
-    // Guard against a generator that silently emits nothing.
-    expect(tablesOf(sqliteSchema).length).toBeGreaterThan(40);
+    // Guard against a generator that silently emits nothing. Core keeps
+    // shrinking as feature tables move into plugins, so this stays loose.
+    expect(tablesOf(sqliteSchema).length).toBeGreaterThan(25);
   });
 
   it("maps each column to the right storage type per dialect", () => {

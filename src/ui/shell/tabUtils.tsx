@@ -6,7 +6,6 @@ import {
   Server,
   Settings,
   User,
-  Fingerprint,
   Hammer,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
@@ -31,9 +30,6 @@ const DashboardTab = lazy(() =>
   })),
 );
 // Rail panels promoted to full tabs.
-const TermixIdPanel = lazy(() =>
-  import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
-);
 const MacrosPanel = lazy(() =>
   import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
@@ -108,8 +104,6 @@ export function tabIcon(type: TabType) {
       return <User className="size-3.5" />;
     case "admin-settings":
       return <Settings className="size-3.5" />;
-    case "termix-id":
-      return <Fingerprint className="size-3.5" />;
     case "macros":
       return <Braces className="size-3.5" />;
 
@@ -201,13 +195,6 @@ export function renderTabContent(tab: Tab, context: TabRenderContext) {
           onOpenTab={(host, type) => shell.openTab(host, type)}
           isVisible={isVisible}
         />,
-      );
-
-    case "termix-id":
-      return withTabSuspense(
-        <PanelTabFrame>
-          <TermixIdPanel />
-        </PanelTabFrame>,
       );
 
     case "split-screen":

@@ -392,6 +392,12 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runTotpMigration } =
         await import("./utils/crypto-migration/totp-migration.js");
       await runTotpMigration();
+
+      // Also after the plugin moves, for a CA whose owner key was not open
+      // when the table was adopted.
+      const { runTermixIdentityCaMigration } =
+        await import("./utils/crypto-migration/termix-identity-ca-migration.js");
+      await runTermixIdentityCaMigration();
     } catch (error) {
       systemLogger.warn("Plugin runtime failed to initialize", {
         operation: "plugin_init",

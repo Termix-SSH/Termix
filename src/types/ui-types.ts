@@ -232,7 +232,6 @@ export type KnownTabType =
   | "homepage"
   | "fleet-inventory"
   // Rail panels that can also open full-width in the main area.
-  | "termix-id"
   | "session-logs"
   | "snippets"
   | "macros"

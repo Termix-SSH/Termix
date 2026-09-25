@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
+import { ComponentSlot } from "@/shell/ActionSlot";
 import type { Credential } from "@/types/ui-types";
 import type {
   CredentialDensity,
@@ -49,7 +50,6 @@ const CREDENTIAL_ITEM_DENSITY_TOKENS = {
 export function CredentialItem({
   cred,
   usedByCount = 0,
-  termixIdLinked = false,
   query = "",
   stripeIndex = 0,
   isMenuOpen = false,
@@ -76,7 +76,6 @@ export function CredentialItem({
 }: {
   cred: Credential;
   usedByCount?: number;
-  termixIdLinked?: boolean;
   query?: string;
   stripeIndex?: number;
   isMenuOpen?: boolean;
@@ -308,11 +307,10 @@ export function CredentialItem({
           >
             {isKey ? t("credentials.keyBadge") : t("credentials.passwordBadge")}
           </span>
-          {termixIdLinked && (
-            <span className="text-[9px] px-1 py-px font-bold border leading-none shrink-0 border-accent-brand/30 text-accent-brand/70">
-              {t("credentials.idBadge")}
-            </span>
-          )}
+          <ComponentSlot
+            slotId="credentials.badges"
+            props={{ credentialId: Number(cred.id) }}
+          />
           {cred.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}

@@ -1,6 +1,7 @@
 /**
  * The OPKSSH, Step CA and Vault redirect URIs identity providers were registered with before
- * 2.9 must keep reaching the plugin's callback, query intact.
+ * 2.9 must keep reaching the plugin's callback, query intact, and the Termix
+ * ID resolver URLs servers fetch must keep reaching the plugin's resolver.
  */
 
 import http from "node:http";
@@ -8,7 +9,7 @@ import type { AddressInfo } from "node:net";
 import express from "express";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-const { registerHostAuthCompatRoutes } =
+const { registerHostAuthCompatRoutes, registerTermixIdCompatRoutes } =
   await import("../../../database/routes/host-compat-routes.js");
 
 let server: http.Server;
@@ -19,6 +20,9 @@ beforeEach(async () => {
   registerHostAuthCompatRoutes(router);
   const app = express();
   app.use("/host", router);
+  const termixId = express.Router();
+  registerTermixIdCompatRoutes(termixId);
+  app.use("/termix-id", termixId);
   server = http.createServer(app);
   await new Promise<void>((resolve) => server.listen(0, resolve));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -86,5 +90,27 @@ describe("the old Vault callback", () => {
     } finally {
       await new Promise<void>((resolve) => vaultServer.close(() => resolve()));
     }
+  });
+});
+
+describe("the old Termix ID resolver URLs", () => {
+  it.each([
+    ["/termix-id/u/alice", "/plugin-api/termix-identity/u/alice"],
+    [
+      "/termix-id/u/alice/ED25519",
+      "/plugin-api/termix-identity/u/alice/ED25519",
+    ],
+    ["/termix-id/u/alice/ca", "/plugin-api/termix-identity/u/alice/ca"],
+  ])("permanently redirects %s", async (path, target) => {
+    const response = await fetch(`${base}${path}`, { redirect: "manual" });
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(target);
+  });
+
+  it("does not forward the old management routes", async () => {
+    const response = await fetch(`${base}/termix-id/me`, {
+      redirect: "manual",
+    });
+    expect(response.status).toBe(404);
   });
 });

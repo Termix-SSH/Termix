@@ -106,8 +106,10 @@
           "device:serial",
           "hosts:write",
           "credentials:use",
+          "credentials:write",
           "network:outbound",
           "network:serve",
+          "network:broadcast",
           "users:read",
           "events:core",
           "notify:send",
@@ -116,6 +118,7 @@
           "hosts:read",
           "db:own",
           "kv:own",
+          "files:own",
           "secrets:own",
           "settings:read-core",
           "ui:surface"

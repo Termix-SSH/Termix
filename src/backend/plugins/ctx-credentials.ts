@@ -13,13 +13,19 @@
  * "op://") instead of handing over a host's own stored secret. Needs
  * auth:provide, like ctx.auth's registrations, and the scheme must be listed
  * in contributes.auth.secretSchemes.
+ *
+ * listSshKeys and createSshKey reach the acting user's own saved keys: the
+ * public half only (credentials:use), and saving a new key pair
+ * (credentials:write). Termix Identity publishes and generates keys this way.
  */
 
 import type {
   PluginCredentials,
   PluginHostProtocol,
   PluginProtocolTarget,
+  PluginSshKeyCredential,
 } from "@termix/plugin-sdk/backend";
+import ssh2 from "ssh2";
 import { PluginCapabilityError } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
@@ -157,6 +163,47 @@ async function resolveRecipientAuth(
   };
 }
 
+function derivePublicKey(
+  privateKey: string | null | undefined,
+  passphrase: string | null | undefined,
+): string | null {
+  if (!privateKey) return null;
+  try {
+    const parsed = ssh2.utils.parseKey(privateKey, passphrase || undefined);
+    const key = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (!key || key instanceof Error) return null;
+    return `${key.type} ${key.getPublicSSH().toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function requireCorePermission(
+  userId: string,
+  permission: string,
+): Promise<void> {
+  const { PermissionManager } = await import("../utils/permission-manager.js");
+  if (
+    !(await PermissionManager.getInstance().hasPermission(userId, permission))
+  ) {
+    throw new Error(`The acting user lacks ${permission}`);
+  }
+}
+
+function actingUser(): string {
+  const userId = getActor();
+  if (!userId) {
+    throw new Error(
+      "ctx.credentials needs an acting user: call it inside a request or ctx.asUser",
+    );
+  }
+  return userId;
+}
+
 export function createPluginCredentials({
   manifest,
   bag,
@@ -166,6 +213,84 @@ export function createPluginCredentials({
   const declared = manifest.capabilities;
 
   return {
+    listSshKeys: async () => {
+      try {
+        await assertCapability(pluginId, "credentials:use", declared);
+        const userId = actingUser();
+        await requireCorePermission(userId, "credentials.view");
+        const { createCurrentCredentialRepository } =
+          await import("../database/repositories/factory.js");
+        const rows =
+          await createCurrentCredentialRepository().listDecryptedByUserId(
+            userId,
+          );
+        const keys: PluginSshKeyCredential[] = rows
+          .filter((row) => row.authType === "key")
+          .map((row) => ({
+            id: row.id,
+            name: row.name,
+            username: row.username ?? null,
+            publicKey:
+              (typeof row.publicKey === "string" && row.publicKey.trim()) ||
+              derivePublicKey(row.privateKey || row.key, row.keyPassword),
+          }));
+        await audit("credentials_list_keys", `${keys.length} keys`, {
+          success: true,
+        });
+        return keys;
+      } catch (error) {
+        await audit("credentials_list_keys", "saved SSH keys", {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
+    createSshKey: async (input) => {
+      const details = `SSH key "${input?.name ?? ""}"`;
+      try {
+        await assertCapability(pluginId, "credentials:write", declared);
+        const userId = actingUser();
+        await requireCorePermission(userId, "credentials.create");
+        if (!input?.name || !input.privateKey || !input.publicKey) {
+          throw new Error("name, privateKey and publicKey are required");
+        }
+        const { createCurrentCredentialRepository } =
+          await import("../database/repositories/factory.js");
+        const created =
+          await createCurrentCredentialRepository().createEncryptedForUser(
+            userId,
+            {
+              userId,
+              name: input.name,
+              description: input.description ?? null,
+              folder: null,
+              tags: "",
+              authType: "key",
+              username: input.username || null,
+              password: null,
+              key: input.privateKey,
+              privateKey: input.privateKey,
+              publicKey: input.publicKey,
+              keyPassword: null,
+              keyType: null,
+              detectedKeyType: input.keyType,
+              usageCount: 0,
+              lastUsed: null,
+            },
+          );
+        await audit("credentials_create_key", details, { success: true });
+        return { id: created.id };
+      } catch (error) {
+        await audit("credentials_create_key", details, {
+          success: false,
+          errorMessage: errorText(error),
+        });
+        throw error;
+      }
+    },
+
     registerSecretResolver: (scheme, resolve) => {
       if (!declared.includes("auth:provide")) {
         throw new PluginCapabilityError(pluginId, "auth:provide");

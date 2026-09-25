@@ -69,3 +69,33 @@ export function registerVaultCompatRoutes(router: Router): void {
     res.redirect(307, localUrl(req, "/plugin-api/vault/oidc/callback"));
   });
 }
+
+/**
+ * The 2.8 Termix ID resolver URLs, which servers fetch from provisioning
+ * scripts. Permanently redirected to the termix-identity plugin's public
+ * resolver; curl -L follows them.
+ */
+export function registerTermixIdCompatRoutes(router: Router): void {
+  /**
+   * @openapi
+   * /termix-id/u/{handle}:
+   *   get:
+   *     summary: Termix ID resolver (2.8 URL)
+   *     description: Permanently redirects to /plugin-api/termix-identity/u/{handle}, and likewise for /termix-id/u/{handle}/{algo} and /termix-id/u/{handle}/ca, so servers provisioned with the old URL keep working.
+   *     tags:
+   *       - Termix ID
+   *     parameters:
+   *       - in: path
+   *         name: handle
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       308:
+   *         description: Redirect to the termix-identity plugin's resolver.
+   */
+  router.get(["/u/:handle", "/u/:handle/:algo"], (req, res) => {
+    const rest = req.path.slice("/u".length);
+    res.redirect(308, localUrl(req, `/plugin-api/termix-identity/u${rest}`));
+  });
+}

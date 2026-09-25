@@ -7,8 +7,10 @@
 
 import { runLdapProviderMigration } from "./ldap-provider-migration.js";
 import { runOpksshConfigMigration } from "./opkssh-config-migration.js";
+import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
 
 export async function runPluginDataMoves(): Promise<void> {
   await runLdapProviderMigration();
   await runOpksshConfigMigration();
+  await runTermixIdentityCaMigration();
 }

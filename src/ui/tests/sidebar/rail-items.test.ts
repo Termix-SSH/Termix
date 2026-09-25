@@ -51,11 +51,11 @@ describe("RAIL_ITEMS", () => {
     // "sftp" moved to the file-manager plugin's own registerRailItem,
     // "port-forwarding" to the tunnels plugin's, "serial" to the serial
     // plugin's, "collab" to the session-sharing plugin's, and "session-logs"
-    // to the session-recording plugin's.
+    // to the session-recording plugin's, "termix-id" to the termix-identity
+    // plugin's.
     expect(RAIL_ITEMS.map((item) => item.id)).toEqual([
       "hosts",
       "credentials",
-      "termix-id",
       "connections",
       "quick-connect",
       "ssh-tools",
@@ -81,7 +81,7 @@ describe("RAIL_ITEMS", () => {
       [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
         .filter((item) => item.promotable)
         .map((item) => item.id),
-    ).toEqual(["termix-id", "ssh-tools", "macros"]);
+    ).toEqual(["ssh-tools", "macros"]);
   });
 
   it("derives promotableIds from the promotable flag", () => {

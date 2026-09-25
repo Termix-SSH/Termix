@@ -1,6 +1,5 @@
 import {
   Braces,
-  Fingerprint,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
@@ -73,13 +72,6 @@ export const RAIL_ITEMS: RailItemDef[] = [
     icon: KeyRound,
     labelKey: "nav.credentials",
     separatorAfter: true,
-  },
-  {
-    id: "termix-id",
-    icon: Fingerprint,
-    labelKey: "nav.termixId",
-    separatorAfter: true,
-    promotable: true,
   },
   {
     id: "connections",

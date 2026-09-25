@@ -73,7 +73,6 @@ async function renderOpenedList({
       allHosts={hosts}
       editingFolderName={null}
       editingFolderValue=""
-      termixIdLinkedIds={new Set()}
       onEditingFolderNameChange={vi.fn()}
       onEditingFolderValueChange={vi.fn()}
       onRenameFolder={vi.fn()}

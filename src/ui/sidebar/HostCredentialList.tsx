@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { getCredentialDetails } from "@/main-axios";
 import { copyToClipboard } from "@/lib/clipboard";
+import { ComponentSlot } from "@/shell/ActionSlot";
 import type { Host, Credential } from "@/types/ui-types";
 
 type CredentialWithCertificate = Credential & { certPublicKey?: string };
@@ -29,7 +30,6 @@ function CredentialItem({
   cred,
   usedByHosts,
   stripeIndex,
-  termixIdLinked,
   onDeploy,
   onEdit,
   onDelete,
@@ -37,7 +37,6 @@ function CredentialItem({
   cred: Credential;
   usedByHosts: Host[];
   stripeIndex: number;
-  termixIdLinked?: boolean;
   onDeploy: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -68,11 +67,10 @@ function CredentialItem({
           >
             {isKey ? "KEY" : "PWD"}
           </span>
-          {termixIdLinked && (
-            <span className="text-[9px] px-1 py-px font-bold border leading-none shrink-0 border-accent-brand/30 text-accent-brand/70">
-              ID
-            </span>
-          )}
+          <ComponentSlot
+            slotId="credentials.badges"
+            props={{ credentialId: Number(cred.id) }}
+          />
         </div>
 
         {/* Username row */}
@@ -189,7 +187,6 @@ function CredentialFolderItem({
   stripeOffset,
   editingFolderName,
   editingFolderValue,
-  termixIdLinkedIds,
   onEditingFolderNameChange,
   onEditingFolderValueChange,
   onRenameFolder,
@@ -203,7 +200,6 @@ function CredentialFolderItem({
   stripeOffset: number;
   editingFolderName: string | null;
   editingFolderValue: string;
-  termixIdLinkedIds?: Set<number>;
   onEditingFolderNameChange: (name: string | null) => void;
   onEditingFolderValueChange: (value: string) => void;
   onRenameFolder: (folder: string, newName: string) => Promise<void>;
@@ -290,7 +286,6 @@ function CredentialFolderItem({
                 cred={cred}
                 usedByHosts={usedByHosts}
                 stripeIndex={stripeOffset + 1 + i}
-                termixIdLinked={termixIdLinkedIds?.has(Number(cred.id))}
                 onDeploy={() => onDeploy(cred)}
                 onEdit={() => onEdit(cred)}
                 onDelete={() => onDelete(cred)}
@@ -310,7 +305,6 @@ export function HostCredentialList({
   allHosts,
   editingFolderName,
   editingFolderValue,
-  termixIdLinkedIds,
   onEditingFolderNameChange,
   onEditingFolderValueChange,
   onRenameFolder,
@@ -326,7 +320,6 @@ export function HostCredentialList({
   allHosts: Host[];
   editingFolderName: string | null;
   editingFolderValue: string;
-  termixIdLinkedIds?: Set<number>;
   onEditingFolderNameChange: (name: string | null) => void;
   onEditingFolderValueChange: (value: string) => void;
   onRenameFolder: (folder: string, newName: string) => Promise<void>;
@@ -408,7 +401,6 @@ export function HostCredentialList({
               stripeOffset={offset}
               editingFolderName={editingFolderName}
               editingFolderValue={editingFolderValue}
-              termixIdLinkedIds={termixIdLinkedIds}
               onEditingFolderNameChange={onEditingFolderNameChange}
               onEditingFolderValueChange={onEditingFolderValueChange}
               onRenameFolder={onRenameFolder}

@@ -42,6 +42,8 @@ import {
 } from "./auth-registry";
 import { pluginHostBridge, resolvePluginPermission } from "./bridge";
 import { shell, tabsApi } from "./shell-bridge";
+import { onRemoteServerChange, remoteServerUrl } from "./desktop";
+import { isElectron } from "@/lib/electron";
 import { withPluginScope } from "./scope";
 import { manifestDeclares, type ViewKind } from "./view-ownership";
 import { pluginKey } from "@/lib/plugin-i18n";
@@ -405,6 +407,12 @@ export function createPluginApp(
       closeTab: shell.closeTab,
       onChange: (listener) => track(tabsApi.onChange(listener)),
       onReady: (listener) => track(tabsApi.onReady(listener)),
+    },
+
+    desktop: {
+      available: isElectron(),
+      remoteServerUrl,
+      onRemoteServerChange: (listener) => track(onRemoteServerChange(listener)),
     },
 
     onDispose(dispose) {
