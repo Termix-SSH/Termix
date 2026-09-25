@@ -8,9 +8,14 @@
 import { runLdapProviderMigration } from "./ldap-provider-migration.js";
 import { runOpksshConfigMigration } from "./opkssh-config-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
+import { runSessionRecordingDataMigration } from "./session-recording-data-migration.js";
+import { runHostMetricsSettingsMigration } from "./host-metrics-settings-migration.js";
 
 export async function runPluginDataMoves(): Promise<void> {
   await runLdapProviderMigration();
   await runOpksshConfigMigration();
   await runTermixIdentityCaMigration();
+  // Both set how long history is kept, which the plugin prunes by on activate.
+  await runSessionRecordingDataMigration();
+  await runHostMetricsSettingsMigration();
 }

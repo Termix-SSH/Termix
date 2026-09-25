@@ -19,6 +19,7 @@ import type {
 } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 import { assertCapability } from "./permissions.js";
+import { getPluginDataDir } from "./paths.js";
 import type { DisposableBag } from "./disposables.js";
 
 type AuditFn = (
@@ -31,7 +32,7 @@ interface Deps {
   manifest: PluginManifest;
   bag: DisposableBag;
   audit: AuditFn;
-  /** Where downloaded binaries go. Defaults to <DATA_DIR>/plugins/<id>/bin. */
+  /** Where downloaded binaries go. Defaults to <DATA_DIR>/plugin-data/<id>/bin. */
   binDir?: () => string;
   /** Test seam for the download. */
   fetch?: typeof fetch;
@@ -58,14 +59,7 @@ export function createPluginProcess(deps: Deps): PluginProcess {
   const pluginId = deps.manifest.id;
   const declared = deps.manifest.capabilities;
   const binDir =
-    deps.binDir ??
-    (() =>
-      path.join(
-        process.env.DATA_DIR ?? "./db/data",
-        "plugins",
-        pluginId,
-        "bin",
-      ));
+    deps.binDir ?? (() => path.join(getPluginDataDir(pluginId), "bin"));
   const doFetch = deps.fetch ?? fetch;
 
   const audited = async <T>(

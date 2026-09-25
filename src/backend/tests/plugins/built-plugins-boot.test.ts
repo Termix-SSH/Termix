@@ -129,8 +129,8 @@ describe("the built plugins on a 2.8 database", () => {
   });
 
   it("records every plugin migration it ran", async () => {
-    const recorded = core.sqlite
-      .prepare(
+    const recorded = core
+      .sqlite!.prepare(
         "SELECT plugin_id, COUNT(*) AS n FROM plugin_migrations GROUP BY plugin_id",
       )
       .all() as Array<{ plugin_id: string; n: number }>;

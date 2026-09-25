@@ -2,16 +2,33 @@ import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
 
-export const DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER =
-  ".database-layer-preupgrade-backup.json";
-export const DATABASE_LAYER_PREUPGRADE_BACKUP_PREFIX =
-  "pre-database-layer-refactor";
+/**
+ * Each upgrade that rewrites the database takes its own backup, once. The 2.5
+ * database layer refactor wrote the first marker, so a 2.8 install already has
+ * it; 2.9.0 moves data into plugins and needs a fresh copy regardless.
+ */
+export type PreupgradeBackupReason =
+  "pre-database-layer-refactor" | "pre-plugin-runtime";
+
+export const CURRENT_PREUPGRADE_BACKUP_REASON: PreupgradeBackupReason =
+  "pre-plugin-runtime";
+
+export function preupgradeBackupMarker(reason: PreupgradeBackupReason): string {
+  return reason === "pre-database-layer-refactor"
+    ? ".database-layer-preupgrade-backup.json"
+    : `.preupgrade-backup-${reason}.json`;
+}
+
+export const DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER = preupgradeBackupMarker(
+  "pre-database-layer-refactor",
+);
 export const DATABASE_LAYER_SKIP_PREUPGRADE_BACKUP_ENV =
   "DATABASE_LAYER_SKIP_PREUPGRADE_BACKUP";
 const DATABASE_LAYER_PREUPGRADE_BACKUP_KEEP_ENV =
   "DATABASE_LAYER_PREUPGRADE_BACKUP_KEEP";
 
 interface PreupgradeBackupOptions {
+  reason?: PreupgradeBackupReason;
   dataDir?: string;
   version?: string;
   now?: Date;
@@ -25,7 +42,7 @@ interface BackupFileEntry {
 }
 
 export interface PreupgradeBackupManifest {
-  reason: "pre-database-layer-refactor";
+  reason: PreupgradeBackupReason;
   createdAt: string;
   sourceVersion: string;
   dataDir: string;
@@ -71,15 +88,17 @@ function copyIfExists(
   };
 }
 
-function cleanupOldBackups(backupsRoot: string, keepCount: number): void {
+function cleanupOldBackups(
+  backupsRoot: string,
+  prefix: string,
+  keepCount: number,
+): void {
   if (!fs.existsSync(backupsRoot)) return;
 
   const entries = fs
     .readdirSync(backupsRoot, { withFileTypes: true })
     .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        entry.name.startsWith(`${DATABASE_LAYER_PREUPGRADE_BACKUP_PREFIX}-`),
+      (entry) => entry.isDirectory() && entry.name.startsWith(`${prefix}-`),
     )
     .map((entry) => {
       const fullPath = path.join(backupsRoot, entry.name);
@@ -95,15 +114,13 @@ function cleanupOldBackups(backupsRoot: string, keepCount: number): void {
   }
 }
 
-export function ensureDatabaseLayerPreupgradeBackup(
+export function ensurePreupgradeBackup(
   options: PreupgradeBackupOptions = {},
 ): PreupgradeBackupResult {
+  const reason = options.reason ?? CURRENT_PREUPGRADE_BACKUP_REASON;
   const env = options.env ?? process.env;
   const dataDir = path.resolve(options.dataDir ?? env.DATA_DIR ?? "./db/data");
-  const markerPath = path.join(
-    dataDir,
-    DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER,
-  );
+  const markerPath = path.join(dataDir, preupgradeBackupMarker(reason));
 
   if (
     TRUE_VALUES.has(
@@ -139,9 +156,7 @@ export function ensureDatabaseLayerPreupgradeBackup(
   const backupsRoot = path.join(dataDir, "backups");
   const backupDir = path.join(
     backupsRoot,
-    `${DATABASE_LAYER_PREUPGRADE_BACKUP_PREFIX}-${timestampForPath(
-      options.now ?? new Date(),
-    )}`,
+    `${reason}-${timestampForPath(options.now ?? new Date())}`,
   );
 
   try {
@@ -152,7 +167,7 @@ export function ensureDatabaseLayerPreupgradeBackup(
       .filter((entry): entry is BackupFileEntry => entry !== null);
 
     const manifest: PreupgradeBackupManifest = {
-      reason: "pre-database-layer-refactor",
+      reason,
       createdAt: (options.now ?? new Date()).toISOString(),
       sourceVersion: options.version ?? env.VERSION ?? "unknown",
       dataDir,
@@ -166,10 +181,11 @@ export function ensureDatabaseLayerPreupgradeBackup(
     );
     fs.writeFileSync(markerPath, JSON.stringify(manifest, null, 2));
 
-    cleanupOldBackups(backupsRoot, parseKeepCount(env));
+    cleanupOldBackups(backupsRoot, reason, parseKeepCount(env));
 
     databaseLogger.info("Database layer pre-upgrade backup created", {
       operation: "database_layer_preupgrade_backup_created",
+      reason,
       backupDir,
       files: files.map((file) => path.basename(file.backup)),
     });

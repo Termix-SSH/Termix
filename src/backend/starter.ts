@@ -4,7 +4,6 @@ import { promises as fs, readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./tls/self-signed.js";
-import { ensureDatabaseLayerPreupgradeBackup } from "./utils/database-layer-preupgrade-backup.js";
 import { DatabaseSaveTrigger } from "./utils/database-save-trigger.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
 import {
@@ -160,20 +159,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./database/db/dialect.js");
     const databaseDialect = resolveDatabaseDialect();
 
-    // The pre-upgrade backup copies the SQLite file, so there is nothing for it
-    // to do on a client-server engine. Say so rather than no-op silently:
-    // backups are the operator's own responsibility there.
-    if (needsExplicitPersist(databaseDialect)) {
-      ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
-    } else {
-      systemLogger.info(
-        `Skipping pre-upgrade backup on ${databaseDialect} - back up the database yourself`,
-        {
-          operation: "backend_init_db_backup_skipped",
-          dialect: databaseDialect,
-        },
-      );
-    }
+    const { backupBeforeUpgrade } = await import("./boot.js");
+    await backupBeforeUpgrade({ dataDir, version });
 
     await AutoSSLSetup.initialize();
     systemLogger.success("SSL setup completed", {

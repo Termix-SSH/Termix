@@ -16,6 +16,19 @@ export function getPluginsDir(): string {
 }
 
 /**
+ * A plugin's own files (ctx.files.dataDir(), downloaded binaries). Kept out of
+ * getPluginsDir(), where the loader would read every data folder as a user
+ * plugin that clashes with the bundled one of the same name.
+ */
+export function getPluginDataDir(pluginId: string): string {
+  return path.join(
+    process.env.DATA_DIR || "./db/data",
+    "plugin-data",
+    pluginId,
+  );
+}
+
+/**
  * Where user .tmxplug files are unpacked. A dot directory inside the user
  * plugins dir, which the loader's directory scan skips.
  */

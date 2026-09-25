@@ -78,10 +78,11 @@ export function resetPluginData(): void {
 }
 
 async function execute(statements: string[]): Promise<void> {
-  const { getDb } = await import("../database/db/index.js");
-  const db = getDb();
+  // getDb() has run() only on SQLite; runStatement picks execute() elsewhere.
+  const { runStatement } =
+    await import("../utils/crypto-migration/raw-rows.js");
   for (const statement of statements) {
-    await db.run(sql.raw(statement));
+    await runStatement(sql.raw(statement));
   }
 }
 

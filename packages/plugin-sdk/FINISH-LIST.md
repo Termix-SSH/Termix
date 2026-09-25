@@ -117,11 +117,9 @@ with a real install, a real device or a repo outside this one.
   URL (`/plugin-api/termix-identity/u/<handle>`, the old one still 308s) and
   the HTTPS certificate page (`docs.termix.site/features/networking/ssl`,
   which still describes certbot and the webroot challenge).
-- Upgrade a real 2.8 install on Postgres and on MySQL (SQLite is covered by
-  the upgrade test): proxmox host settings, tunnels, web endpoints, the file
-  manager's default path and SCP switch, and the terminal, tmux, sharing and
-  recording switches all survive. Postgres was checked by hand against a
-  scratch database; MySQL only runs in CI.
+- Run `bash scripts/upgrade-check.sh` once with Docker running. It upgrades
+  the D4 fixture on real Postgres 16 and MySQL 8. The Postgres half passed
+  against an in-process PGlite server during D4; MySQL has not run yet.
 - Host settings round trip: filter the Hosts panel by a plugin feature, bulk
   enable and disable a plugin on a few hosts, export hosts to JSON and import
   them on another install (plugin settings come across, secrets do not), the

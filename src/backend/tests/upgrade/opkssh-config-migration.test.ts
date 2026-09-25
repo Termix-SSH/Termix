@@ -43,7 +43,7 @@ import { runOpksshConfigMigration } from "../../upgrade/opkssh-config-migration.
 
 let dataDir: string;
 const legacy = () => path.join(dataDir, ".opk", "config.yml");
-const target = () => path.join(dataDir, "plugins", "opkssh", "config.yml");
+const target = () => path.join(dataDir, "plugin-data", "opkssh", "config.yml");
 
 beforeEach(async () => {
   state.settings = new Map();

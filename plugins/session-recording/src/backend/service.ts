@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { PluginContext } from "@termix/plugin-sdk/backend";
 import type { SessionRecordingRepository } from "./repository.js";
+import { adoptRecordingFile } from "./files.js";
 
 /**
  * recordings.writer v1, the service ssh-terminal calls to record sessions.
@@ -40,8 +41,8 @@ export interface RecordingsWriterV1 {
   /**
    * Inserts a row for a recording a caller already wrote to disk itself
    * (remote desktop's guacd recordings), rather than streaming through
-   * open()/append(). The caller already decided to record; this only writes
-   * the row.
+   * open()/append(). The caller already decided to record. The file is
+   * moved under this plugin's data folder, where playback reads it.
    */
   createFinished: (input: {
     hostId: number;
@@ -117,7 +118,15 @@ export function createRecordingsWriter(
 
     async createFinished(input) {
       const username = await repository.usernameFor(input.userId);
-      const row = await repository.create({ ...input, username });
+      const recordingPath = await adoptRecordingFile(
+        input.recordingPath,
+        await ctx.files.dataDir(),
+      ).catch(() => input.recordingPath);
+      const row = await repository.create({
+        ...input,
+        recordingPath,
+        username,
+      });
       return { id: row.id };
     },
   };

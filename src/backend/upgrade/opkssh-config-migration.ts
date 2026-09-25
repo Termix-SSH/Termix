@@ -2,7 +2,7 @@
  * Moves a 2.8 OPKSSH setup into the opkssh plugin.
  *
  * The config file moves from DATA_DIR/.opk/config.yml to the plugin's own
- * folder (DATA_DIR/plugins/opkssh/config.yml). The old file is copied, not
+ * folder (DATA_DIR/plugin-data/opkssh/config.yml). The old file is copied, not
  * moved, so a downgrade still finds it. An install that had a config also
  * keeps sending the pre-2.9 redirect URI (/host/opkssh-callback), because
  * that is the one registered with its identity providers: the plugin's
@@ -55,7 +55,7 @@ export async function runOpksshConfigMigration(
   }
 
   try {
-    const target = path.join(dataDir, "plugins", PLUGIN_ID, "config.yml");
+    const target = path.join(dataDir, "plugin-data", PLUGIN_ID, "config.yml");
     if (!(await exists(target))) {
       await fs.mkdir(path.dirname(target), { recursive: true });
       await fs.copyFile(legacyConfig, target);

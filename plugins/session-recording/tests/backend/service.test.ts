@@ -172,6 +172,41 @@ describe("recordings.writer", () => {
     expect(row.id).toBeGreaterThan(0);
   });
 
+  it("createFinished moves guacd's file under the data folder, where playback reads it", async () => {
+    const { mock, writer } = await setup();
+    const guacdDir = await fs.mkdtemp(path.join(os.tmpdir(), "guacd-"));
+    const source = path.join(guacdDir, "guacamole", "rdp-1.guac");
+    await fs.mkdir(path.dirname(source), { recursive: true });
+    await fs.writeFile(source, "4.size,1.0;");
+
+    const row = await writer.createFinished({
+      hostId: 7,
+      userId: "user-1",
+      startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      duration: 10,
+      recordingPath: source,
+      protocol: "rdp",
+      format: "guacamole",
+    });
+
+    const target = path.join(
+      await mock.ctx.files.dataDir(),
+      "session_recordings",
+      "guacamole",
+      "rdp-1.guac",
+    );
+    await expect(fs.readFile(target, "utf8")).resolves.toBe("4.size,1.0;");
+    await expect(fs.access(source)).rejects.toThrow();
+    const stored = db!.sqlite
+      .prepare(
+        "SELECT recording_path FROM p_session_recording_session_recordings WHERE id = ?",
+      )
+      .get(row.id) as { recording_path: string };
+    expect(stored.recording_path).toBe(target);
+    await fs.rm(guacdDir, { recursive: true, force: true });
+  });
+
   it("enabledFor follows the host's recording switch", async () => {
     const { mock, writer } = await setup();
     await mock.ctx.settings.setHost(7, "enableSessionRecording", true);

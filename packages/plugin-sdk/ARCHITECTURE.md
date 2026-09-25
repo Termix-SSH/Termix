@@ -128,9 +128,10 @@ Plugins own their tables. A plugin declares them with `defineTable()` from
 `mysql` under `migrations/<dialect>/NNNN_name.sql`. Table names are prefixed
 `p_<id with - as _>_`, which `defineTable` adds. `ctx.kv` is for small
 key/value state, and `ctx.files.dataDir()` (**B13**, needs `files:own`) is a
-per-plugin folder under `DATA_DIR`, created on first call, for state too
-large for `ctx.kv` (session recordings, uploaded files); a plugin lays out
-its own subdirectories underneath it. Core `schema.ts` ends up holding only
+per-plugin folder, `<DATA_DIR>/plugin-data/<id>`, created on first call, for
+state too large for `ctx.kv` (session recordings, uploaded files); a plugin
+lays out its own subdirectories underneath it. It is kept apart from
+`<DATA_DIR>/plugins/`, where the loader looks for user plugins (**D4**). Core `schema.ts` ends up holding only
 core tables.
 
 **One table object, three DDL emitters.** The sqlite-core definitions already
@@ -897,7 +898,10 @@ importing the old repository directly. **B14** added `enabledFor(hostId)`
 exists: remote desktop records an RDP or Telnet session only when the plugin
 is running and the host's switch is on, and writes the row as the session's
 user. Recording files live
-under `ctx.files.dataDir()/session_logs/<user>/<session>.cast`. Retention
+under `ctx.files.dataDir()/session_logs/<user>/<session>.cast`. **D4**:
+`createFinished` moves a file written elsewhere (guacd's, in remote desktop's
+recordings folder) to `ctx.files.dataDir()/session_recordings/<folder>/`,
+since playback and retention only read inside the data folder. Retention
 (`retentionDays`, an admin setting) runs a sweep at boot and every 24 hours.
 
 **B15**'s docker plugin provides `docker.containers` (`listContainers`,
@@ -1303,7 +1307,7 @@ base types and branches on no plugin type name.
   matches, else the one in the plugin's data folder, else a download pinned to
   the release's SHA-256. `opkssh login` runs through `ctx.process.run` and is
   killed on cancel, close and deactivate. The config lives at
-  `<DATA_DIR>/plugins/opkssh/config.yml`; `redirect_uris` there are still the
+  `<DATA_DIR>/plugin-data/opkssh/config.yml`; `redirect_uris` there are still the
   localhost listener candidates only, and the public callback still goes to
   OPKSSH as `--remote-redirect-uri`.
 - The chooser and callback pages are public plugin routes
@@ -1743,6 +1747,43 @@ A host switch whose 2.8 column defaulted to on declares `enableDefault: true`
 (file manager, terminal), because a copy only writes the hosts that changed
 it, and every other host has to keep reading on.
 
+**Before activate, not after.** A copy that sets how long a plugin keeps
+history goes in `src/backend/upgrade/plugin-data-moves.ts`
+(`runPluginDataMoves`), which the loader runs once a plugin's migrations
+applied and before its `activate`. A plugin that prunes on activate would
+otherwise prune by its own default first: session recording's retention
+(and its 2.8 files) and host metrics' history retention move there.
+
+#### Proving it (D4)
+
+- **The fixture.** `src/backend/tests/fixtures/upgrade/` is a 2.8 install:
+  `db.sqlite` in 2.8's exact schema (`sqlite-2.8-schema.sql`) with rows in
+  every table `LEGACY_TABLE_OWNERS` lists, every host flag and 2.8 auth type,
+  TOTP, passkey, SSO and LDAP users, custom roles and the moved settings keys;
+  `fixture.env` with the keys it was encrypted with; and `files/`, the
+  recording files its rows point at. `rows.ts` is the source, and
+  `npx tsx scripts/build-upgrade-fixture.ts` rewrites the rest, encrypting
+  the columns 2.8 encrypted the way 2.8 did. `upgrade-fixture-data.test.ts`
+  fails when a legacy table has no rows.
+- **The test.** `src/backend/tests/plugins/upgrade-fixture.test.ts` boots it
+  through `bootCore` (the starter's order: backup, database, core migrations,
+  plugins, data copies) against `dist/plugins`, checks every row, setting,
+  secret, role, login and sync type through plugin routes, settings and ctx,
+  then boots the same data directory again and checks that nothing changed.
+- **Postgres and MySQL.** `scripts/lib/upgrade-sql.mjs` prints every statement
+  the upgrade runs on each engine, snapshotted in
+  `fixtures/upgrade/upgrade-{postgres,mysql}.sql` by `scripts/upgrade-sql.test.ts`,
+  which also refuses a `DROP TABLE` of a legacy table or any `DROP COLUMN`.
+  `bash scripts/upgrade-check.sh` starts both servers in Docker, builds the
+  2.8 schema from the tag's own drizzle migrations, copies the fixture in and
+  runs the same test with `TEST_DIALECT` set.
+- **The backup.** `backupBeforeUpgrade` (`src/backend/boot.ts`) copies the
+  SQLite file before anything opens it. Each upgrade that rewrites the
+  database has its own marker (`ensurePreupgradeBackup({ reason })`); 2.9.0's
+  is `pre-plugin-runtime`, so an install that already has the 2.5 refactor's
+  marker still gets a copy. The test checks the copy is the 2.8 file byte for
+  byte and that a second boot makes no new one.
+
 **Left for 3.0.0.** These stay in 2.9.0 so a downgrade still works, and go
 once every install has booted it:
 
@@ -2050,7 +2091,7 @@ authority for signatures.
 | `log.debug/info/warn/error`                                                                                  | none                                                 | Lines in core's log, tagged with the plugin                                                                         |
 | `events.emit/on`                                                                                             | `events:core` for core topics                        | Topics under `plugin.<id>.*`, or core's (`user.deleted`, `user.data_wiped`, host events)                            |
 | `kv.get/set/delete/list`                                                                                     | `kv:own`                                             | Small key/value state                                                                                               |
-| `files.dataDir()`                                                                                            | `files:own`                                          | A per-plugin folder under `DATA_DIR`                                                                                |
+| `files.dataDir()`                                                                                            | `files:own`                                          | A per-plugin folder, `<DATA_DIR>/plugin-data/<id>`                                                                  |
 | `db.define/client/refs/persist/dialect`                                                                      | `db:own` (not `dialect`)                             | The plugin's own tables through Drizzle; `persist` flushes SQLite to disk                                           |
 | `sync.registerEntity/recordTombstone`                                                                        | none                                                 | Adds a table to remote sync, and records a delete for it                                                            |
 | `registry.provide/consume/revoke`                                                                            | none                                                 | The low-level named registry services sit on                                                                        |
@@ -2294,7 +2335,7 @@ keeps its account key sealed in `ctx.kv`, and checks every 12 hours.
 - `ensureBinary({ name, version, url, sha256, prebuilt })` returns the path of
   a verified executable: the first `prebuilt` path whose SHA-256 matches (a
   copy baked into the Docker image, used in place), else
-  `<DATA_DIR>/plugins/<id>/bin/<name>` when it matches, else a download over
+  `<DATA_DIR>/plugin-data/<id>/bin/<name>` when it matches, else a download over
   https (redirects followed, `network:outbound` checked only then), written
   atomically with mode 755. A mismatch throws and keeps nothing.
 

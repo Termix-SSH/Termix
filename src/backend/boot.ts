@@ -6,6 +6,31 @@
 
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
+import { ensurePreupgradeBackup } from "./utils/database-layer-preupgrade-backup.js";
+import { systemLogger } from "./utils/logger.js";
+
+/**
+ * Copies the SQLite file before anything opens it, so the copy is the database
+ * exactly as the previous version left it: before core's schema patches and
+ * before any plugin adopts a table. Client-server engines are the operator's
+ * to back up.
+ */
+export async function backupBeforeUpgrade(options: {
+  dataDir: string;
+  version: string;
+}): Promise<void> {
+  const { needsExplicitPersist, resolveDatabaseDialect } =
+    await import("./database/db/dialect.js");
+  const dialect = resolveDatabaseDialect();
+  if (needsExplicitPersist(dialect)) {
+    ensurePreupgradeBackup(options);
+    return;
+  }
+  systemLogger.info(
+    `Skipping pre-upgrade backup on ${dialect} - back up the database yourself`,
+    { operation: "backend_init_db_backup_skipped", dialect },
+  );
+}
 
 export async function runCoreBootMigrations(): Promise<void> {
   const { UserKeyManager } = await import("./utils/user-keys.js");

@@ -10,7 +10,10 @@ import { sql } from "drizzle-orm";
 import { columnName, createTableSql } from "@termix/plugin-sdk/ddl";
 import { prefixedTableName } from "@termix/plugin-sdk/db";
 import type { PluginTableDefinition } from "@termix/plugin-sdk/db";
-import { getDb } from "../database/db/index.js";
+import {
+  runStatement,
+  selectRows,
+} from "../utils/crypto-migration/raw-rows.js";
 import { listAllTables } from "./data.js";
 
 export interface UserOwnedTable {
@@ -56,11 +59,10 @@ type Row = Record<string, unknown>;
 export async function readUserPluginRows(
   userId: string,
 ): Promise<Record<string, Row[]>> {
-  const db = getDb();
   const result: Record<string, Row[]> = {};
   for (const owned of listUserOwnedTables()) {
     try {
-      const rows = await db.all<Row>(
+      const rows = await selectRows<Row>(
         sql`SELECT ${sql.join(
           owned.columns.map((column) => sql.identifier(column)),
           sql`, `,
@@ -137,7 +139,6 @@ export async function importUserPluginRows(
   importDb: SqliteLike,
   userId: string,
 ): Promise<PluginRowsImport> {
-  const db = getDb();
   const summary: PluginRowsImport = { imported: 0, skipped: 0, errors: [] };
 
   for (const owned of listUserOwnedTables()) {
@@ -160,7 +161,7 @@ export async function importUserPluginRows(
         column === owned.userColumn ? userId : source[column],
       );
       try {
-        const existing = await db.all(
+        const existing = await selectRows(
           sql`SELECT 1 FROM ${sql.identifier(owned.table)} WHERE ${sql.join(
             columns.map((column, index) =>
               values[index] === null
@@ -174,7 +175,7 @@ export async function importUserPluginRows(
           summary.skipped++;
           continue;
         }
-        await db.run(
+        await runStatement(
           sql`INSERT INTO ${sql.identifier(owned.table)} (${sql.join(
             columns.map((column) => sql.identifier(column)),
             sql`, `,

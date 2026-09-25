@@ -300,9 +300,8 @@ export function createPluginContext(
     "files:own",
     async () => {
       const fs = await import("node:fs/promises");
-      const path = await import("node:path");
-      const base = process.env.DATA_DIR ?? "./db/data";
-      const dir = path.join(base, "plugins", pluginId);
+      const { getPluginDataDir } = await import("./paths.js");
+      const dir = getPluginDataDir(pluginId);
       await fs.mkdir(dir, { recursive: true });
       return dir;
     },
