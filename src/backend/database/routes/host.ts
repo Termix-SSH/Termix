@@ -46,7 +46,6 @@ import {
 } from "./host-plugin-settings.js";
 import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostAuthCompatRoutes } from "./host-compat-routes.js";
-import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
 import { registerHostInternalRoutes } from "./host-internal-routes.js";
@@ -2661,7 +2660,6 @@ registerHostAutostartRoutes(router, {
 });
 
 registerHostAuthCompatRoutes(router);
-registerHostStepCaRoutes(router);
 
 registerHostNetworkRoutes(router, {
   authenticateJWT,

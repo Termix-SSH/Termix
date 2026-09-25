@@ -147,6 +147,12 @@ export function createPluginFetch(deps: Deps): PluginFetch {
             signal: controller.signal,
           },
           (init.allowPrivateHosts ?? []).map((host) => host.toLowerCase()),
+          {
+            ...(init.tls?.ca ? { ca: init.tls.ca } : {}),
+            ...(init.tls?.rejectUnauthorized === false
+              ? { rejectUnauthorized: false }
+              : {}),
+          },
         );
       } finally {
         clearTimeout(timer);

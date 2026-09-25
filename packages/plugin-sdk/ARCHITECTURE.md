@@ -1008,11 +1008,11 @@ auto-session and trusted devices, plus the base SSH auth types password, key,
 stored credential, agent and none. Every other login method, second factor and
 SSH auth method is a plugin through `ctx.auth`.
 
-In 2.9.0, Step-CA and Vault still live in core.
-They register through the same interfaces from
-`src/backend/auth/legacy-providers.ts` and `src/ui/auth/legacy-auth-ui.tsx`
-with `pluginId: "core"`. Phase C moves each one into its plugin by moving its
-block out of those two files; D1 deletes them.
+In 2.9.0, Vault still lives in core. It registers through the same
+interface from `src/backend/auth/legacy-providers.ts` with
+`pluginId: "core"`. Its Phase C step moves its block out of that file; D1
+deletes it. **C4** moved Step-CA out and deleted
+`src/ui/auth/legacy-auth-ui.tsx`, which had no other editor left.
 Nothing else in core branches on those type names.
 
 **C1** moved TOTP and passkeys out:
@@ -1136,11 +1136,28 @@ Nothing else in core branches on those type names.
   2.8 message names for Termix-Mobile; the file manager and docker answer
   `requires_browser_sign_in` and continue on `connect-browser-sign-in`.
 - `@termix/plugin-sdk/ssh-certs` (`applyCertificateAuth`) replaces core's
-  `opkssh-cert-auth.ts`: opkssh, core key auth with a CA certificate, and the
-  Step-CA and Vault providers still in core use it.
-- Step-CA no longer shares anything with OPKSSH: its interaction is
-  `stepca`, its messages `stepca_*`, and it keeps issued certificates in
-  memory until it becomes a plugin.
+  `opkssh-cert-auth.ts`: opkssh, step-ca, core key auth with a CA
+  certificate, and the Vault provider still in core use it.
+
+**C4** moved Step-CA out:
+
+- `step-ca` registers the `stepca` SSH auth provider. Termix never runs the
+  `step` binary: the plugin talks to the CA's HTTPS API and the identity
+  provider through `ctx.fetch` (`network:outbound`), using its `tls` option
+  to bootstrap the CA root by fingerprint and pin it afterwards.
+- Issued certificates live in its own table, `p_step_ca_certs`, sealed with
+  `ctx.secrets.seal`, until the certificate's `validBefore`. 2.8 cached them
+  in `opkssh_tokens`; those are left to expire.
+- The CA URL, fingerprint, provisioner and private endpoint list are admin
+  settings. `step-ca-settings-migration.ts` copies the 2.8 `step_ca_*`
+  settings rows in and turns on `legacyCallback` when a CA was configured,
+  so an upgraded install keeps sending `<base>/host/step-ca-callback`, which
+  core answers with a 307 to `/plugin-api/step-ca/callback`.
+- With `REDIS_URL` set, a callback that lands on another instance is handed
+  to the one that started the sign-in through Redis
+  (`TERMIX_STEP_CA_REDIS_PREFIX`), as in 2.8.
+- The sign-in dialog is a `terminal.overlay` contribution speaking
+  `stepca_*`.
 
 #### One SSH connect pipeline
 
@@ -1682,44 +1699,44 @@ deciding, not the mechanism.
 
 Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 
-| Member                                           | Capability                                         | Status                  |
-| ------------------------------------------------ | -------------------------------------------------- | ----------------------- |
-| `ctx.pluginId`, `ctx.manifest`                   | none                                               | **A1**                  |
-| `ctx.log.*`                                      | none                                               | **A1**                  |
-| `ctx.events.emit` / `.on`                        | `events:core` for core topics                      | **A1**                  |
-| `ctx.kv.get/set/delete/list`                     | `kv:own`                                           | **A1**                  |
-| `ctx.files.dataDir`                              | `files:own`                                        | **B13**                 |
-| `ctx.registry.*`                                 | none                                               | **A1**                  |
-| `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                                   | **A1**, named **B12**   |
-| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                                    | **A1**                  |
-| `ctx.secrets.get` / `.set` / `.delete`           | `secrets:own`                                      | **B18**                 |
-| `ctx.secrets.seal` / `.unseal`                   | `secrets:own`                                      | **C1**                  |
-| `ctx.disposables.add`                            | none                                               | **A1**                  |
-| `ctx.asUser(userId, fn)`                         | none, always audited                               | **A1**                  |
-| `ctx.currentActor()`                             | none                                               | **A1**                  |
-| `ctx.db.define` / `.client` / `.refs`            | `db:own`                                           | **A3**                  |
-| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)                            | **A9**, lazy **B16**    |
-| `ctx.sync.registerEntity`                        | none                                               | **A3**                  |
-| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                                    | **A4**                  |
-| `ctx.http.baseUrl(req)`                          | none                                               | **C2**                  |
-| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                               | **A5**                  |
-| `ctx.capabilities.has` / `.require`              | the capability itself                              | **B11**                 |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`                       | **B4**, **B5**, **B18** |
-| `ctx.hosts.status.*`                             | `hosts:read`                                       | **B16**                 |
-| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`                   | **A8**                  |
-| `ctx.settings.*`                                 | `settings:read-core` (readCore only)               | **A6**                  |
-| `ctx.notify.channels` / `.send`                  | `notify:send`                                      | **B17**                 |
-| `ctx.auth.*`                                     | `auth:provide`                                     | **A8**                  |
-| `ctx.auth.completeRedirectLogin` and the rest    | `auth:provide`                                     | **C2**                  |
-| `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                                   | **B8**                  |
-| `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)                     | **B14**                 |
-| `ctx.credentials.resolveHostProtocol`            | `credentials:read`                                 | **B14**                 |
-| `ctx.credentials.registerSecretResolver`         | `auth:provide`                                     | **B20**                 |
-| `ctx.audit.record`                               | none, the actor is the runtime's                   | **B9**                  |
-| `ctx.schedule.every` / `.after`                  | none                                               | **B16**                 |
-| `ctx.fetch`                                      | `network:outbound`                                 | **B17**, signal **B18** |
-| `ctx.process.run` / `.ensureBinary`              | `process:spawn` (+ `network:outbound` to download) | **C3**                  |
-| `ctx.auth.registerKeyboardInteractiveHandler`    | `auth:provide`                                     | **C3**                  |
+| Member                                           | Capability                                         | Status                              |
+| ------------------------------------------------ | -------------------------------------------------- | ----------------------------------- |
+| `ctx.pluginId`, `ctx.manifest`                   | none                                               | **A1**                              |
+| `ctx.log.*`                                      | none                                               | **A1**                              |
+| `ctx.events.emit` / `.on`                        | `events:core` for core topics                      | **A1**                              |
+| `ctx.kv.get/set/delete/list`                     | `kv:own`                                           | **A1**                              |
+| `ctx.files.dataDir`                              | `files:own`                                        | **B13**                             |
+| `ctx.registry.*`                                 | none                                               | **A1**                              |
+| `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                                   | **A1**, named **B12**               |
+| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                                    | **A1**                              |
+| `ctx.secrets.get` / `.set` / `.delete`           | `secrets:own`                                      | **B18**                             |
+| `ctx.secrets.seal` / `.unseal`                   | `secrets:own`                                      | **C1**                              |
+| `ctx.disposables.add`                            | none                                               | **A1**                              |
+| `ctx.asUser(userId, fn)`                         | none, always audited                               | **A1**                              |
+| `ctx.currentActor()`                             | none                                               | **A1**                              |
+| `ctx.db.define` / `.client` / `.refs`            | `db:own`                                           | **A3**                              |
+| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)                            | **A9**, lazy **B16**                |
+| `ctx.sync.registerEntity`                        | none                                               | **A3**                              |
+| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                                    | **A4**                              |
+| `ctx.http.baseUrl(req)`                          | none                                               | **C2**                              |
+| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                               | **A5**                              |
+| `ctx.capabilities.has` / `.require`              | the capability itself                              | **B11**                             |
+| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`                       | **B4**, **B5**, **B18**             |
+| `ctx.hosts.status.*`                             | `hosts:read`                                       | **B16**                             |
+| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`                   | **A8**                              |
+| `ctx.settings.*`                                 | `settings:read-core` (readCore only)               | **A6**                              |
+| `ctx.notify.channels` / `.send`                  | `notify:send`                                      | **B17**                             |
+| `ctx.auth.*`                                     | `auth:provide`                                     | **A8**                              |
+| `ctx.auth.completeRedirectLogin` and the rest    | `auth:provide`                                     | **C2**                              |
+| `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                                   | **B8**                              |
+| `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)                     | **B14**                             |
+| `ctx.credentials.resolveHostProtocol`            | `credentials:read`                                 | **B14**                             |
+| `ctx.credentials.registerSecretResolver`         | `auth:provide`                                     | **B20**                             |
+| `ctx.audit.record`                               | none, the actor is the runtime's                   | **B9**                              |
+| `ctx.schedule.every` / `.after`                  | none                                               | **B16**                             |
+| `ctx.fetch`                                      | `network:outbound`                                 | **B17**, signal **B18**, tls **C4** |
+| `ctx.process.run` / `.ensureBinary`              | `process:spawn` (+ `network:outbound` to download) | **C3**                              |
+| `ctx.auth.registerKeyboardInteractiveHandler`    | `auth:provide`                                     | **C3**                              |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
 generic check for a capability no other ctx member wraps. Unlike every other
@@ -1956,6 +1973,10 @@ notification)` delivers to the ones among them that are theirs and
   `network:outbound`, audited as `plugin_fetch`. Automations' HTTP step
   passes the admin allowlist it reads through `ctx.settings.readCore`
   (`notification_private_endpoint_allowlist` joined `CORE_SETTINGS_ALLOWLIST`).
+  **C4** added `tls: { ca, rejectUnauthorized }` for a private CA: `ca`
+  trusts a PEM bundle, and `rejectUnauthorized: false` is for the one request
+  that fetches a CA root by fingerprint, which the caller then checks
+  (step-ca, like `step ca bootstrap`).
 
 **B18** added three members for the AI assistant:
 
@@ -2519,7 +2540,7 @@ Then, with the app running:
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
 (B17), ai (B18), homepage (B19), totp and webauthn (C1), sso and ldap (C2),
-opkssh and warpgate (C3),
+opkssh and warpgate (C3), step-ca (C4),
 which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle

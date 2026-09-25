@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "CA lépés"
+  },
+  "editor": {
+    "label": "CA lépés",
+    "description": "Jelentkezzen be az identitásszolgáltatóján keresztül, és hagyja, hogy a lépéses hitelesítésszolgáltatója rövid életű SSH-tanúsítványt állítson ki ehhez a gazdagéphez. A hitelesítésszolgáltató URL-címét, a root ujjlenyomatát és az OIDC-kiszolgálót a rendszergazda állítja be az Adminisztrátori beállítások alatt.",
+    "docs": "Dokumentumok megtekintése"
+  },
+  "dialog": {
+    "openBrowser": "Böngésző megnyitása a hitelesítéshez",
+    "waiting": "Várakozás a böngésző hitelesítésére...",
+    "authenticating": "Hitelesítés feldolgozása..."
+  },
+  "errors": {
+    "authFailed": "Sikertelen hitelesítés. Kérjük, ellenőrizze a hitelesítő adatait, és próbálja újra.",
+    "timeout": "A hitelesítés időtúllépést okozott. Kérjük, próbálja újra."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Gyökér ujjlenyomat (SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC-szolgáltató neve"
+    },
+    "privateEndpoints": {
+      "label": "Engedélyezett privát Step CA-hosztok",
+      "description": "A Step CA tanúsítványfolyamat által érintett privát hosztok a következőkkel vehetik fel a kapcsolatot: maga a CA, és ha belső, akkor az identitásszolgáltató. Vesszővel válassza el őket."
+    }
+  }
+}

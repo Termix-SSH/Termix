@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Passo CA"
+  },
+  "editor": {
+    "label": "Passo CA",
+    "description": "Accedi tramite il tuo provider di identità e lascia che la tua CA Step emetta un certificato SSH temporaneo per questo host. L'URL della CA, l'impronta digitale della radice e il provisioner OIDC vengono impostati da un amministratore nelle Impostazioni di amministrazione.",
+    "docs": "Visualizza documentazione"
+  },
+  "dialog": {
+    "openBrowser": "Apri il browser per autenticarti",
+    "waiting": "In attesa dell'autenticazione nel browser...",
+    "authenticating": "Autenticazione in corso..."
+  },
+  "errors": {
+    "authFailed": "Autenticazione fallita. Controlla le credenziali e riprova.",
+    "timeout": "Autenticazione scaduta. Riprova."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Impronta digitale radice (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Nome del fornitore OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Host Step CA privati consentiti",
+      "description": "Gli host privati che utilizzano il flusso di certificati Step CA potrebbero contattare: la CA stessa e, se interna, il provider di identità. Separarli con delle virgole."
+    }
+  }
+}

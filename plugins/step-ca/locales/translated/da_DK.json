@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Trin CA"
+  },
+  "editor": {
+    "label": "Trin CA",
+    "description": "Log ind via din identitetsudbyder, og lad din Step CA udstede et kortvarigt SSH-certifikat til denne vært. CA-URL'en, root-fingeraftrykket og OIDC-provisioneren indstilles af en administrator under administratorindstillinger.",
+    "docs": "Se dokumenter"
+  },
+  "dialog": {
+    "openBrowser": "Åbn browseren for at godkende",
+    "waiting": "Venter på godkendelse i browseren...",
+    "authenticating": "Behandler godkendelse..."
+  },
+  "errors": {
+    "authFailed": "Godkendelse mislykkedes. Tjek dine loginoplysninger, og prøv igen.",
+    "timeout": "Godkendelsen udløb. Prøv igen."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Rodfingeraftryk (SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC-provisioneringsnavn"
+    },
+    "privateEndpoints": {
+      "label": "Tilladte private Step CA-værter",
+      "description": "Private værter, som Step CA-certifikatflowet kan kontakte: selve CA'en og, hvis den er intern, din identitetsudbyder. Adskil dem med kommaer."
+    }
+  }
+}

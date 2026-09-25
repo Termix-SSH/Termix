@@ -1,0 +1,77 @@
+{
+  "id": "step-ca",
+  "name": "Step CA",
+  "version": "1.0.0",
+  "description": "Sign in to hosts with short-lived SSH certificates from a smallstep step-ca server, using its OIDC provisioner in the browser. Termix calls the CA's HTTPS API directly and never runs the step binary.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "ShieldCheck",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "secrets:own",
+    "network:outbound",
+    "network:serve",
+    "auth:provide",
+    "ui:surface"
+  ],
+  "contributes": {
+    "auth": {
+      "sshAuthTypes": ["stepca"]
+    },
+    "settings": {
+      "admin": [
+        {
+          "key": "caUrl",
+          "type": "string",
+          "labelKey": "settings.caUrl.label",
+          "descriptionKey": "settings.caUrl.description",
+          "placeholderKey": "settings.caUrl.placeholder",
+          "default": ""
+        },
+        {
+          "key": "fingerprint",
+          "type": "string",
+          "labelKey": "settings.fingerprint.label",
+          "descriptionKey": "settings.fingerprint.description",
+          "default": ""
+        },
+        {
+          "key": "provisioner",
+          "type": "string",
+          "labelKey": "settings.provisioner.label",
+          "descriptionKey": "settings.provisioner.description",
+          "default": ""
+        },
+        {
+          "key": "privateEndpoints",
+          "type": "textarea",
+          "labelKey": "settings.privateEndpoints.label",
+          "descriptionKey": "settings.privateEndpoints.description",
+          "default": ""
+        },
+        {
+          "key": "redirectUri",
+          "type": "custom",
+          "component": "redirectUri"
+        },
+        {
+          "key": "legacyCallback",
+          "type": "boolean",
+          "labelKey": "settings.legacyCallback.label",
+          "descriptionKey": "settings.legacyCallback.description",
+          "default": false
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

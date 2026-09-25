@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Langkah CA"
+  },
+  "editor": {
+    "label": "Langkah CA",
+    "description": "Masuk melalui penyedia identitas Anda dan biarkan Step CA Anda menerbitkan sertifikat SSH berumur pendek untuk host ini. URL CA, sidik jari root, dan penyedia OIDC diatur oleh administrator di bawah Pengaturan Admin.",
+    "docs": "Lihat dokumen"
+  },
+  "dialog": {
+    "openBrowser": "Buka Browser untuk Melakukan Otentikasi",
+    "waiting": "Menunggu otentikasi di browser...",
+    "authenticating": "Memproses otentikasi..."
+  },
+  "errors": {
+    "authFailed": "Autentikasi gagal. Harap periksa kredensial Anda dan coba lagi.",
+    "timeout": "Autentikasi habis waktu. Silakan coba lagi."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Sidik jari akar (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Nama penyedia OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Host CA Langkah pribadi yang diizinkan",
+      "description": "Host privat yang dapat dihubungi oleh alur sertifikat Step CA adalah: CA itu sendiri dan, jika internal, penyedia identitas Anda. Pisahkan mereka dengan koma."
+    }
+  }
+}

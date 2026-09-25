@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Krok CA"
+  },
+  "editor": {
+    "label": "Krok CA",
+    "description": "Zaloguj się za pomocą swojego dostawcy tożsamości i pozwól, aby urząd certyfikacji Step CA wydał tymczasowy certyfikat SSH dla tego hosta. Adres URL urzędu certyfikacji, odcisk palca głównego i dostawca OIDC są ustawiane przez administratora w Ustawieniach administratora.",
+    "docs": "Zobacz dokumentację"
+  },
+  "dialog": {
+    "openBrowser": "Otwórz przeglądarkę, aby uwierzytelnić",
+    "waiting": "Oczekiwanie na uwierzytelnienie w przeglądarce...",
+    "authenticating": "Przetwarzanie uwierzytelniania..."
+  },
+  "errors": {
+    "authFailed": "Uwierzytelnienie nie powiodło się. Sprawdź poświadczenia i spróbuj ponownie.",
+    "timeout": "Upłynął limit czasu uwierzytelniania. Spróbuj ponownie."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Odcisk palca głównego (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Nazwa dostawcy OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Dozwolone prywatne hosty Step CA",
+      "description": "Prywatni hosty, z których przepływ certyfikatów Step CA może się kontaktować: z samym CA oraz, jeśli jest wewnętrzny, z Twoim dostawcą tożsamości. Rozdziel je przecinkami."
+    }
+  }
+}

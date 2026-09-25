@@ -88,7 +88,6 @@ import { useSshAuthEditors } from "@/plugin-host/auth-registry";
 import { useSshAuthProviders } from "@/hooks/useSshAuthProviders";
 import { SshAuthProviderFields } from "./SshAuthProviderFields";
 import type { PluginSettingsField } from "@termix/plugin-sdk/manifest";
-import { ensureLegacyAuthUI } from "@/auth/legacy-auth-ui";
 import { PluginComponent } from "@/plugin-host/component-registry";
 import {
   toCredentialOption,
@@ -96,8 +95,6 @@ import {
 } from "./quick-created-credential";
 
 const CUSTOM_FONT_OPTION = "__custom__";
-
-ensureLegacyAuthUI();
 
 export function HostEditor({
   host,

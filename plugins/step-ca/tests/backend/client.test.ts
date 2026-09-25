@@ -1,19 +1,19 @@
+import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-import crypto from "crypto";
 import {
   buildAuthorizationUrl,
   certificateFingerprint,
   createPkce,
   decodeJwtClaims,
+  fetchRootCertificate,
+  findOidcProvisioner,
   generateSshKeyPair,
   normalizeCaUrl,
   normalizeFingerprint,
   parseSshCertificate,
-} from "../../utils/step-ca-client.js";
-import {
-  generateCa,
-  signUserCertificate,
-} from "../../database/routes/ssh-certificate.js";
+} from "../../src/backend/client.js";
+import { parseHostList } from "../../src/backend/auth-session.js";
+import { CA_URL, createFakeCa, createSshCa, fakeRoot } from "./fake-ca.js";
 
 describe("step-ca client helpers", () => {
   it("normalizes the CA url and fingerprint the way step does", () => {
@@ -21,17 +21,14 @@ describe("step-ca client helpers", () => {
       "https://ca.internal:9000",
     );
     expect(() => normalizeCaUrl("http://ca.internal")).toThrow(/https/);
-    const fp = "AB:cd".repeat(16).replace(/:/g, "") + "";
+    const fp = "AB:cd".repeat(16).replace(/:/g, "");
     expect(normalizeFingerprint("AB:cd".repeat(16))).toBe(fp.toLowerCase());
     expect(() => normalizeFingerprint("abcd")).toThrow(/SHA-256/);
   });
 
   it("fingerprints a PEM certificate by the sha256 of its DER", () => {
-    const der = crypto.randomBytes(64);
-    const pem = `-----BEGIN CERTIFICATE-----\n${der.toString("base64")}\n-----END CERTIFICATE-----\n`;
-    expect(certificateFingerprint(pem)).toBe(
-      crypto.createHash("sha256").update(der).digest("hex"),
-    );
+    const root = fakeRoot();
+    expect(certificateFingerprint(root.pem)).toBe(root.fingerprint);
   });
 
   it("builds a PKCE authorization request", () => {
@@ -55,23 +52,19 @@ describe("step-ca client helpers", () => {
     expect(url.searchParams.get("scope")).toContain("openid");
   });
 
-  it("generates an ed25519 key whose public line a CA can certify, and reads the cert back", () => {
+  it("generates an ed25519 key a CA can certify, and reads the cert back", () => {
     const { publicKeyLine, privateKeyPem } = generateSshKeyPair();
     expect(publicKeyLine).toMatch(/^ssh-ed25519 [A-Za-z0-9+/=]+$/);
     expect(privateKeyPem).toContain("BEGIN PRIVATE KEY");
 
-    const ca = generateCa();
-    const cert = signUserCertificate({
-      userPublicKeyLine: publicKeyLine,
-      caPrivateKeyPem: ca.privateKeyPem,
-      caPublicKeyLine: ca.publicKeyLine,
+    const cert = createSshCa().sign({
+      publicKeyBlob: publicKeyLine.split(" ")[1],
       keyId: "alice@example",
       principals: ["alice", "ops"],
       validAfter: 1_700_000_000,
       validBefore: 1_700_057_600,
     });
-    expect(cert).not.toBeNull();
-    const info = parseSshCertificate(cert!);
+    const info = parseSshCertificate(cert);
     expect(info).toMatchObject({
       keyType: "ssh-ed25519-cert-v01@openssh.com",
       publicKeyLine,
@@ -86,6 +79,46 @@ describe("step-ca client helpers", () => {
     expect(() =>
       parseSshCertificate("ssh-ed25519-cert-v01@openssh.com AAAA"),
     ).toThrow(/certificate/);
+  });
+
+  it("reads the private endpoint list with commas or new lines", () => {
+    expect(parseHostList("ca.internal, SSO.internal\nidp.lan")).toEqual([
+      "ca.internal",
+      "sso.internal",
+      "idp.lan",
+    ]);
+    expect(parseHostList(undefined)).toEqual([]);
+  });
+});
+
+describe("talking to the CA", () => {
+  it("refuses a root whose fingerprint does not match", async () => {
+    const ca = createFakeCa({ nonce: () => "" });
+    await expect(
+      fetchRootCertificate({
+        fetch: ca.fetch,
+        caUrl: CA_URL,
+        fingerprint: "b".repeat(64),
+        allowedPrivateHosts: [],
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("finds the OIDC provisioner by name and passes the private hosts", async () => {
+    const ca = createFakeCa({ nonce: () => "" });
+    const target = {
+      fetch: ca.fetch,
+      caUrl: CA_URL,
+      fingerprint: ca.root.fingerprint,
+      allowedPrivateHosts: ["ca.test"],
+    };
+    const root = await fetchRootCertificate(target);
+    const provisioner = await findOidcProvisioner(target, root, "oidc");
+    expect(provisioner.clientID).toBe("termix");
+    expect(ca.calls.every((call) => call.init?.allowPrivateHosts)).toBe(true);
+    await expect(findOidcProvisioner(target, root, "jwk")).rejects.toThrow(
+      /not found/,
+    );
   });
 });
 

@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "스텝 CA"
+  },
+  "editor": {
+    "label": "스텝 CA",
+    "description": "ID 공급자를 통해 로그인하고 Step CA에서 이 호스트에 대한 단기 SSH 인증서를 발급받으세요. CA URL, 루트 지문 및 OIDC 프로비저너는 관리자가 관리자 설정에서 설정합니다.",
+    "docs": "문서 보기"
+  },
+  "dialog": {
+    "openBrowser": "브라우저로 인증하기",
+    "waiting": "브라우저에서 인증 대기 중...",
+    "authenticating": "인증 처리 중..."
+  },
+  "errors": {
+    "authFailed": "인증에 실패했습니다. 자격 증명을 확인하고 다시 시도하세요.",
+    "timeout": "인증 시간이 초과되었습니다. 다시 시도하세요."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "루트 지문(SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC 프로비저너 이름"
+    },
+    "privateEndpoints": {
+      "label": "허용된 개인 Step CA 호스트",
+      "description": "Step CA 인증서 흐름이 접촉할 수 있는 개인 호스트는 CA 자체와 (내부 호스트인 경우) ID 공급자입니다. 이들을 쉼표로 구분하세요."
+    }
+  }
+}

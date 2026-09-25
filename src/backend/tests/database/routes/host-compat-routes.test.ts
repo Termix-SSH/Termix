@@ -1,5 +1,5 @@
 /**
- * The OPKSSH redirect URI identity providers were registered with before
+ * The OPKSSH and Step CA redirect URIs identity providers were registered with before
  * 2.9 must keep reaching the plugin's callback, query intact.
  */
 
@@ -46,6 +46,19 @@ describe("the old OPKSSH callback", () => {
     });
     expect(response.headers.get("location")).toBe(
       "/plugin-api/opkssh/callback/req-1/done",
+    );
+  });
+});
+
+describe("the old Step CA callback", () => {
+  it("forwards to the plugin's callback with the query", async () => {
+    const response = await fetch(
+      `${base}/host/step-ca-callback?code=abc&state=xyz`,
+      { redirect: "manual" },
+    );
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "/plugin-api/step-ca/callback?code=abc&state=xyz",
     );
   });
 });

@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Krok CA"
+  },
+  "editor": {
+    "label": "Krok CA",
+    "description": "Přihlaste se prostřednictvím svého poskytovatele identity a nechte svou certifikační autoritu Step CA vydat krátkodobý SSH certifikát pro tohoto hostitele. URL certifikační autority, otisk kořenového serveru a zřizovatel OIDC nastavuje administrátor v Nastavení správce.",
+    "docs": "Zobrazit dokumenty"
+  },
+  "dialog": {
+    "openBrowser": "Otevřít prohlížeč pro ověření",
+    "waiting": "Čekání na ověření v prohlížeči...",
+    "authenticating": "Zpracování ověřování..."
+  },
+  "errors": {
+    "authFailed": "Ověření se nezdařilo. Zkontrolujte prosím své přihlašovací údaje a zkuste to znovu.",
+    "timeout": "Časový limit ověření vypršel. Zkuste to prosím znovu."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Kořenový otisk (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Název zřizovatele OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Povolení soukromí hostitelé Step CA",
+      "description": "Soukromí hostitelé, které může tok certifikátů Step CA kontaktovat: samotná CA a v případě interní certifikace také váš poskytovatel identity. Oddělte je čárkami."
+    }
+  }
+}

@@ -1490,6 +1490,12 @@ export interface PluginFetchInit {
   allowPrivateHosts?: readonly string[];
   /** Aborts the request, and a streamed body, when the caller gives up. */
   signal?: AbortSignal;
+  /**
+   * TLS for a private CA. `ca` trusts this PEM bundle instead of the system
+   * store. `rejectUnauthorized: false` skips verification, only for fetching
+   * a CA root by fingerprint, where the caller checks the answer itself.
+   */
+  tls?: { ca?: string; rejectUnauthorized?: boolean };
 }
 
 /**

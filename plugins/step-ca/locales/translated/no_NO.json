@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Trinn CA"
+  },
+  "editor": {
+    "label": "Trinn CA",
+    "description": "Logg på via identitetsleverandøren din, og la Step CA utstede et kortvarig SSH-sertifikat for denne verten. CA-URL-en, rotfingeravtrykket og OIDC-provisioneren angis av en administrator under Administratorinnstillinger.",
+    "docs": "Vis dokumenter"
+  },
+  "dialog": {
+    "openBrowser": "Åpne nettleseren for å autentisere",
+    "waiting": "Venter på autentisering i nettleseren...",
+    "authenticating": "Behandler autentisering ..."
+  },
+  "errors": {
+    "authFailed": "Autentiseringen mislyktes. Sjekk legitimasjonen din og prøv på nytt.",
+    "timeout": "Autentiseringen ble tidsavbrutt. Prøv på nytt."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Rotfingeravtrykk (SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC-provisionernavn"
+    },
+    "privateEndpoints": {
+      "label": "Tillatte private Step CA-verter",
+      "description": "Private verter som Step CA-sertifikatflyten kan kontakte: selve CA-en og, hvis intern, identitetsleverandøren din. Skill dem med komma."
+    }
+  }
+}

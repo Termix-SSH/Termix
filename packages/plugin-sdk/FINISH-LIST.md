@@ -483,21 +483,13 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   (`h.pluginSettings?.["web-endpoint"]`). The file is untouched since before
   C2. Owner: D0.
 
-- **C3 (opkssh), for the Step-CA step:** Step-CA is still core and no longer
-  shares OPKSSH's pieces. Its interaction is `stepca` and its socket messages
-  `stepca_*`, but nothing draws them yet: until its plugin contributes a
-  `terminal.overlay` (the opkssh plugin's `OpksshOverlay` and `OpksshDialog`
-  are the model), a Step-CA host asks for a sign-in the terminal cannot show.
-  Its issued certificates are cached in memory (`step-ca-auth.ts`), so they
-  are lost on restart; its plugin should own a table the way opkssh owns
-  `p_opkssh_tokens`. Step-CA certificates 2.8 cached in `opkssh_tokens` stay
-  in the adopted `p_opkssh_tokens`, unused, until they expire. Owner: the
-  Phase C step that moves Step-CA.
-- **C3 (opkssh):** `database/routes/host-compat-routes.ts` answers the 2.8
-  redirect URI `/host/opkssh-callback` with a 307 to the plugin and so names
-  the plugin's path. Keep it until identity providers have moved to
-  `/plugin-api/opkssh/callback` (the admin page shows it, and the
-  `legacyCallback` setting switches over). Owner: 3.0.0.
+- **C3 (opkssh), C4 (step-ca):** `database/routes/host-compat-routes.ts`
+  answers the 2.8 redirect URIs `/host/opkssh-callback` and
+  `/host/step-ca-callback` with a 307 to the plugins and so names their
+  paths. Keep it until identity providers have moved to
+  `/plugin-api/opkssh/callback` and `/plugin-api/step-ca/callback` (each
+  plugin's admin page shows it, and its `legacyCallback` setting switches
+  over). Owner: 3.0.0.
 - **C3 (opkssh/warpgate):** `ssh_data.use_warpgate` and the `.opk` folder
   under `DATA_DIR` stay on disk, unused (the drizzle drop is `SELECT 1;`, the
   config is copied, not moved). Remove them in 3.0.0. Owner: 3.0.0.
@@ -517,6 +509,20 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `useWarpgate` field inline (the host editor sends plugin settings). The
   bulk list should come from the registered providers plus
   `contributes.auth.sshAuthTypes`. Owner: D1.
+- **C4 (step-ca):** the 2.8 `step_ca_url`, `step_ca_fingerprint`,
+  `step_ca_provisioner` and `step_ca_private_endpoint_allowlist` rows stay in
+  core `settings`, unused, after `step-ca-settings-migration.ts` copies them
+  (kept for one release so a downgrade works). Delete them in 3.0.0.
+  Owner: 3.0.0.
+- **C4 (step-ca):** the admin fields are plain settings now, so a bad CA URL
+  or fingerprint is reported when someone signs in (in the terminal dialog)
+  instead of when the admin saves, as the 2.8 route did. A settings
+  validation hook for plugins would bring the save-time check back.
+  Owner: D0.
+- **C4 (step-ca):** the Termix docs still describe Step CA under Admin
+  Settings and the `/host/step-ca-callback` redirect URI. They need the
+  plugin settings page, the new redirect URI and the `legacyCallback`
+  setting. Owner: D0 (docs repo).
 - **Pre-existing, found in C3:** the Docker `opkssh-downloader` stage's
   `OPKSSH_VERSION` build arg is not passed on at runtime, so building with
   another version gives a prebaked binary the plugin's pinned checksum

@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useBranding } from "@/contexts/BrandingContext";
 import {
   getNotificationPrivateEndpoints,
-  getStepCaPrivateEndpoints,
-  setStepCaPrivateEndpoints as setStepCaPrivateEndpointsApi,
   setNotificationPrivateEndpoints as setNotificationPrivateEndpointsApi,
 } from "@/api/private-endpoints-api";
 import {
@@ -73,7 +71,6 @@ import {
   type AdminUser,
 } from "./AdminManagementSections";
 import { toast } from "sonner";
-import { getStepCaSettings, updateStepCaSettings } from "@/api/settings-api";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
   AdminDatabaseSection,
@@ -129,25 +126,6 @@ export function AdminSettingsPanel({
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [oidcSilentLoginDefaultLocked, setOidcSilentLoginDefaultLocked] =
     useState(false);
-  const [stepCaPrivateEndpoints, setStepCaPrivateEndpoints] = useState<
-    string[]
-  >([]);
-  const [stepCaSettings, setStepCaSettings] = useState({
-    caUrl: "",
-    fingerprint: "",
-    provisioner: "",
-  });
-  useEffect(() => {
-    getStepCaSettings()
-      .then((s) =>
-        setStepCaSettings({
-          caUrl: s.caUrl,
-          fingerprint: s.fingerprint,
-          provisioner: s.provisioner,
-        }),
-      )
-      .catch(() => {});
-  }, []);
   const [notificationPrivateEndpoints, setNotificationPrivateEndpoints] =
     useState<string[]>([]);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
@@ -333,7 +311,6 @@ export function AdminSettingsPanel({
         oidcSilent,
         analytics,
         notificationEndpoints,
-        stepCaEndpoints,
         branding,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
@@ -347,7 +324,6 @@ export function AdminSettingsPanel({
         getOidcSilentLoginDefault(),
         getAnalyticsEnabled(),
         getNotificationPrivateEndpoints(),
-        getStepCaPrivateEndpoints(),
         getBranding(),
       ]);
 
@@ -378,9 +354,6 @@ export function AdminSettingsPanel({
       if (analytics.status === "fulfilled") {
         setAnalyticsEnabled(analytics.value.enabled);
         setAnalyticsLocked(analytics.value.locked ?? false);
-      }
-      if (stepCaEndpoints.status === "fulfilled") {
-        setStepCaPrivateEndpoints(stepCaEndpoints.value);
       }
       if (notificationEndpoints.status === "fulfilled") {
         setNotificationPrivateEndpoints(notificationEndpoints.value);
@@ -496,28 +469,6 @@ export function AdminSettingsPanel({
     } catch {
       setAnalyticsEnabled(!newVal);
       toast.error(t("admin.updateAnalyticsFailed"));
-    }
-  }
-
-  async function handleSaveStepCaSettings() {
-    try {
-      await updateStepCaSettings(stepCaSettings);
-      toast.success(t("admin.stepCaSaved"));
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("admin.stepCaSaveFailed"),
-      );
-    }
-  }
-
-  async function handleSaveStepCaPrivateEndpoints(hosts: string[]) {
-    const previous = stepCaPrivateEndpoints;
-    setStepCaPrivateEndpoints(hosts);
-    try {
-      setStepCaPrivateEndpoints(await setStepCaPrivateEndpointsApi(hosts));
-    } catch {
-      setStepCaPrivateEndpoints(previous);
-      toast.error(t("admin.updateStepCaEndpointsFailed"));
     }
   }
 
@@ -938,11 +889,6 @@ export function AdminSettingsPanel({
         analyticsLocked={analyticsLocked}
         handleToggleAnalytics={handleToggleAnalytics}
         notificationPrivateEndpoints={notificationPrivateEndpoints}
-        stepCaPrivateEndpoints={stepCaPrivateEndpoints}
-        onSaveStepCaPrivateEndpoints={handleSaveStepCaPrivateEndpoints}
-        stepCaSettings={stepCaSettings}
-        setStepCaSettings={setStepCaSettings}
-        handleSaveStepCaSettings={handleSaveStepCaSettings}
         onSaveNotificationPrivateEndpoints={
           handleSaveNotificationPrivateEndpoints
         }

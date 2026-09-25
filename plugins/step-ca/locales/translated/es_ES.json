@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Paso CA"
+  },
+  "editor": {
+    "label": "Paso CA",
+    "description": "Inicie sesión a través de su proveedor de identidad y permita que su CA de Step emita un certificado SSH de corta duración para este host. La URL de la CA, la huella digital raíz y el proveedor OIDC se configuran mediante un administrador en la sección de Configuración de administración.",
+    "docs": "Ver documentación"
+  },
+  "dialog": {
+    "openBrowser": "Abrir navegador para autenticarse",
+    "waiting": "Esperando autenticación en el navegador...",
+    "authenticating": "Procesando autenticación..."
+  },
+  "errors": {
+    "authFailed": "La autenticación falló. Revisa tus credenciales e inténtalo de nuevo.",
+    "timeout": "La autenticación expiró. Inténtalo de nuevo."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Huella digital de la raíz (SHA-256)"
+    },
+    "provisioner": {
+      "label": "nombre del proveedor OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Hosts de CA de paso privado permitidos",
+      "description": "Los hosts privados con los que puede contactar el flujo de certificados de Step CA son: la propia CA y, si es interna, su proveedor de identidad. Sepárelos con comas."
+    }
+  }
+}

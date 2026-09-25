@@ -18,8 +18,6 @@ vi.mock("ssh2", async (importOriginal) => {
 const mocks = vi.hoisted(() => ({
   verifier: () => {},
   createHostVerifier: vi.fn(),
-  getStepCaCert: vi.fn(),
-  invalidateStepCaCert: vi.fn(),
   applyCertificateAuth: vi.fn(),
   getVaultCert: vi.fn(),
   deleteVaultCert: vi.fn(),
@@ -39,10 +37,6 @@ vi.mock("../../../hosts/host-key-verifier.js", () => ({
     preloadHostData: async () => null,
     createHostVerifier: mocks.createHostVerifier,
   },
-}));
-vi.mock("../../../hosts/step-ca-auth.js", () => ({
-  getStepCaCert: mocks.getStepCaCert,
-  invalidateStepCaCert: mocks.invalidateStepCaCert,
 }));
 vi.mock("@termix/plugin-sdk/ssh-certs", () => ({
   applyCertificateAuth: mocks.applyCertificateAuth,
@@ -276,25 +270,20 @@ describe("buildConnectConfig per auth type", () => {
   // OPKSSH is a plugin-registered SSH auth provider now: see
   // plugins/opkssh/tests/backend/provider.test.ts.
 
-  it("stepca without a cached certificate asks for a sign-in", async () => {
-    mocks.getStepCaCert.mockReturnValueOnce(null);
-    const { outcome } = await build(host({ authType: "stepca" }));
-    expect(outcome).toMatchObject({
-      status: "interaction-required",
-      interaction: "stepca",
-    });
-    expect(mocks.getStepCaCert).toHaveBeenCalledWith("user-1", 7);
-  });
+  // Step CA is the step-ca plugin's provider: see
+  // plugins/step-ca/tests/backend/step-ca.test.ts.
 
-  it("stepca uses the cached certificate", async () => {
-    mocks.getStepCaCert.mockReturnValueOnce({
-      privateKey: "k",
-      sshCert: "c",
+  it("a stepca host without the step-ca plugin names it", async () => {
+    setSshAuthTypeOwnerSource(() => [
+      { type: "stepca", pluginId: "step-ca", pluginName: "Step CA" },
+    ]);
+    const { outcome } = await build(host({ authType: "stepca" }));
+    expect(outcome).toEqual({
+      status: "error",
+      code: "provider-missing",
+      message: "This host uses stepca, which needs the Step CA plugin",
     });
-    const { config, outcome } = await build(host({ authType: "stepca" }));
-    expect(outcome.status).toBe("ready");
-    expect(config.authHandler).toBe("cert-handler");
-    expect(mocks.applyCertificateAuth).toHaveBeenCalledOnce();
+    setSshAuthTypeOwnerSource(() => []);
   });
 
   it("vault needs a profile, then a cached certificate", async () => {
@@ -465,18 +454,20 @@ describe("connectHost", () => {
   });
 
   it("throws the auth outcome instead of connecting", async () => {
-    mocks.getStepCaCert.mockReturnValue(null);
-    const attempt = connectHost(host({ authType: "stepca" }), {
+    mocks.getVaultCert.mockResolvedValue(null);
+    const vaultHost = () =>
+      host({ authType: "vault", vaultProfile: { id: 3 } });
+    const attempt = connectHost(vaultHost(), {
       userId: "user-1",
       purpose: "tmux",
     });
     await expect(attempt).rejects.toBeInstanceOf(SshConnectError);
     await expect(
-      connectHost(host({ authType: "stepca" }), {
+      connectHost(vaultHost(), {
         userId: "user-1",
         purpose: "tmux",
       }).catch((error) => error.code),
-    ).resolves.toBe("stepca-required");
+    ).resolves.toBe("vault-required");
   });
 
   it("goes through the jump chain and forwards to the target", async () => {
@@ -628,18 +619,18 @@ describe("connectHost", () => {
 
   it("lets the provider react to an auth failure", async () => {
     FakeSshClient.nextBehaviour = ["auth-fail"];
-    mocks.getStepCaCert.mockReturnValueOnce({
+    mocks.getVaultCert.mockResolvedValueOnce({
       privateKey: "k",
       sshCert: "c",
     });
     await expect(
-      connectHost(host({ authType: "stepca" }), {
+      connectHost(host({ authType: "vault", vaultProfile: { id: 3 } }), {
         userId: "user-1",
         purpose: "fleet",
       }),
     ).rejects.toThrow(/All configured authentication methods failed/);
     await vi.waitFor(() =>
-      expect(mocks.invalidateStepCaCert).toHaveBeenCalledWith("user-1", 7),
+      expect(mocks.deleteVaultCert).toHaveBeenCalledWith("user-1", 3),
     );
   });
 

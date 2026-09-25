@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Pasul CA"
+  },
+  "editor": {
+    "label": "Pasul CA",
+    "description": "Conectați-vă prin intermediul furnizorului de identitate și permiteți autorității de certificare Step CA să emită un certificat SSH de scurtă durată pentru această gazdă. Adresa URL a autorității de certificare, amprenta rădăcină și furnizorul OIDC sunt setate de un administrator în Setări administrator.",
+    "docs": "Vizualizați documentele"
+  },
+  "dialog": {
+    "openBrowser": "Deschideți browserul pentru autentificare",
+    "waiting": "Se așteaptă autentificarea în browser...",
+    "authenticating": "Se procesează autentificarea..."
+  },
+  "errors": {
+    "authFailed": "Autentificarea a eșuat. Verificați acreditările și încercați din nou.",
+    "timeout": "Autentificarea a expirat. Vă rugăm să încercați din nou."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Amprentă digitală rădăcină (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Numele furnizorului OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Gazde private permise de Step CA",
+      "description": "Gazde private pe care fluxul de certificate Step CA le poate contacta: CA-ul în sine și, dacă este intern, furnizorul dvs. de identitate. Separați-le prin virgule."
+    }
+  }
+}

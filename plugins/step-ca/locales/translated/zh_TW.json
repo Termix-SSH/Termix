@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "步驟 CA"
+  },
+  "editor": {
+    "label": "步驟 CA",
+    "description": "透過您的身分提供者登錄，並讓您的 Step CA 為此主機頒發短期 SSH 憑證。 CA URL、根指紋和 OIDC 配置器由管理員在「管理設定」中設定。",
+    "docs": "檢視文件"
+  },
+  "dialog": {
+    "openBrowser": "開啟瀏覽器以進行驗證",
+    "waiting": "正在等待瀏覽器中的驗證…",
+    "authenticating": "正在處理驗證…"
+  },
+  "errors": {
+    "authFailed": "驗證失敗。請檢查您的憑證並再試一次。",
+    "timeout": "驗證逾時。請再試一次。"
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "根指紋（SHA-256）"
+    },
+    "provisioner": {
+      "label": "OIDC配置器名稱"
+    },
+    "privateEndpoints": {
+      "label": "允許的私有步驟 CA 主機",
+      "description": "私有主機在執行步驟 CA 憑證流程時可能會聯絡：CA 本身，以及（如果是內部）您的身分提供者。請用逗號分隔它們。"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Schritt CA"
+  },
+  "editor": {
+    "label": "Schritt CA",
+    "description": "Melden Sie sich über Ihren Identitätsanbieter an und lassen Sie Ihre Step-Zertifizierungsstelle ein kurzlebiges SSH-Zertifikat für diesen Host ausstellen. Die URL der Zertifizierungsstelle, der Root-Fingerabdruck und der OIDC-Provisioner werden von einem Administrator unter „Admin-Einstellungen“ festgelegt.",
+    "docs": "Dokumentation anzeigen"
+  },
+  "dialog": {
+    "openBrowser": "Browser zum Authentifizieren öffnen",
+    "waiting": "Warten auf Authentifizierung im Browser...",
+    "authenticating": "Authentifizierung wird verarbeitet..."
+  },
+  "errors": {
+    "authFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldeinformationen und versuchen Sie es erneut.",
+    "timeout": "Authentifizierung abgelaufen. Bitte versuchen Sie es erneut."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Root-Fingerabdruck (SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC-Provisionername"
+    },
+    "privateEndpoints": {
+      "label": "Zulässige private Step CA-Hosts",
+      "description": "Private Hosts, mit denen der Step CA-Zertifikatsfluss in Kontakt treten kann, kontaktieren möglicherweise die Zertifizierungsstelle selbst und, falls intern, Ihren Identitätsanbieter. Trennen Sie diese durch Kommas."
+    }
+  }
+}

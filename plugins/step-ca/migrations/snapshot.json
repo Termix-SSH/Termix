@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "tables": {
+    "certs": {
+      "columns": {
+        "id": {
+          "type": "id",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "type": "refUser",
+          "length": 255,
+          "notNull": true
+        },
+        "hostId": {
+          "type": "refHost",
+          "notNull": true
+        },
+        "sshCert": {
+          "type": "text",
+          "notNull": true
+        },
+        "privateKey": {
+          "type": "text",
+          "notNull": true
+        },
+        "email": {
+          "type": "text"
+        },
+        "createdAt": {
+          "type": "text",
+          "notNull": true,
+          "defaultNow": true
+        },
+        "expiresAt": {
+          "type": "varchar",
+          "length": 255,
+          "notNull": true
+        }
+      },
+      "indexes": [
+        {
+          "name": "idx_step_ca_certs_user_host",
+          "columns": ["userId", "hostId"],
+          "unique": true
+        }
+      ]
+    }
+  }
+}

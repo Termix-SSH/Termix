@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "ステップCA"
+  },
+  "editor": {
+    "label": "ステップCA",
+    "description": "IDプロバイダー経由でサインインし、Step CAにこのホスト用の有効期限の短いSSH証明書を発行させてください。CAのURL、ルートフィンガープリント、およびOIDCプロビジョナーは、管理者が「管理設定」で設定します。",
+    "docs": "ドキュメントを表示"
+  },
+  "dialog": {
+    "openBrowser": "ブラウザを開いて認証",
+    "waiting": "ブラウザでの認証を待機中...",
+    "authenticating": "認証を処理中..."
+  },
+  "errors": {
+    "authFailed": "認証に失敗しました。資格情報を確認して再試行してください。",
+    "timeout": "認証がタイムアウトしました。もう一度お試しください。"
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "ルートフィンガープリント（SHA-256）"
+    },
+    "provisioner": {
+      "label": "OIDCプロビジョナー名"
+    },
+    "privateEndpoints": {
+      "label": "許可されたプライベートStep CAホスト",
+      "description": "プライベートホストの場合、Step CA 証明書フローは、認証局自体、および内部の場合は ID プロバイダーと連絡を取ることができます。これらはカンマで区切ってください。"
+    }
+  }
+}

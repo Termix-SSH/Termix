@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Vaihe CA"
+  },
+  "editor": {
+    "label": "Vaihe CA",
+    "description": "Kirjaudu sisään identiteetintarjoajasi kautta ja anna vaiheen varmentajan myöntää lyhytaikainen SSH-varmenne tälle isännälle. Varmentajan URL-osoitteen, pääkäyttäjän sormenjäljen ja OIDC-varmenteen määrittäjän määrittää järjestelmänvalvojan asetuksissa.",
+    "docs": "Näytä dokumentit"
+  },
+  "dialog": {
+    "openBrowser": "Avaa selain todennusta varten",
+    "waiting": "Odotetaan selaimen todennusta...",
+    "authenticating": "Todennusta käsitellään..."
+  },
+  "errors": {
+    "authFailed": "Todennus epäonnistui. Tarkista tunnistetietosi ja yritä uudelleen.",
+    "timeout": "Todennus aikakatkaistiin. Yritä uudelleen."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Juurisormenjälki (SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC-palveluntarjoajan nimi"
+    },
+    "privateEndpoints": {
+      "label": "Sallitut yksityiset Step CA -isännät",
+      "description": "Yksityiset isännöitsijät, joilla Step CA -varmennetyönkulku voi ottaa yhteyttä: itse CA:han ja, jos kyseessä on sisäinen varmenne, identiteetintarjoajaasi. Erota ne pilkuilla."
+    }
+  }
+}

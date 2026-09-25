@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Pas CA"
+  },
+  "editor": {
+    "label": "Pas CA",
+    "description": "Inicieu la sessió a través del vostre proveïdor d'identitat i deixeu que la vostra Step CA emeti un certificat SSH de curta durada per a aquest amfitrió. L'URL de la CA, l'empremta digital arrel i el proveïdor OIDC els estableix un administrador a Configuració de l'administrador.",
+    "docs": "Veure documents"
+  },
+  "dialog": {
+    "openBrowser": "Obre el navegador per autenticar-te",
+    "waiting": "Esperant l'autenticació al navegador...",
+    "authenticating": "Processant l'autenticació..."
+  },
+  "errors": {
+    "authFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
+    "timeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Empremta digital arrel (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Nom del proveïdor OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Amfitrions privats permesos de Step CA",
+      "description": "Amfitrions privats amb els quals el flux de certificats de la CA de Step pot contactar: la mateixa CA i, si és intern, el vostre proveïdor d'identitat. Separeu-los amb comes."
+    }
+  }
+}

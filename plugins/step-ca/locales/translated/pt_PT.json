@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Etapa CA"
+  },
+  "editor": {
+    "label": "Etapa CA",
+    "description": "Faça login através do seu fornecedor de identidade e permita que a sua Autoridade Certificadora (CA) Step emita um certificado SSH de curta duração para este host. O URL da AC, a impressão digital da raiz e o provisionador OIDC são definidos por um administrador em Definições de Administrador.",
+    "docs": "Ver documentação"
+  },
+  "dialog": {
+    "openBrowser": "Abrir navegador para autenticar",
+    "waiting": "A aguardar autenticação no navegador...",
+    "authenticating": "A processar autenticação..."
+  },
+  "errors": {
+    "authFailed": "A autenticação falhou. Verifique as suas credenciais e tente novamente.",
+    "timeout": "A autenticação expirou. Tente novamente."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Impressão digital de raiz (SHA-256)"
+    },
+    "provisioner": {
+      "label": "nome do provisionador OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Hosts CA privados permitidos",
+      "description": "Para hosts privados, o fluxo de certificados da Step CA pode contactar: a própria CA e, se for interna, o seu fornecedor de identidade. Separe-os com vírgulas."
+    }
+  }
+}

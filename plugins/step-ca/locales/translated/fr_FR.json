@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Étape CA"
+  },
+  "editor": {
+    "label": "Étape CA",
+    "description": "Connectez-vous via votre fournisseur d'identité et laissez votre autorité de certification Step CA émettre un certificat SSH temporaire pour cet hôte. L'URL de l'autorité de certification, l'empreinte racine et le provisionneur OIDC sont configurés par un administrateur dans les paramètres d'administration.",
+    "docs": "Voir la documentation"
+  },
+  "dialog": {
+    "openBrowser": "Ouvrir le navigateur pour s'authentifier",
+    "waiting": "En attente de l'authentification dans le navigateur...",
+    "authenticating": "Traitement de l'authentification..."
+  },
+  "errors": {
+    "authFailed": "Échec de l'authentification. Veuillez vérifier vos identifiants et réessayer.",
+    "timeout": "L'authentification a expiré. Veuillez réessayer."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Empreinte racine (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Nom du fournisseur OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Hôtes d'autorité de certification privés autorisés",
+      "description": "Les hôtes privés pour lesquels le flux de certificats Step CA peut être sollicité peuvent contacter : l’autorité de certification elle-même et, si elle est interne, votre fournisseur d’identité. Séparez-les par des virgules."
+    }
+  }
+}

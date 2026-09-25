@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   delivered: [] as Array<{ channelId: number; title: string }>,
   failChannel: null as number | null,
   fetchCalls: [] as Array<{ url: string; allowlist: readonly string[] }>,
+  lastTls: null as Record<string, unknown> | null,
   lastSignal: null as AbortSignal | null,
 }));
 
@@ -61,7 +62,9 @@ vi.mock("../../utils/safe-outbound-fetch.js", () => ({
     url: string,
     init: RequestInit,
     allowlist: readonly string[],
+    tls: Record<string, unknown> = {},
   ) => {
+    state.lastTls = tls;
     state.lastSignal = init.signal ?? null;
     state.fetchCalls.push({ url, allowlist });
     return new Response("ok", { status: 200 });
@@ -182,6 +185,18 @@ describe("ctx.fetch", () => {
     expect(state.fetchCalls).toEqual([
       { url: "https://ntfy.lan/topic", allowlist: ["ntfy.lan"] },
     ]);
+  });
+
+  it("passes a pinned CA and the fingerprint bootstrap flag to the guard", async () => {
+    const ctx = contextFor(["network:outbound"]);
+    await ctx.fetch("https://ca.lan/root/abc", {
+      tls: { rejectUnauthorized: false },
+    });
+    expect(state.lastTls).toEqual({ rejectUnauthorized: false });
+    await ctx.fetch("https://ca.lan/provisioners", { tls: { ca: "PEM" } });
+    expect(state.lastTls).toEqual({ ca: "PEM" });
+    await ctx.fetch("https://example.com");
+    expect(state.lastTls).toEqual({});
   });
 
   it("aborts the request, and a streamed body, when the caller's signal fires", async () => {

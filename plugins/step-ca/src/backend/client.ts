@@ -1,5 +1,5 @@
-import crypto from "crypto";
-import { safeOutboundFetch } from "./safe-outbound-fetch.js";
+import crypto from "node:crypto";
+import type { PluginFetch } from "@termix/plugin-sdk/backend";
 
 /**
  * A minimal client for smallstep's step-ca SSH user-certificate flow, done
@@ -12,6 +12,8 @@ import { safeOutboundFetch } from "./safe-outbound-fetch.js";
  */
 
 export interface StepCaTarget {
+  /** ctx.fetch: core's SSRF guard. */
+  fetch: PluginFetch;
   caUrl: string;
   fingerprint: string;
   /** Hosts the SSRF guard may reach even when they resolve to private ranges. */
@@ -87,11 +89,13 @@ export async function fetchRootCertificate(
   target: StepCaTarget,
 ): Promise<string> {
   const fingerprint = normalizeFingerprint(target.fingerprint);
-  const response = await safeOutboundFetch(
+  const response = await target.fetch(
     `${normalizeCaUrl(target.caUrl)}/root/${fingerprint}`,
-    { method: "GET", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
-    target.allowedPrivateHosts,
-    { rejectUnauthorized: false },
+    {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      allowPrivateHosts: target.allowedPrivateHosts,
+      tls: { rejectUnauthorized: false },
+    },
   );
   const { ca } = await readJson<{ ca?: string }>(
     response,
@@ -111,11 +115,13 @@ export async function findOidcProvisioner(
   const base = normalizeCaUrl(target.caUrl);
   let cursor = "";
   for (let page = 0; page < 20; page++) {
-    const response = await safeOutboundFetch(
+    const response = await target.fetch(
       `${base}/provisioners?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-      { method: "GET", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
-      target.allowedPrivateHosts,
-      { ca: rootPem },
+      {
+        timeoutMs: FETCH_TIMEOUT_MS,
+        allowPrivateHosts: target.allowedPrivateHosts,
+        tls: { ca: rootPem },
+      },
     );
     const body = await readJson<{
       provisioners?: Array<Record<string, unknown>>;
@@ -148,14 +154,14 @@ export async function findOidcProvisioner(
 }
 
 export async function discoverOidcEndpoints(
+  fetch: PluginFetch,
   configurationEndpoint: string,
   allowedPrivateHosts: readonly string[],
 ): Promise<OidcEndpoints> {
-  const response = await safeOutboundFetch(
-    configurationEndpoint,
-    { method: "GET", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
-    allowedPrivateHosts,
-  );
+  const response = await fetch(configurationEndpoint, {
+    timeoutMs: FETCH_TIMEOUT_MS,
+    allowPrivateHosts: allowedPrivateHosts,
+  });
   const doc = await readJson<{
     authorization_endpoint?: string;
     token_endpoint?: string;
@@ -199,6 +205,7 @@ export function buildAuthorizationUrl(input: {
 }
 
 export async function exchangeCodeForIdToken(input: {
+  fetch: PluginFetch;
   tokenEndpoint: string;
   clientId: string;
   clientSecret?: string;
@@ -215,16 +222,13 @@ export async function exchangeCodeForIdToken(input: {
     code_verifier: input.codeVerifier,
   });
   if (input.clientSecret) form.set("client_secret", input.clientSecret);
-  const response = await safeOutboundFetch(
-    input.tokenEndpoint,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form.toString(),
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    },
-    input.allowedPrivateHosts,
-  );
+  const response = await input.fetch(input.tokenEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: form.toString(),
+    timeoutMs: FETCH_TIMEOUT_MS,
+    allowPrivateHosts: input.allowedPrivateHosts,
+  });
   const body = await readJson<{ id_token?: string }>(
     response,
     "OIDC token exchange",
@@ -272,7 +276,7 @@ export async function signSshCertificate(
 ): Promise<string> {
   const blob = input.publicKeyLine.trim().split(/\s+/)[1];
   if (!blob) throw new Error("Invalid public key line");
-  const response = await safeOutboundFetch(
+  const response = await target.fetch(
     `${normalizeCaUrl(target.caUrl)}/1.0/ssh/sign`,
     {
       method: "POST",
@@ -284,10 +288,10 @@ export async function signSshCertificate(
         principals: input.principals,
         keyID: input.keyId,
       }),
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      timeoutMs: FETCH_TIMEOUT_MS,
+      allowPrivateHosts: target.allowedPrivateHosts,
+      tls: { ca: rootPem },
     },
-    target.allowedPrivateHosts,
-    { ca: rootPem },
   );
   if (!response.ok) {
     let detail = "";

@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Stap CA"
+  },
+  "editor": {
+    "label": "Stap CA",
+    "description": "Meld u aan via uw identiteitsprovider en laat uw Step CA een kortstondig SSH-certificaat voor deze host uitgeven. De CA-URL, root-fingerprint en OIDC-provisioner worden door een beheerder ingesteld onder Beheerinstellingen.",
+    "docs": "Documenten bekijken"
+  },
+  "dialog": {
+    "openBrowser": "Open de browser om te authenticeren.",
+    "waiting": "Wachten op authenticatie in de browser...",
+    "authenticating": "Authenticatie wordt verwerkt..."
+  },
+  "errors": {
+    "authFailed": "Authenticatie mislukt. Controleer uw inloggegevens en probeer het opnieuw.",
+    "timeout": "De authenticatie is mislukt vanwege een time-out. Probeer het opnieuw."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Root-vingerafdruk (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Naam van de OIDC-leverancier"
+    },
+    "privateEndpoints": {
+      "label": "Toegestane privé Step CA-hosts",
+      "description": "De private hosts waarmee de Step CA-certificaatstroom contact kan opnemen, zijn: de certificeringsinstantie zelf en, indien intern, uw identiteitsprovider. Scheid deze met komma's."
+    }
+  }
+}

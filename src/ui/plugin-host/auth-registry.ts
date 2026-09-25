@@ -12,8 +12,6 @@ import { createRegistry } from "@/lib/registry";
  * type is picked. Login methods render on the login screen for methods the
  * server reports as enabled; second factors render in the step after a first
  * login. Either kind may bring an enrolment section for Settings > Security.
- * Core's own (OIDC, LDAP) register from src/ui/auth/legacy-auth-ui.tsx until
- * they move into plugins.
  */
 export interface SshAuthEditorDef {
   /** The authType value stored on the host. */

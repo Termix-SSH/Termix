@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Bước CA"
+  },
+  "editor": {
+    "label": "Bước CA",
+    "description": "Đăng nhập thông qua nhà cung cấp danh tính của bạn và cho phép Step CA cấp chứng chỉ SSH có thời hạn ngắn cho máy chủ này. URL CA, dấu vân tay gốc và trình cung cấp OIDC được quản trị viên thiết lập trong Cài đặt quản trị.",
+    "docs": "Xem tài liệu"
+  },
+  "dialog": {
+    "openBrowser": "Mở trình duyệt để xác thực",
+    "waiting": "Đang chờ xác thực trên trình duyệt...",
+    "authenticating": "Đang xử lý xác thực..."
+  },
+  "errors": {
+    "authFailed": "Xác thực thất bại. Vui lòng kiểm tra thông tin đăng nhập và thử lại.",
+    "timeout": "Xác thực đã hết thời gian chờ. Vui lòng thử lại."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Dấu vân tay gốc (SHA-256)"
+    },
+    "provisioner": {
+      "label": "Tên trình cung cấp OIDC"
+    },
+    "privateEndpoints": {
+      "label": "Cho phép máy chủ Step CA riêng tư",
+      "description": "Các máy chủ riêng mà quy trình chứng chỉ CA từng bước có thể liên hệ: chính CA và, nếu là máy chủ nội bộ, nhà cung cấp danh tính của bạn. Phân tách chúng bằng dấu phẩy."
+    }
+  }
+}

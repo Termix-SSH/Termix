@@ -878,7 +878,7 @@ export function createFakeContext(
       requiresSecret: (authType) =>
         ["password", "key", "credential", "agent"].includes(authType),
       supportsBackground: (authType) =>
-        !["none", "stepca"].includes(authType) &&
+        authType !== "none" &&
         !auth.sshAuthProviders.some(
           (provider) =>
             provider.type === authType && provider.supportsBackground === false,

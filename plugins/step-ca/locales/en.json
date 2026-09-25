@@ -1,0 +1,48 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Step CA"
+  },
+  "editor": {
+    "label": "Step CA",
+    "description": "Sign in through your identity provider and let your Step CA issue a short-lived SSH certificate for this host. The CA URL, root fingerprint and OIDC provisioner are set by an administrator in the Step CA plugin settings.",
+    "docs": "View docs"
+  },
+  "dialog": {
+    "title": "Step CA Authentication Required",
+    "description": "Complete authentication in your browser to continue. The certificate stays valid for as long as your CA allows.",
+    "openBrowser": "Open Browser to Authenticate",
+    "waiting": "Waiting for authentication in browser...",
+    "authenticating": "Processing authentication..."
+  },
+  "errors": {
+    "authFailed": "Authentication failed. Please check your credentials and try again.",
+    "timeout": "Authentication timed out. Please try again."
+  },
+  "settings": {
+    "caUrl": {
+      "label": "CA URL",
+      "description": "The https URL of your smallstep CA. Leave the CA URL, fingerprint and provisioner empty to turn Step CA off.",
+      "placeholder": "https://ca.internal:9000"
+    },
+    "fingerprint": {
+      "label": "Root fingerprint (SHA-256)",
+      "description": "The root certificate fingerprint, as shown by step ca bootstrap."
+    },
+    "provisioner": {
+      "label": "OIDC provisioner name",
+      "description": "The name of the CA's OIDC provisioner. Then choose \"Step CA\" as a host's authentication type."
+    },
+    "privateEndpoints": {
+      "label": "Allowed private Step CA hosts",
+      "description": "Private hosts the Step CA certificate flow may contact: the CA itself and, if internal, your identity provider. Separate them with commas or new lines."
+    },
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with the identity provider behind the OIDC provisioner."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/step-ca-callback, the redirect URI used before 2.9. Turn this off once your identity provider allows the new one."
+    }
+  }
+}

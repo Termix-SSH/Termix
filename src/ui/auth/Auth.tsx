@@ -46,7 +46,6 @@ import {
   type SecondFactorRef,
 } from "@/api/auth-methods-api";
 import { useLoginMethods, useSecondFactors } from "@/plugin-host/auth-registry";
-import { ensureLegacyAuthUI } from "./legacy-auth-ui";
 import { startPreLoginPlugins } from "@/plugin-host/loader";
 import { Checkbox } from "@/components/checkbox";
 import { useBranding } from "@/contexts/BrandingContext";
@@ -98,8 +97,6 @@ const LANGUAGES = [
   { code: "uk", label: "Українська" },
   { code: "vi", label: "Tiếng Việt" },
 ];
-
-ensureLegacyAuthUI();
 
 const STORAGE_KEY = "termix_auth";
 

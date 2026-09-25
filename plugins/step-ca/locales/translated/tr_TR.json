@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Adım CA"
+  },
+  "editor": {
+    "label": "Adım CA",
+    "description": "Kimlik sağlayıcınız aracılığıyla oturum açın ve Step CA'nızın bu sunucu için kısa süreli bir SSH sertifikası düzenlemesine izin verin. CA URL'si, kök parmak izi ve OIDC sağlayıcısı, yönetici tarafından Yönetici Ayarları altında belirlenir.",
+    "docs": "Dokümanları görüntüle"
+  },
+  "dialog": {
+    "openBrowser": "Kimlik Doğrulaması için Tarayıcı Aç",
+    "waiting": "Tarayıcıda kimlik doğrulaması bekleniyor...",
+    "authenticating": "Kimlik doğrulaması işleniyor..."
+  },
+  "errors": {
+    "authFailed": "Kimlik doğrulaması başarısız oldu. Lütfen kimlik bilgilerinizi kontrol edip tekrar deneyin.",
+    "timeout": "Kimlik doğrulaması zaman aşımına uğradı. Lütfen tekrar deneyin."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Kök parmak izi (SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC tedarikçi adı"
+    },
+    "privateEndpoints": {
+      "label": "Özel Step CA sunucularına izin verildi.",
+      "description": "Özel sunucular, Step CA sertifika akışı kapsamında şu kuruluşlarla iletişime geçebilir: CA'nın kendisi ve (dahili ise) kimlik sağlayıcınız. Bunları virgülle ayırın."
+    }
+  }
+}

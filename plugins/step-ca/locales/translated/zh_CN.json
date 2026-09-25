@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "步骤 CA"
+  },
+  "editor": {
+    "label": "步骤 CA",
+    "description": "通过您的身份提供商登录，并让您的 Step CA 为此主机颁发一个短期 SSH 证书。CA URL、根指纹和 OIDC 配置器由管理员在“管理设置”中设置。",
+    "docs": "查看文档"
+  },
+  "dialog": {
+    "openBrowser": "打开浏览器进行认证",
+    "waiting": "等待浏览器认证...",
+    "authenticating": "正在处理认证..."
+  },
+  "errors": {
+    "authFailed": "认证失败，请检查凭据并重试。",
+    "timeout": "认证超时，请重试。"
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "根指纹（SHA-256）"
+    },
+    "provisioner": {
+      "label": "OIDC配置器名称"
+    },
+    "privateEndpoints": {
+      "label": "允许的私有步骤 CA 主机",
+      "description": "私有主机在执行步骤 CA 证书流程时可能会联系：CA 本身，以及（如果是内部）您的身份提供商。请用逗号分隔它们。"
+    }
+  }
+}

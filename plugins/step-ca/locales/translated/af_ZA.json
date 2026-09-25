@@ -1,0 +1,31 @@
+{
+  "hosts": {
+    "filterAuthStepca": "Stap CA"
+  },
+  "editor": {
+    "label": "Stap CA",
+    "description": "Meld aan deur jou identiteitsverskaffer en laat jou Step CA 'n kortstondige SSH-sertifikaat vir hierdie gasheer uitreik. Die CA-URL, wortelvingerafdruk en OIDC-voorsiening word deur 'n administrateur onder Admin-instellings ingestel.",
+    "docs": "Bekyk dokumente"
+  },
+  "dialog": {
+    "openBrowser": "Maak blaaier oop om te verifieer",
+    "waiting": "Wag vir verifikasie in blaaier...",
+    "authenticating": "Verwerk verifikasie..."
+  },
+  "errors": {
+    "authFailed": "Verifikasie het misluk. Kontroleer asseblief jou geloofsbriewe en probeer weer.",
+    "timeout": "Verifikasie het verstryk. Probeer asseblief weer."
+  },
+  "settings": {
+    "fingerprint": {
+      "label": "Wortelvingerafdruk (SHA-256)"
+    },
+    "provisioner": {
+      "label": "OIDC-voorsieningsnaam"
+    },
+    "privateEndpoints": {
+      "label": "Toegelate private Step CA-gashere",
+      "description": "Privaat gashere, die Step CA-sertifikaatvloei, mag kontak maak met: die CA self en, indien intern, jou identiteitsverskaffer. Skei hulle met kommas."
+    }
+  }
+}
