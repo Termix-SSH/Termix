@@ -290,7 +290,6 @@
     "connecting": "Menghubungkan...",
     "connectedSuccessfully": "Terhubung berhasil",
     "totpVerificationFailed": "Verifikasi TOTP gagal",
-    "warpgateVerificationFailed": "Autentikasi Warpgate gagal",
     "authenticationFailed": "Autentikasi gagal",
     "incorrectPassphrase": "Kata sandi salah. Silakan coba lagi.",
     "verificationCodePrompt": "Kode verifikasi:",

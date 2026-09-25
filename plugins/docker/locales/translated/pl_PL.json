@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Aby uzyskać dostęp do konsoli, kontener musi być uruchomiony",
     "verificationCodePrompt": "Wprowadź kod weryfikacyjny",
     "totpVerificationFailed": "Weryfikacja TOTP nie powiodła się. Spróbuj ponownie.",
-    "warpgateVerificationFailed": "Uwierzytelnianie Warpgate nie powiodło się. Spróbuj ponownie.",
     "connectedTo": "Połączono z {{containerName}}",
     "disconnected": "Rozłączono",
     "consoleError": "Błąd konsoli",

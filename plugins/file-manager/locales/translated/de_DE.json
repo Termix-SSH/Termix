@@ -290,7 +290,6 @@
     "connecting": "Verbindung wird hergestellt...",
     "connectedSuccessfully": "Erfolgreich verbunden",
     "totpVerificationFailed": "TOTP-Überprüfung fehlgeschlagen",
-    "warpgateVerificationFailed": "Warpgate-Authentifizierung fehlgeschlagen",
     "authenticationFailed": "Authentifizierung fehlgeschlagen",
     "incorrectPassphrase": "Falsche Passphrase. Bitte versuchen Sie es erneut.",
     "verificationCodePrompt": "Verifizierungscode:",

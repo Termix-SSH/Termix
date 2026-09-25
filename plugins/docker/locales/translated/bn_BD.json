@@ -73,7 +73,6 @@
     "containerMustBeRunning": "কনসোল অ্যাক্সেস করতে হলে কন্টেইনারটি অবশ্যই চালু থাকতে হবে।",
     "verificationCodePrompt": "যাচাইকরণ কোড প্রবেশ করান",
     "totpVerificationFailed": "TOTP যাচাইকরণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
-    "warpgateVerificationFailed": "ওয়ার্পগেট প্রমাণীকরণ ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
     "connectedTo": "{{containerName}} এর সাথে সংযুক্ত",
     "disconnected": "বিচ্ছিন্ন",
     "consoleError": "কনসোল ত্রুটি",

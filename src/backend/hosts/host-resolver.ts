@@ -252,6 +252,21 @@ export async function resolveHostById(
     }
   }
 
+  // Keyboard-interactive handlers run synchronously mid-handshake and can
+  // only read their host settings from here.
+  try {
+    const { loadHostPluginSettings } =
+      await import("../database/routes/host-plugin-settings.js");
+    const settings = (await loadHostPluginSettings([hostId])).get(hostId);
+    if (settings) host.pluginSettings = settings;
+  } catch (e) {
+    sshLogger.warn("Failed to load plugin settings for host", {
+      operation: "host_resolver_plugin_settings",
+      hostId,
+      error: getErrorMessage(e, "Unknown"),
+    });
+  }
+
   return host as unknown as SSHHost;
 }
 

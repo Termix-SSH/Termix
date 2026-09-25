@@ -18,7 +18,6 @@ import { emitInternalEvent } from "../../hosts/internal-events.js";
 import { deleteOwnedHost } from "../../hosts/delete-host.js";
 import {
   createCurrentCredentialRepository,
-  createCurrentOpksshTokenRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentHostResolutionRepository,
@@ -46,7 +45,7 @@ import {
   withHostPluginSettings,
 } from "./host-plugin-settings.js";
 import { validateParentHostId } from "./host-parent-validation.js";
-import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
+import { registerHostAuthCompatRoutes } from "./host-compat-routes.js";
 import { registerHostStepCaRoutes } from "./host-step-ca-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
@@ -183,7 +182,6 @@ router.post(
       password,
       authMethod,
       authType,
-      useWarpgate,
       shareSshAuth,
       credentialId,
       vaultProfileId,
@@ -306,7 +304,6 @@ router.post(
       port,
       username: effectiveUsername,
       authType: effectiveAuthType,
-      useWarpgate: useWarpgate ? 1 : 0,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
       vaultProfileId:
@@ -860,7 +857,6 @@ router.put(
       password,
       authMethod,
       authType,
-      useWarpgate,
       shareSshAuth,
       credentialId,
       vaultProfileId,
@@ -984,7 +980,6 @@ router.put(
       port,
       username: effectiveUsername,
       authType: effectiveAuthType,
-      useWarpgate: useWarpgate ? 1 : 0,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
       vaultProfileId:
@@ -2665,151 +2660,7 @@ registerHostAutostartRoutes(router, {
   requireDataAccess,
 });
 
-/**
- * @openapi
- * /host/opkssh/token/{hostId}:
- *   get:
- *     summary: Get OPKSSH token status for a host
- *     tags: [SSH]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: hostId
- *         in: path
- *         required: true
- *         schema:
- *           type: integer
- *         description: Host ID
- *     responses:
- *       200:
- *         description: Token status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 exists:
- *                   type: boolean
- *                   description: Whether a valid token exists
- *                 expiresAt:
- *                   type: string
- *                   format: date-time
- *                   description: Token expiration timestamp
- *                 email:
- *                   type: string
- *                   description: User email from OIDC identity
- *       404:
- *         description: No valid token found
- *       500:
- *         description: Internal server error
- */
-router.get(
-  "/ssh/opkssh/token/:hostId",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.view"),
-  requireDataAccess,
-  requireDataAccess,
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.userId;
-    const hostId = parseInt(
-      Array.isArray(req.params.hostId)
-        ? req.params.hostId[0]
-        : req.params.hostId,
-    );
-
-    if (!userId || isNaN(hostId)) {
-      return res.status(400).json({ error: "Invalid request" });
-    }
-
-    try {
-      const opksshTokenRepository = createCurrentOpksshTokenRepository();
-      const tokenData = await opksshTokenRepository.findByUserAndHost(
-        userId,
-        hostId,
-      );
-
-      if (!tokenData) {
-        return res.status(404).json({ exists: false });
-      }
-
-      const expiresAt = new Date(tokenData.expiresAt);
-
-      if (expiresAt < new Date()) {
-        await opksshTokenRepository.deleteByUserAndHost(userId, hostId);
-        return res.status(404).json({ exists: false });
-      }
-
-      res.json({
-        exists: true,
-        expiresAt: tokenData.expiresAt,
-        email: tokenData.email,
-      });
-    } catch (error) {
-      sshLogger.error("Error retrieving OPKSSH token status", error, {
-        operation: "opkssh_token_status_error",
-        userId,
-        hostId,
-      });
-      res.status(500).json({ error: "Internal server error" });
-    }
-  },
-);
-
-/**
- * @openapi
- * /host/opkssh/token/{hostId}:
- *   delete:
- *     summary: Delete OPKSSH token for a host
- *     tags: [SSH]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: hostId
- *         in: path
- *         required: true
- *         schema:
- *           type: integer
- *         description: Host ID
- *     responses:
- *       200:
- *         description: Token deleted successfully
- *       500:
- *         description: Internal server error
- */
-router.delete(
-  "/ssh/opkssh/token/:hostId",
-  authenticateJWT,
-  permissionManager.requirePermission("hosts.edit"),
-  requireDataAccess,
-  requireDataAccess,
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.userId;
-    const hostId = parseInt(
-      Array.isArray(req.params.hostId)
-        ? req.params.hostId[0]
-        : req.params.hostId,
-    );
-
-    if (!userId || isNaN(hostId)) {
-      return res.status(400).json({ error: "Invalid request" });
-    }
-
-    try {
-      const { deleteOPKSSHToken } = await import("../../hosts/opkssh-auth.js");
-      await deleteOPKSSHToken(userId, hostId);
-      res.json({ success: true });
-    } catch (error) {
-      sshLogger.error("Error deleting OPKSSH token", error, {
-        operation: "opkssh_token_delete_error",
-        userId,
-        hostId,
-      });
-      res.status(500).json({ error: "Internal server error" });
-    }
-  },
-);
-
-registerHostOpksshRoutes(router);
+registerHostAuthCompatRoutes(router);
 registerHostStepCaRoutes(router);
 
 registerHostNetworkRoutes(router, {

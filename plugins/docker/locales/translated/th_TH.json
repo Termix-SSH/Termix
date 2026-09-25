@@ -73,7 +73,6 @@
     "containerMustBeRunning": "ต้องเปิดใช้งานคอนเทนเนอร์ก่อนจึงจะสามารถเข้าถึงคอนโซลได้",
     "verificationCodePrompt": "ป้อนรหัสยืนยัน",
     "totpVerificationFailed": "การตรวจสอบ TOTP ล้มเหลว โปรดลองอีกครั้ง",
-    "warpgateVerificationFailed": "การตรวจสอบสิทธิ์ผ่านวาร์ปไม่สำเร็จ โปรดลองอีกครั้ง",
     "connectedTo": "เชื่อมต่อกับ {{containerName}}",
     "disconnected": "ตัดการเชื่อมต่อ",
     "consoleError": "ข้อผิดพลาดของคอนโซล",

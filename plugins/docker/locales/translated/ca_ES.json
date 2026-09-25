@@ -73,7 +73,6 @@
     "containerMustBeRunning": "El contenidor ha d'estar en execució per accedir a la consola.",
     "verificationCodePrompt": "Introduïu el codi de verificació",
     "totpVerificationFailed": "La verificació TOTP ha fallat. Torna-ho a provar.",
-    "warpgateVerificationFailed": "L'autenticació de Warpgate ha fallat. Torna-ho a intentar.",
     "connectedTo": "Connectat a {{containerName}}",
     "disconnected": "Desconnectat",
     "consoleError": "Error de consola",

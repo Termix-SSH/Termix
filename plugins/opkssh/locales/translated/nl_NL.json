@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Meld u aan bij deze host met uw identiteitsprovider in plaats van een wachtwoord of sleutel. Hiervoor moet OPKSSH op de server geconfigureerd zijn.",
+    "docs": "Documenten bekijken"
+  },
+  "dialog": {
+    "title": "OPKSSH-authenticatie vereist",
+    "description": "Voltooi de authenticatie in uw browser om verder te gaan. Deze sessie blijft 24 uur geldig.",
+    "openBrowser": "Open de browser om te authenticeren.",
+    "waiting": "Wachten op authenticatie in de browser...",
+    "authenticating": "Authenticatie wordt verwerkt...",
+    "signInWith": "Aanmelden met {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Authenticatie mislukt. Controleer uw inloggegevens en probeer het opnieuw.",
+    "timeout": "De authenticatie is mislukt vanwege een time-out. Probeer het opnieuw."
+  }
+}

@@ -73,7 +73,6 @@
     "containerMustBeRunning": "容器必須在執行中才能存取主控台",
     "verificationCodePrompt": "請輸入驗證碼",
     "totpVerificationFailed": "TOTP 驗證失敗，請再試一次。",
-    "warpgateVerificationFailed": "Warpgate 驗證失敗，請再試一次。",
     "connectedTo": "已連線至 {{containerName}}",
     "disconnected": "已中斷連線",
     "consoleError": "主控台錯誤",

@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Kirjaudu tähän isäntään käyttämällä identiteetintarjoajaasi salasanan tai avaimen sijaan. Edellyttää OPKSSH:n määrittämistä palvelimelle.",
+    "docs": "Näytä dokumentit"
+  },
+  "dialog": {
+    "title": "OPKSSH-todennus vaaditaan",
+    "description": "Suorita todennus selaimessasi jatkaaksesi. Tämä istunto on voimassa 24 tuntia.",
+    "openBrowser": "Avaa selain todennusta varten",
+    "waiting": "Odotetaan selaimen todennusta...",
+    "authenticating": "Todennusta käsitellään...",
+    "signInWith": "Kirjaudu sisään tunnuksella {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Todennus epäonnistui. Tarkista tunnistetietosi ja yritä uudelleen.",
+    "timeout": "Todennus aikakatkaistiin. Yritä uudelleen."
+  }
+}

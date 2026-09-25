@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Parola veya anahtar yerine kimlik sağlayıcınızı kullanarak bu sunucuda oturum açın. Sunucuda OPKSSH kurulumu gerektirir.",
+    "docs": "Dokümanları görüntüle"
+  },
+  "dialog": {
+    "title": "OPKSSH Kimlik Doğrulaması Gerekli",
+    "description": "Devam etmek için tarayıcıda kimlik doğrulamasını tamamlayın. Bu oturum 24 saat geçerli olacak.",
+    "openBrowser": "Kimlik Doğrulaması için Tarayıcı Aç",
+    "waiting": "Tarayıcıda kimlik doğrulaması bekleniyor...",
+    "authenticating": "Kimlik doğrulaması işleniyor...",
+    "signInWith": "{{provider}} ile oturum aç"
+  },
+  "errors": {
+    "authFailed": "Kimlik doğrulaması başarısız oldu. Lütfen kimlik bilgilerinizi kontrol edip tekrar deneyin.",
+    "timeout": "Kimlik doğrulaması zaman aşımına uğradı. Lütfen tekrar deneyin."
+  }
+}

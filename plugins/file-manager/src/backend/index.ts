@@ -200,7 +200,7 @@ export async function activate(ctx: PluginContext) {
     );
   }
 
-  // Pending TOTP/Warpgate parking sessions expire on their own; sweep stale
+  // Pending TOTP and browser sign-in parking sessions expire on their own; sweep stale
   // ones so a session left mid-handshake doesn't leak an open ssh2 Client.
   const pendingSweep = setInterval(() => {
     const now = Date.now();
@@ -386,7 +386,7 @@ export async function activate(ctx: PluginContext) {
     if (
       req.path === "/connect" ||
       req.path === "/connect-totp" ||
-      req.path === "/connect-warpgate"
+      req.path === "/connect-browser-sign-in"
     ) {
       return next();
     }
@@ -463,7 +463,7 @@ export async function activate(ctx: PluginContext) {
    *                 type: array
    *     responses:
    *       200:
-   *         description: SSH connection established, or requires TOTP/Warpgate authentication.
+   *         description: SSH connection established, or requires TOTP or a browser sign-in.
    *       400:
    *         description: Missing required parameters or invalid SSH key format.
    *       401:
@@ -983,7 +983,7 @@ export async function activate(ctx: PluginContext) {
       finish: (responses: string[]) => void,
       prompts: Array<{ prompt: string; echo: boolean }>,
       promptIndex: number,
-      isWarpgate = false,
+      isBrowserSignIn = false,
     ) => {
       pendingTOTPSessions[sessionId] = {
         client,
@@ -1000,7 +1000,7 @@ export async function activate(ctx: PluginContext) {
         totpPromptIndex: promptIndex,
         resolvedPassword: resolvedCredentials.password,
         totpAttempts: 0,
-        ...(isWarpgate ? { isWarpgate: true } : {}),
+        ...(isBrowserSignIn ? { isBrowserSignIn: true } : {}),
       };
     };
 
@@ -1025,23 +1025,24 @@ export async function activate(ctx: PluginContext) {
           return;
         }
 
-        if (decision.kind === "warpgate") {
+        if (decision.kind === "browser") {
           if (responseSent) return;
           responseSent = true;
           connectionLogs.push(
             createConnectionLog(
               "info",
               "sftp_auth",
-              "Warpgate authentication required",
+              `${decision.label} sign-in required`,
               { url: decision.url },
             ),
           );
           parkForAnswer(finish, prompts, -1, true);
           res.json({
-            requires_warpgate: true,
+            requires_browser_sign_in: true,
             sessionId,
+            label: decision.label,
             url: decision.url,
-            securityKey: decision.securityKey,
+            code: decision.code,
             connectionLogs,
           });
           return;
@@ -1347,10 +1348,10 @@ export async function activate(ctx: PluginContext) {
 
   /**
    * @openapi
-   * /plugin-api/file-manager/connect-warpgate:
+   * /plugin-api/file-manager/connect-browser-sign-in:
    *   post:
-   *     summary: Complete Warpgate authentication
-   *     description: Submits empty response to complete Warpgate authentication after user completes browser auth.
+   *     summary: Continue after a browser sign-in
+   *     description: Answers the parked keyboard-interactive round once the user finished signing in in the browser (an SSH gateway's approval, for example).
    *     tags:
    *       - File Manager
    *     requestBody:
@@ -1366,15 +1367,15 @@ export async function activate(ctx: PluginContext) {
    *                 type: string
    *     responses:
    *       200:
-   *         description: Warpgate authentication completed successfully.
+   *         description: Signed in, SSH connection established.
    *       401:
    *         description: Authentication failed or unauthorized.
    *       404:
-   *         description: Warpgate session expired.
+   *         description: Sign-in session expired.
    *       408:
-   *         description: Warpgate session timeout.
+   *         description: Sign-in session timeout.
    */
-  app.post("/connect-warpgate", async (req, res) => {
+  app.post("/connect-browser-sign-in", async (req, res) => {
     const { sessionId } = req.body;
     const userId = ctx.currentActor();
 
@@ -1389,12 +1390,12 @@ export async function activate(ctx: PluginContext) {
     if (!session) {
       return res
         .status(404)
-        .json({ error: "Warpgate session expired. Please reconnect." });
+        .json({ error: "Sign-in session expired. Please reconnect." });
     }
-    if (!session.isWarpgate) {
+    if (!session.isBrowserSignIn) {
       return res
         .status(400)
-        .json({ error: "Session is not a Warpgate session" });
+        .json({ error: "Session is not waiting for a browser sign-in" });
     }
     if (Date.now() - session.createdAt > 300000) {
       delete pendingTOTPSessions[sessionId];
@@ -1405,7 +1406,7 @@ export async function activate(ctx: PluginContext) {
       }
       return res
         .status(408)
-        .json({ error: "Warpgate session timeout. Please reconnect." });
+        .json({ error: "Sign-in session timeout. Please reconnect." });
     }
 
     let responseSent = false;
@@ -1413,7 +1414,7 @@ export async function activate(ctx: PluginContext) {
       if (!responseSent) {
         responseSent = true;
         delete pendingTOTPSessions[sessionId];
-        res.status(408).json({ error: "Warpgate verification timeout" });
+        res.status(408).json({ error: "Sign-in verification timeout" });
       }
     }, 60000);
 
@@ -1440,7 +1441,7 @@ export async function activate(ctx: PluginContext) {
 
         res.json({
           status: "success",
-          message: "Warpgate verified, SSH connection established",
+          message: "Signed in, SSH connection established",
         });
 
         if (session.hostId && session.userId) {
@@ -1460,9 +1461,7 @@ export async function activate(ctx: PluginContext) {
       responseSent = true;
       clearTimeout(responseTimeout);
       delete pendingTOTPSessions[sessionId];
-      res
-        .status(401)
-        .json({ status: "error", message: "Warpgate authentication failed" });
+      res.status(401).json({ status: "error", message: "Sign-in failed" });
     });
 
     session.finish([""]);
@@ -1567,12 +1566,10 @@ export async function activate(ctx: PluginContext) {
     }
     const session = sshSessions[sessionId];
     if (!session || !session.isConnected) {
-      return res
-        .status(400)
-        .json({
-          error: "SSH session not found or not connected",
-          connected: false,
-        });
+      return res.status(400).json({
+        error: "SSH session not found or not connected",
+        connected: false,
+      });
     }
     if (!userId || !verifySessionOwnership(session, userId)) {
       return res.status(403).json({ error: "Session access denied" });

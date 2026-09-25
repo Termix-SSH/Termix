@@ -27,11 +27,14 @@ function classify(
   },
   host: PluginSshHost,
 ): PluginKeyboardInteractiveDecision {
-  if (/warpgate/i.test(round.name)) {
+  // Stands in for a plugin's keyboard-interactive handler.
+  if (/gateway sign-in/i.test(round.name)) {
     return {
-      kind: "warpgate",
+      kind: "browser",
+      id: "gateway",
+      label: "Gateway",
       url: round.instructions.match(/https?:\/\/\S+/)?.[0] ?? null,
-      securityKey: round.instructions.match(/Security key: (\S+)/)?.[1] ?? "",
+      code: round.instructions.match(/Security key: (\S+)/)?.[1] ?? "",
       instructions: round.instructions,
     };
   }
@@ -72,9 +75,9 @@ function createManager() {
     keyboardInteractiveResponded: false,
     keyboardInteractiveFinish: null,
     totpPromptSent: false,
-    warpgateAuthPromptSent: false,
+    browserSignInId: null,
     totpTimeout: null,
-    warpgateAuthTimeout: null,
+    browserSignInTimeout: null,
     totpAttempts: 0,
   });
   return { manager, sent };
@@ -258,13 +261,13 @@ describe("SSHAuthManager.handleKeyboardInteractive", () => {
     expect(finish).toHaveBeenCalledWith(["push"]);
   });
 
-  it("routes Warpgate prompts to the warpgate flow, not the generic path", () => {
+  it("sends a claimed browser round under its handler's name", () => {
     const { manager, sent } = createManager();
     const finish = vi.fn();
 
     manager.handleKeyboardInteractive(
-      "Warpgate Authentication",
-      "Visit https://warpgate.example.com/auth to continue. Security key: AB12",
+      "Gateway sign-in",
+      "Visit https://gateway.example.com/auth to continue. Security key: AB12",
       "",
       [{ prompt: "Press enter once done: ", echo: true }],
       finish,
@@ -277,16 +280,19 @@ describe("SSHAuthManager.handleKeyboardInteractive", () => {
         data: {
           stage: "auth",
           level: "info",
-          message: "Warpgate authentication required",
+          message: "Gateway sign-in required",
         },
       },
       {
-        type: "warpgate_auth_required",
-        url: "https://warpgate.example.com/auth",
+        type: "gateway_auth_required",
+        kind: "browser",
+        label: "Gateway",
+        url: "https://gateway.example.com/auth",
         securityKey: "AB12",
         instructions:
-          "Visit https://warpgate.example.com/auth to continue. Security key: AB12",
+          "Visit https://gateway.example.com/auth to continue. Security key: AB12",
       },
     ]);
+    expect(manager.context.browserSignInId).toBe("gateway");
   });
 });

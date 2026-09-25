@@ -351,6 +351,13 @@
       "when": 1790287989611,
       "tag": "0049_glamorous_hemingway",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1790295069807,
+      "tag": "0050_clear_white_queen",
+      "breakpoints": true
     }
   ]
 }

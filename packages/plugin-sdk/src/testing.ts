@@ -68,6 +68,10 @@ import type {
   PluginNotification,
   PluginNotificationChannel,
   PluginFetchInit,
+  PluginBinarySpec,
+  PluginKeyboardInteractiveHandler,
+  PluginProcessHandle,
+  PluginProcessOptions,
 } from "./backend.js";
 
 /** A timer registered through ctx.schedule, run by hand with runScheduled. */
@@ -128,6 +132,11 @@ export interface FakeContextOptions {
    */
   fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
   /**
+   * Answers ctx.process. Without run every ctx.process.run rejects; without
+   * ensureBinary it answers "/tmp/<pluginId>/bin/<name>".
+   */
+  process?: FakeProcessOptions;
+  /**
    * Makes ctx.auth.recordEnrollment refuse the way core's policy does (trusted
    * proxy login on, password login off), with this message and a 409.
    */
@@ -140,8 +149,55 @@ export interface FakeContextOptions {
   loginAttemptLimit?: number;
 }
 
+export interface FakeProcessOptions {
+  run?: (
+    file: string,
+    args: readonly string[],
+    options?: PluginProcessOptions,
+  ) => PluginProcessHandle | Promise<PluginProcessHandle>;
+  ensureBinary?: (spec: PluginBinarySpec) => Promise<string>;
+}
+
+/** A ctx.process handle a test drives by hand. */
+export interface FakeProcess extends PluginProcessHandle {
+  emitStdout: (chunk: string) => void;
+  emitStderr: (chunk: string) => void;
+  exit: (code: number | null, signal?: string | null) => void;
+  killed: string[];
+}
+
+export function createFakeProcess(pid = 4242): FakeProcess {
+  const stdout: Array<(chunk: string) => void> = [];
+  const stderr: Array<(chunk: string) => void> = [];
+  const killed: string[] = [];
+  let resolveExit: (value: {
+    code: number | null;
+    signal: string | null;
+  }) => void = () => {};
+  const exited = new Promise<{ code: number | null; signal: string | null }>(
+    (resolve) => {
+      resolveExit = resolve;
+    },
+  );
+  return {
+    pid,
+    onStdout: (listener) => void stdout.push(listener),
+    onStderr: (listener) => void stderr.push(listener),
+    exited,
+    kill: (signal = "SIGTERM") => {
+      killed.push(signal);
+      resolveExit({ code: null, signal });
+    },
+    emitStdout: (chunk) => stdout.forEach((listener) => listener(chunk)),
+    emitStderr: (chunk) => stderr.forEach((listener) => listener(chunk)),
+    exit: (code, signal = null) => resolveExit({ code, signal }),
+    killed,
+  };
+}
+
 export interface FakeAuthRegistrations {
   sshAuthProviders: PluginSshAuthProvider[];
+  keyboardInteractiveHandlers: PluginKeyboardInteractiveHandler[];
   loginMethods: PluginLoginMethod[];
   secondFactors: PluginSecondFactor[];
   /** "<userId>:<factorId>" for every recorded enrolment. */
@@ -227,6 +283,14 @@ export interface FakePluginContext {
   secretStore: Map<string, string>;
   /** Every ctx.fetch call, in order. */
   fetches: Array<{ url: string; init?: PluginFetchInit }>;
+  /** Every ctx.process.run call, in order. */
+  processRuns: Array<{
+    file: string;
+    args: readonly string[];
+    options?: PluginProcessOptions;
+  }>;
+  /** Every ctx.process.ensureBinary call, in order. */
+  binaries: PluginBinarySpec[];
   /** Every ctx.audit.record entry, in order. */
   audits: Array<{ action: string; success: boolean; [key: string]: unknown }>;
   /** Every ctx.hosts.recordActivity call, in order. */
@@ -330,6 +394,8 @@ export function createFakeContext(
   const credentialReads: FakePluginContext["credentialReads"] = [];
   const notifications: FakePluginContext["notifications"] = [];
   const fetches: FakePluginContext["fetches"] = [];
+  const processRuns: FakePluginContext["processRuns"] = [];
+  const binaries: FakePluginContext["binaries"] = [];
   const secretStore = new Map<string, string>();
   const audits: FakePluginContext["audits"] = [];
   const activities: FakePluginContext["activities"] = [];
@@ -371,6 +437,7 @@ export function createFakeContext(
   const registryProviders = new Map<string, unknown>();
   const auth: FakeAuthRegistrations = {
     sshAuthProviders: [],
+    keyboardInteractiveHandlers: [],
     loginMethods: [],
     secondFactors: [],
     enrollments: new Set(),
@@ -811,12 +878,19 @@ export function createFakeContext(
       requiresSecret: (authType) =>
         ["password", "key", "credential", "agent"].includes(authType),
       supportsBackground: (authType) =>
-        !["none", "opkssh", "stepca"].includes(authType),
+        !["none", "stepca"].includes(authType) &&
+        !auth.sshAuthProviders.some(
+          (provider) =>
+            provider.type === authType && provider.supportsBackground === false,
+        ),
     },
 
     auth: {
       registerSshAuthProvider: (provider) => {
         auth.sshAuthProviders.push(provider);
+      },
+      registerKeyboardInteractiveHandler: (handler) => {
+        auth.keyboardInteractiveHandlers.push(handler);
       },
       registerLoginMethod: (method) => {
         auth.loginMethods.push(method);
@@ -927,6 +1001,23 @@ export function createFakeContext(
       return options.fetch(url, init);
     },
 
+    process: {
+      run: async (file, args, runOptions) => {
+        processRuns.push({ file, args, options: runOptions });
+        if (!options.process?.run) {
+          throw new Error("ctx.process.run is not stubbed");
+        }
+        return options.process.run(file, args, runOptions);
+      },
+      ensureBinary: async (spec) => {
+        binaries.push(spec);
+        if (options.process?.ensureBinary) {
+          return options.process.ensureBinary(spec);
+        }
+        return `/tmp/${pluginId}/bin/${spec.name}`;
+      },
+    },
+
     asUser: async (userId, fn) => {
       const previous = actor;
       actor = userId;
@@ -960,6 +1051,8 @@ export function createFakeContext(
     credentialReads,
     notifications,
     fetches,
+    processRuns,
+    binaries,
     secretStore,
     audits,
     activities,
@@ -1024,6 +1117,8 @@ export interface MockContextOptions {
    */
   fetch?: (url: string, init?: PluginFetchInit) => Promise<Response>;
   /** See FakeContextOptions. */
+  process?: FakeProcessOptions;
+  /** See FakeContextOptions. */
   refuseEnrollment?: string;
   /** See FakeContextOptions. */
   baseUrl?: string;
@@ -1046,8 +1141,8 @@ export interface MockPluginContext extends FakePluginContext {
  * ctx.db, network:serve on ctx.http and ctx.ws, events:core on emitting a
  * topic outside the plugin's own namespace, settings:read-core on
  * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh,
- * notify:send on ctx.notify, network:outbound on ctx.fetch, and
- * auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
+ * notify:send on ctx.notify, network:outbound on ctx.fetch, process:spawn on
+ * ctx.process, and auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
 export function createMockCtx(
@@ -1073,6 +1168,7 @@ export function createMockCtx(
     hostStatuses: options.hostStatuses,
     notificationChannels: options.notificationChannels,
     fetch: options.fetch,
+    process: options.process,
     refuseEnrollment: options.refuseEnrollment,
     baseUrl: options.baseUrl,
     linkedUsers: options.linkedUsers,
@@ -1309,6 +1405,10 @@ export function createMockCtx(
         require("auth:provide");
         ctx.auth.registerSshAuthProvider(provider);
       },
+      registerKeyboardInteractiveHandler: (handler) => {
+        require("auth:provide");
+        ctx.auth.registerKeyboardInteractiveHandler(handler);
+      },
       registerLoginMethod: (method) => {
         require("auth:provide");
         ctx.auth.registerLoginMethod(method);
@@ -1386,6 +1486,17 @@ export function createMockCtx(
     fetch: async (url, init) => {
       require("network:outbound");
       return ctx.fetch(url, init);
+    },
+
+    process: {
+      run: async (file, args, runOptions) => {
+        require("process:spawn");
+        return ctx.process.run(file, args, runOptions);
+      },
+      ensureBinary: async (spec) => {
+        require("process:spawn");
+        return ctx.process.ensureBinary(spec);
+      },
     },
 
     secrets: {

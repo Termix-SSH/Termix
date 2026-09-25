@@ -290,7 +290,6 @@
     "connecting": "Ansluter...",
     "connectedSuccessfully": "Ansluten",
     "totpVerificationFailed": "TOTP-verifiering misslyckades",
-    "warpgateVerificationFailed": "Warpgate-autentisering misslyckades",
     "authenticationFailed": "Autentiseringen misslyckades",
     "incorrectPassphrase": "Felaktigt lösenord. Försök igen.",
     "verificationCodePrompt": "Verifieringskod:",

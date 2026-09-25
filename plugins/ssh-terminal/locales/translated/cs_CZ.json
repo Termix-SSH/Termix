@@ -40,8 +40,6 @@
     "linkDialogTitle": "Otevřít odkaz",
     "maxReconnectAttemptsReached": "Dosažen maximální počet pokusů o opětovné připojení",
     "noHostSelected": "Nebyl vybrán žádný hostitel",
-    "opksshAuthFailed": "Ověření se nezdařilo. Zkontrolujte prosím své přihlašovací údaje a zkuste to znovu.",
-    "opksshTimeout": "Časový limit ověření vypršel. Zkuste to prosím znovu.",
     "passwordPromptFillTitle": "Vyplňte uložené heslo do tohoto řádku?",
     "reconnect": "Znovu se připojte",
     "reconnected": "Úspěšné opětovné připojení",

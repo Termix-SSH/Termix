@@ -40,8 +40,6 @@
     "linkDialogTitle": "Link öffnen",
     "maxReconnectAttemptsReached": "Maximale Wiederverbindungsversuche erreicht",
     "noHostSelected": "Kein Host ausgewählt",
-    "opksshAuthFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldeinformationen und versuchen Sie es erneut.",
-    "opksshTimeout": "Authentifizierung abgelaufen. Bitte versuchen Sie es erneut.",
     "passwordPromptFillTitle": "Gespeichertes Passwort in diese Eingabeaufforderung einfügen?",
     "reconnect": "Erneut verbinden",
     "reconnected": "Erfolgreich wieder verbunden",

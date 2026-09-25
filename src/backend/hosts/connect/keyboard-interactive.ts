@@ -154,13 +154,8 @@ export function createPromptKeyboardInteractiveHandler(
       switch (decision.kind) {
         case "auto":
           return decision.responses;
-        case "warpgate": {
-          await channel.ask({
-            kind: "warpgate",
-            url: decision.url,
-            securityKey: decision.securityKey,
-            instructions: decision.instructions,
-          });
+        case "browser": {
+          await channel.ask(decision);
           return prompts.map(() => "");
         }
         case "totp": {

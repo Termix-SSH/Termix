@@ -73,7 +73,6 @@
     "containerMustBeRunning": "O contêiner precisa estar em execução para acessar o console.",
     "verificationCodePrompt": "Insira o código de verificação",
     "totpVerificationFailed": "A verificação TOTP falhou. Tente novamente.",
-    "warpgateVerificationFailed": "A autenticação no portal de guerra falhou. Por favor, tente novamente.",
     "connectedTo": "Conectado a {{containerName}}",
     "disconnected": "Desconectado",
     "consoleError": "Erro no console",

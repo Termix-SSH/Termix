@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Masuk ke host ini menggunakan penyedia identitas Anda, bukan kata sandi atau kunci. Membutuhkan OPKSSH yang terpasang di server.",
+    "docs": "Lihat dokumen"
+  },
+  "dialog": {
+    "title": "Otentikasi OPKSSH Diperlukan",
+    "description": "Lakukan otentikasi di browser Anda untuk melanjutkan. Sesi ini akan tetap berlaku selama 24 jam.",
+    "openBrowser": "Buka Browser untuk Melakukan Otentikasi",
+    "waiting": "Menunggu otentikasi di browser...",
+    "authenticating": "Memproses otentikasi...",
+    "signInWith": "Masuk dengan {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Autentikasi gagal. Harap periksa kredensial Anda dan coba lagi.",
+    "timeout": "Autentikasi habis waktu. Silakan coba lagi."
+  }
+}

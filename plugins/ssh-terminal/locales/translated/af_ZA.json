@@ -40,8 +40,6 @@
     "linkDialogTitle": "Maak skakel oop",
     "maxReconnectAttemptsReached": "Maksimum herverbindingspogings bereik",
     "noHostSelected": "Geen gasheer gekies nie",
-    "opksshAuthFailed": "Verifikasie het misluk. Kontroleer asseblief jou geloofsbriewe en probeer weer.",
-    "opksshTimeout": "Verifikasie het verstryk. Probeer asseblief weer.",
     "passwordPromptFillTitle": "Vul die gestoorde wagwoord in hierdie aanwysingsprompt in?",
     "reconnect": "Herkoppel",
     "reconnected": "Herverbind suksesvol",

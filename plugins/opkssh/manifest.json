@@ -1,0 +1,51 @@
+{
+  "id": "opkssh",
+  "name": "OPKSSH",
+  "version": "1.0.0",
+  "description": "Sign in to hosts with short-lived SSH certificates from OpenPubkey SSH, using your identity provider in the browser.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Access & Security",
+  "icon": "ShieldCheck",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "files:own",
+    "secrets:own",
+    "hosts:read",
+    "process:spawn",
+    "network:outbound",
+    "network:serve",
+    "auth:provide",
+    "ui:surface"
+  ],
+  "contributes": {
+    "auth": {
+      "sshAuthTypes": ["opkssh"]
+    },
+    "settings": {
+      "admin": [
+        {
+          "key": "redirectUri",
+          "type": "custom",
+          "component": "redirectUri"
+        },
+        {
+          "key": "legacyCallback",
+          "type": "boolean",
+          "labelKey": "settings.legacyCallback.label",
+          "descriptionKey": "settings.legacyCallback.description",
+          "default": false
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

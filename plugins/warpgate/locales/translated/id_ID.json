@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Gerbang Warpgate",
+        "description": "Host ini terhubung melalui proxy SSH Warpgate. Termix akan menangani alur persetujuan berbasis browser secara otomatis setelah otentikasi."
+      }
+    }
+  }
+}

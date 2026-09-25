@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Zaloguj się do tego hosta, używając swojego dostawcy tożsamości, a nie hasła lub klucza. Wymagane jest skonfigurowanie OPKSSH na serwerze.",
+    "docs": "Zobacz dokumentację"
+  },
+  "dialog": {
+    "title": "Wymagane uwierzytelnienie OPKSSH",
+    "description": "Aby kontynuować, dokończ uwierzytelnianie w przeglądarce. Ta sesja będzie ważna przez 24 godziny.",
+    "openBrowser": "Otwórz przeglądarkę, aby uwierzytelnić",
+    "waiting": "Oczekiwanie na uwierzytelnienie w przeglądarce...",
+    "authenticating": "Przetwarzanie uwierzytelniania...",
+    "signInWith": "Zaloguj się za pomocą {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Uwierzytelnienie nie powiodło się. Sprawdź poświadczenia i spróbuj ponownie.",
+    "timeout": "Upłynął limit czasu uwierzytelniania. Spróbuj ponownie."
+  }
+}

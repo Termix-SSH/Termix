@@ -88,6 +88,7 @@ FROM node:26-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
+    OPKSSH_BUNDLED_DIR=/app/opkssh-bundled \
     PORT=8080 \
     NODE_ENV=production \
     POSTHOG_API_KEY=phc_xM8UznirsFxUkGE68gH4jzeqevf4kh76wGw7Ci7hH2dd
@@ -95,9 +96,9 @@ ENV DATA_DIR=/app/data \
 RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx && \
+    mkdir -p /app/data /app/uploads /app/nginx /tmp/nginx && \
     chown -R node:node /app /tmp/nginx && \
-    chmod 755 /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx
+    chmod 755 /app/data /app/uploads /app/nginx /tmp/nginx
 
 COPY docker/nginx.conf /app/nginx/nginx.conf.template
 COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template
@@ -112,6 +113,8 @@ COPY --chown=node:node --from=backend-builder /app/dist/plugins ./dist/plugins
 # Target of node_modules/@termix/plugin-sdk, which core and the plugins import.
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/package.json ./packages/plugin-sdk/package.json
 COPY --chown=node:node --from=backend-builder /app/packages/plugin-sdk/dist ./packages/plugin-sdk/dist
+# Pre-baked OPKSSH binary. The opkssh plugin uses it when its checksum
+# matches, so an offline install never downloads one.
 COPY --chown=node:node --from=opkssh-downloader /opkssh /app/opkssh-bundled
 COPY --chown=node:node package.json ./
 # Schema for Postgres and MySQL. Unused by the default SQLite deployment, which

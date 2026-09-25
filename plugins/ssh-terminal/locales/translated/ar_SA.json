@@ -40,8 +40,6 @@
     "linkDialogTitle": "فتح الرابط",
     "maxReconnectAttemptsReached": "تم الوصول إلى الحد الأقصى لمحاولات إعادة الاتصال",
     "noHostSelected": "لم يتم تحديد مضيف",
-    "opksshAuthFailed": "فشلت المصادقة. يرجى التحقق من بيانات الاعتماد والمحاولة مرة أخرى.",
-    "opksshTimeout": "انتهت مهلة المصادقة. يرجى المحاولة مرة أخرى.",
     "passwordPromptFillTitle": "هل تريد ملء كلمة المرور المحفوظة في هذه النافذة؟",
     "reconnect": "إعادة الاتصال",
     "reconnected": "تمت إعادة الاتصال بنجاح",

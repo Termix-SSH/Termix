@@ -281,7 +281,9 @@ export type PluginMiddleware = (
 export interface PluginRouterOptions {
   /**
    * Paths served without authentication, relative to the plugin's mount point
-   * and matched exactly ("/callback", not "/plugin-api/<id>/callback").
+   * and matched exactly ("/callback", not "/plugin-api/<id>/callback"). A
+   * ":name" segment matches one segment, and a trailing "/*" matches any
+   * number of further segments, for a proxied page ("/chooser/:id/*").
    *
    * For the handful of routes an unauthenticated third party has to reach: an
    * OIDC callback, an inbound webhook. Every entry is audited when the router
@@ -775,26 +777,69 @@ export interface PluginKeyboardInteractivePrompt {
   echo?: boolean;
 }
 
+/**
+ * A round the user finishes in a browser: open a URL, confirm a code there,
+ * then continue. Transports show one generic dialog for it and name their
+ * messages after `id` (the terminal sends "<id>_auth_required" and waits for
+ * "<id>_auth_continue").
+ */
+export interface PluginBrowserSignInRound {
+  kind: "browser";
+  /** The keyboard-interactive handler that claimed the round. */
+  id: string;
+  /** Product name for the dialog title. */
+  label: string;
+  url: string | null;
+  /** A code to compare in the browser, or "N/A". */
+  code: string;
+  instructions: string;
+}
+
 export type PluginKeyboardInteractiveDecision =
   | { kind: "auto"; responses: string[] }
-  | {
-      kind: "warpgate";
-      url: string | null;
-      securityKey: string;
-      instructions: string;
-    }
+  | PluginBrowserSignInRound
   | { kind: "totp"; promptIndex: number }
   | { kind: "input"; promptIndex: number; isPush: boolean };
 
 export type PluginSshPromptRequest =
   | { kind: "totp"; prompt: string; retry: boolean }
   | { kind: "input"; prompt: string; echo: boolean; isPush: boolean }
-  | {
-      kind: "warpgate";
-      url: string | null;
-      securityKey: string;
+  | PluginBrowserSignInRound;
+
+/** What a keyboard-interactive handler's detect may return. */
+export type PluginKeyboardInteractiveDetection =
+  | Exclude<PluginKeyboardInteractiveDecision, PluginBrowserSignInRound>
+  | Omit<PluginBrowserSignInRound, "id" | "label">;
+
+/**
+ * Claims keyboard-interactive rounds on any host, whatever its auth type,
+ * for a server that speaks its own prompt style (a bastion asking for a
+ * browser sign-in). Handlers run before core's TOTP and push detection.
+ *
+ * `settings` is this plugin's host-scope settings for the host, with manifest
+ * defaults filled in. Both hooks are synchronous; they run inside ssh2's
+ * keyboard-interactive callback.
+ */
+export interface PluginKeyboardInteractiveHandler {
+  /** Listed in contributes.auth.keyboardInteractive. */
+  id: string;
+  /** Product name shown when a browser round is claimed. */
+  label: string;
+  detect: (
+    round: {
+      name: string;
       instructions: string;
-    };
+      prompts: PluginKeyboardInteractivePrompt[];
+    },
+    host: PluginSshHost,
+    settings: Record<string, unknown>,
+  ) => PluginKeyboardInteractiveDetection | null;
+  /** Answer password prompts with the stored password instead of asking. */
+  autoAnswerPasswords?: (
+    host: PluginSshHost,
+    settings: Record<string, unknown>,
+  ) => boolean;
+}
 
 /** Answers keyboard-interactive prompts. Resolve null to give up. */
 export interface PluginSshPromptChannel {
@@ -1213,6 +1258,10 @@ export interface PluginSecondFactor {
  */
 export interface PluginAuth {
   registerSshAuthProvider: (provider: PluginSshAuthProvider) => void;
+  /** A host-independent keyboard-interactive handler. */
+  registerKeyboardInteractiveHandler: (
+    handler: PluginKeyboardInteractiveHandler,
+  ) => void;
   registerLoginMethod: (method: PluginLoginMethod) => void;
   registerSecondFactor: (factor: PluginSecondFactor) => void;
   /**
@@ -1459,13 +1508,68 @@ export type PluginFetch = (
  * hardware (a serial port, a USB device) is the first caller. Core cannot
  * mediate that access the way it mediates ctx.ssh or ctx.db, so the
  * capability here is a declared, reviewable, audited statement of intent
- * rather than a technical gate, matching process:spawn.
+ * rather than a technical gate. Running programs has its own member,
+ * ctx.process.
  */
 export interface PluginCapabilities {
   /** Whether this plugin currently holds `capability`. Not audited: for deciding whether to offer something, not for gating an action. */
   has: (capability: string) => Promise<boolean>;
   /** Throws PluginCapabilityError if this plugin does not hold `capability`. Audited like every guarded ctx method. */
   require: (capability: string) => Promise<void>;
+}
+
+export interface PluginProcessOptions {
+  /** Added to the server's environment. */
+  env?: Record<string, string>;
+  cwd?: string;
+  /** Kills the program with SIGKILL after this long. */
+  timeoutMs?: number;
+}
+
+/** A running program started with ctx.process.run. */
+export interface PluginProcessHandle {
+  readonly pid: number | undefined;
+  /** Output as UTF-8 text, in the chunks it arrives in. */
+  onStdout: (listener: (chunk: string) => void) => void;
+  onStderr: (listener: (chunk: string) => void) => void;
+  /** Settles when the program ends, or rejects when it cannot start. */
+  readonly exited: Promise<{ code: number | null; signal: string | null }>;
+  kill: (signal?: "SIGTERM" | "SIGKILL") => void;
+}
+
+/** A program a plugin downloads and runs, pinned to one checksum. */
+export interface PluginBinarySpec {
+  /** File name under the plugin's data dir, e.g. "opkssh-linux-amd64". */
+  name: string;
+  version: string;
+  /** https URL of the release asset. Redirects are followed. */
+  url: string;
+  /** Hex SHA-256 the file must have. */
+  sha256: string;
+  /**
+   * Paths checked before downloading, such as a copy baked into the Docker
+   * image. One whose checksum matches is used in place.
+   */
+  prebuilt?: readonly string[];
+}
+
+/**
+ * Programs on the Termix server. Needs process:spawn. Every program still
+ * running is killed on deactivate.
+ */
+export interface PluginProcess {
+  /** Starts `file` with `args`, no shell. Audited. */
+  run: (
+    file: string,
+    args: readonly string[],
+    options?: PluginProcessOptions,
+  ) => Promise<PluginProcessHandle>;
+  /**
+   * Returns the path of a verified executable: a matching prebuilt copy, the
+   * copy downloaded earlier, or a fresh download (which also needs
+   * network:outbound). Throws when the checksum does not match.
+   */
+  ensureBinary: (spec: PluginBinarySpec) => Promise<string>;
 }
 
 /**
@@ -1527,6 +1631,8 @@ export interface PluginContext {
   readonly notify: PluginNotify;
   /** Outbound HTTP through core's SSRF guard. Needs network:outbound. */
   readonly fetch: PluginFetch;
+  /** Programs on the Termix server. Needs process:spawn. */
+  readonly process: PluginProcess;
 
   /**
    * Runs `fn` with `userId` as the acting user, for background work that has

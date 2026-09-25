@@ -268,26 +268,6 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await provisionLocalDesktopUserIfNeeded();
     }
 
-    import("./utils/opkssh-binary-manager.js").then(
-      ({ OPKSSHBinaryManager }) => {
-        OPKSSHBinaryManager.ensureBinary().catch((error) => {
-          const dataDir =
-            process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
-          systemLogger.warn(
-            "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
-            {
-              operation: "opkssh_binary_init_failed",
-              error: getErrorMessage(error),
-              stack: error instanceof Error ? error.stack : undefined,
-              platform: process.platform,
-              arch: process.arch,
-              dataDir,
-            },
-          );
-        });
-      },
-    );
-
     const { serverReady } = await import("./database/database.js");
     await serverReady;
 
@@ -392,6 +372,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       const { runWakeOnLanSettingsMigration } =
         await import("./utils/crypto-migration/wake-on-lan-settings-migration.js");
       await runWakeOnLanSettingsMigration();
+
+      const { runWarpgateSettingsMigration } =
+        await import("./utils/crypto-migration/warpgate-settings-migration.js");
+      await runWarpgateSettingsMigration();
 
       const { runSecretSourcesTokenMigration } =
         await import("./utils/crypto-migration/secret-sources-token-migration.js");

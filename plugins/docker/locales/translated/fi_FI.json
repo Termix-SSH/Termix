@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Kontin on oltava käynnissä, jotta konsoliin pääsee käsiksi.",
     "verificationCodePrompt": "Syötä vahvistuskoodi",
     "totpVerificationFailed": "TOTP-vahvistus epäonnistui. Yritä uudelleen.",
-    "warpgateVerificationFailed": "Warpgate-todennus epäonnistui. Yritä uudelleen.",
     "connectedTo": "Yhdistetty kohteeseen {{containerName}}",
     "disconnected": "Yhteys katkennut",
     "consoleError": "Konsolivirhe",

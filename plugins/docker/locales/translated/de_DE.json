@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Der Container muss ausgeführt werden, um auf die Konsole zuzugreifen",
     "verificationCodePrompt": "Bestätigungscode eingeben",
     "totpVerificationFailed": "TOTP-Überprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
-    "warpgateVerificationFailed": "Warpgate-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "connectedTo": "Verbunden mit {{containerName}}",
     "disconnected": "Getrennt",
     "consoleError": "Konsolenfehler",

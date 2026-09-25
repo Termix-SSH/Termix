@@ -6,7 +6,9 @@
  */
 
 import { runLdapProviderMigration } from "./ldap-provider-migration.js";
+import { runOpksshConfigMigration } from "./opkssh-config-migration.js";
 
 export async function runPluginDataMoves(): Promise<void> {
   await runLdapProviderMigration();
+  await runOpksshConfigMigration();
 }

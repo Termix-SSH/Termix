@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Containerul trebuie să ruleze pentru a accesa consola.",
     "verificationCodePrompt": "Introduceți codul de verificare",
     "totpVerificationFailed": "Verificarea TOTP a eșuat. Vă rugăm să încercați din nou.",
-    "warpgateVerificationFailed": "Autentificarea Warpgate a eșuat. Vă rugăm să încercați din nou.",
     "connectedTo": "Conectat la {{containerName}}",
     "disconnected": "Deconectat",
     "consoleError": "Eroare consolă",

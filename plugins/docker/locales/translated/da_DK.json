@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Containeren skal køre for at få adgang til konsollen",
     "verificationCodePrompt": "Indtast bekræftelseskode",
     "totpVerificationFailed": "TOTP-bekræftelse mislykkedes. Prøv igen.",
-    "warpgateVerificationFailed": "Warpgate-godkendelse mislykkedes. Prøv igen.",
     "connectedTo": "Forbundet til {{containerName}}",
     "disconnected": "Afbrudt",
     "consoleError": "Konsolfejl",

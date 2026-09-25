@@ -16,11 +16,12 @@ export type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
 export type SSHConnectionError = Error & {
   connectionLogs?: ConnectionLogPayload[];
   requires_totp?: boolean;
-  requires_warpgate?: boolean;
+  requires_browser_sign_in?: boolean;
   sessionId?: string;
   prompt?: string;
   url?: string;
-  securityKey?: string;
+  code?: string;
+  label?: string;
   status?: string;
   reason?: "no_keyboard" | "auth_failed" | "timeout";
 };

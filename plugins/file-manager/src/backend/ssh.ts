@@ -38,7 +38,7 @@ export function connectSsh(
 
 /**
  * Lower-level primitives for the interactive /connect route, which drives its
- * own ssh2 Client through the TOTP/Warpgate parking flow rather than letting
+ * own ssh2 Client through the TOTP and browser sign-in parking flow rather than letting
  * ctx.ssh.connect finish the handshake itself.
  */
 export function prepareSsh(

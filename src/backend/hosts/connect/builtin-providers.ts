@@ -104,14 +104,17 @@ async function prepareKey(
   const certPublicKey = host.certPublicKey;
   if (certPublicKey && certPublicKey.trim()) {
     try {
-      const { setupCACertAuth } = await import("../opkssh-cert-auth.js");
-      await setupCACertAuth(
+      const { applyCertificateAuth } =
+        await import("@termix/plugin-sdk/ssh-certs");
+      await applyCertificateAuth(
         config,
         env.client,
-        config.privateKey as Buffer,
-        certPublicKey,
+        {
+          privateKey: config.privateKey as Buffer,
+          certificate: certPublicKey,
+          passphrase,
+        },
         host.username,
-        passphrase,
       );
       env.log("info", "Using SSH key authentication with CA certificate");
       return { status: "ready" };

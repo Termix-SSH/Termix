@@ -40,8 +40,6 @@
     "linkDialogTitle": "Obre l'enllaç",
     "maxReconnectAttemptsReached": "S'ha arribat al màxim d'intents de reconnexió",
     "noHostSelected": "No s'ha seleccionat cap amfitrió",
-    "opksshAuthFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
-    "opksshTimeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar.",
     "passwordPromptFillTitle": "Voleu introduir la contrasenya desada en aquesta sol·licitud?",
     "reconnect": "Reconnecta",
     "reconnected": "S'ha reconnectat correctament",

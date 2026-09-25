@@ -290,7 +290,6 @@
     "connecting": "กำลังเชื่อมต่อ...",
     "connectedSuccessfully": "เชื่อมต่อสำเร็จแล้ว",
     "totpVerificationFailed": "การตรวจสอบ TOTP ล้มเหลว",
-    "warpgateVerificationFailed": "การตรวจสอบสิทธิ์วาร์ปไม่สำเร็จ",
     "authenticationFailed": "การตรวจสอบสิทธิ์ล้มเหลว",
     "incorrectPassphrase": "รหัสผ่านไม่ถูกต้อง โปรดลองอีกครั้ง",
     "verificationCodePrompt": "รหัสยืนยัน:",

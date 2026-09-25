@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Portal de Dobra",
+        "description": "Este host se conecta através de um proxy SSH Warpgate. O Termix cuidará automaticamente do fluxo de aprovação baseado em navegador após a autenticação."
+      }
+    }
+  }
+}

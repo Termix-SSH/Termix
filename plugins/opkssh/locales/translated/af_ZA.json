@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Meld aan by hierdie gasheer met jou identiteitsverskaffer in plaas van 'n wagwoord of sleutel. Vereis dat OPKSSH op die bediener opgestel is.",
+    "docs": "Bekyk dokumente"
+  },
+  "dialog": {
+    "title": "OPKSSH-verifikasie vereis",
+    "description": "Voltooi verifikasie in jou blaaier om voort te gaan. Hierdie sessie sal vir 24 uur geldig bly.",
+    "openBrowser": "Maak blaaier oop om te verifieer",
+    "waiting": "Wag vir verifikasie in blaaier...",
+    "authenticating": "Verwerk verifikasie...",
+    "signInWith": "Teken aan met {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Verifikasie het misluk. Kontroleer asseblief jou geloofsbriewe en probeer weer.",
+    "timeout": "Verifikasie het verstryk. Probeer asseblief weer."
+  }
+}

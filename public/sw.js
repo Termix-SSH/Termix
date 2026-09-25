@@ -52,9 +52,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // API routes, including sign-in pages proxied through plugin routes.
   if (
-    url.pathname.startsWith("/host/opkssh-chooser/") ||
-    url.pathname.startsWith("/host/opkssh-callback/")
+    url.pathname.startsWith("/plugin-api/") ||
+    url.pathname.startsWith("/host/")
   ) {
     return;
   }

@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Đăng nhập vào máy chủ này bằng nhà cung cấp danh tính thay vì mật khẩu hoặc khóa. Yêu cầu OPKSSH được thiết lập trên máy chủ.",
+    "docs": "Xem tài liệu"
+  },
+  "dialog": {
+    "title": "Yêu cầu xác thực OPKSSH",
+    "description": "Hoàn tất xác thực trên trình duyệt để tiếp tục. Phiên làm việc này sẽ có hiệu lực trong 24 giờ.",
+    "openBrowser": "Mở trình duyệt để xác thực",
+    "waiting": "Đang chờ xác thực trên trình duyệt...",
+    "authenticating": "Đang xử lý xác thực...",
+    "signInWith": "Đăng nhập bằng {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Xác thực thất bại. Vui lòng kiểm tra thông tin đăng nhập và thử lại.",
+    "timeout": "Xác thực đã hết thời gian chờ. Vui lòng thử lại."
+  }
+}

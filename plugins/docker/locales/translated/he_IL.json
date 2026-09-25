@@ -73,7 +73,6 @@
     "containerMustBeRunning": "יש לפעול על מנת לגשת למסוף.",
     "verificationCodePrompt": "הזן קוד אימות",
     "totpVerificationFailed": "אימות TOTP נכשל. אנא נסה שוב.",
-    "warpgateVerificationFailed": "אימות Warpgate נכשל. אנא נסה שוב.",
     "connectedTo": "מחובר אל {{containerName}}",
     "disconnected": "מְנוּתָק",
     "consoleError": "שגיאת קונסולה",

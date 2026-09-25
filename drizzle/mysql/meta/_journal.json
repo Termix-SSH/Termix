@@ -372,6 +372,13 @@
       "when": 1790287990810,
       "tag": "0052_illegal_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "5",
+      "when": 1790295071302,
+      "tag": "0053_magical_groot",
+      "breakpoints": true
     }
   ]
 }

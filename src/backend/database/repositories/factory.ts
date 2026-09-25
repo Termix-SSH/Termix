@@ -15,7 +15,6 @@ import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repos
 import { CredentialSidebarPreferenceRepository } from "./credential-sidebar-preference-repository.js";
 import { UiPreferenceRepository } from "./ui-preference-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
-import { OpksshTokenRepository } from "./opkssh-token-repository.js";
 import { PluginRepository } from "./plugin-repository.js";
 import { PluginStorageRepository } from "./plugin-storage-repository.js";
 import { PluginSettingsRepository } from "./plugin-settings-repository.js";
@@ -224,13 +223,6 @@ export function createCurrentOpenTabRepository(): OpenTabRepository {
   return new OpenTabRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("open_tab_repository_write"),
-  );
-}
-
-export function createCurrentOpksshTokenRepository(): OpksshTokenRepository {
-  return new OpksshTokenRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("opkssh_token_repository_write"),
   );
 }
 

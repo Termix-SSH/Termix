@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Для доступу до консолі контейнер має бути запущений",
     "verificationCodePrompt": "Введіть код підтвердження",
     "totpVerificationFailed": "Не вдалося перевірити TOTP. Спробуйте ще раз.",
-    "warpgateVerificationFailed": "Помилка автентифікації Warpgate. Будь ласка, спробуйте ще раз.",
     "connectedTo": "Підключено до {{containerName}}",
     "disconnected": "Відключено",
     "consoleError": "Помилка консолі",

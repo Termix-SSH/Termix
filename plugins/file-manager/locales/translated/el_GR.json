@@ -290,7 +290,6 @@
     "connecting": "Συνδετικός...",
     "connectedSuccessfully": "Η σύνδεση ολοκληρώθηκε με επιτυχία",
     "totpVerificationFailed": "Η επαλήθευση TOTP απέτυχε.",
-    "warpgateVerificationFailed": "Η πιστοποίηση Warpgate απέτυχε.",
     "authenticationFailed": "Η επαλήθευση ταυτότητας απέτυχε",
     "incorrectPassphrase": "Λανθασμένη φράση πρόσβασης. Δοκιμάστε ξανά.",
     "verificationCodePrompt": "Κωδικός επαλήθευσης:",

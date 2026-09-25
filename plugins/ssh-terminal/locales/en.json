@@ -40,8 +40,6 @@
     "linkDialogTitle": "Open Link",
     "maxReconnectAttemptsReached": "Maximum reconnection attempts reached",
     "noHostSelected": "No host selected",
-    "opksshAuthFailed": "Authentication failed. Please check your credentials and try again.",
-    "opksshTimeout": "Authentication timed out. Please try again.",
     "passwordPromptFillTitle": "Fill the saved password into this prompt?",
     "reconnect": "Reconnect",
     "reconnected": "Reconnected successfully",

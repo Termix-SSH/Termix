@@ -73,29 +73,14 @@ if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
     sed -i '/# BEGIN HTTP_REDIRECT_SERVER/,/# END HTTP_REDIRECT_SERVER/d' /tmp/nginx/nginx.conf
 fi
 
-mkdir -p /app/data /app/uploads /app/data/.opk /app/data/acme-webroot/.well-known/acme-challenge
-chmod 755 /app/data /app/uploads /app/data/.opk 2>/dev/null || true
+mkdir -p /app/data /app/uploads /app/data/acme-webroot/.well-known/acme-challenge
+chmod 755 /app/data /app/uploads 2>/dev/null || true
 
 if [ -w /app/data ]; then
     echo "Data directory is writable"
 else
-    echo "WARNING: Data directory is not writable. OPKSSH may fail."
+    echo "WARNING: Data directory is not writable. Plugins that keep files (OPKSSH, recordings) may fail."
     ls -ld /app/data
-fi
-
-if [ -w /app/data/.opk ]; then
-    echo "OPKSSH directory is writable"
-else
-    echo "WARNING: OPKSSH directory is not writable. OPKSSH authentication will fail."
-    ls -ld /app/data/.opk
-fi
-
-OPKSSH_DIR="${DATA_DIR:-/app/data}/opkssh"
-if [ ! -d "$OPKSSH_DIR" ]; then
-    echo "OPKSSH binary directory not found at $OPKSSH_DIR"
-    echo "OPKSSH will be installed from the bundled copy on first use (falls back to downloading if unavailable)."
-else
-    echo "OPKSSH binary directory found at $OPKSSH_DIR"
 fi
 
 if [ "$ENABLE_SSL" = "true" ]; then

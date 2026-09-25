@@ -316,7 +316,7 @@
     "connecting": "Connecting...",
     "connectedSuccessfully": "Connected successfully",
     "totpVerificationFailed": "TOTP verification failed",
-    "warpgateVerificationFailed": "Warpgate authentication failed",
+    "browserSignInFailed": "Sign-in failed. Please try again.",
     "authenticationFailed": "Authentication failed",
     "incorrectPassphrase": "Incorrect passphrase. Please try again.",
     "verificationCodePrompt": "Verification code:",

@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Porta de Warpgate",
+        "description": "Aquest amfitrió es connecta a través d'un proxy SSH Warpgate. Termix gestionarà automàticament el flux d'aprovació basat en navegador després de l'autenticació."
+      }
+    }
+  }
+}

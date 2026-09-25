@@ -40,8 +40,6 @@
     "linkDialogTitle": "Åpne lenke",
     "maxReconnectAttemptsReached": "Maksimalt antall forsøk på å koble til igjen er nådd",
     "noHostSelected": "Ingen vert valgt",
-    "opksshAuthFailed": "Autentiseringen mislyktes. Sjekk legitimasjonen din og prøv på nytt.",
-    "opksshTimeout": "Autentiseringen ble tidsavbrutt. Prøv på nytt.",
     "passwordPromptFillTitle": "Skriv inn det lagrede passordet i denne meldingen?",
     "reconnect": "Koble til igjen",
     "reconnected": "Tilkoblet på nytt",

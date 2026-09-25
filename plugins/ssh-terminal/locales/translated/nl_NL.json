@@ -40,8 +40,6 @@
     "linkDialogTitle": "Open link",
     "maxReconnectAttemptsReached": "Maximaal aantal herverbindingspogingen bereikt",
     "noHostSelected": "Geen host geselecteerd",
-    "opksshAuthFailed": "Authenticatie mislukt. Controleer uw inloggegevens en probeer het opnieuw.",
-    "opksshTimeout": "De authenticatie is mislukt vanwege een time-out. Probeer het opnieuw.",
     "passwordPromptFillTitle": "Voer het opgeslagen wachtwoord in op dit veld.",
     "reconnect": "Opnieuw verbinding maken",
     "reconnected": "De verbinding is succesvol hersteld.",

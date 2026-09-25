@@ -290,7 +290,6 @@
     "connecting": "Bağlanıyor...",
     "connectedSuccessfully": "Bağlantı başarıyla kuruldu",
     "totpVerificationFailed": "TOTP doğrulaması başarısız oldu",
-    "warpgateVerificationFailed": "Warpgate kimlik doğrulaması başarısız oldu",
     "authenticationFailed": "Kimlik doğrulama başarısız oldu",
     "incorrectPassphrase": "Yanlış parola. Lütfen tekrar deneyin.",
     "verificationCodePrompt": "Doğrulama kodu:",

@@ -290,7 +290,6 @@
     "connecting": "Łączenie...",
     "connectedSuccessfully": "Połączono pomyślnie",
     "totpVerificationFailed": "Weryfikacja TOTP nie powiodła się",
-    "warpgateVerificationFailed": "Uwierzytelnianie Warpgate nie powiodło się",
     "authenticationFailed": "Uwierzytelnianie nie powiodło się",
     "incorrectPassphrase": "Nieprawidłowe hasło klucza. Spróbuj ponownie.",
     "verificationCodePrompt": "Kod weryfikacyjny:",

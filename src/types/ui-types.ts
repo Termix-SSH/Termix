@@ -33,7 +33,6 @@ export type Host = {
     | "tailscale"
     | "vault"
     | "agent";
-  useWarpgate?: boolean;
   shareSshAuth?: boolean;
   credentialId?: string;
   vaultProfileId?: string;

@@ -1,0 +1,29 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Sign in to this host using your identity provider instead of a password or key. Requires OPKSSH set up on the server.",
+    "docs": "View docs"
+  },
+  "dialog": {
+    "title": "OPKSSH Authentication Required",
+    "description": "Complete authentication in your browser to continue. This session will remain valid for 24 hours.",
+    "openBrowser": "Open Browser to Authenticate",
+    "waiting": "Waiting for authentication in browser...",
+    "authenticating": "Processing authentication...",
+    "signInWith": "Sign in with {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Authentication failed. Please check your credentials and try again.",
+    "timeout": "Authentication timed out. Please try again."
+  },
+  "settings": {
+    "redirectUri": {
+      "label": "Redirect URI",
+      "description": "Register this URL as an allowed redirect URI with every identity provider in your OPKSSH config."
+    },
+    "legacyCallback": {
+      "label": "Use the old redirect URI",
+      "description": "Keep sending /host/opkssh-callback, the redirect URI used before 2.9. Turn this off once your identity providers allow the new one."
+    }
+  }
+}

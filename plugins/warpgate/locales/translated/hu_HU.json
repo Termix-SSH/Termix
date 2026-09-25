@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Warpgate átjáró",
+        "description": "Ez a gazdagép egy Warpgate SSH proxyn keresztül csatlakozik. A Termix a hitelesítés után automatikusan kezeli a böngészőalapú jóváhagyási folyamatot."
+      }
+    }
+  }
+}

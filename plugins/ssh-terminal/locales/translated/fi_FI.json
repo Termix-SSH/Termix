@@ -40,8 +40,6 @@
     "linkDialogTitle": "Avaa linkki",
     "maxReconnectAttemptsReached": "Yhteyden muodostamisen uudelleenyritysten enimmäismäärä saavutettu",
     "noHostSelected": "Ei valittua isäntää",
-    "opksshAuthFailed": "Todennus epäonnistui. Tarkista tunnistetietosi ja yritä uudelleen.",
-    "opksshTimeout": "Todennus aikakatkaistiin. Yritä uudelleen.",
     "passwordPromptFillTitle": "Täytä tallennettu salasana tähän kehotteeseen?",
     "reconnect": "Yhdistä uudelleen",
     "reconnected": "Yhdistäminen uudelleen onnistui",

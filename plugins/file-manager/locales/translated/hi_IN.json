@@ -290,7 +290,6 @@
     "connecting": "कनेक्ट हो रहा है...",
     "connectedSuccessfully": "सफलतापूर्वक कनेक्ट हुआ",
     "totpVerificationFailed": "TOTP सत्यापन विफल",
-    "warpgateVerificationFailed": "Warpgate सत्यापन विफल",
     "authenticationFailed": "प्रमाणीकरण विफल",
     "incorrectPassphrase": "गलत पासफ़्रेज़। कृपया पुनः प्रयास करें।",
     "verificationCodePrompt": "सत्यापन कोड:",

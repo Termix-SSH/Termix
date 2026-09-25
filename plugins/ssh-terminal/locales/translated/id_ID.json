@@ -40,8 +40,6 @@
     "linkDialogTitle": "Buka Tautan",
     "maxReconnectAttemptsReached": "Upaya penyambungan kembali maksimum telah tercapai.",
     "noHostSelected": "Tidak ada pembawa acara yang dipilih.",
-    "opksshAuthFailed": "Autentikasi gagal. Harap periksa kredensial Anda dan coba lagi.",
-    "opksshTimeout": "Autentikasi habis waktu. Silakan coba lagi.",
     "passwordPromptFillTitle": "Masukkan kata sandi yang tersimpan ke dalam kolom ini?",
     "reconnect": "Terhubung kembali",
     "reconnected": "Berhasil terhubung kembali",

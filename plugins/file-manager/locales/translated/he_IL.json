@@ -290,7 +290,6 @@
     "connecting": "מְקַשֵׁר...",
     "connectedSuccessfully": "התחבר בהצלחה",
     "totpVerificationFailed": "אימות TOTP נכשל",
-    "warpgateVerificationFailed": "אימות Warpgate נכשל",
     "authenticationFailed": "האימות נכשל",
     "incorrectPassphrase": "סיסמה שגויה. אנא נסה שוב.",
     "verificationCodePrompt": "קוד אימות:",

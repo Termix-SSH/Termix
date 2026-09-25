@@ -73,7 +73,6 @@
     "containerMustBeRunning": "De container moet actief zijn om toegang te krijgen tot de console.",
     "verificationCodePrompt": "Voer de verificatiecode in.",
     "totpVerificationFailed": "TOTP-verificatie mislukt. Probeer het opnieuw.",
-    "warpgateVerificationFailed": "Authenticatie via Warpgate is mislukt. Probeer het opnieuw.",
     "connectedTo": "Verbonden met {{containerName}}",
     "disconnected": "Verbinding verbroken",
     "consoleError": "Consolefout",

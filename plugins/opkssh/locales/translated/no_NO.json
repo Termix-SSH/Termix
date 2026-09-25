@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Logg på denne verten med identitetsleverandøren din i stedet for et passord eller en nøkkel. Krever at OPKSSH er konfigurert på serveren.",
+    "docs": "Vis dokumenter"
+  },
+  "dialog": {
+    "title": "OPKSSH-autentisering kreves",
+    "description": "Fullfør autentiseringen i nettleseren din for å fortsette. Denne økten vil være gyldig i 24 timer.",
+    "openBrowser": "Åpne nettleseren for å autentisere",
+    "waiting": "Venter på autentisering i nettleseren...",
+    "authenticating": "Behandler autentisering ...",
+    "signInWith": "Logg inn med {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Autentiseringen mislyktes. Sjekk legitimasjonen din og prøv på nytt.",
+    "timeout": "Autentiseringen ble tidsavbrutt. Prøv på nytt."
+  }
+}

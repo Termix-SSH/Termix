@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Warpgate-porten",
+        "description": "Denne verten kobler seg til via en Warpgate SSH-proxy. Termix håndterer den nettleserbaserte godkjenningsflyten automatisk etter autentisering."
+      }
+    }
+  }
+}

@@ -73,7 +73,6 @@
     "containerMustBeRunning": "A konténernek futnia kell a konzol eléréséhez",
     "verificationCodePrompt": "Írja be az ellenőrző kódot",
     "totpVerificationFailed": "A TOTP ellenőrzése sikertelen. Próbáld újra.",
-    "warpgateVerificationFailed": "A Warpgate hitelesítése sikertelen. Próbáld újra.",
     "connectedTo": "Csatlakoztatva ehhez: {{containerName}}",
     "disconnected": "Szétkapcsolt",
     "consoleError": "Konzolhiba",

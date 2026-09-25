@@ -1159,14 +1159,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         return;
       }
 
-      if (decision.kind === "warpgate") {
+      if (decision.kind === "browser") {
         if (responseSent) return;
         responseSent = true;
         connectionLogs.push(
           createConnectionLog(
             "info",
             "sftp_auth",
-            "Warpgate authentication required",
+            `${decision.label} sign-in required`,
             { url: decision.url },
           ),
         );
@@ -1175,7 +1175,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           requires_warpgate: true,
           sessionId,
           url: decision.url,
-          securityKey: decision.securityKey,
+          securityKey: decision.code,
           connectionLogs,
         });
         return;

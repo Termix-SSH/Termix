@@ -30,11 +30,12 @@ type ConnectErrorResponse = {
   message?: string;
   connectionLogs?: ApiConnectionLog[];
   requires_totp?: boolean;
-  requires_warpgate?: boolean;
+  requires_browser_sign_in?: boolean;
   sessionId?: string;
   prompt?: string;
   url?: string;
-  securityKey?: string;
+  code?: string;
+  label?: string;
   status?: string;
   reason?: string;
 };
@@ -48,11 +49,12 @@ export interface SSHConnectResult {
   status?: string;
   reason?: "timeout" | "no_keyboard" | "auth_failed";
   requires_totp?: boolean;
-  requires_warpgate?: boolean;
+  requires_browser_sign_in?: boolean;
   sessionId?: string;
   prompt?: string;
   url?: string;
-  securityKey?: string;
+  code?: string;
+  label?: string;
 }
 
 function triggerBlobDownload(blob: Blob, fileName: string): void {
@@ -125,12 +127,13 @@ export async function connectSSH(
           prompt: data.prompt,
         });
       }
-      if (data.requires_warpgate) {
+      if (data.requires_browser_sign_in) {
         Object.assign(errorWithLogs, {
-          requires_warpgate: true,
+          requires_browser_sign_in: true,
           sessionId: data.sessionId,
           url: data.url,
-          securityKey: data.securityKey,
+          code: data.code,
+          label: data.label,
         });
       }
       if (data.status === "auth_required") {
@@ -176,17 +179,17 @@ export async function verifySSHTOTP(
   }
 }
 
-export async function verifySSHWarpgate(
+export async function verifySSHBrowserSignIn(
   sessionId: string,
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
-      "/ssh/connect-warpgate",
+      "/ssh/connect-browser-sign-in",
       { sessionId },
     );
     return response.data;
   } catch (error) {
-    handleApiError(error, "verify SSH Warpgate");
+    handleApiError(error, "verify SSH browser sign-in");
   }
 }
 
@@ -1020,7 +1023,7 @@ export async function ensureSSHSessionForHost(
 
     if (
       result?.requires_totp ||
-      result?.requires_warpgate ||
+      result?.requires_browser_sign_in ||
       result?.status === "auth_required"
     ) {
       return { state: "auth_required", sessionId };

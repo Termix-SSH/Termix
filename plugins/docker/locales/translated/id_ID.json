@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Kontainer harus berjalan agar dapat mengakses konsol.",
     "verificationCodePrompt": "Masukkan kode verifikasi",
     "totpVerificationFailed": "Verifikasi TOTP gagal. Silakan coba lagi.",
-    "warpgateVerificationFailed": "Autentikasi Warpgate gagal. Silakan coba lagi.",
     "connectedTo": "Terhubung ke {{containerName}}",
     "disconnected": "Terputus",
     "consoleError": "Kesalahan konsol",

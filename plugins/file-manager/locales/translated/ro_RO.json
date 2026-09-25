@@ -290,7 +290,6 @@
     "connecting": "Se conectează...",
     "connectedSuccessfully": "Conectare reușită",
     "totpVerificationFailed": "Verificarea TOTP a eșuat",
-    "warpgateVerificationFailed": "Autentificarea Warpgate a eșuat",
     "authenticationFailed": "Autentificarea a eșuat",
     "incorrectPassphrase": "Parolă incorectă. Vă rugăm să încercați din nou.",
     "verificationCodePrompt": "Cod de verificare:",

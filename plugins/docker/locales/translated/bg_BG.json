@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Контейнерът трябва да е работещ, за да има достъп до конзолата",
     "verificationCodePrompt": "Въведете код за потвърждение",
     "totpVerificationFailed": "Проверката на TOTP не бе успешна. Моля, опитайте отново.",
-    "warpgateVerificationFailed": "Удостоверяването на Warpgate не бе успешно. Моля, опитайте отново.",
     "connectedTo": "Свързано с {{containerName}}",
     "disconnected": "Изключен",
     "consoleError": "Грешка в конзолата",

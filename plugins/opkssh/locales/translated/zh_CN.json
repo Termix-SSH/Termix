@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "使用身份提供商登录此主机，而非密码或密钥。需要在服务器上设置 OPKSSH。",
+    "docs": "查看文档"
+  },
+  "dialog": {
+    "title": "需要 OPKSSH 认证",
+    "description": "在浏览器中完成认证以继续。此会话将在 24 小时内有效。",
+    "openBrowser": "打开浏览器进行认证",
+    "waiting": "等待浏览器认证...",
+    "authenticating": "正在处理认证...",
+    "signInWith": "使用 {{provider}} 登录"
+  },
+  "errors": {
+    "authFailed": "认证失败，请检查凭据并重试。",
+    "timeout": "认证超时，请重试。"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Accedi a questo host usando il tuo provider di identità invece di una password o chiave. Richiede OPKSSH configurato sul server.",
+    "docs": "Visualizza documentazione"
+  },
+  "dialog": {
+    "title": "Autenticazione OPKSSH richiesta",
+    "description": "Completa l'autenticazione nel browser per continuare. Questa sessione rimarrà valida per 24 ore.",
+    "openBrowser": "Apri il browser per autenticarti",
+    "waiting": "In attesa dell'autenticazione nel browser...",
+    "authenticating": "Autenticazione in corso...",
+    "signInWith": "Accedi con {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Autenticazione fallita. Controlla le credenziali e riprova.",
+    "timeout": "Autenticazione scaduta. Riprova."
+  }
+}

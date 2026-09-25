@@ -40,8 +40,6 @@
     "linkDialogTitle": "Link megnyitása",
     "maxReconnectAttemptsReached": "Elérte az újracsatlakozási kísérletek maximális számát",
     "noHostSelected": "Nincs kiválasztva gazdagép",
-    "opksshAuthFailed": "Sikertelen hitelesítés. Kérjük, ellenőrizze a hitelesítő adatait, és próbálja újra.",
-    "opksshTimeout": "A hitelesítés időtúllépést okozott. Kérjük, próbálja újra.",
     "passwordPromptFillTitle": "Írja be a mentett jelszót ebbe a mezőbe?",
     "reconnect": "Újracsatlakozás",
     "reconnected": "Sikeresen újrakapcsolódott",

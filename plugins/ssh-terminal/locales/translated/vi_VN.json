@@ -40,8 +40,6 @@
     "linkDialogTitle": "Mở liên kết",
     "maxReconnectAttemptsReached": "Đã đạt số lần kết nối lại tối đa",
     "noHostSelected": "Chưa chọn máy chủ",
-    "opksshAuthFailed": "Xác thực thất bại. Vui lòng kiểm tra thông tin đăng nhập và thử lại.",
-    "opksshTimeout": "Xác thực đã hết thời gian chờ. Vui lòng thử lại.",
     "passwordPromptFillTitle": "Điền mật khẩu đã lưu vào dòng nhắc này?",
     "reconnect": "Kết nối lại",
     "reconnected": "Đã kết nối lại thành công",

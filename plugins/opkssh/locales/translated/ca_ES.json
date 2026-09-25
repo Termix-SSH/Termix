@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Inicieu la sessió en aquest amfitrió amb el vostre proveïdor d'identitat en comptes d'una contrasenya o clau. Requereix que OPKSSH estigui configurat al servidor.",
+    "docs": "Veure documents"
+  },
+  "dialog": {
+    "title": "Cal autenticació OPKSSH",
+    "description": "Completeu l'autenticació al navegador per continuar. Aquesta sessió serà vàlida durant 24 hores.",
+    "openBrowser": "Obre el navegador per autenticar-te",
+    "waiting": "Esperant l'autenticació al navegador...",
+    "authenticating": "Processant l'autenticació...",
+    "signInWith": "Inicia la sessió amb {{provider}}"
+  },
+  "errors": {
+    "authFailed": "L'autenticació ha fallat. Si us plau, comproveu les vostres credencials i torneu-ho a intentar.",
+    "timeout": "S'ha esgotat el temps d'autenticació. Torna-ho a provar."
+  }
+}

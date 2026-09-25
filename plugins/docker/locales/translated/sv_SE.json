@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Behållaren måste köras för att komma åt konsolen",
     "verificationCodePrompt": "Ange verifieringskod",
     "totpVerificationFailed": "TOTP-verifieringen misslyckades. Försök igen.",
-    "warpgateVerificationFailed": "Warpgate-autentiseringen misslyckades. Försök igen.",
     "connectedTo": "Ansluten till {{containerName}}",
     "disconnected": "Osammanhängande",
     "consoleError": "Konsolfel",

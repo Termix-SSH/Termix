@@ -40,8 +40,6 @@
     "linkDialogTitle": "開啟連結",
     "maxReconnectAttemptsReached": "已達最大重新連線嘗試次數",
     "noHostSelected": "未選取主機",
-    "opksshAuthFailed": "驗證失敗。請檢查您的憑證並再試一次。",
-    "opksshTimeout": "驗證逾時。請再試一次。",
     "passwordPromptFillTitle": "將已儲存的密碼填入此提示？",
     "reconnect": "重新連線",
     "reconnected": "已成功重新連線",

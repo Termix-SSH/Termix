@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Poarta Warpgate",
+        "description": "Această gazdă se conectează printr-un proxy SSH Warpgate. Termix va gestiona automat fluxul de aprobare bazat pe browser după autentificare."
+      }
+    }
+  }
+}

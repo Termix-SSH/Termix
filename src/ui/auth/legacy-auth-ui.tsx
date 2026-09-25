@@ -37,16 +37,6 @@ function CertificateAuthInfo({
   );
 }
 
-function OpksshAuthEditor() {
-  return (
-    <CertificateAuthInfo
-      labelKey="hosts.opksshLabel"
-      descriptionKey="hosts.opksshDesc"
-      docsUrl="https://docs.termix.site/features/authentication/opkssh"
-    />
-  );
-}
-
 function StepCaAuthEditor() {
   return (
     <CertificateAuthInfo
@@ -62,12 +52,6 @@ let registered = false;
 export function ensureLegacyAuthUI(): void {
   if (registered) return;
   registered = true;
-  registerSshAuthEditor({
-    id: "opkssh",
-    pluginId: "core",
-    titleKey: "hosts.filterAuthOpkssh",
-    component: OpksshAuthEditor,
-  });
   registerSshAuthEditor({
     id: "stepca",
     pluginId: "core",

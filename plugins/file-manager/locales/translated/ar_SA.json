@@ -290,7 +290,6 @@
     "connecting": "جارٍ الاتصال...",
     "connectedSuccessfully": "تم الاتصال بنجاح",
     "totpVerificationFailed": "فشل التحقق من TOTP",
-    "warpgateVerificationFailed": "فشلت مصادقة Warpgate",
     "authenticationFailed": "فشلت المصادقة",
     "incorrectPassphrase": "عبارة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
     "verificationCodePrompt": "رمز التحقق:",

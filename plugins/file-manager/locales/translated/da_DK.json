@@ -290,7 +290,6 @@
     "connecting": "Forbinder...",
     "connectedSuccessfully": "Forbindelsen er oprettet",
     "totpVerificationFailed": "TOTP-bekræftelse mislykkedes",
-    "warpgateVerificationFailed": "Warpgate-godkendelse mislykkedes",
     "authenticationFailed": "Godkendelse mislykkedes",
     "incorrectPassphrase": "Forkert adgangskode. Prøv igen.",
     "verificationCodePrompt": "Bekræftelseskode:",

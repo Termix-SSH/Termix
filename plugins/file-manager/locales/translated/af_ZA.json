@@ -290,7 +290,6 @@
     "connecting": "Verbind...",
     "connectedSuccessfully": "Suksesvol gekoppel",
     "totpVerificationFailed": "TOTP-verifikasie het misluk",
-    "warpgateVerificationFailed": "Warpgate-verifikasie het misluk",
     "authenticationFailed": "Verifikasie het misluk",
     "incorrectPassphrase": "Verkeerde wagwoordfrase. Probeer asseblief weer.",
     "verificationCodePrompt": "Verifikasiekode:",

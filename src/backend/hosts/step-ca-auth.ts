@@ -2,12 +2,7 @@ import { randomBytes } from "crypto";
 import type { WebSocket } from "ws";
 import { sshLogger } from "../utils/logger.js";
 import { getErrorMessage } from "../utils/error-message.js";
-import { DataCrypto } from "../utils/data-crypto.js";
-import { FieldCrypto } from "../utils/field-crypto.js";
-import {
-  createCurrentOpksshTokenRepository,
-  createCurrentSettingsRepository,
-} from "../database/repositories/factory.js";
+import { createCurrentSettingsRepository } from "../database/repositories/factory.js";
 import { readStepCaPrivateAllowlist } from "../utils/step-ca-egress.js";
 import {
   stepCaRuntime,
@@ -31,9 +26,8 @@ import {
 /**
  * Step CA (smallstep) SSH user certificates through its OIDC provisioner.
  *
- * Mirrors the OPKSSH flow and reuses its storage, WS messages and connect
- * path; the only difference is how the certificate is obtained: no binary,
- * just the CA's HTTP API plus one OIDC redirect back to Termix.
+ * The CA's HTTP API plus one OIDC redirect back to Termix. Issued
+ * certificates are kept in memory until they expire.
  */
 
 export const STEP_CA_CALLBACK_PATH = "/host/step-ca-callback";
@@ -87,6 +81,37 @@ interface StepCaAuthSession {
 
 const sessions = new Map<string, StepCaAuthSession>();
 
+interface IssuedCertificate {
+  sshCert: string;
+  privateKey: string;
+  expiresAt: number;
+}
+
+const issued = new Map<string, IssuedCertificate>();
+
+function certKey(userId: string, hostId: number): string {
+  return `${userId}:${hostId}`;
+}
+
+/** The cached certificate for this user and host, while it is valid. */
+export function getStepCaCert(
+  userId: string,
+  hostId: number,
+): { sshCert: string; privateKey: string } | null {
+  const key = certKey(userId, hostId);
+  const cert = issued.get(key);
+  if (!cert) return null;
+  if (cert.expiresAt <= Date.now()) {
+    issued.delete(key);
+    return null;
+  }
+  return { sshCert: cert.sshCert, privateKey: cert.privateKey };
+}
+
+export function invalidateStepCaCert(userId: string, hostId: number): void {
+  issued.delete(certKey(userId, hostId));
+}
+
 function send(ws: WebSocket, message: object): void {
   try {
     ws.send(JSON.stringify(message));
@@ -112,7 +137,7 @@ export async function startStepCaAuth(
   const settings = await readStepCaSettings();
   if (!settings) {
     send(ws, {
-      type: "opkssh_config_error",
+      type: "stepca_config_error",
       requestId: "",
       error:
         "Step CA is not configured. An administrator must set the CA URL, root fingerprint and OIDC provisioner under Admin Settings.",
@@ -162,7 +187,7 @@ export async function startStepCaAuth(
       timeout: setTimeout(() => {
         const current = sessions.get(state);
         if (!current || current.completed || current.processing) return;
-        send(ws, { type: "opkssh_timeout", requestId: state });
+        send(ws, { type: "stepca_timeout", requestId: state });
         endSession(current);
       }, AUTH_TIMEOUT_MS),
     };
@@ -184,7 +209,7 @@ export async function startStepCaAuth(
     });
 
     send(ws, {
-      type: "opkssh_status",
+      type: "stepca_status",
       requestId: state,
       stage: "chooser",
       label: "Step CA",
@@ -205,7 +230,7 @@ export async function startStepCaAuth(
       hostId,
     });
     send(ws, {
-      type: "opkssh_error",
+      type: "stepca_error",
       requestId: state,
       error: `Step CA: ${getErrorMessage(error)}`,
     });
@@ -221,9 +246,8 @@ export function cancelStepCaAuth(requestId: string): boolean {
 
 /**
  * Finishes the flow once the identity provider redirects back: exchanges
- * the code, has the CA sign the key, stores the certificate the way OPKSSH
- * does (same table, same encryption, same token id) and tells the terminal
- * to reconnect.
+ * the code, has the CA sign the key, caches the certificate and tells the
+ * terminal to reconnect.
  */
 export async function completeStepCaAuth(
   query: StepCaCallbackQuery,
@@ -262,7 +286,7 @@ async function finishStepCaAuth(
   if (query.error || !query.code) {
     const message = query.error_description || query.error || "Sign-in failed";
     send(session.ws, {
-      type: "opkssh_error",
+      type: "stepca_error",
       requestId: session.state,
       error: `Step CA: ${message}`,
     });
@@ -272,7 +296,7 @@ async function finishStepCaAuth(
 
   try {
     send(session.ws, {
-      type: "opkssh_status",
+      type: "stepca_status",
       requestId: session.state,
       stage: "authenticating",
     });
@@ -320,35 +344,15 @@ async function finishStepCaAuth(
     }
     const expiresAt = certificateInfo.validBefore;
 
-    const userDataKey = DataCrypto.getUserDataKey(session.userId);
-    if (!userDataKey) throw new Error("User data key not found");
-    // Same token id as OPKSSH: getOPKSSHToken decrypts with it.
-    const tokenId = `opkssh-${session.userId}-${session.hostId}`;
-    await createCurrentOpksshTokenRepository().upsert({
-      userId: session.userId,
-      hostId: session.hostId,
-      sshCert: FieldCrypto.encryptField(
-        certificate,
-        userDataKey,
-        tokenId,
-        "ssh_cert",
-      ),
-      privateKey: FieldCrypto.encryptField(
-        session.keyPair.privateKeyPem,
-        userDataKey,
-        tokenId,
-        "private_key",
-      ),
-      email,
-      sub: typeof claims.sub === "string" ? claims.sub : undefined,
-      issuer: typeof claims.iss === "string" ? claims.iss : undefined,
-      audience: typeof claims.aud === "string" ? claims.aud : undefined,
-      expiresAt: expiresAt.toISOString(),
+    issued.set(certKey(session.userId, session.hostId), {
+      sshCert: certificate,
+      privateKey: session.keyPair.privateKeyPem,
+      expiresAt: expiresAt.getTime(),
     });
 
     session.completed = true;
     send(session.ws, {
-      type: "opkssh_completed",
+      type: "stepca_completed",
       requestId: session.state,
       expiresAt: expiresAt.toISOString(),
     });
@@ -362,7 +366,7 @@ async function finishStepCaAuth(
     });
     const message = getErrorMessage(error);
     send(session.ws, {
-      type: "opkssh_error",
+      type: "stepca_error",
       requestId: session.state,
       error: `Step CA: ${message}`,
     });

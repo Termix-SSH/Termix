@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Контејнер мора бити покренут да би се приступило конзоли",
     "verificationCodePrompt": "Унесите верификациони код",
     "totpVerificationFailed": "Верификација TOTP-а није успела. Молимо покушајте поново.",
-    "warpgateVerificationFailed": "Аутентификација преко Ворпгејта није успела. Молимо покушајте поново.",
     "connectedTo": "Повезано са {{containerName}}",
     "disconnected": "Искључено",
     "consoleError": "Грешка конзоле",

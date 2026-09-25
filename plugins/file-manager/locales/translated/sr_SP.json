@@ -290,7 +290,6 @@
     "connecting": "Повезивање...",
     "connectedSuccessfully": "Успешно повезано",
     "totpVerificationFailed": "Верификација TOTP-а није успела",
-    "warpgateVerificationFailed": "Аутентификација Варпгејта није успела",
     "authenticationFailed": "Аутентификација није успела",
     "incorrectPassphrase": "Нетачна лозинка. Молимо покушајте поново.",
     "verificationCodePrompt": "Верификациони код:",

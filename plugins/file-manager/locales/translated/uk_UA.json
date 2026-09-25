@@ -290,7 +290,6 @@
     "connecting": "Підключення...",
     "connectedSuccessfully": "Підключено успішно",
     "totpVerificationFailed": "Не вдалося перевірити TOTP",
-    "warpgateVerificationFailed": "Автентифікація Warpgate не вдалася",
     "authenticationFailed": "Помилка автентифікації",
     "incorrectPassphrase": "Неправильна парольна фраза. Спробуйте ще раз.",
     "verificationCodePrompt": "Код підтвердження:",

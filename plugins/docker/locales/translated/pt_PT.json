@@ -73,7 +73,6 @@
     "containerMustBeRunning": "O contentor tem de estar em execução para aceder à consola",
     "verificationCodePrompt": "Introduza o código de verificação",
     "totpVerificationFailed": "A verificação TOTP falhou. Por favor, tente novamente.",
-    "warpgateVerificationFailed": "A autenticação Warpgate falhou. Por favor, tente novamente.",
     "connectedTo": "Ligado a {{containerName}}",
     "disconnected": "Desligado",
     "consoleError": "Erro da consola",

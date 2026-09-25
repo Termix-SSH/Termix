@@ -73,7 +73,6 @@
     "containerMustBeRunning": "コンソールにアクセスするにはコンテナが実行中である必要があります",
     "verificationCodePrompt": "認証コードを入力してください",
     "totpVerificationFailed": "TOTP認証に失敗しました。もう一度お試しください。",
-    "warpgateVerificationFailed": "Warpgate認証に失敗しました。もう一度お試しください。",
     "connectedTo": "{{containerName}}に接続しました",
     "disconnected": "切断されました",
     "consoleError": "コンソールエラー",

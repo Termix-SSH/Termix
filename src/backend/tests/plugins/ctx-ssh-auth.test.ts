@@ -104,6 +104,8 @@ const { createPluginAuth, createPluginSsh } =
 const { DisposableBag } = await import("../../plugins/disposables.js");
 const { getSshAuthProvider } =
   await import("../../hosts/connect/auth-provider-registry.js");
+const { classifyKeyboardInteractive } =
+  await import("../../hosts/connect/keyboard-interactive.js");
 const { getLoginMethod, getSecondFactor } =
   await import("../../auth/registry.js");
 const { PluginCapabilityError } = await import("@termix/plugin-sdk/backend");
@@ -339,6 +341,101 @@ describe("ctx.auth", () => {
 
     await bag.disposeAll();
     expect(getSshAuthProvider("corp")).toBeUndefined();
+  });
+
+  it("registers a keyboard-interactive handler that sees only its own host settings", async () => {
+    const bag = new DisposableBag("fixture");
+    const auth = createPluginAuth({
+      manifest: manifest(["auth:provide"], { keyboardInteractive: ["gate"] }),
+      bag,
+      audit: vi.fn(async () => {}),
+    });
+    const seen: Array<Record<string, unknown>> = [];
+    auth.registerKeyboardInteractiveHandler({
+      id: "gate",
+      label: "Gate",
+      detect: (round, _host, settings) => {
+        seen.push(settings);
+        return /gate/i.test(round.name)
+          ? {
+              kind: "browser",
+              url: "https://gate",
+              code: "AB12",
+              instructions: "",
+            }
+          : null;
+      },
+      autoAnswerPasswords: (_host, settings) => settings.on === true,
+    });
+
+    const target = {
+      id: 1,
+      ip: "10.0.0.1",
+      port: 22,
+      username: "root",
+      password: "pw",
+      pluginSettings: { fixture: { on: true }, other: { secret: "x" } },
+    };
+    expect(
+      classifyKeyboardInteractive(
+        { name: "Gate sign-in", instructions: "", prompts: [] },
+        target,
+      ),
+    ).toEqual({
+      kind: "browser",
+      id: "gate",
+      label: "Gate",
+      url: "https://gate",
+      code: "AB12",
+      instructions: "",
+    });
+    expect(seen[0]).toEqual({ on: true });
+    expect(
+      classifyKeyboardInteractive(
+        {
+          name: "",
+          instructions: "",
+          prompts: [{ prompt: "Password:", echo: false }],
+        },
+        target,
+      ),
+    ).toEqual({ kind: "auto", responses: ["pw"] });
+
+    await bag.disposeAll();
+    expect(
+      classifyKeyboardInteractive(
+        { name: "Gate sign-in", instructions: "", prompts: [] },
+        target,
+      ).kind,
+    ).not.toBe("browser");
+  });
+
+  it("refuses a keyboard-interactive handler that is not declared", () => {
+    const auth = createPluginAuth({
+      manifest: manifest(["auth:provide"], { keyboardInteractive: ["gate"] }),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    expect(() =>
+      auth.registerKeyboardInteractiveHandler({
+        id: "other",
+        label: "Other",
+        detect: () => null,
+      }),
+    ).toThrow(/contributes\.auth\.keyboardInteractive/);
+
+    const undeclared = createPluginAuth({
+      manifest: manifest([], { keyboardInteractive: ["gate"] }),
+      bag: new DisposableBag("fixture"),
+      audit: vi.fn(async () => {}),
+    });
+    expect(() =>
+      undeclared.registerKeyboardInteractiveHandler({
+        id: "gate",
+        label: "Gate",
+        detect: () => null,
+      }),
+    ).toThrow(PluginCapabilityError);
   });
 
   it("registers login methods and second factors under the plugin, and records enrolment", async () => {

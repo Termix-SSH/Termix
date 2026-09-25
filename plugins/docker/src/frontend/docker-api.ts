@@ -28,9 +28,10 @@ export interface ConnectResult {
   prompt?: string;
   isPassword?: boolean;
   retry?: boolean;
-  requires_warpgate?: boolean;
+  requires_browser_sign_in?: boolean;
   url?: string | null;
-  securityKey?: string;
+  code?: string;
+  label?: string;
   connectionLogs?: ApiConnectionLog[];
 }
 
@@ -101,9 +102,9 @@ export function createDockerApi(api: PluginApiClient) {
         api.post("/ssh/connect-totp", { sessionId, totpCode }),
       ),
 
-    continueWarpgate: (sessionId: string) =>
-      call<ConnectResult>("complete Warpgate authentication", () =>
-        api.post("/ssh/connect-warpgate", { sessionId }),
+    continueBrowserSignIn: (sessionId: string) =>
+      call<ConnectResult>("continue after a browser sign-in", () =>
+        api.post("/ssh/connect-browser-sign-in", { sessionId }),
       ),
 
     disconnect: (sessionId: string) =>

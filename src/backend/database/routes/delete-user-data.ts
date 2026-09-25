@@ -10,7 +10,6 @@ import {
   createCurrentHostSidebarPreferenceRepository,
   createCurrentCredentialSidebarPreferenceRepository,
   createCurrentUiPreferenceRepository,
-  createCurrentOpksshTokenRepository,
   createCurrentOpenTabRepository,
   createCurrentRecentActivityRepository,
   createCurrentRbacAccessRepository,
@@ -97,9 +96,9 @@ export async function deleteUserAndRelatedData(
     // secret_sources cascade on the user's refUser() foreign key, as the
     // homepage and secret-sources plugins' adopted tables. The secret
     // source's token in ctx.secrets is cleaned up generically below, with
-    // every other plugin_settings row for this user.
+    // every other plugin_settings row for this user. The opkssh plugin's
+    // cached certificates cascade the same way.
 
-    await createCurrentOpksshTokenRepository().deleteByUserId(userId);
     await createCurrentVaultTokenRepository().deleteByUserId(userId);
     await createCurrentVaultProfileRepository().deleteByUserId(userId);
     await createCurrentTermixIdentityCaRepository().deleteByUserId(userId);

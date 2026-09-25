@@ -40,8 +40,6 @@
     "linkDialogTitle": "פתח קישור",
     "maxReconnectAttemptsReached": "הגעת למספר המקסימלי של ניסיונות חיבור מחדש",
     "noHostSelected": "לא נבחר מארח",
-    "opksshAuthFailed": "האימות נכשל. אנא בדוק את פרטי הגישה שלך ונסה שוב.",
-    "opksshTimeout": "הזמן שהוקצב לאימות הסתיים. אנא נסה שוב.",
     "passwordPromptFillTitle": "למלא את הסיסמה השמורה בשורת הפקודה הזו?",
     "reconnect": "התחבר מחדש",
     "reconnected": "התחבר מחדש בהצלחה",

@@ -1,6 +1,6 @@
 // HashiCorp Vault SSH signer authentication.
 //
-// Flow (mirrors the OPKSSH subsystem, but Vault-driven over HTTP):
+// Flow (Vault-driven over HTTP):
 //   1. Generate an ephemeral SSH keypair (never persisted long-term).
 //   2. The user authenticates to Vault via an interactive OIDC flow
 //      (auth/<mount>/oidc/auth_url -> browser -> auth/<mount>/oidc/callback),
@@ -8,7 +8,7 @@
 //   3. Vault's SSH secrets engine signs the ephemeral public key
 //      (<sshMount>/sign/<role>) -> short-lived OpenSSH certificate.
 //   4. The ephemeral private key + certificate are cached per-user (encrypted)
-//      until the certificate expires, then used to connect via setupOPKSSHCertAuth.
+//      until the certificate expires, then used to connect via applyCertificateAuth.
 //
 // No Vault tokens, AppRole secrets, or long-lived private keys are ever stored.
 // Vault connection SETTINGS live in shareable vault_profiles rows.

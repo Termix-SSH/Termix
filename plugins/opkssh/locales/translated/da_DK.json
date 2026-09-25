@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Log ind på denne vært med din identitetsudbyder i stedet for en adgangskode eller nøgle. Kræver OPKSSH-opsætning på serveren.",
+    "docs": "Se dokumenter"
+  },
+  "dialog": {
+    "title": "OPKSSH-godkendelse påkrævet",
+    "description": "Fuldfør godkendelsen i din browser for at fortsætte. Denne session forbliver gyldig i 24 timer.",
+    "openBrowser": "Åbn browseren for at godkende",
+    "waiting": "Venter på godkendelse i browseren...",
+    "authenticating": "Behandler godkendelse...",
+    "signInWith": "Log ind med {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Godkendelse mislykkedes. Tjek dine loginoplysninger, og prøv igen.",
+    "timeout": "Godkendelsen udløb. Prøv igen."
+  }
+}

@@ -40,8 +40,6 @@
     "linkDialogTitle": "Öppna länk",
     "maxReconnectAttemptsReached": "Maximalt antal återanslutningsförsök uppnådda",
     "noHostSelected": "Ingen värd vald",
-    "opksshAuthFailed": "Autentiseringen misslyckades. Kontrollera dina inloggningsuppgifter och försök igen.",
-    "opksshTimeout": "Autentiseringen har gått ut. Försök igen.",
     "passwordPromptFillTitle": "Fyll i det sparade lösenordet i den här frågan?",
     "reconnect": "Återanslut",
     "reconnected": "Återansluten lyckades",

@@ -2,7 +2,7 @@ import type { FileItem, SSHHost } from "@/types/index";
 import {
   TOTPDialog,
   SSHAuthDialog,
-  WarpgateDialog,
+  BrowserSignInDialog,
 } from "@termix/plugin-sdk/ui";
 import { PermissionsDialog } from "./components/PermissionsDialog.tsx";
 import { CompressDialog } from "./components/CompressDialog.tsx";
@@ -17,12 +17,13 @@ type FileManagerDialogsProps = {
   totpPrompt: string;
   handleTotpSubmit: (code: string) => void | Promise<void>;
   handleTotpCancel: () => void;
-  warpgateRequired: boolean;
-  warpgateUrl: string;
-  warpgateSecurityKey: string;
-  handleWarpgateContinue: () => void | Promise<void>;
-  handleWarpgateCancel: () => void;
-  handleWarpgateOpenUrl: () => void;
+  browserSignInRequired: boolean;
+  browserSignInUrl: string;
+  browserSignInCode: string;
+  browserSignInLabel: string;
+  handleBrowserSignInContinue: () => void | Promise<void>;
+  handleBrowserSignInCancel: () => void;
+  handleBrowserSignInOpenUrl: () => void;
   currentHost: SSHHost | null;
   showAuthDialog: boolean;
   authDialogReason: "no_keyboard" | "auth_failed" | "timeout";
@@ -49,12 +50,13 @@ export function FileManagerDialogs({
   totpPrompt,
   handleTotpSubmit,
   handleTotpCancel,
-  warpgateRequired,
-  warpgateUrl,
-  warpgateSecurityKey,
-  handleWarpgateContinue,
-  handleWarpgateCancel,
-  handleWarpgateOpenUrl,
+  browserSignInRequired,
+  browserSignInUrl,
+  browserSignInCode,
+  browserSignInLabel,
+  handleBrowserSignInContinue,
+  handleBrowserSignInCancel,
+  handleBrowserSignInOpenUrl,
   currentHost,
   showAuthDialog,
   authDialogReason,
@@ -85,13 +87,14 @@ export function FileManagerDialogs({
         backgroundColor="var(--bg-canvas)"
       />
 
-      <WarpgateDialog
-        isOpen={warpgateRequired}
-        url={warpgateUrl}
-        securityKey={warpgateSecurityKey}
-        onContinue={handleWarpgateContinue}
-        onCancel={handleWarpgateCancel}
-        onOpenUrl={handleWarpgateOpenUrl}
+      <BrowserSignInDialog
+        isOpen={browserSignInRequired}
+        label={browserSignInLabel}
+        url={browserSignInUrl}
+        code={browserSignInCode}
+        onContinue={handleBrowserSignInContinue}
+        onCancel={handleBrowserSignInCancel}
+        onOpenUrl={handleBrowserSignInOpenUrl}
         backgroundColor="var(--bg-canvas)"
       />
 

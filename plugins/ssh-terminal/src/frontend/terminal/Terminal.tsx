@@ -88,8 +88,7 @@ import {
   TOTPDialog,
   SSHAuthDialog,
   PassphraseDialog,
-  WarpgateDialog,
-  OPKSSHDialog,
+  BrowserSignInDialog,
   HostKeyVerificationDialog,
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
@@ -314,22 +313,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     >("no_keyboard");
     const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
     const [, setKeyboardInteractiveDetected] = useState(false);
-    const [warpgateAuthRequired, setWarpgateAuthRequired] = useState(false);
-    const [warpgateAuthUrl, setWarpgateAuthUrl] = useState<string>("");
-    const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
-    const warpgateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    const [opksshDialog, setOpksshDialog] = useState<{
-      isOpen: boolean;
-      authUrl: string;
-      requestId: string;
-      stage: "chooser" | "waiting" | "authenticating" | "completed" | "error";
-      error?: string;
-      providers?: Array<{ alias: string; issuer: string }>;
-      /** Which issuer is asking (OPKSSH by default, "Step CA", ...). */
-      label?: string;
+    // A keyboard-interactive round finished in a browser, named after the
+    // handler that claimed it (see "<id>_auth_required").
+    const [browserSignIn, setBrowserSignIn] = useState<{
+      id: string;
+      label: string;
+      url: string;
+      code: string;
     } | null>(null);
-    const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const browserSignInTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Overlays contributed by plugins (a Tailscale check, say) hear the
     // session's messages and may hold the connect timeout while they wait.
@@ -347,7 +339,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     };
 
-    const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<TerminalHostConfig | null>(null);
 
@@ -839,8 +830,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           webSocketRef.current?.close();
         },
         disconnect: () => webSocketRef.current?.close(),
+        send: (type, data) => {
+          if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+            webSocketRef.current.send(JSON.stringify({ type, data }));
+          }
+        },
+        connectPayload: () => ({
+          hostId: currentHostIdRef.current,
+          cols: terminal?.cols || 80,
+          rows: terminal?.rows || 24,
+          hostConfig: currentHostConfigRef.current,
+        }),
       }),
-      [host, backgroundColor, updateConnectionError],
+      [host, backgroundColor, updateConnectionError, terminal],
     );
 
     const activityLoggingRef = useRef(false);
@@ -1087,38 +1089,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (onClose) onClose();
     }
 
-    function handleWarpgateContinue() {
-      if (webSocketRef.current) {
-        if (warpgateTimeoutRef.current) {
-          clearTimeout(warpgateTimeoutRef.current);
-          warpgateTimeoutRef.current = null;
-        }
-        webSocketRef.current.send(
-          JSON.stringify({
-            type: "warpgate_auth_continue",
-            data: {},
-          }),
-        );
-        setWarpgateAuthRequired(false);
-        setWarpgateAuthUrl("");
-        setWarpgateSecurityKey("");
+    function clearBrowserSignIn() {
+      if (browserSignInTimeoutRef.current) {
+        clearTimeout(browserSignInTimeoutRef.current);
+        browserSignInTimeoutRef.current = null;
       }
+      setBrowserSignIn(null);
     }
 
-    function handleWarpgateCancel() {
-      if (warpgateTimeoutRef.current) {
-        clearTimeout(warpgateTimeoutRef.current);
-        warpgateTimeoutRef.current = null;
-      }
-      setWarpgateAuthRequired(false);
-      setWarpgateAuthUrl("");
-      setWarpgateSecurityKey("");
+    function handleBrowserSignInContinue() {
+      if (!browserSignIn || !webSocketRef.current) return;
+      webSocketRef.current.send(
+        JSON.stringify({
+          type: `${browserSignIn.id}_auth_continue`,
+          data: {},
+        }),
+      );
+      clearBrowserSignIn();
+    }
+
+    function handleBrowserSignInCancel() {
+      clearBrowserSignIn();
       if (onClose) onClose();
     }
 
-    function handleWarpgateOpenUrl() {
-      if (warpgateAuthUrl) {
-        window.open(warpgateAuthUrl, "_blank", "noopener,noreferrer");
+    function handleBrowserSignInOpenUrl() {
+      if (browserSignIn?.url) {
+        window.open(browserSignIn.url, "_blank", "noopener,noreferrer");
       }
     }
 
@@ -1356,9 +1353,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             clearTimeout(totpTimeoutRef.current);
             totpTimeoutRef.current = null;
           }
-          if (warpgateTimeoutRef.current) {
-            clearTimeout(warpgateTimeoutRef.current);
-            warpgateTimeoutRef.current = null;
+          if (browserSignInTimeoutRef.current) {
+            clearTimeout(browserSignInTimeoutRef.current);
+            browserSignInTimeoutRef.current = null;
           }
           if (webSocketRef.current?.readyState === WebSocket.OPEN) {
             webSocketRef.current.send(JSON.stringify({ type: "disconnect" }));
@@ -1912,7 +1909,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             updateConnectionError(errorMessage);
             setIsConnecting(false);
           } else if (msg.type === "connected") {
-            opksshFailedRef.current = false;
             vaultFailedRef.current = false;
             wasConnectedRef.current = true;
             setIsConnected(true);
@@ -2084,51 +2080,30 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               },
               isPush ? 300000 : 180000,
             );
-          } else if (msg.type === "warpgate_auth_required") {
-            setWarpgateAuthRequired(true);
-            setWarpgateAuthUrl(msg.url || "");
-            setWarpgateSecurityKey(msg.securityKey || "N/A");
+          } else if (
+            msg.kind === "browser" &&
+            typeof msg.type === "string" &&
+            msg.type.endsWith("_auth_required")
+          ) {
+            setBrowserSignIn({
+              id: msg.type.slice(0, -"_auth_required".length),
+              label: typeof msg.label === "string" ? msg.label : "",
+              url: msg.url || "",
+              code: msg.securityKey || "",
+            });
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
             }
-            if (warpgateTimeoutRef.current) {
-              clearTimeout(warpgateTimeoutRef.current);
+            if (browserSignInTimeoutRef.current) {
+              clearTimeout(browserSignInTimeoutRef.current);
             }
-            warpgateTimeoutRef.current = setTimeout(() => {
-              setWarpgateAuthRequired(false);
+            browserSignInTimeoutRef.current = setTimeout(() => {
+              setBrowserSignIn(null);
               if (webSocketRef.current) {
                 webSocketRef.current.close();
               }
             }, 300000);
-          } else if (msg.type === "opkssh_auth_required") {
-            if (connectionTimeoutRef.current) {
-              clearTimeout(connectionTimeoutRef.current);
-              connectionTimeoutRef.current = null;
-            }
-            if (opksshFailedRef.current) {
-              setOpksshDialog(null);
-              if (opksshTimeoutRef.current) {
-                clearTimeout(opksshTimeoutRef.current);
-                opksshTimeoutRef.current = null;
-              }
-              updateConnectionError(t("terminal.opksshAuthFailed"));
-              addLog({
-                type: "error",
-                stage: "auth",
-                message: t("terminal.opksshAuthFailed"),
-              });
-            } else {
-              opksshFailedRef.current = true;
-              if (webSocketRef.current) {
-                webSocketRef.current.send(
-                  JSON.stringify({
-                    type: "opkssh_start_auth",
-                    data: { hostId: msg.hostId },
-                  }),
-                );
-              }
-            }
           } else if (msg.type === "vault_auth_required") {
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
@@ -2209,98 +2184,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
             setVaultDialog({ stage: "error", error: msg.error });
             setIsConnecting(false);
-          } else if (msg.type === "opkssh_status") {
-            if (connectionErrorRef.current) return;
-            if (msg.stage === "chooser") {
-              setOpksshDialog({
-                isOpen: true,
-                authUrl: msg.url || "",
-                requestId: msg.requestId || "",
-                stage: "chooser",
-                providers: msg.providers,
-                label: typeof msg.label === "string" ? msg.label : undefined,
-              });
-              if (opksshTimeoutRef.current) {
-                clearTimeout(opksshTimeoutRef.current);
-              }
-              opksshTimeoutRef.current = setTimeout(() => {
-                setOpksshDialog(null);
-                if (webSocketRef.current) {
-                  webSocketRef.current.close();
-                }
-              }, 300000);
-            } else {
-              setOpksshDialog((prev) =>
-                prev ? { ...prev, stage: msg.stage } : null,
-              );
-            }
-          } else if (msg.type === "opkssh_completed") {
-            if (opksshTimeoutRef.current) {
-              clearTimeout(opksshTimeoutRef.current);
-              opksshTimeoutRef.current = null;
-            }
-            setOpksshDialog(null);
-            if (webSocketRef.current && terminal) {
-              webSocketRef.current.send(
-                JSON.stringify({
-                  type: "opkssh_auth_completed",
-                  data: {
-                    hostId: currentHostIdRef.current,
-                    cols: terminal.cols || 80,
-                    rows: terminal.rows || 24,
-                    hostConfig: currentHostConfigRef.current,
-                  },
-                }),
-              );
-            }
-          } else if (msg.type === "opkssh_error") {
-            if (connectionErrorRef.current) return;
-            opksshFailedRef.current = true;
-            if (opksshDialog) {
-              setOpksshDialog((prev) =>
-                prev ? { ...prev, stage: "error", error: msg.error } : null,
-              );
-            } else {
-              setOpksshDialog({
-                isOpen: true,
-                authUrl: "",
-                requestId: msg.requestId || "",
-                stage: "error",
-                error: msg.error,
-              });
-            }
-            setIsConnecting(false);
-          } else if (msg.type === "opkssh_timeout") {
-            if (connectionErrorRef.current) return;
-            opksshFailedRef.current = true;
-            if (opksshDialog) {
-              setOpksshDialog((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      stage: "error",
-                      error: t("terminal.opksshTimeout"),
-                    }
-                  : null,
-              );
-            } else {
-              setOpksshDialog({
-                isOpen: true,
-                authUrl: "",
-                requestId: msg.requestId || "",
-                stage: "error",
-                error: t("terminal.opksshTimeout"),
-              });
-            }
-            setIsConnecting(false);
-          } else if (msg.type === "opkssh_config_error") {
-            setOpksshDialog({
-              isOpen: true,
-              authUrl: "",
-              requestId: msg.requestId || "",
-              stage: "error",
-              error: msg.instructions || msg.error,
-            });
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -2357,7 +2240,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "sessionAttached") {
             isAttachingSessionRef.current = false;
-            opksshFailedRef.current = false;
             vaultFailedRef.current = false;
             wasConnectedRef.current = true;
             setIsConnected(true);
@@ -3985,70 +3867,16 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           backgroundColor={backgroundColor}
         />
 
-        <WarpgateDialog
-          isOpen={warpgateAuthRequired}
-          url={warpgateAuthUrl}
-          securityKey={warpgateSecurityKey}
-          onContinue={handleWarpgateContinue}
-          onCancel={handleWarpgateCancel}
-          onOpenUrl={handleWarpgateOpenUrl}
+        <BrowserSignInDialog
+          isOpen={browserSignIn !== null}
+          label={browserSignIn?.label ?? ""}
+          url={browserSignIn?.url ?? ""}
+          code={browserSignIn?.code ?? ""}
+          onContinue={handleBrowserSignInContinue}
+          onCancel={handleBrowserSignInCancel}
+          onOpenUrl={handleBrowserSignInOpenUrl}
           backgroundColor={backgroundColor}
         />
-
-        {opksshDialog?.isOpen && (
-          <OPKSSHDialog
-            isOpen={opksshDialog.isOpen}
-            authUrl={opksshDialog.authUrl}
-            requestId={opksshDialog.requestId}
-            stage={opksshDialog.stage}
-            error={opksshDialog.error}
-            providers={opksshDialog.providers}
-            label={opksshDialog.label}
-            onCancel={() => {
-              if (webSocketRef.current) {
-                webSocketRef.current.send(
-                  JSON.stringify({
-                    type: "opkssh_cancel",
-                    data: { requestId: opksshDialog.requestId },
-                  }),
-                );
-              }
-              setOpksshDialog(null);
-              if (opksshTimeoutRef.current) {
-                clearTimeout(opksshTimeoutRef.current);
-                opksshTimeoutRef.current = null;
-              }
-            }}
-            onOpenUrl={() => {
-              window.open(opksshDialog.authUrl, "_blank");
-              if (webSocketRef.current) {
-                webSocketRef.current.send(
-                  JSON.stringify({
-                    type: "opkssh_browser_opened",
-                    data: { requestId: opksshDialog.requestId },
-                  }),
-                );
-              }
-            }}
-            onSelectProvider={(alias) => {
-              if (!opksshDialog.authUrl) return;
-              const selectUrl = `${opksshDialog.authUrl}/select?op=${encodeURIComponent(alias)}`;
-              window.open(selectUrl, "_blank");
-              if (webSocketRef.current) {
-                webSocketRef.current.send(
-                  JSON.stringify({
-                    type: "opkssh_browser_opened",
-                    data: { requestId: opksshDialog.requestId },
-                  }),
-                );
-              }
-              setOpksshDialog((prev) =>
-                prev ? { ...prev, stage: "waiting" } : null,
-              );
-            }}
-            backgroundColor={backgroundColor}
-          />
-        )}
 
         <ComponentSlot
           slotId={TERMINAL_OVERLAY_SLOT}

@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Le conteneur doit être en cours d'exécution pour accéder à la console",
     "verificationCodePrompt": "Saisissez le code de vérification",
     "totpVerificationFailed": "La vérification TOTP a échoué. Veuillez réessayer.",
-    "warpgateVerificationFailed": "L'authentification Warpgate a échoué. Veuillez réessayer.",
     "connectedTo": "Connecté à {{containerName}}",
     "disconnected": "Déconnecté",
     "consoleError": "Erreur de la console",

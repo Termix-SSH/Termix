@@ -290,7 +290,6 @@
     "connecting": "接続中...",
     "connectedSuccessfully": "接続しました",
     "totpVerificationFailed": "TOTP検証に失敗しました",
-    "warpgateVerificationFailed": "Warpgate認証に失敗しました",
     "authenticationFailed": "認証に失敗しました",
     "incorrectPassphrase": "パスフレーズが間違っています。もう一度お試しください。",
     "verificationCodePrompt": "認証コード:",

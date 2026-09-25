@@ -290,7 +290,6 @@
     "connecting": "连接中...",
     "connectedSuccessfully": "连接成功",
     "totpVerificationFailed": "TOTP 验证失败",
-    "warpgateVerificationFailed": "Warpgate 认证失败",
     "authenticationFailed": "认证失败",
     "incorrectPassphrase": "密码错误。请重试。",
     "verificationCodePrompt": "验证码:",

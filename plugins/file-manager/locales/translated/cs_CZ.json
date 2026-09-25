@@ -290,7 +290,6 @@
     "connecting": "Spojovací...",
     "connectedSuccessfully": "Úspěšné připojení",
     "totpVerificationFailed": "Ověření TOTP se nezdařilo",
-    "warpgateVerificationFailed": "Ověření Warpgate selhalo",
     "authenticationFailed": "Ověření se nezdařilo",
     "incorrectPassphrase": "Nesprávné heslo. Zkuste to prosím znovu.",
     "verificationCodePrompt": "Ověřovací kód:",

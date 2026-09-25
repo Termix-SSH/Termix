@@ -139,7 +139,6 @@ export type Host = {
     | "tailscale"
     | "agent"
     | "vault";
-  useWarpgate?: boolean;
   shareSshAuth?: boolean;
   password?: string;
   key?: string;
@@ -293,7 +292,6 @@ export interface HostData {
     | "tailscale"
     | "agent"
     | "vault";
-  useWarpgate?: boolean;
   shareSshAuth?: boolean;
   password?: string;
   key?: File | string | null;

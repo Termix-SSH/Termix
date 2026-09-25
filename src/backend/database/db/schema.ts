@@ -168,7 +168,6 @@ export const hosts = sqliteTable(
     // never been manually reordered; falls back to name sort in that case.
     sortOrder: integer("sort_order"),
     authType: text("auth_type").notNull(),
-    useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
     shareSshAuth: integer("share_ssh_auth", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -652,37 +651,6 @@ export const auditLogs = sqliteTable(
     index("idx_audit_logs_action_ts").on(table.action, table.timestamp),
     index("idx_audit_logs_resource_ts").on(table.resourceType, table.timestamp),
   ],
-);
-
-export const opksshTokens = sqliteTable(
-  "opkssh_tokens",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-  
-    sshCert: text("ssh_cert", { length: 8192 }).notNull(),
-    privateKey: text("private_key", { length: 8192 }).notNull(),
-  
-    email: text("email"),
-    sub: text("sub"),
-    issuer: text("issuer"),
-    audience: text("audience"),
-  
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    expiresAt: text("expires_at").notNull(),
-    lastUsed: text("last_used"),
-  },
-  // Declared inline in the production DDL as UNIQUE(...), but never here,
-  // so the generated Postgres and MySQL schemas allowed duplicates the
-  // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_opkssh_tokens_user_host").on(table.userId, table.hostId)],
 );
 
 // Vault SSH signer profiles. These hold ONLY non-secret connection settings and

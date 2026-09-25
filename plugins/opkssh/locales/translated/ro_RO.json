@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Conectați-vă la această gazdă folosind furnizorul de identitate în loc de o parolă sau o cheie. Necesită configurarea OPKSSH pe server.",
+    "docs": "Vizualizați documentele"
+  },
+  "dialog": {
+    "title": "Autentificare OPKSSH necesară",
+    "description": "Finalizați autentificarea în browser pentru a continua. Această sesiune va rămâne valabilă timp de 24 de ore.",
+    "openBrowser": "Deschideți browserul pentru autentificare",
+    "waiting": "Se așteaptă autentificarea în browser...",
+    "authenticating": "Se procesează autentificarea...",
+    "signInWith": "Conectați-vă cu {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Autentificarea a eșuat. Verificați acreditările și încercați din nou.",
+    "timeout": "Autentificarea a expirat. Vă rugăm să încercați din nou."
+  }
+}

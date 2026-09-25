@@ -102,6 +102,12 @@ export function listCredentialTypes(): string[] {
 export function registerKeyboardInteractiveInterceptor(
   interceptor: KeyboardInteractiveInterceptor,
 ): () => void {
+  const existing = interceptors.get(interceptor.id);
+  if (existing && existing.pluginId !== interceptor.pluginId) {
+    throw new Error(
+      `Keyboard-interactive handler "${interceptor.id}" is already provided by ${existing.pluginId}`,
+    );
+  }
   interceptors.set(interceptor.id, interceptor);
   return () => {
     if (interceptors.get(interceptor.id) === interceptor) {

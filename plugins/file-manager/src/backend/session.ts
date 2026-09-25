@@ -57,7 +57,7 @@ export interface PendingTOTPSession {
   totpPromptIndex?: number;
   resolvedPassword?: string;
   totpAttempts: number;
-  isWarpgate?: boolean;
+  isBrowserSignIn?: boolean;
 }
 
 export function execWithSudo(

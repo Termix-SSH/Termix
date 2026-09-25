@@ -290,7 +290,6 @@
     "connecting": "Kapcsolódás...",
     "connectedSuccessfully": "Sikeres csatlakozás",
     "totpVerificationFailed": "TOTP-ellenőrzés sikertelen",
-    "warpgateVerificationFailed": "Warpgate hitelesítés sikertelen",
     "authenticationFailed": "Hitelesítés sikertelen",
     "incorrectPassphrase": "Hibás jelszó. Kérjük, próbálja újra.",
     "verificationCodePrompt": "Ellenőrző kód:",

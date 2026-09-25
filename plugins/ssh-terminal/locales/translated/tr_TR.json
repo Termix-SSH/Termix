@@ -40,8 +40,6 @@
     "linkDialogTitle": "Bağlantıyı Aç",
     "maxReconnectAttemptsReached": "Maksimum yeniden bağlanma denemesine ulaşıldı",
     "noHostSelected": "Hiçbir sunucu seçilmedi",
-    "opksshAuthFailed": "Kimlik doğrulaması başarısız oldu. Lütfen kimlik bilgilerinizi kontrol edip tekrar deneyin.",
-    "opksshTimeout": "Kimlik doğrulaması zaman aşımına uğradı. Lütfen tekrar deneyin.",
     "passwordPromptFillTitle": "Kayıtlı parola bu isteme doldurulsun mu?",
     "reconnect": "Yeniden Bağlan",
     "reconnected": "Başarıyla yeniden bağlandı",

@@ -56,6 +56,10 @@
       "types": "./dist/host-commands.d.ts",
       "default": "./dist/host-commands.js"
     },
+    "./ssh-certs": {
+      "types": "./dist/ssh-certs.d.ts",
+      "default": "./dist/ssh-certs.js"
+    },
     "./tsconfig.plugin.json": "./tsconfig.plugin.json",
     "./schema/manifest.schema.json": "./schema/manifest.schema.json"
   },

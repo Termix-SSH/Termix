@@ -35,7 +35,11 @@ export interface SshConnectHost {
   keyPassword?: string | null;
   keyType?: string | null;
   certPublicKey?: string | null;
-  useWarpgate?: boolean | null;
+  /**
+   * Host-scope plugin settings by plugin id, filled in by the resolver so
+   * synchronous hooks (keyboard-interactive handlers) can read them.
+   */
+  pluginSettings?: Record<string, Record<string, unknown>> | null;
   forceKeyboardInteractive?: boolean | null;
   vaultProfile?: { id?: number | null } | null;
   terminalConfig?: Record<string, unknown> | null;
@@ -234,21 +238,30 @@ export interface KeyboardInteractivePrompt {
   echo?: boolean;
 }
 
+/**
+ * A round finished in a browser: open the URL, compare the code, continue.
+ * `id` names the handler that claimed it; transports name their messages
+ * after it.
+ */
+export interface BrowserSignInRound {
+  kind: "browser";
+  id: string;
+  label: string;
+  url: string | null;
+  code: string;
+  instructions: string;
+}
+
 /** What to do with one keyboard-interactive round. */
 export type KeyboardInteractiveDecision =
   | { kind: "auto"; responses: string[] }
-  | {
-      kind: "warpgate";
-      url: string | null;
-      securityKey: string;
-      instructions: string;
-    }
+  | BrowserSignInRound
   | { kind: "totp"; promptIndex: number }
   | { kind: "input"; promptIndex: number; isPush: boolean };
 
 /**
- * Interceptors run before the built-in classifier. A provider that owns a
- * prompt style (Warpgate today) returns a decision; everyone else returns null.
+ * Interceptors run before the built-in classifier. A plugin that owns a
+ * prompt style returns a decision; everyone else returns null.
  */
 export interface KeyboardInteractiveInterceptor {
   id: string;
@@ -281,9 +294,4 @@ export interface SshPromptChannel {
 export type SshPromptRequest =
   | { kind: "totp"; prompt: string; retry: boolean }
   | { kind: "input"; prompt: string; echo: boolean; isPush: boolean }
-  | {
-      kind: "warpgate";
-      url: string | null;
-      securityKey: string;
-      instructions: string;
-    };
+  | BrowserSignInRound;

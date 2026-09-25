@@ -290,7 +290,6 @@
     "connecting": "Connectant...",
     "connectedSuccessfully": "Connexió correcta",
     "totpVerificationFailed": "La verificació TOTP ha fallat",
-    "warpgateVerificationFailed": "L'autenticació de Warpgate ha fallat",
     "authenticationFailed": "L'autenticació ha fallat",
     "incorrectPassphrase": "Contrasenya incorrecta. Si us plau, torneu-ho a intentar.",
     "verificationCodePrompt": "Codi de verificació:",

@@ -1,0 +1,19 @@
+{
+  "name": "@termix-plugin/opkssh",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -p tsconfig.json",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "js-yaml": "^5.2.3"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*",
+    "@types/js-yaml": "^4.0.9"
+  }
+}

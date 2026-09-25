@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Containeren må kjøre for å få tilgang til konsollen",
     "verificationCodePrompt": "Skriv inn bekreftelseskoden",
     "totpVerificationFailed": "TOTP-verifisering mislyktes. Prøv på nytt.",
-    "warpgateVerificationFailed": "Warpgate-autentisering mislyktes. Prøv på nytt.",
     "connectedTo": "Koblet til {{containerName}}",
     "disconnected": "Frakoblet",
     "consoleError": "Konsollfeil",

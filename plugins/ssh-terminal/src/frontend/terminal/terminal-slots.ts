@@ -10,7 +10,7 @@ import type { Host } from "../types";
  *   `openSidePanel(id)`, rendered with TerminalSidePanelProps.
  * - "terminal.overlay" (components): always mounted over the terminal and
  *   given the session's server messages, for connection flows a plugin owns
- *   (a Tailscale check, say).
+ *   (a Tailscale check, an OPKSSH sign-in). It can answer on the socket.
  *
  * Every contribution's `when` sees `{ host }`.
  */
@@ -79,4 +79,11 @@ export interface TerminalOverlayProps {
   fail: (message: string) => void;
   /** Closes the session's connection. */
   disconnect: () => void;
+  /** Sends a message on the session's socket, as { type, data }. */
+  send: (type: string, data?: unknown) => void;
+  /**
+   * What the server needs to connect again after a sign-in finished: send it
+   * as the data of "<interaction>_auth_completed".
+   */
+  connectPayload: () => Record<string, unknown>;
 }

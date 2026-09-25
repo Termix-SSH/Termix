@@ -1420,7 +1420,6 @@ const migrateSchema = () => {
     { column: "telnet_password", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_password TEXT" },
     { column: "rdp_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
     { column: "vnc_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
-    { column: "use_warpgate", sql: "ALTER TABLE ssh_data ADD COLUMN use_warpgate INTEGER NOT NULL DEFAULT 0" },
     { column: "telnet_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
     { column: "rdp_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_auth_type TEXT" },
     { column: "vnc_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_auth_type TEXT" },
@@ -1475,23 +1474,6 @@ const migrateSchema = () => {
   } catch (e) {
     databaseLogger.warn("Failed to backfill share_ssh_auth", {
       operation: "share_ssh_auth_backfill_v1",
-      error: e,
-    });
-  }
-
-  // Migrate legacy authType="warpgate" hosts to useWarpgate=1 with authType="none"
-  try {
-    const result = sqlite
-      .prepare("UPDATE ssh_data SET use_warpgate = 1, auth_type = 'none' WHERE auth_type = 'warpgate'")
-      .run();
-    if (result.changes > 0) {
-      databaseLogger.info(`Migrated ${result.changes} host(s) from authType='warpgate' to useWarpgate=true`, {
-        operation: "warpgate_auth_migration",
-      });
-    }
-  } catch (e) {
-    databaseLogger.warn("Failed to migrate legacy warpgate authType hosts", {
-      operation: "warpgate_auth_migration",
       error: e,
     });
   }
@@ -1595,37 +1577,6 @@ const migrateSchema = () => {
       operation: "schema_migration",
       error: migrateError,
     });
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM opkssh_tokens LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS opkssh_tokens (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          host_id INTEGER NOT NULL,
-          ssh_cert TEXT NOT NULL,
-          private_key TEXT NOT NULL,
-          email TEXT,
-          sub TEXT,
-          issuer TEXT,
-          audience TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          expires_at TEXT NOT NULL,
-          last_used TEXT,
-          UNIQUE(user_id, host_id),
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create opkssh_tokens table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
   }
 
   try {

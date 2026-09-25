@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Die houer moet loop om toegang tot die konsole te verkry",
     "verificationCodePrompt": "Voer verifikasiekode in",
     "totpVerificationFailed": "TOTP-verifikasie het misluk. Probeer asseblief weer.",
-    "warpgateVerificationFailed": "Warpgate-verifikasie het misluk. Probeer asseblief weer.",
     "connectedTo": "Gekoppel aan {{containerName}}",
     "disconnected": "Ontkoppel",
     "consoleError": "Konsolefout",

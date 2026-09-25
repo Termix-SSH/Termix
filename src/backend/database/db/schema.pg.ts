@@ -178,7 +178,6 @@ export const hosts = pgTable(
     // never been manually reordered; falls back to name sort in that case.
     sortOrder: integer("sort_order"),
     authType: text("auth_type").notNull(),
-    useWarpgate: boolean("use_warpgate").notNull().default(false),
     shareSshAuth: boolean("share_ssh_auth")
       .notNull()
       .default(false),
@@ -660,37 +659,6 @@ export const auditLogs = pgTable(
     index("idx_audit_logs_action_ts").on(table.action, table.timestamp),
     index("idx_audit_logs_resource_ts").on(table.resourceType, table.timestamp),
   ],
-);
-
-export const opksshTokens = pgTable(
-  "opkssh_tokens",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    hostId: integer("host_id")
-      .notNull()
-      .references(() => hosts.id, { onDelete: "cascade" }),
-  
-    sshCert: text("ssh_cert").notNull(),
-    privateKey: text("private_key").notNull(),
-  
-    email: text("email"),
-    sub: text("sub"),
-    issuer: text("issuer"),
-    audience: text("audience"),
-  
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
-    lastUsed: text("last_used"),
-  },
-  // Declared inline in the production DDL as UNIQUE(...), but never here,
-  // so the generated Postgres and MySQL schemas allowed duplicates the
-  // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_opkssh_tokens_user_host").on(table.userId, table.hostId)],
 );
 
 // Vault SSH signer profiles. These hold ONLY non-secret connection settings and

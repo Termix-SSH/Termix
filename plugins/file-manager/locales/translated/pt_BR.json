@@ -290,7 +290,6 @@
     "connecting": "Conectando...",
     "connectedSuccessfully": "Conexão estabelecida com sucesso.",
     "totpVerificationFailed": "A verificação TOTP falhou.",
-    "warpgateVerificationFailed": "A autenticação do portal de guerra falhou.",
     "authenticationFailed": "A autenticação falhou.",
     "incorrectPassphrase": "Senha incorreta. Tente novamente.",
     "verificationCodePrompt": "Código de verificação:",

@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Přihlaste se k tomuto hostiteli pomocí svého poskytovatele identity namísto hesla nebo klíče. Vyžaduje nastavení OPKSSH na serveru.",
+    "docs": "Zobrazit dokumenty"
+  },
+  "dialog": {
+    "title": "Vyžadováno ověřování OPKSSH",
+    "description": "Pro pokračování dokončete ověření ve vašem prohlížeči. Tato relace bude platná 24 hodin.",
+    "openBrowser": "Otevřít prohlížeč pro ověření",
+    "waiting": "Čekání na ověření v prohlížeči...",
+    "authenticating": "Zpracování ověřování...",
+    "signInWith": "Přihlásit se pomocí {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Ověření se nezdařilo. Zkontrolujte prosím své přihlašovací údaje a zkuste to znovu.",
+    "timeout": "Časový limit ověření vypršel. Zkuste to prosím znovu."
+  }
+}

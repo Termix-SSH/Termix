@@ -64,7 +64,6 @@ interface ConnectToHostData {
     credentialId?: number;
     userId?: string;
     forceKeyboardInteractive?: boolean;
-    useWarpgate?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
     useSocks5?: boolean;
     socks5Host?: string;
@@ -341,8 +340,9 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
     let isCleaningUp = false;
     let isShellInitializing = false;
     let isDuplicateConnDiscarded = false;
-    let warpgateAuthPromptSent = false;
-    let warpgateAuthTimeout: NodeJS.Timeout | null = null;
+    // The keyboard-interactive handler whose browser sign-in is pending.
+    let browserSignInId: string | null = null;
+    let browserSignInTimeout: NodeJS.Timeout | null = null;
     let isAwaitingAuthCredentials = false;
 
     let wsAlive = true;
@@ -418,7 +418,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
       keyboardInteractiveResponded = false;
       keyboardInteractiveFinish = null;
       totpPromptSent = false;
-      warpgateAuthPromptSent = false;
+      browserSignInId = null;
     }
 
     ws.on(
@@ -907,19 +907,6 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
               break;
             }
 
-            case "warpgate_auth_continue": {
-              if (keyboardInteractiveFinish) {
-                if (warpgateAuthTimeout) {
-                  clearTimeout(warpgateAuthTimeout);
-                  warpgateAuthTimeout = null;
-                }
-                keyboardInteractiveFinish([""]);
-                keyboardInteractiveFinish = null;
-                warpgateAuthPromptSent = false;
-              }
-              break;
-            }
-
             case "reconnect_with_credentials": {
               const credentialsData = data as {
                 cols: number;
@@ -998,178 +985,6 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
                     type: "error",
                     message:
                       "Failed to connect with provided credentials: " + errMsg,
-                  }),
-                );
-              });
-              break;
-            }
-
-            case "opkssh_start_auth": {
-              const opksshData = data as { hostId: number };
-              try {
-                await startAuthInteraction("opkssh", opksshData.hostId, data);
-              } catch (error) {
-                sshLogger.error("Failed to start OPKSSH auth", error, {
-                  operation: "opkssh_start_auth_error",
-                  userId,
-                  hostId: opksshData.hostId,
-                });
-                ws.send(
-                  JSON.stringify({
-                    type: "opkssh_error",
-                    requestId: "",
-                    error:
-                      error instanceof PluginSshInteractionError
-                        ? error.message
-                        : "Failed to start OPKSSH authentication",
-                  }),
-                );
-              }
-              break;
-            }
-
-            case "opkssh_cancel": {
-              const cancelData = data as { requestId: string };
-              try {
-                await ctx.ssh.cancelInteraction("opkssh", {
-                  requestId: String(cancelData?.requestId ?? ""),
-                });
-                resetConnectionState();
-              } catch (error) {
-                sshLogger.error("Failed to cancel OPKSSH auth", error, {
-                  operation: "opkssh_cancel_error",
-                  userId,
-                });
-              }
-              break;
-            }
-
-            case "opkssh_browser_opened": {
-              break;
-            }
-
-            case "opkssh_auth_completed": {
-              const completedData = data as {
-                hostId: number;
-                cols?: number;
-                rows?: number;
-                hostConfig?: ConnectToHostData["hostConfig"];
-              };
-
-              resetConnectionState();
-
-              const reconnectConfig: ConnectToHostData = {
-                cols: completedData.cols || 80,
-                rows: completedData.rows || 24,
-                hostConfig:
-                  completedData.hostConfig ||
-                  ({
-                    id: completedData.hostId,
-                    ip: "",
-                    port: 22,
-                    username: "",
-                    userId,
-                  } as ConnectToHostData["hostConfig"]),
-              };
-
-              handleConnectToHost(reconnectConfig).catch((error) => {
-                sshLogger.error(
-                  "Failed to reconnect after OPKSSH auth",
-                  error,
-                  {
-                    operation: "opkssh_reconnect_error",
-                    userId,
-                    hostId: completedData.hostId,
-                  },
-                );
-                ws.send(
-                  JSON.stringify({
-                    type: "error",
-                    message:
-                      "Failed to connect after authentication: " +
-                      getErrorMessage(error),
-                  }),
-                );
-              });
-              break;
-            }
-
-            case "vault_start_auth": {
-              const vaultData = data as { hostId: number };
-              try {
-                await startAuthInteraction("vault", vaultData.hostId, data);
-              } catch (error) {
-                sshLogger.error("Failed to start Vault auth", error, {
-                  operation: "vault_start_auth_error",
-                  userId,
-                  hostId: vaultData.hostId,
-                });
-                ws.send(
-                  JSON.stringify({
-                    type: "vault_error",
-                    hostId: vaultData.hostId,
-                    error: getErrorMessage(
-                      error,
-                      "Failed to start Vault authentication",
-                    ),
-                  }),
-                );
-              }
-              break;
-            }
-
-            case "vault_cancel": {
-              const cancelData = data as { hostId: number };
-              try {
-                await ctx.ssh.cancelInteraction("vault", {
-                  hostId: cancelData.hostId,
-                });
-                resetConnectionState();
-              } catch (error) {
-                sshLogger.error("Failed to cancel Vault auth", error, {
-                  operation: "vault_cancel_error",
-                  userId,
-                });
-              }
-              break;
-            }
-
-            case "vault_auth_completed": {
-              const completedData = data as {
-                hostId: number;
-                cols?: number;
-                rows?: number;
-                hostConfig?: ConnectToHostData["hostConfig"];
-              };
-
-              resetConnectionState();
-
-              const reconnectConfig: ConnectToHostData = {
-                cols: completedData.cols || 80,
-                rows: completedData.rows || 24,
-                hostConfig:
-                  completedData.hostConfig ||
-                  ({
-                    id: completedData.hostId,
-                    ip: "",
-                    port: 22,
-                    username: "",
-                    userId,
-                  } as ConnectToHostData["hostConfig"]),
-              };
-
-              handleConnectToHost(reconnectConfig).catch((error) => {
-                sshLogger.error("Failed to reconnect after Vault auth", error, {
-                  operation: "vault_reconnect_error",
-                  userId,
-                  hostId: completedData.hostId,
-                });
-                ws.send(
-                  JSON.stringify({
-                    type: "error",
-                    message:
-                      "Failed to connect after authentication: " +
-                      getErrorMessage(error),
                   }),
                 );
               });
@@ -1296,6 +1111,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
             }
 
             default:
+              if (await handleSignInMessage(type, data)) break;
               sshLogger.warn("Unknown message type received", {
                 operation: "websocket_message_unknown_type",
                 userId,
@@ -1338,6 +1154,122 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         requestOrigin: connection.requestOrigin,
         payload: (payload ?? {}) as Record<string, unknown>,
       });
+    }
+
+    /**
+     * Messages a sign-in's UI sends: "<interaction>_start_auth", "_cancel"
+     * and "_auth_completed" for a provider's browser step, and
+     * "<handler>_auth_continue" for a pending keyboard-interactive browser
+     * round. False for anything else.
+     */
+    async function handleSignInMessage(
+      type: string,
+      data: unknown,
+    ): Promise<boolean> {
+      const match =
+        /^([a-z0-9-]+)_(start_auth|cancel|auth_completed|auth_continue)$/.exec(
+          type,
+        );
+      if (!match) return false;
+      const [, name, action] = match;
+      const payload = (data ?? {}) as Record<string, unknown>;
+      const hostId = Number(payload.hostId);
+
+      if (action === "start_auth") {
+        try {
+          await startAuthInteraction(name, hostId, payload);
+        } catch (error) {
+          sshLogger.error("Failed to start sign-in", error, {
+            operation: "sign_in_start_error",
+            interaction: name,
+            userId,
+            hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: `${name}_error`,
+              requestId: "",
+              hostId,
+              error:
+                error instanceof PluginSshInteractionError
+                  ? error.message
+                  : getErrorMessage(error, "Failed to start authentication"),
+            }),
+          );
+        }
+        return true;
+      }
+
+      if (action === "cancel") {
+        try {
+          await ctx.ssh.cancelInteraction(name, {
+            requestId:
+              typeof payload.requestId === "string"
+                ? payload.requestId
+                : undefined,
+            hostId: Number.isInteger(hostId) ? hostId : undefined,
+          });
+          resetConnectionState();
+        } catch (error) {
+          sshLogger.error("Failed to cancel sign-in", error, {
+            operation: "sign_in_cancel_error",
+            interaction: name,
+            userId,
+          });
+        }
+        return true;
+      }
+
+      if (action === "auth_continue") {
+        if (name === browserSignInId && keyboardInteractiveFinish) {
+          if (browserSignInTimeout) {
+            clearTimeout(browserSignInTimeout);
+            browserSignInTimeout = null;
+          }
+          keyboardInteractiveFinish([""]);
+          keyboardInteractiveFinish = null;
+          browserSignInId = null;
+        }
+        return true;
+      }
+
+      const completed = payload as {
+        hostId: number;
+        cols?: number;
+        rows?: number;
+        hostConfig?: ConnectToHostData["hostConfig"];
+      };
+      resetConnectionState();
+      const reconnectConfig: ConnectToHostData = {
+        cols: completed.cols || 80,
+        rows: completed.rows || 24,
+        hostConfig:
+          completed.hostConfig ||
+          ({
+            id: completed.hostId,
+            ip: "",
+            port: 22,
+            username: "",
+            userId,
+          } as ConnectToHostData["hostConfig"]),
+      };
+      handleConnectToHost(reconnectConfig).catch((error) => {
+        sshLogger.error("Failed to reconnect after sign-in", error, {
+          operation: "sign_in_reconnect_error",
+          interaction: name,
+          userId,
+          hostId: completed.hostId,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Failed to connect after authentication: " +
+              getErrorMessage(error),
+          }),
+        );
+      });
+      return true;
     }
 
     async function handleConnectToHost(data: ConnectToHostData) {
@@ -2360,7 +2292,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
             port,
             username,
             authType: resolvedCredentials.authType,
-            warpgateAuthPromptSent,
+            browserSignInId,
             isKeyboardInteractive,
             hasKeyboardInteractiveFinish: !!keyboardInteractiveFinish,
             keyboardInteractiveResponded,
@@ -2680,9 +2612,9 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         keyboardInteractiveResponded,
         keyboardInteractiveFinish,
         totpPromptSent,
-        warpgateAuthPromptSent,
+        browserSignInId,
         totpTimeout,
-        warpgateAuthTimeout,
+        browserSignInTimeout,
         totpAttempts: 0,
       });
 
@@ -2709,7 +2641,9 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
               resolvedCredentials as unknown as Parameters<
                 typeof sshAuthManager.handleKeyboardInteractive
               >[5],
-              hostConfig,
+              // The resolved host carries the plugin host settings that
+              // keyboard-interactive handlers read.
+              connectTarget ?? hostConfig,
             );
 
             isKeyboardInteractive =
@@ -2719,10 +2653,9 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
             keyboardInteractiveFinish =
               sshAuthManager.context.keyboardInteractiveFinish;
             totpPromptSent = sshAuthManager.context.totpPromptSent;
-            warpgateAuthPromptSent =
-              sshAuthManager.context.warpgateAuthPromptSent;
+            browserSignInId = sshAuthManager.context.browserSignInId;
             totpTimeout = sshAuthManager.context.totpTimeout;
-            warpgateAuthTimeout = sshAuthManager.context.warpgateAuthTimeout;
+            browserSignInTimeout = sshAuthManager.context.browserSignInTimeout;
           },
         ),
       );
@@ -2759,7 +2692,6 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         keyType: resolvedCredentials.keyType,
         certPublicKey: resolvedCredentials.certPublicKey,
         forceKeyboardInteractive: hostConfig.forceKeyboardInteractive,
-        useWarpgate: hostConfig.useWarpgate,
         terminalConfig: hostConfig.terminalConfig,
         jumpHosts: hostConfig.jumpHosts,
         useSocks5: hostConfig.useSocks5,
@@ -2946,9 +2878,9 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
         totpTimeout = null;
       }
 
-      if (warpgateAuthTimeout) {
-        clearTimeout(warpgateAuthTimeout);
-        warpgateAuthTimeout = null;
+      if (browserSignInTimeout) {
+        clearTimeout(browserSignInTimeout);
+        browserSignInTimeout = null;
       }
 
       sshStream = null;

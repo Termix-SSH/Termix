@@ -120,7 +120,6 @@ export function createHostEditorForm(
     username: host?.username ?? (host ? "" : "root"),
     sshPort: host?.sshPort ?? host?.port ?? 22,
     authType: host?.authType ?? "password",
-    useWarpgate: host?.useWarpgate ?? false,
     shareSshAuth: host?.shareSshAuth ?? false,
     password: host?.hasPassword ? "existing_password" : (host?.password ?? ""),
     key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
@@ -391,7 +390,6 @@ export function buildHostEditorPayload(
     tags: form.tags,
     pin: form.pin,
     authType: form.authType,
-    useWarpgate: form.useWarpgate,
     shareSshAuth: form.shareSshAuth,
     password:
       usesPassword || usesKey || usesCredential

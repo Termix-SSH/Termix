@@ -1,5 +1,13 @@
 import type { Request, Response, Router } from "express";
-import { escapeHtml } from "./opkssh-html.js";
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function resultPage(ok: boolean, message: string): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>Termix</title>

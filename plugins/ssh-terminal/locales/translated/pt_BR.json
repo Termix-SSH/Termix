@@ -40,8 +40,6 @@
     "linkDialogTitle": "Abrir link",
     "maxReconnectAttemptsReached": "Número máximo de tentativas de reconexão atingido",
     "noHostSelected": "Nenhum host selecionado",
-    "opksshAuthFailed": "A autenticação falhou. Verifique suas credenciais e tente novamente.",
-    "opksshTimeout": "A autenticação expirou. Tente novamente.",
     "passwordPromptFillTitle": "Digite a senha salva neste campo?",
     "reconnect": "Reconectar",
     "reconnected": "Reconectado com sucesso",

@@ -73,7 +73,6 @@
     "containerMustBeRunning": "访问控制台需要容器处于运行状态",
     "verificationCodePrompt": "输入验证码",
     "totpVerificationFailed": "TOTP 验证失败，请重试。",
-    "warpgateVerificationFailed": "Warpgate 认证失败，请重试。",
     "connectedTo": "已连接到 {{containerName}}",
     "disconnected": "已断开连接",
     "consoleError": "控制台错误",

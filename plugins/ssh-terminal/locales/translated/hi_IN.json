@@ -40,8 +40,6 @@
     "linkDialogTitle": "लिंक खोलें",
     "maxReconnectAttemptsReached": "अधिकतम पुनः कनेक्ट प्रयास पूर्ण हो गए",
     "noHostSelected": "कोई होस्ट चयनित नहीं",
-    "opksshAuthFailed": "प्रमाणीकरण विफल। कृपया अपने क्रेडेंशियल जाँचें और पुनः प्रयास करें।",
-    "opksshTimeout": "प्रमाणीकरण का समय समाप्त हो गया। कृपया पुनः प्रयास करें।",
     "passwordPromptFillTitle": "क्या सहेजे गए पासवर्ड को इस प्रांप्ट में भरें?",
     "reconnect": "पुनः कनेक्ट करें",
     "reconnected": "पुनः कनेक्ट हुआ",

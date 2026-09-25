@@ -522,6 +522,44 @@ export function createPluginAuth({ manifest, bag, audit }: Deps): PluginAuth {
       record("auth_register_ssh", provider.type);
     },
 
+    registerKeyboardInteractiveHandler: (handler) => {
+      requireDeclared(
+        contributes.keyboardInteractive,
+        handler.id,
+        "keyboardInteractive",
+      );
+      // Synchronous hooks inside ssh2's callback, so only the declaration is
+      // checked, like ctx.http.router. Deactivate removes the handler.
+      const settingsFor = (host: SshConnectHost): Record<string, unknown> =>
+        host.pluginSettings?.[pluginId] ?? {};
+      ensureCoreSshAuthProviders();
+      const dispose = registerKeyboardInteractiveInterceptor({
+        id: handler.id,
+        pluginId,
+        detect: (round, host) => {
+          const detected = handler.detect(
+            round,
+            host as PluginSshHost,
+            settingsFor(host),
+          );
+          if (!detected) return null;
+          if (detected.kind === "browser") {
+            return { ...detected, id: handler.id, label: handler.label };
+          }
+          return detected;
+        },
+        autoAnswerPasswords: handler.autoAnswerPasswords
+          ? (host) =>
+              handler.autoAnswerPasswords!(
+                host as PluginSshHost,
+                settingsFor(host),
+              ) === true
+          : undefined,
+      });
+      bag.add(dispose, `keyboard-interactive handler "${handler.id}"`);
+      record("auth_register_keyboard_interactive", handler.id);
+    },
+
     registerLoginMethod: (method) => {
       requireDeclared(contributes.loginMethods, method.id, "loginMethods");
       {

@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Pro přístup ke konzoli musí být kontejner spuštěný.",
     "verificationCodePrompt": "Zadejte ověřovací kód",
     "totpVerificationFailed": "Ověření TOTP se nezdařilo. Zkuste to prosím znovu.",
-    "warpgateVerificationFailed": "Ověření Warpgate se nezdařilo. Zkuste to prosím znovu.",
     "connectedTo": "Připojeno k {{containerName}}",
     "disconnected": "Odpojeno",
     "consoleError": "Chyba konzole",

@@ -290,7 +290,6 @@
     "connecting": "Kobler til...",
     "connectedSuccessfully": "Tilkoblet",
     "totpVerificationFailed": "TOTP-verifisering mislyktes",
-    "warpgateVerificationFailed": "Warpgate-autentisering mislyktes",
     "authenticationFailed": "Autentisering mislyktes",
     "incorrectPassphrase": "Feil passordfrase. Prøv på nytt.",
     "verificationCodePrompt": "Verifiseringskode:",

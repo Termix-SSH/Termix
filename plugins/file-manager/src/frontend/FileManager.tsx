@@ -59,7 +59,7 @@ import {
   moveSSHItem,
   connectSSH,
   verifySSHTOTP,
-  verifySSHWarpgate,
+  verifySSHBrowserSignIn,
   getSSHStatus,
   keepSSHAlive,
   identifySSHSymlink,
@@ -199,12 +199,13 @@ function FileManagerContent({
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpSessionId, setTotpSessionId] = useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = useState<string>("");
-  const [warpgateRequired, setWarpgateRequired] = useState(false);
-  const [warpgateSessionId, setWarpgateSessionId] = useState<string | null>(
-    null,
-  );
-  const [warpgateUrl, setWarpgateUrl] = useState<string>("");
-  const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
+  const [browserSignInRequired, setBrowserSignInRequired] = useState(false);
+  const [browserSignInSessionId, setBrowserSignInSessionId] = useState<
+    string | null
+  >(null);
+  const [browserSignInUrl, setBrowserSignInUrl] = useState<string>("");
+  const [browserSignInCode, setBrowserSignInCode] = useState<string>("");
+  const [browserSignInLabel, setBrowserSignInLabel] = useState<string>("");
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authDialogReason, setAuthDialogReason] = useState<
     "no_keyboard" | "auth_failed" | "timeout"
@@ -421,7 +422,7 @@ function FileManagerContent({
       !!currentHost &&
       !sshSessionId &&
       !totpRequired &&
-      !warpgateRequired &&
+      !browserSignInRequired &&
       !showAuthDialog &&
       !showPassphraseDialog,
     autoStart: false,
@@ -627,11 +628,12 @@ function FileManagerContent({
         socks5ProxyChain: currentHost.socks5ProxyChain,
       });
 
-      if (result?.requires_warpgate) {
-        setWarpgateRequired(true);
-        setWarpgateSessionId(sessionId);
-        setWarpgateUrl(result.url || "");
-        setWarpgateSecurityKey(result.securityKey || "N/A");
+      if (result?.requires_browser_sign_in) {
+        setBrowserSignInRequired(true);
+        setBrowserSignInSessionId(sessionId);
+        setBrowserSignInUrl(result.url || "");
+        setBrowserSignInCode(result.code || "N/A");
+        setBrowserSignInLabel(result.label || "");
         setIsLoading(false);
         return;
       }
@@ -698,11 +700,14 @@ function FileManagerContent({
           setIsLoading(false);
           return;
         }
-        if (sshError.requires_warpgate) {
-          setWarpgateRequired(true);
-          setWarpgateSessionId(sshError.sessionId || currentHost.id.toString());
-          setWarpgateUrl(sshError.url || "");
-          setWarpgateSecurityKey(sshError.securityKey || "N/A");
+        if (sshError.requires_browser_sign_in) {
+          setBrowserSignInRequired(true);
+          setBrowserSignInSessionId(
+            sshError.sessionId || currentHost.id.toString(),
+          );
+          setBrowserSignInUrl(sshError.url || "");
+          setBrowserSignInCode(sshError.code || "N/A");
+          setBrowserSignInLabel(sshError.label || "");
           setIsLoading(false);
           return;
         }
@@ -2660,23 +2665,26 @@ function FileManagerContent({
     if (onClose) onClose();
   }
 
-  async function handleWarpgateContinue() {
-    if (!warpgateSessionId) return;
+  async function handleBrowserSignInContinue() {
+    if (!browserSignInSessionId) return;
 
     try {
       setIsLoading(true);
-      const result = await verifySSHWarpgate(warpgateSessionId);
+      const result = await verifySSHBrowserSignIn(browserSignInSessionId);
 
       if (result?.status === "success") {
-        setWarpgateRequired(false);
-        setWarpgateUrl("");
-        setWarpgateSecurityKey("");
-        setSshSessionId(warpgateSessionId);
-        setWarpgateSessionId(null);
+        setBrowserSignInRequired(false);
+        setBrowserSignInUrl("");
+        setBrowserSignInCode("");
+        setSshSessionId(browserSignInSessionId);
+        setBrowserSignInSessionId(null);
         connectRetryRef.current.markConnected();
 
         try {
-          const response = await listSSHFiles(warpgateSessionId, currentPath);
+          const response = await listSSHFiles(
+            browserSignInSessionId,
+            currentPath,
+          );
           const files = Array.isArray(response)
             ? response
             : response?.files || [];
@@ -2691,24 +2699,24 @@ function FileManagerContent({
         }
       }
     } catch (error: unknown) {
-      console.error("Warpgate verification failed:", error);
-      toast.error(t("fileManager.warpgateVerificationFailed"));
+      console.error("Browser sign-in failed:", error);
+      toast.error(t("fileManager.browserSignInFailed"));
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleWarpgateCancel() {
-    setWarpgateRequired(false);
-    setWarpgateUrl("");
-    setWarpgateSecurityKey("");
-    setWarpgateSessionId(null);
+  function handleBrowserSignInCancel() {
+    setBrowserSignInRequired(false);
+    setBrowserSignInUrl("");
+    setBrowserSignInCode("");
+    setBrowserSignInSessionId(null);
     if (onClose) onClose();
   }
 
-  function handleWarpgateOpenUrl() {
-    if (warpgateUrl) {
-      window.open(warpgateUrl, "_blank", "noopener,noreferrer");
+  function handleBrowserSignInOpenUrl() {
+    if (browserSignInUrl) {
+      window.open(browserSignInUrl, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -2745,11 +2753,12 @@ function FileManagerContent({
         socks5ProxyChain: currentHost.socks5ProxyChain,
       });
 
-      if (result?.requires_warpgate) {
-        setWarpgateRequired(true);
-        setWarpgateSessionId(sessionId);
-        setWarpgateUrl(result.url || "");
-        setWarpgateSecurityKey(result.securityKey || "N/A");
+      if (result?.requires_browser_sign_in) {
+        setBrowserSignInRequired(true);
+        setBrowserSignInSessionId(sessionId);
+        setBrowserSignInUrl(result.url || "");
+        setBrowserSignInCode(result.code || "N/A");
+        setBrowserSignInLabel(result.label || "");
         setIsLoading(false);
         return;
       }
@@ -3626,12 +3635,13 @@ function FileManagerContent({
         totpPrompt={totpPrompt}
         handleTotpSubmit={handleTotpSubmit}
         handleTotpCancel={handleTotpCancel}
-        warpgateRequired={warpgateRequired}
-        warpgateUrl={warpgateUrl}
-        warpgateSecurityKey={warpgateSecurityKey}
-        handleWarpgateContinue={handleWarpgateContinue}
-        handleWarpgateCancel={handleWarpgateCancel}
-        handleWarpgateOpenUrl={handleWarpgateOpenUrl}
+        browserSignInRequired={browserSignInRequired}
+        browserSignInUrl={browserSignInUrl}
+        browserSignInCode={browserSignInCode}
+        browserSignInLabel={browserSignInLabel}
+        handleBrowserSignInContinue={handleBrowserSignInContinue}
+        handleBrowserSignInCancel={handleBrowserSignInCancel}
+        handleBrowserSignInOpenUrl={handleBrowserSignInOpenUrl}
         currentHost={currentHost}
         showAuthDialog={showAuthDialog}
         authDialogReason={authDialogReason}

@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Το κοντέινερ πρέπει να εκτελείται για πρόσβαση στην κονσόλα",
     "verificationCodePrompt": "Εισαγάγετε τον κωδικό επαλήθευσης",
     "totpVerificationFailed": "Η επαλήθευση TOTP απέτυχε. Δοκιμάστε ξανά.",
-    "warpgateVerificationFailed": "Ο έλεγχος ταυτότητας Warpgate απέτυχε. Δοκιμάστε ξανά.",
     "connectedTo": "Συνδεδεμένο με {{containerName}}",
     "disconnected": "Ασύνδετος",
     "consoleError": "Σφάλμα κονσόλας",

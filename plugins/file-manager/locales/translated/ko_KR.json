@@ -290,7 +290,6 @@
     "connecting": "연결 중...",
     "connectedSuccessfully": "연결 성공",
     "totpVerificationFailed": "TOTP 인증 실패",
-    "warpgateVerificationFailed": "Warpgate 인증 실패",
     "authenticationFailed": "인증 실패",
     "incorrectPassphrase": "잘못된 암호입니다. 다시 시도하세요.",
     "verificationCodePrompt": "인증 코드:",

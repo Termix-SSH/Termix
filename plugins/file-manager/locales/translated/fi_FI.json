@@ -290,7 +290,6 @@
     "connecting": "Yhdistetään...",
     "connectedSuccessfully": "Yhteys onnistui",
     "totpVerificationFailed": "TOTP-vahvistus epäonnistui",
-    "warpgateVerificationFailed": "Warpgate-todennus epäonnistui",
     "authenticationFailed": "Todennus epäonnistui",
     "incorrectPassphrase": "Virheellinen salasana. Yritä uudelleen.",
     "verificationCodePrompt": "Vahvistuskoodi:",

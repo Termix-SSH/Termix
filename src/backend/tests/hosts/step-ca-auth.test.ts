@@ -3,7 +3,6 @@ import type { WebSocket } from "ws";
 
 const state = vi.hoisted(() => ({
   sent: [] as Array<Record<string, unknown>>,
-  upsert: vi.fn(async () => undefined),
   parseInfo: {
     publicKeyLine: "ssh-ed25519 TESTKEY",
     principals: ["alice"],
@@ -19,15 +18,6 @@ const state = vi.hoisted(() => ({
 vi.mock("../../utils/logger.js", () => ({
   sshLogger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
-vi.mock("../../utils/data-crypto.js", () => ({
-  DataCrypto: { getUserDataKey: () => Buffer.alloc(32, 1) },
-}));
-vi.mock("../../utils/field-crypto.js", () => ({
-  FieldCrypto: {
-    encryptField: (value: string, _key: Buffer, _id: string, field: string) =>
-      `${field}:${value}`,
-  },
-}));
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => ({
     get: async (key: string) =>
@@ -37,7 +27,6 @@ vi.mock("../../database/repositories/factory.js", () => ({
         step_ca_provisioner: "oidc",
       })[key],
   }),
-  createCurrentOpksshTokenRepository: () => ({ upsert: state.upsert }),
 }));
 vi.mock("../../utils/step-ca-egress.js", () => ({
   readStepCaPrivateAllowlist: async () => [],
@@ -92,8 +81,13 @@ vi.mock("../../hosts/step-ca-runtime.js", () => ({
   },
 }));
 
-const { cancelStepCaAuth, completeStepCaAuth, startStepCaAuth } =
-  await import("../../hosts/step-ca-auth.js");
+const {
+  cancelStepCaAuth,
+  completeStepCaAuth,
+  getStepCaCert,
+  invalidateStepCaCert,
+  startStepCaAuth,
+} = await import("../../hosts/step-ca-auth.js");
 
 function jwt(payload: object): string {
   return `x.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.y`;
@@ -124,7 +118,7 @@ async function start(): Promise<{ requestId: string; nonce: string }> {
 
 beforeEach(() => {
   state.sent.length = 0;
-  state.upsert.mockClear();
+  invalidateStepCaCert("user-1", 7);
   state.runtimeComplete.mockClear();
   state.command = null;
   state.remoteResult = null;
@@ -147,9 +141,11 @@ describe("Step CA authentication", () => {
       ok: true,
       message: "Signed in. You can close this window.",
     });
-    expect(state.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "user-1", hostId: 7 }),
-    );
+    expect(getStepCaCert("user-1", 7)).toEqual({
+      sshCert: "CERT",
+      privateKey: "PRIVATE",
+    });
+    expect(state.sent.at(-1)).toMatchObject({ type: "stepca_completed" });
   });
 
   it("rejects a token without the requested nonce", async () => {
@@ -159,7 +155,7 @@ describe("Step CA authentication", () => {
     const result = await completeStepCaAuth({ state: requestId, code: "code" });
     expect(result.ok).toBe(false);
     expect(result.message).toMatch(/does not match/);
-    expect(state.upsert).not.toHaveBeenCalled();
+    expect(getStepCaCert("user-1", 7)).toBeNull();
   });
 
   it("routes a callback through Redis to the instance holding the WebSocket", async () => {
@@ -170,7 +166,7 @@ describe("Step CA authentication", () => {
     await vi.waitFor(() => expect(state.runtimeComplete).toHaveBeenCalled(), {
       timeout: 2000,
     });
-    expect(state.upsert).toHaveBeenCalled();
+    expect(getStepCaCert("user-1", 7)).not.toBeNull();
   });
 
   it("returns a result produced by another instance", async () => {

@@ -78,7 +78,7 @@
     "containerMustBeRunning": "Container must be running to access console",
     "verificationCodePrompt": "Enter verification code",
     "totpVerificationFailed": "TOTP verification failed. Please try again.",
-    "warpgateVerificationFailed": "Warpgate authentication failed. Please try again.",
+    "browserSignInFailed": "Sign-in failed. Please try again.",
     "connectedTo": "Connected to {{containerName}}",
     "disconnected": "Disconnected",
     "consoleError": "Console error",

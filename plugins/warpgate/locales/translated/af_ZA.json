@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Warpgate-poort",
+        "description": "Hierdie gasheer koppel deur 'n Warpgate SSH-instaanbediener. Termix sal die blaaiergebaseerde goedkeuringsvloei outomaties hanteer na verifikasie."
+      }
+    }
+  }
+}

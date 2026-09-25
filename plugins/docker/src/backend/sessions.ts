@@ -20,7 +20,7 @@ export interface DockerSession {
   cancelIdle?: () => void;
 }
 
-/** A connect still waiting on a person (TOTP, Warpgate). */
+/** A connect still waiting on a person (TOTP, a browser sign-in). */
 export interface PendingEntry {
   userId: string;
   hostId: number;

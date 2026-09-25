@@ -60,7 +60,7 @@ export {
 } from "@/ssh/connection-log/ConnectionLogContext";
 export { TOTPDialog, type MFAPromptMode } from "@/ssh/dialogs/TOTPDialog";
 export { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog";
-export { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog";
+export { BrowserSignInDialog } from "@/ssh/dialogs/BrowserSignInDialog";
 
 // Design tokens: the colour swatches folders, workspaces and tags pick from.
 export { FOLDER_COLORS } from "@/lib/theme";
@@ -95,7 +95,6 @@ export { WidgetTitle } from "@/lib/widget-title";
 export { runVisibleInterval } from "@/lib/visible-interval";
 export { useIsMobile } from "@/hooks/use-mobile";
 export { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog";
-export { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog";
 export { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog";
 
 // Terminal look: themes, fonts and clipboard, shared by every terminal-like

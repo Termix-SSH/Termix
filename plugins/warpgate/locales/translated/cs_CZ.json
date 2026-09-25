@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "host": {
+      "useWarpgate": {
+        "label": "Brána Warpgate",
+        "description": "Tento hostitel se připojuje přes proxy Warpgate SSH. Termix po ověření automaticky zpracuje proces schvalování v prohlížeči."
+      }
+    }
+  }
+}

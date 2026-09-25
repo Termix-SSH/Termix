@@ -104,7 +104,7 @@ export function registerRoutes(router: Router, { ctx, sessions, log }: Deps) {
    * /plugin-api/docker/ssh/connect:
    *   post:
    *     summary: Establish SSH session for Docker
-   *     description: Opens an SSH session to a host for Docker operations. When the host asks for a code, a Warpgate sign-in or a password, the reply says so and the session waits for connect-totp or connect-warpgate.
+   *     description: Opens an SSH session to a host for Docker operations. When the host asks for a code, a browser sign-in or a password, the reply says so and the session waits for connect-totp or connect-browser-sign-in.
    *     tags:
    *       - Docker
    *     requestBody:
@@ -311,10 +311,10 @@ export function registerRoutes(router: Router, { ctx, sessions, log }: Deps) {
 
   /**
    * @openapi
-   * /plugin-api/docker/ssh/connect-warpgate:
+   * /plugin-api/docker/ssh/connect-browser-sign-in:
    *   post:
-   *     summary: Complete Warpgate authentication
-   *     description: Continues a connect after the user finished the Warpgate sign-in in the browser.
+   *     summary: Continue after a browser sign-in
+   *     description: Continues a connect after the user finished signing in in the browser (an SSH gateway's approval, for example).
    *     tags:
    *       - Docker
    *     requestBody:
@@ -332,13 +332,13 @@ export function registerRoutes(router: Router, { ctx, sessions, log }: Deps) {
    *       200:
    *         description: Connected, or another prompt.
    *       400:
-   *         description: Session ID required, or the session is not a Warpgate session.
+   *         description: Session ID required, or the session is not waiting for a browser sign-in.
    *       404:
    *         description: The connect expired.
    *       408:
    *         description: The host did not answer in time.
    */
-  router.post("/ssh/connect-warpgate", async (req, res) => {
+  router.post("/ssh/connect-browser-sign-in", async (req, res) => {
     const userId = userOf(res);
     if (!userId) return;
     const { sessionId } = (req.body ?? {}) as Record<string, unknown>;
@@ -349,7 +349,7 @@ export function registerRoutes(router: Router, { ctx, sessions, log }: Deps) {
       sessions,
       sessionId,
       userId,
-      "warpgate",
+      "browser",
       "",
     );
     return res.status(step.status).json(step.body);

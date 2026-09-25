@@ -290,7 +290,6 @@
     "connecting": "Đang kết nối...",
     "connectedSuccessfully": "Đã kết nối thành công",
     "totpVerificationFailed": "Xác minh TOTP thất bại",
-    "warpgateVerificationFailed": "Xác thực Warpgate thất bại",
     "authenticationFailed": "Xác thực thất bại",
     "incorrectPassphrase": "Cụm mật khẩu không đúng. Vui lòng thử lại.",
     "verificationCodePrompt": "Mã xác minh:",

@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Jelentkezzen be erre a gazdagépre az identitásszolgáltatójával jelszó vagy kulcs helyett. OPKSSH beállítását igényli a szerveren.",
+    "docs": "Dokumentumok megtekintése"
+  },
+  "dialog": {
+    "title": "OPKSSH hitelesítés szükséges",
+    "description": "A folytatáshoz végezze el a hitelesítést a böngészőjében. Ez a munkamenet 24 órán át érvényes marad.",
+    "openBrowser": "Böngésző megnyitása a hitelesítéshez",
+    "waiting": "Várakozás a böngésző hitelesítésére...",
+    "authenticating": "Hitelesítés feldolgozása...",
+    "signInWith": "Bejelentkezés {{provider}} felhasználónévvel"
+  },
+  "errors": {
+    "authFailed": "Sikertelen hitelesítés. Kérjük, ellenőrizze a hitelesítő adatait, és próbálja újra.",
+    "timeout": "A hitelesítés időtúllépést okozott. Kérjük, próbálja újra."
+  }
+}

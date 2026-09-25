@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Inicie sesión en este host usando su proveedor de identidad en lugar de una contraseña o clave. Requiere OPKSSH configurado en el servidor.",
+    "docs": "Ver documentación"
+  },
+  "dialog": {
+    "title": "Autenticación OPKSSH requerida",
+    "description": "Completa la autenticación en tu navegador para continuar. Esta sesión seguirá siendo válida durante 24 horas.",
+    "openBrowser": "Abrir navegador para autenticarse",
+    "waiting": "Esperando autenticación en el navegador...",
+    "authenticating": "Procesando autenticación...",
+    "signInWith": "Iniciar sesión con {{provider}}"
+  },
+  "errors": {
+    "authFailed": "La autenticación falló. Revisa tus credenciales e inténtalo de nuevo.",
+    "timeout": "La autenticación expiró. Inténtalo de nuevo."
+  }
+}

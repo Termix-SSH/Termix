@@ -88,16 +88,20 @@ function normalizePublicPath(path: string): string {
  * to be public are usually keyed by a token ("/webhook/:token"). A parameter
  * matches exactly one segment and never a slash, so ":token" cannot swallow
  * the rest of the path and turn one declared route into a prefix hole.
+ *
+ * A trailing "/*" is the one deliberate prefix: it matches the path itself and
+ * anything below it, for a proxied page that loads its own subpaths.
  */
 function compilePublicPath(path: string): RegExp {
-  const escaped = path
+  const prefix = path.endsWith("/*");
+  const escaped = (prefix ? path.slice(0, -2) : path)
     .split("/")
     .map((segment) => {
       if (segment.startsWith(":")) return "[^/]+";
       return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     })
     .join("/");
-  return new RegExp(`^${escaped}$`);
+  return new RegExp(prefix ? `^${escaped}(?:/.*)?$` : `^${escaped}$`);
 }
 
 /**

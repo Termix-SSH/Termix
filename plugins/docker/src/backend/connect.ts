@@ -2,9 +2,9 @@
  * The Docker panel's interactive connect.
  *
  * Core's pipeline does the handshake; this only bridges its prompt channel to
- * HTTP. A connect that needs a person (a TOTP code, a Warpgate sign-in, a
+ * HTTP. A connect that needs a person (a TOTP code, a browser sign-in, a
  * password the host does not store) answers the request that is waiting with
- * what to ask, and the next request (connect-totp, connect-warpgate) carries
+ * what to ask, and the next request (connect-totp, connect-browser-sign-in) carries
  * the answer back and waits for whatever comes after it: the session, another
  * prompt, or an error.
  */
@@ -31,10 +31,10 @@ export interface ConnectStep {
 }
 
 const TOTP_WAIT_MS = 3 * 60 * 1000;
-const WARPGATE_WAIT_MS = 5 * 60 * 1000;
+const BROWSER_SIGN_IN_WAIT_MS = 5 * 60 * 1000;
 const STEP_WAIT_MS = 90 * 1000;
 // Covers the longest a person may take on a prompt, plus the handshake.
-const CONNECT_TIMEOUT_MS = WARPGATE_WAIT_MS + 30 * 1000;
+const CONNECT_TIMEOUT_MS = BROWSER_SIGN_IN_WAIT_MS + 30 * 1000;
 
 const PASSWORD_PROMPT = /password/i;
 
@@ -47,7 +47,7 @@ export class PendingConnect {
 
   expiresAt = Date.now() + TOTP_WAIT_MS;
   /** What the open prompt expects, or null when nothing is being asked. */
-  awaiting: "totp" | "warpgate" | null = null;
+  awaiting: "totp" | "browser" | null = null;
   abandoned = false;
   private waiter: ((step: ConnectStep) => void) | null = null;
   private queued: ConnectStep | null = null;
@@ -87,7 +87,7 @@ export class PendingConnect {
     });
   }
 
-  ask(kind: "totp" | "warpgate", waitMs: number): Promise<string | null> {
+  ask(kind: "totp" | "browser", waitMs: number): Promise<string | null> {
     this.awaiting = kind;
     this.expiresAt = Date.now() + waitMs;
     return new Promise((resolve) => {
@@ -203,22 +203,23 @@ export async function startConnect(
     switch (request.kind) {
       case "totp":
         return parkTotp(request.prompt, request.retry ? { retry: true } : {});
-      case "warpgate": {
+      case "browser": {
         logs.push(
           connectionLog(
             "info",
             "docker_auth",
-            "Warpgate authentication required",
+            `${request.label} sign-in required`,
           ),
         );
-        const answer = pending.ask("warpgate", WARPGATE_WAIT_MS);
+        const answer = pending.ask("browser", BROWSER_SIGN_IN_WAIT_MS);
         pending.emit({
           status: 200,
           body: {
-            requires_warpgate: true,
+            requires_browser_sign_in: true,
             sessionId,
+            label: request.label,
             url: request.url,
-            securityKey: request.securityKey,
+            code: request.code,
             connectionLogs: logs,
           },
         });
@@ -378,7 +379,7 @@ export async function answerConnect(
   sessions: DockerSessions,
   sessionId: string,
   userId: string,
-  kind: "totp" | "warpgate",
+  kind: "totp" | "browser",
   value: string,
 ): Promise<ConnectStep> {
   const pending = sessions.getPending(sessionId);
@@ -393,8 +394,8 @@ export async function answerConnect(
       status: 400,
       body: {
         error:
-          kind === "warpgate"
-            ? "Session is not a Warpgate session"
+          kind === "browser"
+            ? "Session is not waiting for a browser sign-in"
             : "Session is not waiting for a code",
       },
     };

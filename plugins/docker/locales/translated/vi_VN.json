@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Container phải đang chạy để truy cập bảng điều khiển",
     "verificationCodePrompt": "Nhập mã xác minh",
     "totpVerificationFailed": "Xác minh TOTP thất bại. Vui lòng thử lại.",
-    "warpgateVerificationFailed": "Xác thực Warpgate thất bại. Vui lòng thử lại.",
     "connectedTo": "Đã kết nối đến {{containerName}}",
     "disconnected": "Đã ngắt kết nối",
     "consoleError": "Lỗi bảng điều khiển",

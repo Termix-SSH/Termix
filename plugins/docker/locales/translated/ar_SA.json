@@ -73,7 +73,6 @@
     "containerMustBeRunning": "يجب أن تكون الحاوية قيد التشغيل للوصول إلى وحدة التحكم",
     "verificationCodePrompt": "أدخل رمز التحقق",
     "totpVerificationFailed": "فشل التحقق من TOTP. يرجى المحاولة مرة أخرى.",
-    "warpgateVerificationFailed": "فشلت مصادقة Warpgate. يرجى المحاولة مرة أخرى.",
     "connectedTo": "متصل بـ {{containerName}}",
     "disconnected": "تم قطع الاتصال",
     "consoleError": "خطأ في وحدة التحكم",

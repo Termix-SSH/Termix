@@ -26,7 +26,7 @@ import {
   Select2,
   Separator,
   TOTPDialog,
-  WarpgateDialog,
+  BrowserSignInDialog,
   logActivity,
   useAdaptivePolling,
   useAreaPreferences,
@@ -57,12 +57,13 @@ interface DockerManagerProps {
 }
 
 interface PromptState {
-  kind: "totp" | "warpgate";
+  kind: "totp" | "browser";
   sessionId: string;
   prompt?: string;
   isPassword?: boolean;
   url?: string;
-  securityKey?: string;
+  code?: string;
+  label?: string;
 }
 
 function newSessionId(): string {
@@ -193,12 +194,13 @@ function DockerManagerInner({
   ) => {
     if (result.connectionLogs) setLogs(result.connectionLogs);
 
-    if (result.requires_warpgate) {
+    if (result.requires_browser_sign_in) {
       setPrompt({
-        kind: "warpgate",
+        kind: "browser",
         sessionId: sid,
         url: result.url || "",
-        securityKey: result.securityKey || "",
+        code: result.code || "",
+        label: result.label || "",
       });
       return;
     }
@@ -357,15 +359,19 @@ function DockerManagerInner({
     }
   };
 
-  const handleWarpgateContinue = async () => {
-    if (!prompt || prompt.kind !== "warpgate") return;
+  const handleBrowserSignInContinue = async () => {
+    if (!prompt || prompt.kind !== "browser") return;
     const sid = prompt.sessionId;
     setPrompt(null);
     setIsConnecting(true);
     try {
-      await applyConnectResult(sid, await docker.continueWarpgate(sid), false);
+      await applyConnectResult(
+        sid,
+        await docker.continueBrowserSignIn(sid),
+        false,
+      );
     } catch (error) {
-      reportFailure(error, t("docker.warpgateVerificationFailed"));
+      reportFailure(error, t("docker.browserSignInFailed"));
     } finally {
       setIsConnecting(false);
     }
@@ -379,7 +385,7 @@ function DockerManagerInner({
     closeTab();
   };
 
-  const handleWarpgateOpenUrl = () => {
+  const handleBrowserSignInOpenUrl = () => {
     if (prompt?.url) window.open(prompt.url, "_blank", "noopener,noreferrer");
   };
 
@@ -475,13 +481,14 @@ function DockerManagerInner({
         onSubmit={handleTotpSubmit}
         onCancel={handlePromptCancel}
       />
-      <WarpgateDialog
-        isOpen={prompt?.kind === "warpgate"}
+      <BrowserSignInDialog
+        isOpen={prompt?.kind === "browser"}
+        label={prompt?.label ?? ""}
         url={prompt?.url ?? ""}
-        securityKey={prompt?.securityKey ?? ""}
-        onContinue={handleWarpgateContinue}
+        code={prompt?.code ?? ""}
+        onContinue={handleBrowserSignInContinue}
         onCancel={handlePromptCancel}
-        onOpenUrl={handleWarpgateOpenUrl}
+        onOpenUrl={handleBrowserSignInOpenUrl}
       />
       {currentHost && (
         <SSHAuthDialog

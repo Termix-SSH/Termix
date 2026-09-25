@@ -44,7 +44,7 @@ describe("docker routes", () => {
     const calls: Array<[string, string]> = [
       ["POST", "/ssh/connect"],
       ["POST", "/ssh/connect-totp"],
-      ["POST", "/ssh/connect-warpgate"],
+      ["POST", "/ssh/connect-browser-sign-in"],
       ["POST", "/ssh/disconnect"],
       ["POST", "/ssh/keepalive"],
       ["GET", "/ssh/status?sessionId=s1"],
@@ -204,29 +204,32 @@ describe("docker routes", () => {
     expect((await server.request("GET", "/containers/s1")).status).toBe(200);
   });
 
-  it("continues a Warpgate sign-in and refuses a code for it", async () => {
+  it("continues a browser sign-in and refuses a code for it", async () => {
     server = await startServer();
     promptingConnect(server, async (ask) => {
       await ask({
-        kind: "warpgate",
-        url: "https://warpgate.example/login",
-        securityKey: "KEY",
+        kind: "browser",
+        id: "gateway",
+        label: "Gateway",
+        url: "https://gateway.example/login",
+        code: "KEY",
         instructions: "",
       });
     });
 
     const first = await connect(server);
     expect(first.body).toMatchObject({
-      requires_warpgate: true,
-      url: "https://warpgate.example/login",
-      securityKey: "KEY",
+      requires_browser_sign_in: true,
+      label: "Gateway",
+      url: "https://gateway.example/login",
+      code: "KEY",
     });
     const wrongKind = await server.request("POST", "/ssh/connect-totp", {
       body: { sessionId: "s1", totpCode: "1" },
     });
     expect(wrongKind.status).toBe(400);
 
-    const done = await server.request("POST", "/ssh/connect-warpgate", {
+    const done = await server.request("POST", "/ssh/connect-browser-sign-in", {
       body: { sessionId: "s1" },
     });
     expect(done.body.success).toBe(true);

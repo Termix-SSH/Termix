@@ -290,7 +290,6 @@
     "connecting": "連線中...",
     "connectedSuccessfully": "已成功連線",
     "totpVerificationFailed": "TOTP 驗證失敗",
-    "warpgateVerificationFailed": "Warpgate 驗證失敗",
     "authenticationFailed": "驗證失敗",
     "incorrectPassphrase": "密碼片語錯誤。請再試一次。",
     "verificationCodePrompt": "驗證碼：",

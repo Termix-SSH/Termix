@@ -40,8 +40,6 @@
     "linkDialogTitle": "リンクを開く",
     "maxReconnectAttemptsReached": "再接続の最大試行回数に達しました",
     "noHostSelected": "ホストが選択されていません",
-    "opksshAuthFailed": "認証に失敗しました。資格情報を確認して再試行してください。",
-    "opksshTimeout": "認証がタイムアウトしました。もう一度お試しください。",
     "passwordPromptFillTitle": "保存されたパスワードをこのプロンプトに入力しますか？",
     "reconnect": "再接続",
     "reconnected": "再接続完了",

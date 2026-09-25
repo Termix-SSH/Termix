@@ -40,8 +40,6 @@
     "linkDialogTitle": "Åbn link",
     "maxReconnectAttemptsReached": "Maksimalt antal forsøg på genoprettelse nået",
     "noHostSelected": "Ingen vært valgt",
-    "opksshAuthFailed": "Godkendelse mislykkedes. Tjek dine loginoplysninger, og prøv igen.",
-    "opksshTimeout": "Godkendelsen udløb. Prøv igen.",
     "passwordPromptFillTitle": "Udfyld den gemte adgangskode i denne prompt?",
     "reconnect": "Genopret forbindelse",
     "reconnected": "Genoprettet forbindelse",

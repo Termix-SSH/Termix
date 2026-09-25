@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "Melden Sie sich mit Ihrem Identitätsanbieter an diesem Host an, anstatt mit einem Passwort oder Schlüssel. Erfordert, dass OPKSSH auf dem Server eingerichtet ist.",
+    "docs": "Dokumentation anzeigen"
+  },
+  "dialog": {
+    "title": "OPKSSH-Authentifizierung erforderlich",
+    "description": "Schließen Sie die Authentifizierung in Ihrem Browser ab, um fortzufahren. Diese Sitzung bleibt 24 Stunden lang gültig.",
+    "openBrowser": "Browser zum Authentifizieren öffnen",
+    "waiting": "Warten auf Authentifizierung im Browser...",
+    "authenticating": "Authentifizierung wird verarbeitet...",
+    "signInWith": "Anmelden mit {{provider}}"
+  },
+  "errors": {
+    "authFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldeinformationen und versuchen Sie es erneut.",
+    "timeout": "Authentifizierung abgelaufen. Bitte versuchen Sie es erneut."
+  }
+}

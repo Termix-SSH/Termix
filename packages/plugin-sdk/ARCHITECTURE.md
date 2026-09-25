@@ -38,6 +38,7 @@ dependencies. Entry points:
 | `@termix/plugin-sdk/capabilities`  | The capability catalog                                                                                                        |
 | `@termix/plugin-sdk/settings`      | Settings field types and the shared value validator                                                                           |
 | `@termix/plugin-sdk/host-commands` | Platform detection, package manager commands, sudo elevation - pure helpers over an ssh2 `Client` a plugin got from `ctx.ssh` |
+| `@termix/plugin-sdk/ssh-certs`     | `applyCertificateAuth()`: OpenSSH certificate auth on an ssh2 client, for plugins that issue short-lived certificates         |
 | `@termix/plugin-sdk/testing`       | Test helpers: `createMockCtx()`, `createTestDb()` and more                                                                    |
 
 Plugins never import from `src/` or `@/`, and core never imports from
@@ -217,7 +218,9 @@ handler)` for a socket. Core runs the same middleware in front of every plugin:
    audited when the router is registered and logged on every request, because
    "this plugin opened a hole in auth" should be findable later. It matches the
    full path, with `:param` segments allowed, so declaring `/webhook/:token`
-   public cannot open `/webhook/:token/anything`.
+   public cannot open `/webhook/:token/anything`. A trailing `/*` is the one
+   deliberate prefix (**C3**): `/chooser/:id/*` opens that path and everything
+   below it, for a page the plugin proxies whose assets it cannot list.
 2. **The actor**, from the user core authenticated, never from the request body.
 3. **An enabled check** returning 503 while the plugin is disabled. That is a
    different fact from 404 ("no such plugin") and a caller can act on it.
@@ -476,7 +479,10 @@ bridge core installs.
 Slots core owns: `terminal.toolbar`, `terminal.toolbarStatus`,
 `terminal.sidePanel`, `terminal.overlay` (declared by ssh-terminal; **B9**
 renamed `terminal.dock` to `terminal.sidePanel` and added the status slot,
-where host-metrics puts its CPU, memory and disk bars), `onboarding.steps`, `onboarding.features`,
+where host-metrics puts its CPU, memory and disk bars; **C3** gave overlay
+components `send(type, data)` for the session socket and `connectPayload()`,
+the data an `<interaction>_auth_completed` needs to reconnect, so a sign-in
+flow such as OPKSSH's lives entirely in its plugin), `onboarding.steps`, `onboarding.features`,
 `onboarding.workflow`, `hosts.importMenu`, `hosts.panel`, `proxmox.hostEditor`,
 `shell.overlay`, `dashboard.hostMetrics`, `homepage.hostMetrics` and
 `dashboard.secondaryView`. **B16** added the middle two, component slots in
@@ -577,12 +583,15 @@ tooltip, sheet, section-card, metric-card, charts, the card grid,
 `SnippetVariablesDialog`, `FullScreenAppWrapper`, the connection log context,
 `TOTPDialog` (its `MFAPromptMode` type lives in
 `@termix/plugin-sdk/frontend` since **C1**, so the shell spells no `"totp"`),
-`SSHAuthDialog`, `WarpgateDialog`, `PassphraseDialog`,
-`OPKSSHDialog` (until opkssh moves in Phase C), `HostKeyVerificationDialog`,
+`SSHAuthDialog`, `BrowserSignInDialog`, `PassphraseDialog`,
+`HostKeyVerificationDialog`,
 `useTabs`/`useTabsSafe`, `ActionSlot`, `ComponentSlot`, `PluginComponent` and
 `FOLDER_COLORS` (the colour swatches folders and workspaces pick from).
 **B10** added `popover`, `scroll-area` and `skeleton` for the tmux-monitor
-plugin's session tree and its new-session/kill popovers.
+plugin's session tree and its new-session/kill popovers. **C3** removed
+`OPKSSHDialog` (the opkssh plugin draws its own) and replaced `WarpgateDialog`
+with `BrowserSignInDialog` (`label`, `url`, `code`), the one dialog every
+transport shows for a keyboard-interactive browser round.
 
 **B9** added what a terminal-like surface needs from the shell: `cn`,
 `useConfirmation`, `useIsMobile`, `runAdaptivePolling`; the terminal look
@@ -999,7 +1008,7 @@ auto-session and trusted devices, plus the base SSH auth types password, key,
 stored credential, agent and none. Every other login method, second factor and
 SSH auth method is a plugin through `ctx.auth`.
 
-In 2.9.0, OPKSSH, Step-CA, Vault, Tailscale and Warpgate still live in core.
+In 2.9.0, Step-CA and Vault still live in core.
 They register through the same interfaces from
 `src/backend/auth/legacy-providers.ts` and `src/ui/auth/legacy-auth-ui.tsx`
 with `pluginId: "core"`. Phase C moves each one into its plugin by moving its
@@ -1089,6 +1098,50 @@ Nothing else in core branches on those type names.
   live in `database/routes/auth-compat-routes.ts` and only forward to the
   registered methods, so with the plugins off they answer 404.
 
+**C3** moved OPKSSH and Warpgate out:
+
+- `opkssh` registers the `opkssh` SSH auth type. It adopts `opkssh_tokens` as
+  `p_opkssh_tokens`, the certificate and key sealed with `ctx.secrets.seal`.
+  Rows 2.8 wrote were encrypted with the user's data key, which a plugin cannot
+  open: they read as expired and the user signs in once, which is what a
+  cached certificate is for (at most 24 hours old).
+- The binary comes from `ctx.process.ensureBinary`: the copy the Docker image
+  bakes into `/app/opkssh-bundled` (`OPKSSH_BUNDLED_DIR`) when its checksum
+  matches, else the one in the plugin's data folder, else a download pinned to
+  the release's SHA-256. `opkssh login` runs through `ctx.process.run` and is
+  killed on cancel, close and deactivate. The config lives at
+  `<DATA_DIR>/plugins/opkssh/config.yml`; `redirect_uris` there are still the
+  localhost listener candidates only, and the public callback still goes to
+  OPKSSH as `--remote-redirect-uri`.
+- The chooser and callback pages are public plugin routes
+  (`/plugin-api/opkssh/chooser/:id/*`, `/callback`, `/callback/:id/*`).
+  New installs register `<base>/plugin-api/opkssh/callback` with their
+  identity provider. `utils/crypto-migration/opkssh-config-migration.ts`
+  (run from `plugin-data-moves.ts`) copies a 2.8 `.opk/config.yml` in and
+  turns on the admin setting `legacyCallback`, so an upgraded install keeps
+  sending `<base>/host/opkssh-callback`, which core answers with a 307 to the
+  plugin (`database/routes/host-compat-routes.ts`). The admin page shows the
+  URI to register.
+- The sign-in dialog is a `terminal.overlay` contribution. The terminal knows
+  no sign-in by name: it forwards `<interaction>_start_auth`, `_cancel` and
+  `_auth_completed` to `ctx.ssh` for any provider.
+- `warpgate` registers a keyboard-interactive handler
+  (`ctx.auth.registerKeyboardInteractiveHandler`) and the host setting
+  `useWarpgate`, which `warpgate-settings-migration.ts` fills from
+  `ssh_data.use_warpgate` (and from hosts still on auth type `warpgate`).
+  The column is out of `schema.ts`; its drizzle drop is a no-op.
+- A handler's browser round is the generic `browser` decision
+  (`{ id, label, url, code, instructions }`). The terminal sends it as
+  `<id>_auth_required` and takes `<id>_auth_continue`, so Warpgate keeps its
+  2.8 message names for Termix-Mobile; the file manager and docker answer
+  `requires_browser_sign_in` and continue on `connect-browser-sign-in`.
+- `@termix/plugin-sdk/ssh-certs` (`applyCertificateAuth`) replaces core's
+  `opkssh-cert-auth.ts`: opkssh, core key auth with a CA certificate, and the
+  Step-CA and Vault providers still in core use it.
+- Step-CA no longer shares anything with OPKSSH: its interaction is
+  `stepca`, its messages `stepca_*`, and it keeps issued certificates in
+  memory until it becomes a plugin.
+
 #### One SSH connect pipeline
 
 Every SSH connection, core's and plugins', goes through
@@ -1107,8 +1160,8 @@ Every SSH connection, core's and plugins', goes through
    stored password for password prompts and nothing else.
 
 Keyboard-interactive rounds are classified once (`classifyKeyboardInteractive`):
-an interceptor first (Warpgate), then push MFA, TOTP, and plain input. The
-transport decides how to ask.
+a plugin's keyboard-interactive handler first, then push MFA, TOTP, and plain
+input. The transport decides how to ask.
 
 A host whose `authType` has no provider fails with
 `This host uses <type>, which needs the <plugin> plugin` (the plugin is found
@@ -1158,6 +1211,28 @@ instead draw its own editor with `app.registerSshAuthEditor`.
 
 A transport that can show a browser step sends `<interaction>_auth_required`
 and later calls the provider's `startInteraction` for `<interaction>_start_auth`.
+
+A server that speaks its own prompt style on any host, whatever its auth type
+(an SSH bastion asking for a browser approval), is a keyboard-interactive
+handler instead (**C3**):
+
+```ts
+ctx.auth.registerKeyboardInteractiveHandler({
+  id: "gate", // listed in contributes.auth.keyboardInteractive
+  label: "Gate", // shown in the sign-in dialog title
+  detect: (round, host, settings) =>
+    /gate/i.test(round.name)
+      ? { kind: "browser", url, code, instructions: round.instructions }
+      : null,
+  autoAnswerPasswords: (host, settings) => settings.enabled === true,
+});
+```
+
+`settings` is the plugin's own host settings for the host, defaults filled
+in: the host resolver puts every plugin's host settings on the connect host
+(`pluginSettings`) because both hooks run synchronously inside ssh2's
+callback, and the handler only sees its own slice. Needs `auth:provide`; the
+declaration is checked at registration, and deactivate removes the handler.
 
 #### Login methods and second factors
 
@@ -1427,6 +1502,7 @@ not do.
       "loginMethods": ["corp-sso"],
       "secondFactors": ["pin"],
       "secretSchemes": ["op"], // "<scheme>://..." secret references this plugin resolves
+      "keyboardInteractive": ["gate"], // keyboard-interactive handler ids
     },
     "settings": {
       "admin": [
@@ -1594,6 +1670,8 @@ deciding, not the mechanism.
 - A capability is checked where the privileged thing happens, not at
   activation. Activation-time checks say what a plugin might do; call-time
   checks say what it did.
+- `process:spawn` is checked by `ctx.process` (**C3**); before that it was
+  only a statement of intent.
 - `events:core` is the exception that proves the shape: without it a plugin may
   only emit under `plugin.<its id>.`, because otherwise it could publish
   `host.status` and drive the automations engine as though core had.
@@ -1604,42 +1682,44 @@ deciding, not the mechanism.
 
 Built per plugin in `src/backend/plugins/ctx.ts` and passed to `activate`.
 
-| Member                                           | Capability                           | Status                  |
-| ------------------------------------------------ | ------------------------------------ | ----------------------- |
-| `ctx.pluginId`, `ctx.manifest`                   | none                                 | **A1**                  |
-| `ctx.log.*`                                      | none                                 | **A1**                  |
-| `ctx.events.emit` / `.on`                        | `events:core` for core topics        | **A1**                  |
-| `ctx.kv.get/set/delete/list`                     | `kv:own`                             | **A1**                  |
-| `ctx.files.dataDir`                              | `files:own`                          | **B13**                 |
-| `ctx.registry.*`                                 | none                                 | **A1**                  |
-| `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                     | **A1**, named **B12**   |
-| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                      | **A1**                  |
-| `ctx.secrets.get` / `.set` / `.delete`           | `secrets:own`                        | **B18**                 |
-| `ctx.secrets.seal` / `.unseal`                   | `secrets:own`                        | **C1**                  |
-| `ctx.disposables.add`                            | none                                 | **A1**                  |
-| `ctx.asUser(userId, fn)`                         | none, always audited                 | **A1**                  |
-| `ctx.currentActor()`                             | none                                 | **A1**                  |
-| `ctx.db.define` / `.client` / `.refs`            | `db:own`                             | **A3**                  |
-| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)              | **A9**, lazy **B16**    |
-| `ctx.sync.registerEntity`                        | none                                 | **A3**                  |
-| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                      | **A4**                  |
-| `ctx.http.baseUrl(req)`                          | none                                 | **C2**                  |
-| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                 | **A5**                  |
-| `ctx.capabilities.has` / `.require`              | the capability itself                | **B11**                 |
-| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`         | **B4**, **B5**, **B18** |
-| `ctx.hosts.status.*`                             | `hosts:read`                         | **B16**                 |
-| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`     | **A8**                  |
-| `ctx.settings.*`                                 | `settings:read-core` (readCore only) | **A6**                  |
-| `ctx.notify.channels` / `.send`                  | `notify:send`                        | **B17**                 |
-| `ctx.auth.*`                                     | `auth:provide`                       | **A8**                  |
-| `ctx.auth.completeRedirectLogin` and the rest    | `auth:provide`                       | **C2**                  |
-| `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                     | **B8**                  |
-| `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)       | **B14**                 |
-| `ctx.credentials.resolveHostProtocol`            | `credentials:read`                   | **B14**                 |
-| `ctx.credentials.registerSecretResolver`         | `auth:provide`                       | **B20**                 |
-| `ctx.audit.record`                               | none, the actor is the runtime's     | **B9**                  |
-| `ctx.schedule.every` / `.after`                  | none                                 | **B16**                 |
-| `ctx.fetch`                                      | `network:outbound`                   | **B17**, signal **B18** |
+| Member                                           | Capability                                         | Status                  |
+| ------------------------------------------------ | -------------------------------------------------- | ----------------------- |
+| `ctx.pluginId`, `ctx.manifest`                   | none                                               | **A1**                  |
+| `ctx.log.*`                                      | none                                               | **A1**                  |
+| `ctx.events.emit` / `.on`                        | `events:core` for core topics                      | **A1**                  |
+| `ctx.kv.get/set/delete/list`                     | `kv:own`                                           | **A1**                  |
+| `ctx.files.dataDir`                              | `files:own`                                        | **B13**                 |
+| `ctx.registry.*`                                 | none                                               | **A1**                  |
+| `ctx.services.provide` / `.get` / `.providers`   | per-service RBAC                                   | **A1**, named **B12**   |
+| `ctx.secrets.offer` / `.withdraw` / `.getShared` | per-secret RBAC                                    | **A1**                  |
+| `ctx.secrets.get` / `.set` / `.delete`           | `secrets:own`                                      | **B18**                 |
+| `ctx.secrets.seal` / `.unseal`                   | `secrets:own`                                      | **C1**                  |
+| `ctx.disposables.add`                            | none                                               | **A1**                  |
+| `ctx.asUser(userId, fn)`                         | none, always audited                               | **A1**                  |
+| `ctx.currentActor()`                             | none                                               | **A1**                  |
+| `ctx.db.define` / `.client` / `.refs`            | `db:own`                                           | **A3**                  |
+| `ctx.db.persist` / `.dialect`                    | `db:own` (persist only)                            | **A9**, lazy **B16**    |
+| `ctx.sync.registerEntity`                        | none                                               | **A3**                  |
+| `ctx.http.router` / `ctx.ws.route` / `.upgrade`  | `network:serve`                                    | **A4**                  |
+| `ctx.http.baseUrl(req)`                          | none                                               | **C2**                  |
+| `ctx.rbac.has` / `.hasFor` / `.require`          | own permissions only                               | **A5**                  |
+| `ctx.capabilities.has` / `.require`              | the capability itself                              | **B11**                 |
+| `ctx.hosts.*`                                    | `hosts:read` / `hosts:write`                       | **B4**, **B5**, **B18** |
+| `ctx.hosts.status.*`                             | `hosts:read`                                       | **B16**                 |
+| `ctx.ssh.*`                                      | `ssh:connect`, `credentials:use`                   | **A8**                  |
+| `ctx.settings.*`                                 | `settings:read-core` (readCore only)               | **A6**                  |
+| `ctx.notify.channels` / `.send`                  | `notify:send`                                      | **B17**                 |
+| `ctx.auth.*`                                     | `auth:provide`                                     | **A8**                  |
+| `ctx.auth.completeRedirectLogin` and the rest    | `auth:provide`                                     | **C2**                  |
+| `ctx.desktop.openIsolatedWindow`                 | `desktop:window`                                   | **B8**                  |
+| `ctx.desktop.launchNativeRdp` / `.available`     | `desktop:window` (launch only)                     | **B14**                 |
+| `ctx.credentials.resolveHostProtocol`            | `credentials:read`                                 | **B14**                 |
+| `ctx.credentials.registerSecretResolver`         | `auth:provide`                                     | **B20**                 |
+| `ctx.audit.record`                               | none, the actor is the runtime's                   | **B9**                  |
+| `ctx.schedule.every` / `.after`                  | none                                               | **B16**                 |
+| `ctx.fetch`                                      | `network:outbound`                                 | **B17**, signal **B18** |
+| `ctx.process.run` / `.ensureBinary`              | `process:spawn` (+ `network:outbound` to download) | **C3**                  |
+| `ctx.auth.registerKeyboardInteractiveHandler`    | `auth:provide`                                     | **C3**                  |
 
 **B11** added `ctx.capabilities.has(capability)` / `.require(capability)`, a
 generic check for a capability no other ctx member wraps. Unlike every other
@@ -1670,11 +1750,11 @@ connect pipeline instead of importing ssh2 helpers from core:
 - `prepare(host, { client, purpose })`, `openTransport`,
   `classifyKeyboardInteractive` and `autoResponses` are the lower level for a
   transport with its own prompt flow (**B6**'s interactive file-manager
-  connect with its TOTP/Warpgate parking flow).
+  connect with its TOTP and browser sign-in parking flow).
 - **B15** showed the higher level covers a multi-request HTTP handshake too:
   the Docker panel passes `connect` a `prompt` channel whose `ask` answers the
-  waiting request with what to ask (a code, a Warpgate sign-in, credentials)
-  and resolves when the next request (`connect-totp`, `connect-warpgate`)
+  waiting request with what to ask (a code, a browser sign-in, credentials)
+  and resolves when the next request (`connect-totp`, `connect-browser-sign-in`)
   brings the answer. A retry TOTP round re-asks instead of failing. docker
   has no auth code of its own left.
 - `requiresSecret(authType)` and `supportsBackground(authType)` ask the
@@ -1795,6 +1875,19 @@ credential it points at; a shared recipient gets only core's sharing
 resolution (the owner's shared snapshot or their own override), never the
 owner's raw secret; no connect access, or no host, is `null`. Every call is
 audited as `plugin_credentials_read`, allowed or refused.
+
+**C3** added `ctx.process`, for a plugin that ships a program (opkssh):
+
+- `run(file, args, { env, cwd, timeoutMs })` starts it without a shell and
+  returns `{ pid, onStdout, onStderr, exited, kill }`. Output arrives as UTF-8
+  text. Every program still running is killed on deactivate. Audited as
+  `process_run`.
+- `ensureBinary({ name, version, url, sha256, prebuilt })` returns the path of
+  a verified executable: the first `prebuilt` path whose SHA-256 matches (a
+  copy baked into the Docker image, used in place), else
+  `<DATA_DIR>/plugins/<id>/bin/<name>` when it matches, else a download over
+  https (redirects followed, `network:outbound` checked only then), written
+  atomically with mode 755. A mismatch throws and keeps nothing.
 
 **B20** added `ctx.credentials.registerSecretResolver(scheme, resolve)`,
 behind `auth:provide` like `ctx.auth`'s registrations, for a plugin that
@@ -2151,6 +2244,7 @@ upgrade on all three engines, and the checks in step 15 are green.
    | `ctx.http.router`, `ctx.ws.*`            | `network:serve`                  |
    | `ctx.ssh.*`                              | `ssh:connect`, `credentials:use` |
    | `ctx.auth.*`                             | `auth:provide`                   |
+   | `ctx.process.*`                          | `process:spawn`                  |
    | `ctx.settings.readCore`                  | `settings:read-core`             |
    | `ctx.events.emit` outside `plugin.<id>.` | `events:core`                    |
    | anything registered through `app`        | `ui:surface`                     |
@@ -2425,6 +2519,7 @@ Then, with the app running:
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
 (B17), ai (B18), homepage (B19), totp and webauthn (C1), sso and ldap (C2),
+opkssh and warpgate (C3),
 which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle
@@ -2502,4 +2597,4 @@ Known specifics:
   owns no module state, and its guacamole-lite server is built in `activate`
   with its own signal handlers removed (guacamole-lite installs SIGTERM and
   SIGINT handlers in its constructor). guacd is always an external service,
-  so there is no `ctx.process`; its address is an admin setting.
+  so it does not use `ctx.process`; its address is an admin setting.

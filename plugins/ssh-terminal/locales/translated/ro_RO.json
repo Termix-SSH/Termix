@@ -40,8 +40,6 @@
     "linkDialogTitle": "Deschideți linkul",
     "maxReconnectAttemptsReached": "S-a atins numărul maxim de încercări de reconectare",
     "noHostSelected": "Nicio gazdă selectată",
-    "opksshAuthFailed": "Autentificarea a eșuat. Verificați acreditările și încercați din nou.",
-    "opksshTimeout": "Autentificarea a expirat. Vă rugăm să încercați din nou.",
     "passwordPromptFillTitle": "Introduceți parola salvată în această solicitare?",
     "reconnect": "Reconectați-vă",
     "reconnected": "Reconectare cu succes",

@@ -290,7 +290,6 @@
     "connecting": "Connessione in corso...",
     "connectedSuccessfully": "Connesso con successo",
     "totpVerificationFailed": "Verifica TOTP non riuscita",
-    "warpgateVerificationFailed": "Autenticazione Warpgate non riuscita",
     "authenticationFailed": "Autenticazione non riuscita",
     "incorrectPassphrase": "Frase di accesso non corretta. Riprova.",
     "verificationCodePrompt": "Codice di verifica:",

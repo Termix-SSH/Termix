@@ -234,6 +234,24 @@ describe("ctx.http authentication", () => {
     expect(response.status).toBe(401);
   });
 
+  it("opens everything below a trailing /* and nothing beside it", async () => {
+    const router = http.createPluginRouter({
+      manifest: manifest(),
+      options: { public: ["/chooser/:id/*"] },
+      reportError: () => {},
+    });
+    router.use("/chooser", (_req, res) => res.json({ ok: true }));
+    router.get("/chooserx/a", (_req, res) => res.json({ ok: true }));
+
+    const base = await startServer();
+    const root = `${base}/plugin-api/sample-plugin`;
+
+    expect((await fetch(`${root}/chooser/abc`)).status).toBe(200);
+    expect((await fetch(`${root}/chooser/abc/select/x`)).status).toBe(200);
+    expect((await fetch(`${root}/chooser`)).status).toBe(401);
+    expect((await fetch(`${root}/chooserx/a`)).status).toBe(401);
+  });
+
   it("gives the plugin the user core authenticated, not one the caller named", async () => {
     const router = http.createPluginRouter({
       manifest: manifest(),

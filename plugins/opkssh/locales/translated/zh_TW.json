@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "使用您的識別提供者而非密碼或金鑰來登入此主機。需要在伺服器上設定 OPKSSH。",
+    "docs": "檢視文件"
+  },
+  "dialog": {
+    "title": "需要 OPKSSH 驗證",
+    "description": "請在瀏覽器中完成驗證以繼續。此工作階段將持續有效 24 小時。",
+    "openBrowser": "開啟瀏覽器以進行驗證",
+    "waiting": "正在等待瀏覽器中的驗證…",
+    "authenticating": "正在處理驗證…",
+    "signInWith": "使用 {{provider}} 登入"
+  },
+  "errors": {
+    "authFailed": "驗證失敗。請檢查您的憑證並再試一次。",
+    "timeout": "驗證逾時。請再試一次。"
+  }
+}

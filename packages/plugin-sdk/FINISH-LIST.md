@@ -168,10 +168,6 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   `setHostAutoTmux`, `getCookie`) and the connection helpers. They belong on
   the typed host bridge, which is also where B7's `app.logActivity` line
   above lands. Owner: D1.
-- **B9 (ssh-terminal):** `OPKSSHDialog` is exported from
-  `@termix/plugin-sdk/ui` so the terminal can show the opkssh sign-in. It
-  leaves the ui entry when opkssh becomes a plugin that draws its own UI in
-  `terminal.overlay`. Owner: Phase C (opkssh).
 - **B9 (host-metrics):** the terminal toolbar's CPU/memory/disk bars
   (`TerminalMetricsStatus`) poll the local backend only; on the desktop app a
   host that lives on a connected remote server shows no bars. Same fix as the
@@ -487,6 +483,47 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   (`h.pluginSettings?.["web-endpoint"]`). The file is untouched since before
   C2. Owner: D0.
 
+- **C3 (opkssh), for the Step-CA step:** Step-CA is still core and no longer
+  shares OPKSSH's pieces. Its interaction is `stepca` and its socket messages
+  `stepca_*`, but nothing draws them yet: until its plugin contributes a
+  `terminal.overlay` (the opkssh plugin's `OpksshOverlay` and `OpksshDialog`
+  are the model), a Step-CA host asks for a sign-in the terminal cannot show.
+  Its issued certificates are cached in memory (`step-ca-auth.ts`), so they
+  are lost on restart; its plugin should own a table the way opkssh owns
+  `p_opkssh_tokens`. Step-CA certificates 2.8 cached in `opkssh_tokens` stay
+  in the adopted `p_opkssh_tokens`, unused, until they expire. Owner: the
+  Phase C step that moves Step-CA.
+- **C3 (opkssh):** `database/routes/host-compat-routes.ts` answers the 2.8
+  redirect URI `/host/opkssh-callback` with a 307 to the plugin and so names
+  the plugin's path. Keep it until identity providers have moved to
+  `/plugin-api/opkssh/callback` (the admin page shows it, and the
+  `legacyCallback` setting switches over). Owner: 3.0.0.
+- **C3 (opkssh/warpgate):** `ssh_data.use_warpgate` and the `.opk` folder
+  under `DATA_DIR` stay on disk, unused (the drizzle drop is `SELECT 1;`, the
+  config is copied, not moved). Remove them in 3.0.0. Owner: 3.0.0.
+- **C3 (opkssh):** the Termix docs still describe `DATA_DIR/.opk/config.yml`
+  and `/host/opkssh-callback`. They need the new config path
+  (`DATA_DIR/plugins/opkssh/config.yml`), the new redirect URI and the
+  `legacyCallback` setting. Owner: D0 (docs repo).
+- **C3 (warpgate):** Termix-Mobile's file manager and docker clients call
+  `/ssh/connect-warpgate` and read `requiresWarpgate`; the plugins answer
+  `connect-browser-sign-in` and `requires_browser_sign_in` now (both clients
+  were already on paths B6 and B15 moved). The terminal socket keeps
+  `warpgate_auth_required` / `warpgate_auth_continue`. Owner: D1, with the
+  rest of the mobile client changes.
+- **C3:** `host-bulk-routes.ts` still validates imported auth types against a
+  fixed list that names plugin types (`opkssh`, `stepca`, `tailscale`,
+  `vault`), and the host create/update routes no longer accept a
+  `useWarpgate` field inline (the host editor sends plugin settings). The
+  bulk list should come from the registered providers plus
+  `contributes.auth.sshAuthTypes`. Owner: D1.
+- **Pre-existing, found in C3:** the Docker `opkssh-downloader` stage's
+  `OPKSSH_VERSION` build arg is not passed on at runtime, so building with
+  another version gives a prebaked binary the plugin's pinned checksum
+  rejects (it then downloads the pinned version instead). Pass
+  `OPKSSH_VERSION` and the matching `OPKSSH_SHA256` as `ENV` in the final
+  stage. Owner: D0.
+
 ## Manual checks after 2.9.0
 
 - SSH terminal: password auth, key auth (and an encrypted key's passphrase
@@ -572,3 +609,12 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   sign-in; a second factor after an external login with the admin setting
   on and off; disable each plugin and its buttons go away and its URLs stop
   signing anyone in, then enable it again.
+- OPKSSH and Warpgate: on a 2.8 Docker install with OPKSSH set up, the config
+  shows up under the plugin, the admin page shows the old redirect URI and a
+  terminal sign-in to an OPKSSH host works through the provider chooser
+  without touching the identity provider; switch to the new URI, register
+  it and sign in again; a second connect within 24 hours skips the browser;
+  an offline Docker install uses the baked binary; disable the opkssh plugin
+  and the host says it needs it. A Warpgate host's toggle is on in the host
+  editor's Plugins group after the upgrade, and the terminal, file manager
+  and docker each show the sign-in dialog and connect after it.

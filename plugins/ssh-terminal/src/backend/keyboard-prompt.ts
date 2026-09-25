@@ -3,12 +3,13 @@
  *
  * Core's classifier (ctx.ssh.classifyKeyboardInteractive) decides what a
  * round is; this keeps the terminal's message protocol (totp_required,
- * totp_retry, password_required, warpgate_auth_required) and its timeouts
- * exactly as the client expects.
+ * totp_retry, password_required, "<handler>_auth_required" for a browser
+ * sign-in round) and its timeouts exactly as the client expects.
  */
 
 import type { WebSocket } from "ws";
 import type {
+  PluginBrowserSignInRound,
   PluginKeyboardInteractivePrompt,
   PluginSsh,
   PluginSshHost,
@@ -40,7 +41,6 @@ interface ResolvedCredentials {
 }
 
 interface HostFlags {
-  useWarpgate?: boolean;
   [key: string]: unknown;
 }
 
@@ -54,15 +54,16 @@ interface AuthContext {
   keyboardInteractiveResponded: boolean;
   keyboardInteractiveFinish: ((responses: string[]) => void) | null;
   totpPromptSent: boolean;
-  warpgateAuthPromptSent: boolean;
+  /** The handler whose browser round is waiting for "<id>_auth_continue". */
+  browserSignInId: string | null;
   totpTimeout: NodeJS.Timeout | null;
-  warpgateAuthTimeout: NodeJS.Timeout | null;
+  browserSignInTimeout: NodeJS.Timeout | null;
   totpAttempts: number;
 }
 
 const TOTP_TIMEOUT_MS = 180000;
 const PUSH_TIMEOUT_MS = 300000;
-const WARPGATE_TIMEOUT_MS = 300000;
+const BROWSER_SIGN_IN_TIMEOUT_MS = 300000;
 
 export class SSHAuthManager {
   public context: AuthContext;
@@ -101,8 +102,8 @@ export class SSHAuthManager {
       case "auto":
         finish(decision.responses);
         return;
-      case "warpgate":
-        this.handleWarpgate(decision, finish);
+      case "browser":
+        this.handleBrowserSignIn(decision, finish);
         return;
       case "totp":
         this.handleTotp(
@@ -124,40 +125,48 @@ export class SSHAuthManager {
     }
   }
 
-  private handleWarpgate(
-    decision: { url: string | null; securityKey: string; instructions: string },
+  /**
+   * A round finished in a browser. The message is named after the handler
+   * that claimed it (Termix-Mobile listens for these names), and the client
+   * answers with "<id>_auth_continue".
+   */
+  private handleBrowserSignIn(
+    round: PluginBrowserSignInRound,
     finish: (responses: string[]) => void,
   ): void {
     this.context.keyboardInteractiveFinish = () => {
       finish([""]);
     };
-    this.context.warpgateAuthPromptSent = true;
-    this.sendLog("auth", "info", "Warpgate authentication required");
+    this.context.browserSignInId = round.id;
+    this.sendLog("auth", "info", `${round.label} sign-in required`);
     this.context.ws.send(
       JSON.stringify({
-        type: "warpgate_auth_required",
-        url: decision.url,
-        securityKey: decision.securityKey,
-        instructions: decision.instructions,
+        type: `${round.id}_auth_required`,
+        kind: "browser",
+        label: round.label,
+        url: round.url,
+        securityKey: round.code,
+        instructions: round.instructions,
       }),
     );
 
-    this.context.warpgateAuthTimeout = setTimeout(() => {
+    this.context.browserSignInTimeout = setTimeout(() => {
       if (this.context.keyboardInteractiveFinish) {
         this.context.keyboardInteractiveFinish = null;
-        this.context.warpgateAuthPromptSent = false;
-        this.context.log.warn("Warpgate authentication timeout", {
-          operation: "warpgate_timeout",
+        this.context.browserSignInId = null;
+        this.context.log.warn("Browser sign-in timeout", {
+          operation: "browser_sign_in_timeout",
+          handler: round.id,
           hostId: this.context.hostId,
         });
         this.context.ws.send(
           JSON.stringify({
             type: "error",
-            message: "Warpgate authentication timeout. Please reconnect.",
+            message: `${round.label} sign-in timed out. Please reconnect.`,
           }),
         );
       }
-    }, WARPGATE_TIMEOUT_MS);
+    }, BROWSER_SIGN_IN_TIMEOUT_MS);
   }
 
   private handleTotp(
@@ -289,13 +298,13 @@ export class SSHAuthManager {
       clearTimeout(this.context.totpTimeout);
       this.context.totpTimeout = null;
     }
-    if (this.context.warpgateAuthTimeout) {
-      clearTimeout(this.context.warpgateAuthTimeout);
-      this.context.warpgateAuthTimeout = null;
+    if (this.context.browserSignInTimeout) {
+      clearTimeout(this.context.browserSignInTimeout);
+      this.context.browserSignInTimeout = null;
     }
     this.context.keyboardInteractiveFinish = null;
     this.context.totpPromptSent = false;
-    this.context.warpgateAuthPromptSent = false;
+    this.context.browserSignInId = null;
     this.context.keyboardInteractiveResponded = false;
   }
 }

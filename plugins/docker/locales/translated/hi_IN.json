@@ -73,7 +73,6 @@
     "containerMustBeRunning": "कंसोल तक पहुंचने के लिए कंटेनर चालू होना चाहिए",
     "verificationCodePrompt": "सत्यापन कोड दर्ज करें",
     "totpVerificationFailed": "TOTP सत्यापन विफल। कृपया पुनः प्रयास करें।",
-    "warpgateVerificationFailed": "Warpgate प्रमाणीकरण विफल। कृपया पुनः प्रयास करें।",
     "connectedTo": "{{containerName}} से जुड़ा",
     "disconnected": "डिस्कनेक्टेड",
     "consoleError": "कंसोल त्रुटि",

@@ -1,0 +1,19 @@
+{
+  "editor": {
+    "label": "OPKSSH",
+    "description": "パスワードや鍵の代わりに、IDプロバイダーを使用してこのホストにサインインします。サーバーにOPKSSHのセットアップが必要です。",
+    "docs": "ドキュメントを表示"
+  },
+  "dialog": {
+    "title": "OPKSSH認証が必要です",
+    "description": "ブラウザで認証を完了して続行してください。このセッションは24時間有効です。",
+    "openBrowser": "ブラウザを開いて認証",
+    "waiting": "ブラウザでの認証を待機中...",
+    "authenticating": "認証を処理中...",
+    "signInWith": "{{provider}} でサインイン"
+  },
+  "errors": {
+    "authFailed": "認証に失敗しました。資格情報を確認して再試行してください。",
+    "timeout": "認証がタイムアウトしました。もう一度お試しください。"
+  }
+}

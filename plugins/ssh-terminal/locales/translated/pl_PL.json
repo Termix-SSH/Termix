@@ -40,8 +40,6 @@
     "linkDialogTitle": "Otwórz link",
     "maxReconnectAttemptsReached": "Osiągnięto maksymalną liczbę prób ponownego połączenia",
     "noHostSelected": "Nie wybrano hosta",
-    "opksshAuthFailed": "Uwierzytelnienie nie powiodło się. Sprawdź poświadczenia i spróbuj ponownie.",
-    "opksshTimeout": "Upłynął limit czasu uwierzytelniania. Spróbuj ponownie.",
     "passwordPromptFillTitle": "Czy wpisać zapisane hasło w tym monicie?",
     "reconnect": "Połącz ponownie",
     "reconnected": "Połączono ponownie pomyślnie",

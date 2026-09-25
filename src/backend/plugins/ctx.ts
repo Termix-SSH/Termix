@@ -56,6 +56,7 @@ import { createPluginAuth, createPluginSsh } from "./ctx-ssh-auth.js";
 import { createPluginHosts } from "./ctx-hosts.js";
 import { createPluginSchedule } from "./schedule.js";
 import { createPluginFetch, createPluginNotify } from "./ctx-notify.js";
+import { createPluginProcess } from "./ctx-process.js";
 import { createPluginCredentials } from "./ctx-credentials.js";
 import { isElectronIpcAvailable } from "../utils/electron-ipc-bridge.js";
 
@@ -821,6 +822,11 @@ export function createPluginContext(
     ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
     notify: createPluginNotify({ manifest, audit: auditCall }),
     fetch: createPluginFetch({ manifest, audit: auditCall }),
+    process: createPluginProcess({
+      manifest,
+      bag: handle.bag,
+      audit: auditCall,
+    }),
     auth: createPluginAuth({ manifest, bag: handle.bag, audit: auditCall }),
 
     desktop: {

@@ -259,6 +259,8 @@ export interface PluginAuthContribution {
   secondFactors?: string[];
   /** Schemes this plugin resolves for "<scheme>://..." secret references, e.g. "op". */
   secretSchemes?: string[];
+  /** Keyboard-interactive handler ids, e.g. "warpgate". */
+  keyboardInteractive?: string[];
 }
 
 export interface PluginContributions {
@@ -792,7 +794,13 @@ function validateAuthContribution(value: unknown, errors: string[]): void {
   }
   rejectUnknown(
     value,
-    ["sshAuthTypes", "loginMethods", "secondFactors", "secretSchemes"],
+    [
+      "sshAuthTypes",
+      "loginMethods",
+      "secondFactors",
+      "secretSchemes",
+      "keyboardInteractive",
+    ],
     "contributes.auth",
     errors,
   );
@@ -801,6 +809,7 @@ function validateAuthContribution(value: unknown, errors: string[]): void {
     "loginMethods",
     "secondFactors",
     "secretSchemes",
+    "keyboardInteractive",
   ]) {
     const list = value[key];
     if (list === undefined) continue;
@@ -1351,7 +1360,8 @@ export function parseManifest(raw: unknown): ParsedManifest {
     (auth?.sshAuthTypes?.length ?? 0) +
       (auth?.loginMethods?.length ?? 0) +
       (auth?.secondFactors?.length ?? 0) +
-      (auth?.secretSchemes?.length ?? 0) >
+      (auth?.secretSchemes?.length ?? 0) +
+      (auth?.keyboardInteractive?.length ?? 0) >
     0;
   if (contributesAuth && !manifest.capabilities.includes("auth:provide")) {
     errors.push(

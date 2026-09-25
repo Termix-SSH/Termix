@@ -73,7 +73,6 @@
     "containerMustBeRunning": "Konsola erişmek için konteyner çalışıyor olmalıdır",
     "verificationCodePrompt": "Doğrulama kodunu girin",
     "totpVerificationFailed": "TOTP doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
-    "warpgateVerificationFailed": "Warpgate kimlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
     "connectedTo": "{{containerName}} ile bağlantı kuruldu",
     "disconnected": "Bağlantı kesildi",
     "consoleError": "Konsol hatası",
