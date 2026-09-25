@@ -47,6 +47,11 @@ export async function build({ cwd }) {
     // node_modules import instead, resolved at runtime like a host-provided
     // package.
     external: [...BACKEND_EXTERNALS, ...(manifest.nativeDependencies ?? [])],
+    // Bundled CJS deps still call require() for Node builtins at runtime.
+    // ESM has no ambient require, so give esbuild's require shim a real one.
+    banner: {
+      js: "import { createRequire as __termixCreateRequire } from 'node:module'; const require = __termixCreateRequire(import.meta.url);",
+    },
   });
 
   const frontendEntry = resolveEntry(cwd, FRONTEND_ENTRIES);
