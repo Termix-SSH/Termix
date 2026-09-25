@@ -41,7 +41,6 @@ export interface SshConnectHost {
    */
   pluginSettings?: Record<string, Record<string, unknown>> | null;
   forceKeyboardInteractive?: boolean | null;
-  vaultProfile?: { id?: number | null } | null;
   terminalConfig?: Record<string, unknown> | null;
   jumpHosts?: Array<{ hostId: number }> | null;
   useSocks5?: boolean | null;

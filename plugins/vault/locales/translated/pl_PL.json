@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profil podpisujący Vault",
+    "selectProfile": "Wybierz profil Vault...",
+    "hint": "Ustawienia pochodzą z profilu współdzielonego. Po połączeniu zalogujesz się do Vault przez OIDC. Nie są przechowywane żadne sekrety.",
+    "docs": "Zobacz dokumentację"
+  },
+  "profiles": {
+    "new": "Nowy profil",
+    "manage": "Zarządzaj profilami Vault",
+    "name": "Przyjazna nazwa",
+    "vaultAddr": "Adres Vault",
+    "namespace": "Przestrzeń nazw",
+    "oidcMount": "Mount uwierzytelniania OIDC",
+    "oidcRole": "Rola OIDC",
+    "sshMount": "Mount sekretów SSH",
+    "sshRole": "Rola podpisująca SSH",
+    "validPrincipals": "Dozwoleni użytkownicy (principals)",
+    "keyType": "Typ klucza efemerycznego",
+    "shareWithAll": "Udostępnij wszystkim użytkownikom",
+    "create": "Utwórz profil",
+    "created": "Utworzono profil Vault",
+    "saved": "Zapisano profil Vault",
+    "deleted": "Usunięto profil Vault",
+    "saveFailed": "Nie udało się zapisać profilu Vault",
+    "deleteFailed": "Nie udało się usunąć profilu Vault",
+    "save": "Zapisz profil",
+    "validationError": "Wymagane są nazwa, adres Vault i rola podpisująca SSH",
+    "none": "Brak profili Vault.",
+    "sharedBadge": "współdzielony"
+  },
+  "dialog": {
+    "title": "Wymagane logowanie do Vault",
+    "description": "Otworzyło się okno logowania do HashiCorp Vault. Dokończ logowanie, a połączenie zostanie nawiązane automatycznie.",
+    "failed": "Uwierzytelnienie w Vault nie powiodło się. Spróbuj ponownie.",
+    "reopen": "Otwórz ponownie okno logowania"
+  }
+}

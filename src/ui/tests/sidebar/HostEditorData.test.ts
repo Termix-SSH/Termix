@@ -50,7 +50,6 @@ describe("omitOwnerSshAuthFromSharedEdit", () => {
         key: "owner-key",
         keyPassword: "owner-passphrase",
         keyType: "ssh-ed25519",
-        vaultProfileId: "9",
         overrideCredentialUsername: true,
         shareSshAuth: true,
         sudoPassword: "owner-sudo",
@@ -70,7 +69,6 @@ describe("omitOwnerSshAuthFromSharedEdit", () => {
     for (const field of [
       "authType",
       "credentialId",
-      "vaultProfileId",
       "overrideCredentialUsername",
       "shareSshAuth",
       "password",
@@ -126,32 +124,6 @@ describe("buildHostEditorPayload auth field isolation", () => {
 
     expect(payload.credentialId).toBeNull();
     expect(payload.password).toBe("newpass");
-  });
-
-  it("drops the vaultProfileId when switching a host away from vault auth", () => {
-    const form = {
-      ...createHostEditorForm(null),
-      authType: "password" as const,
-      password: "newpass",
-      vaultProfileId: "9",
-    };
-
-    const payload = buildHostEditorPayload(form, sshOnly);
-
-    expect(payload.vaultProfileId).toBeNull();
-    expect(payload.password).toBe("newpass");
-  });
-
-  it("sends vaultProfileId when authType is vault", () => {
-    const form = {
-      ...createHostEditorForm(null),
-      authType: "vault" as const,
-      vaultProfileId: "9",
-    };
-
-    const payload = buildHostEditorPayload(form, sshOnly);
-
-    expect(payload.vaultProfileId).toBe(9);
   });
 
   it("sends credentialId and optional password when authType is credential", () => {

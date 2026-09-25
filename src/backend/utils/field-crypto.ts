@@ -40,7 +40,6 @@ class FieldCrypto {
     // webhook URLs, which are credentials like any other.
     notification_channels: new Set(["config"]),
     termix_identity_ca: new Set(["privateKey"]),
-    vault_tokens: new Set(["sshCert", "privateKey"]),
   };
 
   static encryptField(

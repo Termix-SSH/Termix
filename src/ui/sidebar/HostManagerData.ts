@@ -78,10 +78,6 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     keyPassword: h.keyPassword,
     keyType: h.keyType,
     credentialId: h.credentialId != null ? String(h.credentialId) : undefined,
-    vaultProfileId:
-      (h as { vaultProfileId?: number | string | null }).vaultProfileId != null
-        ? String((h as { vaultProfileId?: number | string }).vaultProfileId)
-        : undefined,
     notes: h.notes,
     pin: h.pin ?? false,
     sortOrder: h.sortOrder ?? null,

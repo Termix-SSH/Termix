@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} vindue",
     "tmuxWindows": "Vinduer",
     "unknownError": "Der opstod en ukendt fejl",
-    "vaultAuthDescription": "Et vindue er åbnet, hvor du kan logge ind på HashiCorp Vault. Fuldfør loginprocessen der; forbindelsen fortsætter automatisk.",
-    "vaultAuthFailed": "Godkendelse af arkiv mislykkedes. Prøv igen.",
-    "vaultAuthTitle": "Login til Vault kræves",
-    "vaultReopen": "Genåbn loginvinduet",
     "websocketAbnormalClose": "Forbindelsen blev lukket uventet. Dette kan skyldes et problem med reverse proxy eller SSL-konfigurationen. Tjek venligst serverlogfilerne.",
     "websocketError": "WebSocket-forbindelsesfejl"
   },

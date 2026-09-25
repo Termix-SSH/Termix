@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Vault-ondertekenaarprofiel",
+    "selectProfile": "Selecteer een Vault-profiel...",
+    "hint": "De instellingen zijn afkomstig van het gedeelde profiel; u meldt zich bij Vault aan via OIDC wanneer u verbinding maakt. Er worden geen geheimen opgeslagen.",
+    "docs": "Documenten bekijken"
+  },
+  "profiles": {
+    "new": "Nieuw profiel",
+    "manage": "Beheer Vault-profielen",
+    "name": "Vriendelijke naam",
+    "vaultAddr": "Kluisadres",
+    "namespace": "Naamruimte",
+    "oidcMount": "OIDC-authenticatiekoppeling",
+    "oidcRole": "OIDC-rol",
+    "sshMount": "SSH-geheimen Mount",
+    "sshRole": "SSH-ondertekenaarrol",
+    "validPrincipals": "Geldige principes",
+    "keyType": "Tijdelijk sleuteltype",
+    "shareWithAll": "Delen met alle gebruikers",
+    "create": "Profiel aanmaken",
+    "created": "Vault-profiel aangemaakt",
+    "saved": "Vault-profiel opgeslagen",
+    "deleted": "Kluisprofiel verwijderd",
+    "saveFailed": "Het opslaan van het Vault-profiel is mislukt.",
+    "deleteFailed": "Het verwijderen van het Vault-profiel is mislukt.",
+    "save": "Profiel opslaan",
+    "validationError": "Naam, kluisadres en SSH-ondertekeningsrol zijn vereist.",
+    "none": "Nog geen Vault-profielen beschikbaar.",
+    "sharedBadge": "gedeeld"
+  },
+  "dialog": {
+    "title": "Aanmelden bij Vault is vereist.",
+    "description": "Er is een venster geopend om in te loggen bij HashiCorp Vault. Voltooi de aanmelding daar; deze verbinding wordt automatisch tot stand gebracht.",
+    "failed": "Authenticatie voor de kluis is mislukt. Probeer het opnieuw.",
+    "reopen": "Heropen het aanmeldvenster"
+  }
+}

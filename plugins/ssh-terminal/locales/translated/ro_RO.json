@@ -74,10 +74,6 @@
     "tmuxWindowCount": "fereastră {{count}}",
     "tmuxWindows": "Ferestre",
     "unknownError": "A apărut o eroare necunoscută",
-    "vaultAuthDescription": "S-a deschis o fereastră pentru a vă conecta la HashiCorp Vault. Finalizați conectarea acolo; această conexiune va continua automat.",
-    "vaultAuthFailed": "Autentificarea în seif a eșuat. Vă rugăm să încercați din nou.",
-    "vaultAuthTitle": "Este necesară conectarea la seif",
-    "vaultReopen": "Redeschideți fereastra de conectare",
     "websocketAbnormalClose": "Conexiunea s-a închis pe neașteptate. Acest lucru se poate datora unei probleme de configurare a proxy-ului invers sau a SSL. Vă rugăm să verificați jurnalele serverului.",
     "websocketError": "Eroare de conexiune WebSocket"
   },

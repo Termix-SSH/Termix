@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} ウィンドウ",
     "tmuxWindows": "ウィンドウ",
     "unknownError": "不明なエラーが発生しました",
-    "vaultAuthDescription": "HashiCorp Vaultへのサインイン用のウィンドウが開きました。そこでサインインを完了すると、この接続は自動的に続行されます。",
-    "vaultAuthFailed": "Vault 認証に失敗しました。もう一度お試しください。",
-    "vaultAuthTitle": "Vault サインインが必要です",
-    "vaultReopen": "サインインウィンドウを再表示",
     "websocketAbnormalClose": "接続が予期せず切断されました。リバースプロキシまたはSSLの設定に問題がある可能性があります。サーバーログを確認してください。",
     "websocketError": "WebSocket接続エラー"
   },

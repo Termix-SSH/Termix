@@ -600,7 +600,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedSocks5Username = socks5Username;
   let resolvedSocks5Password = socks5Password;
   let resolvedSocks5ProxyChain = socks5ProxyChain;
-  let resolvedVaultProfileId: number | null = null;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById, resolveHostBySyncId } =
@@ -625,9 +624,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
-        resolvedVaultProfileId =
-          (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
-          null;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -695,9 +691,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
-        resolvedVaultProfileId =
-          (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ??
-          null;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -787,9 +780,6 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keyPassword: resolvedCredentials.keyPassword,
     certPublicKey: resolvedCredentials.certPublicKey,
     terminalConfig: resolvedTerminalConfig ?? null,
-    vaultProfile: resolvedVaultProfileId
-      ? { id: resolvedVaultProfileId }
-      : null,
     jumpHosts: resolvedJumpHosts,
     useSocks5: resolvedUseSocks5,
     socks5Host: resolvedSocks5Host,

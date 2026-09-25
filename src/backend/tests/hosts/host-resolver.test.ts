@@ -6,7 +6,6 @@ const state = vi.hoisted(() => ({
   isAdminBypass: false,
   overrideCredentialId: null as number | null,
   credentials: new Map<string, Record<string, unknown>>(),
-  vaultProfile: null as Record<string, unknown> | null,
   auditCalls: [] as Record<string, unknown>[],
   folderCredentialId: null as number | null,
   sharedSecret: null as Record<string, unknown> | null,
@@ -25,9 +24,6 @@ vi.mock("../../database/repositories/factory.js", () => ({
   }),
   createCurrentSharedHostAuthOverrideRepository: () => ({
     findCredentialId: async () => state.overrideCredentialId,
-  }),
-  createCurrentVaultProfileRepository: () => ({
-    findById: async () => state.vaultProfile,
   }),
   createCurrentUserRepository: () => ({
     findById: async (userId: string) => ({ id: userId, username: userId }),
@@ -115,7 +111,6 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     keyType: null,
     credentialId: null,
     shareSshAuth: false,
-    vaultProfileId: null,
     sudoPassword: "owner-sudo",
     autostartPassword: "auto-pass",
     autostartKey: null,
@@ -136,7 +131,6 @@ beforeEach(() => {
   state.isAdminBypass = false;
   state.overrideCredentialId = null;
   state.credentials.clear();
-  state.vaultProfile = null;
   state.auditCalls = [];
   state.folderCredentialId = null;
   state.sharedSecret = null;
@@ -372,13 +366,11 @@ describe("resolveHostById", () => {
     expect(host.key).toBe("RECIPIENT-KEY");
   });
 
-  it("fully replaces Vault authentication with the recipient override", async () => {
+  it("fully replaces a plugin auth type with the recipient override", async () => {
     state.host = baseHost({
       authType: "vault",
       password: null,
-      vaultProfileId: 7,
     });
-    state.vaultProfile = { id: 7 };
     state.overrideCredentialId = 5;
     state.credentials.set("5:recipient", {
       id: 5,
@@ -399,7 +391,6 @@ describe("resolveHostById", () => {
     expect(host.authType).toBe("key");
     expect(host.key).toBe("RECIPIENT-KEY");
     expect(host.certPublicKey).toBe("ssh-ed25519-cert-v01@example certificate");
-    expect(host.vaultProfile).toBeUndefined();
   });
 
   it("falls back to the host username when the override credential has none", async () => {

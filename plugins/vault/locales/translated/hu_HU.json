@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Vault aláírói profil",
+    "selectProfile": "Válasszon ki egy Vault profilt...",
+    "hint": "A beállítások a megosztott profilból származnak; a csatlakozáskor OIDC-n keresztül fog bejelentkezni a Vaultba. A rendszer nem tárol titkos adatokat.",
+    "docs": "Dokumentumok megtekintése"
+  },
+  "profiles": {
+    "new": "Új profil",
+    "manage": "Vault profilok kezelése",
+    "name": "Barátságos név",
+    "vaultAddr": "Trezor címe",
+    "namespace": "Névtér",
+    "oidcMount": "OIDC hitelesítési csatolás",
+    "oidcRole": "OIDC szerepkör",
+    "sshMount": "SSH titkok felhúzása",
+    "sshRole": "SSH aláíró szerepkör",
+    "validPrincipals": "Érvényes megbízók",
+    "keyType": "Efemer kulcstípus",
+    "shareWithAll": "Megosztás az összes felhasználóval",
+    "create": "Profil létrehozása",
+    "created": "Létrehozva a trezor profilja",
+    "saved": "A trezor profilja mentve",
+    "deleted": "Tárolóprofil törölve",
+    "saveFailed": "Nem sikerült menteni a Vault profilját",
+    "deleteFailed": "Nem sikerült törölni a Vault profilját",
+    "save": "Profil mentése",
+    "validationError": "Név, trezor címe és SSH aláírói szerepkör megadása kötelező.",
+    "none": "Még nincsenek Vault-profilok.",
+    "sharedBadge": "megosztott"
+  },
+  "dialog": {
+    "title": "Bejelentkezés szükséges a széfbe",
+    "description": "Megnyílt egy ablak a HashiCorp Vaultba való bejelentkezéshez. Fejezze be a bejelentkezést ott; a kapcsolat automatikusan folytatódik.",
+    "failed": "A trezor hitelesítése sikertelen. Próbálja újra.",
+    "reopen": "Bejelentkezési ablak újranyitása"
+  }
+}

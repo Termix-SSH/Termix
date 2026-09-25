@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profil för valvsignerare",
+    "selectProfile": "Välj en Vault-profil...",
+    "hint": "Inställningarna kommer från den delade profilen; du loggar in på Vault via OIDC när du ansluter. Inga hemligheter lagras.",
+    "docs": "Visa dokument"
+  },
+  "profiles": {
+    "new": "Ny profil",
+    "manage": "Hantera Vault-profiler",
+    "name": "Vänligt namn",
+    "vaultAddr": "Valvadress",
+    "namespace": "Namnrymd",
+    "oidcMount": "OIDC-autentiseringsmontering",
+    "oidcRole": "OIDC-roll",
+    "sshMount": "SSH-hemligheter monteras",
+    "sshRole": "SSH-signerarroll",
+    "validPrincipals": "Giltiga principer",
+    "keyType": "Tillfällig nyckeltyp",
+    "shareWithAll": "Dela med alla användare",
+    "create": "Skapa profil",
+    "created": "Arkivprofil skapad",
+    "saved": "Arkivprofilen har sparats",
+    "deleted": "Arkivprofil raderad",
+    "saveFailed": "Kunde inte spara arkivprofilen",
+    "deleteFailed": "Misslyckades med att ta bort Arkiv-profilen",
+    "save": "Spara profil",
+    "validationError": "Namn, valvadress och SSH-signerarroll krävs",
+    "none": "Inga Vault-profiler ännu.",
+    "sharedBadge": "delad"
+  },
+  "dialog": {
+    "title": "Inloggning till arkivet krävs",
+    "description": "Ett fönster har öppnats för att logga in på HashiCorp Vault. Slutför inloggningen där; anslutningen fortsätter automatiskt.",
+    "failed": "Valvautentisering misslyckades. Försök igen.",
+    "reopen": "Öppna inloggningsfönstret igen"
+  }
+}

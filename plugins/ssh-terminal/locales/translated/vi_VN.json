@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} cửa sổ",
     "tmuxWindows": "Cửa sổ",
     "unknownError": "Lỗi không xác định đã xảy ra",
-    "vaultAuthDescription": "Một cửa sổ đã mở để đăng nhập vào HashiCorp Vault. Hoàn tất đăng nhập ở đó; kết nối này sẽ tự động tiếp tục.",
-    "vaultAuthFailed": "Xác thực Vault thất bại. Vui lòng thử lại.",
-    "vaultAuthTitle": "Yêu cầu đăng nhập Vault",
-    "vaultReopen": "Mở lại cửa sổ đăng nhập",
     "websocketAbnormalClose": "Kết nối đóng đột ngột. Có thể do sự cố cấu hình reverse proxy hoặc SSL. Vui lòng kiểm tra nhật ký máy chủ.",
     "websocketError": "Lỗi kết nối WebSocket"
   },

@@ -1,6 +1,7 @@
 /**
- * The 2.8 URLs under /host that something outside Termix still depends on:
- * the OPKSSH and Step CA redirect URIs registered with identity providers.
+ * The 2.8 auth callback URLs something outside Termix still depends on: the
+ * OPKSSH and Step CA redirect URIs registered with identity providers, and
+ * the Vault one listed in Vault OIDC roles.
  * Each forwards to the plugin route that replaced it, so with the plugin off
  * it signs nobody in.
  */
@@ -48,5 +49,23 @@ export function registerHostAuthCompatRoutes(router: Router): void {
    */
   router.get("/step-ca-callback", (req, res) => {
     res.redirect(307, localUrl(req, "/plugin-api/step-ca/callback"));
+  });
+}
+
+export function registerVaultCompatRoutes(router: Router): void {
+  /**
+   * @openapi
+   * /vault/oidc/callback:
+   *   get:
+   *     summary: Vault OIDC callback (2.8 URL)
+   *     description: The redirect URI Vault OIDC roles allowed before 2.9. Redirects to /plugin-api/vault/oidc/callback with the same query, so existing Vault roles keep working.
+   *     tags:
+   *       - Vault
+   *     responses:
+   *       307:
+   *         description: Redirect to the vault plugin's callback.
+   */
+  router.get("/oidc/callback", (req, res) => {
+    res.redirect(307, localUrl(req, "/plugin-api/vault/oidc/callback"));
   });
 }

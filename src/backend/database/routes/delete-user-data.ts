@@ -23,10 +23,8 @@ import {
   createCurrentTrustedDeviceRepository,
   createCurrentUserPreferenceRepository,
   createCurrentUserRepository,
-  createCurrentVaultProfileRepository,
   createCurrentSharedCredentialSecretsRepository,
   createCurrentCredentialAccessRepository,
-  createCurrentVaultTokenRepository,
 } from "../repositories/factory.js";
 
 export async function deleteUserAndRelatedData(
@@ -96,11 +94,9 @@ export async function deleteUserAndRelatedData(
     // secret_sources cascade on the user's refUser() foreign key, as the
     // homepage and secret-sources plugins' adopted tables. The secret
     // source's token in ctx.secrets is cleaned up generically below, with
-    // every other plugin_settings row for this user. The opkssh plugin's
-    // cached certificates cascade the same way.
+    // every other plugin_settings row for this user. The opkssh and vault
+    // plugins' tables cascade the same way.
 
-    await createCurrentVaultTokenRepository().deleteByUserId(userId);
-    await createCurrentVaultProfileRepository().deleteByUserId(userId);
     await createCurrentTermixIdentityCaRepository().deleteByUserId(userId);
     await createCurrentTermixIdentityRepository().deleteByUserId(userId);
     await createCurrentOpenTabRepository().deleteByUserId(userId);

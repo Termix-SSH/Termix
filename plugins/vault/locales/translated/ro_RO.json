@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profilul semnatarului din seif",
+    "selectProfile": "Selectați un profil Vault...",
+    "hint": "Setările provin din profilul partajat; te vei conecta la Vault prin OIDC când te conectezi. Nu sunt stocate secrete.",
+    "docs": "Vizualizați documentele"
+  },
+  "profiles": {
+    "new": "Profil nou",
+    "manage": "Gestionați profilurile din seif",
+    "name": "Nume prietenos",
+    "vaultAddr": "Adresă seif",
+    "namespace": "Spațiu de nume",
+    "oidcMount": "Montare autentificare OIDC",
+    "oidcRole": "Rolul OIDC",
+    "sshMount": "Secretele SSH Mount",
+    "sshRole": "Rolul semnatarului SSH",
+    "validPrincipals": "Principali validi",
+    "keyType": "Tip de cheie efemeră",
+    "shareWithAll": "Partajați cu toți utilizatorii",
+    "create": "Creați un profil",
+    "created": "Profilul seifului a fost creat",
+    "saved": "Profilul seifului a fost salvat",
+    "deleted": "Profilul seifului a fost șters",
+    "saveFailed": "Nu s-a putut salva profilul din Seif",
+    "deleteFailed": "Nu s-a putut șterge profilul Vault",
+    "save": "Salvați profilul",
+    "validationError": "Numele, adresa seifului și rolul semnatarului SSH sunt obligatorii.",
+    "none": "Încă nu există profiluri Vault.",
+    "sharedBadge": "partajat"
+  },
+  "dialog": {
+    "title": "Este necesară conectarea la seif",
+    "description": "S-a deschis o fereastră pentru a vă conecta la HashiCorp Vault. Finalizați conectarea acolo; această conexiune va continua automat.",
+    "failed": "Autentificarea în seif a eșuat. Vă rugăm să încercați din nou.",
+    "reopen": "Redeschideți fereastra de conectare"
+  }
+}

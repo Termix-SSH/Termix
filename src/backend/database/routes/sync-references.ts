@@ -7,8 +7,7 @@ import { getEntity } from "../../plugins/sync-registry.js";
  * A plain string rather than a union: the set is whatever is registered, and a
  * plugin can both register an entity and reference one. sync.ts resolves the
  * name through the registry, so an unknown one is an error there rather than a
- * silent fallthrough - which is what the old three-way if/else did, routing
- * anything that was not hosts or sshCredentials to vaultProfiles.
+ * silent fallthrough.
  */
 export type SyncReferenceEntity = string;
 

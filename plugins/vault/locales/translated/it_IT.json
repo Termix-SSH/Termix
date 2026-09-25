@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profilo firmatario Vault",
+    "selectProfile": "Seleziona un profilo Vault...",
+    "hint": "Le impostazioni provengono dal profilo condiviso; effettuerai l'accesso a Vault tramite OIDC quando ti connetti. Nessun segreto è memorizzato.",
+    "docs": "Visualizza documentazione"
+  },
+  "profiles": {
+    "new": "Nuovo profilo",
+    "manage": "Gestisci profili Vault",
+    "name": "Nome descrittivo",
+    "vaultAddr": "Indirizzo Vault",
+    "namespace": "Namespace",
+    "oidcMount": "Mount di autenticazione OIDC",
+    "oidcRole": "Ruolo OIDC",
+    "sshMount": "Mount dei segreti SSH",
+    "sshRole": "Ruolo firmatario SSH",
+    "validPrincipals": "Principal validi",
+    "keyType": "Tipo di chiave effimera",
+    "shareWithAll": "Condividi con tutti gli utenti",
+    "create": "Crea profilo",
+    "created": "Profilo Vault creato",
+    "saved": "Profilo Vault salvato",
+    "deleted": "Profilo Vault eliminato",
+    "saveFailed": "Salvataggio profilo Vault non riuscito",
+    "deleteFailed": "Eliminazione profilo Vault non riuscita",
+    "save": "Salva profilo",
+    "validationError": "Nome, indirizzo Vault e ruolo di firma SSH sono obbligatori",
+    "none": "Nessun profilo Vault ancora.",
+    "sharedBadge": "condiviso"
+  },
+  "dialog": {
+    "title": "Accesso a Vault richiesto",
+    "description": "Una finestra si è aperta per accedere a HashiCorp Vault. Completa l'accesso lì; la connessione continuerà automaticamente.",
+    "failed": "Autenticazione Vault fallita. Riprova.",
+    "reopen": "Riapri la finestra di accesso"
+  }
+}

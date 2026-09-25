@@ -35,7 +35,6 @@ export type Host = {
     | "agent";
   shareSshAuth?: boolean;
   credentialId?: string;
-  vaultProfileId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
   hasPassword?: boolean;
@@ -198,26 +197,6 @@ export type Credential = {
   isShared?: boolean;
   ownerUsername?: string | null;
   permissionLevel?: "use" | "manage";
-};
-
-// HashiCorp Vault SSH signer profile — shareable connection settings only
-// (no secrets). Users authenticate to Vault via OIDC at connect time.
-export type VaultProfile = {
-  id: string;
-  name: string;
-  description?: string;
-  folder?: string;
-  tags?: string[];
-  vaultAddr: string;
-  vaultNamespace?: string;
-  oidcMount?: string;
-  oidcRole?: string;
-  sshMount?: string;
-  sshRole: string;
-  validPrincipals?: string;
-  keyType?: string;
-  shared: boolean;
-  owned: boolean;
 };
 
 export type HostFolder = {

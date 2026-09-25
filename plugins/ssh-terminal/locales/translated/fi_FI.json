@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} ikkuna",
     "tmuxWindows": "Ikkunat",
     "unknownError": "Tuntematon virhe tapahtui",
-    "vaultAuthDescription": "Ikkuna HashiCorp-holviin kirjautumista varten on avautunut. Kirjaudu sisään siinä. Yhteys jatkuu automaattisesti.",
-    "vaultAuthFailed": "Holvin todennus epäonnistui. Yritä uudelleen.",
-    "vaultAuthTitle": "Holviin kirjautuminen vaaditaan",
-    "vaultReopen": "Avaa kirjautumisikkuna uudelleen",
     "websocketAbnormalClose": "Yhteys katkesi odottamatta. Tämä voi johtua käänteisestä välityspalvelimesta tai SSL-määritysongelmasta. Tarkista palvelimen lokit.",
     "websocketError": "WebSocket-yhteysvirhe"
   },

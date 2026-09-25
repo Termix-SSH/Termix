@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Vault-Signer-Profil",
+    "selectProfile": "Vault-Profil auswählen...",
+    "hint": "Die Einstellungen stammen aus dem freigegebenen Profil; Sie melden sich beim Verbinden per OIDC bei Vault an. Es werden keine Geheimnisse gespeichert.",
+    "docs": "Dokumentation anzeigen"
+  },
+  "profiles": {
+    "new": "Neues Profil",
+    "manage": "Vault-Profile verwalten",
+    "name": "Anzeigename",
+    "vaultAddr": "Vault-Adresse",
+    "namespace": "Namespace",
+    "oidcMount": "OIDC-Auth-Mount",
+    "oidcRole": "OIDC-Rolle",
+    "sshMount": "SSH-Secrets-Mount",
+    "sshRole": "SSH-Signer-Rolle",
+    "validPrincipals": "Gültige Principals",
+    "keyType": "Ephemerer Schlüsseltyp",
+    "shareWithAll": "Mit allen Benutzern teilen",
+    "create": "Profil erstellen",
+    "created": "Vault-Profil erstellt",
+    "saved": "Vault-Profil gespeichert",
+    "deleted": "Vault-Profil gelöscht",
+    "saveFailed": "Fehler beim Speichern des Vault-Profils",
+    "deleteFailed": "Fehler beim Löschen des Vault-Profils",
+    "save": "Profil speichern",
+    "validationError": "Name, Vault-Adresse und SSH-Signer-Rolle sind erforderlich",
+    "none": "Noch keine Vault-Profile.",
+    "sharedBadge": "geteilt"
+  },
+  "dialog": {
+    "title": "Vault-Anmeldung erforderlich",
+    "description": "Ein Fenster zur Anmeldung bei HashiCorp Vault wurde geöffnet. Schließen Sie die Anmeldung dort ab; diese Verbindung wird automatisch fortgesetzt.",
+    "failed": "Vault-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "reopen": "Anmeldefenster erneut öffnen"
+  }
+}

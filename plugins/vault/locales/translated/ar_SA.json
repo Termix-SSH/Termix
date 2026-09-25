@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "ملف توقيع Vault",
+    "selectProfile": "اختيار ملف توقيع Vault...",
+    "hint": "تأتي الإعدادات من الملف المشترك؛ ستقوم بتسجيل الدخول إلى Vault عبر OIDC عند الاتصال. لا يتم تخزين أي أسرار.",
+    "docs": "عرض المستندات"
+  },
+  "profiles": {
+    "new": "ملف جديد",
+    "manage": "إدارة ملفات Vault",
+    "name": "الاسم المألوف",
+    "vaultAddr": "عنوان Vault",
+    "namespace": "مساحة الاسم",
+    "oidcMount": "تثبيت مصادقة OIDC",
+    "oidcRole": "دور OIDC",
+    "sshMount": "تثبيت أسرار SSH",
+    "sshRole": "دور موقع SSH",
+    "validPrincipals": "المستخدمون المسموح بهم",
+    "keyType": "نوع المفتاح المؤقت",
+    "shareWithAll": "مشاركة مع جميع المستخدمين",
+    "create": "إنشاء ملف تعريف",
+    "created": "تم إنشاء ملف تعريف Vault",
+    "saved": "تم حفظ ملف تعريف Vault",
+    "deleted": "تم حذف ملف تعريف Vault",
+    "saveFailed": "فشل حفظ ملف تعريف Vault",
+    "deleteFailed": "فشل حذف ملف تعريف Vault",
+    "save": "حفظ ملف التعريف",
+    "validationError": "الاسم وعنوان Vault ودور الموقّع SSH مطلوب",
+    "none": "لا توجد ملفات تعريف Vault بعد.",
+    "sharedBadge": "مشترك"
+  },
+  "dialog": {
+    "title": "مطلوب تسجيل الدخول إلى Vault",
+    "description": "تم فتح نافذة لتسجيل الدخول إلى HashiCorp Vault. أكمل تسجيل الدخول هناك؛ سيستمر هذا الاتصال تلقائيًا.",
+    "failed": "فشلت مصادقة Vault. يرجى المحاولة مرة أخرى.",
+    "reopen": "أعد فتح نافذة تسجيل الدخول"
+  }
+}

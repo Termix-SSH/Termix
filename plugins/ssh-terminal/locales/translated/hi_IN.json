@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} विंडो",
     "tmuxWindows": "विंडो",
     "unknownError": "अज्ञात त्रुटि हुई",
-    "vaultAuthDescription": "HashiCorp Vault में साइन इन करने के लिए एक विंडो खुल गई है। वहाँ साइन-इन पूरा करें; यह कनेक्शन स्वचालित रूप से जारी रहेगा।",
-    "vaultAuthFailed": "Vault प्रमाणीकरण विफल। कृपया पुनः प्रयास करें।",
-    "vaultAuthTitle": "Vault साइन-इन आवश्यक है",
-    "vaultReopen": "साइन-इन विंडो फिर से खोलें",
     "websocketAbnormalClose": "कनेक्शन अप्रत्याशित रूप से बंद हो गया। यह रिवर्स प्रॉक्सी या SSL कॉन्फ़िगरेशन समस्या के कारण हो सकता है। कृपया सर्वर लॉग जाँचें।",
     "websocketError": "WebSocket कनेक्शन त्रुटि"
   },

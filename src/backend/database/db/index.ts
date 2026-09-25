@@ -978,11 +978,6 @@ const migrateSchema = () => {
     "override_credential_username",
     "INTEGER",
   );
-  addColumnIfNotExists(
-    "ssh_data",
-    "vault_profile_id",
-    "INTEGER REFERENCES vault_profiles(id) ON DELETE SET NULL",
-  );
 
   addColumnIfNotExists("ssh_data", "autostart_password", "TEXT");
   addColumnIfNotExists("ssh_data", "autostart_key", "TEXT");
@@ -1580,67 +1575,6 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite.prepare("SELECT id FROM vault_profiles LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS vault_profiles (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          description TEXT,
-          folder TEXT,
-          tags TEXT,
-          vault_addr TEXT NOT NULL,
-          vault_namespace TEXT,
-          oidc_mount TEXT,
-          oidc_role TEXT,
-          ssh_mount TEXT,
-          ssh_role TEXT NOT NULL,
-          valid_principals TEXT,
-          key_type TEXT,
-          shared INTEGER NOT NULL DEFAULT 0,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create vault_profiles table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM vault_tokens LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS vault_tokens (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          profile_id INTEGER NOT NULL,
-          ssh_cert TEXT NOT NULL,
-          private_key TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          expires_at TEXT NOT NULL,
-          last_used TEXT,
-          UNIQUE(user_id, profile_id),
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-          FOREIGN KEY (profile_id) REFERENCES vault_profiles (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create vault_tokens table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
     const existingRoles = sqlite.prepare("SELECT name, is_system FROM roles").all() as Array<{ name: string; is_system: number }>;
 
     try {
@@ -1878,7 +1812,6 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_folders", "sync_id", "TEXT");
   addColumnIfNotExists("snippets", "sync_id", "TEXT");
   addColumnIfNotExists("snippet_folders", "sync_id", "TEXT");
-  addColumnIfNotExists("vault_profiles", "sync_id", "TEXT");
 
   // Plugin runtime: lastError reports why a plugin is blocked or failed, and
   // grants record whether a capability came from an admin or from bundling.
@@ -1896,7 +1829,6 @@ const migrateSchema = () => {
     "ssh_folders",
     "snippets",
     "snippet_folders",
-    "vault_profiles",
   ];
 
   for (const table of syncIdTables) {

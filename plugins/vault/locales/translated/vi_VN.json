@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Hồ sơ người ký Vault",
+    "selectProfile": "Chọn hồ sơ Vault...",
+    "hint": "Cài đặt từ hồ sơ dùng chung; bạn sẽ đăng nhập Vault qua OIDC khi kết nối. Không lưu bí mật.",
+    "docs": "Xem tài liệu"
+  },
+  "profiles": {
+    "new": "Hồ sơ mới",
+    "manage": "Quản lý hồ sơ Vault",
+    "name": "Tên hiển thị",
+    "vaultAddr": "Địa chỉ Vault",
+    "namespace": "Không gian tên",
+    "oidcMount": "Điểm gắn xác thực OIDC",
+    "oidcRole": "Vai trò OIDC",
+    "sshMount": "Điểm gắn bí mật SSH",
+    "sshRole": "Vai trò ký SSH",
+    "validPrincipals": "Các danh tính hợp lệ",
+    "keyType": "Loại khóa tạm thời",
+    "shareWithAll": "Chia sẻ với tất cả người dùng",
+    "create": "Tạo hồ sơ",
+    "created": "Đã tạo hồ sơ Vault",
+    "saved": "Đã lưu hồ sơ Vault",
+    "deleted": "Đã xóa hồ sơ Vault",
+    "saveFailed": "Không thể lưu hồ sơ Vault",
+    "deleteFailed": "Không thể xóa hồ sơ Vault",
+    "save": "Lưu hồ sơ",
+    "validationError": "Tên, địa chỉ Vault và vai trò ký SSH là bắt buộc",
+    "none": "Chưa có hồ sơ Vault nào.",
+    "sharedBadge": "được chia sẻ"
+  },
+  "dialog": {
+    "title": "Yêu cầu đăng nhập Vault",
+    "description": "Một cửa sổ đã mở để đăng nhập vào HashiCorp Vault. Hoàn tất đăng nhập ở đó; kết nối này sẽ tự động tiếp tục.",
+    "failed": "Xác thực Vault thất bại. Vui lòng thử lại.",
+    "reopen": "Mở lại cửa sổ đăng nhập"
+  }
+}

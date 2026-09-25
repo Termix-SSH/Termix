@@ -1141,7 +1141,7 @@ export function createTerminalSocket(deps: TerminalSocketDeps) {
     /**
      * Starts the browser sign-in behind an "<interaction>_auth_required"
      * message. The provider for the host's auth type wins; otherwise the first
-     * provider that owns this interaction (Vault attaches to any auth type).
+     * provider that owns this interaction.
      */
     async function startAuthInteraction(
       interaction: string,

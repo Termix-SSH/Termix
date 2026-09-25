@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profil for hvelvsigner",
+    "selectProfile": "Velg en Vault-profil...",
+    "hint": "Innstillingene kommer fra den delte profilen. Du logger deg på Vault via OIDC når du kobler til. Ingen hemmeligheter lagres.",
+    "docs": "Vis dokumenter"
+  },
+  "profiles": {
+    "new": "Ny profil",
+    "manage": "Administrer Vault-profiler",
+    "name": "Vennlig navn",
+    "vaultAddr": "Hvelvadresse",
+    "namespace": "Navnerom",
+    "oidcMount": "OIDC-autentiseringsmontering",
+    "oidcRole": "OIDC-rolle",
+    "sshMount": "SSH-hemmeligheter monteres",
+    "sshRole": "SSH-signatørrolle",
+    "validPrincipals": "Gyldige prinsipaler",
+    "keyType": "Kortvarig nøkkeltype",
+    "shareWithAll": "Del med alle brukere",
+    "create": "Opprett profil",
+    "created": "Vault-profil opprettet",
+    "saved": "Vault-profilen er lagret",
+    "deleted": "Vault-profilen er slettet",
+    "saveFailed": "Kunne ikke lagre Vault-profilen",
+    "deleteFailed": "Kunne ikke slette Vault-profilen",
+    "save": "Lagre profil",
+    "validationError": "Navn, hvelvadresse og SSH-signerrolle er obligatorisk",
+    "none": "Ingen Vault-profiler ennå.",
+    "sharedBadge": "delt"
+  },
+  "dialog": {
+    "title": "Pålogging til arkivet kreves",
+    "description": "Et vindu har åpnet seg for å logge på HashiCorp Vault. Fullfør påloggingen der; denne tilkoblingen vil fortsette automatisk.",
+    "failed": "Hvelv-autentisering mislyktes. Prøv på nytt.",
+    "reopen": "Åpne påloggingsvinduet på nytt"
+  }
+}

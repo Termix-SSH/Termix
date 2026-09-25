@@ -3,7 +3,6 @@ import { findUsableCredential } from "./usable-credential.js";
 import { resolveExternalSecretRefs } from "./external-secrets.js";
 import {
   createCurrentHostResolutionRepository,
-  createCurrentVaultProfileRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
 import type { HostResolutionHostRecord } from "../database/repositories/host-resolution-repository.js";
@@ -231,26 +230,6 @@ export async function resolveHostById(
     host as Record<string, unknown>,
     sharedAuthResolution === "recipient-override" ? userId : ownerId,
   );
-
-  // Resolve a Vault SSH signer profile (shared settings, no secrets). The
-  // certificate itself is obtained per-user at connect time via Vault OIDC.
-  if (host.vaultProfileId && sharedAuthResolution !== "recipient-override") {
-    try {
-      const profile = await createCurrentVaultProfileRepository().findById(
-        host.vaultProfileId as number,
-      );
-      if (profile) {
-        (host as Record<string, unknown>).vaultProfile = profile;
-        host.authType = "vault";
-      }
-    } catch (e) {
-      sshLogger.warn("Failed to resolve vault profile for host", {
-        operation: "host_resolver_vault_profile",
-        hostId,
-        error: getErrorMessage(e, "Unknown"),
-      });
-    }
-  }
 
   // Keyboard-interactive handlers run synchronously mid-handshake and can
   // only read their host settings from here.

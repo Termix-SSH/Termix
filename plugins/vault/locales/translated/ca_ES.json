@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Perfil del signant de la caixa forta",
+    "selectProfile": "Seleccioneu un perfil de Vault...",
+    "hint": "La configuració prové del perfil compartit; iniciaràs la sessió a Vault mitjançant OIDC quan et connectis. No s'emmagatzemen secrets.",
+    "docs": "Veure documents"
+  },
+  "profiles": {
+    "new": "Nou perfil",
+    "manage": "Gestiona els perfils de Vault",
+    "name": "Nom amigable",
+    "vaultAddr": "Adreça de la caixa forta",
+    "namespace": "Espai de noms",
+    "oidcMount": "Muntatge d'autenticació OIDC",
+    "oidcRole": "Rol de l'OIDC",
+    "sshMount": "Muntanya de Secrets SSH",
+    "sshRole": "Rol de signant SSH",
+    "validPrincipals": "Principals vàlids",
+    "keyType": "Tipus de clau efímera",
+    "shareWithAll": "Comparteix amb tots els usuaris",
+    "create": "Crea un perfil",
+    "created": "Perfil de la caixa forta creat",
+    "saved": "Perfil de la caixa forta desat",
+    "deleted": "Perfil de la caixa forta suprimit",
+    "saveFailed": "No s'ha pogut desar el perfil de Vault",
+    "deleteFailed": "No s'ha pogut suprimir el perfil de Vault",
+    "save": "Desa el perfil",
+    "validationError": "El nom, l'adreça de la caixa forta i el rol de signant SSH són obligatoris.",
+    "none": "Encara no hi ha perfils de Vault.",
+    "sharedBadge": "compartit"
+  },
+  "dialog": {
+    "title": "Cal iniciar sessió a la caixa forta",
+    "description": "S'ha obert una finestra per iniciar la sessió a HashiCorp Vault. Completeu l'inici de sessió allà; aquesta connexió continuarà automàticament.",
+    "failed": "L'autenticació de la caixa forta ha fallat. Torna-ho a provar.",
+    "reopen": "Torna a obrir la finestra d'inici de sessió"
+  }
+}

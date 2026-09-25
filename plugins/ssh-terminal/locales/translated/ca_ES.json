@@ -74,10 +74,6 @@
     "tmuxWindowCount": "finestra {{count}}",
     "tmuxWindows": "Finestres",
     "unknownError": "S'ha produït un error desconegut",
-    "vaultAuthDescription": "S'ha obert una finestra per iniciar la sessió a HashiCorp Vault. Completeu l'inici de sessió allà; aquesta connexió continuarà automàticament.",
-    "vaultAuthFailed": "L'autenticació de la caixa forta ha fallat. Torna-ho a provar.",
-    "vaultAuthTitle": "Cal iniciar sessió a la caixa forta",
-    "vaultReopen": "Torna a obrir la finestra d'inici de sessió",
     "websocketAbnormalClose": "La connexió s'ha tancat inesperadament. Això pot ser degut a un problema de configuració del proxy invers o de l'SSL. Si us plau, reviseu els registres del servidor.",
     "websocketError": "Error de connexió de WebSocket"
   },

@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} Fenster",
     "tmuxWindows": "Fenster",
     "unknownError": "Unbekannter Fehler aufgetreten",
-    "vaultAuthDescription": "Ein Fenster zur Anmeldung bei HashiCorp Vault wurde geöffnet. Schließen Sie die Anmeldung dort ab; diese Verbindung wird automatisch fortgesetzt.",
-    "vaultAuthFailed": "Vault-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
-    "vaultAuthTitle": "Vault-Anmeldung erforderlich",
-    "vaultReopen": "Anmeldefenster erneut öffnen",
     "websocketAbnormalClose": "Verbindung unerwartet geschlossen. Dies kann auf ein Problem mit dem Reverse-Proxy oder der SSL-Konfiguration zurückzuführen sein. Bitte überprüfen Sie die Server-Logs.",
     "websocketError": "WebSocket-Verbindungsfehler"
   },

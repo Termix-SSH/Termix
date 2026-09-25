@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Perfil do assinante do Vault",
+    "selectProfile": "Selecione um perfil do Vault...",
+    "hint": "As configurações são provenientes do perfil compartilhado; você fará login no Vault via OIDC ao se conectar. Nenhum segredo é armazenado.",
+    "docs": "Ver documentos"
+  },
+  "profiles": {
+    "new": "Novo perfil",
+    "manage": "Gerenciar perfis do Vault",
+    "name": "Nome amigável",
+    "vaultAddr": "Endereço do cofre",
+    "namespace": "Espaço de nomes",
+    "oidcMount": "Montagem de autenticação OIDC",
+    "oidcRole": "Função OIDC",
+    "sshMount": "Montagem de segredos SSH",
+    "sshRole": "Função de assinatura SSH",
+    "validPrincipals": "Principais válidos",
+    "keyType": "Tipo de chave efêmera",
+    "shareWithAll": "Compartilhe com todos os usuários",
+    "create": "Criar perfil",
+    "created": "Perfil do Vault criado",
+    "saved": "Perfil do Vault salvo",
+    "deleted": "Perfil do Vault excluído",
+    "saveFailed": "Falha ao salvar o perfil do Vault",
+    "deleteFailed": "Falha ao excluir o perfil do Vault",
+    "save": "Salvar perfil",
+    "validationError": "Nome, endereço do Vault e função de assinatura SSH são obrigatórios.",
+    "none": "Ainda não há perfis no Vault.",
+    "sharedBadge": "compartilhado"
+  },
+  "dialog": {
+    "title": "É necessário fazer login no cofre.",
+    "description": "Uma janela foi aberta para fazer login no HashiCorp Vault. Conclua o login; esta conexão será estabelecida automaticamente.",
+    "failed": "A autenticação do cofre falhou. Tente novamente.",
+    "reopen": "Reabrir janela de login"
+  }
+}

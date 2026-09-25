@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} jendela",
     "tmuxWindows": "Windows",
     "unknownError": "Terjadi kesalahan yang tidak diketahui.",
-    "vaultAuthDescription": "Jendela telah terbuka untuk masuk ke HashiCorp Vault. Selesaikan proses masuk di sana; koneksi ini akan berlanjut secara otomatis.",
-    "vaultAuthFailed": "Autentikasi Vault gagal. Silakan coba lagi.",
-    "vaultAuthTitle": "Login ke Vault diperlukan.",
-    "vaultReopen": "Buka kembali jendela masuk",
     "websocketAbnormalClose": "Koneksi terputus secara tidak terduga. Ini mungkin disebabkan oleh masalah konfigurasi reverse proxy atau SSL. Silakan periksa log server.",
     "websocketError": "Kesalahan koneksi WebSocket"
   },

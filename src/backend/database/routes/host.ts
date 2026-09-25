@@ -183,7 +183,6 @@ router.post(
       authType,
       shareSshAuth,
       credentialId,
-      vaultProfileId,
       key,
       keyPassword,
       keyType,
@@ -305,8 +304,6 @@ router.post(
       authType: effectiveAuthType,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
-      vaultProfileId:
-        effectiveAuthType === "vault" ? vaultProfileId || null : null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
@@ -858,7 +855,6 @@ router.put(
       authType,
       shareSshAuth,
       credentialId,
-      vaultProfileId,
       key,
       keyPassword,
       keyType,
@@ -981,8 +977,6 @@ router.put(
       authType: effectiveAuthType,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
-      vaultProfileId:
-        effectiveAuthType === "vault" ? vaultProfileId || null : null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,

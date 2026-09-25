@@ -1,4 +1,3 @@
-import { registerLegacySshAuthProviders } from "../../auth/legacy-providers.js";
 import { registerBuiltinSshAuthProviders } from "./builtin-providers.js";
 
 let registered = false;
@@ -11,7 +10,6 @@ export function ensureCoreSshAuthProviders(): void {
   if (registered) return;
   registered = true;
   registerBuiltinSshAuthProviders();
-  registerLegacySshAuthProviders();
 }
 
 /** Test helper, pairs with resetSshAuthRegistryForTests. */

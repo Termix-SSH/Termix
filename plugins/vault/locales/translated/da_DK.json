@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profil for underskriver af arkiv",
+    "selectProfile": "Vælg en Vault-profil...",
+    "hint": "Indstillingerne kommer fra den delte profil; du logger ind på Vault via OIDC, når du opretter forbindelse. Der gemmes ingen hemmeligheder.",
+    "docs": "Se dokumenter"
+  },
+  "profiles": {
+    "new": "Ny profil",
+    "manage": "Administrer Vault-profiler",
+    "name": "Venligt navn",
+    "vaultAddr": "Adresse i boksen",
+    "namespace": "Navnerum",
+    "oidcMount": "OIDC-godkendelsesmontering",
+    "oidcRole": "OIDC-rolle",
+    "sshMount": "SSH-hemmeligheder monteres",
+    "sshRole": "SSH-underskriverrolle",
+    "validPrincipals": "Gyldige principper",
+    "keyType": "Kortvarig nøgletype",
+    "shareWithAll": "Del med alle brugere",
+    "create": "Opret profil",
+    "created": "Vault-profil oprettet",
+    "saved": "Vault-profil gemt",
+    "deleted": "Vault-profil slettet",
+    "saveFailed": "Kunne ikke gemme Vault-profilen",
+    "deleteFailed": "Kunne ikke slette Vault-profilen",
+    "save": "Gem profil",
+    "validationError": "Navn, Vault-adresse og SSH-underskriverrolle er påkrævet",
+    "none": "Ingen Vault-profiler endnu.",
+    "sharedBadge": "delt"
+  },
+  "dialog": {
+    "title": "Login til Vault kræves",
+    "description": "Et vindue er åbnet, hvor du kan logge ind på HashiCorp Vault. Fuldfør loginprocessen der; forbindelsen fortsætter automatisk.",
+    "failed": "Godkendelse af arkiv mislykkedes. Prøv igen.",
+    "reopen": "Genåbn loginvinduet"
+  }
+}

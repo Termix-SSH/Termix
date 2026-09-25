@@ -23,7 +23,6 @@ describe("sync references", () => {
         rdpCredentialId: 13,
         vncCredentialId: null,
         telnetCredentialId: null,
-        vaultProfileId: 4,
         parentHostId: 3,
       },
       async (entityType, id) => `${entityType}-${id}`,
@@ -34,17 +33,14 @@ describe("sync references", () => {
       rdpCredentialSyncId: "sshCredentials-13",
       vncCredentialSyncId: null,
       telnetCredentialSyncId: null,
-      vaultProfileSyncId: "vaultProfiles-4",
       parentHostSyncId: "hosts-3",
     });
     expect(row).not.toHaveProperty("credentialId");
-    expect(row).not.toHaveProperty("vaultProfileId");
   });
 
   it("resolves stable sync IDs to IDs from the receiving database", async () => {
     const ids = new Map([
       ["sshCredentials:credential-sync", 91],
-      ["vaultProfiles:vault-sync", 37],
       ["hosts:parent-sync", 52],
     ]);
     const row = await deserializeSyncReferences(
@@ -55,7 +51,6 @@ describe("sync references", () => {
         rdpCredentialSyncId: null,
         vncCredentialSyncId: null,
         telnetCredentialSyncId: null,
-        vaultProfileSyncId: "vault-sync",
         parentHostSyncId: "parent-sync",
       },
       async (entityType, syncId) => ids.get(`${entityType}:${syncId}`) ?? null,
@@ -66,7 +61,6 @@ describe("sync references", () => {
       rdpCredentialId: null,
       vncCredentialId: null,
       telnetCredentialId: null,
-      vaultProfileId: 37,
       parentHostId: 52,
     });
     expect(row).not.toHaveProperty("credentialSyncId");

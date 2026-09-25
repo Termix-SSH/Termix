@@ -74,10 +74,6 @@
     "tmuxWindowCount": "חלון {{count}}",
     "tmuxWindows": "חלונות",
     "unknownError": "אירעה שגיאה לא ידועה",
-    "vaultAuthDescription": "נפתח חלון לכניסה לכספת HashiCorp. השלם את תהליך הכניסה שם; חיבור זה ימשיך אוטומטית.",
-    "vaultAuthFailed": "אימות הכספת נכשל. אנא נסה שוב.",
-    "vaultAuthTitle": "נדרשת כניסה לכספת",
-    "vaultReopen": "פתח מחדש את חלון הכניסה",
     "websocketAbnormalClose": "החיבור נסגר באופן בלתי צפוי. ייתכן שהדבר נובע מבעיית פרוקסי הפוך או מבעיית תצורת SSL. אנא בדוק את יומני השרת.",
     "websocketError": "שגיאת חיבור WebSocket"
   },

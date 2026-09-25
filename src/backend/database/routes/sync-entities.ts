@@ -15,7 +15,6 @@ import {
   hosts,
   sshCredentials,
   sshFolders,
-  vaultProfiles,
   userPreferences,
 } from "../db/schema.js";
 import {
@@ -48,11 +47,6 @@ const HOST_REFERENCES = [
     entityType: "sshCredentials",
   },
   {
-    field: "vaultProfileId",
-    syncField: "vaultProfileSyncId",
-    entityType: "vaultProfiles",
-  },
-  {
     field: "parentHostId",
     syncField: "parentHostSyncId",
     entityType: "hosts",
@@ -78,11 +72,8 @@ export function registerCoreSyncEntities(): void {
     order: 10,
   });
 
-  registerEntity(CORE_OWNER, {
-    type: "vaultProfiles",
-    table: vaultProfiles,
-    order: 20,
-  });
+  // vaultProfiles (order 20) moved to the vault plugin. Hosts no longer
+  // reference it: a host's profile is the plugin's profileId host setting.
 
   registerEntity(CORE_OWNER, {
     type: "sshFolders",

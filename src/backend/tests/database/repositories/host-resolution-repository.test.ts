@@ -195,7 +195,6 @@ describe("HostResolutionRepository", () => {
       rdpCredentialId: null,
       vncCredentialId: null,
       telnetCredentialId: null,
-      vaultProfileId: null,
       authType: "password",
       parentHostId: null,
       folder: null,

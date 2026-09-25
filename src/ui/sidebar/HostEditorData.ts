@@ -134,7 +134,6 @@ export function createHostEditorForm(
         : d?.credentialId != null
           ? String(d.credentialId)
           : "",
-    vaultProfileId: host?.vaultProfileId ?? "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
     parentHostId: host?.parentHostId ?? "",
@@ -294,7 +293,6 @@ export function omitOwnerSshAuthFromSharedEdit(
     keyType: _keyType,
     sudoPassword: _sudoPassword,
     credentialId: _credentialId,
-    vaultProfileId: _vaultProfileId,
     overrideCredentialUsername: _overrideCredentialUsername,
     shareSshAuth: _shareSshAuth,
     ...editableFields
@@ -325,7 +323,6 @@ export function buildHostEditorPayload(
   const usesKey = form.authType === "key";
   const usesPassword = form.authType === "password";
   const usesAgent = form.authType === "agent";
-  const usesVault = form.authType === "vault";
   // With SSH off, the host's primary protocol is the first plugin protocol
   // switched on, and its port stands in for the host port.
   const primaryProtocol = protocols.enableSsh
@@ -410,8 +407,6 @@ export function buildHostEditorPayload(
     keyType: usesKey && form.keyType !== "auto" ? form.keyType : null,
     credentialId:
       usesCredential && form.credentialId ? Number(form.credentialId) : null,
-    vaultProfileId:
-      usesVault && form.vaultProfileId ? Number(form.vaultProfileId) : null,
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
     enableTerminal: form.enableTerminal,

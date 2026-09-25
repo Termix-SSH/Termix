@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} 个窗口",
     "tmuxWindows": "窗口",
     "unknownError": "发生未知错误",
-    "vaultAuthDescription": "已打开窗口以登录 HashiCorp Vault。在该处完成登录；此连接将自动继续。",
-    "vaultAuthFailed": "Vault 认证失败，请重试。",
-    "vaultAuthTitle": "需要 Vault 登录",
-    "vaultReopen": "重新打开登录窗口",
     "websocketAbnormalClose": "连接意外关闭。这可能是因为反向代理或SSL配置问题。请检查服务器日志。",
     "websocketError": "WebSocket 连接错误"
   },

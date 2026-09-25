@@ -152,8 +152,6 @@ export type Host = {
   autostartKeyPassword?: string;
 
   credentialId?: number;
-  vaultProfileId?: number | null;
-  vaultProfile?: { id?: number | null };
   overrideCredentialUsername?: boolean;
   userId?: string;
   enableTerminal: boolean;
@@ -299,7 +297,6 @@ export interface HostData {
   keyType?: string;
   sudoPassword?: string;
   credentialId?: number | null;
-  vaultProfileId?: number | null;
   connectionOrigin?: "local" | "remote" | null;
   overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;

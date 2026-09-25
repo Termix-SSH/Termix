@@ -381,6 +381,10 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         await import("./utils/crypto-migration/step-ca-settings-migration.js");
       await runStepCaSettingsMigration();
 
+      const { runVaultSettingsMigration } =
+        await import("./utils/crypto-migration/vault-settings-migration.js");
+      await runVaultSettingsMigration();
+
       const { runSecretSourcesTokenMigration } =
         await import("./utils/crypto-migration/secret-sources-token-migration.js");
       await runSecretSourcesTokenMigration();

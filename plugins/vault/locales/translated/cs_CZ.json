@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profil podepisujícího trezoru",
+    "selectProfile": "Vyberte profil úložiště...",
+    "hint": "Nastavení pocházejí ze sdíleného profilu; po připojení se do úložiště přihlásíte přes OIDC. Žádné tajné kódy se neukládají.",
+    "docs": "Zobrazit dokumenty"
+  },
+  "profiles": {
+    "new": "Nový profil",
+    "manage": "Správa profilů úložiště",
+    "name": "Přátelský název",
+    "vaultAddr": "Adresa trezoru",
+    "namespace": "Jmenný prostor",
+    "oidcMount": "Připojení autorizace OIDC",
+    "oidcRole": "Role OIDC",
+    "sshMount": "SSH tajemství Mount",
+    "sshRole": "Role SSH podepisujícího",
+    "validPrincipals": "Platné principy",
+    "keyType": "Typ dočasného klíče",
+    "shareWithAll": "Sdílet se všemi uživateli",
+    "create": "Vytvořit profil",
+    "created": "Profil úložiště vytvořen",
+    "saved": "Profil trezoru uložen",
+    "deleted": "Profil trezoru smazán",
+    "saveFailed": "Uložení profilu úložiště se nezdařilo.",
+    "deleteFailed": "Profil v úložišti se nepodařilo smazat.",
+    "save": "Uložit profil",
+    "validationError": "Jméno, adresa trezoru a role SSH signatáře jsou povinné.",
+    "none": "Zatím žádné profily v úložišti Vault.",
+    "sharedBadge": "sdílené"
+  },
+  "dialog": {
+    "title": "Vyžaduje se přihlášení do trezoru",
+    "description": "Otevřelo se okno pro přihlášení do HashiCorp Vault. Dokončete přihlášení tam; toto připojení bude automaticky pokračovat.",
+    "failed": "Ověření v trezoru se nezdařilo. Zkuste to prosím znovu.",
+    "reopen": "Znovu otevřít přihlašovací okno"
+  }
+}

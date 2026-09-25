@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profil de signature Vault",
+    "selectProfile": "Sélectionner un profil Vault...",
+    "hint": "Les paramètres proviennent du profil partagé ; vous vous connecterez à Vault via OIDC lors de la connexion. Aucun secret n'est stocké.",
+    "docs": "Voir la documentation"
+  },
+  "profiles": {
+    "new": "Nouveau profil",
+    "manage": "Gérer les profils Vault",
+    "name": "Nom convivial",
+    "vaultAddr": "Adresse Vault",
+    "namespace": "Espace de noms",
+    "oidcMount": "Point de montage d'authentification OIDC",
+    "oidcRole": "Rôle OIDC",
+    "sshMount": "Point de montage des secrets SSH",
+    "sshRole": "Rôle de signature SSH",
+    "validPrincipals": "Principaux valides",
+    "keyType": "Type de clé éphémère",
+    "shareWithAll": "Partager avec tous les utilisateurs",
+    "create": "Créer un profil",
+    "created": "Profil Vault créé",
+    "saved": "Profil Vault enregistré",
+    "deleted": "Profil Vault supprimé",
+    "saveFailed": "Échec de l'enregistrement du profil Vault",
+    "deleteFailed": "Échec de la suppression du profil Vault",
+    "save": "Enregistrer le profil",
+    "validationError": "Le nom, l'adresse Vault et le rôle de signataire SSH sont requis",
+    "none": "Aucun profil Vault pour le moment",
+    "sharedBadge": "partagé"
+  },
+  "dialog": {
+    "title": "Connexion à Vault requise",
+    "description": "Une fenêtre s'est ouverte pour vous connecter à HashiCorp Vault. Terminez la connexion dans cette fenêtre ; cette connexion continuera automatiquement.",
+    "failed": "Échec de l'authentification Vault. Veuillez réessayer.",
+    "reopen": "Rouvrir la fenêtre de connexion"
+  }
+}

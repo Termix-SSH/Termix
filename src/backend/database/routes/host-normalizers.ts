@@ -42,7 +42,6 @@ export const OWNER_PRIVATE_AUTH_FIELDS = {
     "authType",
     "authMethod",
     "credentialId",
-    "vaultProfileId",
     "overrideCredentialUsername",
     "shareSshAuth",
     "password",

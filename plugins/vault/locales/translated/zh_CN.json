@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Vault 签名者配置文件",
+    "selectProfile": "选择 Vault 配置文件...",
+    "hint": "设置来自共享配置文件；连接时将使用 OIDC 登录 Vault。不会存储任何机密。",
+    "docs": "查看文档"
+  },
+  "profiles": {
+    "new": "新建配置文件",
+    "manage": "管理 Vault 配置文件",
+    "name": "友好名称",
+    "vaultAddr": "Vault 地址",
+    "namespace": "命名空间",
+    "oidcMount": "OIDC 认证挂载点",
+    "oidcRole": "OIDC 角色",
+    "sshMount": "SSH 机密挂载点",
+    "sshRole": "SSH 签名者角色",
+    "validPrincipals": "有效主体",
+    "keyType": "临时密钥类型",
+    "shareWithAll": "与所有用户共享",
+    "create": "创建配置文件",
+    "created": "Vault 配置文件已创建",
+    "saved": "Vault 配置文件已保存",
+    "deleted": "Vault 配置文件已删除",
+    "saveFailed": "保存 Vault 配置文件失败",
+    "deleteFailed": "删除 Vault 配置文件失败",
+    "save": "保存配置文件",
+    "validationError": "名称、Vault 地址和 SSH 签名者角色为必填项",
+    "none": "暂无 Vault 配置文件。",
+    "sharedBadge": "共享"
+  },
+  "dialog": {
+    "title": "需要 Vault 登录",
+    "description": "已打开窗口以登录 HashiCorp Vault。在该处完成登录；此连接将自动继续。",
+    "failed": "Vault 认证失败，请重试。",
+    "reopen": "重新打开登录窗口"
+  }
+}

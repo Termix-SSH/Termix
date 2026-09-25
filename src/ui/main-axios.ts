@@ -1783,14 +1783,6 @@ export {
   deployCredentialToHost,
 } from "@/api/credentials-api";
 
-export {
-  getVaultProfiles,
-  createVaultProfile,
-  updateVaultProfile,
-  deleteVaultProfile,
-  type VaultProfilePayload,
-} from "@/api/vault-profiles-api";
-
 // ============================================================================
 // SNIPPETS API
 // ============================================================================

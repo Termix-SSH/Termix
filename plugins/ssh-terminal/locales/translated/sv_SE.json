@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} fönster",
     "tmuxWindows": "Fönster",
     "unknownError": "Okänt fel inträffade",
-    "vaultAuthDescription": "Ett fönster har öppnats för att logga in på HashiCorp Vault. Slutför inloggningen där; anslutningen fortsätter automatiskt.",
-    "vaultAuthFailed": "Valvautentisering misslyckades. Försök igen.",
-    "vaultAuthTitle": "Inloggning till arkivet krävs",
-    "vaultReopen": "Öppna inloggningsfönstret igen",
     "websocketAbnormalClose": "Anslutningen stängdes oväntat. Detta kan bero på ett problem med omvänd proxy eller SSL-konfiguration. Kontrollera serverloggarna.",
     "websocketError": "WebSocket-anslutningsfel"
   },

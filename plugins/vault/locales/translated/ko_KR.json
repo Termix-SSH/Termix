@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Vault 서명자 프로필",
+    "selectProfile": "Vault 프로필 선택...",
+    "hint": "설정은 공유 프로필에서 가져옵니다. 연결 시 OIDC를 통해 Vault에 로그인하게 됩니다. 비밀은 저장되지 않습니다.",
+    "docs": "문서 보기"
+  },
+  "profiles": {
+    "new": "새 프로필",
+    "manage": "Vault 프로필 관리",
+    "name": "별칭",
+    "vaultAddr": "Vault 주소",
+    "namespace": "네임스페이스",
+    "oidcMount": "OIDC 인증 마운트",
+    "oidcRole": "OIDC 역할",
+    "sshMount": "SSH 시크릿 마운트",
+    "sshRole": "SSH 서명자 역할",
+    "validPrincipals": "유효한 프린시펄",
+    "keyType": "임시 키 유형",
+    "shareWithAll": "모든 사용자와 공유",
+    "create": "프로필 생성",
+    "created": "Vault 프로필 생성됨",
+    "saved": "Vault 프로필 저장됨",
+    "deleted": "Vault 프로필 삭제됨",
+    "saveFailed": "Vault 프로필 저장 실패",
+    "deleteFailed": "Vault 프로필 삭제 실패",
+    "save": "프로필 저장",
+    "validationError": "이름, Vault 주소 및 SSH 서명자 역할이 필요합니다.",
+    "none": "아직 Vault 프로필이 없습니다.",
+    "sharedBadge": "공유"
+  },
+  "dialog": {
+    "title": "Vault 로그인 필요",
+    "description": "HashiCorp Vault 로그인을 위한 창이 열렸습니다. 해당 창에서 로그인을 완료하면 연결이 자동으로 계속됩니다.",
+    "failed": "Vault 인증에 실패했습니다. 다시 시도하세요.",
+    "reopen": "로그인 창 다시 열기"
+  }
+}

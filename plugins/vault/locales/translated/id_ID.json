@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Profil Penandatangan Vault",
+    "selectProfile": "Pilih profil Vault...",
+    "hint": "Pengaturan berasal dari profil bersama; Anda akan masuk ke Vault melalui OIDC saat terhubung. Tidak ada rahasia yang disimpan.",
+    "docs": "Lihat dokumen"
+  },
+  "profiles": {
+    "new": "Profil baru",
+    "manage": "Kelola profil Vault",
+    "name": "Nama yang Ramah",
+    "vaultAddr": "Alamat Brankas",
+    "namespace": "Ruang nama",
+    "oidcMount": "OIDC Otorisasi Pemasangan",
+    "oidcRole": "Peran OIDC",
+    "sshMount": "Pemasangan Rahasia SSH",
+    "sshRole": "Peran Penandatangan SSH",
+    "validPrincipals": "Prinsip-prinsip yang Sah",
+    "keyType": "Jenis Kunci Sementara",
+    "shareWithAll": "Bagikan dengan semua pengguna",
+    "create": "Buat profil",
+    "created": "Profil Vault telah dibuat.",
+    "saved": "Profil Vault tersimpan.",
+    "deleted": "Profil Vault dihapus",
+    "saveFailed": "Gagal menyimpan profil Vault",
+    "deleteFailed": "Gagal menghapus profil Vault",
+    "save": "Simpan profil",
+    "validationError": "Nama, alamat Vault, dan peran penandatangan SSH wajib diisi.",
+    "none": "Belum ada profil Vault.",
+    "sharedBadge": "dibagikan"
+  },
+  "dialog": {
+    "title": "Login ke Vault diperlukan.",
+    "description": "Jendela telah terbuka untuk masuk ke HashiCorp Vault. Selesaikan proses masuk di sana; koneksi ini akan berlanjut secara otomatis.",
+    "failed": "Autentikasi Vault gagal. Silakan coba lagi.",
+    "reopen": "Buka kembali jendela masuk"
+  }
+}

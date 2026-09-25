@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Vault İmzalayıcı Profili",
+    "selectProfile": "Bir Vault profili seçin...",
+    "hint": "Ayarlar paylaşılan profilden gelir; bağlandığınızda OIDC ile Vault'ta oturum açarsınız. Hiçbir gizli bilgi saklanmaz.",
+    "docs": "Dokümanları görüntüle"
+  },
+  "profiles": {
+    "new": "Yeni profil",
+    "manage": "Vault Profillerini Yönet",
+    "name": "Gösterim Adı",
+    "vaultAddr": "Vault Adresi",
+    "namespace": "Ad Alanı",
+    "oidcMount": "OIDC Kimlik Doğrulama Bağlama",
+    "oidcRole": "OIDC Rolü",
+    "sshMount": "SSH Gizli Dizin Bağlama",
+    "sshRole": "SSH İmzalayıcı Rolü",
+    "validPrincipals": "Geçerli Asıllar",
+    "keyType": "Geçici Anahtar Türü",
+    "shareWithAll": "Tüm Kullanıcılarla Paylaş",
+    "create": "Profil oluştur",
+    "created": "Vault profili oluşturuldu",
+    "saved": "Vault profili kaydedildi",
+    "deleted": "Vault profili silindi",
+    "saveFailed": "Vault profili kaydedilemedi",
+    "deleteFailed": "Vault profili silinemedi",
+    "save": "Profili kaydet",
+    "validationError": "Ad, Vault adresi ve SSH imzalama rolü gereklidir",
+    "none": "Henüz Vault profili yok.",
+    "sharedBadge": "paylaşılan"
+  },
+  "dialog": {
+    "title": "Vault Oturum Açması Gerekli",
+    "description": "HashiCorp Vault'ta oturum açmak için bir pencere açıldı. Orada oturum açmayı tamamlayın; bu bağlantı otomatik olarak devam edecek.",
+    "failed": "Vault kimlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
+    "reopen": "Oturum açma penceresini yeniden aç"
+  }
+}

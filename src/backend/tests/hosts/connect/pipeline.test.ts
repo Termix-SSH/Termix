@@ -19,8 +19,7 @@ const mocks = vi.hoisted(() => ({
   verifier: () => {},
   createHostVerifier: vi.fn(),
   applyCertificateAuth: vi.fn(),
-  getVaultCert: vi.fn(),
-  deleteVaultCert: vi.fn(),
+  forgetCert: vi.fn(),
   applyAgentAuth: vi.fn(),
   performPortKnocking: vi.fn(),
   createJumpHostChain: vi.fn(),
@@ -40,10 +39,6 @@ vi.mock("../../../hosts/host-key-verifier.js", () => ({
 }));
 vi.mock("@termix/plugin-sdk/ssh-certs", () => ({
   applyCertificateAuth: mocks.applyCertificateAuth,
-}));
-vi.mock("../../../hosts/vault-signer-auth.js", () => ({
-  getVaultCert: mocks.getVaultCert,
-  deleteVaultCert: mocks.deleteVaultCert,
 }));
 vi.mock("../../../hosts/terminal-auth-helpers.js", () => ({
   applyAgentAuth: mocks.applyAgentAuth,
@@ -105,6 +100,39 @@ function host(overrides: Partial<SshConnectHost> = {}): SshConnectHost {
     password: "hunter2",
     ...overrides,
   };
+}
+
+/**
+ * A plugin-style provider that needs a browser sign-in until it has a
+ * certificate, and forgets it when the host rejects it.
+ */
+function registerSignInProvider(hasCert: boolean) {
+  return registerSshAuthProvider({
+    type: "signin",
+    pluginId: "fixture-plugin",
+    labelKey: "fixture.label",
+    needsUserInteraction: true,
+    interaction: "signin",
+    prepare: async (config) => {
+      if (!hasCert) {
+        return {
+          status: "interaction-required",
+          interaction: "signin",
+          message: "Sign in first",
+        };
+      }
+      config.password = "cert";
+      return { status: "ready" };
+    },
+    onAuthFailed: (_host, env) => {
+      mocks.forgetCert(env.userId, env.hostId);
+      return {
+        status: "interaction-required",
+        interaction: "signin",
+        message: "Sign in again",
+      };
+    },
+  });
 }
 
 async function build(
@@ -286,30 +314,20 @@ describe("buildConnectConfig per auth type", () => {
     setSshAuthTypeOwnerSource(() => []);
   });
 
-  it("vault needs a profile, then a cached certificate", async () => {
-    const noProfile = await build(host({ authType: "vault" }));
-    expect(noProfile.outcome).toMatchObject({ status: "error" });
+  // Vault is the vault plugin's provider: see
+  // plugins/vault/tests/backend/vault.test.ts.
 
-    mocks.getVaultCert.mockResolvedValueOnce(null);
-    const noCert = await build(
-      host({ authType: "vault", vaultProfile: { id: 3 } }),
-    );
-    // The file manager turns the flag into requiresVaultAuth in its 401.
-    expect(noCert.outcome).toMatchObject({
-      status: "interaction-required",
-      interaction: "vault",
-      flag: "requiresVaultAuth",
+  it("a vault host without the vault plugin names it", async () => {
+    setSshAuthTypeOwnerSource(() => [
+      { type: "vault", pluginId: "vault", pluginName: "HashiCorp Vault" },
+    ]);
+    const { outcome } = await build(host({ authType: "vault" }));
+    expect(outcome).toEqual({
+      status: "error",
+      code: "provider-missing",
+      message: "This host uses vault, which needs the HashiCorp Vault plugin",
     });
-
-    mocks.getVaultCert.mockResolvedValueOnce({
-      privateKey: "k",
-      sshCert: "c",
-    });
-    const ready = await build(
-      host({ authType: "vault", vaultProfile: { id: 3 } }),
-    );
-    expect(ready.outcome.status).toBe("ready");
-    expect(mocks.getVaultCert).toHaveBeenLastCalledWith("user-1", 3);
+    setSshAuthTypeOwnerSource(() => []);
   });
 
   // Tailscale is a plugin-registered SSH auth provider now: see
@@ -454,20 +472,19 @@ describe("connectHost", () => {
   });
 
   it("throws the auth outcome instead of connecting", async () => {
-    mocks.getVaultCert.mockResolvedValue(null);
-    const vaultHost = () =>
-      host({ authType: "vault", vaultProfile: { id: 3 } });
-    const attempt = connectHost(vaultHost(), {
+    const dispose = registerSignInProvider(false);
+    const attempt = connectHost(host({ authType: "signin" }), {
       userId: "user-1",
       purpose: "tmux",
     });
     await expect(attempt).rejects.toBeInstanceOf(SshConnectError);
     await expect(
-      connectHost(vaultHost(), {
+      connectHost(host({ authType: "signin" }), {
         userId: "user-1",
         purpose: "tmux",
       }).catch((error) => error.code),
-    ).resolves.toBe("vault-required");
+    ).resolves.toBe("signin-required");
+    dispose();
   });
 
   it("goes through the jump chain and forwards to the target", async () => {
@@ -619,19 +636,17 @@ describe("connectHost", () => {
 
   it("lets the provider react to an auth failure", async () => {
     FakeSshClient.nextBehaviour = ["auth-fail"];
-    mocks.getVaultCert.mockResolvedValueOnce({
-      privateKey: "k",
-      sshCert: "c",
-    });
+    const dispose = registerSignInProvider(true);
     await expect(
-      connectHost(host({ authType: "vault", vaultProfile: { id: 3 } }), {
+      connectHost(host({ authType: "signin" }), {
         userId: "user-1",
         purpose: "fleet",
       }),
     ).rejects.toThrow(/All configured authentication methods failed/);
     await vi.waitFor(() =>
-      expect(mocks.deleteVaultCert).toHaveBeenCalledWith("user-1", 3),
+      expect(mocks.forgetCert).toHaveBeenCalledWith("user-1", 7),
     );
+    dispose();
   });
 
   it("pools under the old key shape", async () => {

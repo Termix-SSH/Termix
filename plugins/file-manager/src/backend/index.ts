@@ -584,7 +584,6 @@ export async function activate(ctx: PluginContext) {
     let resolvedSocks5Username = socks5Username;
     let resolvedSocks5Password = socks5Password;
     let resolvedSocks5ProxyChain = socks5ProxyChain;
-    let resolvedVaultProfileId: number | null = null;
 
     const resolveFrom = async () => {
       const resolvedHost = hostSyncId
@@ -607,8 +606,6 @@ export async function activate(ctx: PluginContext) {
       resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
         Record<string, unknown> | undefined;
       resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
-      resolvedVaultProfileId =
-        (resolvedHost.vaultProfile as { id?: number } | undefined)?.id ?? null;
       if (resolvedHost.useSocks5) {
         resolvedUseSocks5 = resolvedHost.useSocks5;
         resolvedSocks5Host = resolvedHost.socks5Host;
@@ -717,9 +714,6 @@ export async function activate(ctx: PluginContext) {
       keyPassword: resolvedCredentials.keyPassword,
       certPublicKey: resolvedCredentials.certPublicKey,
       terminalConfig: resolvedTerminalConfig ?? null,
-      vaultProfile: resolvedVaultProfileId
-        ? { id: resolvedVaultProfileId }
-        : null,
       jumpHosts: resolvedJumpHosts,
       useSocks5: resolvedUseSocks5,
       socks5Host: resolvedSocks5Host,

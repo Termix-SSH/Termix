@@ -1,5 +1,5 @@
 /**
- * The OPKSSH and Step CA redirect URIs identity providers were registered with before
+ * The OPKSSH, Step CA and Vault redirect URIs identity providers were registered with before
  * 2.9 must keep reaching the plugin's callback, query intact.
  */
 
@@ -60,5 +60,31 @@ describe("the old Step CA callback", () => {
     expect(response.headers.get("location")).toBe(
       "/plugin-api/step-ca/callback?code=abc&state=xyz",
     );
+  });
+});
+
+describe("the old Vault callback", () => {
+  it("forwards to the plugin's callback with the query", async () => {
+    const { registerVaultCompatRoutes } =
+      await import("../../../database/routes/host-compat-routes.js");
+    const router = express.Router();
+    registerVaultCompatRoutes(router);
+    const app = express();
+    app.use("/vault", router);
+    const vaultServer = http.createServer(app);
+    await new Promise<void>((resolve) => vaultServer.listen(0, resolve));
+    const port = (vaultServer.address() as AddressInfo).port;
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${port}/vault/oidc/callback?code=abc&state=xyz`,
+        { redirect: "manual" },
+      );
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(
+        "/plugin-api/vault/oidc/callback?code=abc&state=xyz",
+      );
+    } finally {
+      await new Promise<void>((resolve) => vaultServer.close(() => resolve()));
+    }
   });
 });

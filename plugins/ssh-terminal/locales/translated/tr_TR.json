@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} pencere",
     "tmuxWindows": "Pencereler",
     "unknownError": "Bilinmeyen bir hata oluştu",
-    "vaultAuthDescription": "HashiCorp Vault'ta oturum açmak için bir pencere açıldı. Orada oturum açmayı tamamlayın; bu bağlantı otomatik olarak devam edecek.",
-    "vaultAuthFailed": "Vault kimlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
-    "vaultAuthTitle": "Vault Oturum Açması Gerekli",
-    "vaultReopen": "Oturum açma penceresini yeniden aç",
     "websocketAbnormalClose": "Bağlantı beklenmedik şekilde kapandı. Bu, ters proxy veya SSL yapılandırma sorunundan kaynaklanabilir. Lütfen sunucu günlüklerini kontrol edin.",
     "websocketError": "WebSocket bağlantı hatası"
   },

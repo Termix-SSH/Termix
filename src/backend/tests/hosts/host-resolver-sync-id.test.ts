@@ -11,7 +11,6 @@ vi.mock("../../database/repositories/factory.js", () => ({
     findHostOwnerId,
     findHostById,
   }),
-  createCurrentVaultProfileRepository: () => ({}),
   createCurrentUserRepository: () => ({ findById: vi.fn() }),
 }));
 

@@ -2,8 +2,8 @@
  * Login methods and second factors, from core and from plugins.
  *
  * Password login is registered by core and always present. Everything else
- * (OIDC, LDAP, passkeys, TOTP, ...) registers here, from a plugin through
- * ctx.auth or, in 2.9.0, from legacy-providers.ts.
+ * (OIDC, LDAP, passkeys, TOTP, ...) registers here from a plugin through
+ * ctx.auth.
  */
 
 import type {

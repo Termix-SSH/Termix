@@ -41,7 +41,6 @@ import {
   updateSSHHost,
   getSnippets,
   getUserInfo,
-  getVaultProfiles,
   getHostPassword,
   adminCreateUserHost,
   adminUpdateUserHost,
@@ -57,7 +56,7 @@ import {
   parseCustomThemes,
   type SavedCustomTheme,
 } from "@/api/open-tabs-api";
-import type { Host, VaultProfile } from "@/types/ui-types";
+import type { Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 import { updatePluginHostSettings } from "@/api/plugins-api";
@@ -78,7 +77,6 @@ import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import { withProtocolSettings } from "./host-protocols";
 import { canEditHost } from "./host-permissions";
-import { VaultProfileManager } from "./VaultProfileManager";
 import {
   getHostEditorSection,
   isSshGroupTab,
@@ -167,8 +165,6 @@ export function HostEditor({
   const [saving, setSaving] = useState(false);
   const [snippets, setSnippets] = useState<{ id: number; name: string }[]>([]);
   const [isOidcUser, setIsOidcUser] = useState(false);
-  const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
-  const [showVaultManager, setShowVaultManager] = useState(false);
   const [showSecretSources, setShowSecretSources] = useState(false);
   const [quickCredentialName, setQuickCredentialName] = useState("");
   const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
@@ -232,12 +228,6 @@ export function HostEditor({
     setField("customThemeColors", { ...theme.colors });
   };
 
-  const reloadVaultProfiles = () => {
-    getVaultProfiles()
-      .then((res) => setVaultProfiles(res as unknown as VaultProfile[]))
-      .catch(() => {});
-  };
-
   useEffect(() => {
     getUserInfo()
       .then((info) => setIsOidcUser(info.is_oidc))
@@ -251,7 +241,6 @@ export function HostEditor({
     loadSnippets
       .then((res) => setSnippets(mapSnippetResponse(res)))
       .catch(() => {});
-    reloadVaultProfiles();
   }, [adminTargetUserId]);
 
   useEffect(() => {
@@ -465,7 +454,7 @@ export function HostEditor({
   };
 
   // Shared hosts: view-level recipients see a read-only editor; edit-level
-  // recipients may change the host but never its credential/vault references
+  // recipients may change the host but never its credential references
   // or auth type (owner-only, enforced server-side too).
   const isSharedHost = !!host?.isShared;
   const readOnly = isSharedHost && host !== null && !canEditHost(host);
@@ -872,58 +861,6 @@ export function HostEditor({
                           </Select2>
                         </div>
                       </>
-                    )}
-                    {authMethod === "vault" && (
-                      <div className="flex flex-col gap-1.5 col-span-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.vaultProfile")}
-                        </label>
-                        <Select2
-                          value={form.vaultProfileId}
-                          onChange={(e) =>
-                            setField("vaultProfileId", e.target.value)
-                          }
-                          className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">
-                            {t("hosts.selectAVaultProfile")}
-                          </option>
-                          {vaultProfiles.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.shared ? `${p.name} (shared)` : p.name}
-                            </option>
-                          ))}
-                        </Select2>
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] text-muted-foreground">
-                            {t("hosts.vaultProfileHint")}
-                          </p>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <a
-                              href="https://docs.termix.site/features/authentication/vault"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-accent-brand hover:underline"
-                            >
-                              {t("hosts.docsLink")}
-                            </a>
-                            <button
-                              type="button"
-                              className="text-[10px] text-accent-brand hover:text-accent-brand/80"
-                              onClick={() => setShowVaultManager((v) => !v)}
-                            >
-                              {t("hosts.vaultManageProfiles")}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {authMethod === "vault" && showVaultManager && (
-                      <VaultProfileManager
-                        profiles={vaultProfiles}
-                        onChanged={reloadVaultProfiles}
-                        onClose={() => setShowVaultManager(false)}
-                      />
                     )}
                     {authMethod === "credential" && (
                       <>

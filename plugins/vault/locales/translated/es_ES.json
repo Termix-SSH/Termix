@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Perfil de firmante de Vault",
+    "selectProfile": "Seleccionar un perfil de Vault...",
+    "hint": "La configuración proviene del perfil compartido; se iniciará sesión en Vault a través de OIDC al conectarse. No se almacenan secretos.",
+    "docs": "Ver documentación"
+  },
+  "profiles": {
+    "new": "Nuevo perfil",
+    "manage": "Administrar perfiles de Vault",
+    "name": "Nombre descriptivo",
+    "vaultAddr": "Dirección de Vault",
+    "namespace": "Espacio de nombres",
+    "oidcMount": "Montaje de autenticación OIDC",
+    "oidcRole": "Rol OIDC",
+    "sshMount": "Montaje de secretos SSH",
+    "sshRole": "Rol de firmante SSH",
+    "validPrincipals": "Principals válidos",
+    "keyType": "Tipo de clave efímera",
+    "shareWithAll": "Compartir con todos los usuarios",
+    "create": "Crear perfil",
+    "created": "Perfil de Vault creado",
+    "saved": "Perfil de Vault guardado",
+    "deleted": "Perfil de Vault eliminado",
+    "saveFailed": "Error al guardar el perfil de Vault",
+    "deleteFailed": "Error al eliminar el perfil de Vault",
+    "save": "Guardar perfil",
+    "validationError": "Se requieren el nombre, la dirección de Vault y el rol de firmante SSH",
+    "none": "Aún no hay perfiles de Vault.",
+    "sharedBadge": "compartido"
+  },
+  "dialog": {
+    "title": "Inicio de sesión en Vault requerido",
+    "description": "Se ha abierto una ventana para iniciar sesión en HashiCorp Vault. Completa el inicio de sesión allí; esta conexión continuará automáticamente.",
+    "failed": "La autenticación de Vault falló. Inténtalo de nuevo.",
+    "reopen": "Reabrir ventana de inicio de sesión"
+  }
+}

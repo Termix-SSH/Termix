@@ -42,8 +42,6 @@ import { TrustedDeviceRepository } from "./trusted-device-repository.js";
 import { UserDataExportRepository } from "./user-data-export-repository.js";
 import { UserPreferenceRepository } from "./user-preference-repository.js";
 import { UserRepository } from "./user-repository.js";
-import { VaultProfileRepository } from "./vault-profile-repository.js";
-import { VaultTokenRepository } from "./vault-token-repository.js";
 
 /**
  * The context every repository runs against.
@@ -413,20 +411,6 @@ export function createCurrentSharedCredentialSecretsRepository(): SharedCredenti
     createCurrentRepositoryWriteHook(
       "shared_credential_secrets_repository_write",
     ),
-  );
-}
-
-export function createCurrentVaultProfileRepository(): VaultProfileRepository {
-  return new VaultProfileRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("vault_profile_repository_write"),
-  );
-}
-
-export function createCurrentVaultTokenRepository(): VaultTokenRepository {
-  return new VaultTokenRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("vault_token_repository_write"),
   );
 }
 

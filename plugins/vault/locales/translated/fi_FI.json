@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Varaston allekirjoittajan profiili",
+    "selectProfile": "Valitse holviprofiili...",
+    "hint": "Asetukset tulevat jaetusta profiilista; kirjaudut Holviin OIDC:n kautta, kun muodostat yhteyden. Salaisuuksia ei tallenneta.",
+    "docs": "Näytä dokumentit"
+  },
+  "profiles": {
+    "new": "Uusi profiili",
+    "manage": "Hallinnoi holviprofiileja",
+    "name": "Ystävällinen nimi",
+    "vaultAddr": "Holvin osoite",
+    "namespace": "Nimiavaruus",
+    "oidcMount": "OIDC-todennusliitos",
+    "oidcRole": "OIDC-rooli",
+    "sshMount": "SSH-salaisuuksien kiinnitys",
+    "sshRole": "SSH-allekirjoittajan rooli",
+    "validPrincipals": "Voimassa olevat pääasialliset",
+    "keyType": "Lyhytaikainen avaintyyppi",
+    "shareWithAll": "Jaa kaikkien käyttäjien kanssa",
+    "create": "Luo profiili",
+    "created": "Holvin profiili luotu",
+    "saved": "Holvin profiili tallennettu",
+    "deleted": "Holvin profiili poistettu",
+    "saveFailed": "Holvin profiilin tallentaminen epäonnistui",
+    "deleteFailed": "Holviprofiilin poistaminen epäonnistui",
+    "save": "Tallenna profiili",
+    "validationError": "Nimi, holvin osoite ja SSH-allekirjoittajan rooli vaaditaan",
+    "none": "Ei vielä holviprofiileja.",
+    "sharedBadge": "jaettu"
+  },
+  "dialog": {
+    "title": "Holviin kirjautuminen vaaditaan",
+    "description": "Ikkuna HashiCorp-holviin kirjautumista varten on avautunut. Kirjaudu sisään siinä. Yhteys jatkuu automaattisesti.",
+    "failed": "Holvin todennus epäonnistui. Yritä uudelleen.",
+    "reopen": "Avaa kirjautumisikkuna uudelleen"
+  }
+}

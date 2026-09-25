@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}}개 윈도우",
     "tmuxWindows": "윈도우",
     "unknownError": "알 수 없는 오류가 발생했습니다.",
-    "vaultAuthDescription": "HashiCorp Vault 로그인을 위한 창이 열렸습니다. 해당 창에서 로그인을 완료하면 연결이 자동으로 계속됩니다.",
-    "vaultAuthFailed": "Vault 인증에 실패했습니다. 다시 시도하세요.",
-    "vaultAuthTitle": "Vault 로그인 필요",
-    "vaultReopen": "로그인 창 다시 열기",
     "websocketAbnormalClose": "연결이 예기치 않게 종료되었습니다. 리버스 프록시 또는 SSL 구성 문제일 수 있습니다. 서버 로그를 확인하세요.",
     "websocketError": "WebSocket 연결 오류"
   },

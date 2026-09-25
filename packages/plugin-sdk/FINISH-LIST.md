@@ -529,6 +529,31 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   rejects (it then downloads the pinned version instead). Pass
   `OPKSSH_VERSION` and the matching `OPKSSH_SHA256` as `ENV` in the final
   stage. Owner: D0.
+- **C5 (vault):** the Termix docs still describe Vault profiles with the
+  `/vault/oidc/callback` redirect URI. They need the plugin settings page,
+  the new redirect URI (`/plugin-api/vault/oidc/callback`) and the
+  `legacyCallback` setting. Owner: D0 (docs repo).
+- **C5 (vault):** a host's Vault profile is the plugin's `profileId` host
+  setting now, and host-scope plugin settings do not travel over remote sync
+  (the host entity used to carry `vaultProfileSyncId`). Profiles still sync
+  as `vaultProfiles`; the host on the other side has to pick its profile
+  again. Needs a generic way to sync host-scope plugin settings, the same gap
+  the B7 export/import line describes. Owner: D1.
+- **C5 (vault), for D2:** `vaultProfileId` was an owner-private auth field a
+  shared-host recipient with edit access could not change. As a host setting
+  it is written through `/plugins/vault/settings/host/:hostId`, which only
+  checks edit access, so such a recipient can now point the host at another
+  profile. Same question as the B14 line on per-field sharing levels.
+  Owner: D2.
+- **C5 (vault):** `ssh_data.vault_profile_id` stays in the database,
+  unused, after `vault-settings-migration.ts` copies it (kept so a downgrade
+  works, and the pg/mysql foreign key on it now points at
+  `p_vault_profiles`). Drop it in 3.0.0. Owner: 3.0.0.
+- **Pre-existing, found in C5:** `npm run test -w plugins/ssh-terminal`
+  fails "ssh-terminal activate > serves the terminal socket": it expects
+  `mock.wsRoutes` to equal `[{ path, raw }]`, but `FakeWsRoute` now also
+  records `handler` and `options`. Use `toMatchObject` or
+  `expect.objectContaining`. Owner: D0.
 
 ## Manual checks after 2.9.0
 
@@ -624,3 +649,11 @@ build`'s esbuild step has no static-asset-copy pipeline the way core's Vite
   and the host says it needs it. A Warpgate host's toggle is on in the host
   editor's Plugins group after the upgrade, and the terminal, file manager
   and docker each show the sign-in dialog and connect after it.
+- Vault: on a 2.8 database every Vault profile is there and each Vault host
+  still has its profile selected in the host editor; the admin page shows the
+  old redirect URI; a terminal connect opens Vault's sign-in, signs a
+  certificate and connects, and a second connect skips the browser until the
+  certificate expires; create, edit, share and delete a profile from the host
+  editor (sharing only offered with "Share Vault profiles"); switch to the new
+  redirect URI after allowing it in the Vault role; disable the vault plugin
+  and a Vault host says it needs it, then enable it again.

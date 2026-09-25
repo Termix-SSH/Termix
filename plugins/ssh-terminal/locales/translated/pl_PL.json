@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} okno",
     "tmuxWindows": "Okna",
     "unknownError": "Wystąpił nieznany błąd",
-    "vaultAuthDescription": "Otworzyło się okno logowania do HashiCorp Vault. Dokończ logowanie, a połączenie zostanie nawiązane automatycznie.",
-    "vaultAuthFailed": "Uwierzytelnienie w Vault nie powiodło się. Spróbuj ponownie.",
-    "vaultAuthTitle": "Wymagane logowanie do Vault",
-    "vaultReopen": "Otwórz ponownie okno logowania",
     "websocketAbnormalClose": "Połączenie zostało nieoczekiwanie zamknięte. Przyczyną może być reverse proxy lub problem z konfiguracją SSL. Sprawdź logi serwera.",
     "websocketError": "Błąd połączenia WebSocket"
   },

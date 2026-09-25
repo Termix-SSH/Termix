@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} окно",
     "tmuxWindows": "Окна",
     "unknownError": "Произошла неизвестная ошибка",
-    "vaultAuthDescription": "Открыто окно для входа в HashiCorp Vault. Завершите вход там; подключение продолжится автоматически.",
-    "vaultAuthFailed": "Аутентификация Vault не удалась. Попробуйте снова.",
-    "vaultAuthTitle": "Требуется вход в Vault",
-    "vaultReopen": "Повторно открыть окно входа",
     "websocketAbnormalClose": "Соединение неожиданно закрыто. Возможно, проблема с обратным прокси или конфигурацией SSL. Проверьте журналы сервера.",
     "websocketError": "Ошибка подключения WebSocket"
   },

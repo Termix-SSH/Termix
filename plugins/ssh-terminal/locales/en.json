@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} window",
     "tmuxWindows": "Windows",
     "unknownError": "Unknown error occurred",
-    "vaultAuthDescription": "A window has opened to sign in to HashiCorp Vault. Complete the sign-in there; this connection will continue automatically.",
-    "vaultAuthFailed": "Vault authentication failed. Please try again.",
-    "vaultAuthTitle": "Vault sign-in required",
-    "vaultReopen": "Reopen sign-in window",
     "websocketAbnormalClose": "Connection closed unexpectedly. This may be due to a reverse proxy or SSL configuration issue. Please check server logs.",
     "websocketError": "WebSocket connection error"
   },

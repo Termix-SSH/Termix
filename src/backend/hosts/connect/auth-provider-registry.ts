@@ -2,8 +2,7 @@
  * Every SSH auth type the server knows how to connect with.
  *
  * Core registers password, key, credential, agent and none. The rest come from
- * plugins through ctx.auth.registerSshAuthProvider, or for 2.9.0 from
- * src/backend/auth/legacy-providers.ts. A type with no provider fails the
+ * plugins through ctx.auth.registerSshAuthProvider. A type with no provider fails the
  * connect with a message naming the plugin that would provide it.
  */
 

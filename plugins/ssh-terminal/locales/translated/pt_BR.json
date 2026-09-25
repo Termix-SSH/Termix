@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} janela",
     "tmuxWindows": "Windows",
     "unknownError": "Ocorreu um erro desconhecido.",
-    "vaultAuthDescription": "Uma janela foi aberta para fazer login no HashiCorp Vault. Conclua o login; esta conexão será estabelecida automaticamente.",
-    "vaultAuthFailed": "A autenticação do cofre falhou. Tente novamente.",
-    "vaultAuthTitle": "É necessário fazer login no cofre.",
-    "vaultReopen": "Reabrir janela de login",
     "websocketAbnormalClose": "A conexão foi encerrada inesperadamente. Isso pode ter ocorrido devido a um problema de configuração de proxy reverso ou SSL. Verifique os registros do servidor.",
     "websocketError": "Erro de conexão WebSocket"
   },

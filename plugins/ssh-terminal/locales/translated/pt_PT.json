@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} janela",
     "tmuxWindows": "Janelas",
     "unknownError": "Ocorreu um erro desconhecido.",
-    "vaultAuthDescription": "Foi aberta uma janela para iniciar sessão no HashiCorp Vault. Conclua o início de sessão aí; esta ligação continuará automaticamente.",
-    "vaultAuthFailed": "A autenticação no Vault falhou. Tente novamente.",
-    "vaultAuthTitle": "Início de sessão no Vault necessário",
-    "vaultReopen": "Reabrir janela de início de sessão",
     "websocketAbnormalClose": "A ligação foi fechada inesperadamente. Isto pode dever-se a um problema de configuração do proxy reverso ou SSL. Verifique os registos do servidor.",
     "websocketError": "Erro de ligação WebSocket"
   },

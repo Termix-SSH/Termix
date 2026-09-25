@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} vindu",
     "tmuxWindows": "Vinduer",
     "unknownError": "Ukjent feil oppstod",
-    "vaultAuthDescription": "Et vindu har åpnet seg for å logge på HashiCorp Vault. Fullfør påloggingen der; denne tilkoblingen vil fortsette automatisk.",
-    "vaultAuthFailed": "Hvelv-autentisering mislyktes. Prøv på nytt.",
-    "vaultAuthTitle": "Pålogging til arkivet kreves",
-    "vaultReopen": "Åpne påloggingsvinduet på nytt",
     "websocketAbnormalClose": "Tilkoblingen ble avsluttet uventet. Dette kan skyldes et problem med omvendt proxy eller SSL-konfigurasjon. Sjekk serverloggene.",
     "websocketError": "WebSocket-tilkoblingsfeil"
   },

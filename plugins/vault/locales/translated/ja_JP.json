@@ -1,0 +1,38 @@
+{
+  "editor": {
+    "profile": "Vault 署名者プロファイル",
+    "selectProfile": "Vault プロファイルを選択...",
+    "hint": "設定は共有プロファイルから取得され、接続時に OIDC で Vault にサインインします。シークレットは保存されません。",
+    "docs": "ドキュメントを表示"
+  },
+  "profiles": {
+    "new": "新規プロファイル",
+    "manage": "Vault プロファイルの管理",
+    "name": "表示名",
+    "vaultAddr": "Vault アドレス",
+    "namespace": "名前空間",
+    "oidcMount": "OIDC 認証マウント",
+    "oidcRole": "OIDC ロール",
+    "sshMount": "SSH シークレットマウント",
+    "sshRole": "SSH 署名者ロール",
+    "validPrincipals": "有効なプリンシパル",
+    "keyType": "エフェメラルキータイプ",
+    "shareWithAll": "すべてのユーザーと共有",
+    "create": "プロファイルを作成",
+    "created": "Vaultプロファイルが作成されました",
+    "saved": "Vaultプロファイルが保存されました",
+    "deleted": "Vaultプロファイルが削除されました",
+    "saveFailed": "Vaultプロファイルの保存に失敗しました",
+    "deleteFailed": "Vaultプロファイルの削除に失敗しました",
+    "save": "プロファイルを保存",
+    "validationError": "名前、Vaultアドレス、SSH署名ロールは必須です",
+    "none": "まだVaultプロファイルがありません。",
+    "sharedBadge": "共有"
+  },
+  "dialog": {
+    "title": "Vault サインインが必要です",
+    "description": "HashiCorp Vaultへのサインイン用のウィンドウが開きました。そこでサインインを完了すると、この接続は自動的に続行されます。",
+    "failed": "Vault 認証に失敗しました。もう一度お試しください。",
+    "reopen": "サインインウィンドウを再表示"
+  }
+}

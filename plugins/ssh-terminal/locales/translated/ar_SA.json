@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} نافذة",
     "tmuxWindows": "النوافذ",
     "unknownError": "حدث خطأ غير معروف",
-    "vaultAuthDescription": "تم فتح نافذة لتسجيل الدخول إلى HashiCorp Vault. أكمل تسجيل الدخول هناك؛ سيستمر هذا الاتصال تلقائيًا.",
-    "vaultAuthFailed": "فشلت مصادقة Vault. يرجى المحاولة مرة أخرى.",
-    "vaultAuthTitle": "مطلوب تسجيل الدخول إلى Vault",
-    "vaultReopen": "أعد فتح نافذة تسجيل الدخول",
     "websocketAbnormalClose": "أُغلق الاتصال بشكل غير متوقع. قد يكون السبب مشكلة في الوكيل العكسي أو إعدادات SSL. يرجى مراجعة سجلات الخادم.",
     "websocketError": "خطأ في اتصال WebSocket"
   },

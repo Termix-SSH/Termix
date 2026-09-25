@@ -185,7 +185,7 @@ artifacts in lockstep: the `schema.ts` declaration, the `index.ts` DDL, and the
 regenerated `schema.pg.ts`/`schema.mysql.ts` plus drizzle migrations.
 
 **Sync entities are registered, not hardcoded.** `ctx.sync.registerEntity`
-adds an entity to remote sync; core registers its own ten the same way in
+adds an entity to remote sync; core registers its own the same way in
 `database/routes/sync-entities.ts`. The wire names are unchanged, because
 existing tombstones and rows on the far side match on those strings. The
 Electron client asks the server for the ordered list and falls back to its
@@ -1008,12 +1008,10 @@ auto-session and trusted devices, plus the base SSH auth types password, key,
 stored credential, agent and none. Every other login method, second factor and
 SSH auth method is a plugin through `ctx.auth`.
 
-In 2.9.0, Vault still lives in core. It registers through the same
-interface from `src/backend/auth/legacy-providers.ts` with
-`pluginId: "core"`. Its Phase C step moves its block out of that file; D1
-deletes it. **C4** moved Step-CA out and deleted
-`src/ui/auth/legacy-auth-ui.tsx`, which had no other editor left.
-Nothing else in core branches on those type names.
+**C5** moved Vault, the last SSH auth method core still registered, into
+its plugin and deleted `src/backend/auth/legacy-providers.ts`. **C4** had
+already deleted `src/ui/auth/legacy-auth-ui.tsx`. Core registers only the
+base types and branches on no plugin type name.
 
 **C1** moved TOTP and passkeys out:
 
@@ -1137,7 +1135,7 @@ Nothing else in core branches on those type names.
   `requires_browser_sign_in` and continue on `connect-browser-sign-in`.
 - `@termix/plugin-sdk/ssh-certs` (`applyCertificateAuth`) replaces core's
   `opkssh-cert-auth.ts`: opkssh, step-ca, core key auth with a CA
-  certificate, and the Vault provider still in core use it.
+  certificate, and vault use it.
 
 **C4** moved Step-CA out:
 
@@ -1158,6 +1156,39 @@ Nothing else in core branches on those type names.
   (`TERMIX_STEP_CA_REDIS_PREFIX`), as in 2.8.
 - The sign-in dialog is a `terminal.overlay` contribution speaking
   `stepca_*`.
+
+**C5** moved HashiCorp Vault out:
+
+- `vault` registers the `vault` SSH auth provider. It adopts
+  `vault_profiles` and `vault_tokens` as `p_vault_profiles` and
+  `p_vault_tokens`. Profiles keep their ids and sync ids; cached
+  certificates are sealed with `ctx.secrets.seal`, and the ones 2.8 wrote
+  with the user's data key do not unseal, so they are dropped and cost one
+  sign-in. A fresh install has no foreign key from a token to its profile
+  (the SDK has no builder for one to a plugin's own table), so deleting a
+  profile deletes its tokens in code.
+- A host's profile is the `profileId` host setting (hidden, edited in the
+  plugin's `registerSshAuthEditor` editor, which also holds the profile
+  manager where the host editor always had it).
+  `vault-settings-migration.ts` copies `ssh_data.vault_profile_id` into it;
+  the column is out of `schema.ts` and its drizzle drop is a no-op.
+- Vault is reached through `ctx.fetch`, with the profile's own Vault host
+  passed as `allowPrivateHosts`, since Vault servers are usually internal.
+- Profile routes are `/plugin-api/vault/profiles`, gated on `vault.use`;
+  sharing a profile needs `vault.share` (admins by default), which replaces
+  2.8's admin check. Only the owner edits or deletes one.
+- The sync entity keeps its wire name `vaultProfiles` and order 20. Hosts no
+  longer reference it, so core's host entity lost its `vaultProfileId`
+  reference and `sync-references.ts` has no Vault case.
+- The callback is `/plugin-api/vault/oidc/callback` (public). The boot
+  migration decides `legacyCallback` once: on when the 2.8 database used
+  Vault, so Termix keeps sending `<base>/vault/oidc/callback`, the URI Vault
+  roles allow, which core answers with a 307 to the plugin
+  (`registerVaultCompatRoutes` in `host-compat-routes.ts`; nginx proxies
+  only that path now).
+- The sign-in dialog is a `terminal.overlay` contribution. It keeps the 2.8
+  message names (`vault_auth_url`, `vault_completed`, `vault_error`) for
+  Termix-Mobile.
 
 #### One SSH connect pipeline
 
@@ -2298,8 +2329,7 @@ upgrade on all three engines, and the checks in step 15 are green.
    (`ctx.disposables.add`). Nothing at module scope. `deactivate` is usually
    empty.
 4. **When the SDK does not have it, add it to the SDK.** Never work around a
-   gap with a core import, and never add to
-   `src/backend/auth/legacy-providers.ts`. A new ctx member is:
+   gap with a core import. A new ctx member is:
    1. the type and a doc comment in `packages/plugin-sdk/src/backend.ts`;
    2. the implementation in `src/backend/plugins/ctx.ts`, wrapped in `guarded()`
       when it is privileged, so it checks the capability and writes an audit
@@ -2540,7 +2570,7 @@ Then, with the app running:
 The bundled plugins predate the SDK, apart from workspaces (A9), snippets
 (B2), remote-desktop (B14), docker (B15), host-metrics (B16), automations
 (B17), ai (B18), homepage (B19), totp and webauthn (C1), sso and ldap (C2),
-opkssh and warpgate (C3), step-ca (C4),
+opkssh and warpgate (C3), step-ca (C4), vault (C5),
 which import nothing from core. The others still reach core by relative
 path (`../../../../src/backend/...`), which an esbuild plugin,
 `packages/plugin-sdk/cli/lib/legacy-core-imports.mjs`, keeps out of the bundle

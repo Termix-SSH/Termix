@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} okno",
     "tmuxWindows": "Okna",
     "unknownError": "Došlo k neznámé chybě",
-    "vaultAuthDescription": "Otevřelo se okno pro přihlášení do HashiCorp Vault. Dokončete přihlášení tam; toto připojení bude automaticky pokračovat.",
-    "vaultAuthFailed": "Ověření v trezoru se nezdařilo. Zkuste to prosím znovu.",
-    "vaultAuthTitle": "Vyžaduje se přihlášení do trezoru",
-    "vaultReopen": "Znovu otevřít přihlašovací okno",
     "websocketAbnormalClose": "Spojení se neočekávaně ukončilo. Může to být způsobeno problémem s reverzní proxy nebo konfigurací SSL. Zkontrolujte prosím protokoly serveru.",
     "websocketError": "Chyba připojení k WebSocketu"
   },

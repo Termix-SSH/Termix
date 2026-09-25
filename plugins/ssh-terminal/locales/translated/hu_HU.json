@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} ablak",
     "tmuxWindows": "Ablakok",
     "unknownError": "Ismeretlen hiba történt",
-    "vaultAuthDescription": "Megnyílt egy ablak a HashiCorp Vaultba való bejelentkezéshez. Fejezze be a bejelentkezést ott; a kapcsolat automatikusan folytatódik.",
-    "vaultAuthFailed": "A trezor hitelesítése sikertelen. Próbálja újra.",
-    "vaultAuthTitle": "Bejelentkezés szükséges a széfbe",
-    "vaultReopen": "Bejelentkezési ablak újranyitása",
     "websocketAbnormalClose": "A kapcsolat váratlanul megszakadt. Ennek oka lehet fordított proxy vagy SSL konfigurációs probléma. Kérjük, ellenőrizze a szervernaplókat.",
     "websocketError": "WebSocket csatlakozási hiba"
   },

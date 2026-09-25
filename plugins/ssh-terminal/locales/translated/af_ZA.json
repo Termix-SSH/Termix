@@ -74,10 +74,6 @@
     "tmuxWindowCount": "{{count}} venster",
     "tmuxWindows": "Vensters",
     "unknownError": "Onbekende fout het voorgekom",
-    "vaultAuthDescription": "'n Venster het oopgemaak om by HashiCorp Vault aan te meld. Voltooi die aanmelding daar; hierdie verbinding sal outomaties voortgaan.",
-    "vaultAuthFailed": "Kluisverifikasie het misluk. Probeer asseblief weer.",
-    "vaultAuthTitle": "Kluisaanmelding vereis",
-    "vaultReopen": "Maak aanmeldvenster weer oop",
     "websocketAbnormalClose": "Verbinding het onverwags gesluit. Dit kan wees as gevolg van 'n omgekeerde proxy- of SSL-konfigurasieprobleem. Gaan asseblief bedienerlogboeke na.",
     "websocketError": "WebSocket-verbindingsfout"
   },
