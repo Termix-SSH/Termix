@@ -175,12 +175,10 @@ import {
 } from "@/shell/tab-registry";
 import { getPanel, usePanels } from "@/shell/panel-registry";
 import { invokeAction } from "@/shell/action-registry";
-import { startPluginRuntime, stopPluginRuntime } from "@/plugin-host/loader";
 import { usePluginStore } from "@/plugin-host/plugin-store";
 import {
   notifyShellReady,
   notifyTabsChanged,
-  resetShellBridge,
   setShellCallbacks,
   setShellHosts,
   setShellLayoutProvider,
@@ -399,17 +397,6 @@ export function AppShell({
         setShowDonationModal(!!info.show_donation_modal);
       })
       .catch(() => setIsAdmin(false));
-  }, []);
-
-  // Plugin frontends register the tabs, panels and actions that a saved
-  // session may need, so they load before tabs are restored. On logout every
-  // plugin is deactivated, since the next user may see different ones.
-  useEffect(() => {
-    startPluginRuntime().catch(() => {});
-    return () => {
-      void stopPluginRuntime();
-      resetShellBridge();
-    };
   }, []);
 
   const handleDismissDonationModal = useCallback(() => {
@@ -2661,6 +2648,7 @@ export function AppShell({
               splitMode={splitMode}
               username={username}
               isAdmin={showAdminUI}
+              pluginsSettled={pluginsSettled}
               onRailClick={handleRailClick}
               onOpenTab={openSingletonTab}
               onOpenInRightDock={openInRightDock}

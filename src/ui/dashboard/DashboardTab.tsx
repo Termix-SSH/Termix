@@ -3,9 +3,11 @@ import { enabledHostProtocols, protocolPort } from "@/sidebar/host-protocols";
 import { ComponentSlot } from "@/shell/ActionSlot";
 import { useActionSlot } from "@/hooks/use-action-slot";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePluginStore } from "@/plugin-host/plugin-store";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
 import { Separator } from "@/components/separator";
+import { Skeleton } from "@/components/skeleton";
 import {
   Activity,
   Database,
@@ -1049,6 +1051,7 @@ export function DashboardTab({
   // canvas preview. Only one is offered today; "dashboard" always exists.
   const secondaryViews = useActionSlot("dashboard.secondaryView");
   const secondaryView = secondaryViews[0];
+  const { settled: pluginsSettled } = usePluginStore();
 
   const [dashboardView, setDashboardView] = useState<string>(() => {
     try {
@@ -1057,11 +1060,14 @@ export function DashboardTab({
       return "dashboard";
     }
   });
+  // Until plugins settle, a plugin view saved from last session hasn't had a
+  // chance to register yet, so its absence doesn't mean it's really gone.
+  const viewPending = !pluginsSettled && dashboardView !== "dashboard";
   // Falls back to the dashboard when the view a plugin contributed is off.
   const isDashboardView =
     dashboardView === "dashboard" ||
-    !secondaryView ||
-    dashboardView !== secondaryView.actionId;
+    (!viewPending && !secondaryView) ||
+    (!!secondaryView && dashboardView !== secondaryView.actionId);
 
   useEffect(() => {
     try {
@@ -1482,23 +1488,27 @@ export function DashboardTab({
     <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
       <Card className="flex-row items-center justify-between px-5 py-3 shrink-0 mx-5 mt-5 gap-0">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-0 bg-muted/40 border border-border p-0.5">
-            <button
-              onClick={() => setDashboardView("dashboard")}
-              className={`px-3 py-1 text-sm font-medium transition-colors ${isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {t("dashboard.title")}
-            </button>
-            {secondaryView && (
+          {viewPending ? (
+            <Skeleton className="h-7 w-40" />
+          ) : (
+            <div className="flex items-center gap-0 bg-muted/40 border border-border p-0.5">
               <button
-                onClick={() => setDashboardView(secondaryView.actionId)}
-                className={`px-3 py-1 text-sm font-medium transition-colors ${!isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => setDashboardView("dashboard")}
+                className={`px-3 py-1 text-sm font-medium transition-colors ${isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {t(secondaryView.titleKey)}
+                {t("dashboard.title")}
               </button>
-            )}
-          </div>
-          {isDashboardView && (
+              {secondaryView && (
+                <button
+                  onClick={() => setDashboardView(secondaryView.actionId)}
+                  className={`px-3 py-1 text-sm font-medium transition-colors ${!isDashboardView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {t(secondaryView.titleKey)}
+                </button>
+              )}
+            </div>
+          )}
+          {isDashboardView && !viewPending && (
             <p className="text-xs text-muted-foreground hidden sm:block">
               {todayLabel}
             </p>
@@ -1621,7 +1631,13 @@ export function DashboardTab({
         </div>
       </Card>
 
-      {!isDashboardView && secondaryView?.component ? (
+      {viewPending ? (
+        <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col p-5 gap-3">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full flex-1" />
+        </div>
+      ) : !isDashboardView && secondaryView?.component ? (
         <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col">
           <secondaryView.component onOpenSingletonTab={onOpenSingletonTab} />
         </div>

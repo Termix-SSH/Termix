@@ -169,9 +169,19 @@ export function parseCustomKeybindings(
   }
 }
 
+const userPreferencesCache = createTtlRequestCache<UserPreferences>(10_000);
+
+/**
+ * Cached briefly so the loading gate's prefetch and the shell's own read on
+ * mount share one request instead of two, which is what let stale
+ * localStorage flags (hiddenRailTabs, pinAppRail) flash before the real
+ * values landed a moment after the shell first rendered.
+ */
 export async function getUserPreferences(): Promise<UserPreferences> {
-  const response = await authApi.get("/user-preferences");
-  return response.data;
+  return userPreferencesCache.get(async () => {
+    const response = await authApi.get("/user-preferences");
+    return response.data;
+  });
 }
 
 export async function saveUserPreferences(

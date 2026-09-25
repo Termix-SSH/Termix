@@ -260,4 +260,43 @@ describe("activation order", () => {
     expect(order).toEqual([]);
     expect([...blocked.keys()].sort()).toEqual(["a", "b"]);
   });
+
+  it("activates independent plugins concurrently rather than one at a time", async () => {
+    modules.alpha = railPlugin("alpha");
+    modules.beta = railPlugin("beta");
+    plugins = [summary("alpha"), summary("beta")];
+
+    // Each import blocks until the other has started, which only resolves
+    // if both imports were kicked off before either finished.
+    let releaseAlpha: () => void;
+    let releaseBeta: () => void;
+    const alphaStarted = new Promise<void>((resolve) => {
+      releaseAlpha = resolve;
+    });
+    const betaStarted = new Promise<void>((resolve) => {
+      releaseBeta = resolve;
+    });
+    configurePluginLoader({
+      fetchPlugins: async () => plugins,
+      importFrontend: async (entry) => {
+        if (entry.id === "alpha") {
+          releaseAlpha!();
+          await betaStarted;
+        } else if (entry.id === "beta") {
+          releaseBeta!();
+          await alphaStarted;
+        }
+        const module = modules[entry.id];
+        if (!module) throw new Error(`no module for ${entry.id}`);
+        return module;
+      },
+      loadLocale: async () => null,
+      injectCss: () => null,
+    });
+
+    await syncPlugins();
+
+    expect(railIds()).toContain("alpha-panel");
+    expect(railIds()).toContain("beta-panel");
+  });
 });

@@ -56,6 +56,15 @@ export async function hasPermission(permission: string): Promise<boolean> {
   return matchesPermission(permissions, isAdmin, permission);
 }
 
+/**
+ * Warms the permissions cache before the shell mounts, so permission-gated
+ * rail items are already known on first paint instead of popping in once
+ * usePermissions' own fetch resolves.
+ */
+export function preloadPermissions(): Promise<void> {
+  return load().then(() => undefined);
+}
+
 export function notifyPermissionsChanged(): void {
   cache = null;
   window.dispatchEvent(new Event(PERMISSIONS_CHANGED_EVENT));

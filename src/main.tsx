@@ -24,7 +24,15 @@ import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
-import { fetchGuestViews, startPluginRuntime } from "@/plugin-host/loader";
+import {
+  fetchGuestViews,
+  startPluginRuntime,
+  stopPluginRuntime,
+} from "@/plugin-host/loader";
+import { settledPromise } from "@/plugin-host/plugin-store";
+import { resetShellBridge } from "@/plugin-host/shell-bridge";
+import { preloadPermissions } from "@/hooks/use-permissions";
+import { getUserPreferences } from "@/api/open-tabs-api";
 import { standaloneViewFor } from "@/shell/tab-registry";
 import { PluginViewPlaceholder } from "@/plugin-host/PluginViewPlaceholder";
 
@@ -39,7 +47,12 @@ const ElectronVersionCheck = lazy(() =>
 );
 
 type Phase =
-  "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
+  | "verifying"
+  | "idle-auth"
+  | "loading-app"
+  | "fading-in"
+  | "idle-app"
+  | "fading-out";
 
 type LogoutOptions = {
   manual?: boolean;
@@ -180,6 +193,14 @@ function App() {
           }
         }
         fadingInFromLoginRef.current = false;
+        setPhase("loading-app");
+        await Promise.all([
+          startPluginRuntime()
+            .catch(() => {})
+            .then(() => settledPromise()),
+          preloadPermissions(),
+          getUserPreferences().catch(() => undefined),
+        ]);
         setPhase("fading-in");
         timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
       })
@@ -238,8 +259,18 @@ function App() {
     clearDesktopManualLogout();
     setAuthUsername(u);
     fadingInFromLoginRef.current = true;
-    setPhase("fading-in");
-    timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+    setPhase("loading-app");
+    void (async () => {
+      await Promise.all([
+        startPluginRuntime()
+          .catch(() => {})
+          .then(() => settledPromise()),
+        preloadPermissions(),
+        getUserPreferences().catch(() => undefined),
+      ]);
+      setPhase("fading-in");
+      timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
+    })();
     if (isElectron()) {
       window.electronAPI?.startC2SAutoStartTunnels?.().catch(() => {});
       const localJwt = localStorage.getItem("jwt");
@@ -264,6 +295,10 @@ function App() {
     // isn't subject to batching, so it correctly dedupes within one tick.
     if (loggingOutRef.current) return;
     loggingOutRef.current = true;
+    // The next user may see different plugins, so nothing they registered
+    // should survive into the next session.
+    void stopPluginRuntime();
+    resetShellBridge();
     clearStoredAuth();
     localStorage.removeItem("jwt");
     if (isElectron() && options?.manual) {
@@ -297,7 +332,7 @@ function App() {
   const { t } = useTranslation();
   const isTransitioning = phase === "fading-in" || phase === "fading-out";
 
-  if (phase === "verifying") {
+  if (phase === "verifying" || phase === "loading-app") {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

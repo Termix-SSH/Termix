@@ -300,22 +300,53 @@ async function reconcile(summaries: PluginSummary[]): Promise<void> {
     if (!wanted.has(id)) failedVersions.delete(id);
   }
 
-  for (const summary of order) {
-    if (active.has(summary.id)) continue;
-    // Do not retry a bundle that already failed until it changes.
-    if (
-      failedVersions.has(summary.id) &&
-      failedVersions.get(summary.id) === (summary.assetVersion ?? null)
-    ) {
-      setFrontendState(
-        summary.id,
-        "failed",
-        getPluginRecord(summary.id)?.error,
+  await activateConcurrently(order);
+}
+
+/**
+ * Activates every plugin in `order`, running independent plugins in
+ * parallel instead of one at a time. Each plugin still waits for its own
+ * hard dependencies to finish activating first (success or failure - a
+ * blocked or failed dependency must not hang its dependents forever).
+ */
+async function activateConcurrently(order: PluginSummary[]): Promise<void> {
+  const byId = new Map(order.map((summary) => [summary.id, summary]));
+  const started = new Map<string, Promise<void>>();
+
+  const run = (summary: PluginSummary): Promise<void> => {
+    const existing = started.get(summary.id);
+    if (existing) return existing;
+
+    const task = (async () => {
+      const dependencyIds = Object.keys(summary.dependencies ?? {});
+      await Promise.all(
+        dependencyIds.map((id) => {
+          const dependency = byId.get(id);
+          return dependency ? run(dependency) : Promise.resolve();
+        }),
       );
-      continue;
-    }
-    await activate(summary);
-  }
+
+      if (active.has(summary.id)) return;
+      // Do not retry a bundle that already failed until it changes.
+      if (
+        failedVersions.has(summary.id) &&
+        failedVersions.get(summary.id) === (summary.assetVersion ?? null)
+      ) {
+        setFrontendState(
+          summary.id,
+          "failed",
+          getPluginRecord(summary.id)?.error,
+        );
+        return;
+      }
+      await activate(summary);
+    })();
+
+    started.set(summary.id, task);
+    return task;
+  };
+
+  await Promise.all(order.map(run));
 }
 
 function enqueue(task: () => Promise<void>): Promise<void> {
