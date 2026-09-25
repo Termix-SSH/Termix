@@ -1,17 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Loader2, Trash2, Users, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ListChecks,
+  Search,
+  Share2,
+  Shield,
+  User,
+  Users,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
+import { Select2 } from "@/components/select2";
 import {
   getCredentialAccess,
   getRoles,
@@ -20,16 +29,40 @@ import {
   type CredentialPermissionLevel,
   type ShareTarget,
 } from "@/api/rbac-api";
-import { getUserList, type AccessRecord, type Role } from "@/main-axios";
+import { getUserList, type AccessRecord } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
 import { getErrorMessage } from "@/lib/error-message";
 
+const PERMISSION_LEVELS: CredentialPermissionLevel[] = ["use", "manage"];
+
+const LEVEL_KEYS: Record<
+  CredentialPermissionLevel,
+  { label: string; description: string }
+> = {
+  use: {
+    label: "credentials.share.levelUse",
+    description: "credentials.share.levelUseDesc",
+  },
+  manage: {
+    label: "credentials.share.levelManage",
+    description: "credentials.share.levelManageDesc",
+  },
+};
+
 const EXPIRY_PRESETS = [
-  { key: "never", hours: undefined },
+  { key: "never", hours: null },
+  { key: "oneHour", hours: 1 },
   { key: "oneDay", hours: 24 },
   { key: "sevenDays", hours: 24 * 7 },
   { key: "thirtyDays", hours: 24 * 30 },
+  { key: "custom", hours: undefined },
 ] as const;
+
+type ExpiryPresetKey = (typeof EXPIRY_PRESETS)[number]["key"];
+
+function levelOf(record: AccessRecord): CredentialPermissionLevel {
+  return record.permissionLevel === "manage" ? "manage" : "use";
+}
 
 export function CredentialShareModal({
   credential,
@@ -39,285 +72,504 @@ export function CredentialShareModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"user" | "role">("user");
+  const [targetTab, setTargetTab] = useState<"user" | "role">("user");
   const [search, setSearch] = useState("");
-  const [users, setUsers] = useState<Array<{ id: string; username: string }>>(
-    [],
+  const [shareUsers, setShareUsers] = useState<
+    { id: string; username: string }[]
+  >([]);
+  const [shareRoles, setShareRoles] = useState<
+    { id: number; name: string; displayName?: string }[]
+  >([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
+    new Set(),
   );
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-  const [selectedRoles, setSelectedRoles] = useState<Set<number>>(new Set());
-  const [level, setLevel] = useState<CredentialPermissionLevel>("use");
-  const [expiry, setExpiry] =
-    useState<(typeof EXPIRY_PRESETS)[number]["key"]>("never");
-  const [access, setAccess] = useState<AccessRecord[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [permissionLevel, setPermissionLevel] =
+    useState<CredentialPermissionLevel>("use");
+  const [expiryPreset, setExpiryPreset] = useState<ExpiryPresetKey>("never");
+  const [customHours, setCustomHours] = useState("");
+  const [accessList, setAccessList] = useState<AccessRecord[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const credentialId = credential ? Number(credential.id) : null;
 
-  const loadAccess = useCallback(async () => {
+  const refreshAccessList = useCallback(async () => {
     if (!credentialId) return;
-    try {
-      setAccess((await getCredentialAccess(credentialId)).access);
-    } catch {
-      setAccess([]);
-    }
+    setAccessList((await getCredentialAccess(credentialId)).access ?? []);
   }, [credentialId]);
 
   useEffect(() => {
-    if (!credential) return;
-    setSelectedUsers(new Set());
-    setSelectedRoles(new Set());
     setSearch("");
-    setLoading(true);
-    Promise.all([
-      getUserList().catch(() => ({ users: [] })),
-      getRoles().catch(() => ({ roles: [] as Role[] })),
-      loadAccess(),
-    ])
-      .then(([userResult, roleResult]) => {
-        setUsers(
-          userResult.users.map((u) => ({ id: u.userId, username: u.username })),
-        );
-        setRoles(roleResult.roles);
-      })
-      .finally(() => setLoading(false));
-  }, [credential, loadAccess]);
+    setSelectedUserIds(new Set());
+    setSelectedRoleIds(new Set());
+    setPermissionLevel("use");
+    setExpiryPreset("never");
+    setCustomHours("");
+    setTargetTab("user");
+    setAccessList([]);
+    setLoadError(false);
+    if (!credentialId) return;
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter((u) =>
-        u.username.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [users, search],
-  );
-  const filteredRoles = useMemo(
-    () =>
-      roles.filter((r) =>
-        (r.displayName || r.name).toLowerCase().includes(search.toLowerCase()),
-      ),
-    [roles, search],
-  );
+    Promise.all([
+      getCredentialAccess(credentialId).catch(() => ({ access: [] })),
+      getUserList().catch(() => ({ users: [] })),
+      getRoles().catch(() => ({ roles: [] })),
+    ])
+      .then(([accessRes, usersRes, rolesRes]) => {
+        setAccessList(accessRes.access ?? []);
+        setShareUsers(
+          (usersRes.users ?? []).map((u) => ({
+            id: String(u.userId),
+            username: u.username,
+          })),
+        );
+        setShareRoles(
+          (rolesRes.roles ?? [])
+            .filter((r) => !r.isSystem)
+            .map((r) => ({
+              id: Number(r.id),
+              name: r.name,
+              displayName: r.displayName,
+            })),
+        );
+      })
+      .catch(() => setLoadError(true));
+  }, [credentialId]);
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q
+      ? shareUsers.filter((u) => u.username.toLowerCase().includes(q))
+      : shareUsers;
+  }, [shareUsers, search]);
+
+  const filteredRoles = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q
+      ? shareRoles.filter(
+          (r) =>
+            r.name.toLowerCase().includes(q) ||
+            (r.displayName ?? "").toLowerCase().includes(q),
+        )
+      : shareRoles;
+  }, [shareRoles, search]);
+
+  const selectedCount = selectedUserIds.size + selectedRoleIds.size;
+
+  const durationHours = (() => {
+    if (expiryPreset === "never") return undefined;
+    if (expiryPreset === "custom") {
+      const hours = Number(customHours);
+      return Number.isFinite(hours) && hours > 0 ? hours : undefined;
+    }
+    return (
+      EXPIRY_PRESETS.find((p) => p.key === expiryPreset)?.hours ?? undefined
+    );
+  })();
 
   async function handleShare() {
-    if (!credentialId) return;
+    if (!credentialId || selectedCount === 0) return;
     const targets: ShareTarget[] = [
-      ...Array.from(selectedUsers, (id) => ({ type: "user" as const, id })),
-      ...Array.from(selectedRoles, (id) => ({ type: "role" as const, id })),
+      ...Array.from(selectedUserIds, (id) => ({ type: "user" as const, id })),
+      ...Array.from(selectedRoleIds, (id) => ({ type: "role" as const, id })),
     ];
-    if (targets.length === 0) return;
-    setSaving(true);
+    setSubmitting(true);
     try {
-      const preset = EXPIRY_PRESETS.find((p) => p.key === expiry);
-      await shareCredential(credentialId, targets, level, preset?.hours);
+      await shareCredential(
+        credentialId,
+        targets,
+        permissionLevel,
+        durationHours,
+      );
+      await refreshAccessList();
+      setSelectedUserIds(new Set());
+      setSelectedRoleIds(new Set());
       toast.success(t("credentials.share.shared"));
-      setSelectedUsers(new Set());
-      setSelectedRoles(new Set());
-      await loadAccess();
     } catch (e) {
       toast.error(getErrorMessage(e));
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   }
 
-  async function handleRevoke(entry: AccessRecord) {
+  // No update route for credential grants, so re-share with the time left.
+  async function handleLevelChange(
+    record: AccessRecord,
+    level: CredentialPermissionLevel,
+  ) {
+    if (!credentialId || levelOf(record) === level) return;
+    const target: ShareTarget | null =
+      record.targetType === "role" && record.roleId != null
+        ? { type: "role", id: Number(record.roleId) }
+        : record.userId
+          ? { type: "user", id: String(record.userId) }
+          : null;
+    if (!target) return;
+    let remainingHours: number | undefined;
+    if (record.expiresAt) {
+      remainingHours =
+        (new Date(record.expiresAt).getTime() - Date.now()) / 3_600_000;
+      if (remainingHours <= 0) {
+        toast.error(t("hosts.sharing.accessUpdateFailed"));
+        return;
+      }
+    }
+    try {
+      await shareCredential(credentialId, [target], level, remainingHours);
+      await refreshAccessList();
+      toast.success(t("hosts.sharing.accessUpdated"));
+    } catch {
+      toast.error(t("hosts.sharing.accessUpdateFailed"));
+    }
+  }
+
+  async function handleRevoke(record: AccessRecord) {
     if (!credentialId) return;
     try {
-      await revokeCredentialAccess(credentialId, entry.id);
-      await loadAccess();
+      await revokeCredentialAccess(credentialId, record.id);
+      setAccessList((prev) => prev.filter((entry) => entry.id !== record.id));
+      toast.success(t("credentials.share.accessRevoked"));
     } catch (e) {
       toast.error(getErrorMessage(e));
     }
   }
 
-  const toggle = <T,>(set: Set<T>, value: T): Set<T> => {
-    const next = new Set(set);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    return next;
-  };
+  if (!credential) return null;
 
   return (
-    <Dialog open={!!credential} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {t("credentials.share.title", { name: credential?.name ?? "" })}
-          </DialogTitle>
-          <DialogDescription>
-            {t("credentials.share.description")}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="absolute inset-0 z-20 flex flex-col bg-sidebar">
+      <button
+        onClick={onClose}
+        className="flex items-center gap-2 px-3 py-2 shrink-0 border-b border-border text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+      >
+        <ArrowLeft className="size-3.5 shrink-0" />
+        <span className="truncate">
+          {t("credentials.share.title", { name: credential.name ?? "" })}
+        </span>
+      </button>
 
-        {loading ? (
-          <div className="flex justify-center py-6">
-            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+      {loadError && (
+        <div className="flex items-start gap-2 px-3 py-2 shrink-0 border-b border-destructive/30 bg-destructive/5 text-xs text-destructive">
+          <Shield className="size-3.5 shrink-0 mt-0.5" />
+          <div>{t("hosts.sharing.loadError")}</div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2 p-3 shrink-0 border-b border-border">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <Users className="size-3.5" />
+            {t("hosts.sharing.shareWithSection")}
           </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-1">
-              {(["user", "role"] as const).map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  onClick={() => setTab(kind)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1 text-[10px] font-semibold border ${
-                    tab === kind
-                      ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {kind === "user" ? (
-                    <UserRound className="size-3" />
-                  ) : (
-                    <Users className="size-3" />
-                  )}
-                  {t(
-                    kind === "user"
-                      ? "credentials.share.users"
-                      : "credentials.share.roles",
-                  )}
-                </button>
-              ))}
-            </div>
-            <Input
-              className="h-8 text-xs"
-              placeholder={t("credentials.share.searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
-              {tab === "user"
-                ? filteredUsers.map((u) => (
-                    <label
-                      key={u.id}
-                      className="flex items-center gap-2 text-xs px-1 py-0.5 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.has(u.id)}
-                        onChange={() =>
-                          setSelectedUsers((s) => toggle(s, u.id))
-                        }
-                      />
-                      {u.username}
-                    </label>
-                  ))
-                : filteredRoles.map((r) => (
-                    <label
-                      key={r.id}
-                      className="flex items-center gap-2 text-xs px-1 py-0.5 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedRoles.has(r.id)}
-                        onChange={() =>
-                          setSelectedRoles((s) => toggle(s, r.id))
-                        }
-                      />
-                      {r.displayName || r.name}
-                    </label>
-                  ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("credentials.share.permission")}
-                </span>
-                <select
-                  value={level}
-                  onChange={(e) =>
-                    setLevel(e.target.value as CredentialPermissionLevel)
-                  }
-                  className="h-8 border border-border bg-background px-2 text-xs outline-none"
-                >
-                  <option value="use">{t("credentials.share.levelUse")}</option>
-                  <option value="manage">
-                    {t("credentials.share.levelManage")}
-                  </option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("credentials.share.expires")}
-                </span>
-                <select
-                  value={expiry}
-                  onChange={(e) => setExpiry(e.target.value as typeof expiry)}
-                  className="h-8 border border-border bg-background px-2 text-xs outline-none"
-                >
-                  {EXPIRY_PRESETS.map((p) => (
-                    <option key={p.key} value={p.key}>
-                      {t(`credentials.share.expiry.${p.key}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              {t(
-                level === "manage"
-                  ? "credentials.share.levelManageDesc"
-                  : "credentials.share.levelUseDesc",
-              )}
-            </p>
-
-            {access.length > 0 && (
-              <div className="flex flex-col gap-1 border-t border-border pt-2">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("credentials.share.currentAccess")}
-                </span>
-                {access.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center gap-2 text-xs px-1 py-0.5"
-                  >
-                    {entry.targetType === "role" ? (
-                      <Users className="size-3 text-muted-foreground" />
-                    ) : (
-                      <UserRound className="size-3 text-muted-foreground" />
-                    )}
-                    <span className="flex-1 truncate">
-                      {entry.targetType === "role"
-                        ? entry.roleDisplayName || entry.roleName
-                        : entry.username}
-                    </span>
-                    <span className="text-[10px] uppercase text-muted-foreground">
-                      {entry.permissionLevel}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => void handleRevoke(entry)}
-                      title={t("credentials.share.revoke")}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {t("common.close")}
-          </Button>
-          <Button
-            onClick={() => void handleShare()}
-            disabled={
-              saving || (selectedUsers.size === 0 && selectedRoles.size === 0)
-            }
+          <a
+            href="https://docs.termix.site/features/authentication/rbac"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[10px] text-accent-brand hover:underline shrink-0"
           >
-            {saving && <Loader2 className="size-3.5 mr-1 animate-spin" />}
-            {t("credentials.share.shareButton")}
+            {t("hosts.docsLink")}
+          </a>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          {t("credentials.share.description")}
+        </p>
+
+        <div className="flex gap-1.5">
+          {(["user", "role"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setTargetTab(tab)}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${targetTab === tab ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+            >
+              {tab === "user" ? (
+                <User className="size-3 shrink-0" />
+              ) : (
+                <Shield className="size-3 shrink-0" />
+              )}
+              {tab === "user"
+                ? t("hosts.sharing.usersTab")
+                : t("hosts.sharing.rolesTab")}
+              {tab === "user" && selectedUserIds.size > 0 && (
+                <span>({selectedUserIds.size})</span>
+              )}
+              {tab === "role" && selectedRoleIds.size > 0 && (
+                <span>({selectedRoleIds.size})</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50" />
+          <Input
+            placeholder={t("hosts.sharing.searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+
+        <div className="flex flex-col border border-border h-28 overflow-y-auto">
+          {targetTab === "user" &&
+            (filteredUsers.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-muted-foreground/50 text-center">
+                {t("hosts.sharing.noMatches")}
+              </div>
+            ) : (
+              filteredUsers.map((user) => {
+                const isSelected = selectedUserIds.has(user.id);
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() =>
+                      setSelectedUserIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(user.id)) next.delete(user.id);
+                        else next.add(user.id);
+                        return next;
+                      })
+                    }
+                    className={`flex items-center gap-2 px-2.5 py-1.5 text-xs text-left border-b border-border/50 last:border-0 transition-colors shrink-0 ${isSelected ? "bg-accent-brand/10 text-accent-brand" : "hover:bg-muted/40"}`}
+                  >
+                    <div
+                      className={`size-3.5 border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+                    >
+                      {isSelected && (
+                        <Check className="size-2.5 text-background" />
+                      )}
+                    </div>
+                    <User className="size-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">{user.username}</span>
+                  </button>
+                );
+              })
+            ))}
+          {targetTab === "role" &&
+            (filteredRoles.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-muted-foreground/50 text-center">
+                {t("hosts.sharing.noMatches")}
+              </div>
+            ) : (
+              filteredRoles.map((role) => {
+                const isSelected = selectedRoleIds.has(role.id);
+                return (
+                  <button
+                    key={role.id}
+                    onClick={() =>
+                      setSelectedRoleIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(role.id)) next.delete(role.id);
+                        else next.add(role.id);
+                        return next;
+                      })
+                    }
+                    className={`flex items-center gap-2 px-2.5 py-1.5 text-xs text-left border-b border-border/50 last:border-0 transition-colors shrink-0 ${isSelected ? "bg-accent-brand/10 text-accent-brand" : "hover:bg-muted/40"}`}
+                  >
+                    <div
+                      className={`size-3.5 border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+                    >
+                      {isSelected && (
+                        <Check className="size-2.5 text-background" />
+                      )}
+                    </div>
+                    <Shield className="size-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">
+                      {role.displayName || role.name}
+                    </span>
+                  </button>
+                );
+              })
+            ))}
+        </div>
+
+        <div className="flex items-end gap-2">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.sharing.permissionLevelLabel")}
+            </span>
+            <Select2
+              value={permissionLevel}
+              onChange={(e) =>
+                setPermissionLevel(e.target.value as CredentialPermissionLevel)
+              }
+              className="h-8 w-full px-2.5 text-xs border border-border bg-background hover:bg-muted/40 transition-colors"
+            >
+              {PERMISSION_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {t(LEVEL_KEYS[level].label)}
+                </option>
+              ))}
+            </Select2>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex flex-col gap-1 shrink-0">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left">
+                  {t("hosts.sharing.expiryLabel")}
+                </span>
+                <span className="h-8 flex items-center justify-center px-2.5 text-xs border border-border hover:bg-muted/40 transition-colors whitespace-nowrap">
+                  {t(`hosts.sharing.expiry.${expiryPreset}`)}
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="text-xs">
+              {EXPIRY_PRESETS.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.key}
+                  onClick={() => setExpiryPreset(preset.key)}
+                >
+                  {expiryPreset === preset.key ? (
+                    <Check className="size-3 mr-1.5" />
+                  ) : (
+                    <span className="size-3 mr-1.5" />
+                  )}
+                  {t(`hosts.sharing.expiry.${preset.key}`)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="outline"
+            className="h-8 shrink-0 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            disabled={
+              selectedCount === 0 ||
+              submitting ||
+              (expiryPreset === "custom" && !durationHours)
+            }
+            onClick={handleShare}
+          >
+            <Share2 className="size-3.5 mr-1.5" />
+            {selectedCount > 0
+              ? t("hosts.sharing.shareWithCount", { count: selectedCount })
+              : t("hosts.sharing.shareButton")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          {t(LEVEL_KEYS[permissionLevel].description)}
+        </p>
+
+        {expiryPreset === "custom" && (
+          <Input
+            type="number"
+            autoFocus
+            placeholder={t("hosts.sharing.customHoursPlaceholder")}
+            value={customHours}
+            onChange={(e) => setCustomHours(e.target.value)}
+            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex items-center gap-1.5 px-3 py-2 shrink-0 border-b border-border text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <ListChecks className="size-3.5" />
+          {t("hosts.sharing.currentAccess")}
+          {accessList.length > 0 && (
+            <span className="text-muted-foreground/40">
+              ({accessList.length})
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {accessList.length === 0 && (
+            <div className="px-3 py-6 text-xs text-muted-foreground/50 text-center">
+              {t("credentials.share.noAccessEntries")}
+            </div>
+          )}
+          {accessList.map((record) => {
+            const expired =
+              record.expiresAt && new Date(record.expiresAt) < new Date();
+            const recordLevel = levelOf(record);
+            return (
+              <div
+                key={record.id}
+                className="flex flex-col gap-1 px-3 py-2 border-b border-border/60 last:border-0 text-xs"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {record.targetType === "user" ? (
+                      <User className="size-3 text-muted-foreground shrink-0" />
+                    ) : (
+                      <Shield className="size-3 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="font-semibold truncate">
+                      {record.username ??
+                        record.roleDisplayName ??
+                        record.roleName ??
+                        record.userId ??
+                        record.roleId}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-accent-brand/30 bg-accent-brand/10 text-accent-brand transition-colors hover:bg-accent-brand/20">
+                          {t(LEVEL_KEYS[recordLevel].label)}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="text-xs">
+                        {PERMISSION_LEVELS.map((level) => (
+                          <DropdownMenuItem
+                            key={level}
+                            onClick={() => handleLevelChange(record, level)}
+                          >
+                            {recordLevel === level ? (
+                              <Check className="size-3 mr-1.5" />
+                            ) : (
+                              <span className="size-3 mr-1.5" />
+                            )}
+                            {t(LEVEL_KEYS[level].label)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
+                      onClick={() => void handleRevoke(record)}
+                    >
+                      {t("hosts.sharing.revoke")}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-4">
+                  <span>
+                    {t("hosts.sharing.grantedBy")}:{" "}
+                    <span className="text-foreground/70">
+                      {record.grantedByUsername ?? "?"}
+                    </span>
+                  </span>
+                  <span className={expired ? "text-destructive" : ""}>
+                    {t("hosts.sharing.expires")}:{" "}
+                    {expired ? (
+                      <span className="inline-flex items-center gap-0.5 text-destructive">
+                        <X className="size-3" />
+                        {t("hosts.sharing.expired")}
+                      </span>
+                    ) : record.expiresAt ? (
+                      <span className="text-foreground/70">
+                        {new Date(record.expiresAt).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-foreground/70">
+                        {t("hosts.sharing.never")}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }

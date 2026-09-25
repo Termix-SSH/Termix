@@ -51,25 +51,13 @@
     "share": {
       "title": "Share \"{{name}}\"",
       "description": "Recipients get their own encrypted copy of the secrets. It is refreshed whenever the credential changes and removed when the share is revoked.",
-      "users": "Users",
-      "roles": "Roles",
-      "searchPlaceholder": "Search...",
-      "permission": "Permission",
       "levelUse": "Use",
       "levelManage": "Manage",
       "levelUseDesc": "Use: attach the credential to hosts and connect. The secret itself stays hidden.",
       "levelManageDesc": "Manage: also edit the credential and share it with others.",
-      "expires": "Expires",
-      "expiry": {
-        "never": "Never",
-        "oneDay": "1 day",
-        "sevenDays": "7 days",
-        "thirtyDays": "30 days"
-      },
-      "currentAccess": "Shared with",
-      "revoke": "Revoke",
-      "shared": "Credential shared",
-      "shareButton": "Share"
+      "noAccessEntries": "This credential has not been shared yet",
+      "accessRevoked": "Access revoked",
+      "shared": "Credential shared"
     },
     "deleteCredentialAction": "Delete credential",
     "editCredentialAction": "Edit credential",
