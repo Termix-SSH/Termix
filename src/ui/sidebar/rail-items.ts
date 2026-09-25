@@ -65,6 +65,10 @@ export interface RailItemDef {
   pluginId?: string;
   /** Role permission the user needs to see it at all, as a full id. */
   permission?: string;
+  /** "footer" renders it at the bottom of the rail, above the profile. */
+  placement?: "main" | "footer";
+  /** Called as a hook by the rail; a positive number shows as a badge. */
+  useBadge?: () => number | null | undefined;
 }
 
 export const RAIL_ITEMS: RailItemDef[] = [

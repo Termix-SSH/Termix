@@ -29,6 +29,7 @@ import { runAcmeSslSettingsMigration } from "./acme-ssl-settings-migration.js";
 import { runVaultSettingsMigration } from "./vault-settings-migration.js";
 import { runSecretSourcesTokenMigration } from "./secret-sources-token-migration.js";
 import { runTotpMigration } from "./totp-migration.js";
+import { runNotificationChannelMigration } from "./notification-channel-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
 
 const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
@@ -55,6 +56,7 @@ const MIGRATIONS: Array<[string, () => Promise<unknown>]> = [
   ["runVaultSettingsMigration", runVaultSettingsMigration],
   ["runSecretSourcesTokenMigration", runSecretSourcesTokenMigration],
   ["runTotpMigration", runTotpMigration],
+  ["runNotificationChannelMigration", runNotificationChannelMigration],
   ["runTermixIdentityCaMigration", runTermixIdentityCaMigration],
 ];
 

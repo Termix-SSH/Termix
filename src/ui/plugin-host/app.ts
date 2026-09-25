@@ -130,6 +130,8 @@ export function createPluginApp(
           hidden: item.hidden,
           after: item.after,
           order: item.order,
+          placement: item.placement,
+          useBadge: item.useBadge,
           pluginId,
           permission: item.permission
             ? resolvePluginPermission(pluginId, item.permission)

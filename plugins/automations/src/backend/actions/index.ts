@@ -67,22 +67,26 @@ async function runNotify(
   const title = renderTemplate(step.title ?? "", context.template);
   const body = renderTemplate(step.body ?? "", context.template);
 
-  if (step.channelIds.length === 0) {
-    return fail("No notification channels selected");
-  }
+  const channelIds = step.channelIds ?? [];
   if (context.dryRun) {
     return ok(
-      `Would notify ${step.channelIds.length} channel(s): ${title || body}`,
+      channelIds.length > 0
+        ? `Would send an alert to the inbox and ${channelIds.length} channel(s): ${title || body}`
+        : `Would send an alert to the inbox: ${title || body}`,
     );
   }
 
   const trigger = context.template.trigger ?? {};
   let result;
   try {
-    result = await runtime.ctx.notify.send(step.channelIds, {
+    result = await runtime.ctx.notify.send({
       title: title || "Termix automation",
       body,
       severity: step.severity ?? "warning",
+      category: "automations.notify",
+      audience: { userId: context.userId },
+      channelIds,
+      link: { tab: "automations" },
       context: {
         hostId:
           context.template.host?.id ??
@@ -102,12 +106,15 @@ async function runNotify(
     return fail(errorText(error));
   }
 
+  if (result.recipients === 0) {
+    return fail("Alerts are turned off on this server");
+  }
   const errors = result.failures.map((f) => `${f.name}: ${f.error}`);
-  if (result.delivered === 0) {
-    return fail(errors.join("; ") || "No enabled channels to notify");
+  if (channelIds.length > 0 && result.delivered === 0 && errors.length > 0) {
+    return fail(errors.join("; "));
   }
   return ok(
-    `Notified ${result.delivered} channel(s)${errors.length ? `; ${errors.join("; ")}` : ""}`,
+    `Sent an alert${result.delivered ? ` and notified ${result.delivered} channel(s)` : ""}${errors.length ? `; ${errors.join("; ")}` : ""}`,
   );
 }
 

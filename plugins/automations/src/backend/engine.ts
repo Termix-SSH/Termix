@@ -302,6 +302,27 @@ export class AutomationEngine {
       // An automation_failed handler that itself fails must not re-announce
       // its own failure, so the event is not emitted for runs that this event
       // already started.
+      await this.ctx.notify
+        .send({
+          title: `Automation "${automation.name}" failed`,
+          body: error ?? undefined,
+          severity: "warning",
+          category: "automations.run_failed",
+          audience: { userId: automation.userId },
+          link: { tab: "automations" },
+          dedupeKey: `automations.run_failed:${automation.id}`,
+          context: {
+            sourceId: automation.id,
+            sourceName: automation.name,
+            triggerType: request.triggerType,
+          },
+        })
+        .catch((notifyError: unknown) =>
+          this.ctx.log.warn(
+            `Could not send the failure alert for automation ${automation.id}: ${errorText(notifyError)}`,
+          ),
+        );
+
       if (request.triggerType !== "internal_event") {
         this.ctx.events.emit(TOPIC_AUTOMATION_FAILED, {
           userId: automation.userId,

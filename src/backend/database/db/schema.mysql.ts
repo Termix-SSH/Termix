@@ -271,20 +271,6 @@ export const hosts = mysqlTable(
   ],
 );
 
-export const dismissedAlerts = mysqlTable(
-  "dismissed_alerts",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    alertId: text("alert_id").notNull(),
-    dismissedAt: text("dismissed_at")
-      .notNull()
-      .default(sql`(CURRENT_TIMESTAMP)`),
-  },
-  (table) => [index("idx_dismissed_alerts_user_id").on(table.userId)],
-);
 
 export const sshCredentials = mysqlTable(
   "ssh_credentials",
@@ -719,22 +705,6 @@ export const uiPreferences = mysqlTable("ui_preferences", {
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
-
-// --- alerts begin ---
-export const notificationChannels = mysqlTable("notification_channels", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
-  config: text("config").notNull(),
-  enabled: boolean("enabled").notNull().default(true),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-// --- alerts end ---
 
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync

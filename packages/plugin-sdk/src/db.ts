@@ -265,6 +265,7 @@ export const LEGACY_TABLE_OWNERS: Readonly<Record<string, string>> = {
   termix_identity_ca: "termix-identity",
   webauthn_credentials: "webauthn",
   sso_providers: "sso",
+  dismissed_alerts: "alerts",
 };
 
 /**

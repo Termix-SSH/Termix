@@ -7,7 +7,6 @@ import multer from "multer";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/users.js";
 import hostRoutes from "./routes/host.js";
-import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import sshAuthRoutes from "./routes/ssh-auth-routes.js";
 import rbacRoutes from "./routes/rbac.js";
@@ -17,7 +16,6 @@ import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
 import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
 import uiPreferencesRoutes from "./routes/ui-preferences.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
-import notificationChannelsRoutes from "./routes/notification-channels-routes.js";
 import syncRoutes from "./routes/sync.js";
 import dashboardRoutes from "./routes/dashboard-routes.js";
 import {
@@ -48,7 +46,6 @@ import { configureDirectHttps, getTlsConfig } from "../tls/tls-service.js";
 import { acmeChallengeHandler } from "../tls/acme-challenges.js";
 import {
   createCurrentCredentialRepository,
-  createCurrentDismissedAlertRepository,
   createCurrentHostRepository,
   createCurrentPluginSettingsRepository,
   createCurrentSettingsRepository,
@@ -866,13 +863,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE dismissed_alerts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          alert_id TEXT NOT NULL,
-          dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
         CREATE TABLE ssh_credential_usage (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           credential_id INTEGER NOT NULL,
@@ -1007,21 +997,6 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
 
       // Rows the user owns in plugin tables travel with the export.
       await writeUserPluginTables(exportDb, userId);
-
-      const dismissedAlertRepository = createCurrentDismissedAlertRepository();
-      const alerts = await dismissedAlertRepository.listByUserId(userId);
-      const insertAlert = exportDb.prepare(`
-        INSERT INTO dismissed_alerts (id, user_id, alert_id, dismissed_at)
-        VALUES (?, ?, ?, ?)
-      `);
-      for (const alert of alerts) {
-        insertAlert.run(
-          alert.id,
-          alert.userId,
-          alert.alertId,
-          alert.dismissedAt,
-        );
-      }
 
       const sshCredentialUsageRepository =
         createCurrentSshCredentialUsageRepository();
@@ -1217,7 +1192,6 @@ app.post(
           sshHostsImported: 0,
           sshCredentialsImported: 0,
           pluginItemsImported: 0,
-          dismissedAlertsImported: 0,
           credentialUsageImported: 0,
           settingsImported: 0,
           skippedItems: 0,
@@ -1365,37 +1339,6 @@ app.post(
           result.summary.pluginItemsImported += pluginRows.imported;
           result.summary.skippedItems += pluginRows.skipped;
           result.summary.errors.push(...pluginRows.errors);
-
-          const dismissedAlertRepository =
-            createCurrentDismissedAlertRepository();
-
-          try {
-            const importedAlerts = importDb
-              .prepare("SELECT * FROM dismissed_alerts")
-              .all();
-            for (const alert of importedAlerts) {
-              try {
-                const created = await dismissedAlertRepository.createForImport(
-                  userId,
-                  alert.alert_id,
-                  alert.dismissed_at,
-                );
-                if (created) {
-                  result.summary.dismissedAlertsImported++;
-                } else {
-                  result.summary.skippedItems++;
-                }
-              } catch (alertError) {
-                result.summary.errors.push(
-                  `Dismissed alert import error: ${alertError.message}`,
-                );
-              }
-            }
-          } catch {
-            apiLogger.info(
-              "dismissed_alerts table not found in import file, skipping",
-            );
-          }
 
           const targetUser = await userRepository.findById(userId);
           if (targetUser?.isAdmin) {
@@ -1614,7 +1557,6 @@ app.post("/database/restore", requireAdmin, async (req, res) => {
 
 app.use("/users", userRoutes);
 app.use("/host", hostRoutes);
-app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
 app.use("/ssh-auth", sshAuthRoutes);
 app.use("/rbac", rbacRoutes);
@@ -1624,7 +1566,6 @@ app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
 app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
 app.use("/ui-preferences", uiPreferencesRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
-app.use("/", notificationChannelsRoutes);
 app.use("/sync", syncRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/plugins", pluginRoutes);

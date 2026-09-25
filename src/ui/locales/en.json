@@ -2271,27 +2271,6 @@
     }
   },
   "terminalToolbar": {},
-  "alerts": {
-    "addChannel": "Add Channel",
-    "editChannel": "Edit Channel",
-    "channelName": "Name",
-    "channelType": "Type",
-    "channelNameRequired": "Name is required",
-    "webhookUrl": "URL",
-    "webhookUrlRequired": "Webhook URL is required",
-    "webhookDesc": "POST JSON payload to this URL on each alert firing",
-    "ntfyServer": "Server URL",
-    "ntfyTopic": "Topic",
-    "ntfyTopicRequired": "Topic is required",
-    "ntfyToken": "Access Token (optional)",
-    "channelSaveFailed": "Failed to save channel",
-    "discordUrlInvalid": "Discord URL must be a valid Discord webhook URL",
-    "discordWebhookDesc": "POST a Discord embed to this webhook URL on each alert firing",
-    "discordUsername": "Display name (optional)",
-    "discordAvatar": "Avatar URL (optional)",
-    "failedToLoad": "Failed to load alerts",
-    "failedToDismiss": "Failed to dismiss alert"
-  },
   "macros": {
     "title": "Macros",
     "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
@@ -2450,8 +2429,12 @@
         "consequence": "Including activity from other users, not just yours."
       },
       "notify:send": {
-        "title": "Send notifications",
-        "consequence": "Through the channels you have already set up."
+        "title": "Send alerts",
+        "consequence": "To you or other users, and through the channels they set up."
+      },
+      "notify:hub": {
+        "title": "Receive every alert",
+        "consequence": "Stores and delivers the alerts all plugins send, including their contents."
       },
       "audit:read": {
         "title": "Read the audit log",

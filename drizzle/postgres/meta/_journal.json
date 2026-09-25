@@ -414,6 +414,13 @@
       "when": 1790304465181,
       "tag": "0058_goofy_ma_gnuci",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1790370151997,
+      "tag": "0059_square_korg",
+      "breakpoints": true
     }
   ]
 }

@@ -342,21 +342,6 @@ export interface Tab {
 }
 
 // ============================================================================
-// ALERT TYPES
-// ============================================================================
-
-export interface TermixAlert {
-  id: string;
-  title: string;
-  message: string;
-  expiresAt: string;
-  priority?: "low" | "medium" | "high" | "critical";
-  type?: "info" | "warning" | "error" | "success";
-  actionUrl?: string;
-  actionText?: string;
-}
-
-// ============================================================================
 // TERMINAL CONFIGURATION TYPES
 // ============================================================================
 
@@ -527,7 +512,6 @@ export interface ExportSummary {
   sshHostsImported: number;
   sshCredentialsImported: number;
   pluginItemsImported: number;
-  dismissedAlertsImported: number;
   credentialUsageImported: number;
   settingsImported: number;
   skippedItems: number;

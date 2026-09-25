@@ -176,6 +176,23 @@ describe("scheduled renewal", () => {
     await vi.waitFor(() => expect(mock.tls.renewers).toBe(0));
   });
 
+  it("alerts every admin when a renewal fails", async () => {
+    const { mock, runner } = await setup({ settings: CONFIGURED });
+    issue.mockRejectedValueOnce(new Error("rate limited"));
+    expect(await runner.check()).toBe(false);
+    expect(mock.notifications).toEqual([
+      {
+        actor: undefined,
+        notification: expect.objectContaining({
+          body: "rate limited",
+          severity: "critical",
+          category: "acme-ssl.renewal_failed",
+          audience: "admins",
+        }),
+      },
+    ]);
+  });
+
   it("waits before retrying after a failed attempt", async () => {
     const { mock, runner } = await setup({ settings: CONFIGURED });
     issue.mockRejectedValueOnce(new Error("rate limited"));

@@ -264,20 +264,6 @@ export const hosts = sqliteTable(
   ],
 );
 
-export const dismissedAlerts = sqliteTable(
-  "dismissed_alerts",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    alertId: text("alert_id").notNull(),
-    dismissedAt: text("dismissed_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [index("idx_dismissed_alerts_user_id").on(table.userId)],
-);
 
 export const sshCredentials = sqliteTable(
   "ssh_credentials",
@@ -716,22 +702,6 @@ export const uiPreferences = sqliteTable("ui_preferences", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
-
-// --- alerts begin ---
-export const notificationChannels = sqliteTable("notification_channels", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
-  config: text("config").notNull(),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// --- alerts end ---
 
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync

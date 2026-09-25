@@ -1,5 +1,3 @@
-import { createCurrentSettingsRepository } from "../database/repositories/factory.js";
-
 export const NOTIFICATION_PRIVATE_ALLOWLIST_KEY =
   "notification_private_endpoint_allowlist";
 
@@ -15,11 +13,4 @@ export function parseNotificationAllowlist(raw: string | null): string[] {
   } catch {
     return [];
   }
-}
-
-export async function readNotificationPrivateAllowlist(): Promise<string[]> {
-  const raw = await createCurrentSettingsRepository().get(
-    NOTIFICATION_PRIVATE_ALLOWLIST_KEY,
-  );
-  return parseNotificationAllowlist(raw);
 }

@@ -1492,19 +1492,46 @@ export interface PluginAudit {
   }) => Promise<void>;
 }
 
-/** A notification channel the acting user set up. Its config never leaves core. */
+/** A notification channel a user set up. Its config never leaves the hub. */
 export interface PluginNotificationChannel {
   id: number;
   name: string;
-  /** "webhook", "ntfy" or "discord". */
+  /** "webhook", "ntfy", "discord", "email", or whatever the hub supports. */
   type: string;
   enabled: boolean;
 }
 
+export type PluginNotificationSeverity =
+  "info" | "success" | "warning" | "critical";
+
+/**
+ * Who receives an alert. Left out, it goes to the acting user. "admins" and
+ * a permission reach every user who holds it when the alert is sent.
+ */
+export type PluginNotificationAudience =
+  { userId: string } | { permission: string } | "admins";
+
 export interface PluginNotification {
   title: string;
-  body: string;
-  severity?: "info" | "warning" | "critical";
+  body?: string;
+  /** Defaults to "warning". */
+  severity?: PluginNotificationSeverity;
+  /**
+   * What kind of alert this is, "<pluginId>.<kind>" by convention, e.g.
+   * "acme-ssl.renewal_failed". Users route alerts to channels by it.
+   * Defaults to the sending plugin's id.
+   */
+  category?: string;
+  audience?: PluginNotificationAudience;
+  /**
+   * Channels to deliver to on top of the recipient's own routing rules.
+   * Only channels the recipient owns are used.
+   */
+  channelIds?: number[];
+  /** Where the alert points: a tab type to open, or an http(s) URL. */
+  link?: { tab?: string; url?: string };
+  /** While an unread alert with this key exists, repeats are dropped. */
+  dedupeKey?: string;
   /**
    * Extra fields a webhook receiver gets alongside the message. `sourceId`
    * and `sourceName` name what sent it (an automation, a rule).
@@ -1517,30 +1544,50 @@ export interface PluginNotification {
     triggerType?: string;
     value?: unknown;
     threshold?: unknown;
+    [key: string]: unknown;
   };
 }
 
 export interface PluginNotifyResult {
+  /** Users the alert reached. */
+  recipients: number;
+  /** Channel deliveries that succeeded, across every recipient. */
   delivered: number;
   failures: Array<{ channelId: number; name: string; error: string }>;
 }
 
 /**
- * Core's notification channels, as the acting user. Needs notify:send, and
- * refuses a call with no actor: channels belong to a user.
+ * The plugin that stores alerts and delivers them to channels. Core resolves
+ * the audience and hands the hub a list of user ids; it never sees a channel.
+ */
+export interface PluginNotifyHub {
+  deliver: (input: {
+    /** The plugin that sent the alert. */
+    source: string;
+    recipients: string[];
+    notification: PluginNotification;
+  }) => Promise<PluginNotifyResult>;
+  channels: (userId: string) => Promise<PluginNotificationChannel[]>;
+}
+
+/**
+ * Alerts. Every plugin sends through here and the hub plugin decides where
+ * they land. Needs notify:send. With no hub running, send reaches nobody and
+ * channels answers an empty list, so callers never have to check.
  */
 export interface PluginNotify {
-  /** The acting user's channels, without their config. */
+  /** The acting user's channels, without their config. Needs an actor. */
   channels: () => Promise<PluginNotificationChannel[]>;
   /**
-   * Sends to the listed channels the acting user owns. Disabled channels and
-   * ids the user does not own are skipped. One channel failing does not stop
-   * the others.
+   * Sends an alert. With no audience it goes to the acting user, so a call
+   * with neither is refused. One channel failing does not stop the others.
    */
-  send: (
-    channelIds: number[],
-    notification: PluginNotification,
-  ) => Promise<PluginNotifyResult>;
+  send: (notification: PluginNotification) => Promise<PluginNotifyResult>;
+  /**
+   * Makes this plugin the hub. Needs notify:hub. Only one hub runs at a time;
+   * a second one is refused. Revoked on deactivate.
+   */
+  serve: (hub: PluginNotifyHub) => () => void;
 }
 
 export interface PluginFetchInit {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "@termix/plugin-sdk/frontend";
+import { invokeAction, useTranslation } from "@termix/plugin-sdk/frontend";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -11,16 +11,7 @@ import {
   Trash2,
   Workflow,
 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  NotificationChannelDialog,
-  deleteNotificationChannel,
-  getBasePath,
-  getNotificationChannels,
-  testNotificationChannel,
-  type NotificationChannel,
-} from "@termix/plugin-sdk/ui";
+import { Badge, Button, getBasePath } from "@termix/plugin-sdk/ui";
 import {
   useAutomationsApi,
   type AutomationRow,
@@ -42,7 +33,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-type PanelTab = "automations" | "runs" | "channels";
+type PanelTab = "automations" | "runs";
 
 const STATUS_CLASS: Record<string, string> = {
   success: "text-green-500",
@@ -96,11 +87,6 @@ export function AutomationsPanel({
   const [expandedRun, setExpandedRun] = useState<number | null>(null);
   const [runSteps, setRunSteps] = useState<AutomationRunStepRow[]>([]);
 
-  const [channels, setChannels] = useState<NotificationChannel[]>([]);
-  const [channelDialogOpen, setChannelDialogOpen] = useState(false);
-  const [editingChannel, setEditingChannel] =
-    useState<NotificationChannel | null>(null);
-
   const loadAutomations = useCallback(async () => {
     setLoading(true);
     try {
@@ -121,15 +107,10 @@ export function AutomationsPanel({
   }, [api]);
 
   const loadOptions = useCallback(async () => {
-    const [editorOptions, channelsResult] = await Promise.allSettled([
-      api.editorOptions(),
-      getNotificationChannels(),
-    ]);
-    if (channelsResult.status === "fulfilled") {
-      setChannels(channelsResult.value);
-    }
-    if (editorOptions.status === "fulfilled") {
-      setOptions(editorOptions.value);
+    try {
+      setOptions(await api.editorOptions());
+    } catch {
+      // The editor falls back to empty pickers.
     }
   }, [api]);
 
@@ -236,27 +217,6 @@ export function AutomationsPanel({
       toast.success(t(`${base}.runFinished`, { status: outcome.status }));
       await loadAutomations();
       if (tab === "runs") await loadRuns();
-    } catch (error) {
-      toast.error(getErrorMessage(error, String(error)));
-    }
-  }
-
-  async function testChannel(channel: NotificationChannel) {
-    try {
-      // Throws with the reason when delivery fails.
-      await testNotificationChannel(channel.id);
-      toast.success(t(`${base}.channelTestSent`));
-    } catch (error) {
-      toast.error(getErrorMessage(error, String(error)));
-    }
-  }
-
-  async function removeChannel(channel: NotificationChannel) {
-    if (!confirm(t(`${base}.deleteChannelConfirm`))) return;
-    try {
-      await deleteNotificationChannel(channel.id);
-      toast.success(t(`${base}.channelDeleted`));
-      await loadOptions();
     } catch (error) {
       toast.error(getErrorMessage(error, String(error)));
     }
@@ -372,7 +332,7 @@ export function AutomationsPanel({
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-1 p-2 border-b border-border">
-        {(["automations", "runs", "channels"] as PanelTab[]).map((key) => (
+        {(["automations", "runs"] as PanelTab[]).map((key) => (
           <Button
             key={key}
             variant={tab === key ? "outline" : "ghost"}
@@ -386,11 +346,20 @@ export function AutomationsPanel({
           >
             <span className="truncate">
               {t(
-                `${base}.${key === "automations" ? "tabAutomations" : key === "runs" ? "tabRuns" : "tabChannels"}`,
+                `${base}.${key === "automations" ? "tabAutomations" : "tabRuns"}`,
               )}
             </span>
           </Button>
         ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="min-w-0 flex-shrink rounded-none h-7 px-2 text-xs"
+          title={t(`${base}.channelsHint`)}
+          onClick={() => void invokeAction("alerts.openChannels")}
+        >
+          <span className="truncate">{t(`${base}.tabChannels`)}</span>
+        </Button>
         <a
           href="https://docs.termix.site/features/automations/overview"
           target="_blank"
@@ -576,83 +545,7 @@ export function AutomationsPanel({
             ))}
           </div>
         )}
-
-        {tab === "channels" && (
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-none w-full mb-2 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-              onClick={() => {
-                setEditingChannel(null);
-                setChannelDialogOpen(true);
-              }}
-            >
-              <Plus size={14} className="mr-1" />
-              {t(`${base}.addChannel`)}
-            </Button>
-
-            {channels.length === 0 && (
-              <p className="text-xs text-muted-foreground p-2">
-                {t(`${base}.emptyChannels`)}
-              </p>
-            )}
-
-            <div className="space-y-1">
-              {channels.map((channel) => (
-                <div
-                  key={channel.id}
-                  className="border border-border p-2.5 hover:bg-muted/40"
-                >
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="flex-1 text-left text-sm truncate"
-                      onClick={() => {
-                        setEditingChannel(channel);
-                        setChannelDialogOpen(true);
-                      }}
-                    >
-                      {channel.name}
-                    </button>
-                    <Badge variant="outline" className="text-[10px] uppercase">
-                      {channel.type}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="flex-1" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 rounded-none text-[11px]"
-                      onClick={() => testChannel(channel)}
-                    >
-                      {t(`${base}.testChannel`)}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-none"
-                      onClick={() => removeChannel(channel)}
-                    >
-                      <Trash2 size={12} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
       </div>
-
-      <NotificationChannelDialog
-        open={channelDialogOpen}
-        onOpenChange={setChannelDialogOpen}
-        channel={editingChannel}
-        onSaved={() => {
-          setChannelDialogOpen(false);
-          void loadOptions();
-        }}
-      />
     </div>
   );
 }

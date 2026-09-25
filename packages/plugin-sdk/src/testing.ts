@@ -69,6 +69,7 @@ import type {
   PluginHostStatusEntry,
   PluginNotification,
   PluginNotificationChannel,
+  PluginNotifyHub,
   PluginFetchInit,
   PluginBinarySpec,
   PluginTlsCertificateInfo,
@@ -303,9 +304,10 @@ export interface FakePluginContext {
   /** Every ctx.notify.send call, with the actor it ran as. */
   notifications: Array<{
     actor: string | undefined;
-    channelIds: number[];
     notification: PluginNotification;
   }>;
+  /** The hub the plugin registered with ctx.notify.serve, if any. */
+  notifyHub: { current: PluginNotifyHub | null };
   /** Backing store behind ctx.secrets.get/set, keyed "<userId>:<key>". */
   secretStore: Map<string, string>;
   /** Every ctx.fetch call, in order. */
@@ -434,6 +436,7 @@ export function createFakeContext(
   const credentialReads: FakePluginContext["credentialReads"] = [];
   const createdSshKeys: FakePluginContext["createdSshKeys"] = [];
   const notifications: FakePluginContext["notifications"] = [];
+  const notifyHub: FakePluginContext["notifyHub"] = { current: null };
   const fetches: FakePluginContext["fetches"] = [];
   const processRuns: FakePluginContext["processRuns"] = [];
   const binaries: FakePluginContext["binaries"] = [];
@@ -1105,13 +1108,29 @@ export function createFakeContext(
     },
 
     notify: {
-      channels: async () => options.notificationChannels ?? [],
-      send: async (channelIds, notification) => {
-        notifications.push({ actor, channelIds, notification });
+      channels: async () => {
+        if (!actor) throw new Error("ctx.notify needs an acting user");
+        return options.notificationChannels ?? [];
+      },
+      send: async (notification) => {
+        if (!notification.audience && !actor) {
+          throw new Error("ctx.notify needs an acting user or an audience");
+        }
+        notifications.push({ actor, notification });
+        const channelIds = notification.channelIds ?? [];
         const selected = (options.notificationChannels ?? []).filter(
           (channel) => channelIds.includes(channel.id) && channel.enabled,
         );
-        return { delivered: selected.length, failures: [] };
+        return { recipients: 1, delivered: selected.length, failures: [] };
+      },
+      serve: (hub) => {
+        if (notifyHub.current) throw new Error("A hub is already running");
+        notifyHub.current = hub;
+        const revoke = () => {
+          if (notifyHub.current === hub) notifyHub.current = null;
+        };
+        disposals.push(revoke);
+        return revoke;
       },
     },
 
@@ -1235,6 +1254,7 @@ export function createFakeContext(
     credentialReads,
     createdSshKeys,
     notifications,
+    notifyHub,
     fetches,
     processRuns,
     binaries,
@@ -1333,7 +1353,7 @@ export interface MockPluginContext extends FakePluginContext {
  * ctx.db, network:serve on ctx.http and ctx.ws, events:core on emitting a
  * topic outside the plugin's own namespace, settings:read-core on
  * ctx.settings.readCore, ssh:connect plus credentials:use on ctx.ssh,
- * notify:send on ctx.notify, network:outbound on ctx.fetch, process:spawn on
+ * notify:send on ctx.notify (notify:hub on serve), network:outbound on ctx.fetch, process:spawn on
  * ctx.process, system:tls on ctx.system, and auth:provide on ctx.auth. Reading a plugin's own settings is deliberately
  * ungated. As the SDK grows a member, add its gate here in the same shape.
  */
@@ -1692,9 +1712,13 @@ export function createMockCtx(
         require("notify:send");
         return ctx.notify.channels();
       },
-      send: async (channelIds, notification) => {
+      send: async (notification) => {
         require("notify:send");
-        return ctx.notify.send(channelIds, notification);
+        return ctx.notify.send(notification);
+      },
+      serve: (hub) => {
+        require("notify:hub");
+        return ctx.notify.serve(hub);
       },
     },
 

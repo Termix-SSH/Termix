@@ -1,0 +1,148 @@
+{
+  "id": "alerts",
+  "name": "Alerts",
+  "version": "1.0.0",
+  "description": "One inbox for every alert, with delivery to webhooks, ntfy, Discord and email.",
+  "author": {
+    "name": "Termix"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Termix-SSH/Termix",
+  "category": "Monitoring",
+  "icon": "Bell",
+  "engine": {
+    "termix": ">=2.9.0",
+    "api": "1"
+  },
+  "capabilities": [
+    "db:own",
+    "events:core",
+    "network:outbound",
+    "network:serve",
+    "notify:hub",
+    "notify:send",
+    "secrets:own",
+    "settings:read-core",
+    "ui:surface"
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "alerts",
+        "titleKey": "nav.alerts",
+        "icon": "Bell",
+        "openFrom": ["rail", "palette"]
+      }
+    ],
+    "permissions": [
+      {
+        "name": "use",
+        "titleKey": "permissions.use.title",
+        "descriptionKey": "permissions.use.description",
+        "defaultRoles": ["admin", "user"]
+      }
+    ],
+    "settings": {
+      "admin": [
+        {
+          "key": "announcements",
+          "type": "boolean",
+          "group": "settings.group.general",
+          "labelKey": "settings.admin.announcements.label",
+          "descriptionKey": "settings.admin.announcements.description",
+          "default": true
+        },
+        {
+          "key": "retentionDays",
+          "type": "number",
+          "group": "settings.group.general",
+          "labelKey": "settings.admin.retentionDays.label",
+          "descriptionKey": "settings.admin.retentionDays.description",
+          "default": 90,
+          "min": 1,
+          "max": 3650
+        },
+        {
+          "key": "smtpHost",
+          "type": "string",
+          "group": "settings.group.email",
+          "labelKey": "settings.admin.smtpHost.label",
+          "descriptionKey": "settings.admin.smtpHost.description",
+          "placeholderKey": "settings.admin.smtpHost.placeholder",
+          "default": ""
+        },
+        {
+          "key": "smtpPort",
+          "type": "number",
+          "group": "settings.group.email",
+          "labelKey": "settings.admin.smtpPort.label",
+          "descriptionKey": "settings.admin.smtpPort.description",
+          "default": 587,
+          "min": 1,
+          "max": 65535
+        },
+        {
+          "key": "smtpSecure",
+          "type": "boolean",
+          "group": "settings.group.email",
+          "labelKey": "settings.admin.smtpSecure.label",
+          "descriptionKey": "settings.admin.smtpSecure.description",
+          "default": false
+        },
+        {
+          "key": "smtpUser",
+          "type": "string",
+          "group": "settings.group.email",
+          "labelKey": "settings.admin.smtpUser.label",
+          "descriptionKey": "settings.admin.smtpUser.description",
+          "default": ""
+        },
+        {
+          "key": "smtpPassword",
+          "type": "secret",
+          "group": "settings.group.email",
+          "labelKey": "settings.admin.smtpPassword.label",
+          "descriptionKey": "settings.admin.smtpPassword.description"
+        },
+        {
+          "key": "smtpFrom",
+          "type": "string",
+          "group": "settings.group.email",
+          "labelKey": "settings.admin.smtpFrom.label",
+          "descriptionKey": "settings.admin.smtpFrom.description",
+          "placeholderKey": "settings.admin.smtpFrom.placeholder",
+          "default": ""
+        }
+      ],
+      "user": [
+        {
+          "key": "popups",
+          "type": "select",
+          "labelKey": "settings.user.popups.label",
+          "descriptionKey": "settings.user.popups.description",
+          "default": "warning",
+          "options": [
+            {
+              "value": "all",
+              "labelKey": "settings.user.popups.all"
+            },
+            {
+              "value": "warning",
+              "labelKey": "settings.user.popups.warning"
+            },
+            {
+              "value": "critical",
+              "labelKey": "settings.user.popups.critical"
+            },
+            {
+              "value": "off",
+              "labelKey": "settings.user.popups.off"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "locales": "locales",
+  "platforms": ["linux", "win32", "darwin"]
+}

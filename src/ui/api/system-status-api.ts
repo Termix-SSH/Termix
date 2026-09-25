@@ -1,32 +1,4 @@
-import type { TermixAlert } from "@/types";
 import { authApi, handleApiError } from "@/main-axios";
-
-// ALERTS
-// ============================================================================
-
-export async function getUserAlerts(): Promise<{
-  alerts: TermixAlert[];
-}> {
-  try {
-    const response = await authApi.get(`/alerts`);
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "fetch user alerts");
-    throw error;
-  }
-}
-
-export async function dismissAlert(
-  alertId: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/alerts/dismiss", { alertId });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "dismiss alert");
-    throw error;
-  }
-}
 
 // ============================================================================
 // UPDATES & RELEASES

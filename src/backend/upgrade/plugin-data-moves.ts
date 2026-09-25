@@ -10,6 +10,7 @@ import { runOpksshConfigMigration } from "./opkssh-config-migration.js";
 import { runTermixIdentityCaMigration } from "./termix-identity-ca-migration.js";
 import { runSessionRecordingDataMigration } from "./session-recording-data-migration.js";
 import { runHostMetricsSettingsMigration } from "./host-metrics-settings-migration.js";
+import { runNotificationChannelMigration } from "./notification-channel-migration.js";
 
 export async function runPluginDataMoves(): Promise<void> {
   await runLdapProviderMigration();
@@ -18,4 +19,6 @@ export async function runPluginDataMoves(): Promise<void> {
   // Both set how long history is kept, which the plugin prunes by on activate.
   await runSessionRecordingDataMigration();
   await runHostMetricsSettingsMigration();
+  // Automations name channels by id, so they are in place before it starts.
+  await runNotificationChannelMigration();
 }

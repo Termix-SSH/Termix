@@ -1,0 +1,19 @@
+{
+  "name": "@termix-plugin/alerts",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "termix-plugin build",
+    "test": "termix-plugin test",
+    "typecheck": "tsc -b ../../tsconfig.plugins.backend.json ../../tsconfig.plugins.frontend.json",
+    "validate": "termix-plugin validate"
+  },
+  "dependencies": {
+    "nodemailer": "^10.0.10"
+  },
+  "devDependencies": {
+    "@termix/plugin-sdk": "*",
+    "@types/nodemailer": "^8.0.2"
+  }
+}

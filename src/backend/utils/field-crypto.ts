@@ -38,7 +38,6 @@ class FieldCrypto {
     ]),
     // Channel configs hold ntfy tokens, webhook auth headers and Discord
     // webhook URLs, which are credentials like any other.
-    notification_channels: new Set(["config"]),
   };
 
   static encryptField(

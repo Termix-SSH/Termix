@@ -168,6 +168,16 @@ export interface RailItemContribution {
   after?: string;
   /** Lower sorts first among plugin items. */
   order?: number;
+  /**
+   * "footer" puts it at the bottom of the rail, above the user's profile,
+   * for something always at hand like an inbox. Default "main".
+   */
+  placement?: "main" | "footer";
+  /**
+   * A hook the rail calls to show a count on the icon, e.g. unread alerts.
+   * Zero or nothing shows no badge.
+   */
+  useBadge?: () => number | null | undefined;
 }
 
 export interface PanelProps {

@@ -9,6 +9,10 @@
       "source": "workspace"
     },
     {
+      "id": "alerts",
+      "source": "workspace"
+    },
+    {
       "id": "automations",
       "source": "workspace"
     },

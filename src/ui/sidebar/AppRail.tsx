@@ -14,6 +14,7 @@ import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { Skeleton } from "@/components/skeleton";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { useRailItems, type RailItemDef } from "./rail-items";
+import { RailBadge } from "./RailBadge";
 
 /** Core rail views; plugins add their own ids at runtime. */
 export type CoreRailView =
@@ -36,8 +37,15 @@ type RailItem =
       dot?: boolean;
       promotable?: boolean;
       rightDockable?: boolean;
+      useBadge?: () => number | null | undefined;
     }
-  | { kind: "tab"; tabType: TabType; icon: React.ReactNode; title: string }
+  | {
+      kind: "tab";
+      tabType: TabType;
+      icon: React.ReactNode;
+      title: string;
+      useBadge?: () => number | null | undefined;
+    }
   | { kind: "separator" };
 
 function buildRailButtons(
@@ -55,6 +63,7 @@ function buildRailButtons(
         tabType: item.id as TabType,
         icon: <Icon size={16} />,
         title: t(item.labelKey),
+        useBadge: item.useBadge,
       });
     } else {
       all.push({
@@ -64,6 +73,7 @@ function buildRailButtons(
         dot: item.id === "split-screen" ? splitMode !== "none" : undefined,
         promotable: item.promotable,
         rightDockable: item.rightDockable,
+        useBadge: item.useBadge,
       });
     }
     if (item.separatorAfter) all.push({ kind: "separator" });
@@ -202,7 +212,15 @@ export function AppRail({
   }, []);
 
   const railExpanded = pinned || (expandOnHover && hovered);
-  const railButtons = buildRailButtons(railItems, splitMode, t, hiddenTabs);
+  const railButtons = buildRailButtons(
+    railItems.filter((item) => item.placement !== "footer"),
+    splitMode,
+    t,
+    hiddenTabs,
+  );
+  const footerItems = railItems.filter(
+    (item) => item.placement === "footer" && !hiddenTabs.has(item.id),
+  );
   const setRailPinned = (nextPinned: boolean) => {
     setPinned(nextPinned);
     localStorage.setItem("pinAppRail", String(nextPinned));
@@ -265,10 +283,16 @@ export function AppRail({
                   className={`${btnBase} text-muted-foreground hover:text-foreground hover:bg-muted/60`}
                 >
                   <span
-                    className="shrink-0 flex items-center justify-center"
+                    className="relative shrink-0 flex items-center justify-center"
                     style={{ width: 16, height: 16 }}
                   >
                     {item.icon}
+                    {item.useBadge && (
+                      <RailBadge
+                        useBadge={item.useBadge}
+                        className="-top-1.5 -right-2"
+                      />
+                    )}
                   </span>
                   <span
                     className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${
@@ -318,10 +342,16 @@ export function AppRail({
                   }`}
                 >
                   <span
-                    className="shrink-0 flex items-center justify-center"
+                    className="relative shrink-0 flex items-center justify-center"
                     style={{ width: 16, height: 16 }}
                   >
                     {item.icon}
+                    {item.useBadge && (
+                      <RailBadge
+                        useBadge={item.useBadge}
+                        className="-top-1.5 -right-2"
+                      />
+                    )}
                   </span>
                   <span
                     className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${
@@ -373,6 +403,70 @@ export function AppRail({
             style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
           />
         )}
+        {footerItems.map((item) => {
+          const Icon = item.icon;
+          const title = t(item.labelKey);
+          return (
+            <button
+              key={item.id}
+              onClick={(e) => {
+                if (item.kind === "tab") {
+                  onOpenTab?.(item.id as TabType);
+                  return;
+                }
+                if (item.promotable && (e.ctrlKey || e.metaKey)) {
+                  onOpenTab?.(item.id as TabType);
+                  return;
+                }
+                onRailClick(item.id as RailView);
+              }}
+              onAuxClick={(e) => {
+                if (e.button !== 1 || !item.promotable) return;
+                e.preventDefault();
+                onOpenTab?.(item.id as TabType);
+              }}
+              onContextMenu={() => {
+                if (item.promotable || item.rightDockable)
+                  setMenuTarget({
+                    view: item.id as RailView,
+                    title,
+                    promotable: item.promotable,
+                    rightDockable: item.rightDockable,
+                  });
+              }}
+              data-rail-promotable={
+                item.promotable || item.rightDockable ? "" : undefined
+              }
+              title={
+                item.promotable ? `${title}\n${t("nav.openAsTabHint")}` : title
+              }
+              style={btnStyle}
+              className={`${btnBase} ${
+                sidebarOpen && railView === item.id
+                  ? "text-accent-brand bg-accent-brand/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
+            >
+              <span
+                className="relative shrink-0 flex items-center justify-center"
+                style={{ width: 16, height: 16 }}
+              >
+                <Icon size={16} />
+                {item.useBadge && (
+                  <RailBadge
+                    useBadge={item.useBadge}
+                    className="-top-1.5 -right-2"
+                  />
+                )}
+              </span>
+              <span
+                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"}`}
+              >
+                {title}
+              </span>
+            </button>
+          );
+        })}
         {(
           [
             {

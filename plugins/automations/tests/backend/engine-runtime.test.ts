@@ -62,10 +62,12 @@ describe("scheduled automations", () => {
     expect(server.mock.notifications).toEqual([
       {
         actor: "alice",
-        channelIds: [1],
         notification: expect.objectContaining({
           title: "Ping schedule",
           body: "hello",
+          category: "automations.notify",
+          audience: { userId: "alice" },
+          channelIds: [1],
         }),
       },
     ]);
@@ -379,5 +381,78 @@ describe("watchers", () => {
       status: "success",
       error: null,
     });
+  });
+});
+
+describe("alerts", () => {
+  const schedule = { kind: "schedule", intervalSeconds: 300 };
+
+  it("sends a notify step to the owner's inbox when no channel is picked", async () => {
+    server = await startServer();
+    const id = await create(
+      server,
+      "Inbox only",
+      definition(schedule, [
+        { id: "n", type: "notify", channelIds: [], title: "Heads up" },
+      ]),
+    );
+
+    const outcome = await server.request("POST", `/${id}/run`, { body: {} });
+
+    expect(outcome.body.status).toBe("success");
+    expect(server.mock.notifications).toEqual([
+      {
+        actor: "alice",
+        notification: expect.objectContaining({
+          title: "Heads up",
+          audience: { userId: "alice" },
+          channelIds: [],
+          link: { tab: "automations" },
+        }),
+      },
+    ]);
+  });
+
+  it("only describes the alert on a dry run", async () => {
+    server = await startServer();
+    const id = await create(
+      server,
+      "Dry",
+      definition(schedule, [
+        { id: "n", type: "notify", channelIds: [1], title: "Heads up" },
+      ]),
+    );
+
+    const outcome = await server.request("POST", `/${id}/run`, {
+      body: { dryRun: true },
+    });
+
+    expect(outcome.body.status).toBe("success");
+    expect(server.mock.notifications).toEqual([]);
+  });
+
+  it("alerts the owner when a run fails", async () => {
+    server = await startServer();
+    const id = await create(
+      server,
+      "Breaks",
+      definition(schedule, [{ id: "s", type: "stop", status: "failed" }]),
+    );
+
+    const outcome = await server.request("POST", `/${id}/run`, { body: {} });
+
+    expect(outcome.body.status).toBe("failed");
+    expect(server.mock.notifications).toEqual([
+      {
+        actor: "alice",
+        notification: expect.objectContaining({
+          title: 'Automation "Breaks" failed',
+          severity: "warning",
+          category: "automations.run_failed",
+          audience: { userId: "alice" },
+          dedupeKey: `automations.run_failed:${id}`,
+        }),
+      },
+    ]);
   });
 });

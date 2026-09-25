@@ -175,6 +175,23 @@ describe("adopting the automation tables", () => {
       "idx_automation_runs_user",
     ]);
 
+    // Channels moved to the alerts plugin, so a link may name a channel the
+    // old table never had, and the old one's link is still there.
+    expect(indexes(db, "p_automations_channels")).toEqual([
+      "idx_automation_channels_pair",
+    ]);
+    expect(
+      db.sqlite.prepare("SELECT channel_id FROM p_automations_channels").all(),
+    ).toEqual([{ channel_id: 4 }]);
+    db.sqlite
+      .prepare(
+        "INSERT INTO p_automations_channels (automation_id, channel_id) VALUES (7, 99)",
+      )
+      .run();
+    db.sqlite
+      .prepare("DELETE FROM p_automations_channels WHERE channel_id = 99")
+      .run();
+
     // The foreign keys followed the rename: deleting the automation still
     // takes its state, schedule, runs, steps and channel links with it.
     db.sqlite

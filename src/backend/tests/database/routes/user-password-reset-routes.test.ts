@@ -29,7 +29,6 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentSettingsRepository: () => ({}),
   createCurrentSshCredentialUsageRepository: deletingRepo("usage"),
   createCurrentRecentActivityRepository: deletingRepo("activity"),
-  createCurrentDismissedAlertRepository: deletingRepo("alerts"),
   createCurrentHostRepository: deletingRepo("hosts"),
   createCurrentCredentialRepository: deletingRepo("credentials"),
 }));
@@ -126,7 +125,6 @@ describe("resetUserPassword", () => {
     expect(calls.deletedFor).toEqual([
       "usage:user-1",
       "activity:user-1",
-      "alerts:user-1",
       "hosts:user-1",
       "credentials:user-1",
     ]);

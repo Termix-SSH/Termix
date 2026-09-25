@@ -3,11 +3,9 @@ import { getDb, getSqlite } from "../db/index.js";
 import { needsExplicitPersist, resolveDatabaseDialect } from "../db/dialect.js";
 import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
-import { NotificationChannelRepository } from "./notification-channel-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { CredentialRepository } from "./credential-repository.js";
-import { DismissedAlertRepository } from "./dismissed-alert-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
@@ -119,13 +117,6 @@ export function getCurrentSettingValue(key: string): string | null {
   return row?.value ?? null;
 }
 
-export function createCurrentNotificationChannelRepository(): NotificationChannelRepository {
-  return new NotificationChannelRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("notification_channel_repository_write"),
-  );
-}
-
 export function createCurrentApiKeyRepository(): ApiKeyRepository {
   return new ApiKeyRepository(
     createCurrentRepositoryContext(),
@@ -151,13 +142,6 @@ export function createCurrentSyncTombstoneRepository(): SyncTombstoneRepository 
   return new SyncTombstoneRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("sync_tombstone_repository_write"),
-  );
-}
-
-export function createCurrentDismissedAlertRepository(): DismissedAlertRepository {
-  return new DismissedAlertRepository(
-    createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("dismissed_alert_repository_write"),
   );
 }
 

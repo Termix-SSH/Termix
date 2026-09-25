@@ -1,27 +1,28 @@
 /**
- * ctx.notify and ctx.fetch: each is gated on its capability and audited,
- * notify only ever reaches the acting user's own channels, and fetch goes
- * through the SSRF guard with only the hosts the caller listed.
+ * ctx.notify and ctx.fetch: each is gated on its capability and audited.
+ * notify resolves the audience in core and hands the hub plain user ids, and
+ * fetch goes through the SSRF guard with only the hosts the caller listed.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+  PluginNotification,
+  PluginNotifyHub,
+} from "@termix/plugin-sdk/backend";
 
 const grants = new Map<string, string[]>();
 const auditEntries: Array<Record<string, unknown>> = [];
 
 const state = vi.hoisted(() => ({
-  channels: new Map<
-    string,
-    Array<{
-      id: number;
-      name: string;
-      type: string;
-      config: string;
-      enabled: number;
-    }>
-  >(),
-  delivered: [] as Array<{ channelId: number; title: string }>,
-  failChannel: null as number | null,
+  users: [
+    { id: "alice", isAdmin: true },
+    { id: "bob", isAdmin: false },
+    { id: "carol", isAdmin: false },
+  ],
+  permissions: new Map<string, string[]>([
+    ["bob", ["docker.view"]],
+    ["carol", ["docker.view"]],
+  ]),
   fetchCalls: [] as Array<{ url: string; allowlist: readonly string[] }>,
   lastTls: null as Record<string, unknown> | null,
   lastSignal: null as AbortSignal | null,
@@ -35,25 +36,25 @@ vi.mock("../../database/repositories/factory.js", () => ({
         capability,
       })),
   }),
-  createCurrentNotificationChannelRepository: () => ({
-    listNotificationChannels: async (userId: string) =>
-      state.channels.get(userId) ?? [],
+  createCurrentUserRepository: () => ({
+    listAll: async () => state.users,
+    findById: async (id: string) =>
+      state.users.find((user) => user.id === id) ?? null,
   }),
+}));
+
+vi.mock("../../utils/permission-manager.js", () => ({
+  PermissionManager: {
+    getInstance: () => ({
+      hasPermission: async (userId: string, permission: string) =>
+        state.permissions.get(userId)?.includes(permission) ?? false,
+    }),
+  },
 }));
 
 vi.mock("../../utils/audit-logger.js", () => ({
   logAudit: async (entry: Record<string, unknown>) => {
     auditEntries.push(entry);
-  },
-}));
-
-vi.mock("../../utils/notification-sender.js", () => ({
-  deliverNotification: async (
-    channel: { id: number },
-    notification: { title: string },
-  ) => {
-    if (channel.id === state.failChannel) throw new Error("HTTP 500");
-    state.delivered.push({ channelId: channel.id, title: notification.title });
   },
 }));
 
@@ -74,13 +75,18 @@ vi.mock("../../utils/safe-outbound-fetch.js", () => ({
 import { createPluginContext, createPluginHandle } from "../../plugins/ctx.js";
 import { invalidatePluginPermissionCache } from "../../plugins/permissions.js";
 import { runAsActor } from "../../plugins/actor.js";
+import { clearNotifyHub } from "../../plugins/notify-hub.js";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
 
-function contextFor(capabilities: string[]) {
-  grants.set("demo", capabilities);
+function contextFor(
+  capabilities: string[],
+  id = "demo",
+  granted: string[] = capabilities,
+) {
+  grants.set(id, granted);
   const manifest = {
-    id: "demo",
-    name: "demo",
+    id,
+    name: id,
     version: "1.0.0",
     description: "",
     author: { name: "test" },
@@ -89,26 +95,38 @@ function contextFor(capabilities: string[]) {
     engine: { termix: ">=2.9.0", api: "1" },
     capabilities,
   } as PluginManifest;
-  const handle = createPluginHandle("demo", { activate: () => {} });
+  const handle = createPluginHandle(id, { activate: () => {} });
   return createPluginContext(manifest, handle);
+}
+
+function fakeHub() {
+  const calls: Array<{
+    source: string;
+    recipients: string[];
+    notification: PluginNotification;
+  }> = [];
+  const hub: PluginNotifyHub = {
+    deliver: async (input) => {
+      calls.push(input);
+      return {
+        recipients: input.recipients.length,
+        delivered: 0,
+        failures: [],
+      };
+    },
+    channels: async (userId) => [
+      { id: 1, name: `channel of ${userId}`, type: "webhook", enabled: true },
+    ],
+  };
+  return { hub, calls };
 }
 
 beforeEach(() => {
   grants.clear();
   auditEntries.length = 0;
   invalidatePluginPermissionCache();
-  state.channels.clear();
-  state.delivered.length = 0;
-  state.failChannel = null;
+  clearNotifyHub();
   state.fetchCalls.length = 0;
-  state.channels.set("alice", [
-    { id: 1, name: "ops", type: "webhook", config: "{}", enabled: 1 },
-    { id: 2, name: "muted", type: "ntfy", config: "{}", enabled: 0 },
-    { id: 3, name: "pager", type: "discord", config: "{}", enabled: 1 },
-  ]);
-  state.channels.set("bob", [
-    { id: 9, name: "bob's", type: "webhook", config: "{}", enabled: 1 },
-  ]);
 });
 
 describe("ctx.notify", () => {
@@ -123,42 +141,117 @@ describe("ctx.notify", () => {
     });
   });
 
-  it("refuses a call with no acting user", async () => {
+  it("refuses a send with neither an acting user nor an audience", async () => {
     const ctx = contextFor(["notify:send"]);
-    await expect(
-      ctx.notify.send([1], { title: "t", body: "b" }),
-    ).rejects.toThrow(/acting user/);
-  });
-
-  it("lists the actor's channels without their config", async () => {
-    const ctx = contextFor(["notify:send"]);
-    const channels = await runAsActor("alice", "request", () =>
-      ctx.notify.channels(),
+    await expect(ctx.notify.send({ title: "t" })).rejects.toThrow(
+      /acting user/,
     );
-    expect(channels).toEqual([
-      { id: 1, name: "ops", type: "webhook", enabled: true },
-      { id: 2, name: "muted", type: "ntfy", enabled: false },
-      { id: 3, name: "pager", type: "discord", enabled: true },
-    ]);
   });
 
-  it("sends only to the actor's enabled channels and reports failures", async () => {
+  it("reaches nobody while no hub is running", async () => {
     const ctx = contextFor(["notify:send"]);
-    state.failChannel = 3;
+    const result = await runAsActor("alice", "request", () =>
+      ctx.notify.send({ title: "Disk" }),
+    );
+    expect(result).toEqual({ recipients: 0, delivered: 0, failures: [] });
+    expect(
+      await runAsActor("alice", "request", () => ctx.notify.channels()),
+    ).toEqual([]);
+  });
+
+  it("hands the hub the acting user and the sending plugin by default", async () => {
+    const { hub, calls } = fakeHub();
+    contextFor(["notify:hub"], "hub").notify.serve(hub);
+    const ctx = contextFor(["notify:send"]);
 
     const result = await runAsActor("alice", "request", () =>
-      ctx.notify.send([1, 2, 3, 9], { title: "Disk", body: "full" }),
+      ctx.notify.send({ title: "Disk", severity: "critical" }),
     );
 
-    expect(state.delivered).toEqual([{ channelId: 1, title: "Disk" }]);
-    expect(result).toEqual({
-      delivered: 1,
-      failures: [{ channelId: 3, name: "pager", error: "HTTP 500" }],
-    });
+    expect(result.recipients).toBe(1);
+    expect(calls).toEqual([
+      {
+        source: "demo",
+        recipients: ["alice"],
+        notification: { title: "Disk", severity: "critical" },
+      },
+    ]);
     expect(auditEntries.at(-1)).toMatchObject({
       action: "plugin_notify_send",
       success: true,
     });
+  });
+
+  it("resolves a named user, admins and a permission in core", async () => {
+    const { hub, calls } = fakeHub();
+    contextFor(["notify:hub"], "hub").notify.serve(hub);
+    const ctx = contextFor(["notify:send"]);
+
+    await ctx.notify.send({ title: "a", audience: { userId: "bob" } });
+    await ctx.notify.send({ title: "b", audience: "admins" });
+    await ctx.notify.send({
+      title: "c",
+      audience: { permission: "docker.view" },
+    });
+
+    expect(calls.map((call) => call.recipients)).toEqual([
+      ["bob"],
+      ["alice"],
+      ["bob", "carol"],
+    ]);
+  });
+
+  it("does not call the hub for an audience that names nobody", async () => {
+    const { hub, calls } = fakeHub();
+    contextFor(["notify:hub"], "hub").notify.serve(hub);
+    const ctx = contextFor(["notify:send"]);
+
+    const result = await ctx.notify.send({
+      title: "x",
+      audience: { userId: "ghost" },
+    });
+
+    expect(result.recipients).toBe(0);
+    expect(calls).toEqual([]);
+  });
+
+  it("asks the hub for the acting user's channels", async () => {
+    const { hub } = fakeHub();
+    contextFor(["notify:hub"], "hub").notify.serve(hub);
+    const ctx = contextFor(["notify:send"]);
+    expect(
+      await runAsActor("bob", "request", () => ctx.notify.channels()),
+    ).toEqual([
+      { id: 1, name: "channel of bob", type: "webhook", enabled: true },
+    ]);
+  });
+
+  it("only serves a hub the manifest declares notify:hub for", () => {
+    const { hub } = fakeHub();
+    expect(() =>
+      contextFor(["notify:send"], "rogue").notify.serve(hub),
+    ).toThrow(/notify:hub/);
+  });
+
+  it("refuses a second hub from another plugin", () => {
+    contextFor(["notify:hub"], "hub").notify.serve(fakeHub().hub);
+    expect(() =>
+      contextFor(["notify:hub"], "other").notify.serve(fakeHub().hub),
+    ).toThrow(/already/);
+  });
+
+  it("stops using a hub once it is revoked or its grant is gone", async () => {
+    const first = fakeHub();
+    const revoke = contextFor(["notify:hub"], "hub").notify.serve(first.hub);
+    const ctx = contextFor(["notify:send"]);
+    revoke();
+    await ctx.notify.send({ title: "x", audience: "admins" });
+    expect(first.calls).toEqual([]);
+
+    const second = fakeHub();
+    contextFor(["notify:hub"], "ungranted", []).notify.serve(second.hub);
+    await ctx.notify.send({ title: "y", audience: "admins" });
+    expect(second.calls).toEqual([]);
   });
 });
 

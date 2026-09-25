@@ -99,7 +99,7 @@ export type AutomationRepository = Awaited<
 >;
 
 /**
- * Automation storage. `ownedChannelIds` answers which of core's notification
+ * Automation storage. `ownedChannelIds` answers which alert
  * channels the user owns, so a link can never point at another user's.
  */
 export async function createAutomationRepository(

@@ -272,20 +272,6 @@ export const hosts = pgTable(
   ],
 );
 
-export const dismissedAlerts = pgTable(
-  "dismissed_alerts",
-  {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    alertId: text("alert_id").notNull(),
-    dismissedAt: text("dismissed_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-  },
-  (table) => [index("idx_dismissed_alerts_user_id").on(table.userId)],
-);
 
 export const sshCredentials = pgTable(
   "ssh_credentials",
@@ -720,22 +706,6 @@ export const uiPreferences = pgTable("ui_preferences", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
-
-// --- alerts begin ---
-export const notificationChannels = pgTable("notification_channels", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
-  config: text("config").notNull(),
-  enabled: boolean("enabled").notNull().default(true),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-// --- alerts end ---
 
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync

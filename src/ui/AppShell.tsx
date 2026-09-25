@@ -72,11 +72,6 @@ const SplitScreenPanel = lazy(() =>
     default: m.SplitScreenPanel,
   })),
 );
-const AlertManager = lazy(() =>
-  import("@/dashboard/panels/alerts/AlertManager").then((m) => ({
-    default: m.AlertManager,
-  })),
-);
 
 // Secondary rail panels — load on first open, not with the shell critical path.
 const SshToolsPanel = lazy(() =>
@@ -259,7 +254,6 @@ export function AppShell({
   // The standalone desktop backend still owns system settings such as the
   // Tailscale API key, even though it has only one implicit user.
   const showAdminUI = isAdmin;
-  const [userId, setUserId] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
@@ -396,7 +390,6 @@ export function AppShell({
     getUserInfo()
       .then((info) => {
         setIsAdmin(info.is_admin);
-        setUserId(info.userId);
         setShowDonationModal(!!info.show_donation_modal);
       })
       .catch(() => setIsAdmin(false));
@@ -2913,9 +2906,6 @@ export function AppShell({
           />
         </Suspense>
       )}
-      <Suspense fallback={null}>
-        <AlertManager userId={userId} loggedIn={!!username} />
-      </Suspense>
       <OnboardingDialog
         open={showOnboarding}
         context={{}}

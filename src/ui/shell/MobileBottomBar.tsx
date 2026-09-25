@@ -12,6 +12,7 @@ import type { RailView } from "@/sidebar/AppRail";
 import { useRailItems } from "@/sidebar/rail-items";
 import type { SplitMode } from "@/types/ui-types";
 import { readHiddenRailTabs } from "@/sidebar/hidden-rail-tabs";
+import { RailBadge } from "@/sidebar/RailBadge";
 
 export function MobileBottomBar({
   railView,
@@ -75,7 +76,15 @@ export function MobileBottomBar({
             className={`relative flex flex-col items-center justify-center flex-1 gap-0.5 py-2 min-h-[56px] transition-colors text-[10px] font-medium
               ${active ? "text-accent-brand" : "text-muted-foreground"}`}
           >
-            <Icon className="size-5" />
+            <span className="relative">
+              <Icon className="size-5" />
+              {item.useBadge && (
+                <RailBadge
+                  useBadge={item.useBadge}
+                  className="-top-1.5 -right-2.5"
+                />
+              )}
+            </span>
             <span className="max-w-full truncate px-0.5">
               {t(item.labelKey)}
             </span>
@@ -92,7 +101,19 @@ export function MobileBottomBar({
             className={`relative flex flex-col items-center justify-center flex-1 gap-0.5 py-2 min-h-[56px] transition-colors text-[10px] font-medium
               ${moreActive ? "text-accent-brand" : "text-muted-foreground"}`}
           >
-            <MoreHorizontal className="size-5" />
+            <span className="relative">
+              <MoreHorizontal className="size-5" />
+              {moreItems.map((item) =>
+                item.useBadge ? (
+                  <RailBadge
+                    key={item.id}
+                    useBadge={item.useBadge}
+                    variant="dot"
+                    className="-top-0.5 -right-1"
+                  />
+                ) : null,
+              )}
+            </span>
             <span>{t("common.more")}</span>
           </button>
         </DropdownMenuTrigger>
@@ -115,6 +136,11 @@ export function MobileBottomBar({
               >
                 <Icon className="size-4" />
                 {t(item.labelKey)}
+                {item.useBadge && (
+                  <span className="relative ml-auto w-5 h-3.5">
+                    <RailBadge useBadge={item.useBadge} className="right-0" />
+                  </span>
+                )}
               </DropdownMenuItem>
             );
           })}

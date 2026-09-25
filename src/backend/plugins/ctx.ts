@@ -858,7 +858,11 @@ export function createPluginContext(
       ),
     ),
     ssh: createPluginSsh({ manifest, bag: handle.bag, audit: auditCall }),
-    notify: createPluginNotify({ manifest, audit: auditCall }),
+    notify: createPluginNotify({
+      manifest,
+      audit: auditCall,
+      bag: handle.bag,
+    }),
     fetch: createPluginFetch({ manifest, audit: auditCall }),
     process: createPluginProcess({
       manifest,

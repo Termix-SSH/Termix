@@ -15,10 +15,10 @@ import {
  * Adopted from core's automation tables, so column and index names are the
  * legacy ones and the rename carries every row across.
  *
- * The links between these tables, and a channel link to core's
- * notification_channels, are plain integers here: the SDK only references
- * users and ssh_data. The adoption migrations keep the legacy FOREIGN KEY
- * clauses by hand, so deleting an automation still cascades.
+ * The links between these tables are plain integers here: the SDK only
+ * references users and ssh_data. The adoption migrations keep the legacy
+ * FOREIGN KEY clauses by hand, so deleting an automation still cascades. A
+ * channel id points into the alerts plugin's table and has no foreign key.
  */
 
 export const automations = adoptLegacyTable(
@@ -166,7 +166,7 @@ export const runSteps = adoptLegacyTable(
   ),
 );
 
-/** Which of core's notification channels an automation is linked to. */
+/** Which alert channels an automation is linked to. */
 export const channels = adoptLegacyTable(
   "automation_channels",
   defineTable(

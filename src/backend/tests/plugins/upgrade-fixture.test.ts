@@ -265,6 +265,7 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
       ["/plugin-api/secret-sources", "d4-source"],
       ["/plugin-api/session-sharing/rooms", "d4-room"],
       ["/plugin-api/webauthn/credentials", "d4-passkey", "passkey"],
+      ["/plugin-api/alerts/channels", "d4-channel"],
     ];
     const failures: string[] = [];
     for (const [url, marker, as] of checks) {
@@ -498,6 +499,17 @@ function upgradeChecks(current: () => Booted, bootIndex: number) {
     expect(
       await asUser(USERS.admin, () => sources.secrets.get("source:d4-source")),
     ).toBe("d4-source-token");
+  });
+
+  it("moves every notification channel into alerts, config readable", async () => {
+    const response = await get(current(), "/plugin-api/alerts/channels/1");
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      name: "d4-channel",
+      type: "ntfy",
+      usable: true,
+      config: { url: "https://ntfy.d4.example/d4" },
+    });
   });
 
   it("keeps every role's permissions", async () => {

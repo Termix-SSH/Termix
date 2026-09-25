@@ -7,7 +7,6 @@ import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 import {
   createCurrentCredentialRepository,
-  createCurrentDismissedAlertRepository,
   createCurrentHostRepository,
   createCurrentRecentActivityRepository,
   createCurrentSettingsRepository,
@@ -70,7 +69,6 @@ export async function resetUserPassword(
 
   await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
   await createCurrentRecentActivityRepository().deleteByUserId(userId);
-  await createCurrentDismissedAlertRepository().deleteByUserId(userId);
   await createCurrentHostRepository().deleteByUserId(userId);
   await createCurrentCredentialRepository().deleteByUserId(userId);
   // A plugin holding this user's data (snippets and anything else keyed by

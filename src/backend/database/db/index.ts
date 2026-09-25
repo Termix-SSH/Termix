@@ -322,14 +322,6 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    CREATE TABLE IF NOT EXISTS dismissed_alerts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        alert_id TEXT NOT NULL,
-        dismissed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    );
-
     CREATE TABLE IF NOT EXISTS ssh_credentials (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -1546,29 +1538,6 @@ const migrateSchema = () => {
       databaseLogger.warn(`Failed to drop legacy ${table} table`, {
         operation: "schema_migration",
         error: dropError,
-      });
-    }
-  }
-
-  try {
-    sqlite.prepare("SELECT id FROM notification_channels LIMIT 1").get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS notification_channels (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          name TEXT NOT NULL,
-          type TEXT NOT NULL,
-          config TEXT NOT NULL,
-          enabled INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create notification_channels table", {
-        operation: "schema_migration",
-        error: createError,
       });
     }
   }

@@ -412,6 +412,14 @@ export const ROWS: Record<string, Row[]> = {
       enabled: 1,
     },
   ],
+  dismissed_alerts: [
+    {
+      id: 1,
+      user_id: USERS.admin,
+      alert_id: "d4-dismissed-announcement",
+      dismissed_at: T,
+    },
+  ],
 
   snippet_folders: [
     {
@@ -839,6 +847,5 @@ export const CORE_TABLES = new Set([
   "ssh_data",
   "host_access",
   "user_preferences",
-  "notification_channels",
   "settings",
 ]);

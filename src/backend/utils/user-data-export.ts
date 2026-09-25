@@ -1,5 +1,4 @@
 import {
-  createCurrentDismissedAlertRepository,
   createCurrentUserDataExportRepository,
   createCurrentUserRepository,
 } from "../database/repositories/factory.js";
@@ -17,7 +16,6 @@ interface UserExportData {
     sshCredentials: unknown[];
     /** The user's rows in plugin tables, keyed by table name. */
     pluginData: Record<string, unknown[]>;
-    dismissedAlerts: unknown[];
   };
   metadata: {
     totalRecords: number;
@@ -91,9 +89,6 @@ class UserDataExport {
         0,
       );
 
-      const alerts =
-        await createCurrentDismissedAlertRepository().listByUserId(userId);
-
       const exportData: UserExportData = {
         version: this.EXPORT_VERSION,
         exportedAt: new Date().toISOString(),
@@ -103,14 +98,12 @@ class UserDataExport {
           sshHosts: processedSshHosts,
           sshCredentials: sshCredentialsData,
           pluginData,
-          dismissedAlerts: alerts,
         },
         metadata: {
           totalRecords:
             processedSshHosts.length +
             sshCredentialsData.length +
-            pluginRowCount +
-            alerts.length,
+            pluginRowCount,
           encrypted: format === "encrypted",
           exportType: scope,
         },
@@ -182,7 +175,7 @@ class UserDataExport {
 
     if (dataObj.userData) {
       const userData = dataObj.userData as Record<string, unknown>;
-      const requiredFields = ["sshHosts", "sshCredentials", "dismissedAlerts"];
+      const requiredFields = ["sshHosts", "sshCredentials"];
       for (const field of requiredFields) {
         if (!Array.isArray(userData[field])) {
           errors.push(`Missing or invalid userData.${field} field`);
@@ -213,7 +206,6 @@ class UserDataExport {
       sshHosts: number;
       sshCredentials: number;
       pluginRows: number;
-      dismissedAlerts: number;
     };
     encrypted: boolean;
   } {
@@ -229,7 +221,6 @@ class UserDataExport {
           (total, rows) => total + rows.length,
           0,
         ),
-        dismissedAlerts: data.userData.dismissedAlerts.length,
       },
       encrypted: data.metadata.encrypted,
     };

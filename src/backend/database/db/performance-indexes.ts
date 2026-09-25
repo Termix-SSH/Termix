@@ -109,11 +109,6 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     table: "user_open_tabs",
     columns: "user_id",
   },
-  {
-    name: "idx_dismissed_alerts_user_id",
-    table: "dismissed_alerts",
-    columns: "user_id",
-  },
 ];
 
 interface IndexableDatabase {

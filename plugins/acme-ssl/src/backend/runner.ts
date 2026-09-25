@@ -134,10 +134,21 @@ export function createAcmeRunner(
         await runner.issue();
         return true;
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         ctx.log.error(
           "Certificate renewal failed",
-          error instanceof Error ? error : new Error(String(error)),
+          error instanceof Error ? error : new Error(message),
         );
+        await ctx.notify
+          .send({
+            title: `Certificate renewal failed for ${settings.domain}`,
+            body: message,
+            severity: "critical",
+            category: "acme-ssl.renewal_failed",
+            audience: "admins",
+            dedupeKey: `acme-ssl.renewal_failed:${settings.domain}`,
+          })
+          .catch(() => {});
         return false;
       }
     },

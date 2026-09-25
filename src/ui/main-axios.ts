@@ -1297,8 +1297,6 @@ export {
 } from "@/api/admin-user-data-api";
 
 export {
-  getUserAlerts,
-  dismissAlert,
   getReleasesRSS,
   getVersionInfo,
   releaseUrlFrom,

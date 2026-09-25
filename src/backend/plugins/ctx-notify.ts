@@ -1,17 +1,20 @@
 /**
- * ctx.notify and ctx.fetch: core's notification channels and core's guarded
- * outbound HTTP. Channels belong to a user, so notify always runs as the
- * acting user and never sees a channel's config.
+ * ctx.notify and ctx.fetch: alerts through whichever plugin serves as the
+ * hub, and core's guarded outbound HTTP. Core resolves who an alert is for,
+ * so a plugin names an audience and never a list of users it could not see.
  */
 
 import type {
   PluginFetch,
+  PluginNotification,
+  PluginNotificationAudience,
   PluginNotify,
   PluginNotifyResult,
 } from "@termix/plugin-sdk/backend";
 import type { PluginManifest } from "@termix/plugin-sdk/manifest";
-import { assertCapability } from "./permissions.js";
+import { assertCapability, capabilityRefused } from "./permissions.js";
 import { getActor } from "./actor.js";
+import { activeNotifyHub, registerNotifyHub } from "./notify-hub.js";
 
 type AuditFn = (
   action: string,
@@ -22,7 +25,15 @@ type AuditFn = (
 interface Deps {
   manifest: PluginManifest;
   audit: AuditFn;
+  /** Where serve's revoke goes, so the hub goes away with the plugin. */
+  bag?: { add: (dispose: () => void, label: string) => void };
 }
+
+const EMPTY_RESULT: PluginNotifyResult = {
+  recipients: 0,
+  delivered: 0,
+  failures: [],
+};
 
 function actingUser(): string {
   const actor = getActor();
@@ -60,14 +71,43 @@ async function audited<T>(
   }
 }
 
+/** The user ids an audience names right now. */
+export async function resolveAudience(
+  audience: PluginNotificationAudience | undefined,
+): Promise<string[]> {
+  if (!audience) return [actingUser()];
+  const { createCurrentUserRepository } =
+    await import("../database/repositories/factory.js");
+  const users = createCurrentUserRepository();
+  if (audience === "admins") {
+    return (await users.listAll())
+      .filter((user) => user.isAdmin)
+      .map((user) => user.id);
+  }
+  if ("userId" in audience) {
+    return (await users.findById(audience.userId)) ? [audience.userId] : [];
+  }
+  const { PermissionManager } = await import("../utils/permission-manager.js");
+  const permissions = PermissionManager.getInstance();
+  const recipients: string[] = [];
+  for (const user of await users.listAll()) {
+    if (await permissions.hasPermission(user.id, audience.permission)) {
+      recipients.push(user.id);
+    }
+  }
+  return recipients;
+}
+
+function describeAudience(notification: PluginNotification): string {
+  const { audience } = notification;
+  if (!audience) return "acting user";
+  if (audience === "admins") return "admins";
+  if ("userId" in audience) return `user ${audience.userId}`;
+  return `permission ${audience.permission}`;
+}
+
 export function createPluginNotify(deps: Deps): PluginNotify {
-  const listOwn = async (userId: string) => {
-    const { createCurrentNotificationChannelRepository } =
-      await import("../database/repositories/factory.js");
-    return createCurrentNotificationChannelRepository().listNotificationChannels(
-      userId,
-    );
-  };
+  const pluginId = deps.manifest.id;
 
   return {
     channels: () =>
@@ -77,48 +117,39 @@ export function createPluginNotify(deps: Deps): PluginNotify {
         "notify_channels",
         "listed channels",
         async () => {
-          const rows = await listOwn(actingUser());
-          return rows.map((row) => ({
-            id: row.id,
-            name: row.name,
-            type: row.type,
-            enabled: !!row.enabled,
-          }));
+          const userId = actingUser();
+          const hub = await activeNotifyHub();
+          return hub ? hub.channels(userId) : [];
         },
       ),
 
-    send: (channelIds, notification) =>
+    send: (notification) =>
       audited(
         deps,
         "notify:send",
         "notify_send",
-        `${channelIds.length} channel(s)`,
+        `${notification.category ?? pluginId} to ${describeAudience(notification)}`,
         async () => {
-          const rows = await listOwn(actingUser());
-          const { deliverNotification } =
-            await import("../utils/notification-sender.js");
-          const result: PluginNotifyResult = { delivered: 0, failures: [] };
-          for (const row of rows) {
-            if (!channelIds.includes(row.id) || !row.enabled) continue;
-            try {
-              await deliverNotification(row, {
-                title: notification.title,
-                body: notification.body,
-                severity: notification.severity ?? "warning",
-                context: notification.context,
-              });
-              result.delivered++;
-            } catch (error) {
-              result.failures.push({
-                channelId: row.id,
-                name: row.name,
-                error: error instanceof Error ? error.message : String(error),
-              });
-            }
-          }
-          return result;
+          const recipients = await resolveAudience(notification.audience);
+          const hub = await activeNotifyHub();
+          if (!hub || recipients.length === 0) return { ...EMPTY_RESULT };
+          return hub.deliver({ source: pluginId, recipients, notification });
         },
       ),
+
+    serve: (hub) => {
+      if (!deps.manifest.capabilities.includes("notify:hub")) {
+        throw capabilityRefused(pluginId, "notify:hub", "notify_serve");
+      }
+      const revoke = registerNotifyHub({
+        pluginId,
+        declared: deps.manifest.capabilities,
+        hub,
+      });
+      deps.bag?.add(revoke, "alert hub");
+      void deps.audit("notify_serve", "serving alerts", { success: true });
+      return revoke;
+    },
   };
 }
 

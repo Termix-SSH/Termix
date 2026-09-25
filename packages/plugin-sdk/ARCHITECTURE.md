@@ -195,17 +195,17 @@ regenerated `schema.pg.ts`/`schema.mysql.ts` plus drizzle migrations.
 
 **What stays in core.** After 2.9.0, `schema.ts`, the SQLite DDL in
 `db/index.ts`, `performance-indexes.ts`, the repository factory and the
-drizzle migrations hold only these 38 tables. Anything else is a plugin's,
+drizzle migrations hold only these 36 tables. Anything else is a plugin's,
 under `p_<id>_`.
 
 | Area             | Tables                                                                                                                                                                                                          |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Accounts         | `users`, `sessions`, `trusted_devices`, `api_keys`, `user_external_identities`, `user_second_factors`                                                                                                           |
 | Preferences      | `settings`, `user_preferences`, `ui_preferences`, `host_sidebar_preferences`, `credential_sidebar_preferences`, `user_open_tabs`                                                                                |
-| Hosts            | `ssh_data`, `ssh_folders`, `recent_activity`, `dismissed_alerts`                                                                                                                                                |
+| Hosts            | `ssh_data`, `ssh_folders`, `recent_activity`                                                                                                                                                                    |
 | Credentials      | `ssh_credentials`, `ssh_credential_usage`                                                                                                                                                                       |
 | Sharing and RBAC | `roles`, `user_roles`, `host_access`, `folder_access`, `credential_access`, `shared_host_secrets`, `shared_host_auth_overrides`, `shared_credential_secrets`, `rbac_known_permissions`, `rbac_applied_defaults` |
-| Audit and alerts | `audit_logs`, `notification_channels`                                                                                                                                                                           |
+| Audit            | `audit_logs`                                                                                                                                                                                                    |
 | Sync             | `sync_tombstones`                                                                                                                                                                                               |
 | Plugin runtime   | `plugins`, `plugin_permission_grants`, `plugin_registries`, `plugin_install_counts`, `plugin_storage`, `plugin_settings`, `plugin_migrations`                                                                   |
 
@@ -550,32 +550,32 @@ when the plugin deactivates. Every registered component is wrapped in the
 plugin's scope (so the hooks know which plugin they belong to), an error
 boundary and Suspense.
 
-| Member                                              | What it does                                                                                                                                             |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `registerRailItem`                                  | A rail button, hidden from users without its `permission`. Hideable items show in Appearance > Sidebar > Navigation. The id must be a declared view      |
-| `registerPanel`                                     | A rail panel, id in `contributes.panels` or `contributes.tabs`                                                                                           |
-| `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs                                                      |
-| `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`                                                            |
-| `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                                                                     |
-| `registerHostProtocol`                              | A connection protocol next to SSH (**B14**): General tab switch, Hosts panel filter and grouping, Quick Connect, the host's primary type and port        |
-| `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                                                                 |
-| `registerPaletteEntry`                              | A global or per-host command palette entry                                                                                                               |
-| `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                                                                     |
-| `registerHomepageWidget`                            | A homepage widget, with an optional edit form                                                                                                            |
-| `registerSettingsComponent`                         | A component a `type: "custom"` settings field names                                                                                                      |
-| `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                                                                             |
-| `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result                                                 |
-| `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                                                                           |
-| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method (`placement: "inline"` beside the password form) and a second factor challenge, each with an optional `enrollment`          |
-| `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                              |
-| `apiFor(origin)`                                    | The same client for a resolved connection origin: `"remote"` reaches the desktop app's connected server (**B14**)                                        |
-| `fetch(path, init)`                                 | A raw `fetch` on `/plugin-api/<id>/<path>` with core's auth, for a streamed response (SSE) axios cannot read (**B18**)                                   |
-| `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                      |
-| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                         |
-| `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                              |
-| `desktop`                                           | `available`, `remoteServerUrl()` and `onRemoteServerChange`: whether the frontend runs in the desktop app and which remote server it syncs with (**C6**) |
-| `registerComponent`                                 | A component other plugins and core render by id with `PluginComponent`                                                                                   |
-| `onSettingsChanged`                                 | Called when one of the plugin's settings changes                                                                                                         |
+| Member                                              | What it does                                                                                                                                                                                                                                                           |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `registerRailItem`                                  | A rail button, hidden from users without its `permission`. Hideable items show in Appearance > Sidebar > Navigation. The id must be a declared view. `placement: "footer"` puts it above the profile, and `useBadge` is a hook whose number shows on the icon (**E1**) |
+| `registerPanel`                                     | A rail panel, id in `contributes.panels` or `contributes.tabs`                                                                                                                                                                                                         |
+| `registerTab`                                       | A tab type, id in `contributes.tabs`. Options cover persistence, layouts, singletons and host needs                                                                                                                                                                    |
+| `registerHostEditorSection`                         | A host editor tab in the top strip or the SSH group, with `form`, `setField` and `updateForm`                                                                                                                                                                          |
+| `registerHostAction`                                | A connect or open action on a host: sidebar row, palette, dashboard, default connect                                                                                                                                                                                   |
+| `registerHostProtocol`                              | A connection protocol next to SSH (**B14**): General tab switch, Hosts panel filter and grouping, Quick Connect, the host's primary type and port                                                                                                                      |
+| `registerHostBadge`, `registerHostContextMenuItem`  | Host row badges and context menu entries                                                                                                                                                                                                                               |
+| `registerPaletteEntry`                              | A global or per-host command palette entry                                                                                                                                                                                                                             |
+| `registerDashboardCard`                             | A dashboard card, id in `contributes.dashboardCards`                                                                                                                                                                                                                   |
+| `registerHomepageWidget`                            | A homepage widget, with an optional edit form                                                                                                                                                                                                                          |
+| `registerSettingsComponent`                         | A component a `type: "custom"` settings field names                                                                                                                                                                                                                    |
+| `registerAction`, `declareActionSlot`               | Frontend actions and the slots a plugin owns                                                                                                                                                                                                                           |
+| `registerSlotContribution`, `invokeAction`          | Fill a slot with a `button` or a `component`, with an optional `when`; call an action and get its result                                                                                                                                                               |
+| `registerSshAuthEditor`                             | An SSH auth method's editor in the host editor                                                                                                                                                                                                                         |
+| `registerLoginMethod`, `registerSecondFactorUI`     | Login screen UI for a method (`placement: "inline"` beside the password form) and a second factor challenge, each with an optional `enrollment`                                                                                                                        |
+| `api`, `wsUrl(path)`                                | axios on `/plugin-api/<id>/` and the plugin's WebSocket URL                                                                                                                                                                                                            |
+| `apiFor(origin)`                                    | The same client for a resolved connection origin: `"remote"` reaches the desktop app's connected server (**B14**)                                                                                                                                                      |
+| `fetch(path, init)`                                 | A raw `fetch` on `/plugin-api/<id>/<path>` with core's auth, for a streamed response (SSE) axios cannot read (**B18**)                                                                                                                                                 |
+| `t`, `hasPermission`                                | The plugin's strings and a permission check, for code outside a component (a toast from `activate`)                                                                                                                                                                    |
+| `tabs.open`, `getLayout`, `applyLayout`, `onChange` | Tab control, used by workspaces; `tabs.openRailView` (**B12**) opens a rail view                                                                                                                                                                                       |
+| `guest`, `info`, `onDispose`                        | Guest mode flag, plugin info, extra cleanup                                                                                                                                                                                                                            |
+| `desktop`                                           | `available`, `remoteServerUrl()` and `onRemoteServerChange`: whether the frontend runs in the desktop app and which remote server it syncs with (**C6**)                                                                                                               |
+| `registerComponent`                                 | A component other plugins and core render by id with `PluginComponent`                                                                                                                                                                                                 |
+| `onSettingsChanged`                                 | Called when one of the plugin's settings changes                                                                                                                                                                                                                       |
 
 A few contribution fields core reads generically:
 
@@ -798,10 +798,10 @@ mode are still preset-seeded localStorage keys core writes, as in 2.8.
   status for a host, from the shell's own polling, or null outside the shell.
   **B14** added `buildOriginWsUrl`, `getBasePath`, `resolveRemoteHostId` and the
   `ConnectionStage` type, for remote desktop's display socket and its remote
-  host lookup. **B17** added `NotificationChannelDialog` and the channel API
-  (`getNotificationChannels`, `deleteNotificationChannel`,
-  `testNotificationChannel`, the `NotificationChannel` type): channels are core,
-  so a plugin that manages them shows core's dialog. `useConnectionDefaults` now carries terminal defaults only; the
+  host lookup. **B17** added a channel dialog and API for core's notification
+  channels, which **E1** removed again when channels moved to the alerts
+  plugin: a plugin that wants its user to manage channels invokes
+  `alerts.openChannels`. `useConnectionDefaults` now carries terminal defaults only; the
   RDP half became remote desktop's user settings. Publishing its
   `.d.ts` for plugins outside this repo is a follow-up for the repo split.
   **B19** added `PluginViewPlaceholder`, for the homepage plugin's widget
@@ -976,8 +976,10 @@ sessions shared with a user from the `sessions.sharedWithMe` action.
 (`snippets.access`, a hard dependency), fleets (`fleets.access`), tunnels
 (`tunnels.access`), Docker (`docker.containers`, `docker.events`), host metrics
 (`host-metrics.viewers`) and wake-on-lan (`wake-on-lan.send` v1,
-`wake(hostId)`, which **B20** provides) as services, notification channels through
-`ctx.notify`, the HTTP step through `ctx.fetch`, hosts through `ctx.hosts` and
+`wake(hostId)`, which **B20** provides) as services, alerts through
+`ctx.notify` (a notify step goes to the owner's inbox plus the channels it
+names, and a failed run sends the owner an `automations.run_failed` alert, E1),
+the HTTP step through `ctx.fetch`, hosts through `ctx.hosts` and
 `ctx.ssh.resolveHost`, and commands through `ctx.ssh.withConnection`. Every run
 executes inside `ctx.asUser(<owner>)`, so each of those calls is the owner's.
 The scheduler tick is `ctx.schedule.every`, and triggers listen through
@@ -997,8 +999,9 @@ It provides `automations.access` v1 (`list`, `get`, `create`, `run`, gated
 on `automations.view`, with `create` and `run` also checking their own
 permissions) for the AI assistant, which lists automations as an optional
 dependency. It adopts `automations` and the five `automation_*` tables; the
-migrations keep the legacy links between them and to `notification_channels`
-by hand. Core's `hosts/automation-events.ts` became `hosts/internal-events.ts`
+migrations keep the legacy links between them by hand. Its channel links
+lost their foreign key to `notification_channels` in its 0002 migration (E1),
+since channel ids now point into the alerts plugin's table. Core's `hosts/automation-events.ts` became `hosts/internal-events.ts`
 (`emitInternalEvent`), since it never was specific to automations. Webhooks
 live at `/plugin-api/automations/webhook/<token>`; the 2.8 path
 `/automations/webhook/<token>` is rewritten to it in both nginx configs,
@@ -1138,6 +1141,52 @@ its stats come from the Proxmox API, not from SSH on the host. The intervals,
 history retention and the new-host default are admin settings, the
 temperature unit a user setting, and the rest of `stats_config` host
 settings.
+
+**Alerts (E1)** is the one place every alert lands, from any plugin, official
+or not. A plugin sends with `ctx.notify.send({ title, body?, severity?,
+category?, audience?, channelIds?, link?, dedupeKey?, context? })` and never
+needs to know the alerts plugin exists:
+
+- Core resolves `audience` to user ids: nothing means the acting user,
+  `{ userId }` one user, `"admins"` every admin, `{ permission }` every user
+  who holds it. It then hands `{ source, recipients, notification }` to the
+  hub, the one plugin that called `ctx.notify.serve(hub)` with the
+  `notify:hub` capability (high risk: it sees every alert). A second hub is
+  refused, and a hub whose grant is withdrawn is ignored. With no hub running,
+  `send` reaches nobody and `channels()` answers `[]`, so a sender never
+  checks. `notify.hub` is core's word and names no plugin.
+- `category` is `<pluginId>.<kind>` by convention (`acme-ssl.renewal_failed`,
+  `automations.run_failed`) and defaults to the sending plugin's id; users
+  route by it. `severity` is `info`, `success`, `warning` (the default) or
+  `critical`. `link.tab` names a tab type the inbox opens; `link.url` must be
+  http(s). An alert with a `dedupeKey` is dropped while an unread one with the
+  same key is in that user's inbox.
+- The alerts plugin stores each alert once per recipient in
+  `p_alerts_items`, pushes it to the user's open `GET /stream` (server-sent
+  events), and sends it to that user's channels: the ones their delivery
+  rules match (`p_alerts_rules`: a category pattern such as `docker.*` and a
+  lowest severity) plus the `channelIds` the sender named, only ever the
+  recipient's own. Channels (`p_alerts_channels`: webhook, ntfy, Discord and
+  email over the admin's SMTP server) keep their config sealed with
+  `ctx.secrets.seal`, so an alert sent at night with no user signed in is still
+  delivered. Private addresses need the channel's opt-in and an exact host in
+  core's `notification_private_endpoint_allowlist`, which it reads with
+  `ctx.settings.readCore`.
+- Termix announcements (`termix-alerts.json` in the Docs repo, which core
+  fetched in 2.8) come into each inbox the first time the user looks, and one
+  the user deletes is recorded in `p_alerts_dismissed` (adopted from core's
+  `dismissed_alerts`) and never comes back. They never go to channels.
+- The upgrade copies core's `notification_channels` into `p_alerts_channels`
+  with the same ids and reseals each config once its owner's data key opens
+  (`upgrade/notification-channel-migration.ts`, at boot and at a password
+  login). The old table stays, emptied of configs, until 3.0.0.
+- The frontend puts a bell at the bottom of the rail (a rail item with
+  `placement: "footer"` and a `useBadge` hook showing the unread count), an
+  inbox in its panel, and inbox, channels and delivery rules in its tab. New
+  alerts pop up through a `shell.overlay` component, as far as the user's
+  `popups` setting allows. Other plugins open it with the `alerts.open` and
+  `alerts.openChannels` actions. Automations sends its notify steps and
+  failed runs here, and acme-ssl a failed renewal to every admin.
 
 ### 10. Lifecycle
 
@@ -2074,7 +2123,8 @@ deciding, not the mechanism.
 | `network:broadcast`  | medium   | Send network broadcast packets                                 |
 | `users:read`         | medium   | See usernames and roles, never hashes or 2FA state             |
 | `events:core`        | medium   | Subscribe to and emit core events carrying other users' data   |
-| `notify:send`        | medium   | Send notifications through configured channels                 |
+| `notify:send`        | medium   | Send alerts to users and through their channels                |
+| `notify:hub`         | high     | Receive, store and deliver every alert all plugins send        |
 | `audit:read`         | medium   | Read the audit log                                             |
 | `desktop:window`     | medium   | Open desktop windows (Electron only)                           |
 | `hosts:read`         | low      | See the host list it can already see                           |
@@ -2145,7 +2195,8 @@ authority for signatures.
 | `desktop.openIsolatedWindow/launchNativeRdp/available`                                                       | `desktop:window` (not `available`)                   | Electron windows and the native RDP client                                                                          |
 | `audit.record`                                                                                               | none                                                 | An audit line under the plugin's own action name                                                                    |
 | `schedule.every/after`                                                                                       | none                                                 | Timers that stop on deactivate and never overlap                                                                    |
-| `notify.channels/send`                                                                                       | `notify:send`                                        | Core's notification channels, as the acting user                                                                    |
+| `notify.channels/send`                                                                                       | `notify:send`                                        | Alerts, handed to the hub plugin with the audience resolved in core                                                 |
+| `notify.serve`                                                                                               | `notify:hub`                                         | Makes the plugin the one hub that stores and delivers alerts                                                        |
 | `fetch(url, init)`                                                                                           | `network:outbound`                                   | Outbound HTTP through core's SSRF guard; `allowPrivateHosts` hosts also go through the configured proxy             |
 | `process.run/ensureBinary`                                                                                   | `process:spawn` (+ `network:outbound` to download)   | Programs on the server                                                                                              |
 | `system.tlsStatus/writeTlsCertificate/reloadTls/publishHttpChallenge/registerTlsRenewer`                     | `system:tls`                                         | The server certificate                                                                                              |
@@ -2414,14 +2465,11 @@ samples; the default still saves before returning.
 **B17** added `ctx.notify` and `ctx.fetch`:
 
 - `ctx.notify.channels()` lists the acting user's notification channels
-  (id, name, type, enabled, never the config), and `send(channelIds,
-notification)` delivers to the ones among them that are theirs and
-  enabled, returning `{ delivered, failures }`. Both need `notify:send` and
-  an actor, and are audited (`plugin_notify_channels`, `plugin_notify_send`).
-  Channels stay core (`notification_channels`, its routes and
-  `NotificationChannelDialog`); delivery is `deliverNotification` in
-  `utils/notification-sender.ts`, which keeps the channel's private-network
-  opt-in plus the admin allowlist.
+  (id, name, type, enabled, never the config), and `send` delivers an alert.
+  Both need `notify:send` and are audited (`plugin_notify_channels`,
+  `plugin_notify_send`). **E1** moved channels, delivery and the inbox out of
+  core into the alerts plugin, gave `send` one notification argument with an
+  audience, and added `serve`; see Alerts under "Cross-plugin use".
 - `ctx.fetch(url, { method, headers, body, timeoutMs, allowPrivateHosts })`
   goes through `safeOutboundFetch`: http and https only, no embedded
   credentials, DNS pinned, no redirects, and private or loopback addresses

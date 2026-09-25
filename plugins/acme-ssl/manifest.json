@@ -20,6 +20,7 @@
     "secrets:own",
     "network:outbound",
     "network:serve",
+    "notify:send",
     "ui:surface"
   ],
   "contributes": {

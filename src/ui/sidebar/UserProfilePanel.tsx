@@ -1270,7 +1270,6 @@ export function UserProfilePanel({
             (s.sshHostsImported || 0) +
             (s.sshCredentialsImported || 0) +
             (s.pluginItemsImported || 0) +
-            (s.dismissedAlertsImported || 0) +
             (s.settingsImported || 0);
           toast.success(
             t("newUi.sidebar.userProfile.importCompleted", {
